@@ -17478,17 +17478,12 @@ SITargetLowering::foldAddSub64WithZeroLowBitsTo32(SDNode *N,
 // Collect the ultimate src of each of the mul node's operands, and confirm
 // each operand is 8 bits.
 static std::optional<ByteProvider<SDValue>>
-handleMulOperand(const SDValue &MulOperand, SelectionDAG &DAG) {
-  auto Byte0 = calculateByteProvider(MulOperand, 0, 0);
-  if (!Byte0 || Byte0->isConstantZero()) {
-    return std::nullopt;
-  }
-  auto Byte1 = calculateByteProvider(MulOperand, 1, 0);
-  if (Byte1 && !Byte1->isConstantZero()) {
-    return std::nullopt;
-  }
+handleMulOperand(SelectionDAG &DAG, SDValue MulOperand) {
   if (AMDGPUTargetLowering::numBitsUnsigned(MulOperand, DAG) > 8 &&
       AMDGPUTargetLowering::numBitsSigned(MulOperand, DAG) > 8)
+    return std::nullopt;
+  auto Byte0 = calculateByteProvider(MulOperand, 0, 0);
+  if (!Byte0 || Byte0->isConstantZero())
     return std::nullopt;
   return Byte0;
 }
@@ -17776,11 +17771,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       if (MulIdx == -1)
         break;
       auto Src0 =
-          handleMulOperand(TempNode->getOperand(MulIdx)->getOperand(0), DAG);
+          handleMulOperand(DAG, TempNode->getOperand(MulIdx)->getOperand(0));
       if (!Src0)
         break;
       auto Src1 =
-          handleMulOperand(TempNode->getOperand(MulIdx)->getOperand(1), DAG);
+          handleMulOperand(DAG, TempNode->getOperand(MulIdx)->getOperand(1));
       if (!Src1)
         break;
 
@@ -17801,11 +17796,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       if (I == 2 && isMul(TempNode->getOperand(AddIdx))) {
         Src2s.push_back(TempNode->getOperand(AddIdx));
         auto Src0 =
-            handleMulOperand(TempNode->getOperand(AddIdx)->getOperand(0), DAG);
+            handleMulOperand(DAG, TempNode->getOperand(AddIdx)->getOperand(0));
         if (!Src0)
           break;
         auto Src1 =
-            handleMulOperand(TempNode->getOperand(AddIdx)->getOperand(1), DAG);
+            handleMulOperand(DAG, TempNode->getOperand(AddIdx)->getOperand(1));
         if (!Src1)
           break;
         auto IterIsSigned = checkDot4MulSignedness(
