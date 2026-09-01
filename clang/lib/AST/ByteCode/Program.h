@@ -53,6 +53,9 @@ public:
       if (Record *R = RecordPair.second)
         R->~Record();
     }
+
+    for (Function *F : Funcs.values())
+      F->~Function();
   }
 
   const Context &getContext() const { return Ctx; }
@@ -91,9 +94,10 @@ public:
   /// Creates a new function from a code range.
   template <typename... Ts>
   Function *createFunction(const FunctionDecl *Def, Ts &&...Args) {
-    Def = Def->getCanonicalDecl();
-    auto *Func = new Function(Def, std::forward<Ts>(Args)...);
-    Funcs.insert({Def, std::unique_ptr<Function>(Func)});
+    Def = Def->getFirstDecl();
+    auto *Func = new (Allocate(sizeof(Function)))
+        Function(Def, std::forward<Ts>(Args)...);
+    Funcs.insert({Def, Func});
     return Func;
   }
   /// Creates an anonymous function.
@@ -165,7 +169,7 @@ private:
   /// Reference to the VM context.
   Context &Ctx;
   /// Mapping from decls to cached bytecode functions.
-  llvm::DenseMap<const FunctionDecl *, std::unique_ptr<Function>> Funcs;
+  llvm::DenseMap<const FunctionDecl *, Function *> Funcs;
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
 

@@ -1286,14 +1286,18 @@ public:
   static constexpr const char *LLVMSuffix = ".llvm.";
   static constexpr const char *PartSuffix = ".part.";
   static constexpr const char *UniqSuffix = ".__uniq.";
+  // Appended by LowerTypeTests to the body of a CFI jump table member, whose
+  // original name then refers to the jump table entry.
+  static constexpr const char *CfiSuffix = ".cfi";
 
   static StringRef getCanonicalFnName(StringRef FnName,
                                       StringRef Attr = "selected") {
     // Note the sequence of the suffixes in the knownSuffixes array matters.
     // If suffix "A" is appended after the suffix "B", "A" should be in front
-    // of "B" in knownSuffixes.
-    const SmallVector<StringRef> KnownSuffixes{LLVMSuffix, PartSuffix,
-                                               UniqSuffix};
+    // of "B" in knownSuffixes. The CFI suffix is appended in the ThinLTO
+    // backend, after all the others.
+    const SmallVector<StringRef> KnownSuffixes{CfiSuffix, LLVMSuffix,
+                                               PartSuffix, UniqSuffix};
     return getCanonicalFnName(FnName, KnownSuffixes, Attr);
   }
 
