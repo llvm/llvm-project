@@ -151,3 +151,12 @@ void test_new_expression_crossed_fail() {
   std::unique_ptr<A> b2(second);
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A*' to 'std::unique_ptr<A>' constructor may cause double deletion
 }
+
+bool can_take(std::shared_ptr<A> a);
+void take(std::shared_ptr<A> a);
+
+void test_discowered_in_wild(std::shared_ptr<A> a, std::unique_ptr<A> b) {
+  if (can_take(a)) {
+    take(a);
+  }
+}

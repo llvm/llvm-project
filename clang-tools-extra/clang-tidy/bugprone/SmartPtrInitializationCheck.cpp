@@ -677,8 +677,10 @@ private:
     llvm::SmallPtrSet<const VarDecl *, 32> PtrVars;
     llvm::SmallPtrSet<const FieldDecl *, 32> PtrFields;
 
-    for (const ParmVarDecl *PVD : Func->parameters())
-      PtrVars.insert(PVD);
+    for (const ParmVarDecl *PVD : Func->parameters()) {
+      if (PVD->getType()->isPointerType())
+        PtrVars.insert(PVD);
+    }
 
     std::function<void(const Stmt *)> CollectPtrVars = [&](const Stmt *S) {
       if (!S)
