@@ -2214,11 +2214,8 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
 
     if (RdxKind == RecurKind::FMaximumNum ||
         RdxKind == RecurKind::FMinimumNum) {
-      auto *StartValue = dyn_cast<VPIRValue>(MinOrMaxPhiR->getStartValue());
-      auto *StartC = StartValue
-                         ? dyn_cast<ConstantFP>(StartValue->getLiveInIRValue())
-                         : nullptr;
-      if (!StartC || StartC->isNaN())
+      auto *StartC = dyn_cast<VPConstant>(MinOrMaxPhiR->getStartValue());
+      if (!StartC || StartC->getConstant()->isNaN())
         return false;
     }
 
