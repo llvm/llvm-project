@@ -1688,10 +1688,13 @@ static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
       if (!TT.isAMDGCN() || TT.getOS() != llvm::Triple::AMDHSA)
         continue;
 
-      const ArgList &DevArgs = C.getArgsForToolChain(DevTC, {}, Kind);
-      SanitizerArgs DevSan = DevTC->getSanitizerArgs(DevArgs, {}, Kind);
-      if (DevSan.needsUbsanRt() && !DevSan.requiresMinimalRuntime())
-        return true;
+      for (BoundArch BA :
+           C.getDriver().getOffloadArchs(C, C.getArgs(), Kind, *DevTC)) {
+        const ArgList &DevArgs = C.getArgsForToolChain(DevTC, BA, Kind);
+        SanitizerArgs DevSan = DevTC->getSanitizerArgs(DevArgs, BA, Kind);
+        if (DevSan.needsUbsanRt() && !DevSan.requiresMinimalRuntime())
+          return true;
+      }
     }
   }
   return false;
