@@ -3610,7 +3610,7 @@ public:
 ///
 class CompoundLiteralExpr : public Expr {
 public:
-  enum class ScopeKind { Block, File, ParameterList };
+  enum class ScopeKind { Block, File };
 
 private:
   /// LParenLoc - If non-null, this is the location of the left paren in a
@@ -3620,7 +3620,7 @@ private:
 
   /// The type as written.  This can be an incomplete array type, in
   /// which case the actual expression type will be different.
-  llvm::PointerIntPair<TypeSourceInfo *, 2, ScopeKind> TInfoAndScope;
+  llvm::PointerIntPair<TypeSourceInfo *, 1, ScopeKind> TInfoAndScope;
   Stmt *Init;
 
   /// Value of constant literals with static storage duration.

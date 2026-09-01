@@ -7581,7 +7581,6 @@ ExprResult Sema::BuildCompoundLiteralExpr(
   bool HasThreadStorage = TSC != TSCS_unspecified;
   bool HasConstexpr = ConstexprKind == ConstexprSpecKind::Constexpr;
 
-  bool IsPrototypeScope = PrototypeScope;
   bool IsFunctionDeclarationScope =
       PrototypeScope && PrototypeScope->isFunctionDeclarationScope();
   bool IsFileScope = !CurContext->isFunctionOrMethod() &&
@@ -7713,9 +7712,8 @@ ExprResult Sema::BuildCompoundLiteralExpr(
           ? VK_PRValue
           : VK_LValue;
   CompoundLiteralExpr::ScopeKind Scope =
-      IsFileScope        ? CompoundLiteralExpr::ScopeKind::File
-      : IsPrototypeScope ? CompoundLiteralExpr::ScopeKind::ParameterList
-                         : CompoundLiteralExpr::ScopeKind::Block;
+      IsFileScope ? CompoundLiteralExpr::ScopeKind::File
+                  : CompoundLiteralExpr::ScopeKind::Block;
 
   bool HasGlobalStorage =
       IsFileScope || (getLangOpts().C23 && (HasStatic || HasThreadStorage));
@@ -7772,31 +7770,40 @@ ExprResult Sema::BuildCompoundLiteralExpr(
   }
 
   if (HasStatic && !literalType.isConstQualified()) {
-    if (!IsPrototypeScope) {
+    if (PrototypeScope) {
+      if (IsFunctionDeclarationScope &&
+          DelayedDiagnostics.shouldDelayDiagnostics())
+        DelayedDiagnostics.add(
+            sema::DelayedDiagnostic::makeForbiddenStatic(StorageClassLoc));
+    } else {
       DiagnoseStaticInInline(StorageClassLoc, getCurFunctionDecl());
-    } else if (IsFunctionDeclarationScope &&
-               DelayedDiagnostics.shouldDelayDiagnostics()) {
-      DelayedDiagnostics.add(
-          sema::DelayedDiagnostic::makeForbiddenStatic(StorageClassLoc));
     }
   }
 
-  if (!HasGlobalStorage && !IsPrototypeScope && !getLangOpts().CPlusPlus) {
+  if (!HasGlobalStorage && !getLangOpts().CPlusPlus) {
     // Compound literals that have automatic storage duration are destroyed at
     // the end of the scope in C; in C++, they're just temporaries.
 
-    // Emit diagnostics if it is or contains a C union type that is non-trivial
-    // to destruct.
-    if (E->getType().hasNonTrivialToPrimitiveDestructCUnion())
-      checkNonTrivialCUnion(E->getType(), E->getExprLoc(),
-                            NonTrivialCUnionContext::CompoundLiteral,
-                            NTCUK_Destruct);
+    if (PrototypeScope) {
+      if (literalType.isDestructedType()) {
+        Cleanup.setExprNeedsCleanups(true);
+        ExprCleanupObjects.push_back(E);
+      }
+    } else {
+      // Emit diagnostics if it is or contains a C union type that is
+      // non-trivial to destruct.
+      if (E->getType().hasNonTrivialToPrimitiveDestructCUnion())
+        checkNonTrivialCUnion(E->getType(), E->getExprLoc(),
+                              NonTrivialCUnionContext::CompoundLiteral,
+                              NTCUK_Destruct);
 
-    // Diagnose jumps that enter or exit the lifetime of the compound literal.
-    if (literalType.isDestructedType()) {
-      Cleanup.setExprNeedsCleanups(true);
-      ExprCleanupObjects.push_back(E);
-      getCurFunction()->setHasBranchProtectedScope();
+      // Diagnose jumps that enter or exit the lifetime of the compound
+      // literal.
+      if (literalType.isDestructedType()) {
+        Cleanup.setExprNeedsCleanups(true);
+        ExprCleanupObjects.push_back(E);
+        getCurFunction()->setHasBranchProtectedScope();
+      }
     }
   }
 

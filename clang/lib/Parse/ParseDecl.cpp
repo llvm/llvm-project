@@ -8009,6 +8009,8 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
       NumElements = ParseAssignmentExpression();
+      if (NumElements.isUsable())
+        NumElements = Actions.MaybeCreateExprWithCleanups(NumElements);
     }
   } else {
     if (StaticLoc.isValid()) {
