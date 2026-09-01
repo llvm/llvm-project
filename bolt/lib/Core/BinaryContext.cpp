@@ -1843,6 +1843,9 @@ void BinaryContext::openSharedDWOContext() {
   // (buildDWPTypeUnitsForUnit) by making sure all abbreviations are set up.
   for (const std::unique_ptr<DWARFUnit> &U : DWOCtx->dwo_info_section_units())
     U->getAbbreviations();
+  // DWARF4-equivalent, which keeps split type units in .debug_types.dwo
+  for (const std::unique_ptr<DWARFUnit> &U : DWOCtx->dwo_types_section_units())
+    U->getAbbreviations();
 }
 
 void BinaryContext::releaseDWOCU(uint64_t DWOId) {
