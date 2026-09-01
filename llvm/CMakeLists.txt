@@ -503,8 +503,15 @@ if(WIN32 AND NOT UNIX)
     # cabinet itself, and CAB supports only MSZIP/LZX/Quantum, so an MSI cannot
     # use LZMA the way the NSIS generator does.
     set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval" "-dcl:high")
-    # Make the LLVM installation available for all users.
-    set(CPACK_WIX_INSTALL_SCOPE "perMachine")
+    # Make the LLVM installation available for all users.  CPack only gained
+    # CPACK_WIX_INSTALL_SCOPE in CMake 3.29, so inject the equivalent ALLUSERS
+    # property when packaging with an older CMake supported by LLVM.
+    if(CMAKE_VERSION VERSION_LESS "3.29")
+      list(APPEND CPACK_WIX_PATCH_FILE
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/WiXPerMachinePatch.xml")
+    else()
+      set(CPACK_WIX_INSTALL_SCOPE "perMachine")
+    endif()
     # Identifies the LLVM product line accross all versions. Must not be changed.
     # Ensures previous installations are uninstalled and do not live side by
     # side.
