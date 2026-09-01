@@ -277,12 +277,6 @@ class Parser : public CodeCompletionHandler {
   /// Implementations are in Parser.cpp
   ///@{
 
-private:
-  /// Prepare the parser and its components.
-  ///
-  /// The lack of initialization can lead to missing functionality.
-  void Initialize();
-
 public:
   friend class ColonProtectionRAIIObject;
   friend class PoisonSEHIdentifiersRAIIObject;
@@ -309,6 +303,10 @@ public:
   // different actual classes based on the actions in place.
   typedef OpaquePtr<DeclGroupRef> DeclGroupPtrTy;
   typedef OpaquePtr<TemplateName> TemplateTy;
+
+  /// Initialize - Warm up the parser.
+  ///
+  void Initialize();
 
   /// Parse the first top-level declaration in a translation unit.
   ///
@@ -3010,6 +3008,13 @@ private:
   void AnnotateExistingIndexedTypeNamePack(ParsedType T,
                                            SourceLocation StartLoc,
                                            SourceLocation EndLoc);
+
+  TemplateNameKind isPackIndexingTemplateName(UnqualifiedId &Name,
+                                              TemplateTy &Template);
+
+  bool AnnotatePackIndexingTemplateName(CXXScopeSpec &SS, UnqualifiedId &Name,
+                                        TemplateTy Template,
+                                        TemplateNameKind TNK);
 
   /// Return true if the next token should be treated as a [[]] attribute,
   /// or as a keyword that behaves like one.  The former is only true if

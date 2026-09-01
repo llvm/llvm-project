@@ -44,6 +44,7 @@ LLVMInitializeLoongArchTarget() {
   initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
   initializeLoongArchExpandAtomicPseudoPass(*PR);
+  initializeLoongArchLateBranchOptPass(*PR);
 }
 
 static cl::opt<bool> EnableLoongArchDeadRegisterElimination(
@@ -121,16 +122,7 @@ LoongArchTargetMachine::getSubtargetImpl(const Function &F) const {
   std::string Key = CPU + TuneCPU + FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
-    auto ABIName = Options.MCOptions.getABIName();
-    if (const MDString *ModuleTargetABI = dyn_cast_or_null<MDString>(
-            F.getParent()->getModuleFlag("target-abi"))) {
-      auto TargetABI = LoongArchABI::getTargetABI(ABIName);
-      if (TargetABI != LoongArchABI::ABI_Unknown &&
-          ModuleTargetABI->getString() != ABIName) {
-        report_fatal_error("-target-abi option != target-abi module flag");
-      }
-      ABIName = ModuleTargetABI->getString();
-    }
+    StringRef ABIName = getTargetABIName(*F.getParent());
     I = std::make_unique<LoongArchSubtarget>(TargetTriple, CPU, TuneCPU, FS,
                                              ABIName, *this);
   }
@@ -165,6 +157,7 @@ public:
   void addPreRegAlloc() override;
   bool addRegAssignAndRewriteFast() override;
   bool addRegAssignAndRewriteOptimized() override;
+  void addMachineLateOptimization() override;
 };
 } // end namespace
 
@@ -238,4 +231,10 @@ bool LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
       EnableLoongArchDeadRegisterElimination)
     addPass(createLoongArchDeadRegisterDefinitionsPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
+}
+
+void LoongArchPassConfig::addMachineLateOptimization() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchLateBranchOptPass());
+  TargetPassConfig::addMachineLateOptimization();
 }

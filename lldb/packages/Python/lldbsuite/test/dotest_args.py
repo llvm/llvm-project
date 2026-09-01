@@ -249,6 +249,14 @@ def create_parser():
         help="The root build directory for the tests. It will be removed before running.",
     )
     group.add_argument(
+        "--timeout",
+        dest="timeout",
+        metavar="Timeout in seconds",
+        type=float,
+        default=0,
+        help="The timeout lit is using to run this test, if any.",
+    )
+    group.add_argument(
         "--lldb-module-cache-dir",
         dest="lldb_module_cache_dir",
         metavar="The clang module cache directory used by LLDB",

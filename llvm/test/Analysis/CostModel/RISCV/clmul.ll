@@ -48,11 +48,11 @@ define void @clmul() {
 ; RV32ZVBC-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; RV64ZVBC-LABEL: 'clmul'
-; RV64ZVBC-NEXT:  Cost Model: Found costs of 6 for: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
-; RV64ZVBC-NEXT:  Cost Model: Found costs of 3 for: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
-; RV64ZVBC-NEXT:  Cost Model: Found costs of 3 for: %call_i32 = call i32 @llvm.clmul.i32(i32 poison, i32 poison)
-; RV64ZVBC-NEXT:  Cost Model: Found costs of 3 for: %call_i16 = call i16 @llvm.clmul.i16(i16 poison, i16 poison)
-; RV64ZVBC-NEXT:  Cost Model: Found costs of 3 for: %call_i8 = call i8 @llvm.clmul.i8(i8 poison, i8 poison)
+; RV64ZVBC-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:8 SizeLat:6 for: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
+; RV64ZVBC-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:3 for: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
+; RV64ZVBC-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:3 for: %call_i32 = call i32 @llvm.clmul.i32(i32 poison, i32 poison)
+; RV64ZVBC-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:3 for: %call_i16 = call i16 @llvm.clmul.i16(i16 poison, i16 poison)
+; RV64ZVBC-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:4 SizeLat:3 for: %call_i8 = call i8 @llvm.clmul.i8(i8 poison, i8 poison)
 ; RV64ZVBC-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
