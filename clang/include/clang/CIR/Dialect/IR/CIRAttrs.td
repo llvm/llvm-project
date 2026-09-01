@@ -999,6 +999,64 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalOffsetAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_GlobalOffsetAttr : CIR_ValueLikeAttr<"GlobalOffset", "global_offset"> {
+  let summary = "Provides constant access to a byte offset from a global";
+  let description = [{
+    Get the constant address that is `offset` bytes away from the address of
+    global `symbol`. Like `#cir.global_view`, it provides a way to access
+    globals from other globals and always produces a pointer, and the type of
+    the referenced symbol may differ from the type of the attribute.
+
+    Whereas `#cir.global_view` navigates the type of the symbol using
+    subelement indices, this attribute describes a flat displacement in bytes.
+    It is used for the addresses that cannot be described by subelement
+    indices, namely addresses outside of the referenced object, such as the
+    one-past-the-end address of a record, and addresses that do not fall on a
+    subelement boundary. This mirrors the byte offset that classic codegen
+    applies to every constant lvalue.
+
+    Example:
+
+    ```
+    struct S { int x; };
+    S s;
+    S *p = &s + 1;
+    ```
+
+    produces
+
+    ```
+    cir.global external @p = #cir.global_offset<@s, 4> : !cir.ptr<!rec_S>
+    ```
+
+    which lowers to
+
+    ```
+    @p = global ptr getelementptr (i8, ptr @s, i64 4)
+    ```
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::FlatSymbolRefAttr":$symbol,
+                        "int64_t":$offset);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::FlatSymbolRefAttr":$symbol,
+                                        "int64_t":$offset), [{
+      return $_get(type.getContext(), type, symbol, offset);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` $symbol `,` $offset `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VTableAttr
 //===----------------------------------------------------------------------===//
 
