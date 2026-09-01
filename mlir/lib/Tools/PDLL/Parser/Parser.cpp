@@ -3182,7 +3182,7 @@ FailureOr<ast::Expr *> Parser::parseTypeConversionExpr() {
     return failure();
 
   // Parse converter name
-  if (!curToken.isIdentifier()) {
+  if (!curToken.is(Token::identifier)) {
     return emitError(curToken.getLoc(),
                      "expected type converter name after `<`");
   }
@@ -3246,8 +3246,6 @@ FailureOr<ast::Expr *> Parser::parseConvertedOperandExpr() {
     return failure();
 
   return ast::ConvertedOperandExpr::create(ctx, loc, *operandExpr, *typeExpr);
-}
-  return failure();
 }
 
 LogicalResult Parser::codeCompleteOperationName(StringRef dialectName) {
