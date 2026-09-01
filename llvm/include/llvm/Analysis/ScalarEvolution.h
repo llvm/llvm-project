@@ -2095,6 +2095,11 @@ private:
   BackedgeTakenInfo computeBackedgeTakenCount(const Loop *L,
                                               bool AllowPredicates = false);
 
+  /// Variant of getSmallConstantTripMultiple taking pre-collected loop
+  /// \p Guards. \p ExitCount must be computable.
+  unsigned getSmallConstantTripMultiple(const SCEV *ExitCount,
+                                        const LoopGuards &Guards);
+
   /// Compute the number of times the backedge of the specified loop will
   /// execute if it exits via the specified block. If AllowPredicates is set,
   /// this call will try to use a minimal set of SCEV predicates in order to

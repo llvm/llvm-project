@@ -113,6 +113,11 @@ LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 LLVM_ABI StringRef getBaseArchNameAMDGCN(GPUKind AK);
 
 LLVM_ABI Triple::SubArchType getSubArch(GPUKind AK);
+
+/// Returns the preferred subarch for a GPU name \p CPU, or NoSubArch if
+/// unrecognized.
+LLVM_ABI Triple::SubArchType getSubArchFromGPUName(StringRef CPU);
+
 LLVM_ABI Triple::SubArchType getMajorSubArch(Triple::SubArchType SubArch);
 
 /// Return true if subarch \p A is compatible with subarch \p B, i.e. they are
