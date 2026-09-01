@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -974,6 +975,162 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
   }
 };
 
+// Returns the `vector.shape_cast` that flattened a value of type `ndType` into
+// `flat`, if that is how `flat` was produced.
+static vector::ShapeCastOp getFlattenCast(Value flat, VectorType ndType) {
+  auto shapeCast = flat.getDefiningOp<vector::ShapeCastOp>();
+  if (shapeCast && shapeCast.getSourceVectorType() == ndType)
+    return shapeCast;
+  return nullptr;
+}
+
+static DenseElementsAttr getDenseConstant(Value flat) {
+  DenseElementsAttr elements;
+  if (matchPattern(flat, m_Constant(&elements)))
+    return elements;
+  return nullptr;
+}
+
+static vector::BroadcastOp getSplatBroadcast(Value flat) {
+  auto broadcast = flat.getDefiningOp<vector::BroadcastOp>();
+  if (broadcast && !isa<VectorType>(broadcast.getSourceType()))
+    return broadcast;
+  return nullptr;
+}
+
+// Returns true if `unflatten` can reshape `flat` to `ndType`.
+static bool canUnflatten(Value flat, VectorType ndType) {
+  return getFlattenCast(flat, ndType) || getDenseConstant(flat) ||
+         getSplatBroadcast(flat);
+}
+
+// Reshape `flat` to `ndType` without introducing a 1-D to N-D
+// `vector.shape_cast`. Only handles the forms a frontend actually emits when
+// flattening: the flattening cast itself, a constant, and a splat.
+// `canUnflatten` must hold.
+static Value unflatten(PatternRewriter &rewriter, Value flat,
+                       VectorType ndType) {
+  assert(cast<VectorType>(flat.getType()).getRank() == 1 &&
+         "expected a 1-D vector");
+
+  if (auto shapeCast = getFlattenCast(flat, ndType))
+    return shapeCast.getSource();
+
+  if (DenseElementsAttr elements = getDenseConstant(flat))
+    return arith::ConstantOp::create(rewriter, flat.getLoc(), ndType,
+                                     elements.reshape(ndType));
+
+  auto broadcast = getSplatBroadcast(flat);
+  assert(broadcast && "expected canUnflatten to hold");
+  return vector::BroadcastOp::create(rewriter, flat.getLoc(), ndType,
+                                     broadcast.getSource());
+}
+
+// Restore the N-D form of a flattened `vector.gather` / `vector.scatter`.
+//
+// XeGPU layouts are expressed in terms of the N-D shape of the accessed data,
+// so a flattened gather/scatter forces layout propagation to reason through the
+// surrounding `vector.shape_cast` ops - which is either impossible or yields
+// layouts that cannot be distributed.
+//
+// Before:
+//   %cst = arith.constant dense<0.0> : vector<8192xbf16>
+//   %fi = vector.shape_cast %idx : vector<128x64xindex> to vector<8192xindex>
+//   %fm = vector.shape_cast %mask : vector<128x64xi1> to vector<8192xi1>
+//   %fr = vector.gather %src[%c0] [%fi], %fm, %cst : memref<?xbf16>,
+//       vector<8192xindex>, vector<8192xi1>, vector<8192xbf16>
+//       into vector<8192xbf16>
+//   %res = vector.shape_cast %fr : vector<8192xbf16> to vector<128x64xbf16>
+//
+// After:
+//   %cst = arith.constant dense<0.0> : vector<128x64xbf16>
+//   %res = vector.gather %src[%c0] [%idx], %mask, %cst : memref<?xbf16>,
+//       vector<128x64xindex>, vector<128x64xi1>, vector<128x64xbf16>
+//       into vector<128x64xbf16>
+template <typename OpTy>
+struct UnflattenGatherScatter : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    constexpr bool isGather = std::is_same_v<OpTy, vector::GatherOp>;
+
+    if (op.getIndexVectorType().getRank() != 1)
+      return rewriter.notifyMatchFailure(op, "index vector is not 1-D");
+
+    // The N-D shape comes from the index operand's producer: this only undoes
+    // a flattening that already happened, it never invents a shape.
+    auto indexCast =
+        op.getIndices().template getDefiningOp<vector::ShapeCastOp>();
+    if (!indexCast || indexCast.getSourceVectorType().getRank() < 2)
+      return rewriter.notifyMatchFailure(
+          op, "index vector is not a shape_cast of an N-D vector");
+    VectorType ndIndexType = indexCast.getSourceVectorType();
+    VectorType ndMaskType =
+        ndIndexType.cloneWith(std::nullopt, rewriter.getI1Type());
+    VectorType ndType = ndIndexType.cloneWith(
+        std::nullopt, op.getVectorType().getElementType());
+
+    // Check everything before creating any IR: a partially applied rewrite
+    // would leave dead ops behind.
+    if (!canUnflatten(op.getMask(), ndMaskType))
+      return rewriter.notifyMatchFailure(op, "cannot un-flatten the mask");
+
+    if constexpr (isGather) {
+      if (!canUnflatten(op.getPassThru(), ndType))
+        return rewriter.notifyMatchFailure(op,
+                                           "cannot un-flatten the pass-thru");
+
+      // Every use must cast back to N-D, else the rewrite would just move the
+      // shape_casts to the result.
+      SmallVector<vector::ShapeCastOp> resultCasts;
+      for (Operation *user : op->getUsers()) {
+        auto resultCast = dyn_cast<vector::ShapeCastOp>(user);
+        if (!resultCast || resultCast.getResultVectorType() != ndType)
+          return rewriter.notifyMatchFailure(
+              op, "result is not exclusively shape_cast back to N-D");
+        resultCasts.push_back(resultCast);
+      }
+      if (resultCasts.empty())
+        return rewriter.notifyMatchFailure(op, "result is unused");
+
+      Value mask = unflatten(rewriter, op.getMask(), ndMaskType);
+      Value passThru = unflatten(rewriter, op.getPassThru(), ndType);
+      auto ndGather = vector::GatherOp::create(
+          rewriter, op.getLoc(), ndType, op.getBase(), op.getOffsets(),
+          indexCast.getSource(), mask, passThru, op.getAlignmentAttr());
+      for (vector::ShapeCastOp resultCast : resultCasts)
+        rewriter.replaceOp(resultCast, ndGather.getResult());
+      rewriter.eraseOp(op);
+    } else {
+      if (!canUnflatten(op.getValueToStore(), ndType))
+        return rewriter.notifyMatchFailure(
+            op, "cannot un-flatten the stored value");
+
+      Value mask = unflatten(rewriter, op.getMask(), ndMaskType);
+      Value valueToStore = unflatten(rewriter, op.getValueToStore(), ndType);
+      // Only operand types change, and this keeps the optional tensor result
+      // untouched.
+      rewriter.modifyOpInPlace(op, [&] {
+        op.getIndicesMutable().assign(indexCast.getSource());
+        op.getMaskMutable().assign(mask);
+        op.getValueToStoreMutable().assign(valueToStore);
+      });
+    }
+    return success();
+  }
+};
+
+// Un-flatten every gather/scatter that was flattened to 1-D operands, so that
+// the conversion patterns and the XeGPU layouts downstream of them see the N-D
+// shape of the accessed data.
+static LogicalResult unflattenGatherScatter(Operation *root) {
+  RewritePatternSet patterns(root->getContext());
+  patterns.add<UnflattenGatherScatter<vector::GatherOp>,
+               UnflattenGatherScatter<vector::ScatterOp>>(root->getContext());
+  return applyPatternsGreedily(root, std::move(patterns));
+}
+
 // Returns `memrefTy` with its memory space replaced by `newMemSpace`.
 static MemRefType withMemorySpace(MemRefType memrefTy, Attribute newMemSpace) {
   return MemRefType::get(memrefTy.getShape(), memrefTy.getElementType(),
@@ -1053,6 +1210,11 @@ struct ConvertVectorToXeGPUPass
     // Promote local allocations to SLM (address space 3) so that
     // load_matrix/store_matrix lowerings have well-typed memref operands.
     promoteAllocasToSLM(getOperation());
+
+    // Undo any flattening of gather/scatter operands, so that the conversion
+    // below sees the N-D shape the XeGPU layouts are expressed in.
+    if (failed(unflattenGatherScatter(getOperation())))
+      return signalPassFailure();
 
     RewritePatternSet patterns(&getContext());
     populateVectorToXeGPUConversionPatterns(patterns);
