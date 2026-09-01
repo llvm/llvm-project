@@ -19,6 +19,12 @@ ljmpq *(%rax)
 lcallq *(%rax)
 // CHECK: error: unsupported indirect branch
 
+jmp *%eax
+// CHECK: error: instruction requires: Not 64-bit mode
+
+jmp *%ax
+// CHECK: error: instruction requires: Not 64-bit mode
+
 // Only 64-bit near returns are supported.
 
 retw
