@@ -240,7 +240,7 @@ define i1 @workgroup_zero() {
 ; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-GFX12-NEXT:    s_and_b32 s0, ttmp7, 0xffff
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL-GFX12-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; GISEL-GFX12-NEXT:    s_bfe_u32 s1, ttmp7, 0x100010
 ; GISEL-GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-GFX12-NEXT:    s_or_b32 s0, s0, s1
@@ -280,23 +280,41 @@ define i1 @workgroup_nonzero() {
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: workgroup_nonzero:
-; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_and_b32 s0, ttmp7, 0xffff
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_lshr_b32 s1, ttmp7, 16
-; GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_or_b32 s0, s0, s1
-; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; DAGISEL-GFX12-LABEL: workgroup_nonzero:
+; DAGISEL-GFX12:       ; %bb.0: ; %entry
+; DAGISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_expcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-GFX12-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; DAGISEL-GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
+; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-GFX12-NEXT:    s_or_b32 s0, s0, s1
+; DAGISEL-GFX12-NEXT:    s_cselect_b32 s0, 1, 0
+; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; DAGISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX12-LABEL: workgroup_nonzero:
+; GISEL-GFX12:       ; %bb.0: ; %entry
+; GISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_expcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
+; GISEL-GFX12-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-GFX12-NEXT:    s_bfe_u32 s1, ttmp7, 0x100010
+; GISEL-GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
+; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-GFX12-NEXT:    s_or_b32 s0, s0, s1
+; GISEL-GFX12-NEXT:    s_cselect_b32 s0, 1, 0
+; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %1 = tail call i32 @llvm.amdgcn.workgroup.id.y()
@@ -335,28 +353,51 @@ define i1 @workitem_workgroup_zero() {
 ; GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: workitem_workgroup_zero:
-; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_and_b32 s0, ttmp7, 0xffff
-; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
-; GFX12-NEXT:    v_bfe_u32 v1, v31, 10, 10
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_lshr_b32 s1, ttmp7, 16
-; GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_or_b32 s0, s0, s1
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_or3_b32 v0, s0, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; DAGISEL-GFX12-LABEL: workitem_workgroup_zero:
+; DAGISEL-GFX12:       ; %bb.0: ; %entry
+; DAGISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_expcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; DAGISEL-GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; DAGISEL-GFX12-NEXT:    v_bfe_u32 v1, v31, 10, 10
+; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-GFX12-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; DAGISEL-GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
+; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-GFX12-NEXT:    s_or_b32 s0, s0, s1
+; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-GFX12-NEXT:    v_or3_b32 v0, s0, v0, v1
+; DAGISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; DAGISEL-GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; DAGISEL-GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; DAGISEL-GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; DAGISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX12-LABEL: workitem_workgroup_zero:
+; GISEL-GFX12:       ; %bb.0: ; %entry
+; GISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_expcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
+; GISEL-GFX12-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; GISEL-GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; GISEL-GFX12-NEXT:    v_bfe_u32 v1, v31, 10, 10
+; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-GFX12-NEXT:    s_bfe_u32 s1, ttmp7, 0x100010
+; GISEL-GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
+; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-GFX12-NEXT:    s_or_b32 s0, s0, s1
+; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-GFX12-NEXT:    v_or3_b32 v0, s0, v0, v1
+; GISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GISEL-GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GISEL-GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %1 = tail call i32 @llvm.amdgcn.workgroup.id.y()
@@ -452,7 +493,7 @@ define i1 @workitem_workgroup_nonzero() {
 ; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-GFX12-NEXT:    s_and_b32 s0, ttmp7, 0xffff
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL-GFX12-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; GISEL-GFX12-NEXT:    s_bfe_u32 s1, ttmp7, 0x100010
 ; GISEL-GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
 ; GISEL-GFX12-NEXT:    v_bfe_u32 v0, v31, 10, 10
 ; GISEL-GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -481,3 +522,5 @@ entry:
   %cmp = icmp ne i32 %or4, 0
   ret i1 %cmp
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX12: {{.*}}

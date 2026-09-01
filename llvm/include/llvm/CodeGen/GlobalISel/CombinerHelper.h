@@ -245,7 +245,6 @@ public:
                                IndexedLoadStoreMatchInfo &MatchInfo) const;
 
   LLVM_ABI bool matchSextTruncSextLoad(MachineInstr &MI) const;
-  LLVM_ABI void applySextTruncSextLoad(MachineInstr &MI) const;
 
   /// Match sext_inreg(load p), imm -> sextload p
   LLVM_ABI bool
@@ -379,7 +378,9 @@ public:
   LLVM_ABI void applyShiftOfShiftedLogic(MachineInstr &MI,
                                          ShiftOfShiftedLogic &MatchInfo) const;
 
-  LLVM_ABI bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  /// \return true if the target's TargetLowering::isDesirableToCommuteWithShift
+  /// hook approves of commuting \p MI (a G_SHL) with the binop feeding it.
+  LLVM_ABI bool isDesirableToCommuteWithShift(const MachineInstr &MI) const;
 
   /// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (shift x, (C1 + C2))
   LLVM_ABI bool matchLshrOfTruncOfLshr(MachineInstr &MI,
@@ -453,10 +454,6 @@ public:
   /// a scalar constant or a G_BUILD_VECTOR of constants.
   LLVM_ABI bool matchConstantFoldUnaryIntOp(MachineInstr &MI,
                                             BuildFnTy &MatchInfo) const;
-
-  /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
-  LLVM_ABI bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
-  LLVM_ABI void applyCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
 
   /// Transform PtrToInt(IntToPtr(x)) to x.
   LLVM_ABI void applyCombineP2IToI2P(MachineInstr &MI, Register &Reg) const;
@@ -649,7 +646,6 @@ public:
 
   /// Combine G_PTR_ADD with nullptr to G_INTTOPTR
   LLVM_ABI bool matchPtrAddZero(MachineInstr &MI) const;
-  LLVM_ABI void applyPtrAddZero(MachineInstr &MI) const;
 
   /// Combine G_UREM x, (known power of 2) to an add and bitmasking.
   LLVM_ABI void applySimplifyURemByPow2(MachineInstr &MI) const;
