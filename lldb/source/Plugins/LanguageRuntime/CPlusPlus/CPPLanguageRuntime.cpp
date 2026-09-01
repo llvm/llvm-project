@@ -806,9 +806,9 @@ CPPLanguageRuntime::GetVTableInfoEntry(ValueObject &in_value, bool check_type) {
 
   // Check our cache first to see if we already have this info
   {
-    std::lock_guard<std::mutex> locker(m_vtable_mutex);
-    auto pos = m_vtable_info_map.find(vtable_addr);
-    if (pos != m_vtable_info_map.end())
+    auto vtable_info_map = m_vtable_info_map.Lock();
+    auto pos = vtable_info_map->find(vtable_addr);
+    if (pos != vtable_info_map->end())
       return pos->second;
   }
 
@@ -830,8 +830,7 @@ CPPLanguageRuntime::GetVTableInfoEntry(ValueObject &in_value, bool check_type) {
           /*info=*/VTableInfo{vtable_addr, symbol},
           /*runtime=*/runtime.get(),
       };
-      std::lock_guard<std::mutex> locker(m_vtable_mutex);
-      m_vtable_info_map[vtable_addr] = entry;
+      (*m_vtable_info_map.Lock())[vtable_addr] = entry;
       return entry;
     }
   }
