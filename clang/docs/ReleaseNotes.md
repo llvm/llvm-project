@@ -538,6 +538,19 @@ features cannot lower the translation-unit ABI level;
 
 ### OpenMP Support
 
+- Canonicalize intra-tiles in loop tiling. `#pragma omp tile` still emits a
+  min-bounded inner loop, which vectorizes well. When a parent directive such as
+  `for collapse(n)` needs a constant per-tile trip count, Clang rereads a
+  droppable hint and treats that inner loop as rectangular, with an overshoot
+  guard only if the last tile can be partial.
+
+  Not yet supported (diagnosed, left as follow-up):
+
+  - `collapse` through stacked `#pragma omp tile` (the inner floor is not a
+    collapsed counter).
+  - A loop transformation (`tile`, `unroll`, `interchange`, ...) that consumes
+    another tile's intra-tile loop.
+
 - Added parsing and semantic support for `dims` modifier in `num_teams` and
   `thread_limit` clauses for OpenMP 6.1 or later.
 

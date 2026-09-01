@@ -171,15 +171,16 @@ void f(void) {
 }
 } // namespace GH139073
 
-// A tile's intra-tile loop is wrapped in an internal reinterpretation hint. A
-// loop transformation consuming that loop must see through the wrapper, so
-// check that these still parse and analyze without diagnostics.
+// A loop transformation that consumes an inner tile's intra-tile loop would
+// miscompute the nest; that is diagnosed. Consuming only the generated floor
+// (one size, or unroll) is still accepted.
 namespace consumed_by_transformation {
-// Codegen: tile_collapse_reinterpret_codegen.cpp and tile_codegen_tile_for.cpp;
+// Codegen: tile_codegen_tile_for.cpp;
 // run time: libomp transform/tile/parallel-wsloop-collapse-stacked-tile.cpp.
 void tile_of_tile() {
 #pragma omp tile sizes(3, 5)
 #pragma omp tile sizes(2)
+  // expected-error@+1 {{cannot apply a loop transformation to the intra-tile loop of a '#pragma omp tile' that is nested inside another loop-transforming directive; OpenMP permits this construct, but it is not yet supported}}
   for (int i = 0; i < 100; ++i)
     ;
 }
@@ -188,11 +189,20 @@ void tile_of_tile() {
 void tile_of_tile_range_for(int (&A)[100]) {
 #pragma omp tile sizes(3, 5)
 #pragma omp tile sizes(2)
+  // expected-error@+1 {{cannot apply a loop transformation to the intra-tile loop of a '#pragma omp tile' that is nested inside another loop-transforming directive; OpenMP permits this construct, but it is not yet supported}}
   for (int &v : A)
     (void)v;
 }
 
-// 'unroll' is a loop transformation too, so it consumes the tile the same way.
+// Outer tile takes only the inner floor, not the intra-tile loop.
+void tile_of_tile_one_size() {
+#pragma omp tile sizes(3)
+#pragma omp tile sizes(2)
+  for (int i = 0; i < 100; ++i)
+    ;
+}
+
+// 'unroll' only consumes the generated floor.
 void unroll_of_tile() {
 #pragma omp unroll partial(4)
 #pragma omp tile sizes(2)

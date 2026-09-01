@@ -54,11 +54,22 @@ void collapse_simd_over_tile() {
 }
 
 void collapse_outer_of_stacked_tiles_2d() {
-  // The outer tile consumes both loops of the inner tile, so both of its
-  // intra-tile loops find their floor among the collapsed counters.
+  // Outer tile sizes(2, 3) needs two loops, so it reaches the inner
+  // intra-tile loop. Same limitation as tile_of_tile_two_sizes.
 #pragma omp for collapse(4)
 #pragma omp tile sizes(2, 3)
 #pragma omp tile sizes(4)
+  // expected-error@+1 {{cannot apply a loop transformation to the intra-tile loop of a '#pragma omp tile' that is nested inside another loop-transforming directive; OpenMP permits this construct, but it is not yet supported}}
+  for (int i = 0; i < 6; ++i)
+    body(i);
+}
+
+void tile_of_tile_two_sizes() {
+  // Outer tile sizes(3, 5) needs two loops, so it reaches the inner
+  // intra-tile loop. That nest would run the wrong iterations.
+#pragma omp tile sizes(3, 5)
+#pragma omp tile sizes(2)
+  // expected-error@+1 {{cannot apply a loop transformation to the intra-tile loop of a '#pragma omp tile' that is nested inside another loop-transforming directive; OpenMP permits this construct, but it is not yet supported}}
   for (int i = 0; i < 6; ++i)
     body(i);
 }

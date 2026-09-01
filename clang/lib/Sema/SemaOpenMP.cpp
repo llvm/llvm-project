@@ -9772,7 +9772,8 @@ static bool checkOpenMPIterationSpace(
       // instead of recomputing it per iteration. Diagnose to avoid silently
       // producing the wrong iteration space.
       SemaRef.Diag(ISC.getInitSrcRange().getBegin(),
-                   diag::err_omp_collapse_stacked_tile);
+                   diag::err_omp_collapse_stacked_tile)
+          << /*Collapse=*/0;
       return true;
     }
   } else {
@@ -14772,8 +14773,17 @@ bool SemaOpenMP::checkTransformableLoopNest(
   OriginalInits.emplace_back();
   bool Result = OMPLoopBasedDirective::doForAllLoops(
       AStmt->IgnoreContainers(), /*TryImperfectlyNestedLoops=*/false, NumLoops,
-      [this, &LoopHelpers, &Body, &OriginalInits, Kind](unsigned Cnt,
-                                                        Stmt *CurStmt) {
+      [this, &LoopHelpers, &Body, &OriginalInits,
+       Kind](unsigned Cnt, Stmt *CurStmt, Stmt *HintWrapper) {
+        // The start of this loop is a floor set in the enclosing tile's body.
+        // Loop analysis reads a start only once, so the nest would repeat the
+        // first tile. Reject instead of emitting wrong loops.
+        if (HintWrapper) {
+          SemaRef.Diag(CurStmt->getBeginLoc(),
+                       diag::err_omp_collapse_stacked_tile)
+              << /*LoopTransform=*/1;
+          return true;
+        }
         VarsWithInheritedDSAType TmpDSA;
         unsigned SingleNumLoops =
             checkOpenMPLoop(Kind, nullptr, nullptr, CurStmt, SemaRef, *DSAStack,
