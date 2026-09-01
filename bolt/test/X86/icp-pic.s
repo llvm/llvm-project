@@ -1,7 +1,7 @@
 # REQUIRES: system-linux, x86-registered-target
 
 ## Verify that x86 ICP materializes the promoted target address with a
-## PC-relative LEA instruction, automatically for a PIE input.
+## PC-relative LEA instruction, automatically for PIE inputs.
 
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/main.s -o %t.o
@@ -11,17 +11,13 @@
 # RUN: ld.lld -pie --entry=reg_call --emit-relocs %t.o -o %t.pie
 # RUN: llvm-bolt %t.pie -o %t.pie.out --relocs --data=%t/fdata --icp=calls \
 # RUN:   --icp-calls-topn=1 --lite=0 --use-gnu-stack \
-# RUN:   --custom-allocation-vma=0x80000000 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=PIC-INFO
+# RUN:   --custom-allocation-vma=0x80000000
 # RUN: llvm-objdump -d --no-show-raw-insn %t.pie.out | \
-# RUN:   FileCheck %s --check-prefix=LEA
+# RUN:   FileCheck %s --check-prefix=PIE-LEA
 
-# PIC-INFO: BOLT-INFO: ICP is using x86 PIC mode with PC-relative LEA target checks
-# FORCE-INFO: BOLT-INFO: ICP is using x86 PIC mode with PC-relative LEA target checks
-
-# LEA-LABEL: <reg_call_site>:
-# LEA:       leaq {{.*}}(%rip), %r11
-# LEA-SAME:  <target>
+# PIE-LEA-LABEL: <reg_call_site>:
+# PIE-LEA:       leaq {{.*}}(%rip), %r11
+# PIE-LEA-SAME:  <target>
 
 #--- main.s
 .text

@@ -34,7 +34,6 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<IndirectCallPromotionType> ICP;
 extern cl::opt<unsigned> Verbosity;
 extern cl::opt<unsigned> ExecutionCountThreshold;
-extern cl::opt<bool> X86ICPPIC;
 
 static cl::opt<unsigned> ICPJTRemainingPercentThreshold(
     "icp-jt-remaining-percent-threshold",
@@ -1497,10 +1496,6 @@ Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
       << format("%.1f", (100.0 * TotalIndexBasedJumps) /
                             std::max<uint64_t>(TotalIndexBasedCandidates, 1))
       << "%\n";
-
-  if (BC.isX86() && (!BC.HasFixedLoadAddress || opts::X86ICPPIC))
-    BC.outs() << "BOLT-INFO: ICP is using x86 PIC mode with PC-relative "
-                 "LEA target checks\n";
 
 #ifndef NDEBUG
   verifyProfile(BFs);
