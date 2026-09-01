@@ -225,9 +225,10 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
 
     Two driver modes select how each function's classification is computed:
 
-    - `target=<name>` selects an ABI target.  Currently only `"test"` (the
-      MLIR test target in `mlir/lib/ABI/Targets/Test/`) is supported.  Real
-      targets (x86_64, AArch64, ...) will be added once the LLVM ABI library
+    - `target=<name>` selects an ABI target: `"x86_64"` (System V),
+      `"amdgpu"`, or `"test"` (the MLIR test target in
+      `mlir/lib/ABI/Targets/Test/`).  The clang pipeline picks the target from
+      the module triple.  Other targets will be added as the LLVM ABI library
       ships them.
     - `classification-attr=<name>` reads a `DictionaryAttr` named `<name>`
       from each `cir.func` and parses it via the test-target injection
@@ -246,7 +247,9 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
              clEnumValN(cir::CallConvTarget::Test, "test",
                         "MLIR test ABI target"),
              clEnumValN(cir::CallConvTarget::X86_64, "x86_64",
-                        "x86_64 System V")
+                        "x86_64 System V"),
+             clEnumValN(cir::CallConvTarget::AMDGPU, "amdgpu",
+                        "AMDGPU")
            )}]>,
     Option<"classificationAttr", "classification-attr", "std::string",
            /*default=*/"\"\"",
