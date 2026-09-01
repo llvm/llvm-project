@@ -335,21 +335,12 @@ public:
 
   bool isElementTypeLegalForCompressStore(Type *Ty) const {
     assert(Ty->isIntegerTy() || Ty->isFloatingPointTy());
-    // 32-bit and 64-bit element types are legal if we have SVE.
-    if (is_contained({32u, 64u}, Ty->getScalarSizeInBits()))
-      return true;
-
-    // 8-bit and 16-bit types require +sve2p2 or +sme2p2.
-    if (is_contained({8u, 16u}, Ty->getScalarSizeInBits()))
-      return ST->hasSVE2p2() || ST->hasSME2p2();
-
-    return false;
+    return is_contained({8u, 16u, 32u, 64u}, Ty->getScalarSizeInBits());
   }
 
   bool isLegalMaskedCompressStore(Type *DataType,
                                   Align Alignment) const override {
-    if (!(ST->isSVEAvailable() ||
-          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
+    if (!(ST->isSVEAvailable() || ST->isSVEorStreamingSVEAvailable()))
       return false;
 
     if (isa<FixedVectorType>(DataType) &&
