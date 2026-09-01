@@ -187,10 +187,13 @@ public:
       for (User *U : Arg->users())
         if (isDefinitionAcrossSuspend(*Arg, U))
           return true;
-    } else if (auto *Inst = dyn_cast<Instruction>(&V)) {
+      return false;
+    }
+    if (auto *Inst = dyn_cast<Instruction>(&V)) {
       for (User *U : Inst->users())
         if (isDefinitionAcrossSuspend(*Inst, U))
           return true;
+      return false;
     }
 
     llvm_unreachable(
