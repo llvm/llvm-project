@@ -11,7 +11,7 @@ define i32 @test_br(i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[C]], [[B]]
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[C]], [[B]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ; CHECK:       false:
 ; CHECK-NEXT:    ret i32 0

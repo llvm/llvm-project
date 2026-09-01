@@ -240,6 +240,46 @@ haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
       return NoCommonBitsSetResult::Known;
   }
 
+  auto ImpliesNoCommonBits = [&](Value *Cond, bool IsTrue) {
+    CmpPredicate Pred;
+    Value *A, *B;
+    if (match(Cond, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+      if (!IsTrue)
+        Pred = ICmpInst::getInversePredicate(Pred);
+      if (Pred == ICmpInst::ICMP_EQ &&
+          match(A, m_c_And(m_Specific(LHS), m_Specific(RHS))) &&
+          match(B, m_Zero()))
+        return true;
+    }
+    return false;
+  };
+
+  if (SQ.AC) {
+    for (auto &AssumeVH : SQ.AC->assumptionsFor(LHS)) {
+      if (!AssumeVH)
+        continue;
+      auto *I = cast<CallInst>(AssumeVH);
+      if (isValidAssumeForContext(I, SQ) &&
+          ImpliesNoCommonBits(I->getArgOperand(0), /*IsTrue=*/true))
+        return NoCommonBitsSetResult::Known;
+    }
+  }
+
+  if (SQ.DC && SQ.CxtI && SQ.DT) {
+    for (CondBrInst *BI : SQ.DC->conditionsFor(LHS)) {
+      Value *Cond = BI->getCondition();
+      if (SQ.DT->dominates(BasicBlockEdge(BI->getParent(), BI->getSuccessor(0)),
+                           SQ.CxtI->getParent()) &&
+          ImpliesNoCommonBits(Cond, /*IsTrue=*/true))
+        return NoCommonBitsSetResult::Known;
+
+      if (SQ.DT->dominates(BasicBlockEdge(BI->getParent(), BI->getSuccessor(1)),
+                           SQ.CxtI->getParent()) &&
+          ImpliesNoCommonBits(Cond, /*IsTrue=*/false))
+        return NoCommonBitsSetResult::Known;
+    }
+  }
+
   return NoCommonBitsSetResult::Unknown;
 }
 

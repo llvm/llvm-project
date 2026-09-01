@@ -8,7 +8,7 @@ define i32 @test_assume_and(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %and = and i32 %a, %b
