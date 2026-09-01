@@ -17142,6 +17142,10 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
 
   maybeAddDeclWithEffects(BD);
 
+  // A block body parsed under a constrained FP environment must be strict-FP.
+  if (BSI->UsesFPIntrin && !BD->hasAttr<StrictFPAttr>())
+    BD->addAttr(StrictFPAttr::CreateImplicit(Context));
+
   if (BSI->HasImplicitReturnType)
     deduceClosureReturnType(*BSI);
 
