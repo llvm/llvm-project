@@ -11,12 +11,12 @@ define void @splat_trim_combined(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, ptr %F,
 ; CHECK-NEXT:    [[D0:%.*]] = load i64, ptr [[D]], align 8
 ; CHECK-NEXT:    [[E0:%.*]] = load i64, ptr [[E]], align 8
 ; CHECK-NEXT:    [[F0:%.*]] = load i64, ptr [[F]], align 8
-; CHECK-NEXT:    [[C3:%.*]] = icmp sgt i64 [[E0]], 42
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i64 [[C0]], 42
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i64 [[A0]], 42
-; CHECK-NEXT:    [[V3:%.*]] = select i1 [[C3]], i64 [[E0]], i64 42
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[C2]], i64 [[C0]], i64 42
 ; CHECK-NEXT:    [[V1:%.*]] = select i1 [[C1]], i64 [[A0]], i64 42
+; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i64 [[C0]], 42
+; CHECK-NEXT:    [[V2:%.*]] = select i1 [[C2]], i64 [[C0]], i64 42
+; CHECK-NEXT:    [[C3:%.*]] = icmp sgt i64 [[E0]], 42
+; CHECK-NEXT:    [[V3:%.*]] = select i1 [[C3]], i64 [[E0]], i64 42
 ; CHECK-NEXT:    [[AS2:%.*]] = add i64 [[V1]], [[V2]]
 ; CHECK-NEXT:    [[AS3:%.*]] = sub i64 [[V1]], [[V2]]
 ; CHECK-NEXT:    [[AS1:%.*]] = add i64 [[V1]], [[V2]]
