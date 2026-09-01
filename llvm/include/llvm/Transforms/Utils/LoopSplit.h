@@ -115,11 +115,15 @@ private:
   ScalarEvolution *SE;
   DominatorTree *DT;
 
-  // Induction analysis, populated during legality analysis.
-  const SCEV *InductionStart = nullptr; // value on the first iteration.
-  const SCEV *InductionEnd = nullptr;   // value on the last iteration.
-  bool InductionIsSigned = false;       // iteration ordering signedness.
-  bool Descending = false;              // step is -1 (the loop counts down).
+  /// IV SCEV on the first iteration.
+  const SCEV *InductionStart = nullptr;
+  /// IV SCEV on the last iteration (from backedge-taken count).
+  const SCEV *InductionEnd = nullptr;
+  /// True if the original loop treats the IV as signed, false if unsigned.
+  /// Partition guards and end bounds follow the same signedness.
+  bool InductionIsSigned = false;
+  /// Induction step is -1 (loop counts down).
+  bool Descending = false;
 
   /// One record per partition, in add order.
   SmallVector<PartitionInfo, 4> Partitions;
