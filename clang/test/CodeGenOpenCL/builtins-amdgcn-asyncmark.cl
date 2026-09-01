@@ -5,13 +5,42 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu12.50-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 // REQUIRES: amdgpu-registered-target
 
+// The argument is a mask of the stages to leave out, and reaches the intrinsic
+// unchanged. An empty mask leaves out nothing, so it covers every stage.
+
 // CHECK-LABEL: @test_invocation(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark()
-// CHECK-NEXT:    call void @llvm.amdgcn.wait.asyncmark(i16 0)
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 0)
+// CHECK-NEXT:    call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 0)
 // CHECK-NEXT:    ret void
 //
 void test_invocation() {
-  __builtin_amdgcn_asyncmark();
-  __builtin_amdgcn_wait_asyncmark(0);
+  __builtin_amdgcn_asyncmark(0);
+  __builtin_amdgcn_wait_asyncmark(0, 0);
+}
+
+// Every combination of stage bits is meaningful, so the masks below are just
+// the complement of the stages they cover: 2046 leaves in TENSOR alone, 2045
+// GLOBAL_LOAD_ASYNC_TO_LDS alone, and 2038 the two of TENSOR and
+// ASYNC_LDS_STORE. A mask may also name reserved stages, or every stage at once.
+
+// CHECK-LABEL: @test_masks(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 2046)
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 2045)
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 2038)
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 2000)
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 2047)
+// CHECK-NEXT:    call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 2046)
+// CHECK-NEXT:    call void @llvm.amdgcn.wait.asyncmark(i16 2, i32 2038)
+// CHECK-NEXT:    ret void
+//
+void test_masks() {
+  __builtin_amdgcn_asyncmark(2046);
+  __builtin_amdgcn_asyncmark(2045);
+  __builtin_amdgcn_asyncmark(2038);
+  __builtin_amdgcn_asyncmark(2000);
+  __builtin_amdgcn_asyncmark(2047);
+  __builtin_amdgcn_wait_asyncmark(1, 2046);
+  __builtin_amdgcn_wait_asyncmark(2, 2038);
 }

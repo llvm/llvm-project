@@ -1689,6 +1689,19 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       switch (F->getIntrinsicID()) {
       default:
         break;
+      // Legacy asyncmark intrinsics without the stage operand.
+      case Intrinsic::amdgcn_asyncmark:
+        if (F->arg_size() == 0) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_wait_asyncmark:
+        if (F->arg_size() == 1) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
       // Legacy wmma iu intrinsics without the optional clamp operand.
       case Intrinsic::amdgcn_wmma_i32_16x16x64_iu8:
         if (F->arg_size() == 7) {
@@ -5250,6 +5263,29 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->copyMetadata(*CI);
     return NewCall;
   };
+
+  // Legacy asyncmark intrinsics missed the stage mask operand. Append an empty
+  // mask, which omits/ignores no stage and so preserves the behavior they had.
+  if ((F->getIntrinsicID() == Intrinsic::amdgcn_asyncmark &&
+       CI->arg_empty()) ||
+      (F->getIntrinsicID() == Intrinsic::amdgcn_wait_asyncmark &&
+       CI->arg_size() == 1)) {
+    SmallVector<Value *, 2> Args(CI->args());
+    Args.push_back(Builder.getInt32(0));
+
+    Function *NewDecl =
+        Intrinsic::getOrInsertDeclaration(F->getParent(), F->getIntrinsicID());
+
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    auto *NewCall = cast<CallInst>(Builder.CreateCall(NewDecl, Args, Bundles));
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->copyMetadata(*CI);
+    return NewCall;
+  }
 
   if (F->getIntrinsicID() == Intrinsic::amdgcn_wmma_i32_16x16x64_iu8) {
     assert(CI->arg_size() == 7 && "Legacy int_amdgcn_wmma_i32_16x16x64_iu8 "
