@@ -22,6 +22,7 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
+#include <algorithm>
 #include <array>
 #include <optional>
 #include <set>
@@ -1353,6 +1354,64 @@ inline bool IsCUDAUnifiedSymbol(const Symbol &sym) {
   return IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Unified);
 }
 
+inline bool HasCUDADataAttr(const Symbol &sym) {
+  const auto *details{
+      sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()};
+  return details && details->cudaDataAttr().has_value();
+}
+
+// The data attribute of a component describes the data that the component
+// designates, so it hides the attribute of the object that the component is
+// taken from: in a%b, where a is managed and b is device, a%b designates
+// device data. Collect the symbols of the expression, leaving out the ones
+// that a component with an attribute hides.
+template <typename A>
+semantics::UnorderedSymbolSet CollectEffectiveCudaSymbols(const A &expr) {
+  semantics::UnorderedSymbolSet result{CollectCudaSymbols(expr)};
+  SymbolVector symbols{GetSymbolVector(expr)};
+  // GetSymbolVector lists the base of a component chain before its components.
+  // Reverse it to visit the innermost component of a chain first.
+  std::reverse(symbols.begin(), symbols.end());
+  bool hidden{false};
+  for (const Symbol &sym : symbols) {
+    bool isComponent{sym.owner().IsDerivedType()};
+    if (hidden) {
+      result.erase(sym);
+    } else if (isComponent && HasCUDADataAttr(sym)) {
+      hidden = true;
+    }
+    if (!isComponent) {
+      hidden = false; // The base ends the component chain.
+    }
+  }
+  return result;
+}
+
+// Get the number of symbols with the CUDA managed attribute in a set.
+inline int CountCUDAManagedSymbols(
+    const semantics::UnorderedSymbolSet &symbols) {
+  int count{0};
+  for (const Symbol &sym : symbols) {
+    if (IsCUDAManagedSymbol(sym)) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+// Get the number of symbols with a CUDA device attribute other than unified in
+// a set.
+inline int CountCUDANonUnifiedSymbols(
+    const semantics::UnorderedSymbolSet &symbols) {
+  int count{0};
+  for (const Symbol &sym : symbols) {
+    if (IsCUDADeviceSymbol(sym) && !IsCUDAUnifiedSymbol(sym)) {
+      ++count;
+    }
+  }
+  return count;
+}
+
 // Non-allocatable module-level managed/unified variables use pointer
 // indirection through a companion global in __nv_managed_data__.
 // Explicit data transfers (cudaMemcpy) must be avoided for these
@@ -1470,15 +1529,20 @@ template <typename A> inline bool IsWholeManagedArray(const A &expr) {
 // Unified data is host memory that the device can also access, so it takes the
 // place of host data in the rules above and an assignment between unified sides
 // is host code.
+// The side of an assignment is classified from the data it designates, so the
+// attribute of a component prevails over the attribute of the object it is
+// taken from.
 // Return true if the assignment is one of the copies above.
 template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
+  semantics::UnorderedSymbolSet lhsSymbols{CollectEffectiveCudaSymbols(lhs)};
+  semantics::UnorderedSymbolSet rhsSymbols{CollectEffectiveCudaSymbols(rhs)};
   // Unified data is left out of these counts and checks so that it is handled
   // as host data.
-  bool lhsHasManaged{HasCUDAManagedSymbols(lhs)};
-  bool lhsIsHost{!HasCUDANonUnifiedSymbols(lhs)};
-  int rhsNbManagedSymbols{GetNbOfCUDAManagedSymbols(rhs)};
-  int rhsNbSymbols{GetNbOfCUDANonUnifiedSymbols(rhs)};
+  bool lhsHasManaged{CountCUDAManagedSymbols(lhsSymbols) > 0};
+  bool lhsIsHost{CountCUDANonUnifiedSymbols(lhsSymbols) == 0};
+  int rhsNbManagedSymbols{CountCUDAManagedSymbols(rhsSymbols)};
+  int rhsNbSymbols{CountCUDANonUnifiedSymbols(rhsSymbols)};
 
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
