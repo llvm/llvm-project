@@ -1168,10 +1168,11 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       if (TargetInfo::adaptsToHostTarget(Target, HostTriple) &&
           Target.getArchPointerBitWidth() !=
               HostTriple.getArchPointerBitWidth()) {
-        Diag(diag::err_target_unsupported_host_pointer_related_type)
-            << Target.str() << HostTriple.str() << /*pointer width*/ 0
-            << HostTriple.getArchPointerBitWidth()
-            << Target.getArchPointerBitWidth();
+        Diag(diag::err_incompatible_host_and_device_targets)
+            << Target.str() << HostTriple.str();
+        Diag(diag::note_incompatible_host_and_device_type)
+            << /*size*/ 1 << "void *" << HostTriple.getArchPointerBitWidth() / 8
+            << Target.getArchPointerBitWidth() / 8;
         continue;
       }
 

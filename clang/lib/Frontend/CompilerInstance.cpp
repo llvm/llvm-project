@@ -170,7 +170,7 @@ bool CompilerInstance::createTarget() {
   if (auto *Aux = getAuxTarget()) {
     getTarget().setAuxTarget(Aux);
 
-    if (!getTarget().checkHostPointerRelatedTypes(
+    if (!getTarget().checkHostCompatibility(
             getDiagnostics(), Aux->getTriple(),
             TargetInfo::HostAdaptation::SetAuxTarget))
       return false;

@@ -12,11 +12,23 @@
 // RUN: not %clang_cc1 -triple spirv64-unknown-unknown -aux-triple i386-unknown-linux-gnu \
 // RUN:   -fsycl-is-device -fsyntax-only %s 2>&1 | FileCheck --check-prefix=SPIRV %s
 
-// AMDGCN: error: device target 'amdgcn-amd-amdhsa' takes a pointer width of 32 bits from host target 'i386-unknown-linux-gnu', but requires 64 bits
-// R600: error: device target 'r600-unknown-unknown' takes a pointer width of 64 bits from host target 'x86_64-unknown-linux-gnu', but requires 32 bits
-// NVPTX: error: device target 'nvptx64-nvidia-cuda' takes a pointer width of 32 bits from host target 'i386-unknown-linux-gnu', but requires 64 bits
-// SPIR: error: device target 'spir-unknown-unknown' takes a pointer width of 64 bits from host target 'x86_64-unknown-linux-gnu', but requires 32 bits
-// SPIRV: error: device target 'spirv64-unknown-unknown' takes a pointer width of 32 bits from host target 'i386-unknown-linux-gnu', but requires 64 bits
+// Every type that disagrees with the device data layout is noted.
+
+// AMDGCN: error: device target 'amdgcn-amd-amdhsa' is not compatible with host target 'i386-unknown-linux-gnu'
+// AMDGCN-NEXT: note: size of type 'void *' for the host target (4 bytes) does not match the size for the device target (8 bytes)
+// AMDGCN-NEXT: note: alignment of type 'void *' for the host target (4 bytes) does not match the alignment for the device target (8 bytes)
+// AMDGCN-NEXT: note: size of type 'size_t' for the host target (4 bytes) does not match the size for the device target (8 bytes)
+// AMDGCN-NEXT: note: size of type 'ptrdiff_t' for the host target (4 bytes) does not match the size for the device target (8 bytes)
+// AMDGCN-NEXT: note: size of type 'intptr_t' for the host target (4 bytes) does not match the size for the device target (8 bytes)
+
+// R600: error: device target 'r600-unknown-unknown' is not compatible with host target 'x86_64-unknown-linux-gnu'
+// R600-NEXT: note: size of type 'void *' for the host target (8 bytes) does not match the size for the device target (4 bytes)
+// NVPTX: error: device target 'nvptx64-nvidia-cuda' is not compatible with host target 'i386-unknown-linux-gnu'
+// NVPTX-NEXT: note: size of type 'void *' for the host target (4 bytes) does not match the size for the device target (8 bytes)
+// SPIR: error: device target 'spir-unknown-unknown' is not compatible with host target 'x86_64-unknown-linux-gnu'
+// SPIR-NEXT: note: size of type 'void *' for the host target (8 bytes) does not match the size for the device target (4 bytes)
+// SPIRV: error: device target 'spirv64-unknown-unknown' is not compatible with host target 'i386-unknown-linux-gnu'
+// SPIRV-NEXT: note: size of type 'void *' for the host target (4 bytes) does not match the size for the device target (8 bytes)
 
 // OpenMP device compilation adapts at both stages too.
 
@@ -36,9 +48,12 @@
 // RUN: not %clang_cc1 -triple spirv64-amd-amdhsa -aux-triple spir-unknown-unknown \
 // RUN:   -fsycl-is-device -fsyntax-only %s 2>&1 | FileCheck --check-prefix=AMDHSA-SPIR %s
 
-// SPIRV-NVPTX: error: device target 'spirv64-unknown-unknown' takes a pointer width of 32 bits from host target 'nvptx-nvidia-cuda', but requires 64 bits
-// AMDGCN-R600: error: device target 'amdgcn-amd-amdhsa' takes a pointer width of 32 bits from host target 'r600-unknown-unknown', but requires 64 bits
-// AMDHSA-SPIR: error: device target 'spirv64-amd-amdhsa' takes a pointer width of 32 bits from host target 'spir-unknown-unknown', but requires 64 bits
+// SPIRV-NVPTX: error: device target 'spirv64-unknown-unknown' is not compatible with host target 'nvptx-nvidia-cuda'
+// SPIRV-NVPTX-NEXT: note: size of type 'void *' for the host target (4 bytes) does not match the size for the device target (8 bytes)
+// AMDGCN-R600: error: device target 'amdgcn-amd-amdhsa' is not compatible with host target 'r600-unknown-unknown'
+// AMDGCN-R600-NEXT: note: size of type 'void *' for the host target (4 bytes) does not match the size for the device target (8 bytes)
+// AMDHSA-SPIR: error: device target 'spirv64-amd-amdhsa' is not compatible with host target 'spir-unknown-unknown'
+// AMDHSA-SPIR-NEXT: note: size of type 'void *' for the host target (4 bytes) does not match the size for the device target (8 bytes)
 
 // The host pointer width is taken from the host target rather than from its
 // triple, so an ABI that narrows pointers is caught too.
@@ -50,9 +65,12 @@
 // RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnux32 \
 // RUN:   -fcuda-is-device -fsyntax-only -x hip %s 2>&1 | FileCheck --check-prefix=AMDGCN-X32 %s
 
-// SPIR64-X32: error: device target 'spir64-unknown-unknown' takes a pointer width of 32 bits from host target 'x86_64-unknown-linux-gnux32', but requires 64 bits
-// NVPTX64-X32: error: device target 'nvptx64-nvidia-cuda' takes a pointer width of 32 bits from host target 'x86_64-unknown-linux-gnux32', but requires 64 bits
-// AMDGCN-X32: error: device target 'amdgcn-amd-amdhsa' takes a pointer width of 32 bits from host target 'x86_64-unknown-linux-gnux32', but requires 64 bits
+// SPIR64-X32: error: device target 'spir64-unknown-unknown' is not compatible with host target 'x86_64-unknown-linux-gnux32'
+// SPIR64-X32-NEXT: note: size of type 'void *' for the host target (4 bytes) does not match the size for the device target (8 bytes)
+// NVPTX64-X32: error: device target 'nvptx64-nvidia-cuda' is not compatible with host target 'x86_64-unknown-linux-gnux32'
+// NVPTX64-X32-NEXT: note: size of type 'void *' for the host target (4 bytes) does not match the size for the device target (8 bytes)
+// AMDGCN-X32: error: device target 'amdgcn-amd-amdhsa' is not compatible with host target 'x86_64-unknown-linux-gnux32'
+// AMDGCN-X32-NEXT: note: size of type 'void *' for the host target (4 bytes) does not match the size for the device target (8 bytes)
 
 // NVPTX and AMDGPU take the pointer alignment from the host too, so a host that
 // under aligns pointers is a mismatch even where the widths agree.
@@ -62,8 +80,14 @@
 // RUN: not %clang_cc1 -triple r600-unknown-unknown -aux-triple m68k-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -fsyntax-only -x hip %s 2>&1 | FileCheck --check-prefix=R600-M68K %s
 
-// NVPTX-M68K: error: device target 'nvptx-nvidia-cuda' takes a pointer alignment of 16 bits from host target 'm68k-unknown-linux-gnu', but requires 32 bits
-// R600-M68K: error: device target 'r600-unknown-unknown' takes a pointer alignment of 16 bits from host target 'm68k-unknown-linux-gnu', but requires 32 bits
+// The alignment is then the only type detail noted.
+
+// NVPTX-M68K: error: device target 'nvptx-nvidia-cuda' is not compatible with host target 'm68k-unknown-linux-gnu'
+// NVPTX-M68K-NEXT: note: alignment of type 'void *' for the host target (2 bytes) does not match the alignment for the device target (4 bytes)
+// NVPTX-M68K-NOT: note:
+// R600-M68K: error: device target 'r600-unknown-unknown' is not compatible with host target 'm68k-unknown-linux-gnu'
+// R600-M68K-NEXT: note: alignment of type 'void *' for the host target (2 bytes) does not match the alignment for the device target (4 bytes)
+// R600-M68K-NOT: note:
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -fsyntax-only -x hip %s

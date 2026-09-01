@@ -348,13 +348,13 @@ public:
     return getHostAdaptation(DeviceTriple, HostTriple) != HostAdaptation::None;
   }
 
-  /// Reports an error if this target adapts to the given host target at the
-  /// given stage and ended up with pointer related types that disagree with its
-  /// own data layout. Does nothing if it does not adapt at that stage. Returns
-  /// true if no error was reported.
-  bool checkHostPointerRelatedTypes(DiagnosticsEngine &Diags,
-                                    const llvm::Triple &HostTriple,
-                                    HostAdaptation Stage) const;
+  /// Reports an error, and a note per offending type, if this target adapts to
+  /// the given host target at the given stage and ended up with pointer related
+  /// types that disagree with its own data layout. Does nothing if it does not
+  /// adapt at that stage. Returns true if no error was reported.
+  bool checkHostCompatibility(DiagnosticsEngine &Diags,
+                              const llvm::Triple &HostTriple,
+                              HostAdaptation Stage) const;
 
   virtual ~TargetInfo();
 

@@ -863,32 +863,47 @@ TargetInfo::getHostAdaptation(const llvm::Triple &DeviceTriple,
   return HostAdaptation::None;
 }
 
-bool TargetInfo::checkHostPointerRelatedTypes(DiagnosticsEngine &Diags,
-                                              const llvm::Triple &HostTriple,
-                                              HostAdaptation Stage) const {
+bool TargetInfo::checkHostCompatibility(DiagnosticsEngine &Diags,
+                                        const llvm::Triple &HostTriple,
+                                        HostAdaptation Stage) const {
   assert(Stage != HostAdaptation::None && "Nothing to check");
   if (getHostAdaptation(getTriple(), HostTriple) != Stage)
     return true;
 
-  // The device data layout fixes the width of every one of these types.
+  // The device data layout fixes the size and the alignment of a pointer, and
+  // with them the width of every integer type that has to hold one.
   unsigned Required = getTriple().getArchPointerBitWidth();
-  // The order matches the %select in the diagnostic below.
-  unsigned Widths[] = {static_cast<unsigned>(getPointerWidth(LangAS::Default)),
-                       static_cast<unsigned>(getPointerAlign(LangAS::Default)),
-                       getTypeWidth(getSizeType()),
-                       getTypeWidth(getPtrDiffType(LangAS::Default)),
-                       getTypeWidth(getIntPtrType())};
+  struct Mismatch {
+    unsigned Which;
+    const char *TypeName;
+    unsigned HostBits;
+  };
+  // The order matches the %select in note_incompatible_host_and_device_type.
+  enum { Alignment, Size };
 
-  for (auto [Which, Width] : llvm::enumerate(Widths)) {
-    if (Width != Required) {
-      Diags.Report(diag::err_target_unsupported_host_pointer_related_type)
-          << getTriple().str() << HostTriple.str()
-          << static_cast<unsigned>(Which) << Width << Required;
-      return false;
-    }
-  }
+  SmallVector<Mismatch, 5> Mismatches;
+  auto Check = [&](unsigned Which, const char *TypeName, uint64_t HostBits) {
+    if (HostBits != Required)
+      Mismatches.push_back({Which, TypeName, static_cast<unsigned>(HostBits)});
+  };
 
-  return true;
+  Check(Size, "void *", getPointerWidth(LangAS::Default));
+  Check(Alignment, "void *", getPointerAlign(LangAS::Default));
+  Check(Size, "size_t", getTypeWidth(getSizeType()));
+  Check(Size, "ptrdiff_t", getTypeWidth(getPtrDiffType(LangAS::Default)));
+  Check(Size, "intptr_t", getTypeWidth(getIntPtrType()));
+
+  if (Mismatches.empty())
+    return true;
+
+  Diags.Report(diag::err_incompatible_host_and_device_targets)
+      << getTriple().str() << HostTriple.str();
+  for (const Mismatch &M : Mismatches)
+    Diags.Report(diag::note_incompatible_host_and_device_type)
+        << M.Which << M.TypeName << M.HostBits / getCharWidth()
+        << Required / getCharWidth();
+
+  return false;
 }
 
 /// CreateTargetInfo - Return the target info object for the specified target
@@ -908,8 +923,8 @@ TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
   Target->TargetOpts = Opts;
 
   // Targets that adapt in their constructor have done so by now.
-  if (!Target->checkHostPointerRelatedTypes(
-          Diags, llvm::Triple(Opts->HostTriple), HostAdaptation::Constructor))
+  if (!Target->checkHostCompatibility(Diags, llvm::Triple(Opts->HostTriple),
+                                      HostAdaptation::Constructor))
     return nullptr;
 
   // Set the target CPU if specified.
