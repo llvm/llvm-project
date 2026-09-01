@@ -4038,6 +4038,10 @@ public:
                                      ArrayRef<BindingDecl *> Bindings = {});
 
 private:
+  /// Maps a DeclSpec::SCS to a VarDecl::StorageClass. Any error reporting is up
+  /// to the caller; illegal input values are mapped to SC_None.
+  static StorageClass StorageClassSpecToVarDeclStorageClass(const DeclSpec &DS);
+
   // Perform a check on an AsmLabel to verify its consistency and emit
   // diagnostics in case of an error.
   void CheckAsmLabel(Scope *S, Expr *AsmLabelExpr, StorageClass SC,

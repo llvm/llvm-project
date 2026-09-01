@@ -5666,11 +5666,7 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
   return Invalid;
 }
 
-/// StorageClassSpecToVarDeclStorageClass - Maps a DeclSpec::SCS to
-/// a VarDecl::StorageClass. Any error reporting is up to the caller:
-/// illegal input values are mapped to SC_None.
-static StorageClass
-StorageClassSpecToVarDeclStorageClass(const DeclSpec &DS) {
+StorageClass Sema::StorageClassSpecToVarDeclStorageClass(const DeclSpec &DS) {
   DeclSpec::SCS StorageClassSpec = DS.getStorageClassSpec();
   assert(StorageClassSpec != DeclSpec::SCS_typedef &&
          "Parser allowed 'typedef' as storage class VarDecl.");
