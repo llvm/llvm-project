@@ -325,6 +325,69 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
 }
 
+/// Return true if \p S is known to be monotonically non-decreasing
+/// (in the unsigned sense, without unsigned wrap) across iterations of \p L.
+static bool isKnownNonDecreasingInLoop(const SCEV *S, const Loop *L,
+                                       ScalarEvolution &SE) {
+  if (SE.isLoopInvariant(S, L))
+    return true;
+
+  switch (S->getSCEVType()) {
+  case scUDivExpr: {
+    // Non-decreasing in the numerator when the divisor is loop-invariant.
+    const auto *UDiv = cast<SCEVUDivExpr>(S);
+    return SE.isLoopInvariant(UDiv->getRHS(), L) &&
+           isKnownNonDecreasingInLoop(UDiv->getLHS(), L, SE);
+  }
+  case scAddRecExpr: {
+    auto *AR = cast<SCEVAddRecExpr>(S);
+    assert(AR->getLoop() == L &&
+           "trying to check for AddRec in different loop");
+    return SE.getMonotonicPredicateType(AR, ICmpInst::ICMP_UGE) ==
+           ScalarEvolution::MonotonicPredicateType::MonotonicallyIncreasing;
+  }
+  default:
+    return false;
+  }
+}
+
+/// Try to bound a loop-variant pointer that is not an affine AddRec.
+///
+/// If the offset is provably monotonically non-decreasing the accessed range is
+/// bounded by the offset's value at the first iteration (via
+/// SplitIntoInitAndPostInc) and last iteration (via getSCEVAtScope)
+///
+/// Returns {nullptr, nullptr} if no such bound can be formed.
+static std::pair<const SCEV *, const SCEV *>
+getNonAffineMonotonicBounds(const Loop *Lp, const SCEV *PtrExpr,
+                            ScalarEvolution *SE) {
+  const auto *PtrAdd = dyn_cast<SCEVAddExpr>(PtrExpr);
+  if (!PtrAdd || !PtrAdd->hasNoUnsignedWrap())
+    return {nullptr, nullptr};
+
+  const SCEV *Base = *find_if(PtrAdd->operands(), [](const auto &Op) {
+    return Op->getType()->isPointerTy();
+  });
+  if (isa<SCEVCouldNotCompute>(Base) || !SE->isLoopInvariant(Base, Lp))
+    return {nullptr, nullptr};
+
+  const SCEV *Offset = SE->getMinusSCEV(PtrExpr, Base);
+  if (isa<SCEVCouldNotCompute>(Offset) ||
+      !isKnownNonDecreasingInLoop(Offset, Lp, *SE))
+    return {nullptr, nullptr};
+
+  const SCEV *OffStart = SE->SplitIntoInitAndPostInc(Lp, Offset).first;
+  const SCEV *OffEnd = SE->getSCEVAtScope(Offset, Lp->getParentLoop());
+  if (isa<SCEVCouldNotCompute>(OffStart) || isa<SCEVCouldNotCompute>(OffEnd) ||
+      !SE->isLoopInvariant(OffStart, Lp) || !SE->isLoopInvariant(OffEnd, Lp))
+    return {nullptr, nullptr};
+
+  assert(SE->isKnownPredicate(CmpInst::ICMP_ULE, OffStart, OffEnd) &&
+         "Start must be provably <= End for monotonic expressions");
+
+  return {SE->getAddExpr(Base, OffStart), SE->getAddExpr(Base, OffEnd)};
+}
+
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
@@ -405,8 +468,13 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       ScStart = SE->getUMinExpr(ScStart, ScEnd);
       ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
     }
-  } else
-    return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
+  } else {
+    // The pointer is loop-variant but not an affine AddRec. Try to form a
+    // tight bound for a monotonic offset (see getNonAffineMonotonicBounds).
+    std::tie(ScStart, ScEnd) = getNonAffineMonotonicBounds(Lp, PtrExpr, SE);
+    if (!ScStart)
+      return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
+  }
 
   assert(SE->isLoopInvariant(ScStart, Lp) && "ScStart needs to be invariant");
   assert(SE->isLoopInvariant(ScEnd, Lp) && "ScEnd needs to be invariant");
@@ -1317,8 +1385,13 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
     if (!AR && Assume)
       AR = PSE.getAsAddRec(Ptr, &Predicates);
-    if (!AR || !AR->isAffine())
-      return false;
+    if (!AR || !AR->isAffine()) {
+      // Check if bounds for non-affine monotonic expressions can be formed.
+      if (!Assume ||
+          !getNonAffineMonotonicBounds(TheLoop, P.getPointer(), SE).first)
+        return false;
+      continue;
+    }
 
     // If there's only one option for Ptr, commit the predicates collected by
     // getAsAddRec and look Ptr up again afterwards: the lookup below reads the
