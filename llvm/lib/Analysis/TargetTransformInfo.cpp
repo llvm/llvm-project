@@ -1445,6 +1445,11 @@ bool TargetTransformInfo::isLegalToVectorizeStoreChain(
                                                AddrSpace);
 }
 
+unsigned
+TargetTransformInfo::getMaxAtomicVectorSizeInBits(unsigned AddrSpace) const {
+  return TTIImpl->getMaxAtomicVectorSizeInBits(AddrSpace);
+}
+
 bool TargetTransformInfo::isLegalToVectorizeReduction(
     const RecurrenceDescriptor &RdxDesc, ElementCount VF) const {
   return TTIImpl->isLegalToVectorizeReduction(RdxDesc, VF);
