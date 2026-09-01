@@ -312,6 +312,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
               cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinSurfaceDeviceType())
         return ty;
     } else if (type->isCUDADeviceBuiltinTextureType()) {
+      if (mlir::Type ty =
+              cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinTextureDeviceType())
+        return ty;
+
       assert(!cir::MissingFeatures::cudaTextureType());
     }
   }
