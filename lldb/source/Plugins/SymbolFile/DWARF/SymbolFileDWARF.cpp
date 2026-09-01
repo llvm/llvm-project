@@ -2344,6 +2344,8 @@ void SymbolFileDWARF::FindGlobalVariables(
 
   // Technically not a mangled name, but a support variable emitted by clang.
   // Regardless, we need an exact lookup
+  //
+  // FIXME: Replace this with a constant shared between Clang and LLDB
   if (name == "__clang_vtable")
     name_is_mangled = true;
 

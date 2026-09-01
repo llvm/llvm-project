@@ -49,8 +49,8 @@ TypeAndOrName ItaniumABIRuntime::FindTypeInfoWithClangVTable(
                                  CompilerDeclContext(), -1, vars);
 
   Log *log = GetLog(LLDBLog::Object);
-  LLDB_LOGF(log, "0x%16.16" PRIx64 ": found %zu __clang_vtable variables\n",
-            in_value.GetPointerValue().address, vars.GetSize());
+  LLDB_LOG(log, "{0:x}: found {1} __clang_vtable variables",
+           in_value.GetPointerValue().address, vars.GetSize());
 
   for (lldb::VariableSP var : vars) {
     auto valobj = ValueObjectVariable::Create(m_process, var);
@@ -59,10 +59,10 @@ TypeAndOrName ItaniumABIRuntime::FindTypeInfoWithClangVTable(
 
     auto type_sp = var->GetEnclosingType();
     if (!type_sp) {
-      LLDB_LOGF(log,
-                "0x%16.16" PRIx64 ": Found __clang_vtable at 0x%16.16" PRIx64
-                ", but not the enclosing type!\n",
-                in_value.GetPointerValue().address, valobj->GetLoadAddress());
+      LLDB_LOG(
+          log,
+          "{0:x}: Found __clang_vtable at {1:x}, but not the enclosing type!",
+          in_value.GetPointerValue().address, valobj->GetLoadAddress());
 
       // Failure to find the type is either an error in the debug info, or the
       // symptom of a module with debug kind info which doesn't support this
@@ -71,21 +71,20 @@ TypeAndOrName ItaniumABIRuntime::FindTypeInfoWithClangVTable(
     }
 
     if (!TypeSystemClang::IsCXXClassType(type_sp->GetForwardCompilerType())) {
-      LLDB_LOGF(log,
-                "0x%16.16" PRIx64 ": Found __clang_vtable at 0x%16.16" PRIx64
-                " for '%s' which is not a CXXClassType. Ignoring\n",
-                in_value.GetPointerValue().address, valobj->GetLoadAddress(),
-                type_sp->GetQualifiedName().AsCString(""));
+      LLDB_LOG(log,
+               "{0:x}: Found __clang_vtable at {1:x} for '{2}' which is not a "
+               "CXXClassType. Ignoring",
+               in_value.GetPointerValue().address, valobj->GetLoadAddress(),
+               type_sp->GetQualifiedName().AsCString(""));
       continue;
     }
 
-    LLDB_LOGF(log,
-              "0x%16.16" PRIx64
-              ": static-type = '%s' has dynamic type: uid={0x%" PRIx64
-              "}, type-name='%s'\n",
-              in_value.GetPointerValue().address,
-              in_value.GetTypeName().AsCString(""), type_sp->GetID(),
-              type_sp->GetName().GetCString());
+    LLDB_LOG(log,
+             "{0:x}: static-type = '{1}' has dynamic type: uid={2:x}, "
+             "type-name='{3}'",
+             in_value.GetPointerValue().address,
+             in_value.GetTypeName().AsCString(""), type_sp->GetID(),
+             type_sp->GetName().GetCString());
 
     return TypeAndOrName(type_sp);
   }
