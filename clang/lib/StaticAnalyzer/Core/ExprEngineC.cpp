@@ -834,9 +834,8 @@ void ExprEngine::VisitUnaryExprOrTypeTraitExpr(
   Dst.insert(Engine.makeNodeWithBinding(Pred, Ex, V));
 }
 
-void ExprEngine::VisitStmtExpr(const StmtExpr *S, ExplodedNode *Pred,
+void ExprEngine::VisitStmtExpr(const StmtExpr *SE, ExplodedNode *Pred,
                                ExplodedNodeSet &Dst) {
-  const auto *SE = cast<StmtExpr>(S);
   if (SE->getSubStmt()->body_empty()) {
     // Empty statement expression.
     assert(SE->getType() == getContext().VoidTy &&
