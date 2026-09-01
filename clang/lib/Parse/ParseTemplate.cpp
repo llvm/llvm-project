@@ -1511,12 +1511,12 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), FunD);
 
-  assert((!isa<FunctionTemplateDecl>(LPT.D) ||
-          cast<FunctionTemplateDecl>(LPT.D)
-                  ->getTemplateParameters()
-                  ->getDepth() == TemplateParameterDepth - 1) &&
-         "TemplateParameterDepth should be greater than the depth of "
-         "current template being instantiated!");
+  assert(
+      (!isa<FunctionTemplateDecl>(LPT.D) ||
+       cast<FunctionTemplateDecl>(LPT.D)->getTemplateParameters()->getDepth() ==
+           TemplateParameterDepth - 1) &&
+      "TemplateParameterDepth should be greater than the depth of "
+      "current template being instantiated!");
 
   ParseFunctionBody(LPT.D, FnScope);
   Actions.UnmarkAsLateParsedTemplate(FunD);
