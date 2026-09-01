@@ -20,9 +20,9 @@ end program
 
 ! CHECK-LABEL: func.func @_QQmain
 ! The pointer capture should not get an implicit default mapper.
-! CHECK: %[[PTR_PTEE_MAP:.*]] = omp.map.info {{.*}}map_clauses(implicit, tofrom){{.*}} {name = ""}
-! CHECK: %[[PTR_DESC_MAP:.*]] = omp.map.info {{.*}}members(%[[PTR_PTEE_MAP]]{{.*}}){{.*}} {name = "ptr"}
+! CHECK: %[[PTR_PTEE_MAP:.*]] = omp.map.info {{.*}}map_clauses(implicit, tofrom){{.*}} name("")
+! CHECK: %[[PTR_DESC_MAP:.*]] = omp.map.info {{.*}}members(%[[PTR_PTEE_MAP]]{{.*}}){{.*}} name("ptr")
 
 ! The allocatable capture should still use the implicit default mapper.
-! CHECK: %[[ALLOC_PTEE_MAP:.*]] = omp.map.info {{.*}}map_clauses(implicit, tofrom){{.*}}mapper(@_QQFt_omp_default_mapper){{.*}} {name = ""}
-! CHECK: %[[ALLOC_DESC_MAP:.*]] = omp.map.info {{.*}}members(%[[ALLOC_PTEE_MAP]]{{.*}}){{.*}} {name = "al"}
+! CHECK: %[[ALLOC_PTEE_MAP:.*]] = omp.map.info {{.*}}map_clauses(implicit, tofrom){{.*}}mapper(@_QQFt_omp_default_mapper){{.*}} name("")
+! CHECK: %[[ALLOC_DESC_MAP:.*]] = omp.map.info {{.*}}members(%[[ALLOC_PTEE_MAP]]{{.*}}){{.*}} name("al")

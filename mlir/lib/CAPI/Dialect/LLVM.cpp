@@ -372,9 +372,37 @@ MlirAttribute mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
     intptr_t nImportedEntities, MlirAttribute const *importedEntities) {
   SmallVector<Attribute> importsStorage;
   importsStorage.reserve(nImportedEntities);
+  auto sourceLanguageAttr = DISourceLanguageNameAttr::get(
+      unwrap(ctx), sourceLanguage, /*name=*/0, /*version=*/std::nullopt,
+      sourceLanguageDialect);
   return wrap(DICompileUnitAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf,
-      cast<DistinctAttr>(unwrap(id)), sourceLanguage, sourceLanguageDialect,
+      cast<DistinctAttr>(unwrap(id)), sourceLanguageAttr,
+      cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
+      isOptimized, DIEmissionKind(emissionKind), isDebugInfoForProfiling,
+      DINameTableKind(nameTableKind),
+      cast<StringAttr>(unwrap(splitDebugFilename)),
+      llvm::map_to_vector(
+          unwrapList(nImportedEntities, importedEntities, importsStorage),
+          llvm::CastTo<DINodeAttr>)));
+}
+
+MlirAttribute mlirLLVMDICompileUnitAttrGetWithSourceLanguageName(
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    unsigned int sourceLanguageName, uint32_t sourceLanguageVersion,
+    unsigned int sourceLanguageDialect, MlirAttribute file,
+    MlirAttribute producer, bool isOptimized,
+    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
+    intptr_t nImportedEntities, MlirAttribute const *importedEntities) {
+  SmallVector<Attribute> importsStorage;
+  importsStorage.reserve(nImportedEntities);
+  auto sourceLanguageAttr = DISourceLanguageNameAttr::get(
+      unwrap(ctx), /*language=*/0, sourceLanguageName,
+      std::optional<uint32_t>(sourceLanguageVersion), sourceLanguageDialect);
+  return wrap(DICompileUnitAttr::get(
+      unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf,
+      cast<DistinctAttr>(unwrap(id)), sourceLanguageAttr,
       cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
       isOptimized, DIEmissionKind(emissionKind), isDebugInfoForProfiling,
       DINameTableKind(nameTableKind),

@@ -118,6 +118,13 @@ public:
   LLVM_ABI std::optional<TypeSize>
   getAllocationSizeInBits(const DataLayout &DL) const;
 
+  /// Get the size of the allocated type.  (This is the allocation size
+  /// ignoring the array size.)
+  LLVM_ABI TypeSize getAllocationBaseSize(const DataLayout &DL) const;
+
+  // Get whether the allocated type is a scalable type.
+  bool isScalable() const { return AllocatedType->isScalableTy(); }
+
   /// Return the type that is being allocated by the instruction.
   Type *getAllocatedType() const { return AllocatedType; }
   /// for use only in special circumstances that need to generically
