@@ -7,13 +7,13 @@
   ptr blockaddress(@drop_backedge, %false)
 ]
 
-define void @f(i1 %c) {
-; CHECK-LABEL: define void @f(
+define void @preserve_backedge(i1 %c) {
+; CHECK-LABEL: define void @preserve_backedge(
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[COMMON_RET:.*]]{{$}}
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[COMMON_RET:.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[COMMON_RET]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -22,14 +22,10 @@ entry:
 
 loop:
   %sel = select i1 %c, i32 0, i32 1
-  switch i32 %sel, label %other [
-  i32 0, label %loop
+  switch i32 %sel, label %loop [
   i32 1, label %exit
+  i32 2, label %exit
   ], !llvm.loop !0
-
-other:
-  call void @g()
-  ret void
 
 exit:
   ret void
@@ -79,3 +75,6 @@ declare void @g()
 declare void @h()
 
 !0 = distinct !{!0}
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]]}
+;.

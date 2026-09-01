@@ -74,6 +74,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
@@ -123,25 +124,6 @@ static const unsigned BitPartRecursionMaxDepth = 48;
 //  Local constant propagation.
 //
 
-void llvm::copyLoopMetadataIfSuccessorsPreserved(const Instruction &OldTerm,
-                                                 Instruction &NewTerm) {
-  MDNode *LoopMD = OldTerm.getMetadata(LLVMContext::MD_loop);
-  if (!LoopMD)
-    return;
-
-  assert(OldTerm.isTerminator() && NewTerm.isTerminator() &&
-         "expected terminators");
-  assert(OldTerm.getParent() == NewTerm.getParent() &&
-         "expected terminators in the same block");
-  assert(OldTerm.getNumSuccessors() != 0 && NewTerm.getNumSuccessors() != 0 &&
-         "expected terminators with successors");
-
-  if (all_of(successors(&OldTerm), [&](const BasicBlock *Succ) {
-        return is_contained(successors(&NewTerm), Succ);
-      }))
-    NewTerm.setMetadata(LLVMContext::MD_loop, LoopMD);
-}
-
 /// ConstantFoldTerminator - If a terminator instruction is predicated on a
 /// constant value, convert it into an unconditional branch to the constant
 /// destination.  This is a nontrivial operation because the successors of this
@@ -171,7 +153,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
 
       // Replace the conditional branch with an unconditional one.
       UncondBrInst *NewBI = Builder.CreateBr(Dest1, BI);
-      copyLoopMetadataIfSuccessorsPreserved(*BI, *NewBI);
+      NewBI->copyMetadata(*BI, {LLVMContext::MD_loop});
 
       Value *Cond = BI->getCondition();
       BI->eraseFromParent();
@@ -287,7 +269,10 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     if (TheOnlyDest) {
       // Insert the new branch.
       UncondBrInst *NewBI = Builder.CreateBr(TheOnlyDest, SI);
-      copyLoopMetadataIfSuccessorsPreserved(*SI, *NewBI);
+      // Preserve loop metadata when every switch destination is retained.
+      if (all_of(successors(SI),
+                 [&](const BasicBlock *Succ) { return Succ == TheOnlyDest; }))
+        NewBI->copyMetadata(*SI, {LLVMContext::MD_loop});
       BasicBlock *BB = SI->getParent();
 
       SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
@@ -330,7 +315,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // Insert the new branch.
       CondBrInst *NewBr = Builder.CreateCondBr(
           Cond, FirstCase.getCaseSuccessor(), SI->getDefaultDest(), SI);
-      copyLoopMetadataIfSuccessorsPreserved(*SI, *NewBr);
+      NewBr->copyMetadata(*SI, {LLVMContext::MD_loop});
       SmallVector<uint32_t> Weights;
       if (extractBranchWeights(*SI, Weights) && Weights.size() == 2) {
         uint32_t DefWeight = Weights[0];

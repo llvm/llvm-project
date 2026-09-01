@@ -5054,8 +5054,9 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
       NewTerm = Builder.CreateBr(FalseBB, OldTerm);
     }
   }
-  if (NewTerm)
-    copyLoopMetadataIfSuccessorsPreserved(*OldTerm, *NewTerm);
+  // If no successor block was removed, any loop backedge is preserved
+  if (NewTerm && RemovedSuccessors.empty())
+    NewTerm->copyMetadata(*OldTerm, {LLVMContext::MD_loop});
   eraseTerminatorAndDCECond(OldTerm);
 
   if (DTU) {
@@ -6173,11 +6174,12 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
 
   CondBrInst *NewCondBr = dyn_cast<CondBrInst>(NewBI);
   if (NewCondBr) {
+    // The new branch preserves both non-unreachable switch destinations.
+    NewCondBr->copyMetadata(*SI, {LLVMContext::MD_loop});
     // The switch weights do not map directly to the new branch and are
     // recomputed below.
     NewCondBr->setMetadata(LLVMContext::MD_prof, nullptr);
   }
-  copyLoopMetadataIfSuccessorsPreserved(*SI, *NewBI);
 
   // Update weight for the newly-created conditional branch.
   if (hasBranchWeightMD(*SI) && NewCondBr) {

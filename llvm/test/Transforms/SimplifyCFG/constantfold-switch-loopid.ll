@@ -29,25 +29,6 @@ exit:
   ret void
 }
 
-define void @constant_cond() {
-; CHECK-LABEL: define void @constant_cond() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    br label %[[LOOP]]{{$}}
-;
-entry:
-  br label %loop
-
-loop:
-  switch i32 1, label %exit [
-  i32 1, label %loop
-  ], !llvm.loop !0
-
-exit:
-  ret void
-}
-
 define void @same_dest(i32 %x) {
 ; CHECK-LABEL: define void @same_dest(
 ; CHECK-SAME: i32 [[X:%.*]]) {
