@@ -24,12 +24,6 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 // FoldingSetNodeIDRef Implementation
 
-bool FoldingSetNodeIDRef::operator==(FoldingSetNodeIDRef RHS) const {
-  if (Size != RHS.Size)
-    return false;
-  return memcmp(Data, RHS.Data, Size * sizeof(*Data)) == 0;
-}
-
 bool FoldingSetNodeIDRef::operator<(FoldingSetNodeIDRef RHS) const {
   if (Size != RHS.Size)
     return Size < RHS.Size;
@@ -107,14 +101,6 @@ void FoldingSetNodeID::AddNodeID(const FoldingSetNodeID &ID) {
   Bits.append(ID.Bits.begin(), ID.Bits.end());
 }
 
-bool FoldingSetNodeID::operator==(const FoldingSetNodeID &RHS) const {
-  return *this == FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
-}
-
-bool FoldingSetNodeID::operator==(FoldingSetNodeIDRef RHS) const {
-  return FoldingSetNodeIDRef(Bits.data(), Bits.size()) == RHS;
-}
-
 bool FoldingSetNodeID::operator<(const FoldingSetNodeID &RHS) const {
   return *this < FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
 }
@@ -132,15 +118,6 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 
 //===----------------------------------------------------------------------===//
 // FoldingSetBase Implementation
-
-/// Encode a 32-bit hash as an opaque non-null token for InsertPos.
-static void *encodeHash(uint32_t Hash) {
-  return reinterpret_cast<void *>(static_cast<uintptr_t>(Hash));
-}
-
-static uint32_t decodeHash(void *InsertPos) {
-  return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(InsertPos));
-}
 
 FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
   assert(5 < Log2InitSize && Log2InitSize < 32 &&
@@ -211,42 +188,18 @@ void FoldingSetBase::reserve(unsigned N) {
   grow(N + (N + 2) / 3);
 }
 
-LLVM_ATTRIBUTE_NOINLINE bool
-FoldingSetBase::nodeEquals(const FoldingSetInfo &Info,
-                           const FoldingSetBase *Self, Node *N,
-                           const FoldingSetNodeID &ID) {
-  FoldingSetNodeID TempID;
-  return Info.NodeEquals(Self, N, ID, TempID);
-}
-
-FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
-    const FoldingSetNodeID &ID, void *&InsertPos, const FoldingSetInfo &Info) {
-  unsigned IDHash = ID.ComputeHash();
-  unsigned Mask = NumBuckets - 1;
-  for (unsigned I = IDHash & Mask; Buckets[I]; I = (I + 1) & Mask) {
-    Node *N = static_cast<Node *>(Buckets[I]);
-    if (N->getFoldingSetHash() == IDHash && nodeEquals(Info, this, N, ID)) {
-      InsertPos = nullptr;
-      return N;
-    }
-  }
-
-  InsertPos = encodeHash(IDHash);
-  return nullptr;
-}
-
-void FoldingSetBase::InsertNode(Node *N, void *InsertPos) {
+void FoldingSetBase::insert(Node *N, FoldingSetInsertToken Token) {
   assert(N && "Cannot insert a null node");
-  assert(InsertPos && "Invalid InsertPos!");
+  assert(Token && "Invalid token!");
   incrementEpoch();
   if (LLVM_UNLIKELY((NumNodes + 1) * 4 > NumBuckets * 3))
     grow(NumBuckets * 2);
-  uint32_t Hash = decodeHash(InsertPos);
+  uint32_t Hash = Token.Hash;
   placeNode(N, Hash);
   N->setFoldingSetHash(Hash);
 }
 
-bool FoldingSetBase::RemoveNode(Node *N) {
+bool FoldingSetBase::erase(Node *N) {
   uint32_t Hash = N->getFoldingSetHash();
   if (Hash == FoldingSetNodeIDRef::NotAHash)
     return false; // Never inserted.
@@ -274,15 +227,4 @@ bool FoldingSetBase::RemoveNode(Node *N) {
   N->setFoldingSetHash(FoldingSetNodeIDRef::NotAHash);
   --NumNodes;
   return true;
-}
-
-FoldingSetBase::Node *
-FoldingSetBase::GetOrInsertNode(Node *N, const FoldingSetInfo &Info) {
-  FoldingSetNodeID ID;
-  Info.GetNodeProfile(this, N, ID);
-  void *IP;
-  if (Node *E = FindNodeOrInsertPos(ID, IP, Info))
-    return E;
-  InsertNode(N, IP);
-  return N;
 }
