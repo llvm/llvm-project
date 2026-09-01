@@ -164,6 +164,7 @@ private:
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
   bool foldDeinterleaveInterleavePair(Instruction &I);
+  bool foldPartialDeinterleave(Instruction &I);
 
   void replaceValue(Instruction &Old, Value &New, bool Erase = true) {
     LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
@@ -6029,6 +6030,66 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   return true;
 }
 
+/// Replace a partially used deinterleave of a load with strided shuffles of the
+/// loaded vector when it is cheaper than an interleaved load.
+bool VectorCombine::foldPartialDeinterleave(Instruction &I) {
+  auto *Deinterleave = dyn_cast<IntrinsicInst>(&I);
+  if (!Deinterleave)
+    return false;
+
+  unsigned Factor =
+      getDeinterleaveIntrinsicFactor(Deinterleave->getIntrinsicID());
+  if (!Factor || Deinterleave->hasOperandBundles() ||
+      !Deinterleave->hasOneUse())
+    return false;
+
+  auto *Load = dyn_cast<LoadInst>(Deinterleave->getArgOperand(0));
+  auto *LoadTy = Load ? dyn_cast<FixedVectorType>(Load->getType()) : nullptr;
+  if (!LoadTy || !Load->hasOneUse() || !Load->isSimple())
+    return false;
+
+  auto *ResultTy = dyn_cast<FixedVectorType>(
+      Deinterleave->getType()->getStructElementType(0));
+  if (!ResultTy ||
+      LoadTy->getNumElements() != Factor * ResultTy->getNumElements())
+    return false;
+
+  auto *Extract = dyn_cast<ExtractValueInst>(*Deinterleave->user_begin());
+  if (!Extract || Extract->getNumIndices() != 1)
+    return false;
+  unsigned Index = *Extract->idx_begin();
+  if (Index >= Factor)
+    return false;
+
+  SmallVector<int, 8> Mask;
+  for (unsigned Lane = 0; Lane != ResultTy->getNumElements(); ++Lane)
+    Mask.push_back(Index + Lane * Factor);
+
+  InstructionCost LoadCost = TTI.getInterleavedMemoryOpCost(
+      Instruction::Load, LoadTy, Factor, {}, Load->getAlign(),
+      Load->getPointerAddressSpace(), CostKind);
+
+  InstructionCost OldCost =
+      LoadCost * 2; // double the cost to compensate for shuffle
+
+  InstructionCost NewCost =
+      TTI.getMemoryOpCost(Instruction::Load, LoadTy, Load->getAlign(),
+                          Load->getPointerAddressSpace(), CostKind) +
+      TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, ResultTy, LoadTy, CostKind,
+                         Mask);
+
+  LLVM_DEBUG(dbgs() << "VC: Found partially used deinterleave: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (!OldCost.isValid() || !NewCost.isValid() || NewCost > OldCost)
+    return false;
+
+  Builder.SetInsertPoint(Deinterleave);
+  Value *Result = Builder.CreateShuffleVector(Load, Mask);
+  replaceValue(*Extract, *Result, false);
+  return true;
+}
+
 /// Fold away a matched pair of vector.deinterleave/interleave intrinsics
 /// with a chain of elementwise operations on each between the
 /// deinterleave and interleave.
@@ -6329,6 +6390,8 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
 /// %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
 /// ```
 bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
+  if (foldPartialDeinterleave(I))
+    return true;
   if (foldDeinterleaveInterleavePair(I))
     return true;
 
