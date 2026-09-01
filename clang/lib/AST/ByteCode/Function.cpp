@@ -15,10 +15,10 @@
 using namespace clang;
 using namespace clang::interp;
 
-Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
+Function::Function(FunctionDeclTy Source, unsigned ArgSize,
                    llvm::SmallVectorImpl<ParamDescriptor> &&ParamDescriptors,
                    bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker)
-    : P(P), Kind(FunctionKind::Normal), Source(Source), ArgSize(ArgSize),
+    : Kind(FunctionKind::Normal), Source(Source), ArgSize(ArgSize),
       ParamDescriptors(std::move(ParamDescriptors)), IsValid(false),
       IsFullyCompiled(false), HasThisPointer(HasThisPointer), HasRVO(HasRVO),
       HasBody(false), Defined(false) {
@@ -64,9 +64,5 @@ SourceInfo Function::getSource(CodePtr PC) const {
   assert(PC <= getCodeEnd() && "PC Does not belong to this function");
   assert(hasBody() && "Function has no body");
   unsigned Offset = PC - getCodeBegin();
-  using Elem = std::pair<unsigned, SourceInfo>;
-  auto It = llvm::lower_bound(SrcMap, Elem{Offset, {}}, llvm::less_first());
-  if (It == SrcMap.end())
-    return SrcMap.back().second;
-  return It->second;
+  return SrcMap.findSourceForOffset(Offset);
 }

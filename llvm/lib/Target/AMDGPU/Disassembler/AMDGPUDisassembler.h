@@ -47,6 +47,9 @@ private:
   mutable uint64_t Literal;
   mutable bool HasLiteral;
   mutable std::optional<bool> EnableWavefrontSize32;
+
+  // If the object's ELF e_flags enable xnack. TODO: Replace with TargetID
+  mutable bool XnackOnFromEFlags = false;
   unsigned CodeObjectVersion;
   const MCExpr *UCVersionW64Expr;
   const MCExpr *UCVersionW32Expr;
@@ -137,8 +140,11 @@ public:
 
   unsigned getVgprClassId(unsigned Width) const;
   unsigned getAgprClassId(unsigned Width) const;
-  unsigned getSgprClassId(unsigned Width) const;
-  unsigned getTtmpClassId(unsigned Width) const;
+
+  /// Return the SGPR/TTMP register class accepted by source decoding for
+  /// \p Width, or std::nullopt if that width has no supported encoding.
+  std::optional<unsigned> getSgprClassId(unsigned Width) const;
+  std::optional<unsigned> getTtmpClassId(unsigned Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
 

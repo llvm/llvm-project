@@ -119,7 +119,7 @@ void test9(int *List, int Length) {
 // CHECK-NEXT: ![[LOOP5]] = distinct !{![[LOOP5]], [[MP]], [[GEN6]], [[GEN10]]}
 
 // CHECK-NEXT: ![[LOOP6]] = distinct !{![[LOOP6]], [[MP]], [[GEN8]], [[GEN10]], [[GEN11:![0-9]+]]}
-// CHECK-NEXT: [[GEN11]] = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+// CHECK-NEXT: [[GEN11]] = !{!"llvm.loop.vectorize.scalable.disable"}
 
 // CHECK-NEXT: ![[LOOP7]] = distinct !{![[LOOP7]], [[MP]], [[GEN8]], [[GEN12:![0-9]+]], [[GEN11]], [[GEN3]]}
 // CHECK-NEXT: [[GEN12]] = !{!"llvm.loop.vectorize.width", i32 4}

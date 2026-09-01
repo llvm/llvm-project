@@ -284,8 +284,7 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; DEFAULT:       vector.scevcheck:
-; DEFAULT-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
-; DEFAULT-NEXT:    [[TMP2:%.*]] = add i32 [[UMAX]], -1
+; DEFAULT-NEXT:    [[TMP2:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 1)
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 0
 ; DEFAULT-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; DEFAULT:       vector.ph:
@@ -338,8 +337,7 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; STRIDED:       vector.scevcheck:
-; STRIDED-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
-; STRIDED-NEXT:    [[TMP2:%.*]] = add i32 [[UMAX]], -1
+; STRIDED-NEXT:    [[TMP2:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 1)
 ; STRIDED-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 0
 ; STRIDED-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
@@ -702,14 +700,12 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:  entry:
 ; STRIDED-NEXT:    [[PIN2:%.*]] = ptrtoaddr ptr [[PIN:%.*]] to i64
 ; STRIDED-NEXT:    [[POUT1:%.*]] = ptrtoaddr ptr [[POUT:%.*]] to i64
-; STRIDED-NEXT:    [[TMP0:%.*]] = sext i32 [[STRIDE:%.*]] to i64
-; STRIDED-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 2
 ; STRIDED-NEXT:    [[TMP2:%.*]] = zext i32 [[NCOLS:%.*]] to i64
 ; STRIDED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 1)
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; STRIDED:       vector.scevcheck:
-; STRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE]], 1
+; STRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE:%.*]], 1
 ; STRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; STRIDED:       vector.memcheck:
 ; STRIDED-NEXT:    [[TMP4:%.*]] = sub i64 [[POUT1]], [[PIN2]]

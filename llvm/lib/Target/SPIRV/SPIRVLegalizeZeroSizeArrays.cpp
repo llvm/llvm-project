@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRV.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -21,7 +20,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "spirv-legalize-zero-size-arrays"
 
@@ -346,8 +344,8 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
 
 } // namespace
 
-PreservedAnalyses SPIRVLegalizeZeroSizeArrays::run(Module &M,
-                                                   ModuleAnalysisManager &AM) {
+PreservedAnalyses
+SPIRVLegalizeZeroSizeArraysPass::run(Module &M, ModuleAnalysisManager &AM) {
   SPIRVLegalizeZeroSizeArraysImpl Impl(TM);
   if (Impl.runOnModule(M))
     return PreservedAnalyses::none();

@@ -16,7 +16,7 @@ int128_t foo(void) { return 0; }
 
 int128_t bar(int128_t a, int128_t b) { return a * b; }
 
-// X64: define dso_local <2 x i64> @bar(ptr noundef align 16 dead_on_return %0, ptr noundef align 16 dead_on_return %1)
+// X64: define dso_local <2 x i64> @bar(ptr nofreeobj noundef align 16 dead_on_return dereferenceable(16) %0, ptr nofreeobj noundef align 16 dead_on_return dereferenceable(16) %1)
 // ARM: define dso_local i128 @bar(i128 noundef %a, i128 noundef %b)
 
 void vararg(int a, ...) {
