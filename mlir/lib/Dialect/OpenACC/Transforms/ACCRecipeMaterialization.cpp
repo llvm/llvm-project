@@ -195,12 +195,22 @@ private:
                                     acc::ACCToGPUMappingPolicy &policy) const;
 };
 
+// A descriptor is mapped as its own storage, so a clause's section bounds
+// describe the data it points to rather than the bytes being mapped.
+static bool mapsDescriptor(Value var) {
+  auto ptrTy = dyn_cast<acc::PointerLikeType>(var.getType());
+  return ptrTy && isa<acc::MappableType>(ptrTy.getElementType());
+}
+
 template <typename OpTy>
 void ACCRecipeMaterialization::handleInitialValueMapping(OpTy op) const {
   OpBuilder builder(op);
+  // Bounds would map the payload rather than the descriptor the recipe reads.
+  ValueRange bounds =
+      mapsDescriptor(op.getVar()) ? ValueRange{} : ValueRange(op.getBounds());
   auto mapInitialOp = acc::FirstprivateMapInitialOp::create(
       builder, op.getLoc(), op.getVar(), op.getStructured(), op.getImplicit(),
-      op.getBounds());
+      bounds);
   mapInitialOp.setName(op.getName());
   op.getVarMutable().assign(mapInitialOp.getAccVar());
 }
