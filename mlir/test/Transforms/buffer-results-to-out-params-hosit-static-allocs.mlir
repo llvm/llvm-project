@@ -49,3 +49,14 @@ func.func private @return_arg(%arg0: memref<128x256xf32>, %arg1: memref<128x256x
   "test.source"(%arg0, %arg1)  : (memref<128x256xf32>, memref<128x256xf32>) -> ()
   return %arg0 : memref<128x256xf32>
 }
+
+// CHECK-LABEL: func.func private @duplicate_return_value(
+// CHECK-SAME:    %[[ARG0:.*]]: memref<4xf32>, %[[ARG1:.*]]: memref<4xf32>) {
+// CHECK-NOT:     memref.alloc
+// CHECK:         memref.copy %[[ARG0]], %[[ARG1]] : memref<4xf32> to memref<4xf32>
+// CHECK:         return
+func.func private @duplicate_return_value()
+    -> (memref<4xf32>, memref<4xf32>) {
+  %a = memref.alloc() : memref<4xf32>
+  return %a, %a : memref<4xf32>, memref<4xf32>
+}

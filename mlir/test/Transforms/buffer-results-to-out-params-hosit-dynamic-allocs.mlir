@@ -77,3 +77,31 @@ func.func @complex_alloc_test(%size0 : index, %size1: index) {
 //       CHECK:   call @complex_alloc(%[[size0]], %[[size1]], %[[alloc0]], %[[alloc1]], %[[alloc2]]) : (index, index, memref<?x?xf32>, memref<4xf32>, memref<?xf32>) -> ()
 //       CHECK:   "test.sink"(%[[alloc0]], %[[alloc1]], %[[alloc2]]) : (memref<?x?xf32>, memref<4xf32>, memref<?xf32>) -> ()
 //       CHECK: }
+
+// -----
+
+func.func private @duplicate_dynamic(%size : index)
+    -> (memref<?xf32>, memref<?xf32>) {
+  %alloc = memref.alloc(%size) : memref<?xf32>
+  return %alloc, %alloc : memref<?xf32>, memref<?xf32>
+}
+
+func.func @duplicate_dynamic_test(%size : index) {
+  %alloc0, %alloc1 = call @duplicate_dynamic(%size)
+      : (index) -> (memref<?xf32>, memref<?xf32>)
+  "test.sink"(%alloc0, %alloc1) : (memref<?xf32>, memref<?xf32>) -> ()
+}
+
+// CHECK-LABEL: func.func private @duplicate_dynamic(
+//  CHECK-SAME:   %{{.*}}: index,
+//  CHECK-SAME:   %[[OUT0:.*]]: memref<?xf32>,
+//  CHECK-SAME:   %[[OUT1:.*]]: memref<?xf32>) {
+//       CHECK:   memref.copy %[[OUT0]], %[[OUT1]] : memref<?xf32> to memref<?xf32>
+//       CHECK:   return
+
+// CHECK-LABEL: func.func @duplicate_dynamic_test(
+//  CHECK-SAME:   %[[SIZE:.*]]: index) {
+//       CHECK:   %[[ALLOC0:.*]] = memref.alloc(%[[SIZE]]) : memref<?xf32>
+//       CHECK:   %[[ALLOC1:.*]] = memref.alloc(%[[SIZE]]) : memref<?xf32>
+//       CHECK:   call @duplicate_dynamic(%[[SIZE]], %[[ALLOC0]], %[[ALLOC1]]) : (index, memref<?xf32>, memref<?xf32>) -> ()
+//       CHECK:   "test.sink"(%[[ALLOC0]], %[[ALLOC1]]) : (memref<?xf32>, memref<?xf32>) -> ()

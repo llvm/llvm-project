@@ -168,7 +168,20 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
     }
     OpBuilder builder(op);
     SmallVector<SmallVector<Value>> dynamicSizes;
+    SetVector<Operation *> toErase;
+    DenseMap<Value, BlockArgument> primaryArgs;
+    DenseMap<Value, SmallVector<Value>> dynSizes;
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
+      auto [it, inserted] = primaryArgs.try_emplace(orig, arg);
+      if (!inserted) {
+        if (auto dynIt = dynSizes.find(orig); dynIt != dynSizes.end())
+          dynamicSizes.push_back(dynIt->second);
+        if (it->second != arg &&
+            failed(options.memCpyFn(builder, op->getLoc(), it->second, arg)))
+          return WalkResult::interrupt();
+        continue;
+      }
+
       bool hoistStaticAllocs =
           options.hoistStaticAllocs &&
           cast<MemRefType>(orig.getType()).hasStaticShape();
@@ -182,13 +195,18 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
         if (hoistDynamicAllocs) {
           SmallVector<Value> dynamicSize = getDynamicSize(orig, func);
           dynamicSizes.push_back(dynamicSize);
+          dynSizes.try_emplace(orig, std::move(dynamicSize));
         }
-        orig.getDefiningOp()->erase();
+        toErase.insert(orig.getDefiningOp());
       } else {
         if (failed(options.memCpyFn(builder, op.getLoc(), orig, arg)))
           return WalkResult::interrupt();
       }
     }
+
+    for (Operation *eraseOp : toErase)
+      eraseOp->erase();
+
     func::ReturnOp::create(builder, op.getLoc(), keepAsReturnOperands);
     op.erase();
     auto dynamicSizePair =
