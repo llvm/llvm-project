@@ -1308,8 +1308,10 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (auto *arg = args.getLastArg(clang::options::OPT_fopenmp_version_EQ)) {
-    llvm::ArrayRef<llvm::omp::Version> ompVersions =
-        llvm::omp::getOpenMPVersions();
+    llvm::SmallVector<unsigned> ompVersions;
+    for (llvm::omp::Version v : llvm::omp::getOpenMPVersions()) {
+      ompVersions.push_back(static_cast<unsigned>(v));
+    }
     unsigned oldVersions[] = {11, 20, 25, 30};
     unsigned version = 0;
 
@@ -1958,8 +1960,9 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
-                                    fortranOptions.predefinitions);
+    Fortran::common::setOpenMPMacro(
+        static_cast<unsigned>(getLangOpts().getOpenMPVersion()),
+        fortranOptions.predefinitions);
   }
 
   if (frontendOptions.features.IsEnabled(
