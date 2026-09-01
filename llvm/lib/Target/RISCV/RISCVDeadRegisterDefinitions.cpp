@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "riscv-dead-defs"
@@ -34,7 +33,6 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();

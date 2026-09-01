@@ -23,7 +23,6 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 
 using namespace llvm;
 
@@ -913,7 +912,7 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
 
   do {
     // Skip all symbols to the line end.
-    while (*CurPtr != '\n')
+    while (CurPtr != CurBuf.end() && *CurPtr != '\n' && *CurPtr != '\r')
       ++CurPtr;
 
     // Find the first non-whitespace symbol in the next line(s).

@@ -436,9 +436,8 @@ static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
 
 #if defined(EXPENSIVE_CHECKS)
   CI.verify();
-  if (LI) {
-    LI->verify(DT);
-  }
+  if (LI)
+    LI->verify();
 #endif // EXPENSIVE_CHECKS
 
   return true;

@@ -89,6 +89,10 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
       return false;
     if (isPtrConversion(Callee))
       return true;
+    if (auto *Method = dyn_cast<CXXMethodDecl>(Callee)) {
+      if (isGetterOfSafePtr(Method).value_or(false))
+        return true;
+    }
     unsigned ArgIndex = 0;
     unsigned ArgOffset = isa<CXXOperatorCallExpr>(CE);
     for (auto *Arg : CE->arguments()) {
@@ -428,6 +432,7 @@ public:
       auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
       if (Value)
         Report->addRange(Value->getSourceRange());
+      Report->setDeclWithIssue(DeclWithIssue);
       BR->emitReport(std::move(Report));
     } else {
       if (V->hasLocalStorage())

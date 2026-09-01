@@ -30,13 +30,11 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PEI.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -162,10 +160,7 @@ STATISTIC(NumBytesStackSpace,
 
 void PEILegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addPreserved<MachineLoopInfoWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
-  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -367,10 +362,7 @@ PrologEpilogInserterPass::run(MachineFunction &MF,
   if (!PEIImpl(&ORE).run(MF))
     return PreservedAnalyses::all();
 
-  return getMachineFunctionPassPreservedAnalyses()
-      .preserveSet<CFGAnalyses>()
-      .preserve<MachineDominatorTreeAnalysis>()
-      .preserve<MachineLoopAnalysis>();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
 
 /// Calculate the MaxCallFrameSize variable for the function's frame
@@ -1349,7 +1341,7 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
   for (MachineBasicBlock &MBB : MF)
     if (MBB.isReturnBlock())
-      TFI.emitZeroCallUsedRegs(RegsToZero, MBB);
+      TFI.emitZeroCallUsedRegs(RegsToZero, MBB, RS);
 }
 
 /// Replace all FrameIndex operands with physical register references and actual

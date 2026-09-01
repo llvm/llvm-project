@@ -236,9 +236,8 @@ func.func @omp_newcli_unused() -> () {
 }
 
 
-// CHECK-LABEL: @omp_canonloop_multiregion_isolatedfromabove(
-func.func @omp_canonloop_multiregion_isolatedfromabove() -> () {
-  omp.private {type = firstprivate} @x.privatizer : !llvm.ptr init {
+// CHECK-LABEL: omp.private {{.*}} @x.privatizer
+omp.private {type = firstprivate} @x.privatizer : !llvm.ptr init {
     ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
       %c42_i32 = arith.constant 42: i32
       // CHECK: omp.canonical_loop %iv : i32 in range(%c42_i32) {
@@ -273,10 +272,6 @@ func.func @omp_canonloop_multiregion_isolatedfromabove() -> () {
       }
       // CHECK: omp.yield
       omp.yield
-  }
-
-  // CHECK: return
-  return
 }
 
 

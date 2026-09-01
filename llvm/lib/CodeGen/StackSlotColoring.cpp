@@ -31,7 +31,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -166,13 +165,10 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<SlotIndexesWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addRequired<LiveStacksWrapperLegacy>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreservedID(MachineDominatorsID);
 
     // In some Target's pipeline, register allocation (RA) might be
     // split into multiple phases based on register class. So, this pass
@@ -594,8 +590,6 @@ StackSlotColoringPass::run(MachineFunction &MF,
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<SlotIndexesAnalysis>();
-  PA.preserve<MachineBlockFrequencyAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<LiveDebugVariablesAnalysis>();
   return PA;

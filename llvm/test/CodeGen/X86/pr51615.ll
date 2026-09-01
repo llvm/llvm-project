@@ -44,10 +44,10 @@ define void @volatile_load_2_elts() {
 define void @volatile_load_1_elt() {
 ; ALL-LABEL: volatile_load_1_elt:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vbroadcastsd g1(%rip), %ymm0
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm0[4,5],ymm1[6,7]
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; ALL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vbroadcastsd g1(%rip), %ymm1
+; ALL-NEXT:    vblendps {{.*#+}} ymm2 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; ALL-NEXT:    vmovaps %ymm0, (%rax)
 ; ALL-NEXT:    vmovaps %ymm2, (%rax)
 ; ALL-NEXT:    vzeroupper
@@ -63,10 +63,10 @@ define void @volatile_load_1_elt() {
 define void @volatile_load_2_elts_bitcast() {
 ; ALL-LABEL: volatile_load_2_elts_bitcast:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vbroadcastsd g2(%rip), %ymm0
-; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm0[4,5],ymm1[6,7]
-; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; ALL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vbroadcastsd g2(%rip), %ymm1
+; ALL-NEXT:    vblendps {{.*#+}} ymm2 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; ALL-NEXT:    vmovaps %ymm0, (%rax)
 ; ALL-NEXT:    vmovaps %ymm2, (%rax)
 ; ALL-NEXT:    vzeroupper

@@ -199,6 +199,9 @@ protected:
       for (const std::string &file : report->attachments.files)
         out << "  [ ] " << file << "\n";
     }
+    out << "Complete the report before sharing it:\n";
+    out << "  [ ] Give the report a descriptive title\n";
+    out << "  [ ] Answer the questions\n";
     result.AppendWarning("the report may contain file paths, command history "
                          "and program data. Review it before attaching it to a "
                          "public issue");

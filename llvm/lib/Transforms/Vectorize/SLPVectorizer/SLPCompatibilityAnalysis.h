@@ -16,16 +16,23 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 
 #include <cstdint>
 #include <utility>
 
 namespace llvm {
+class APInt;
 class Constant;
+class ConstantInt;
+class TargetLibraryInfo;
 class Value;
 } // namespace llvm
 
@@ -126,6 +133,245 @@ public:
   }
 };
 
+/// Helper class that determines whether a list of integer comparisons can
+/// share a single predicate. InstCombine canonicalizes single-element and
+/// single-complement range comparisons to eq/ne at the type boundaries
+/// (e.g. x <u 1 becomes x == 0); such lanes are interchangeable with the
+/// rest of the list by adjusting the compared constant.
+class CmpSamePredicateHelper {
+  using MaskType = std::uint16_t;
+  /// Bit i represents predicate ICMP_EQ + i.
+  static constexpr unsigned NumPreds = CmpInst::ICMP_SLE - CmpInst::ICMP_EQ + 1;
+  static constexpr MaskType AllPreds = (1 << NumPreds) - 1;
+  /// Intersection of the per-lane convertible predicate sets.
+  MaskType Mask = AllPreds;
+  /// Predicates present in the list natively. The shared predicate must be
+  /// one of them: the main op must be an actual instruction with this
+  /// predicate.
+  MaskType SeenBefore = 0;
+
+  static constexpr MaskType getBit(CmpInst::Predicate P) {
+    return static_cast<MaskType>(1) << (P - CmpInst::ICMP_EQ);
+  }
+  /// Returns the mask of the predicates that can express the comparison
+  /// (Pred, X, C) with an adjusted constant C, including Pred itself.
+  static MaskType getFormsMask(CmpInst::Predicate Pred, const APInt &C);
+  /// Returns the constant of the (Pred, X, C') form equivalent to the
+  /// boundary family (IsComplement, K). Pred must be in the family mask.
+  static APInt getFamilyConstant(bool IsComplement, const APInt &K,
+                                 CmpInst::Predicate Pred);
+
+public:
+  /// Intersects the convertible predicate set of \p CI with the running
+  /// set. Returns false when the intersection becomes empty.
+  bool add(const ICmpInst *CI);
+  /// Returns the shared predicate, preferring the predicate of
+  /// \p Preferred when the whole list can use it, or BAD_ICMP_PREDICATE
+  /// when the list cannot share a natively present predicate.
+  CmpInst::Predicate getPredicate(const ICmpInst *Preferred) const;
+  /// Returns the predicate the whole list can share, or BAD_ICMP_PREDICATE
+  /// when it cannot share a natively present predicate.
+  static CmpInst::Predicate getSharedPredicate(ArrayRef<Value *> VL,
+                                               const ICmpInst *Preferred);
+  /// Checks if the comparison \p CI can be expressed with the predicate
+  /// \p Pred by adjusting its constant operand.
+  static bool canConvertTo(const CmpInst *CI, CmpInst::Predicate Pred);
+  /// Returns the adjusted constant operand expressing \p CI with the
+  /// predicate \p Pred, or nullptr if not convertible or if \p CI already
+  /// uses \p Pred.
+  static ConstantInt *getAdjustedConstant(const CmpInst *CI,
+                                          CmpInst::Predicate Pred);
+};
+
+/// Main data required for vectorization of instructions.
+class InstructionsState {
+  /// MainOp and AltOp are primarily determined by getSameOpcode. Currently,
+  /// only BinaryOperator, CastInst, and CmpInst support alternate instructions
+  /// (i.e., AltOp is not equal to MainOp; this can be checked using
+  /// isAltShuffle).
+  /// A rare exception is TrySplitNode, where the InstructionsState is derived
+  /// from getMainAltOpsNoStateVL.
+  /// For those InstructionsState that use alternate instructions, the resulting
+  /// vectorized output ultimately comes from a shufflevector. For example,
+  /// given a vector list (VL):
+  /// VL[0] = add i32 a, e
+  /// VL[1] = sub i32 b, f
+  /// VL[2] = add i32 c, g
+  /// VL[3] = sub i32 d, h
+  /// The vectorized result would be:
+  /// intermediated_0 = add <4 x i32> <a, b, c, d>, <e, f, g, h>
+  /// intermediated_1 = sub <4 x i32> <a, b, c, d>, <e, f, g, h>
+  /// result = shufflevector <4 x i32> intermediated_0,
+  ///                        <4 x i32> intermediated_1,
+  ///                        <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  /// Since shufflevector is used in the final result, when calculating the cost
+  /// (getEntryCost), we must account for the usage of shufflevector in
+  /// GetVectorCost.
+  Instruction *MainOp = nullptr;
+  Instruction *AltOp = nullptr;
+  /// Whether the instruction state represents copyable instructions.
+  bool HasCopyables = false;
+  /// Index of the operand modeling the copyable values: the addend for
+  /// fmuladd (retried with a multiplicand), the first operand otherwise.
+  unsigned CopyableOpIdx = 0;
+  /// Whether copyable single-use fmuls/fadds are modeled as
+  /// fmuladd(a, b, -0.0)/fmuladd(1.0, a, b), absorbing the binop instead of
+  /// computing and gathering its result.
+  bool AbsorbCopyableFMulOrFAdd = false;
+
+public:
+  Instruction *getMainOp() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return MainOp;
+  }
+
+  Instruction *getAltOp() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return AltOp;
+  }
+
+  /// The main/alternate opcodes for the list of instructions.
+  unsigned getOpcode() const { return getMainOp()->getOpcode(); }
+
+  unsigned getAltOpcode() const { return getAltOp()->getOpcode(); }
+
+  /// Some of the instructions in the list have alternate opcodes.
+  bool isAltShuffle() const { return getMainOp() != getAltOp(); }
+
+  /// Checks if \p I is the same operation as \p Op, distinguishing calls by
+  /// intrinsic ID (all calls share the Call opcode, so e.g. umax != smax).
+  static bool isSameOperation(const Instruction *I, const Instruction *Op);
+
+  /// Checks if the instruction matches either the main or alternate opcode.
+  /// \returns
+  /// - MainOp if \param I matches MainOp's opcode directly or can be converted
+  /// to it
+  /// - AltOp if \param I matches AltOp's opcode directly or can be converted to
+  /// it
+  /// - nullptr if \param I cannot be matched or converted to either opcode
+  Instruction *getMatchingMainOpOrAltOp(Instruction *I) const;
+
+  /// Checks if main/alt instructions are shift operations.
+  bool isShiftOp() const {
+    return getMainOp()->isShift() && getAltOp()->isShift();
+  }
+
+  /// Checks if main/alt instructions are bitwise logic operations.
+  bool isBitwiseLogicOp() const {
+    return getMainOp()->isBitwiseLogicOp() && getAltOp()->isBitwiseLogicOp();
+  }
+
+  /// Checks if main/alt instructions are mul/div/rem/fmul/fdiv/frem operations.
+  bool isMulDivLikeOp() const;
+
+  /// Checks if main/alt instructions are add/sub/fadd/fsub operations.
+  bool isAddSubLikeOp() const;
+
+  /// Checks if main/alt instructions are cmp operations.
+  bool isCmpOp() const {
+    return (getOpcode() == Instruction::ICmp ||
+            getOpcode() == Instruction::FCmp) &&
+           getAltOpcode() == getOpcode();
+  }
+
+  /// Checks if the current state is valid, i.e. has non-null MainOp
+  bool valid() const { return MainOp && AltOp; }
+
+  explicit operator bool() const { return valid(); }
+
+  InstructionsState() = delete;
+  InstructionsState(Instruction *MainOp, Instruction *AltOp,
+                    bool HasCopyables = false)
+      : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables),
+        CopyableOpIdx(MainOp && RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)
+                          ? 2
+                          : 0) {}
+  static InstructionsState invalid() { return {nullptr, nullptr}; }
+
+  /// Checks if the value is a copyable element.
+  bool isCopyableElement(Value *V) const;
+
+  /// Checks if the value \p V is a transformed instruction, compatible either
+  /// with main or alternate ops.
+  bool isExpandedBinOp(Value *V) const;
+
+  /// Checks if the operand at index \p Idx of instruction \p I is an expanded
+  /// operand.
+  bool isExpandedOperand(Instruction *I, unsigned Idx) const;
+
+  /// Checks if the value is non-schedulable.
+  bool isNonSchedulable(Value *V) const;
+
+  /// Checks if the state represents copyable instructions.
+  bool areInstructionsWithCopyableElements() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return HasCopyables;
+  }
+
+  /// Returns the index of the operand the copyable value is modeled in.
+  unsigned getCopyableOpIdx() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return CopyableOpIdx;
+  }
+
+  /// Sets the index of the operand the copyable value is modeled in.
+  void setCopyableOpIdx(unsigned Idx) {
+    assert((Idx == 0 || Idx == 2) && "Unexpected copyable operand index.");
+    CopyableOpIdx = Idx;
+  }
+
+  /// Checks if copyable fmuls/fadds are absorbed as fmuladd(a, b, -0.0) or
+  /// fmuladd(1.0, a, b).
+  bool hasAbsorbedCopyableFMulOrFAdd() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return AbsorbCopyableFMulOrFAdd;
+  }
+
+  /// Sets the absorbed-fmul/fadd modeling for copyable fmuls/fadds.
+  void setAbsorbCopyableFMulOrFAdd(bool Absorb) {
+    AbsorbCopyableFMulOrFAdd = Absorb;
+  }
+};
+
+/// Checks if \p V is a single-use fmul/fadd with operands outside \p VL.
+bool isAbsorbableFMulOrFAdd(ArrayRef<Value *> VL, Value *V);
+
+/// Checks if \p V is a copyable single-use fmul/fadd, absorbable as
+/// fmuladd(a, b, -0.0) or fmuladd(1.0, a, b).
+bool isAbsorbableCopyableFMulOrFAdd(const InstructionsState &S, Value *V);
+
+/// Checks if every copyable in \p VL is an absorbable fmul/fadd: the binops
+/// die instead of being computed and gathered. Operand order is normalized
+/// when the operands are built.
+bool hasOnlyAbsorbableCopyableFMulOrFAdds(ArrayRef<Value *> VL);
+
+/// \returns analysis of the Instructions in \p VL described in
+/// InstructionsState, the Opcode that we suppose the whole list
+/// could be vectorized even if its structure is diverse.
+InstructionsState getSameOpcode(ArrayRef<Value *> VL,
+                                const TargetLibraryInfo &TLI);
+
+/// \returns the main or alternate operation from \p S matching \p I, together
+/// with the operands of \p I adjusted to the selected operation.
+std::pair<Instruction *, SmallVector<Value *>>
+convertTo(Instruction *I, const InstructionsState &S);
+
+/// Checks if the specified instruction \p I is an alternate operation for
+/// the given \p MainOp and \p AltOp instructions.
+bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
+                            Instruction *AltOp, const TargetLibraryInfo &TLI);
+
+/// Peel the per-lane associative chains of an alternate node into operand
+/// columns. Lanes peel in lockstep and only chain links with the lane's own
+/// opcode, so every combine level keeps the root's main/alt opcode pattern
+/// and a subtract lane never becomes an add of a negated leaf. Only the
+/// leading (running) column peels: peeling a subtracted subtract would flip
+/// signs. \p SubLanes records the subtract lanes for the realignment sign
+/// query. Returns the flattened columns, empty when no level peels.
+SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
+    const InstructionsState &S, const TargetLibraryInfo &TLI,
+    ArrayRef<Value *> VL, ArrayRef<Value *> Op0, ArrayRef<Value *> Op1,
+    SmallVectorImpl<Value *> &ReassocScalars, SmallBitVector &SubLanes);
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H

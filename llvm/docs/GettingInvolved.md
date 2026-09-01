@@ -2,9 +2,6 @@
 
 LLVM welcomes contributions of all kinds. To get started, please review the following topics:
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
@@ -521,7 +518,6 @@ can be better.
 :hidden:
 
 Proposals/GitHubMove
-BugpointRedesign
 Proposals/TestSuite
 Proposals/VariableNames
 Proposals/VectorPredication
@@ -530,10 +526,6 @@ Proposals/VectorPredication
 * {doc}`Proposals/GitHubMove`
 
   Proposal to move from SVN/Git to GitHub.
-
-* {doc}`BugpointRedesign`
-
-  Design doc for a redesign of the Bugpoint tool.
 
 * {doc}`Proposals/TestSuite`
 

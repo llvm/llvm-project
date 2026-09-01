@@ -6,7 +6,6 @@ define void @test_nvvm_fence_proxy_alias() {
 ; CHECK-LABEL: test_nvvm_fence_proxy_alias(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    fence.proxy.alias;
 ; CHECK-NEXT:    ret;

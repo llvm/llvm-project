@@ -11665,10 +11665,10 @@ define <2 x i16> @multi_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z0, i16 %z1) {
 ; GFX10-GISEL-LABEL: multi_use_mul_mad_i16_var:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_mad_u16 v2, v0, v1, v2
-; GFX10-GISEL-NEXT:    v_mad_u16 v0, v0, v1, v3
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v2
-; GFX10-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX10-GISEL-NEXT:    v_mad_u16 v3, v0, v1, v3
+; GFX10-GISEL-NEXT:    v_mad_u16 v0, v0, v1, v2
+; GFX10-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
+; GFX10-GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: multi_use_mul_mad_i16_var:

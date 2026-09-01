@@ -247,12 +247,15 @@ func.func @op_with_region() -> (i32) {
   return %1 : i32
 }
 
+// `llvm.mlir.constant` allows a float attribute to be paired with an integer
+// type of the same width, so the folded attribute type differs from the source
+// type of the broadcast. Folding must bail out instead of crashing.
 // CHECK-LABEL: no_crash_with_different_source_type
 func.func @no_crash_with_different_source_type() {
-  // CHECK: llvm.mlir.constant(0 : index) : i64
-  %0 = llvm.mlir.constant(0 : index) : i64
-  // CHECK: vector.broadcast %[[CST:.*]] : i64 to vector<128xi64>
-  %1 = vector.broadcast %0 : i64 to vector<128xi64>
+  // CHECK: llvm.mlir.constant(0.000000e+00 : f32) : i32
+  %0 = llvm.mlir.constant(0.0 : f32) : i32
+  // CHECK: vector.broadcast %[[CST:.*]] : i32 to vector<128xi32>
+  %1 = vector.broadcast %0 : i32 to vector<128xi32>
   llvm.return
 }
 
@@ -282,7 +285,7 @@ func.func @no_crash_acc_kernel_environment(%data: memref<8xi32>) {
   acc.kernel_environment {
     acc.compute_region {
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -334,4 +337,32 @@ func.func @fold_to_non_operand_value(%x: i64, %cond: i1) -> i64 {
   %cast1 = builtin.unrealized_conversion_cast %a : i64 to index
   %cast2 = builtin.unrealized_conversion_cast %cast1 : index to i64
   return %cast2 : i64
+}
+
+// -----
+
+// Regression test: SCCP must revert in-place folds. The `vector.extract`
+// folder rewrites a constant dynamic position into a static one in place, but
+// the constants SCCP feeds into `fold` are speculative: on the first visit of
+// ^bb1 %iv is Constant 0, before the back edge widens it to overdefined.
+// Without the revert, the dynamic extract would permanently read element 0.
+
+// CHECK-LABEL: func @no_inplace_extract_fold_of_speculative_constant
+func.func @no_inplace_extract_fold_of_speculative_constant(%a: f32, %b: f32) -> f32 {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c2_i32 = arith.constant 2 : i32
+  %v = vector.from_elements %a, %b : vector<2xf32>
+  cf.br ^bb1(%c0_i32 : i32)
+// CHECK: ^bb1(%[[IV:.*]]: i32):
+^bb1(%iv: i32):
+  // CHECK: %[[IDX:.*]] = arith.index_cast %[[IV]] : i32 to index
+  %idx = arith.index_cast %iv : i32 to index
+  // CHECK: vector.extract %{{.*}}[%[[IDX]]] : f32 from vector<2xf32>
+  %e = vector.extract %v[%idx] : f32 from vector<2xf32>
+  %next = arith.addi %iv, %c1_i32 : i32
+  %cond = arith.cmpi ne, %next, %c2_i32 : i32
+  cf.cond_br %cond, ^bb1(%next : i32), ^bb2
+^bb2:
+  return %e : f32
 }

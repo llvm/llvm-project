@@ -268,7 +268,11 @@ enum ScriptedExtension {
   eScriptedExtensionScriptedThread,
   eScriptedExtensionScriptedFrame,
   eScriptedExtensionScriptedStackFrameRecognizer,
-  kLastScriptedExtension = eScriptedExtensionScriptedStackFrameRecognizer
+  eScriptedExtensionScriptedCommand,
+  eScriptedExtensionParsedCommand,
+  eScriptedExtensionScriptedStringSummary,
+  eScriptedExtensionScriptedSyntheticChildren,
+  kLastScriptedExtension = eScriptedExtensionScriptedSyntheticChildren
 };
 
 /// Register numbering types.
@@ -657,7 +661,7 @@ enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer = 0x0002,
   eInstrumentationRuntimeTypeMainThreadChecker = 0x0003,
   eInstrumentationRuntimeTypeSwiftRuntimeReporting = 0x0004,
-  eInstrumentationRuntimeTypeLibsanitizersAsan = 0x0005,
+  eInstrumentationRuntimeTypeUnused = 0x0005, // Free to reuse
   eInstrumentationRuntimeTypeBoundsSafety = 0x0006,
   eNumInstrumentationRuntimeTypes
 };
@@ -923,6 +927,7 @@ enum SectionType {
   eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
   eSectionTypeWasmName,
+  eSectionTypeWasmGlobal,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){

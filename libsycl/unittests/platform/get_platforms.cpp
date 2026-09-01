@@ -26,4 +26,13 @@ TEST(PlatformTest, APIGetPlatformsDefaultMock) {
   EXPECT_TRUE(Devices[0].is_gpu());
 
   EXPECT_EQ(Devices[0].get_platform(), Platforms[0]);
+
+#ifdef SYCL_KHR_DEFAULT_CONTEXT
+  auto Context = Platforms[0].khr_get_default_context();
+  EXPECT_EQ(Context.get_platform(), Platforms[0]);
+
+  auto CtxDevices = Context.get_devices();
+  ASSERT_EQ(CtxDevices.size(), 1u);
+  ASSERT_EQ(CtxDevices[0], Devices[0]);
+#endif
 }
