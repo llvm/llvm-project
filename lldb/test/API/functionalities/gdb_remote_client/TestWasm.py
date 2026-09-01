@@ -96,7 +96,7 @@ def global_read_packet(global_index, module_id=MODULE_ID):
     """
     The packet that reads a global from the module instance holding it.
     """
-    return f"qWasmGlobal:{global_index};{INSTANCE_KEY}{module_id};"
+    return f"qWasmGlobal:{global_index};{INSTANCE_KEY}{module_id}"
 
 
 def format_register_value(val):
@@ -205,7 +205,7 @@ class MyResponder(MockGDBServerResponder):
         Read a global. A client that can name the instance holding it does so
         with the instance suffix, and one that cannot names a frame.
 
-        Format: qWasmGlobal:index;instance:id; or
+        Format: qWasmGlobal:index;instance:id or
                 qWasmGlobal:frame_index;index
         """
         first, _, rest = packet.split(":", 1)[1].partition(";")
@@ -217,7 +217,7 @@ class MyResponder(MockGDBServerResponder):
             # The global index space belongs to the instance, so an index only
             # names a global together with the instance it indexes. Another
             # instance's globals answer a different question.
-            module = self.module_with_id(int(rest[len(INSTANCE_KEY) :].rstrip(";")))
+            module = self.module_with_id(int(rest[len(INSTANCE_KEY) :]))
             if module is None:
                 return "E04"
             return module.encode_global(int(first))

@@ -26,6 +26,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <cstdint>
+#include <utility>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -99,6 +100,7 @@ public:
   bool IsAlive() override { return true; }
   size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
                       size_t size, Status &error) override {
+    m_reads.emplace_back(process_addr.GetValue(), size);
     if (m_bytes_left == 0)
       return 0;
 
@@ -122,6 +124,8 @@ public:
   // Test-specific additions
   size_t m_bytes_left;
   int m_filler = 'B';
+  // Every DoReadMemory request, as (address, size).
+  llvm::SmallVector<std::pair<lldb::addr_t, size_t>, 4> m_reads;
   MemoryCache &GetMemoryCache() { return m_memory_cache; }
   void SetMaxReadSize(size_t size) { m_bytes_left = size; }
   void SetFiller(int filler) { m_filler = filler; }
@@ -193,45 +197,57 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
   // Cache empty, memory read succeeds, size > l2 cache size
   process->SetMaxReadSize(l2_cache_size * 4);
   data_sp->SetByteSize(l2_cache_size * 2);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x1000, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == data_sp->GetByteSize());
-  ASSERT_TRUE(process->m_bytes_left == l2_cache_size * 2);
+  // A read larger than a line goes to the inferior as asked, not rounded to a
+  // line.
+  ASSERT_EQ(process->m_reads.size(), 1u);
+  EXPECT_EQ(process->m_reads[0].first, 0x1000u);
+  EXPECT_EQ(process->m_reads[0].second, l2_cache_size * 2);
 
   // Reading data previously cached (not in L2 cache).
   data_sp->SetByteSize(l2_cache_size + 1);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x1000, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == data_sp->GetByteSize());
-  ASSERT_TRUE(process->m_bytes_left == l2_cache_size * 2); // Verify we didn't
-                                                           // read from the
-                                                           // inferior.
+  EXPECT_TRUE(process->m_reads.empty());
 
   // Read from a different address, but make the size == l2 cache size.
   // This should fill in a the L2 cache.
   data_sp->SetByteSize(l2_cache_size);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x2000, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == data_sp->GetByteSize());
-  ASSERT_TRUE(process->m_bytes_left == l2_cache_size);
+  ASSERT_EQ(process->m_reads.size(), 1u);
+  EXPECT_EQ(process->m_reads[0].first, 0x2000u);
+  EXPECT_EQ(process->m_reads[0].second, l2_cache_size);
 
   // Read from that L2 cache entry but read less than size of the cache line.
   // Additionally, read from an offset.
   data_sp->SetByteSize(l2_cache_size - 5);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x2001, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == data_sp->GetByteSize());
-  ASSERT_TRUE(process->m_bytes_left == l2_cache_size); // Verify we didn't read
-                                                       // from the inferior.
+  EXPECT_TRUE(process->m_reads.empty());
 
   // What happens if we try to populate an L2 cache line but the read gives less
   // than the size of a cache line?
   process->SetMaxReadSize(l2_cache_size - 10);
   data_sp->SetByteSize(l2_cache_size - 5);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x3000, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == l2_cache_size - 10);
-  ASSERT_TRUE(process->m_bytes_left == 0);
+  ASSERT_EQ(process->m_reads.size(), 2u);
+  EXPECT_EQ(process->m_reads[0].first, 0x3000u);
+  EXPECT_EQ(process->m_reads[0].second, l2_cache_size);
+  EXPECT_EQ(process->m_reads[1].first, 0x3000u + l2_cache_size - 10);
+  EXPECT_EQ(process->m_reads[1].second, 10u);
 
   // What happens if we have a partial L2 cache line filled in and we try to
   // read the part that isn't filled in?
@@ -245,57 +261,75 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
   // What happens when we try to straddle 2 cache lines?
   process->SetMaxReadSize(l2_cache_size * 2);
   data_sp->SetByteSize(l2_cache_size);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x4001, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == l2_cache_size);
-  ASSERT_TRUE(process->m_bytes_left == 0);
+  // One aligned line fetch per line touched.
+  ASSERT_EQ(process->m_reads.size(), 2u);
+  EXPECT_EQ(process->m_reads[0].first, 0x4000u);
+  EXPECT_EQ(process->m_reads[0].second, l2_cache_size);
+  EXPECT_EQ(process->m_reads[1].first, 0x4000u + l2_cache_size);
+  EXPECT_EQ(process->m_reads[1].second, l2_cache_size);
 
   // What happens when we try to straddle 2 cache lines where the first one is
   // only partially filled?
   process->SetMaxReadSize(l2_cache_size - 1);
   data_sp->SetByteSize(l2_cache_size);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x5005, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == l2_cache_size - 6); // Ignoring the first 5 bytes,
                                                 // missing the last byte
-  ASSERT_TRUE(process->m_bytes_left == 0);
+  ASSERT_EQ(process->m_reads.size(), 2u);
+  EXPECT_EQ(process->m_reads[0].first, 0x5000u);
+  EXPECT_EQ(process->m_reads[0].second, l2_cache_size);
+  EXPECT_EQ(process->m_reads[1].first, 0x5000u + l2_cache_size - 1);
+  EXPECT_EQ(process->m_reads[1].second, 1u);
 
   // What happens if we add an invalid range and try to do a read larger than
   // a cache line?
   mem_cache.AddInvalidRange(0x6000, l2_cache_size * 2);
   process->SetMaxReadSize(l2_cache_size * 2);
   data_sp->SetByteSize(l2_cache_size * 2);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x6000, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == 0);
-  ASSERT_TRUE(process->m_bytes_left == l2_cache_size * 2);
+  EXPECT_TRUE(process->m_reads.empty());
 
   // What happens if we add an invalid range and try to do a read lt/eq a
   // cache line?
   mem_cache.AddInvalidRange(0x7000, l2_cache_size);
   process->SetMaxReadSize(l2_cache_size);
   data_sp->SetByteSize(l2_cache_size);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x7000, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == 0);
-  ASSERT_TRUE(process->m_bytes_left == l2_cache_size);
+  EXPECT_TRUE(process->m_reads.empty());
 
   // What happens if we remove the invalid range and read again?
   mem_cache.RemoveInvalidRange(0x7000, l2_cache_size);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x7000, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == l2_cache_size);
-  ASSERT_TRUE(process->m_bytes_left == 0);
+  ASSERT_EQ(process->m_reads.size(), 1u);
+  EXPECT_EQ(process->m_reads[0].first, 0x7000u);
+  EXPECT_EQ(process->m_reads[0].second, l2_cache_size);
 
   // What happens if we flush and read again?
   process->SetMaxReadSize(l2_cache_size * 2);
   mem_cache.Flush(0x7000, l2_cache_size);
+  process->m_reads.clear();
   bytes_read = mem_cache.Read(0x7000, data_sp->GetBytes(),
                               data_sp->GetByteSize(), error);
   ASSERT_TRUE(bytes_read == l2_cache_size);
-  ASSERT_TRUE(process->m_bytes_left == l2_cache_size); // Verify that we re-read
-                                                       // instead of using an
-                                                       // old cache
+  // Verify that we re-read instead of using an old cache.
+  ASSERT_EQ(process->m_reads.size(), 1u);
+  EXPECT_EQ(process->m_reads[0].first, 0x7000u);
+  EXPECT_EQ(process->m_reads[0].second, l2_cache_size);
 }
 
 TEST_F(MemoryTest, TestL1Cache) {
@@ -422,11 +456,13 @@ TEST_F(MemoryTest, TestReadStopsAtAnInvalidRange) {
 
   DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
   MemoryCache &cache = process->GetMemoryCache();
+  const lldb::addr_t line = process->GetMemoryCacheLineSize();
   const lldb::addr_t base = 0xE000;
 
   cache.AddInvalidRange(base + 16, 16);
   process->SetMaxReadSize(4096);
   process->SetFiller(0xBB);
+  process->m_reads.clear();
 
   // Only the bytes below the invalid range are served, and the read reports
   // the failure.
@@ -437,12 +473,20 @@ TEST_F(MemoryTest, TestReadStopsAtAnInvalidRange) {
   for (size_t i = 0; i < 16; ++i)
     EXPECT_EQ(buf[i], 0xBB) << "byte " << i;
 
+  // The whole aligned line is still fetched, crossing the invalid range, even
+  // though only the 16 bytes below it may be served.
+  ASSERT_EQ(process->m_reads.size(), 1u);
+  EXPECT_EQ(process->m_reads[0].first, base);
+  EXPECT_EQ(process->m_reads[0].second, line);
+
   // A read starting inside the range has nothing to serve.
   Status inside_error;
   std::vector<uint8_t> inside(8, 0);
+  process->m_reads.clear();
   EXPECT_EQ(cache.Read(base + 20, inside.data(), inside.size(), inside_error),
             0u);
   EXPECT_TRUE(inside_error.Fail());
+  EXPECT_TRUE(process->m_reads.empty());
 }
 
 TEST_F(MemoryTest, TestUnusableCacheLineSize) {
@@ -648,15 +692,19 @@ TEST_F(MemoryTest, TestReadMemoryRangesUsesL2Cache) {
   ASSERT_EQ(full_line % l2_cache_size, 0u);
   process->SetMaxReadSize(l2_cache_size);
   process->SetFiller('A');
+  process->m_reads.clear();
   ASSERT_EQ(process->ReadMemory(full_line, header, sizeof(header), error),
             sizeof(header));
-  ASSERT_EQ(process->m_bytes_left, 0u);
+  ASSERT_EQ(process->m_reads.size(), 1u);
+  EXPECT_EQ(process->m_reads[0].first, full_line);
+  EXPECT_EQ(process->m_reads[0].second, l2_cache_size);
 
   { // Ranges covered by that line are served from the cache. Leave the inferior
     // able to answer, with a filler of its own, so a miss would show up both in
-    // the contents below and in the unspent budget.
+    // the contents below and in the request log.
     process->SetMaxReadSize(l2_cache_size);
     process->SetFiller('X');
+    process->m_reads.clear();
     llvm::SmallVector<uint8_t, 0> buffer(3 * 8, 0);
     llvm::SmallVector<Range<addr_t, size_t>> ranges = {
         {full_line + 8, 8},
@@ -671,11 +719,12 @@ TEST_F(MemoryTest, TestReadMemoryRangesUsesL2Cache) {
         EXPECT_EQ(byte, 'A');
     }
     // Nothing was read from the inferior, so no packet was sent.
-    EXPECT_EQ(process->m_bytes_left, l2_cache_size);
+    EXPECT_TRUE(process->m_reads.empty());
   }
 
   { // A range crossing into the next, uncached line is a miss.
     process->SetMaxReadSize(0);
+    process->m_reads.clear();
     llvm::SmallVector<uint8_t, 0> buffer(8, 0);
     llvm::SmallVector<Range<addr_t, size_t>> ranges = {
         {full_line + l2_cache_size - 4, 8}};
@@ -683,6 +732,10 @@ TEST_F(MemoryTest, TestReadMemoryRangesUsesL2Cache) {
         process->ReadMemoryRanges(ranges, buffer);
     ASSERT_EQ(read_results.size(), 1u);
     EXPECT_EQ(read_results[0].size(), 0u);
+    // The missed range is asked for as it stands, not rounded up to a line.
+    ASSERT_EQ(process->m_reads.size(), 1u);
+    EXPECT_EQ(process->m_reads[0].first, full_line + l2_cache_size - 4);
+    EXPECT_EQ(process->m_reads[0].second, 8u);
   }
 
   { // A batch of hits and misses keeps the results in the requested order, and
@@ -690,6 +743,7 @@ TEST_F(MemoryTest, TestReadMemoryRangesUsesL2Cache) {
     const addr_t uncached_line = 0x3000;
     process->SetMaxReadSize(l2_cache_size);
     process->SetFiller('C');
+    process->m_reads.clear();
     llvm::SmallVector<uint8_t, 0> buffer(3 * 8, 0);
     llvm::SmallVector<Range<addr_t, size_t>> ranges = {
         {full_line + 8, 8}, {uncached_line, 8}, {full_line + 16, 8}};
@@ -704,7 +758,9 @@ TEST_F(MemoryTest, TestReadMemoryRangesUsesL2Cache) {
       EXPECT_EQ(byte, 'C');
     for (uint8_t byte : read_results[2])
       EXPECT_EQ(byte, 'A');
-    EXPECT_EQ(process->m_bytes_left, l2_cache_size - 8);
+    ASSERT_EQ(process->m_reads.size(), 1u);
+    EXPECT_EQ(process->m_reads[0].first, uncached_line);
+    EXPECT_EQ(process->m_reads[0].second, 8u);
   }
 
   // A line the inferior could only partially supply is cached short.
@@ -714,11 +770,17 @@ TEST_F(MemoryTest, TestReadMemoryRangesUsesL2Cache) {
   ASSERT_LT(bytes_available, l2_cache_size);
   process->SetMaxReadSize(bytes_available);
   process->SetFiller('D');
+  process->m_reads.clear();
   ASSERT_EQ(process->ReadMemory(short_line, header, sizeof(header), error),
             sizeof(header));
-  ASSERT_EQ(process->m_bytes_left, 0u);
+  ASSERT_EQ(process->m_reads.size(), 2u);
+  EXPECT_EQ(process->m_reads[0].first, short_line);
+  EXPECT_EQ(process->m_reads[0].second, l2_cache_size);
+  EXPECT_EQ(process->m_reads[1].first, short_line + bytes_available);
+  EXPECT_EQ(process->m_reads[1].second, l2_cache_size - bytes_available);
 
   { // Only the part of the line that was actually read may be served.
+    process->m_reads.clear();
     llvm::SmallVector<uint8_t, 0> buffer(2 * 8, 0);
     llvm::SmallVector<Range<addr_t, size_t>> ranges = {
         {short_line + bytes_available - 8, 8},
@@ -730,6 +792,9 @@ TEST_F(MemoryTest, TestReadMemoryRangesUsesL2Cache) {
     for (uint8_t byte : read_results[0])
       EXPECT_EQ(byte, 'D');
     EXPECT_EQ(read_results[1].size(), 0u);
+    ASSERT_EQ(process->m_reads.size(), 1u);
+    EXPECT_EQ(process->m_reads[0].first, short_line + bytes_available - 4);
+    EXPECT_EQ(process->m_reads[0].second, 8u);
   }
 }
 

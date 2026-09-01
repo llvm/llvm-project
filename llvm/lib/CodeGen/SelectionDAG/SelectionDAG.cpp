@@ -6153,7 +6153,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   switch (Opcode) {
   case ISD::POISON: {
     Known.KnownFPClasses = fcNone;
-    Known.SignBit = false;
+    Known.setSignBit(false);
     break;
   }
   case ISD::FNEG: {

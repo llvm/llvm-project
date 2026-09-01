@@ -817,7 +817,7 @@ private:
   unsigned fNext = 0;
 
   /// mdnMap - Map for MDNodes.
-  DenseMap<const MDNode*, unsigned> mdnMap;
+  DenseMap<const MDNode *, unsigned> mdnMap;
   unsigned mdnNext = 0;
 
   /// asMap - The slot map for attribute sets.
@@ -5122,8 +5122,7 @@ void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                      bool IsForDebug) const {
   SlotTracker SlotTable(this->getParent());
   formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, SlotTable, this->getModule(), AAW,
-                   IsForDebug,
+  AssemblyWriter W(OS, SlotTable, this->getModule(), AAW, IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printBasicBlock(this);
 }

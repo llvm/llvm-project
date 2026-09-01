@@ -249,7 +249,7 @@ ProcessWasm::GetWasmVariable(WasmVirtualRegisterKinds kind,
 llvm::Expected<lldb::DataBufferSP>
 ProcessWasm::GetWasmGlobalForModule(uint32_t module_id, uint32_t index) {
   return SendWasmValueQuery(
-      llvm::formatv("qWasmGlobal:{0};instance:{1};", index, module_id).str());
+      llvm::formatv("qWasmGlobal:{0};instance:{1}", index, module_id).str());
 }
 
 llvm::Expected<lldb::DataBufferSP>
