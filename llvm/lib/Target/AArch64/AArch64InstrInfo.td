@@ -5807,34 +5807,6 @@ let Predicates = [HasFPRCVT] in {
           (UCVTFDSr (EXTRACT_SUBREG V64:$Rn, ssub))>;
 }
 
-def : Pat<(f16 (fdiv (f16 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
-          (SCVTFSWHri GPR32:$Rn, fixedpoint_f16_i32:$scale)>;
-def : Pat<(f32 (fdiv (f32 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f32_i32:$scale)),
-          (SCVTFSWSri GPR32:$Rn, fixedpoint_f32_i32:$scale)>;
-def : Pat<(f64 (fdiv (f64 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f64_i32:$scale)),
-          (SCVTFSWDri GPR32:$Rn, fixedpoint_f64_i32:$scale)>;
-
-def : Pat<(f16 (fdiv (f16 (any_sint_to_fp (i64 GPR64:$Rn))), fixedpoint_f16_i64:$scale)),
-          (SCVTFSXHri GPR64:$Rn, fixedpoint_f16_i64:$scale)>;
-def : Pat<(f32 (fdiv (f32 (any_sint_to_fp (i64 GPR64:$Rn))), fixedpoint_f32_i64:$scale)),
-          (SCVTFSXSri GPR64:$Rn, fixedpoint_f32_i64:$scale)>;
-def : Pat<(f64 (fdiv (f64 (any_sint_to_fp (i64 GPR64:$Rn))), fixedpoint_f64_i64:$scale)),
-          (SCVTFSXDri GPR64:$Rn, fixedpoint_f64_i64:$scale)>;
-
-def : Pat<(f16 (fdiv (f16 (any_uint_to_fp (i64 GPR64:$Rn))), fixedpoint_f16_i64:$scale)),
-          (UCVTFSXHri GPR64:$Rn, fixedpoint_f16_i64:$scale)>;
-def : Pat<(f32 (fdiv (f32 (any_uint_to_fp (i64 GPR64:$Rn))), fixedpoint_f32_i64:$scale)),
-          (UCVTFSXSri GPR64:$Rn, fixedpoint_f32_i64:$scale)>;
-def : Pat<(f64 (fdiv (f64 (any_uint_to_fp (i64 GPR64:$Rn))), fixedpoint_f64_i64:$scale)),
-          (UCVTFSXDri GPR64:$Rn, fixedpoint_f64_i64:$scale)>;
-
-def : Pat<(f16 (fdiv (f16 (any_uint_to_fp (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
-          (UCVTFSWHri GPR32:$Rn, fixedpoint_f16_i32:$scale)>;
-def : Pat<(f32 (fdiv (f32 (any_uint_to_fp (i32 GPR32:$Rn))), fixedpoint_f32_i32:$scale)),
-          (UCVTFSWSri GPR32:$Rn, fixedpoint_f32_i32:$scale)>;
-def : Pat<(f64 (fdiv (f64 (any_uint_to_fp (i32 GPR32:$Rn))), fixedpoint_f64_i32:$scale)),
-          (UCVTFSWDri GPR32:$Rn, fixedpoint_f64_i32:$scale)>;
-
 //===----------------------------------------------------------------------===//
 // Unscaled integer to floating point conversion instruction.
 //===----------------------------------------------------------------------===//
@@ -9666,6 +9638,56 @@ def gi_fixedpoint_scalar_xform
     : GICustomOperandRenderer<"renderFixedPointScalarXForm">,
       GISDNodeXFormEquiv<fixedpoint_scalar_xform>;
 
+multiclass IntegerToFPScalarPats<SDPatternOperator OpNode, string INST> {
+  // TODO: Support these patterns for GlobalISel as well.
+  let GISelShouldIgnore = 1 in {
+  // Expect the integer operand to be in GPR register.
+  def : Pat<(f16 (fmul (f16 (OpNode (i32 GPR32:$Rn))), fixedpoint_recip_f16_i32:$scale)),
+            (!cast<Instruction>(INST # "SWHri") GPR32:$Rn, fixedpoint_recip_f16_i32:$scale)>;
+  def : Pat<(f32 (fmul (f32 (OpNode (i32 GPR32:$Rn))), fixedpoint_recip_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "SWSri") GPR32:$Rn, fixedpoint_recip_f32_i32:$scale)>;
+  def : Pat<(f64 (fmul (f64 (OpNode (i32 GPR32:$Rn))), fixedpoint_recip_f64_i32:$scale)),
+            (!cast<Instruction>(INST # "SWDri") GPR32:$Rn, fixedpoint_recip_f64_i32:$scale)>;
+  def : Pat<(f16 (fmul (f16 (OpNode (i64 GPR64:$Rn))), fixedpoint_recip_f16_i64:$scale)),
+            (!cast<Instruction>(INST # "SXHri") GPR64:$Rn, fixedpoint_recip_f16_i64:$scale)>;
+  def : Pat<(f32 (fmul (f32 (OpNode (i64 GPR64:$Rn))), fixedpoint_recip_f32_i64:$scale)),
+            (!cast<Instruction>(INST # "SXSri") GPR64:$Rn, fixedpoint_recip_f32_i64:$scale)>;
+  def : Pat<(f64 (fmul (f64 (OpNode (i64 GPR64:$Rn))), fixedpoint_recip_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "SXDri") GPR64:$Rn, fixedpoint_recip_f64_i64:$scale)>;
+  }
+
+  def : Pat<(f16 (fdiv (f16 (OpNode (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
+            (!cast<Instruction>(INST # "SWHri") GPR32:$Rn, fixedpoint_f16_i32:$scale)>;
+  def : Pat<(f32 (fdiv (f32 (OpNode (i32 GPR32:$Rn))), fixedpoint_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "SWSri") GPR32:$Rn, fixedpoint_f32_i32:$scale)>;
+  def : Pat<(f64 (fdiv (f64 (OpNode (i32 GPR32:$Rn))), fixedpoint_f64_i32:$scale)),
+            (!cast<Instruction>(INST # "SWDri") GPR32:$Rn, fixedpoint_f64_i32:$scale)>;
+  def : Pat<(f16 (fdiv (f16 (OpNode (i64 GPR64:$Rn))), fixedpoint_f16_i64:$scale)),
+            (!cast<Instruction>(INST # "SXHri") GPR64:$Rn, fixedpoint_f16_i64:$scale)>;
+  def : Pat<(f32 (fdiv (f32 (OpNode (i64 GPR64:$Rn))), fixedpoint_f32_i64:$scale)),
+            (!cast<Instruction>(INST # "SXSri") GPR64:$Rn, fixedpoint_f32_i64:$scale)>;
+  def : Pat<(f64 (fdiv (f64 (OpNode (i64 GPR64:$Rn))), fixedpoint_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "SXDri") GPR64:$Rn, fixedpoint_f64_i64:$scale)>;
+
+  // Expect the integer operand to be in FPR register. The AdvSIMD scalar
+  // shifted conversion forms are same-width, so only i32->f32 and i64->f64
+  // can use them for generic integer-to-fp fixed-point conversions.
+  let GISelShouldIgnore = 1 in {
+  def : Pat<(f32 (fmul (f32 (OpNode (i32 (bitconvert (f32 FPR32:$Rn))))), fixedpoint_recip_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_recip_f32_i32:$scale))>;
+  def : Pat<(f64 (fmul (f64 (OpNode (i64 (bitconvert (f64 FPR64:$Rn))))), fixedpoint_recip_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_recip_f64_i64:$scale))>;
+  }
+
+  def : Pat<(f32 (fdiv (f32 (OpNode (i32 (bitconvert (f32 FPR32:$Rn))))), fixedpoint_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
+  def : Pat<(f64 (fdiv (f64 (OpNode (i64 (bitconvert (f64 FPR64:$Rn))))), fixedpoint_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
+}
+
+defm : IntegerToFPScalarPats<any_sint_to_fp, "SCVTF">;
+defm : IntegerToFPScalarPats<any_uint_to_fp, "UCVTF">;
+
 multiclass FPToFixedScalarPats<SDPatternOperator OpN, string INST > {
   // Allow integer result to remain in GPR register.
   def : Pat<(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)),
@@ -9698,20 +9720,31 @@ defm : FPToFixedScalarPats<int_aarch64_neon_vcvtfp2fxu, "FCVTZU">;
 // Codegen patterns for SCVTF and UCVTF. We don't put these directly on the
 // instructions because TableGen's type inference can't handle the truth.
 // Having the same base pattern for fp <--> int totally freaks it out.
-def : Pat<(int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR32:$imm),
+def : Pat<(int_aarch64_neon_vcvtfxu2fp (i32 (bitconvert (f32 FPR32:$Rn))), vecshiftR32:$imm),
           (UCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
-def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn), vecshiftR64:$imm)),
+def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp (i64 (bitconvert (f64 FPR64:$Rn))),
+                                            vecshiftR64:$imm)),
           (UCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
 def : Pat<(v1f64 (int_aarch64_neon_vcvtfxs2fp (v1i64 FPR64:$Rn),
                                             vecshiftR64:$imm)),
           (SCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
-def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp (i64 FPR64:$Rn), vecshiftR64:$imm)),
+def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp (i64 (bitconvert (f64 FPR64:$Rn))),
+                                            vecshiftR64:$imm)),
           (SCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
 def : Pat<(v1f64 (int_aarch64_neon_vcvtfxu2fp (v1i64 FPR64:$Rn),
                                             vecshiftR64:$imm)),
           (UCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
-def : Pat<(int_aarch64_neon_vcvtfxs2fp FPR32:$Rn, vecshiftR32:$imm),
+def : Pat<(int_aarch64_neon_vcvtfxs2fp (i32 (bitconvert (f32 FPR32:$Rn))), vecshiftR32:$imm),
           (SCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
+
+def : Pat<(f32 (int_aarch64_neon_vcvtfxs2fp GPR32:$Rn, vecshiftR32:$imm)),
+          (SCVTFSWSri GPR32:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
+def : Pat<(f32 (int_aarch64_neon_vcvtfxu2fp GPR32:$Rn, vecshiftR32:$imm)),
+          (UCVTFSWSri GPR32:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp GPR64:$Rn, vecshiftR64:$imm)),
+          (SCVTFSXDri GPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp GPR64:$Rn, vecshiftR64:$imm)),
+          (UCVTFSXDri GPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
 
 // Patterns for FP16 Intrinsics - requires reg copy to/from as i16s not supported.
 
