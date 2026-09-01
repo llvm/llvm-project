@@ -5566,6 +5566,7 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
   unsigned NumFrees = 0;
   unsigned NumMasked = 0;
   unsigned NumEndMasked = 0;
+  unsigned NumBarriers = 0;
   unsigned NumLog = 0;
   unsigned NumCeil = 0;
   for (Instruction &I : instructions(F)) {
@@ -5579,8 +5580,13 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
       NumFrees += 1;
     } else if (Name.equals_insensitive("__kmpc_masked")) {
       NumMasked += 1;
+      EXPECT_TRUE(Call->getDebugLoc()) << "no !dbg on " << Name;
     } else if (Name.equals_insensitive("__kmpc_end_masked")) {
       NumEndMasked += 1;
+      EXPECT_TRUE(Call->getDebugLoc()) << "no !dbg on " << Name;
+    } else if (Name.equals_insensitive("__kmpc_barrier")) {
+      NumBarriers += 1;
+      EXPECT_TRUE(Call->getDebugLoc()) << "no !dbg on " << Name;
     } else if (Name.equals_insensitive("llvm.log2.f64")) {
       NumLog += 1;
     } else if (Name.equals_insensitive("llvm.ceil.f64")) {
@@ -5590,6 +5596,7 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
   EXPECT_EQ(NumBodiesGenerated, 2U);
   EXPECT_EQ(NumMasked, 3U);
   EXPECT_EQ(NumEndMasked, 3U);
+  EXPECT_EQ(NumBarriers, 3U);
   EXPECT_EQ(NumMallocs, 1U);
   EXPECT_EQ(NumFrees, 1U);
   EXPECT_EQ(NumLog, 1U);

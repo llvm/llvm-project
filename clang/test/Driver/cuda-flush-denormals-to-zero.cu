@@ -46,11 +46,11 @@
 // NOFTZ-NOT: "-fdenormal-fp-math-f32"
 
 // MIXED-DEFAULT-MODE-NOT: -denormal-fp-math
-// MIXED-DEFAULT-MODE: "-fdenormal-fp-math-f32=preserve-sign,preserve-sign"
-// MIXED-DEFAULT-MODE-SAME: "-target-cpu" "gfx803"
+// MIXED-DEFAULT-MODE: "-triple" "amdgpu8.03
+// MIXED-DEFAULT-MODE-SAME: "-fdenormal-fp-math-f32=preserve-sign,preserve-sign"
 // MIXED-DEFAULT-MODE-NOT: -denormal-fp-math
 
-// FTZX2: "-fdenormal-fp-math-f32=preserve-sign,preserve-sign"
-// FTZX2-SAME: "-target-cpu" "gfx803"
-// FTZX2: "-fdenormal-fp-math-f32=preserve-sign,preserve-sign"
-// FTZX2-SAME: "-target-cpu" "gfx900"
+// FTZX2: "-triple" "amdgpu8.03
+// FTZX2-SAME: "-fdenormal-fp-math-f32=preserve-sign,preserve-sign"
+// FTZX2: "-triple" "amdgpu9.00
+// FTZX2-SAME: "-fdenormal-fp-math-f32=preserve-sign,preserve-sign"
