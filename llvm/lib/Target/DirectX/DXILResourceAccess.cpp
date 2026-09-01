@@ -825,44 +825,43 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     assert(NumEdges != 0 && "Malformed Phi Node");
 
     IRBuilder<> Builder(Phi);
-    PHINode *GetPtrPhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
-    PHINode *HandlePhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
+    std::unique_ptr<PHINode> GetPtrPhi(
+        PHINode::Create(Builder.getInt32Ty(), NumEdges));
+    std::unique_ptr<PHINode> HandlePhi(
+        PHINode::Create(Builder.getInt32Ty(), NumEdges));
 
     // Register a ref to this phi for a recursive phi
     if (Phi->getType()->isTargetExtTy())
-      VisitedPhis[Phi] = HandlePhi;
+      VisitedPhis[Phi] = HandlePhi.get();
 
-    bool HasGetPtr = true;
     for (unsigned Idx = 0; Idx < NumEdges; Idx++) {
       auto *BB = Phi->getIncomingBlock(Idx);
       auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(Idx));
       auto AccessIdx = getAccessIndices(V, DeadInsts, VisitedPhis);
-      HasGetPtr &= AccessIdx.hasGetPtrIdx();
-      if (HasGetPtr)
+      if (AccessIdx.hasGetPtrIdx())
         GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
       HandlePhi->addIncoming(AccessIdx.HandleIdx, BB);
     }
-    DeadInsts.insert(Phi);
 
-    Value *GetPtrIdx = GetPtrPhi;
-    if (HasGetPtr) {
-      if (Value *ConstantGetPtr = GetPtrPhi->hasConstantValue()) {
-        GetPtrIdx = ConstantGetPtr;
-        delete GetPtrPhi;
-      } else
-        Builder.Insert(GetPtrPhi);
-    } else {
+    Value *GetPtrIdx;
+    if (GetPtrPhi->getNumIncomingValues() == 0)
       GetPtrIdx = nullptr;
-      delete GetPtrPhi;
+    else if (Value *ConstantGetPtr = GetPtrPhi->hasConstantValue())
+      GetPtrIdx = ConstantGetPtr;
+    else {
+      GetPtrIdx = GetPtrPhi.release();
+      Builder.Insert(GetPtrIdx);
     }
 
-    Value *HandleIdx = HandlePhi;
-    if (Value *ConstantHandle = HandlePhi->hasConstantValue()) {
+    Value *HandleIdx;
+    if (Value *ConstantHandle = HandlePhi->hasConstantValue())
       HandleIdx = ConstantHandle;
-      delete HandlePhi;
-    } else
-      Builder.Insert(HandlePhi);
+    else {
+      HandleIdx = HandlePhi.release();
+      Builder.Insert(HandleIdx);
+    }
 
+    DeadInsts.insert(Phi);
     return {GetPtrIdx, HandleIdx};
   }
 
