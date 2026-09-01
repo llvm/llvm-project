@@ -329,9 +329,6 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
             }
 #endif
 
-            // Normalize negative direction vectors if required by clients.
-            if (NormalizeResults && D->normalize(&SE))
-              OS << "normalized - ";
             D->dump(OS);
           } else
             OS << "none!\n";
@@ -401,34 +398,6 @@ FullDependence::FullDependence(Instruction *Source, Instruction *Destination,
     DV = std::make_unique<DVEntry[]>(CommonLevels);
 }
 
-// FIXME: in some cases the meaning of a negative direction vector
-// may not be straightforward, e.g.,
-// for (int i = 0; i < 32; ++i) {
-//   Src:    A[i] = ...;
-//   Dst:    use(A[31 - i]);
-// }
-// The dependency is
-//   flow { Src[i] -> Dst[31 - i] : when i >= 16 } and
-//   anti { Dst[i] -> Src[31 - i] : when i < 16 },
-// -- hence a [<>].
-// As long as a dependence result contains '>' ('<>', '<=>', "*"), it
-// means that a reversed/normalized dependence needs to be considered
-// as well. Nevertheless, current isDirectionNegative() only returns
-// true with a '>' or '>=' dependency for ease of canonicalizing the
-// dependency vector, since the reverse of '<>', '<=>' and "*" is itself.
-bool FullDependence::isDirectionNegative() const {
-  for (unsigned Level = 1; Level <= Levels; ++Level) {
-    unsigned char Direction = DV[Level - 1].Direction;
-    if (Direction == Dependence::DVEntry::EQ)
-      continue;
-    if (Direction == Dependence::DVEntry::GT ||
-        Direction == Dependence::DVEntry::GE)
-      return true;
-    return false;
-  }
-  return false;
-}
-
 void FullDependence::negate(ScalarEvolution &SE) {
   std::swap(Src, Dst);
   for (unsigned Level = 1; Level <= Levels; ++Level) {
@@ -445,18 +414,6 @@ void FullDependence::negate(ScalarEvolution &SE) {
     if (DV[Level - 1].Distance != nullptr)
       DV[Level - 1].Distance = SE.getNegativeSCEV(DV[Level - 1].Distance);
   }
-}
-
-bool FullDependence::normalize(ScalarEvolution *SE) {
-  if (!isDirectionNegative())
-    return false;
-
-  LLVM_DEBUG(dbgs() << "Before normalizing negative direction vectors:\n";
-             dump(dbgs()););
-  negate(*SE);
-  LLVM_DEBUG(dbgs() << "After normalizing negative direction vectors:\n";
-             dump(dbgs()););
-  return true;
 }
 
 // The rest are simple getters that hide the implementation.

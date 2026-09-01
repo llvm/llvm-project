@@ -306,7 +306,7 @@ define void @banerjee3(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
 ; NORMALIZE-NEXT:    da analyze - none!
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: %0 = load i64, ptr %arrayidx7, align 8
-; NORMALIZE-NEXT:    da analyze - normalized - anti [< <]!
+; NORMALIZE-NEXT:    da analyze - flow [> >]!
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; NORMALIZE-NEXT:    da analyze - confused!
 ; NORMALIZE-NEXT:  Src: %0 = load i64, ptr %arrayidx7, align 8 --> Dst: %0 = load i64, ptr %arrayidx7, align 8
@@ -561,7 +561,7 @@ define void @banerjee6(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
 ; NORMALIZE-NEXT:    da analyze - none!
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: %0 = load i64, ptr %arrayidx7, align 8
-; NORMALIZE-NEXT:    da analyze - normalized - anti [<= <>]!
+; NORMALIZE-NEXT:    da analyze - flow [=> <>]!
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; NORMALIZE-NEXT:    da analyze - confused!
 ; NORMALIZE-NEXT:  Src: %0 = load i64, ptr %arrayidx7, align 8 --> Dst: %0 = load i64, ptr %arrayidx7, align 8
@@ -646,7 +646,7 @@ define void @banerjee7(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
 ; NORMALIZE-NEXT:    da analyze - none!
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: %0 = load i64, ptr %arrayidx7, align 8
-; NORMALIZE-NEXT:    da analyze - normalized - anti [< =>]!
+; NORMALIZE-NEXT:    da analyze - flow [> <=]!
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; NORMALIZE-NEXT:    da analyze - confused!
 ; NORMALIZE-NEXT:  Src: %0 = load i64, ptr %arrayidx7, align 8 --> Dst: %0 = load i64, ptr %arrayidx7, align 8
@@ -731,7 +731,7 @@ define void @banerjee8(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
 ; NORMALIZE-NEXT:    da analyze - none!
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: %0 = load i64, ptr %arrayidx7, align 8
-; NORMALIZE-NEXT:    da analyze - normalized - anti [< <>]!
+; NORMALIZE-NEXT:    da analyze - flow [> <>]!
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; NORMALIZE-NEXT:    da analyze - confused!
 ; NORMALIZE-NEXT:  Src: %0 = load i64, ptr %arrayidx7, align 8 --> Dst: %0 = load i64, ptr %arrayidx7, align 8
