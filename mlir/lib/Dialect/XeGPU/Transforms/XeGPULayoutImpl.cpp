@@ -273,21 +273,19 @@ LogicalResult xegpu::propagateYieldOperandsToRegionResults(
       // Assign the yield operand's layout to the region op result it feeds.
       if (auto result = dyn_cast<OpResult>(successorInput))
         xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
-      // A block argument has no attribute of its own, and scf.while's "after"
-      // arguments are tied to no init operand to borrow one from. Their layout
-      // is only recoverable when the terminator forwards a region argument
-      // unchanged, so that getDistributeLayoutAttr can read it from there. If a
-      // layout is required and the forwarded value is anything else, say so
-      // rather than lowering the region with an unknown layout.
+      // Restrict the input IR: a successor argument that is not tied to an init
+      // operand (scf.while's "after" arguments) must be fed by a pass-through,
+      // because nothing else identifies which value the region carries. Its
+      // layout is then that of the forwarded argument's init operand.
       if (auto arg = dyn_cast<BlockArgument>(successorInput)) {
         auto loop =
             dyn_cast<LoopLikeOpInterface>(arg.getOwner()->getParentOp());
         bool tiedToInit = loop && loop.getTiedLoopInit(arg);
-        if (!tiedToInit && getLayoutOfValue(arg) &&
-            !isa<BlockArgument>(successorOperand->get()))
+        if (!tiedToInit && !isa<BlockArgument>(successorOperand->get()))
           return terminator->emitError(
-              "region argument requires a layout, but the forwarded value is "
-              "not a region argument");
+              "unsupported region structure: the successor argument it feeds "
+              "is not tied to an init operand, so its value must be passed "
+              "through from predecessor region argument.");
       }
     }
   }

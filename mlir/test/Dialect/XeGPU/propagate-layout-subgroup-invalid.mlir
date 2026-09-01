@@ -106,7 +106,7 @@ gpu.module @test {
     %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32> -> !xegpu.tensor_desc<256x128xf32>
     %0 = scf.while (%before = %cst) : (vector<256x128xf32>) -> vector<256x128xf32> {
       %loaded = xegpu.load_nd %tdesc[0, 0] : !xegpu.tensor_desc<256x128xf32> -> vector<256x128xf32>
-      // expected-error@+2 {{region argument requires a layout, but the forwarded value is not a region argument}}
+      // expected-error@+2 {{unsupported region structure: the successor argument it feeds is not tied to an init operand, so its value must be passed through from predecessor region argument.}}
       // expected-error@+1 {{Failed to update operation with the layout.}}
       scf.condition(%cond) %loaded : vector<256x128xf32>
     } do {
