@@ -1520,6 +1520,16 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
         "FIRToMemRef: expected defining op or block argument for FIR memref");
   }
 
+  // If a zero-offset view (fir.declare, ref-to-ref fir.convert, ...) wraps an
+  // fir.array_coor, dispatch on the array_coor so bounds-aware lowering runs.
+  // Otherwise leave firMemref as the view so marshal keeps its naming.
+  Value peeled = peelZeroOffsetViews(firMemref);
+  if (auto arrayCoorOp =
+          dyn_cast_or_null<fir::ArrayCoorOp>(peeled.getDefiningOp())) {
+    firMemref = peeled;
+    memrefOp = arrayCoorOp;
+  }
+
   if (auto arrayCoorOp = dyn_cast<fir::ArrayCoorOp>(memrefOp)) {
     MemRefInfo memrefInfo =
         convertArrayCoorOp(memOp, arrayCoorOp, rewriter, typeConverter);
@@ -1578,28 +1588,12 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
     return marshalView(memOp, memrefOp, firMemref, rewriter, typeConverter,
                        "device-data memref");
 
-  // Some other zero-offset, ref-producing view (fir.declare, ref-to-ref
-  // fir.convert, fir.box_addr, fir.volatile_cast): peek underneath for an
-  // fir.array_coor that needs bounds-aware handling (e.g. fir.declare
-  // wrapping fir.array_coor); otherwise marshal the view itself so its
-  // naming is kept and getFIRConvert's dedup logic still applies.
-  if (isa<fir::FortranObjectViewOpInterface>(memrefOp)) {
-    if (auto arrayCoorOp = dyn_cast_or_null<fir::ArrayCoorOp>(
-            peelZeroOffsetViews(firMemref).getDefiningOp())) {
-      MemRefInfo memrefInfo =
-          convertArrayCoorOp(memOp, arrayCoorOp, rewriter, typeConverter);
-      if (succeeded(memrefInfo)) {
-        for (auto user : arrayCoorOp->getUsers())
-          if (!isa<fir::LoadOp, fir::StoreOp>(user))
-            return memrefInfo;
-        eraseOps.insert(arrayCoorOp);
-      }
-      return memrefInfo;
-    }
-
+  // Remaining zero-offset view (fir.declare, ref-to-ref fir.convert,
+  // fir.box_addr, fir.volatile_cast, ...): no array_coor underneath, so
+  // marshal the view itself to keep naming and getFIRConvert dedup.
+  if (isa<fir::FortranObjectViewOpInterface>(memrefOp))
     return marshalView(memOp, memrefOp, firMemref, rewriter, typeConverter,
                        "view memref");
-  }
 
   LLVM_DEBUG(llvm::dbgs()
                  << "FIRToMemRef: unable to create convert for memref value:\n";

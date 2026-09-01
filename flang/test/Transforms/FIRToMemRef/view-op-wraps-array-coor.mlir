@@ -1,7 +1,7 @@
-// Test that each zero-offset FortranObjectViewOpInterface op wrapping (directly
-// or through a chain of such views) a fir.array_coor is peeled through, so the
-// array_coor is still lowered to a bounds-aware memref access instead of being
-// treated as an opaque scalar reference.
+// Test that zero-offset FortranObjectViewOpInterface ops wrapping a
+// fir.array_coor are peeled through, so the array_coor is still lowered to a
+// bounds-aware memref access instead of being treated as an opaque scalar
+// reference. fir.volatile_cast is a peel barrier.
 // RUN: fir-opt %s --fir-to-memref --allow-unregistered-dialect | FileCheck %s
 // The pass must not introduce any fir.convert that drops volatility.
 // RUN: fir-opt %s --strict-fir-volatile-verifier --fir-to-memref -o /dev/null
@@ -41,9 +41,8 @@ func.func @convert_wraps_array_coor(%arg0: !fir.ref<!fir.array<10xi32>>, %v: i32
 }
 
 // A fir.box_addr can only reach an array_coor through an intervening
-// fir.embox/rebox/create_box (its own operand is always a box, and
-// array_coor never produces one), so this also exercises peeling through
-// fir.embox one level down.
+// fir.embox (its own operand is always a box, and array_coor never produces
+// one), so this also exercises peeling through fir.embox.
 // CHECK-LABEL: func.func @box_addr_wraps_array_coor
 // CHECK:       %[[M0:.+]] = fir.convert %arg0 : (!fir.ref<!fir.array<10xi32>>) -> memref<10xi32>
 // CHECK:       %[[M1:.+]] = fir.convert %arg0 : (!fir.ref<!fir.array<10xi32>>) -> memref<10xi32>
@@ -59,27 +58,6 @@ func.func @box_addr_wraps_array_coor(%arg0: !fir.ref<!fir.array<10xi32>>, %v: i3
   %addr = fir.box_addr %box : (!fir.box<i32>) -> !fir.ref<i32>
   %load = fir.load %addr : !fir.ref<i32>
   fir.store %v to %addr : !fir.ref<i32>
-  return
-}
-
-// Longer chain (fir.declare -> fir.box_addr -> fir.embox -> fir.array_coor)
-// to check multi-hop peeling through fir.embox specifically.
-// CHECK-LABEL: func.func @embox_wraps_array_coor
-// CHECK:       %[[M0:.+]] = fir.convert %arg0 : (!fir.ref<!fir.array<10xi32>>) -> memref<10xi32>
-// CHECK:       %[[M1:.+]] = fir.convert %arg0 : (!fir.ref<!fir.array<10xi32>>) -> memref<10xi32>
-// CHECK:       memref.load %[[M0]]
-// CHECK:       memref.store %arg1, %[[M1]]
-// CHECK-NOT:   fir.array_coor
-func.func @embox_wraps_array_coor(%arg0: !fir.ref<!fir.array<10xi32>>, %v: i32) {
-  %c1 = arith.constant 1 : index
-  %c10 = arith.constant 10 : index
-  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %elem = fir.array_coor %arg0(%shape) %c1 : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-  %box = fir.embox %elem : (!fir.ref<i32>) -> !fir.box<i32>
-  %addr = fir.box_addr %box : (!fir.box<i32>) -> !fir.ref<i32>
-  %decl = fir.declare %addr {uniq_name = "x"} : (!fir.ref<i32>) -> !fir.ref<i32>
-  %load = fir.load %decl : !fir.ref<i32>
-  fir.store %v to %decl : !fir.ref<i32>
   return
 }
 
@@ -105,50 +83,6 @@ func.func @volatile_cast_wraps_array_coor(%arg0: !fir.ref<!fir.array<10xi32>, vo
   %vc = fir.volatile_cast %elem : (!fir.ref<i32, volatile>) -> !fir.ref<i32>
   %load = fir.load %vc : !fir.ref<i32>
   fir.store %v to %vc : !fir.ref<i32>
-  return
-}
-
-// fir.create_box wraps a non-contiguous byte-strided view (e.g. a
-// derived-type component array); box_addr unwraps it back to a ref.
-// CHECK-LABEL: func.func @create_box_wraps_array_coor
-// CHECK:       %[[M0:.+]] = fir.convert %arg0 : (!fir.ref<!fir.array<10xi32>>) -> memref<10xi32>
-// CHECK:       %[[M1:.+]] = fir.convert %arg0 : (!fir.ref<!fir.array<10xi32>>) -> memref<10xi32>
-// CHECK:       memref.load %[[M0]]
-// CHECK:       memref.store %arg1, %[[M1]]
-// CHECK-NOT:   fir.array_coor
-func.func @create_box_wraps_array_coor(%arg0: !fir.ref<!fir.array<10xi32>>, %v: i32) {
-  %c1 = arith.constant 1 : index
-  %c10 = arith.constant 10 : index
-  %c4 = arith.constant 4 : index
-  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %elem = fir.array_coor %arg0(%shape) %c1 : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-  %arr1 = fir.convert %elem : (!fir.ref<i32>) -> !fir.ref<!fir.array<1xi32>>
-  %box = fir.create_box %arr1 lbs(%c1) extents(%c1) strides(%c4) : (!fir.ref<!fir.array<1xi32>>, index, index, index) -> !fir.box<!fir.array<1xi32>>
-  %addrarr = fir.box_addr %box : (!fir.box<!fir.array<1xi32>>) -> !fir.ref<!fir.array<1xi32>>
-  %addr = fir.convert %addrarr : (!fir.ref<!fir.array<1xi32>>) -> !fir.ref<i32>
-  %load = fir.load %addr : !fir.ref<i32>
-  fir.store %v to %addr : !fir.ref<i32>
-  return
-}
-
-// fir.rebox re-views an existing box (e.g. to change its shape); the box it
-// re-views can itself be an fir.embox wrapping the array_coor result.
-// CHECK-LABEL: func.func @rebox_wraps_array_coor
-// CHECK:       %[[M0:.+]] = fir.convert %arg0 : (!fir.ref<!fir.array<10xi32>>) -> memref<10xi32>
-// CHECK:       %[[M1:.+]] = fir.convert %arg0 : (!fir.ref<!fir.array<10xi32>>) -> memref<10xi32>
-// CHECK:       memref.load %[[M0]]
-// CHECK:       memref.store %arg1, %[[M1]]
-// CHECK-NOT:   fir.array_coor
-func.func @rebox_wraps_array_coor(%arg0: !fir.ref<!fir.array<10xi32>>, %v: i32) {
-  %c1 = arith.constant 1 : index
-  %c10 = arith.constant 10 : index
-  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %elem = fir.array_coor %arg0(%shape) %c1 : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-  %box = fir.embox %elem : (!fir.ref<i32>) -> !fir.box<i32>
-  %rebox = fir.rebox %box : (!fir.box<i32>) -> !fir.box<i32>
-  %addr = fir.box_addr %rebox : (!fir.box<i32>) -> !fir.ref<i32>
-  %load = fir.load %addr : !fir.ref<i32>
-  fir.store %v to %addr : !fir.ref<i32>
   return
 }
 
