@@ -1798,6 +1798,10 @@ FailureOr<ast::Expr *> Parser::parseExpr() {
   // Parse the LHS expression.
   FailureOr<ast::Expr *> lhsExpr;
   switch (curToken.getKind()) {
+  case Token::kw_convert_type:
+    return parseTypeConversionExpr();
+  case Token::kw_converted_operand:
+    return parseConvertedOperandExpr();
   case Token::kw_attr:
     lhsExpr = parseAttributeExpr();
     break;
@@ -3158,6 +3162,87 @@ Parser::codeCompleteConstraintName(ast::Type inferredType,
 
 LogicalResult Parser::codeCompleteDialectName() {
   codeCompleteContext->codeCompleteDialectName();
+
+//===----------------------------------------------------------------------===//
+// TypeConversionExpr
+//===----------------------------------------------------------------------===//
+
+/// Parse a type conversion expression:
+///   type-conversion-expr ::= `convert_type` `<` identifier `>` `(` expr `)`
+FailureOr<ast::Expr *> Parser::parseTypeConversionExpr() {
+  SMRange loc = curToken.getLoc();
+  consumeToken(Token::kw_convert_type);
+
+  // Expect `<`
+  if (failed(parseToken(Token::less, "expected `<` after convert_type")))
+    return failure();
+
+  // Parse converter name
+  if (!curToken.isIdentifier()) {
+    return emitError(curToken.getLoc(),
+                     "expected type converter name after `<`");
+  }
+  
+  StringRef converterName = curToken.getSpelling();
+  consumeToken();
+
+  // Expect `>`
+  if (failed(parseToken(Token::greater,
+                        "expected `>` after type converter name")))
+    return failure();
+
+  // Expect `(`
+  if (failed(parseToken(Token::l_paren,
+                        "expected `(` after type converter")))
+    return failure();
+
+  // Parse type expression
+  FailureOr<ast::Expr *> typeExpr = parseExpr();
+  if (failed(typeExpr))
+    return failure();
+
+  // Expect `)`
+  if (failed(parseToken(Token::r_paren, "expected `)` after type")))
+    return failure();
+
+  return ast::TypeConversionExpr::create(ctx, loc, converterName, *typeExpr);
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertedOperandExpr
+//===----------------------------------------------------------------------===//
+
+/// Parse a converted operand expression:
+///   converted-operand-expr ::= `converted_operand` `(` expr `,` expr `)`
+FailureOr<ast::Expr *> Parser::parseConvertedOperandExpr() {
+  SMRange loc = curToken.getLoc();
+  consumeToken(Token::kw_converted_operand);
+
+  // Expect `(`
+  if (failed(parseToken(Token::l_paren,
+                        "expected `(` after converted_operand")))
+    return failure();
+
+  // Parse operand expression
+  FailureOr<ast::Expr *> operandExpr = parseExpr();
+  if (failed(operandExpr))
+    return failure();
+
+  // Expect `,`
+  if (failed(parseToken(Token::comma, "expected `,` after operand")))
+    return failure();
+
+  // Parse type expression
+  FailureOr<ast::Expr *> typeExpr = parseExpr();
+  if (failed(typeExpr))
+    return failure();
+
+  // Expect `)`
+  if (failed(parseToken(Token::r_paren, "expected `)` after type")))
+    return failure();
+
+  return ast::ConvertedOperandExpr::create(ctx, loc, *operandExpr, *typeExpr);
+}
   return failure();
 }
 

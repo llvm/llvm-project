@@ -1353,4 +1353,63 @@ inline bool Stmt::classof(const Node *node) {
 } // namespace pdll
 } // namespace mlir
 
-#endif // MLIR_TOOLS_PDLL_AST_NODES_H_
+
+//===----------------------------------------------------------------------===//
+// TypeConversionExpr
+//===----------------------------------------------------------------------===//
+
+/// This expression represents a type conversion using a registered type
+/// converter: convert_type<ConverterName>(type_expr)
+class TypeConversionExpr : public Node::NodeBase<TypeConversionExpr, Expr> {
+public:
+  static TypeConversionExpr *create(Context &ctx, SMRange loc,
+                                     StringRef converterName,
+                                     Expr *typeExpr);
+
+  /// Get the name of the type converter to use
+  StringRef getConverterName() const { return converterName; }
+
+  /// Get the type expression to convert
+  Expr *getTypeExpr() const { return typeExpr; }
+
+private:
+  TypeConversionExpr(Context &ctx, SMRange loc, StringRef converterName,
+                     Expr *typeExpr)
+      : Base(loc, TypeType::get(ctx)), converterName(converterName),
+        typeExpr(typeExpr) {}
+
+  /// The name of the type converter
+  StringRef converterName;
+  /// The type expression to convert
+  Expr *typeExpr;
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertedOperandExpr
+//===----------------------------------------------------------------------===//
+
+/// This expression represents access to a type-converted operand:
+/// converted_operand(operand_expr, type_expr)
+class ConvertedOperandExpr : public Node::NodeBase<ConvertedOperandExpr, Expr> {
+public:
+  static ConvertedOperandExpr *create(Context &ctx, SMRange loc,
+                                       Expr *operandExpr, Expr *typeExpr);
+
+  /// Get the operand expression
+  Expr *getOperandExpr() const { return operandExpr; }
+
+  /// Get the target type expression
+  Expr *getTypeExpr() const { return typeExpr; }
+
+private:
+  ConvertedOperandExpr(Context &ctx, SMRange loc, Expr *operandExpr,
+                       Expr *typeExpr)
+      : Base(loc, ValueType::get(ctx)), operandExpr(operandExpr),
+        typeExpr(typeExpr) {}
+
+  /// The operand to access after conversion
+  Expr *operandExpr;
+  /// The target type
+  Expr *typeExpr;
+};
+

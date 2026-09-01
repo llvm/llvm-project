@@ -1,0 +1,47 @@
+// RUN: mlir-pdll %s -x mlir | FileCheck %s
+
+// Test: Type conversion expression parsing
+Pattern TestConvertType {
+  let root = op<test.op>(input: Value) -> (result_type: Type);
+  
+  // NEW SYNTAX: convert_type<ConverterName>(type)
+  let converted_type = convert_type<TestConverter>(result_type);
+  
+  rewrite root with {
+    erase root;
+  };
+}
+
+// Test: Converted operand expression parsing  
+Pattern TestConvertedOperand {
+  let root = op<test.op>(input: Value);
+  
+  // NEW SYNTAX: converted_operand(value, type)
+  let conv_input = converted_operand(input, convert_type<TestConverter>(type(input)));
+  
+  rewrite root with {
+    erase root;
+  };
+}
+
+// Test: Complete ONNX Cast → HipSR Cast pattern (POC)
+Pattern ConvertOnnxCast {
+  let root = op<onnx.Cast>(input: Value) {to = toAttr: Attr} -> (result_type: Type);
+  
+  // Type conversion
+  let hipsr_type = convert_type<OnnxToHipSRConverter>(result_type);
+  let input_type = convert_type<OnnxToHipSRConverter>(type(input));
+  
+  // Access converted operand
+  let conv_input = converted_operand(input, input_type);
+  
+  rewrite root with {
+    // In full implementation, would create hipsr.cast here
+    // For POC, just demonstrate parsing works
+    erase root;
+  };
+}
+
+// CHECK: Pattern TestConvertType
+// CHECK: Pattern TestConvertedOperand  
+// CHECK: Pattern ConvertOnnxCast
