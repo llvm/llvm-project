@@ -1266,7 +1266,7 @@ define i128 @bitreverse_i128(i128 %a0) nounwind {
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
-; AVX512VL-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VL-NEXT:    vpaddb %xmm0, %xmm2, %xmm0
 ; AVX512VL-NEXT:    vmovq %xmm0, %rax
 ; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX512VL-NEXT:    retq
@@ -1285,7 +1285,7 @@ define i128 @bitreverse_i128(i128 %a0) nounwind {
 ; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VBMI-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
-; AVX512VBMI-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VBMI-NEXT:    vpaddb %xmm0, %xmm2, %xmm0
 ; AVX512VBMI-NEXT:    vmovq %xmm0, %rax
 ; AVX512VBMI-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX512VBMI-NEXT:    retq
@@ -1398,7 +1398,7 @@ define i128 @bitreverse_i128_vector(<2 x i64> %v0) nounwind {
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
-; AVX512VL-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VL-NEXT:    vpaddb %xmm0, %xmm2, %xmm0
 ; AVX512VL-NEXT:    vmovq %xmm0, %rax
 ; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX512VL-NEXT:    retq
@@ -1414,7 +1414,7 @@ define i128 @bitreverse_i128_vector(<2 x i64> %v0) nounwind {
 ; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VBMI-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
-; AVX512VBMI-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VBMI-NEXT:    vpaddb %xmm0, %xmm2, %xmm0
 ; AVX512VBMI-NEXT:    vmovq %xmm0, %rax
 ; AVX512VBMI-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX512VBMI-NEXT:    retq
@@ -1531,7 +1531,7 @@ define i128 @bitreverse_i128_load(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
-; AVX512VL-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VL-NEXT:    vpaddb %xmm0, %xmm2, %xmm0
 ; AVX512VL-NEXT:    vmovq %xmm0, %rax
 ; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX512VL-NEXT:    retq
@@ -1548,7 +1548,7 @@ define i128 @bitreverse_i128_load(ptr %p0) nounwind {
 ; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VBMI-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
-; AVX512VBMI-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX512VBMI-NEXT:    vpaddb %xmm0, %xmm2, %xmm0
 ; AVX512VBMI-NEXT:    vmovq %xmm0, %rax
 ; AVX512VBMI-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX512VBMI-NEXT:    retq
