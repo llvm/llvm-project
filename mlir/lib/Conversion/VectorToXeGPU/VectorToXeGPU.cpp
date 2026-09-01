@@ -104,17 +104,19 @@ static bool isSupportedBlockShape(const xegpu::uArch::uArch *uArch,
   if (!uArch || !uArch->isSupportedInstruction(instKind))
     return false;
 
-  const xegpu::uArch::Instruction *inst = uArch->getInstruction(instKind);
-  const xegpu::uArch::BlockIOInstructionInterface *blockInst = nullptr;
-  if (const auto *load =
-          dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(inst))
-    blockInst = load;
-  else if (const auto *store =
-               dyn_cast<xegpu::uArch::Subgroup2DBlockStoreInstruction>(inst))
-    blockInst = store;
+  const auto *blockInst = dyn_cast<xegpu::uArch::BlockIOInstructionInterface>(
+      uArch->getInstruction(instKind));
   if (!blockInst)
     return false;
 
+  // Query the untransformed shapes. Whether a tile is eventually loaded with
+  // the transformed (VNNI) variant is only decided later, when layout
+  // propagation knows whether it feeds the B operand of a matrix operation,
+  // but for 8-, 16- and 32-bit elements the transformed shapes are a subset of
+  // the untransformed ones, so nothing the transformed variant could access is
+  // rejected here. Sub-byte elements are the exception, and there accepting a
+  // transformed-only shape would just move the failure into layout
+  // propagation, which asserts once it picks the untransformed variant.
   // A missing entry means the element type itself is not supported.
   std::optional<xegpu::uArch::BlockIOInstructionInterface::BlockShapes>
       blockShapes = blockInst->getBlockWidthHeightCount(
