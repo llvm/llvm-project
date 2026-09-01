@@ -138,6 +138,32 @@ TEST(HighlightsTest, All) {
             return 1;
         }
       )cpp",
+      R"cpp(// Overloaded operator: the whole name, not just `operator`, is highlighted.
+        using size_t = decltype(sizeof(0));
+        struct S {
+          static void *[[operator]] [[n^ew]](size_t);
+          static void operator delete(void *);
+        };
+      )cpp",
+      R"cpp(// Same, with the cursor on the operator keyword itself.
+        using size_t = decltype(sizeof(0));
+        struct S {
+          static void *[[^operator]] [[new]](size_t);
+          static void operator delete(void *);
+        };
+      )cpp",
+      R"cpp(// Same, for operator delete.
+        using size_t = decltype(sizeof(0));
+        struct S {
+          static void *operator new(size_t);
+          static void [[operator]] [[del^ete]](void *);
+        };
+      )cpp",
+      R"cpp(// Overloaded operator spanning multiple tokens.
+        struct S {
+          void [[operator]] [[^(]][[)]](int);
+        };
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
