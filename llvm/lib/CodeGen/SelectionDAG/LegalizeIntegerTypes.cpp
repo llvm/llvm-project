@@ -127,8 +127,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SPLICE_RIGHT:
     Res = PromoteIntRes_VECTOR_SPLICE(N);
     break;
-  case ISD::VECTOR_BROADCAST:
-    Res = PromoteIntRes_VECTOR_BROADCAST(N);
+  case ISD::VECTOR_REPEAT:
+    Res = PromoteIntRes_VECTOR_REPEAT(N);
     break;
   case ISD::VECTOR_INTERLEAVE:
   case ISD::VECTOR_DEINTERLEAVE:
@@ -2126,8 +2126,8 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PARTIAL_REDUCE_SUMLA:
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
     break;
-  case ISD::VECTOR_BROADCAST:
-    Res = PromoteIntOp_VECTOR_BROADCAST(N);
+  case ISD::VECTOR_REPEAT:
+    Res = PromoteIntOp_VECTOR_REPEAT(N);
     break;
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
@@ -2990,14 +2990,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N) {
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_BROADCAST(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_REPEAT(SDNode *N) {
   SDLoc DL(N);
   SDValue Src = GetPromotedInteger(N->getOperand(0));
   EVT SrcVT = Src.getValueType();
   EVT OrigVT = N->getValueType(0);
   EVT NewVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getVectorElementType(),
                                OrigVT.getVectorElementCount());
-  SDValue Res = DAG.getNode(ISD::VECTOR_BROADCAST, DL, NewVT, Src);
+  SDValue Res = DAG.getNode(ISD::VECTOR_REPEAT, DL, NewVT, Src);
   return DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Res);
 }
 
@@ -6079,7 +6079,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
   return DAG.getNode(N->getOpcode(), dl, OutVT, V0, V1, N->getOperand(2));
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_BROADCAST(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_REPEAT(SDNode *N) {
   SDLoc DL(N);
 
   EVT OutVT = N->getValueType(0);

@@ -1446,8 +1446,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SETCC:
     SplitVecRes_SETCC(N, Lo, Hi);
     break;
-  case ISD::VECTOR_BROADCAST:
-    SplitVecRes_VECTOR_BROADCAST(N, Lo, Hi);
+  case ISD::VECTOR_REPEAT:
+    SplitVecRes_VECTOR_REPEAT(N, Lo, Hi);
     break;
   case ISD::VECTOR_REVERSE:
     SplitVecRes_VECTOR_REVERSE(N, Lo, Hi);
@@ -3468,8 +3468,8 @@ void DAGTypeLegalizer::SplitVecRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo,
   Hi = DAG.getNode(N->getOpcode(), dl, DstVTHi, SrcHi, N->getOperand(1));
 }
 
-void DAGTypeLegalizer::SplitVecRes_VECTOR_BROADCAST(SDNode *N, SDValue &Lo,
-                                                    SDValue &Hi) {
+void DAGTypeLegalizer::SplitVecRes_VECTOR_REPEAT(SDNode *N, SDValue &Lo,
+                                                 SDValue &Hi) {
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
   EVT LoVT, HiVT;
@@ -3485,9 +3485,9 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_BROADCAST(SDNode *N, SDValue &Lo,
       DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
                   DAG.getVTList(SplitSrcVT, SplitSrcVT), SrcLo, SrcHi);
   SDValue Even =
-      DAG.getNode(ISD::VECTOR_BROADCAST, DL, LoVT, Deinterleaved.getValue(0));
+      DAG.getNode(ISD::VECTOR_REPEAT, DL, LoVT, Deinterleaved.getValue(0));
   SDValue Odd =
-      DAG.getNode(ISD::VECTOR_BROADCAST, DL, LoVT, Deinterleaved.getValue(1));
+      DAG.getNode(ISD::VECTOR_REPEAT, DL, LoVT, Deinterleaved.getValue(1));
   SDValue Interleaved = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
                                     DAG.getVTList(LoVT, LoVT), Even, Odd);
   Lo = Interleaved.getValue(0);
@@ -7642,8 +7642,8 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     Res = WidenVecOp_FAKE_USE(N);
     break;
   case ISD::CONCAT_VECTORS:     Res = WidenVecOp_CONCAT_VECTORS(N); break;
-  case ISD::VECTOR_BROADCAST:
-    Res = WidenVecOp_VECTOR_BROADCAST(N);
+  case ISD::VECTOR_REPEAT:
+    Res = WidenVecOp_VECTOR_REPEAT(N);
     break;
   case ISD::INSERT_SUBVECTOR:   Res = WidenVecOp_INSERT_SUBVECTOR(N); break;
   case ISD::EXTRACT_SUBVECTOR:  Res = WidenVecOp_EXTRACT_SUBVECTOR(N); break;
@@ -8085,7 +8085,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_CONCAT_VECTORS(SDNode *N) {
   return DAG.getBuildVector(VT, dl, Ops);
 }
 
-SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_BROADCAST(SDNode *N) {
+SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_REPEAT(SDNode *N) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
@@ -8093,7 +8093,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_BROADCAST(SDNode *N) {
   EVT WidennedSrcVT = TLI.getTypeToTransformTo(*DAG.getContext(), SrcVT);
   assert(WidennedSrcVT.getVectorElementCount().isKnownMultipleOf(
              SrcVT.getVectorElementCount()) &&
-         "Cannot widen VECTOR_BROADCAST operand to an ElementCount that's not "
+         "Cannot widen VECTOR_REPEAT operand to an ElementCount that's not "
          "a multiple of the input ElementCount.");
   unsigned NumConcat =
       WidennedSrcVT.getVectorMinNumElements() / SrcVT.getVectorMinNumElements();
@@ -8105,8 +8105,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_BROADCAST(SDNode *N) {
   EVT WidenedVT = VT.changeVectorElementCount(
       *DAG.getContext(),
       ElementCount::getScalable(WidennedSrcVT.getVectorMinNumElements()));
-  SDValue Widened =
-      DAG.getNode(ISD::VECTOR_BROADCAST, DL, WidenedVT, WidenedSrc);
+  SDValue Widened = DAG.getNode(ISD::VECTOR_REPEAT, DL, WidenedVT, WidenedSrc);
   return DAG.getExtractSubvector(DL, VT, Widened, 0);
 }
 

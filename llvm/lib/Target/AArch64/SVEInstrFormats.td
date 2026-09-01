@@ -1588,12 +1588,12 @@ multiclass sve_int_perm_dup_i<string asm> {
   }
 
   // Broadcast whole fixed-length vectors to packed SVE types.
-  // See LowerVECTOR_BROADCAST for handling of legal unpacked types.
+  // See LowerVECTOR_REPEAT for handling of legal unpacked types.
   foreach VT = [nxv16i8, nxv8i16, nxv8f16, nxv8bf16,
                 nxv4i32, nxv4f32, nxv2i64, nxv2f64] in {
-    def : Pat<(VT (vector_broadcast (SVEType<VT>.ZSub V128:$vec))),
+    def : Pat<(VT (vector_repeat (SVEType<VT>.ZSub V128:$vec))),
               (!cast<Instruction>(NAME # _Q) (SUBREG_TO_REG $vec, zsub), (i64 0))>;
-    def : Pat<(VT (vector_broadcast (SVEType<VT>.DSub V64:$vec))),
+    def : Pat<(VT (vector_repeat (SVEType<VT>.DSub V64:$vec))),
               (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG $vec, dsub), (i64 0))>;
   }
 

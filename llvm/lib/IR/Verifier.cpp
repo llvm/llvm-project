@@ -6844,21 +6844,21 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
-  case Intrinsic::vector_broadcast: {
+  case Intrinsic::vector_repeat: {
     auto *ResultTy = cast<VectorType>(Call.getType());
     auto *ArgTy = cast<VectorType>(Call.getArgOperand(0)->getType());
 
     Check(ResultTy->getElementType() == ArgTy->getElementType(),
-          "vector_broadcast argument and result must have the same element "
+          "vector_repeat argument and result must have the same element "
           "type.",
           &Call);
     Check(ArgTy->getElementCount().isFixed(),
-          "vector_broadcast argument must be a fixed-length vector.", &Call);
+          "vector_repeat argument must be a fixed-length vector.", &Call);
     Check(ResultTy->getElementCount().isScalable(),
-          "vector_broadcast result must be a scalable vector.", &Call);
+          "vector_repeat result must be a scalable vector.", &Call);
     Check(ArgTy->getElementCount().getKnownMinValue() ==
               ResultTy->getElementCount().getKnownMinValue(),
-          "vector_broadcast argument and result must have the same minimum "
+          "vector_repeat argument and result must have the same minimum "
           "element count.",
           &Call);
     break;

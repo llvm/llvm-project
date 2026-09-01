@@ -2773,9 +2773,9 @@ foreach n = 2...8 in {
                               [IntrNoMem, IntrSpeculatable]>;
 }
 
-// vector_broadcast( SrcVector )
-// Broadcast a fixed-length vector to its "vscale x" equivalent.
-def int_vector_broadcast : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+// vector_repeat( SrcVector )
+// Repeat a fixed-length vector to fill its "vscale x" equivalent.
+def int_vector_repeat : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                                  [llvm_anyvector_ty],
                                                  [IntrNoMem, IntrSpeculatable]>;
 

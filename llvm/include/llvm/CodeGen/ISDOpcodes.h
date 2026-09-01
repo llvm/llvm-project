@@ -636,10 +636,10 @@ enum NodeType {
   /// Result[J] = EXTRACT_SUBVECTOR(Interleaved, J * getVectorMinNumElements())
   VECTOR_INTERLEAVE,
 
-  /// VECTOR_BROADCAST(SRC_SUBVEC)
-  /// Duplicate a fixed-length vector in a scalable vector with the same minimum
-  /// element count.
-  VECTOR_BROADCAST,
+  /// VECTOR_REPEAT(FIXED_LENGTH_VECTOR)
+  /// Repeatedly copies the elements of the source fixed-length vector to fill a
+  /// scalable vector with the same minimum element count.
+  VECTOR_REPEAT,
 
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,
   /// whose elements are shuffled using the following algorithm:

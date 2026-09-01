@@ -932,7 +932,7 @@ def vector_insert_subvec : SDNode<"ISD::INSERT_SUBVECTOR",
 def extract_subvector : SDNode<"ISD::EXTRACT_SUBVECTOR", SDTSubVecExtract, []>;
 def insert_subvector : SDNode<"ISD::INSERT_SUBVECTOR", SDTSubVecInsert, []>;
 
-def vector_broadcast : SDNode<"ISD::VECTOR_BROADCAST",
+def vector_repeat : SDNode<"ISD::VECTOR_REPEAT",
     SDTypeProfile<1, 1, [SDTCisVec<1>, SDTCisVec<0>]>,
     []>;
 
