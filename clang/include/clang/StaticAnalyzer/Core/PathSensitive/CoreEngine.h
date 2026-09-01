@@ -84,7 +84,7 @@ private:
 
   /// Whether the single-TU phase ran out of budget with work left over.
   /// The CTU phase replaces \c WList, so this has to be remembered separately.
-  bool STUHadWorkRemaining = false;
+  bool exploredAllSTUPaths = false;
 
   /// The information about functions shared by the whole translation unit.
   /// (This data is owned by AnalysisConsumer.)
@@ -150,8 +150,8 @@ public:
   // Functions for external checking of whether we have unfinished work.
   bool wasBlockAborted() const { return !blocksAborted.empty(); }
   bool wasBlocksExhausted() const { return !blocksExhausted.empty(); }
-  bool hasWorkRemaining() const {
-    return wasBlocksExhausted() || WList->hasWork() || STUHadWorkRemaining ||
+  bool hasExploredAllPaths() const {
+    return wasBlocksExhausted() || WList->hasWork() || exploredAllSTUPaths ||
            wasBlockAborted();
   }
 
