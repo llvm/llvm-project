@@ -879,6 +879,11 @@ static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
               RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) ||
               !RedPhi->getUnderlyingValue())
             return true;
+          // TODO: Add support for FindIV reductions with sunk expressions: the
+          // resume value from the main loop is in expression domain (e.g.,
+          // mul(ReducedIV, 3)), but the epilogue tracks raw IV values. A sunk
+          // expression is identified by a non-VPInstruction user of
+          // ComputeReductionResult.
           if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind))
             return RedPhi->isExpressionSunk();
           return false;

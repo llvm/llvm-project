@@ -2879,6 +2879,9 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe, public VPIRFlags {
   /// compare has multiple uses.
   bool HasUsesOutsideReductionChain;
 
+  // True if FindIV's expression was sunk into the vector loop. Epilogue
+  // is disabled while this is true. Temporary until epilogue handles sunk
+  // expressions.
   bool ExpressionSunk = false;
 
 public:
@@ -2947,7 +2950,7 @@ public:
     return HasUsesOutsideReductionChain;
   }
 
-  void setExpressionSunk(bool V = true) { ExpressionSunk = V; }
+  void setExpressionSunk() { ExpressionSunk = true; }
 
   bool isExpressionSunk() const { return ExpressionSunk; }
 
