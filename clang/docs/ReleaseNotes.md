@@ -113,6 +113,9 @@ features cannot lower the translation-unit ABI level;
 ### Clang Frontend Potentially Breaking Changes
 
 - Templight support has been removed.
+- A host `-fopenmp` or `-fopenmp-simd` compilation now emits diagnostics it previously
+  deferred and then dropped when no offload target was configured. Code that used to
+  compile may be rejected, matching a compilation without those flags.
 
 ### Clang Python Bindings Potentially Breaking Changes
 
@@ -775,6 +778,15 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 ### Python Binding Changes
 
 ### OpenMP Support
+
+- Fixed a host OpenMP compilation never flushing its deferred diagnostics unless an
+  offload target was configured, which accepted `try`/`throw` with exceptions disabled
+  and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+- Fixed `-fopenmp-simd` deferring diagnostics as if it were a device compilation. It has
+  no device compilation and ignores `declare target`, so its diagnostics are now emitted
+  directly.
+- Fixed an OpenMP `requires` directive read from a PCH or module losing its effect on
+  semantic checks, which caused spurious `reverse_offload` errors.
 
 - Added parsing and semantic support for `dims` modifier in `num_teams`,
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.

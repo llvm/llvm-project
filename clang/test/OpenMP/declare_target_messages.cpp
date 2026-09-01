@@ -21,16 +21,16 @@
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp60,omp52-or-later,ompvar,omp5-or-later,omp5-or-later-var %{openmp60_simd} -fopenmp-is-target-device %{target_mac} %{limit} -o - %s
 
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp45,omp45-to-51,omp45-to-51-var,omp45-to-51-clause -fopenmp-version=45 -fopenmp-simd %{limit} -o - %s
-// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host-5-and-51,no-host5-and-51 -fopenmp %{limit} -o - %s
-// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host-5-and-51,no-host5-and-51 -fopenmp %{limit} -DTESTEND=1 -o - %s
-// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host-5-and-51,no-host5-and-51 -fopenmp %{limit} -I%S/Inputs -DTESTENDINC=1 -o - %s
-// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host-5-and-51,no-host5-and-51 -fopenmp-simd %{limit} -o - %s
+// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host5,host-5-and-51,no-host5-and-51 -fopenmp %{limit} -o - %s
+// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host5,host-5-and-51,no-host5-and-51 -fopenmp %{limit} -DTESTEND=1 -o - %s
+// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host5,host-5-and-51,no-host5-and-51 -fopenmp %{limit} -I%S/Inputs -DTESTENDINC=1 -o - %s
+// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host5,host-5-and-51,no-host5-and-51 -fopenmp-simd %{limit} -o - %s
 
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp52,omp52-or-later,ompvar,omp5-or-later,omp5-or-later-var %{openmp52} -DVERBOSE_MODE=1 %{limit} -o - %s
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp60,omp52-or-later,ompvar,omp5-or-later,omp5-or-later-var %{openmp60} -DVERBOSE_MODE=1 %{limit} -o - %s
 
-// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp5,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host-5-and-51,no-host5-and-51 %{openmp50} %{limit} -o - %s
-// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host-5-and-51,no-host5-and-51 -fopenmp %{limit} -o - %s
+// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp5,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host5,host-5-and-51,no-host5-and-51 %{openmp50} %{limit} -o - %s
+// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host5,host-5-and-51,no-host5-and-51 -fopenmp %{limit} -o - %s
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp60,omp52-or-later,ompvar,omp5-or-later,omp5-or-later-var %{openmp60} %{limit} -o - %s
 
 #pragma omp begin declare target

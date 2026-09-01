@@ -259,6 +259,12 @@ public:
   /// Called on well-formed '#pragma omp requires'.
   DeclGroupPtrTy ActOnOpenMPRequiresDirective(SourceLocation Loc,
                                               ArrayRef<OMPClause *> ClauseList);
+
+  /// Registers a 'requires' directive deserialized from an AST file.
+  void addRequiresDecl(OMPRequiresDecl *D);
+
+  /// The 'requires' directives seen so far in this translation unit.
+  ArrayRef<const OMPRequiresDecl *> getRequiresDecls() const;
   /// Check restrictions on Requires directive
   OMPRequiresDecl *CheckOMPRequiresDecl(SourceLocation Loc,
                                         ArrayRef<OMPClause *> Clauses);
