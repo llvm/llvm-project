@@ -684,7 +684,8 @@ public:
   /// The store-to-load forwarding penalty is a microarchitectural cycle count.
   /// Like getBranchMispredictPenalty, the target-independent base returns a
   /// neutral 0; targets with a scheduling model supply the real value through
-  /// BasicTTIImpl (defaulting to MCSchedModel::DefaultStoreLoadForwardingPenalty).
+  /// BasicTTIImpl (defaulting to
+  /// MCSchedModel::DefaultStoreLoadForwardingPenalty).
   virtual InstructionCost getStoreLoadForwardingConflictCost(
       Type *VecTy, TargetTransformInfo::TargetCostKind CostKind) const {
     return 0;
