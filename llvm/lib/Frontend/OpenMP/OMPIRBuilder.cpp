@@ -53,7 +53,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetMachine.h"
@@ -7587,6 +7586,8 @@ OpenMPIRBuilder::getOpenMPDefaultSimdAlign(const Triple &TargetTriple,
     return 128;
   if (TargetTriple.isWasm())
     return 128;
+  if (TargetTriple.isSystemZ())
+    return 64;
   return 0;
 }
 
@@ -9497,9 +9498,11 @@ static Function *emitTargetTaskProxyFunction(
 
   bool HasShareds = SharedArgsOperandNo > 0;
   bool HasOffloadingArrays = NumOffloadingArrays > 0;
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   BasicBlock *EntryBB =
       BasicBlock::Create(Builder.getContext(), "entry", ProxyFn);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   SmallVector<Value *> KernelLaunchArgs;
   KernelLaunchArgs.reserve(StaleCI->arg_size());

@@ -181,11 +181,8 @@
 #include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -201,14 +198,11 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-
-#include <vector>
 
 #include <cstdio>
 
@@ -1078,13 +1072,14 @@ public:
   }
 
   bool runOnModuleNormal(Module &M) {
-    CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
 
-    Changed |=
-        eliminateGVConstantExprUsesFromAllInstructions(M, isLDSVariableToLower);
+    Changed |= any_of(M.globals(), isNotYetLoweredLDSVariable);
 
-    Changed = true; // todo: narrow this down
+    CallGraph CG(M);
+
+    eliminateGVConstantExprUsesFromAllInstructions(M,
+                                                   isNotYetLoweredLDSVariable);
 
     // For each kernel, what variables does it access directly or through
     // callees
@@ -1258,7 +1253,7 @@ public:
     }
 
     for (auto &GV : make_early_inc_range(M.globals()))
-      if (AMDGPU::isLDSVariableToLower(GV)) {
+      if (isNotYetLoweredLDSVariable(GV)) {
         // probably want to remove from used lists
         GV.removeDeadConstantUsers();
         if (GV.use_empty())
@@ -1269,6 +1264,11 @@ public:
   }
 
 private:
+  // An absolute address means a previous run already placed the variable.
+  static bool isNotYetLoweredLDSVariable(const GlobalVariable &GV) {
+    return isLDSVariableToLower(GV) && !GV.isAbsoluteSymbolRef();
+  }
+
   // Increase the alignment of LDS globals if necessary to maximise the chance
   // that we can use aligned LDS instructions to access them.
   static bool superAlignLDSGlobals(Module &M) {

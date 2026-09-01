@@ -59,6 +59,9 @@ Pointer::Pointer(const Pointer &P)
   case Storage::Typeid:
     Typeid = P.Typeid;
     break;
+  case Storage::String:
+    Str = P.Str;
+    break;
   }
 }
 
@@ -77,6 +80,9 @@ Pointer::Pointer(Pointer &&P) : Offset(P.Offset), StorageKind(P.StorageKind) {
     break;
   case Storage::Typeid:
     Typeid = P.Typeid;
+    break;
+  case Storage::String:
+    Str = P.Str;
     break;
   }
 }
@@ -127,6 +133,10 @@ Pointer &Pointer::operator=(const Pointer &P) {
     break;
   case Storage::Typeid:
     Typeid = P.Typeid;
+    break;
+  case Storage::String:
+    Str = P.Str;
+    break;
   }
   return *this;
 }
@@ -166,6 +176,10 @@ Pointer &Pointer::operator=(Pointer &&P) {
     break;
   case Storage::Typeid:
     Typeid = P.Typeid;
+    break;
+  case Storage::String:
+    Str = P.Str;
+    break;
   }
   return *this;
 }
@@ -206,6 +220,13 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   } break;
+  case Storage::String:
+    if (Offset != 0 || Str.Decayed)
+      Path.push_back(APValue::LValuePathEntry::ArrayIndex(Offset));
+
+    return APValue(APValue::LValueBase(Str.Base),
+                   CharUnits::fromQuantity(Offset * elemSize()), Path,
+                   /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 
   assert(isBlockPointer());
@@ -366,6 +387,11 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     OS << "(Typeid) { " << (const void *)asTypeidPointer().TypePtr << ", "
        << (const void *)asTypeidPointer().TypeInfoType << " + " << Offset
        << "}";
+    break;
+  case Storage::String:
+    OS << "(String) { " << (const void *)Str.getLiteral() << ' ';
+    Str.getLiteral()->outputString(OS);
+    OS << ". ID: " << Str.ID << " + " << Offset << "}";
   }
 }
 
@@ -390,6 +416,8 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
     return getIntegerRepresentation();
   case Storage::Typeid:
     return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
+  case Storage::String:
+    return reinterpret_cast<uintptr_t>(Str.getLiteral()) + Offset;
   }
 
   auto getTypeSize = [&](QualType T) -> std::optional<size_t> {
@@ -470,6 +498,8 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
     return getIntegerRepresentation();
   case Storage::Typeid:
     return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
+  case Storage::String:
+    return Offset * Str.getLiteral()->getCharByteWidth();
   }
 
   auto getTypeSize = [&](QualType T) -> std::optional<size_t> {
@@ -827,6 +857,8 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
     return true;
   if (A.isTypeidPointer() && B.isTypeidPointer())
     return A.asTypeidPointer().TypePtr == B.asTypeidPointer().TypePtr;
+  if (A.isStringPointer() && B.isStringPointer())
+    return A.Str.ID == B.Str.ID && A.Str.getLiteral() == B.Str.getLiteral();
 
   if (A.StorageKind != B.StorageKind)
     return false;
@@ -892,17 +924,6 @@ bool Pointer::pointsToLiteral() const {
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
 }
 
-bool Pointer::pointsToStringLiteral() const {
-  if (isZero() || !isBlockPointer())
-    return false;
-
-  if (block()->isDynamic())
-    return false;
-
-  const Expr *E = block()->getDescriptor()->asExpr();
-  return isa_and_nonnull<StringLiteral>(E);
-}
-
 bool Pointer::pointsToLabel() const {
   if (isZero() || !isBlockPointer())
     return false;
@@ -959,177 +980,176 @@ Pointer::computeSplitPoint(const Pointer &A, const Pointer &B) {
   llvm_unreachable("The loop above should've returned.");
 }
 
-std::optional<APValue> Pointer::toRValue(const Context &Ctx,
-                                         QualType ResultType) const {
+/// Convert a pointer to a composite value to an rvalue.
+static bool toRValue(const Context &Ctx, QualType Ty, PtrView Ptr, APValue &R) {
   const ASTContext &ASTCtx = Ctx.getASTContext();
-  assert(!ResultType.isNull());
-  // Method to recursively traverse composites.
-  std::function<bool(QualType, PtrView, APValue &)> Composite;
-  Composite = [&Composite, &Ctx, &ASTCtx](QualType Ty, PtrView Ptr,
-                                          APValue &R) {
-    if (const auto *AT = Ty->getAs<AtomicType>())
-      Ty = AT->getValueType();
+  if (const auto *AT = Ty->getAs<AtomicType>())
+    Ty = AT->getValueType();
 
-    // Invalid pointers.
-    if (Ptr.isDummy() || !Ptr.isLive() || Ptr.isPastEnd())
+  // Invalid pointers.
+  if (Ptr.isDummy() || !Ptr.isLive() || Ptr.isPastEnd())
+    return false;
+
+  // Primitives should never end up here.
+  assert(!Ctx.canClassify(Ty));
+  const Descriptor *FieldDesc = Ptr.getFieldDesc();
+  assert(FieldDesc);
+
+  if (const auto *RT = Ty->getAsCanonical<RecordType>()) {
+    if (!FieldDesc->isRecord())
       return false;
+    const auto *Record = Ptr.getRecord();
+    assert(Record && "Missing record descriptor");
 
-    // Primitives should never end up here.
-    assert(!Ctx.canClassify(Ty));
-    const Descriptor *FieldDesc = Ptr.getFieldDesc();
-    assert(FieldDesc);
-
-    if (const auto *RT = Ty->getAsCanonical<RecordType>()) {
-      if (!FieldDesc->isRecord())
-        return false;
-      const auto *Record = Ptr.getRecord();
-      assert(Record && "Missing record descriptor");
-
-      bool Ok = true;
-      if (RT->getDecl()->isUnion()) {
-        const FieldDecl *ActiveField = nullptr;
-        APValue Value;
-        for (const auto &F : Record->fields()) {
-          PtrView FP = Ptr.atField(F.Offset);
-          if (FP.isActive()) {
-            const Descriptor *Desc = F.Desc;
-            if (Desc->isPrimitive()) {
-              TYPE_SWITCH(Desc->getPrimType(),
-                          Value = FP.deref<T>().toAPValue(ASTCtx));
-            } else {
-              QualType FieldTy = F.Decl->getType();
-              Ok &= Composite(FieldTy, FP, Value);
-            }
-            ActiveField = FP.getFieldDesc()->asFieldDecl();
-            break;
-          }
-        }
-        R = APValue(ActiveField, Value);
-      } else {
-        unsigned NF = Record->getNumFields();
-        unsigned NB = Record->getNumBases();
-        unsigned NV = Ptr.isBaseClass() ? 0 : Record->getNumVirtualBases();
-
-        R = APValue(APValue::UninitStruct(), NB, NF, NV);
-
-        for (unsigned I = 0; I != NF; ++I) {
-          const Record::Field *FD = Record->getField(I);
-          const Descriptor *Desc = FD->Desc;
-          PtrView FP = Ptr.atField(FD->Offset);
-          APValue &Value = R.getStructField(I);
+    bool Ok = true;
+    if (RT->getDecl()->isUnion()) {
+      const FieldDecl *ActiveField = nullptr;
+      APValue Value;
+      for (const auto &F : Record->fields()) {
+        PtrView FP = Ptr.atField(F.Offset);
+        if (FP.isActive()) {
+          const Descriptor *Desc = F.Desc;
           if (Desc->isPrimitive()) {
             TYPE_SWITCH(Desc->getPrimType(),
                         Value = FP.deref<T>().toAPValue(ASTCtx));
           } else {
-            QualType FieldTy = FD->Decl->getType();
-            Ok &= Composite(FieldTy, FP, Value);
+            QualType FieldTy = F.Decl->getType();
+            Ok &= toRValue(Ctx, FieldTy, FP, Value);
           }
-        }
-
-        for (unsigned I = 0; I != NB; ++I) {
-          const Record::Base *BD = Record->getBase(I);
-          QualType BaseTy = Ctx.getASTContext().getCanonicalTagType(BD->Decl);
-          PtrView BP = Ptr.atField(BD->Offset);
-          Ok &= Composite(BaseTy, BP, R.getStructBase(I));
-        }
-
-        for (unsigned I = 0; I != NV; ++I) {
-          const Record::Base *VD = Record->getVirtualBase(I);
-          assert(VD);
-          QualType VirtBaseTy =
-              Ctx.getASTContext().getCanonicalTagType(VD->Decl);
-          PtrView VP = Ptr.atField(VD->Offset);
-          Ok &= Composite(VirtBaseTy, VP, R.getStructVirtualBase(I));
+          ActiveField = FP.getFieldDesc()->asFieldDecl();
+          break;
         }
       }
-      return Ok;
-    }
+      R = APValue(ActiveField, Value);
+    } else {
+      unsigned NF = Record->getNumFields();
+      unsigned NB = Record->getNumBases();
+      unsigned NV = Ptr.isBaseClass() ? 0 : Record->getNumVirtualBases();
 
-    if (Ty->isIncompleteArrayType()) {
-      R = APValue(APValue::UninitArray(), 0, 0);
-      return true;
-    }
+      R = APValue(APValue::UninitStruct(), NB, NF, NV);
 
-    if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
-      if (!FieldDesc->isArray())
-        return false;
-      const size_t NumElems = Ptr.getNumElems();
-      QualType ElemTy = AT->getElementType();
-      R = APValue(APValue::UninitArray{}, NumElems, NumElems);
-
-      bool Ok = true;
-      OptPrimType ElemT = Ctx.classify(ElemTy);
-      for (unsigned I = 0; I != NumElems; ++I) {
-        APValue &Slot = R.getArrayInitializedElt(I);
-        if (ElemT) {
-          TYPE_SWITCH(*ElemT, Slot = Ptr.elem<T>(I).toAPValue(ASTCtx));
+      for (unsigned I = 0; I != NF; ++I) {
+        const Record::Field *FD = Record->getField(I);
+        const Descriptor *Desc = FD->Desc;
+        PtrView FP = Ptr.atField(FD->Offset);
+        APValue &Value = R.getStructField(I);
+        if (Desc->isPrimitive()) {
+          TYPE_SWITCH(Desc->getPrimType(),
+                      Value = FP.deref<T>().toAPValue(ASTCtx));
         } else {
-          Ok &= Composite(ElemTy, Ptr.atIndex(I).narrow(), Slot);
+          QualType FieldTy = FD->Decl->getType();
+          Ok &= toRValue(Ctx, FieldTy, FP, Value);
         }
       }
-      return Ok;
-    }
 
-    // Complex types.
-    if (Ty->isAnyComplexType()) {
-      // Can happen via C casts.
-      if (!FieldDesc->getType()->isAnyComplexType())
-        return false;
-
-      PrimType ElemT = FieldDesc->getPrimType();
-      if (isIntegerOrBoolType(ElemT)) {
-        INT_TYPE_SWITCH(ElemT, {
-          auto V1 = Ptr.elem<T>(0);
-          auto V2 = Ptr.elem<T>(1);
-          R = APValue(V1.toAPSInt(), V2.toAPSInt());
-          return true;
-        });
-      } else if (ElemT == PT_Float) {
-        R = APValue(Ptr.elem<Floating>(0).getAPFloat(),
-                    Ptr.elem<Floating>(1).getAPFloat());
-        return true;
+      for (unsigned I = 0; I != NB; ++I) {
+        const Record::Base *BD = Record->getBase(I);
+        QualType BaseTy = Ctx.getASTContext().getCanonicalTagType(BD->Decl);
+        PtrView BP = Ptr.atField(BD->Offset);
+        Ok &= toRValue(Ctx, BaseTy, BP, R.getStructBase(I));
       }
+
+      for (unsigned I = 0; I != NV; ++I) {
+        const Record::Base *VD = Record->getVirtualBase(I);
+        assert(VD);
+        QualType VirtBaseTy = Ctx.getASTContext().getCanonicalTagType(VD->Decl);
+        PtrView VP = Ptr.atField(VD->Offset);
+        Ok &= toRValue(Ctx, VirtBaseTy, VP, R.getStructVirtualBase(I));
+      }
+    }
+    return Ok;
+  }
+
+  if (Ty->isIncompleteArrayType()) {
+    R = APValue(APValue::UninitArray(), 0, 0);
+    return true;
+  }
+
+  if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
+    if (!FieldDesc->isArray())
       return false;
-    }
+    const size_t NumElems = Ptr.getNumElems();
+    QualType ElemTy = AT->getElementType();
+    R = APValue(APValue::UninitArray{}, NumElems, NumElems);
 
-    // Vector types.
-    if (const auto *VT = Ty->getAs<VectorType>()) {
-      if (!FieldDesc->isPrimitiveArray())
-        return false;
-
-      PrimType ElemT = FieldDesc->getPrimType();
-      SmallVector<APValue> Values;
-      Values.reserve(VT->getNumElements());
-      for (unsigned I = 0; I != VT->getNumElements(); ++I) {
-        TYPE_SWITCH(ElemT,
-                    { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx)); });
+    bool Ok = true;
+    OptPrimType ElemT = Ctx.classify(ElemTy);
+    for (unsigned I = 0; I != NumElems; ++I) {
+      APValue &Slot = R.getArrayInitializedElt(I);
+      if (ElemT) {
+        TYPE_SWITCH(*ElemT, Slot = Ptr.elem<T>(I).toAPValue(ASTCtx));
+      } else {
+        Ok &= toRValue(Ctx, ElemTy, Ptr.atIndex(I).narrow(), Slot);
       }
+    }
+    return Ok;
+  }
 
-      assert(Values.size() == VT->getNumElements());
-      R = APValue(Values.data(), Values.size());
+  // Complex types.
+  if (Ty->isAnyComplexType()) {
+    // Can happen via C casts.
+    if (!FieldDesc->getType()->isAnyComplexType())
+      return false;
+
+    PrimType ElemT = FieldDesc->getPrimType();
+    if (isIntegerOrBoolType(ElemT)) {
+      INT_TYPE_SWITCH(ElemT, {
+        auto V1 = Ptr.elem<T>(0);
+        auto V2 = Ptr.elem<T>(1);
+        R = APValue(V1.toAPSInt(), V2.toAPSInt());
+        return true;
+      });
+    } else if (ElemT == PT_Float) {
+      R = APValue(Ptr.elem<Floating>(0).getAPFloat(),
+                  Ptr.elem<Floating>(1).getAPFloat());
       return true;
     }
+    return false;
+  }
 
-    // Constant Matrix types.
-    if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
-      if (!FieldDesc->isPrimitiveArray())
-        return false;
-      PrimType ElemT = FieldDesc->getPrimType();
-      unsigned NumElems = MT->getNumElementsFlattened();
+  // Vector types.
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    if (!FieldDesc->isPrimitiveArray())
+      return false;
 
-      SmallVector<APValue> Values;
-      Values.reserve(NumElems);
-      for (unsigned I = 0; I != NumElems; ++I) {
-        TYPE_SWITCH(ElemT,
-                    { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx)); });
-      }
-
-      R = APValue(Values.data(), MT->getNumRows(), MT->getNumColumns());
-      return true;
+    PrimType ElemT = FieldDesc->getPrimType();
+    SmallVector<APValue> Values;
+    Values.reserve(VT->getNumElements());
+    for (unsigned I = 0; I != VT->getNumElements(); ++I) {
+      TYPE_SWITCH(ElemT,
+                  { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx)); });
     }
 
-    llvm_unreachable("invalid value to return");
-  };
+    assert(Values.size() == VT->getNumElements());
+    R = APValue(Values.data(), Values.size());
+    return true;
+  }
+
+  // Constant Matrix types.
+  if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
+    if (!FieldDesc->isPrimitiveArray())
+      return false;
+    PrimType ElemT = FieldDesc->getPrimType();
+    unsigned NumElems = MT->getNumElementsFlattened();
+
+    SmallVector<APValue> Values;
+    Values.reserve(NumElems);
+    for (unsigned I = 0; I != NumElems; ++I) {
+      TYPE_SWITCH(ElemT,
+                  { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx)); });
+    }
+
+    R = APValue(Values.data(), MT->getNumRows(), MT->getNumColumns());
+    return true;
+  }
+
+  llvm_unreachable("invalid value to return");
+}
+
+std::optional<APValue> Pointer::toRValue(const Context &Ctx,
+                                         QualType ResultType) const {
+  const ASTContext &ASTCtx = Ctx.getASTContext();
+  assert(!ResultType.isNull());
 
   // Can't return functions as rvalues.
   if (ResultType->isFunctionType())
@@ -1148,12 +1168,15 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
   if (OptPrimType T = Ctx.classify(ResultType)) {
     if (!canDeref(*T))
       return std::nullopt;
-    TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
+    TYPE_SWITCH(*T, return this->load<T>().toAPValue(ASTCtx));
   }
+
+  if (!isBlockPointer())
+    return std::nullopt;
 
   // Return the composite type.
   APValue Result;
-  if (!Composite(ResultType, view(), Result))
+  if (!::toRValue(Ctx, ResultType, view(), Result))
     return std::nullopt;
   return Result;
 }
@@ -1167,6 +1190,8 @@ const VarDecl *Pointer::getRootVarDecl() const {
 const Expr *Pointer::getRootExpr() const {
   if (isBlockPointer())
     return getDeclDesc()->asExpr();
+  if (isStringPointer())
+    return Str.getLiteral();
   return nullptr;
 }
 
