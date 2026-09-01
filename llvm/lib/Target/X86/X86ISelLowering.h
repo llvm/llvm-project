@@ -236,8 +236,6 @@ namespace llvm {
 
     bool isCheapToSpeculateCtlz(Type *Ty) const override;
 
-    bool isCtlzFast() const override;
-
     bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
       // If the pair to store is a mixture of float and int values, we will
       // save two bitwise instructions and one float-to-int instruction and
