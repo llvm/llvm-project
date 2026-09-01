@@ -59,8 +59,7 @@ template <typename...> struct IsIntegral {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsIntegral<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsIntegral<evaluate::Type<C>> {
   static constexpr bool value{//
       C == common::TypeCategory::Integer ||
       C == common::TypeCategory::Unsigned};
@@ -72,8 +71,7 @@ template <typename...> struct IsFloatingPoint {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsFloatingPoint<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsFloatingPoint<evaluate::Type<C>> {
   static constexpr bool value{//
       C == common::TypeCategory::Real || C == common::TypeCategory::Complex};
 };
@@ -88,8 +86,7 @@ template <typename...> struct IsLogical {
   static constexpr bool value{false};
 };
 
-template <common::TypeCategory C, int K>
-struct IsLogical<evaluate::Type<C, K>> {
+template <common::TypeCategory C> struct IsLogical<evaluate::Type<C>> {
   static constexpr bool value{C == common::TypeCategory::Logical};
 };
 
@@ -160,7 +157,7 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     // Since this works with clang, MSVC and at least GCC 8.5, I'm assuming
     // that this is some kind of a GCC issue.
     using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>,
-        evaluate::LogicalOperation<T::kind>>;
+        evaluate::LogicalOperation>;
 #else
     using MatchTypes = typename decltype(outer1)::MatchTypes;
 #endif
@@ -205,6 +202,7 @@ private:
   evaluate::Expr<T> Reconstruct(const S &op, evaluate::Expr<T> atom,
       evaluate::Expr<T> op1, evaluate::Expr<T> op2) {
     using TypeS = llvm::remove_cvref_t<decltype(op)>;
+    const int kindS{op.kind()};
     // This function has to be semantically correct for all possible types
     // of S even though at runtime s will only be one of the matched types.
     // Limit the construction to the operation types that we tried to match
@@ -212,8 +210,10 @@ private:
     if constexpr (!common::HasMember<TypeS, MatchTypes>) {
       return evaluate::Expr<T>(TypeS(op));
     } else if constexpr (is_logical_v<T>) {
-      constexpr int K{T::kind};
-      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation<K>>) {
+      CHECK(op1.kind() == op2.kind());
+      const int K{op1.kind()};
+      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation>) {
+        CHECK(K == kindS);
         // Logical operators take an extra argument in their constructor,
         // so they need their own reconstruction code.
         common::LogicalOperator opCode{op.logicalOperator};
@@ -224,9 +224,9 @@ private:
       }
     } else {
       // Generic reconstruction.
-      return evaluate::Expr<T>(TypeS( //
+      return evaluate::Expr<T>(TypeS(kindS, //
           std::move(atom),
-          evaluate::Expr<T>(TypeS( //
+          evaluate::Expr<T>(TypeS(kindS, //
               std::move(op1), std::move(op2)))));
     }
   }
@@ -1739,6 +1739,7 @@ struct MinMaxRewriter : public evaluate::rewrite::Identity {
   template <typename T>
   evaluate::Expr<T> operator()(
       evaluate::Expr<T> &&x, const evaluate::FunctionRef<T> &f) {
+    const int kind{f.kind()};
     const evaluate::ProcedureDesignator &proc = f.proc();
     if (!IsMinMax(proc) || f.arguments().size() <= 2) {
       return Id::operator()(std::move(x), f);
@@ -1794,10 +1795,10 @@ struct MinMaxRewriter : public evaluate::rewrite::Identity {
     }
 
     SomeExpr tmp = evaluate::AsGenericExpr(
-        evaluate::FunctionRef<T>(AsRvalue(proc), AsRvalue(nonAtoms)));
+        evaluate::FunctionRef<T>{kind, AsRvalue(proc), AsRvalue(nonAtoms)});
 
-    return evaluate::Expr<T>(evaluate::FunctionRef<T>(
-        AsRvalue(proc), {AsActual(*atomArg), AsActual(tmp)}));
+    return evaluate::Expr<T>{evaluate::FunctionRef<T>{
+        kind, AsRvalue(proc), {AsActual(*atomArg), AsActual(tmp)}}};
   }
 
 private:

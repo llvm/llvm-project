@@ -1,3 +1,4 @@
+#include "flang/Evaluate/real.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Testing/fp-testing.h"
 #include "flang/Testing/testing.h"
@@ -10,16 +11,16 @@
 using namespace Fortran::evaluate;
 using namespace Fortran::common;
 
-using Real2 = Scalar<Type<TypeCategory::Real, 2>>;
-using Real3 = Scalar<Type<TypeCategory::Real, 3>>;
-using Real4 = Scalar<Type<TypeCategory::Real, 4>>;
-using Real8 = Scalar<Type<TypeCategory::Real, 8>>;
+using Real2 = value::Real<value::Integer<16>, 11>;
+using Real3 = value::Real<value::Integer<16>, 8>;
+using Real4 = value::Real<value::Integer<32>, 24>;
+using Real8 = value::Real<value::Integer<64>, 53>;
 #ifdef __x86_64__
-using Real10 = Scalar<Type<TypeCategory::Real, 10>>;
+using Real10 = value::Real<value::X87IntegerContainer, 64>;
 #endif
-using Real16 = Scalar<Type<TypeCategory::Real, 16>>;
-using Integer4 = Scalar<Type<TypeCategory::Integer, 4>>;
-using Integer8 = Scalar<Type<TypeCategory::Integer, 8>>;
+using Real16 = value::Real<value::Integer<128>, 113>;
+using Integer4 = value::Integer<32>;
+using Integer8 = value::Integer<64>;
 
 void dumpTest() {
   struct {

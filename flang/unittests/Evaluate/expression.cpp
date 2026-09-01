@@ -11,13 +11,17 @@
 
 using namespace Fortran::evaluate;
 
+static Expr<Type<TypeCategory::Integer>> MakeDefaultIntegerExpr(int32_t v) {
+  return MakeConstantExpr<Type<TypeCategory::Integer>>(4, v);
+}
+
 int main() {
-  using DefaultIntegerExpr = Expr<Type<TypeCategory::Integer, 4>>;
-  TEST(DefaultIntegerExpr::Result::AsFortran() == "INTEGER(4)");
-  MATCH("666_4", DefaultIntegerExpr{666}.AsFortran());
-  MATCH("-1_4", (-DefaultIntegerExpr{1}).AsFortran());
-  auto ex1{
-      DefaultIntegerExpr{2} + DefaultIntegerExpr{3} * -DefaultIntegerExpr{4}};
+  using DefaultIntegerExpr = Expr<Type<TypeCategory::Integer>>;
+  TEST(DefaultIntegerExpr::Result{4}.AsFortran() == "INTEGER(4)");
+  MATCH("666_4", MakeDefaultIntegerExpr(666).AsFortran());
+  MATCH("-1_4", (-MakeDefaultIntegerExpr(1)).AsFortran());
+  auto ex1{MakeDefaultIntegerExpr(2) +
+      MakeDefaultIntegerExpr(3) * -MakeDefaultIntegerExpr(4)};
   MATCH("2_4+3_4*(-4_4)", ex1.AsFortran());
   Fortran::common::IntrinsicTypeDefaultKinds defaults;
   auto intrinsics{Fortran::evaluate::IntrinsicProcTable::Configure(defaults)};
@@ -28,9 +32,10 @@ int main() {
       intrinsics, targetCharacteristics, languageFeatures, tempNames};
   ex1 = Fold(context, std::move(ex1));
   MATCH("-10_4", ex1.AsFortran());
-  MATCH("1_4/2_4", (DefaultIntegerExpr{1} / DefaultIntegerExpr{2}).AsFortran());
-  DefaultIntegerExpr a{1};
-  DefaultIntegerExpr b{2};
+  MATCH("1_4/2_4",
+      (MakeDefaultIntegerExpr(1) / MakeDefaultIntegerExpr(2)).AsFortran());
+  DefaultIntegerExpr a{MakeDefaultIntegerExpr(1)};
+  DefaultIntegerExpr b{MakeDefaultIntegerExpr(2)};
   MATCH("1_4", a.AsFortran());
   a = b;
   MATCH("2_4", a.AsFortran());

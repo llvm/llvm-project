@@ -224,12 +224,7 @@ void DumpEvaluateExpr::Outdent() {
 void DumpEvExpr(const SomeExpr &x) { DumpEvaluateExpr::Dump(x); }
 
 void DumpEvExpr(
-    const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer, 4>> &x) {
-  DumpEvaluateExpr::Dump(x);
-}
-
-void DumpEvExpr(
-    const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer, 8>> &x) {
+    const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>> &x) {
   DumpEvaluateExpr::Dump(x);
 }
 
@@ -240,7 +235,7 @@ void DumpEvExpr(const evaluate::DataRef &x) { DumpEvaluateExpr::Dump(x); }
 void DumpEvExpr(const evaluate::Substring &x) { DumpEvaluateExpr::Dump(x); }
 
 void DumpEvExpr(
-    const evaluate::Designator<evaluate::Type<common::TypeCategory::Integer, 4>>
+    const evaluate::Designator<evaluate::Type<common::TypeCategory::Integer>>
         &x) {
   DumpEvaluateExpr::Dump(x);
 }

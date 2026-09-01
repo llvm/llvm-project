@@ -152,12 +152,13 @@ template <typename FuncType, typename TR, typename... TA, size_t... I>
 static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
     FoldingContext &context, std::vector<Expr<SomeType>> &&args,
     std::index_sequence<I...>) {
+  constexpr int kind{TR::kind};
   host::HostFloatingPointEnvironment hostFPE;
   hostFPE.SetUpHostFloatingPointEnvironment(context);
   host::HostType<TR> hostResult{};
   Scalar<TR> result{};
   std::tuple<Scalar<TA>...> scalarArgs{
-      GetScalarConstantValue<TA>(args[I]).value()...};
+      GetScalarConstantValue<typename TA::FortranType>(args[I]).value()...};
   if (context.targetCharacteristics().areSubnormalsFlushedToZero() &&
       !hostFPE.hasSubnormalFlushingHardwareControl()) {
     hostResult = func(host::CastFortranToHost<TA>(
@@ -171,7 +172,8 @@ static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
     CheckFloatingPointIssues<TR>(hostFPE, result);
   }
   hostFPE.CheckAndRestoreFloatingPointEnvironment(context);
-  return AsGenericExpr(Constant<TR>(std::move(result)));
+  return AsGenericExpr(
+      Constant<typename TR::FortranType>(kind, std::move(result)));
 }
 template <typename HostTR, typename... HostTA>
 Expr<SomeType> ApplyHostFunction(FuncPointer<HostTR, HostTA...> func,
@@ -823,9 +825,12 @@ static const Expr<SomeType> &GetArg(
 
 template <typename T>
 static bool IsInRange(const Expr<T> &expr, int lb, int ub) {
+  const int kind{expr.kind()};
   if (auto scalar{GetScalarConstantValue<T>(expr)}) {
-    auto lbValue{Scalar<T>::FromInteger(value::Integer<8>{lb}).value};
-    auto ubValue{Scalar<T>::FromInteger(value::Integer<8>{ub}).value};
+    auto lbValue{
+        Scalar<T>::FromInteger(kind, value::IntegerValue{1, lb}).value};
+    auto ubValue{
+        Scalar<T>::FromInteger(kind, value::IntegerValue{1, ub}).value};
     return Satisfies(RelationalOperator::LE, lbValue.Compare(*scalar)) &&
         Satisfies(RelationalOperator::LE, scalar->Compare(ubValue));
   }
@@ -859,9 +864,10 @@ static bool VerifyStrictlyPositiveIfReal(
     const bool isStrictlyPositive{std::visit(
         [&](const auto &x) -> bool {
           using T = typename std::decay_t<decltype(x)>::Result;
+          const int kind{x.kind()};
           auto scalar{GetScalarConstantValue<T>(x)};
           return Satisfies(
-              RelationalOperator::LT, Scalar<T>{}.Compare(*scalar));
+              RelationalOperator::LT, Scalar<T>::Zero(kind).Compare(*scalar));
         },
         someReal->u)};
     if (!isStrictlyPositive) {

@@ -7391,7 +7391,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
             // Map standard OpenMP foreign-runtime identifier strings to
             // their well-known integer values (OpenMP 5.1, Table 22.2).
             auto frId = llvm::StringSwitch<std::optional<int64_t>>(
-                            llvm::StringRef(*str).lower())
+                            str->AsStringRef()->lower())
                             .Case("cuda", 1)
                             .Case("cuda_driver", 2)
                             .Case("opencl", 3)
@@ -7681,7 +7681,7 @@ static void genErrorDirective(lower::AbstractConverter &converter,
   if (args.message) {
     if (auto expr = semantics::omp::GetEvaluateExpr(*args.message)) {
       if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr))
-        message = *val;
+        message = val->AsStdString();
       else
         messageExpr = expr;
     }

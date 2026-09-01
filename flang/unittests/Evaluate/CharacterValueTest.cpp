@@ -39,7 +39,7 @@ TYPED_TEST_SUITE(CharacterValueTypedKind, CharacterTypedKinds, KindName);
 
 class CharacterValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(CharacterValueKind, CharacterValueKind,
-    testing::ValuesIn(CharacterKinds),
+    testing::ValuesIn(KindsByType<TypeCategory::Character>::kinds),
     [](const testing::TestParamInfo<int> &info) {
       return "CHARACTER_" + std::to_string(info.param);
     });

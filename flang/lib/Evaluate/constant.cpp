@@ -144,8 +144,10 @@ bool HasNegativeExtent(const ConstantSubscripts &shape) {
 
 template <typename RESULT, typename ELEMENT>
 ConstantBase<RESULT, ELEMENT>::ConstantBase(
-    std::vector<Element> &&x, ConstantSubscripts &&sh, Result res)
-    : ConstantBounds(std::move(sh)), result_{res}, values_(std::move(x)) {
+    int kind, std::vector<Element> &&x, ConstantSubscripts &&sh, Result res)
+    : ConstantBounds(std::move(sh)), kind_{kind}, result_{res},
+      values_(std::move(x)) {
+  CHECK_KIND(kind, RESULT);
   CHECK(TotalElementCount(shape()) && size() == *TotalElementCount(shape()));
 }
 
@@ -154,7 +156,8 @@ ConstantBase<RESULT, ELEMENT>::~ConstantBase() {}
 
 template <typename RESULT, typename ELEMENT>
 bool ConstantBase<RESULT, ELEMENT>::operator==(const ConstantBase &that) const {
-  return shape() == that.shape() && values_ == that.values_;
+  return kind() == that.kind() && shape() == that.shape() &&
+      values_ == that.values_;
 }
 
 template <typename RESULT, typename ELEMENT>
@@ -198,7 +201,8 @@ auto Constant<T>::At(const ConstantSubscripts &index) const -> Element {
 
 template <typename T>
 auto Constant<T>::Reshape(ConstantSubscripts &&dims) const -> Constant {
-  return {Base::Reshape(dims), std::move(dims)};
+  const int kind{Base::kind()};
+  return {kind, Base::Reshape(dims), std::move(dims)};
 }
 
 template <typename T>
@@ -207,25 +211,28 @@ std::size_t Constant<T>::CopyFrom(const Constant<T> &source, std::size_t count,
   return Base::CopyFrom(source, count, resultSubscripts, dimOrder);
 }
 
-// Constant<Type<TypeCategory::Character, KIND> specializations
-template <int KIND>
-Constant<Type<TypeCategory::Character, KIND>>::Constant(
-    const Scalar<Result> &str)
-    : values_{str}, length_{static_cast<ConstantSubscript>(values_.size())} {}
+// Constant<Type<TypeCategory::Character>> specialization
+Constant<Type<TypeCategory::Character>>::Constant(
+    int kind, const Scalar<Result> &str)
+    : kind_{kind}, values_{str},
+      length_{static_cast<ConstantSubscript>(values_.size())} {
+  CHECK(str.kind() == kind);
+}
 
-template <int KIND>
-Constant<Type<TypeCategory::Character, KIND>>::Constant(Scalar<Result> &&str)
-    : values_{std::move(str)}, length_{static_cast<ConstantSubscript>(
-                                   values_.size())} {}
+Constant<Type<TypeCategory::Character>>::Constant(
+    int kind, Scalar<Result> &&str)
+    : kind_{kind}, values_{std::move(str)},
+      length_{static_cast<ConstantSubscript>(values_.size())} {
+  CHECK(str.kind() == kind);
+}
 
-template <int KIND>
-Constant<Type<TypeCategory::Character, KIND>>::Constant(ConstantSubscript len,
-    std::vector<Scalar<Result>> &&strings, ConstantSubscripts &&sh)
-    : ConstantBounds(std::move(sh)), length_{len} {
+Constant<Type<TypeCategory::Character>>::Constant(int kind,
+    ConstantSubscript len, std::vector<Scalar<Result>> &&strings,
+    ConstantSubscripts &&sh)
+    : ConstantBounds(std::move(sh)), kind_{kind}, length_{len} {
   CHECK(TotalElementCount(shape()) &&
       strings.size() == *TotalElementCount(shape()));
-  values_.assign(strings.size() * length_,
-      static_cast<typename Scalar<Result>::value_type>(' '));
+  values_.assign(kind, strings.size() * length_, ' ');
   ConstantSubscript at{0};
   for (const auto &str : strings) {
     auto strLen{static_cast<ConstantSubscript>(str.size())};
@@ -239,16 +246,13 @@ Constant<Type<TypeCategory::Character, KIND>>::Constant(ConstantSubscript len,
   CHECK(at == static_cast<ConstantSubscript>(values_.size()));
 }
 
-template <int KIND>
-Constant<Type<TypeCategory::Character, KIND>>::~Constant() {}
+Constant<Type<TypeCategory::Character>>::~Constant() {}
 
-template <int KIND>
-bool Constant<Type<TypeCategory::Character, KIND>>::empty() const {
+bool Constant<Type<TypeCategory::Character>>::empty() const {
   return size() == 0;
 }
 
-template <int KIND>
-std::size_t Constant<Type<TypeCategory::Character, KIND>>::size() const {
+std::size_t Constant<Type<TypeCategory::Character>>::size() const {
   if (length_ == 0) {
     std::optional<uint64_t> n{TotalElementCount(shape())};
     CHECK(n);
@@ -258,23 +262,20 @@ std::size_t Constant<Type<TypeCategory::Character, KIND>>::size() const {
   }
 }
 
-template <int KIND>
-auto Constant<Type<TypeCategory::Character, KIND>>::At(
+auto Constant<Type<TypeCategory::Character>>::At(
     const ConstantSubscripts &index) const -> Scalar<Result> {
   auto offset{SubscriptsToOffset(index)};
   return values_.substr(offset * length_, length_);
 }
 
-template <int KIND>
-auto Constant<Type<TypeCategory::Character, KIND>>::Substring(
-    ConstantSubscript lo, ConstantSubscript hi) const
-    -> std::optional<Constant> {
+auto Constant<Type<TypeCategory::Character>>::Substring(ConstantSubscript lo,
+    ConstantSubscript hi) const -> std::optional<Constant> {
   std::vector<Element> elements;
   ConstantSubscript n{GetSize(shape())};
   ConstantSubscript newLength{0};
   if (lo > hi) { // zero-length results
     while (n-- > 0) {
-      elements.emplace_back(); // ""
+      elements.emplace_back(Scalar<Result>::Zero(kind())); // ""
     }
   } else if (lo < 1 || hi > length_) {
     return std::nullopt;
@@ -284,11 +285,11 @@ auto Constant<Type<TypeCategory::Character, KIND>>::Substring(
       elements.emplace_back(At(at).substr(lo - 1, newLength));
     }
   }
-  return Constant{newLength, std::move(elements), ConstantSubscripts{shape()}};
+  return Constant{
+      kind(), newLength, std::move(elements), ConstantSubscripts{shape()}};
 }
 
-template <int KIND>
-auto Constant<Type<TypeCategory::Character, KIND>>::Reshape(
+auto Constant<Type<TypeCategory::Character>>::Reshape(
     ConstantSubscripts &&dims) const -> Constant<Result> {
   std::optional<uint64_t> optN{TotalElementCount(dims)};
   CHECK(optN);
@@ -304,14 +305,12 @@ auto Constant<Type<TypeCategory::Character, KIND>>::Reshape(
       at = 0;
     }
   }
-  return {length_, std::move(elements), std::move(dims)};
+  return {kind(), length_, std::move(elements), std::move(dims)};
 }
 
-template <int KIND>
-std::size_t Constant<Type<TypeCategory::Character, KIND>>::CopyFrom(
-    const Constant<Type<TypeCategory::Character, KIND>> &source,
-    std::size_t count, ConstantSubscripts &resultSubscripts,
-    const std::vector<int> *dimOrder) {
+std::size_t Constant<Type<TypeCategory::Character>>::CopyFrom(
+    const Constant<Type<TypeCategory::Character>> &source, std::size_t count,
+    ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder) {
   CHECK(length_ == source.length_);
   if (length_ == 0) {
     // It's possible that the array of strings consists of all empty strings.
@@ -320,11 +319,11 @@ std::size_t Constant<Type<TypeCategory::Character, KIND>>::CopyFrom(
     return count;
   } else {
     std::size_t copied{0};
-    std::size_t elementBytes{length_ * sizeof(decltype(values_[0]))};
+    std::size_t elementBytes{static_cast<std::size_t>(length_) * kind()};
     ConstantSubscripts sourceSubscripts{source.lbounds()};
     while (copied < count) {
-      auto *dest{&values_.at(SubscriptsToOffset(resultSubscripts) * length_)};
-      const auto *src{&source.values_.at(
+      auto *dest{values_.at(SubscriptsToOffset(resultSubscripts) * length_)};
+      const auto *src{source.values_.at(
           source.SubscriptsToOffset(sourceSubscripts) * length_)};
       std::memcpy(dest, src, elementBytes);
       copied++;
@@ -337,14 +336,14 @@ std::size_t Constant<Type<TypeCategory::Character, KIND>>::CopyFrom(
 
 // Constant<SomeDerived> specialization
 Constant<SomeDerived>::Constant(const StructureConstructor &x)
-    : Base{x.values(), Result{x.derivedTypeSpec()}} {}
+    : Base{/*kind=*/0, x.values(), Result{x.derivedTypeSpec()}} {}
 
 Constant<SomeDerived>::Constant(StructureConstructor &&x)
-    : Base{std::move(x.values()), Result{x.derivedTypeSpec()}} {}
+    : Base{/*kind=*/0, std::move(x.values()), Result{x.derivedTypeSpec()}} {}
 
 Constant<SomeDerived>::Constant(const semantics::DerivedTypeSpec &spec,
     std::vector<StructureConstructorValues> &&x, ConstantSubscripts &&s)
-    : Base{std::move(x), std::move(s), Result{spec}} {}
+    : Base{/*kind=*/0, std::move(x), std::move(s), Result{spec}} {}
 
 static std::vector<StructureConstructorValues> AcquireValues(
     std::vector<StructureConstructor> &&x) {
@@ -357,7 +356,8 @@ static std::vector<StructureConstructorValues> AcquireValues(
 
 Constant<SomeDerived>::Constant(const semantics::DerivedTypeSpec &spec,
     std::vector<StructureConstructor> &&x, ConstantSubscripts &&shape)
-    : Base{AcquireValues(std::move(x)), std::move(shape), Result{spec}} {}
+    : Base{/*kind=*/0, AcquireValues(std::move(x)), std::move(shape),
+          Result{spec}} {}
 
 std::optional<StructureConstructor>
 Constant<SomeDerived>::GetScalarValue() const {

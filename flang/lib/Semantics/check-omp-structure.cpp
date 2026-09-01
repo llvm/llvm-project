@@ -2792,7 +2792,7 @@ void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
   if (args.message) {
     if (auto expr{GetEvaluateExpr(*args.message)}) {
       if (auto val{evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr)}) {
-        message = *val;
+        message = val->AsStdString();
       }
     }
   }

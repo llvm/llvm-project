@@ -63,6 +63,7 @@ public:
   StaticDataObject &Push(const std::string &, bool /*ignored*/ = false);
   StaticDataObject &Push(const std::u16string &, bool bigEndian = false);
   StaticDataObject &Push(const std::u32string &, bool bigEndian = false);
+  StaticDataObject &Push(const value::CharacterValue &, bool bigEndian = false);
   std::optional<std::string> AsString() const;
   std::optional<std::u16string> AsU16String(bool bigEndian = false) const;
   std::optional<std::u32string> AsU32String(bool bigEndian = false) const;

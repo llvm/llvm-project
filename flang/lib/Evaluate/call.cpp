@@ -269,7 +269,8 @@ std::optional<Expr<SubscriptInteger>> ProcedureRef::LEN() const {
           UnwrapExpr<Expr<SomeInteger>>(arguments_[1].value())};
       CHECK(stringArg && nCopiesArg);
       if (auto stringLen{stringArg->LEN()}) {
-        auto converted{ConvertTo(*stringLen, common::Clone(*nCopiesArg))};
+        auto converted{ConvertTo(
+            stringLen->kind(), *stringLen, common::Clone(*nCopiesArg))};
         return *std::move(stringLen) * std::move(converted);
       }
     }

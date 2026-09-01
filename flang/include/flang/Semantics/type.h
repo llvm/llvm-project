@@ -52,6 +52,9 @@ using MaybeIntExpr = std::optional<SomeIntExpr>;
 using SubscriptIntExpr = evaluate::Expr<evaluate::SubscriptInteger>;
 using MaybeSubscriptIntExpr = std::optional<SubscriptIntExpr>;
 using KindExpr = SubscriptIntExpr;
+using evaluate::MakeSubscriptIntExpr;
+
+KindExpr MakeKindExpr(int v);
 
 // An array spec bound: an explicit integer expression, assumed size
 // or implied shape(*), or assumed or deferred shape(:).  In the absence

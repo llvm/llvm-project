@@ -34,6 +34,10 @@ namespace Fortran::evaluate {
 class IntrinsicProcTable;
 class TargetCharacteristics;
 
+namespace value {
+class CharacterValue;
+}
+
 using common::ConstantSubscript;
 using common::RealFlag;
 using common::RealFlags;
@@ -73,6 +77,9 @@ static constexpr Ordering Compare(
     return Ordering::Equal;
   }
 }
+
+Ordering Compare(
+    const value::CharacterValue &x, const value::CharacterValue &y);
 
 static constexpr Ordering Reverse(Ordering ordering) {
   if (ordering == Ordering::Less) {
