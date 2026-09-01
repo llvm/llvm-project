@@ -99,52 +99,6 @@ using SSAContext = GenericSSAContext<Function>;
 template <typename T> class GenericUniformityInfo;
 using UniformityInfo = GenericUniformityInfo<SSAContext>;
 
-class SDVTListNode : public FoldingSetNode {
-  friend struct FoldingSetTrait<SDVTListNode>;
-
-  /// A reference to an Interned FoldingSetNodeID for this node.
-  /// The Allocator in SelectionDAG holds the data.
-  /// SDVTList contains all types which are frequently accessed in SelectionDAG.
-  /// The size of this list is not expected to be big so it won't introduce
-  /// a memory penalty.
-  FoldingSetNodeIDRef FastID;
-  const EVT *VTs;
-  unsigned int NumVTs;
-  /// The hash value for SDVTList is fixed, so cache it to avoid
-  /// hash calculation.
-  unsigned HashValue;
-
-public:
-  SDVTListNode(const FoldingSetNodeIDRef ID, const EVT *VT, unsigned int Num) :
-      FastID(ID), VTs(VT), NumVTs(Num) {
-    HashValue = ID.ComputeHash();
-  }
-
-  SDVTList getSDVTList() {
-    SDVTList result = {VTs, NumVTs};
-    return result;
-  }
-};
-
-/// Specialize FoldingSetTrait for SDVTListNode
-/// to avoid computing temp FoldingSetNodeID and hash value.
-template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTListNode> {
-  static void Profile(const SDVTListNode &X, FoldingSetNodeID& ID) {
-    ID = X.FastID;
-  }
-
-  static bool Equals(const SDVTListNode &X, const FoldingSetNodeID &ID,
-                     unsigned IDHash, FoldingSetNodeID &TempID) {
-    if (X.HashValue != IDHash)
-      return false;
-    return ID == X.FastID;
-  }
-
-  static unsigned ComputeHash(const SDVTListNode &X, FoldingSetNodeID &TempID) {
-    return X.HashValue;
-  }
-};
-
 template <> struct ilist_alloc_traits<SDNode> {
   static void deleteNode(SDNode *) {
     llvm_unreachable("ilist_traits<SDNode> shouldn't see a deleteNode call!");
@@ -254,11 +208,21 @@ class SelectionDAG {
   BlockFrequencyInfo *BFI = nullptr;
   MachineModuleInfo *MMI = nullptr;
 
-  /// Extended EVTs used for single value VTLists.
-  std::set<EVT, EVT::compareRawBits> EVTs;
-
-  /// List of non-single value types.
-  FoldingSet<SDVTListNode> VTListMap;
+  /// Uniquing of VT lists.  Each key aliases the EVT array that the returned
+  /// SDVTList points at, allocated from \p Allocator.
+  struct VTListInfo {
+    static unsigned getHashValue(ArrayRef<EVT> VTs) {
+      unsigned H = VTs.size();
+      for (EVT VT : VTs)
+        H = detail::combineHashValue(
+            H, DenseMapInfo<intptr_t>::getHashValue(VT.getRawBits()));
+      return H;
+    }
+    static bool isEqual(ArrayRef<EVT> LHS, ArrayRef<EVT> RHS) {
+      return LHS == RHS;
+    }
+  };
+  DenseSet<ArrayRef<EVT>, VTListInfo> VTLists;
 
   /// Pool allocation for misc. objects that are created once per SelectionDAG.
   BumpPtrAllocator Allocator;
@@ -2780,11 +2744,12 @@ private:
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
   void AddModifiedNodeToCSEMaps(SDNode *N);
-  SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op, void *&InsertPos);
+  SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op,
+                               FoldingSetInsertToken &InsertToken);
   SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op1, SDValue Op2,
-                               void *&InsertPos);
+                               FoldingSetInsertToken &InsertToken);
   SDNode *FindModifiedNodeSlot(SDNode *N, ArrayRef<SDValue> Ops,
-                               void *&InsertPos);
+                               FoldingSetInsertToken &InsertToken);
   SDNode *UpdateSDLocOnMergeSDNode(SDNode *N, const SDLoc &loc);
 
   void DeleteNodeNotInCSEMaps(SDNode *N);
@@ -2792,17 +2757,18 @@ private:
 
   void allnodes_clear();
 
-  /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
-  /// not, return the insertion token that will make insertion faster.  This
-  /// overload is for nodes other than Constant or ConstantFP, use the other one
-  /// for those.
-  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos);
+  /// Look up the node specified by ID in CSEMap. If it exists, return it and
+  /// clear \p InsertToken; otherwise return null and set \p InsertToken for a
+  /// subsequent insert. This overload is for nodes other than Constant or
+  /// ConstantFP, use the other one for those.
+  SDNode *lookupNode(const FoldingSetNodeID &ID,
+                     FoldingSetInsertToken &InsertToken);
 
-  /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
-  /// not, return the insertion token that will make insertion faster.  Performs
-  /// additional processing for constant nodes.
-  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, const SDLoc &DL,
-                              void *&InsertPos);
+  /// Look up the node specified by ID in CSEMap. If it exists, return it and
+  /// clear \p InsertToken; otherwise return null and set \p InsertToken for a
+  /// subsequent insert. Performs additional processing for constant nodes.
+  SDNode *lookupNode(const FoldingSetNodeID &ID, const SDLoc &DL,
+                     FoldingSetInsertToken &InsertToken);
 
   /// Maps to auto-CSE operations.
   std::vector<CondCodeSDNode*> CondCodeNodes;

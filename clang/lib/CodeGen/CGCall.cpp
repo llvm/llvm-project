@@ -1092,8 +1092,8 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
                           X86ABIAVXLevel, info, paramInfos, required,
                           resultType, argTypes);
 
-  void *insertPos = nullptr;
-  CGFunctionInfo *FI = FunctionInfos.FindNodeOrInsertPos(ID, insertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  CGFunctionInfo *FI = FunctionInfos.lookup(ID, InsertToken);
   if (FI)
     return FI;
 
@@ -1103,7 +1103,7 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
   FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
                               X86ABIAVXLevel, info, paramInfos, resultType,
                               argTypes, required);
-  FunctionInfos.InsertNode(FI, insertPos);
+  FunctionInfos.insert(FI, InsertToken);
 
   bool inserted = FunctionsBeingProcessed.insert(FI).second;
   (void)inserted;
