@@ -235,7 +235,8 @@ def m_wasm_Features_Group : OptionGroup<"<wasm features group>">,
 def m_wasm_Features_Driver_Group : OptionGroup<"<wasm driver features group>">,
                                    Group<m_Group>, DocName<"WebAssembly Driver">;
 def m_x86_Features_Group : OptionGroup<"<x86 features group>">,
-                           Group<m_Group>, Visibility<[ClangOption, CLOption]>,
+                           Group<m_Group>,
+                           Visibility<[ClangOption, CLOption, FlangOption]>,
                            DocName<"X86">;
 def m_x86_AVX10_Features_Group : OptionGroup<"<x86 AVX10 features group>">,
                                  Group<m_Group>, Visibility<[ClangOption, CLOption]>,
@@ -7539,9 +7540,11 @@ def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, 
 def mvzeroupper : Flag<["-"], "mvzeroupper">, Group<m_x86_Features_Group>;
 def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
 def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
-                 HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
+                 Visibility<[ClangOption, CLOption, FlangOption]>,
+                 HelpText<"Disable generation of gather instructions in auto-vectorization (x86 only)">;
 def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
-                  HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
+                  Visibility<[ClangOption, CLOption, FlangOption]>,
+                  HelpText<"Disable generation of scatter instructions in auto-vectorization (x86 only)">;
 def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
