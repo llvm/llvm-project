@@ -147,6 +147,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
 
+- Improved {doc}`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check to honor new
+  `[[clang::annotate("clang-tidy", "bugprone-use-after-move", "specified_after_move")]]` attribute.
+
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
