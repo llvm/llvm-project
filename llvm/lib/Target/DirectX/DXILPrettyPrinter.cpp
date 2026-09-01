@@ -314,12 +314,10 @@ public:
 } // namespace
 
 static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
-                        DXILResourceTypeMap &DRTM) {
+                        DXILResourceTypeMap &DRTM, const DXILDebugInfoMap &DI) {
   formatted_raw_ostream FOS(OS);
 
   prettyPrintResources(FOS, DRM, DRTM);
-
-  DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
 
   ModuleSlotTracker MST(&M);
   AbstractSlotTrackerStorage *STS = nullptr;
@@ -355,7 +353,8 @@ PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
-  prettyPrint(OS, M, DRM, DRTM);
+  const DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
+  prettyPrint(OS, M, DRM, DRTM, DI);
   return PreservedAnalyses::none();
 }
 
@@ -391,8 +390,9 @@ bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
       getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  prettyPrint(OS, M, DRM, DRTM);
-  return false;
+  const DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
+  prettyPrint(OS, M, DRM, DRTM, DI);
+  return DI.Modified;
 }
 
 ModulePass *llvm::createDXILPrettyPrinterLegacyPass(raw_ostream &OS) {

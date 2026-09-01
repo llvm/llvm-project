@@ -1,0 +1,36 @@
+# RUN: llc -mtriple=aarch64 -verify-coalescing -run-pass=register-coalescer -verify-machineinstrs -o - %s | FileCheck %s
+
+# A subregister definition without the undef flag is a read-modify-write,
+# including when it is defined by IMPLICIT_DEF. When the IMPLICIT_DEF cannot be
+# erased, retain the lanes carrying values from the preceding definition.
+# Otherwise the coalescer can miss the interference between %src and %dst and
+# turn the first two copies below into a destructive in-place permutation.
+
+# CHECK-LABEL: name: preserve_valid_lanes
+# CHECK:       [[SRC:%[a-z0-9]+]]:qqqq = COPY $q0_q1_q2_q3
+# CHECK-NEXT:  [[SRC]].qsub3:qqqq = IMPLICIT_DEF
+# CHECK-NOT:   [[SRC]].qsub0:qqqq = COPY [[SRC]].qsub1
+# CHECK-NOT:   [[SRC]].qsub1:qqqq = COPY [[SRC]].qsub0
+# CHECK:       undef [[DST:%[a-z0-9]+]].qsub0:qqqq = COPY [[SRC]].qsub1
+# CHECK-NEXT:  [[DST]].qsub1:qqqq = COPY [[SRC]].qsub0
+# CHECK-NEXT:  [[DST]].qsub2:qqqq = COPY [[SRC]].qsub2
+# CHECK:       RET_ReallyLR implicit [[SRC]].qsub0, implicit [[DST]]
+
+---
+name: preserve_valid_lanes
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $q0_q1_q2_q3
+
+    %src:qqqq = COPY $q0_q1_q2_q3
+    %src.qsub3:qqqq = IMPLICIT_DEF
+
+  bb.1:
+    undef %dst.qsub0:qqqq = COPY %src.qsub1
+    %dst.qsub1:qqqq = COPY %src.qsub0
+    %dst.qsub2:qqqq = COPY %src.qsub2
+
+  bb.2:
+    RET_ReallyLR implicit %src.qsub0, implicit %dst
+...
