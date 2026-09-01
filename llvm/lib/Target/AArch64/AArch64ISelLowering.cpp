@@ -1551,6 +1551,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+
+      // Wider reductions are built from a ladder of the rungs above.
+      setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v4i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
     }
 
     if (Subtarget->hasDotProd()) {
@@ -2218,17 +2226,32 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT :
          {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
+                    MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
+                    MVT::nxv4i32, MVT::nxv4f32}) {
+      // Use a custom lowering for masked stores that could be a supported
+      // compressing store. Note: These types still use the normal (Legal)
+      // lowering for non-compressing masked stores.
+      setOperationAction(ISD::MSTORE, VT, Custom);
+    }
 
     // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
     // bits of the SVE register.
     for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
-                    MVT::v2f64})
+                    MVT::v2f64}) {
+      setOperationAction(ISD::MSTORE, VT, Custom);
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    }
 
     if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
       // With +sve2p2/+sme2p2 the full range of vector types are supported.
-      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16})
+      for (auto VT :
+           {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16}) {
+        // Use custom lowering for MSTORE so we can handle compressstore (using
+        // VECTOR_COMPRESS).
+        setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      }
 
       for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v4f16,
                       MVT::v8f16, MVT::v4bf16, MVT::v8bf16})
@@ -2274,15 +2297,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::nxv4f32, MVT::nxv2f64, MVT::v4f16, MVT::v8f16,
                     MVT::v2f32, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
-
-    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
-                    MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
-                    MVT::nxv4i32, MVT::nxv4f32}) {
-      // Use a custom lowering for masked stores that could be a supported
-      // compressing store. Note: These types still use the normal (Legal)
-      // lowering for non-compressing masked stores.
-      setOperationAction(ISD::MSTORE, VT, Custom);
-    }
 
     // Histcnt is SVE2 only
     if (Subtarget->hasSVE2()) {
@@ -7034,13 +7048,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_dupq_lane:
     return LowerDUPQLane(Op, DAG);
   case Intrinsic::aarch64_sve_convert_from_svbool:
-    if (Op.getValueType() == MVT::aarch64svcount)
-      return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Op.getOperand(1));
     return getSVEPredicateBitCast(Op.getValueType(), Op.getOperand(1), DAG);
   case Intrinsic::aarch64_sve_convert_to_svbool:
-    if (Op.getOperand(1).getValueType() == MVT::aarch64svcount)
-      return DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, Op.getOperand(1));
     return getSVEPredicateBitCast(MVT::nxv16i1, Op.getOperand(1), DAG);
+  case Intrinsic::aarch64_sve_convert_from_svcount:
+  case Intrinsic::aarch64_sve_convert_to_svcount:
+    return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Op.getOperand(1));
   case Intrinsic::aarch64_sve_fneg:
     return DAG.getNode(AArch64ISD::FNEG_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
@@ -7301,6 +7314,15 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_neon_pmul:
     return DAG.getNode(ISD::CLMUL, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
+  case Intrinsic::aarch64_sve_psel: {
+    if (Op.getValueType() != MVT::aarch64svcount)
+      return Op;
+    // Lower predicate-as-counter variants to reuse normal predicate isel.
+    SmallVector<SDValue> Ops(Op->ops());
+    Ops[1] = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, Ops[1]);
+    SDValue PSel = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, Ops);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::aarch64svcount, PSel);
+  }
   }
 }
 
@@ -14386,14 +14408,39 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
     }
   } else {
     if (const auto P = parseSVERegAsConstraint(Constraint)) {
-      // SME functions that are not in streaming mode, should
-      // still observe clobbers of Z-registers by clobbering
-      // the lower 128bits of those registers.
-      if (AArch64::ZPRRegClass.hasSubClassEq(P->second) &&
-          !Subtarget->isSVEorStreamingSVEAvailable())
-        return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
-                              &AArch64::FPR128RegClass);
-      return *P;
+      if (!AArch64::ZPRRegClass.hasSubClassEq(P->second))
+        return *P;
+
+      // A named Z-register constraint with MVT::Other
+      // represents an untyped clobber.
+      if (VT == MVT::Other) {
+        // SME functions that are not in streaming mode, should
+        // still observe clobbers of Z-registers by clobbering
+        // the lower 128bits of those registers.
+        if (!Subtarget->isSVEorStreamingSVEAvailable())
+          return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
+                                &AArch64::FPR128RegClass);
+        return *P;
+      }
+
+      if (Subtarget->isSVEorStreamingSVEAvailable()) {
+        // Accept the full-width SVE vector types representable in C
+        switch (VT.SimpleTy) {
+        case MVT::nxv16i8:
+        case MVT::nxv8i16:
+        case MVT::nxv4i32:
+        case MVT::nxv2i64:
+        case MVT::nxv8f16:
+        case MVT::nxv4f32:
+        case MVT::nxv2f64:
+        case MVT::nxv8bf16:
+          return *P;
+        default:
+          break;
+        }
+      }
+
+      return std::make_pair(0U, nullptr);
     }
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
@@ -24514,7 +24561,35 @@ static SDValue performSubNegAndOneCombine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   return DAG.getSetCC(DL, VT, And, DAG.getConstant(0, DL, VT), ISD::SETNE);
 }
+static SDValue performAddAddCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::ADD)
+    return SDValue();
 
+  EVT VT = N->getValueType(0);
+
+  if (!VT.isScalarInteger())
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue A, B;
+
+  if (Op0.getOpcode() == ISD::ADD && Op0.hasOneUse() &&
+      (Op0.getOperand(0) == Op1 || Op0.getOperand(1) == Op1)) {
+    A = (Op0.getOperand(0) == Op1) ? Op0.getOperand(1) : Op0.getOperand(0);
+    B = Op1;
+  } else if (Op1.getOpcode() == ISD::ADD && Op1.hasOneUse() &&
+             (Op1.getOperand(0) == Op0 || Op1.getOperand(1) == Op0)) {
+    A = (Op1.getOperand(0) == Op0) ? Op1.getOperand(1) : Op1.getOperand(0);
+    B = Op0;
+  } else {
+    return SDValue();
+  }
+
+  SDLoc DL(N);
+  SDValue ShiftB = DAG.getNode(ISD::SHL, DL, VT, B, DAG.getConstant(1, DL, VT));
+  return DAG.getNode(ISD::ADD, DL, VT, A, ShiftB);
+}
 // Fold ADD(SBC(Y, 0, W), C) -> SBC(Y, -C, W)
 // SBC(Y, 0, W) = Y - 0 - ~carry = Y + carry - 1
 // Adding C:  Y + carry - 1 + C = Y - (-C) - ~carry = SBC(Y, -C, W)
@@ -24543,6 +24618,8 @@ static SDValue performAddWithSBCCombine(SDNode *N, SelectionDAG &DAG) {
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
+  if (SDValue Val = performAddAddCombine(N, DCI.DAG))
+    return Val;
   if (SDValue Val = performAddUADDVCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddDotCombine(N, DCI.DAG))
@@ -27357,9 +27434,9 @@ static bool getBoolVectorBitcastCompare(SDValue Vec, SDValue RHS,
 // iN, we can use a trick that extracts the i^th bit from the i^th element and
 // then performs a vector add to get a scalar bitmask. This requires that each
 // element's bits are either all 1 or all 0.
-static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-  SDValue ComparisonResult(N, 0);
+static SDValue vectorToScalarBitmask(SDValue ComparisonResult,
+                                     SelectionDAG &DAG) {
+  SDLoc DL(ComparisonResult);
   EVT VecVT = ComparisonResult.getValueType();
   assert(VecVT.isVector() && "Must be a vector type");
 
@@ -27584,7 +27661,7 @@ static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
     return SDValue();
 
   VecOp = DAG.getNode(ISD::TRUNCATE, DL, MemVT, VecOp);
-  SDValue VectorBits = vectorToScalarBitmask(VecOp.getNode(), DAG);
+  SDValue VectorBits = vectorToScalarBitmask(VecOp, DAG);
   if (!VectorBits)
     return SDValue();
 
@@ -30083,7 +30160,9 @@ static SDValue performDUPCombine(SDNode *N,
     // produce a scalar value in FPRs.
     if (Op.getOpcode() == AArch64ISD::FCMEQ ||
         Op.getOpcode() == AArch64ISD::FCMGE ||
-        Op.getOpcode() == AArch64ISD::FCMGT) {
+        Op.getOpcode() == AArch64ISD::FCMGT ||
+        (Op.getOpcode() == ISD::BITCAST &&
+         Op->getOperand(0).getValueType().isFloatingPoint())) {
       EVT ElemVT = VT.getVectorElementType();
       EVT ExpandedVT = VT;
       // Insert into a 128-bit vector to match DUPLANE's pattern.
@@ -31991,7 +32070,7 @@ static void replaceBoolVectorBitcast(SDNode *N,
       Op = Op.getOperand(0);
   }
 
-  SDValue VectorBits = vectorToScalarBitmask(Op.getNode(), DAG);
+  SDValue VectorBits = vectorToScalarBitmask(Op, DAG);
   if (VectorBits)
     Results.push_back(DAG.getZExtOrTrunc(VectorBits, DL, VT));
 }
@@ -33615,7 +33694,7 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
 
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-      if (AI->getAllocatedType()->isScalableTy())
+      if (AI->isScalable())
         return true;
     }
   }
@@ -33939,16 +34018,11 @@ SDValue AArch64TargetLowering::LowerMSTORE(SDValue Op,
     return SDValue();
 
   EVT MaskVT = Store->getMask().getValueType();
-  EVT MaskExtVT = getPromotedVTForPredicate(MaskVT);
-  EVT MaskReduceVT = MaskExtVT.getScalarType();
   SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-
-  SDValue MaskExt =
-      DAG.getNode(ISD::ZERO_EXTEND, DL, MaskExtVT, Store->getMask());
-  SDValue CntActive =
-      DAG.getNode(ISD::VECREDUCE_ADD, DL, MaskReduceVT, MaskExt);
-  if (MaskReduceVT != MVT::i64)
-    CntActive = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CntActive);
+  SDValue CntActive = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
+      Store->getMask(), Store->getMask());
 
   SDValue CompressedValue =
       DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
@@ -35098,6 +35172,12 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                     DAG.getConstant(0, DL, ResultVT), SignFlipMask, RHS);
     return DAG.getNode(ISD::SUB, DL, ResultVT, BiasedDot, BiasCorrection);
   }
+
+  // The wider Neon shapes left here have no single instruction, so leave them
+  // to the generic expansion, which chains the two-way reductions above.
+  if (!Subtarget->isSVEorStreamingSVEAvailable() &&
+      OpVT.getVectorNumElements() > 2 * ResultVT.getVectorNumElements())
+    return SDValue();
 
   bool ConvertToScalable = ResultVT.isFixedLengthVector() &&
                            Subtarget->isSVEorStreamingSVEAvailable();

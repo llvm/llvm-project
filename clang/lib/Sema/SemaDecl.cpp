@@ -6585,6 +6585,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
           return nullptr;
 
         D.setInvalidType();
+      } else if (CurContext->isRecord() && !CurContext->Equals(DC)) {
+        D.setInvalidType();
       }
     }
 
@@ -18506,7 +18508,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   }
 
   if (getLangOpts().CPlusPlus && Name && DC && StdNamespace &&
-      DC->Equals(getStdNamespace())) {
+      DC->getRedeclContext()->Equals(getStdNamespace())) {
     if (Name->isStr("bad_alloc")) {
       // This is a declaration of or a reference to "std::bad_alloc".
       isStdBadAlloc = true;

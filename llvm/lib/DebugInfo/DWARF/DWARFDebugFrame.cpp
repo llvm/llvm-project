@@ -23,7 +23,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -199,9 +198,14 @@ DWARFDebugFrame::~DWARFDebugFrame() = default;
   errs() << "\n";
 }
 
-Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
+Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
   uint64_t Offset = 0;
   DenseMap<uint64_t, CIE *> CIEs;
+
+  // Retain the section contents so that the programs left undecoded below can
+  // be parsed on demand later.
+  if (!ParseCFIProgram)
+    this->Data = Data;
 
   while (Data.isValidOffset(Offset)) {
     uint64_t StartOffset = Offset;
@@ -385,6 +389,14 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
                                    LSDAAddress, Arch));
     }
 
+    if (!ParseCFIProgram) {
+      // Record where this entry's CFI instructions begin, so that the program
+      // left undecoded here can be parsed on demand later.
+      Entries.back()->markCFIProgramUnparsed(Offset);
+      Offset = EndStructureOffset;
+      continue;
+    }
+
     if (Error E =
             Entries.back()->cfis().parse(Data, &Offset, EndStructureOffset))
       return E;
@@ -407,16 +419,70 @@ FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
   return nullptr;
 }
 
+Error DWARFDebugFrame::parseCFIProgram(FrameEntry &Entry) const {
+  std::optional<uint64_t> StartOffset = Entry.getUnparsedCFIStartOffset();
+  if (!StartOffset)
+    return Error::success();
+
+  if (!Data)
+    return createStringError(
+        errc::invalid_argument,
+        "cannot parse the instructions of the entry at 0x%" PRIx64
+        " on demand: the section contents were not retained",
+        Entry.getOffset());
+
+  uint64_t Offset = *StartOffset;
+  uint64_t EndOffset = Entry.getEndOffset();
+  assert(Offset >= Entry.getOffset() && Offset <= EndOffset &&
+         "entry does not know where its instructions begin");
+  DWARFDataExtractor EntryData = *Data;
+  // Clear previous unsuccessful parsing attempts, if any.
+  Entry.cfis().clear();
+  if (Error E = Entry.cfis().parse(EntryData, &Offset, EndOffset))
+    return E;
+
+  if (Offset != EndOffset)
+    return createStringError(errc::invalid_argument,
+                             "parsing entry instructions at 0x%" PRIx64
+                             " failed",
+                             Entry.getOffset());
+
+  // Signal we have a valid fully parsed CFI program.
+  Entry.markCFIProgramParsed();
+  return Error::success();
+}
+
+Error DWARFDebugFrame::parseAllCFIPrograms() const {
+  for (const auto &Entry : Entries)
+    if (Error E = parseCFIProgram(*Entry))
+      return E;
+  return Error::success();
+}
+
+void DWARFDebugFrame::dumpEntry(FrameEntry &Entry, raw_ostream &OS,
+                                DIDumpOptions DumpOpts) const {
+  if (const auto *Fde = dyn_cast<FDE>(&Entry))
+    if (const CIE *Cie = Fde->getLinkedCIE())
+      if (FrameEntry *CieEntry = getEntryAtOffset(Cie->getOffset()))
+        if (Error E = parseCFIProgram(*CieEntry))
+          DumpOpts.RecoverableErrorHandler(std::move(E));
+
+  if (Error E = parseCFIProgram(Entry))
+    DumpOpts.RecoverableErrorHandler(std::move(E));
+
+  Entry.dump(OS, DumpOpts);
+}
+
 void DWARFDebugFrame::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
                            std::optional<uint64_t> Offset) const {
   DumpOpts.IsEH = IsEH;
   if (Offset) {
     if (auto *Entry = getEntryAtOffset(*Offset))
-      Entry->dump(OS, DumpOpts);
+      dumpEntry(*Entry, OS, DumpOpts);
     return;
   }
 
   OS << "\n";
   for (const auto &Entry : Entries)
-    Entry->dump(OS, DumpOpts);
+    dumpEntry(*Entry, OS, DumpOpts);
 }

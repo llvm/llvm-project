@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/ADT/Twine.h"
@@ -41,6 +40,9 @@ struct GPUInfo {
   AMDGPUFeatureBitset Features;
   IsaVersion Version;
   StringTable::Offset FamilyName;
+  StringTable::Offset BaseName; // The canonical device name for a variant.
+  uint8_t MaxWavesPerEU;
+  uint32_t MaxHWAddressableLocalMemorySize;
 };
 
 // Per-GPU data for the R600 GPUKinds.
@@ -166,6 +168,11 @@ StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
 Triple::SubArchType llvm::AMDGPU::getSubArch(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->SubArch : Triple::SubArchType::NoSubArch;
+}
+
+StringRef llvm::AMDGPU::getBaseArchNameAMDGCN(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? AMDGPUNameStrTab[Info->BaseName] : "";
 }
 
 AMDGPU::GPUKind
@@ -423,6 +430,25 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
   return 8;
 }
 
+unsigned AMDGPU::getMaxHWAddressableLocalMemorySize(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->MaxHWAddressableLocalMemorySize : 32768;
+}
+
+unsigned
+AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch) {
+  return getMaxHWAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch));
+}
+
+unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->MaxWavesPerEU : 10;
+}
+
+unsigned AMDGPU::getMaxWavesPerEU(Triple::SubArchType SubArch) {
+  return getMaxWavesPerEU(getGPUKindFromSubArch(SubArch));
+}
+
 StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   assert(T.isAMDGPU());
   auto ProcKind = T.isAMDGCN() ? parseArchAMDGCN(Arch) : parseArchR600(Arch);
@@ -438,9 +464,10 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
 // FIXME: This is hacky, we shouldn't have mismatches between the bitset and
 // feature string map.
 static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
-    FEAT_FAST_FMAF,         FEAT_FAST_DENORMAL_F32, FEAT_SUPPORTS_WAVE32,
-    FEAT_SUPPORTS_WGP,      FEAT_XNACK_SUPPORT,     FEAT_SRAMECC_SUPPORT,
-    FEAT_XNACK_ON_OFF_MODES};
+    FEAT_FAST_FMAF,          FEAT_FAST_DENORMAL_F32,  FEAT_SUPPORTS_WAVE32,
+    FEAT_SUPPORTS_WGP,       FEAT_XNACK_SUPPORT,      FEAT_SRAMECC_SUPPORT,
+    FEAT_XNACK_ON_OFF_MODES, FEAT_APERTURE_REGS,      FEAT_GET_DOORBELL_ID,
+    FEAT_AGPR_ALLOC,         FEAT_1536_PHYSICAL_VGPRS};
 
 // Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
 // Overwrite false, existing entries are kept so user -mattr overrides win.

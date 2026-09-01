@@ -77,6 +77,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
@@ -1836,12 +1837,11 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
 
   SelectInst *NewSel = SelectInst::Create(SI->getCondition(), NewTV, NewFV);
 
-  // Preserve metadata that remains valid for the transformed select.
+  // Preserve metadata that remains valid for the transformed select including
+  // source location information.
   NewSel->copyMetadata(*SI,
-                       {LLVMContext::MD_prof, LLVMContext::MD_unpredictable});
-
-  // Preserve source location information.
-  NewSel->setDebugLoc(SI->getDebugLoc());
+                       {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
+                        LLVMContext::MD_dbg});
 
   return NewSel;
 }

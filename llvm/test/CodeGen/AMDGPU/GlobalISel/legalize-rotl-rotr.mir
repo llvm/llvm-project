@@ -48,7 +48,7 @@ body:             |
     ; GFX6-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[C5]](s32)
     ; GFX6-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[SUB4]], [[C2]]
     ; GFX6-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[AND3]](s32)
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[SHL]], [[LSHR1]]
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LSHR1]]
     ; GFX6-NEXT: $sgpr0 = COPY [[OR]](s32)
     ;
     ; GFX8-LABEL: name: rotl_i15
@@ -93,7 +93,7 @@ body:             |
     ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s16) = G_LSHR [[LSHR]], [[AND3]](s16)
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL]](s16)
     ; GFX8-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR1]](s16)
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[ANYEXT]], [[ANYEXT1]]
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
     ; GFX8-NEXT: $sgpr0 = COPY [[OR]](s32)
     %2:_(s32) = COPY $sgpr0
     %0:_(s15) = G_TRUNC %2(s32)
@@ -235,7 +235,7 @@ body:             |
     ; GFX-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND2]], [[C5]](s32)
     ; GFX-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[SUB4]], [[C2]]
     ; GFX-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LSHR]], [[AND3]](s32)
-    ; GFX-NEXT: [[OR:%[0-9]+]]:_(s32) = disjoint G_OR [[SHL]], [[LSHR1]]
+    ; GFX-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LSHR1]]
     ; GFX-NEXT: $sgpr0 = COPY [[OR]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
