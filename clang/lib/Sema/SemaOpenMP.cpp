@@ -4265,8 +4265,7 @@ public:
                                  BD->getType()->isScalarType();
         if (!BD ||
             (isOpenMPTargetExecutionDirective(DKind) && !InTargetAndScalar) ||
-            (!InTargetAndScalar &&
-             !isImplicitOrExplicitTaskingRegion(DKind) &&
+             (!InTargetAndScalar && !isImplicitOrExplicitTaskingRegion(DKind) &&
              !isOpenMPParallelDirective(DKind) &&
              !isOpenMPWorksharingDirective(DKind) &&
              !isOpenMPTeamsDirective(DKind)))
