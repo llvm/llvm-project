@@ -12,12 +12,17 @@ entry:
   %v.addr = alloca ptr, align 8
   store ptr %v, ptr %v.addr, align 8, !dbg !20
   %0 = load ptr, ptr %v.addr, align 8, !dbg !21
+  ;; A location with no layers at all, so that one module exercises both record
+  ;; shapes: layered locations carry the irlayers operand and unlayered ones are
+  ;; written with a shorter abbrev that omits it entirely.
+  %1 = load ptr, ptr %v.addr, align 8, !dbg !23
   ret void, !dbg !22
 }
 
 ; CHECK-LABEL: define dso_local void @test_kernel
 ; CHECK: store ptr %v, ptr %v.addr, align 8, !dbg ![[DBG1:[0-9]+]]
 ; CHECK: load ptr, ptr %v.addr, align 8, !dbg ![[DBG2:[0-9]+]]
+; CHECK: load ptr, ptr %v.addr, align 8, !dbg ![[DBG4:[0-9]+]]
 ; CHECK: ret void, !dbg ![[DBG3:[0-9]+]]
 
 ;; Verify the metadata structure is preserved: each !dbg is a DILocation whose
@@ -27,6 +32,11 @@ entry:
 ; CHECK-DAG: ![[DBG1]] = !DILocation(line: 2, column: 5, scope: ![[SP:[0-9]+]], irlayers: ![[LIST:[0-9]+]])
 ; CHECK-DAG: ![[DBG2]] = !DILocation(line: 3, column: 5, scope: ![[SP]], irlayers: ![[LIST]])
 ; CHECK-DAG: ![[DBG3]] = !DILocation(line: 4, column: 1, scope: ![[SP]], irlayers: ![[LIST]])
+
+;; The unlayered location must come back with no irlayers operand. The closing
+;; paren is the assertion -- it is what distinguishes "absent" from "present but
+;; empty".
+; CHECK-DAG: ![[DBG4]] = !DILocation(line: 5, column: 5, scope: ![[SP]])
 
 ;; The shared layer list holds one DILayerLoc with the kind string and the
 ;; intermediate coordinate.
@@ -55,3 +65,6 @@ entry:
 !20 = !DILocation(line: 2, column: 5, scope: !8, irlayers: !30)
 !21 = !DILocation(line: 3, column: 5, scope: !8, irlayers: !30)
 !22 = !DILocation(line: 4, column: 1, scope: !8, irlayers: !30)
+
+;; Unlayered location, sharing the same scope.
+!23 = !DILocation(line: 5, column: 5, scope: !8)
