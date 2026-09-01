@@ -156,12 +156,11 @@ public:
           "supported on this driver");
     }
 
-    if (Result != ze_result_t::ZE_RESULT_SUCCESS) {
+    if (Result != ze_result_t::ZE_RESULT_SUCCESS)
       return Plugin::error(getOffloadErrorCode(Result),
                            "zeCommandListAppendLaunchKernelWithArguments "
                            "failed with error %d, %s",
                            Result, getZeErrorName(Result));
-    }
 
     return Plugin::success();
   }

@@ -62,9 +62,9 @@ public:
     // Need to cast the type to avoid mismatch of return type deduction
     using ReturnTy = std::invoke_result_t<decltype(Fn), Args...>;
     if (UsesFuncPtr) {
-      if (FuncPtr == nullptr) {
+      if (FuncPtr == nullptr)
         return static_cast<ReturnTy>(UnsupportedValue);
-      }
+
       auto Result = FuncPtr(std::forward<Args>(ArgsList)...);
       return Result;
     }
@@ -79,17 +79,15 @@ public:
 
   bool tryLoadingExperimental(ze_driver_handle_t zeDriver,
                               const char *FuncName) {
-    if (api_helper::canCall<Fn>()) {
+    if (api_helper::canCall<Fn>())
       return true; // Function is already available, no need to load it using
                    // experimental API.
-    }
 
     auto Result = zeDriverGetExtensionFunctionAddress(
         zeDriver, FuncName, reinterpret_cast<void **>(&FuncPtr));
 
-    if (Result != ZE_RESULT_SUCCESS || FuncPtr == nullptr) {
+    if (Result != ZE_RESULT_SUCCESS || FuncPtr == nullptr)
       return false;
-    }
 
     UsesFuncPtr = true;
     return true;
