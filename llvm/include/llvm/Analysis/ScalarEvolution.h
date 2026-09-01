@@ -1257,9 +1257,9 @@ public:
   /// a multiple of \p M if \p S starts with a multiple of \p M and at every
   /// iteration step \p S only adds multiples of \p M. \p Assumptions records
   /// the runtime predicates under which \p S is a multiple of \p M.
-  LLVM_ABI bool
-  isKnownMultipleOf(const SCEV *S, uint64_t M,
-                    SmallVectorImpl<const SCEVPredicate *> &Assumptions);
+  LLVM_ABI bool isKnownMultipleOf(
+      const SCEV *S, uint64_t M,
+      SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
   /// Return true if we know that S1 and S2 must have the same sign.
   LLVM_ABI bool haveSameSign(const SCEV *S1, const SCEV *S2);
@@ -1625,13 +1625,13 @@ public:
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
   class FoldID {
-    const SCEV *Op = nullptr;
+    SCEVUse Op;
     const Type *Ty = nullptr;
     unsigned short C;
 
   public:
-    FoldID(SCEVTypes C, const SCEV *Op, const Type *Ty) : Op(Op), Ty(Ty), C(C) {
-      assert(Op);
+    FoldID(SCEVTypes C, SCEVUse Op, const Type *Ty) : Op(Op), Ty(Ty), C(C) {
+      assert(Op.getPointer());
       assert(Ty);
     }
 
@@ -1639,8 +1639,9 @@ public:
 
     unsigned computeHash() const {
       return detail::combineHashValue(
-          C, detail::combineHashValue(reinterpret_cast<uintptr_t>(Op),
-                                      reinterpret_cast<uintptr_t>(Ty)));
+          C, detail::combineHashValue(
+                 reinterpret_cast<uintptr_t>(Op.getOpaqueValue()),
+                 reinterpret_cast<uintptr_t>(Ty)));
     }
 
     bool operator==(const FoldID &RHS) const {

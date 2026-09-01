@@ -10,7 +10,7 @@
 
 // shared_ptr
 
-// shared_ptr& operator=(const shared_ptr& r);
+// shared_ptr& operator=(const shared_ptr& r) noexcept;
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
@@ -45,6 +45,8 @@ int A::count = 0;
 
 int main(int, char**)
 {
+    static_assert(std::is_nothrow_assignable<std::shared_ptr<A>&, const std::shared_ptr<A>&>::value, "");
+
     {
         const std::shared_ptr<A> pA(new A);
         A* ptrA = pA.get();
