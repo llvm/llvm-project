@@ -1232,6 +1232,22 @@ defm FMAX3 : FMINIMUMMAXIMUM3<"max", /* NaN */ false, nvptx_fmaxnum3>;
 defm FMINNAN3 : FMINIMUMMAXIMUM3<"min", /* NaN */ true, nvptx_fminimum3>;
 defm FMAXNAN3 : FMINIMUMMAXIMUM3<"max", /* NaN */ true, nvptx_fmaximum3>;
 
+def f32abs : ComplexPattern<f32, 1, "SelectFAbs">;
+
+multiclass FMINIMUMMAXIMUM_ABS<string OpcStr, bit NaN,
+                             SDPatternOperator Op3> {
+  def f32 : BasicFlagsNVPTXInst<(outs B32:$dst),
+              (ins RI32:$a, RI32:$b, RI32:$c), (ins FTZFlag:$ftz),
+              OpcStr # "$ftz" # !if(NaN, ".NaN", "") # ".abs.f32",
+              [(set f32:$dst, (Op3 f32abs:$a, f32abs:$b, f32abs:$c))]>,
+              Requires<[PTX88, SM100]>;
+}
+
+defm FMINABS : FMINIMUMMAXIMUM_ABS<"min", false, nvptx_fminnum3>;
+defm FMAXABS : FMINIMUMMAXIMUM_ABS<"max", false, nvptx_fmaxnum3>;
+defm FMINNANABS : FMINIMUMMAXIMUM_ABS<"min", true, nvptx_fminimum3>;
+defm FMAXNANABS : FMINIMUMMAXIMUM_ABS<"max", true, nvptx_fmaximum3>;
+
 defm FABS  : F2<"abs", fabs>;
 defm FNEG  : F2<"neg", fneg>;
 defm FABS_H: F2_Support_Half<"abs", fabs>;
