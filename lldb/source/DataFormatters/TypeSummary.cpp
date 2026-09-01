@@ -357,6 +357,8 @@ bool BytecodeSummaryFormat::FormatObject(ValueObject *valobj,
     os << *u;
   else if (auto i = std::get_if<int64_t>(&top))
     os << *i;
+  else if (auto ap = std::get_if<llvm::APSInt>(&top))
+    os << *ap;
   else if (auto valobj = std::get_if<ValueObjectSP>(&top)) {
     if (!valobj->get())
       os << "empty object";
