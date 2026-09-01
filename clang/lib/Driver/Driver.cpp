@@ -5315,10 +5315,10 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     DDep.add(*FatbinAction,
              *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
              /*BA=*/{}, Action::OFK_HIP);
-  } else if (!UsesLLVMOffloading && HIPNoRDC) {
+  } else if ((!UsesLLVMOffloading && HIPNoRDC) || SYCLNoRDC) {
     // Host + device assembly: defer to clang-offload-bundler (see
     // BuildActions).
-    if (HIPAsmBundleDeviceOut &&
+    if (HIPNoRDC && HIPAsmBundleDeviceOut &&
         shouldBundleHIPAsmWithNewDriver(C, Args, C.getDriver())) {
       for (Action *OA : OffloadActions)
         HIPAsmBundleDeviceOut->push_back(OA);
@@ -5329,30 +5329,16 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     Action *PackagerAction =
         C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
 
-    // For HIP non-RDC compilation, wrap the device binary with linker wrapper
-    // before bundling with host code. Do not bind a specific GPU arch here,
-    // as the packaged image may contain entries for multiple GPUs.
+    // For non-RDC compilation, wrap the device binary with linker wrapper
+    // before bundling with host code. Do not bind a specific arch here, as the
+    // packaged binary may contain entries for multiple archs.
+    Action::OffloadKind Kind = SYCLNoRDC ? Action::OFK_SYCL : Action::OFK_HIP;
+    types::ID FatbinType =
+        SYCLNoRDC ? types::TY_SYCL_FATBIN : types::TY_HIP_FATBIN;
     ActionList AL{PackagerAction};
-    PackagerAction =
-        C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_HIP_FATBIN);
-    DDep.add(*PackagerAction,
-             *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
-             /*BA=*/{}, Action::OFK_HIP);
-  } else if (SYCLNoRDC) {
-    // Package all the offloading actions into a single output that can be
-    // embedded in the host and linked.
-    Action *PackagerAction =
-        C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
-
-    // Wrap the device binary with linker wrapper before bundling with host
-    // code. Do not bind a specific arch here, as the packaged binary may
-    // contain entries for multiple architectures.
-    ActionList AL{PackagerAction};
-    PackagerAction =
-        C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_SYCL_FATBIN);
-    DDep.add(*PackagerAction,
-             *C.getOffloadToolChains<Action::OFK_SYCL>().first->second,
-             /*BA=*/{}, Action::OFK_SYCL);
+    PackagerAction = C.MakeAction<LinkerWrapperJobAction>(AL, FatbinType);
+    DDep.add(*PackagerAction, *C.getOffloadToolChains(Kind).first->second,
+             /*BA=*/{}, Kind);
   } else {
     // Package all the offloading actions into a single output that can be
     // embedded in the host and linked.
