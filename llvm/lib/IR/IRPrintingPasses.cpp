@@ -26,49 +26,37 @@ using namespace llvm;
 
 namespace {
 
-static void printModule(raw_ostream &OS, StringRef Banner,
-                        bool ShouldPreserveUseListOrder, Module &M) {
-  if (llvm::isFunctionInPrintList("*")) {
-    if (!Banner.empty())
-      OS << Banner << "\n";
-    M.print(OS, nullptr, ShouldPreserveUseListOrder);
-    return;
-  }
-
-  bool BannerPrinted = false;
-  for (const auto &F : M.functions()) {
-    if (!llvm::isFunctionInPrintList(F.getName()))
-      continue;
-    if (!BannerPrinted && !Banner.empty()) {
-      OS << Banner << "\n";
-      BannerPrinted = true;
-    }
-    F.print(OS);
-  }
-}
-
 class PrintModulePassWrapper : public ModulePass {
   raw_ostream &OS;
   std::string Banner;
   bool ShouldPreserveUseListOrder;
-  bool ShouldRenumberMetadata;
 
 public:
   static char ID;
-  PrintModulePassWrapper()
-      : ModulePass(ID), OS(dbgs()), ShouldPreserveUseListOrder(false),
-        ShouldRenumberMetadata(false) {}
+  PrintModulePassWrapper() : ModulePass(ID), OS(dbgs()) {}
   PrintModulePassWrapper(raw_ostream &OS, const std::string &Banner,
-                         bool ShouldPreserveUseListOrder,
-                         bool ShouldRenumberMetadata)
+                         bool ShouldPreserveUseListOrder)
       : ModulePass(ID), OS(OS), Banner(Banner),
-        ShouldPreserveUseListOrder(ShouldPreserveUseListOrder),
-        ShouldRenumberMetadata(ShouldRenumberMetadata) {}
+        ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
   bool runOnModule(Module &M) override {
-    if (ShouldRenumberMetadata)
-      M.renumberMetadataForAssembly();
-    printModule(OS, Banner, ShouldPreserveUseListOrder, M);
+    if (llvm::isFunctionInPrintList("*")) {
+      if (!Banner.empty())
+        OS << Banner << "\n";
+      M.print(OS, nullptr, ShouldPreserveUseListOrder);
+    } else {
+      bool BannerPrinted = false;
+      for (const auto &F : M.functions()) {
+        if (llvm::isFunctionInPrintList(F.getName())) {
+          if (!BannerPrinted && !Banner.empty()) {
+            OS << Banner << "\n";
+            BannerPrinted = true;
+          }
+          F.print(OS);
+        }
+      }
+    }
+
     return false;
   }
 
@@ -92,10 +80,10 @@ public:
   // This pass just prints a banner followed by the function as it's processed.
   bool runOnFunction(Function &F) override {
     if (isFunctionInPrintList(F.getName())) {
-      if (forcePrintModuleIR()) {
-        OS << Banner << " (function: " << F.getName() << ")\n";
-        F.getParent()->print(OS, nullptr);
-      } else
+      if (forcePrintModuleIR())
+        OS << Banner << " (function: " << F.getName() << ")\n"
+           << *F.getParent();
+      else
         OS << Banner << '\n' << static_cast<Value &>(F);
     }
 
@@ -121,16 +109,7 @@ INITIALIZE_PASS(PrintFunctionPassWrapper, "print-function",
 ModulePass *llvm::createPrintModulePass(llvm::raw_ostream &OS,
                                         const std::string &Banner,
                                         bool ShouldPreserveUseListOrder) {
-  return createPrintModulePass(OS, Banner, ShouldPreserveUseListOrder,
-                               /*ShouldRenumberMetadata=*/false);
-}
-
-ModulePass *llvm::createPrintModulePass(llvm::raw_ostream &OS,
-                                        const std::string &Banner,
-                                        bool ShouldPreserveUseListOrder,
-                                        bool ShouldRenumberMetadata) {
-  return new PrintModulePassWrapper(OS, Banner, ShouldPreserveUseListOrder,
-                                    ShouldRenumberMetadata);
+  return new PrintModulePassWrapper(OS, Banner, ShouldPreserveUseListOrder);
 }
 
 FunctionPass *llvm::createPrintFunctionPass(llvm::raw_ostream &OS,
