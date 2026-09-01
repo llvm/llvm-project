@@ -321,6 +321,18 @@ constexpr bool test_ref() {
     assert(&(*o2) == &j);
   }
 
+  // https://github.com/llvm/llvm-project/issues/220332
+  {
+    struct foo {
+      int& member() { return i_; }
+      int i_ = 0;
+    };
+    std::optional<foo> opt(std::in_place);
+    std::same_as<std::optional<int&>> decltype(auto) mem = opt.transform(&foo::member);
+    assert(mem.has_value());
+    assert(&(*mem) == &opt->i_);
+  }
+
   return true;
 }
 #endif

@@ -79,6 +79,9 @@ public:
 private:
   _Tp* __value_ = nullptr;
 
+  template <class>
+  friend class optional;
+
   template <class _Up>
   _LIBCPP_HIDE_FROM_ABI constexpr void __convert_init_ref_val(_Up&& __val) {
     _Tp& __r(std::forward<_Up>(__val));
