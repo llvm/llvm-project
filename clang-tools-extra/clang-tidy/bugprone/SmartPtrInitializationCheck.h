@@ -34,6 +34,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
+  void emitDiagnostic(ASTContext &Context, const Expr *ConstructorOrMember);
   std::string getSmartPointerDescription(const CXXRecordDecl *RecordDecl,
                                          const ASTContext &Context);
   std::string getRawPointerDescription(const Expr *PointerExpr,

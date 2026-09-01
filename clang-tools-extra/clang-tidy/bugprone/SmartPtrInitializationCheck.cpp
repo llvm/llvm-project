@@ -26,6 +26,33 @@ const auto DefaultSharedPointers = "::std::shared_ptr;::boost::shared_ptr";
 const auto DefaultUniquePointers = "::std::unique_ptr";
 const auto DefaultDefaultDeleters = "::std::default_delete";
 
+} // namespace
+
+// We remove wrappers that do not carry semantic load for classifying the value:
+// brackets, implicit casts, temporary objects, cleanup nodes.
+static const clang::Expr *stripWrappers(const clang::Expr *E) {
+  while (E) {
+    const clang::Expr *Prev = E;
+    E = E->IgnoreParens();
+    if (const auto *ICE = llvm::dyn_cast<clang::ImplicitCastExpr>(E))
+      E = ICE->getSubExpr();
+    else if (const auto *EWC = llvm::dyn_cast<clang::ExprWithCleanups>(E))
+      E = EWC->getSubExpr();
+    else if (const auto *MTE =
+                 llvm::dyn_cast<clang::MaterializeTemporaryExpr>(E))
+      E = MTE->getSubExpr();
+    else if (const auto *BTE = llvm::dyn_cast<clang::CXXBindTemporaryExpr>(E))
+      E = BTE->getSubExpr();
+    else if (const auto *CE = llvm::dyn_cast<clang::ConstantExpr>(E))
+      E = CE->getSubExpr();
+    if (E == Prev)
+      break;
+  }
+  return E;
+}
+
+namespace {
+
 struct PointerLocation {
   // Root == nullptr && IsThis == true  => via `this`
   // Root != nullptr                    => regular variable/parameter
@@ -64,7 +91,9 @@ struct Transition {
 
 class TransitionsFinder;
 
-// The main visitor applies the "transfer function" of one block to the transferred state. It is created anew for each call to runBlockTransfer() and does not store any inter-block state itself.
+// The main visitor applies the "transfer function" of one block to the
+// transferred state. It is created anew for each call to runBlockTransfer() and
+// does not store any inter-block state itself.
 class PointerStateVisitor
     : public clang::ConstStmtVisitor<PointerStateVisitor> {
   using StateMap = std::map<PointerLocation, unsigned>;
@@ -75,7 +104,9 @@ class PointerStateVisitor
   }
 
 public:
-  // Sink == nullptr -> transitions are not recorded, only the final state is calculated (used in phase 1 / fixpoint, and in the preliminary location detection phase).
+  // Sink == nullptr -> transitions are not recorded, only the final state is
+  // calculated (used in phase 1 / fixpoint, and in the preliminary location
+  // detection phase).
   PointerStateVisitor(
       const llvm::SmallPtrSet<const clang::VarDecl *, 32> &Vars,
       const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &Fields,
@@ -117,44 +148,27 @@ public:
     handleSmartPtrConstruct(CE, CE);
   }
 
-  // Any other instruction: simply search for "infection" inside it by passing a pointer/field to the smartpointer constructor.
+  // Any other instruction: simply search for "infection" inside it by passing a
+  // pointer/field to the smartpointer constructor.
   void VisitStmt(const clang::Stmt *S) { scanForSmartPtrWrap(S); }
 
 private:
   const llvm::SmallPtrSet<const clang::VarDecl *, 32> &PtrVars;
   const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &PtrFields;
-  StateMap &
-      CurrentState; // state of a specific block (outside: IN -> resulting in OUT)
+  StateMap &CurrentState; // state of a specific block (outside: IN -> resulting
+                          // in OUT)
   std::map<PointerLocation, std::vector<Transition>> *Sink;
   llvm::SmallPtrSet<const clang::Stmt *, 32>
       ProcessedConstructsAndResets; // dedup within ONE block processing call
 
-  // We remove wrappers that do not carry semantic load for classifying the value: brackets, implicit casts, temporary objects, cleanup nodes.
-  const clang::Expr *stripWrappers(const clang::Expr *E) {
-    while (E) {
-      const clang::Expr *Prev = E;
-      E = E->IgnoreParens();
-      if (const auto *ICE = llvm::dyn_cast<clang::ImplicitCastExpr>(E))
-        E = ICE->getSubExpr();
-      else if (const auto *EWC = llvm::dyn_cast<clang::ExprWithCleanups>(E))
-        E = EWC->getSubExpr();
-      else if (const auto *MTE =
-                   llvm::dyn_cast<clang::MaterializeTemporaryExpr>(E))
-        E = MTE->getSubExpr();
-      else if (const auto *BTE = llvm::dyn_cast<clang::CXXBindTemporaryExpr>(E))
-        E = BTE->getSubExpr();
-      else if (const auto *CE = llvm::dyn_cast<clang::ConstantExpr>(E))
-        E = CE->getSubExpr();
-      if (E == Prev)
-        break;
-    }
-    return E;
-  }
-
   // Structural (without PtrVars/PtrFields checking) "path" recognition:
   // DeclRefExpr(var) -> {var, []}; MemberExpr(base, field) -> resolveBase(base)
   // + [field].
-  // Used both for the MemberExpr base (where the base itself is a structure, not a pointer, and does NOT have to be in PtrVars) and within resolveLocation. Stops (returns nullopt) on anything that is not DeclRefExpr or MemberExpr - array indexing, function calls, this, etc. (see the file header for restrictions).
+  // Used both for the MemberExpr base (where the base itself is a structure,
+  // not a pointer, and does NOT have to be in PtrVars) and within
+  // resolveLocation. Stops (returns nullopt) on anything that is not
+  // DeclRefExpr or MemberExpr - array indexing, function calls, this, etc. (see
+  // the file header for restrictions).
   bool resolveBase(const clang::Expr *E, PointerLocation &Out) {
     E = stripWrappers(E);
     if (!E)
@@ -223,7 +237,8 @@ private:
   // Attempts to recognize E as a tracked location:
   // - DeclRefExpr(var), where var is in PtrVars (a regular pointer variable)
   // - MemberExpr(base, field), where field is in PtrFields (a.val / a->val),
-  // and base is recognized STRUCTURALLY (without checking PtrVars for base - since base is usually NOT a pointer, but a structure/object).
+  // and base is recognized STRUCTURALLY (without checking PtrVars for base -
+  // since base is usually NOT a pointer, but a structure/object).
   bool resolveLocation(const clang::Expr *E, PointerLocation &Out) {
     const clang::Expr *S = stripWrappers(E);
     if (!S)
@@ -253,7 +268,8 @@ private:
     return false;
   }
 
-  // Defines the state that a pointer goes into when it is assigned/initialized with the value of expression E.
+  // Defines the state that a pointer goes into when it is assigned/initialized
+  // with the value of expression E.
   unsigned classify(const clang::Expr *E) {
     const clang::Expr *S = stripWrappers(E);
     if (!S)
@@ -274,18 +290,21 @@ private:
         return PS_PlainPointer;
     }
 
-    // rare case: the pointer is directly assigned the result of constructing a smart pointer
+    // rare case: the pointer is directly assigned the result of constructing a
+    // smart pointer
     if (const auto *CE = llvm::dyn_cast<clang::CXXConstructExpr>(S)) {
       if (isSmartPtrType(CE->getType()))
         return PS_SmartPtrWrapper;
     }
 
-    // b = a;  /  b = a.val;  -> infection with the CURRENT (for this block) state of the source
+    // b = a;  /  b = a.val;  -> infection with the CURRENT (for this block)
+    // state of the source
     PointerLocation SrcLoc;
     if (resolveLocation(S, SrcLoc))
       return getState(CurrentState, SrcLoc);
 
-    // An unknown expression of a pointer type (function call, type cast, etc.) is considered an ordinary pointer.
+    // An unknown expression of a pointer type (function call, type cast, etc.)
+    // is considered an ordinary pointer.
     if (S->getType()->isPointerType())
       return PS_PlainPointer;
 
@@ -300,9 +319,13 @@ private:
     CurrentState[Loc] = NewState;
   }
 
-  // Searches for a CXXConstructExpr of type shared_ptr or unique_ptr within the subtree of S and marks as SmartPtrWrapper any tracked locations passed as constructor arguments.
+  // Searches for a CXXConstructExpr of type shared_ptr or unique_ptr within the
+  // subtree of S and marks as SmartPtrWrapper any tracked locations passed as
+  // constructor arguments.
   //
-  // The traversal is iterative (explicit stack on the heap), not recursive - recursion overflows the call stack on deeply nested expressions (confirmed by AddressSanitizer: stack-overflow).
+  // The traversal is iterative (explicit stack on the heap), not recursive -
+  // recursion overflows the call stack on deeply nested expressions (confirmed
+  // by AddressSanitizer: stack-overflow).
   void scanForSmartPtrWrap(const clang::Stmt *Root) {
     if (!Root)
       return;
@@ -346,7 +369,8 @@ private:
     assert(ME);
     if (!ME->getMethodDecl())
       return;
-    if (!ME->getMethodDecl()->getDeclName().isIdentifier() || ME->getMethodDecl()->getName() != "reset")
+    if (!ME->getMethodDecl()->getDeclName().isIdentifier() ||
+        ME->getMethodDecl()->getName() != "reset")
       return;
     if (!isSmartPtrType(ME->getImplicitObjectArgument()->getType()))
       return;
@@ -656,9 +680,9 @@ public:
     const auto *ResetWithThisExpr =
         Result.Nodes.getNodeAs<CXXMemberCallExpr>("reset-with-this-expr");
     if (CtorWithThisExpr)
-      emitDiagnostic(*Result.Context, CtorWithThisExpr);
+      Check.emitDiagnostic(*Result.Context, CtorWithThisExpr);
     else if (ResetWithThisExpr)
-      emitDiagnostic(*Result.Context, ResetWithThisExpr);
+      Check.emitDiagnostic(*Result.Context, ResetWithThisExpr);
     else
       checkFlowSensitive(Result);
   }
@@ -680,10 +704,9 @@ private:
     llvm::SmallPtrSet<const VarDecl *, 32> PtrVars;
     llvm::SmallPtrSet<const FieldDecl *, 32> PtrFields;
 
-    for (const ParmVarDecl *PVD : Func->parameters()) {
+    for (const ParmVarDecl *PVD : Func->parameters())
       if (PVD->getType()->isPointerType())
         PtrVars.insert(PVD);
-    }
 
     std::function<void(const Stmt *)> CollectPtrVars = [&](const Stmt *S) {
       if (!S)
@@ -717,39 +740,9 @@ private:
       for (const auto &t : transList) {
         if (t.fromState == t.toState && t.fromState == PS_SmartPtrWrapper) {
           if (const auto *E = dyn_cast<const Expr>(t.stmt))
-            emitDiagnostic(*Result.Context, E);
+            Check.emitDiagnostic(*Result.Context, E);
         }
       }
-    }
-  }
-
-  void emitDiagnostic(ASTContext &Context, const Expr *ConstructorOrMember) {
-    if (const auto *SmartPtrCtor =
-            dyn_cast<const CXXConstructExpr>(ConstructorOrMember)) {
-      const Expr *PointerArg = SmartPtrCtor->getArg(0);
-      if (!PointerArg)
-        return;
-      const SourceLocation Loc = PointerArg->getBeginLoc();
-      if (Loc.isInvalid())
-        return;
-      Check.diag(Loc, "passing a raw pointer '%0' to %1 constructor may cause "
-                      "double deletion")
-          << Check.getRawPointerDescription(PointerArg, Context)
-          << SmartPtrCtor->getType();
-    } else if (const auto *ResetCall =
-                   dyn_cast<const CXXMemberCallExpr>(ConstructorOrMember)) {
-      const Expr *PointerArg = ResetCall->getArg(0);
-      if (!PointerArg)
-        return;
-      const SourceLocation Loc = PointerArg->getBeginLoc();
-      if (Loc.isInvalid())
-        return;
-      Check.diag(
-          Loc,
-          "passing a raw pointer '%0' to '%1::reset' may cause double deletion")
-          << Check.getRawPointerDescription(PointerArg, Context)
-          << Check.getSmartPointerDescription(
-                 ResetCall->getMethodDecl()->getParent(), Context);
     }
   }
 };
@@ -777,8 +770,7 @@ public:
         cxxMemberCallExpr(callee(cxxMethodDecl(hasName("release"))));
 
     // Array automatically decays to pointer
-    auto PointerArg = expr(anyOf(hasType(pointerType()), hasType(arrayType())))
-                          .bind("pointer-arg");
+    auto PointerArg = expr(anyOf(hasType(pointerType()), hasType(arrayType())));
 
     // Matcher for unique_ptr types with custom deleters
     auto UniquePtrWithCustomDeleter = classTemplateSpecializationDecl(
@@ -804,12 +796,12 @@ public:
                                   ignoringParenCasts(ReleaseCallMatcher),
                                   ignoringParenCasts(conditionalOperator()));
 
-    auto SmartPtrConstructorMatcher = cxxConstructExpr(
-        hasDeclaration(
-            cxxConstructorDecl(ofClass(IsSmartPtrRecord.bind("method-parent")))
-                .bind("method-decl")),
-        hasArgument(0, PointerArg), unless(HasCustomDeleter),
-        unless(hasArgument(0, AllowedArguments)));
+    auto SmartPtrConstructorMatcher =
+        cxxConstructExpr(
+            hasDeclaration(cxxConstructorDecl(ofClass(IsSmartPtrRecord))),
+            hasArgument(0, PointerArg), unless(HasCustomDeleter),
+            unless(hasArgument(0, AllowedArguments)))
+            .bind("ctor");
 
     // Matcher for reset() calls
     // Exclude reset() calls with custom deleters:
@@ -823,39 +815,28 @@ public:
         on(hasType(hasUnqualifiedDesugaredType(
             recordType(hasDeclaration(UniquePtrWithCustomDeleter))))));
 
-    auto ResetCallMatcher = cxxMemberCallExpr(
-        on(hasType(hasUnqualifiedDesugaredType(recordType(
-            hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
-        callee(cxxMethodDecl(ofClass(IsSmartPtrRecord.bind("method-parent")),
-                             hasName("reset"))
-                   .bind("method-decl")),
-        hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
-        unless(hasArgument(0, AllowedArguments)));
+    auto ResetCallMatcher =
+        cxxMemberCallExpr(
+            on(hasType(hasUnqualifiedDesugaredType(recordType(
+                hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
+            callee(cxxMethodDecl(ofClass(IsSmartPtrRecord), hasName("reset"))),
+            hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
+            unless(hasArgument(0, AllowedArguments)))
+            .bind("reset");
 
     Finder->addMatcher(SmartPtrConstructorMatcher, &Check);
     Finder->addMatcher(ResetCallMatcher, &Check);
   }
 
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override {
-    const auto *PointerArg = Result.Nodes.getNodeAs<Expr>("pointer-arg");
-    const auto *MethodDecl =
-        Result.Nodes.getNodeAs<CXXMethodDecl>("method-decl");
-    const auto *Record = Result.Nodes.getNodeAs<CXXRecordDecl>("method-parent");
+    const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
+    const auto *Reset = Result.Nodes.getNodeAs<CXXMemberCallExpr>("reset");
+    const Expr *ConstructorOrMember = Ctor;
+    if (!ConstructorOrMember)
+      ConstructorOrMember = Reset;
 
-    if (!MethodDecl)
-      return;
-
-    assert(PointerArg && Record);
-
-    const SourceLocation Loc = PointerArg->getBeginLoc();
-    if (Loc.isInvalid())
-      return;
-
-    Check.diag(Loc,
-               "passing a raw pointer '%0' to '%1%2 may cause double deletion")
-        << Check.getRawPointerDescription(PointerArg, *Result.Context)
-        << Check.getSmartPointerDescription(Record, *Result.Context)
-        << (isa<CXXConstructorDecl>(MethodDecl) ? "' constructor" : "::reset'");
+    if (ConstructorOrMember)
+      Check.emitDiagnostic(*Result.Context, ConstructorOrMember);
   }
 
   bool isStrictMode() override { return true; }
@@ -900,6 +881,36 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
 void SmartPtrInitializationCheck::check(
     const MatchFinder::MatchResult &Result) {
   Impl->check(Result);
+}
+
+void SmartPtrInitializationCheck::emitDiagnostic(
+    ASTContext &Context, const Expr *ConstructorOrMember) {
+  if (const auto *SmartPtrCtor =
+          dyn_cast<const CXXConstructExpr>(ConstructorOrMember)) {
+    const Expr *PointerArg = stripWrappers(SmartPtrCtor->getArg(0));
+    if (!PointerArg)
+      return;
+    const SourceLocation Loc = PointerArg->getBeginLoc();
+    if (Loc.isInvalid())
+      return;
+    diag(Loc, "passing a raw pointer '%0' to %1 constructor may cause "
+              "double deletion")
+        << getRawPointerDescription(PointerArg, Context)
+        << SmartPtrCtor->getType();
+  } else if (const auto *ResetCall =
+                 dyn_cast<const CXXMemberCallExpr>(ConstructorOrMember)) {
+    const Expr *PointerArg = stripWrappers(ResetCall->getArg(0));
+    if (!PointerArg)
+      return;
+    const SourceLocation Loc = PointerArg->getBeginLoc();
+    if (Loc.isInvalid())
+      return;
+    diag(Loc,
+         "passing a raw pointer '%0' to '%1::reset' may cause double deletion")
+        << getRawPointerDescription(PointerArg, Context)
+        << getSmartPointerDescription(ResetCall->getMethodDecl()->getParent(),
+                                      Context);
+  }
 }
 
 std::string SmartPtrInitializationCheck::getSmartPointerDescription(
