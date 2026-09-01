@@ -391,6 +391,8 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   pm.addPass(flangomp::createMapInfoFinalizationPass());
 
   pm.addPass(flangomp::createGenericLoopConversionPass());
+  if (opts.isTargetDevice)
+    pm.addPass(flangomp::createIndirectCallLookupPass());
 }
 
 void createDebugPasses(mlir::PassManager &pm,

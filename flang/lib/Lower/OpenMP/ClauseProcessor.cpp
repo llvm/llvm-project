@@ -13,6 +13,8 @@
 #include "ClauseProcessor.h"
 #include "Utils.h"
 
+#include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/OpenMP/Clauses.h"
@@ -21,6 +23,7 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Utils/OpenMP.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -473,6 +476,24 @@ bool ClauseProcessor::processDeviceType(
       result.deviceType = mlir::omp::DeclareTargetDeviceType::any;
       break;
     }
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processIndirect(
+    mlir::omp::IndirectClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Indirect>()) {
+    // Case: declare target ... indirect[(scalar-logical-constant)]
+    // An `indirect` clause with no argument defaults to `.true.`.
+    bool isIndirect = true;
+    if (clause->v) {
+      auto foldedExpr = Fortran::evaluate::Fold(
+          semaCtx.foldingContext(), Fortran::common::Clone(*clause->v));
+      // The argument may have any logical kind, not just logical(4).
+      isIndirect = semantics::omp::GetLogicalValue(foldedExpr).value_or(true);
+    }
+    result.indirect = isIndirect;
     return true;
   }
   return false;

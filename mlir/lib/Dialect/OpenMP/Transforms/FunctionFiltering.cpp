@@ -101,7 +101,8 @@ class FunctionFilteringPass
       if (declareTargetOp && !declareTargetOp.isDeclareTarget())
         declareTargetOp.setDeclareTarget(omp::DeclareTargetDeviceType::host,
                                          omp::DeclareTargetCaptureClause::to,
-                                         /*automap=*/false, /*implicit=*/true);
+                                         /*automap=*/false, /*implicit=*/true,
+                                         /*indirect=*/false);
       return WalkResult::advance();
     });
   }

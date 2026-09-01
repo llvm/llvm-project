@@ -117,6 +117,17 @@ def AutomapToTargetDataPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
+def IndirectCallLookupPass
+    : Pass<"omp-indirect-call-lookup", "mlir::ModuleOp"> {
+  let summary = "Route device indirect calls through the OpenMP indirect-call "
+                "lookup runtime function.";
+  let dependentDialects = [
+    "mlir::func::FuncDialect",
+    "fir::FIROpsDialect",
+    "mlir::omp::OpenMPDialect"
+  ];
+}
+
 def UnimplementedDeviceCheckPass
     : Pass<"omp-unimplemented-device-check", "::mlir::ModuleOp"> {
   let summary = "Report not-yet-implemented situations on target device code";

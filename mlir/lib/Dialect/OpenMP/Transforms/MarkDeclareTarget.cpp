@@ -282,7 +282,8 @@ class MarkDeclareTargetPass
       // Update the operation and add callees to the worklist to propagate it.
       declareTargetOp.setDeclareTarget(changedDeviceType,
                                        omp::DeclareTargetCaptureClause::to,
-                                       /*automap=*/false, /*implicit=*/true);
+                                       /*automap=*/false, /*implicit=*/true,
+                                       /*indirect=*/false);
 
       for (auto &callee : calls[workItem.first])
         worklist.push_back({callee.getKey(), changedDeviceType});

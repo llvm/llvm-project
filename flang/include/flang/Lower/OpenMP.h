@@ -59,6 +59,7 @@ struct OMPDeferredDeclareTargetInfo {
   mlir::omp::DeclareTargetCaptureClause declareTargetCaptureClause;
   mlir::omp::DeclareTargetDeviceType declareTargetDeviceType;
   bool automap = false;
+  bool indirect = false;
   const Fortran::semantics::Symbol &sym;
 };
 

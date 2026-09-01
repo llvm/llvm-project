@@ -94,6 +94,7 @@ public:
   bool processInbranch(mlir::omp::InbranchClauseOps &result) const;
   bool processInclusive(mlir::Location currentLocation,
                         mlir::omp::InclusiveClauseOps &result) const;
+  bool processIndirect(mlir::omp::IndirectClauseOps &result) const;
   bool processInitializer(
       lower::SymMap &symMap,
       ReductionProcessor::GenInitValueCBTy &genInitValueCB,

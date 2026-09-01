@@ -46,7 +46,8 @@ def DeclareTargetAttr : OpenMP_Attr<"DeclareTarget", "declaretarget"> {
       (ins OptionalParameter<"DeclareTargetDeviceTypeAttr">:$device_type,
           OptionalParameter<"DeclareTargetCaptureClauseAttr">:$capture_clause,
           DefaultValuedParameter<"bool", "false">:$automap,
-          DefaultValuedParameter<"bool", "false">:$implicit);
+          DefaultValuedParameter<"bool", "false">:$implicit,
+          DefaultValuedParameter<"bool", "false">:$indirect);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }

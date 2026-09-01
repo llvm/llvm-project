@@ -396,7 +396,7 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*methodName=*/"setDeclareTarget",
       (ins "mlir::omp::DeclareTargetDeviceType":$deviceType,
            "mlir::omp::DeclareTargetCaptureClause":$captureClause,
-           "bool":$automap, "bool":$implicit), [{}], [{
+           "bool":$automap, "bool":$implicit, "bool":$indirect), [{}], [{
         $_op->setDiscardableAttr("omp.declare_target",
                   mlir::omp::DeclareTargetAttr::get(
                       $_op->getContext(),
@@ -404,7 +404,7 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
                           $_op->getContext(), deviceType),
                       mlir::omp::DeclareTargetCaptureClauseAttr::get(
                           $_op->getContext(), captureClause),
-                      automap, implicit));
+                      automap, implicit, indirect));
       }]>,
       InterfaceMethod<
       /*description=*/[{
@@ -466,6 +466,20 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
                 $_op->getDiscardableAttr("omp.declare_target"))
           if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
             return dAttr.getImplicit();
+         return false;
+      }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Return true if the DeclareTarget attribute has the INDIRECT modifier,
+        indicating that the entity may be invoked through a function pointer
+        from within a target region.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"getDeclareTargetIndirect",
+      (ins), [{}], [{
+        if (mlir::Attribute dTar = $_op->getDiscardableAttr("omp.declare_target"))
+          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
+            return dAttr.getIndirect();
          return false;
       }]>
   ];
