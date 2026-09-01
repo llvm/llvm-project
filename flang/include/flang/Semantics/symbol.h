@@ -99,10 +99,10 @@ public:
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const WithOmpDeclarative &);
 
-  void set_version(unsigned version) { version_ = version; }
+  void set_version(llvm::omp::Version version) { version_ = version; }
 
 private:
-  unsigned version_;
+  llvm::omp::Version version_;
   // The set of clauses from a REQUIRES directive. Only applicable
   // to program unit symbols (i.e. scopes of the REQUIRES directive).
   // The set of requirements for any program unit include requirements

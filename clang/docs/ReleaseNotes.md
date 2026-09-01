@@ -54,6 +54,11 @@ in a future version of Clang.
 
 ### C++ Specific Potentially Breaking Changes
 
+- The `[[carries_dependency]]` attribute is no longer recognized, in any language
+  mode, as it was removed from the standard by
+  [P3475R2](https://wg21.link/P3475R2).
+
+
 ### Objective-C Specific Potentially Breaking Changes
 
 - Fixed an issue where AST consumers based on `RecursiveASTVisitor` would bypass
@@ -73,7 +78,7 @@ features cannot lower the translation-unit ABI level;
 - On SPARC, a `_Complex` value with an integer element type is now passed and
   returned packed into the one or two integer registers it fits in, matching GCC.
   Clang previously passed such a value indirectly and returned it with one part
-  per register. 
+  per register.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
 
 - On SPARC64, a `_Complex char` or `_Complex short` is now
@@ -95,6 +100,13 @@ features cannot lower the translation-unit ABI level;
 
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
+
+- On x86-64 System V, a non-zero-width unnamed bit-field now classifies the
+  eightbytes it occupies as INTEGER, like a named bit-field, matching GCC.
+  Aggregates where this changes the classification may be passed or returned
+  differently -- a struct holding a run of `__int128` bit-fields, for example,
+  now travels in the two integer registers the ABI assigns it. This also fixes
+  a crash when such a struct was passed or returned. (#GH202205)
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -119,7 +131,7 @@ features cannot lower the translation-unit ABI level;
 
 - `CompletionString.availability` now returns instances of `AvailabilityKind`.
   As a result, the `__str__` representation of its return values changed.
-  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`. 
+  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
 ### OpenCL Potentially Breaking Changes
 
@@ -149,6 +161,10 @@ features cannot lower the translation-unit ABI level;
   implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
 
 - Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
+
+- Implemented the language part of [P3475R2](https://wg21.link/P3475R2) (Defang
+  and deprecate `memory_order::consume`) by removing support for the
+  `[[carries_dependency]]` attribute.
 
 #### C++23 Feature Support
 
@@ -204,6 +220,10 @@ features cannot lower the translation-unit ABI level;
 
 - Clang tools now resolve tool names without a path in compilation databases
   through `PATH`.
+
+- On musl targets, the driver now links ``libssp_nonshared.a`` when stack
+  protection is enabled and the library is present in the toolchain library
+  paths, matching what musl distributions configure GCC to do.
 
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
@@ -434,6 +454,12 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now diagnoses more details when a constraint evaluates to false.
 
+- `-Wpointer-arith` no longer reports subtraction of pointers to a variably
+  modified type, such as `int[n]`, as a subtraction of pointers to a type of
+  zero size, unless the size is provably zero: a zero-sized base element or a
+  dimension that is a zero integer constant, as in `struct Empty vla[n]` or
+  `int vla[n][0]`. (#GH28328)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -555,6 +581,9 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
 
+- Fixed a regression where deprecation warnings were omitted for synthesized
+  deduction guide. (#GH160543)
+
 - Fixed an assertion when a redeclaration of a function template or an out-of-line
   definition of a member of a class template added a default argument to a
   parameter that follows a parameter pack (e.g.
@@ -618,6 +647,11 @@ features cannot lower the translation-unit ABI level;
   - `__builtin_amdgcn_sicmpl`
   - `__builtin_amdgcn_fcmp`
   - `__builtin_amdgcn_fcmpf`
+
+#### DirectX Support
+
+- `clang-dxc` and HLSL support are now enabled by default, following the
+  promotion of the DirectX backend to an official LLVM target.
 
 #### NVPTX Support
 

@@ -394,6 +394,50 @@ add_libc_test(
 )
 
 add_libc_test(
+  setgid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    setgid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.getgid
+    libc.src.unistd.setgid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  setregid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    setregid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.getegid
+    libc.src.unistd.getgid
+    libc.src.unistd.setregid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  setreuid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    setreuid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.geteuid
+    libc.src.unistd.getuid
+    libc.src.unistd.setreuid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   setsid_test
   SUITE
     libc_unistd_unittests
@@ -401,6 +445,20 @@ add_libc_test(
     setsid_test.cpp
   DEPENDS
     libc.src.unistd.setsid
+)
+
+add_libc_test(
+  setuid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    setuid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.getuid
+    libc.src.unistd.setuid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
@@ -543,6 +601,16 @@ add_libc_test(
   DEPENDS
     libc.src.unistd.getpagesize
     libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  getegid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    getegid_test.cpp
+  DEPENDS
+    libc.src.unistd.getegid
 )
 
 add_libc_test(

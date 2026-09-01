@@ -43,6 +43,7 @@ struct GPUInfo {
   StringTable::Offset BaseName; // The canonical device name for a variant.
   uint8_t MaxWavesPerEU;
   uint32_t MaxHWAddressableLocalMemorySize;
+  uint8_t LDSBankCount;
 };
 
 // Per-GPU data for the R600 GPUKinds.
@@ -440,6 +441,15 @@ AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch) {
   return getMaxHWAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch));
 }
 
+unsigned AMDGPU::getLDSBankCount(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->LDSBankCount : 32;
+}
+
+unsigned AMDGPU::getLDSBankCount(Triple::SubArchType SubArch) {
+  return getLDSBankCount(getGPUKindFromSubArch(SubArch));
+}
+
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->MaxWavesPerEU : 10;
@@ -464,9 +474,10 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
 // FIXME: This is hacky, we shouldn't have mismatches between the bitset and
 // feature string map.
 static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
-    FEAT_FAST_FMAF,         FEAT_FAST_DENORMAL_F32, FEAT_SUPPORTS_WAVE32,
-    FEAT_SUPPORTS_WGP,      FEAT_XNACK_SUPPORT,     FEAT_SRAMECC_SUPPORT,
-    FEAT_XNACK_ON_OFF_MODES};
+    FEAT_FAST_FMAF,          FEAT_FAST_DENORMAL_F32,  FEAT_SUPPORTS_WAVE32,
+    FEAT_SUPPORTS_WGP,       FEAT_XNACK_SUPPORT,      FEAT_SRAMECC_SUPPORT,
+    FEAT_XNACK_ON_OFF_MODES, FEAT_APERTURE_REGS,      FEAT_GET_DOORBELL_ID,
+    FEAT_AGPR_ALLOC,         FEAT_1536_PHYSICAL_VGPRS};
 
 // Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
 // Overwrite false, existing entries are kept so user -mattr overrides win.

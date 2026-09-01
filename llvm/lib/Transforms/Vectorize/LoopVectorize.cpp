@@ -6445,6 +6445,15 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                        VPI->getOpcode()) &&
          "Should have been handled prior to this!");
 
+  // We can only replicate an extractvalue if its operand generates per lane in
+  // the same block, otherwise we would need to extract a lane from its struct
+  // operand which is invalid.
+  if (VPI->getOpcode() == Instruction::ExtractValue)
+    if (VPRecipeBase *OpR = VPI->getOperand(0)->getDefiningRecipe())
+      if (!vputils::doesGeneratePerAllLanes(OpR) ||
+          OpR->getParent() != VPI->getParent())
+        return tryToWiden(VPI);
+
   if (!shouldWiden(Instr, Range))
     return nullptr;
 
@@ -8366,6 +8375,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 }
 
 LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
+  CFGChanged = false;
 
   // Don't attempt if
   // 1. the target claims to have no vector registers, and
@@ -8379,7 +8389,7 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
        TTI->getMaxInterleaveFactor(ElementCount::getFixed(1), true) < 2))
     return LoopVectorizeResult(false, false);
 
-  bool Changed = false, CFGChanged = false;
+  bool Changed = false;
 
   // The vectorizer requires loops to be in simplified form.
   // Since simplification may add new inner loops, it has to run before the
@@ -8412,13 +8422,6 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
 
     if (Changed) {
       LAIs->clear();
-
-      // If CycleAnalysis was cached by a prior pass (e.g. DSE), it now holds
-      // stale pointers to blocks that may have been deleted during
-      // vectorization. Clear it so that BlockFrequencyAnalysis (if requested
-      // for a later loop) recomputes it fresh.
-      if (FAM->getCachedResult<CycleAnalysis>(F))
-        FAM->clearAnalysis<CycleAnalysis>(F);
 
 #ifndef NDEBUG
       if (VerifySCEV)
@@ -8455,8 +8458,10 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  FAM = &AM;
-  GetBFI = [&AM, &F]() -> BlockFrequencyInfo & {
+  GetBFI = [this, &AM, &F]() -> BlockFrequencyInfo & {
+    // CycleInfo cached by an earlier pass is invalidated when the CFG changes.
+    if (CFGChanged && AM.getCachedResult<CycleAnalysis>(F))
+      AM.clearAnalysis<CycleAnalysis>(F);
     return AM.getResult<BlockFrequencyAnalysis>(F);
   };
   LoopVectorizeResult Result = runImpl(F);

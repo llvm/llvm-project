@@ -306,8 +306,8 @@ Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
   assert(OutputPath != "-" && "Unexpected request for FD of stdout");
 
   // Disable temporary file for other non-regular files, and if we get a status
-  // object, also check if we can write and disable write-through buffers if
-  // appropriate.
+  // object, also check if in append mode we can write and disable write-through
+  // buffers if appropriate.
   if (Config.getAtomicWrite()) {
     sys::fs::file_status Status;
     sys::fs::status(OutputPath, Status);
@@ -315,8 +315,12 @@ Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
       if (!sys::fs::is_regular_file(Status))
         Config.setNoAtomicWrite();
 
-      // Fail now if we can't write to the final destination.
-      if (!sys::fs::can_write(OutputPath))
+      // In append mode, we will open the file for writing which will need write
+      // permission. Fail now if it is already clear that we can't write to the
+      // final destination.
+      // In non-append mode, we will delete and replace the file. Permission
+      // bits of the file itself are irrelevant in this case.
+      if (Config.getAppend() && !sys::fs::can_write(OutputPath))
         return make_error<OutputError>(
             OutputPath,
             std::make_error_code(std::errc::operation_not_permitted));
