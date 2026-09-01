@@ -328,6 +328,8 @@ private:
   parseOperationExpr(OpResultTypeContext inputResultTypeContext =
                          OpResultTypeContext::Explicit);
   FailureOr<ast::Expr *> parseTupleExpr();
+  FailureOr<ast::Expr *> parseTypeConversionExpr();
+  FailureOr<ast::Expr *> parseConvertedOperandExpr();
   FailureOr<ast::Expr *> parseTypeExpr();
   FailureOr<ast::Expr *> parseUnderscoreExpr();
 
