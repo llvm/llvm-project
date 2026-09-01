@@ -819,11 +819,10 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
     SPIRV::ModuleAnalysisInfo &MAI) {
   assert(GV && "GV must not be null in emitDebugGlobalVariable");
 
-  assert(!CompileUnits.empty() &&
-         "emitDebugGlobalVariable requires non-empty CompileUnits");
   auto ParentRegOpt = resolveScope(GV->getScope());
-  assert(ParentRegOpt && "DebugCompilationUnit must be emitted before "
-                         "emitDebugGlobalVariable");
+  if (!ParentRegOpt)
+    return std::nullopt;
+
   MCRegister ParentReg = *ParentRegOpt;
 
   // TyReg: DebugInfoNone when GV has no DI type (as done in
