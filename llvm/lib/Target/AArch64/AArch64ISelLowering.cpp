@@ -10548,8 +10548,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Since callee will pop the argument stack as a tail call, we must keep the
     // popped size aligned to the stack alignment. Either or both of NumBytes
     // and NumReusableBytes may not have been aligned, so we further increase by
-    // the amount needed to keep FPDiff, and therefore preserve the required
-    // alignment going into the callee.
+    // the amount needed to keep FPDiff aligned, and therefore preserve the
+    // required alignment going into the callee.
     FPDiff -= offsetToAlignment(FPDiff, StackAlign);
     NumBytes += offsetToAlignment(FPDiff, StackAlign);
 
