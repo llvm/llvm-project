@@ -293,10 +293,9 @@ define i64 @insert_10_i64_optsize(i64 %a, i64 %b) nounwind optsize {
 ;
 ; X64-SLOW-LABEL: insert_10_i64_optsize:
 ; X64-SLOW:       # %bb.0:
-; X64-SLOW-NEXT:    movabsq $18014398509481983, %rax # imm = 0x3FFFFFFFFFFFFF
-; X64-SLOW-NEXT:    andq %rdi, %rax
-; X64-SLOW-NEXT:    shlq $54, %rsi
-; X64-SLOW-NEXT:    orq %rsi, %rax
+; X64-SLOW-NEXT:    movq %rdi, %rax
+; X64-SLOW-NEXT:    shlq $10, %rax
+; X64-SLOW-NEXT:    shrdq $10, %rsi, %rax
 ; X64-SLOW-NEXT:    retq
   %and = and i64 %a, 18014398509481983
   %shl = shl i64 %b, 54
@@ -314,10 +313,9 @@ define i64 @insert_10_i64_minsize(i64 %a, i64 %b) nounwind minsize {
 ;
 ; X64-SLOW-LABEL: insert_10_i64_minsize:
 ; X64-SLOW:       # %bb.0:
-; X64-SLOW-NEXT:    movabsq $18014398509481983, %rax # imm = 0x3FFFFFFFFFFFFF
-; X64-SLOW-NEXT:    andq %rdi, %rax
-; X64-SLOW-NEXT:    shlq $54, %rsi
-; X64-SLOW-NEXT:    orq %rsi, %rax
+; X64-SLOW-NEXT:    movq %rdi, %rax
+; X64-SLOW-NEXT:    shlq $10, %rax
+; X64-SLOW-NEXT:    shrdq $10, %rsi, %rax
 ; X64-SLOW-NEXT:    retq
   %and = and i64 %a, 18014398509481983
   %shl = shl i64 %b, 54

@@ -53866,9 +53866,11 @@ static SDValue combineOrOnSHLToSHRD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
   using namespace SDPatternMatch;
   assert(N->getOpcode() == ISD::OR && "Invalid Node. Expected OR.");
 
-  // Bail if SHLD is slow
-  if (Subtarget.isSHLDSlow())
-    return SDValue();
+  // If optimizing for code size, run irrespective of slow SHLD.
+  // If not optimizing for code size and SHLD is slow, then bail.
+  bool IsOptSize = DAG.getMachineFunction().getFunction().hasOptSize();
+  if (!IsOptSize && Subtarget.isSHLDSlow())
+      return SDValue();
 
   EVT VT = N->getValueType(0);
 
