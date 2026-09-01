@@ -3313,8 +3313,8 @@ SemaOpenMP::ActOnOpenMPGroupPrivateDirective(SourceLocation Loc,
                                              ArrayRef<Expr *> VarList) {
   llvm::omp::Version OMPVersion = getLangOpts().getOpenMPVersion();
   if (!OMPVersion || OMPVersion < 60) {
-    Diag(Loc, diag::err_omp_unexpected_directive) << getOpenMPDirectiveName(
-        OMPD_groupprivate, OMPVersion);
+    Diag(Loc, diag::err_omp_unexpected_directive)
+        << getOpenMPDirectiveName(OMPD_groupprivate, OMPVersion);
     return nullptr;
   }
   if (OMPGroupPrivateDecl *D = CheckOMPGroupPrivateDecl(Loc, VarList)) {
