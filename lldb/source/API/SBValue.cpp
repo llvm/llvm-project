@@ -1448,6 +1448,18 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
           watchpoint_sp->SetDeclInfo(std::string(ss.GetString()));
         }
       }
+      // If it is a local variable, disable the watchpoint after we leave
+      // the current frame. If not, the watchpoint keeps firing
+      // when a later function reuses the same stack memory.
+      if (VariableSP var_sp = value_sp->GetVariable()) {
+        watchpoint_sp->SetWatchVariable(true);
+        watchpoint_sp->SetWatchSpec(value_sp->GetName().GetString());
+
+        if (var_sp->GetScope() == eValueTypeVariableLocal) {
+          const auto &exe_ctx = value_sp->GetExecutionContextRef();
+          watchpoint_sp->SetupVariableWatchpointDisabler(exe_ctx.GetFrameSP());
+        }
+      }
     }
   } else if (target_sp) {
     error = Status::FromErrorStringWithFormat("could not get SBValue: %s",
