@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/scalblnf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/scalblnf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(float128, scalblnf128, (float128 x, long n)) {
-  return math::scalblnf128(x, n);
+  return cpp::bit_cast<float128>(math::scalblnf128(cpp::bit_cast<Float128>(x), n));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

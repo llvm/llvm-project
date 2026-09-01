@@ -407,6 +407,8 @@ static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::ldexpf128(Float128(0.0), 0));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::scalbnf128(Float128(0.0), 0));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::scalblnf128(Float128(0.0), 0L));
 
 //===----------------------------------------------------------------------===//
 //                       Native Float128 Tests
@@ -494,9 +496,6 @@ static_assert(float128(0.0) == [] {
   int exp{};
   return LIBC_NAMESPACE::shared::remquof128(float128(1.0), float128(1.0), &exp);
 }());
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0.0));
-
 static_assert(0 == [] {
   float128 setpayload_x = float128(0.0);
   return LIBC_NAMESPACE::shared::setpayloadf128(&setpayload_x, float128(0.0));
