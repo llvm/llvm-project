@@ -9,7 +9,8 @@
 // DEFINE:   --ssaf-global-scope-analysis-result=%S/Inputs/empty-suite.json \
 // DEFINE:   --ssaf-src-edit-file=%t/edits.yaml \
 // DEFINE:   --ssaf-transformation-report-file=%t/report.sarif \
-// DEFINE:   --ssaf-compilation-unit-id=cu
+// DEFINE:   --ssaf-compilation-unit-id=cu \
+// DEFINE:   --ssaf-link-unit-id=lu
 
 // =============================================================================
 // 1. -Wno-error=scalable-static-analysis-framework downgrades to a warning.

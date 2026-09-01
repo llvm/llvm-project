@@ -209,6 +209,14 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getURemExpr(Ops[0], Ops[1]);
     });
+  // A SDiv with non-negative operands is equivalent to an UDiv.
+  if (match(V, m_SDiv(m_VPValue(LHSVal), m_VPValue(RHSVal)))) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      if (!SE.isKnownNonNegative(Ops[0]) || !SE.isKnownNonNegative(Ops[1]))
+        return SE.getCouldNotCompute();
+      return SE.getUDivExpr(Ops[0], Ops[1]);
+    });
+  }
   // A SRem with non-negative operands is equivalent to an URem.
   if (match(V, m_SRem(m_VPValue(LHSVal), m_VPValue(RHSVal)))) {
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
@@ -223,6 +231,11 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       (*Mask + 1).isPowerOf2())
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getURemExpr(Ops[0], SE.getConstant(*Mask + 1));
+    });
+  // SCEV models ptrtoaddr, but not ptrtoint, mirroring createSCEV.
+  if (match(V, m_PtrToAddr(m_VPValue(LHSVal))))
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      return SE.getPtrToAddrExpr(Ops[0]);
     });
   if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
     Type *DestTy = V->getScalarType();

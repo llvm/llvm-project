@@ -2500,11 +2500,22 @@ Error RewriteInstance::readSpecialSections() {
     BC->outs() << "BOLT-INFO: enabling " << (opts::StrictMode ? "strict " : "")
                << "relocation mode\n";
 
-  // Read EH frame for function boundaries info.
-  Expected<const DWARFDebugFrame *> EHFrameOrError = BC->DwCtx->getEHFrame();
-  if (!EHFrameOrError)
-    report_error("expected valid eh_frame section", EHFrameOrError.takeError());
-  CFIRdWrt.reset(new CFIReaderWriter(*BC, *EHFrameOrError.get()));
+  // Read EH frame for function boundaries info. Parse only the frame index
+  // (FDE addresses/ranges); the CFI instruction programs are parsed on demand
+  // per function during disassembly (see CFIReaderWriter::fillCFIInfoFor) so we
+  // never materialize every function's CFI program at once. We parse our own
+  // DWARFDebugFrame instead of DwCtx->getEHFrame() so that the (fully parsed)
+  // frame is not cached in the DWARF context for the lifetime of the run.
+  const DWARFObject &DObj = BC->DwCtx->getDWARFObj();
+  const DWARFSection &EHFrameSection = DObj.getEHFrameSection();
+  DWARFDataExtractor EHFrameData(
+      DObj, EHFrameSection, BC->DwCtx->isLittleEndian(), DObj.getAddressSize());
+  auto EHFrame = std::make_unique<DWARFDebugFrame>(
+      BC->DwCtx->getArch(), /*IsEH=*/true, EHFrameSection.Address);
+  if (Error E = EHFrame->parse(EHFrameData, /*ParseCFIProgram=*/false))
+    report_error("expected valid eh_frame section", std::move(E));
+  CFIRdWrt.reset(
+      new CFIReaderWriter(*BC, std::move(EHFrame), std::move(EHFrameData)));
 
   processSectionMetadata();
 
@@ -4056,6 +4067,10 @@ void RewriteInstance::disassembleFunctions() {
           Function.parseLSDA(LSDAData, LSDASection->getAddress()));
     }
   }
+
+  // CFI programs and the FDE index are only needed while disassembling; release
+  // them now so they don't occupy memory for the rest of the pipeline.
+  CFIRdWrt->releaseFrameData();
 }
 
 void RewriteInstance::buildFunctionsCFG() {
