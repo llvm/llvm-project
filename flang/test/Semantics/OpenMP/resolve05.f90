@@ -52,10 +52,23 @@ subroutine default_none_private()
   !$omp end parallel
 end subroutine
 
+! Test that the predetermined-private iteration variable of a simd loop nested
+! in a DEFAULT(NONE) region is exempt (its DSA is predetermined linear, not
+! explicitly private).
+subroutine default_none_simd_loop()
+  !$omp parallel default(none)
+  !$omp simd
+  do i1 = 1, 10
+  end do
+  !$omp end simd
+  !$omp end parallel
+end subroutine
+
 program mm
   call default_none()
   call default_none_seq_loop()
   call default_none_nested()
   call default_none_private()
+  call default_none_simd_loop()
   !TODO: private, firstprivate, shared
 end

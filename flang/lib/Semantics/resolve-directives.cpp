@@ -2630,6 +2630,9 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
   for (int dirDepth{0}; dirDepth < (int)dirContext_.size(); ++dirDepth) {
     DirContext &dirContext = dirContext_[dirDepth];
     Symbol::Flags dsa;
+    // A variable with a predetermined DSA (e.g. a loop iteration variable of
+    // an associated loop) is exempt from the DEFAULT(NONE) requirement.
+    bool isPredetermined{false};
 
     Scope &scope{context_.FindScope(dirContext.directiveSource)};
 
@@ -2638,6 +2641,9 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       if (it != scope.end()) {
         // There is already a symbol in the current scope, use its DSA.
         dsa = GetSymbolDSA(*it->second);
+        if (it->second->test(Symbol::Flag::OmpPreDetermined)) {
+          isPredetermined = true;
+        }
       } else {
         for (auto symMap : dirContext.objectWithDSA) {
           if (symMap.first->name() == sym->name()) {
@@ -2742,7 +2748,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
               sym->name());
         }
       };
-      if (dsa.test(Symbol::Flag::OmpPrivate) ||
+      if (isPredetermined || dsa.test(Symbol::Flag::OmpPrivate) ||
           crayPtrDSA.test(Symbol::Flag::OmpPrivate)) {
         checkDefaultNone = false;
       } else if (dsa.any() || crayPtrDSA.any()) {
