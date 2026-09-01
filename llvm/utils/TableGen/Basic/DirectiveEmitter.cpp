@@ -905,21 +905,31 @@ static void generateGetDirectivePureSince(const DirectiveLanguage &DirLang,
   // OmpStructureChecker::CheckDirectiveInPureProcedure.
   constexpr int NeverPure = 0x7FFFFFFF;
   OS << "constexpr unsigned getDirectivePureSince(Directive Dir) {\n";
-  OS << "  switch (Dir) {\n";
 
-  StringRef Prefix = DirLang.getDirectivePrefix();
+  // Only print the switch if we have any pure directives, as the switch with
+  // only a default is a warning on some compilers.
+  if (llvm::any_of(DirLang.getDirectives(), [](const Record *R) {
+        Directive D(R);
+        return D.getPureSince() != NeverPure;
+      })) {
+    OS << "  switch (Dir) {\n";
 
-  for (const Record *R : DirLang.getDirectives()) {
-    Directive D(R);
-    int PureSince = D.getPureSince();
-    if (PureSince == NeverPure)
-      continue;
-    OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
-    OS << "    return " << PureSince << ";\n";
+    StringRef Prefix = DirLang.getDirectivePrefix();
+
+    for (const Record *R : DirLang.getDirectives()) {
+      Directive D(R);
+      int PureSince = D.getPureSince();
+      if (PureSince == NeverPure)
+        continue;
+      OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
+      OS << "    return " << PureSince << ";\n";
+    }
+    OS << "  default:\n";
+    OS << "    return 0x7FFFFFFF;\n";
+    OS << "  } // switch (Dir)\n";
+  } else {
+    OS << "  return 0x7FFFFFFF;\n";
   }
-  OS << "  default:\n";
-  OS << "    return 0x7FFFFFFF;\n";
-  OS << "  } // switch (Dir)\n";
   OS << "}\n";
 }
 
