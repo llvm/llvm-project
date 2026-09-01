@@ -44,21 +44,20 @@ Getting Started with libc++
    ImplementationDefinedBehavior
    Modules
    Hardening
-   ReleaseProcedure
-   PostMeetingProcedure
    Status/Cxx17
    Status/Cxx20
    Status/Cxx23
    Status/Cxx26
    Status/Cxx29
-   Status/Format
-   Status/Parallelism
 
 
 .. toctree::
     :hidden:
 
     AddingNewCIJobs
+    Contributing/ReleaseProcedure
+    Contributing/PostMeetingProcedure
+    Contributing/NewStandardProcedure
     FeatureTestMacroTable
 
 

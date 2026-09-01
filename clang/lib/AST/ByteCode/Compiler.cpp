@@ -1551,7 +1551,6 @@ bool Compiler<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
   BinaryOperatorKind Op = E->getOpcode();
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  OptPrimType T = classify(E->getType());
 
   if (Op == BO_LOr) {
     // Logical OR. Visit LHS and only evaluate RHS if LHS was FALSE.
@@ -1600,9 +1599,10 @@ bool Compiler<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
     return this->emitPopBool(E);
 
   // For C, cast back to integer type.
-  assert(T);
-  if (T != PT_Bool)
-    return this->emitCast(PT_Bool, *T, E);
+  if (!E->getType()->isBooleanType()) {
+    PrimType T = classifyPrim(E->getType());
+    return this->emitCast(PT_Bool, T, E);
+  }
   return true;
 }
 
@@ -7282,9 +7282,9 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
     const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
     FunctionTemplateDecl *CallOpTemplate =
         LambdaCallOp->getDescribedFunctionTemplate();
-    void *InsertPos = nullptr;
+    llvm::FoldingSetInsertToken InsertToken;
     const FunctionDecl *CorrespondingCallOpSpecialization =
-        CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+        CallOpTemplate->findSpecialization(TAL->asArray(), InsertToken);
     assert(CorrespondingCallOpSpecialization);
     LambdaCallOp = CorrespondingCallOpSpecialization;
   } else {
