@@ -582,6 +582,33 @@ private:
   /// addressing.
   LSDATypeTableTy LSDATypeAddressTable;
 
+public:
+  /// An LSDA type table entry whose value comes from a dynamic relocation
+  /// instead of being resolved at link time, e.g. a DW_EH_PE_absptr entry
+  /// naming a typeinfo from a shared library under -z notext. The entry reads
+  /// as zero in the input.
+  struct LSDATypeTableDynRelocTy {
+    Relocation Rel;
+    uint64_t InputAddress = 0;
+    /// One label per emitted copy of the type table.
+    SmallVector<MCSymbol *, 2> OutputLabels;
+  };
+
+  /// Keyed by the entry's index in LSDATypeTable.
+  using LSDATypeTableDynRelocsTy = std::map<unsigned, LSDATypeTableDynRelocTy>;
+
+  LSDATypeTableDynRelocsTy &getLSDATypeTableDynRelocs() {
+    return LSDATypeTableDynRelocs;
+  }
+
+  /// Return true if any LSDA type table entry comes from a dynamic relocation.
+  bool hasLSDATypeTableDynRelocs() const {
+    return !LSDATypeTableDynRelocs.empty();
+  }
+
+private:
+  LSDATypeTableDynRelocsTy LSDATypeTableDynRelocs;
+
   /// Marking for the beginnings of language-specific data areas for each
   /// fragment of the function.
   SmallVector<MCSymbol *, 0> LSDASymbols;
