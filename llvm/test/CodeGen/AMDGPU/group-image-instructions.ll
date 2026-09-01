@@ -45,56 +45,56 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
 ; GFX11-NEXT:    v_interp_p2_f32 v0, v3, v1, v0 wait_exp:7
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_add_f32_e32 v5, s23, v36
-; GFX11-NEXT:    v_add_f32_e32 v4, s22, v0
-; GFX11-NEXT:    v_add_f32_e32 v8, s20, v0
-; GFX11-NEXT:    v_add_f32_e32 v9, s21, v36
-; GFX11-NEXT:    v_add_f32_e32 v12, s18, v0
-; GFX11-NEXT:    v_add_f32_e32 v13, s19, v36
-; GFX11-NEXT:    v_add_f32_e32 v16, s16, v0
-; GFX11-NEXT:    v_add_f32_e32 v17, s17, v36
-; GFX11-NEXT:    v_add_f32_e32 v20, s24, v0
-; GFX11-NEXT:    v_add_f32_e32 v21, s25, v36
-; GFX11-NEXT:    v_add_f32_e32 v24, s26, v0
-; GFX11-NEXT:    v_add_f32_e32 v25, s27, v36
-; GFX11-NEXT:    v_add_f32_e32 v28, s28, v0
-; GFX11-NEXT:    v_add_f32_e32 v29, s29, v36
-; GFX11-NEXT:    v_add_f32_e32 v32, s30, v0
-; GFX11-NEXT:    v_add_f32_e32 v33, s31, v36
+; GFX11-NEXT:    v_add_f32_e32 v3, s23, v36
+; GFX11-NEXT:    v_add_f32_e32 v2, s22, v0
+; GFX11-NEXT:    v_add_f32_e32 v68, s20, v0
+; GFX11-NEXT:    v_add_f32_e32 v69, s21, v36
+; GFX11-NEXT:    v_add_f32_e32 v70, s18, v0
+; GFX11-NEXT:    v_add_f32_e32 v71, s19, v36
+; GFX11-NEXT:    v_add_f32_e32 v72, s16, v0
+; GFX11-NEXT:    v_add_f32_e32 v73, s17, v36
+; GFX11-NEXT:    v_add_f32_e32 v74, s24, v0
+; GFX11-NEXT:    v_add_f32_e32 v75, s25, v36
+; GFX11-NEXT:    v_add_f32_e32 v76, s26, v0
+; GFX11-NEXT:    v_add_f32_e32 v77, s27, v36
+; GFX11-NEXT:    v_add_f32_e32 v78, s28, v0
+; GFX11-NEXT:    v_add_f32_e32 v79, s29, v36
+; GFX11-NEXT:    v_add_f32_e32 v80, s30, v0
+; GFX11-NEXT:    v_add_f32_e32 v81, s31, v36
 ; GFX11-NEXT:    s_clause 0x7
-; GFX11-NEXT:    image_sample v[4:7], v[4:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[8:11], v[8:9], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[12:15], v[12:13], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[16:19], v[16:17], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[20:23], v[20:21], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[24:27], v[24:25], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[28:31], v[28:29], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[32:35], v[32:33], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    v_add_f32_e32 v37, s34, v0
-; GFX11-NEXT:    v_add_f32_e32 v38, s35, v36
-; GFX11-NEXT:    v_add_f32_e32 v40, s36, v0
-; GFX11-NEXT:    v_add_f32_e32 v41, s37, v36
-; GFX11-NEXT:    v_add_f32_e32 v44, s38, v0
-; GFX11-NEXT:    v_add_f32_e32 v45, s39, v36
-; GFX11-NEXT:    v_add_f32_e32 v48, s40, v0
-; GFX11-NEXT:    v_add_f32_e32 v49, s41, v36
-; GFX11-NEXT:    v_add_f32_e32 v52, s42, v0
-; GFX11-NEXT:    v_add_f32_e32 v53, s43, v36
-; GFX11-NEXT:    v_add_f32_e32 v56, s44, v0
-; GFX11-NEXT:    v_add_f32_e32 v57, s45, v36
-; GFX11-NEXT:    v_add_f32_e32 v60, s46, v0
-; GFX11-NEXT:    v_add_f32_e32 v61, s47, v36
+; GFX11-NEXT:    image_sample v[4:7], v[2:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[8:11], v[68:69], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[12:15], v[70:71], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[16:19], v[72:73], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[20:23], v[74:75], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[24:27], v[76:77], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[28:31], v[78:79], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[32:35], v[80:81], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    v_add_f32_e32 v82, s34, v0
+; GFX11-NEXT:    v_add_f32_e32 v83, s35, v36
+; GFX11-NEXT:    v_add_f32_e32 v84, s36, v0
+; GFX11-NEXT:    v_add_f32_e32 v85, s37, v36
+; GFX11-NEXT:    v_add_f32_e32 v86, s38, v0
+; GFX11-NEXT:    v_add_f32_e32 v87, s39, v36
+; GFX11-NEXT:    v_add_f32_e32 v88, s40, v0
+; GFX11-NEXT:    v_add_f32_e32 v89, s41, v36
+; GFX11-NEXT:    v_add_f32_e32 v90, s42, v0
+; GFX11-NEXT:    v_add_f32_e32 v91, s43, v36
+; GFX11-NEXT:    v_add_f32_e32 v92, s44, v0
+; GFX11-NEXT:    v_add_f32_e32 v93, s45, v36
+; GFX11-NEXT:    v_add_f32_e32 v94, s46, v0
+; GFX11-NEXT:    v_add_f32_e32 v95, s47, v36
 ; GFX11-NEXT:    v_add_f32_e32 v0, s12, v0
 ; GFX11-NEXT:    v_add_f32_e32 v1, s13, v36
 ; GFX11-NEXT:    s_and_b32 exec_lo, exec_lo, s33
 ; GFX11-NEXT:    s_clause 0x7
-; GFX11-NEXT:    image_sample v[36:39], v[37:38], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[40:43], v[40:41], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[44:47], v[44:45], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[48:51], v[48:49], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[52:55], v[52:53], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[56:59], v[56:57], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    image_sample v[60:63], v[60:61], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[36:39], v[82:83], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[40:43], v[84:85], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[44:47], v[86:87], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[48:51], v[88:89], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[52:55], v[90:91], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[56:59], v[92:93], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX11-NEXT:    image_sample v[60:63], v[94:95], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX11-NEXT:    image_sample v[64:67], v[0:1], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX11-NEXT:    s_waitcnt vmcnt(14)
 ; GFX11-NEXT:    v_dual_add_f32 v0, v8, v4 :: v_dual_add_f32 v1, v9, v5

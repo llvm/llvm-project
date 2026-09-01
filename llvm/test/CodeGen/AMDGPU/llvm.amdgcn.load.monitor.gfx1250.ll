@@ -35,8 +35,8 @@ define amdgpu_ps void @global_load_monitor_b32_saddr_relaxed_sys(ptr addrspace(1
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    global_load_monitor_b32 v2, v2, s[0:1] offset:32 scope:SCOPE_SYS
+; GFX1250-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1250-NEXT:    global_load_monitor_b32 v2, v3, s[0:1] offset:32 scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -74,8 +74,8 @@ define amdgpu_ps void @global_load_monitor_b64_saddr_acquire_agent(ptr addrspace
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    global_load_monitor_b64 v[2:3], v2, s[0:1] offset:32 scope:SCOPE_DEV
+; GFX1250-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1250-NEXT:    global_load_monitor_b64 v[2:3], v4, s[0:1] offset:32 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -113,8 +113,8 @@ define amdgpu_ps void @global_load_monitor_b128_saddr_seq_cst_workgroup(ptr addr
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    global_load_monitor_b128 v[2:5], v2, s[0:1] offset:32
+; GFX1250-NEXT:    v_mov_b32_e32 v6, 0
+; GFX1250-NEXT:    global_load_monitor_b128 v[2:5], v6, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-NEXT:    s_endpgm
@@ -234,8 +234,8 @@ define amdgpu_ps void @global_load_monitor_b64_saddr_no_scale_offset_seq_cst_sys
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], 2, s[0:1]
-; GFX1250-NEXT:    global_load_monitor_b64 v[2:3], v[2:3], off scope:SCOPE_SYS
+; GFX1250-NEXT:    v_lshl_add_u64 v[4:5], v[2:3], 2, s[0:1]
+; GFX1250-NEXT:    global_load_monitor_b64 v[2:3], v[4:5], off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0

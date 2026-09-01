@@ -14,9 +14,9 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    image_sample v2, v[0:1], s[0:7], s[0:3] dmask:0x4 dim:SQ_RSRC_IMG_2D
 ; GFX10-NEXT:    image_sample v3, v[0:1], s[0:7], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0
+; GFX10-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    image_load_mip v4, v[2:4], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D unorm
+; GFX10-NEXT:    image_load_mip v4, [v2, v3, v5], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_clause 0x3
 ; GFX10-NEXT:    s_buffer_load_dword s24, s[0:3], 0x5c
 ; GFX10-NEXT:    s_buffer_load_dword s28, s[0:3], 0x7c
@@ -82,9 +82,9 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    image_sample v2, v[0:1], s[0:7], s[0:3] dmask:0x4 dim:SQ_RSRC_IMG_2D
 ; GFX11-NEXT:    image_sample v3, v[0:1], s[0:7], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    image_load_mip v4, v[2:4], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    image_load_mip v4, [v2, v3, v5], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    s_clause 0x3
 ; GFX11-NEXT:    s_buffer_load_b32 s24, s[0:3], 0x5c
 ; GFX11-NEXT:    s_buffer_load_b32 s28, s[0:3], 0x7c

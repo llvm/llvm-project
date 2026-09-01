@@ -40,7 +40,6 @@ define amdgpu_kernel void @_start() {
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %dynamic-memcpy-expansion-residual-cond
-; FIXME: Compare should be evaluated at compile time
 ; CHECK-NEXT:    s_cmp_eq_u64 13, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
 ; CHECK-NEXT:  ; %bb.3: ; %dynamic-memcpy-expansion-residual-body.preheader
@@ -79,6 +78,7 @@ define amdgpu_kernel void @_start() {
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_4
 ; CHECK-NEXT:  .LBB0_5: ; %dynamic-memcpy-post-expansion
 ; CHECK-NEXT:    s_endpgm
+; FIXME: Compare should be evaluated at compile time
   %src_ptr = getelementptr inbounds [128 x i8], ptr @src_array, i64 0, i64 0
   %dst_ptr = getelementptr inbounds [128 x i8], ptr @dst_array, i64 0, i64 0
   call void @llvm.memcpy.p0.p0.i64(ptr %dst_ptr, ptr %src_ptr, i64 add (i64 sub (i64 16, i64 ptrtoint (ptr addrspacecast (ptr addrspace(4) null to ptr) to i64)), i64 13), i1 false)

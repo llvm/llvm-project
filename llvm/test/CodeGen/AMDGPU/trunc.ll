@@ -444,9 +444,9 @@ define amdgpu_kernel void @v_trunc_i64_to_i1(ptr addrspace(1) %out, ptr addrspac
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s3
-; VI-NEXT:    v_add_u32_e32 v1, vcc, s2, v1
-; VI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
-; VI-NEXT:    flat_load_dwordx2 v[1:2], v[1:2]
+; VI-NEXT:    v_add_u32_e32 v3, vcc, s2, v1
+; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
+; VI-NEXT:    flat_load_dwordx2 v[1:2], v[3:4]
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s0, v0
