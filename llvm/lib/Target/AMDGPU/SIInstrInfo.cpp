@@ -4524,10 +4524,10 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
 
     struct CandidateInfo {
       const MachineOperand *ImmSrc; // Operand to check for immediate
-      unsigned Opc;                  // Target opcode (FMAMK or FMAAK)
-      const MachineOperand *Src0;    // src0 for the new instruction
-      const MachineOperand *Src1;    // src1 for the new instruction
-      const MachineOperand *Src2;    // src2 for the new instruction
+      unsigned Opc;                 // Target opcode (FMAMK or FMAAK)
+      const MachineOperand *Src0;   // src0 for the new instruction
+      const MachineOperand *Src1;   // src1 for the new instruction
+      const MachineOperand *Src2;   // src2 for the new instruction
     };
 
     CandidateInfo AllCandidates[] = {
@@ -4539,7 +4539,9 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
     ArrayRef<CandidateInfo> Candidates = AllCandidates;
     if (Src0Literal)
       Candidates = Candidates.drop_front(2);
-    if (!isOperandLegal(MI, AMDGPU::getNamedOperandIdx(FMAMKOpc, AMDGPU::OpName::src0), Src1))
+    if (!isOperandLegal(
+            MI, AMDGPU::getNamedOperandIdx(FMAMKOpc, AMDGPU::OpName::src0),
+            Src1))
       Candidates = Candidates.drop_back();
 
     MachineInstr *DefMI = nullptr;
