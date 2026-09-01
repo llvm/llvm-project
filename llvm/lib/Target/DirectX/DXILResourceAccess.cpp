@@ -842,29 +842,26 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
         GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
       HandlePhi->addIncoming(AccessIdx.HandleIdx, BB);
     }
-
-    if (HasGetPtr)
-      Builder.Insert(GetPtrPhi);
-    else
-      GetPtrPhi = nullptr;
-
-    Builder.Insert(HandlePhi);
-
     DeadInsts.insert(Phi);
 
     Value *GetPtrIdx = GetPtrPhi;
-    Value *HandleIdx = HandlePhi;
-
-    if (GetPtrPhi)
+    if (HasGetPtr) {
       if (Value *ConstantGetPtr = GetPtrPhi->hasConstantValue()) {
         GetPtrIdx = ConstantGetPtr;
-        DeadInsts.insert(GetPtrPhi);
-      }
+        delete GetPtrPhi;
+      } else
+        Builder.Insert(GetPtrPhi);
+    } else {
+      GetPtrIdx = nullptr;
+      delete GetPtrPhi;
+    }
 
+    Value *HandleIdx = HandlePhi;
     if (Value *ConstantHandle = HandlePhi->hasConstantValue()) {
       HandleIdx = ConstantHandle;
-      DeadInsts.insert(HandlePhi);
-    }
+      delete HandlePhi;
+    } else
+      Builder.Insert(HandlePhi);
 
     return {GetPtrIdx, HandleIdx};
   }
