@@ -7207,12 +7207,9 @@ context: it is a bare coordinate in a file, not a location in a scope tree.
 are referenced by a {ref}`DILocation`'s `irlayers:` field. A location with no
 intermediate position omits `irlayers:` rather than referencing an empty list.
 
-Operand order is preserved and is part of the node's identity — two lists with
-the same entries in a different order are different nodes — and a consumer sees
-the entries in that order. LLVM itself attaches no meaning to the order: it does
-not define which level comes first and does not check any particular arrangement,
-so any convention (such as listing levels in lowering order) is an agreement
-between a producer and its consumer.
+The operands are a sequence: order is part of the node's identity, so two lists
+with the same entries in a different order are different nodes. LLVM attaches no
+meaning to the order and does not require any particular arrangement.
 
 Both node types are normally uniqued, so instructions sharing a position at some
 level share the corresponding node. `distinct` forms are legal; nothing in LLVM

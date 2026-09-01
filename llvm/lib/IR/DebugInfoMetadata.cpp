@@ -295,13 +295,12 @@ static Metadata *mergeIRLayers(LLVMContext &C, const DILocation *LocA,
                     L->getColumn());
   };
   SmallDenseSet<LayerKey, 2> BLayers;
-  for (unsigned I = 0, E = LB->getNumLayers(); I != E; ++I)
-    if (const DILayerLoc *R = LB->getLayer(I))
-      BLayers.insert(keyOf(R));
+  for (const MDOperand &Op : LB->layers())
+    BLayers.insert(keyOf(cast<DILayerLoc>(Op.get())));
   SmallVector<Metadata *, 2> Keep;
-  for (unsigned I = 0, E = LA->getNumLayers(); I != E; ++I) {
-    DILayerLoc *L = LA->getLayer(I);
-    if (L && BLayers.contains(keyOf(L)))
+  for (const MDOperand &Op : LA->layers()) {
+    auto *L = cast<DILayerLoc>(Op.get());
+    if (BLayers.contains(keyOf(L)))
       Keep.push_back(L);
   }
   if (Keep.empty())
@@ -401,9 +400,8 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     if (L1->getScope()->getSubprogram() != L2->getScope()->getSubprogram())
       return nullptr;
 
-    // Each merged frame keeps the intersection of the two frames'
-    // intermediate-IR layer sets, so a layer on any frame (e.g. the shared
-    // outermost kernel frame) survives the merge.
+    // Each merged location keeps the intersection of the two inputs'
+    // intermediate-IR layer sets, so a layer common to both survives.
     Metadata *MergedLayers = mergeIRLayers(C, L1, L2);
 
     // Find nearest common scope inside subprogram.

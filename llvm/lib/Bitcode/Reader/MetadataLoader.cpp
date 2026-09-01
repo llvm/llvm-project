@@ -1472,12 +1472,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_LOCATION: {
-    // Defined shapes: 5 (through inlinedAt), 6 (isImplicit), 8 (adds the Key
-    // Instructions fields), 9 (adds irlayers). Anything longer is a record from
-    // a newer writer and its trailing fields are ignored, which is what makes
-    // this encoding append-only; anything shorter, or a 7 (an atomGroup with no
-    // atomRank), is a shape no writer produces.
-    if (Record.size() < 5 || Record.size() == 7)
+    // 9: irlayers.
+    if (Record.size() < 5 || Record.size() == 7 || Record.size() > 9)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1521,7 +1517,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     IsDistinct = Record[0];
     SmallVector<Metadata *, 4> Elts;
     for (unsigned I = 1, E = Record.size(); I != E; ++I)
-      Elts.push_back(getMDOrNull(Record[I]));
+      Elts.push_back(getMD(Record[I]));
     MetadataList.assignValue(GET_OR_DISTINCT(DILayerLocList, (Context, Elts)),
                              NextMetadataNo);
     NextMetadataNo++;

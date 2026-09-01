@@ -2661,10 +2661,9 @@ public:
 /// A single intermediate-IR layer location.
 ///
 /// One source coordinate in an intermediate IR level (e.g. TileIR, MLIR) that
-/// sits between the high-level source and the final LLVM IR. Lightweight: it
-/// references its \a DIFile directly (no scope, no discriminator) and stores
-/// line/column in the free Metadata subclass-data slots. Grouped behind a
-/// \a DILayerLocList on \a DILocation's optional `irlayers` operand.
+/// sits between the high-level source and the final LLVM IR. It has no scope
+/// and references its \a DIFile directly. Grouped behind a \a DILayerLocList on
+/// \a DILocation's optional `irlayers` operand.
 ///
 /// Uses the SubclassData16 and SubclassData32 Metadata slots.
 class DILayerLoc : public MDNode {
@@ -2718,13 +2717,7 @@ public:
   }
 };
 
-/// A normally uniqued list of \a DILayerLoc entries (`distinct` is legal).
-///
-/// The container node behind \a DILocation's optional `irlayers` operand:
-/// essentially an \a MDTuple of \a DILayerLoc refs with typed accessors and its
-/// own metadata kind, so consumers can type-check it with
-/// `isa<DILayerLocList>`. Operand order is preserved and is part of the node's
-/// identity, but LLVM assigns it no meaning.
+/// A sequence of \a DILayerLoc entries.
 class DILayerLocList : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -2745,7 +2738,7 @@ class DILayerLocList : public MDNode {
                                           bool ShouldCreate = true);
 
   TempDILayerLocList cloneImpl() const {
-    return getTemporary(getContext(), SmallVector<Metadata *, 4>(operands()));
+    return getTemporary(getContext(), SmallVector<Metadata *>(operands()));
   }
 
 public:
@@ -3064,10 +3057,8 @@ public:
 
   Metadata *getRawScope() const { return getOperand(0); }
   Metadata *getRawInlinedAt() const {
-    // Layout: [scope, (inlinedAt?), (irlayers?)]. irlayers, when present, is
-    // always the last operand; discount it before the inlinedAt count trick.
-    unsigned NonLayerOps = getNumOperands() - (HasIRLayers ? 1 : 0);
-    if (NonLayerOps == 2)
+    // irlayers, when present, is always the last operand.
+    if (getNumOperands() - HasIRLayers == 2)
       return getOperand(1);
     return nullptr;
   }

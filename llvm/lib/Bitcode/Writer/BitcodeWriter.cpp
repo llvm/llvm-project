@@ -1932,7 +1932,7 @@ void ModuleBitcodeWriter::writeDILocation(const DILocation *N,
   Record.push_back(N->getAtomRank());
 
   unsigned AbbrevToUse = Abbrev;
-  if (Metadata *IRLayers = N->getRawIRLayers()) {
+  if (DILayerLocList *IRLayers = N->getIRLayers()) {
     if (!DILocationLayersAbbrev)
       DILocationLayersAbbrev = createDILocationAbbrev(/*WithIRLayers=*/true);
     AbbrevToUse = DILocationLayersAbbrev;
@@ -1959,8 +1959,8 @@ void ModuleBitcodeWriter::writeDILayerLocList(const DILayerLocList *N,
                                               SmallVectorImpl<uint64_t> &Record,
                                               unsigned Abbrev) {
   Record.push_back(N->isDistinct());
-  for (auto &I : N->operands())
-    Record.push_back(VE.getMetadataOrNullID(I));
+  for (const MDOperand &Op : N->layers())
+    Record.push_back(VE.getMetadataID(Op.get()));
   Stream.EmitRecord(bitc::METADATA_LAYERLOCLIST, Record, Abbrev);
   Record.clear();
 }
@@ -3926,7 +3926,7 @@ void ModuleBitcodeWriter::writeFunction(
           Vals.push_back(DL->getAtomRank());
 
           unsigned DLAbbrev = FUNCTION_DEBUG_LOC_ABBREV;
-          if (Metadata *IRLayers = DL->getRawIRLayers()) {
+          if (DILayerLocList *IRLayers = DL->getIRLayers()) {
             DLAbbrev = FUNCTION_DEBUG_LOC_LAYERS_ABBREV;
             Vals.push_back(VE.getMetadataOrNullID(IRLayers));
           }
