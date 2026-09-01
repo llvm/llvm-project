@@ -445,6 +445,45 @@ TEST_F(MemoryTest, TestReadStopsAtAnInvalidRange) {
   EXPECT_TRUE(inside_error.Fail());
 }
 
+TEST_F(MemoryTest, TestUnusableCacheLineSize) {
+  ArchSpec arch("arm64-apple-macosx");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  // A Process copies the global properties when it is constructed, so the
+  // setting must be in place before CreateProcess, and put back afterwards.
+  struct SettingGuard {
+    ~SettingGuard() {
+      Process::GetGlobalProperties().SetPropertyValue(
+          nullptr, eVarSetOperationClear, "memory-cache-line-size", "");
+    }
+  } restore_setting;
+
+  auto set_line_size = [](const char *setting) {
+    return Process::GetGlobalProperties().SetPropertyValue(
+        nullptr, eVarSetOperationAssign, "memory-cache-line-size", setting);
+  };
+
+  // A usable setting must take effect, or the checks below prove nothing.
+  ASSERT_TRUE(set_line_size("256").Success());
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  DummyProcess *process =
+      static_cast<DummyProcess *>(CreateProcess(target_sp).get());
+  EXPECT_EQ(process->GetMemoryCacheLineSize(), 256u);
+
+  for (const char *setting : {"0", "4294967296"}) {
+    SCOPED_TRACE(setting);
+    EXPECT_TRUE(set_line_size(setting).Fail());
+    // Refused, so the last usable value is still in effect.
+    EXPECT_EQ(process->GetMemoryCacheLineSize(), 256u);
+    TargetSP later_target_sp = CreateTarget(debugger_sp, arch);
+    EXPECT_EQ(CreateProcess(later_target_sp)->GetMemoryCacheLineSize(), 256u);
+  }
+}
+
 TEST_F(MemoryTest, TestReadInteger) {
   ArchSpec arch("x86_64-apple-macosx-");
 

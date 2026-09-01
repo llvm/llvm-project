@@ -321,8 +321,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_fp_sum_reassociation, false))
     opts.SplitSumExpressionTree = 1;
 
-  if (args.getLastArg(clang::options::OPT_floop_interchange))
-    opts.InterchangeLoops = 1;
+  // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),
+  // which enables the pass whenever the optimization pipeline runs.
+  opts.InterchangeLoops =
+      args.hasFlag(clang::options::OPT_floop_interchange,
+                   clang::options::OPT_fno_loop_interchange, true);
 
   if (args.getLastArg(clang::options::OPT_fexperimental_loop_fusion))
     opts.FuseLoops = 1;
@@ -1990,6 +1993,10 @@ void CompilerInvocation::setDefaultPredefinitions() {
   case llvm::Triple::ArchType::aarch64:
     fortranOptions.predefinitions.emplace_back("__aarch64__", "1");
     fortranOptions.predefinitions.emplace_back("__aarch64", "1");
+    break;
+  case llvm::Triple::ArchType::systemz:
+    fortranOptions.predefinitions.emplace_back("__s390x__", "1");
+    fortranOptions.predefinitions.emplace_back("__s390x", "1");
     break;
   }
 }

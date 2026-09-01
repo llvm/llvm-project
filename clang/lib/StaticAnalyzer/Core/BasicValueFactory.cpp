@@ -89,16 +89,16 @@ BasicValueFactory::~BasicValueFactory() {
 
 APSIntPtr BasicValueFactory::getValue(const llvm::APSInt &X) {
   llvm::FoldingSetNodeID ID;
-  void *InsertPos;
+  llvm::FoldingSetInsertToken InsertToken;
 
   using FoldNodeTy = llvm::FoldingSetNodeWrapper<llvm::APSInt>;
 
   X.Profile(ID);
-  FoldNodeTy* P = APSIntSet.FindNodeOrInsertPos(ID, InsertPos);
+  FoldNodeTy *P = APSIntSet.lookup(ID, InsertToken);
 
   if (!P) {
     P = new (BPAlloc) FoldNodeTy(X);
-    APSIntSet.InsertNode(P, InsertPos);
+    APSIntSet.insert(P, InsertToken);
   }
 
   // We own the APSInt object. It's safe here.
@@ -126,13 +126,13 @@ BasicValueFactory::getCompoundValData(QualType T,
                                       llvm::ImmutableList<SVal> Vals) {
   llvm::FoldingSetNodeID ID;
   CompoundValData::Profile(ID, T, Vals);
-  void *InsertPos;
+  llvm::FoldingSetInsertToken InsertToken;
 
-  CompoundValData* D = CompoundValDataSet.FindNodeOrInsertPos(ID, InsertPos);
+  CompoundValData *D = CompoundValDataSet.lookup(ID, InsertToken);
 
   if (!D) {
     D = new (BPAlloc) CompoundValData(T, Vals);
-    CompoundValDataSet.InsertNode(D, InsertPos);
+    CompoundValDataSet.insert(D, InsertToken);
   }
 
   return D;
@@ -143,14 +143,13 @@ BasicValueFactory::getLazyCompoundValData(const StoreRef &store,
                                           const TypedValueRegion *region) {
   llvm::FoldingSetNodeID ID;
   LazyCompoundValData::Profile(ID, store, region);
-  void *InsertPos;
+  llvm::FoldingSetInsertToken InsertToken;
 
-  LazyCompoundValData *D =
-    LazyCompoundValDataSet.FindNodeOrInsertPos(ID, InsertPos);
+  LazyCompoundValData *D = LazyCompoundValDataSet.lookup(ID, InsertToken);
 
   if (!D) {
     D = new (BPAlloc) LazyCompoundValData(store, region);
-    LazyCompoundValDataSet.InsertNode(D, InsertPos);
+    LazyCompoundValDataSet.insert(D, InsertToken);
   }
 
   return D;
@@ -160,14 +159,13 @@ const PointerToMemberData *BasicValueFactory::getPointerToMemberData(
     const NamedDecl *ND, llvm::ImmutableList<const CXXBaseSpecifier *> L) {
   llvm::FoldingSetNodeID ID;
   PointerToMemberData::Profile(ID, ND, L);
-  void *InsertPos;
+  llvm::FoldingSetInsertToken InsertToken;
 
-  PointerToMemberData *D =
-      PointerToMemberDataSet.FindNodeOrInsertPos(ID, InsertPos);
+  PointerToMemberData *D = PointerToMemberDataSet.lookup(ID, InsertToken);
 
   if (!D) {
     D = new (BPAlloc) PointerToMemberData(ND, L);
-    PointerToMemberDataSet.InsertNode(D, InsertPos);
+    PointerToMemberDataSet.insert(D, InsertToken);
   }
 
   return D;
@@ -351,7 +349,7 @@ BasicValueFactory::getPersistentSValWithData(const SVal& V, uintptr_t Data) {
   if (!PersistentSVals) PersistentSVals = new PersistentSValsTy();
 
   llvm::FoldingSetNodeID ID;
-  void *InsertPos;
+  llvm::FoldingSetInsertToken InsertToken;
   V.Profile(ID);
   ID.AddPointer((void*) Data);
 
@@ -359,11 +357,11 @@ BasicValueFactory::getPersistentSValWithData(const SVal& V, uintptr_t Data) {
 
   using FoldNodeTy = llvm::FoldingSetNodeWrapper<SValData>;
 
-  FoldNodeTy* P = Map.FindNodeOrInsertPos(ID, InsertPos);
+  FoldNodeTy *P = Map.lookup(ID, InsertToken);
 
   if (!P) {
     P = new (BPAlloc) FoldNodeTy(std::make_pair(V, Data));
-    Map.InsertNode(P, InsertPos);
+    Map.insert(P, InsertToken);
   }
 
   return P->getValue();
@@ -375,7 +373,7 @@ BasicValueFactory::getPersistentSValPair(const SVal& V1, const SVal& V2) {
   if (!PersistentSValPairs) PersistentSValPairs = new PersistentSValPairsTy();
 
   llvm::FoldingSetNodeID ID;
-  void *InsertPos;
+  llvm::FoldingSetInsertToken InsertToken;
   V1.Profile(ID);
   V2.Profile(ID);
 
@@ -383,11 +381,11 @@ BasicValueFactory::getPersistentSValPair(const SVal& V1, const SVal& V2) {
 
   using FoldNodeTy = llvm::FoldingSetNodeWrapper<SValPair>;
 
-  FoldNodeTy* P = Map.FindNodeOrInsertPos(ID, InsertPos);
+  FoldNodeTy *P = Map.lookup(ID, InsertToken);
 
   if (!P) {
     P = new (BPAlloc) FoldNodeTy(std::make_pair(V1, V2));
-    Map.InsertNode(P, InsertPos);
+    Map.insert(P, InsertToken);
   }
 
   return P->getValue();

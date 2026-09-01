@@ -1,8 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: not %clang_cc1 %s -o - -S -triple=amdgpu-amd-amdhsa 2>&1 | FileCheck %s
+// RUN: %clang_cc1 %s -fsyntax-only -triple=amdgpu-amd-amdhsa -verify
 
 void test_amdgcn_fence_failure() {
-
-  // CHECK: error: Unsupported atomic synchronization scope
-  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "foobar");
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "foobar"); // expected-error {{unsupported atomic synchronization scope 'foobar'}}
 }

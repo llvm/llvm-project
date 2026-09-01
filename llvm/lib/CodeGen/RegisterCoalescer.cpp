@@ -2617,7 +2617,8 @@ private:
                              const MachineInstr &ImpDef) {
       assert(ImpDef.isImplicitDef());
       ErasableImplicitDef = false;
-      ValidLanes = TRI.getSubRegIndexLaneMask(ImpDef.getOperand(0).getSubReg());
+      ValidLanes |=
+          TRI.getSubRegIndexLaneMask(ImpDef.getOperand(0).getSubReg());
     }
   };
 
