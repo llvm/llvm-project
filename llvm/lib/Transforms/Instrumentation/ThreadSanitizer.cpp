@@ -109,7 +109,7 @@ namespace {
 /// ensures the __tsan_init function is in the list of global constructors for
 /// the module.
 struct ThreadSanitizer {
-  ThreadSanitizer() {
+  ThreadSanitizer(ThreadSanitizerOptions Options) : Options(Options) {
     // Check options and warn user.
     if (ClInstrumentReadBeforeWrite && ClCompoundReadBeforeWrite) {
       errs()
@@ -172,6 +172,7 @@ private:
   FunctionCallee TsanVptrUpdate;
   FunctionCallee TsanVptrLoad;
   FunctionCallee MemmoveFn, MemcpyFn, MemsetFn;
+  ThreadSanitizerOptions Options;
 };
 
 void insertModuleCtor(Module &M) {
@@ -184,9 +185,19 @@ void insertModuleCtor(Module &M) {
 }
 }  // namespace
 
+ThreadSanitizerPass::ThreadSanitizerPass(ThreadSanitizerOptions Options)
+    : Options(Options) {
+  if (ClInstrumentMemoryAccesses.getNumOccurrences() > 0)
+    this->Options.InstrumentMemoryAccesses = ClInstrumentMemoryAccesses;
+  if (ClInstrumentAtomics.getNumOccurrences() > 0)
+    this->Options.InstrumentAtomics = ClInstrumentAtomics;
+  if (ClInstrumentMemIntrinsics.getNumOccurrences() > 0)
+    this->Options.InstrumentMemIntrinsics = ClInstrumentMemIntrinsics;
+}
+
 PreservedAnalyses ThreadSanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
-  ThreadSanitizer TSan;
+  ThreadSanitizer TSan(Options);
   if (TSan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F)))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -550,19 +561,19 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // (e.g. variables that do not escape, etc).
 
   // Instrument memory accesses only if we want to report bugs in the function.
-  if (ClInstrumentMemoryAccesses && SanitizeFunction)
+  if (Options.InstrumentMemoryAccesses && SanitizeFunction)
     for (const auto &II : AllLoadsAndStores) {
       Res |= instrumentLoadOrStore(II, DL);
     }
 
   // Instrument atomic memory accesses in any case (they can be used to
   // implement synchronization).
-  if (ClInstrumentAtomics)
+  if (Options.InstrumentAtomics)
     for (auto *Inst : AtomicAccesses) {
       Res |= instrumentAtomic(Inst, DL);
     }
 
-  if (ClInstrumentMemIntrinsics && SanitizeFunction)
+  if (Options.InstrumentMemIntrinsics && SanitizeFunction)
     for (auto *Inst : MemIntrinCalls) {
       Res |= instrumentMemIntrinsic(Inst);
     }
