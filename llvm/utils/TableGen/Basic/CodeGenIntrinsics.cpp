@@ -427,8 +427,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
           TheDef->getLoc(),
           formatv("RangeSet requires ImmArg for argument {}", RangeSet.ArgNo));
 
-  // Default values are not yet supported for overloaded intrinsics
-  // (overloaded support will come in a follow-up).
   if (isOverloaded &&
       llvm::any_of(ParamDefaultValues, [](const std::optional<uint64_t> &DV) {
         return DV.has_value();
@@ -437,8 +435,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
                     "default argument values are not supported for "
                     "overloaded intrinsics");
 
-  // Validate: defaults must form a contiguous trailing block ending at
-  // the last parameter (mirrors C++ default-argument rules).
   unsigned NumParams = IS.ParamTys.size();
   bool SeenDefault = false;
   for (unsigned i = 0; i < NumParams; ++i) {
