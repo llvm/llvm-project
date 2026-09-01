@@ -43,22 +43,22 @@ void main(uint GI : SV_GroupIndex) {
   // as 2 * 5 * 4 + 3 * 4 = 52 and the following indices are sequential.
   
   // CHECK-NEXT: %[[Ptr_Tmp2_0:.*]] = getelementptr [4 x %"class.hlsl::RWBuffer"], ptr %[[Tmp2]], i32 0, i32 0
-  // CHECK-NEXT: call void @hlsl::RWBuffer<int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // CHECK-NEXT: call {{(spir_func )?}}void @hlsl::RWBuffer<int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align {{(4|8)}} %[[Ptr_Tmp2_0]], 
   // CHECK-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 0, i32 noundef 52, ptr noundef @[[BufB]])
   
   // CHECK-NEXT: %[[Ptr_Tmp2_1:.*]] = getelementptr [4 x %"class.hlsl::RWBuffer"], ptr %[[Tmp2]], i32 0, i32 1
-  // CHECK-NEXT: call void @hlsl::RWBuffer<int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // CHECK-NEXT: call {{(spir_func )?}}void @hlsl::RWBuffer<int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align {{(4|8)}} %[[Ptr_Tmp2_1]], 
   // CHECK-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 0, i32 noundef 53, ptr noundef @[[BufB]])
   
   // CHECK-NEXT: %[[Ptr_Tmp2_2:.*]] = getelementptr [4 x %"class.hlsl::RWBuffer"], ptr %[[Tmp2]], i32 0, i32 2
-  // CHECK-NEXT: call void @hlsl::RWBuffer<int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // CHECK-NEXT: call {{(spir_func )?}}void @hlsl::RWBuffer<int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align {{(4|8)}} %[[Ptr_Tmp2_2]], 
   // CHECK-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 0, i32 noundef 54, ptr noundef @[[BufB]])
 
   // CHECK-NEXT: %[[Ptr_Tmp2_3:.*]] = getelementptr [4 x %"class.hlsl::RWBuffer"], ptr %[[Tmp2]], i32 0, i32 3
-  // CHECK-NEXT: call void @hlsl::RWBuffer<int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // CHECK-NEXT: call {{(spir_func )?}}void @hlsl::RWBuffer<int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align {{(4|8)}} %[[Ptr_Tmp2_3]], 
   // CHECK-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 0, i32 noundef 55, ptr noundef @[[BufB]])
 

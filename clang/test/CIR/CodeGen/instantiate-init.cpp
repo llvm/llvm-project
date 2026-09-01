@@ -60,10 +60,10 @@ void init_vec_using_initalizer_list() {
 // CIR:   cir.yield
 // CIR: }
 
-// LLVM:   %[[COERCE:.*]] = alloca %"class.std::initializer_list<int>", i64 1, align 8
-// LLVM:   %[[VEC_ADDR:.*]] = alloca %struct.Vector, i64 1, align 1
-// LLVM:   %[[AGG_ADDR:.*]] = alloca %"class.std::initializer_list<int>", i64 1, align 8
-// LLVM:   %[[INIT_LIST_ADDR:.*]] = alloca [3 x i32], i64 1, align 4
+// LLVM:   %[[COERCE:.*]] = alloca %"class.std::initializer_list<int>", align 8
+// LLVM:   %[[VEC_ADDR:.*]] = alloca %struct.Vector, align 1
+// LLVM:   %[[AGG_ADDR:.*]] = alloca %"class.std::initializer_list<int>", align 8
+// LLVM:   %[[INIT_LIST_ADDR:.*]] = alloca [3 x i32], align 4
 // LLVM:   %[[INIT_LIST_PTR:.*]] = getelementptr i32, ptr %[[INIT_LIST_ADDR]], i32 0
 // LLVM:   store i32 0, ptr %[[INIT_LIST_PTR]], align 4
 // LLVM:   %[[ELEM_1_PTR:.*]] = getelementptr i32, ptr %[[INIT_LIST_PTR]], i64 1

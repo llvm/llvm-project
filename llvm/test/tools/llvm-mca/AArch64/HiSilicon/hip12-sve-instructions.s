@@ -562,11 +562,15 @@
 # CHECK-NEXT:  1      2     0.50                        facge	p0.h, p0/z, z1.h, z0.h
 # CHECK-NEXT:  1      2     0.50                        facge	p0.s, p0/z, z0.s, z1.s
 # CHECK-NEXT:  1      2     0.50                        facge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      2     0.50                        facge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  1      2     0.50                        facge	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  1      2     0.50                        facgt	p0.d, p0/z, z0.d, z1.d
 # CHECK-NEXT:  1      2     0.50                        facgt	p0.d, p0/z, z1.d, z0.d
 # CHECK-NEXT:  1      2     0.50                        facgt	p0.h, p0/z, z0.h, z1.h
 # CHECK-NEXT:  1      2     0.50                        facgt	p0.h, p0/z, z1.h, z0.h
 # CHECK-NEXT:  1      2     0.50                        facgt	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  1      2     0.50                        facgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      2     0.50                        facgt	p0.d, p0/z, z1.d, z0.d
 # CHECK-NEXT:  1      2     0.50                        facgt	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  1      2     0.50                        fadd	z0.d, p0/m, z0.d, #0.5
 # CHECK-NEXT:  1      2     0.50                        fadd	z0.d, p7/m, z0.d, z31.d
@@ -3449,7 +3453,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2.0]  [2.1]  [2.2]  [3]    [4]    [5]    [6]    [7]    [8]    [9.0]  [9.1]  [10.0] [10.1] [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -     466.67 466.67 466.67 52.83  61.33  52.83  61.33  77.33  77.33  401.00 401.00 401.00 401.00 1726.50 1699.50 1726.50 1699.50
+# CHECK-NEXT:  -      -      -     466.67 466.67 466.67 52.83  61.33  52.83  61.33  77.33  77.33  401.00 401.00 401.00 401.00 1728.50 1701.50 1728.50 1701.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2.0]  [2.1]  [2.2]  [3]    [4]    [5]    [6]    [7]    [8]    [9.0]  [9.1]  [10.0] [10.1] [11]   [12]   [13]   [14]   Instructions:
@@ -4005,11 +4009,15 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facge	p0.h, p0/z, z1.h, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facge	p0.s, p0/z, z0.s, z1.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facge	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facgt	p0.d, p0/z, z0.d, z1.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facgt	p0.d, p0/z, z1.d, z0.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facgt	p0.h, p0/z, z0.h, z1.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facgt	p0.h, p0/z, z1.h, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facgt	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facgt	p0.d, p0/z, z1.d, z0.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   facgt	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   fadd	z0.d, p0/m, z0.d, #0.5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   fadd	z0.d, p7/m, z0.d, z31.d

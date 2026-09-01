@@ -525,6 +525,27 @@ def testTileInterchangeMixed(target):
 
 @run
 @create_sequence
+def testTileInterchangeArrayAttr(target):
+    interchange = ArrayAttr.get(
+        [IntegerAttr.get(IndexType.get(), 0), IntegerAttr.get(IndexType.get(), 1)]
+    )
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=interchange)
+    # CHECK-LABEL: TEST: testTileInterchangeArrayAttr
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for
+    # CHECK-SAME: [4, 8] interchange = [0, 1]
+
+
+@run
+@create_sequence
+def testTileInterchangeTuple(target):
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=(0, 1))
+    # CHECK-LABEL: TEST: testTileInterchangeTuple
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for
+    # CHECK-SAME: [4, 8] interchange = [0, 1]
+
+
+@run
+@create_sequence
 def testTileZero(target):
     structured.TileUsingForOp(target, sizes=[4, 0, 2, 0], interchange=[0, 1, 2, 3])
     # CHECK-LABEL: TEST: testTileZero

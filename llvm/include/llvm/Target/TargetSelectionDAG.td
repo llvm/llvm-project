@@ -573,6 +573,10 @@ def vecreduce_fmin  : SDNode<"ISD::VECREDUCE_FMIN", SDTFPVecReduce>;
 def vecreduce_fmax  : SDNode<"ISD::VECREDUCE_FMAX", SDTFPVecReduce>;
 def vecreduce_fminimum : SDNode<"ISD::VECREDUCE_FMINIMUM", SDTFPVecReduce>;
 def vecreduce_fmaximum : SDNode<"ISD::VECREDUCE_FMAXIMUM", SDTFPVecReduce>;
+def vecreduce_fminimumnum : SDNode<"ISD::VECREDUCE_FMINIMUMNUM",
+                                   SDTFPVecReduce>;
+def vecreduce_fmaximumnum : SDNode<"ISD::VECREDUCE_FMAXIMUMNUM",
+                                   SDTFPVecReduce>;
 
 def partial_reduce_umla : SDNode<"ISD::PARTIAL_REDUCE_UMLA",
                                  SDTPartialReduceMLA>;
@@ -941,6 +945,13 @@ def get_active_lane_mask
           "ISD::GET_ACTIVE_LANE_MASK",
           SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>,
           []>;
+
+def vector_match
+    : SDNode<"ISD::VECTOR_MATCH",
+             SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>,
+                                  SDTCisVec<3>, SDTCisSameNumEltsAs<0, 1>,
+                                  SDTCisSameAs<0, 3>]>,
+             []>;
 
 // Nodes for intrinsics, you should use the intrinsic itself and let tblgen use
 // these internally.  Don't reference these directly.

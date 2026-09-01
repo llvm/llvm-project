@@ -2686,8 +2686,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId) override {
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy * /*Context*/) override {
     // Allocate and initialize the image object.
     AMDGPUDeviceImageTy *AMDImage = Plugin.allocate<AMDGPUDeviceImageTy>();
     new (AMDImage) AMDGPUDeviceImageTy(ImageId, *this, std::move(TgtImage));
@@ -2728,6 +2728,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (!MemoryPool)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "no memory pool for the specified allocation kind");
+
+    // See allocate() for the registration of host / shared memory as pinned
+    // memory.
+    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+      if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
+        return Err;
 
     if (auto Err = MemoryPool->deallocate(TgtPtr))
       return Err;
@@ -3093,12 +3099,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Stream->pushMemoryCopyH2DAsync(TgtPtr, PatternPtr, PinnedPtr,
                                           PatternSize, PinnedMemoryManager,
                                           Size / PatternSize);
-  }
-
-  /// Initialize the async info
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    // TODO: Implement this function.
-    return Plugin::success();
   }
 
   interop_spec_t selectInteropPreference(int32_t InteropType,
@@ -3979,6 +3979,15 @@ private:
   }
 };
 
+struct AMDGPUPluginContextTy final : public PluginContextTy {
+  using PluginContextTy::PluginContextTy;
+
+  Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
+    // TODO: Implement this function.
+    return Plugin::success();
+  }
+};
+
 /// Class implementing the AMDGPU-specific functionalities of the plugin.
 struct AMDGPUPluginTy final : public GenericPluginTy {
   /// Create an AMDGPU plugin and initialize the AMDGPU driver.
@@ -4081,6 +4090,11 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
                                 int32_t NumDevices) override {
     return new AMDGPUDeviceTy(Plugin, DeviceId, NumDevices, getHostDevice(),
                               getKernelAgent(DeviceId));
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<AMDGPUPluginContextTy>(*this, Devices);
   }
 
   /// Creates an AMDGPU global handler.
@@ -4527,6 +4541,12 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
     // Enable all valid kernel agents to access the buffer.
     if (auto Err = MemoryPool->enableAccess(Alloc, Size, Agents))
       return std::move(Err);
+
+    // Register host / shared memory as pinned memory, so that transfers reading
+    // from it can take a device-accessible path.
+    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+      if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
+        return std::move(Err);
   }
 
   return Alloc;
