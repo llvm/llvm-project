@@ -1922,9 +1922,7 @@ void ASTReader::buildLoadedSLocRemapping(
     unsigned NumDupEntries, unsigned ReducedNumEntries) {
   unsigned N = Files.size();
 
-  // With no duplicates a single identity segment reproduces the flat shift and
-  // the local-to-global ID mapping stays linear. Record each file so a later
-  // module can reuse it.
+  // Without duplicates, the remap is the original flat shift.
   if (NumDupEntries == 0) {
     F.SLocRemap.push_back({0, ~SourceLocation::UIntTy(0),
                            static_cast<int64_t>(F.SLocEntryBaseOffset) - 2});
@@ -1932,6 +1930,7 @@ void ASTReader::buildLoadedSLocRemapping(
     F.SLocRemapGlobal.push_back(
         {F.SLocEntryBaseOffset, F.SLocEntryBaseOffset + SLocSpaceSize,
          static_cast<int64_t>(F.SLocEntryBaseOffset) - 2});
+    // Record each file for deduplication by later modules.
     for (unsigned I = 0; I != N; ++I)
       if (!Files[I].Name.empty())
         registerPrimaryLoadedFile(Files[I], F.SLocEntryBaseOffset + Offsets[I],
@@ -2009,8 +2008,7 @@ ASTReader::remapSLocEntryOffset(ModuleFile &F, uint32_t LocalOffset) const {
 
 int64_t ASTReader::getSLocInverseDelta(ModuleFile &F,
                                        SourceLocation::UIntTy G) const {
-  // The list is sorted by global start and its segments tile this module's
-  // range, so the covering segment is the last one whose start is <= G.
+  // SLocRemapGlobal is sorted by global start; find the segment containing G.
   if (!F.SLocRemapGlobal.empty()) {
     auto It = llvm::upper_bound(
         F.SLocRemapGlobal, G,

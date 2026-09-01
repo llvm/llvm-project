@@ -6862,9 +6862,8 @@ ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc) {
       SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex);
 
 #ifndef NDEBUG
-  // The reader must recover Loc from what we wrote, which holds only if
-  // BaseOffset inverts its local-to-global map. A stale inverse otherwise goes
-  // unnoticed until the location resolves into an unrelated file.
+  // Verify that serialization and deserialization round-trip loaded locations.
+  // A stale inverse may otherwise resolve the location to an unrelated file.
   if (OwningModuleFile) {
     SourceLocation Decoded = SourceLocationEncoding::decode(Encoded).first;
     assert(getChain()->TranslateSourceLocation(*OwningModuleFile, Decoded) ==

@@ -755,11 +755,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   static const SourceLocation::UIntTy MaxLoadedOffset =
       1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
 
-  // Source location deduplication. A file included into many modules is
-  // serialized into each of their PCMs. ASTReader keeps the first loaded copy
-  // and redirects later modules' references to it instead of allocating a
-  // duplicate SLoc range. These counters record the address space that reuse
-  // saved, for -print-stats.
+  // Source location deduplication statistics.
 private:
   /// Number of loaded file entries reused from an earlier module.
   unsigned NumDuplicateLoadedFiles = 0;

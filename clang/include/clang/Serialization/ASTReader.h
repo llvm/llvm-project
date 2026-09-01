@@ -2399,18 +2399,14 @@ public:
   llvm::Expected<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
                                                         unsigned Index);
 
-  /// Identity of an input file, built from serialized metadata so we touch no
-  /// files at load. Name is the resolved path, so two files with the same
-  /// spelling in different directories stay distinct. An empty Name means a
-  /// non-file entry like a buffer or expansion, and never deduplicates.
+  /// Identity of an input file used for source location deduplication.
+  /// Name is the resolved path; an empty Name denotes a non-file entry.
   struct SLocFileIdentity {
     std::string Name;
     off_t Size = 0;
   };
 
-  /// Where a file's SLoc entry first landed in the loaded address space, kept
-  /// with the identity fields used to confirm a later module's same-named entry
-  /// really is the same file.
+  /// Location and identity of the first loaded copy of a file.
   struct PrimaryLoadedFileLoc {
     SourceLocation::UIntTy Offset = 0; ///< global start offset
     int ID = 0;                        ///< global SLoc entry ID
@@ -2559,16 +2555,13 @@ public:
     // translated or refactor the code to make it clear that
     // TranslateSourceLocation won't be called with translated source location.
 
-    // When a file in this module was reused from an earlier one, the map is
-    // piecewise rather than a single shift, so find the segment covering this
-    // location. A macro location keeps its offset in the low bits with the high
-    // bit set, so match on the offset part and re-apply the bit to the result.
+    // The remap is piecewise when files are deduplicated. SourceLocation's
+    // MacroID bit is not part of the offset used to select a segment.
     if (!ModuleFile.SLocRemap.empty()) {
       SourceLocation::UIntTy Raw = Loc.getRawEncoding();
       SourceLocation::UIntTy MacroBit = Raw & SourceLocation::MacroIDBit;
       SourceLocation::UIntTy Low = Raw & ~SourceLocation::MacroIDBit;
-      // The list is sorted by LocalBegin and its segments are contiguous, so
-      // the covering segment is the last one whose LocalBegin is <= Low.
+      // Find the segment containing Low.
       auto It = llvm::upper_bound(
           ModuleFile.SLocRemap, Low,
           [](SourceLocation::UIntTy V,
