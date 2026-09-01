@@ -124,9 +124,6 @@ static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
 
-static cl::opt<bool> UseTTIForRP("slsr-tti-rp", cl::init(false),
-                                 cl::desc("Use TTI to compute RP for SLSR-RP"));
-
 // RPFilter targets one pathological shape: a block holding many distinct
 // bases. Each basis contributes one extended live range no matter how many
 // candidates are rewritten against it, so it is the number of distinct bases,
@@ -1577,28 +1574,9 @@ private:
 
   unsigned computeRegWeight(Type *Ty) const {
     const DataLayout &DL = F->getDataLayout();
-    if (UseTTIForRP) {
-      // Aggregates legalize to a flat sequence of scalars; approximate rather
-      // than calling getRegUsageForType, which is llvm_unreachable on them.
-      if (!VectorType::isValidElementType(Ty->getScalarType()))
-        return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
 
-      // TTI's getRegUsageForType can be used for types that are
-      // validElementType(Ty->getScalarType()). However, even the valid vector
-      // type should be multiplited by get{Min}NumElements() to handle
-      // {ScalarVectorType}, FixedVectorType. Overall, getTypeSizeInBits(Ty)
-      // handing all those cases should be sufficient for heuristic.
-      unsigned RegUsage = TTI->getRegUsageForType(Ty);
-#if 0
-      if (FixedVectorType *FVT = dyn_cast<FixedVectorType>(Ty))
-        RegUsage *= FVT->getNumElements();
-      else if (ScalableVectorType *SVT = dyn_cast<ScalableVectorType>(Ty))
-        RegUsage *= SVT->getMinNumElements();
-#endif
-      return RegUsage;
-    }
-
-    // Default logic to compute RP.
+    // TTI's getRegUsageForType is less accurate than
+    // default logic to compute RP for targets like AMDGPU
     return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
   }
 
@@ -1684,79 +1662,6 @@ private:
     return BB.getName() == "for.cond.cleanup";
   }
 
-  unsigned maxPressureInBlock(const BasicBlock &BB, const ValueSet &LiveIn,
-                              const ValueSet &LiveOut) const {
-
-#if 1
-    bool IsDebugBlock = isDebugBlock(BB);
-    unsigned StoreCount = 0;
-#endif
-
-    SmallVector<const Instruction *, 128> Order;
-    DenseMap<const Instruction *, unsigned> Idx;
-    for (const Instruction &I : BB) {
-      if (I.isDebugOrPseudoInst())
-        continue;
-      Idx[&I] = Order.size();
-      Order.push_back(&I);
-    }
-
-    DenseMap<const Value *, unsigned> LastUse;
-    for (const Instruction &I : BB) {
-      if (I.isDebugOrPseudoInst() || isa<PHINode>(&I))
-        continue;
-      for (const Value *Op : I.operand_values())
-        if (isRegisterLike(Op))
-          LastUse[Op] = Idx[&I];
-    }
-    const unsigned End = Order.size();
-    for (const Value *V : LiveOut)
-      LastUse[V] = End; // survives the block; never retires here
-
-    ValueSet Open;
-    for (const Value *V : LiveIn)
-      Open.insert(V);
-
-    unsigned MaxW = 0;
-    for (unsigned i = 0; i != End; ++i) {
-      if (isa<StoreInst>(Order[i])) {
-        StoreCount++;
-      }
-      if (!Order[i]->getType()->isVoidTy())
-        Open.insert(Order[i]);
-
-      unsigned W = 0;
-      for (const Value *V : Open) {
-        auto RW = regWeight(V);
-        W += RW;
-        if (IsDebugBlock && StoreCount == 32) {
-          DEBUG_SLSR_RP({
-            dbgs() << "regweight: " << "i: " << i << " value: " << *V
-                   << " RW: " << RW << ", ";
-          });
-          // dbgs() << "W: " << W << "\n";
-        }
-
-        // W += regWeight(V);
-      }
-      MaxW = std::max(MaxW, W);
-
-      SmallVector<const Value *, 8> Dead;
-      for (const Value *V : Open) {
-        auto It = LastUse.find(V);
-        if (It == LastUse.end() || It->second <= i)
-          Dead.push_back(V);
-      }
-      for (const Value *V : Dead)
-        Open.erase(V);
-
-      if (IsDebugBlock && StoreCount == 32) {
-        DEBUG_SLSR_RP(dbgs() << "W: " << W << " MaxW: " << MaxW << "\n");
-      }
-    }
-    return MaxW;
-  }
-
   // Return true if I is a candidate and its basis is in the same bb, false
   // otherwise.
   bool insertBasisIfCand(const Instruction *I, ValueSet &LiveSetWithSLSR,
@@ -1776,17 +1681,6 @@ private:
     }
 
     return false;
-  }
-
-  // TODO: Remove
-  void updateLiveSetWithSLSR(ValueSet &LiveSetWithSLSR,
-                             const DenseSet<const Value *> &SeenLastUse,
-                             const Instruction &I, const Value *Op) const {
-    // LiveSet += {Cand.Basis} <-- Done already
-    // LiveSet -= {Op} if this is the last use of Op (i.e.
-    // SeenLastUse.contains(Op))
-    if (SeenLastUse.contains(Op))
-      LiveSetWithSLSR.erase(Op);
   }
 
   std::pair<unsigned, unsigned>
@@ -1882,7 +1776,7 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "SLSR on Function: " << F.getName() << "\n");
   // Traverse the dominator tree in the depth-first order. This order makes sure
   // all bases of a candidate are in Candidates when we process it.
-  for (auto *const Node : depth_first(DT))
+  for (const auto Node : depth_first(DT))
     for (auto &I : *(Node->getBlock()))
       allocateCandidatesAndFindBasis(&I);
 
@@ -1894,7 +1788,6 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   }
   sortCandidateInstructions();
 
-  ////////////////////////////////////////////////////
   DenseMap<Instruction *, Candidate *> PickedCandidateMap;
   for (Instruction *I : SortedCandidateInsts)
     if (Candidate *C = pickRewriteCandidate(I))
