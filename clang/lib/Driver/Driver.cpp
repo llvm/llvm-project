@@ -55,7 +55,6 @@
 #include "ToolChains/ZOS.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetID.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
@@ -1159,20 +1158,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       if (Target.getArch() == llvm::Triple::ArchType::UnknownArch) {
         Diag(diag::err_drv_invalid_or_unsupported_offload_target)
             << Target.str();
-        continue;
-      }
-
-      // A triple level approximation that catches the common cases early; the
-      // types are checked once the device adapts.
-      const llvm::Triple &HostTriple = C.getDefaultToolChain().getTriple();
-      if (TargetInfo::adaptsToHostTarget(Target, HostTriple) &&
-          Target.getArchPointerBitWidth() !=
-              HostTriple.getArchPointerBitWidth()) {
-        Diag(diag::err_incompatible_host_and_device_targets)
-            << Target.str() << HostTriple.str();
-        Diag(diag::note_incompatible_host_and_device_type)
-            << /*size*/ 1 << "void *" << HostTriple.getArchPointerBitWidth() / 8
-            << Target.getArchPointerBitWidth() / 8;
         continue;
       }
 

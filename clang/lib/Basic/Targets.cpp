@@ -836,42 +836,15 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
 using namespace clang::targets;
 
-TargetInfo::HostAdaptation
-TargetInfo::getHostAdaptation(const llvm::Triple &DeviceTriple,
-                              const llvm::Triple &HostTriple) {
-  // No recognizable host triple, so nothing to adapt to.
-  if (HostTriple.getArch() == llvm::Triple::UnknownArch)
-    return HostAdaptation::None;
-
-  // setAuxTarget() overwrites these, so constructor values are not yet final.
-  if (DeviceTriple.isAMDGPU() ||
-      (DeviceTriple.getArch() == llvm::Triple::spirv64 &&
-       DeviceTriple.getOS() == llvm::Triple::AMDHSA))
-    return HostAdaptation::SetAuxTarget;
-
-  // Logical SPIR-V sets these itself, with a 32-bit size_t by design.
-  if (DeviceTriple.isSPIRVLogical())
-    return HostAdaptation::None;
-
-  if (DeviceTriple.isSPIROrSPIRV())
-    return HostTriple.isSPIROrSPIRV() ? HostAdaptation::None
-                                      : HostAdaptation::Constructor;
-  if (DeviceTriple.isNVPTX())
-    return HostTriple.isNVPTX() ? HostAdaptation::None
-                                : HostAdaptation::Constructor;
-
-  return HostAdaptation::None;
-}
-
 bool TargetInfo::checkHostCompatibility(DiagnosticsEngine &Diags,
-                                        const llvm::Triple &HostTriple,
-                                        HostAdaptation Stage) const {
-  assert(Stage != HostAdaptation::None && "Nothing to check");
-  if (getHostAdaptation(getTriple(), HostTriple) != Stage)
+                                        const llvm::Triple &HostTriple) const {
+  // Logical SPIR-V has no pointer size to require.
+  if (getTriple().isSPIRVLogical())
     return true;
 
-  // The device data layout fixes the size and the alignment of a pointer, and
-  // with them the width of every integer type that has to hold one.
+  // Whatever this target took from the host target, it has to hold a pointer,
+  // whose size and alignment its own data layout fixes. A target that took
+  // nothing agrees with itself and is reported here in no case.
   unsigned Required = getTriple().getArchPointerBitWidth();
   struct Mismatch {
     unsigned Which;
@@ -921,11 +894,6 @@ TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
     return nullptr;
   }
   Target->TargetOpts = Opts;
-
-  // Targets that adapt in their constructor have done so by now.
-  if (!Target->checkHostCompatibility(Diags, llvm::Triple(Opts->HostTriple),
-                                      HostAdaptation::Constructor))
-    return nullptr;
 
   // Set the target CPU if specified.
   if (!Opts->CPU.empty() && !Target->setCPU(Opts->CPU)) {

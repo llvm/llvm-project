@@ -170,9 +170,9 @@ bool CompilerInstance::createTarget() {
   if (auto *Aux = getAuxTarget()) {
     getTarget().setAuxTarget(Aux);
 
-    if (!getTarget().checkHostCompatibility(
-            getDiagnostics(), Aux->getTriple(),
-            TargetInfo::HostAdaptation::SetAuxTarget))
+    // The target has taken everything it takes from the host target by now.
+    if (getLangOpts().isTargetDevice() &&
+        !getTarget().checkHostCompatibility(getDiagnostics(), Aux->getTriple()))
       return false;
   }
 
