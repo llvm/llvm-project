@@ -1165,7 +1165,7 @@ Value *InstCombinerImpl::tryFactorizationFolds(BinaryOperator &I) {
   BinaryOperator *Op0 = dyn_cast<BinaryOperator>(LHS);
   BinaryOperator *Op1 = dyn_cast<BinaryOperator>(RHS);
   Instruction::BinaryOps TopLevelOpcode = I.getOpcode();
-  Value *A, *B, *C, *D;
+  Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
   Instruction::BinaryOps LHSOpcode, RHSOpcode;
 
   if (Op0)
