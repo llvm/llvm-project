@@ -17,6 +17,7 @@
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/tcgetpgrp.h"
+#include "src/unistd/unlink.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -24,11 +25,13 @@
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcTcGetPgrpTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-// It's hard to test tcgetpgrp in unit tests, as the test process
-// is not typically associated with a terminal. We can probably achieve
-// this with fork()-ing a child process and creating the pseudo-terminal
-// fixture, but given that tcgetpgrp is a simple ioctl() wrapper (on Linux),
-// this complexity is likely not justified.
+// NOTE: We are not testing the kernel behavior, only how we wire up
+// and wrap kernel syscalls in libc interface (on Linux we wrap ioctl)
+// and propagate errors. It's hard to get good coverage of tcgetpgrp
+// in unit tests, as the test process is not typically associated with
+// a terminal. We can achieve this with fork()-ing a child process
+// and creating the pseudo-terminal fixture, but this complexity is
+// not justified.
 
 TEST_F(LlvmLibcTcGetPgrpTest, BadFd) {
   ASSERT_THAT(LIBC_NAMESPACE::tcgetpgrp(-1), Fails<pid_t>(EBADF));
@@ -42,4 +45,5 @@ TEST_F(LlvmLibcTcGetPgrpTest, NonTerminalFd) {
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::tcgetpgrp(fd), Fails<pid_t>(ENOTTY));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(test_file), Succeeds(0));
 }

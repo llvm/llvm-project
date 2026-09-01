@@ -465,6 +465,7 @@ add_libc_test(
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.tcgetpgrp
+    libc.src.unistd.unlink
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -482,6 +483,7 @@ add_libc_test(
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.tcsetpgrp
+    libc.src.unistd.unlink
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
