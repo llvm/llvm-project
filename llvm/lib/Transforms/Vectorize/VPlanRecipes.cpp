@@ -2096,6 +2096,26 @@ void VPPhiAccessors::setIncomingValueForBlock(const VPBasicBlock *VPBB,
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPhiAccessors::printPhiOperands(raw_ostream &O,
                                       VPSlotTracker &SlotTracker) const {
+  auto *BB = const_cast<VPBasicBlock *>(getAsRecipe()->getParent());
+  auto *Region = BB->getParent();
+
+  // incoming_values_and_blocks would crash if operands are out of sync with the
+  // predecessors. Detect that and have a separate path for printing such
+  // malformed phis (that can either be due to a bug or because we're dumping
+  // them in the middle of some kind of phi processing, like conversion to
+  // blends). The condition below loosely follows the logic in
+  // `VPBasicBlock::getCFGPredecessor`.
+  if ((!Region || Region->getEntry() != BB) &&
+      getAsRecipe()->getNumOperands() != BB->getNumPredecessors()) {
+    O << " malformed ";
+    interleaveComma(incoming_values(), O, [&O, &SlotTracker](auto V) {
+      O << "[ ";
+      V->printAsOperand(O, SlotTracker);
+      O << " ]";
+    });
+
+    return;
+  }
   interleaveComma(incoming_values_and_blocks(), O, [&O, &SlotTracker](auto Op) {
     O << "[ ";
     std::get<0>(Op)->printAsOperand(O, SlotTracker);
