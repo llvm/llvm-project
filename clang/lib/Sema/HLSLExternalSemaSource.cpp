@@ -296,14 +296,13 @@ static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
       .addStaticInitializationFunctions(false);
 }
 
-/// Set up TextureCube type: SRV cube texture. Locations are float3 direction
-/// vectors into the cube rather than texel coordinates, so cube textures have
-/// no Load, no operator[] and no mips member. Their sampling and gather
-/// methods also have no offset overloads.
-static BuiltinTypeDeclBuilder setupTextureCubeType(CXXRecordDecl *Decl,
-                                                   Sema &S) {
+/// Set up TextureCube and TextureCubeArray types: SRV cube textures. Locations
+/// are direction vectors into the cube rather than texel coordinates, so cube
+/// textures have no Load, no operator[] and no mips member. Their sampling and
+/// gather methods also have no offset overloads.
+static BuiltinTypeDeclBuilder setupTextureCubeType(CXXRecordDecl *Decl, Sema &S,
+                                                   bool IsArray) {
   constexpr ResourceDimension Dim = ResourceDimension::Cube;
-  constexpr bool IsArray = false;
   return BuiltinTypeDeclBuilder(S, Decl)
       .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim)
       .addDefaultHandleConstructor()
@@ -842,13 +841,32 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupTextureCubeType(Decl, *SemaPtr).completeDefinition();
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/false)
+        .completeDefinition();
   });
 
   auto *PartialSpecCube = addVectorTexturePartialSpecialization(
       *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
   onCompletion(PartialSpecCube, [this](CXXRecordDecl *Decl) {
-    setupTextureCubeType(Decl, *SemaPtr).completeDefinition();
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/false)
+        .completeDefinition();
+  });
+
+  // TextureCubeArray — same as TextureCube but IsArray=true, so locations gain
+  // an array slice and are float4.
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "TextureCubeArray")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/true).completeDefinition();
+  });
+
+  auto *PartialSpecCubeArray = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecCubeArray, [this](CXXRecordDecl *Decl) {
+    setupTextureCubeType(Decl, *SemaPtr, /*IsArray=*/true).completeDefinition();
   });
 }
 
