@@ -148,7 +148,7 @@ public:
         WaitEvents);
 
     if (Result == ze_result_t::ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {
-      Context.AppendLaunchKernelSupported.store(false,
+      Context.AppendLaunchKernelWithArgsSupported.store(false,
                                                 std::memory_order_release);
       return Plugin::error(
           ErrorCode::UNSUPPORTED,

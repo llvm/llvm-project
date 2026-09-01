@@ -60,7 +60,7 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
       Device.getL0Context().LaunchKernelWithArguments.available();
 
   if (AppendLaunchKernelWithArgsAvailable &&
-      Device.getL0Context().AppendLaunchKernelSupported.load(
+      Device.getL0Context().AppendLaunchKernelWithArgsSupported.load(
           std::memory_order_acquire)) {
     auto Err = CmdList->appendLaunchKernelWithArgs(
         Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
