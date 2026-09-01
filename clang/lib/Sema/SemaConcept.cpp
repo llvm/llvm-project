@@ -578,7 +578,7 @@ private:
         ConstraintSatisfactionChecker &Checker,
         const NormalizedConstraintWithParamMapping &Constraint,
         const MultiLevelTemplateArgumentList &MLTAL, UnsignedOrNone PackIndex,
-        std::optional<unsigned> PreviousDetailsSize = std::nullopt)
+        UnsignedOrNone PreviousDetailsSize = std::nullopt)
         : Checker(Checker), H(Checker.S, MLTAL, ID, PackIndex),
           PreviousDetailsSize(PreviousDetailsSize
                                   ? *PreviousDetailsSize
