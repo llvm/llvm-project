@@ -15,6 +15,7 @@
 #include "AMDGPUMCResourceInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -119,8 +120,7 @@ const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
                                                 MCContext &OutContext) {
   SmallPtrSet<const MCExpr *, 8> Seen;
   SmallVector<const MCExpr *, 8> WorkList;
-  SmallPtrSet<const MCSymbol *, 8> SeenUnassigned;
-  SmallVector<const MCExpr *, 8> Unassigned;
+  SmallSetVector<const MCSymbol *, 8> Unassigned;
   int64_t Maximum = 0;
 
   const MCExpr *RecExpr = RecSym->getVariableValue();
@@ -169,9 +169,8 @@ const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
         const MCExpr *SymVal = SymRef.getVariableValue();
         if (Seen.insert(SymVal).second)
           WorkList.push_back(SymVal);
-      } else if (&SymRef != AssigneeSym &&
-                 SeenUnassigned.insert(&SymRef).second) {
-        Unassigned.push_back(CurExpr);
+      } else if (&SymRef != AssigneeSym) {
+        Unassigned.insert(&SymRef);
       }
       break;
     }
@@ -193,8 +192,11 @@ const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
   if (Unassigned.empty())
     return MaxConst;
 
-  Unassigned.insert(Unassigned.begin(), MaxConst);
-  return AMDGPUMCExpr::createMax(Unassigned, OutContext);
+  SmallVector<const MCExpr *, 8> MaxArgs;
+  MaxArgs.push_back(MaxConst);
+  for (const MCSymbol *Sym : Unassigned)
+    MaxArgs.push_back(MCSymbolRefExpr::create(Sym, OutContext));
+  return AMDGPUMCExpr::createMax(MaxArgs, OutContext);
 }
 
 void MCResourceInfo::assignResourceInfoExpr(
