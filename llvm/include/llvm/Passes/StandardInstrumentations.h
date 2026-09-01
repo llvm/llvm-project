@@ -30,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Transforms/IPO/PGOVerify.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 
 #include <string>
@@ -614,6 +615,7 @@ class StandardInstrumentations {
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
   DroppedVariableStatsIR DroppedStatsIR;
+  IPGOVerifier IPGOVerification;
 
   bool VerifyEach;
 

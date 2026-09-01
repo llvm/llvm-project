@@ -1,0 +1,20 @@
+# IR level Instrumentation Flag
+:ir
+main
+# Func Hash:
+1124680652598534200
+# Num Counters:
+3
+# Counter Values:
+1000000000
+1000
+1
+
+test
+# Func Hash:
+382993475055910911
+# Num Counters:
+2
+# Counter Values:
+2000000000
+1000000000

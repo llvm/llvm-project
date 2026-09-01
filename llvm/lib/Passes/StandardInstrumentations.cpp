@@ -2517,6 +2517,7 @@ void StandardInstrumentations::registerCallbacks(
   OptPassGate.registerCallbacks(PIC);
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
+  IPGOVerification.registerCallbacks(PIC);
   if (VerifyEach)
     Verify.registerCallbacks(PIC, MAM);
   PrintChangedDiff.registerCallbacks(PIC);
