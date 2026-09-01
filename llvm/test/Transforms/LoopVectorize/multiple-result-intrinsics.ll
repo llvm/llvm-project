@@ -827,18 +827,8 @@ define void @sincos_predicated_store(i1 %c, ptr noalias %src, ptr noalias %dst, 
 ; CHECK:    store <2 x double> zeroinitializer, ptr [[TMP3:%.*]], align 8
 ; CHECK:  [[IF1:.*:]]
 ; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP0]], 1
-; CHECK:    br i1 [[TMP1:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:  [[PRED_STORE_IF]]:
-; CHECK:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
-; CHECK:    store double [[TMP4]], ptr [[COS_DST]], align 8
-; CHECK:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:  [[PRED_STORE_CONTINUE]]:
-; CHECK:    br i1 [[TMP1]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; CHECK:  [[PRED_STORE_IF1]]:
 ; CHECK:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; CHECK:    store double [[TMP5]], ptr [[COS_DST]], align 8
-; CHECK:    br label %[[PRED_STORE_CONTINUE2]]
-; CHECK:  [[PRED_STORE_CONTINUE2]]:
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ; CHECK:  [[EXIT1:.*:]]

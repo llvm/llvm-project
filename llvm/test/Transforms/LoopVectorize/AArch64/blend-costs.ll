@@ -490,8 +490,6 @@ define void @only_first_lane_used(i1 %c, ptr noalias %p1, ptr noalias %p2, ptr n
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LATCH9:.*]] ]
@@ -505,31 +503,12 @@ define void @only_first_lane_used(i1 %c, ptr noalias %p1, ptr noalias %p2, ptr n
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x i64> poison, i64 [[TMP8]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT12]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; CHECK:       [[PRED_STORE_IF3]]:
-; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; CHECK:       [[PRED_STORE_CONTINUE4]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; CHECK:       [[PRED_STORE_CONTINUE6]]:
 ; CHECK-NEXT:    br label %[[LATCH9]]
 ; CHECK:       [[LATCH9]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i64> [ [[BROADCAST_SPLAT11]], %[[FOO1]] ], [ poison, %[[PRED_STORE_CONTINUE6]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ poison, %[[FOO1]] ], [ [[BROADCAST_SPLAT13]], %[[PRED_STORE_CONTINUE6]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x i1> [ zeroinitializer, %[[FOO1]] ], [ [[BROADCAST_SPLAT]], %[[PRED_STORE_CONTINUE6]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i64> [ [[BROADCAST_SPLAT11]], %[[FOO1]] ], [ poison, %[[BAR2]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ poison, %[[FOO1]] ], [ [[BROADCAST_SPLAT13]], %[[BAR2]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x i1> [ zeroinitializer, %[[FOO1]] ], [ splat (i1 true), %[[BAR2]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP11]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP9]], i64 0

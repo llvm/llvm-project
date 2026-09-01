@@ -84,6 +84,9 @@ class VPPredicator {
   /// Post-dominator tree for the VPlan.
   VPPostDominatorTree VPPDT;
 
+  /// Dominance frontier for the VPlan.
+  VPDominanceFrontier VPDF;
+
   DenseMap<VPValue *, DenseMap<VPBasicBlock *, VPValue *>>
       SSAReconstructionDefsMap;
 
@@ -169,7 +172,7 @@ class VPPredicator {
 
 public:
   VPPredicator(VPlan &Plan)
-      : Plan(Plan), VPDT(Plan), VPPDT(Plan),
+      : Plan(Plan), VPDT(Plan), VPPDT(Plan), VPDF(VPDT),
         BlocksInCompactRPOTOrder(
             Plan.getVectorLoopRegion()->getEntryBasicBlock(), VPDT),
         BlendTerms(BlocksInCompactRPOTOrder.size()) {
@@ -371,9 +374,64 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // This is the block mask. We OR all unique incoming edges.
   for (auto *Predecessor : SetVector<VPBlockBase *>(
            VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
-    VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
-    if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
-                     // too.
+    auto *Pred = cast<VPBasicBlock>(Predecessor);
+    bool CanUseBlockMaskOnly = [&] {
+      if (!shouldPreserveTerminator(Pred))
+        return false;
+
+      LLVM_DEBUG(
+          dbgs()
+          << "Checking if can skip branch condition for a uniform branch at "
+          << Pred->getName() << "\n");
+
+      auto False = []([[maybe_unused]] StringRef Reason = "") {
+        LLVM_DEBUG(dbgs() << "  can't skip"
+                          << (Reason.empty() ? Twine() : (": " + Reason))
+                          << "\n");
+        return false;
+      };
+
+      // Detect patterns like
+      //
+      //                            BB (uniform branch)
+      //                           /  \
+      // +-------------------------+   +-------------------------+
+      // | no other incoming edges |   | no other incoming edges |
+      // +-------------------------+   +-------------------------+
+      //                          \    /   /
+      //                           \  /   /
+      //                          PostDomBB <-- possible other edges originated
+      //                                        before BB.
+      //
+      // where each box is either a single entry region with all exiting edges
+      // pointing to PostDomBB or just a direct edge BB->PostDomBB.
+      auto *IPostDomNode = VPPDT.getNode(Pred)->getIDom();
+      if (!IPostDomNode)
+        return False("No post-dom");
+      auto *IPostDom = cast<VPBasicBlock>(IPostDomNode->getBlock());
+      LLVM_DEBUG(dbgs() << "  post-dom: " << IPostDom->getName() << "\n");
+
+      auto HasOnlyIPostDomInDF = [&](VPBlockBase *BB) {
+        auto It = VPDF.find(BB);
+        return It != VPDF.end() && It->second.size() == 1 &&
+               It->second.front() == IPostDom;
+      };
+      if (!VPDT.properlyDominates(Pred, IPostDom) && !HasOnlyIPostDomInDF(Pred))
+        return False("doesn't dominate its post-dom or have it as its only "
+                     "dominance-frontier block");
+
+      if (!all_of(Pred->successors(), [&](VPBlockBase *Succ) {
+            return Succ == IPostDom || HasOnlyIPostDomInDF(Succ);
+          }))
+        return False("failed successor checks");
+
+      LLVM_DEBUG(dbgs() << "  can skip\n");
+      return true;
+    }();
+    VPValue *EdgeMask =
+        CanUseBlockMaskOnly ? getBlockInMask(Pred) : createEdgeMask(Pred, VPBB);
+    if (!EdgeMask) {
+      // Mask of predecessor is all-one so mask of block is too.
       setBlockInMask(VPBB, EdgeMask);
       return;
     }

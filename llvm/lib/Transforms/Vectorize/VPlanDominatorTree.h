@@ -69,6 +69,10 @@ struct GraphTraits<const VPDomTreeNode *>
     : public DomTreeGraphTraitsBase<const VPDomTreeNode,
                                     VPDomTreeNode::const_iterator> {};
 
+struct VPDominanceFrontier : public DominanceFrontierBase<VPBlockBase, false> {
+  explicit VPDominanceFrontier(const DomTreeT &VPDT);
+};
+
 struct VPPostDominanceFrontier
     : public DominanceFrontierBase<VPBlockBase, true> {
   explicit VPPostDominanceFrontier(const DomTreeT &VPDT);

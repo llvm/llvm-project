@@ -102,23 +102,20 @@ define void @blend_chain_iv(i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = freeze i1 [[C]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH4:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP_LATCH4]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_NEXT1:.*]], label %[[LOOP_LATCH4]]
 ; CHECK:       [[LOOP_NEXT1]]:
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[LOOP_NEXT_22:.*]], label %[[LOOP_NEXT_33:.*]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_NEXT_22:.*]], label %[[LOOP_NEXT_33:.*]]
 ; CHECK:       [[LOOP_NEXT_22]]:
 ; CHECK-NEXT:    br label %[[LOOP_NEXT_33]]
 ; CHECK:       [[LOOP_NEXT_33]]:
 ; CHECK-NEXT:    br label %[[LOOP_LATCH4]]
 ; CHECK:       [[LOOP_LATCH4]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[VEC_IND]], %[[LOOP_NEXT_33]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[BROADCAST_SPLAT]], %[[LOOP_NEXT_33]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ splat (i1 true), %[[LOOP_NEXT_33]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> [[TMP0]], <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[INDEX:%.*]] = extractelement <4 x i64> [[PREDPHI]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[INDEX]]

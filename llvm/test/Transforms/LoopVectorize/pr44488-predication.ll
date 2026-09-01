@@ -18,31 +18,15 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_SREM_CONTINUE2:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @v_38, align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[TMP0]], 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_SREM_CONTINUE2]], label [[COND_FALSE41:%.*]]
 ; CHECK:       cond.false41:
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
-; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_SREM_IF:%.*]], label [[PRED_SREM_CONTINUE:%.*]]
-; CHECK:       pred.srem.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = srem i16 5786, [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> poison, i16 [[TMP4]], i64 0
-; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE]]
-; CHECK:       pred.srem.continue:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i16> [ poison, [[COND_FALSE41]] ], [ [[TMP5]], [[PRED_SREM_IF]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
-; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_SREM_IF1:%.*]], label [[PRED_SREM_CONTINUE3:%.*]]
-; CHECK:       pred.srem.if2:
-; CHECK-NEXT:    [[TMP8:%.*]] = srem i16 5786, [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP6]], i16 [[TMP8]], i64 1
-; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE3]]
-; CHECK:       pred.srem.continue3:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ [[TMP6]], [[PRED_SREM_CONTINUE]] ], [ [[TMP9]], [[PRED_SREM_IF1]] ]
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[TMP5]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE2]]
-; CHECK:       for.latch4:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP10]], [[PRED_SREM_CONTINUE3]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i1> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP2]], [[PRED_SREM_CONTINUE3]] ]
+; CHECK:       for.latch2:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[BROADCAST_SPLAT]], [[COND_FALSE41]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i1> [ zeroinitializer, [[VECTOR_BODY]] ], [ splat (i1 true), [[COND_FALSE41]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP14]], <2 x i16> [[TMP13]], <2 x i16> splat (i16 5786)
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i16> [[PREDPHI]], i64 1
 ; CHECK-NEXT:    store i16 [[TMP11]], ptr @v_39, align 1

@@ -101,31 +101,19 @@ define void @masked_umax_used_by_load_address(ptr noalias %src, ptr noalias %dst
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[SRC:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE2:%.*]] ]
-; CHECK-NEXT:    br i1 [[C]], label [[THEN1:%.*]], label [[PRED_LOAD_CONTINUE2]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN1:%.*]], label [[PRED_LOAD_CONTINUE2]]
 ; CHECK:       then1:
-; CHECK-NEXT:    br i1 [[C]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
-; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
-; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i16> [ poison, [[THEN1]] ], [ [[TMP3]], [[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    br i1 [[C]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE3:%.*]]
-; CHECK:       pred.load.if2:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> [[TMP4]], i16 [[TMP5]], i64 1
-; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE3]]
-; CHECK:       pred.load.continue3:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i16> [ [[TMP4]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP6]], [[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
-; CHECK:       loop.latch4:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_LOAD_CONTINUE3]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i1> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[BROADCAST_SPLAT]], [[PRED_LOAD_CONTINUE3]] ]
+; CHECK:       loop.latch2:
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[THEN1]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i1> [ zeroinitializer, [[VECTOR_BODY]] ], [ splat (i1 true), [[THEN1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP11]], <2 x i16> [[TMP10]], <2 x i16> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[DST:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i16> [[PREDPHI]], ptr [[TMP8]], align 2
