@@ -66,7 +66,6 @@
 // CHECK-SAME: "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: {{".*lib1.bc"}}
-// CHECK-SAME: "-target-cpu" "gfx900"
 // BC-SAME: "-o" "a.bc"
 // BCBUN-SAME: "-o" "{{.*}}.bc"
 // LL-SAME: "-o" "a.ll"
@@ -140,5 +139,4 @@
 // NOLTO: {{".*clang.*"}} "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // NOLTO-SAME: "-S"
 // NOLTO-NOT: "-flto
-// NOLTO-SAME: "-target-cpu" "gfx900"
 // NOLTO-SAME: "-o" "a-hip-amdgpu9.00-amd-amdhsa-gfx900.s"

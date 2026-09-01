@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/TriggerCrashPass.h"
-#include <cstdlib>
 
 using namespace llvm;
 
@@ -19,6 +18,21 @@ PreservedAnalyses TriggerCrashModulePass::run(Module &,
 
 PreservedAnalyses TriggerCrashFunctionPass::run(Function &,
                                                 FunctionAnalysisManager &) {
+  abort();
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses TriggerCrashCGSCCPass::run(LazyCallGraph::SCC &,
+                                             CGSCCAnalysisManager &,
+                                             LazyCallGraph &,
+                                             CGSCCUpdateResult &) {
+  abort();
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses TriggerCrashLoopPass::run(Loop &, LoopAnalysisManager &,
+                                            LoopStandardAnalysisResults &,
+                                            LPMUpdater &) {
   abort();
   return PreservedAnalyses::all();
 }
