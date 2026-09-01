@@ -1767,104 +1767,197 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 // Lowers a `convert_layout` that only relocates data between lanes: the input
 // layout replicates the data over lanes, while the target layout hands each
-// lane a different part of it. Every element of the result already exists in
-// some lane, so nothing is recomputed. The scale operands of scaled matrix
-// multiplication need this, being produced broadcasted and consumed
-// distributed.
+// lane a different part of it. Every element already exists in some lane, so
+// nothing is recomputed. The scale operands of scaled matrix multiplication
+// need this, being produced broadcasted and consumed distributed.
+//
+// What it handles
+// ---------------
+//
+// The three cases below, all on a `vector<8x2>` over 16 lanes, are the three
+// tests. `#xegpu.` prefixes are dropped for width.
+//
+// 1. Broadcast over the whole subgroup, distributed to 8 lanes.
+//
+//      slice<layout<lane_layout = [1, 1, 16]>, dims = [2]>
+//        ->  layout<lane_layout = [8, 1]>
+//
+//    Every lane arrives holding all 16 elements and leaves holding one row.
+//    Emits 2 extracts and no shuffle: every lane already has what it needs.
+//
+// 2. Broadcast over two groups of 8 lanes, distributed to 8 lanes.
+//
+//      slice<layout<lane_layout = [8, 1, 2], order = [0, 2, 1]>, dims = [0]>
+//        ->  layout<lane_layout = [8, 1]>
+//
+//    Lanes 0-7 arrive holding all of column 0, lanes 8-15 all of column 1, and
+//    lane `i` leaves holding row `i`. So lane 3 wants (3, 0) and (3, 1); it
+//    holds (3, 0) already, while (3, 1) is in lane 11. Emits 1 extract and 1
+//    shuffle. This is the running example used below.
+//
+// 3. Broadcast over the whole subgroup, distributed to two groups of 8 lanes.
+//
+//      slice<layout<lane_layout = [1, 1, 16]>, dims = [2]>
+//        ->  slice<layout<lane_layout = [8, 1, 2], order = [0, 2, 1]>,
+//                  dims = [0]>
+//
+//    Every lane arrives holding all 16 elements; lanes 0-7 leave holding column
+//    0 and lanes 8-15 column 1. Emits 8 extracts and no shuffle.
+//
+// Nested slices are coalesced before anything else looks at a layout, so only
+// the lane_layout of the underlying layout and the union of the sliced dims
+// matter; @convert_layout_broadcast_nested_slice covers a two-level input.
+//
+// What it declines
+// ----------------
+//
+// Each of these reports a match failure rather than lowering. Same notation,
+// and `vector<8x2>` over 16 lanes unless said otherwise.
+//
+//  * `lane_data` differing between the two layouts:
+//
+//      layout<[8, 1], [1, 1]>  ->  layout<[1, 8], [1, 2]>
+//
+//    A `lane_data`-only change is the repack pattern's job; changing it and
+//    `lane_layout` together is handled by neither.
+//
+//  * `lane_data` equal but not unit:
+//
+//      slice<layout<[1, 1, 16], [1, 2, 1]>, dims = [2]>
+//        ->  layout<[8, 1], [1, 2]>
+//
+//    A lane then holds two elements per distribution unit, which the ownership
+//    tables do not enumerate.
+//
+//  * an input layout that covers only part of the subgroup:
+//
+//      layout<[8, 1], [1, 1]>  ->  layout<[1, 8], [1, 1]>
+//
+//    Only the target may leave lanes out; the input has to name all 16.
+//
+//  * elements narrower than a byte:
+//
+//      slice<layout<[1, 1, 16]>, dims = [2]>  ->  layout<[8, 1]>
+//        on vector<8x2xf4E2M1FN>
+//
+//    There is no type for `gpu.shuffle` to carry a 4-bit element in.
+//
+//  * a lane's element index not being one dimension of the target lane layout,
+//    as when `order` transposes it:
+//
+//      slice<layout<[1, 1, 16]>, dims = [2]>
+//        ->  layout<[4, 4], order = [0, 1]>        on vector<4x4>
+//
+//    Lane `i` would need element `(i % 4) * 4 + i / 4`, which the restricted
+//    index form below cannot express.
 //
 // Concepts
 // --------
 //
-// fragment         The elements a lane holds under a layout, as a flat list --
-//                  the lane's distributed vector. Both layouts give a lane a
-//                  fragment, and the conversion turns the input one into the
-//                  target one.
+// fragment
+//     What a lane holds under a layout: 8x1 under case 2's input layout, 1x2
+//     under its target.
 //
-// broadcast group  Lanes that hold the same fragment. A sliced lane_layout
-//                  dimension forms one: nothing is distributed over its lanes,
-//                  so they are all given the same data. The group spans that
-//                  dimension -- all 16 lanes if it covers the subgroup, 8 if it
-//                  covers half of it.
+// broadcast group
+//     Lanes holding the same fragment. A sliced lane_layout dimension forms
+//     one, since nothing is distributed over its lanes: in case 2 dim 0 is
+//     sliced and spans 8 lanes, so lanes 0-7 are one group and 8-15 another.
 //
-// slot             A lane's linear id within the target lane layout,
-//                  `lane % numSlots`. The target layout gives the same fragment
-//                  to every lane of a slot, so there are `numSlots` distinct
-//                  target fragments and the lanes past the first `numSlots` are
-//                  replicas.
+// slot
+//     A lane's index among the lanes the target layout distributes to, `lane %
+//     numSlots`. In case 2 `numSlots` is 8, so the lanes pair up: lane 11 has
+//     slot 3 like lane 3, and runs the same arithmetic on its own fragment. How
+//     many elements a lane holds is a separate matter -- it can own several,
+//     which show up as several positions in its fragment, not as several slots.
 //
-// donor            The lane a value is read from. Only `gpu.shuffle idx` moves
-//                  a value between lanes, and it exchanges exactly one value
-//                  per lane: each lane offers one value and receives one lane's
-//                  offering. So all lanes have to run the same extract, and a
-//                  lane can only be served by a lane that arrives at the same
-//                  extract index -- one of its own slot, i.e. `slot + delta`
-//                  for a `delta` that is a multiple of `numSlots`. Lanes
-//                  `delta` apart form a donor group, which partitions the
-//                  subgroup by the target layout and is not a broadcast group.
+// donor
+//     The lane a value is read from, `slot + delta`. `gpu.shuffle idx` is the
+//     only way to move data between lanes and it exchanges one value per lane,
+//     so every lane runs the same extract; a donor can therefore only serve
+//     lanes of its own slot, which makes `delta` a multiple of `numSlots`. In
+//     case 2, slot 3 reads (3, 1) from lane 3 + 8.
 //
-// element source   Where one element of the target fragment comes from: the
-//                  donor to take it from, and the index to extract from that
-//                  donor's fragment. A shuffle is needed exactly when that
-//                  donor cannot be the lane itself. The index is a function of
-//                  the slot,
+//     The two indices come from opposite sides: `slot` from the target layout,
+//     which decides how many lanes the value is distributed to, and `delta`
+//     from the input layout, which decides how many copies of it there are.
 //
-//                    stride * ((slot / slotStride) % extent) + offset
+// element source
+//     Where one element of the target fragment comes from: the donor, and the
+//     index to extract from that donor's fragment. A shuffle is needed exactly
+//     when the donor cannot be the lane itself. Case 2 has two, one per element
+//     of its 1x2 fragment:
 //
-//                  which says "one dimension of the target lane layout selects
-//                  one element of the fragment": `(slot / slotStride) % extent`
-//                  is the lane's index along that dimension, `slotStride` being
-//                  how many slots apart two lanes have to be for it to differ
-//                  by one and `extent` how many values it takes. It costs a
-//                  couple of `arith` ops on the lane id, where an arbitrary
-//                  per-slot index would need a materialized table and a gather.
+//       element 0 -> delta = 0, index = slot    // (3, 0), already local
+//       element 1 -> delta = 8, index = slot    // (3, 1), from lane 11
+//
+// The index has to be computable from the lane id, so it is restricted to
+//
+//   stride * ((slot / slotStride) % extent) + offset
+//
+// which walks one dimension of the target lane layout: `(slot / slotStride) %
+// extent` is the lane's index along that dimension and `stride`/`offset` place
+// it in the fragment. The three cases give it three shapes:
+//
+//   index = slot        consecutive slots take consecutive elements  (case 2:
+//                       slotStride = 1, extent = 8)
+//   index = 2 * slot    every other element, because the fragment holds whole
+//                       2-element rows  (case 1)
+//   index = slot / 8    eight consecutive slots take the same element, the
+//                       column their half of the subgroup owns  (case 3:
+//                       slotStride = 8, extent = 2)
+//
+// An arbitrary index per slot would need a materialized table and a gather;
+// this costs a couple of `arith` ops on the lane id.
 //
 // Algorithm
 // ---------
 //
-//   tabulate inputOwned[lane] and targetOwned[slot]    // element coordinates
+//   tabulate inputOwned[lane] and targetOwned[lane]  // element coordinates
 //   for each element `pos` of the target fragment:
-//     for delta in 0, numSlots, 2 * numSlots, ...:     // smallest first
-//       needed[slot] = index of targetOwned[slot][pos]
-//                      in inputOwned[slot + delta]
-//       if a slot's donor does not hold its element: next delta
-//       index = fit `needed` to stride/offset/slotStride/extent,
-//               else next delta
+//     for delta = 0, numSlots, 2 * numSlots, ...  // smallest first
+//       for each slot:
+//         needed[slot] = index of the element targetOwned[slot][pos] in the
+//                        fragment of its donor, lane `slot + delta`
+//         if that donor does not hold the element: give up on this delta
+//       look for one stride/offset/slotStride/extent whose index reproduces
+//         every needed[slot]; if there is none: next delta
 //       accept (delta, index) and stop
 //     if no delta fits: fail, the layout change is not of this form
 //   for each element source:
-//     %idx = index(slot)                               // arith on gpu.lane_id
-//     %val = vector.extract %fragment[%idx]
-//     %val = gpu.shuffle idx %val, slot + delta        // unless donor == lane
-//     %res = vector.insert %val, %res[pos]
+//     %idx   = index(slot)                           // arith on gpu.lane_id
+//     %val   = vector.extract %fragment[%idx]
+//     %donor = slot + delta
+//     %val   = gpu.shuffle idx %val, %donor          // unless %donor is %lane
+//     %res   = vector.insert %val, %res[pos]
 //
-// Replication leaves the donor ambiguous: several donor groups may hold the
-// element and they all yield the same value, so the smallest `delta` is taken.
-// Only `delta = 0` can make the donor the lane itself, so it is the only one
-// that may need no shuffle, and taking it is what leaves a fully broadcast
-// input shuffle-free.
+// `%donor` is the lane itself when `delta` is 0 and the extract already lands
+// on an element the lane owns, and that is the only case where the shuffle is
+// dropped. Replication makes it a choice: several donor groups may hold the
+// element and all give the same value, so the smallest `delta` is taken, which
+// is what leaves a fully broadcast input shuffle-free.
 //
-// For example, redistributing a `vector<8x2>` whose input fragments hold column
-// 0 in lanes [0, 8) and column 1 in lanes [8, 16) to a target that gives lane
-// `i` row `i` (`numSlots` = 8, so lanes [8, 16) are replicas) yields
-//
-//   pos 0 -> delta = 0, idx = slot   // column 0 is in the lane's own group
-//   pos 1 -> delta = 8, idx = slot   // column 1 is one donor group away
+// Only lanes 0 to `numSlots` - 1 are required to end up holding the elements
+// the target layout assigns their slot; each is the one lane of its slot the
+// layout distributes to. Lanes sharing a slot run the same arithmetic on their
+// own fragment, so when a shuffle is emitted they all receive the donor's value
+// and are equally correct, and when it is dropped they keep whatever that index
+// holds in their own fragment -- which is why dropping it relies on nobody
+// reading them.
 //
 // An index is derived from the tables and then verified against them, so a
-// layout change that does not have this form is reported as a match failure
-// rather than lowered incorrectly.
+// layout change that is not of this form is reported as a match failure rather
+// than lowered incorrectly.
 //
-// Assumption: only the first `numSlots` lanes have to end up with the elements
-// the target layout assigns them, the rest being replicas. Whether the donor
-// can be the lane itself is therefore decided over the slots alone, and for all
-// of them at once since the index is uniform over the subgroup: one slot whose
-// local extract misses the element it owns forces the shuffle on every lane.
+// One caveat: after the rewrite only the first `numSlots` lanes are
+// guaranteed to hold what the target layout assigns them. The others are
+// replicas whose local extract can land on a different element, so dropping a
+// shuffle relies on nobody reading them.
 //
 //===----------------------------------------------------------------------===//
 
-/// Number of lanes of the subgroup `layout` distributes over. Lanes covered by
-/// sliced dimensions count too: they hold a replicated fragment, not nothing.
-static int64_t getNumParticipatingLanes(xegpu::DistributeLayoutAttr layout) {
+/// Number of lanes `layout` distributes to. Lanes covered by sliced dimensions
+/// count too: they hold a replicated fragment, not nothing.
+static int64_t getNumDistributedLanes(xegpu::DistributeLayoutAttr layout) {
   // flatten() coalesces nested slices, so the parent it leaves is always a
   // plain LayoutAttr carrying the lane_layout of the whole subgroup.
   if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(layout))
@@ -1889,9 +1982,9 @@ static bool isBroadcastRedistribution(xegpu::DistributeLayoutAttr inputLayout,
   if (inputLayout.getEffectiveLaneDataAsInt() !=
       targetLayout.getEffectiveLaneDataAsInt())
     return false;
-  int64_t numSlots = getNumParticipatingLanes(targetLayout);
-  return getNumParticipatingLanes(inputLayout) == subgroupSize &&
-         numSlots > 0 && subgroupSize % numSlots == 0;
+  int64_t numSlots = getNumDistributedLanes(targetLayout);
+  return getNumDistributedLanes(inputLayout) == subgroupSize && numSlots > 0 &&
+         subgroupSize % numSlots == 0;
 }
 
 /// Ownership table: `owned[lane][i]` is the coordinate, in the undistributed
@@ -1941,8 +2034,8 @@ struct ElementSource {
   bool needsShuffle;
 };
 
-/// Fits `needed`, the fragment index each of the `numSlots` slots has to read,
-/// to a `FragmentIndex`. Fails when no index reproduces `needed`.
+/// Fits `needed`, the fragment index each of the `numSlots` slots has to
+/// read, to a `FragmentIndex`. Fails when no index reproduces `needed`.
 static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
                                                  int64_t numSlots) {
   // Slots sharing an index are adjacent, so the first change in `needed` gives
@@ -2038,7 +2131,7 @@ redistributeBroadcastedValue(ConversionPatternRewriter &rewriter, Location loc,
     return failure();
   int64_t srcNumElems = srcTy.getNumElements();
   int64_t resNumElems = resTy.getNumElements();
-  int64_t numSlots = getNumParticipatingLanes(targetLayout);
+  int64_t numSlots = getNumDistributedLanes(targetLayout);
   if (numSlots < 1 || subgroupSize % numSlots != 0)
     return failure();
   // gpu.shuffle only moves the integer widths a lane can hold.
