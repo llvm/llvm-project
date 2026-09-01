@@ -45,6 +45,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
@@ -12556,6 +12557,21 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
     if (Subtarget->hasGFX1250_STRICT())
       initializeM0ToZeroForClusterLoad(Op, DAG, DL);
+    return SDValue();
+  }
+  case Intrinsic::amdgcn_asyncmark:
+  case Intrinsic::amdgcn_wait_asyncmark: {
+    Function &F = DAG.getMachineFunction().getFunction();
+    auto *StageC =
+        cast<ConstantSDNode>(Op->getOperand(Op.getNumOperands() - 1));
+    uint32_t StageRaw = StageC->getZExtValue();
+    if (!AMDGPU::AsyncStage::isValidStage(StageRaw) ||
+        AMDGPU::AsyncStage::isReservedStage(StageRaw)) {
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, "intrinsic @llvm.amdgcn.*.asyncmark: invalid stage",
+          DL.getDebugLoc(), DS_Error));
+      return Chain;
+    }
     return SDValue();
   }
   case Intrinsic::amdgcn_exp_compr: {

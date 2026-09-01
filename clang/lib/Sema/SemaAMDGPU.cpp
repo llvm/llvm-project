@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <cstdint>
@@ -203,6 +204,38 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 15);
+  case AMDGPU::BI__builtin_amdgcn_asyncmark:
+  case AMDGPU::BI__builtin_amdgcn_wait_asyncmark: {
+    bool IsMark = BuiltinID == AMDGPU::BI__builtin_amdgcn_asyncmark;
+
+    // Check the sequence length limit is a constant.
+    llvm::APSInt NumMarks;
+    if (!IsMark && SemaRef.BuiltinConstantArg(TheCall, 0, NumMarks))
+      return true;
+
+    unsigned StageArgNum = IsMark ? 0 : 1;
+    llvm::APSInt Stage;
+    if (SemaRef.BuiltinConstantArg(TheCall, StageArgNum, Stage))
+      return true;
+
+    Expr *ArgExpr = TheCall->getArg(StageArgNum);
+    uint64_t Value = Stage.getZExtValue();
+
+    if (!llvm::AMDGPU::AsyncStage::isValidStage(Value)) {
+      return Diag(ArgExpr->getBeginLoc(), diag::err_argument_invalid_range)
+             << toString(Stage, 10) << 0 << (int)llvm::AMDGPU::AsyncStage::ALL
+             << ArgExpr->getSourceRange();
+    }
+
+    if (llvm::AMDGPU::AsyncStage::isReservedStage(Value)) {
+      return Diag(ArgExpr->getBeginLoc(),
+                  diag::err_amdgcn_asyncmark_stage_reserved)
+             << llvm::AMDGPU::AsyncStage::getStageName(Value)
+             << ArgExpr->getSourceRange();
+    }
+
+    return false;
+  }
   case AMDGPU::BI__builtin_amdgcn_av_load_b128:
     return checkAVLoadStore(TheCall, /*IsStore=*/false);
   case AMDGPU::BI__builtin_amdgcn_av_store_b128:

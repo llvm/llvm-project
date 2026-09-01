@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
 #include <optional>
 
 #define DEBUG_TYPE "amdgpu-isel"
@@ -2438,10 +2439,20 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_tensor_store_from_lds:
     return selectTensorLoadStore(I, IntrinsicID);
   case Intrinsic::amdgcn_asyncmark:
-  case Intrinsic::amdgcn_wait_asyncmark:
+  case Intrinsic::amdgcn_wait_asyncmark: {
     if (!Subtarget->hasAsyncMark())
       return false;
+    uint32_t Stage = I.getOperand(I.getNumOperands() - 1).getImm();
+    if (!AMDGPU::AsyncStage::isValidStage(Stage) ||
+        AMDGPU::AsyncStage::isReservedStage(Stage)) {
+      const Function &Fn = MF->getFunction();
+      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+          Fn, "intrinsic @llvm.amdgcn.*.asyncmark: invalid stage",
+          I.getDebugLoc(), DS_Error));
+      return false;
+    }
     break;
+  }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
