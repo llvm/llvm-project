@@ -59,6 +59,17 @@ static cl::opt<bool> ForceEmitZeroLoadFlag(
     cl::desc("Force all waitcnt load counters to wait until 0"),
     cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EnablePreLoopVMEMWait(
+    "amdgpu-enable-pre-loop-vmem-wait",
+    cl::desc("Experimentally retire older VMEM loads before entering a loop"),
+    cl::init(false), cl::Hidden);
+
+static cl::opt<bool> EnablePreheaderFlushLoopCarriedLoad(
+    "amdgpu-preheader-flush-loop-carried-load",
+    cl::desc("Experimentally flush an outside-loop VMEM load in the preheader "
+             "even when the loop has its own VMEM traffic"),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<bool> ExpertSchedulingModeFlag(
     "amdgpu-expert-scheduling-mode",
     cl::desc("Enable expert scheduling mode 2 for all functions (GFX12+ only)"),
@@ -394,6 +405,8 @@ public:
                                              const WaitcntBrackets &Brackets);
   PreheaderFlushFlags isPreheaderToFlush(MachineBasicBlock &MBB,
                                          const WaitcntBrackets &ScoreBrackets);
+  unsigned getPreLoopVmemWait(MachineBasicBlock &MBB,
+                              const WaitcntBrackets &ScoreBrackets) const;
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
   bool isDSRead(const MachineInstr &MI) const;
   bool mayStoreIncrementingDSCNT(const MachineInstr &MI) const;
@@ -432,7 +445,8 @@ public:
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr,
-                                 PreheaderFlushFlags FlushFlags);
+                                 PreheaderFlushFlags FlushFlags,
+                                 unsigned PreLoopVmemWait);
   bool generateWaitcnt(AMDGPU::Waitcnt Wait,
                        MachineBasicBlock::instr_iterator It,
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
@@ -2292,9 +2306,11 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
 ///  If FlushFlags.FlushVmCnt is true, we want to flush the vmcnt counter here.
 ///  If FlushFlags.FlushDsCnt is true, we want to flush the dscnt counter here
 ///  (GFX12+ only, where DS_CNT is a separate counter).
-bool SIInsertWaitcnts::generateWaitcntInstBefore(
-    MachineInstr &MI, WaitcntBrackets &ScoreBrackets,
-    MachineInstr *OldWaitcntInstr, PreheaderFlushFlags FlushFlags) {
+bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
+                                                 WaitcntBrackets &ScoreBrackets,
+                                                 MachineInstr *OldWaitcntInstr,
+                                                 PreheaderFlushFlags FlushFlags,
+                                                 unsigned PreLoopVmemWait) {
   LLVM_DEBUG(dbgs() << "\n*** GenerateWaitcntInstBefore: "; MI.print(dbgs()););
 
   assert(!isNonWaitcntMetaInst(MI));
@@ -2592,6 +2608,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
          {AMDGPU::LOAD_CNT, AMDGPU::SAMPLE_CNT, AMDGPU::BVH_CNT})
       Wait.set(T, 0);
   }
+
+  if (PreLoopVmemWait != ~0u)
+    Wait.add(AMDGPU::LOAD_CNT, PreLoopVmemWait);
 
   if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(AMDGPU::DS_CNT))
     Wait.set(AMDGPU::DS_CNT, 0);
@@ -3061,6 +3080,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
+  unsigned PreLoopVmemWait = getPreLoopVmemWait(Block, ScoreBrackets);
 
   // NOTE: We may append instrs after Inst while iterating.
   ScoreBrackets.verify();
@@ -3085,8 +3105,9 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // Generate an s_waitcnt instruction to be placed before Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr,
-                                          FlushFlags);
+                                          FlushFlags, PreLoopVmemWait);
     OldWaitcntInstr = nullptr;
+    PreLoopVmemWait = ~0u;
 
     if (Inst.getOpcode() == AMDGPU::ASYNCMARK) {
       // Asyncmarks record the current wait state and so should not allow
@@ -3141,6 +3162,9 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(AMDGPU::DS_CNT))
       Wait.set(AMDGPU::DS_CNT, 0);
   }
+
+  if (PreLoopVmemWait != ~0u)
+    Wait.add(AMDGPU::LOAD_CNT, PreLoopVmemWait);
 
   // Combine or remove any redundant waitcnts at the end of the block.
   Modified |= generateWaitcnt(Wait, Block.instr_end(), Block, ScoreBrackets,
@@ -3213,6 +3237,55 @@ SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
   }
 
   return PreheaderFlushFlags();
+}
+
+unsigned SIInsertWaitcnts::getPreLoopVmemWait(
+    MachineBasicBlock &MBB, const WaitcntBrackets &ScoreBrackets) const {
+  if (!EnablePreLoopVMEMWait || ScoreBrackets.empty(AMDGPU::LOAD_CNT) ||
+      ScoreBrackets.counterOutOfOrder(AMDGPU::LOAD_CNT))
+    return ~0u;
+
+  unsigned Outstanding = ScoreBrackets.getOutstanding(AMDGPU::LOAD_CNT);
+  if (Outstanding < 2)
+    return ~0u;
+
+  MachineBasicBlock *Succ = MBB.getSingleSuccessor();
+  if (!Succ)
+    return ~0u;
+
+  MachineLoop *Loop = MLI.getLoopFor(Succ);
+  if (!Loop || Loop->getLoopPreheader() != &MBB)
+    return ~0u;
+
+  // Leave every pending load used by the loop outstanding. Retiring one more
+  // request drains only older loads that do not contribute to the loop.
+  unsigned MaxRequiredWait = 0;
+  bool UsesPendingLoad = false;
+  for (MachineBasicBlock *LoopMBB : Loop->blocks()) {
+    for (const MachineInstr &MI : *LoopMBB) {
+      for (const MachineOperand &Op : MI.all_uses()) {
+        if (Op.isDebug() || !TRI.isVectorRegister(MRI, Op.getReg()))
+          continue;
+        if (Op.isImplicit() && MI.mayLoadOrStore())
+          continue;
+
+        AMDGPU::Waitcnt Wait;
+        ScoreBrackets.determineWaitForPhysReg(AMDGPU::LOAD_CNT,
+                                              Op.getReg().asMCReg(), Wait, MI);
+        unsigned RequiredWait = Wait.get(AMDGPU::LOAD_CNT);
+        if (RequiredWait == ~0u)
+          continue;
+
+        UsesPendingLoad = true;
+        MaxRequiredWait = std::max(MaxRequiredWait, RequiredWait);
+      }
+    }
+  }
+
+  if (!UsesPendingLoad || MaxRequiredWait + 1 >= Outstanding)
+    return ~0u;
+
+  return MaxRequiredWait + 1;
 }
 
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
@@ -3329,8 +3402,11 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
           if (VgprDefDS.contains(RU))
             TrackSimpleDSOpt = false;
 
-          // Early exit if all optimizations are invalidated
-          if (VMemInvalidated && !TrackSimpleDSOpt && !TrackDSFlushPoint)
+          // Early exit if all optimizations are invalidated. Keep scanning when
+          // the loop-carried-load flush experiment is on so that
+          // UsesVgprVMEMLoadedOutside is still computed.
+          if (VMemInvalidated && !TrackSimpleDSOpt && !TrackDSFlushPoint &&
+              !EnablePreheaderFlushLoopCarriedLoad)
             return Flags;
 
           // Check for flush points (DS read used in same iteration)
@@ -3363,8 +3439,11 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
             VgprDefVMEM.insert(RU);
           }
         }
-        // Early exit if all optimizations are invalidated
-        if (VMemInvalidated && !TrackSimpleDSOpt && !TrackDSFlushPoint)
+        // Early exit if all optimizations are invalidated. Keep scanning when
+        // the loop-carried-load flush experiment is on so that
+        // UsesVgprVMEMLoadedOutside is still computed.
+        if (VMemInvalidated && !TrackSimpleDSOpt && !TrackDSFlushPoint &&
+            !EnablePreheaderFlushLoopCarriedLoad)
           return Flags;
       }
 
@@ -3398,6 +3477,15 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   if (!VMemInvalidated && UsesVgprVMEMLoadedOutside &&
       ((!ST.hasVscnt() && HasVMemStore && !HasVMemLoad) ||
        (HasVMemLoad && ST.hasVmemWriteVgprInOrder())))
+    Flags.FlushVmCnt = true;
+
+  // Experiment: also flush when the loop uses a value loaded by a VMEM op
+  // outside the loop, even if the loop has its own VMEM traffic (which the
+  // decision above excludes). Retiring the outside load before the loop can
+  // reduce dynamic scoreboard stalls for long loops. Flushing is always
+  // correct, so this only affects performance; it is off by default because it
+  // pessimizes short loops.
+  if (EnablePreheaderFlushLoopCarriedLoad && UsesVgprVMEMLoadedOutside)
     Flags.FlushVmCnt = true;
 
   // DS flush decision:

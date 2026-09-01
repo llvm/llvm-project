@@ -60,13 +60,14 @@ namespace {
 
 class AMDGPULDSBufferingImpl {
   const AMDGPUTargetMachine &TM;
-  unsigned MaxBytes;
+  AMDGPULDSBufferingOptions Options;
   Module *Mod = nullptr;
   const DataLayout *DL = nullptr;
 
 public:
-  AMDGPULDSBufferingImpl(const AMDGPUTargetMachine &TM, unsigned MaxBytes)
-      : TM(TM), MaxBytes(MaxBytes) {}
+  AMDGPULDSBufferingImpl(const AMDGPUTargetMachine &TM,
+                         AMDGPULDSBufferingOptions Options)
+      : TM(TM), Options(Options) {}
 
   bool run(Function &F) {
     LLVM_DEBUG(dbgs() << "[LDSBuffer] Visit function: " << F.getName() << '\n');
@@ -84,6 +85,7 @@ public:
     unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(F).second;
 
     bool Changed = false;
+    unsigned CandidateIndex = 0;
     unsigned NumTransformed = 0;
 
     // Minimal pattern: a load from AS(1) whose only use is a store back to the
@@ -122,21 +124,27 @@ public:
         if (StoreSize.isScalable() || AllocSize.isScalable())
           continue;
         uint64_t CopySize = StoreSize.getFixedValue();
-        if (CopySize == 0 || CopySize > MaxBytes)
+        if (CopySize == 0 || CopySize > Options.MaxBytes)
           continue;
         uint64_t SlotSize = AllocSize.getFixedValue();
-        Align MinAlign = Align(16);
+        Align MinAlign = Align(Options.MinAlignment);
         Align LoadAlign = LI->getAlign();
         Align StoreAlign = SI->getAlign();
         Align Alignment = std::min(LoadAlign, StoreAlign);
         if (Alignment < MinAlign)
           continue;
 
+        unsigned ThisCandidate = CandidateIndex++;
+        if (Options.OnlyCandidate >= 0 &&
+            ThisCandidate != static_cast<unsigned>(Options.OnlyCandidate))
+          continue;
+
         // Create LDS slot near the load and emit memcpy global->LDS.
         LLVM_DEBUG({
           dbgs() << "[LDSBuffer] Candidate found: load->store same ptr in "
                  << F.getName() << '\n';
-          dbgs() << "            size=" << CopySize
+          dbgs() << "            index=" << ThisCandidate
+                 << ", size=" << CopySize
                  << "B, loadAlign=" << LoadAlign.value()
                  << ", storeAlign=" << StoreAlign.value()
                  << ", chosenAlign=" << Alignment.value()
@@ -151,6 +159,34 @@ public:
           continue;
         auto [GV, SlotPtr] = createLDSGlobalAndThreadSlot(
             F, ValTy, WorkGroupSize, Alignment, BLoad);
+
+        if (Options.Mode != AMDGPULDSBufferingMode::Buffer) {
+          Value *ControlValue =
+              Options.Mode == AMDGPULDSBufferingMode::ShadowLDS
+                  ? static_cast<Value *>(LI)
+                  : Constant::getNullValue(ValTy);
+          IRBuilder<> BAfterLoad(LI->getNextNode());
+          StoreInst *ControlStore = BAfterLoad.CreateStore(
+              ControlValue, SlotPtr, /*isVolatile=*/true);
+          ControlStore->setAlignment(Alignment);
+
+          IRBuilder<> BAfterStore(SI->getNextNode());
+          LoadInst *ControlLoad = BAfterStore.CreateLoad(
+              ValTy, SlotPtr, /*isVolatile=*/true, "ldsbuf.control");
+          ControlLoad->setAlignment(Alignment);
+
+          LLVM_DEBUG(dbgs()
+                     << "[LDSBuffer] Insert "
+                     << (Options.Mode == AMDGPULDSBufferingMode::ShadowLDS
+                             ? "shadow"
+                             : "irrelevant")
+                     << " LDS control: " << GV->getName() << ", bytes="
+                     << CopySize << ", align=" << Alignment.value() << '\n');
+          Changed = true;
+          ++NumTransformed;
+          continue;
+        }
+
         // memcpy p3 <- p1
         LLVM_DEBUG(dbgs() << "[LDSBuffer] Insert memcpy global->LDS: "
                           << GV->getName() << ", bytes=" << CopySize
@@ -215,7 +251,7 @@ private:
 
 PreservedAnalyses AMDGPULDSBufferingPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
-  bool Changed = AMDGPULDSBufferingImpl(TM, MaxBytes).run(F);
+  bool Changed = AMDGPULDSBufferingImpl(TM, Options).run(F);
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -231,9 +267,12 @@ PreservedAnalyses AMDGPULDSBufferingPass::run(Function &F,
 namespace {
 
 class AMDGPULDSBufferingLegacy : public FunctionPass {
+  AMDGPULDSBufferingOptions Options;
+
 public:
   static char ID;
-  AMDGPULDSBufferingLegacy() : FunctionPass(ID) {}
+  AMDGPULDSBufferingLegacy(AMDGPULDSBufferingOptions Options)
+      : FunctionPass(ID), Options(Options) {}
 
   StringRef getPassName() const override { return "AMDGPU LDS Buffering"; }
 
@@ -246,8 +285,7 @@ public:
     if (skipFunction(F))
       return false;
     if (TargetPassConfig *TPC = getAnalysisIfAvailable<TargetPassConfig>())
-      return AMDGPULDSBufferingImpl(TPC->getTM<AMDGPUTargetMachine>(),
-                                    /*MaxBytes=*/64)
+      return AMDGPULDSBufferingImpl(TPC->getTM<AMDGPUTargetMachine>(), Options)
           .run(F);
     return false;
   }
@@ -262,6 +300,7 @@ INITIALIZE_PASS_BEGIN(AMDGPULDSBufferingLegacy, DEBUG_TYPE,
 INITIALIZE_PASS_END(AMDGPULDSBufferingLegacy, DEBUG_TYPE,
                     "AMDGPU per-thread LDS buffering", false, false)
 
-FunctionPass *llvm::createAMDGPULDSBufferingLegacyPass() {
-  return new AMDGPULDSBufferingLegacy();
+FunctionPass *
+llvm::createAMDGPULDSBufferingLegacyPass(AMDGPULDSBufferingOptions Options) {
+  return new AMDGPULDSBufferingLegacy(Options);
 }

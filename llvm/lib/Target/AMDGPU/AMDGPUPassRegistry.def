@@ -100,8 +100,11 @@ FUNCTION_ALIAS_ANALYSIS("amdgpu-aa", AMDGPUAA())
 #endif
 FUNCTION_PASS_WITH_PARAMS(
     "amdgpu-lds-buffering", "AMDGPULDSBufferingPass",
-    [=](unsigned MaxBytes) { return AMDGPULDSBufferingPass(*this, MaxBytes); },
-    parseAMDGPULDSBufferingMaxBytes, "max-bytes")
+    [=](AMDGPULDSBufferingOptions Options) {
+      return AMDGPULDSBufferingPass(*this, Options);
+    },
+    parseAMDGPULDSBufferingOptions,
+    "max-bytes;min-align;only-candidate;mode")
 FUNCTION_PASS_WITH_PARAMS(
     "amdgpu-atomic-optimizer",
     "AMDGPUAtomicOptimizerPass",
