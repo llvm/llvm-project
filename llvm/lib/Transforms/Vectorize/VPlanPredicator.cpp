@@ -371,9 +371,54 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // This is the block mask. We OR all unique incoming edges.
   for (auto *Predecessor : SetVector<VPBlockBase *>(
            VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
-    VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
-    if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
-                     // too.
+    auto *Pred = cast<VPBasicBlock>(Predecessor);
+    bool CanUseBlockMaskOnly = [&] {
+      if (!shouldPreserveTerminator(Pred))
+        return false;
+
+      LLVM_DEBUG(
+          dbgs()
+          << "Checking if can skip branch condition for a uniform branch at "
+          << Pred->getName() << "\n");
+
+      auto False = []([[maybe_unused]] StringRef Reason = "") {
+        LLVM_DEBUG(dbgs() << "  can't skip"
+                          << (Reason.empty() ? Twine() : (": " + Reason))
+                          << "\n");
+        return false;
+      };
+
+      // Detect patterns like
+      //
+      //       BB (uniform branch)
+      //      /  \
+      //     /  +-------------------------+
+      //    |   | no other incoming edges |
+      //    |   +-------------------------+
+      //     \    /   /
+      //      \  /   /
+      //     PostDomBB <-- <possible other edges originated before BB
+      //
+      // where one of those uniform edges is a "bypass". We can use BB's mask
+      // instead of the edge mask for the masks inside the "box" region above.
+      auto *IPostDomNode = VPPDT.getNode(Pred)->getIDom();
+      if (!IPostDomNode)
+        return False("No post-dom");
+      auto *IPostDom = dyn_cast<VPBasicBlock>(IPostDomNode->getBlock());
+      LLVM_DEBUG(dbgs() << "  post-dom: " << IPostDom->getName() << "\n");
+      if (!IPostDom || !VPDT.properlyDominates(Pred, IPostDom))
+        return False("doesn't dominate its post-dom");
+
+      if (!is_contained(Pred->getSuccessors(), IPostDom))
+        return False("not a bypass branch");
+
+      LLVM_DEBUG(dbgs() << "  can skip\n");
+      return true;
+    }();
+    VPValue *EdgeMask =
+        CanUseBlockMaskOnly ? getBlockInMask(Pred) : createEdgeMask(Pred, VPBB);
+    if (!EdgeMask) {
+      // Mask of predecessor is all-one so mask of block is too.
       setBlockInMask(VPBB, EdgeMask);
       return;
     }

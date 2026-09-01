@@ -777,18 +777,18 @@ define void @simplifiable_blend(i1 %c1, i1 %c2, i1 %c3, i32 %x, i32 %y, ptr %p) 
 ; CHECK-NEXT:    Successor(s): A, B
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    A:
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = freeze ir<%c2>
-; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP8]]>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = freeze ir<%c2>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): C, D
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    C:
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and ir<%c1>, ir<%c2>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and ir<%c1>, ir<%c2>
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
-; CHECK-NEXT:      WIDEN-PHI vp<[[VP12:%[0-9]+]]> = phi [ vp<[[VP4:%[0-9]+]]>, F ], [ ir<false>, D ], [ ir<false>, C ]
-; CHECK-NEXT:      WIDEN-PHI vp<[[VP13:%[0-9]+]]> = phi [ ir<false>, F ], [ ir<%c1>, D ], [ ir<%c1>, C ]
-; CHECK-NEXT:      BLEND ir<%phi> = ir<%y>/vp<[[VP12]]> ir<%x>/vp<[[VP13]]>
+; CHECK-NEXT:      WIDEN-PHI vp<[[VP10:%[0-9]+]]> = phi [ vp<[[VP4:%[0-9]+]]>, F ], [ ir<false>, D ], [ ir<false>, C ]
+; CHECK-NEXT:      WIDEN-PHI vp<[[VP11:%[0-9]+]]> = phi [ ir<false>, F ], [ ir<%c1>, D ], [ ir<%c1>, C ]
+; CHECK-NEXT:      BLEND ir<%phi> = ir<%y>/vp<[[VP10]]> ir<%x>/vp<[[VP11]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
@@ -798,8 +798,8 @@ define void @simplifiable_blend(i1 %c1, i1 %c2, i1 %c3, i32 %x, i32 %y, ptr %p) 
 ; CHECK-NEXT:    No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    D:
-; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = not ir<%c2>
-; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and ir<%c1>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%c2>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and ir<%c1>, vp<[[VP7]]>
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    B:
@@ -812,8 +812,6 @@ define void @simplifiable_blend(i1 %c1, i1 %c2, i1 %c3, i32 %x, i32 %y, ptr %p) 
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    E:
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not ir<%c3>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): F
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
@@ -1000,24 +998,23 @@ define void @outermost_uniform_branch(ptr %a, i1 %u0) {
 ; CHECK-NEXT:    Successor(s): bb1, bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb1:
-; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%u0>
-; CHECK-NEXT:      EMIT ir<%v1> = icmp sle ir<%iv>, ir<1>, ir<%u0>
+; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%v1> = icmp sle ir<%iv>, ir<1>
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = logical-and ir<%u0>, ir<%v1>
-; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, ir<%v1>
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:
 ; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add1>/ir<true> ir<%add2>/ir<%v1>
-; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, ir<%u0>
+; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
-; CHECK-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ ir<%add3>, bb3 ]
-; CHECK-NEXT:      WIDEN-PHI vp<[[VP6:%[0-9]+]]> = phi [ ir<false>, vector.body ], [ ir<%u0>, bb3 ]
-; CHECK-NEXT:      BLEND ir<%phi4> = ir<%iv>/ir<true> vp<%5>/vp<[[VP6]]>
+; CHECK-NEXT:      WIDEN-PHI vp<[[VP4:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ ir<%add3>, bb3 ]
+; CHECK-NEXT:      WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<false>, vector.body ], [ ir<true>, bb3 ]
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<%iv>/ir<true> vp<%4>/vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT store ir<%phi4>, ir<%a>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
@@ -1083,15 +1080,14 @@ define void @outermost_uniform_branch_no_phi(ptr %a, i1 %u0) {
 ; CHECK-NEXT:    Successor(s): bb1, bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb1:
-; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%u0>
-; CHECK-NEXT:      EMIT store ir<%add1>, ir<%gep>, ir<%u0>
-; CHECK-NEXT:      EMIT ir<%v1> = icmp sle ir<%iv>, ir<1>, ir<%u0>
+; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT store ir<%add1>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%v1> = icmp sle ir<%iv>, ir<1>
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = logical-and ir<%u0>, ir<%v1>
-; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
-; CHECK-NEXT:      EMIT store ir<%add2>, ir<%gep>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, ir<%v1>
+; CHECK-NEXT:      EMIT store ir<%add2>, ir<%gep>, ir<%v1>
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:
@@ -1363,14 +1359,13 @@ define void @uniform_branch_after_varying_branch(ptr %a, i1 %u1) {
 ; CHECK-NEXT:    Successor(s): bb2, bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%u1>
-; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP6]]>
+; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:
-; CHECK-NEXT:      WIDEN-PHI vp<[[VP7:%[0-9]+]]> = phi [ ir<poison>, bb1 ], [ ir<%add2>, bb2 ]
-; CHECK-NEXT:      WIDEN-PHI vp<[[VP8:%[0-9]+]]> = phi [ ir<false>, bb1 ], [ ir<%u1>, bb2 ]
-; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add1>/ir<true> vp<%7>/vp<[[VP8]]>
+; CHECK-NEXT:      WIDEN-PHI vp<[[VP6:%[0-9]+]]> = phi [ ir<poison>, bb1 ], [ ir<%add2>, bb2 ]
+; CHECK-NEXT:      WIDEN-PHI vp<[[VP7:%[0-9]+]]> = phi [ ir<false>, bb1 ], [ ir<true>, bb2 ]
+; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add1>/ir<true> vp<%6>/vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
@@ -1454,9 +1449,8 @@ define void @uniform_branch_after_varying_branch_no_phi(ptr %a, i1 %u1) {
 ; CHECK-NEXT:    Successor(s): bb2, bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%u1>
-; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP6]]>
-; CHECK-NEXT:      EMIT store ir<%add2>, ir<%gep>, vp<[[VP6]]>
+; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT store ir<%add2>, ir<%gep>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:

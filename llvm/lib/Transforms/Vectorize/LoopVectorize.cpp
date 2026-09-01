@@ -6058,8 +6058,10 @@ VPRecipeWithIRFlags *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   case Instruction::UDiv:
   case Instruction::SRem:
   case Instruction::URem:
-    // If not provably safe, use a masked intrinsic.
-    if (CM.isPredicatedInst(I))
+    // If not provably safe, use a masked intrinsic. Predicator might have
+    // preserved uniform control flow making this unmasked even if CM expected
+    // it to be masked.
+    if (CM.isPredicatedInst(I) && VPI->isMasked())
       return new VPWidenIntrinsicRecipe(
           getMaskedDivRemIntrinsic(VPI->getOpcode()), VPI->operands(),
           I->getType(), {}, {}, VPI->getDebugLoc());

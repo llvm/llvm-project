@@ -32,23 +32,7 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:    Successor(s): if.then, for.inc
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if.then:
-; CHECK-NEXT:    Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT:    <xVFxUF> pred.store: {
-; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK ir<%c>
-; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        CLONE store ir<%tmp3>, ir<%tmp2>
-; CHECK-NEXT:      Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:      pred.store.continue:
-; CHECK-NEXT:      No successors
-; CHECK-NEXT:    }
-; CHECK-NEXT:    Successor(s): if.then.0
-; CHECK-EMPTY:
-; CHECK-NEXT:    if.then.0:
+; CHECK-NEXT:      CLONE store ir<%tmp3>, ir<%tmp2>
 ; CHECK-NEXT:    Successor(s): for.inc
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    for.inc:

@@ -13,9 +13,6 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[X]], 0
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
@@ -23,7 +20,7 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP0]], %[[ELSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ splat (i1 true), %[[ELSE]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[PREDPHI7:%.*]] = select i1 [[TMP2]], i64 0, i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[PREDPHI7]], 1
