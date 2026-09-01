@@ -116,8 +116,7 @@ private:
     BaseIterator &operator++() {
       ReductionNode *top = visitQueue.front();
       visitQueue.pop();
-      for (ReductionNode *node : getNeighbors(top))
-        visitQueue.push(node);
+      pushNeighbors(top);
       return *this;
     }
 
@@ -131,11 +130,10 @@ private:
     ReductionNode *operator->() const { return visitQueue.front(); }
 
   protected:
-    ArrayRef<ReductionNode *> getNeighbors(ReductionNode *node) {
-      return static_cast<T *>(this)->getNeighbors(node);
+    void pushNeighbors(ReductionNode *node) {
+      return static_cast<T *>(this)->pushNeighbors(node);
     }
 
-  private:
     std::queue<ReductionNode *> visitQueue;
   };
 
@@ -188,7 +186,16 @@ class ReductionNode::iterator<SinglePath>
     : public BaseIterator<iterator<SinglePath>> {
   friend BaseIterator<iterator<SinglePath>>;
   using BaseIterator::BaseIterator;
-  ArrayRef<ReductionNode *> getNeighbors(ReductionNode *node);
+  void pushNeighbors(ReductionNode *node);
+};
+
+// Specialized iterator for MultiPath traversal
+template <>
+class ReductionNode::iterator<MultiPath>
+    : public BaseIterator<iterator<MultiPath>> {
+  friend BaseIterator<iterator<MultiPath>>;
+  using BaseIterator::BaseIterator;
+  void pushNeighbors(ReductionNode *node);
 };
 
 } // namespace mlir

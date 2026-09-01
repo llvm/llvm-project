@@ -75,7 +75,7 @@ ArrayRef<ReductionNode *> ReductionNode::generateNewVariants() {
   // final ranges vector will be {{1, 3}, {4, 6}, {6, 9}}.
   auto maxElement =
       llvm::max_element(ranges, [](const Range &lhs, const Range &rhs) {
-        return (lhs.second - lhs.first) > (rhs.second - rhs.first);
+        return (lhs.second - lhs.first) < (rhs.second - rhs.first);
       });
 
   // The length of range is less than 1, we can't split it to create new
@@ -115,8 +115,8 @@ void ReductionNode::update(std::pair<Tester::Interestingness, size_t> result) {
   }
 }
 
-ArrayRef<ReductionNode *>
-ReductionNode::iterator<SinglePath>::getNeighbors(ReductionNode *node) {
+void
+ReductionNode::iterator<SinglePath>::pushNeighbors(ReductionNode *node) {
   // Single Path: Traverses the smallest successful variant at each level until
   // no new successful variants can be created at that level.
   ArrayRef<ReductionNode *> variantsFromParent =
@@ -129,7 +129,7 @@ ReductionNode::iterator<SinglePath>::getNeighbors(ReductionNode *node) {
   if (!llvm::all_of(variantsFromParent, [](ReductionNode *node) {
         return node->isInteresting() != Tester::Interestingness::Untested;
       })) {
-    return {};
+    return;
   }
 
   ReductionNode *smallest = nullptr;
@@ -150,5 +150,34 @@ ReductionNode::iterator<SinglePath>::getNeighbors(ReductionNode *node) {
     node = node->getParent();
   }
 
-  return node->generateNewVariants();
+  for (ReductionNode *newVariant : node->generateNewVariants()) {
+    visitQueue.push(newVariant);
+  }
+}
+
+void
+ReductionNode::iterator<MultiPath>::pushNeighbors(ReductionNode *node) {
+  // MultiPath: Traverses every successful variant at each level until
+  // no new successful variants can be created.
+  ArrayRef<ReductionNode *> variantsFromParent =
+      node->getParent()->getVariants();
+
+  if (node->isInteresting() == Tester::Interestingness::True && node->getSize() < node->getParent()->getSize()) {
+    for (ReductionNode *newVariant : node->generateNewVariants()) {
+      visitQueue.push(newVariant);
+    }
+  }
+
+  // The parent node created several variants and they may be waiting for
+  // examing interestingness. In Single Path approach, we will select the
+  // smallest variant to continue our exploration. Thus we should wait until the
+  // last variant to be examed then do the following traversal decision.
+  if (llvm::all_of(variantsFromParent, [](ReductionNode *node) {
+        return node->isInteresting() != Tester::Interestingness::Untested;
+      })) {
+
+    for (ReductionNode *newVariant : node->getParent()->generateNewVariants()) {
+      visitQueue.push(newVariant);
+    }
+  }
 }
