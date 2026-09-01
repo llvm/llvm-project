@@ -14,6 +14,7 @@
 #include "L0Device.h"
 #include "L0Kernel.h"
 #include "L0Plugin.h"
+#include "L0Trace.h"
 #include "PluginInterface.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
@@ -93,11 +94,8 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
 
   // Submit kernel using older set of APIs - zeKernelSetArgumentValue
   auto &GroupSizes = KEnv.GroupSizes;
-  auto Res = zeKernelSetGroupSize(Kernel, GroupSizes.groupSizeX,
-                                  GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
-  if (Res != ZE_RESULT_SUCCESS)
-    return error::createOffloadError(ErrorCode::UNSUPPORTED,
-                                     "Could not set group size!");
+  CALL_ZE_RET_ERROR(zeKernelSetGroupSize, Kernel, GroupSizes.groupSizeX,
+                    GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
 
   auto &KernelProperties = KEnv.KernelPR;
 
@@ -105,11 +103,8 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
        KernelArg++) {
     uint32_t ArgSize = KEnv.ArgSizes[KernelArg];
 
-    Res = zeKernelSetArgumentValue(Kernel, KernelArg, ArgSize,
-                                   KEnv.ArgPtrs[KernelArg]);
-    if (Res != ZE_RESULT_SUCCESS)
-      return error::createOffloadError(ErrorCode::UNKNOWN,
-                                       "Could not set argument to a kernel!");
+    CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, Kernel, KernelArg, ArgSize,
+                      KEnv.ArgPtrs[KernelArg]);
   }
 
   return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
