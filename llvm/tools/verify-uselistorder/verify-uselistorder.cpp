@@ -75,7 +75,7 @@ struct TempFile {
   FileRemover Remover;
   bool init(const std::string &Ext, bool IsText = false);
   bool writeBitcode(const Module &M) const;
-  bool writeAssembly(Module &M) const;
+  bool writeAssembly(const Module &M) const;
   std::unique_ptr<Module> readBitcode(LLVMContext &Context) const;
   std::unique_ptr<Module> readAssembly(LLVMContext &Context) const;
 };
@@ -137,7 +137,7 @@ bool TempFile::writeBitcode(const Module &M) const {
   return false;
 }
 
-bool TempFile::writeAssembly(Module &M) const {
+bool TempFile::writeAssembly(const Module &M) const {
   LLVM_DEBUG(dbgs() << " - write assembly\n");
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC, sys::fs::OF_TextWithCRLF);
@@ -146,7 +146,6 @@ bool TempFile::writeAssembly(Module &M) const {
     return true;
   }
 
-  M.renumberMetadataForAssembly();
   M.print(OS, nullptr, /* ShouldPreserveUseListOrder */ true);
   return false;
 }
@@ -380,7 +379,7 @@ static void verifyBitcodeUseListOrder(const Module &M) {
   verifyAfterRoundTrip(M, F.readBitcode(Context));
 }
 
-static void verifyAssemblyUseListOrder(Module &M) {
+static void verifyAssemblyUseListOrder(const Module &M) {
   TempFile F;
   if (F.init("ll", /*IsText=*/true))
     report_fatal_error("failed to initialize assembly file");
@@ -392,7 +391,7 @@ static void verifyAssemblyUseListOrder(Module &M) {
   verifyAfterRoundTrip(M, F.readAssembly(Context));
 }
 
-static void verifyUseListOrder(Module &M) {
+static void verifyUseListOrder(const Module &M) {
   outs() << "verify bitcode\n";
   verifyBitcodeUseListOrder(M);
   outs() << "verify assembly\n";

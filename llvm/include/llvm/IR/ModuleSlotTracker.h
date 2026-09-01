@@ -9,12 +9,11 @@
 #ifndef LLVM_IR_MODULESLOTTRACKER_H
 #define LLVM_IR_MODULESLOTTRACKER_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <functional>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace llvm {
 
@@ -22,13 +21,14 @@ class Module;
 class Function;
 class SlotTracker;
 class Value;
-class DILocation;
 class MDNode;
 
 /// Abstract interface of slot tracker storage.
 class LLVM_ABI AbstractSlotTrackerStorage {
 public:
   virtual ~AbstractSlotTrackerStorage();
+
+  virtual unsigned getNextMetadataSlot() = 0;
 
   virtual void createMetadataSlot(const MDNode *) = 0;
   virtual int getMetadataSlot(const MDNode *) = 0;
@@ -43,36 +43,19 @@ public:
 /// If the IR changes from underneath \a ModuleSlotTracker, strings like
 /// "<badref>" will be printed, or, worse, the wrong slots entirely.
 class LLVM_ABI ModuleSlotTracker {
-public:
-  using MachineMDNodeListType =
-      SmallVector<std::pair<unsigned, const MDNode *>, 0>;
-
-private:
   /// Storage for a slot tracker.
   std::unique_ptr<SlotTracker> MachineStorage;
   bool ShouldCreateStorage = false;
+  bool ShouldInitializeAllMetadata = false;
 
   const Module *M = nullptr;
   const Function *F = nullptr;
   SlotTracker *Machine = nullptr;
 
-  std::function<void(AbstractSlotTrackerStorage *, const Module *)>
+  std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
       ProcessModuleHookFn;
-  std::function<void(AbstractSlotTrackerStorage *, const Function *)>
+  std::function<void(AbstractSlotTrackerStorage *, const Function *, bool)>
       ProcessFunctionHookFn;
-
-protected:
-  /// Renumber module metadata and then additional metadata for canonical
-  /// assembly output.
-  void renumberMetadataForAssembly(
-      ArrayRef<const MDNode *> AdditionalMetadata,
-      MachineMDNodeListType *AdditionalMetadataNodes = nullptr) const;
-
-  /// Collect metadata reachable from \p AdditionalMetadata but not from the
-  /// module.
-  void collectAdditionalMetadata(
-      ArrayRef<const MDNode *> AdditionalMetadata,
-      MachineMDNodeListType &AdditionalMetadataNodes) const;
 
 public:
   /// Wrap a preinitialized SlotTracker.
@@ -81,8 +64,13 @@ public:
 
   /// Construct a slot tracker from a module.
   ///
-  /// If \a M is \c nullptr, uses a null slot tracker.
-  explicit ModuleSlotTracker(const Module *M);
+  /// If \a M is \c nullptr, uses a null slot tracker.  Otherwise, initializes
+  /// a slot tracker, and initializes all metadata slots.  \c
+  /// ShouldInitializeAllMetadata defaults to true because this is expected to
+  /// be shared between multiple callers, and otherwise MDNode references will
+  /// not match up.
+  explicit ModuleSlotTracker(const Module *M,
+                             bool ShouldInitializeAllMetadata = true);
 
   /// Destructor to clean up storage.
   virtual ~ModuleSlotTracker();
@@ -107,16 +95,14 @@ public:
   int getLocalSlot(const Value *V);
 
   void setProcessHook(
-      std::function<void(AbstractSlotTrackerStorage *, const Module *)>);
-  void setProcessHook(
-      std::function<void(AbstractSlotTrackerStorage *, const Function *)>);
+      std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>);
+  void setProcessHook(std::function<void(AbstractSlotTrackerStorage *,
+                                         const Function *, bool)>);
 
-  void collectMDNodes(MachineMDNodeListType &L) const;
+  using MachineMDNodeListType =
+      std::vector<std::pair<unsigned, const MDNode *>>;
 
-  /// Return whether a debug location should be printed inline instead of by ID.
-  virtual bool shouldPrintDebugLocationInline(const DILocation *) const {
-    return false;
-  }
+  void collectMDNodes(MachineMDNodeListType &L, unsigned LB, unsigned UB) const;
 };
 
 } // end namespace llvm
