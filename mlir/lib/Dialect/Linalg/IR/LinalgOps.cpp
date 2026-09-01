@@ -2113,7 +2113,7 @@ struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
       return failure();
 
     assert(reduceOp.getInputs().size() == 1 &&
-        "expected one input for a single-result tensor reduce");
+           "expected one input for a single-result tensor reduce");
 
     auto broadcastOp =
         reduceOp.getInputs().front().getDefiningOp<linalg::BroadcastOp>();
