@@ -10,6 +10,7 @@ add_lldb_unittest(TargetTests
   ModuleCacheTest.cpp
   PathMappingListTest.cpp
   ProcessPropertiesTest.cpp
+  ReExportedSymbolTest.cpp
   RegisterTypeBuilderClangTest.cpp
   RemoteAwarePlatformTest.cpp
   ScratchTypeSystemTest.cpp

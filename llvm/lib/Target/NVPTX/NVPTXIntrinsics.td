@@ -2781,8 +2781,8 @@ let Predicates = [hasNarrowFPConversionSupport] in {
             (CVT_bf16x2_ue8m0x2 $a)>;
 }
 
-// ue5m3x2 to f16x2 / bf16x2 conversions.
-let Predicates = [hasUE5M3TypeSupport] in {
+// ue5m3x2 conversions.
+let Predicates = [hasRubinFamilySupport] in {
   def : Pat<(int_nvvm_ue5m3x2_to_f16x2_rn i16:$a),
             (CVT_f16x2_ue5m3x2 $a, CvtRN)>;
   
@@ -2795,7 +2795,42 @@ let Predicates = [hasUE5M3TypeSupport] in {
             (CVT_bf16x2_ue5m3x2_scale_n2 $a, $b, CvtRN)>;
   def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0 i16:$a, i16:$b),
             (CVT_bf16x2_ue5m3x2_scale_n2 $a, $b, CvtRN_SATFINITE)>;
-} // let Predicates = [hasUE5M3TypeSupport]
+
+  foreach satfinite = ["", "satfinite"] in {
+    defvar sat = !if(!empty(satfinite), "", "_" # satfinite);
+    foreach rnd = ["rn", "rz"] in {
+      defvar mode = !cast<PatLeaf>("Cvt" # !toupper(rnd) # !toupper(sat));
+
+      defvar ff_intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_" # rnd # sat);
+      def : Pat<(ff_intrin f32:$a, f32:$b), (CVT_ue5m3x2_f32 $a, $b, mode)>;
+
+      defvar ff_scale_intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_" # rnd # sat # "_scale_n1_ue8m0");
+      def : Pat<(ff_scale_intrin f32:$a, f32:$b, i16:$c),
+                (CVT_ue5m3x2_f32_scale_n1 $a, $b, $c, mode)>;
+
+      foreach type = ["f16x2", "bf16x2"] in {
+        defvar intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_" # rnd # sat);
+        def : Pat<(intrin B32:$a),
+                  (!cast<NVPTXInst>("CVT_ue5m3x2_" # type) $a, mode)>;
+
+        defvar scale_intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_" # rnd # sat # "_scale_n1_ue8m0");
+        def : Pat<(scale_intrin B32:$a, i16:$b),
+                  (!cast<NVPTXInst>("CVT_ue5m3x2_" # type # "_scale_n1") $a, $b, mode)>;
+      }
+    }
+
+    defvar rp_mode = !cast<PatLeaf>("CvtRP" # !toupper(sat));
+
+    defvar ff_rp_intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_rp" # sat);
+    def : Pat<(ff_rp_intrin f32:$a, f32:$b), (CVT_ue5m3x2_f32 $a, $b, rp_mode)>;
+
+    foreach type = ["f16x2", "bf16x2"] in {
+      defvar rp_intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_rp" # sat);
+      def : Pat<(rp_intrin B32:$a),
+                (!cast<NVPTXInst>("CVT_ue5m3x2_" # type) $a, rp_mode)>;
+    }
+  }
+} // let Predicates = [hasRubinFamilySupport]
 
 def SDT_CVT_F32X4_TO_FPX4_RS_VEC :
   SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 
@@ -2886,32 +2921,68 @@ class AtomicSDNodeXForm<SDNode atomic> {
   SDNodeXForm GetAddSp = SDNodeXForm<atomic, [{
     return getI32Imm(getAddrSpace(cast<MemSDNode>(N)), SDLoc(N));
   }]>;
+
+  SDNodeXForm GetEvictionAndPrefetchHint = SDNodeXForm<atomic, [{
+    auto *MN = cast<MemSDNode>(N);
+    unsigned EltWidth = MN->getMemoryVT().getFixedSizeInBits();
+    NVPTXMemCacheHintAccess Access{
+        NVPTXMemCacheHintInstruction::Atom, getAddrSpace(MN),
+        /*NumElts=*/1, EltWidth, MN->isVolatile()};
+    return getMemCacheHintOperands(MN, Access, SDLoc(N),
+                                   /*EmitDiagnostics=*/true)
+        .EvictionAndPrefetchHint;
+  }]>;
+
+  SDNodeXForm GetCachePolicy = SDNodeXForm<atomic, [{
+    auto *MN = cast<MemSDNode>(N);
+    unsigned EltWidth = MN->getMemoryVT().getFixedSizeInBits();
+    NVPTXMemCacheHintAccess Access{
+        NVPTXMemCacheHintInstruction::Atom, getAddrSpace(MN),
+        /*NumElts=*/1, EltWidth, MN->isVolatile()};
+    return getMemCacheHintOperands(MN, Access, SDLoc(N),
+                                   /*EmitDiagnostics=*/false)
+        .CachePolicyReg;
+  }]>;
 }
 
-multiclass F_ATOMIC_2<RegTyInfo t, SDPatternOperator op, string op_str, SDNode atomic, list<Predicate> preds = []> {
-  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}" # "." # op_str;
+multiclass F_ATOMIC_2<RegTyInfo t, SDPatternOperator op, string op_str,
+                      string type_str, SDNode atomic,
+                      list<Predicate> preds = []> {
+  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}." # op_str #
+                   "${evictionAndPrefetchHint:l2}." # type_str #
+                   " \t$dst, [$addr], $b${policy};";
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
-    def _r : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.RC:$b),
-      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-      asm_str>,
+    def _r : NVPTXInst<
+      (outs t.RC:$dst),
+      (ins ADDR:$addr, t.RC:$b, AtomicCode:$sem, AtomicCode:$scope,
+           AtomicCode:$addsp,
+           EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+           CachePolicy:$policy), asm_str>,
       Requires<preds>;
     if t.SupportsImm then
-      def _i : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-        (ins ADDR:$addr, t.Imm:$b),
-        (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-        asm_str>,
+      def _i : NVPTXInst<
+        (outs t.RC:$dst),
+        (ins ADDR:$addr, t.Imm:$b, AtomicCode:$sem, AtomicCode:$scope,
+             AtomicCode:$addsp,
+             EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+             CachePolicy:$policy), asm_str>,
         Requires<preds>;
   }
 
   defvar XForm = AtomicSDNodeXForm<atomic>;
 
   def : Pat<(op:$this addr:$addr, t.Ty:$b),
-  (!cast<Instruction>(NAME # _r) ADDR:$addr, t.Ty:$b, (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this))>;
+  (!cast<Instruction>(NAME # _r) ADDR:$addr, t.Ty:$b, (XForm.GetSem $this),
+    (XForm.GetScope $this), (XForm.GetAddSp $this),
+    (XForm.GetEvictionAndPrefetchHint $this),
+    (XForm.GetCachePolicy $this))>;
 
   if t.SupportsImm then
     def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b)),
-      (!cast<Instruction>(NAME # _i) ADDR:$addr, (t.Ty t.ImmNode:$b), (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this))>;
+      (!cast<Instruction>(NAME # _i) ADDR:$addr, (t.Ty t.ImmNode:$b),
+        (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this),
+        (XForm.GetEvictionAndPrefetchHint $this),
+        (XForm.GetCachePolicy $this))>;
 }
 
 multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode atomic> {
@@ -2957,29 +3028,29 @@ multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode a
 defm atomic_load_fadd  : binary_atomic_op_fp<atomic_load_fadd>;
 
 // atom_add
-defm INT_PTX_ATOM_ADD_32 : F_ATOMIC_2<I32RT, atomic_load_add_i32, "add.u32", atomic_load_add>;
-defm INT_PTX_ATOM_ADD_64 : F_ATOMIC_2<I64RT, atomic_load_add_i64, "add.u64", atomic_load_add>;
+defm INT_PTX_ATOM_ADD_32 : F_ATOMIC_2<I32RT, atomic_load_add_i32, "add", "u32", atomic_load_add>;
+defm INT_PTX_ATOM_ADD_64 : F_ATOMIC_2<I64RT, atomic_load_add_i64, "add", "u64", atomic_load_add>;
 
-defm INT_PTX_ATOM_ADD_F16  : F_ATOMIC_2<F16RT, atomic_load_fadd, "add.noftz.f16", atomic_load_fadd, [SM70, PTX63]>;
-defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, "add.noftz.bf16", atomic_load_fadd, [SM90]>;
-defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2<F32RT, atomic_load_fadd, "add.f32", atomic_load_fadd>;
-defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2<F64RT, atomic_load_fadd, "add.f64", atomic_load_fadd, [hasAtomAddF64]>;
+defm INT_PTX_ATOM_ADD_F16  : F_ATOMIC_2<F16RT, atomic_load_fadd, "add.noftz", "f16", atomic_load_fadd, [SM70, PTX63]>;
+defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, "add.noftz", "bf16", atomic_load_fadd, [SM90]>;
+defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2<F32RT, atomic_load_fadd, "add", "f32", atomic_load_fadd>;
+defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2<F64RT, atomic_load_fadd, "add", "f64", atomic_load_fadd, [hasAtomAddF64]>;
 
 // atom_swap
-defm INT_PTX_ATOM_SWAP_32 : F_ATOMIC_2<I32RT, atomic_swap_i32, "exch.b32", atomic_swap>;
-defm INT_PTX_ATOM_SWAP_64 : F_ATOMIC_2<I64RT, atomic_swap_i64, "exch.b64", atomic_swap>;
+defm INT_PTX_ATOM_SWAP_32 : F_ATOMIC_2<I32RT, atomic_swap_i32, "exch", "b32", atomic_swap>;
+defm INT_PTX_ATOM_SWAP_64 : F_ATOMIC_2<I64RT, atomic_swap_i64, "exch", "b64", atomic_swap>;
 
 // atom_max
-defm INT_PTX_ATOMIC_MAX_32 : F_ATOMIC_2<I32RT, atomic_load_max_i32, "max.s32", atomic_load_max>;
-defm INT_PTX_ATOMIC_MAX_64 : F_ATOMIC_2<I64RT, atomic_load_max_i64, "max.s64", atomic_load_max, [SM32]>;
-defm INT_PTX_ATOMIC_UMAX_32 : F_ATOMIC_2<I32RT, atomic_load_umax_i32, "max.u32", atomic_load_umax>;
-defm INT_PTX_ATOMIC_UMAX_64 : F_ATOMIC_2<I64RT, atomic_load_umax_i64, "max.u64", atomic_load_umax, [SM32]>;
+defm INT_PTX_ATOMIC_MAX_32 : F_ATOMIC_2<I32RT, atomic_load_max_i32, "max", "s32", atomic_load_max>;
+defm INT_PTX_ATOMIC_MAX_64 : F_ATOMIC_2<I64RT, atomic_load_max_i64, "max", "s64", atomic_load_max, [SM32]>;
+defm INT_PTX_ATOMIC_UMAX_32 : F_ATOMIC_2<I32RT, atomic_load_umax_i32, "max", "u32", atomic_load_umax>;
+defm INT_PTX_ATOMIC_UMAX_64 : F_ATOMIC_2<I64RT, atomic_load_umax_i64, "max", "u64", atomic_load_umax, [SM32]>;
 
 // atom_min
-defm INT_PTX_ATOMIC_MIN_32 : F_ATOMIC_2<I32RT, atomic_load_min_i32, "min.s32", atomic_load_min>;
-defm INT_PTX_ATOMIC_MIN_64 : F_ATOMIC_2<I64RT, atomic_load_min_i64, "min.s64", atomic_load_min, [SM32]>;
-defm INT_PTX_ATOMIC_UMIN_32 : F_ATOMIC_2<I32RT, atomic_load_umin_i32, "min.u32", atomic_load_umin>;
-defm INT_PTX_ATOMIC_UMIN_64 : F_ATOMIC_2<I64RT, atomic_load_umin_i64, "min.u64", atomic_load_umin, [SM32]>;
+defm INT_PTX_ATOMIC_MIN_32 : F_ATOMIC_2<I32RT, atomic_load_min_i32, "min", "s32", atomic_load_min>;
+defm INT_PTX_ATOMIC_MIN_64 : F_ATOMIC_2<I64RT, atomic_load_min_i64, "min", "s64", atomic_load_min, [SM32]>;
+defm INT_PTX_ATOMIC_UMIN_32 : F_ATOMIC_2<I32RT, atomic_load_umin_i32, "min", "u32", atomic_load_umin>;
+defm INT_PTX_ATOMIC_UMIN_64 : F_ATOMIC_2<I64RT, atomic_load_umin_i64, "min", "u64", atomic_load_umin, [SM32]>;
 
 // NOTE: The semantics for atomicrmw fmin (and fmax) upholds LangRef
 // requirements.  The LangRef requires the semantics of fmin/fmax to follow
@@ -2992,20 +3063,20 @@ defm INT_PTX_ATOMIC_UMIN_64 : F_ATOMIC_2<I64RT, atomic_load_umin_i64, "min.u64",
 // [3] https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#half-precision-floating-point-instructions-min
 
 // atom_inc  atom_dec
-defm INT_PTX_ATOM_INC_32 : F_ATOMIC_2<I32RT, atomic_load_uinc_wrap_i32, "inc.u32", atomic_load_uinc_wrap>;
-defm INT_PTX_ATOM_DEC_32 : F_ATOMIC_2<I32RT, atomic_load_udec_wrap_i32, "dec.u32", atomic_load_udec_wrap>;
+defm INT_PTX_ATOM_INC_32 : F_ATOMIC_2<I32RT, atomic_load_uinc_wrap_i32, "inc", "u32", atomic_load_uinc_wrap>;
+defm INT_PTX_ATOM_DEC_32 : F_ATOMIC_2<I32RT, atomic_load_udec_wrap_i32, "dec", "u32", atomic_load_udec_wrap>;
 
 // atom_and
-defm INT_PTX_ATOM_AND_32 : F_ATOMIC_2<I32RT, atomic_load_and_i32, "and.b32", atomic_load_and>;
-defm INT_PTX_ATOM_AND_64 : F_ATOMIC_2<I64RT, atomic_load_and_i64, "and.b64", atomic_load_and, [SM32]>;
+defm INT_PTX_ATOM_AND_32 : F_ATOMIC_2<I32RT, atomic_load_and_i32, "and", "b32", atomic_load_and>;
+defm INT_PTX_ATOM_AND_64 : F_ATOMIC_2<I64RT, atomic_load_and_i64, "and", "b64", atomic_load_and, [SM32]>;
 
 // atom_or
-defm INT_PTX_ATOM_OR_32 : F_ATOMIC_2<I32RT, atomic_load_or_i32, "or.b32", atomic_load_or>;
-defm INT_PTX_ATOM_OR_64 : F_ATOMIC_2<I64RT, atomic_load_or_i64, "or.b64", atomic_load_or, [SM32]>;
+defm INT_PTX_ATOM_OR_32 : F_ATOMIC_2<I32RT, atomic_load_or_i32, "or", "b32", atomic_load_or>;
+defm INT_PTX_ATOM_OR_64 : F_ATOMIC_2<I64RT, atomic_load_or_i64, "or", "b64", atomic_load_or, [SM32]>;
 
 // atom_xor
-defm INT_PTX_ATOM_XOR_32 : F_ATOMIC_2<I32RT, atomic_load_xor_i32, "xor.b32", atomic_load_xor>;
-defm INT_PTX_ATOM_XOR_64 : F_ATOMIC_2<I64RT, atomic_load_xor_i64, "xor.b64", atomic_load_xor, [SM32]>;
+defm INT_PTX_ATOM_XOR_32 : F_ATOMIC_2<I32RT, atomic_load_xor_i32, "xor", "b32", atomic_load_xor>;
+defm INT_PTX_ATOM_XOR_64 : F_ATOMIC_2<I64RT, atomic_load_xor_i64, "xor", "b64", atomic_load_xor, [SM32]>;
 
 // Define atom.cas for all combinations of size x addrspace x memory order
 // supported in PTX *and* on the hardware.
@@ -3036,11 +3107,13 @@ let mayLoad = true, mayStore = true, hasSideEffects = true,
     NVPTXInst<
         (outs B64:$dst0, B64:$dst1),
         (ins ADDR:$addr, B64:$amt0, B64:$amt1,
-             AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+             AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+             EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+             CachePolicy:$policy),
         "{{\n\t"
         ".reg .b128 amt, dst;\n\t"
         "mov.b128 amt, {$amt0, $amt1};\n\t"
-        "atom${sem:sem}${scope:scope}${addsp:addsp}.exch.b128 dst, [$addr], amt;\n\t"
+        "atom${sem:sem}${scope:scope}${addsp:addsp}.exch${evictionAndPrefetchHint:l2}.b128 dst, [$addr], amt${policy};\n\t"
         "mov.b128 {$dst0, $dst1}, dst;\n\t"
         "}}">;
 }
