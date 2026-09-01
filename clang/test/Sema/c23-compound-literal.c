@@ -87,15 +87,16 @@ void test8(void) {
 
 void test9(void) {
   int *a = &(register int){1};   // expected-error {{address of register compound literal requested}}
-  int *b = (register int[1]){1}; // expected-error {{address of register compound literal requested}}
+  int *b = (register int[1]){1};
   struct S2 { int a; };
   int *c = &(register struct S2){1}.a;                   // expected-error {{address of register compound literal requested}}
   double *d = &__real__ (register _Complex double){1};   // expected-error {{address of register compound literal requested}}
   double *e = &__imag__ (register _Complex double){1};   // expected-error {{address of register compound literal requested}}
   int *f = &_Generic(0, int: (register int){1});         // expected-error {{address of register compound literal requested}}
-  int *g = _Generic(0, int: (register int[1]){1});       // expected-error {{address of register compound literal requested}}
+  int *g = _Generic(0, int: (register int[1]){1});
   int *h = &_Generic(0, int: (register struct S2){1}).a; // expected-error {{address of register compound literal requested}}
   int *i = &__extension__ (register int){1};             // expected-error {{address of register compound literal requested}}
+  int (*j)[1] = &(register int[1]){1};                   // expected-error {{address of register compound literal requested}}
 }
 
 int a5[1];

@@ -554,54 +554,6 @@ SourceRange Sema::getExprRange(Expr *E) const {
 //  Standard Promotions and Conversions
 //===----------------------------------------------------------------------===//
 
-namespace {
-enum {
-  AO_Bit_Field = 0,
-  AO_Vector_Element = 1,
-  AO_Property_Expansion = 2,
-  AO_Register_Variable = 3,
-  AO_Matrix_Element = 4,
-  AO_Register_Compound_Literal = 5,
-  AO_No_Error = 6
-};
-}
-
-using PrimaryObject = llvm::PointerUnion<ValueDecl *, CompoundLiteralExpr *>;
-
-static PrimaryObject getPrimaryObject(Expr *E) {
-  E = E->IgnoreParens();
-  switch (E->getStmtClass()) {
-  case Stmt::DeclRefExprClass:
-    return cast<DeclRefExpr>(E)->getDecl();
-  case Stmt::CompoundLiteralExprClass:
-    return cast<CompoundLiteralExpr>(E);
-  case Stmt::MemberExprClass:
-    if (cast<MemberExpr>(E)->isArrow())
-      return {};
-    return getPrimaryObject(cast<MemberExpr>(E)->getBase());
-  case Stmt::ArraySubscriptExprClass: {
-    Expr *Base = cast<ArraySubscriptExpr>(E)->getBase()->IgnoreParens();
-    if (auto *ICE = dyn_cast<ImplicitCastExpr>(Base);
-        ICE && ICE->getSubExpr()->getType()->isArrayType())
-      return getPrimaryObject(ICE->getSubExpr());
-    return {};
-  }
-  case Stmt::UnaryOperatorClass: {
-    UnaryOperator *UO = cast<UnaryOperator>(E);
-    if (UO->getOpcode() == UO_Real || UO->getOpcode() == UO_Imag ||
-        UO->getOpcode() == UO_Extension)
-      return getPrimaryObject(UO->getSubExpr());
-    return {};
-  }
-  case Stmt::ImplicitCastExprClass:
-    return getPrimaryObject(cast<ImplicitCastExpr>(E)->getSubExpr());
-  case Stmt::CXXUuidofExprClass:
-    return cast<CXXUuidofExpr>(E)->getGuidDecl();
-  default:
-    return {};
-  }
-}
-
 /// DefaultFunctionArrayConversion (C99 6.3.2.1p3, C99 6.3.2.1p4).
 ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
   // Handle any placeholder expressions which made it here.
@@ -635,13 +587,6 @@ ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
     // T" can be converted to an rvalue of type "pointer to T".
     //
     if (getLangOpts().C99 || getLangOpts().CPlusPlus || E->isLValue()) {
-      if (!getLangOpts().CPlusPlus) {
-        auto *CLE = getPrimaryObject(E).dyn_cast<CompoundLiteralExpr *>();
-        if (CLE && CLE->getStorageClass() == SC_Register)
-          return Diag(E->getExprLoc(), diag::err_typecheck_address_of)
-                 << AO_Register_Compound_Literal << CLE->getSourceRange();
-      }
-
       ExprResult Res = ImpCastExprToType(E, Context.getArrayDecayedType(Ty),
                                          CK_ArrayToPointerDecay);
       if (Res.isInvalid())
@@ -15067,6 +15012,54 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
   } else {
     VK = VK_PRValue;
     return ResType.getUnqualifiedType();
+  }
+}
+
+namespace {
+enum {
+  AO_Bit_Field = 0,
+  AO_Vector_Element = 1,
+  AO_Property_Expansion = 2,
+  AO_Register_Variable = 3,
+  AO_Matrix_Element = 4,
+  AO_Register_Compound_Literal = 5,
+  AO_No_Error = 6
+};
+}
+
+using PrimaryObject = llvm::PointerUnion<ValueDecl *, CompoundLiteralExpr *>;
+
+static PrimaryObject getPrimaryObject(Expr *E) {
+  E = E->IgnoreParens();
+  switch (E->getStmtClass()) {
+  case Stmt::DeclRefExprClass:
+    return cast<DeclRefExpr>(E)->getDecl();
+  case Stmt::CompoundLiteralExprClass:
+    return cast<CompoundLiteralExpr>(E);
+  case Stmt::MemberExprClass:
+    if (cast<MemberExpr>(E)->isArrow())
+      return {};
+    return getPrimaryObject(cast<MemberExpr>(E)->getBase());
+  case Stmt::ArraySubscriptExprClass: {
+    Expr *Base = cast<ArraySubscriptExpr>(E)->getBase()->IgnoreParens();
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(Base);
+        ICE && ICE->getSubExpr()->getType()->isArrayType())
+      return getPrimaryObject(ICE->getSubExpr());
+    return {};
+  }
+  case Stmt::UnaryOperatorClass: {
+    UnaryOperator *UO = cast<UnaryOperator>(E);
+    if (UO->getOpcode() == UO_Real || UO->getOpcode() == UO_Imag ||
+        UO->getOpcode() == UO_Extension)
+      return getPrimaryObject(UO->getSubExpr());
+    return {};
+  }
+  case Stmt::ImplicitCastExprClass:
+    return getPrimaryObject(cast<ImplicitCastExpr>(E)->getSubExpr());
+  case Stmt::CXXUuidofExprClass:
+    return cast<CXXUuidofExpr>(E)->getGuidDecl();
+  default:
+    return {};
   }
 }
 
