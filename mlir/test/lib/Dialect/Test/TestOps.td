@@ -3019,6 +3019,57 @@ def TableGenBuildOp7 : TEST_Op<"tblgen_build_7", []> {
   let results = (outs);
 }
 
+// Properties of every supported kind on an inferred-result aggregate builder.
+// The inference hook checks that the legacy mixed-attribute overload populated
+// defaults and converted properties before invoking it.
+def TableGenBuildOp8 : TEST_Op<"tblgen_build_8", [
+    InferTypeOpInterface, AttrSizedOperandSegments, AttrSizedResultSegments
+  ]> {
+  let arguments = (ins
+    Variadic<AnyType>:$a,
+    Variadic<AnyType>:$b,
+    BoolAttr:$attr0,
+    DefaultValuedAttr<I32Attr, "7">:$defaultAttr,
+    I64Prop:$nativeProp
+  );
+  let results = (outs Variadic<AnyType>:$resultA,
+                      Variadic<AnyType>:$resultB);
+
+  let extraClassDeclaration = [{
+    static ::llvm::LogicalResult inferReturnTypes(
+        ::mlir::MLIRContext *, ::std::optional<::mlir::Location>,
+        ::mlir::ValueRange operands, ::mlir::DictionaryAttr,
+        ::mlir::PropertyRef properties, ::mlir::RegionRange,
+        ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
+      if (!properties)
+        return ::mlir::failure();
+      const auto &prop = *properties.as<const Properties *>();
+      if (!prop.attr0 || !prop.attr0.getValue() || !prop.defaultAttr ||
+          prop.defaultAttr.getInt() != 7 || prop.nativeProp != 42 ||
+          prop.operandSegmentSizes != std::array<int32_t, 2>{1, 1} ||
+          prop.resultSegmentSizes != std::array<int32_t, 2>{1, 0})
+        return ::mlir::failure();
+      inferredReturnTypes.assign({operands.front().getType()});
+      return ::mlir::success();
+    }
+  }];
+}
+
+// Exercise the aggregate builder that derives results from operand types.
+def TableGenBuildOp9 : TEST_Op<"tblgen_build_9",
+    [SameOperandsAndResultType]> {
+  let arguments = (ins AnyType:$input, BoolAttr:$attr0);
+  let results = (outs AnyType:$result);
+}
+
+// Exercise the aggregate builder that derives results from its first
+// attribute after that attribute has been converted to properties.
+def TableGenBuildOp10 : TEST_Op<"tblgen_build_10",
+    [FirstAttrDerivedResultType]> {
+  let arguments = (ins TypeAttr:$type, AnyType:$input);
+  let results = (outs AnyType:$result);
+}
+
 //===----------------------------------------------------------------------===//
 // Test BufferPlacement
 //===----------------------------------------------------------------------===//

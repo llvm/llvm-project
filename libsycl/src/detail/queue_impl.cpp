@@ -130,7 +130,7 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                                  size_t ArgSize) {
   ol_symbol_handle_t Kernel =
       detail::ProgramAndKernelManager::getInstance().getOrCreateKernel(
-          KernelInfo, MDevice);
+          KernelInfo, MContext, MDevice);
   assert(Kernel);
 
   handleEventDependencies(MCurrentSubmitInfo.DepEvents);
