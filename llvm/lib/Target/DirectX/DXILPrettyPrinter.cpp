@@ -318,7 +318,7 @@ static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
   formatted_raw_ostream FOS(OS);
 
   prettyPrintResources(FOS, DRM, DRTM);
-  
+
   ModuleSlotTracker MST(&M);
   AbstractSlotTrackerStorage *STS = nullptr;
   unsigned NextMetadataSlot = 0;

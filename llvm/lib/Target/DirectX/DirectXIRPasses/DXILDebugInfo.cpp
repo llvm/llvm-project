@@ -67,11 +67,10 @@ static void replaceDbgValue(Module &M, DXILDebugInfoMap &Res) {
 }
 
 DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
-  M.convertFromNewDbgValues();
-
   DXILDebugInfoMap Res;
-  // convertFromNewDbgValues() may change IR.
-  Res.Modified = true;
+  // Convert debug markers back to dbg.value intrinsics. Record whether any
+  // changes were made.
+  Res.Modified = M.convertFromNewDbgValues();
   DebugInfoFinder DIF;
   DIF.processModule(M);
 
