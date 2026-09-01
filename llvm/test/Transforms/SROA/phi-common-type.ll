@@ -30,3 +30,22 @@ cont:
   %value = load i64, ptr %address, align 8
   ret i64 %value
 }
+
+define ptr @volatile_load_ptr_same_type(i1 %cond, ptr %source, ptr %other) {
+; CHECK-LABEL: define ptr @volatile_load_ptr_same_type(
+; CHECK:         [[TEMPORARY:%.*]] = alloca ptr, align 8
+;
+entry:
+  %temporary = alloca [1 x i64], align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %temporary, ptr align 8 %source,
+                                  i64 8, i1 false)
+  br i1 %cond, label %then, label %cont
+
+then:
+  br label %cont
+
+cont:
+  %address = phi ptr [ %other, %then ], [ %temporary, %entry ]
+  %value = load volatile ptr, ptr %address, align 8
+  ret ptr %value
+}

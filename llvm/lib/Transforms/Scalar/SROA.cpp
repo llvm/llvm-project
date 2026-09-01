@@ -1478,14 +1478,27 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
 #endif // !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
-static bool isSafePHIToSpeculate(PHINode &PN);
-
-/// Find the common load type used through a pointer PHI that SROA can
-/// speculate.
+/// Find the common load/store type used through a pointer PHI.
+///
+/// Whether those accesses can be speculated does not affect the type they use
+/// and is checked separately when attempting promotion.
 static Type *findCommonTypeThroughPHI(PHINode &PN) {
-  if (!isSafePHIToSpeculate(PN))
-    return nullptr;
-  return cast<LoadInst>(PN.user_back())->getType();
+  Type *Ty = nullptr;
+
+  for (User *U : PN.users()) {
+    Type *UserTy = nullptr;
+    if (auto *LI = dyn_cast<LoadInst>(U))
+      UserTy = LI->getType();
+    else if (auto *SI = dyn_cast<StoreInst>(U);
+             SI && SI->getPointerOperand() == &PN)
+      UserTy = SI->getValueOperand()->getType();
+
+    if (!UserTy || (Ty && Ty != UserTy))
+      return nullptr;
+    Ty = UserTy;
+  }
+
+  return Ty;
 }
 
 /// Walk the range of a partitioning looking for a common type to cover this
