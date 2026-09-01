@@ -1100,8 +1100,9 @@ public:
   /// @{
 
   /// Returns the exception model recorded by the "exception-model" module flag,
-  /// or ExceptionHandling::None when the flag is absent (meaning unspecified;
-  /// callers with a TargetMachine should fall back to its exception model).
+  /// or ExceptionHandling::Default when the flag is absent (meaning
+  /// unspecified; callers with a TargetMachine should fall back to its
+  /// exception model).
   ExceptionHandling getExceptionModel() const;
   /// @}
 

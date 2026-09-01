@@ -9562,6 +9562,9 @@ compiled for. The value is an `MDString` and must be one of:
 * - Value
   - Meaning
 
+* - `"none"`
+  - Exceptions are explicitly disabled.
+
 * - `"dwarf"`
   - DWARF-like table-based (CFI) exception handling.
 
@@ -9582,9 +9585,11 @@ compiled for. The value is an `MDString` and must be one of:
 
 ```
 
-When the flag is absent, the target's default exception model is used. The flag
-must use the `error` merge behavior, so that linking modules with conflicting
-exception models is rejected. For example:
+When the flag is absent, the exception model is unspecified and the target's
+default is used. This is distinct from an explicit `"none"`, which disables
+exceptions even on targets that support them by default. The flag must use the
+`error` merge behavior, so that linking modules with conflicting exception
+models is rejected. For example:
 ```
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"exception-model", !"sjlj"}
