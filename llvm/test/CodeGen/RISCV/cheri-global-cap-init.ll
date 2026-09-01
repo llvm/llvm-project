@@ -1,19 +1,9 @@
-; RUN: llc -mtriple=riscv32 --relocation-model=pic -target-abi il32pc64f -mattr=+experimental-y,+f -relocation-model=static %s -o -
-; RUN: llc -mtriple=riscv32 --relocation-model=pic -target-abi il32pc64f -mattr=+experimental-y,+f %s -o -
-; RUN: llc -mtriple=riscv32 --relocation-model=pic -target-abi il32pc64f -mattr=+experimental-y,+f -filetype=obj %s -o -
+; RUN: llc -mtriple=riscv32 -target-abi il32pc64 -mattr=+experimental-y %s -o /dev/null
+; RUN: llc -mtriple=riscv32 -target-abi il32pc64 -mattr=+experimental-y -filetype=obj %s -o /dev/null
+; RUN: llc -mtriple=riscv64 -target-abi l64pc128 -mattr=+experimental-y %s -o /dev/null
+; RUN: llc -mtriple=riscv64 -target-abi l64pc128 -mattr=+experimental-y -filetype=obj %s -o /dev/null
 
-; Ported from CodeGen/CHERI-Generic/Inputs/cheri-global-cap-init.ll in CHERI downstreams.
+; Previously crashed due to using pointer size rather than index size when computing the initializer of @b
 
-; FIXME: Add RV64 RUN lines and asm/disasm checks once .chericap directives are supported.
-
-@a = common addrspace(200) global [5 x i32] zeroinitializer, align 4
-@b = addrspace(200) global [3 x ptr addrspace(200)] [
-    ptr addrspace(200) getelementptr (i8, ptr addrspace(200) @a, i64 8),
-    ptr addrspace(200) getelementptr (i8, ptr addrspace(200) @a, i64 4),
-    ptr addrspace(200) @a
-  ], align 32
-@c = addrspace(200) constant [3 x ptr addrspace(200)] [
-    ptr addrspace(200) getelementptr (i8, ptr addrspace(200) @a, i64 16),
-    ptr addrspace(200) getelementptr (i8, ptr addrspace(200) @a, i64 12),
-    ptr addrspace(200) @a
-  ], align 32
+@a = external addrspace(200) global i32
+@b = addrspace(200) global i32 ptrtoint (ptr addrspace(200) getelementptr (i8, ptr addrspace(200) @a, i64 8) to i32)
