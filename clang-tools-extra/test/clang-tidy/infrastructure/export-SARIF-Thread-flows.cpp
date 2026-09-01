@@ -119,7 +119,7 @@ void f() {
 //CHECK-SARIF-NEXT:                 "rank": -1
 //CHECK-SARIF-NEXT:               },
 //CHECK-SARIF-NEXT:               "fullDescription": {
-//CHECK-SARIF-NEXT:                 "text": ""
+//CHECK-SARIF-NEXT:                 "text": "Dereference of null pointer (loaded from variable 'ptr')"
 //CHECK-SARIF-NEXT:               },
 //CHECK-SARIF-NEXT:               "helpUri": "https://clang.llvm.org/extra/clang-tidy/checks/clang-analyzer/core.NullDereference.html",
 //CHECK-SARIF-NEXT:               "id": "clang-analyzer-core.NullDereference",
