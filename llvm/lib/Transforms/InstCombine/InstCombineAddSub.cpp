@@ -3303,6 +3303,18 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   if (match(&I, m_FNeg(m_Value(Op))))
     return UnaryOperator::CreateFNegFMF(Op, &I);
 
+  // fsub +0.0, X ==> fneg X if known X is never +0.0
+  if (match(I.getOperand(0), m_PosZeroFP())) {
+    Value *X = I.getOperand(1);
+    DenormalMode Mode = I.getFunction()->getDenormalMode(
+        X->getType()->getScalarType()->getFltSemantics());
+    KnownFPClass Known = computeKnownFPClass(
+        X, fcPosZero | fcSubnormal, getSimplifyQuery().getWithInstruction(&I));
+    if (Known.isKnownNeverLogicalPosZero(Mode) &&
+        (Mode.Input == DenormalMode::IEEE || Known.isKnownNeverSubnormal()))
+      return UnaryOperator::CreateFNegFMF(X, &I);
+  }
+
   if (Instruction *X = foldFNegIntoConstant(I, DL))
     return X;
 
