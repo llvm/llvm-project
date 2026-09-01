@@ -721,8 +721,7 @@ private:
 
   template <typename LookupKeyT>
   const BucketT *doFind(const LookupKeyT &Val) const {
-    // Tighter than NumBuckets == 0: catches emptied and small-mode maps.
-    if (getNumEntries() == 0)
+    if (empty())
       return nullptr;
     auto [BucketsPtr, U, NumBuckets] = getRep();
 
