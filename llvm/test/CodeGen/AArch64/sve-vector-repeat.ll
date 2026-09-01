@@ -2,53 +2,53 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
 
 
-define <vscale x 16 x i8> @broadcast_quad_i8(<16 x i8> %a) {
-; CHECK-LABEL: broadcast_quad_i8:
+define <vscale x 16 x i8> @repeat_quad_i8(<16 x i8> %a) {
+; CHECK-LABEL: repeat_quad_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 16 x i8> @llvm.vector.broadcast.nxv16i8.v16i8(<16 x i8> %a)
+  %out = call <vscale x 16 x i8> @llvm.vector.repeat.nxv16i8.v16i8(<16 x i8> %a)
   ret <vscale x 16 x i8> %out
 }
 
-define <vscale x 16 x i8> @broadcast_double_i8(<8 x i8> %a) {
-; CHECK-LABEL: broadcast_double_i8:
+define <vscale x 16 x i8> @repeat_double_i8(<8 x i8> %a) {
+; CHECK-LABEL: repeat_double_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
   %tmp = shufflevector <8 x i8> %a, <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %out = call <vscale x 16 x i8> @llvm.vector.broadcast.nxv16i8.v16i8(<16 x i8> %tmp)
+  %out = call <vscale x 16 x i8> @llvm.vector.repeat.nxv16i8.v16i8(<16 x i8> %tmp)
   ret <vscale x 16 x i8> %out
 }
 
-define <vscale x 8 x i16> @broadcast_double_i8_to_double_sve(<8 x i8> %a) {
-; CHECK-LABEL: broadcast_double_i8_to_double_sve:
+define <vscale x 8 x i16> @repeat_double_i8_to_double_sve(<8 x i8> %a) {
+; CHECK-LABEL: repeat_double_i8_to_double_sve:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i8> @llvm.vector.broadcast.nxv8i8.v8i8(<8 x i8> %a)
+  %out = call <vscale x 8 x i8> @llvm.vector.repeat.nxv8i8.v8i8(<8 x i8> %a)
   %out.legal = sext <vscale x 8 x i8> %out to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %out.legal
 }
 
-define <vscale x 8 x i16> @broadcast_quad_i16(<8 x i16> %a) {
-; CHECK-LABEL: broadcast_quad_i16:
+define <vscale x 8 x i16> @repeat_quad_i16(<8 x i16> %a) {
+; CHECK-LABEL: repeat_quad_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x i16> @llvm.vector.broadcast.nxv8i16.v8i16(<8 x i16> %a)
+  %out = call <vscale x 8 x i16> @llvm.vector.repeat.nxv8i16.v8i16(<8 x i16> %a)
   ret <vscale x 8 x i16> %out
 }
 
-define <vscale x 16 x i8> @broadcast_wide_i16(<8 x i16> %a.lo, <8 x i16> %a.hi) {
-; CHECK-LABEL: broadcast_wide_i16:
+define <vscale x 16 x i8> @repeat_wide_i16(<8 x i16> %a.lo, <8 x i16> %a.hi) {
+; CHECK-LABEL: repeat_wide_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp2 v2.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
@@ -60,84 +60,84 @@ define <vscale x 16 x i8> @broadcast_wide_i16(<8 x i16> %a.lo, <8 x i16> %a.hi) 
 ; CHECK-NEXT:    ret
   %a = shufflevector <8 x i16> %a.lo, <8 x i16> %a.hi,
                      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %out = call <vscale x 16 x i16> @llvm.vector.broadcast.nxv16i16.v16i16(<16 x i16> %a)
+  %out = call <vscale x 16 x i16> @llvm.vector.repeat.nxv16i16.v16i16(<16 x i16> %a)
   %out.legal = trunc <vscale x 16 x i16> %out to <vscale x 16 x i8>
   ret <vscale x 16 x i8> %out.legal
 }
 
-define <vscale x 8 x i16> @broadcast_double_i16(<4 x i16> %a) {
-; CHECK-LABEL: broadcast_double_i16:
+define <vscale x 8 x i16> @repeat_double_i16(<4 x i16> %a) {
+; CHECK-LABEL: repeat_double_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
   %tmp = shufflevector <4 x i16> %a, <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-  %out = call <vscale x 8 x i16> @llvm.vector.broadcast.nxv8i16.v8i16(<8 x i16> %tmp)
+  %out = call <vscale x 8 x i16> @llvm.vector.repeat.nxv8i16.v8i16(<8 x i16> %tmp)
   ret <vscale x 8 x i16> %out
 }
 
-define <vscale x 4 x i32> @broadcast_double_i16_to_double_sve(<4 x i16> %a) {
-; CHECK-LABEL: broadcast_double_i16_to_double_sve:
+define <vscale x 4 x i32> @repeat_double_i16_to_double_sve(<4 x i16> %a) {
+; CHECK-LABEL: repeat_double_i16_to_double_sve:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i16> @llvm.vector.broadcast.nxv4i16.v4i16(<4 x i16> %a)
+  %out = call <vscale x 4 x i16> @llvm.vector.repeat.nxv4i16.v4i16(<4 x i16> %a)
   %out.legal = zext <vscale x 4 x i16> %out to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %out.legal
 }
 
-define <vscale x 4 x i32> @broadcast_quad_i32(<4 x i32> %a) {
-; CHECK-LABEL: broadcast_quad_i32:
+define <vscale x 4 x i32> @repeat_quad_i32(<4 x i32> %a) {
+; CHECK-LABEL: repeat_quad_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x i32> @llvm.vector.broadcast.nxv4i32.v4i32(<4 x i32> %a)
+  %out = call <vscale x 4 x i32> @llvm.vector.repeat.nxv4i32.v4i32(<4 x i32> %a)
   ret <vscale x 4 x i32> %out
 }
 
-define <vscale x 4 x i32> @broadcast_double_i32(<2 x i32> %a) {
-; CHECK-LABEL: broadcast_double_i32:
+define <vscale x 4 x i32> @repeat_double_i32(<2 x i32> %a) {
+; CHECK-LABEL: repeat_double_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
   %tmp = shufflevector <2 x i32> %a, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-  %out = call <vscale x 4 x i32> @llvm.vector.broadcast.nxv4i32.v4i32(<4 x i32> %tmp)
+  %out = call <vscale x 4 x i32> @llvm.vector.repeat.nxv4i32.v4i32(<4 x i32> %tmp)
   ret <vscale x 4 x i32> %out
 }
 
-define <vscale x 2 x i64> @broadcast_quad_i64(<2 x i64> %a) {
-; CHECK-LABEL: broadcast_quad_i64:
+define <vscale x 2 x i64> @repeat_quad_i64(<2 x i64> %a) {
+; CHECK-LABEL: repeat_quad_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x i64> @llvm.vector.broadcast.nxv2i64.v2i64(<2 x i64> %a)
+  %out = call <vscale x 2 x i64> @llvm.vector.repeat.nxv2i64.v2i64(<2 x i64> %a)
   ret <vscale x 2 x i64> %out
 }
 
-define <vscale x 2 x i64> @broadcast_double_i64(<1 x i64> %a) {
-; CHECK-LABEL: broadcast_double_i64:
+define <vscale x 2 x i64> @repeat_double_i64(<1 x i64> %a) {
+; CHECK-LABEL: repeat_double_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
   %tmp = shufflevector <1 x i64> %a, <1 x i64> poison, <2 x i32> zeroinitializer
-  %out = call <vscale x 2 x i64> @llvm.vector.broadcast.nxv2i64.v2i64(<2 x i64> %tmp)
+  %out = call <vscale x 2 x i64> @llvm.vector.repeat.nxv2i64.v2i64(<2 x i64> %tmp)
   ret <vscale x 2 x i64> %out
 }
 
 ; vscale_range tests
 
 ; wider-than-NEON fixed-length source and wide destination
-define <vscale x 4 x i32> @broadcast_v4i64_to_nxv4i64(<vscale x 2 x i64> %a.legal) vscale_range(2,8) {
-; CHECK-LABEL: broadcast_v4i64_to_nxv4i64:
+define <vscale x 4 x i32> @repeat_v4i64_to_nxv4i64(<vscale x 2 x i64> %a.legal) vscale_range(2,8) {
+; CHECK-LABEL: repeat_v4i64_to_nxv4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
@@ -150,49 +150,49 @@ define <vscale x 4 x i32> @broadcast_v4i64_to_nxv4i64(<vscale x 2 x i64> %a.lega
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z2.s
 ; CHECK-NEXT:    ret
   %a = call <4 x i64> @llvm.vector.extract.v4i64.nxv2i64(<vscale x 2 x i64> %a.legal, i64 0)
-  %r = call <vscale x 4 x i64> @llvm.vector.broadcast.nxv4i64.v4i64(<4 x i64> %a)
+  %r = call <vscale x 4 x i64> @llvm.vector.repeat.nxv4i64.v4i64(<4 x i64> %a)
   %r.legal = trunc <vscale x 4 x i64> %r to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %r.legal
 }
 
 ; FP / BFP types
 
-define <vscale x 8 x half> @broadcast_quad_f16(<8 x half> %a) {
-; CHECK-LABEL: broadcast_quad_f16:
+define <vscale x 8 x half> @repeat_quad_f16(<8 x half> %a) {
+; CHECK-LABEL: repeat_quad_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x half> @llvm.vector.broadcast.nxv8f16(<8 x half> %a)
+  %out = call <vscale x 8 x half> @llvm.vector.repeat.nxv8f16(<8 x half> %a)
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 8 x half> @broadcast_double_f16(<4 x half> %a) {
-; CHECK-LABEL: broadcast_double_f16:
+define <vscale x 8 x half> @repeat_double_f16(<4 x half> %a) {
+; CHECK-LABEL: repeat_double_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
   %tmp = shufflevector <4 x half> %a, <4 x half> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-  %out = call <vscale x 8 x half> @llvm.vector.broadcast.nxv8f16(<8 x half> %tmp)
+  %out = call <vscale x 8 x half> @llvm.vector.repeat.nxv8f16(<8 x half> %tmp)
   ret <vscale x 8 x half> %out
 }
 
-define <vscale x 4 x half> @broadcast_double_f16_to_double_sve(<4 x half> %a) {
-; CHECK-LABEL: broadcast_double_f16_to_double_sve:
+define <vscale x 4 x half> @repeat_double_f16_to_double_sve(<4 x half> %a) {
+; CHECK-LABEL: repeat_double_f16_to_double_sve:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x half> @llvm.vector.broadcast.nxv4f16(<4 x half> %a)
+  %out = call <vscale x 4 x half> @llvm.vector.repeat.nxv4f16(<4 x half> %a)
   ret <vscale x 4 x half> %out
 }
 
-define <vscale x 2 x half> @broadcast_2f16_to_nxv2f16(<4 x half> %a) {
-; CHECK-LABEL: broadcast_2f16_to_nxv2f16:
+define <vscale x 2 x half> @repeat_2f16_to_nxv2f16(<4 x half> %a) {
+; CHECK-LABEL: repeat_2f16_to_nxv2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
@@ -202,68 +202,68 @@ define <vscale x 2 x half> @broadcast_2f16_to_nxv2f16(<4 x half> %a) {
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
   %a.legal = call <2 x half> @llvm.vector.extract.v2f16.v4f16(<4 x half> %a, i64 0)
-  %out = call <vscale x 2 x half> @llvm.vector.broadcast.nxv2f16(<2 x half> %a.legal)
+  %out = call <vscale x 2 x half> @llvm.vector.repeat.nxv2f16(<2 x half> %a.legal)
   ret <vscale x 2 x half> %out
 }
 
-define <vscale x 8 x bfloat> @broadcast_quad_bf16(<8 x bfloat> %a) #0 {
-; CHECK-LABEL: broadcast_quad_bf16:
+define <vscale x 8 x bfloat> @repeat_quad_bf16(<8 x bfloat> %a) #0 {
+; CHECK-LABEL: repeat_quad_bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x bfloat> @llvm.vector.broadcast.nxv8bf16.v8bf16(<8 x bfloat> %a)
+  %out = call <vscale x 8 x bfloat> @llvm.vector.repeat.nxv8bf16.v8bf16(<8 x bfloat> %a)
   ret <vscale x 8 x bfloat> %out
 }
 
-define <vscale x 4 x float> @broadcast_quad_f32(<4 x float> %a) {
-; CHECK-LABEL: broadcast_quad_f32:
+define <vscale x 4 x float> @repeat_quad_f32(<4 x float> %a) {
+; CHECK-LABEL: repeat_quad_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x float> @llvm.vector.broadcast.nxv4f32.v4f32(<4 x float> %a)
+  %out = call <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32(<4 x float> %a)
   ret <vscale x 4 x float> %out
 }
 
-define <vscale x 2 x float> @broadcast_double_f32_to_nxv2f32(<2 x float> %a) {
-; CHECK-LABEL: broadcast_double_f32_to_nxv2f32:
+define <vscale x 2 x float> @repeat_double_f32_to_nxv2f32(<2 x float> %a) {
+; CHECK-LABEL: repeat_double_f32_to_nxv2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x float> @llvm.vector.broadcast.nxv2f32.v2f32(<2 x float> %a)
+  %out = call <vscale x 2 x float> @llvm.vector.repeat.nxv2f32.v2f32(<2 x float> %a)
   ret <vscale x 2 x float> %out
 }
 
-define <vscale x 4 x bfloat> @broadcast_double_bf16_to_nxv4bf16(<4 x bfloat> %a) #0 {
-; CHECK-LABEL: broadcast_double_bf16_to_nxv4bf16:
+define <vscale x 4 x bfloat> @repeat_double_bf16_to_nxv4bf16(<4 x bfloat> %a) #0 {
+; CHECK-LABEL: repeat_double_bf16_to_nxv4bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x bfloat> @llvm.vector.broadcast.nxv4bf16.v4bf16(<4 x bfloat> %a)
+  %out = call <vscale x 4 x bfloat> @llvm.vector.repeat.nxv4bf16.v4bf16(<4 x bfloat> %a)
   ret <vscale x 4 x bfloat> %out
 }
 
-define <vscale x 2 x double> @broadcast_quad_f64(<2 x double> %a) {
-; CHECK-LABEL: broadcast_quad_f64:
+define <vscale x 2 x double> @repeat_quad_f64(<2 x double> %a) {
+; CHECK-LABEL: repeat_quad_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x double> @llvm.vector.broadcast.nxv2f64.v2f64(<2 x double> %a)
+  %out = call <vscale x 2 x double> @llvm.vector.repeat.nxv2f64.v2f64(<2 x double> %a)
   ret <vscale x 2 x double> %out
 }
 
 ; Predicates
 
-define <vscale x 16 x i1> @broadcast_v16i1_to_nxv16i1(<16 x i8> %a) {
-; CHECK-LABEL: broadcast_v16i1_to_nxv16i1:
+define <vscale x 16 x i1> @repeat_v16i1_to_nxv16i1(<16 x i8> %a) {
+; CHECK-LABEL: repeat_v16i1_to_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.b
@@ -272,12 +272,12 @@ define <vscale x 16 x i1> @broadcast_v16i1_to_nxv16i1(<16 x i8> %a) {
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    ret
   %a.legal = trunc <16 x i8> %a to <16 x i1>
-  %out = call <vscale x 16 x i1> @llvm.vector.broadcast.nxv16i1.v16i1(<16 x i1> %a.legal)
+  %out = call <vscale x 16 x i1> @llvm.vector.repeat.nxv16i1.v16i1(<16 x i1> %a.legal)
   ret <vscale x 16 x i1> %out
 }
 
-define <vscale x 16 x i1> @broadcast_v8i1_to_nxv16i1(<8 x i8> %a) {
-; CHECK-LABEL: broadcast_v8i1_to_nxv16i1:
+define <vscale x 16 x i1> @repeat_v8i1_to_nxv16i1(<8 x i8> %a) {
+; CHECK-LABEL: repeat_v8i1_to_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.b
@@ -288,12 +288,12 @@ define <vscale x 16 x i1> @broadcast_v8i1_to_nxv16i1(<8 x i8> %a) {
 ; CHECK-NEXT:    ret
   %a.legal = trunc <8 x i8> %a to <8 x i1>
   %tmp = shufflevector <8 x i1> %a.legal, <8 x i1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %out = call <vscale x 16 x i1> @llvm.vector.broadcast.nxv16i1.v16i1(<16 x i1> %tmp)
+  %out = call <vscale x 16 x i1> @llvm.vector.repeat.nxv16i1.v16i1(<16 x i1> %tmp)
   ret <vscale x 16 x i1> %out
 }
 
-define <vscale x 8 x i1> @broadcast_v8i1_double_to_nxv8i1(<8 x i8> %a) {
-; CHECK-LABEL: broadcast_v8i1_double_to_nxv8i1:
+define <vscale x 8 x i1> @repeat_v8i1_double_to_nxv8i1(<8 x i8> %a) {
+; CHECK-LABEL: repeat_v8i1_double_to_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ptrue p0.h
@@ -302,12 +302,12 @@ define <vscale x 8 x i1> @broadcast_v8i1_double_to_nxv8i1(<8 x i8> %a) {
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ret
   %a.legal = trunc <8 x i8> %a to <8 x i1>
-  %out = call <vscale x 8 x i1> @llvm.vector.broadcast.nxv8i1.v8i1(<8 x i1> %a.legal)
+  %out = call <vscale x 8 x i1> @llvm.vector.repeat.nxv8i1.v8i1(<8 x i1> %a.legal)
   ret <vscale x 8 x i1> %out
 }
 
-define <vscale x 8 x i1> @broadcast_v8i1_quad_to_nxv8i1(<8 x i16> %a) {
-; CHECK-LABEL: broadcast_v8i1_quad_to_nxv8i1:
+define <vscale x 8 x i1> @repeat_v8i1_quad_to_nxv8i1(<8 x i16> %a) {
+; CHECK-LABEL: repeat_v8i1_quad_to_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h
@@ -316,12 +316,12 @@ define <vscale x 8 x i1> @broadcast_v8i1_quad_to_nxv8i1(<8 x i16> %a) {
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ret
   %a.legal = trunc <8 x i16> %a to <8 x i1>
-  %out = call <vscale x 8 x i1> @llvm.vector.broadcast.nxv8i1.v8i1(<8 x i1> %a.legal)
+  %out = call <vscale x 8 x i1> @llvm.vector.repeat.nxv8i1.v8i1(<8 x i1> %a.legal)
   ret <vscale x 8 x i1> %out
 }
 
-define <vscale x 8 x i1> @broadcast_v4i1_double_to_nxv8i1(<4 x i16> %a) {
-; CHECK-LABEL: broadcast_v4i1_double_to_nxv8i1:
+define <vscale x 8 x i1> @repeat_v4i1_double_to_nxv8i1(<4 x i16> %a) {
+; CHECK-LABEL: repeat_v4i1_double_to_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h
@@ -332,12 +332,12 @@ define <vscale x 8 x i1> @broadcast_v4i1_double_to_nxv8i1(<4 x i16> %a) {
 ; CHECK-NEXT:    ret
   %a.legal = trunc <4 x i16> %a to <4 x i1>
   %tmp = shufflevector <4 x i1> %a.legal, <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-  %out = call <vscale x 8 x i1> @llvm.vector.broadcast.nxv8i1.v8i1(<8 x i1> %tmp)
+  %out = call <vscale x 8 x i1> @llvm.vector.repeat.nxv8i1.v8i1(<8 x i1> %tmp)
   ret <vscale x 8 x i1> %out
 }
 
-define <vscale x 4 x i1> @broadcast_v4i1_double_to_nxv4i1(<4 x i16> %a) {
-; CHECK-LABEL: broadcast_v4i1_double_to_nxv4i1:
+define <vscale x 4 x i1> @repeat_v4i1_double_to_nxv4i1(<4 x i16> %a) {
+; CHECK-LABEL: repeat_v4i1_double_to_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ptrue p0.s
@@ -346,12 +346,12 @@ define <vscale x 4 x i1> @broadcast_v4i1_double_to_nxv4i1(<4 x i16> %a) {
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ret
   %a.legal = trunc <4 x i16> %a to <4 x i1>
-  %out = call <vscale x 4 x i1> @llvm.vector.broadcast.nxv4i1.v4i1(<4 x i1> %a.legal)
+  %out = call <vscale x 4 x i1> @llvm.vector.repeat.nxv4i1.v4i1(<4 x i1> %a.legal)
   ret <vscale x 4 x i1> %out
 }
 
-define <vscale x 4 x i1> @broadcast_v4i1_quad_to_nxv4i1(<4 x i32> %a) {
-; CHECK-LABEL: broadcast_v4i1_quad_to_nxv4i1:
+define <vscale x 4 x i1> @repeat_v4i1_quad_to_nxv4i1(<4 x i32> %a) {
+; CHECK-LABEL: repeat_v4i1_quad_to_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s
@@ -360,12 +360,12 @@ define <vscale x 4 x i1> @broadcast_v4i1_quad_to_nxv4i1(<4 x i32> %a) {
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ret
   %a.legal = trunc <4 x i32> %a to <4 x i1>
-  %out = call <vscale x 4 x i1> @llvm.vector.broadcast.nxv4i1.v4i1(<4 x i1> %a.legal)
+  %out = call <vscale x 4 x i1> @llvm.vector.repeat.nxv4i1.v4i1(<4 x i1> %a.legal)
   ret <vscale x 4 x i1> %out
 }
 
-define <vscale x 4 x i1> @broadcast_v2i1_double_to_nxv4i1(<2 x i32> %a) {
-; CHECK-LABEL: broadcast_v2i1_double_to_nxv4i1:
+define <vscale x 4 x i1> @repeat_v2i1_double_to_nxv4i1(<2 x i32> %a) {
+; CHECK-LABEL: repeat_v2i1_double_to_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s
@@ -376,12 +376,12 @@ define <vscale x 4 x i1> @broadcast_v2i1_double_to_nxv4i1(<2 x i32> %a) {
 ; CHECK-NEXT:    ret
   %a.legal = trunc <2 x i32> %a to <2 x i1>
   %tmp = shufflevector <2 x i1> %a.legal, <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-  %out = call <vscale x 4 x i1> @llvm.vector.broadcast.nxv4i1.v4i1(<4 x i1> %tmp)
+  %out = call <vscale x 4 x i1> @llvm.vector.repeat.nxv4i1.v4i1(<4 x i1> %tmp)
   ret <vscale x 4 x i1> %out
 }
 
-define <vscale x 2 x i1> @broadcast_v2i1_double_to_nxv2i1(<2 x i32> %a) {
-; CHECK-LABEL: broadcast_v2i1_double_to_nxv2i1:
+define <vscale x 2 x i1> @repeat_v2i1_double_to_nxv2i1(<2 x i32> %a) {
+; CHECK-LABEL: repeat_v2i1_double_to_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    ptrue p0.d
@@ -390,12 +390,12 @@ define <vscale x 2 x i1> @broadcast_v2i1_double_to_nxv2i1(<2 x i32> %a) {
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ret
   %a.legal = trunc <2 x i32> %a to <2 x i1>
-  %out = call <vscale x 2 x i1> @llvm.vector.broadcast.nxv2i1.v2i1(<2 x i1> %a.legal)
+  %out = call <vscale x 2 x i1> @llvm.vector.repeat.nxv2i1.v2i1(<2 x i1> %a.legal)
   ret <vscale x 2 x i1> %out
 }
 
-define <vscale x 2 x i1> @broadcast_v2i1_quad_to_nxv2i1(<2 x i64> %a) {
-; CHECK-LABEL: broadcast_v2i1_quad_to_nxv2i1:
+define <vscale x 2 x i1> @repeat_v2i1_quad_to_nxv2i1(<2 x i64> %a) {
+; CHECK-LABEL: repeat_v2i1_quad_to_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d
@@ -404,6 +404,6 @@ define <vscale x 2 x i1> @broadcast_v2i1_quad_to_nxv2i1(<2 x i64> %a) {
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ret
   %a.legal = trunc <2 x i64> %a to <2 x i1>
-  %out = call <vscale x 2 x i1> @llvm.vector.broadcast.nxv2i1.v2i1(<2 x i1> %a.legal)
+  %out = call <vscale x 2 x i1> @llvm.vector.repeat.nxv2i1.v2i1(<2 x i1> %a.legal)
   ret <vscale x 2 x i1> %out
 }

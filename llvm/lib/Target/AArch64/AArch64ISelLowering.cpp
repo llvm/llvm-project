@@ -1990,16 +1990,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
 
-    // Direct patterns exist for broadcasts to packed SVE types.
+    // Direct patterns exist for quad broadcasts.
     for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64,
                     MVT::nxv8f16, MVT::nxv4f32, MVT::nxv2f64, MVT::nxv8bf16})
-      setOperationAction(ISD::VECTOR_BROADCAST, VT, Legal);
+      setOperationAction(ISD::VECTOR_REPEAT, VT, Legal);
 
-    // Broadcasts to unpacked SVE type require explicit unpacking to add spacing
-    // between elements.
+    // VECTOR_REPEAT to unpacked SVE types require explicit unpacking to add
+    // spacing between elements.
     for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv2f32, MVT::nxv2bf16,
                     MVT::nxv4bf16})
-      setOperationAction(ISD::VECTOR_BROADCAST, VT, Custom);
+      setOperationAction(ISD::VECTOR_REPEAT, VT, Custom);
 
     if (Subtarget->hasSVEB16B16() &&
         Subtarget->isNonStreamingSVEorSME2Available()) {
@@ -8891,8 +8891,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerEXTEND_VECTOR_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     return LowerZERO_EXTEND_VECTOR_INREG(Op, DAG);
-  case ISD::VECTOR_BROADCAST:
-    return LowerVECTOR_BROADCAST(Op, DAG);
+  case ISD::VECTOR_REPEAT:
+    return LowerVECTOR_REPEAT(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SPLAT_VECTOR:
@@ -17839,8 +17839,8 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   return SDValue();
 }
 
-SDValue AArch64TargetLowering::LowerVECTOR_BROADCAST(SDValue Op,
-                                                     SelectionDAG &DAG) const {
+SDValue AArch64TargetLowering::LowerVECTOR_REPEAT(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   assert(isUnpackedType(VT, DAG) && "Expected an unpacked vector type!");
@@ -17857,8 +17857,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_BROADCAST(SDValue Op,
       *DAG.getContext(),
       ElementCount::getFixed(PackedVT.getVectorMinNumElements()));
   SDValue PackedSrc = DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedSrcVT, Ops);
-  SDValue Broadcast =
-      DAG.getNode(ISD::VECTOR_BROADCAST, DL, PackedVT, PackedSrc);
+  SDValue Broadcast = DAG.getNode(ISD::VECTOR_REPEAT, DL, PackedVT, PackedSrc);
   return DAG.getExtractSubvector(DL, VT, Broadcast, 0);
 }
 
