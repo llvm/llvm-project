@@ -36,15 +36,15 @@ public:
 };
 void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
-FunctionPass *createAMDGPURegBankCombinerLegacy(bool IsOptNone);
+FunctionPass *createAMDGPURegBankCombinerLegacy(bool IsOptLevelNone);
 void initializeAMDGPURegBankCombinerLegacyPass(PassRegistry &);
 
 class AMDGPURegBankCombinerPass
     : public RequiredPassInfoMixin<AMDGPURegBankCombinerPass> {
-  bool IsOptNone;
+  bool IsOptLevelNone;
 
 public:
-  explicit AMDGPURegBankCombinerPass(bool IsOptNone = false);
+  explicit AMDGPURegBankCombinerPass(bool IsOptLevelNone = false);
 
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
