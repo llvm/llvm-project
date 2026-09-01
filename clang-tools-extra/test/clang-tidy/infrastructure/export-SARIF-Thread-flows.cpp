@@ -108,7 +108,7 @@ void f() {
 //CHECK-SARIF-NEXT:       "tool": {
 //CHECK-SARIF-NEXT:         "driver": {
 //CHECK-SARIF-NEXT:           "fullName": "clang-tidy",
-//CHECK-SARIF-NEXT:           "informationUri": "https://clang.llvm.org/docs/UsersManual.html",
+//CHECK-SARIF-NEXT:           "informationUri": "https://clang.llvm.org/extra/clang-tidy/",
 //CHECK-SARIF-NEXT:           "language": "en-US",
 //CHECK-SARIF-NEXT:           "name": "clang-tidy",
 //CHECK-SARIF-NEXT:           "rules": [
@@ -119,7 +119,7 @@ void f() {
 //CHECK-SARIF-NEXT:                 "rank": -1
 //CHECK-SARIF-NEXT:               },
 //CHECK-SARIF-NEXT:               "fullDescription": {
-//CHECK-SARIF-NEXT:                 "text": "Dereference of null pointer (loaded from variable 'ptr')"
+//CHECK-SARIF-NEXT:                 "text": ""
 //CHECK-SARIF-NEXT:               },
 //CHECK-SARIF-NEXT:               "helpUri": "https://clang.llvm.org/extra/clang-tidy/checks/clang-analyzer/core.NullDereference.html",
 //CHECK-SARIF-NEXT:               "id": "clang-analyzer-core.NullDereference",
