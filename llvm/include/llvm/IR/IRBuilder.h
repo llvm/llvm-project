@@ -1216,9 +1216,14 @@ public:
     return Insert(ReturnInst::Create(Context, V));
   }
 
-  /// Create an unconditional 'br label X' instruction.
-  UncondBrInst *CreateBr(BasicBlock *Dest) {
-    return Insert(UncondBrInst::Create(Dest));
+  /// Create an unconditional 'br label X' instruction, optionally copying
+  /// debug and annotation metadata from MDSrc.
+  UncondBrInst *CreateBr(BasicBlock *Dest, Instruction *MDSrc = nullptr) {
+    UncondBrInst *Br = UncondBrInst::Create(Dest);
+    if (MDSrc)
+      Br->copyMetadata(*MDSrc,
+                       {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
+    return Insert(Br);
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
