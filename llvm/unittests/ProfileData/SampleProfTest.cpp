@@ -787,6 +787,12 @@ TEST(SampleProfCanonicalNameTest, CoroFnName) {
             FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.destroy"));
   EXPECT_EQ("_Zfoo",
             FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.resume"));
+  EXPECT_EQ("foo",
+            FunctionSamples::getCanonicalCoroFnName("foo.cleanupper"));
+  EXPECT_EQ("foo",
+            FunctionSamples::getCanonicalCoroFnName("foo.destroyer"));
+  EXPECT_EQ("foo",
+            FunctionSamples::getCanonicalCoroFnName("foo.resumed"));
   EXPECT_EQ("foo.other", FunctionSamples::getCanonicalCoroFnName("foo.other"));
 
   // Policy "none".
