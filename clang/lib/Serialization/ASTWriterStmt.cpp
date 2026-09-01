@@ -703,7 +703,6 @@ void ASTStmtWriter::VisitUnresolvedSYCLKernelCallStmt(
 
   Record.AddStmt(S->getOriginalStmt());
   Record.AddStmt(S->getKernelLaunchIdExpr());
-  Record.AddStmt(S->getSpecArgsIdExpr());
 
   Code = serialization::STMT_UNRESOLVED_SYCL_KERNEL_CALL;
 }

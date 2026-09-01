@@ -39,29 +39,9 @@ struct Wrapper {
  int *data1;
 };
 
-template<typename T>
-auto set_kernel_arg(const T &t) {
-  return t;
-}
-
-auto set_kernel_arg(EmptySpecial &a) {
-  return a.data;
-}
-
-template<typename KernelName, typename... Ts>
-auto sycl_handle_special_kernel_parameters(Ts...) {
-  return [](auto ...Args){ return; };
-}
-
-template<typename... Ts>
-struct type_list {};
-
 template <typename KernelName, typename... Ts>
 auto sycl_kernel_launch(const char *, Ts...) {
-
-    return [&](auto&&... extra_host_args) {
-      return type_list<decltype(set_kernel_arg(extra_host_args))...>{};
-  };
+    return [](auto&&... special_subobjects) { };
 }
 
 
@@ -78,11 +58,7 @@ template <typename KN, typename KT>
 // CHECK-NEXT: | | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | | `-CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: | | | |  `-DeclRefExpr {{.*}} 'KT' lvalue ParmVar {{.*}} 'Kernel' 'KT'
-// CHECK-NEXT: | | | |-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (ADL) = 'sycl_kernel_launch' {{.*}}
-// CHECK-NEXT: | | | | `-TemplateArgument type 'KN':'type-parameter-0-0'
-// CHECK-NEXT: | | | |   `-TemplateTypeParmType {{.*}} 'KN' dependent depth 0 index 0
-// CHECK-NEXT: | | | |     `-TemplateTypeParm {{.*}} 'KN'
-// CHECK-NEXT: | | | `-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (ADL) = 'sycl_handle_special_kernel_parameters' {{.*}}
+// CHECK-NEXT: | | | `-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (ADL) = 'sycl_kernel_launch' {{.*}}
 // CHECK-NEXT: | | |   `-TemplateArgument type 'KN':'type-parameter-0-0'
 // CHECK-NEXT: | | |     `-TemplateTypeParmType {{.*}} 'KN' dependent depth 0 index 0
 // CHECK-NEXT: | | |       `-TemplateTypeParm {{.*}} 'KN'
@@ -103,10 +79,10 @@ template <typename KN, typename KT>
 // CHECK-NEXT: | | | |   `-ImplicitCastExpr {{.*}} 'const {{.*}}' lvalue <NoOp>
 // CHECK-NEXT: | | | |     `-DeclRefExpr {{.*}} lvalue ParmVar {{.*}} 'Kernel' {{.*}}
 // CHECK-NEXT: | | | |-CompoundStmt {{.*}}
-// CHECK-NEXT: | | | | `-ExprWithCleanups {{.*}} 'type_list<{{.*}}>'
-// CHECK-NEXT: | | | |   `-CXXOperatorCallExpr {{.*}} 'type_list<{{.*}}>' '()'
-// CHECK-NEXT: | | | |     |-ImplicitCastExpr {{.*}} 'type_list<{{.*}}> (*)(EmptySpecial &) const' <FunctionToPointerDecay>
-// CHECK-NEXT: | | | |     | `-DeclRefExpr {{.*}} 'type_list<{{.*}}> (EmptySpecial &) const' lvalue CXXMethod {{.*}} 'operator()' '{{.*}}'
+// CHECK-NEXT: | | | | `-ExprWithCleanups {{.*}} 'void'
+// CHECK-NEXT: | | | |   `-CXXOperatorCallExpr {{.*}} 'void' '()'
+// CHECK-NEXT: | | | |     |-ImplicitCastExpr {{.*}} 'void (*)(EmptySpecial &) const' <FunctionToPointerDecay>
+// CHECK-NEXT: | | | |     | `-DeclRefExpr {{.*}} 'void (EmptySpecial &) const' lvalue CXXMethod {{.*}} 'operator()' '{{.*}}'
 // CHECK-NEXT: | | | |     |-ImplicitCastExpr {{.*}} 'const {{.*}}' lvalue <NoOp>
 // CHECK-NEXT: | | | |     | `-MaterializeTemporaryExpr {{.*}} '{{.*}}' lvalue
 // CHECK-NEXT: | | | |     |   `-CallExpr {{.*}} '{{.*}}'
@@ -122,46 +98,29 @@ template <typename KN, typename KT>
 // CHECK-NEXT: | | | |         `-DeclRefExpr {{.*}} lvalue ParmVar {{.*}} 'Kernel' {{.*}}
 // CHECK-NEXT: | | | `-OutlinedFunctionDecl {{.*}}
 // CHECK-NEXT: | | |   |-ImplicitParamDecl {{.*}} implicit used Kernel {{.*}}
-// CHECK-NEXT: | | |   |-ImplicitParamDecl {{.*}} implicit used idk 'int'
 // CHECK-NEXT: | | |   `-CompoundStmt {{.*}}
-// CHECK-NEXT: | | |     |-ExprWithCleanups {{.*}} 'void'
-// CHECK-NEXT: | | |     | `-CXXOperatorCallExpr {{.*}} 'void' '()'
-// CHECK-NEXT: | | |     |   |-ImplicitCastExpr {{.*}} 'void (*)(int) const' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |     |   | `-DeclRefExpr {{.*}} 'void (int) const' lvalue CXXMethod {{.*}} 'operator()' '{{.*}}'
-// CHECK-NEXT: | | |     |   |-ImplicitCastExpr {{.*}} 'const {{.*}}' lvalue <NoOp>
-// CHECK-NEXT: | | |     |   | `-MaterializeTemporaryExpr {{.*}} '{{.*}}' lvalue
-// CHECK-NEXT: | | |     |   |   `-CallExpr {{.*}} '{{.*}}'
-// CHECK-NEXT: | | |     |   |     |-ImplicitCastExpr {{.*}} '{{.*}}' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |     |   |     | `-DeclRefExpr {{.*}} '{{.*}}' lvalue Function {{.*}} 'sycl_handle_special_kernel_parameters' {{.*}}
-// CHECK-NEXT: | | |     |   |     `-CXXConstructExpr {{.*}} 'EmptySpecial' 'void (const EmptySpecial &) noexcept'
-// CHECK-NEXT: | | |     |   |       `-ImplicitCastExpr {{.*}} 'const EmptySpecial' lvalue <NoOp>
-// CHECK-NEXT: | | |     |   |         `-MemberExpr {{.*}} 'EmptySpecial' lvalue .data {{.*}}
-// CHECK-NEXT: | | |     |   |           `-MemberExpr {{.*}} 'Wrapper<EmptySpecial>' lvalue . {{.*}}
-// CHECK-NEXT: | | |     |   |             `-DeclRefExpr {{.*}} lvalue ImplicitParam {{.*}} 'Kernel' {{.*}}
-// CHECK-NEXT: | | |     |   `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
-// CHECK-NEXT: | | |     |     `-DeclRefExpr {{.*}} 'int' lvalue ImplicitParam {{.*}} 'idk' 'int'
-// CHECK-NEXT: | | |     `-CompoundStmt {{.*}}
-// CHECK-NEXT: | | |       `-CXXOperatorCallExpr {{.*}} 'void' '()'
-// CHECK-NEXT: | | |         |-ImplicitCastExpr {{.*}} 'void (*)() const' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |         | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const'
-// CHECK-NEXT: | | |         `-ImplicitCastExpr {{.*}} 'const {{.*}}' lvalue <NoOp>
-// CHECK-NEXT: | | |           `-DeclRefExpr {{.*}} lvalue ImplicitParam {{.*}} 'Kernel' {{.*}}
+// CHECK-NEXT: | | |     `-CXXOperatorCallExpr {{.*}} 'void' '()'
+// CHECK-NEXT: | | |       |-ImplicitCastExpr {{.*}} 'void (*)() const' <FunctionToPointerDecay>
+// CHECK-NEXT: | | |       | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const'
+// CHECK-NEXT: | | |       `-ImplicitCastExpr {{.*}} 'const {{.*}}' lvalue <NoOp>
+// CHECK-NEXT: | | |         `-DeclRefExpr {{.*}} lvalue ImplicitParam {{.*}} 'Kernel' {{.*}}
 // CHECK-NEXT: | | `-SYCLKernelEntryPointAttr {{.*}} struct KN<0>
 
 // Test that a class inheriting from a sycl_special_kernel_parameter type
-// is properly decomposed via a DerivedToBase cast.
+// is accessed via a DerivedToBase cast.
 // The instantiation for KN<1> should produce a SYCLKernelCallStmt where
-// the base class SpecialBase is accessed via DerivedToBase cast and
-// the additional kernel parameter has struct type SpecialArgData.
+// the base class SpecialBase is accessed via DerivedToBase cast.
 // CHECK:      | `-FunctionDecl {{.*}} used k {{.*}} implicit_instantiation instantiated_from {{.*}}
 // CHECK-NEXT: |   |-TemplateArgument type 'KN<1>'
 // CHECK:      |   |-SYCLKernelCallStmt {{.*}}
 // CHECK-NEXT: |   | |-CompoundStmt {{.*}}
 // CHECK-NEXT: |   | | `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK:      |   | |-CompoundStmt {{.*}}
-// CHECK-NEXT: |   | | `-ExprWithCleanups {{.*}} 'type_list<{{.*}}>'
-// CHECK-NEXT: |   | |   `-CXXOperatorCallExpr {{.*}} 'type_list<{{.*}}>' '()'
-// CHECK:      |   | |     |-ImplicitCastExpr {{.*}} 'const {{.*}}' lvalue <NoOp>
+// CHECK-NEXT: |   | | `-ExprWithCleanups {{.*}} 'void'
+// CHECK-NEXT: |   | |   `-CXXOperatorCallExpr {{.*}} 'void' '()'
+// CHECK-NEXT: |   | |     |-ImplicitCastExpr {{.*}} 'void (*)(SpecialBase &) const' <FunctionToPointerDecay>
+// CHECK-NEXT: |   | |     | `-DeclRefExpr {{.*}} 'void (SpecialBase &) const' lvalue CXXMethod {{.*}} 'operator()' '{{.*}}'
+// CHECK-NEXT: |   | |     |-ImplicitCastExpr {{.*}} 'const {{.*}}' lvalue <NoOp>
 // CHECK-NEXT: |   | |     | `-MaterializeTemporaryExpr {{.*}} '{{.*}}' lvalue
 // CHECK-NEXT: |   | |     |   `-CallExpr {{.*}} '{{.*}}'
 // CHECK-NEXT: |   | |     |     |-ImplicitCastExpr {{.*}} '{{.*}}' <FunctionToPointerDecay>
@@ -176,23 +135,12 @@ template <typename KN, typename KT>
 // CHECK-NEXT: |   | |         `-DeclRefExpr {{.*}} lvalue ParmVar {{.*}} 'Kernel' {{.*}}
 // CHECK-NEXT: |   | `-OutlinedFunctionDecl {{.*}}
 // CHECK-NEXT: |   |   |-ImplicitParamDecl {{.*}} implicit used Kernel {{.*}}
-// CHECK-NEXT: |   |   |-ImplicitParamDecl {{.*}} implicit used idk 'SpecialArgData'
 // CHECK-NEXT: |   |   `-CompoundStmt {{.*}}
-// CHECK-NEXT: |   |     |-ExprWithCleanups {{.*}} 'void'
-// CHECK-NEXT: |   |     | `-CXXOperatorCallExpr {{.*}} 'void' '()'
-// CHECK:      |   |     |   | `-DeclRefExpr {{.*}} '{{.*}}' lvalue Function {{.*}} 'sycl_handle_special_kernel_parameters' {{.*}}
-// CHECK-NEXT: |   |     |   |     `-CXXConstructExpr {{.*}} 'SpecialBase' 'void (const SpecialBase &) noexcept'
-// CHECK-NEXT: |   |     |   |       `-ImplicitCastExpr {{.*}} 'const SpecialBase' lvalue <DerivedToBase (SpecialBase)>
-// CHECK-NEXT: |   |     |   |         `-ImplicitCastExpr {{.*}} 'const DerivedFromSpecial' lvalue <NoOp>
-// CHECK-NEXT: |   |     |   |           `-MemberExpr {{.*}} 'DerivedFromSpecial' lvalue . {{.*}}
-// CHECK-NEXT: |   |     |   |             `-DeclRefExpr {{.*}} lvalue ImplicitParam {{.*}} 'Kernel' {{.*}}
-// CHECK-NEXT: |   |     |   `-CXXConstructExpr {{.*}} 'SpecialArgData' 'void (const SpecialArgData &) noexcept'
-// CHECK-NEXT: |   |     |     `-ImplicitCastExpr {{.*}} 'const SpecialArgData' lvalue <NoOp>
-// CHECK-NEXT: |   |     |       `-DeclRefExpr {{.*}} 'SpecialArgData' lvalue ImplicitParam {{.*}} 'idk' 'SpecialArgData'
-// CHECK-NEXT: |   |     `-CompoundStmt {{.*}}
-// CHECK-NEXT: |   |       `-CXXOperatorCallExpr {{.*}} 'void' '()'
-// CHECK:      |   |         `-ImplicitCastExpr {{.*}} 'const {{.*}}' lvalue <NoOp>
-// CHECK-NEXT: |   |           `-DeclRefExpr {{.*}} lvalue ImplicitParam {{.*}} 'Kernel' {{.*}}
+// CHECK-NEXT: |   |     `-CXXOperatorCallExpr {{.*}} 'void' '()'
+// CHECK-NEXT: |   |       |-ImplicitCastExpr {{.*}} 'void (*)() const' <FunctionToPointerDecay>
+// CHECK-NEXT: |   |       | `-DeclRefExpr {{.*}} 'void () const' lvalue CXXMethod {{.*}} 'operator()' 'void () const'
+// CHECK-NEXT: |   |       `-ImplicitCastExpr {{.*}} 'const {{.*}}' lvalue <NoOp>
+// CHECK-NEXT: |   |         `-DeclRefExpr {{.*}} lvalue ImplicitParam {{.*}} 'Kernel' {{.*}}
 // CHECK-NEXT: |   `-SYCLKernelEntryPointAttr {{.*}} struct KN<1>
 
 void case1() {
@@ -200,23 +148,13 @@ void case1() {
     k<KN<0>>([KernelArg](){});
 }
 
-struct SpecialArgData {
-  int *ptr;
-  int size;
-};
-
 struct [[clang::sycl_special_kernel_parameter]] SpecialBase {
   int data;
 };
 
-
 struct DerivedFromSpecial : SpecialBase {
   int extra;
 };
-
-auto set_kernel_arg(SpecialBase &a) {
-  return SpecialArgData{};
-}
 
 void case2() {
     DerivedFromSpecial DFS;

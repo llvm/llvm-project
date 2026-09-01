@@ -105,36 +105,25 @@ private:
   Stmt *OriginalStmt = nullptr;
   // KernelLaunchIdExpr stores an UnresolvedLookupExpr or UnresolvedMemberExpr
   // corresponding to the SYCL kernel launch function for which a call
-  // will be synthesized during template instantiation of the host code.
+  // will be synthesized during template instantiation.
   Expr *KernelLaunchIdExpr = nullptr;
-  // Similar to KernelLaunchIdExpr HandleSYCLSpecialParamsIdExpr stores an
-  // UnresolvedLookupExpr or UnresolvedMemberExpr corresponding to the fuction
-  // handling of special SYCL kernel parameters for which a call will be
-  // synthesized during template instantiation of the device code.
-  Expr *HandleSYCLSpecialParamsIdExpr = nullptr;
 
-  UnresolvedSYCLKernelCallStmt(CompoundStmt *CS, Expr *IdExpr,
-                               Expr *HandleSYCLSpecialParamsIdExpr)
+  UnresolvedSYCLKernelCallStmt(CompoundStmt *CS, Expr *IdExpr)
       : Stmt(UnresolvedSYCLKernelCallStmtClass), OriginalStmt(CS),
-        KernelLaunchIdExpr(IdExpr),
-        HandleSYCLSpecialParamsIdExpr(HandleSYCLSpecialParamsIdExpr) {}
+        KernelLaunchIdExpr(IdExpr) {}
 
   void setOriginalStmt(CompoundStmt *CS) { OriginalStmt = CS; }
 
   void setKernelLaunchIdExpr(Expr *IdExpr) { KernelLaunchIdExpr = IdExpr; }
-  void setSpecArgsIdExpr(Expr *IdExpr) {
-    HandleSYCLSpecialParamsIdExpr = IdExpr;
-  }
 
 public:
   static UnresolvedSYCLKernelCallStmt *Create(const ASTContext &C,
-                                              CompoundStmt *CS, Expr *IdExpr,
-                                              Expr *SpecArgsExpr) {
-    return new (C) UnresolvedSYCLKernelCallStmt(CS, IdExpr, SpecArgsExpr);
+                                              CompoundStmt *CS, Expr *IdExpr) {
+    return new (C) UnresolvedSYCLKernelCallStmt(CS, IdExpr);
   }
 
   static UnresolvedSYCLKernelCallStmt *CreateEmpty(const ASTContext &C) {
-    return new (C) UnresolvedSYCLKernelCallStmt(nullptr, nullptr, nullptr);
+    return new (C) UnresolvedSYCLKernelCallStmt(nullptr, nullptr);
   }
 
   CompoundStmt *getOriginalStmt() { return cast<CompoundStmt>(OriginalStmt); }
@@ -144,10 +133,6 @@ public:
 
   Expr *getKernelLaunchIdExpr() { return KernelLaunchIdExpr; }
   const Expr *getKernelLaunchIdExpr() const { return KernelLaunchIdExpr; }
-  Expr *getSpecArgsIdExpr() { return HandleSYCLSpecialParamsIdExpr; }
-  const Expr *getSpecArgsIdExpr() const {
-    return HandleSYCLSpecialParamsIdExpr;
-  }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getOriginalStmt()->getBeginLoc();

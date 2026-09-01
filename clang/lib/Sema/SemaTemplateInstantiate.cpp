@@ -592,11 +592,8 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case TypeAliasTemplateInstantiation:
   case PartialOrderingTTP:
   case SYCLKernelLaunchLookup:
-  case SYCLSpecialParametersHandlerLookup:
   case SYCLKernelLaunchOverloadResolution:
-  case SYCLSpecialParametersOverloadResolution:
   case SYCLKernelHostSpecialParametersHandlerCall:
-  case SYCLKernelDeviceSpecialParametersHandlerCall:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -1274,46 +1271,33 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
                                << /*isTemplateTemplateParam=*/true
                                << Active->InstantiationRange);
       break;
-    case CodeSynthesisContext::SYCLKernelLaunchLookup:
-    case CodeSynthesisContext::SYCLSpecialParametersHandlerLookup: {
+    case CodeSynthesisContext::SYCLKernelLaunchLookup: {
       const auto *SKEPAttr =
           Active->Entity->getAttr<SYCLKernelEntryPointAttr>();
       assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
       assert(!SKEPAttr->isInvalidAttr() &&
              "sycl_kernel_entry_point attribute is invalid");
       DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
-      std::string Name =
-          (Active->Kind ==
-           CodeSynthesisContext::SYCLKernelLaunchLookup)
-              ? "sycl_kernel_launch"
-              : "sycl_handle_special_kernel_parameters";
       DiagFunc(SKEPAttr->getLocation(),
                PDiag(diag::note_sycl_kernel_implicit_lookup_here)
-                   << Name << SKEPAttr->getKernelName());
+                   << "sycl_kernel_launch" << SKEPAttr->getKernelName());
       break;
     }
-    case CodeSynthesisContext::SYCLKernelLaunchOverloadResolution:
-    case CodeSynthesisContext::SYCLSpecialParametersOverloadResolution: {
+    case CodeSynthesisContext::SYCLKernelLaunchOverloadResolution: {
       const auto *SKEPAttr =
           Active->Entity->getAttr<SYCLKernelEntryPointAttr>();
       assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
       assert(!SKEPAttr->isInvalidAttr() &&
              "sycl_kernel_entry_point attribute is invalid");
       DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
-      std::string Name =
-          (Active->Kind ==
-           CodeSynthesisContext::SYCLKernelLaunchOverloadResolution)
-              ? "sycl_kernel_launch"
-              : "sycl_handle_special_kernel_parameters";
       DiagFunc(SKEPAttr->getLocation(),
                PDiag(diag::note_sycl_kernel_implicit_overload_resolution_here)
-                   << Name << SKEPAttr->getKernelName()
+                   << "sycl_kernel_launch" << SKEPAttr->getKernelName()
                    << convertCallArgsValueCategoryAndTypeToString(
                           *this, llvm::ArrayRef(Active->CallArgs,
                                                 Active->NumCallArgs)));
       break;
     }
-    case CodeSynthesisContext::SYCLKernelDeviceSpecialParametersHandlerCall:
     case CodeSynthesisContext::SYCLKernelHostSpecialParametersHandlerCall: {
       const auto *SKEPAttr =
           Active->Entity->getAttr<SYCLKernelEntryPointAttr>();
@@ -1321,15 +1305,9 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       assert(!SKEPAttr->isInvalidAttr() &&
              "sycl_kernel_entry_point attribute is invalid");
       DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
-      std::string CalleeName = "callable object returned by ";
-      CalleeName +=
-          (Active->Kind ==
-           CodeSynthesisContext::SYCLKernelHostSpecialParametersHandlerCall)
-              ? "'sycl_kernel_launch'"
-              : "'sycl_handle_special_kernel_parameters'";
       DiagFunc(SKEPAttr->getLocation(),
                PDiag(diag::note_sycl_kernel_implicit_call_here)
-                   << CalleeName
+                   << "callable object returned by 'sycl_kernel_launch'"
                    << convertCallArgsValueCategoryAndTypeToString(
                           *this, llvm::ArrayRef(Active->CallArgs,
                                                 Active->NumCallArgs)));

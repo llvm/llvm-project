@@ -13579,9 +13579,9 @@ def note_sycl_kernel_implicit_overload_resolution_here : Note<
   " function arguments %2 required here">;
 def note_sycl_kernel_implicit_call_here : Note<
   "in implicit call to %0 with arguments %1 required here">;
-def err_sycl_kernel_launch_not_type_list : Error<
-  "the callable returned by 'sycl_kernel_launch' must return a class template"
-  " specialization; %0 is not a class template specialization">;
+def err_sycl_kernel_launch_not_void : Error<
+  "the callable returned by 'sycl_kernel_launch' must return 'void' when invoked"
+  " with the special kernel parameter subobjects; %0 was returned instead">;
 def err_sycl_entry_point_device_use : Error<
   "function %0 cannot be used in device code because it is declared with the"
   " %1 attribute">;

@@ -953,54 +953,19 @@ in SYCL host or device compilation modes.
 
 When a parameter of a function declared with the ``sycl_kernel_entry_point``
 attribute contains a subobject whose type is marked with this attribute, the
-compiler performs special handling on both the host and device sides.
-
-**Host side behavior:**
-
-The synthesized call to ``sycl_kernel_launch`` is expected to return a non-void
-callable object when special kernel parameters are present. This callable is
-then invoked with references to the special subobjects (found by traversing the
-kernel function object's members). The return type of that second call must be
-a ``type_list<Ts...>`` specialization whose template arguments describe the
-types of additional kernel parameters needed to initialize the special objects
-on the device. The synthesized host code looks approximately as follows:
+synthesized call to ``sycl_kernel_launch`` is expected to return a callable
+object. This callable is then invoked with references to the special subobjects
+(found by traversing the kernel function object's members) so that the SYCL
+runtime can process them. The return type of that second call must be ``void``.
+The synthesized host code looks approximately as follows:
 
 .. code-block:: c++
 
-  // sycl_kernel_launch returns a callable when special params are present,
-  // the callable is invoked with references to special subobjects.
-  type_list<buffer_t*, int> result = sycl_kernel_launch<KN>(
-      symbol, std::move(kernelFunc))(kernelFunc.special_member);
-  // Note that result variable is not declared and is shown here for educational
-  // purposes.
-
-**Device side behavior:**
-
-The generated offload kernel entry point includes additional implicit parameters
-whose types are determined by the ``type_list`` template arguments gathered on
-the host side. These additional parameters are initialized via a synthesized
-call to a ``sycl_handle_special_kernel_parameters`` function template, which
-is looked up in the same manner as ``sycl_kernel_launch``. The synthesized
-device code looks approximately as follows:
-
-.. code-block:: c++
-
-  void kernel-entry-point(KernelType kernelFunc, buffer_t* X, int Y) {
-    sycl_handle_special_kernel_parameters<KernelName>(kernelFunc.special_member)
-                                                     (X, Y);
-    kernelFunc();
-  }
+  sycl_kernel_launch<KN>(symbol,
+                         std::move(kernelFunc))(kernelFunc.special_member);
 
 Where ``special_member`` is a subobject of the kernel function object whose type
-is marked with ``sycl_special_kernel_parameter``, and ``X`` and ``Y`` are the
-additional kernel parameters needed to initialize the special subobject on the
-device.
-
-The ``sycl_handle_special_kernel_parameters`` function template is expected to
-be provided by the SYCL library implementation. It receives references to the
-special subobjects as arguments and returns a callable object that accepts the
-additional kernel parameters and uses them to initialize the special subobjects
-for device execution.
+is marked with ``sycl_special_kernel_parameter``.
 
 Use of this attribute might look as follows:
 

@@ -44,9 +44,6 @@ template<int, int = 0> struct KN;
 template<typename KNT, typename... Ts>
 void sycl_kernel_launch(const char *, Ts...) {}
 
-template<typename KNT, typename... Ts>
-void sycl_handle_special_kernel_parameters(Ts...) {}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Valid declarations.
 ////////////////////////////////////////////////////////////////////////////////
