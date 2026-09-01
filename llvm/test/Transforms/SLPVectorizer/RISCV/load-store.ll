@@ -274,10 +274,9 @@ define void @shared-chain-ordering(ptr %dest, ptr %p, i64 %offset) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 4
 ; CHECK-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
 ; CHECK-NEXT:    store <4 x i16> [[TMP0]], ptr [[INCS0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[TMP0]], i64 0
-; CHECK-NEXT:    store i16 [[TMP1]], ptr [[DEST]], align 4
-; CHECK-NEXT:    [[INCS:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; CHECK-NEXT:    store i16 [[E1]], ptr [[INCS]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 0, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> [[TMP1]], i16 [[E1]], i64 1
+; CHECK-NEXT:    store <2 x i16> [[TMP2]], ptr [[DEST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: @shared-chain-ordering(
@@ -287,10 +286,9 @@ define void @shared-chain-ordering(ptr %dest, ptr %p, i64 %offset) {
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 4
 ; DEFAULT-NEXT:    [[E1:%.*]] = load i16, ptr [[INC]], align 2
 ; DEFAULT-NEXT:    store <4 x i16> [[TMP0]], ptr [[INCS0]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[TMP0]], i64 0
-; DEFAULT-NEXT:    store i16 [[TMP1]], ptr [[DEST]], align 4
-; DEFAULT-NEXT:    [[INCS:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; DEFAULT-NEXT:    store i16 [[E1]], ptr [[INCS]], align 2
+; DEFAULT-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 0, i32 poison>
+; DEFAULT-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> [[TMP1]], i16 [[E1]], i64 1
+; DEFAULT-NEXT:    store <2 x i16> [[TMP2]], ptr [[DEST]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:

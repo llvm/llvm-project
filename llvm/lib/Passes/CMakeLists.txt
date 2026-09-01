@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMPasses
   PassBuilderBindings.cpp
   PassBuilderPipelines.cpp
   StandardInstrumentations.cpp
+  TriggerCrashPasses.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm
@@ -15,6 +16,7 @@ add_llvm_component_library(LLVMPasses
   LINK_COMPONENTS
   AggressiveInstCombine
   Analysis
+  AsmPrinter
   CFGuard
   CodeGen
   GlobalISel

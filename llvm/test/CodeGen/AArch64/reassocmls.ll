@@ -174,12 +174,19 @@ define i64 @mla_i64_uses(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 }
 
 define i64 @mla_i64_mul(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
-; CHECK-LABEL: mla_i64_mul:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul x8, x2, x1
-; CHECK-NEXT:    madd x9, x4, x3, x8
-; CHECK-NEXT:    add x0, x8, x9
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: mla_i64_mul:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mul x8, x4, x3
+; CHECK-SD-NEXT:    mul x9, x2, x1
+; CHECK-SD-NEXT:    add x0, x8, x9, lsl #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mla_i64_mul:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mul x8, x2, x1
+; CHECK-GI-NEXT:    madd x9, x4, x3, x8
+; CHECK-GI-NEXT:    add x0, x8, x9
+; CHECK-GI-NEXT:    ret
   %m1.neg = mul i64 %c, %b
   %m2.neg = mul i64 %e, %d
   %reass.add = add i64 %m2.neg, %m1.neg

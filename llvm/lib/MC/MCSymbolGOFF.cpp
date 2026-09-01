@@ -8,9 +8,32 @@
 
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/BinaryFormat/GOFF.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
+
+MCSectionGOFF *MCSymbolGOFF::getSectionForCommonSymbol(MCContext &Ctx,
+                                                       Align ByteAlignment) {
+  MCSectionGOFF *SD = Ctx.getGOFFSection(
+      SectionKind::getMetadata(), getName(),
+      GOFF::SDAttr{GOFF::ESD_TA_Unspecified, GOFF::ESD_BSC_Unspecified});
+
+  MCSectionGOFF *ED = Ctx.getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_WSA,
+      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
+      SD);
+  ED->setAlignment(ByteAlignment);
+
+  return Ctx.getGOFFSection(SectionKind::getBSS(), getName(),
+                            GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
+                                         GOFF::ESD_LT_XPLink, getBindingScope(),
+                                         0},
+                            ED);
+}
 
 bool MCSymbolGOFF::setSymbolAttribute(MCSymbolAttr Attribute) {
   switch (Attribute) {

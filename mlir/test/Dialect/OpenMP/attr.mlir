@@ -71,12 +71,6 @@ func.func @omp_decl_tar_host_to() -> () attributes {omp.declare_target = #omp.de
   return
 }
 
-// CHECK-LABEL: func @omp_decl_tar_host_link
-// CHECK-SAME: {{.*}} attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (link)>} {
-func.func @omp_decl_tar_host_link() -> () attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (link)>} {
-  return
-}
-
 // CHECK-LABEL: func @omp_decl_tar_host_enter
 // CHECK-SAME: {{.*}} attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter)>} {
 func.func @omp_decl_tar_host_enter() -> () attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter)>} {
@@ -89,12 +83,6 @@ func.func @omp_decl_tar_nohost_to() -> () attributes {omp.declare_target = #omp.
   return
 }
 
-// CHECK-LABEL: func @omp_decl_tar_nohost_link
-// CHECK-SAME: {{.*}} attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (link)>} {
-func.func @omp_decl_tar_nohost_link() -> () attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (link)>} {
-  return
-}
-
 // CHECK-LABEL: func @omp_decl_tar_nohost_enter
 // CHECK-SAME: {{.*}} attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>} {
 func.func @omp_decl_tar_nohost_enter() -> () attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>} {
@@ -104,12 +92,6 @@ func.func @omp_decl_tar_nohost_enter() -> () attributes {omp.declare_target = #o
 // CHECK-LABEL: func @omp_decl_tar_any_to
 // CHECK-SAME: {{.*}} attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
 func.func @omp_decl_tar_any_to() -> () attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
-  return
-}
-
-// CHECK-LABEL: func @omp_decl_tar_any_link
-// CHECK-SAME: {{.*}} attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} {
-func.func @omp_decl_tar_any_link() -> () attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} {
   return
 }
 

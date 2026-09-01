@@ -919,7 +919,7 @@ define amdgpu_kernel void @v_cttz_zero_poison_i64_with_select(ptr addrspace(1) n
 ; SI-NEXT:    v_or_b32_e32 v1, v3, v2
 ; SI-NEXT:    v_ffbl_b32_e32 v0, v0
 ; SI-NEXT:    v_ffbl_b32_e32 v1, v1
-; SI-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
+; SI-NEXT:    v_or_b32_e32 v0, 32, v0
 ; SI-NEXT:    v_min_u32_e32 v0, v0, v1
 ; SI-NEXT:    v_min_u32_e32 v0, 64, v0
 ; SI-NEXT:    v_mov_b32_e32 v1, 0
@@ -984,7 +984,7 @@ define amdgpu_kernel void @v_cttz_zero_poison_i64_with_select(ptr addrspace(1) n
 ; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_or_b32_e32 v4, v4, v7
 ; VI-NEXT:    v_ffbl_b32_e32 v3, v3
-; VI-NEXT:    v_add_u32_e32 v3, vcc, 32, v3
+; VI-NEXT:    v_or_b32_e32 v3, 32, v3
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 8, v8
 ; VI-NEXT:    s_waitcnt vmcnt(0)

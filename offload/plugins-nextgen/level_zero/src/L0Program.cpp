@@ -94,7 +94,7 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
   ModuleDesc.pConstants = &SpecConstants;
   ze_result_t RC;
-  CALL_ZE(RC, zeModuleCreate, L0Device.getZeContext(), L0Device.getZeDevice(),
+  CALL_ZE(RC, zeModuleCreate, getZeContext(), L0Device.getZeDevice(),
           &ModuleDesc, &Module, &BuildLog);
   if (BuildLog)
     zeModuleBuildLogDestroy(BuildLog);
