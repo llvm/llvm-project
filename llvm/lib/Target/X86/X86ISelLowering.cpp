@@ -63295,7 +63295,7 @@ static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
         User->getValueSizeInBits(0).getFixedValue() > VT.getFixedSizeInBits()) {
       assert(cast<MemIntrinsicSDNode>(User)->isSimple() &&
              MemIntrin->isSimple() && "Illegal broadcast load type");
-      DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
+      DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1), true);
       SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
                                          VT.getSizeInBits());
       Extract = DAG.getBitcast(VT, Extract);

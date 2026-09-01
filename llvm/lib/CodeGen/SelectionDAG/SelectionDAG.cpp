@@ -13391,6 +13391,87 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
     setRoot(To);
 }
 
+/// ReplaceAllUsesOfValueExceptSelfWith - Identical to
+/// ReplaceAllUsesOfValueWith, but skips the replacement when the user of To is
+/// To itself. This can occur in cases where atemporary  self-referential
+/// TokenFactor node is created.
+void SelectionDAG::ReplaceAllUsesOfValueExceptSelfWith(SDValue From,
+                                                       SDValue To) {
+  // Handle the really simple, really trivial case efficiently.
+  if (From == To)
+    return;
+
+  // Handle the simple, trivial, case efficiently.
+  if (From.getNode()->getNumValues() == 1) {
+    ReplaceAllUsesWith(From, To);
+    return;
+  }
+
+  // Preserve Debug Info.
+  transferDbgValues(From, To);
+  copyExtraInfo(From.getNode(), To.getNode());
+
+  // Iterate over just the existing users of From. See the comments in
+  // the ReplaceAllUsesWith above.
+  SDNode::use_iterator UI = From.getNode()->use_begin(),
+                       UE = From.getNode()->use_end();
+  RAUWUpdateListener Listener(*this, UI, UE);
+  while (UI != UE) {
+    SDNode *User = UI->getUser();
+
+    // Don't replace uses of the To node if is is self-referential.
+    // If CSE tries to merge the Use with another node post-replacement
+    // it'll try to remove the same node from the CSE map twice, causing a
+    // crash.
+    if (User == To.getNode()) {
+      do {
+        ++UI;
+      } while (UI != UE && UI->getUser() == User);
+      continue;
+    }
+
+    bool UserRemovedFromCSEMaps = false;
+
+    // A user can appear in a use list multiple times, and when this
+    // happens the uses are usually next to each other in the list.
+    // To help reduce the number of CSE recomputations, process all
+    // the uses of this user that we can find this way.
+    do {
+      SDUse &Use = *UI;
+
+      // Skip uses of different values from the same node.
+      if (Use.getResNo() != From.getResNo()) {
+        ++UI;
+        continue;
+      }
+
+      // If this node hasn't been modified yet, it's still in the CSE maps,
+      // so remove its old self from the CSE maps.
+      if (!UserRemovedFromCSEMaps) {
+        RemoveNodeFromCSEMaps(User);
+        UserRemovedFromCSEMaps = true;
+      }
+
+      ++UI;
+      Use.set(To);
+      if (To->isDivergent() != From->isDivergent())
+        updateDivergence(User);
+    } while (UI != UE && UI->getUser() == User);
+    // We are iterating over all uses of the From node, so if a use
+    // doesn't use the specific value, no changes are made.
+    if (!UserRemovedFromCSEMaps)
+      continue;
+
+    // Now that we have modified User, add it back to the CSE maps.  If it
+    // already exists there, recursively merge the results together.
+    AddModifiedNodeToCSEMaps(User);
+  }
+
+  // If we just RAUW'd the root, take note.
+  if (From == getRoot())
+    setRoot(To);
+}
+
 namespace {
 
 /// UseMemo - This class is used by SelectionDAG::ReplaceAllUsesOfValuesWith
@@ -13708,7 +13789,8 @@ void SelectionDAG::AddDbgValue(SDDbgValue *DB, bool isParameter) {
 void SelectionDAG::AddDbgLabel(SDDbgLabel *DB) { DbgInfo->add(DB); }
 
 SDValue SelectionDAG::makeEquivalentMemoryOrdering(SDValue OldChain,
-                                                   SDValue NewMemOpChain) {
+                                                   SDValue NewMemOpChain,
+                                                   bool SkipSelfReplacement) {
   assert(isa<MemSDNode>(NewMemOpChain) && "Expected a memop node");
   assert(NewMemOpChain.getValueType() == MVT::Other && "Expected a token VT");
   // The new memory operation must have the same position as the old load in
@@ -13720,7 +13802,10 @@ SDValue SelectionDAG::makeEquivalentMemoryOrdering(SDValue OldChain,
 
   SDValue TokenFactor = getNode(ISD::TokenFactor, SDLoc(OldChain), MVT::Other,
                                 OldChain, NewMemOpChain);
-  ReplaceAllUsesOfValueWith(OldChain, TokenFactor);
+  if (SkipSelfReplacement)
+    ReplaceAllUsesOfValueExceptSelfWith(OldChain, TokenFactor);
+  else
+    ReplaceAllUsesOfValueWith(OldChain, TokenFactor);
   UpdateNodeOperands(TokenFactor.getNode(), OldChain, NewMemOpChain);
   return TokenFactor;
 }
