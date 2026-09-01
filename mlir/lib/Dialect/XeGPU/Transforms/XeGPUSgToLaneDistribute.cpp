@@ -128,8 +128,9 @@ struct SgToLaneCreateNdDesc
       return failure();
 
     auto newOp = xegpu::CreateNdDescOp::create(
-        rewriter, op.getLoc(), resultType.dropLayouts(), op.getOperands(),
-        op->getAttrs());
+        rewriter, op.getLoc(), TypeRange{resultType.dropLayouts()},
+        op.getOperands(), op.getProperties(),
+        op->getDiscardableAttrDictionary().getValue());
     rewriter.replaceOp(op, newOp.getResult());
     return success();
   }

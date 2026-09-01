@@ -1674,7 +1674,8 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, ExprId e, Value v0,
   case TensorExp::Kind::kTruncF:
     return arith::TruncFOp::create(rewriter, loc, inferType(e, v0), v0);
   case TensorExp::Kind::kExtF:
-    return arith::ExtFOp::create(rewriter, loc, inferType(e, v0), v0);
+    return arith::ExtFOp::create(rewriter, loc, TypeRange{inferType(e, v0)},
+                                 ValueRange{v0}, arith::ExtFOp::Properties{});
   case TensorExp::Kind::kCastFS:
     return arith::FPToSIOp::create(rewriter, loc, inferType(e, v0), v0);
   case TensorExp::Kind::kCastFU:

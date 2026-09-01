@@ -3679,7 +3679,8 @@ public:
 
     if (isa<FloatType>(srcElementType) && isa<FloatType>(dstElementType) &&
         srcWidth < dstWidth)
-      return arith::ExtFOp::create(rewriter, loc, dstType, val);
+      return arith::ExtFOp::create(rewriter, loc, dstType, val,
+                                   arith::FastMathFlagsAttr{});
 
     if (isa<IntegerType>(srcElementType) && isa<IntegerType>(dstElementType) &&
         srcWidth < dstWidth)

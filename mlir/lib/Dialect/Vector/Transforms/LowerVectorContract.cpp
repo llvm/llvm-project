@@ -393,7 +393,8 @@ struct UnrolledOuterProductGenerator
     if (vecType)
       promotedType = vecType.clone(promotedType);
     if (isa<FloatType>(dstElementType))
-      return arith::ExtFOp::create(rewriter, loc, promotedType, v);
+      return arith::ExtFOp::create(rewriter, loc, promotedType, v,
+                                   /*fastmath=*/{});
     return arith::ExtSIOp::create(rewriter, loc, promotedType, v);
   }
 

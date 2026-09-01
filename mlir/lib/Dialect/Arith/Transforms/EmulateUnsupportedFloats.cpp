@@ -98,7 +98,8 @@ void mlir::arith::populateEmulateUnsupportedFloatsConversions(
   });
   converter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        auto extFOp = arith::ExtFOp::create(b, loc, target, input);
+        auto extFOp = arith::ExtFOp::create(b, loc, target, input.front(),
+                                            arith::FastMathFlagsAttr{});
         extFOp.setFastmath(arith::FastMathFlags::contract);
         return extFOp;
       });

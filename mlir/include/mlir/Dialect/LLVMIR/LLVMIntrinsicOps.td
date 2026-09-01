@@ -501,8 +501,17 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
         $_builder.getNamedAttr($_qualCppClassName::getRoundingModeAttrName(),
                                roundingModeAttr));
     }], true : "") # [{
+    $_qualCppClassName::Properties properties{};
+    $_qualCppClassName::populateDefaultProperties(
+        OperationName($_qualCppClassName::getOperationName(),
+                      $_builder.getContext()), properties);
+    if (failed($_qualCppClassName::setPropertiesFromAttr(
+          properties, $_builder.getDictionaryAttr(mlirAttrs),
+          [&]() { return emitError($_location); }))) {
+      return failure();
+    }
     auto op = $_qualCppClassName::create($_builder, $_location,
-      $_resultType, mlirOperands, mlirAttrs);
+      $_resultType, mlirOperands, properties, {});
     moduleImport.setFastmathFlagsAttr(inst, op);
     $res = op;
   }];

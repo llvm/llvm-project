@@ -142,7 +142,7 @@ struct FlattenLoad : public OpRewritePattern<memref::LoadOp> {
 
     Location loc = op.getLoc();
     Value flatMemref = getFlatMemref(rewriter, loc, memref, op.getIndices());
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, flatMemref);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, flatMemref, ValueRange{});
     return success();
   }
 };

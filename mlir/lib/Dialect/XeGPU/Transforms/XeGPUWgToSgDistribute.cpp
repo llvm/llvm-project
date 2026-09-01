@@ -339,7 +339,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         resShape.push_back(aVecShape[aVecShape.size() - 2]);
         resShape.push_back(bVecShape[bVecShape.size() - 1]);
         VectorType resTy = VectorType::get(resShape, resultTy.getElementType());
-        auto newDpasOp = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
+        auto newDpasOp = xegpu::DpasOp::create(
+            rewriter, loc, resTy, operands[0], operands[1], tmpC,
+            /*layout_a=*/nullptr, /*layout_b=*/nullptr, /*layout_cd=*/nullptr);
         newDpasOp.setLayoutCdAttr(layoutCd.dropSgLayoutAndData());
         newDpasOp.setLayoutAAttr(layoutA.dropSgLayoutAndData());
         newDpasOp.setLayoutBAttr(layoutB.dropSgLayoutAndData());

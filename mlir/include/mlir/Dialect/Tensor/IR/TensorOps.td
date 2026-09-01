@@ -1218,9 +1218,11 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
       "ArrayRef<ReassociationIndices>":$reassociation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
-      $_state.addAttribute("reassociation",
-          getReassociationIndicesAttribute($_builder, reassociation));
-      build($_builder, $_state, resultType, src, attrs);
+      buildPropertiesAndDiscardableAttributes($_state, attrs);
+      $_state.getOrAddProperties<Properties>().reassociation =
+          getReassociationIndicesAttribute($_builder, reassociation);
+      $_state.addOperands(src);
+      $_state.addTypes(resultType);
     }]>,
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationExprs>":$reassociation,

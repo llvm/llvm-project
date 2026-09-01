@@ -1753,9 +1753,10 @@ ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
         currTDescType.getElementType(), currTDescType.getEncoding(),
         expectedLayout);
     xegpu::CreateNdDescOp newOp = xegpu::CreateNdDescOp::create(
-        builder, consumerOp->getLoc(), newTensorDescType,
+        builder, consumerOp->getLoc(), TypeRange{newTensorDescType},
         conflictingCreateNdOp->getOperands(),
-        conflictingCreateNdOp->getAttrs());
+        conflictingCreateNdOp.getProperties(),
+        conflictingCreateNdOp->getDiscardableAttrDictionary().getValue());
     // Replace the tensor descriptor operand in the consumer op with the new
     // tensor descriptor.
     consumerOp->replaceUsesOfWith(tdescValue, newOp.getResult());

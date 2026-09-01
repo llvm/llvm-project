@@ -92,8 +92,13 @@ struct ConvertOpToUnsigned final : OpRewritePattern<Signed> {
             staticallyNonNegative(this->solver, static_cast<Operation *>(op))))
       return failure();
 
-    rw.replaceOpWithNewOp<Unsigned>(op, op->getResultTypes(), op->getOperands(),
-                                    op->getAttrs());
+    typename Unsigned::Properties properties{};
+    Unsigned::populateDefaultProperties(
+        OperationName(Unsigned::getOperationName(), rw.getContext()),
+        properties);
+    rw.replaceOpWithNewOp<Unsigned>(
+        op, op->getResultTypes(), op->getOperands(), properties,
+        op->getDiscardableAttrDictionary().getValue());
     return success();
   }
 
