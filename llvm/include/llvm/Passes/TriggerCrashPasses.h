@@ -10,16 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_TRIGGERCRASHPASS_H
-#define LLVM_TRANSFORMS_UTILS_TRIGGERCRASHPASS_H
+#ifndef LLVM_PASSES_TRIGGERCRASHPASSES_H
+#define LLVM_PASSES_TRIGGERCRASHPASSES_H
 
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
@@ -30,18 +29,18 @@ public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-class TriggerCrashFunctionPass
-    : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
-public:
-  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
 class TriggerCrashCGSCCPass
     : public OptionalPassInfoMixin<TriggerCrashCGSCCPass> {
 public:
   LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
                                  CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                  CGSCCUpdateResult &UR);
+};
+
+class TriggerCrashFunctionPass
+    : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 class TriggerCrashLoopPass
@@ -52,8 +51,13 @@ public:
                                  LPMUpdater &U);
 };
 
-LLVM_ABI FunctionPass *createTriggerCrashFunctionPass();
+class TriggerCrashMachineFunctionPass
+    : public OptionalPassInfoMixin<TriggerCrashMachineFunctionPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
 
 } // namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_TRIGGERCRASHPASS_H
+#endif // LLVM_PASSES_TRIGGERCRASHPASSES_H
