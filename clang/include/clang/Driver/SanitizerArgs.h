@@ -111,11 +111,6 @@ public:
            !Sanitizers.has(SanitizerKind::Address) &&
            !Sanitizers.has(SanitizerKind::HWAddress);
   }
-  bool needsDsanRt() const {
-    return Sanitizers.has(SanitizerKind::DoubleFree) &&
-           !Sanitizers.has(SanitizerKind::Address) &&
-           !Sanitizers.has(SanitizerKind::HWAddress);
-  }
   bool needsFuzzerInterceptors() const;
   bool needsUbsanRt() const;
   bool needsUbsanCXXRt() const;

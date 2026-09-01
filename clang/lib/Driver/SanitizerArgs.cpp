@@ -48,8 +48,7 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::Type | SanitizerKind::MemtagStack |
     SanitizerKind::MemtagHeap | SanitizerKind::MemtagGlobals |
     SanitizerKind::Memory | SanitizerKind::KernelMemory | SanitizerKind::Leak |
-    SanitizerKind::DoubleFree | SanitizerKind::Undefined |
-    SanitizerKind::Integer | SanitizerKind::Bounds |
+    SanitizerKind::Undefined | SanitizerKind::Integer | SanitizerKind::Bounds |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
     SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
@@ -710,9 +709,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
-      std::make_pair(SanitizerKind::DoubleFree,
-                     SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::Scudo),
       std::make_pair(SanitizerKind::KernelAddress,
                      SanitizerKind::Address | SanitizerKind::Leak |
                          SanitizerKind::Thread | SanitizerKind::Memory),

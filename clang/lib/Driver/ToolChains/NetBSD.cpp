@@ -521,7 +521,6 @@ NetBSD::getSupportedSanitizers(BoundArch BA,
     Res |= SanitizerKind::PointerCompare;
     Res |= SanitizerKind::PointerSubtract;
     Res |= SanitizerKind::Leak;
-    Res |= SanitizerKind::DoubleFree;
     Res |= SanitizerKind::SafeStack;
     Res |= SanitizerKind::Scudo;
     Res |= SanitizerKind::Vptr;
