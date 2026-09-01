@@ -5558,11 +5558,10 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // below must be skipped - otherwise the folded insert is double-counted.
       // Stores (the symmetric PEXTR*(mem) fold) are left unchanged here.
       bool Is0thSubVec = (NumEltDone() % LT.second.getVectorNumElements()) == 0;
-      bool FoldedInLaneInsert =
-          IsLoad && !Is0thSubVec &&
-          ((CurrOpSizeBytes == 1 && ST->hasSSE41()) ||
-           (CurrOpSizeBytes == 2 && ST->hasSSE2()) ||
-           (CurrOpSizeBytes == 4 && ST->hasSSE41()));
+      bool FoldedInLaneInsert = IsLoad && !Is0thSubVec &&
+                                ((CurrOpSizeBytes == 1 && ST->hasSSE41()) ||
+                                 (CurrOpSizeBytes == 2 && ST->hasSSE2()) ||
+                                 (CurrOpSizeBytes == 4 && ST->hasSSE41()));
       if (CurrOpSizeBytes == 32 && ST->isUnalignedMem32Slow())
         Cost += 2;
       else if (CurrOpSizeBytes < 4 && !FoldedInLaneInsert)
