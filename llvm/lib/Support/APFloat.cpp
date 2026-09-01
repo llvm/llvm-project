@@ -3769,7 +3769,13 @@ APInt IEEEFloat::bitcastToAPInt() const {
   if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat4E2M1FN)
     return convertFloat4E2M1FNAPFloatToAPInt();
 
-  llvm_unreachable("unknown format!");
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semX87DoubleExtended)
+    return convertF80LongDoubleAPFloatToAPInt();
+
+  if (semantics->bitcastToAPInt != nullptr)
+    return semantics->bitcastToAPInt(*this);
+
+  llvm_unreachable("unsupported semantics");
 }
 
 float IEEEFloat::convertToFloat() const {
@@ -4084,6 +4090,8 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
     return initFromFloat6E2M3FNAPInt(api);
   if (Sem == &APFloatBase::semFloat4E2M1FN)
     return initFromFloat4E2M1FNAPInt(api);
+  if (Sem->initFromAPInt != nullptr)
+    return Sem->initFromAPInt(*this, api);
 
   llvm_unreachable("unsupported semantics");
 }
