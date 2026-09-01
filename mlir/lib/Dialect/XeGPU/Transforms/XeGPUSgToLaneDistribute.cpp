@@ -1941,8 +1941,8 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // layout distributes to. Lanes sharing a slot run the same arithmetic on their
 // own fragment, so when a shuffle is emitted they all receive the donor's value
 // and are equally correct, and when it is dropped they keep whatever that index
-// holds in their own fragment -- which is why dropping it relies on nobody
-// reading them.
+// holds in their own fragment. The target layout assigns those lanes no
+// elements, so what they hold is unspecified.
 //
 // An index is derived from the tables and then verified against them, so a
 // layout change that is not of this form is reported as a match failure rather
@@ -2105,14 +2105,10 @@ deriveElementSource(const OwnedCoords &inputOwned,
     if (failed(index))
       continue;
 
-    // The donor is the lane itself only if the local extract lands on the
-    // element the lane owns, which just the slots get to decide.
-    bool needsShuffle =
-        donorDelta != 0 ||
-        !llvm::all_of(llvm::seq<int64_t>(0, numSlots), [&](int64_t slot) {
-          return inputOwned[slot][index->at(slot)] == targetOwned[slot][pos];
-        });
-    return ElementSource{*index, donorDelta, needsShuffle};
+    // The donor is the lane itself exactly when `delta` is 0: `needed[slot]`
+    // was located in the fragment of lane `slot + delta`, so at 0 every slot's
+    // extract is local by construction.
+    return ElementSource{*index, donorDelta, /*needsShuffle=*/donorDelta != 0};
   }
   return failure();
 }
@@ -2230,6 +2226,9 @@ redistributeBroadcastedValue(ConversionPatternRewriter &rewriter, Location loc,
   };
 
   // Extract, shuffle and insert one element of the result at a time.
+  // TODO: one shuffle per element, though `gpu.shuffle` moves a whole 32-bit
+  // lane word. Elements sharing a donor could travel in one, as
+  // shuffleDataAsLaneLayoutChange does.
   llvm::DenseMap<std::tuple<int64_t, int64_t, int64_t, int64_t>, Value>
       extracted;
   for (auto [pos, source] : llvm::enumerate(sources)) {
