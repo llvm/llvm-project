@@ -1,0 +1,139 @@
+# RUN: llc -mtriple=i686-unknown-linux-gnu -run-pass=machine-latecleanup %s \
+# RUN:   -o - -verify-machineinstrs | FileCheck %s
+#
+# An invariant load always returns the same value, so the pass can reuse an
+# earlier one even when a store or a call comes in between.
+#
+# These tests use a 32-bit target on purpose. There a constant pool entry is
+# addressed absolutely, while on x86-64 the load goes through $rip. isCandidate()
+# only lets an instruction use the frame register, so the x86-64 form is never
+# tracked and there would be nothing to test.
+
+--- |
+  define void @constant_pool_load_is_reused() #0 {
+    ret void
+  }
+
+  define void @immutable_argument_load_is_reused() #0 {
+    ret void
+  }
+
+  define void @mutable_argument_load_is_not_reused() #0 {
+    ret void
+  }
+
+  define void @constant_pool_load_not_reused_after_clobber() #0 {
+    ret void
+  }
+
+  declare void @sink()
+
+  attributes #0 = { "frame-pointer"="all" }
+...
+---
+# A store cannot change a constant pool entry.
+name:            constant_pool_load_is_reused
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    4
+constants:
+  - id:              0
+    value:           'i32 85'
+    alignment:       4
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 4 }
+body:             |
+  bb.0:
+    liveins: $ebp, $ecx
+
+    ; CHECK-LABEL: name: constant_pool_load_is_reused
+    ; CHECK:      $eax = MOV32rm $noreg, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+    ; CHECK-NEXT: MOV32mr $ebp, 1, $noreg, -8, $noreg, $ecx :: (store (s32) into %stack.0)
+    ; CHECK-NEXT: MOV32mr $ebp, 1, $noreg, -12, $noreg, $eax
+    ; CHECK-NEXT: RET32
+    $eax = MOV32rm $noreg, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+    MOV32mr $ebp, 1, $noreg, -8, $noreg, $ecx :: (store (s32) into %stack.0)
+    $eax = MOV32rm $noreg, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+    MOV32mr $ebp, 1, $noreg, -12, $noreg, $eax
+    RET32
+...
+---
+# An incoming argument slot is immutable, so not even a call can change it.
+# $ebx is callee-saved, so the call's register mask leaves the tracked
+# definition alone and only the memory reasoning is under test.
+name:            immutable_argument_load_is_reused
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    4
+  hasCalls:        true
+fixedStack:
+  - { id: 0, offset: 8, size: 4, alignment: 4, isImmutable: true }
+body:             |
+  bb.0:
+    liveins: $ebp
+
+    ; CHECK-LABEL: name: immutable_argument_load_is_reused
+    ; CHECK:      $ebx = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.0)
+    ; CHECK-NEXT: CALLpcrel32
+    ; CHECK-NEXT: MOV32mr $ebp, 1, $noreg, -12, $noreg, $ebx
+    ; CHECK-NEXT: RET32
+    $ebx = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.0)
+    CALLpcrel32 target-flags(x86-plt) @sink, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
+    $ebx = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.0)
+    MOV32mr $ebp, 1, $noreg, -12, $noreg, $ebx
+    RET32
+...
+---
+# A mutable frame object is not invariant, so the pass has to leave it alone.
+name:            mutable_argument_load_is_not_reused
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    4
+fixedStack:
+  - { id: 0, offset: 8, size: 4, alignment: 4, isImmutable: false }
+body:             |
+  bb.0:
+    liveins: $ebp
+
+    ; CHECK-LABEL: name: mutable_argument_load_is_not_reused
+    ; CHECK:      $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.0)
+    ; CHECK-NEXT: $ecx = MOV32ri 1
+    ; CHECK-NEXT: $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.0)
+    ; CHECK-NEXT: MOV32mr $ebp, 1, $noreg, -12, $noreg, $eax
+    ; CHECK-NEXT: RET32
+    $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.0)
+    $ecx = MOV32ri 1
+    $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.0)
+    MOV32mr $ebp, 1, $noreg, -12, $noreg, $eax
+    RET32
+...
+---
+# Redefining the loaded register still ends the reuse.
+name:            constant_pool_load_not_reused_after_clobber
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    4
+constants:
+  - id:              0
+    value:           'i32 85'
+    alignment:       4
+body:             |
+  bb.0:
+    liveins: $ebp
+
+    ; CHECK-LABEL: name: constant_pool_load_not_reused_after_clobber
+    ; CHECK:      $eax = MOV32rm $noreg, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+    ; CHECK-NEXT: $eax = MOV32ri 7
+    ; CHECK-NEXT: $eax = MOV32rm $noreg, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+    ; CHECK-NEXT: MOV32mr $ebp, 1, $noreg, -12, $noreg, $eax
+    ; CHECK-NEXT: RET32
+    $eax = MOV32rm $noreg, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+    $eax = MOV32ri 7
+    $eax = MOV32rm $noreg, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+    MOV32mr $ebp, 1, $noreg, -12, $noreg, $eax
+    RET32
+...
