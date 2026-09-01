@@ -199,7 +199,7 @@ private:
     const clang::CXXRecordDecl *RD = QT->getAsCXXRecordDecl();
     if (!RD)
       return false;
-    if (RD->getName() != "shared_ptr")
+    if (RD->getNameAsString() != "shared_ptr")
       return false;
     return RD->isInStdNamespace();
   }
@@ -211,7 +211,7 @@ private:
     const clang::CXXRecordDecl *RD = QT->getAsCXXRecordDecl();
     if (!RD)
       return false;
-    if (RD->getName() != "unique_ptr")
+    if (RD->getNameAsString() != "unique_ptr")
       return false;
     return RD->isInStdNamespace();
   }
@@ -343,7 +343,7 @@ private:
 
   void handleSmartPtrReset(const clang::CXXMemberCallExpr *ME,
                            const clang::Stmt *EnclosingStmt) {
-    if (ME->getMethodDecl()->getName() != "reset")
+    if (ME->getMethodDecl()->getNameAsString() != "reset")
       return;
     if (!isSmartPtrType(ME->getImplicitObjectArgument()->getType()))
       return;
