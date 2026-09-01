@@ -2451,6 +2451,72 @@ struct TestTryLock {
     }
   }
 
+  // The same capability listed under opposite success values is acquired
+  // regardless of the call's result: warns, then treated as an
+  // unconditional acquisition.
+  bool TryLockEitherWay() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu)
+      EXCLUSIVE_TRYLOCK_FUNCTION(false, mu);
+  void tryheld_regardless_of_result() {
+    if (TryLockEitherWay()) { // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+      a = 1;
+      mu.Unlock();
+    } else {
+      a = 2;
+      mu.Unlock();
+    }
+  }
+
+  void tryheld_regardless_of_result_unbranched() {
+    TryLockEitherWay(); // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+    a = 1;
+    mu.Unlock();
+  }
+
+  // The shared analogue: share-held regardless of the result.
+  bool TryReadEitherWay() SHARED_TRYLOCK_FUNCTION(true, mu)
+      SHARED_TRYLOCK_FUNCTION(false, mu);
+  void tryheld_regardless_of_result_shared() {
+    TryReadEitherWay(); // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+    int r = a;
+    (void)r;
+    mu.ReaderUnlock();
+  }
+
+  // A cross-kind pairing -- exclusive on success, shared on failure -- may
+  // be a deliberate API, but a single fact cannot represent a hold whose
+  // kind varies with the result, so it keeps only the guarantee that holds
+  // either way: an unconditional *shared* hold. Exclusive access on the
+  // success arm is then (conservatively) diagnosed.
+  bool TryUpgrade() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu)
+      SHARED_TRYLOCK_FUNCTION(false, mu);
+  void tryheld_regardless_of_result_cross_kind() {
+    if (TryUpgrade()) { // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+      a = 1; // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+      mu.ReaderUnlock();
+    } else {
+      mu.ReaderUnlock();
+    }
+  }
+
+  // Degenerate in both kinds at once: one diagnostic, one unconditional
+  // acquisition -- exclusive, since both polarities promised it.
+  bool TryLockEveryWay() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu)
+      EXCLUSIVE_TRYLOCK_FUNCTION(false, mu) SHARED_TRYLOCK_FUNCTION(true, mu)
+      SHARED_TRYLOCK_FUNCTION(false, mu);
+  void tryheld_regardless_of_result_both_kinds() {
+    TryLockEveryWay(); // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+    a = 1;
+    mu.Unlock();
+  }
+
+  // The diagnostic is emitted from the lockset walk, so analysis-dead
+  // code stays silent like every other diagnostic of the walk.
+  void tryheld_regardless_of_result_unreachable() {
+    fail();
+    TryLockEitherWay();
+    mu.Unlock();
+  }
+
   void tryheld_assign_as_condition() {
     bool b;
     if ((b = mu.TryLock())) {
@@ -2516,7 +2582,49 @@ void mixed_success_after_reassignment() {
   }
 }
 
+// Whether opposite success values name the same capability can depend on
+// the call's arguments: aliased pointers collapse the mixed attributes into
+// an unconditional acquisition, diagnosed at the call.
+void mixed_success_aliased() {
+  try_lock_ptr_split(&pmu1, &pmu1); // expected-warning {{mutex 'pmu1' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+  pdata = 1;
+  pmu1.Unlock();
+}
+
 } // end namespace TryLockPointerRetranslation
+
+// Degenerate try-acquire annotations reconcile on every recording path,
+// not just pre-walk CallExprs: constructors (recorded in handleCall's
+// attribute loop) and expression-less calls (a destructor: no result to
+// branch on at all).
+namespace TryLockRegardlessCtorDtor {
+
+Mutex mu;
+int data GUARDED_BY(mu);
+
+struct SCOPED_LOCKABLE ScopedEitherWay {
+  ScopedEitherWay(Mutex *m) EXCLUSIVE_TRYLOCK_FUNCTION(true, m)
+      EXCLUSIVE_TRYLOCK_FUNCTION(false, m);
+  ~ScopedEitherWay() EXCLUSIVE_UNLOCK_FUNCTION();
+};
+
+void ctor_regardless_of_result() {
+  ScopedEitherWay scope(&mu); // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+  data = 1;
+}
+
+struct LockEitherWayOnExit {
+  ~LockEitherWayOnExit() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu)
+      EXCLUSIVE_TRYLOCK_FUNCTION(false, mu);
+};
+
+void dtor_regardless_of_result() {
+  { LockEitherWayOnExit guard; } // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+  data = 1;
+  mu.Unlock();
+}
+
+} // end namespace TryLockRegardlessCtorDtor
 
 // A try-acquire attribute's success value is decoded by constant evaluation,
 // which handles template parameters for example.

@@ -4375,6 +4375,10 @@ def warn_unlock_kind_mismatch : Warning<
 def warn_double_lock : Warning<
   "acquiring %0 '%1' that %select{is already|may already be}2 held">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_try_lock_regardless_of_result : Warning<
+  "%0 '%1' is acquired regardless of the result of the try-acquire call; "
+  "treating the acquisition as unconditional">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_no_unlock : Warning<
   "%0 '%1' is still held at the end of function">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;

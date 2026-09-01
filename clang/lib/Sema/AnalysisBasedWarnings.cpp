@@ -2065,6 +2065,16 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
                           makeLockedHereNote(LocLocked, Kind));
   }
 
+  void handleTryLockRegardlessOfResult(StringRef Kind, Name LockName,
+                                       SourceLocation Loc) override {
+    if (Loc.isInvalid())
+      Loc = FunLocation;
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_try_lock_regardless_of_result)
+                 << Kind << LockName);
+    Warnings.emplace_back(std::move(Warning), getNotes());
+  }
+
   void handleDoubleLock(StringRef Kind, Name LockName, SourceLocation LocLocked,
                         SourceLocation LocDoubleLock, bool MaybeHeld) override {
     if (LocDoubleLock.isInvalid())

@@ -159,6 +159,16 @@ public:
                                 SourceLocation LocLocked,
                                 SourceLocation LocDoubleLock, bool MaybeHeld) {}
 
+  /// Warn when a call's try-acquire attributes leave a capability acquired
+  /// regardless of the call's result; the analysis treats the acquisition
+  /// as unconditional rather than resolvable by a branch on the result.
+  /// \param Kind -- the capability's name parameter (role, mutex, etc).
+  /// \param LockName -- A StringRef name for the lock expression, to be
+  /// printed in the error message.
+  /// \param Loc -- The location of the call.
+  virtual void handleTryLockRegardlessOfResult(StringRef Kind, Name LockName,
+                                               SourceLocation Loc) {}
+
   /// Warn about situations where a mutex is sometimes held and sometimes not.
   /// The three situations are:
   /// 1. a mutex is locked on an "if" branch but not the "else" branch,
