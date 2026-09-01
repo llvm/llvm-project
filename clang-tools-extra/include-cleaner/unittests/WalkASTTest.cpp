@@ -1120,9 +1120,9 @@ TEST(WalkAST, ObjCCompatibleAliasDecl) {
 
 TEST(WalkAST, ObjCCompatibleAliasUsage) {
   testWalk(R"objc(
-    @interface $explicit^MyClass
+    @interface MyClass
     @end
-    @compatibility_alias AliasName MyClass;
+    $explicit^@compatibility_alias AliasName MyClass;
   )objc",
            R"objc(
     void test() {
