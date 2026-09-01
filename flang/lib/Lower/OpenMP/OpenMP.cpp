@@ -2634,7 +2634,7 @@ genTargetClauses(lower::AbstractConverter &converter,
                   "storage-associated variable");
     }
   cp.processIsDevicePtr(stmtCtx, clauseOps, isDevicePtrObjects);
-  cp.processMap(loc, stmtCtx, clauseOps, llvm::omp::Directive::OMPD_unknown,
+  cp.processMap(loc, stmtCtx, clauseOps, llvm::omp::Directive::OMPD_target,
                 &mapObjects);
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
@@ -2657,7 +2657,8 @@ static void genTargetDataClauses(
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_target_data, clauseOps);
-  cp.processMap(loc, stmtCtx, clauseOps);
+  cp.processMap(loc, stmtCtx, clauseOps,
+                llvm::omp::Directive::OMPD_target_data);
   cp.processUseDeviceAddr(stmtCtx, clauseOps, useDeviceAddrObjects);
   // Record the source UDA prefix before non-C_PTR UDP operands are promoted.
   sourceUseDeviceAddrCount = useDeviceAddrObjects.size();

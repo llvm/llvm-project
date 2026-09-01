@@ -435,6 +435,28 @@ private:
   SemanticsContext &context_;
 };
 
+class OmpIteratorReferenceChecker {
+public:
+  explicit OmpIteratorReferenceChecker(
+      const UnorderedSymbolSet &iteratorSymbols)
+      : iteratorSymbols_{iteratorSymbols} {}
+
+  template <typename T> bool Pre(const T &) { return !found_; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::Name &name) {
+    if (name.symbol && iteratorSymbols_.count(name.symbol->GetUltimate()) != 0)
+      found_ = true;
+    return !found_;
+  }
+
+  bool found() const { return found_; }
+
+private:
+  const UnorderedSymbolSet &iteratorSymbols_;
+  bool found_{false};
+};
+
 bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
   // Do not do clause checks while processing METADIRECTIVE.
   // See comment in CheckAllowedClause.
@@ -4814,9 +4836,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
         "The specification of modifiers without comma separators for the "
         "'MAP' clause has been deprecated in OpenMP 5.2"_port_en_US);
   }
-  if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)}) {
-    CheckIteratorModifier(*iter);
-  }
+  const auto *iterator{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)};
+  if (iterator)
+    CheckIteratorModifier(*iterator);
 
   using Directive = llvm::omp::Directive;
   Directive dir{GetContext().directive};
@@ -4952,7 +4974,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   // having a temporary stack descriptor. If we have reference modifiers, we
   // ignore the warning and trust that the user knows what they are doing
   // already, as they are aware the type comes with a descriptor and pointer
-  // combination.
+  // combination. Iterator-dependent objects are also ignored because lowering
+  // maps only their selected data, not the descriptor.
   //
   // We will utilise this information to emit a warning later if the neccesary
   // conditions are met, where we have an enter map without a corresponding exit
@@ -4962,7 +4985,30 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
   if (!hasRefModifier &&
       (llvm::is_contained(leafs, Directive::OMPD_target_enter_data) ||
           llvm::is_contained(leafs, Directive::OMPD_target_exit_data))) {
+    UnorderedSymbolSet iteratorSymbols;
+    if (iterator) {
+      for (const parser::OmpIteratorSpecifier &iterSpec : iterator->v) {
+        const auto &typeDecl{std::get<parser::TypeDeclarationStmt>(iterSpec.t)};
+        const auto &entities{
+            std::get<std::list<parser::EntityDecl>>(typeDecl.t)};
+        for (const parser::EntityDecl &entity : entities) {
+          const auto &name{std::get<parser::ObjectName>(entity.t)};
+          if (name.symbol)
+            iteratorSymbols.insert(name.symbol->GetUltimate());
+        }
+      }
+    }
+
     for (const parser::OmpObject &object : objects.v) {
+      bool referencesIterator{false};
+      if (const auto *designator{GetDesignatorFromObj(object)}) {
+        OmpIteratorReferenceChecker checker{iteratorSymbols};
+        parser::Walk(*designator, checker);
+        referencesIterator = checker.found();
+      }
+      if (referencesIterator)
+        continue;
+
       if (const Symbol *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
         if (HasTemporaryStackDescriptor(*sym)) {
           auto maybeSource{GetObjectSource(object)};

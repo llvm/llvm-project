@@ -255,6 +255,29 @@ resolveMapperId(Fortran::lower::AbstractConverter &converter,
                 mlir::omp::ClauseMapFlags mapTypeBits,
                 llvm::omp::Directive directive, bool hasParentObj);
 
+struct IteratorMapInfo {
+  hlfir::Entity entity;
+  llvm::SmallVector<mlir::Value> bounds;
+};
+
+/// Properties needed to validate an iterator map locator without lowering it.
+/// The analysis is total for every evaluate::DataRef alternative.
+struct IteratorMapObjectAnalysis {
+  const semantics::Symbol *rootSym = nullptr;
+  bool isDerivedTypeMember = false;
+  bool isCoindexed = false;
+  bool isSupported = false;
+};
+
+IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object);
+
+std::optional<IteratorMapInfo>
+genIteratorMapInfo(Fortran::lower::AbstractConverter &converter,
+                   fir::FirOpBuilder &builder,
+                   Fortran::semantics::SemanticsContext &semaCtx,
+                   Fortran::lower::StatementContext &stmtCtx,
+                   const omp::Object &object, mlir::Location loc);
+
 std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
