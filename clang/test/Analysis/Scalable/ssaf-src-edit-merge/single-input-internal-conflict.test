@@ -1,0 +1,26 @@
+# A single input file containing two overlapping replacements (same file,
+# offset, and length but different replacement text). The library detects
+# this as a within-input conflict and drops one; the tool reports the
+# cluster on stderr and exits 0.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/internal-conflict.tpl.yaml %t.dir/a.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml
+
+# RUN: clang-ssaf-src-edit-merge -o %t.dir/merged.yaml %t.dir/a.yaml \
+# RUN:   2> %t.dir/stderr.txt
+
+# Drop-all: zero replacements survive at the conflict offset (both the X
+# and Y candidates are removed).
+# RUN: FileCheck --input-file=%t.dir/merged.yaml %s
+# CHECK-NOT: ReplacementText:
+
+# Cluster summary line emitted with the full cluster size (2).
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --check-prefix=CONFLICT %s
+# CONFLICT: conflict:
+# CONFLICT-SAME: skipped
+# CONFLICT-SAME: 2
+# CONFLICT-SAME: foo.cpp:10

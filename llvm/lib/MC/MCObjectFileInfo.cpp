@@ -437,24 +437,17 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   DataRelROSection = Ctx->getELFSection(".data.rel.ro", ELF::SHT_PROGBITS,
                                         ELF::SHF_ALLOC | ELF::SHF_WRITE);
 
-  unsigned MergeableCstFlags = ELF::SHF_ALLOC | ELF::SHF_MERGE;
-  StringRef CstPrefix = ".rodata";
-  if (Large && T.getArch() == Triple::x86_64) {
-    MergeableCstFlags |= ELF::SHF_X86_64_LARGE;
-    CstPrefix = ".lrodata";
-  }
-
   MergeableConst4Section = Ctx->getELFSection(
-      CstPrefix + ".cst4", ELF::SHT_PROGBITS, MergeableCstFlags, 4);
+      ".rodata.cst4", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
 
   MergeableConst8Section = Ctx->getELFSection(
-      CstPrefix + ".cst8", ELF::SHT_PROGBITS, MergeableCstFlags, 8);
+      ".rodata.cst8", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
 
   MergeableConst16Section = Ctx->getELFSection(
-      CstPrefix + ".cst16", ELF::SHT_PROGBITS, MergeableCstFlags, 16);
+      ".rodata.cst16", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
 
   MergeableConst32Section = Ctx->getELFSection(
-      CstPrefix + ".cst32", ELF::SHT_PROGBITS, MergeableCstFlags, 32);
+      ".rodata.cst32", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
 
   // Exception Handling Sections.
 
@@ -687,6 +680,23 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       InitDebugSection("D_APPLNMSP", ".apple_namespaces");
   DwarfAccelTypesSection = InitDebugSection("D_APPLTYPS", ".apple_types");
   DwarfAccelObjCSection = InitDebugSection("D_APPLOBJC", ".apple_objc");
+
+  // Fission Sections
+  DwarfInfoDWOSection = InitDebugSection("D_INFO_DWO", ".debug_info.dwo");
+  DwarfTypesDWOSection = InitDebugSection("D_TYPES_DWO", ".debug_types.dwo");
+  DwarfAbbrevDWOSection = InitDebugSection("D_ABREV_DWO", ".debug_abbrev.dwo");
+  DwarfStrDWOSection = InitDebugSection("D_STR_DWO", ".debug_str.dwo");
+  DwarfLineDWOSection = InitDebugSection("D_LINE_DWO", ".debug_line.dwo");
+  DwarfLocDWOSection = InitDebugSection("D_LOC_DWO", ".debug_loc.dwo");
+  DwarfStrOffDWOSection =
+      InitDebugSection("D_STROFFS_DWO", ".debug_str_offsets.dwo");
+  DwarfRnglistsDWOSection =
+      InitDebugSection("D_RNGLISTS_DWO", ".debug_rnglists.dwo");
+  DwarfMacinfoDWOSection =
+      InitDebugSection("D_MACINFO_DWO", ".debug_macinfo.dwo");
+  DwarfMacroDWOSection = InitDebugSection("D_MACRO_DWO", ".debug_macro.dwo");
+  DwarfLoclistsDWOSection =
+      InitDebugSection("D_LOCLISTS_DWO", ".debug_loclists.dwo");
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {

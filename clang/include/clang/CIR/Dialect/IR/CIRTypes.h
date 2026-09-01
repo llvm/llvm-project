@@ -23,6 +23,9 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 struct fltSemantics;
@@ -36,6 +39,43 @@ struct UnionTypeStorage;
 } // namespace detail
 
 bool isValidFundamentalIntWidth(unsigned width);
+
+/// Whether a record member is a zero-width bit-field, spelled as a zero-length
+/// array of the bit-field's declared type under the bit-field mark.  The ABI
+/// counts that declared type as user data, while the zero length keeps the
+/// member out of the record's storage, so it contributes neither size nor
+/// alignment to the record's layout.
+bool isZeroWidthBitField(mlir::Type memberTy, RecordMemberKind kind);
+
+/// Whether a member holds data for argument passing.  The kind alone does not
+/// answer this: a zero-width bit-field takes the bit-field mark but occupies no
+/// storage, so it holds none.
+inline bool holdsDataForABI(mlir::Type memberTy, RecordMemberKind kind) {
+  if (isZeroWidthBitField(memberTy, kind))
+    return false;
+  return kind == RecordMemberKind::Data || kind == RecordMemberKind::BitField;
+}
+
+/// Whether any member holds data for argument passing.  The two ranges are the
+/// member types and their marks, in order.
+inline bool anyMemberHoldsDataForABI(llvm::ArrayRef<mlir::Type> memberTys,
+                                     llvm::ArrayRef<RecordMemberKind> kinds) {
+  return llvm::any_of(llvm::zip_equal(memberTys, kinds), [](const auto &pair) {
+    auto [memberTy, kind] = pair;
+    return holdsDataForABI(memberTy, kind);
+  });
+}
+
+/// Whether a member of this kind is a bit-field access unit holding data.  The
+/// compiler chooses an access unit's width, so the member can be narrower than
+/// the declared type of the bit-fields it holds.  A true answer does not mean
+/// the member holds a bit-field: a union's base subobject takes this mark when
+/// any variant is an access unit, whatever its own storage type came from.  A
+/// unit holding only unnamed bit-fields is `empty` instead, and is told apart
+/// from the rest of `empty` by occupying bytes.
+inline bool isBitFieldAccessUnit(RecordMemberKind kind) {
+  return kind == RecordMemberKind::BitField;
+}
 
 /// Returns true if the type is a CIR sized type.
 ///
@@ -122,18 +162,32 @@ public:
   bool isComplete() const { return !isIncomplete(); }
   bool getPacked() const;
   bool getPadded() const;
+  llvm::ArrayRef<RecordMemberKind> getMemberKinds() const;
 
   bool isClass() const;
   bool isStruct() const;
   bool isUnion() const { return mlir::isa<UnionType>(*this); }
+
+  /// Whether no member holds data.  Vacuously true for a complete record with
+  /// no members, and false for an incomplete one, whose members are not known
+  /// yet.  A union's tail-padding slot is not a member and does not count.
+  bool isEmptyForABI() const;
+
+  /// One `Data` kind per member.  Takes the member list rather than a count so
+  /// the length cannot drift from the record it describes.
+  static llvm::SmallVector<RecordMemberKind>
+  getAllDataKinds(llvm::ArrayRef<mlir::Type> members);
 
   size_t getNumElements() const { return getMembers().size(); }
   mlir::Type getElementType(size_t idx) const { return getMembers()[idx]; }
   std::string getKindAsStr() const;
   std::string getPrefixedName() const;
 
-  void complete(llvm::ArrayRef<mlir::Type> members, bool packed, bool padded,
-                mlir::Type padding = {});
+  /// \p padding is union-only.  A struct carries its padding as a member
+  /// marked pad.
+  void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
+                mlir::Type padding,
+                llvm::ArrayRef<RecordMemberKind> memberKinds);
   uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                             unsigned idx) const;
   bool isLayoutIdentical(const RecordType &other);

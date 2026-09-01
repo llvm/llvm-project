@@ -20,63 +20,11 @@ class TestCPPResultVariables(TestBase):
         self.main_source_file = lldb.SBFileSpec("two-bases.cpp")
 
     def check_dereference(self, result_varname, frame, expr_options):
-        deref_expr = "*{0}".format(result_varname)
-        base_children = ValueCheck(
-            name="Base", value="", children=[ValueCheck(name="base_int", value="100")]
-        )
-        base_1_arr_children = [
-            ValueCheck(name="[0]", value="100"),
-            ValueCheck(name="[1]", value="101"),
-            ValueCheck(name="[2]", value="102"),
-            ValueCheck(name="[3]", value="103"),
-            ValueCheck(name="[4]", value="104"),
-            ValueCheck(name="[5]", value="105"),
-            ValueCheck(name="[6]", value="106"),
-            ValueCheck(name="[7]", value="107"),
-            ValueCheck(name="[8]", value="108"),
-            ValueCheck(name="[9]", value="109"),
-        ]
-        base_2_arr_children = [
-            ValueCheck(name="[0]", value="200"),
-            ValueCheck(name="[1]", value="201"),
-            ValueCheck(name="[2]", value="202"),
-            ValueCheck(name="[3]", value="203"),
-            ValueCheck(name="[4]", value="204"),
-            ValueCheck(name="[5]", value="205"),
-            ValueCheck(name="[6]", value="206"),
-            ValueCheck(name="[7]", value="207"),
-            ValueCheck(name="[8]", value="208"),
-            ValueCheck(name="[9]", value="209"),
-        ]
-        deref_children = [
-            ValueCheck(
-                name="Base_1",
-                value="",
-                children=[
-                    base_children,
-                    ValueCheck(
-                        name="base_1_arr", value="", children=base_1_arr_children
-                    ),
-                ],
-            ),
-            ValueCheck(
-                name="Base_2",
-                value="",
-                children=[
-                    base_children,
-                    ValueCheck(
-                        name="base_2_arr", value="", children=base_2_arr_children
-                    ),
-                ],
-            ),
-            ValueCheck(name="derived_int", value="1000"),
-        ]
-        result_var_deref = self.expect_expr(
-            deref_expr,
-            result_type="Derived",
-            result_children=deref_children,
-            options=expr_options,
-        )
+        # All the variables we are comparing against are various ways to get
+        # pointers to my_derived.  So use that to make our CheckValue:
+        my_derived = frame.FindVariable("my_derived")
+        self.assertSuccess(my_derived.error, "Got my_derived")
+        my_value_check = ValueCheck(valobj=my_derived)
 
         direct_access_expr = "{0}->derived_int".format(result_varname)
         self.expect_expr(direct_access_expr, result_type="int", result_value="1000")
@@ -84,9 +32,8 @@ class TestCPPResultVariables(TestBase):
         # Also check this by directly accessing the result variable:
         result_value = frame.FindValue(result_varname, lldb.eValueTypeConstResult, True)
         self.assertTrue(result_value.error.success, "Found my result variable")
-        value_check = ValueCheck(children=deref_children)
-        value_check.check_value(
-            self, result_value, f"{result_varname} children are correct"
+        my_value_check.check_value(
+            self, result_value.Dereference(), "children are correct"
         )
 
         # Make sure we can also call a function through the derived type:

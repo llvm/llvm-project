@@ -50,6 +50,13 @@ inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
   return builder.getI64Type();
 }
 
+/// Get the block of \p region where alloca-like operations should be inserted:
+/// the block where the closest parent operation owning the stack allocations of
+/// \p region expects them (an OpenACC compute construct, an outlineable OpenMP
+/// operation, a privatization or reduction recipe, ...), or the entry block of
+/// the enclosing function.
+mlir::Block *getAllocaBlock(mlir::Region &region);
+
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
 //===----------------------------------------------------------------------===//
@@ -616,6 +623,23 @@ public:
     std::replace(fmfString.begin(), fmfString.end(), ',', '_');
     return fmfString;
   }
+
+  /// RAII helper to set FastMathFlags for a scope and restore the previous
+  /// value on destruction.
+  class FastMathFlagGuard {
+  public:
+    FastMathFlagGuard(FirOpBuilder &builder, mlir::arith::FastMathFlags flags)
+        : builder{builder}, savedFlags{builder.getFastMathFlags()} {
+      builder.setFastMathFlags(flags);
+    }
+    FastMathFlagGuard(const FastMathFlagGuard &) = delete;
+    FastMathFlagGuard &operator=(const FastMathFlagGuard &) = delete;
+    ~FastMathFlagGuard() { builder.setFastMathFlags(savedFlags); }
+
+  private:
+    FirOpBuilder &builder;
+    mlir::arith::FastMathFlags savedFlags;
+  };
 
   /// Set default IntegerOverflowFlags value for all operations
   /// supporting mlir::arith::IntegerOverflowFlagsAttr that will be created

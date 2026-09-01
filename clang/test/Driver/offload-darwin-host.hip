@@ -4,5 +4,5 @@
 
 // RUN: %clang -### --target=arm64-apple-darwin24.6.0 -mmacos-version-min=10.9 --offload-arch=gfx900 -nogpulib -nogpuinc %s 2>&1 | FileCheck %s
 
-// CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "arm64-apple-darwin24.6.0"
-// CHECK: "-cc1" "-triple" "arm64-apple-macosx10.9.0" "-aux-triple" "amdgcn-amd-amdhsa"
+// CHECK: "-cc1" "-triple" "amdgpu9.00-amd-amdhsa" "-aux-triple" "arm64-apple-darwin24.6.0"
+// CHECK: "-cc1" "-triple" "arm64-apple-macosx10.9.0" "-aux-triple" "amdgpu-amd-amdhsa"

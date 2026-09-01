@@ -51,7 +51,7 @@ namespace llvm {
     };
   }
 
-  enum class ExceptionHandling {
+  enum class ExceptionHandling : int {
     None,     ///< No exception support
     DwarfCFI, ///< DWARF-like instruction based exceptions
     SjLj,     ///< setjmp/longjmp based exceptions

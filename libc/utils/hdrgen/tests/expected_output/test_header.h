@@ -35,9 +35,9 @@ __BEGIN_C_DECLS
 
 CONST_FUNC_A MACRO_ATTR(A) void func_a(void) __NOEXCEPT;
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 float128 func_b(void) __NOEXCEPT;
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 _Float16 func_c(int, float) __NOEXCEPT;
@@ -50,7 +50,7 @@ _Float16 func_e(float128) __NOEXCEPT;
 #endif // LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
 
 extern obj object_1;
-extern obj object_2;
+extern obj object_2[3];
 
 __END_C_DECLS
 
