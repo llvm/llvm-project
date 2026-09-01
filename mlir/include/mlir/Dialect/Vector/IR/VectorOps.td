@@ -2496,6 +2496,9 @@ def Vector_ShapeCastOp :
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
+    // Return true if this Op is effectively a vector.broadcast (i.e. the input
+    // and output shapes satisfy the vector.broadcast constraints).
+    bool isBroadcastLike();
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
   let hasFolder = 1;

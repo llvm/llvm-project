@@ -313,7 +313,11 @@ declare void @has_varargs(...) nounwind;
 ; CHECK-NEXT:     mov     x2, x5
 ; CHECK-NEXT:     bl      "#memcpy"
 ; CHECK-NEXT:     sub     sp, sp, #32
+; CHECK-NEXT:     fmov    d0, x22
+; CHECK-NEXT:     fmov    d1, x21
 ; CHECK-NEXT:     mov     x9, x26
+; CHECK-NEXT:     fmov    d2, x20
+; CHECK-NEXT:     fmov    d3, x19
 ; CHECK-NEXT:     mov     x0, x22
 ; CHECK-NEXT:     mov     x1, x21
 ; CHECK-NEXT:     mov     x2, x20
@@ -391,7 +395,11 @@ declare [2 x i8] @has_varargs_small_struct(...) nounwind;
 ; CHECK-NEXT:     mov     x2, x5
 ; CHECK-NEXT:     bl      "#memcpy"
 ; CHECK-NEXT:     sub     sp, sp, #32
+; CHECK-NEXT:     fmov    d0, x22
+; CHECK-NEXT:     fmov    d1, x21
 ; CHECK-NEXT:     mov     x9, x26
+; CHECK-NEXT:     fmov    d2, x20
+; CHECK-NEXT:     fmov    d3, x19
 ; CHECK-NEXT:     mov     x0, x22
 ; CHECK-NEXT:     mov     x1, x21
 ; CHECK-NEXT:     mov     x2, x20
@@ -566,7 +574,11 @@ declare void @has_varargs_sret(ptr sret([100 x i8]), ...) nounwind;
 ; CHECK-NEXT:     mov     x2, x4
 ; CHECK-NEXT:     bl      "#memcpy"
 ; CHECK-NEXT:     sub     sp, sp, #32
+; CHECK-NEXT:     fmov    d0, x22
+; CHECK-NEXT:     fmov    d1, x21
 ; CHECK-NEXT:     mov     x9, x26
+; CHECK-NEXT:     fmov    d2, x20
+; CHECK-NEXT:     fmov    d3, x19
 ; CHECK-NEXT:     mov     x0, x22
 ; CHECK-NEXT:     mov     x1, x21
 ; CHECK-NEXT:     mov     x2, x20

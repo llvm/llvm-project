@@ -854,10 +854,17 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
     IterTy CurrI = I;
     ++I;
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": checking instruction: "; CurrI->dump());
-    // Skip debug value.
+
+    if (terminateSearch(*CurrI)) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE ": should terminate search: ";
+                 CurrI->dump());
+      break;
+    }
+    // Skip debug and pseudo instructions.
     // Instruction TargetOpcode::JUMP_TABLE_DEBUG_INFO is only used to note
     // jump table debug info.
-    if (CurrI->isDebugInstr() || CurrI->isJumpTableDebugInfo()) {
+    if (CurrI->isDebugInstr() || CurrI->isJumpTableDebugInfo() ||
+        CurrI->isMetaInstruction()) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE ": ignoring debug instruction: ";
                  CurrI->dump());
       continue;
@@ -869,12 +876,6 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
       // However, we still need to update the register def-use information.
       RegDU.update(*CurrI, 0, CurrI->getNumOperands());
       continue;
-    }
-
-    if (terminateSearch(*CurrI)) {
-      LLVM_DEBUG(dbgs() << DEBUG_TYPE ": should terminate search: ";
-                 CurrI->dump());
-      break;
     }
 
     assert((!CurrI->isCall() && !CurrI->isReturn() && !CurrI->isBranch()) &&

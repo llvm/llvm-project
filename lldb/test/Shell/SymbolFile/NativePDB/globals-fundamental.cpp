@@ -199,18 +199,33 @@ constexpr bool ConstexprBFalse = false;
 constexpr bool ConstexprBTrue = true;
 // CHECK-NEXT: (lldb) target variable ConstexprBTrue
 // CHECK-NEXT: (const bool) ConstexprBTrue = true
+constexpr char ConstexprCMin = -128;
+// CHECK-NEXT: (lldb) target variable ConstexprCMin
+// CHECK-NEXT: (const char) ConstexprCMin = '\x80'
+constexpr char ConstexprCMax = 127;
+// CHECK-NEXT: (lldb) target variable ConstexprCMax
+// CHECK-NEXT: (const char) ConstexprCMax = '\x7f'
 constexpr char ConstexprCA = 'A';
 // CHECK-NEXT: (lldb) target variable ConstexprCA
 // CHECK-NEXT: (const char) ConstexprCA = 'A'
 constexpr char ConstexprCZ = 'Z';
 // CHECK-NEXT: (lldb) target variable ConstexprCZ
 // CHECK-NEXT: (const char) ConstexprCZ = 'Z'
+constexpr signed char ConstexprSCMin = -128;
+// CHECK-NEXT: (lldb) target variable ConstexprSCMin
+// CHECK-NEXT: (const signed char) ConstexprSCMin = '\x80'
+constexpr signed char ConstexprSCMax = 127;
+// CHECK-NEXT: (lldb) target variable ConstexprSCMax
+// CHECK-NEXT: (const signed char) ConstexprSCMax = '\x7f'
 constexpr signed char ConstexprSCa = 'a';
 // CHECK-NEXT: (lldb) target variable ConstexprSCa
 // CHECK-NEXT: (const signed char) ConstexprSCa = 'a'
 constexpr signed char ConstexprSCz = 'z';
 // CHECK-NEXT: (lldb) target variable ConstexprSCz
 // CHECK-NEXT: (const signed char) ConstexprSCz = 'z'
+constexpr unsigned char ConstexprUCMax = 255;
+// CHECK-NEXT: (lldb) target variable ConstexprUCMax
+// CHECK-NEXT: (const unsigned char) ConstexprUCMax = '\xff'
 constexpr unsigned char ConstexprUC24 = 24;
 // CHECK-NEXT: (lldb) target variable ConstexprUC24
 // CHECK-NEXT: (const unsigned char) ConstexprUC24 = '\x18'
@@ -725,10 +740,15 @@ const wchar_t &CRWCP = WCP;
 // CHECK-NEXT: |-VarDecl {{.*}} CD 'const double'
 // CHECK-NEXT: |-VarDecl {{.*}} ConstexprBFalse 'const bool'
 // CHECK-NEXT: |-VarDecl {{.*}} ConstexprBTrue 'const bool'
+// CHECK-NEXT: |-VarDecl {{.*}} ConstexprCMin 'const char'
+// CHECK-NEXT: |-VarDecl {{.*}} ConstexprCMax 'const char'
 // CHECK-NEXT: |-VarDecl {{.*}} ConstexprCA 'const char'
 // CHECK-NEXT: |-VarDecl {{.*}} ConstexprCZ 'const char'
+// CHECK-NEXT: |-VarDecl {{.*}} ConstexprSCMin 'const signed char'
+// CHECK-NEXT: |-VarDecl {{.*}} ConstexprSCMax 'const signed char'
 // CHECK-NEXT: |-VarDecl {{.*}} ConstexprSCa 'const signed char'
 // CHECK-NEXT: |-VarDecl {{.*}} ConstexprSCz 'const signed char'
+// CHECK-NEXT: |-VarDecl {{.*}} ConstexprUCMax 'const unsigned char'
 // CHECK-NEXT: |-VarDecl {{.*}} ConstexprUC24 'const unsigned char'
 // CHECK-NEXT: |-VarDecl {{.*}} ConstexprUC42 'const unsigned char'
 // CHECK-NEXT: |-VarDecl {{.*}} ConstexprC16_24 'const char16_t'

@@ -322,3 +322,47 @@ then:
 else:
   ret i1 false
 }
+
+define i1 @test_icmp_trunc_nuw_reproducer(i8 %x) {
+; CHECK-LABEL: define i1 @"{{.+}}test_icmp_trunc_nuw_reproducerrepro"(i8 %x) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   %0 = icmp eq i8 %x, 0
+; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %check = trunc nuw i8 %x to i1
+; CHECK-NEXT:   ret i1 %check
+; CHECK-NEXT: }
+;
+entry:
+  %iszero = icmp eq i8 %x, 0
+  br i1 %iszero, label %then, label %else
+
+then:
+  %check = trunc nuw i8 %x to i1
+  call void @use(i1 %check)
+  ret i1 %check
+
+else:
+  ret i1 false
+}
+
+define i1 @test_trunc_nuw_icmp_reproducer(i8 %x) {
+; CHECK-LABEL: define i1 @"{{.+}}test_trunc_nuw_icmp_reproducerrepro"(i8 %x) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   %0 = icmp eq i8 %x, 0
+; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %check = icmp ne i8 %x, 0
+; CHECK-NEXT:   ret i1 %check
+; CHECK-NEXT: }
+;
+entry:
+  %iszero = trunc nuw i8 %x to i1
+  br i1 %iszero, label %else, label %then
+
+then:
+  %check = icmp ne i8 %x, 0
+  call void @use(i1 %check)
+  ret i1 %check
+
+else:
+  ret i1 false
+}

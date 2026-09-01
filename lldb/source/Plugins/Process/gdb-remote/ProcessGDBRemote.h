@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ThreadSafeValue.h"
@@ -284,6 +285,9 @@ protected:
 
   GDBRemoteCommunicationClient m_gdb_comm;
   std::atomic<lldb::pid_t> m_debugserver_pid;
+
+  /// Registration for the packet-history diagnostics provider, if enabled.
+  std::optional<Diagnostics::ArtifactProviderID> m_diagnostics_artifact_id;
 
   std::optional<StringExtractorGDBRemote> m_last_stop_packet;
   std::recursive_mutex m_last_stop_packet_mutex;

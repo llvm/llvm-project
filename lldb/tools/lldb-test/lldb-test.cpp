@@ -1005,7 +1005,7 @@ static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool 
     AutoIndent Indent(Printer, 2);
     Printer.formatLine("Index: {0}", I);
     Printer.formatLine("ID: {0:x}", S->GetID());
-    Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
+    Printer.formatLine("Name: {0}", S->GetName());
     Printer.formatLine("Type: {0}", S->GetTypeAsCString());
     Printer.formatLine("Permissions: {0}", GetPermissionsAsCString(S->GetPermissions()));
     Printer.formatLine("Thread specific: {0:y}", S->IsThreadSpecific());

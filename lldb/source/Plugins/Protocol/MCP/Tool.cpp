@@ -8,9 +8,12 @@
 
 #include "Tool.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Host/File.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Protocol/MCP/Protocol.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UriParser.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -146,4 +149,79 @@ DebuggerListTool::Call(const lldb_protocol::mcp::ToolArguments &args) {
   }
 
   return createTextResult(output);
+}
+
+/// Opens the platform null device with the given options, or nullptr on error.
+static lldb::FileSP openNull(File::OpenOptions options) {
+  llvm::Expected<lldb::FileUP> file =
+      FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL), options);
+  if (!file) {
+    llvm::consumeError(file.takeError());
+    return nullptr;
+  }
+  return std::move(*file);
+}
+
+Expected<lldb_protocol::mcp::CallToolResult>
+DebuggerCreateTool::Call(const lldb_protocol::mcp::ToolArguments &) {
+  // Redirect the new debugger's stdio to the null device so its prompt and
+  // async output can't corrupt an MCP stream sharing the host's stdout. Command
+  // results flow through CommandReturnObject and are unaffected. Open the null
+  // files first so a failure can't leave a created debugger on the real stdio.
+  // The single write-only null file backs both stdout and stderr.
+  lldb::FileSP in = openNull(File::eOpenOptionReadOnly);
+  lldb::FileSP out = openNull(File::eOpenOptionWriteOnly);
+  if (!in || !out)
+    return createStringError(
+        "failed to open the null device for debugger stdio");
+
+  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+  if (!debugger_sp)
+    return createStringError("failed to create debugger");
+
+  debugger_sp->SetInputFile(in);
+  debugger_sp->SetOutputFile(out);
+  debugger_sp->SetErrorFile(out);
+
+  return createTextResult(to_uri(debugger_sp));
+}
+
+Expected<lldb_protocol::mcp::CallToolResult>
+DebuggerDeleteTool::Call(const lldb_protocol::mcp::ToolArguments &args) {
+  if (!std::holds_alternative<json::Value>(args))
+    return createStringError("DebuggerDeleteTool requires arguments");
+
+  const json::Object *arguments = std::get<json::Value>(args).getAsObject();
+  if (!arguments)
+    return createStringError("DebuggerDeleteTool requires arguments");
+
+  std::optional<StringRef> debugger = arguments->getString("debugger");
+  if (!debugger)
+    return createStringError("DebuggerDeleteTool requires a debugger");
+
+  StringRef specifier = *debugger;
+  specifier.consume_front(kSchemeAndHost);
+  uint32_t debugger_id = 0;
+  if (specifier.consumeInteger(10, debugger_id))
+    return createStringError(
+        formatv("malformed debugger specifier {0}", *debugger));
+
+  lldb::DebuggerSP debugger_sp = Debugger::FindDebuggerWithID(debugger_id);
+  if (!debugger_sp)
+    return createStringError("no debugger found");
+
+  Debugger::Destroy(debugger_sp);
+  return createTextResult(formatv("deleted {0}", *debugger).str());
+}
+
+std::optional<json::Value> DebuggerDeleteTool::GetSchema() const {
+  using namespace llvm::json;
+  Object properties{
+      {"debugger",
+       Object{{"type", "string"},
+              {"description", "The debugger ID or URI to destroy."}}}};
+  Object schema{{"type", "object"},
+                {"properties", std::move(properties)},
+                {"required", Array{"debugger"}}};
+  return schema;
 }

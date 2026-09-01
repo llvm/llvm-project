@@ -48,17 +48,20 @@ end
 ! CHECK:         omp.parallel   {
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : i32
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_0_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0_DECL]]#0 : !fir.ref<i32>
-! CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_4:.*]] = arith.cmpi sgt, %[[VAL_2]], %[[VAL_3]] : i32
-! CHECK:           cf.cond_br %[[VAL_4]], ^bb1, ^bb2
-! CHECK:         ^bb1:
-! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_0_DECL]]#0 : !fir.ref<i32>
-! CHECK:           %[[VAL_6:.*]] = arith.constant false
-! CHECK:           %[[VAL_7:.*]] = arith.constant false
-! CHECK:           fir.call @_FortranAStopStatement(%[[VAL_5]], %[[VAL_6]], %[[VAL_7]]) {{.*}} : (i32, i1, i1) -> ()
-! CHECK:           omp.terminator
-! CHECK:         ^bb2:
+! CHECK:           scf.execute_region no_inline {
+! CHECK:             %[[VAL_2:.*]] = fir.load %[[VAL_0_DECL]]#0 : !fir.ref<i32>
+! CHECK:             %[[VAL_3:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_4:.*]] = arith.cmpi sgt, %[[VAL_2]], %[[VAL_3]] : i32
+! CHECK:             cf.cond_br %[[VAL_4]], ^bb1, ^bb2
+! CHECK:           ^bb1:
+! CHECK:             %[[VAL_5:.*]] = fir.load %[[VAL_0_DECL]]#0 : !fir.ref<i32>
+! CHECK:             %[[VAL_6:.*]] = arith.constant false
+! CHECK:             %[[VAL_7:.*]] = arith.constant false
+! CHECK:             fir.call @_FortranAStopStatement(%[[VAL_5]], %[[VAL_6]], %[[VAL_7]]) {{.*}} : (i32, i1, i1) -> ()
+! CHECK:             fir.unreachable
+! CHECK:           ^bb2:
+! CHECK:             scf.yield
+! CHECK:           }
 ! CHECK:           omp.terminator
 ! CHECK:         }
 ! CHECK:         return
@@ -88,26 +91,25 @@ end
 ! CHECK-NEXT:      omp.loop_nest (%[[VAL_6:.*]]) : i32 = (%[[VAL_3]]) to (%[[VAL_4]]) inclusive step (%[[VAL_5]]) {
 ! CHECK:             %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_stop_in_region4Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             hlfir.assign %[[VAL_6]] to %[[VAL_0_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK:             cf.br ^bb1
-! CHECK:           ^bb1:
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 3 : i32
 ! CHECK:             hlfir.assign %[[VAL_7]] to %[[VAL_2_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK:             %[[VAL_8:.*]] = fir.load %[[VAL_2_DECL]]#0 : !fir.ref<i32>
-! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
-! CHECK:             %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_9]] : i32
-! CHECK:             cf.cond_br %[[VAL_10]], ^bb2, ^bb3
-! CHECK:           ^bb2:
-! CHECK:             %[[VAL_11:.*]] = fir.load %[[VAL_2_DECL]]#0 : !fir.ref<i32>
-! CHECK:             %[[VAL_12:.*]] = arith.constant false
-! CHECK:             %[[VAL_13:.*]] = arith.constant false
-! CHECK:             fir.call @_FortranAStopStatement(%[[VAL_11]], %[[VAL_12]], %[[VAL_13]]) {{.*}} : (i32, i1, i1) -> ()
-! CHECK:             omp.yield
-! CHECK:           ^bb3:
+! CHECK:             scf.execute_region no_inline {
+! CHECK:               %[[VAL_8:.*]] = fir.load %[[VAL_2_DECL]]#0 : !fir.ref<i32>
+! CHECK:               %[[VAL_9:.*]] = arith.constant 1 : i32
+! CHECK:               %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_9]] : i32
+! CHECK:               cf.cond_br %[[VAL_10]], ^bb1, ^bb2
+! CHECK:             ^bb1:
+! CHECK:               %[[VAL_11:.*]] = fir.load %[[VAL_2_DECL]]#0 : !fir.ref<i32>
+! CHECK:               %[[VAL_12:.*]] = arith.constant false
+! CHECK:               %[[VAL_13:.*]] = arith.constant false
+! CHECK:               fir.call @_FortranAStopStatement(%[[VAL_11]], %[[VAL_12]], %[[VAL_13]]) {{.*}} : (i32, i1, i1) -> ()
+! CHECK:               fir.unreachable
+! CHECK:             ^bb2:
+! CHECK:               scf.yield
+! CHECK:             }
 ! CHECK:             omp.yield
 ! CHECK:           }
 ! CHECK:         }
-! CHECK:         cf.br ^bb1
-! CHECK:       ^bb1:
 ! CHECK:         return
 ! CHECK:       }
 
@@ -139,12 +141,15 @@ end
 
 !CHECK-LABEL: func.func @_QPtest_stop_in_region6
 !CHECK:  omp.parallel   {
-!CHECK:    cf.cond_br %{{.*}}, ^[[BB1:.*]], ^[[BB2:.*]]
-!CHECK:  ^[[BB1]]:
-!CHECK:    {{.*}}fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (i32, i1, i1) -> ()
-!CHECK:    omp.terminator
-!CHECK:  ^[[BB2]]:
-!CHECK:    {{.*}}fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (i32, i1, i1) -> ()
+!CHECK:    scf.execute_region no_inline {
+!CHECK:      cf.cond_br %{{.*}}, ^[[BB1:.*]], ^[[BB2:.*]]
+!CHECK:    ^[[BB1]]:
+!CHECK:      {{.*}}fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (i32, i1, i1) -> ()
+!CHECK:      fir.unreachable
+!CHECK:    ^[[BB2]]:
+!CHECK:      {{.*}}fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (i32, i1, i1) -> ()
+!CHECK:      fir.unreachable
+!CHECK:    }
 !CHECK:    omp.terminator
 !CHECK:  }
 !CHECK:  return

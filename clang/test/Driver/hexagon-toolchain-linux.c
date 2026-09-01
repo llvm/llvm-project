@@ -201,6 +201,49 @@
 // CHECK-RELOC-NORMAL: "{{.*}}crt1.o"
 
 // -----------------------------------------------------------------------------
+// Startup object: -static alone gets PIE by default (see PIE-DEFAULT above),
+// so it must link the self-relocating rcrt1.o, not the plain crt1.o. Plain
+// crt1.o never processes the R_HEX_RELATIVE relocations a static-PIE image
+// needs, and the resulting binary crashes during libc startup.
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -static %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-STATIC-PIE %s
+// CHECK-STATIC-PIE:      "-static" "-pie"
+// CHECK-STATIC-PIE:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}rcrt1.o"
+// CHECK-STATIC-PIE-NOT:  "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+
+// -----------------------------------------------------------------------------
+// Startup object: -static -no-pie must still link the plain, non-relocating
+// crt1.o (a static non-PIE image has no relocations to apply).
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -static -no-pie %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-STATIC-NO-PIE %s
+// CHECK-STATIC-NO-PIE:      "-static"
+// CHECK-STATIC-NO-PIE-NOT:  "-pie"
+// CHECK-STATIC-NO-PIE:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// CHECK-STATIC-NO-PIE-NOT:  "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}rcrt1.o"
+
+// -----------------------------------------------------------------------------
+// Startup object: a non-static (dynamic) link keeps using crt1.o even though
+// PIE is on by default -- relocation is the dynamic linker's job there, not
+// the CRT's.
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-DYNAMIC-PIE %s
+// CHECK-DYNAMIC-PIE:      "-pie"
+// CHECK-DYNAMIC-PIE:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// CHECK-DYNAMIC-PIE-NOT:  "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}rcrt1.o"
+
+// -----------------------------------------------------------------------------
 // Sanitizer library paths: -fsanitize=memory
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \

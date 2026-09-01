@@ -1,17 +1,21 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap setFunctionBreakpoints request
 """
 
-
-import dap_server
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
+from lldbsuite.test.decorators import (
+    skipIfTargetDoesNotSupportSharedLibraries,
+    skipIfWindows,
+)
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import (
+    DAPTestGetTargetBreakpointsArgs,
+    FunctionBreakpoint,
+    LaunchArgs,
+)
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()
-class TestDAP_setFunctionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_setFunctionBreakpoints(DAPTestCaseBase):
     @skipIfWindows
     def test_set_and_clear(self):
         """Tests setting and clearing function breakpoints.
@@ -29,145 +33,134 @@ class TestDAP_setFunctionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # Visual Studio Code Debug Adapters have no way to specify the file
         # without launching or attaching to a process, so we must start a
         # process in order to be able to set breakpoints.
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        bp_id_12 = None
-        functions = ["twelve"]
-        # Set a function breakpoint at 'twelve'
-        response = self.dap_server.request_setFunctionBreakpoints(functions)
-        if response:
-            breakpoints = response["body"]["breakpoints"]
+        session = self.build_and_create_session()
+        with session.configure(LaunchArgs(self.getBuildArtifact("a.out"))):
+            functions = ["twelve"]
+            # Set a function breakpoint at 'twelve'.
+            response = session.set_function_breakpoints(functions)
+            breakpoints = response.body.breakpoints
             self.assertEqual(
                 len(breakpoints),
                 len(functions),
-                "expect %u source breakpoints" % (len(functions)),
+                f"expect {len(functions)} source breakpoints",
             )
-            for breakpoint in breakpoints:
-                bp_id_12 = breakpoint["id"]
-                self.assertTrue(breakpoint["verified"], "expect breakpoint verified")
+            bp_id_12 = self.expect_not_none(breakpoints[0].id)
+            self.assertTrue(breakpoints[0].verified, "expect breakpoint verified")
 
-        # Add an extra name and make sure we have two breakpoints after this
-        functions.append("thirteen")
-        response = self.dap_server.request_setFunctionBreakpoints(functions)
-        if response:
-            breakpoints = response["body"]["breakpoints"]
+            # Add an extra name and make sure we have two breakpoints after this.
+            functions.append("thirteen")
+            response = session.set_function_breakpoints(functions)
+            breakpoints = response.body.breakpoints
             self.assertEqual(
                 len(breakpoints),
                 len(functions),
-                "expect %u source breakpoints" % (len(functions)),
+                f"expect {len(functions)} source breakpoints",
             )
-            for breakpoint in breakpoints:
-                self.assertTrue(breakpoint["verified"], "expect breakpoint verified")
+            for bp in breakpoints:
+                self.assertTrue(bp.verified, "expect breakpoint verified")
 
-        # There is no breakpoint delete packet, clients just send another
-        # setFunctionBreakpoints packet with the different function names.
-        functions.remove("thirteen")
-        response = self.dap_server.request_setFunctionBreakpoints(functions)
-        if response:
-            breakpoints = response["body"]["breakpoints"]
+            # There is no breakpoint delete packet, clients just send another
+            # setFunctionBreakpoints packet with the different function names.
+            functions.remove("thirteen")
+            response = session.set_function_breakpoints(functions)
+            breakpoints = response.body.breakpoints
             self.assertEqual(
                 len(breakpoints),
                 len(functions),
-                "expect %u source breakpoints" % (len(functions)),
+                f"expect {len(functions)} source breakpoints",
             )
-            for breakpoint in breakpoints:
-                bp_id = breakpoint["id"]
+            for bp in breakpoints:
                 self.assertEqual(
-                    bp_id, bp_id_12, 'verify "twelve" breakpoint ID is same'
+                    bp.id, bp_id_12, 'verify "twelve" breakpoint ID is same'
                 )
-                self.assertTrue(
-                    breakpoint["verified"], "expect breakpoint still verified"
-                )
+                self.assertTrue(bp.verified, "expect breakpoint still verified")
 
-        # Now get the full list of breakpoints set in the target and verify
-        # we have only 1 breakpoints set. The response above could have told
-        # us about 1 breakpoints, but we want to make sure we don't have the
-        # second one still set in the target
-        response = self.dap_server.request_testGetTargetBreakpoints()
-        if response:
-            breakpoints = response["body"]["breakpoints"]
+            # Now get the full list of breakpoints set in the target and verify
+            # we have only 1 breakpoints set. The response above could have told
+            # us about 1 breakpoints, but we want to make sure we don't have the
+            # second one still set in the target.
+            response = session.send_request(DAPTestGetTargetBreakpointsArgs()).result()
+            breakpoints = response.body.breakpoints
             self.assertEqual(
                 len(breakpoints),
                 len(functions),
-                "expect %u source breakpoints" % (len(functions)),
+                f"expect {len(functions)} source breakpoints",
             )
-            for breakpoint in breakpoints:
-                bp_id = breakpoint["id"]
+            for bp in breakpoints:
                 self.assertEqual(
-                    bp_id, bp_id_12, 'verify "twelve" breakpoint ID is same'
+                    bp.id, bp_id_12, 'verify "twelve" breakpoint ID is same'
                 )
-                self.assertTrue(
-                    breakpoint["verified"], "expect breakpoint still verified"
-                )
+                self.assertTrue(bp.verified, "expect breakpoint still verified")
 
-        # Now clear all breakpoints for the source file by passing down an
-        # empty lines array
-        functions = []
-        response = self.dap_server.request_setFunctionBreakpoints(functions)
-        if response:
-            breakpoints = response["body"]["breakpoints"]
+            # Now clear all breakpoints for the source file by passing down an
+            # empty lines array.
+            functions = []
+            response = session.set_function_breakpoints(functions)
+            breakpoints = response.body.breakpoints
             self.assertEqual(
                 len(breakpoints),
                 len(functions),
-                "expect %u source breakpoints" % (len(functions)),
+                f"expect {len(functions)} source breakpoints",
             )
 
-        # Verify with the target that all breakpoints have been cleared
-        response = self.dap_server.request_testGetTargetBreakpoints()
-        if response:
-            breakpoints = response["body"]["breakpoints"]
+            # Verify with the target that all breakpoints have been cleared.
+            response = session.send_request(DAPTestGetTargetBreakpointsArgs()).result()
+            breakpoints = response.body.breakpoints
             self.assertEqual(
                 len(breakpoints),
                 len(functions),
-                "expect %u source breakpoints" % (len(functions)),
+                f"expect {len(functions)} source breakpoints",
             )
 
     @skipIfWindows
     def test_functionality(self):
         """Tests hitting breakpoints and the functionality of a single
         breakpoint, like 'conditions' and 'hitCondition' settings."""
-
+        session = self.build_and_create_session()
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        # Set a breakpoint on "twelve" with no condition and no hitCondition
-        functions = ["twelve"]
-        breakpoint_ids = self.set_function_breakpoints(functions)
 
-        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        # Set a breakpoint on "twelve" with no condition and no hitCondition.
+        with session.configure(LaunchArgs(program)) as ctx:
+            [bp_id] = session.resolve_function_breakpoints(["twelve"])
 
-        # Verify we hit the breakpoint we just set
-        self.continue_to_breakpoints(breakpoint_ids)
+        # Verify we hit the breakpoint we just set.
+        stop_event = session.verify_stopped_on_breakpoint(
+            bp_id, after=ctx.process_event
+        )
 
-        # Make sure i is zero at first breakpoint
-        i = int(self.dap_server.get_local_variable_value("i"))
+        # Make sure i is zero at first breakpoint.
+        thread_ctx = session.thread_context_from(stop_event)
+        i = thread_ctx.top_frame().locals["i"].value_as_int
         self.assertEqual(i, 0, "i != 0 after hitting breakpoint")
 
-        # Update the condition on our breakpoint
-        new_breakpoint_ids = self.set_function_breakpoints(functions, condition="i==4")
+        # Update the condition on our breakpoint.
+        func_bp = FunctionBreakpoint(name="twelve", condition="i==4")
+        [condition_bp_id] = session.resolve_function_breakpoints([func_bp])
         self.assertEqual(
-            breakpoint_ids,
-            new_breakpoint_ids,
-            "existing breakpoint should have its condition " "updated",
+            bp_id,
+            condition_bp_id,
+            "existing breakpoint should have its condition updated",
         )
 
-        self.continue_to_breakpoints(breakpoint_ids)
-        i = int(self.dap_server.get_local_variable_value("i"))
+        session.continue_to_breakpoint(bp_id)
+        i = thread_ctx.top_frame().locals["i"].value_as_int
         self.assertEqual(i, 4, "i != 4 showing conditional works")
-        new_breakpoint_ids = self.set_function_breakpoints(functions, hitCondition="2")
 
+        func_bp = FunctionBreakpoint(name="twelve", hitCondition="2")
+        [hit_condition_bp_id] = session.resolve_function_breakpoints([func_bp])
         self.assertEqual(
-            breakpoint_ids,
-            new_breakpoint_ids,
-            "existing breakpoint should have its condition " "updated",
+            bp_id,
+            hit_condition_bp_id,
+            "existing breakpoint should have its condition updated",
         )
 
-        # Continue with a hitCondition of 2 and expect it to skip 1 value
-        self.continue_to_breakpoints(breakpoint_ids)
-        i = int(self.dap_server.get_local_variable_value("i"))
+        # Continue with a hitCondition of 2 and expect it to skip 1 value.
+        session.continue_to_breakpoint(bp_id)
+        i = thread_ctx.top_frame().locals["i"].value_as_int
         self.assertEqual(i, 6, "i != 6 showing hitCondition works")
 
-        # continue after hitting our hitCondition and make sure it only goes
-        # up by 1
-        self.continue_to_breakpoints(breakpoint_ids)
-        i = int(self.dap_server.get_local_variable_value("i"))
+        # Continue after hitting our hitCondition and make sure it only goes
+        # up by 1.
+        session.continue_to_breakpoint(bp_id)
+        i = thread_ctx.top_frame().locals["i"].value_as_int
         self.assertEqual(i, 7, "i != 7 showing post hitCondition hits every time")

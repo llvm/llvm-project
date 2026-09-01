@@ -304,11 +304,7 @@ class StdLibraryFunctionsChecker
 
   protected:
     bool checkSpecificValidity(const FunctionDecl *FD) const override {
-      const bool ValidArg =
-          getArgType(FD, ArgN)->isIntegralType(FD->getASTContext());
-      assert(ValidArg &&
-             "This constraint should be applied on an integral type");
-      return ValidArg;
+      return getArgType(FD, ArgN)->isIntegralType(FD->getASTContext());
     }
 
   private:

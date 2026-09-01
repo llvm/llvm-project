@@ -42,28 +42,38 @@ if (current_cpu == "") {
   current_cpu = target_cpu
 }
 
-if (host_os == "win") {
-  host_toolchain = "//llvm/utils/gn/build/toolchain:win"
+host_toolchain = "//llvm/utils/gn/build/toolchain:host"
+
+# FIXME: Implement for Windows.
+if (host_os != "win") {
+  host_debug_toolchain = "//llvm/utils/gn/build/toolchain:host_debug"
 } else {
-  host_toolchain = "//llvm/utils/gn/build/toolchain:unix"
+  host_debug_toolchain = host_toolchain
 }
 
 set_default_toolchain(host_toolchain)
 
-if (current_os == "android") {
-  foreach(target_type,
-          [
-            "executable",
-            "loadable_module",
-            "shared_library",
-          ]) {
-    template(target_type) {
-      target(target_type, target_name) {
-        forward_variables_from(invoker, "*")
+foreach(target_type,
+        [
+          "executable",
+          "loadable_module",
+          "shared_library",
+        ]) {
+  template(target_type) {
+    target(target_type, target_name) {
+      forward_variables_from(invoker, "*")
+      if (current_os == "android") {
         if (!defined(deps)) {
           deps = []
         }
         deps += [ "//llvm/utils/gn/build/libs/implicit" ]
+      }
+    }
+    if (current_toolchain == host_toolchain && host_debug_toolchain != host_toolchain) {
+      _invoker_target_name = target_name
+      group("${_invoker_target_name}.dbg") {
+        forward_variables_from(invoker, [ "testonly" ])
+        deps = [ ":${_invoker_target_name}($host_debug_toolchain)" ]
       }
     }
   }

@@ -86,6 +86,7 @@ if (SPHINX_FOUND)
       sys/wait
       termios
       threads
+      time
       uchar
       unistd
       wchar

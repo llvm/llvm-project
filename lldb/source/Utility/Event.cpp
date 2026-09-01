@@ -77,7 +77,7 @@ void Event::Dump(Stream *s) const {
     m_data_sp->Dump(s);
     s->PutChar('}');
   } else
-    s->Printf("<NULL>");
+    s->PutCString("<NULL>");
 }
 
 void Event::DoOnRemoval() {

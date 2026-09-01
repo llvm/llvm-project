@@ -1394,10 +1394,18 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
           // but their handling is more complex. Maybe we can find better
           // abstractions to handle them in a general fashion.
           bool isPrivateItem = false;
+          // The private/map block argument is owned by the clause-carrying op
+          // (e.g. omp.wsloop), but the declare may be nested deeper (e.g. in an
+          // omp.loop_nest). Resolve the op from the block arg's owner rather
+          // than the declare's immediate parent to handle that nesting.
+          mlir::Operation *ompParentOp = op->getParentOp();
+          if (auto blockArg =
+                  mlir::dyn_cast<mlir::BlockArgument>(op.getMemref()))
+            ompParentOp = blockArg.getOwner()->getParentOp();
           if (omp::BlockArgOpenMPOpInterface argIface =
-                  dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
+                  dyn_cast<omp::BlockArgOpenMPOpInterface>(ompParentOp)) {
             Value ompValArg;
-            llvm::TypeSwitch<Operation *>(op->getParentOp())
+            llvm::TypeSwitch<Operation *>(ompParentOp)
                 .Case([&](omp::TargetOp targetOp) {
                   // If declare operation is inside omp target region,
                   // continue alias analysis outside the target region

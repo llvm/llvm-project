@@ -19,6 +19,17 @@
 // CHECK: define {{.*}}@f_avx10_1{{.*}} [[f_avx10_1:#[0-9]+]]
 // CHECK: define {{.*}}@f_prefer_256_bit({{.*}} [[f_prefer_256_bit:#[0-9]+]]
 // CHECK: define {{.*}}@f_no_prefer_256_bit({{.*}} [[f_no_prefer_256_bit:#[0-9]+]]
+// CHECK: define {{.*}}@f_apxf({{.*}} [[f_apxf:#[0-9]+]]
+// CHECK: define {{.*}}@f_no_apxf({{.*}} [[f_no_apxf:#[0-9]+]]
+// CHECK: define {{.*}}@f_egpr({{.*}} [[f_egpr:#[0-9]+]]
+// CHECK: define {{.*}}@f_ndd({{.*}} [[f_ndd:#[0-9]+]]
+// CHECK: define {{.*}}@f_ccmp({{.*}} [[f_ccmp:#[0-9]+]]
+// CHECK: define {{.*}}@f_nf({{.*}} [[f_nf:#[0-9]+]]
+// CHECK: define {{.*}}@f_cf({{.*}} [[f_cf:#[0-9]+]]
+// CHECK: define {{.*}}@f_zu({{.*}} [[f_zu:#[0-9]+]]
+// CHECK: define {{.*}}@f_push2pop2({{.*}} [[f_push2pop2:#[0-9]+]]
+// CHECK: define {{.*}}@f_ppx({{.*}} [[f_ppx:#[0-9]+]]
+// CHECK: define {{.*}}@f_jmpabs({{.*}} [[f_jmpabs:#[0-9]+]]
 
 // CHECK: [[f_default]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87" "tune-cpu"="i686"
 void f_default(void) {}
@@ -108,3 +119,47 @@ void f_prefer_256_bit(void) {}
 // CHECK: [[f_no_prefer_256_bit]] = {{.*}}"target-features"="{{.*}}-prefer-256-bit
 __attribute__((target("no-prefer-256-bit")))
 void f_no_prefer_256_bit(void) {}
+
+// CHECK: [[f_apxf]] = {{.*}}"target-features"="{{.*}}+ccmp{{.*}}+egpr{{.*}}+jmpabs{{.*}}+ndd{{.*}}+nf{{.*}}+ppx{{.*}}+push2pop2{{.*}}+zu
+__attribute__((target("apxf")))
+void f_apxf(void) {}
+
+// CHECK: [[f_no_apxf]] = {{.*}}"target-features"="{{.*}}-ccmp{{.*}}-egpr{{.*}}-jmpabs{{.*}}-ndd{{.*}}-nf{{.*}}-ppx{{.*}}-push2pop2{{.*}}-zu
+__attribute__((target("no-apxf")))
+void f_no_apxf(void) {}
+
+// CHECK: [[f_egpr]] = {{.*}}"target-features"="{{.*}}+egpr
+__attribute__((target("egpr")))
+void f_egpr(void) {}
+
+// CHECK: [[f_ndd]] = {{.*}}"target-features"="{{.*}}+ndd
+__attribute__((target("ndd")))
+void f_ndd(void) {}
+
+// CHECK: [[f_ccmp]] = {{.*}}"target-features"="{{.*}}+ccmp
+__attribute__((target("ccmp")))
+void f_ccmp(void) {}
+
+// CHECK: [[f_nf]] = {{.*}}"target-features"="{{.*}}+nf
+__attribute__((target("nf")))
+void f_nf(void) {}
+
+// CHECK: [[f_cf]] = {{.*}}"target-features"="{{.*}}+cf
+__attribute__((target("cf")))
+void f_cf(void) {}
+
+// CHECK: [[f_zu]] = {{.*}}"target-features"="{{.*}}+zu
+__attribute__((target("zu")))
+void f_zu(void) {}
+
+// CHECK: [[f_push2pop2]] = {{.*}}"target-features"="{{.*}}+push2pop2
+__attribute__((target("push2pop2")))
+void f_push2pop2(void) {}
+
+// CHECK: [[f_ppx]] = {{.*}}"target-features"="{{.*}}+ppx
+__attribute__((target("ppx")))
+void f_ppx(void) {}
+
+// CHECK: [[f_jmpabs]] = {{.*}}"target-features"="{{.*}}+jmpabs
+__attribute__((target("jmpabs")))
+void f_jmpabs(void) {}

@@ -1847,6 +1847,43 @@ Error CUDADeviceTy::dataExchangeImpl(const void *SrcPtr,
   return Plugin::check(Res, "error in cuMemcpyDtoDAsync: %s");
 }
 
+/// Map a CUDA driver result code to the corresponding offload error code.
+static ErrorCode getOffloadErrorCode(CUresult ResultCode) {
+  switch (ResultCode) {
+  case CUDA_ERROR_INVALID_VALUE:
+    return ErrorCode::INVALID_VALUE;
+  case CUDA_ERROR_OUT_OF_MEMORY:
+  case CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES:
+    return ErrorCode::OUT_OF_RESOURCES;
+  case CUDA_ERROR_NOT_INITIALIZED:
+  case CUDA_ERROR_DEINITIALIZED:
+    return ErrorCode::UNINITIALIZED;
+  case CUDA_ERROR_NO_DEVICE:
+  case CUDA_ERROR_INVALID_DEVICE:
+    return ErrorCode::INVALID_DEVICE;
+  case CUDA_ERROR_INVALID_IMAGE:
+  case CUDA_ERROR_INVALID_SOURCE:
+  case CUDA_ERROR_INVALID_PTX:
+  case CUDA_ERROR_UNSUPPORTED_PTX_VERSION:
+    return ErrorCode::INVALID_BINARY;
+  case CUDA_ERROR_FILE_NOT_FOUND:
+  case CUDA_ERROR_OPERATING_SYSTEM:
+    return ErrorCode::HOST_IO;
+  case CUDA_ERROR_JIT_COMPILER_NOT_FOUND:
+    return ErrorCode::HOST_TOOL_NOT_FOUND;
+  case CUDA_ERROR_NOT_FOUND:
+  case CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND:
+    return ErrorCode::NOT_FOUND;
+  case CUDA_ERROR_NOT_SUPPORTED:
+    return ErrorCode::UNSUPPORTED;
+  case CUDA_ERROR_INVALID_HANDLE:
+  case CUDA_ERROR_INVALID_CONTEXT:
+    return ErrorCode::INVALID_ARGUMENT;
+  default:
+    return ErrorCode::UNKNOWN;
+  }
+}
+
 template <typename... ArgsTy>
 static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   CUresult ResultCode = static_cast<CUresult>(Code);
@@ -1858,18 +1895,7 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   if (Ret != CUDA_SUCCESS)
     REPORT() << "Unrecognized " GETNAME(TARGET_NAME) " error code " << Code;
 
-  // TODO: Add more entries to this switch
-  ErrorCode OffloadErrCode;
-  switch (ResultCode) {
-  case CUDA_ERROR_NOT_FOUND:
-    OffloadErrCode = ErrorCode::NOT_FOUND;
-    break;
-  default:
-    OffloadErrCode = ErrorCode::UNKNOWN;
-  }
-
-  // TODO: Create a map for CUDA error codes to Offload error codes
-  return Plugin::error(OffloadErrCode, ErrFmt, Args..., Desc);
+  return Plugin::error(getOffloadErrorCode(ResultCode), ErrFmt, Args..., Desc);
 }
 
 } // namespace plugin

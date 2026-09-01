@@ -348,8 +348,12 @@ module attributes {omp.is_target_device = true} {
       omp.terminator
     }
 
-    // CHECK-NEXT: omp.target kernel_type(generic) allocate(%[[ARG0]] : !llvm.ptr -> %[[ARG0]] : !llvm.ptr) thread_limit(%[[ARG1]] : i32) private(@privatizer %[[ARG0]] -> %{{.*}} : !llvm.ptr)
-    omp.target kernel_type(generic) allocate(%arg0 : !llvm.ptr -> %arg0 : !llvm.ptr) depend(taskdependin -> %arg0 : !llvm.ptr) device(%arg1 : i32) if(%arg2) thread_limit(%arg1 : i32) in_reduction(@reduction %arg0 -> %arg3 : !llvm.ptr) private(@privatizer %arg0 -> %arg4 : !llvm.ptr) {
+    // The `in_reduction` list item on `omp.target` has no dedicated block
+    // argument; it is captured by a matching `map_entries` entry.
+    // CHECK-NEXT: %[[MAP:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    %1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    // CHECK-NEXT: omp.target kernel_type(generic) allocate(%[[ARG0]] : !llvm.ptr -> %[[ARG0]] : !llvm.ptr) thread_limit(%[[ARG1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !llvm.ptr) private(@privatizer %[[ARG0]] -> %{{.*}} : !llvm.ptr)
+    omp.target kernel_type(generic) allocate(%arg0 : !llvm.ptr -> %arg0 : !llvm.ptr) depend(taskdependin -> %arg0 : !llvm.ptr) device(%arg1 : i32) if(%arg2) thread_limit(%arg1 : i32) in_reduction(@reduction %arg0 : !llvm.ptr) map_entries(%1 -> %arg3 : !llvm.ptr) private(@privatizer %arg0 -> %arg4 : !llvm.ptr) {
       omp.terminator
     }
 

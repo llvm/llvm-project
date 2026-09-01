@@ -301,7 +301,7 @@ public:
   /// be invoked multiple times; the external source should take care not to
   /// introduce the same declarations repeatedly.
   void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) override;
+      llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) override;
 
   /// Read the set of referenced selectors known to the
   /// external Sema source.

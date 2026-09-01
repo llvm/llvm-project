@@ -12,7 +12,7 @@ if (llvm_install_cctools_symlinks) {
   symlink_or_copy("lipo") {
     deps = [ ":llvm-lipo" ]
     source = "llvm-lipo"
-    output = "$root_out_dir/bin/lipo"
+    output = "$llvm_current_bindir/lipo"
   }
 }
 

@@ -134,14 +134,17 @@ end
 ! CHECK-LABEL:  func.func @_QPtest_optional3(
 ! CHECK-SAME:     %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
 ! CHECK:          %[[VAL_0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional, value>, uniq_name = "_QFtest_optional3Ex"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-! CHECK:          %[[VAL_1:.*]] = fir.is_present %[[VAL_0]]#1 : (!fir.box<!fir.array<?xf32>>) -> i1
-! CHECK:          cf.cond_br %[[VAL_1]], ^bb1, ^bb2
+! CHECK:          scf.execute_region no_inline {
+! CHECK:            %[[VAL_1:.*]] = fir.is_present %[[VAL_0]]#1 : (!fir.box<!fir.array<?xf32>>) -> i1
+! CHECK:            cf.cond_br %[[VAL_1]], ^bb1, ^bb2
 ! CHECK:          b1:  // pred: ^bb0
-! CHECK:          %[[C0_I32:.*]] = arith.constant 0 : i32
-! CHECK:          %[[FALSE:.*]] = arith.constant false
-! CHECK:          %[[FALSE_0:.*]] = arith.constant false
-! CHECK:          fir.call @_FortranAStopStatement(%[[C0_I32]], %[[FALSE]], %[[FALSE]]_0) fastmath<contract> : (i32, i1, i1) -> ()
-! CHECK:          fir.unreachable
+! CHECK:            %[[C0_I32:.*]] = arith.constant 0 : i32
+! CHECK:            %[[FALSE:.*]] = arith.constant false
+! CHECK:            %[[FALSE_0:.*]] = arith.constant false
+! CHECK:            fir.call @_FortranAStopStatement(%[[C0_I32]], %[[FALSE]], %[[FALSE]]_0) fastmath<contract> : (i32, i1, i1) -> ()
+! CHECK:            fir.unreachable
 ! CHECK:          b2:  // pred: ^bb0
+! CHECK:            scf.yield
+! CHECK:          }
 ! CHECK:          return
 ! CHECK:        }

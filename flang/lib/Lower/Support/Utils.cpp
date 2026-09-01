@@ -741,15 +741,25 @@ void privatizeSymbol(
       TODO(symLoc, "create polymorphic host associated copy");
   }
 
-  // fir.array<> cannot be converted to any single llvm type and fir helpers
-  // are not available in openmp to llvmir translation so we cannot generate
-  // an alloca for a fir.array type there. Get around this by boxing all
-  // arrays.
-  if (mlir::isa<fir::SequenceType>(allocType)) {
-    hlfir::Entity entity{hsb.getAddr()};
-    entity = genVariableBox(symLoc, firOpBuilder, entity);
-    privVal = entity.getBase();
-    allocType = privVal.getType();
+  // fir.array<> has no single LLVM type and the openmp-to-llvmir translation
+  // cannot build an alloca for it, so arrays are boxed here. Exception: a
+  // constant-shape array of trivial elements (e.g. real(8)::xx(3)) maps to a
+  // fixed-size LLVM array the translation can stack-allocate, so it is left
+  // unboxed -- avoiding a per-thread heap allocation and letting alias analysis
+  // prove the private does not alias dummy arguments. Firstprivate,
+  // dynamic-extent, unknown-shape, character and derived-type arrays stay
+  // boxed, as do arrays whose HLFIR variable is already a descriptor and so
+  // never reach this branch as a fir.array (e.g. non-default lower bounds).
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(allocType)) {
+    bool requiresBox = emitCopyRegion || seqTy.hasUnknownShape() ||
+                       seqTy.hasDynamicExtents() ||
+                       !fir::isa_trivial(seqTy.getEleTy());
+    if (requiresBox) {
+      hlfir::Entity entity{hsb.getAddr()};
+      entity = genVariableBox(symLoc, firOpBuilder, entity);
+      privVal = entity.getBase();
+      allocType = privVal.getType();
+    }
   }
 
   if (mlir::isa<fir::BaseBoxType>(privVal.getType())) {

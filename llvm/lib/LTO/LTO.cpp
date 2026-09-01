@@ -304,9 +304,14 @@ std::string llvm::computeLTOCacheKey(
     }
   };
 
-  // Include the hash for the linkage type to reflect internalization and weak
-  // resolution, and collect any used type identifier resolutions.
-  for (auto &GS : DefinedGlobals) {
+  // Sort the defined globals by GUID to be independent of the insertion order,
+  // which may depend on the order that modules are added.
+  SmallVector<std::pair<GlobalValue::GUID, GlobalValueSummary *>>
+      SortedDefinedGlobals(DefinedGlobals.begin(), DefinedGlobals.end());
+  llvm::sort(SortedDefinedGlobals, llvm::less_first());
+  for (auto &GS : SortedDefinedGlobals) {
+    // Include the hash for the linkage type to reflect internalization and weak
+    // resolution, and collect any used type identifier resolutions.
     GlobalValue::LinkageTypes Linkage = GS.second->linkage();
     Hasher.update(
         ArrayRef<uint8_t>((const uint8_t *)&Linkage, sizeof(Linkage)));

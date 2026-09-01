@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=amdgpu8.02 -global-isel=0 < %s | FileCheck -enable-var-scope -check-prefixes=VI-SDAG %s
 ; RUN: llc -mtriple=amdgpu8.02 -global-isel=1 -global-isel-abort=2 < %s | FileCheck -enable-var-scope -check-prefixes=VI-GISEL %s
 ; RUN: llc -mtriple=amdgpu9.00 -global-isel=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-SDAG %s
-; RUN: llc -mtriple=amdgpu9.00 -global-isel=1 -global-isel-abort=2 < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-GISEL %s
+; RUN: llc -mtriple=amdgpu9.00 -global-isel=1 < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-GISEL %s
 ; RUN: llc -mtriple=amdgpu11.00 -global-isel=0 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-SDAG,GFX11-SDAG-FAKE16 %s
-; RUN: llc -mtriple=amdgpu11.00 -global-isel=1 -global-isel-abort=2 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-FAKE16 %s
+; RUN: llc -mtriple=amdgpu11.00 -global-isel=1 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-FAKE16 %s
 ; RUN: llc -mtriple=amdgpu11.00 -global-isel=0 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-SDAG,GFX11-SDAG-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu11.00 -global-isel=1 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
 
@@ -9071,8 +9071,12 @@ define half @v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum(half %a) {
 ; VI-GISEL:       ; %bb.0:
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_add_f16_e32 v0, 1.0, v0
-; VI-GISEL-NEXT:    v_max_f16_e32 v0, 2.0, v0
-; VI-GISEL-NEXT:    v_min_f16_e32 v0, 4.0, v0
+; VI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; VI-GISEL-NEXT:    v_max_f32_e32 v0, 2.0, v0
+; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; VI-GISEL-NEXT:    v_min_f32_e32 v0, 4.0, v0
+; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_nnan_input_fmed3_r_i_i_f16_maximum_minimum:

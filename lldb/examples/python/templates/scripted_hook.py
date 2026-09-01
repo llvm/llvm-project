@@ -14,8 +14,11 @@ class ScriptedHook(metaclass=ABCMeta):
     registered via `target hook add -P`.
     """
 
+    target: lldb.SBTarget
+    args: lldb.SBStructuredData
+
     @abstractmethod
-    def __init__(self, target, args):
+    def __init__(self, target: lldb.SBTarget, args: lldb.SBStructuredData):
         """Construct a scripted hook.
 
         Args:
@@ -26,7 +29,7 @@ class ScriptedHook(metaclass=ABCMeta):
         self.target = target
         self.args = args
 
-    def handle_module_loaded(self, stream):
+    def handle_module_loaded(self, stream: lldb.SBStream) -> None:
         """Called whenever a module is loaded into the target.
 
         Args:
@@ -35,7 +38,7 @@ class ScriptedHook(metaclass=ABCMeta):
         """
         pass
 
-    def handle_module_unloaded(self, stream):
+    def handle_module_unloaded(self, stream: lldb.SBStream) -> None:
         """Called whenever a module is unloaded from the target.
 
         Args:
@@ -45,7 +48,9 @@ class ScriptedHook(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def handle_stop(self, exe_ctx, stream):
+    def handle_stop(
+        self, exe_ctx: lldb.SBExecutionContext, stream: lldb.SBStream
+    ) -> bool:
         """Called whenever the process stops, before control is returned to
         the user.
 

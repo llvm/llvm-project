@@ -731,15 +731,16 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK) {
   assert(Ptr.isLive());
   assert(!Ptr.isInitialized());
-  return DiagnoseUninitialized(S, OpPC, Ptr.isExtern(), Ptr.block(), AK);
+  return diagnoseUninitialized(S, OpPC, Ptr.isExtern(), Ptr.block(),
+                               Ptr.getLifetime(), AK);
 }
 
-bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
-                           const Block *B, AccessKinds AK) {
+bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
+                           const Block *B, Lifetime LT, AccessKinds AK) {
   if (S.checkingPotentialConstantExpression()) {
     // Extern and static member declarations might be initialized later.
     if (Extern)
@@ -762,11 +763,10 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
         // Diagnose as non-const read.
         diagnoseNonConstVariable(S, OpPC, VD);
       } else {
-        const SourceInfo &Loc = S.Current->getSource(OpPC);
         // Diagnose as "read of object outside its lifetime".
-        S.FFDiag(Loc, diag::note_constexpr_access_uninit)
+        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
             << AK << /*IsIndeterminate=*/false;
-        S.Note(VD->getLocation(), diag::note_declared_at);
+        S.Note(VD->getFirstDecl()->getLocation(), diag::note_declared_at);
       }
       return false;
     }
@@ -783,7 +783,8 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
 
   if (!S.checkingPotentialConstantExpression()) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
-        << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
+        << AK << /*uninitialized=*/(LT == Lifetime::Started)
+        << S.Current->getRange(OpPC);
     noteValueLocation(S, B);
   }
   return false;
@@ -836,7 +837,7 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   if (!CheckConstant(S, OpPC, B->getDescriptor()))
     return false;
   if (Desc.InitState != GlobalInitState::Initialized)
-    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B, AK_Read);
+    return diagnoseUninitialized(S, OpPC, B->isExtern(), B);
   if (!CheckTemporary(S, OpPC, B, AK_Read))
     return false;
   if (B->getDescriptor()->IsVolatile) {
@@ -858,10 +859,10 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
   const auto &Desc = *reinterpret_cast<const InlineDescriptor *>(B->rawData());
   const Descriptor *BlockDesc = B->getDescriptor();
+  if (!Desc.IsInitialized)
+    return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B, Desc.LifeState);
   if (!CheckLifetime(S, OpPC, Desc.LifeState, B, AK_Read))
     return false;
-  if (!Desc.IsInitialized)
-    return DiagnoseUninitialized(S, OpPC, /*Extern=*/false, B, AK_Read);
   if (BlockDesc->IsVolatile) {
     if (!S.getLangOpts().CPlusPlus)
       return Invalid(S, OpPC);
@@ -917,7 +918,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!CheckActive(S, OpPC, Ptr, AK))
     return false;
   if (!Ptr.isInitialized())
-    return DiagnoseUninitialized(S, OpPC, Ptr, AK);
+    return diagnoseUninitialized(S, OpPC, Ptr, AK);
   if (!CheckLifetime(S, OpPC, Ptr, AK))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK))
@@ -985,7 +986,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLifetime(S, OpPC, Ptr, AK_Read))
     return false;
   if (!Ptr.isInitialized())
-    return DiagnoseUninitialized(S, OpPC, Ptr, AK_Read);
+    return diagnoseUninitialized(S, OpPC, Ptr, AK_Read);
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK_Read))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
@@ -1733,6 +1734,9 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!D->ElemRecord)
     return true;
 
+  if (S.getLangOpts().CPlusPlus26)
+    return true;
+
   if (D->ElemRecord->getNumVirtualBases() == 0)
     return true;
 
@@ -2122,7 +2126,7 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
     return false;
 
   if (!Ptr.isInitialized())
-    return DiagnoseUninitialized(S, OpPC, Ptr, AK_Read);
+    return diagnoseUninitialized(S, OpPC, Ptr, AK_Read);
 
   // Our given pointer, limited by the base that's currently being initialized,
   // if any.

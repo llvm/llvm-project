@@ -476,11 +476,26 @@ findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
                          const llvm::Triple &T, std::string &SubdirName) {
   llvm::SmallVector<llvm::SmallString<32>, 4> Subdirs;
   Subdirs.emplace_back(LiteralTriple.str());
+  // On ARM64EC targets, also try native aarch64 sysroot, which may contain
+  // support for both targets.
+  if (LiteralTriple.isWindowsArm64EC()) {
+    llvm::Triple NativeTriple(LiteralTriple);
+    NativeTriple.setArchName("aarch64");
+    Subdirs.emplace_back(NativeTriple.str());
+  }
   Subdirs.emplace_back(T.str());
   Subdirs.emplace_back(T.getArchName());
   Subdirs.back() += "-w64-mingw32";
   Subdirs.emplace_back(T.getArchName());
   Subdirs.back() += "-w64-mingw32ucrt";
+  if (T.isWindowsArm64EC()) {
+    llvm::Triple NativeTriple(T);
+    NativeTriple.setArchName("aarch64");
+    Subdirs.emplace_back(NativeTriple.str());
+
+    Subdirs.emplace_back("aarch64-w64-mingw32");
+    Subdirs.emplace_back("aarch64-w64-mingw32ucrt");
+  }
   StringRef ClangRoot = llvm::sys::path::parent_path(D.Dir);
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {

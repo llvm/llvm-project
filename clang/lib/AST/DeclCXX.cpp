@@ -335,8 +335,10 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //   In the definition of a constexpr function [...]
       //    -- if the function is a constructor or destructor,
       //       its class shall not have any virtual base classes
-      data().DefaultedDefaultConstructorIsConstexpr = false;
-      data().DefaultedDestructorIsConstexpr = false;
+      if (!C.getLangOpts().CPlusPlus26) {
+        data().DefaultedDefaultConstructorIsConstexpr = false;
+        data().DefaultedDestructorIsConstexpr = false;
+      }
 
       // C++1z [class.copy]p8:
       //   The implicitly-declared copy constructor for a class X will have
@@ -2596,41 +2598,6 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
     if (BO->isPtrMemOp()) {
       auto *MPT = BO->getRHS()->getType()->castAs<MemberPointerType>();
       if (MPT->getPointeeType()->isRecordType())
-        return DevirtualizedMethod;
-    }
-  }
-
-  // By CWG1504 / C++11 [expr.add]p6, pointer arithmetic on a base pointer into
-  // an array of derived objects is undefined behavior when the element type and
-  // pointee type are not similar. This means we can devirtualize calls on
-  // objects accessed through array subscripts or pointer arithmetic with
-  // non-zero offsets, since the dynamic type must match the static type.
-  //
-  // A single object is considered to be an array of one element, so p[0]
-  // could still be a derived object, but p[N] for N != 0 cannot.
-  const Expr *Inner = Base->IgnoreParenImpCasts();
-  if (const auto *UO = dyn_cast<UnaryOperator>(Inner))
-    if (UO->getOpcode() == UO_Deref)
-      Inner = UO->getSubExpr()->IgnoreParenImpCasts();
-
-  // Handle p[N].f() (dot syntax with array subscript).
-  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Inner)) {
-    Expr::EvalResult Result;
-    if (ASE->getIdx()->EvaluateAsInt(Result, getASTContext()) &&
-        !Result.Val.getInt().isZero())
-      return DevirtualizedMethod;
-  }
-
-  // Handle (p + N)->f() (arrow syntax with pointer arithmetic).
-  if (const auto *BO = dyn_cast<BinaryOperator>(Inner)) {
-    if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub) {
-      // Identify the integer operand (the offset).
-      const Expr *IdxExpr = BO->getLHS()->getType()->isPointerType()
-                                ? BO->getRHS()
-                                : BO->getLHS();
-      Expr::EvalResult Result;
-      if (IdxExpr->EvaluateAsInt(Result, getASTContext()) &&
-          !Result.Val.getInt().isZero())
         return DevirtualizedMethod;
     }
   }

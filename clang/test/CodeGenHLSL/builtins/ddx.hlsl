@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s -DCALL=dx.ddx.coarse -DVAR=hlsl.ddx.coarse
-// RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple spirv-pc-vulkan-pixel  %s \
+// RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple spirv-pc-vulkan-library  %s \
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s -DCALL=spv.ddx -DVAR=spv.ddx
 

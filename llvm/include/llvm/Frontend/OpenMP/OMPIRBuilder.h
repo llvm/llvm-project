@@ -1497,11 +1497,6 @@ public:
   /// \param Loc The location where the flush directive was encountered
   LLVM_ABI void createFlush(const LocationDescription &Loc);
 
-  /// Generator for '#omp taskwait'
-  ///
-  /// \param Loc The location where the taskwait directive was encountered.
-  LLVM_ABI void createTaskwait(const LocationDescription &Loc);
-
   /// Generator for '#omp taskyield'
   ///
   /// \param Loc The location where the taskyield directive was encountered.
@@ -1540,7 +1535,14 @@ public:
   LLVM_ABI void emitTaskDependency(IRBuilderBase &Builder, Value *Entry,
                                    const DependData &Dep);
 
-  /// Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
+  /// Generator for '#omp taskwait'
+  ///
+  /// \param Loc The location where the taskwait directive was encountered.
+  /// \param Dependencies dependencies as specified by the 'depend' clause.
+  LLVM_ABI void createTaskwait(const LocationDescription &Loc,
+                               DependenciesInfo Dependencies = {});
+
+  ///  Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
   /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`
   LLVM_ABI llvm::StructType *getKmpTaskAffinityInfoTy();
 
@@ -2439,6 +2441,39 @@ public:
       bool IsNoWait = false, bool IsTeamsReduction = false);
 
   ///}
+
+  /// Emit the host runtime lookups that redirect the `in_reduction`
+  /// list items of an `omp.target` region to their per-task reduction-private
+  /// storage.
+  ///
+  /// This owns the complete runtime-generation path for target `in_reduction`.
+  /// It computes the executing thread's gtid once for the whole target body (so
+  /// a target with several in_reduction items does not emit a redundant
+  /// `__kmpc_global_thread_num` per item), then for each item emits
+  /// `__kmpc_task_reduction_get_th_data(gtid, /*descriptor=*/null, origPtr)`
+  /// with the address-space normalization required by the runtime entry point.
+  /// The NULL descriptor makes the runtime walk the enclosing taskgroups to
+  /// find the matching `task_reduction` registration for the item. The lookups
+  /// are emitted at \p Loc, which must be inside the target task body.
+  ///
+  /// The front-end-specific work (matching each `in_reduction` item to its
+  /// mapped storage and binding the generated private pointer back to the
+  /// right value) stays with the caller: each generated private pointer is
+  /// handed back through \p MapPrivateCB.
+  ///
+  /// \param Loc          Insertion point for the target body.
+  /// \param OrigPtrs     Per item, the mapped original pointer used as the
+  ///                     runtime `orig` argument.
+  /// \param ResultPtrTys Per item, the type the returned private pointer must
+  ///                     have (for address-space normalization). Must have the
+  ///                     same length as \p OrigPtrs.
+  /// \param MapPrivateCB Called once per item, in list order, with the item
+  ///                     index and the generated per-task private pointer.
+  /// \returns The insertion point after the emitted lookups.
+  LLVM_ABI InsertPointTy createTargetInReduction(
+      const LocationDescription &Loc, ArrayRef<Value *> OrigPtrs,
+      ArrayRef<Type *> ResultPtrTys,
+      function_ref<void(unsigned, Value *)> MapPrivateCB);
 
   /// Return the insertion point used by the underlying IRBuilder.
   InsertPointTy getInsertionPoint() { return Builder.saveIP(); }

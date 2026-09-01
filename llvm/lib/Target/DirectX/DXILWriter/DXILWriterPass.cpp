@@ -29,6 +29,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -36,7 +37,16 @@ using namespace llvm;
 using namespace llvm::dxil;
 
 extern cl::opt<bool> EmbedDebug;
-extern cl::opt<std::string> PdbDebugPath;
+extern cl::opt<bool> StripDebug;
+cl::opt<std::string> PdbDebugPath(
+    "dx-pdb-path",
+    cl::desc("Write debug information to the given file, or automatically "
+             "named file in directory when ending in '/'"),
+    cl::value_desc("filename"));
+cl::opt<bool> SourceInDebugModule(
+    "dx-source-in-debug-module",
+    cl::desc("Embed source code into debug module on DirectX target"),
+    cl::init(false));
 
 namespace {
 class WriteDXILPass : public llvm::ModulePass {
@@ -160,15 +170,16 @@ class EmbedDXILPass : public llvm::ModulePass {
 
     if (HasDebugInfo) {
       if (WriteDebug) {
-        // Replace dx.source metadata nodes with stubs.
-        // TODO: Add /Qsource_in_debug_module flag to enable/disable this.
-        LLVMContext &Ctx = M.getContext();
-        MDString *EmptyString = MDString::get(Ctx, "");
-        replaceNamedMetadataArray(M, "dx.source.contents",
-                                  {EmptyString, EmptyString});
-        replaceNamedMetadataArray(M, "dx.source.defines", {});
-        replaceNamedMetadataArray(M, "dx.source.mainFileName", {EmptyString});
-        replaceNamedMetadataArray(M, "dx.source.args", {});
+        if (!SourceInDebugModule) {
+          // Replace dx.source metadata nodes with stubs.
+          LLVMContext &Ctx = M.getContext();
+          MDString *EmptyString = MDString::get(Ctx, "");
+          replaceNamedMetadataArray(M, "dx.source.contents",
+                                    {EmptyString, EmptyString});
+          replaceNamedMetadataArray(M, "dx.source.defines", {});
+          replaceNamedMetadataArray(M, "dx.source.mainFileName", {EmptyString});
+          replaceNamedMetadataArray(M, "dx.source.args", {});
+        }
       } else {
         // If we have an ILDB part, strip DXIL from all debug info.
         StripDebugInfo(M);
@@ -231,9 +242,12 @@ public:
 
     bool HasDebugInfo = !M.debug_compile_units().empty();
 
-    // Enable EmbedDebug if there is debug info, but it is not being written
-    // to a PDB file.
-    if (HasDebugInfo && !EmbedDebug && PdbDebugPath.empty())
+    // If both StripDebug and EmbedDebug are specified, StripDebug is ignored.
+    if (StripDebug && EmbedDebug)
+      StripDebug = false;
+    // Enable EmbedDebug if there is debug info, but it is not being stripped
+    // or written to a PDB file.
+    if (HasDebugInfo && !StripDebug && !EmbedDebug && PdbDebugPath.empty())
       EmbedDebug = true;
     if (!HasDebugInfo && EmbedDebug)
       reportFatalUsageError(

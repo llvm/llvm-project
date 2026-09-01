@@ -37,6 +37,7 @@ static_library("Vectorize") {
     "VPlan.cpp",
     "VPlanAnalysis.cpp",
     "VPlanConstruction.cpp",
+    "VPlanEVLTailFolding.cpp",
     "VPlanPredicator.cpp",
     "VPlanRecipes.cpp",
     "VPlanTransforms.cpp",

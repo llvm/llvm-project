@@ -111,6 +111,8 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
     return V;
   if (VTy->isAggregateType() || VTy->isVectorTy())
     return V;
+  if (VTy->isPointerTy() && Ty->isPointerTy())
+    return IRB.CreatePointerBitCastOrAddrSpaceCast(V, Ty);
   TypeSize RequestedSize = DL.getTypeSizeInBits(Ty);
   TypeSize ValueSize = DL.getTypeSizeInBits(VTy);
   bool ShouldTruncate = RequestedSize < ValueSize;
@@ -126,8 +128,6 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
                                        /*IsSigned=*/false),
                      Ty, DL, AllowTruncate);
   }
-  if (VTy->isPointerTy() && Ty->isPointerTy())
-    return IRB.CreatePointerBitCastOrAddrSpaceCast(V, Ty);
   if (VTy->isIntegerTy() && Ty->isIntegerTy())
     return IRB.CreateIntCast(V, Ty, /*IsSigned=*/false);
   // Use bit-preserving casts for floating-point values: convert float to int
@@ -797,7 +797,7 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
 
       auto *AI = IIRB.getAlloca(Fn, CallParam->getType());
       IIRB.IRB.CreateStore(CallParam, AI);
-      CallParam = CachedParam = AI;
+      CallParam = CachedParam = tryToCast(IIRB.IRB, AI, IIRB.PtrTy, DL);
     }
   }
 

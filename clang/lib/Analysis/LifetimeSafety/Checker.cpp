@@ -260,21 +260,24 @@ public:
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
+        llvm::SmallVector<const Expr *> ExprChain =
+            getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg));
         if (Warning.InvalidatedByExpr) {
           if (IssueExpr)
             // Use-after-invalidation of an object on stack.
             SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
-                                                   Warning.InvalidatedByExpr);
+                                                   Warning.InvalidatedByExpr,
+                                                   ExprChain);
           else if (InvalidatedPVD)
             // Use-after-invalidation of a parameter.
             SemaHelper->reportUseAfterInvalidation(
-                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
+                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr,
+                ExprChain);
 
         } else
           // Scope-based expiry (use-after-scope).
-          SemaHelper->reportUseAfterScope(
-              IssueExpr, UF->getUseExpr(), MovedExpr, ExpiryLoc,
-              getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg)));
+          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
+                                          MovedExpr, ExpiryLoc, ExprChain);
 
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {

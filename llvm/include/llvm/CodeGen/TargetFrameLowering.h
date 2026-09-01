@@ -368,6 +368,19 @@ public:
   virtual StackOffset getFrameIndexReferenceFromSP(const MachineFunction &MF,
                                                    int FI) const;
 
+  /// Return the list of registers which must be preserved by the function: the
+  /// value on exit must be the same as the value on entry. A register from this
+  /// list does may not need to be saved / reloaded if the function did not use
+  /// it.
+  const MCPhysReg *getMustPreserveRegisters(const MachineFunction &MF) const;
+
+  /// This method determines which of the registers reported by
+  /// getMustPreserveRegisters() must be saved in prolog and reloaded in epilog
+  /// regardless of whether or not they were modified by the function.
+  void determineUncondPrologCalleeSaves(MachineFunction &MF,
+                                        const MCPhysReg *CSRegs,
+                                        BitVector &UncondPrologCSRs) const;
+
   /// Returns the callee-saved registers as computed by determineCalleeSaves
   /// in the BitVector \p SavedRegs.
   virtual void getCalleeSaves(const MachineFunction &MF,

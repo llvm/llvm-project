@@ -1296,11 +1296,56 @@ def CIR_CXXAssignAttr : CIR_Attr<"CXXAssign", "cxx_assign"> {
 // FuncInfoAttr
 //===----------------------------------------------------------------------===//
 
+// The standard library entities the identity tag can name. Each entry
+// pairs with one raised operation in CIRStdOps.td.
+def CIR_KnownFuncKind : CIR_I32EnumAttr<"KnownFuncKind",
+    "known standard library entity", [
+  I32EnumAttrCase<"StdFind", 1, "std::find">,
+]> {
+  let genSpecializedAttr = 0;
+  // A name like std::find is not a bare identifier, so print it as a quoted
+  // string. The enum parser already reads a quoted string back.
+  let parameterPrinter =
+      "$_printer.printKeywordOrString(" # symbolToStringFnName # "($_self))";
+}
+
+def CIR_FuncIdentityAttr : CIR_Attr<"FuncIdentity", "func_identity"> {
+  let summary = "Identifies a function as a known standard library entity";
+  let description = [{
+    Names the standard library entity a function represents, so that
+    transformations can recognize calls to well known library functions
+    without decoding mangled symbol names.
+
+    The tag names the whole entity. For `std::find` that is the free
+    function named `find` in the `std` namespace, so a member function, a
+    static member, or an operator can never carry the tag. Inline
+    namespaces, such as the versioning namespace of libc++, count as part
+    of `std`. The tag never encodes signatures, and a function that
+    matches no known entity carries no attribute.
+
+    Example:
+    ```
+    #cir.func_identity<"std::find">
+    ```
+  }];
+
+  let parameters = (ins
+    EnumParameter<CIR_KnownFuncKind>:$kind
+  );
+
+  let assemblyFormat = [{
+    `<` $kind `>`
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
 // The attributes accepted in the optional func_info slot on cir.func.
 def CIR_FuncInfoAttr : AnyAttrOf<[
   CIR_CXXCtorAttr,
   CIR_CXXDtorAttr,
-  CIR_CXXAssignAttr
+  CIR_CXXAssignAttr,
+  CIR_FuncIdentityAttr
 ], "function information attribute">;
 
 //===----------------------------------------------------------------------===//

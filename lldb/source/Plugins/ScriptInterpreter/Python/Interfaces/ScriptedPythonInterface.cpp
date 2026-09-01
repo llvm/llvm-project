@@ -305,22 +305,57 @@ template <>
 lldb::ValueObjectListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
     python::PythonObject &p, Status &error) {
-  lldb::SBValueList *sb_value_list = reinterpret_cast<lldb::SBValueList *>(
-      python::LLDBSWIGPython_CastPyObjectToSBValueList(p.get()));
-
-  if (!sb_value_list) {
-    error = Status::FromErrorStringWithFormat(
-        "couldn't cast lldb::SBValueList to lldb::ValueObjectListSP");
-    return {};
-  }
-
+  // Two Python return shapes are accepted here so callers can go through
+  // Dispatch<ValueObjectListSP>() uniformly: an `SBValueList` wrapper
+  // (what most extension methods return) and a plain Python `list` of
+  // `SBValue` (what `get_recognized_arguments` is documented to return).
   lldb::ValueObjectListSP out = std::make_shared<ValueObjectList>();
-  for (uint32_t i = 0, e = sb_value_list->GetSize(); i < e; ++i) {
-    SBValue value = sb_value_list->GetValueAtIndex(i);
-    out->Append(m_interpreter.GetOpaqueTypeFromSBValue(value));
+  if (auto *sb_value_list = reinterpret_cast<lldb::SBValueList *>(
+          python::LLDBSWIGPython_CastPyObjectToSBValueList(p.get()))) {
+    for (uint32_t i = 0, e = sb_value_list->GetSize(); i < e; ++i) {
+      SBValue value = sb_value_list->GetValueAtIndex(i);
+      out->Append(m_interpreter.GetOpaqueTypeFromSBValue(value));
+    }
+    return out;
   }
 
-  return out;
+  // Fallback: a plain Python `list` of `SBValue`. Round-trip through
+  // `CreateStructuredObject` so we don't touch the `PyList_*` C API
+  // directly; unknown-shape items surface as `StructuredData::Generic`
+  // holding their opaque `PyObject*`, which we hand back to SWIG to
+  // recover the SBValue wrapper.
+  StructuredData::ObjectSP structured = p.CreateStructuredObject();
+  StructuredData::Array *arr = structured ? structured->GetAsArray() : nullptr;
+  if (arr) {
+    size_t index = 0;
+    bool aborted = false;
+    arr->ForEach([&](StructuredData::Object *item) {
+      StructuredData::Generic *generic = item ? item->GetAsGeneric() : nullptr;
+      if (!generic) {
+        error = Status::FromErrorStringWithFormatv(
+            "ValueObjectList item at index {0} is not a "
+            "StructuredData::Generic",
+            index);
+        aborted = true;
+        return false;
+      }
+      auto *sb_value = reinterpret_cast<lldb::SBValue *>(
+          python::LLDBSWIGPython_CastPyObjectToSBValue(
+              static_cast<PyObject *>(generic->GetValue())));
+      if (sb_value)
+        if (auto valobj_sp = m_interpreter.GetOpaqueTypeFromSBValue(*sb_value))
+          out->Append(valobj_sp);
+      ++index;
+      return true;
+    });
+    if (aborted)
+      return {};
+    return out;
+  }
+
+  error = Status::FromErrorStringWithFormat(
+      "couldn't extract ValueObjectList from Python return value");
+  return {};
 }
 
 template <>

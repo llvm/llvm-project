@@ -148,6 +148,18 @@ public:
     return nullptr;
   }
 
+  /// Return the number of extra cycles the processor takes to recover from a
+  /// branch misprediction. Defaults to the value in the scheduling model.
+  virtual unsigned getMispredictionPenalty() const {
+    return getSchedModel().MispredictPenalty;
+  }
+
+  /// Return the expected latency of load instructions. Defaults to the value
+  /// in the scheduling model.
+  virtual unsigned getLoadLatency() const {
+    return getSchedModel().LoadLatency;
+  }
+
   /// Configure the LibcallLoweringInfo for this subtarget. The libcalls will be
   /// pre-configured with defaults based on RuntimeLibcallsInfo. This may be
   /// used to override those decisions, such as disambiguating alternative

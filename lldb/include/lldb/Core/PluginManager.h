@@ -687,6 +687,10 @@ public:
   static ScriptedInterfaceUsages
   GetScriptedInterfaceUsagesAtIndex(uint32_t idx);
 
+  static void AutoCompleteScriptedExtension(
+      llvm::StringRef partial_name, CompletionRequest &request,
+      lldb::ScriptLanguage language = lldb::eScriptLanguageUnknown);
+
   // REPL
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              REPLCreateInstance create_callback,

@@ -8,7 +8,9 @@ add_libc_unittest(
     getrlimit_setrlimit_test.cpp
   DEPENDS
     libc.include.fcntl
-    libc.include.sys_resource
+    libc.hdr.sys_resource_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_rlimit
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.resource.getrlimit

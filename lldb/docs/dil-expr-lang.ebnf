@@ -43,7 +43,8 @@ primary_expression = numeric_literal
 
 id_expression = unqualified_id
               | qualified_id
-              | register ;
+              | register
+              | null_pointer ;
 
 unqualified_id = identifier ;
 
@@ -56,6 +57,8 @@ numeric_literal = ? Integer constant: hexademical, decimal, octal, binary ?
                 | ? Floating constant ? ;
 
 boolean_literal = "true" | "false" ;
+
+null_pointer = "nullptr" ;
 
 register = "$" ? Register name ? ;
 

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -208,6 +209,10 @@ enum class SecNameTableFlags : uint32_t {
   // the suffix when doing profile matching when seeing the flag.
   SecFlagUniqSuffix = (1 << 2)
 };
+enum class SecProfileSymbolListFlags : uint32_t {
+  SecFlagInValid = 0,
+  SecFlagMD5 = (1 << 0)
+};
 enum class SecProfSummaryFlags : uint32_t {
   SecFlagInValid = 0,
   /// SecFlagPartial means the profile is for common/shared code.
@@ -253,6 +258,9 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
   switch (Type) {
   case SecNameTable:
     IsFlagLegal = std::is_same<SecNameTableFlags, SecFlagType>();
+    break;
+  case SecProfileSymbolList:
+    IsFlagLegal = std::is_same<SecProfileSymbolListFlags, SecFlagType>();
     break;
   case SecProfSummary:
     IsFlagLegal = std::is_same<SecProfSummaryFlags, SecFlagType>();
@@ -1688,29 +1696,59 @@ public:
     Syms.insert(Name.copy(Allocator));
   }
 
-  bool contains(StringRef Name) { return Syms.count(Name); }
+  bool contains(StringRef Name) const {
+    return IsMD5 ? ColdGUIDTable.contains(llvm::MD5Hash(Name))
+                 : Syms.count(Name);
+  }
 
   void merge(const ProfileSymbolList &List) {
+    assert(!List.IsMD5 &&
+           "Merging pre-hashed MD5 ProfileSymbolList not yet implemented");
     for (auto Sym : List.Syms)
       add(Sym, true);
   }
 
-  unsigned size() { return Syms.size(); }
+  unsigned size() const { return IsMD5 ? ColdGUIDTable.size() : Syms.size(); }
   void reserve(size_t Size) { Syms.reserve(Size); }
 
   void setToCompress(bool TC) { ToCompress = TC; }
   bool toCompress() { return ToCompress; }
+
+  std::vector<uint64_t> collectGUIDs() const {
+    assert(!IsMD5 &&
+           "Collecting GUIDs from existing MD5 table not yet implemented");
+    std::vector<uint64_t> Keys;
+    Keys.reserve(Syms.size());
+    llvm::append_range(Keys, llvm::map_range(Syms, llvm::MD5Hash));
+    llvm::sort(Keys);
+    Keys.erase(llvm::unique(Keys), Keys.end());
+    return Keys;
+  }
+
+  void setColdGUIDTable(EytzingerTableSpan<support::ulittle64_t> Table) {
+    assert(Syms.empty() &&
+           "Setting ColdGUIDTable shadows existing strings in Syms");
+    ColdGUIDTable = Table;
+    IsMD5 = true;
+  }
+  EytzingerTableSpan<support::ulittle64_t> getColdGUIDTable() const {
+    assert(IsMD5 && "Retrieving ColdGUIDTable from non-MD5 ProfileSymbolList");
+    return ColdGUIDTable;
+  }
+  bool isMD5() const { return IsMD5; }
 
   LLVM_ABI std::error_code read(const uint8_t *Data, uint64_t ListSize);
   LLVM_ABI std::error_code write(raw_ostream &OS);
   LLVM_ABI void dump(raw_ostream &OS = dbgs()) const;
 
 private:
+  bool IsMD5 = false;
   // Determine whether or not to compress the symbol list when
   // writing it into profile. The variable is unused when the symbol
   // list is read from an existing profile.
   bool ToCompress = false;
   DenseSet<StringRef> Syms;
+  EytzingerTableSpan<support::ulittle64_t> ColdGUIDTable;
   BumpPtrAllocator Allocator;
 };
 

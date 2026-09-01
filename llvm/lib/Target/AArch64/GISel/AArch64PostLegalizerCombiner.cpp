@@ -320,8 +320,7 @@ bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
     return false; // Don't split truncating stores.
   if (!MRI.hasOneNonDBGUse(Store.getValueReg()))
     return false;
-  auto MaybeCst = isConstantOrConstantSplatVector(
-      *MRI.getVRegDef(Store.getValueReg()), MRI);
+  auto MaybeCst = isConstantOrConstantSplatVector(Store.getValueReg(), MRI);
   return MaybeCst && MaybeCst->isZero();
 }
 
@@ -404,12 +403,10 @@ bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
     return false;
 
   // Check the constant splat values
-  auto V1 = isConstantOrConstantSplatVector(
-      *MRI.getVRegDef(MI.getOperand(2).getReg()), MRI);
-  auto V2 = isConstantOrConstantSplatVector(
-      *MRI.getVRegDef(AndMI->getOperand(2).getReg()), MRI);
-  auto V3 = isConstantOrConstantSplatVector(
-      *MRI.getVRegDef(LShrMI->getOperand(2).getReg()), MRI);
+  auto V1 = isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
+  auto V2 = isConstantOrConstantSplatVector(AndMI->getOperand(2).getReg(), MRI);
+  auto V3 =
+      isConstantOrConstantSplatVector(LShrMI->getOperand(2).getReg(), MRI);
   if (!V1.has_value() || !V2.has_value() || !V3.has_value())
     return false;
   unsigned HalfSize = DstTy.getScalarSizeInBits() / 2;

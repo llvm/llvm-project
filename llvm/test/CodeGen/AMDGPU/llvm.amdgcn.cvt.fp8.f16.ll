@@ -299,9 +299,9 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte0(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    global_wb
 ; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1
-; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[4:5], v2, off
+; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 0)
   store i32 %cvt, ptr addrspace(1) %out
@@ -360,9 +360,9 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte1(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    global_wb
 ; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:1
-; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[4:5], v2, off
+; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 1)
   store i32 %cvt, ptr addrspace(1) %out
@@ -405,9 +405,9 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte2(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    global_wb
 ; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:2
-; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[4:5], v2, off
+; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 2)
   store i32 %cvt, ptr addrspace(1) %out
@@ -450,9 +450,9 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_byte3(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    global_wb
 ; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_bf8_f16 v2, v0, v1 byte_sel:3
-; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[4:5], v2, off
+; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.bf8.f16(half %a, i32 %sr, i32 %old, i32 3)
   store i32 %cvt, ptr addrspace(1) %out
@@ -545,9 +545,9 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte0(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    global_wb
 ; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1
-; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[4:5], v2, off
+; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 0)
   store i32 %cvt, ptr addrspace(1) %out
@@ -606,9 +606,9 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte1(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    global_wb
 ; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:1
-; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[4:5], v2, off
+; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 1)
   store i32 %cvt, ptr addrspace(1) %out
@@ -651,9 +651,9 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte2(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    global_wb
 ; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:2
-; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[4:5], v2, off
+; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 2)
   store i32 %cvt, ptr addrspace(1) %out
@@ -696,9 +696,9 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_byte3(half %a, i32 %sr, i32 %old, ptr
 ; GFX1250-GISEL-FAKE16-NEXT:    global_wb
 ; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX1250-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_sr_fp8_f16 v2, v0, v1 byte_sel:3
-; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[4:5], v2, off
+; GFX1250-GISEL-FAKE16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
   %cvt = tail call i32 @llvm.amdgcn.cvt.sr.fp8.f16(half %a, i32 %sr, i32 %old, i32 3)
   store i32 %cvt, ptr addrspace(1) %out

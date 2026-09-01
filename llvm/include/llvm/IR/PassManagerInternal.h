@@ -226,22 +226,11 @@ template <typename IRUnitT, typename PassT, typename ResultT,
           typename InvalidatorT>
 struct AnalysisResultModel<IRUnitT, PassT, ResultT, InvalidatorT, false>
     : AnalysisResultConcept<IRUnitT, InvalidatorT> {
-  explicit AnalysisResultModel(ResultT Result) : Result(std::move(Result)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  AnalysisResultModel(const AnalysisResultModel &Arg) : Result(Arg.Result) {}
-  AnalysisResultModel(AnalysisResultModel &&Arg)
-      : Result(std::move(Arg.Result)) {}
-
-  friend void swap(AnalysisResultModel &LHS, AnalysisResultModel &RHS) {
-    using std::swap;
-    swap(LHS.Result, RHS.Result);
-  }
-
-  AnalysisResultModel &operator=(AnalysisResultModel RHS) {
-    swap(*this, RHS);
-    return *this;
-  }
+  template <typename... ExtraArgTs>
+  AnalysisResultModel(PassT &Pass, IRUnitT &IR,
+                      AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
+                      ExtraArgTs &&...ExtraArgs)
+      : Result(Pass.run(IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...)) {}
 
   /// The model bases invalidation solely on being in the preserved set.
   //
@@ -264,22 +253,11 @@ template <typename IRUnitT, typename PassT, typename ResultT,
           typename InvalidatorT>
 struct AnalysisResultModel<IRUnitT, PassT, ResultT, InvalidatorT, true>
     : AnalysisResultConcept<IRUnitT, InvalidatorT> {
-  explicit AnalysisResultModel(ResultT Result) : Result(std::move(Result)) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  AnalysisResultModel(const AnalysisResultModel &Arg) : Result(Arg.Result) {}
-  AnalysisResultModel(AnalysisResultModel &&Arg)
-      : Result(std::move(Arg.Result)) {}
-
-  friend void swap(AnalysisResultModel &LHS, AnalysisResultModel &RHS) {
-    using std::swap;
-    swap(LHS.Result, RHS.Result);
-  }
-
-  AnalysisResultModel &operator=(AnalysisResultModel RHS) {
-    swap(*this, RHS);
-    return *this;
-  }
+  template <typename... ExtraArgTs>
+  AnalysisResultModel(PassT &Pass, IRUnitT &IR,
+                      AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
+                      ExtraArgTs &&...ExtraArgs)
+      : Result(Pass.run(IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...)) {}
 
   /// The model delegates to the \c ResultT method.
   bool invalidate(IRUnitT &IR, const PreservedAnalyses &PA,
@@ -344,8 +322,9 @@ struct AnalysisPassModel
   std::unique_ptr<AnalysisResultConcept<IRUnitT, InvalidatorT>>
   run(IRUnitT &IR, AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
       ExtraArgTs... ExtraArgs) override {
+    // Call Pass.run in constructor to avoid move of analysis result.
     return std::make_unique<ResultModelT>(
-        Pass.run(IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...));
+        Pass, IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...);
   }
 
   /// The model delegates to a static \c PassT::name method.

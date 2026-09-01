@@ -160,6 +160,20 @@ func.func @compute_region_two_dims(%data: memref<8xi32>,
 
 // -----
 
+// CHECK-LABEL: func @reduction_init_with_bounds
+func.func @reduction_init_with_bounds(%arg0: memref<?xi32>, %lb: index, %ext: index) {
+  %c1 = arith.constant 1 : index
+  %bnd = acc.bounds lowerbound(%lb : index) extent(%ext : index) stride(%c1 : index)
+  %0 = acc.reduction_init %arg0 bounds(%bnd) <add> : memref<?xi32> {
+    acc.yield %arg0 : memref<?xi32>
+  }
+  return
+}
+// CHECK: %[[BND:.*]] = acc.bounds
+// CHECK: acc.reduction_init %{{.*}} bounds(%[[BND]]) <add> : memref<?xi32>
+
+// -----
+
 // CHECK-LABEL: func @compute_region_unknown_width
 func.func @compute_region_unknown_width(%data: memref<100xf32>) {
   %copyin = acc.copyin varPtr(%data : memref<100xf32>) -> memref<100xf32>

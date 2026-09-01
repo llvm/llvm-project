@@ -170,11 +170,6 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                     true);
 
   Type *ArgType = Arg->getType();
-  if (isTypedPointerTy(ArgType)) {
-    return GR->getOrCreateSPIRVPointerType(
-        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder,
-        addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
-  }
 
   // In case OriginalArgType is of untyped pointer type, there are three
   // possibilities:

@@ -4234,7 +4234,8 @@ void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
   for (const auto &Entry : SrcNames)
     if (DstNames[Entry.first].first == nullptr &&
         SrcNames[Entry.first].second == 1)
-      Pattern->error("Pattern has dead named input: $" + Entry.first);
+      Pattern->error("Pattern has dead named input: $" + Entry.first +
+                     " (use srcvalue for an intentionally unused input)");
 
   PatternsToMatch.push_back(std::move(PTM));
 }

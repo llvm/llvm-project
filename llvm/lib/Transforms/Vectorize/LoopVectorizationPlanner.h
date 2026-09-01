@@ -453,8 +453,8 @@ public:
     return createScalarIntrinsic(Intrinsic::vscale, {}, ResultTy, DL);
   }
 
-  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -464,8 +464,8 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -968,10 +968,6 @@ public:
   /// Returns true if \p Plan requires a scalar epilogue after the vector
   /// loop. Asserts that the VPlan decision matches the legacy cost model.
   bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
-
-  /// Returns true if \p Plan folds the tail by masking. Asserts that the
-  /// VPlan-based decision matches the legacy cost model.
-  bool hasTailFolded(const VPlan &Plan) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

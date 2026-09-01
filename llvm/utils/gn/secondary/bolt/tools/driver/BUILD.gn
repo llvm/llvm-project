@@ -8,7 +8,7 @@ foreach(symlink, symlinks) {
   symlink_or_copy(symlink) {
     deps = [ ":llvm-bolt" ]
     source = "llvm-bolt"
-    output = "$root_out_dir/bin/$symlink"
+    output = "$llvm_current_bindir/$symlink"
   }
 }
 

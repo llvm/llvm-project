@@ -49,9 +49,9 @@ private:
 
 Session::ControllerAccess::~ControllerAccess() = default;
 
-Session::Session(ExecutorProcessInfo EPI, RunWrapperCall RunCall,
+Session::Session(ExecutorProcessInfo EPI, DispatchFn Dispatch,
                  ErrorReporterFn ReportError)
-    : EPI(std::move(EPI)), RunCall(std::move(RunCall)),
+    : EPI(std::move(EPI)), Dispatch(std::move(Dispatch)),
       ReportError(std::move(ReportError)),
       Notifiers(createService<NotificationService>()) {}
 

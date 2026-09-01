@@ -40,13 +40,6 @@ namespace lldb_private {
 template <> Log::Channel &LogChannelFor<TestChannel>() { return test_channel; }
 } // namespace lldb_private
 
-// Wrap list function to make it easier to test.
-static bool ListCategories(llvm::StringRef channel, std::string &result) {
-  result.clear();
-  llvm::raw_string_ostream result_stream(result);
-  return Log::ListChannelCategories(channel, result_stream);
-}
-
 namespace {
 // A test fixture which provides tests with a pre-registered channel.
 struct LogChannelTest : public ::testing::Test {
@@ -276,18 +269,18 @@ TEST_F(LogChannelTest, Disable) {
 
 TEST_F(LogChannelTest, List) {
   std::string list;
-  EXPECT_TRUE(ListCategories("chan", list));
-  std::string expected =
-      R"(Logging categories for 'chan':
+  EXPECT_THAT_EXPECTED(Log::ListChannelCategories("chan"),
+                       llvm::HasValue(
+                           R"(Logging categories for 'chan':
   all - all available logging categories
   default - default set of logging categories
   foo - log foo
   bar - log bar
-)";
-  EXPECT_EQ(expected, list);
+)"));
 
-  EXPECT_FALSE(ListCategories("chanchan", list));
-  EXPECT_EQ("Invalid log channel 'chanchan'.\n", list);
+  EXPECT_THAT_EXPECTED(
+      Log::ListChannelCategories("chanchan"),
+      llvm::FailedWithMessage("Invalid log channel 'chanchan'.\n"));
 }
 
 TEST_F(LogChannelEnabledTest, log_options) {

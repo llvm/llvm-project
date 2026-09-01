@@ -1369,7 +1369,9 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
                    const LoadStoreInstProperties &Props,
                    InsertPosition InsertBef)
     : LoadInst(Ty, Ptr, Name, Props.IsVolatile, Props.Alignment, Props.Ordering,
-               Props.SSID, InsertBef) {}
+               Props.SSID, InsertBef) {
+  setElementwise(Props.IsElementwise);
+}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
@@ -4453,8 +4455,8 @@ AllocaInst *AllocaInst::cloneImpl() const {
 }
 
 LoadInst *LoadInst::cloneImpl() const {
-  return new LoadInst(getType(), getOperand(0), Twine(), isVolatile(),
-                      getAlign(), getOrdering(), getSyncScopeID());
+  return new LoadInst(getType(), getOperand(0), Twine(), getProperties(),
+                      /*InsertBefore=*/nullptr);
 }
 
 StoreInst *StoreInst::cloneImpl() const {

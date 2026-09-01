@@ -341,12 +341,12 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
 
         if (m_step_out_to_id == frame_zero_id)
           done = true;
-        else if (m_step_out_to_id < frame_zero_id) {
+        else if (m_step_out_to_id.IsYoungerThan(frame_zero_id)) {
           // Either we stepped past the breakpoint, or the stack ID calculation
           // was incorrect and we should probably stop.
           done = true;
         } else {
-          done = (m_immediate_step_from_id < frame_zero_id);
+          done = (m_immediate_step_from_id.IsYoungerThan(frame_zero_id));
         }
 
         if (done) {
@@ -405,7 +405,7 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
     StopInfoSP stop_info_sp = GetPrivateStopInfo();
     if (stop_info_sp && stop_info_sp->GetStopReason() == eStopReasonBreakpoint) {
       StackID frame_zero_id = GetThread().GetStackFrameAtIndex(0)->GetStackID();
-      done = !(frame_zero_id < m_step_out_to_id);
+      done = !(frame_zero_id.IsYoungerThan(m_step_out_to_id));
     }
   }
 
@@ -565,5 +565,5 @@ bool ThreadPlanStepOut::IsPlanStale() {
   // then there's something for us to do.  Otherwise, we're stale.
 
   StackID frame_zero_id = GetThread().GetStackFrameAtIndex(0)->GetStackID();
-  return !(frame_zero_id < m_step_out_to_id);
+  return !(frame_zero_id.IsYoungerThan(m_step_out_to_id));
 }

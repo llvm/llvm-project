@@ -174,6 +174,14 @@ bool X86TargetInfo::initFeatureMap(
       continue;
     }
 
+    if (Feature == "+apxf" || Feature == "-apxf") {
+      char Sign = Feature[0];
+      for (const char *Sub :
+           {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "zu", "jmpabs"})
+        UpdatedFeaturesVec.push_back(Sign + std::string(Sub));
+      continue;
+    }
+
     UpdatedFeaturesVec.push_back(Feature);
   }
 
@@ -1184,6 +1192,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("xsavec", true)
       .Case("xsaves", true)
       .Case("xsaveopt", true)
+      .Case("apxf", true)
       .Case("egpr", true)
       .Case("push2pop2", true)
       .Case("ppx", true)

@@ -6,10 +6,10 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; COST-LABEL: define void @switch_default_to_latch_common_dest(
 ; COST-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0:[0-9]+]] {
 ; COST-NEXT:  [[ENTRY:.*]]:
-; COST-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; COST-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; COST-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; COST-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; COST-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[START]] to i64
+; COST-NEXT:    [[TMP12:%.*]] = sub i64 [[END1]], [[TMP11]]
+; COST-NEXT:    [[TMP1:%.*]] = add i64 [[TMP12]], -8
 ; COST-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; COST-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
@@ -58,10 +58,10 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; FORCED-LABEL: define void @switch_default_to_latch_common_dest(
 ; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FORCED-NEXT:  [[ENTRY:.*]]:
-; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[TMP16:%.*]] = sub i64 [[END1]], [[TMP15]]
+; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP16]], -8
 ; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
@@ -141,10 +141,10 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; COST-LABEL: define void @switch_default_to_latch_common_dest_using_branches(
 ; COST-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; COST-NEXT:  [[ENTRY:.*]]:
-; COST-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; COST-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; COST-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; COST-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; COST-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[START]] to i64
+; COST-NEXT:    [[TMP14:%.*]] = sub i64 [[END1]], [[TMP13]]
+; COST-NEXT:    [[TMP1:%.*]] = add i64 [[TMP14]], -8
 ; COST-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; COST-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
@@ -196,10 +196,10 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; FORCED-LABEL: define void @switch_default_to_latch_common_dest_using_branches(
 ; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; FORCED-NEXT:  [[ENTRY:.*]]:
-; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[TMP20:%.*]] = sub i64 [[END1]], [[TMP19]]
+; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP20]], -8
 ; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
@@ -319,10 +319,10 @@ define void @switch_all_dests_distinct(ptr %start, ptr %end) {
 ; FORCED-LABEL: define void @switch_all_dests_distinct(
 ; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; FORCED-NEXT:  [[ENTRY:.*]]:
-; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[TMP22:%.*]] = sub i64 [[END1]], [[TMP21]]
+; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP22]], -8
 ; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
@@ -437,10 +437,10 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; COST-LABEL: define void @switch_all_dests_distinct_variant_using_branches(
 ; COST-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; COST-NEXT:  [[ENTRY:.*]]:
-; COST-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; COST-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; COST-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; COST-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; COST-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[START]] to i64
+; COST-NEXT:    [[TMP17:%.*]] = sub i64 [[END1]], [[TMP16]]
+; COST-NEXT:    [[TMP1:%.*]] = add i64 [[TMP17]], -8
 ; COST-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; COST-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
@@ -509,10 +509,10 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; FORCED-LABEL: define void @switch_all_dests_distinct_variant_using_branches(
 ; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; FORCED-NEXT:  [[ENTRY:.*]]:
-; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP25:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[TMP26:%.*]] = sub i64 [[END1]], [[TMP25]]
+; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP26]], -8
 ; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
@@ -669,10 +669,10 @@ define void @switch_multiple_common_dests(ptr %start, ptr %end) {
 ; FORCED-LABEL: define void @switch_multiple_common_dests(
 ; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; FORCED-NEXT:  [[ENTRY:.*]]:
-; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP29:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[TMP30:%.*]] = sub i64 [[END1]], [[TMP29]]
+; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP30]], -8
 ; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
@@ -818,10 +818,10 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; FORCED-LABEL: define void @switch4_default_common_dest_with_case(
 ; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; FORCED-NEXT:  [[ENTRY:.*]]:
-; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP17:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[TMP18:%.*]] = sub i64 [[END1]], [[TMP17]]
+; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP18]], -8
 ; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
@@ -954,10 +954,10 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-LABEL: define void @switch_under_br_default_common_dest_with_case(
 ; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; FORCED-NEXT:  [[ENTRY:.*]]:
-; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP25:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[TMP26:%.*]] = sub i64 [[END1]], [[TMP25]]
+; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP26]], -8
 ; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
@@ -1107,10 +1107,10 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-LABEL: define void @br_under_switch_default_common_dest_with_case(
 ; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; FORCED-NEXT:  [[ENTRY:.*]]:
-; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP29:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[TMP30:%.*]] = sub i64 [[END1]], [[TMP29]]
+; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP30]], -8
 ; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
@@ -1261,10 +1261,10 @@ define void @large_number_of_cases(ptr %start, ptr %end) {
 ; FORCED-LABEL: define void @large_number_of_cases(
 ; FORCED-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; FORCED-NEXT:  [[ENTRY:.*]]:
-; FORCED-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; FORCED-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; FORCED-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; FORCED-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; FORCED-NEXT:    [[TMP43:%.*]] = ptrtoint ptr [[START]] to i64
+; FORCED-NEXT:    [[TMP44:%.*]] = sub i64 [[END1]], [[TMP43]]
+; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP44]], -8
 ; FORCED-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; FORCED-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8

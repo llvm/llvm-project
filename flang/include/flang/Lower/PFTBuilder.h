@@ -330,10 +330,13 @@ struct Evaluation : EvaluationVariant {
   // nodes. Members such as lexicalSuccessor and block are applicable only
   // to these nodes, plus some directives. The controlSuccessor member is
   // used for nonlexical successors, such as linking to a GOTO target. For
-  // multiway branches, it is set to the first target. Successor and exit
-  // links always target statements or directives. An internal Construct
-  // node has a constructExit link that applies to exits from anywhere within
-  // the construct.
+  // multiway branches (computed GO TO, arithmetic IF), it is set to the
+  // first target and any additional targets are recorded in
+  // extraControlSuccessors so analyses that need to see every branch target
+  // (e.g. wrappability of an unstructured construct) can enumerate them all.
+  // Successor and exit links always target statements or directives. An
+  // internal Construct node has a constructExit link that applies to exits
+  // from anywhere within the construct.
   //
   // An unstructured construct is one that contains some form of goto. This
   // is indicated by the isUnstructured member flag, which may be set on a
@@ -365,6 +368,10 @@ struct Evaluation : EvaluationVariant {
   Evaluation *parentConstruct{nullptr};  // set for nodes below the top level
   Evaluation *lexicalSuccessor{nullptr}; // set for leaf nodes, some directives
   Evaluation *controlSuccessor{nullptr}; // set for some leaf nodes
+  // Additional branch targets for multiway branches (computed GO TO,
+  // arithmetic IF). Empty for single-target branches; the first target is in
+  // controlSuccessor and the remaining ones are stored here in source order.
+  llvm::SmallVector<Evaluation *, 0> extraControlSuccessors;
   Evaluation *constructExit{nullptr};    // set for constructs
   bool isNewBlock{false};                // evaluation begins a new basic block
   bool isUnstructured{false};  // evaluation has unstructured control flow
@@ -873,6 +880,10 @@ void visitAllSymbols(const FunctionLikeUnit &funit,
 /// eval region.
 void visitAllSymbols(const Evaluation &eval,
                      std::function<void(const semantics::Symbol &)> callBack);
+
+/// Return true when \p eval is an unstructured DO or IF construct that can
+/// folded into a self-contained scf.execute_region.
+bool isWrappableConstruct(const Evaluation &eval);
 
 } // namespace Fortran::lower::pft
 

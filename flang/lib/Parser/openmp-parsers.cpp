@@ -2622,19 +2622,16 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                     Parser<OmpDelimitedMetadirectiveDirective>{}))))
 
 static constexpr DirectiveSet GetLoopDirectives() {
-  using Directive = llvm::omp::Directive;
   using SourceLanguage = llvm::omp::SourceLanguage;
   DirectiveSet loopDirectives;
 
-  for (auto dirVal{llvm::to_underlying(Directive::First_)};
-      dirVal != llvm::to_underlying(Directive::Last_) + 1; ++dirVal) {
-    auto dirId{static_cast<Directive>(dirVal)};
+  for (auto dirId : llvm::omp::directives()) {
     auto assoc{getDirectiveAssociation(dirId)};
     if (assoc == llvm::omp::Association::LoopNest ||
         assoc == llvm::omp::Association::LoopSeq) {
       auto langs{getDirectiveLanguages(dirId)};
       if (llvm::to_underlying(langs & SourceLanguage::Fortran) != 0) {
-        loopDirectives.set(dirVal);
+        loopDirectives.set(llvm::to_underlying(dirId));
       }
     }
   }

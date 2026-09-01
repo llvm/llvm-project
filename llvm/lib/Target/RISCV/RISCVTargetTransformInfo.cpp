@@ -1720,6 +1720,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                           cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
                           0, cast<VectorType>(ICA.getReturnType()));
   }
+  case Intrinsic::vp_merge: {
+    // If an operand is a binary op and the type is legal, RISCVVectorPeephole
+    // will likely fold the resulting vmerge.vvm away.
+    if (ICA.getVectorInstrContext() == VectorInstrContext::BinaryOp &&
+        getTypeLegalizationCost(RetTy).first == 1)
+      return TTI::TCC_Free;
+    break;
+  }
   case Intrinsic::fptoui_sat:
   case Intrinsic::fptosi_sat: {
     InstructionCost Cost = 0;

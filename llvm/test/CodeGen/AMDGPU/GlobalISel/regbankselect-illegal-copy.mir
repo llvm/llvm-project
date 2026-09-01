@@ -1,5 +1,5 @@
-# RUN: not llc -mtriple=amdgcn -mcpu=gfx600 -run-pass=regbankselect -regbankselect-fast -filetype=null %s 2>&1 | FileCheck %s
-# RUN: not llc -mtriple=amdgcn -mcpu=gfx600 -run-pass=regbankselect -regbankselect-greedy -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=amdgpu6.00 -run-pass=regbankselect -regbankselect-fast -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=amdgpu6.00 -run-pass=regbankselect -regbankselect-greedy -filetype=null %s 2>&1 | FileCheck %s
 
 # Check behavior for illegal copies.
 

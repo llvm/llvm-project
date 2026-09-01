@@ -173,4 +173,4 @@ TEST(ErrorCAPITest, CustomErrorTypeId) {
   orc_rt_Error_freeErrorMessage(Msg);
 }
 
-} // end anonymous namespace
+} // namespace

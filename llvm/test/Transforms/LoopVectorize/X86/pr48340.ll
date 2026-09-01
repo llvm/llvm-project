@@ -12,8 +12,8 @@ define ptr @foo(ptr %p, ptr %p.last) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[P_LAST1:%.*]] = ptrtoint ptr [[P_LAST:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P_LAST1]], -1024
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[P3]], [[P_LAST1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP6]], -1024
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 10
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 16
@@ -22,11 +22,11 @@ define ptr @foo(ptr %p, ptr %p.last) #0 {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 10
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P_LAST]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[P]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[P_LAST]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 1024, i64 2048, i64 3072>
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[TMP5]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD]], <4 x i64> splat (i64 4096)
@@ -41,13 +41,13 @@ define ptr @foo(ptr %p, ptr %p.last) #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[P]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[P_LAST]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P2:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[P_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i64, ptr [[P2]], i64 128
 ; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P2]], align 8
-; CHECK-NEXT:    [[B:%.*]] = icmp eq ptr [[P_INC]], [[P_LAST]]
+; CHECK-NEXT:    [[B:%.*]] = icmp eq ptr [[P_INC]], [[P]]
 ; CHECK-NEXT:    br i1 [[B]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi ptr [ [[V]], [[LOOP]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ]
@@ -72,8 +72,8 @@ define ptr @bar(ptr %p, ptr %p.last) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[P_LAST1:%.*]] = ptrtoint ptr [[P_LAST:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P_LAST1]], -1024
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[P3]], [[P_LAST1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP6]], -1024
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 10
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 16
@@ -82,11 +82,11 @@ define ptr @bar(ptr %p, ptr %p.last) #0 {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 10
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P_LAST]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[P]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[P_LAST]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 1024, i64 2048, i64 3072>
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[TMP5]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD]], <4 x i64> splat (i64 4096)
@@ -101,13 +101,13 @@ define ptr @bar(ptr %p, ptr %p.last) #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[P]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[P_LAST]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P2:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[P_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i64, ptr [[P2]], i64 128
 ; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P2]], align 8
-; CHECK-NEXT:    [[B:%.*]] = icmp eq ptr [[P_INC]], [[P_LAST]]
+; CHECK-NEXT:    [[B:%.*]] = icmp eq ptr [[P_INC]], [[P]]
 ; CHECK-NEXT:    br i1 [[B]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi ptr [ [[V]], [[LOOP]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ]

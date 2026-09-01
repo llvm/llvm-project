@@ -1284,6 +1284,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // Loop over the PHI nodes in the original block, setting incoming values.
   for (PHINode *PN : OrigPHINode) {
     if (CompletelyUnroll) {
+      // The RAUW below disconnects the original PHI from its users.
+      // Invalidate cached SCEVs while the def-use chain is still intact.
+      if (SE)
+        SE->forgetValue(PN);
       PN->replaceAllUsesWith(PN->getIncomingValueForBlock(Preheader));
       PN->eraseFromParent();
     } else if (ULO.Count > 1) {

@@ -5,25 +5,9 @@ define i32 @test(ptr %p, i32 %n, ptr %p2) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[N:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i16> [[TMP0]] to <4 x i32>
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[ARRAYIDX_4]], align 2
-; CHECK-NEXT:    [[CONV_4:%.*]] = sext i16 [[TMP7]] to i32
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 10
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX_5]], align 2
-; CHECK-NEXT:    [[CONV_5:%.*]] = sext i16 [[TMP3]] to i32
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
-; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX_6]], align 2
-; CHECK-NEXT:    [[CONV_6:%.*]] = sext i16 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP5]], [[CONV_4]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[CONV_5]], [[CONV_6]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[OP_RDX]], [[OP_RDX1]]
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 14
-; CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[ARRAYIDX_7]], align 2
-; CHECK-NEXT:    [[CONV_7:%.*]] = sext i16 [[TMP6]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[OP_RDX2]], [[CONV_7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[TMP0]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP1]])
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[P2]], align 4
 ; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[TMP2]], [[N]]
 ; CHECK-NEXT:    ret i32 [[ADD1]]

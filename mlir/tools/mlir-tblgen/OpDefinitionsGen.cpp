@@ -2175,7 +2175,8 @@ generateNamedOperandGetters(const Operator &op, Class &opClass,
                     "'SameVariadicOperandSize' traits");
   }
 
-  // Print the ods names so they don't need to be hardcoded in the source.
+  // Print the ODS indices of operands so they don't need to be hardcoded in the
+  // source.
   for (int i = 0; i != numOperands; ++i) {
     const auto &operand = op.getOperand(i);
     if (operand.name.empty())
@@ -2387,6 +2388,17 @@ void OpEmitter::genNamedResultGetters() {
     PrintFatalError(op.getLoc(),
                     "op cannot have both 'AttrSizedResultSegments' and "
                     "'SameVariadicResultSize' traits");
+  }
+
+  // Print the ODS indices of results so they don't need to be hardcoded in the
+  // source.
+  for (int i = 0; i != numResults; ++i) {
+    const auto &result = op.getResult(i);
+    if (result.name.empty())
+      continue;
+
+    opClass.declare<Field>("static constexpr int",
+                           Twine("odsIndex_") + result.name + " = " + Twine(i));
   }
 
   // Build the initializer string for the result segment size attribute.

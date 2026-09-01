@@ -4,12 +4,12 @@
 define void @foo(ptr %start, ptr %end) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START:%.*]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[END1]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[END1]], -1
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[START2]], i64 [[TMP1]])
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[START:%.*]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[END1]], i64 [[TMP10]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[UMIN]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -24,8 +24,8 @@ define void @foo(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i32 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 -1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 -1, [[INDUCTION3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[END]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[END]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[START]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[START]], i32 [[TMP5]]
 ; CHECK-NEXT:    store i8 0, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
@@ -40,9 +40,9 @@ define void @foo(ptr %start, ptr %end) {
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[COUNT_09:%.*]] = phi i32 [ [[ADD:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 -1, [[COUNT_09]]
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[END]], i32 [[ADD]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[START]], i32 [[ADD]]
 ; CHECK-NEXT:    store i8 0, ptr [[G]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[START]], [[G]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[END]], [[G]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       while.end.loopexit:
 ; CHECK-NEXT:    ret void

@@ -26,6 +26,10 @@
 
 namespace llvm {
 
+namespace yaml {
+class ContiguousBlobAccumulator;
+}
+
 namespace COFF {
 
 inline Characteristics operator|(Characteristics a, Characteristics b) {
@@ -74,7 +78,7 @@ struct SectionDataEntry {
   std::optional<object::coff_load_configuration64> LoadConfig64;
 
   LLVM_ABI size_t size() const;
-  LLVM_ABI void writeAsBinary(raw_ostream &OS) const;
+  LLVM_ABI void writeAsBinary(yaml::ContiguousBlobAccumulator &CBA) const;
 };
 
 struct Section {

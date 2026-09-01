@@ -815,9 +815,45 @@ bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {
   return A.block() == B.block();
 }
 
-bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
-  return hasSameBase(A, B) && A.BS.Base == B.BS.Base &&
-         A.getFieldDesc()->IsArray;
+bool Pointer::elemsOfSameArray(const Pointer &A, const Pointer &B) {
+  assert(hasSameBase(A, B));
+  assert(A.isBlockPointer());
+  assert(B.isBlockPointer());
+
+  if (A.BS.Base == B.BS.Base)
+    return true;
+
+  if (A.isBaseClass() || B.isBaseClass())
+    return false;
+
+  if (A.getField() || B.getField())
+    return false;
+
+  auto closestArray = [](const Pointer &P) -> PtrView {
+    if (P.isArrayRoot())
+      return P.view();
+
+    PtrView V = P.view();
+    if (V.isArrayElement() || V.isOnePastEnd())
+      V = V.expand().getArray();
+
+    if (P.isRoot())
+      return P.view();
+
+    while (!V.isRoot() && !V.getFieldDesc()->IsArray) {
+      if (V.isArrayElement()) {
+        V = V.expand().getArray();
+        break;
+      }
+      V = V.getBase();
+    }
+    return V;
+  };
+
+  if (closestArray(A) != closestArray(B))
+    return false;
+
+  return true;
 }
 
 bool Pointer::pointsToLiteral() const {
@@ -949,7 +985,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
         unsigned NB = Record->getNumBases();
         unsigned NV = Ptr.isBaseClass() ? 0 : Record->getNumVirtualBases();
 
-        R = APValue(APValue::UninitStruct(), NB, NF);
+        R = APValue(APValue::UninitStruct(), NB, NF, NV);
 
         for (unsigned I = 0; I != NF; ++I) {
           const Record::Field *FD = Record->getField(I);
@@ -978,7 +1014,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           QualType VirtBaseTy =
               Ctx.getASTContext().getCanonicalTagType(VD->Decl);
           PtrView VP = Ptr.atField(VD->Offset);
-          Ok &= Composite(VirtBaseTy, VP, R.getStructBase(NB + I));
+          Ok &= Composite(VirtBaseTy, VP, R.getStructVirtualBase(I));
         }
       }
       return Ok;

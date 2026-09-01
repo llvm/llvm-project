@@ -12,33 +12,59 @@ declare { double, double } @llvm.modf.f64(double)
 declare { <2 x double>, <2 x double> } @llvm.modf.v2f64(<2 x double>)
 
 define { half, half } @test_modf_f16(half %x) {
-; GFX9-LABEL: test_modf_f16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_movk_i32 s4, 0x7c00
-; GFX9-NEXT:    v_trunc_f16_e32 v1, v0
-; GFX9-NEXT:    v_sub_f16_e32 v2, v0, v1
-; GFX9-NEXT:    v_cmp_neq_f16_e64 vcc, |v0|, s4
-; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v2, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: test_modf_f16:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x7c00
+; GFX9-SDAG-NEXT:    v_trunc_f16_e32 v1, v0
+; GFX9-SDAG-NEXT:    v_sub_f16_e32 v2, v0, v1
+; GFX9-SDAG-NEXT:    v_cmp_neq_f16_e64 vcc, |v0|, s4
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX9-SDAG-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: test_modf_f16:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_trunc_f16_e32 v1, v0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0x7c00
+; GFX9-GISEL-NEXT:    v_sub_f16_e32 v2, v0, v1
+; GFX9-GISEL-NEXT:    v_cmp_eq_f16_e64 s[4:5], |v0|, v3
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[4:5]
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0x7fff, v2
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff8000, v0
+; GFX9-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { half, half } @llvm.modf.f16(half %x)
   ret { half, half } %result
 }
 
 define half @test_modf_f16_only_use_fract(half %x) {
-; GFX9-LABEL: test_modf_f16_only_use_fract:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_movk_i32 s4, 0x7c00
-; GFX9-NEXT:    v_trunc_f16_e32 v1, v0
-; GFX9-NEXT:    v_sub_f16_e32 v1, v0, v1
-; GFX9-NEXT:    v_cmp_neq_f16_e64 vcc, |v0|, s4
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v1, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: test_modf_f16_only_use_fract:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x7c00
+; GFX9-SDAG-NEXT:    v_trunc_f16_e32 v1, v0
+; GFX9-SDAG-NEXT:    v_sub_f16_e32 v1, v0, v1
+; GFX9-SDAG-NEXT:    v_cmp_neq_f16_e64 vcc, |v0|, s4
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX9-SDAG-NEXT:    v_bfi_b32 v0, s4, v1, v0
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: test_modf_f16_only_use_fract:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_trunc_f16_e32 v1, v0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0x7c00
+; GFX9-GISEL-NEXT:    v_sub_f16_e32 v1, v0, v1
+; GFX9-GISEL-NEXT:    v_cmp_eq_f16_e64 s[4:5], |v0|, v2
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v1, 0, s[4:5]
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff8000, v0
+; GFX9-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call { half, half } @llvm.modf.f16(half %x)
   %result.0 = extractvalue { half, half } %result, 0
   ret half %result.0

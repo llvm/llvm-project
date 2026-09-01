@@ -179,21 +179,21 @@ static LLT getBufferRsrcScalarType(const LLT Ty) {
 
 static LLT getBufferRsrcRegisterType(const LLT Ty) {
   if (!Ty.isVector())
-    return LLT::fixed_vector(4, LLT::scalar(32));
+    return LLT::fixed_vector(4, LLT::integer(32));
   const unsigned NumElems = Ty.getElementCount().getFixedValue();
-  return LLT::fixed_vector(NumElems * 4, LLT::scalar(32));
+  return LLT::fixed_vector(NumElems * 4, LLT::integer(32));
 }
 
 static LLT getBitcastRegisterType(const LLT Ty) {
   const unsigned Size = Ty.getSizeInBits();
 
   if (Size <= 32) {
-    // <2 x s8> -> s16
-    // <4 x s8> -> s32
-    return LLT::scalar(Size);
+    // <2 x i8> -> i16
+    // <4 x i8> -> i32
+    return LLT::integer(Size);
   }
 
-  return LLT::scalarOrVector(ElementCount::getFixed(Size / 32), 32);
+  return LLT::fixed_vector(Size / 32, LLT::integer(32));
 }
 
 static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
@@ -292,6 +292,10 @@ static LegalityPredicate elementTypeIsLegal(unsigned TypeIdx) {
     return EltTy == LLT::scalar(16) || EltTy.getSizeInBits() >= 32;
   };
 }
+
+const LLT I16 = LLT::integer(16);
+constexpr LLT F16 = LLT::float16();
+constexpr LLT BF16 = LLT::bfloat16();
 
 constexpr LLT S1 = LLT::scalar(1);
 constexpr LLT S8 = LLT::scalar(8);
@@ -631,14 +635,14 @@ static LLT castBufferRsrcFromV4I32(MachineInstr &MI, MachineIRBuilder &B,
   if (!PointerTy.isVector()) {
     // Happy path: (4 x s32) -> (s32, s32, s32, s32) -> (p8)
     const unsigned NumParts = PointerTy.getSizeInBits() / 32;
-    const LLT S32 = LLT::scalar(32);
+    const LLT I32 = LLT::integer(32);
 
     Register VectorReg = MRI.createGenericVirtualRegister(VectorTy);
     std::array<Register, 4> VectorElems;
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
     for (unsigned I = 0; I < NumParts; ++I)
       VectorElems[I] =
-          B.buildExtractVectorElementConstant(S32, VectorReg, I).getReg(0);
+          B.buildExtractVectorElementConstant(I32, VectorReg, I).getReg(0);
     B.buildMergeValues(MO, VectorElems);
     MO.setReg(VectorReg);
     return VectorTy;
@@ -667,7 +671,7 @@ static Register castBufferRsrcToV4I32(Register Pointer, MachineIRBuilder &B) {
     // Special case: p8 -> (s32, s32, s32, s32) -> (4xs32)
     SmallVector<Register, 4> PointerParts;
     const unsigned NumParts = PointerTy.getSizeInBits() / 32;
-    auto Unmerged = B.buildUnmerge(LLT::scalar(32), Pointer);
+    auto Unmerged = B.buildUnmerge(LLT::integer(32), Pointer);
     for (unsigned I = 0; I < NumParts; ++I)
       PointerParts.push_back(Unmerged.getReg(I));
     return B.buildBuildVector(VectorTy, PointerParts).getReg(0);
@@ -926,6 +930,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_BITCAST)
       // Don't worry about the size constraint.
       .legalIf(all(isRegisterClassType(ST, 0), isRegisterClassType(ST, 1)))
+      .widenScalarIf(all(typeInSet(0, {I16, F16, BF16}), isScalar(1)),
+                     changeTo(0, LLT::integer(32)))
+      .widenScalarIf(all(isScalar(0), typeInSet(1, {I16, F16, BF16})),
+                     changeTo(1, LLT::integer(32)))
       .lower();
 
   getActionDefinitionsBuilder(G_CONSTANT)
@@ -6701,6 +6709,14 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
   const int MemSize = MMO->getSize().getValue();
   LLT MemTy = MMO->getMemoryType();
 
+  if (IsFormat && !IsTyped && !IsD16 && MemTy.getSizeInBits() < 32) {
+    const Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "unsupported sub-dword format buffer store", MI.getDebugLoc()));
+    MI.eraseFromParent();
+    return true;
+  }
+
   VData = fixStoreSourceType(B, VData, MemTy, IsFormat);
 
   castBufferRsrcArgToV4I32(MI, B, 2);
@@ -6871,6 +6887,17 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   const bool IsD16 = IsFormat && (EltTy.getSizeInBits() == 16);
   const bool Unpacked = ST.hasUnpackedD16VMem();
 
+  if (IsFormat && !IsTyped && !IsD16 && MemTy.getSizeInBits() < 32) {
+    const Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "unsupported sub-dword format buffer load", MI.getDebugLoc()));
+    B.buildUndef(Dst);
+    if (IsTFE)
+      B.buildUndef(StatusDst);
+    MI.eraseFromParent();
+    return true;
+  }
+
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
   unsigned Opc;
@@ -6945,7 +6972,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
     B.buildTrunc(Dst, LoadDstReg);
   } else if (Unpacked && IsD16 && Ty.isVector()) {
-    LLT UnpackedTy = Ty.changeElementSize(32);
+    LLT UnpackedTy = LLT::fixed_vector(Ty.getNumElements(), LLT::integer(32));
     Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(UnpackedTy);
     buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
                     Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
@@ -7895,13 +7922,6 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
   Register RayInvDir = MI.getOperand(6).getReg();
   Register TDescr = MI.getOperand(7).getReg();
 
-  if (!ST.hasGFX10_AEncoding()) {
-    Function &Fn = B.getMF().getFunction();
-    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "intrinsic not supported on subtarget", MI.getDebugLoc()));
-    return false;
-  }
-
   RayExtent = B.buildBitcast(I32, RayExtent).getReg(0);
 
   const bool IsGFX11 = AMDGPU::isGFX11(ST);
@@ -8054,13 +8074,6 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
   Register RayDir = MI.getOperand(8).getReg();
   Register Offsets = MI.getOperand(9).getReg();
   Register TDescr = MI.getOperand(10).getReg();
-
-  if (!ST.hasBVHDualAndBVH8Insts()) {
-    Function &Fn = B.getMF().getFunction();
-    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "intrinsic not supported on subtarget", MI.getDebugLoc()));
-    return false;
-  }
 
   bool IsBVH8 = cast<GIntrinsic>(MI).getIntrinsicID() ==
                 Intrinsic::amdgcn_image_bvh8_intersect_ray;
@@ -8712,16 +8725,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   case Intrinsic::amdgcn_av_load_b128:
   case Intrinsic::amdgcn_av_store_b128: {
-    const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
-    if (!ST.hasFlatGlobalInsts()) {
-      const char *Name = IntrID == Intrinsic::amdgcn_av_load_b128
-                             ? "llvm.amdgcn.av.load.b128"
-                             : "llvm.amdgcn.av.store.b128";
-      Function &Fn = B.getMF().getFunction();
-      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-          Fn, Twine(Name) + " not supported on subtarget", MI.getDebugLoc()));
-      return false;
-    }
     assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
     if (IntrID == Intrinsic::amdgcn_av_load_b128)
       B.buildLoad(MI.getOperand(0), MI.getOperand(2), **MI.memoperands_begin());

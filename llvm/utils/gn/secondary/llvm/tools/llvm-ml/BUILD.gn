@@ -10,7 +10,7 @@ tablegen("Opts") {
 symlink_or_copy("llvm-ml64") {
   deps = [ ":llvm-ml" ]
   source = "llvm-ml"
-  output = "$root_out_dir/bin/llvm-ml64"
+  output = "$llvm_current_bindir/llvm-ml64"
 }
 
 # //:llvm-ml depends on this symlink target, see comment in //BUILD.gn.

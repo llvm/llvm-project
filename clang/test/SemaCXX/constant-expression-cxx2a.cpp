@@ -1524,3 +1524,23 @@ namespace GH150705 {
   constexpr const A& a = b;
   constexpr auto x = (a.*q)(); // expected-error {{constant expression}}
 }
+
+namespace GH197403 {
+  struct Inner {
+    constexpr ~Inner() noexcept {}
+  };
+  struct Outer {
+    Inner inner;
+  };
+  template<typename T>
+  struct BugTrigger {
+    union { T value; int dummy; };
+    constexpr BugTrigger() : value{} {}
+    constexpr ~BugTrigger() noexcept { value.~T(); }
+  };
+  consteval int test() {
+    BugTrigger<Outer> bt;
+    return 0;
+  }
+  static_assert(test() == 0);
+}

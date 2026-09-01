@@ -49,6 +49,11 @@ static cl::opt<uint64_t> RequestedVersion(
     "sample-profile-format-version", cl::init(DefaultVersion), cl::Hidden,
     cl::desc("Format version to write for extensible binary profiles"));
 
+static cl::opt<bool>
+    WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
+                        cl::desc("Write ProfileSymbolList (Cold Symbols) as "
+                                 "64-bit MD5 hashes in Eytzinger layout"));
+
 namespace llvm {
 namespace support {
 namespace endian {
@@ -422,10 +427,39 @@ std::error_code SampleProfileWriterExtBinaryBase::writeCSNameTableSection() {
 
 std::error_code
 SampleProfileWriterExtBinaryBase::writeProfileSymbolListSection() {
+  if (WriteMD5ProfSymList)
+    return writeMD5ProfileSymbolListSection();
+  return writeStringBasedProfileSymbolListSection();
+}
+
+std::error_code
+SampleProfileWriterExtBinaryBase::writeStringBasedProfileSymbolListSection() {
+  assert((!ProfSymList || !ProfSymList->isMD5()) &&
+         "Writing string-based ProfileSymbolListSection from MD5 table "
+         "not yet implemented");
   if (ProfSymList && ProfSymList->size() > 0)
     if (std::error_code EC = ProfSymList->write(*OutputStream))
       return EC;
 
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileWriterExtBinaryBase::writeMD5ProfileSymbolListSection() {
+  if (!ProfSymList || ProfSymList->size() == 0)
+    return sampleprof_error::success;
+  assert(!ProfSymList->isMD5() &&
+         "Writing MD5 ProfileSymbolListSection from existing MD5 "
+         "table not yet implemented");
+
+  auto &OS = *OutputStream;
+  std::vector<uint64_t> Keys = ProfSymList->collectGUIDs();
+
+  auto Table =
+      llvm::EytzingerTable<support::ulittle64_t>::create(std::move(Keys));
+
+  OS.write(reinterpret_cast<const char *>(Table.data()),
+           Table.size() * sizeof(support::ulittle64_t));
   return sampleprof_error::success;
 }
 
@@ -448,6 +482,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   if (Type == SecProfSummary && ExtBinaryWriteVTableTypeProf)
     addSectionFlag(SecProfSummary,
                    SecProfSummaryFlags::SecFlagHasVTableTypeProf);
+  if (Type == SecProfileSymbolList && WriteMD5ProfSymList)
+    addSectionFlag(SecProfileSymbolList, SecProfileSymbolListFlags::SecFlagMD5);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {

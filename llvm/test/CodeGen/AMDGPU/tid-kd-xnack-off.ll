@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=-xnack < %s | FileCheck --check-prefixes=ASM %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=-xnack --filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefixes=OBJ %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=-xnack --filetype=obj < %s | llvm-readelf --notes - | FileCheck --check-prefixes=ELF %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -mattr=-xnack < %s | FileCheck --check-prefixes=ASM %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -mattr=-xnack --filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefixes=OBJ %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -mattr=-xnack --filetype=obj < %s | llvm-readelf --notes - | FileCheck --check-prefixes=ELF %s
 
 ; TODO: Update to check for granulated sgpr count directive once one is added.
 

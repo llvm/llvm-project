@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ConstraintSystem.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Value.h"
@@ -198,10 +199,15 @@ void ConstraintSystem::dump() const {
         break;
       if (E.Id == 0)
         continue;
+      // The Value2Index map (and hence Names) may be absent, e.g. for the
+      // temporary system solved in isConditionImplied. Fall back to a generic
+      // variable name in that case.
+      std::string Name = E.Id <= Names.size() ? Names[E.Id - 1]
+                                              : ("%v" + std::to_string(E.Id));
       std::string Coefficient;
       if (E.Coefficient != 1)
         Coefficient = std::to_string(E.Coefficient) + " * ";
-      Parts.push_back(Coefficient + Names[E.Id - 1]);
+      Parts.push_back(Coefficient + Name);
     }
     // assert(!Parts.empty() && "need to have at least some parts");
     int64_t ConstPart = 0;
@@ -221,6 +227,66 @@ bool ConstraintSystem::mayHaveSolution() {
   return HasSolution;
 }
 
+std::pair<ConstraintSystem, SmallVector<int64_t, 8>>
+ConstraintSystem::getSubSystem(ArrayRef<int64_t> R) const {
+  // Only constraints that share a variable (transitively) with a query R can
+  // affect whether system + !R has a solution.
+  //
+  // Mark variables in the query and collect to the transitive closure over
+  // variables that co-occur in a constraint row.
+  ConstraintSystem SubSystem;
+  SmallBitVector InSystem(NumVariables + 1, false);
+  for (unsigned Id = 1, E = R.size(); Id < E; ++Id)
+    if (R[Id] != 0)
+      InSystem[Id] = true;
+  bool Changed = true;
+  while (Changed) {
+    Changed = false;
+    for (const auto &Row : Constraints) {
+      // No common variables, skip.
+      if (none_of(Row,
+                  [&](const Entry &E) { return E.Id != 0 && InSystem[E.Id]; }))
+        continue;
+      for (const Entry &E : Row)
+        if (E.Id != 0 && !InSystem[E.Id]) {
+          InSystem[E.Id] = true;
+          Changed = true;
+        }
+    }
+  }
+
+  // Assign compact indices to the variables of the sub-system.
+  SmallVector<unsigned, 16> OldToNew;
+  OldToNew.assign(NumVariables + 1, 0);
+  unsigned NextIdx = 1;
+  for (unsigned Id : InSystem.set_bits())
+    OldToNew[Id] = NextIdx++;
+
+  // Build new compact set of rows.
+  SubSystem.NumVariables = NextIdx;
+  for (const auto &Row : Constraints) {
+    if (none_of(Row,
+                [&](const Entry &E) { return E.Id != 0 && InSystem[E.Id]; }))
+      continue;
+    SmallVector<Entry, 8> NewRow;
+    for (const Entry &E : Row) {
+      if (!E.Id)
+        NewRow.emplace_back(E.Coefficient, E.Id);
+      else if (unsigned New = OldToNew[E.Id])
+        NewRow.emplace_back(E.Coefficient, New);
+    }
+    SubSystem.Constraints.push_back(std::move(NewRow));
+  }
+
+  // Remap the query row into the component's compact index space.
+  SmallVector<int64_t, 8> NewR(SubSystem.NumVariables, 0);
+  NewR[0] = R[0];
+  for (unsigned Id = 1, E = R.size(); Id < E; ++Id)
+    if (R[Id] != 0)
+      NewR[OldToNew[Id]] = R[Id];
+  return {std::move(SubSystem), std::move(NewR)};
+}
+
 bool ConstraintSystem::isConditionImplied(SmallVector<int64_t, 8> R) const {
   // If all variable coefficients are 0, we have 'C >= 0'. If the constant is >=
   // 0, R is always true, regardless of the system.
@@ -233,7 +299,22 @@ bool ConstraintSystem::isConditionImplied(SmallVector<int64_t, 8> R) const {
   if (R.empty())
     return false;
 
-  auto NewSystem = *this;
-  NewSystem.addVariableRow(R);
-  return !NewSystem.mayHaveSolution();
+  auto Copy = *this;
+  Copy.addVariableRow(R);
+  return !Copy.mayHaveSolution();
+}
+
+bool ConstraintSystem::isConditionImpliedInSubSystem(
+    SmallVector<int64_t, 8> R) const {
+  if (R.empty())
+    return false;
+
+  // Queries with no variables are trivially decided without building any
+  // component.
+  if (all_of(ArrayRef(R).drop_front(1), equal_to(0)))
+    return R[0] >= 0;
+
+  // A single query: build the component and solve it in place.
+  const auto &[SubCS, NewR] = getSubSystem(R);
+  return SubCS.isConditionImplied(NewR);
 }

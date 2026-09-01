@@ -72,12 +72,6 @@ static Register getWaveAddress(const MachineInstr *Def) {
              : Register();
 }
 
-static void diagnoseUnsupportedIntrinsic(const MachineInstr &I) {
-  const Function &F = I.getMF()->getFunction();
-  F.getContext().diagnose(DiagnosticInfoUnsupported(
-      F, "intrinsic not supported on subtarget", I.getDebugLoc(), DS_Error));
-}
-
 bool AMDGPUInstructionSelector::isVCC(Register Reg,
                                       const MachineRegisterInfo &MRI) const {
   // The verifier is oblivious to s1 being a valid value for wavesize registers.
@@ -775,6 +769,41 @@ bool AMDGPUInstructionSelector::selectS16MergeToS32(MachineInstr &MI) const {
   return true;
 }
 
+// Pack each pair of s16 into an s32 with S_PACK_LL_B32_B16, then combine the
+// s32 pieces into the destination with a REG_SEQUENCE.
+bool AMDGPUInstructionSelector::selectS16MergeToWide(MachineInstr &MI) const {
+  MachineBasicBlock *BB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register DstReg = MI.getOperand(0).getReg();
+  const unsigned DstSize = MRI->getType(DstReg).getSizeInBits();
+  const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
+  const unsigned NumSrc = MI.getNumOperands() - 1;
+
+  // Pack each pair of s16 sources into an s32.
+  SmallVector<Register, 8> S32Regs;
+  for (unsigned I = 0; I != NumSrc; I += 2) {
+    Register S32 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    auto Pack = BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_PACK_LL_B32_B16), S32)
+                    .addReg(MI.getOperand(I + 1).getReg())
+                    .addReg(MI.getOperand(I + 2).getReg());
+    constrainSelectedInstRegOperands(*Pack, TII, TRI, RBI);
+    S32Regs.push_back(S32);
+  }
+
+  // Combine the s32 pieces into the destination with a REG_SEQUENCE.
+  const TargetRegisterClass *DstRC =
+      TRI.getRegClassForSizeOnBank(DstSize, *DstBank);
+  if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+  ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(DstRC, /*EltSize=*/4);
+  auto MIB = BuildMI(*BB, MI, DL, TII.get(TargetOpcode::REG_SEQUENCE), DstReg);
+  for (unsigned I = 0, E = S32Regs.size(); I != E; ++I)
+    MIB.addReg(S32Regs[I]).addImm(SubRegs[I]);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
   MachineBasicBlock *BB = MI.getParent();
   Register DstReg = MI.getOperand(0).getReg();
@@ -788,7 +817,19 @@ bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
         MI.getNumOperands() == 3) {
       return selectS16MergeToS32(MI);
     }
-    return selectImpl(MI, *CoverageInfo);
+    // With true16 a scalar s16 is a register type, so a scalar wider than 32
+    // bits can be built from s16 pieces.
+    bool IsWideS16Merge = SrcSize == 16 && DstTy.getSizeInBits() > 32 &&
+                          DstTy.getSizeInBits() % 32 == 0;
+
+    // SGPRs have no 16-bit subregisters, so pack pairs of s16 with S_PACK.
+    if (IsWideS16Merge &&
+        RBI.getRegBank(DstReg, *MRI, TRI)->getID() != AMDGPU::VGPRRegBankID)
+      return selectS16MergeToWide(MI);
+
+    // A VGPR wide s16 merge falls through to the generic path below.
+    if (!IsWideS16Merge)
+      return selectImpl(MI, *CoverageInfo);
   }
 
   const DebugLoc &DL = MI.getDebugLoc();
@@ -1283,38 +1324,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectPermlaneSwapIntrin(I, IntrinsicID);
   case Intrinsic::amdgcn_wave_shuffle:
     return selectWaveShuffleIntrin(I);
-  case Intrinsic::amdgcn_fma_legacy:
-    if (!STI.hasFmaLegacy32Insts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_sudot4:
-  case Intrinsic::amdgcn_sudot8:
-    if (!STI.hasDot8Insts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_permlane16:
-  case Intrinsic::amdgcn_permlanex16:
-    if (!STI.hasPermlane16Insts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_mov_dpp8:
-    if (!STI.hasDPP8()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_tanh:
-    if (!STI.hasTanhInsts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -2497,12 +2506,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     if (!Subtarget->hasAsyncMark())
       return false;
     break;
-  case Intrinsic::amdgcn_exp_compr:
-    if (!STI.hasCompressedExport()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
@@ -2527,13 +2530,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
-  case Intrinsic::amdgcn_s_wakeup_barrier: {
-    if (!STI.hasSWakeupBarrier()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectNamedBarrierInst(I, IntrinsicID);
-  }
+  case Intrinsic::amdgcn_s_wakeup_barrier:
   case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);

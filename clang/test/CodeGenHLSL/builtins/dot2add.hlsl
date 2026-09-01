@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -fnative-half-type -fnative-int16-type -triple \
-// RUN:   dxil-pc-shadermodel6.4-compute %s -emit-llvm -o - | \
+// RUN:   dxil-pc-shadermodel6.4-library %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
 // RUN: %clang_cc1 -finclude-default-header -fnative-half-type -fnative-int16-type -triple \
-// RUN:   spirv-pc-vulkan-compute %s -emit-llvm -o - | \
+// RUN:   spirv-pc-vulkan-library %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
 // Test basic lowering to runtime function call.

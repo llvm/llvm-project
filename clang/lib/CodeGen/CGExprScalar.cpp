@@ -4091,12 +4091,24 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
 
   llvm::PHINode *atomicPHI = nullptr;
   if (const AtomicType *atomicTy = LHSTy->getAs<AtomicType>()) {
-    QualType type = atomicTy->getValueType();
-    if (!type->isBooleanType() && type->isIntegerType() &&
-        !(type->isUnsignedIntegerType() &&
+    // Type wrapped by _Atomic.
+    QualType AtomicValueTy = atomicTy->getValueType();
+    // Type resulting from FP conversion / integer promotion of the compound
+    // assignment operands.
+    QualType ResultTy = E->getComputationResultType();
+    // Do not try the atomicrmw op fast-path when the compound assignment may
+    // involve FP conversions, as the correct semantics would require promoting
+    // the loaded integer to double, performing FP arithmetics, and truncation
+    // back as a single atomic operation. Integer promotion is still
+    // semantically safe.
+    bool CanEmitAtomicRMW =
+        !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
+        ResultTy->isIntegerType() &&
+        !(AtomicValueTy->isUnsignedIntegerType() &&
           CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
         CGF.getLangOpts().getSignedOverflowBehavior() !=
-            LangOptions::SOB_Trapping) {
+            LangOptions::SOB_Trapping;
+    if (CanEmitAtomicRMW) {
       llvm::AtomicRMWInst::BinOp AtomicOp = llvm::AtomicRMWInst::BAD_BINOP;
       llvm::Instruction::BinaryOps Op;
       switch (OpInfo.Opcode) {
@@ -4149,7 +4161,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     llvm::BasicBlock *startBB = Builder.GetInsertBlock();
     llvm::BasicBlock *opBB = CGF.createBasicBlock("atomic_op", CGF.CurFn);
     OpInfo.LHS = EmitLoadOfLValue(LHSLV, E->getExprLoc());
-    OpInfo.LHS = CGF.EmitToMemory(OpInfo.LHS, type);
+    OpInfo.LHS = CGF.EmitToMemory(OpInfo.LHS, AtomicValueTy);
     Builder.CreateBr(opBB);
     Builder.SetInsertPoint(opBB);
     atomicPHI = Builder.CreatePHI(OpInfo.LHS->getType(), 2);

@@ -216,8 +216,8 @@ void simplifyExternals(Module &M) {
                                            AttributeList::FunctionIndex,
                                            F.getAttributes().getFnAttrs()));
     NewF->takeName(&F);
-    NewF->setMetadata(LLVMContext::MD_unique_id,
-                      F.getMetadata(LLVMContext::MD_unique_id));
+    NewF->setMetadata(LLVMContext::MD_guid,
+                      F.getMetadata(LLVMContext::MD_guid));
     F.replaceAllUsesWith(NewF);
     F.eraseFromParent();
   }

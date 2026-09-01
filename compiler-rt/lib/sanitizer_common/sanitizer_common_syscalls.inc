@@ -417,7 +417,7 @@ POST_SYSCALL(setsid)(long res) {}
 
 PRE_SYSCALL(setgroups)(long gidsetsize, __sanitizer___kernel_gid_t *grouplist) {
   if (grouplist)
-    POST_WRITE(grouplist, gidsetsize * sizeof(*grouplist));
+    PRE_READ(grouplist, gidsetsize * sizeof(*grouplist));
 }
 
 POST_SYSCALL(setgroups)
@@ -1663,7 +1663,7 @@ POST_SYSCALL(getgroups16)
 PRE_SYSCALL(setgroups16)
 (long gidsetsize, __sanitizer___kernel_old_gid_t *grouplist) {
   if (grouplist)
-    POST_WRITE(grouplist, gidsetsize * sizeof(*grouplist));
+    PRE_READ(grouplist, gidsetsize * sizeof(*grouplist));
 }
 
 POST_SYSCALL(setgroups16)

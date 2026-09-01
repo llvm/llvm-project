@@ -1635,6 +1635,13 @@ def : PatGprNoX0Simm26NoSimm12<or, QC_E_ORI>;
 def : PatGprNoX0Simm26NoSimm12<xor, QC_E_XORI>;
 } // Predicates = [HasVendorXqcilia, IsRV32]
 
+/// FrameIndex calculations
+
+let Predicates = [HasVendorXqcilia, IsRV32] in {
+  def : Pat<(riscv_add_like frameindex:$fi, simm26_nosimm12:$offset),
+            (QC_E_ADDI (iPTR (to_tframeindex $fi)), simm26_nosimm12:$offset)>;
+} // Predicates = [HasVendorXqcilia, IsRV32]
+
 /// Load/Store operations
 
 let Predicates = [HasVendorXqcilo, IsRV32], AddedComplexity = 2 in {

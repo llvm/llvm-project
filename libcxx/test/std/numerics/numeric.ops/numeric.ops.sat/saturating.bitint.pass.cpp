@@ -8,10 +8,8 @@
 
 // REQUIRES: std-at-least-c++26
 
-// TODO(LLVM25): remove these guards. Clang <= 22 mis-evaluates
-// std::saturating_mul on non-byte-aligned _BitInt. https://llvm.org/PR204085
-// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22
-// UNSUPPORTED: apple-clang-17, apple-clang-18, apple-clang-19, apple-clang-20, apple-clang-21
+// UNSUPPORTED: clang-21, clang-22
+// UNSUPPORTED: apple-clang-21
 // UNSUPPORTED: target={{.+}}-android{{.*}}
 
 // <numeric>

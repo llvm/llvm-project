@@ -250,7 +250,7 @@ macro(test_targets)
         endif()
       endif()
     elseif(COMPILER_RT_TARGET_AMDGPU)
-      test_target_arch(amdgcn "" "--target=amdgcn-amd-amdhsa" "-nogpulib"
+      test_target_arch(amdgpu "" "--target=amdgpu-amd-amdhsa" "-nogpulib"
                        "-flto" "-Xclang -mcode-object-version=none")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
       test_target_arch(hexagon "" "")

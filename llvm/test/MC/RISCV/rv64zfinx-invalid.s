@@ -9,5 +9,5 @@ fmv.x.w t2, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
 fmv.w.x a5, t5 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # FP registers where integer regs are expected
-fcvt.s.l a2, ft2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
-fcvt.s.lu a3, ft3 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+fcvt.s.l a2, ft2 # CHECK: :[[@LINE]]:14: error: register must be a GPR
+fcvt.s.lu a3, ft3 # CHECK: :[[@LINE]]:15: error: register must be a GPR

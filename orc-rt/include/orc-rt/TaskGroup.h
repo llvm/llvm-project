@@ -26,6 +26,24 @@ namespace orc_rt {
 /// all tasks have completed.
 class TaskGroup {
 public:
+  class Token;
+
+  /// A strong reference to a TaskGroup, used only to construct Tokens from it
+  /// (see Token). It exposes no operations of its own: acquisition lives on the
+  /// Token constructor so that Token remains the single point that knows the
+  /// acquire/release protocol. A TokenSource keeps the referenced TaskGroup
+  /// alive, but does not hold a Token and so does not prevent the group from
+  /// closing or completing.
+  class TokenSource {
+    friend class Token;
+
+  public:
+    TokenSource(std::shared_ptr<TaskGroup> TG) : TG(std::move(TG)) {}
+
+  private:
+    std::shared_ptr<TaskGroup> TG;
+  };
+
   /// Token represents the right to proceed with a task as part of a
   /// TaskGroup.
   ///
@@ -100,6 +118,12 @@ public:
       if (G && G->acquireToken())
         this->G = std::move(G);
     }
+
+    /// Construct a Token from the given TokenSource.
+    /// Note that this may fail if the TaskGroup has been closed. Clients must
+    /// check whether the resulting Token is valid (using operator bool())
+    /// before continuing with their task.
+    Token(const TokenSource &S) : Token(S.TG) {}
 
     /// Destroys this Token, potentially triggering task group completion if
     /// this Token represented the last running task in the TaskGroup.

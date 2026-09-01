@@ -210,6 +210,9 @@ std::string ModFileWriter::GetAsString(const Symbol &symbol) {
   }
   all << '\n' << uses_.str();
   uses_.str().clear();
+  // Re-exported reduction modules are tracked per module file, so reset the set
+  // (like usedNonIntrinsicModules_) now that this module's uses are emitted.
+  reexportedReductionModules_.clear();
   all << useExtraAttrs_.str();
   useExtraAttrs_.str().clear();
   all << decls_.str();
@@ -900,13 +903,43 @@ void ModFileWriter::PutUse(const Symbol &symbol) {
   // user "interface operator(+)". A reduction named by a plain identifier
   // ("myred") has a valid name and is emitted normally below. An operator-less
   // reduction (a special function, or an intrinsic operator on an intrinsic
-  // type) has no operator to recover through and is left to the normal path.
+  // type) has an unwritable name and no operator to recover through; it is
+  // re-exported by a plain USE of the defining module (see below).
   const Symbol &ultimate{symbol.GetUltimate()};
   if (ultimate.has<UserReductionDetails>()) {
     std::string opId{GetReductionFortranId(ultimate.name())};
     const Symbol *opSym{
         opId.empty() ? nullptr : ultimate.owner().FindSymbol(opId)};
     if (opSym && opSym->GetUltimate().has<GenericDetails>()) {
+      return;
+    }
+    // An operator-less reduction (a special function, or an intrinsic operator
+    // on an intrinsic type) has an unwritable mangled name and no operator to
+    // recover through. It can only have been re-exported by a plain USE of the
+    // defining module (a mangled name cannot appear in an only-list, and there
+    // is no operator surrogate to name), so re-export the whole module. The
+    // reduction then comes in as a shared use-association, with no facade-owned
+    // duplicate and no re-resolved directive text. Any entities the facade
+    // renames or makes private are still emitted with their own use/rename/
+    // private items, which the reader honors, so the plain USE does not widen
+    // their visibility.
+    llvm::StringRef mangled{ultimate.name().begin(), ultimate.name().size()};
+    if (mangled.starts_with("op.")) {
+      // Only a PUBLIC operator-less reduction is re-exported. If the facade
+      // made it private, it must not be re-exported at all: emitting the plain
+      // use would re-import the whole module publicly and, because the mangled
+      // name is otherwise unwritable, silently change a consumer from the
+      // intrinsic reduction to this private one across a module-file
+      // round-trip.
+      if (!symbol.attrs().test(Attr::PRIVATE)) {
+        auto &reductionUse{symbol.get<UseDetails>()};
+        const Symbol &reexportModule{GetUsedModule(reductionUse)};
+        if (!reductionUse.symbol().owner().parent().IsIntrinsicModules() &&
+            reexportedReductionModules_.insert(reexportModule).second) {
+          uses_ << "use " << reexportModule.name() << '\n';
+          usedNonIntrinsicModules_.insert(reexportModule);
+        }
+      }
       return;
     }
   }

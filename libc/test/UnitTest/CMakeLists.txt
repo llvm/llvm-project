@@ -40,7 +40,7 @@ function(add_unittest_framework_library name)
   endif()
   target_compile_options(${name}.unit PRIVATE ${compile_options})
 
-    _get_hermetic_test_compile_options(compile_options "")
+  _get_hermetic_test_compile_options(compile_options "")
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
   target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
 
@@ -100,6 +100,17 @@ set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
 if(${LIBC_TARGET_OS} STREQUAL "linux" OR ${LIBC_TARGET_OS} STREQUAL "darwin")
   list(APPEND libc_death_test_srcs ExecuteFunctionUnix.cpp)
 endif()
+set(libc_death_tess_deps libc.hdr.stdint_proxy)
+if (LLVM_LIBC_FULL_BUILD)
+  list(APPEND libc_death_tess_deps
+    libc.include.llvm-libc-macros.poll-macros
+    libc.include.llvm-libc-macros.signal_macros
+    libc.include.llvm-libc-macros.sys_wait_macros
+    libc.include.llvm-libc-types.pid_t
+    libc.include.llvm-libc-types.struct_pollfd
+    libc.src.__support.libc_assert
+  )
+endif()
 
 add_unittest_framework_library(
   LibcDeathTestExecutors
@@ -108,7 +119,7 @@ add_unittest_framework_library(
   HDRS
     ExecuteFunction.h
   DEPENDS
-    libc.hdr.stdint_proxy
+    ${libc_death_tess_deps}
 )
 
 add_unittest_framework_library(
@@ -221,4 +232,14 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.properties.architectures
     libc.src.errno.errno
+)
+
+add_header_library(
+  ConstraintHandlerCheckingTest
+  HDRS
+    ConstraintHandlerCheckingTest.h
+  DEPENDS
+    libc.hdr.types.constraint_handler_t
+    libc.hdr.types.errno_t
+    libc.src.stdlib.set_constraint_handler_s
 )

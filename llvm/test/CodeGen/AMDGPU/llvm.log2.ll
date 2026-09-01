@@ -2131,16 +2131,27 @@ define float @v_log2_f32_from_fpext_f16(i16 %src.i) {
 }
 
 define float @v_log2_f32_from_fpext_math_f16(i16 %src0.i, i16 %src1.i) {
-; SI-LABEL: v_log2_f32_from_fpext_math_f16:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_add_f32_e32 v0, v0, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_log_f32_e32 v0, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-SDAG-LABEL: v_log2_f32_from_fpext_math_f16:
+; SI-SDAG:       ; %bb.0:
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-SDAG-NEXT:    v_add_f32_e32 v0, v0, v1
+; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-SDAG-NEXT:    v_log_f32_e32 v0, v0
+; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-GISEL-LABEL: v_log2_f32_from_fpext_math_f16:
+; SI-GISEL:       ; %bb.0:
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_log_f32_e32 v0, v0
+; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_log2_f32_from_fpext_math_f16:
 ; VI:       ; %bb.0:
@@ -3403,7 +3414,5 @@ attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; GFX689-SDAG: {{.*}}
 ; GFX900-GISEL: {{.*}}
 ; GFX900-SDAG: {{.*}}
-; SI-GISEL: {{.*}}
-; SI-SDAG: {{.*}}
 ; VI-GISEL: {{.*}}
 ; VI-SDAG: {{.*}}

@@ -28,7 +28,7 @@ bundle_data("clangxpc_bundle_xpc_service_info_plist") {
 
 bundle_data("clangxpc_bundle_xpc_service_executable") {
   public_deps = [ "//clang-tools-extra/clangd/tool:clangd" ]
-  sources = [ "$root_out_dir/bin/clangd" ]
+  sources = [ "$llvm_current_bindir/clangd" ]
   outputs = [ "{{bundle_executable_dir}}/{{source_file_part}}" ]
 }
 

@@ -1,29 +1,10 @@
 ! RUN: split-file %s %t
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/do_loop_with_stop.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK1
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/do_loop_with_cycle_goto.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK2
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/nested_goto_loop.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK3
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/nested_loop_with_inner_goto.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK4
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_lt.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK7
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_gt.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK8
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_nested.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK6
-
-//--- do_loop_with_stop.f90
-
-subroutine do_loop_with_stop()
-  integer :: i
-  integer, parameter :: n = 10
-  real, dimension(n) :: a, b
-
-  !$acc kernels
-  do i = 1, n
-    a(i) = b(i) + 1.0
-    if (i == 5) stop
-  end do
-  !$acc end kernels
-
-! CHECK1: not yet implemented: unstructured do loop in acc kernels
-
-end subroutine
 
 //--- do_loop_with_cycle_goto.f90
 

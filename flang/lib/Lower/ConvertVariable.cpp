@@ -495,20 +495,6 @@ createGlobalInitialization(fir::FirOpBuilder &builder, fir::GlobalOp global,
   builder.restoreInsertionPoint(insertPt);
 }
 
-static unsigned getAllocatorIdxFromDataAttr(cuf::DataAttributeAttr dataAttr) {
-  if (dataAttr) {
-    if (dataAttr.getValue() == cuf::DataAttribute::Pinned)
-      return kPinnedAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Device)
-      return kDeviceAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Managed)
-      return kManagedAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Unified)
-      return kUnifiedAllocatorPos;
-  }
-  return kDefaultAllocator;
-}
-
 /// Create the global op and its init if it has one
 fir::GlobalOp Fortran::lower::defineGlobal(
     Fortran::lower::AbstractConverter &converter,
@@ -564,12 +550,19 @@ fir::GlobalOp Fortran::lower::defineGlobal(
         fir::HasValueOp::create(b, loc, box);
       });
     } else {
-      // Create unallocated/disassociated descriptor if no explicit init
+      // Create unallocated/disassociated descriptor if no explicit init. Under
+      // -gpu=unified, back a plain module allocatable/pointer with managed
+      // memory by baking the unified allocator index into the descriptor.
+      const bool cudaUnifiedBacking =
+          converter.getFoldingContext().languageFeatures().IsEnabled(
+              Fortran::common::LanguageFeature::CudaUnified);
+      unsigned allocatorIdx =
+          Fortran::lower::getAllocatorIdxForUnified(sym, cudaUnifiedBacking);
       createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
         mlir::Value box = fir::factory::createUnallocatedBox(
             b, loc, symTy,
             /*nonDeferredParams=*/{},
-            /*typeSourceBox=*/{}, getAllocatorIdxFromDataAttr(dataAttr));
+            /*typeSourceBox=*/{}, allocatorIdx);
         fir::HasValueOp::create(b, loc, box);
       });
     }
@@ -1070,12 +1063,15 @@ enum class VariableCleanUp { Finalize, Deallocate };
 /// 7.5.6.3 point 3 or if it is an allocatable that must be deallocated. Note
 /// that deallocation will trigger finalization if the type has any.
 static std::optional<VariableCleanUp>
-needDeallocationOrFinalization(const Fortran::lower::pft::Variable &var) {
+needDeallocationOrFinalization(const Fortran::lower::pft::Variable &var,
+                               bool deallocateMainProgramVariable = false) {
   if (!var.hasSymbol())
     return std::nullopt;
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   const Fortran::semantics::Scope &owner = sym.owner();
   if (owner.kind() == Fortran::semantics::Scope::Kind::MainProgram) {
+    if (deallocateMainProgramVariable)
+      return VariableCleanUp::Deallocate;
     // The standard does not require finalizing main program variables.
     return std::nullopt;
   }
@@ -1274,8 +1270,10 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
   auto *builder = &converter.getFirOpBuilder();
-  if (needCUDAAlloc(var.getSymbol()) &&
-      !cuf::isCUDADeviceContext(builder->getRegion())) {
+  bool needsHostCudaCleanup = needCUDAAlloc(var.getSymbol()) &&
+                              !cuf::isCUDADeviceContext(builder->getRegion());
+  bool deallocateMainProgramVariable = false;
+  if (needsHostCudaCleanup) {
     cuf::DataAttributeAttr dataAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
                                                         var.getSymbol());
@@ -1283,10 +1281,15 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     fir::ExtendedValue exv =
         converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
     auto *sym = &var.getSymbol();
-    const Fortran::semantics::Scope &owner = sym->owner();
-    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram &&
-        dataAttr.getValue() != cuf::DataAttribute::Shared) {
-      converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
+    // Free the CUF storage, including in the main program: this is storage
+    // cleanup, not finalization, so it must not be skipped there.
+    if (dataAttr.getValue() != cuf::DataAttribute::Shared) {
+      deallocateMainProgramVariable =
+          sym->owner().kind() == Fortran::semantics::Scope::Kind::MainProgram &&
+          Fortran::semantics::IsAllocatable(*sym);
+      Fortran::lower::StatementContext &cudaCleanupCtx =
+          converter.getCudaCleanupCtx();
+      cudaCleanupCtx.attachCleanup([builder, loc, exv, sym]() {
         cuf::DataAttributeAttr dataAttr =
             Fortran::lower::translateSymbolCUFDataAttribute(
                 builder->getContext(), *sym);
@@ -1296,14 +1299,17 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   }
 
   if (std::optional<VariableCleanUp> cleanup =
-          needDeallocationOrFinalization(var)) {
+          needDeallocationOrFinalization(var, deallocateMainProgramVariable)) {
     auto *builder = &converter.getFirOpBuilder();
     mlir::Location loc = converter.getCurrentLocation();
     fir::ExtendedValue exv =
         converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
+    Fortran::lower::StatementContext &cleanupCtx =
+        needsHostCudaCleanup ? converter.getCudaCleanupCtx()
+                             : converter.getFctCtx();
     switch (*cleanup) {
     case VariableCleanUp::Finalize:
-      converter.getFctCtx().attachCleanup([builder, loc, exv]() {
+      cleanupCtx.attachCleanup([builder, loc, exv]() {
         mlir::Value box = builder->createBox(loc, exv);
         fir::runtime::genDerivedTypeDestroy(*builder, loc, box);
       });
@@ -1311,7 +1317,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     case VariableCleanUp::Deallocate:
       auto *converterPtr = &converter;
       auto *sym = &var.getSymbol();
-      converter.getFctCtx().attachCleanup([converterPtr, loc, exv, sym]() {
+      cleanupCtx.attachCleanup([converterPtr, loc, exv, sym]() {
         const fir::MutableBoxValue *mutableBox =
             exv.getBoxOf<fir::MutableBoxValue>();
         assert(mutableBox &&
@@ -2327,9 +2333,17 @@ void Fortran::lower::mapSymbolAttributes(
           TODO(loc,
                "derived type allocatable or pointer with length parameters");
     }
+    // Under -gpu=unified, bake the unified allocator index into the descriptor
+    // at creation so runtime-driven allocations (allocate-on-assignment,
+    // SOURCE=, ...) get managed backing, not just explicit ALLOCATE.
+    const bool cudaUnifiedBacking =
+        converter.getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::CudaUnified) &&
+        !cuf::isCUDADeviceContext(builder.getRegion());
     fir::MutableBoxValue box = Fortran::lower::createMutableBox(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
-        Fortran::lower::getAllocatorIdx(var.getSymbol()));
+        Fortran::lower::getAllocatorIdxForUnified(var.getSymbol(),
+                                                  cudaUnifiedBacking));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);
     return;

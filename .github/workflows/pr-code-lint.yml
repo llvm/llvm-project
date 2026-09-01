@@ -21,14 +21,14 @@ jobs:
       run:
         shell: bash
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint:latest@sha256:91665a4e158d3b2a4b93da1ebdab3067196a8b48f1f84759cc83c09e9d038ee5'
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint:latest@sha256:416874e477b33c1cb66a30e77e0b9942b7333a7bd304c2f1d51743e7adaedd54'
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           fetch-depth: 2

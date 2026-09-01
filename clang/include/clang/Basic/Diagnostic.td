@@ -191,60 +191,80 @@ class CompatWarningId<string name, int std, string diag, string diag_pre> {
   string CategoryName = ?;
 }
 
-// C++ compatibility warnings.
-multiclass CXXCompat<
+// Compatibility warnings.
+multiclass CompatWarning<
+    // Diagnostic message.
     string message,
+    // Version number.
     int std_ver,
+    // Is this C++?
+    bit cxx,
+    // ExtWarn if true, Extension if false.
     bit ext_warn = true,
-    string std_ver_override = ""#std_ver> {
-    // 'X is a C++YZ extension'.
-    def compat_pre_cxx#std_ver#_#NAME :
-        Diagnostic<!strconcat(message, " a C++", std_ver_override,  " extension"),
+    // Language mode name to use in the diagnostic text.
+    string std_ver_name = ""#std_ver,
+    // Version string used in diagnostic group names.
+    string diag_group_ver_str = ""#std_ver> {
+    defvar lang = !if(cxx, "C++", "C");
+    defvar prefix = !if(cxx, "CXX", "C");
+    defvar prefix_lower = !tolower(prefix#diag_group_ver_str);
+    defvar is_cxx_11 = !and(cxx, !eq(std_ver, 11));
+
+    // 'X is a C(++)YZ extension'.
+    def compat_pre_#prefix_lower#_#NAME :
+        Diagnostic<!strconcat(message, " a ", lang, std_ver_name,  " extension"),
                    CLASS_EXTENSION,
                    !if(ext_warn, SEV_Warning, SEV_Ignored)>,
-        InGroup<!cast<DiagGroup>("CXX"#std_ver)>;
+        InGroup<!cast<DiagGroup>(prefix#diag_group_ver_str)>;
 
-    // 'X is incompatible with C++98' (if std_ver == 11).
-    // 'X is incompatible with C++ standards before C++YZ' (otherwise).
-    def compat_cxx#std_ver#_#NAME :
-        Warning<!if(!eq(std_ver, 11),
+    // 'X is incompatible with C++98' (if is_cxx_11 is true).
+    // 'X is incompatible with C(++) standards before C(++)YZ' (otherwise).
+    def compat_#prefix_lower#_#NAME :
+        Warning<!if(is_cxx_11,
                     !strconcat(message, " incompatible with C++98"),
-                    !strconcat(message, " incompatible with C++ standards before C++", std_ver_override))>,
-        InGroup<!cast<DiagGroup>(!if(!eq(std_ver, 11),
-                                     "CXX98Compat",
-                                     "CXXPre"#std_ver#"Compat"))>,
+                    !strconcat(message, " incompatible with ", lang, " standards before ", lang, std_ver_name))>,
+        InGroup<!cast<DiagGroup>(!if(is_cxx_11,
+                                     prefix#"98Compat",
+                                     prefix#"Pre"#diag_group_ver_str#"Compat"))>,
         DefaultIgnore;
 
     def : CompatWarningId<
         NAME, std_ver,
-        "compat_cxx"#std_ver#"_"#NAME,
-        "compat_pre_cxx"#std_ver#"_"#NAME>;
+        "compat_"#prefix_lower#"_"#NAME,
+        "compat_pre_"#prefix_lower#"_"#NAME>;
 }
 
-// These generate pairs of C++ compatibility warnings of the form:
+// These generate pairs of C(++) compatibility warnings of the form:
 //
-//    - compat_cxx<std>_<name>
-//    - compat_pre_cxx<std>_<name>
+//    - compat_c(xx)<std>_<name>
+//    - compat_pre_c(xx)<std>_<name>
 //
-// The 'compat_cxx...' warning is intended to be issued in C++<std> mode,
-// and the 'compat_pre_cxx...' warning in C++ modes before C++<std>.
+// The 'compat_c(xx)...' warning is intended to be issued in C(++)<std> mode,
+// and the 'compat_pre_c(xx)...' warning in C(++) modes before C(++)<std>.
 //
 // Example:
 //
-//   defm inline_variable : CXX17Compat<"inline variables are">;
+//   defm inline_variable : C(XX)11Compat<"inline variables are">;
 //
 // This generates two warnings:
 //
-//   - compat_cxx17_inline_variable:     'inline variables are incompatible with C++ standards before C++17'
-//   - compat_pre_cxx17_inline_variable: 'inline variables are a C++17 extension'
+//   - compat_c(xx)11_inline_variable:     'inline variables are incompatible with C(++) standards before C(++)11'
+//   - compat_pre_c(xx)11_inline_variable: 'inline variables are a C(++)11 extension'
 //
-multiclass CXX11Compat<string message, bit ext_warn = true> : CXXCompat<message, 11, ext_warn>;
-multiclass CXX14Compat<string message, bit ext_warn = true> : CXXCompat<message, 14, ext_warn>;
-multiclass CXX17Compat<string message, bit ext_warn = true> : CXXCompat<message, 17, ext_warn>;
-multiclass CXX20Compat<string message, bit ext_warn = true> : CXXCompat<message, 20, ext_warn>;
-multiclass CXX23Compat<string message, bit ext_warn = true> : CXXCompat<message, 23, ext_warn>;
-multiclass CXX26Compat<string message, bit ext_warn = true> : CXXCompat<message, 26, ext_warn, "2c">;
-multiclass CXX29Compat<string message, bit ext_warn = true> : CXXCompat<message, 29, ext_warn, "2d">;
+multiclass CXX11Compat<string message, bit ext_warn = true> : CompatWarning<message, 11, /*cxx=*/true, ext_warn>;
+multiclass CXX14Compat<string message, bit ext_warn = true> : CompatWarning<message, 14, /*cxx=*/true, ext_warn>;
+multiclass CXX17Compat<string message, bit ext_warn = true> : CompatWarning<message, 17, /*cxx=*/true, ext_warn>;
+multiclass CXX20Compat<string message, bit ext_warn = true> : CompatWarning<message, 20, /*cxx=*/true, ext_warn>;
+multiclass CXX23Compat<string message, bit ext_warn = true> : CompatWarning<message, 23, /*cxx=*/true, ext_warn>;
+multiclass CXX26Compat<string message, bit ext_warn = true> : CompatWarning<message, 26, /*cxx=*/true, ext_warn, "2c">;
+multiclass CXX29Compat<string message, bit ext_warn = true> : CompatWarning<message, 29, /*cxx=*/true, ext_warn, "2d">;
+
+// C compatibility warnings generally use Extension rather than ExtWarn.
+multiclass C99Compat<string message, bit ext_warn = false> : CompatWarning<message, 99, /*cxx=*/false, ext_warn>;
+multiclass C11Compat<string message, bit ext_warn = false> : CompatWarning<message, 11, /*cxx=*/false, ext_warn>;
+multiclass C17Compat<string message, bit ext_warn = false> : CompatWarning<message, 17, /*cxx=*/false, ext_warn>;
+multiclass C23Compat<string message, bit ext_warn = false> : CompatWarning<message, 23, /*cxx=*/false, ext_warn>;
+multiclass C2yCompat<string message, bit ext_warn = false> : CompatWarning<message, 29, /*cxx=*/false, ext_warn, "2y", "2y">;
 
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"

@@ -7,7 +7,7 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu10.10-amd-amdhsa < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu11.00-amd-amdhsa < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
 
 define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; SI-LABEL: is_private_vgpr:

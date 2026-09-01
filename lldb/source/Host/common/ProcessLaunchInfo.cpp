@@ -359,7 +359,7 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
         // There should only be one argument that is the shell command itself
         // to be used as is
         if (argv[0] && !argv[1])
-          shell_command.Printf("%s", argv[0]);
+          shell_command.PutCString(argv[0]);
         else
           return false;
       } else {

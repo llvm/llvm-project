@@ -112,22 +112,22 @@ define i32 @or_reduction_with_freeze(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    [[DST6:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-NEXT:    [[SRC4:%.*]] = ptrtoint ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[DST3:%.*]] = ptrtoint ptr [[DST]] to i64
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST6]], [[SRC7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[SRC]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 10
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[DST1]] to i3
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[SRC2]] to i3
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[DST3]] to i3
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[SRC4]] to i3
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i3 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i3 [[TMP5]] to i64
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[DST3]], [[SRC4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[DST6]], [[SRC7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 8

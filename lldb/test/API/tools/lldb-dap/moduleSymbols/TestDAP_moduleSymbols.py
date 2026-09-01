@@ -3,8 +3,8 @@ Test lldb-dap moduleSymbols request
 """
 
 from lldbsuite.test.decorators import skipIfWindows
-from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs, ModuleSymbolsArgs
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, ModuleSymbolsArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_moduleSymbols(DAPTestCaseBase):

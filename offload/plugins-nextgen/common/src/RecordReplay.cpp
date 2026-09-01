@@ -286,7 +286,6 @@ Error NativeRecordReplayTy::recordDescImpl(
   uint32_t MaxThreads = UserThreads
                             ? std::min(UserThreads, Kernel.getMaxThreads())
                             : Kernel.getMaxThreads();
-  assert(MaxThreads >= 0 && "MaxThreads must be greater than zero.");
   json::Array JsonThreadsLimits;
   JsonThreadsLimits.push_back(1);
   JsonThreadsLimits.push_back(MaxThreads);

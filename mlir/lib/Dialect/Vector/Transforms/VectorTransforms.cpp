@@ -244,7 +244,7 @@ struct CombineContractResultTranspose final
   }
 };
 
-/// Merge BroadcastOp into ContractionOp user.
+/// Merge BroadcastOp (and broadcast-like ShapeCastOp) into ContractionOp user.
 /// Ex:
 /// ```
 ///   %0 = vector.broadcast %arg0 : vector<32x16xf32> to vector<8x32x16xf32>
@@ -282,21 +282,34 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
   bool changed = false;
   for (Value *operand : {&lhs, &rhs}) {
     AffineMap &map = maps[index++];
+
+    // Accept operands defined by vector.broadcast and broadcast-like
+    // vector.shape_cast.
+    auto sc = operand->getDefiningOp<vector::ShapeCastOp>();
     auto broadcast = operand->getDefiningOp<vector::BroadcastOp>();
-    if (!broadcast)
+    if (!broadcast && !sc)
       continue;
+
+    if (sc && !sc.isBroadcastLike())
+      return rewriter.notifyMatchFailure(
+          contractOp, "Operand defined via vector.shape_cast that has "
+                      "non-broadcast semantics");
+
+    // Get the source and the result types.
+    VectorType srcType = sc ? sc.getSourceVectorType()
+                            : dyn_cast<VectorType>(broadcast.getSourceType());
+    VectorType resType =
+        sc ? sc.getResultVectorType() : broadcast.getResultVectorType();
+
     // contractionOp can only take vector as operands.
-    auto srcType = dyn_cast<VectorType>(broadcast.getSourceType());
-    if (!srcType ||
-        srcType.getRank() == broadcast.getResultVectorType().getRank())
+    // auto srcType = dyn_cast<VectorType>(broadcast.getSourceVectorType());
+    if (!srcType || srcType.getRank() >= resType.getRank())
       continue;
-    int64_t rankDiff =
-        broadcast.getResultVectorType().getRank() - srcType.getRank();
+    int64_t rankDiff = resType.getRank() - srcType.getRank();
     bool innerDimBroadcast = false;
     SmallVector<AffineExpr> originalDims;
     for (const auto &dim : llvm::enumerate(srcType.getShape())) {
-      if (dim.value() !=
-          broadcast.getResultVectorType().getDimSize(rankDiff + dim.index())) {
+      if (dim.value() != resType.getDimSize(rankDiff + dim.index())) {
         innerDimBroadcast = true;
         break;
       }
@@ -311,7 +324,7 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
     // of non-unit size.
     bool nonUnitDimReductionBroadcast = false;
     for (int64_t i = 0; i < rankDiff; ++i) {
-      if (broadcast.getResultVectorType().getDimSize(i) != 1 &&
+      if (resType.getDimSize(i) != 1 &&
           isReductionIterator(contractOp.getIteratorTypes()
                                   .getValue()[map.getDimPosition(i)])) {
         nonUnitDimReductionBroadcast = true;
@@ -321,11 +334,10 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
     if (nonUnitDimReductionBroadcast)
       continue;
 
-    AffineMap broadcastMap =
-        AffineMap::get(broadcast.getResultVectorType().getRank(), 0,
-                       originalDims, contractOp.getContext());
+    AffineMap broadcastMap = AffineMap::get(resType.getRank(), 0, originalDims,
+                                            contractOp.getContext());
     map = broadcastMap.compose(map);
-    *operand = broadcast.getSource();
+    *operand = broadcast ? broadcast.getSource() : sc.getSource();
     changed = true;
   }
 

@@ -138,9 +138,6 @@ enum ActionKind {
   /// Run one or more source code analyses.
   RunAnalysis,
 
-  /// Dump template instantiations
-  TemplightDump,
-
   /// Just lex, no output.
   RunPreprocessorOnly,
 

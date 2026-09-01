@@ -762,7 +762,7 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
 
 static bool CompareStackID(const StackFrameSP &stack_sp,
                            const StackID &stack_id) {
-  return stack_sp->GetStackID() < stack_id;
+  return stack_sp->GetStackID().IsYoungerThan(stack_id);
 }
 
 StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {

@@ -302,3 +302,15 @@ namespace PseudoDtorOnGlobal {
     a.m.~T(); // both-note {{cannot modify an object that is visible outside}}
   }
 }
+
+namespace UninitializedAndLifetime {
+  struct A { int n; };
+  constexpr void use_after_destroy() {
+    A a; // both-note {{declared here}}
+    a.~A();
+    A b = a; // both-note {{in call}} \
+             // both-note {{read of object outside its lifetime}}
+  }
+  static_assert((use_after_destroy(), true)); // both-error {{not an integral constant expression}} \
+                                              // both-note {{in call}}
+}

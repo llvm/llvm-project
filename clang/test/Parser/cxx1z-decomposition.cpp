@@ -152,6 +152,7 @@ namespace Template {
 }
 
 #define MYC C
+#define CLOSE_NO_INIT ] ;
 
 namespace Init {
   template<typename T> T f(T t) {
@@ -171,6 +172,8 @@ namespace Init {
     T t1 = t; // check that uninitialized structured binding declaration error works with templates and macros
     auto [t0, t2] MYC = {t, t1}; // expected-error{{structured binding declaration '[t0, t2]' requires an initializer; expected '=' or braced initializer list}} expected-error{{expected ';' at end of declaration}}
                                  // CHECK: :[[@LINE-1]]:19: error: structured binding declaration '[t0, t2]' requires an initializer; expected '=' or braced initializer list
+    auto [bad4 CLOSE_NO_INIT // expected-error {{structured binding declaration '[bad4]' requires an initializer; expected '=' or braced initializer list}}
+                             // CHECK: :[[@LINE-1]]:10: error: structured binding declaration '[bad4]' requires an initializer; expected '=' or braced initializer list
   }
 }
 

@@ -3,12 +3,12 @@
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.00 < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.70 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1170,GFX1170-SDAG,GFX1170-SDAG-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1170,GFX1170-SDAG,GFX1170-SDAG-FAKE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu11.70 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1170,GFX1170-GISEL,GFX1170-GISEL-TRUE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1170,GFX1170-GISEL,GFX1170-GISEL-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.70 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1170,GFX1170-GISEL,GFX1170-GISEL-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1170,GFX1170-GISEL,GFX1170-GISEL-FAKE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-SDAG,GFX12-SDAG-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-SDAG,GFX12-SDAG-FAKE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-TRUE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-FAKE16 %s
 
 define amdgpu_ps float @test_fminimum_f32_vv(float %a, float %b) {
 ; GFX9-LABEL: test_fminimum_f32_vv:
@@ -445,14 +445,25 @@ define amdgpu_ps half @test_fminimum_f16_vv(half %a, half %b) {
 }
 
 define amdgpu_ps half @test_fminimum_f16_ss(half inreg %a, half inreg %b) {
-; GFX9-LABEL: test_fminimum_f16_ss:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-NEXT:    v_min_f16_e32 v1, s0, v0
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x7e00
-; GFX9-NEXT:    v_cmp_o_f16_e32 vcc, s0, v0
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX9-NEXT:    ; return to shader part epilog
+; GFX9-SDAG-LABEL: test_fminimum_f16_ss:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-SDAG-NEXT:    v_min_f16_e32 v1, s0, v0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, 0x7e00
+; GFX9-SDAG-NEXT:    v_cmp_o_f16_e32 vcc, s0, v0
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX9-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX9-GISEL-LABEL: test_fminimum_f16_ss:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-GISEL-NEXT:    v_min_f16_e32 v1, s0, v0
+; GFX9-GISEL-NEXT:    v_cmp_o_f16_e32 vcc, s0, v0
+; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX9-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
+; GFX9-GISEL-NEXT:    s_cselect_b32 s0, s1, 0x7e00
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1170-SDAG-TRUE16-LABEL: test_fminimum_f16_ss:
 ; GFX1170-SDAG-TRUE16:       ; %bb.0:

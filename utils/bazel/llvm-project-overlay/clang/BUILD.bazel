@@ -2755,7 +2755,9 @@ cc_library(
         ":basic",
         ":frontend",
         ":scalable_static_analysis_core",
+        ":scalable_static_analysis_source_transformation",
         ":sema",
+        ":tooling_core",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -2777,7 +2779,10 @@ cc_binary(
 
 cc_binary(
     name = "clang-ssaf-linker",
-    srcs = ["tools/clang-ssaf-linker/SSAFLinker.cpp"],
+    srcs = glob([
+        "tools/clang-ssaf-linker/*.cpp",
+        "tools/clang-ssaf-linker/*.h",
+    ]),
     deps = [
         ":basic",
         ":scalable_static_analysis_analyses",
@@ -2786,5 +2791,6 @@ cc_binary(
         ":scalable_static_analysis_tool",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )

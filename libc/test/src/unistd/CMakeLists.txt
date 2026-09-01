@@ -24,6 +24,7 @@ add_libc_unittest(
   SRCS
     access_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -58,6 +59,7 @@ add_libc_unittest(
   SRCS
     chown_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.hdr.fcntl_macros
     libc.include.unistd
     libc.src.errno.errno
@@ -78,6 +80,7 @@ add_libc_unittest(
   SRCS
     dup_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -97,6 +100,7 @@ add_libc_unittest(
   SRCS
     dup2_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -116,6 +120,7 @@ add_libc_unittest(
   SRCS
     dup3_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -135,6 +140,7 @@ add_libc_unittest(
   SRCS
     faccessat_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -168,6 +174,7 @@ add_libc_unittest(
   SRCS
     fchown_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.hdr.fcntl_macros
     libc.include.unistd
     libc.src.errno.errno
@@ -188,6 +195,7 @@ add_libc_unittest(
   SRCS
     ftruncate_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -208,6 +216,7 @@ add_libc_unittest(
   SRCS
     pread_pwrite_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -228,6 +237,7 @@ add_libc_unittest(
   SRCS
     read_write_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -247,6 +257,7 @@ add_libc_unittest(
   SRCS
     link_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -264,6 +275,7 @@ add_libc_unittest(
   SRCS
     linkat_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -401,6 +413,7 @@ add_libc_unittest(
   SRCS
     symlink_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -418,6 +431,7 @@ add_libc_unittest(
   SRCS
     symlinkat_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -435,6 +449,7 @@ add_libc_unittest(
   SRCS
     truncate_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -455,6 +470,7 @@ add_libc_unittest(
   SRCS
     unlink_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -471,6 +487,7 @@ add_libc_unittest(
   SRCS
     unlinkat_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.src.errno.errno
     libc.src.fcntl.open
@@ -563,6 +580,7 @@ add_libc_unittest(
   SRCS
     isatty_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.src.unistd.isatty
     libc.src.fcntl.open
     libc.src.unistd.close
@@ -588,6 +606,7 @@ add_libc_unittest(
   SRCS
     syscall_test.cpp
   DEPENDS
+    libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.hdr.fcntl_macros
     libc.include.sys_syscall

@@ -3,8 +3,8 @@ Test exception behavior in DAP with obj-c throw.
 """
 
 from lldbsuite.test.decorators import skipUnlessDarwin
-from lldbsuite.test.tools.lldb_dap.dap_types import ExceptionFilterOptions, LaunchArgs
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import ExceptionFilterOptions, LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_exception_objc(DAPTestCaseBase):

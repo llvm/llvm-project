@@ -35,8 +35,8 @@ set(NVPTXCodeGen_sources
   NVPTXMCExpr.cpp
   NVPTXMarkKernelPtrsGlobal.cpp
   NVPTXPeephole.cpp
-  NVPTXSetByValParamAlign.cpp
   NVPTXPrologEpilogPass.cpp
+  NVPTXPromoteParamAlign.cpp
   NVPTXProxyRegErasure.cpp
   NVPTXRegisterInfo.cpp
   NVPTXReplaceImageHandles.cpp

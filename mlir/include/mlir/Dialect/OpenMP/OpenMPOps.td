@@ -1001,7 +1001,8 @@ def TaskOp : OpenMP_Op<"task", traits = [
     OutlineableOpenMPOpInterface
   ], clauses = [
     OpenMP_AffinityClause, OpenMP_AllocateClause, OpenMP_DependClause,
-    OpenMP_FinalClause, OpenMP_IfClause, OpenMP_InReductionClause,
+    OpenMP_FinalClause, OpenMP_IfClause,
+    OpenMP_InReductionClauseSkip<assemblyFormat = true>,
     OpenMP_MergeableClause, OpenMP_PriorityClause, OpenMP_PrivateClause,
     OpenMP_UntiedClause, OpenMP_DetachClause
   ], singleRegion = true> {
@@ -1047,9 +1048,10 @@ def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
     DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
-    OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_MergeableClause,
-    OpenMP_NogroupClause, OpenMP_NumTasksClause, OpenMP_PriorityClause,
-    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_UntiedClause
+    OpenMP_IfClause, OpenMP_InReductionClauseSkip<assemblyFormat = true>,
+    OpenMP_MergeableClause, OpenMP_NogroupClause, OpenMP_NumTasksClause,
+    OpenMP_PriorityClause, OpenMP_PrivateClause, OpenMP_ReductionClause,
+    OpenMP_UntiedClause
   ], singleRegion = true> {
   let summary = "OutlinableOpenMPOpInterface wrapper for taskloop construct";
   let description = [{
@@ -1662,6 +1664,15 @@ def TargetOp : OpenMP_Op<"target", traits = [
   ];
 
   let extraClassDeclaration = [{
+    // Override BlockArgOpenMPOpInterface method because `in_reduction` list
+    // items on `omp.target` do not define entry block arguments. The reduction
+    // variable is accessed inside the target body through its matching
+    // `map_entries` block argument; the `in_reduction` operands are kept only
+    // as host-side metadata used to look up the per-task private storage.
+    unsigned numInReductionBlockArgs() {
+      return 0;
+    }
+
     mlir::Value getMappedValueForPrivateVar(unsigned privVarIdx) {
       std::optional<DenseI64ArrayAttr> privateMapIdices = getPrivateMapsAttr();
 
@@ -1686,8 +1697,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
     " | `map_iterated` `(` $map_iterated `:` type($map_iterated) `)`)" # [{
       custom<TargetOpRegion>(
           $region, $has_device_addr_vars, type($has_device_addr_vars),
-          $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
-          type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
+          $host_eval_vars, type($host_eval_vars),
           $map_vars, type($map_vars), $private_vars, type($private_vars),
           $private_syms, $private_needs_barrier, $private_maps) attr-dict
     }];

@@ -34,15 +34,24 @@ template <typename Tag> struct ID {
   }
 };
 
+/// The lifetime analyses do not benefit from canonicalizing their immutable
+/// collections, so they opt out of it via these aliases.
+template <typename T>
+using SetTy =
+    llvm::ImmutableSet<T, llvm::ImutContainerInfo<T>, /*Canonicalize=*/false>;
+
+template <typename KeyT, typename ValT>
+using MapTy = llvm::ImmutableMap<KeyT, ValT, llvm::ImutKeyValueInfo<KeyT, ValT>,
+                                 /*Canonicalize=*/false>;
+
 /// Computes the union of two ImmutableSets.
 template <typename T>
-llvm::ImmutableSet<T> join(llvm::ImmutableSet<T> A, llvm::ImmutableSet<T> B,
-                           typename llvm::ImmutableSet<T>::Factory &F) {
+SetTy<T> join(SetTy<T> A, SetTy<T> B, typename SetTy<T>::Factory &F) {
   if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
     return A;
   if (A.getHeight() < B.getHeight())
     std::swap(A, B);
-  for (const T &E : B)
+  for (const auto &E : B)
     A = F.add(A, E);
   return A;
 }
@@ -67,11 +76,10 @@ enum class JoinKind {
 // TODO(opt): This key-wise join is a performance bottleneck. A more
 // efficient merge could be implemented using a Patricia Trie or HAMT
 // instead of the current AVL-tree-based ImmutableMap.
-template <typename K, typename V, typename Joiner>
-llvm::ImmutableMap<K, V> join(const llvm::ImmutableMap<K, V> &A,
-                              const llvm::ImmutableMap<K, V> &B,
-                              typename llvm::ImmutableMap<K, V>::Factory &F,
-                              Joiner JoinValues, JoinKind Kind) {
+template <typename KeyT, typename ValT, typename Joiner>
+MapTy<KeyT, ValT> join(const MapTy<KeyT, ValT> &A, const MapTy<KeyT, ValT> &B,
+                       typename MapTy<KeyT, ValT>::Factory &F,
+                       Joiner JoinValues, JoinKind Kind) {
   if (A.getRootWithoutRetain() == B.getRootWithoutRetain())
     return A;
   if (A.getHeight() < B.getHeight())
@@ -79,19 +87,13 @@ llvm::ImmutableMap<K, V> join(const llvm::ImmutableMap<K, V> &A,
 
   // For each element in B, join it with the corresponding element in A
   // (or with an empty value if it doesn't exist in A).
-  llvm::ImmutableMap<K, V> Res = A;
-  for (const auto &Entry : B) {
-    const K &Key = Entry.first;
-    const V &ValB = Entry.second;
+  MapTy<KeyT, ValT> Res = A;
+  for (const auto &[Key, ValB] : B)
     Res = F.add(Res, Key, JoinValues(A.lookup(Key), &ValB));
-  }
   if (Kind == JoinKind::Symmetric) {
-    for (const auto &Entry : A) {
-      const K &Key = Entry.first;
-      const V &ValA = Entry.second;
+    for (const auto &[Key, ValA] : A)
       if (!B.contains(Key))
         Res = F.add(Res, Key, JoinValues(&ValA, nullptr));
-    }
   }
   return Res;
 }

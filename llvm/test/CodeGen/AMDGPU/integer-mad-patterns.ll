@@ -15,17 +15,17 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.0a-amd-amdpal < %s | FileCheck -check-prefixes=GFX9,GFX90A,GFX9-GISEL,GFX90A-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgpu10.30-amd-amdpal < %s | FileCheck -check-prefixes=GFX10,GFX10-SDAG %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu10.30-amd-amdpal < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu10.30-amd-amdpal < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.00-amd-amdpal -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-SDAG,GFX11-SDAG-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.00-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-SDAG,GFX11-SDAG-FAKE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu11.00-amd-amdpal -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu11.00-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.00-amd-amdpal -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.00-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-FAKE16 %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00-amd-amdpal -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1200,GFX1200-SDAG,GFX1200-SDAG-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1200,GFX1200-SDAG,GFX1200-SDAG-FAKE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu12.00-amd-amdpal -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1200,GFX1200-GISEL,GFX1200-GISEL-TRUE16 %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu12.00-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1200,GFX1200-GISEL,GFX1200-GISEL-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00-amd-amdpal -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1200,GFX1200-GISEL,GFX1200-GISEL-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1200,GFX1200-GISEL,GFX1200-GISEL-FAKE16 %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG,GFX1250-FAKE16,GFX1250-SDAG-FAKE16 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-FAKE16,GFX1250-GISEL-FAKE16 %s

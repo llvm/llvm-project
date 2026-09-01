@@ -173,6 +173,7 @@ LLVM_ABI void initializeLoadStoreOptPass(PassRegistry &);
 LLVM_ABI void initializeLoadStoreVectorizerLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLocalStackSlotPassPass(PassRegistry &);
 LLVM_ABI void initializeLocalizerPass(PassRegistry &);
+LLVM_ABI void initializeLogicalSROALegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLoopDataPrefetchLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLoopExtractorLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLoopInfoWrapperPassPass(PassRegistry &);

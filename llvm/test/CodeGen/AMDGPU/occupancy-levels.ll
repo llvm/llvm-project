@@ -1,32 +1,32 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx950 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX950 %s
+; RUN: llc -mtriple=amdgpu9.00 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgpu9.50 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX950 %s
 ; The amdhsa OS implicitly enables the trap handler, which reserves 16 SGPRs per
 ; wave. The reported occupancy of SGPR-limited kernels must account for that, so
 ; the same kernels reach a lower occupancy than on the non-amdhsa runs above.
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX9TRAP %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX950TRAP %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1010,GFX1010W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-xnack -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1010,GFX1010W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1030,GFX1030W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1030,GFX1030W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1101 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1101 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1102 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1030,GFX1030W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1102 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1030,GFX1030W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1030,GFX1030W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1030,GFX1030W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1151 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1151 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1152 < %s | FileCheck --check-prefixes=GCN,GFX1030,GFX1030W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1152 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1030,GFX1030W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1153 < %s | FileCheck --check-prefixes=GCN,GFX1030,GFX1030W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1153 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1030,GFX1030W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GCN,GFX1250 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX9TRAP %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX950TRAP %s
+; RUN: llc -mtriple=amdgpu10.10 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1010,GFX1010W32 %s
+; RUN: llc -mtriple=amdgpu10.10 -mattr=-xnack -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1010,GFX1010W64 %s
+; RUN: llc -mtriple=amdgpu10.30 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1030,GFX1030W32 %s
+; RUN: llc -mtriple=amdgpu10.30 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1030,GFX1030W64 %s
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
+; RUN: llc -mtriple=amdgpu11.01 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
+; RUN: llc -mtriple=amdgpu11.01 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
+; RUN: llc -mtriple=amdgpu11.02 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1030,GFX1030W32 %s
+; RUN: llc -mtriple=amdgpu11.02 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1030,GFX1030W64 %s
+; RUN: llc -mtriple=amdgpu11.50 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1030,GFX1030W32 %s
+; RUN: llc -mtriple=amdgpu11.50 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1030,GFX1030W64 %s
+; RUN: llc -mtriple=amdgpu11.51 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
+; RUN: llc -mtriple=amdgpu11.51 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
+; RUN: llc -mtriple=amdgpu11.52 < %s | FileCheck --check-prefixes=GCN,GFX1030,GFX1030W32 %s
+; RUN: llc -mtriple=amdgpu11.52 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1030,GFX1030W64 %s
+; RUN: llc -mtriple=amdgpu11.53 < %s | FileCheck --check-prefixes=GCN,GFX1030,GFX1030W32 %s
+; RUN: llc -mtriple=amdgpu11.53 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1030,GFX1030W64 %s
+; RUN: llc -mtriple=amdgpu12.00 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
+; RUN: llc -mtriple=amdgpu12.00 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
+; RUN: llc -mtriple=amdgpu12.50 < %s | FileCheck --check-prefixes=GCN,GFX1250 %s
+; RUN: llc -mtriple=amdgpu13.10 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
 
 ; GCN-LABEL: {{^}}max_occupancy:
 ; GFX9:       ; Occupancy: 10

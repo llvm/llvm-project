@@ -13,6 +13,10 @@ import sys
 
 @skipIfTargetDoesNotSupportThreads()
 class TestGuiSpawnThreadsTest(PExpectTest):
+    # This tests spawns threads, so low resources on the host may
+    # lead to the test program being stalled for a long time.
+    TIMEOUT = PExpectTest.TIMEOUT * 2
+
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan

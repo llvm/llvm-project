@@ -11,25 +11,6 @@
 // cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
-namespace cwg1504 { // cwg1504: 23
-#if __cplusplus >= 201103L
-  // CWG1504: Pointer arithmetic after derived-base conversion
-  struct Base { int x; };
-  struct Derived : Base { int y; };
-  constexpr Derived arr[2] = {};
-
-  // Pointer arithmetic on a base pointer into a derived array is UB,
-  // and the constexpr evaluator must diagnose it.
-  constexpr int test(int n) {
-    return ((const Base*)arr)[n].x; // #cwg1504-x
-  }
-  constexpr int bad = test(1);
-  // since-cxx11-error@-1 {{constexpr variable 'bad' must be initialized by a constant expression}}
-  // since-cxx11-note@#cwg1504-x {{cannot access field of pointer past the end of object}}
-  // since-cxx11-note@-3 {{in call to 'test(1)'}}
-#endif
-} // namespace cwg1504
-
 namespace cwg1512 { // cwg1512: 4
   void f(char *p) {
     if (p > 0) {}

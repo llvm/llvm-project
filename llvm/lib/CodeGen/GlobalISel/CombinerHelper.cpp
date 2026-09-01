@@ -2290,8 +2290,7 @@ bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
     return false;
 
   Register RHS = MI.getOperand(2).getReg();
-  MachineInstr *MIShiftAmt = MRI.getVRegDef(RHS);
-  auto MaybeShiftAmtVal = isConstantOrConstantSplatVector(*MIShiftAmt, MRI);
+  auto MaybeShiftAmtVal = isConstantOrConstantSplatVector(RHS, MRI);
   if (!MaybeShiftAmtVal)
     return false;
 
@@ -2938,8 +2937,7 @@ bool CombinerHelper::matchInsertExtractVecEltOutOfBounds(
 bool CombinerHelper::matchConstantSelectCmp(MachineInstr &MI,
                                             unsigned &OpIdx) const {
   GSelect &SelMI = cast<GSelect>(MI);
-  auto Cst =
-      isConstantOrConstantSplatVector(*MRI.getVRegDef(SelMI.getCondReg()), MRI);
+  auto Cst = isConstantOrConstantSplatVector(SelMI.getCondReg(), MRI);
   if (!Cst)
     return false;
   OpIdx = Cst->isZero() ? 3 : 2;
@@ -3049,8 +3047,7 @@ bool CombinerHelper::matchConstantOp(const MachineOperand &MOP,
                                      int64_t C) const {
   if (!MOP.isReg())
     return false;
-  auto *MI = MRI.getVRegDef(MOP.getReg());
-  auto MaybeCst = isConstantOrConstantSplatVector(*MI, MRI);
+  auto MaybeCst = isConstantOrConstantSplatVector(MOP.getReg(), MRI);
   return MaybeCst && MaybeCst->getBitWidth() <= 64 &&
          MaybeCst->getSExtValue() == C;
 }
@@ -5344,7 +5341,6 @@ bool CombinerHelper::tryReassocBinOp(unsigned Opc, Register DstReg,
   if (OpLHSDef->getOpcode() != Opc)
     return false;
 
-  MachineInstr *OpRHSDef = MRI.getVRegDef(OpRHS);
   Register OpLHSLHS = OpLHSDef->getOperand(1).getReg();
   Register OpLHSRHS = OpLHSDef->getOperand(2).getReg();
 
@@ -5352,9 +5348,9 @@ bool CombinerHelper::tryReassocBinOp(unsigned Opc, Register DstReg,
   // other constants in the expression tree. Folding is not guaranteed so we
   // might have (C1 op C2). In that case do not pull a constant out because it
   // won't help and can lead to infinite loops.
-  if (isConstantOrConstantSplatVector(*MRI.getVRegDef(OpLHSRHS), MRI) &&
-      !isConstantOrConstantSplatVector(*MRI.getVRegDef(OpLHSLHS), MRI)) {
-    if (isConstantOrConstantSplatVector(*OpRHSDef, MRI)) {
+  if (isConstantOrConstantSplatVector(OpLHSRHS, MRI) &&
+      !isConstantOrConstantSplatVector(OpLHSLHS, MRI)) {
+    if (isConstantOrConstantSplatVector(OpRHS, MRI)) {
       // (Opc (Opc X, C1), C2) -> (Opc X, (Opc C1, C2))
       MatchInfo = [=](MachineIRBuilder &B) {
         auto NewCst = B.buildInstr(Opc, {OpRHSTy}, {OpLHSRHS, OpRHS});
@@ -7037,7 +7033,7 @@ bool CombinerHelper::matchRepeatedFPDivisor(
     return false;
 
   auto IsOne = [this](Register X) {
-    auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
+    auto N0CFP = isConstantOrConstantSplatVectorFP(X, MRI);
     return N0CFP && (N0CFP->isOne() || N0CFP->isMinusOne());
   };
 
