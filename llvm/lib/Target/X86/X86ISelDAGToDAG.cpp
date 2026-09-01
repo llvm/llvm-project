@@ -5690,7 +5690,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::x86_tcvtrowps2phh_internal:
     case Intrinsic::x86_tcvtrowps2phl_internal:
     case Intrinsic::x86_tilemovrow_internal: {
-      if (!Subtarget->hasAMXAVX512())
+      if (!Subtarget->hasAMXAVX512() && !Subtarget->hasACEV1())
         break;
       auto *MFI =
           CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();

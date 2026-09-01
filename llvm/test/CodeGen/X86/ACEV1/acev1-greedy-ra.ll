@@ -1,10 +1,11 @@
-; ACE v1 Greedy Register Allocation Test
-; Tests that tile registers are allocated correctly in a separate pass
-; Note: ACE v1 uses TILEMOVROW to extract tile data (not TILESTORED)
-;
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1,+avx512f,+avx512bf16 -verify-machineinstrs -stop-after x86-tile-config | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1,+avx10.1 -verify-machineinstrs -stop-after x86-tile-config | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1 -verify-machineinstrs -stop-after x86-tile-config | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+acev1,+amx-tile -verify-machineinstrs -stop-after x86-tile-config | FileCheck %s
 
-; Test basic tile register allocation for ACE
+; Test the tile register is allocated in a separate pass. ACE v1 alone, and
+; composed with AMX-TILE, must both work. ACE v1 extracts tile data with
+; TILEMOVROW rather than TILESTORED.
+
 define void @test_acev1_ra(ptr %out, <32 x bfloat> %zmm_a, <32 x bfloat> %zmm_b) nounwind {
   ; CHECK-LABEL: name: test_acev1_ra
   ; CHECK: PLDTILECFGV
