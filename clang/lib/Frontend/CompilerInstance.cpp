@@ -170,9 +170,9 @@ bool CompilerInstance::createTarget() {
   if (auto *Aux = getAuxTarget()) {
     getTarget().setAuxTarget(Aux);
 
-    // The target has taken everything it takes from the host target by now.
-    if (getLangOpts().isTargetDevice() &&
-        !getTarget().checkHostCompatibility(getDiagnostics(), Aux->getTriple()))
+    // The target has taken everything it takes from the auxiliary target by
+    // now, which TargetInfo::adjust() above is too early for.
+    if (!getTarget().checkAuxTargetCompatibility(getDiagnostics()))
       return false;
   }
 

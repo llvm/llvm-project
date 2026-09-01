@@ -326,14 +326,10 @@ public:
   static TargetInfo *CreateTargetInfo(DiagnosticsEngine &Diags,
                                       TargetOptions &Opts);
 
-  /// Reports an error, and a note per offending type, if a pointer related type
-  /// (the pointer size and alignment, size_t, ptrdiff_t, and intptr_t) that
-  /// this device target took from the given host target disagrees with its own
-  /// data layout. Returns true if no error was reported. Call this once the
-  /// target has taken whatever it takes from the host target, that is, after
-  /// setAuxTarget().
-  bool checkHostCompatibility(DiagnosticsEngine &Diags,
-                              const llvm::Triple &HostTriple) const;
+  /// Diagnoses the pointer related types that this target took from its
+  /// auxiliary target if they disagree with its own data layout. Returns true
+  /// if no error was reported. Call after setAuxTarget().
+  bool checkAuxTargetCompatibility(DiagnosticsEngine &Diags) const;
 
   virtual ~TargetInfo();
 

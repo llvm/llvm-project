@@ -836,15 +836,20 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
 using namespace clang::targets;
 
-bool TargetInfo::checkHostCompatibility(DiagnosticsEngine &Diags,
-                                        const llvm::Triple &HostTriple) const {
+bool TargetInfo::checkAuxTargetCompatibility(DiagnosticsEngine &Diags) const {
+  // Only a device target takes its pointer related types from another target,
+  // and only such a target is given the triple of the target it takes them
+  // from.
+  StringRef HostTriple = getTargetOpts().HostTriple;
+  if (HostTriple.empty())
+    return true;
+
   // Logical SPIR-V has no pointer size to require.
   if (getTriple().isSPIRVLogical())
     return true;
 
-  // Whatever this target took from the host target, it has to hold a pointer,
-  // whose size and alignment its own data layout fixes. A target that took
-  // nothing agrees with itself and is reported here in no case.
+  // These getters return what the target took from the host, so a disagreement
+  // with the width its own data layout fixes is a host/device mismatch.
   unsigned Required = getTriple().getArchPointerBitWidth();
   struct Mismatch {
     unsigned Which;
@@ -870,7 +875,7 @@ bool TargetInfo::checkHostCompatibility(DiagnosticsEngine &Diags,
     return true;
 
   Diags.Report(diag::err_incompatible_host_and_device_targets)
-      << getTriple().str() << HostTriple.str();
+      << getTriple().str() << HostTriple;
   for (const Mismatch &M : Mismatches)
     Diags.Report(diag::note_incompatible_host_and_device_type)
         << M.Which << M.TypeName << M.HostBits / getCharWidth()
