@@ -715,6 +715,9 @@ features cannot lower the translation-unit ABI level;
 
 #### WebAssembly Support
 
+- Added `__builtin_wasm_memory_copy` and `__builtin_wasm_memory_fill` builtins
+  for the WebAssembly `memory.copy` and `memory.fill` bulk memory instructions.
+
 #### AVR Support
 
 #### SystemZ Support

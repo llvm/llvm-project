@@ -3097,6 +3097,34 @@ TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX1030), 106u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetVGPRAllocGranule) {
+  // Wave64 / wave32. gfx90a+ has a fixed granule; targets with 1536 physical
+  // VGPRs use 12/24; gfx10.3+ uses 8/16; everything else 4/8.
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX600, false), 4u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX600, true), 8u);
+
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX90A, false), 8u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX90A, true), 8u);
+
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1010, false), 4u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1010, true), 8u);
+
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1030, false), 8u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1030, true), 16u);
+
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1100, false), 12u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1100, true), 24u);
+
+  // An unknown GPU falls back to the base granule.
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_NONE, false), 4u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_NONE, true), 8u);
+
+  // The SubArch overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(Triple::AMDGPUSubArch90A, true), 8u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(Triple::AMDGPUSubArch1030, true), 16u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(Triple::AMDGPUSubArch1100, true), 24u);
+}
+
 TEST(TargetParserTest, testAMDGPUgetMaxHWAddressableLocalMemorySize) {
   // The addressable cap is a fixed hardware property, independent of how many
   // SIMDs a work-group runs on.
