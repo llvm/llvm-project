@@ -653,63 +653,60 @@ RISCVInstructionSelector::selectAddrRegImmLsb00000(MachineOperand &Root) const {
   if (!Root.isReg())
     return std::nullopt;
 
-  MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
-  if (RootDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+  Register RootReg = Root.getReg();
+
+  // Frame index.
+  int FI;
+  if (mi_match(RootReg, *MRI, m_GFrameIndex(FI))) {
     return {{
-        [=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); },
+        [=](MachineInstrBuilder &MIB) { MIB.addFrameIndex(FI); },
         [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
     }};
   }
 
-  if (isBaseWithConstantOffset(Root, *MRI)) {
-    MachineOperand &LHS = RootDef->getOperand(1);
-    MachineOperand &RHS = RootDef->getOperand(2);
-    MachineInstr *LHSDef = MRI->getVRegDef(LHS.getReg());
-    MachineInstr *RHSDef = MRI->getVRegDef(RHS.getReg());
-    int64_t RHSC = RHSDef->getOperand(1).getCImm()->getSExtValue();
-
+  // base + constant offset (G_PTR_ADD).
+  Register BaseReg;
+  int64_t RHSC;
+  if (mi_match(RootReg, *MRI, m_GPtrAdd(m_Reg(BaseReg), m_ICst(RHSC)))) {
     if (isInt<12>(RHSC)) {
       // Not a multiple of 32: can't encode, use the address as-is.
       if ((RHSC & 0b11111) != 0) {
-        return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+        return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RootReg); },
                  [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
       }
       // Fold the offset.
-      if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+      int BaseFI;
+      if (mi_match(BaseReg, *MRI, m_GFrameIndex(BaseFI)))
         return {{
-            [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
+            [=](MachineInstrBuilder &MIB) { MIB.addFrameIndex(BaseFI); },
             [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); },
         }};
-      return {{[=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(BaseReg); },
                [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
     }
 
     // Large constant: fold a -2048/2016 adjustment to save an instruction.
     if ((-2049 >= RHSC && RHSC >= -4096) || (4063 >= RHSC && RHSC >= 2017)) {
       int64_t Adj = RHSC < 0 ? -2048 : 2016;
-      return renderAddiPair(LHS.getReg(), RHSC - Adj, Adj);
+      return renderAddiPair(BaseReg, RHSC - Adj, Adj);
     }
 
     // Otherwise split the constant into Hi (materialized + added to the base)
     // and Lo12 (folded offset).
-    if (auto Fns = computeConstAddr(RHSC, /*IsPrefetch=*/true, LHS.getReg()))
+    if (auto Fns = computeConstAddr(RHSC, /*IsPrefetch=*/true, BaseReg))
       return Fns;
   }
 
   // Bare constant address. IRTranslator emits inttoptr(C) as
   // G_INTTOPTR(G_CONSTANT); look through the G_INTTOPTR to reach the constant.
-  if (RootDef->getOpcode() == TargetOpcode::G_INTTOPTR) {
-    MachineInstr *SrcDef = MRI->getVRegDef(RootDef->getOperand(1).getReg());
-    if (SrcDef->getOpcode() == TargetOpcode::G_CONSTANT)
-      RootDef = SrcDef;
-  }
-  if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
-    int64_t CVal = RootDef->getOperand(1).getCImm()->getSExtValue();
+  int64_t CVal;
+  if (mi_match(RootReg, *MRI, m_GIntToPtr(m_ICst(CVal))) ||
+      mi_match(RootReg, *MRI, m_ICst(CVal))) {
     if (auto Fns = computeConstAddr(CVal, /*IsPrefetch=*/true, Register()))
       return Fns;
   }
 
-  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RootReg); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
 }
 
