@@ -296,9 +296,6 @@ def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
                                         "HasAMXAVX512", "true",
                                         "Support AMX-AVX512 instructions",
                                         [FeatureAMXTILE]>;
-def FeatureACEV1 : SubtargetFeature<"acev1", "HasACEV1", "true",
-                                    "Support ACEV1 (AI Compute Extensions v1) instructions",
-                                    [FeatureAMXAVX512]>;
 def FeatureCMPCCXADD : SubtargetFeature<"cmpccxadd", "HasCMPCCXADD", "true",
                                         "Support CMPCCXADD instructions">;
 def FeatureRAOINT : SubtargetFeature<"raoint", "HasRAOINT", "true",
@@ -366,6 +363,16 @@ def FeatureAVX10_2_512 : SubtargetFeature<"avx10.2-512", "HasAVX10_2_512", "true
 def FeatureAVX10_V2_AUX : SubtargetFeature<"avx10v2aux", "HasAVX10_V2_AUX", "true",
                                            "Support AVX10 V2 AUX instructions",
                                            [FeatureAVX10_1]>;
+// Defined after AVX10.1 since ACE v1 builds on it as its vector baseline.
+// ACE v1 reuses the AMX tile architecture: per spec section 15.5.5 an
+// implementation that supports only ACE still reports AMX-TILE, which is what
+// enumerates the tile registers and LDTILECFG/STTILECFG/TILEZERO/TILERELEASE.
+// The AMX compute features and palette 1 are not required, so AMX-AVX512 is not
+// implied; TILEMOVROW and the TCVTROW* family are enumerated under
+// "AMX-AVX512 || ACE_VSN >= 1".
+def FeatureACEV1 : SubtargetFeature<"acev1", "HasACEV1", "true",
+                                    "Support ACEV1 (AI Compute Extensions v1) instructions",
+                                    [FeatureAMXTILE, FeatureAVX10_1]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
                                    "Support extended general purpose register">;
 def FeaturePush2Pop2 : SubtargetFeature<"push2pop2", "HasPush2Pop2", "true",

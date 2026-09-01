@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown \
-// RUN: -target-feature +acev1 -target-feature +avx512f -target-feature +avx512bf16 \
+// RUN: -target-feature +acev1 -target-feature +avx10.1 \
 // RUN: -emit-llvm -o - -Werror -pedantic | FileCheck %s
 
-// Tests ACE v1 APIs using __acetile type (fixed 16x64 dimensions)
-// Note: ACE v1 does not have TILELOADD/TILESTORED - uses ACE-specific tile operations
+// Tests ACE v1 APIs using __acetile type (fixed 16x64 dimensions).
+// ACE v1 has no TILELOADD/TILESTORED, so it uses ACE-specific tile operations.
 
 #include <immintrin.h>
 
@@ -20,7 +20,7 @@ void test_tile_ace_zero(void) {
 void test_tile_ace_top4buud(__acetile dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4buud
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.top4buud.internal
+  // CHECK-DAG: call x86_amx @llvm.x86.top4buud.internal(i16 16, i16 64, i16 64,
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4buud(&dst, src1, src2);
 }
@@ -29,7 +29,7 @@ void test_tile_ace_top4buud(__acetile dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4busd(__acetile dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4busd
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.top4busd.internal
+  // CHECK-DAG: call x86_amx @llvm.x86.top4busd.internal(i16 16, i16 64, i16 64,
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4busd(&dst, src1, src2);
 }
@@ -38,7 +38,7 @@ void test_tile_ace_top4busd(__acetile dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4bssd(__acetile dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4bssd
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.top4bssd.internal
+  // CHECK-DAG: call x86_amx @llvm.x86.top4bssd.internal(i16 16, i16 64, i16 64,
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4bssd(&dst, src1, src2);
 }
@@ -47,7 +47,7 @@ void test_tile_ace_top4bssd(__acetile dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top4bsud(__acetile dst, __m512i src1, __m512i src2) {
   // CHECK-LABEL: @test_tile_ace_top4bsud
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.top4bsud.internal
+  // CHECK-DAG: call x86_amx @llvm.x86.top4bsud.internal(i16 16, i16 64, i16 64,
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top4bsud(&dst, src1, src2);
 }
@@ -56,7 +56,7 @@ void test_tile_ace_top4bsud(__acetile dst, __m512i src1, __m512i src2) {
 void test_tile_ace_top2bf16ps(__acetile dst, __m512bh src1, __m512bh src2) {
   // CHECK-LABEL: @test_tile_ace_top2bf16ps
   // CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  // CHECK-DAG: call x86_amx @llvm.x86.top2bf16ps.internal
+  // CHECK-DAG: call x86_amx @llvm.x86.top2bf16ps.internal(i16 16, i16 64, i16 64,
   // CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_ace_top2bf16ps(&dst, src1, src2);
 }
@@ -109,14 +109,14 @@ void test_tile_ace_top4mxbssps(__acetile dst, __m512i src1, __m512i src2) {
 // Test tile setrow (ACE-specific: ZMM to tile row)
 void test_tile_ace_setrow(__acetile dst, __m512i src) {
   // CHECK-LABEL: @test_tile_ace_setrow
-  // CHECK: call x86_amx @llvm.x86.tilesetrow.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovrow.set.internal
   __tile_ace_setrow(&dst, src, 0);
 }
 
 // Test tile setcol (ACE-specific: ZMM to tile column)
 void test_tile_ace_setcol(__acetile dst, __m512i src) {
   // CHECK-LABEL: @test_tile_ace_setcol
-  // CHECK: call x86_amx @llvm.x86.tilesetcol.internal
+  // CHECK: call x86_amx @llvm.x86.tilemovcol.set.internal
   __tile_ace_setcol(&dst, src, 0);
 }
 
@@ -125,6 +125,41 @@ __m512i test_tile_ace_getrow(__acetile src) {
   // CHECK-LABEL: @test_tile_ace_getrow
   // CHECK: call <16 x i32> @llvm.x86.tilemovrow.internal
   return __tile_ace_getrow(&src, 0);
+}
+
+// Test tile row read with INT32 to FP32 conversion (ACE-specific)
+__m512 test_tile_ace_cvtrowd2ps(__acetile src) {
+  // CHECK-LABEL: @test_tile_ace_cvtrowd2ps
+  // CHECK: call <16 x float> @llvm.x86.tcvtrowd2ps.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
+  return __tile_ace_cvtrowd2ps(&src, 2);
+}
+
+// Test tile row read with FP32 to BF16 conversion, high half of each dword
+__m512bh test_tile_ace_cvtrowps2bf16h(__acetile src) {
+  // CHECK-LABEL: @test_tile_ace_cvtrowps2bf16h
+  // CHECK: call <32 x bfloat> @llvm.x86.tcvtrowps2bf16h.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
+  return __tile_ace_cvtrowps2bf16h(&src, 4);
+}
+
+// Test tile row read with FP32 to BF16 conversion, low half of each dword
+__m512bh test_tile_ace_cvtrowps2bf16l(__acetile src) {
+  // CHECK-LABEL: @test_tile_ace_cvtrowps2bf16l
+  // CHECK: call <32 x bfloat> @llvm.x86.tcvtrowps2bf16l.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
+  return __tile_ace_cvtrowps2bf16l(&src, 6);
+}
+
+// Test tile row read with FP32 to FP16 conversion, high half of each dword
+__m512h test_tile_ace_cvtrowps2phh(__acetile src) {
+  // CHECK-LABEL: @test_tile_ace_cvtrowps2phh
+  // CHECK: call <32 x half> @llvm.x86.tcvtrowps2phh.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
+  return __tile_ace_cvtrowps2phh(&src, 8);
+}
+
+// Test tile row read with FP32 to FP16 conversion, low half of each dword
+__m512h test_tile_ace_cvtrowps2phl(__acetile src) {
+  // CHECK-LABEL: @test_tile_ace_cvtrowps2phl
+  // CHECK: call <32 x half> @llvm.x86.tcvtrowps2phl.internal(i16 16, i16 64, x86_amx {{%.*}}, i32 {{%.*}})
+  return __tile_ace_cvtrowps2phl(&src, 10);
 }
 
 // Integration test: ACE computation workflow
