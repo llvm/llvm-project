@@ -53771,7 +53771,7 @@ static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
  
 // Fold an OR with a masked destination and a left-shifted
 // source into a shift + double-precision shift (SHRD):
-static SDValue combineORToSHRD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
+static SDValue combineOrOnSHLToSHRD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
 										const X86Subtarget &Subtarget) {
 	using namespace SDPatternMatch;
 	assert(N->getOpcode() == ISD::OR && "Invalid Node. Expected OR.");
@@ -53884,7 +53884,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineOrWithGF2P8AFFINEQB(N, dl, DAG, VT))
     return R;
 
-  if (SDValue R = combineORToSHRD(N, dl, DAG, Subtarget))
+  if (SDValue R = combineOrOnSHLToSHRD(N, dl, DAG, Subtarget))
   	  return R;
 
   if (DCI.isBeforeLegalizeOps())
