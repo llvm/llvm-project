@@ -1067,6 +1067,9 @@ struct fltSemantics {
      - exponent = 0, integer bit 1 ("pseudodenormal")
      The first three are treated as NaNs, the last one as Normal */
   bool hasExplicitIntegerBit = false;
+
+  void (* initFromAPInt)(detail::IEEEFloat&, const APInt&) = nullptr;
+  APInt (* bitcastToAPInt)(const detail::IEEEFloat&) = nullptr;
 };
 
 // This is a interface class that is currently forwarding functionalities from
