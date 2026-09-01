@@ -66,8 +66,7 @@ class LoadKextTestCase(TestBase):
         # could resolve the UUID and the test would pass without it.
         self.runCmd("settings set symbols.enable-external-lookup false")
         self.runCmd(
-            "settings set platform.plugin.darwin-kernel.kext-directories "
-            + extensions
+            "settings set platform.plugin.darwin-kernel.kext-directories " + extensions
         )
         self.runCmd("platform select darwin-kernel")
 
@@ -83,9 +82,7 @@ class LoadKextTestCase(TestBase):
         # Assert on the whole path, not just the file name: the shared module
         # list matches on UUID alone, so a module the other tests in this file
         # registered under a bare name would satisfy a file name check.
-        self.assertEqual(
-            module.GetFileSpec().fullpath, os.path.join(macos, "mykext")
-        )
+        self.assertEqual(module.GetFileSpec().fullpath, os.path.join(macos, "mykext"))
 
     @skipUnlessDarwin
     def test_kernel_lookup_by_uuid_without_a_process(self):
