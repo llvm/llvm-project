@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -4199,8 +4198,11 @@ bool SIRegisterInfo::shouldApplyAntiHints(
   if (CurrentOccupancy == 1)
     return true;
 
-  // Set max VGPRs for target and current occupancy to early bail out if we are
-  // close to the limit.
+  // Do not apply anti-hints if we are reaching close to the VGPR budget. For
+  // target occupancy, the 80% cutoff is a conservative: anti-hints are disabled
+  // early enough that later registers still have headroom to stay at target
+  // occupancy. For current occupancy, the 95% cutoff margin is used to apply
+  // anti-hints close to the limit of the current occupancy budget.
   unsigned MaxVGPRsCutOffForTargetOccupancy =
       (ST.getMaxNumVGPRs(TargetOccupancy, DynamicVGPRBlockSize) * 80) / 100;
   unsigned MaxVGPRsCutOffForCurrentOccupancy =
@@ -4261,9 +4263,19 @@ void SIRegisterInfo::applyRegAllocationAntiHints(
         (!isVGPRClass(RC) && !isAGPRClass(RC) && !isVectorSuperClass(RC)))
       return true;
 
-    unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
-    unsigned Highest = getHWRegIndex(Reg) + NumRegs - 1;
-    return Highest < MaxVGPRsForCurrentOccupancy;
+    unsigned RegEndIndex =
+        getHWRegIndex(Reg) + divideCeil(getRegSizeInBits(*RC), 32);
+
+    unsigned MaxVGPR = NumVGPRs;
+    unsigned MaxAGPR = NumAGPRs;
+    if (isAGPRClass(RC))
+      MaxAGPR = std::max(MaxAGPR, RegEndIndex);
+    else
+      MaxVGPR = std::max(MaxVGPR, RegEndIndex);
+
+    return static_cast<unsigned>(AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(),
+                                                          MaxAGPR, MaxVGPR)) <=
+           MaxVGPRsForCurrentOccupancy;
   };
 
   HintsAndCustomOrder.truncate(NumHints);
