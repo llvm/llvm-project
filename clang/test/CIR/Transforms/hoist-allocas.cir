@@ -196,3 +196,30 @@ module {
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 }
+
+cir.func @alloca_after_scope() {
+  cir.scope {
+    %0 = cir.alloca "inner" align(4) init : !cir.ptr<!s32i>
+  }
+  %1 = cir.alloca "after" align(4) init : !cir.ptr<!s32i>
+  cir.return
+}
+
+// CHECK: cir.func{{.*}} @alloca_after_scope()
+// CHECK-NEXT: cir.alloca{{.*}}"inner"
+// CHECK-NEXT: cir.alloca{{.*}}"after"
+// CHECK-NEXT: cir.scope
+
+cir.func @alloca_after_straightline() {
+  %0 = cir.alloca "first" align(4) init : !cir.ptr<!s32i>
+  %1 = cir.const #cir.int<0> : !s32i
+  cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+  %2 = cir.alloca "second" align(4) init : !cir.ptr<!s32i>
+  cir.return
+}
+
+// CHECK: cir.func{{.*}} @alloca_after_straightline()
+// CHECK-NEXT: cir.alloca{{.*}}"first"
+// CHECK-NEXT: cir.const
+// CHECK-NEXT: cir.store
+// CHECK-NEXT: cir.alloca{{.*}}"second"
