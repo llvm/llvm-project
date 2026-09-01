@@ -86,7 +86,7 @@ namespace extended_examples {
   }
 }
 
-//expected-error@71 {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&&'}}
+//expected-error@71 {{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
 //expected-note@70 {{previous declaration is here}}
 //expected-error@82 {{statement requires expression of integer type ('A2' invalid)}}
 //expected-error@83 {{statement requires expression of integer type ('A3' invalid)}}

@@ -62,7 +62,7 @@ struct Modifier : public Base {
 };
 } // namespace details
 
-template <typename DetailsTy> using DetailsMap = DenseMap<unsigned, DetailsTy>;
+template <typename DetailsTy> using DetailsMap = DenseMap<Version, DetailsTy>;
 
 template <typename DetailsTy> struct Descriptor {
   Descriptor(const Descriptor &) = default;
@@ -73,9 +73,9 @@ template <typename DetailsTy> struct Descriptor {
   StringRef getName() const { return Name; }
   const DetailsMap<DetailsTy> &getDetails() const { return Details; }
 
-  SmallVector<unsigned> getVersions() const {
-    SmallVector<unsigned> Vs;
-    for (unsigned V : llvm::omp::getOpenMPVersions()) {
+  SmallVector<Version> getVersions() const {
+    SmallVector<Version> Vs;
+    for (Version V : llvm::omp::getOpenMPVersions()) {
       if (auto F = Details.find(V); F != Details.end())
         Vs.push_back(V);
     }
@@ -92,16 +92,16 @@ protected:
 struct Clause : public Descriptor<details::Clause> {
   using Base = Descriptor<details::Clause>;
   using Base::Base;
-  LLVM_ABI Properties getProperties(unsigned V) const;
-  LLVM_ABI Directives getDirectives(unsigned V) const;
-  LLVM_ABI Modifiers getModifiers(unsigned V) const;
+  LLVM_ABI Properties getProperties(Version V) const;
+  LLVM_ABI Directives getDirectives(Version V) const;
+  LLVM_ABI Modifiers getModifiers(Version V) const;
 };
 
 struct Modifier : public Descriptor<details::Modifier> {
   using Base = Descriptor<details::Modifier>;
   using Base::Base;
-  LLVM_ABI Properties getProperties(unsigned V) const;
-  LLVM_ABI Clauses getClauses(unsigned V) const;
+  LLVM_ABI Properties getProperties(Version V) const;
+  LLVM_ABI Clauses getClauses(Version V) const;
 };
 } // namespace descriptor
 
@@ -111,7 +111,7 @@ using DescriptorMap = DenseMap<Enum, DescriptorTy>;
 LLVM_ABI const descriptor::Clause &getDescriptor(llvm::omp::Clause C);
 LLVM_ABI const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M);
 
-LLVM_ABI Properties getProperties(Clause C, unsigned Version);
+LLVM_ABI Properties getProperties(Clause C, Version V);
 } // namespace llvm::omp
 
 #endif // LLVM_FRONTEND_OPENMP_OMPDESCRIPTORS_H

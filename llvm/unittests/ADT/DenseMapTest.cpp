@@ -1158,6 +1158,24 @@ TEST(DenseMapCustomTest, EraseInvalidatesIterators) {
   M.erase(M.find(2));
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
+
+TEST(DenseMapCustomTest, IteratorComparability) {
+  DenseMap<int, int>::iterator I1, I2;
+  EXPECT_EQ(I1, I2);
+
+  DenseMap<int, int> Map1, Map2;
+  Map1.try_emplace(1, 10);
+  Map2.try_emplace(2, 20);
+  EXPECT_DEATH((void)(Map1.begin() == Map2.begin()), "incomparable iterators");
+}
+
+TEST(DenseMapCustomTest, InsertInvalidatesIteratorComparison) {
+  DenseMap<int, int> Map;
+  Map.try_emplace(1, 10);
+  auto It = Map.begin();
+  Map.try_emplace(2, 20);
+  EXPECT_DEATH((void)(It == Map.end()), "incomparable iterators");
+}
 #endif
 
 } // namespace

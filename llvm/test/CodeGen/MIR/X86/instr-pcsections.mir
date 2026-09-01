@@ -27,7 +27,7 @@ body:             |
     liveins: $rdi
 
     ; CHECK-LABEL: name: test
-    ; CHECK: MOV{{.*}} pcsections !0
+    ; CHECK: MOV{{.*}} pcsections !{{[0-9]+}}
     renamable $al = MOV8rm killed renamable $rdi, 1, $noreg, 0, $noreg, pcsections !0
     RET64 implicit killed $al
 
