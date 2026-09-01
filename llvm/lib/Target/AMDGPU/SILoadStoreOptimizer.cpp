@@ -60,11 +60,9 @@
 #include "SILoadStoreOptimizer.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -1022,7 +1020,8 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
   // Check other optional immediate operands for equality.
   AMDGPU::OpName OperandsToMatch[] = {
       AMDGPU::OpName::cpol, AMDGPU::OpName::d16,  AMDGPU::OpName::unorm,
-      AMDGPU::OpName::da,   AMDGPU::OpName::r128, AMDGPU::OpName::a16};
+      AMDGPU::OpName::da,   AMDGPU::OpName::r128, AMDGPU::OpName::a16,
+      AMDGPU::OpName::dim};
 
   for (AMDGPU::OpName op : OperandsToMatch) {
     int Idx = AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), op);

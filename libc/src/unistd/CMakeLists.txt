@@ -169,6 +169,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getegid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getegid
+)
+
+add_entrypoint_object(
   gethostname
   ALIAS
   DEPENDS
@@ -316,10 +323,38 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setgid
+)
+
+add_entrypoint_object(
+  setregid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setregid
+)
+
+add_entrypoint_object(
+  setreuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setreuid
+)
+
+add_entrypoint_object(
   setsid
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.setsid
+)
+
+add_entrypoint_object(
+  setuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setuid
 )
 
 add_entrypoint_object(

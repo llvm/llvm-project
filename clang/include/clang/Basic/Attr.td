@@ -1299,13 +1299,6 @@ def Bounded : IgnoredAttr {
   let Spellings = [GNU<"bounded">];
 }
 
-def CarriesDependency : InheritableParamAttr {
-  let Spellings = [GNU<"carries_dependency">,
-                   CXX11<"","carries_dependency", 200809>];
-  let Subjects = SubjectList<[ParmVar, ObjCMethod, Function], ErrorDiag>;
-  let Documentation = [CarriesDependencyDocs];
-}
-
 def CDecl : DeclOrTypeAttr {
   let Spellings = [GCC<"cdecl">, CustomKeyword<"__cdecl">, CustomKeyword<"_cdecl">];
 //  let Subjects = [Function, ObjCMethod];

@@ -38,7 +38,7 @@ private:
   /// order to tell which OMP scope defined vs. references a certain Symbol.
   struct OMPConstructSymbolVisitor {
     OMPConstructSymbolVisitor(semantics::SemanticsContext &ctx)
-        : version(ctx.langOptions().OpenMPVersion) {}
+        : version(ctx.langOptions().getOpenMPVersion()) {}
     template <typename T>
     bool Pre(const T &) {
       return true;
@@ -88,7 +88,7 @@ private:
     llvm::SmallVector<ConstructPtr> constructs;
     llvm::DenseMap<semantics::Symbol *, ConstructPtr> symDefMap;
 
-    unsigned version;
+    llvm::omp::Version version;
   };
 
   mlir::OpBuilder::InsertPoint lastPrivIP;
@@ -153,7 +153,7 @@ private:
   void insertDeallocs();
 
   static bool isOpenMPPrivatizingConstruct(const parser::OpenMPConstruct &omp,
-                                           unsigned version);
+                                           llvm::omp::Version version);
   bool isOpenMPPrivatizingEvaluation(const pft::Evaluation &eval) const;
 
 public:

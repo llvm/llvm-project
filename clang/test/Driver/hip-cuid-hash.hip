@@ -31,8 +31,8 @@
 
 // RUN: FileCheck %s -check-prefixes=DIFF -input-file %t.out
 
-// SAME: "-cc1"{{.*}} "-target-cpu" "gfx906" {{.*}}"-cuid=[[CUID:[0-9a-f]+]]"
-// SAME: "-cc1"{{.*}} "-target-cpu" "gfx906" {{.*}}"-cuid=[[CUID]]"
+// SAME: "-cc1"{{.*}} "-triple" "amdgpu9.06{{.*}}"-cuid=[[CUID:[0-9a-f]+]]"
+// SAME: "-cc1"{{.*}} "-triple" "amdgpu9.06{{.*}}"-cuid=[[CUID]]"
 
-// DIFF: "-cc1"{{.*}} "-target-cpu" "gfx906" {{.*}}"-cuid=[[CUID:[0-9a-f]+]]"
-// DIFF-NOT: "-target-cpu" "gfx906" {{.*}}"-cuid=[[CUID]]"
+// DIFF: "-cc1"{{.*}} "-triple" "amdgpu9.06{{.*}}"-cuid=[[CUID:[0-9a-f]+]]"
+// DIFF-NOT: "-triple" "amdgpu9.06{{.*}}"-cuid=[[CUID]]"
