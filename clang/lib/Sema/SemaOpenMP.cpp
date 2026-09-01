@@ -1367,7 +1367,11 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
     DVar.ImplicitDSALoc = Iter->DefaultAttrLoc;
     DVar.Modifier = Data.Modifier;
     DVar.AppliedToPointee = Data.AppliedToPointee;
-    return DVar;
+    // For BindingDecls with OMPC_unknown, fall through to implicit DSA logic
+    // instead of treating them as explicitly specified.
+    if (!(isa<BindingDecl>(D) && DVar.CKind == OMPC_unknown)) {
+      return DVar;
+    }
   }
 
   DefaultDataSharingAttributes IterDA = Iter->DefaultAttr;
@@ -4253,10 +4257,16 @@ public:
       // offloading contexts (where map clause handles them).
       if (isa<DecompositionDecl>(VD)) {
         // For BindingDecls, continue checking only if:
-        // - We're in a DSA context (tasking/parallel/worksharing/teams), AND
-        // - We're NOT in a target offloading context
-        if (!BD || isOpenMPTargetExecutionDirective(DKind) ||
-            (!isImplicitOrExplicitTaskingRegion(DKind) &&
+        // - We are in a DSA context (tasking/parallel/worksharing/teams), or
+        // - We are in a target context and the binding is scalar (implicit
+        // firstprivate).
+        bool InTargetAndScalar = BD &&
+                                 isOpenMPTargetExecutionDirective(DKind) &&
+                                 BD->getType()->isScalarType();
+        if (!BD ||
+            (isOpenMPTargetExecutionDirective(DKind) && !InTargetAndScalar) ||
+            (!InTargetAndScalar &&
+             !isImplicitOrExplicitTaskingRegion(DKind) &&
              !isOpenMPParallelDirective(DKind) &&
              !isOpenMPWorksharingDirective(DKind) &&
              !isOpenMPTeamsDirective(DKind)))
@@ -4324,8 +4334,10 @@ public:
       // data-sharing attribute clause (including a data-sharing attribute
       // clause on a combined construct where target. is one of the
       // constituent constructs), or an is_device_ptr clause.
-      OpenMPDefaultmapClauseKind ClauseKind =
-          getVariableCategoryFromDecl(SemaRef.getLangOpts(), VD);
+      // For BindingDecls, use the binding's type to determine category.
+      OpenMPDefaultmapClauseKind ClauseKind = getVariableCategoryFromDecl(
+          SemaRef.getLangOpts(), BD ? static_cast<const ValueDecl *>(BD)
+                                    : static_cast<const ValueDecl *>(VD));
       if (SemaRef.getLangOpts().OpenMP >= 50) {
         bool IsModifierNone = Stack->getDefaultmapModifier(ClauseKind) ==
                               OMPC_DEFAULTMAP_MODIFIER_none;
@@ -4421,8 +4433,9 @@ public:
         if (!AlreadyMapped) {
           bool IsFirstprivate = false;
           // By default lambdas are captured as firstprivates.
+          QualType CheckType = BD ? BD->getType() : VD->getType();
           if (const auto *RD =
-                  VD->getType().getNonReferenceType()->getAsCXXRecordDecl())
+                  CheckType.getNonReferenceType()->getAsCXXRecordDecl())
             IsFirstprivate = RD->isLambda();
           IsFirstprivate =
               IsFirstprivate || (Stack->mustBeFirstprivate(ClauseKind) && !Res);
@@ -20530,13 +20543,19 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
     if (IsBindingDecl) {
       const auto *BD = cast<BindingDecl>(D);
       PrivateVD = cast<VarDecl>(BD->getDecomposedDecl());
-      PrivateType = PrivateVD->getType().getUnqualifiedType();
+      // PrivateType stays as the BindingDecl's type (Type), not the
+      // DecompositionDecl's type.
     }
 
-    VarDecl *VDPrivate =
-        buildVarDecl(SemaRef, ELoc, PrivateType, D->getName(),
-                     D->hasAttrs() ? &D->getAttrs() : nullptr,
-                     PrivateVD ? cast<DeclRefExpr>(SimpleRefExpr) : nullptr);
+    // For regular arrays, pass the original var ref. For BindingDecls, don't
+    // pass the DecompositionDecl ref since VDPrivate has the binding's type,
+    // not the decomposition type.
+    VarDecl *VDPrivate = buildVarDecl(SemaRef, ELoc, PrivateType, D->getName(),
+                                      D->hasAttrs() ? &D->getAttrs() : nullptr,
+                                      (PrivateVD && !IsBindingDecl)
+                                          ? cast<DeclRefExpr>(SimpleRefExpr)
+                                          : nullptr);
+
     // Generate helper private variable and initialize it with the value of the
     // original variable. The address of the original variable is replaced by
     // the address of the new private variable in the CodeGen. This new variable
@@ -20544,14 +20563,29 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
     // original variable for proper diagnostics and variable capturing.
     Expr *VDInitRefExpr = nullptr;
 
-    // For BindingDecls, CodeGen will handle initialization by copying the
-    // entire DecompositionDecl, so we don't need to set an initializer here.
-    // Just create a dummy init var for consistency with the normal path.
+    // For BindingDecls, VDPrivate should have the binding's type (not the
+    // DecompositionDecl's type), and will be initialized from the binding's
+    // field in the original DecompositionDecl.
     if (IsBindingDecl) {
-      QualType DREType = PrivateType.getNonReferenceType();
-      VarDecl *VDInit = buildVarDecl(SemaRef, RefExpr->getExprLoc(), DREType,
-                                     ".firstprivate.temp");
-      VDInitRefExpr = buildDeclRefExpr(SemaRef, VDInit, DREType, ELoc);
+      if (PrivateType->isArrayType()) {
+        // For array bindings, don't set any initializer - the array copy
+        // will be handled specially in CodeGen (emitPrivatesInit).
+        // We still need to create VDInitRefExpr for the Inits list.
+        VarDecl *VDInit = buildVarDecl(SemaRef, RefExpr->getExprLoc(), ElemType,
+                                       D->getName());
+        VDInitRefExpr = buildDeclRefExpr(SemaRef, VDInit, ElemType, ELoc);
+      } else {
+        // For non-array bindings, create a simple copy initialization.
+        VarDecl *VDInit = buildVarDecl(SemaRef, RefExpr->getExprLoc(),
+                                       PrivateType, ".firstprivate.temp");
+        VDInitRefExpr = buildDeclRefExpr(SemaRef, VDInit, PrivateType,
+                                         RefExpr->getExprLoc());
+
+        // Initialize VDPrivate from VDInit (which will point to the field).
+        SemaRef.AddInitializerToDecl(
+            VDPrivate, SemaRef.DefaultLvalueConversion(VDInitRefExpr).get(),
+            /*DirectInit=*/false);
+      }
     }
     // For arrays generate initializer for single element and replace it by
     // the original array element in CodeGen.
