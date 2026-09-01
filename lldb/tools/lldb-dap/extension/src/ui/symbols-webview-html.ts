@@ -55,6 +55,14 @@ export function getSymbolsTableHTMLContent(
       .tabulator-cell {
         text-overflow: clip !important;
       }
+      
+      .tabulator .tabulator-cell .tabulator-tick {
+        fill: var(--vscode-editor-foreground);
+      }
+
+      .tabulator .tabulator-cell .tabulator-cross {
+        fill: var(--vscode-editor-foreground);
+      }
 
       #symbols-table {
         width: 100%;
