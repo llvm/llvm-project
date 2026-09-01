@@ -67,9 +67,7 @@ public:
     if (!api_helper::canCall<Fn>())
       return static_cast<ReturnTy>(UnsupportedValue);
 
-    auto Result = Fn(std::forward<Args>(ArgsList)...);
-
-    return Result;
+    return Fn(std::forward<Args>(ArgsList)...);
   }
 
   bool tryLoadingExperimental(ze_driver_handle_t zeDriver,
