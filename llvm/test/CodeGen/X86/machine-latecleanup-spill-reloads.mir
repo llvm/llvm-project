@@ -48,6 +48,14 @@
     ret void
   }
 
+  define void @same_spill_slot_partial_store_blocks_reload_reuse() {
+    ret void
+  }
+
+  define void @same_spill_slot_disjoint_store_blocks_reload_reuse() {
+    ret void
+  }
+
   declare void @sink()
 
   attributes #0 = { "frame-pointer"="all" }
@@ -347,5 +355,55 @@ body:             |
     MOV64mr $rsp, 1, $noreg, 32, $noreg, $rdx :: (store (s64) into %ir.a)
     $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
     MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+name:            same_spill_slot_partial_store_blocks_reload_reuse
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       64
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -24, size: 16, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -32, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $rcx
+
+    ; CHECK-LABEL: name: same_spill_slot_partial_store_blocks_reload_reuse
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV8mr $rsp, 1, $noreg, 44, $noreg, $cl :: (store (s8) into %stack.0 + 4, align 4)
+    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 56, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
+    MOV8mr $rsp, 1, $noreg, 44, $noreg, $cl :: (store (s8) into %stack.0 + 4, align 4)
+    $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 56, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+name:            same_spill_slot_disjoint_store_blocks_reload_reuse
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       64
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -24, size: 16, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -32, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $rcx
+
+    ; CHECK-LABEL: name: same_spill_slot_disjoint_store_blocks_reload_reuse
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV8mr $rsp, 1, $noreg, 52, $noreg, $cl :: (store (s8) into %stack.0 + 12, align 4)
+    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 56, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
+    MOV8mr $rsp, 1, $noreg, 52, $noreg, $cl :: (store (s8) into %stack.0 + 12, align 4)
+    $rax = MOV64rm $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 56, $noreg, $rax :: (store (s64) into %stack.1)
     RET64
 ...
