@@ -954,6 +954,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       MachineInstr &NewMI = TII.duplicate(MBB, MBB.end(), MI);
       NewMI.dropMemRefs(MF);
       NewMI.setDebugLoc(DL);
+      NewMI.clearKillInfo();
       // Also clear debug locations on any bundled instructions.
       if (NewMI.isBundledWithSucc()) {
         auto BundleEnd = getBundleEnd(NewMI.getIterator());
