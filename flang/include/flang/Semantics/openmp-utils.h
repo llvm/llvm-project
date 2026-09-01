@@ -311,6 +311,7 @@ struct OmpErrorArgs {
 
 /// Scan the clause list of an `!$omp error` directive for its AT, SEVERITY, and
 /// MESSAGE clause values.
+OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpDirectiveSpecification &spec);
 OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir);
 
 inline bool IsDoConcurrentLegal(unsigned version) {

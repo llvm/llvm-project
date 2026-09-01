@@ -920,9 +920,9 @@ bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec) {
   return false;
 }
 
-OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir) {
+OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpDirectiveSpecification &spec) {
   OmpErrorArgs args;
-  for (const parser::OmpClause &clause : errDir.v.Clauses().v) {
+  for (const parser::OmpClause &clause : spec.Clauses().v) {
     if (const auto *at{std::get_if<parser::OmpClause::At>(&clause.u)}) {
       args.at = at->v.v;
     } else if (const auto *sev{
@@ -934,6 +934,10 @@ OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir) {
     }
   }
   return args;
+}
+
+OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir) {
+  return GetErrorDirectiveArgs(errDir.v);
 }
 
 static bool IsTransformableLoop(const parser::OmpDirectiveSpecification &spec) {

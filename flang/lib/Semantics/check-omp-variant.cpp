@@ -751,14 +751,14 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
       unsigned version{context_.langOptions().OpenMPVersion};
       if (version >= llvm::omp::getDirectivePureSince(
                          llvm::omp::Directive::OMPD_metadirective)) {
-        CheckDirectiveInPureProcedure(x.DirName().source, dirId);
+        CheckDirectiveInPureProcedure(x.DirName().source, dirId, x);
       }
       if (IsDoConcurrentLegal(version)) {
-        CheckDirectiveInDoConcurrent(x.DirName().source, dirId);
+        CheckDirectiveInDoConcurrent(x.DirName().source, dirId, x);
       }
     } else {
-      CheckDirectiveInPureProcedure(x.DirName().source, dirId);
-      CheckDirectiveInDoConcurrent(x.DirName().source, dirId);
+      CheckDirectiveInPureProcedure(x.DirName().source, dirId, x);
+      CheckDirectiveInDoConcurrent(x.DirName().source, dirId, x);
     }
   }
 }

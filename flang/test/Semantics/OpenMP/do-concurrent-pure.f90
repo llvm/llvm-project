@@ -78,6 +78,43 @@ contains
     end do
   end subroutine
 
+  ! An `!$omp error` directive is only "pure" when its action-time is
+  ! compilation; AT(EXECUTION) defers the mandated abort to run time, so it
+  ! is never allowed in a DO CONCURRENT construct.
+  subroutine do_concurrent_error_at_compilation(a, n)
+    integer, intent(in) :: n
+    integer, intent(inout) :: a(n)
+    integer :: i
+    do concurrent (i = 1:n)
+      !WARNING: ok
+      !$omp error at(compilation) severity(warning) message("ok")
+      a(i) = a(i) + 1
+    end do
+  end subroutine
+
+  subroutine do_concurrent_error_at_execution(a, n)
+    integer, intent(in) :: n
+    integer, intent(inout) :: a(n)
+    integer :: i
+    do concurrent (i = 1:n)
+      !ERROR: The OpenMP directive 'ERROR' is not allowed in a DO CONCURRENT construct
+      !$omp error at(execution) severity(fatal) message("boom")
+      a(i) = a(i) + 1
+    end do
+  end subroutine
+
+  ! The same AT(EXECUTION) restriction applies to a METADIRECTIVE's variant.
+  subroutine do_concurrent_metadirective_error_at_execution(a, n)
+    integer, intent(in) :: n
+    integer, intent(inout) :: a(n)
+    integer :: i
+    do concurrent (i = 1:n)
+      !ERROR: The OpenMP directive 'ERROR' is not allowed in a DO CONCURRENT construct
+      !$omp metadirective when(user={condition(.true.)}: error at(execution) severity(fatal) message("boom"))
+      a(i) = a(i) + 1
+    end do
+  end subroutine
+
   ! An APPLY clause's directive-variant must be pure too, independently of
   ! its host directive (TILE, which is itself pure).
   subroutine do_concurrent_apply(a, n)
