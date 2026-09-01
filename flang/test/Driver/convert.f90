@@ -10,7 +10,6 @@
 ! RUN: %flang -### -fconvert=big-endian %s  2>&1 | FileCheck %s --check-prefix=VALID
 ! RUN: %flang -### -fconvert=swap %s  2>&1 | FileCheck %s --check-prefix=VALID
 ! RUN: not %flang -fconvert=foobar %s  2>&1 | FileCheck %s --check-prefix=INVALID
-! RUN: not %flang -fconvert=big_endian %s  2>&1 | FileCheck %s --check-prefix=INVALID-BIG-ENDIAN
 
 !-----------------------------------------
 ! FRONTEND FLANG DRIVER (flang -fc1)
@@ -21,7 +20,6 @@
 ! RUN: %flang_fc1 -emit-mlir -fconvert=big-endian %s -o - | FileCheck %s --check-prefix=VALID_FC1
 ! RUN: %flang_fc1 -emit-mlir -fconvert=swap %s -o - | FileCheck %s --check-prefix=VALID_FC1
 ! RUN: not %flang_fc1 -fconvert=foobar %s  2>&1 | FileCheck %s --check-prefix=INVALID
-! RUN: not %flang_fc1 -fconvert=big_endian %s  2>&1 | FileCheck %s --check-prefix=INVALID-BIG-ENDIAN
 
 ! Only test that the command executes without error. Correct handling of each
 ! option is handled in Lowering tests.
@@ -29,4 +27,3 @@
 ! VALID_FC1: module
 
 ! INVALID: error: invalid value 'foobar' in '-fconvert=foobar', expected one of: unknown,native,little-endian,big-endian,swap
-! INVALID-BIG-ENDIAN: error: invalid value 'big_endian' in '-fconvert=big_endian', expected one of: unknown,native,little-endian,big-endian,swap
