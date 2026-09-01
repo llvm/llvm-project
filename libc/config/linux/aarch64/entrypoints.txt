@@ -299,8 +299,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.random.getrandom
 
     # sys/resource.h entrypoints
+    libc.src.sys.resource.getpriority
     libc.src.sys.resource.getrlimit
     libc.src.sys.resource.getrusage
+    libc.src.sys.resource.setpriority
     libc.src.sys.resource.setrlimit
 
     # sys/sendfile.h entrypoints

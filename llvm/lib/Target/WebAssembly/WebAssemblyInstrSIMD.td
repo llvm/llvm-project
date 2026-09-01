@@ -1345,9 +1345,11 @@ defm MUL : SIMDBinaryFP<fmul, "mul", 230>;
 defm DIV : SIMDBinaryFP<fdiv, "div", 231>;
 
 // NaN-propagating minimum: min
+let isCommutable = 1 in
 defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 
 // NaN-propagating maximum: max
+let isCommutable = 1 in
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin

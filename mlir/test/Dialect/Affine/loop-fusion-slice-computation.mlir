@@ -160,3 +160,32 @@ func.func @slice_loop_nest_with_smaller_outer_trip_count() {
   }
   return
 }
+
+// -----
+
+// The destination loop of a tiled dim is clamped at the end of the data by a
+// min upper bound, so the region of the source the tile reads is bounded by a
+// min too: `min(%i * 64 + 64, 1000)`. Such a bound is kept as the several
+// results it takes rather than being dropped for the constant bound, which
+// would say only that the slice ends somewhere before the end of the data and
+// make a slice of one tile look like a slice of everything from the tile on.
+
+#ub = affine_map<(d0) -> (64, d0 * -64 + 1000)>
+
+// CHECK-LABEL: func @slice_ub_from_min_bounded_dst() {
+func.func @slice_ub_from_min_bounded_dst() {
+  %0 = memref.alloc() : memref<1000xf32>
+  %cst = arith.constant 7.000000e+00 : f32
+  affine.for %i0 = 0 to 1000 {
+    // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0 floordiv 64), (d0) -> (d0 floordiv 64 + 1)] [(d0) -> (d0 mod 64), (d0) -> (d0 mod 64 + 1)] )}}
+    affine.store %cst, %0[%i0] : memref<1000xf32>
+  }
+  affine.for %i1 = 0 to 16 {
+    // expected-remark@-1 {{slice ( src loop: 0, dst loop: 1, depth: 1 : insert point: (1, 0) loop bounds: [(d0) -> (d0 * 64), (d0) -> (d0 * 64 + 64, 1000)] )}}
+    // expected-remark@-2 {{slice ( src loop: 0, dst loop: 1, depth: 2 : insert point: (2, 0) loop bounds: [(d0, d1) -> (d0 * 64 + d1), (d0, d1) -> (d0 * 64 + d1 + 1)] )}}
+    affine.for %i2 = 0 to min #ub(%i1) {
+      %1 = affine.load %0[%i1 * 64 + %i2] : memref<1000xf32>
+    }
+  }
+  return
+}

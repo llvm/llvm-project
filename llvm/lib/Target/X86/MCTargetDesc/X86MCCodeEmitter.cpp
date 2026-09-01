@@ -30,7 +30,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
-#include <cstdlib>
 
 using namespace llvm;
 
