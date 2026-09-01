@@ -15355,9 +15355,10 @@ void Sema::CheckThreadLocalForLargeAlignment(VarDecl *VD) {
     if (!VD->hasDependentAlignment()) {
       CharUnits MaxAlignChars = Context.toCharUnitsFromBits(MaxAlign);
       if (Context.getDeclAlign(VD) > MaxAlignChars) {
-        Diag(VD->getLocation(), diag::err_tls_var_aligned_over_maximum)
-            << (unsigned)Context.getDeclAlign(VD).getQuantity() << VD
-            << (unsigned)MaxAlignChars.getQuantity();
+        Diag(VD->getLocation(), diag::err_tls_aligned_over_maximum)
+            << (unsigned)Context.getDeclAlign(VD).getQuantity()
+            << /*IsCompoundLiteral=*/false
+            << (unsigned)MaxAlignChars.getQuantity() << VD;
       }
     }
   }

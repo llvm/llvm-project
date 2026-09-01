@@ -3770,12 +3770,10 @@ def err_attr_codemodel_arg : Error<"code model '%0' is not supported on this tar
 
 def err_aix_attr_unsupported : Error<"%0 attribute is not yet supported on AIX">;
 
-def err_tls_var_aligned_over_maximum : Error<
-  "alignment (%0) of thread-local variable %1 is greater than the maximum supported "
-  "alignment (%2) for a thread-local variable on this target">;
-def err_tls_compound_literal_aligned_over_maximum : Error<
-  "alignment (%0) of thread-local compound literal is greater than the maximum "
-  "supported alignment (%1) for thread-local storage on this target">;
+def err_tls_aligned_over_maximum : Error<
+  "alignment (%0) of thread-local %select{variable %3|compound literal}1 is "
+  "greater than the maximum supported alignment (%2) for "
+  "%select{a thread-local variable|thread-local storage}1 on this target">;
 
 def err_only_annotate_after_access_spec : Error<
   "access specifier can only have annotation attributes">;

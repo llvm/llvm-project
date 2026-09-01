@@ -152,8 +152,8 @@ static bool checkThreadLocalCompoundLiteral(Sema &S, SourceLocation Loc,
   if (TypeAlign <= MaxAlignChars)
     return false;
 
-  S.Diag(Loc, diag::err_tls_compound_literal_aligned_over_maximum)
-      << (unsigned)TypeAlign.getQuantity()
+  S.Diag(Loc, diag::err_tls_aligned_over_maximum)
+      << (unsigned)TypeAlign.getQuantity() << /*IsCompoundLiteral=*/true
       << (unsigned)MaxAlignChars.getQuantity();
   return true;
 }

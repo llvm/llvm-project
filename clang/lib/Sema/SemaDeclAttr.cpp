@@ -4894,8 +4894,9 @@ void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
             .getQuantity();
     if (MaxTLSAlign && AlignVal > MaxTLSAlign &&
         VD->getTLSKind() != VarDecl::TLS_None) {
-      Diag(VD->getLocation(), diag::err_tls_var_aligned_over_maximum)
-          << (unsigned)AlignVal << VD << MaxTLSAlign;
+      Diag(VD->getLocation(), diag::err_tls_aligned_over_maximum)
+          << (unsigned)AlignVal << /*IsCompoundLiteral=*/false << MaxTLSAlign
+          << VD;
       return;
     }
   }
