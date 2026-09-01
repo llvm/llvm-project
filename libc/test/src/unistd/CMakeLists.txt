@@ -511,6 +511,42 @@ add_libc_test(
 )
 
 add_libc_test(
+  tcgetpgrp_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    tcgetpgrp_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.tcgetpgrp
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  tcsetpgrp_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    tcsetpgrp_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.tcsetpgrp
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   truncate_test
   SUITE
     libc_unistd_unittests

@@ -462,6 +462,19 @@ functions:
     return_type: long
     arguments:
       - type: int
+  - name: tcgetpgrp
+    standards:
+      - posix
+    return_type: pid_t
+    arguments:
+      - type: int
+  - name: tcsetpgrp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: pid_t
   - name: truncate
     standards:
       - posix

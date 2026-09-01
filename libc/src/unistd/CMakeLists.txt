@@ -393,6 +393,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tcgetpgrp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcgetpgrp
+)
+
+add_entrypoint_object(
+  tcsetpgrp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcsetpgrp
+)
+
+add_entrypoint_object(
   truncate
   ALIAS
   DEPENDS
