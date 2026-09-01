@@ -18,6 +18,7 @@ std::shared_ptr<T>
 }
 
 // All cases were taken from https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/memory-management-mem/mem56-cpp/
+// Also "reset" cases were added
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║                  Noncompliant Code Example                   ║
@@ -28,7 +29,18 @@ void f0() {
   // CHECK-MESSAGES-STRICT: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
   std::shared_ptr<int> p2(i);
   // CHECK-MESSAGES-PERMISSIVE: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
-// CHECK-MESSAGES-STRICT: :[[@LINE-2]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+  // CHECK-MESSAGES-STRICT: :[[@LINE-2]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+}
+
+void f0_reset() {
+  int *i = new int;
+  std::shared_ptr<int> p1;
+  std::shared_ptr<int> p2;
+  p1.reset(i);
+  // CHECK-MESSAGES-STRICT: :[[@LINE-1]]:12: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' reset method may cause double deletion
+  p2.reset(i);
+  // CHECK-MESSAGES-PERMISSIVE: :[[@LINE-1]]:12: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' reset method may cause double deletion
+  // CHECK-MESSAGES-STRICT: :[[@LINE-2]]:12: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' reset method may cause double deletion
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -53,11 +65,17 @@ void g(std::shared_ptr<D> derived);
 // ╚══════════════════════════════════════════════════════════════╝
 void f2() {
   std::shared_ptr<B> poly(new D);
+  std::shared_ptr<B> poly2(new D);
   // ...
   g(std::shared_ptr<D>(dynamic_cast<D *>(poly.get())));
   // CHECK-MESSAGES-PERMISSIVE: :[[@LINE-1]]:24: warning: passing a raw pointer 'D *' to 'std::shared_ptr<D>' constructor may cause double deletion
-  // // CHECK-MESSAGES-STRICT: :[[@LINE-2]]:24: warning: passing a raw pointer 'D *' to 'std::shared_ptr<D>' constructor may cause double deletion
+  // CHECK-MESSAGES-STRICT: :[[@LINE-2]]:24: warning: passing a raw pointer 'D *' to 'std::shared_ptr<D>' constructor may cause double deletion
   // Any use of poly will now result in accessing freed memory.
+  std::shared_ptr<D> sinc;
+  sinc.reset(dynamic_cast<D *>(poly2.get()));
+  // CHECK-MESSAGES-PERMISSIVE: :[[@LINE-1]]:14: warning: passing a raw pointer 'D *' to 'std::shared_ptr<D>' reset method may cause double deletion
+  // CHECK-MESSAGES-STRICT: :[[@LINE-2]]:14: warning: passing a raw pointer 'D *' to 'std::shared_ptr<D>' reset method may cause double deletion
+  // Any use of poly2 will now result in accessing freed memory.
 }
 
 // ╔══════════════════════════════════════════════════════════════╗
@@ -77,11 +95,13 @@ void f3() {
 struct S1 {
   std::shared_ptr<S1> g() { return std::shared_ptr<S1>(this); }
   // CHECK-MESSAGES-PERMISSIVE: :[[@LINE-1]]:56: warning: passing a raw pointer 'S1 *' to 'std::shared_ptr<S1>' constructor may cause double deletion
-// CHECK-MESSAGES-STRICT: :[[@LINE-2]]:56: warning: passing a raw pointer 'S1 *' to 'std::shared_ptr<S1>' constructor may cause double deletion
+  // CHECK-MESSAGES-STRICT: :[[@LINE-2]]:56: warning: passing a raw pointer 'S1 *' to 'std::shared_ptr<S1>' constructor may cause double deletion
+  std::shared_ptr<S1> g_reset() { std::shared_ptr<S1> sp; sp.reset(this); return sp; }
+  // CHECK-MESSAGES-PERMISSIVE: :[[@LINE-1]]:68: warning: passing a raw pointer 'S1 *' to 'std::shared_ptr<S1>' reset method may cause double deletion
+  // CHECK-MESSAGES-STRICT: :[[@LINE-2]]:68: warning: passing a raw pointer 'S1 *' to 'std::shared_ptr<S1>' reset method may cause double deletion
 };
 
 
-// TODO: resets also must be covered
 void f4() {
   std::shared_ptr<S1> s1 = std::make_shared<S1>();
   // ...
