@@ -25,25 +25,19 @@
 // CHECK:    case GICXXPred_MI_Predicate_and_or_pat: {
 // CHECK:      return doesComplexCheck(MI);
 // CHECK:    case GICXXPred_MI_Predicate_fadd_contract: {
-// CHECK:      return MI.getFlag(MachineInstr::FmContract) ||
-// CHECK-NEXT:        MI.getMF()->getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast;
+// CHECK:      return MI.getFlag(MachineInstr::FmContract);
 // CHECK:    case GICXXPred_MI_Predicate_ffloor_nnan: {
 // CHECK:      return MI.getFlag(MachineInstr::FmNoNans);
 // CHECK:    case GICXXPred_MI_Predicate_fma_contract: {
-// CHECK:      return MI.getFlag(MachineInstr::FmContract) ||
-// CHECK-NEXT:        MI.getMF()->getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast;
+// CHECK:      return MI.getFlag(MachineInstr::FmContract);
 // CHECK:    case GICXXPred_MI_Predicate_fmad_contract: {
-// CHECK:      return MI.getFlag(MachineInstr::FmContract) ||
-// CHECK-NEXT:        MI.getMF()->getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast;
+// CHECK:      return MI.getFlag(MachineInstr::FmContract);
 // CHECK:    case GICXXPred_MI_Predicate_fmul_contract: {
-// CHECK:      return MI.getFlag(MachineInstr::FmContract) ||
-// CHECK-NEXT:        MI.getMF()->getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast;
+// CHECK:      return MI.getFlag(MachineInstr::FmContract);
 // CHECK:    case GICXXPred_MI_Predicate_fpround_contract: {
-// CHECK:      return MI.getFlag(MachineInstr::FmContract) ||
-// CHECK-NEXT:        MI.getMF()->getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast;
+// CHECK:      return MI.getFlag(MachineInstr::FmContract);
 // CHECK:    case GICXXPred_MI_Predicate_fsub_contract: {
-// CHECK:      return MI.getFlag(MachineInstr::FmContract) ||
-// CHECK-NEXT:        MI.getMF()->getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast;
+// CHECK:      return MI.getFlag(MachineInstr::FmContract);
 // CHECK:    case GICXXPred_MI_Predicate_mul_pat: {
 // CHECK:      return doesComplexCheck(MI);
 // CHECK:    case GICXXPred_MI_Predicate_or_oneuse: {

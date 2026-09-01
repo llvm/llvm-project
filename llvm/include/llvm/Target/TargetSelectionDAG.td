@@ -1346,15 +1346,12 @@ def immAllZerosV : SDPatternOperator; // ISD::isConstantSplatVectorAllZeros
 
 // Other helper fragments.
 
-// A node the target may contract, because it carries the flag or because the
-// whole function opted in with -fp-contract=fast
+// A node that carries the contract fast-math flag
 class ContractablePatFrag<dag ops, dag frag> : PatFrag<ops, frag, [{
-  return N->getFlags().hasAllowContract() ||
-         TM.Options.AllowFPOpFusion == FPOpFusion::Fast;
+  return N->getFlags().hasAllowContract();
 }]> {
   let GISelPredicateCode = [{
-    return MI.getFlag(MachineInstr::FmContract) ||
-           MI.getMF()->getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast;
+    return MI.getFlag(MachineInstr::FmContract);
   }];
 }
 
@@ -1362,7 +1359,7 @@ class ContractablePatFrag<dag ops, dag frag> : PatFrag<ops, frag, [{
 def fmul_contract : ContractablePatFrag<(ops node:$a, node:$b),
                                         (fmul node:$a, node:$b)>;
 
-// An 'fadd' node which can be contracted with fmul_contract into a fma or other relaxed instruction
+// An 'fadd' node the target may contract
 def fadd_contract : ContractablePatFrag<(ops node:$a, node:$b),
                                         (fadd node:$a, node:$b)>;
 
