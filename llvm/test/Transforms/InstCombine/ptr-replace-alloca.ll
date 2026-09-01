@@ -38,6 +38,41 @@ sink:
   ret i8 %load
 }
 
+define i8 @phi_addrspace_change(i1 %cond) {
+; CHECK-LABEL: @phi_addrspace_change(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @g1, i64 1), [[IF]] ], [ getelementptr inbounds nuw (i8, ptr @g1, i64 2), [[ELSE]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+entry:
+  %alloca = alloca [32 x i8], align 4, addrspace(5)
+  call void @llvm.memcpy.p5.p0.i64(ptr addrspace(5) %alloca, ptr @g1, i64 32, i1 false)
+  %base = getelementptr [32 x i8], ptr addrspace(5) %alloca, i32 0, i32 0
+  br i1 %cond, label %if, label %else
+
+if:
+  %val.if = getelementptr i8, ptr addrspace(5) %base, i32 1
+  br label %sink
+
+else:
+  %val.else = getelementptr i8, ptr addrspace(5) %base, i32 2
+  br label %sink
+
+sink:
+  %ptr = phi ptr addrspace(5) [ %val.if, %if ], [ %val.else, %else ]
+  %gep = getelementptr i8, ptr addrspace(5) %ptr, i32 1
+  %load = load i8, ptr addrspace(5) %gep
+  ret i8 %load
+}
+
 define i8 @volatile_load_keep_alloca(i1 %cond) {
 ; CHECK-LABEL: @volatile_load_keep_alloca(
 ; CHECK-NEXT:  entry:
@@ -502,6 +537,7 @@ define i8 @preserve_load_metadata(i64 %idx) {
 !0 = !{!"my-annotation"}
 
 declare void @llvm.memcpy.p1.p0.i64(ptr addrspace(1), ptr, i64, i1)
+declare void @llvm.memcpy.p5.p0.i64(ptr addrspace(5), ptr, i64, i1)
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 declare void @llvm.memcpy.p0.p1.i64(ptr, ptr addrspace(1), i64, i1)
 declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1), ptr addrspace(1), i64, i1)

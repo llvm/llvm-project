@@ -50,4 +50,6 @@ int main(int, char**) {
     assert(false);                // if we got here, ASAN didn't trigger
     ((void)foo);
   }
+
+  return 0;
 }

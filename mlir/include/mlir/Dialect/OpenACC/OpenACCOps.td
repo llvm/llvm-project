@@ -594,7 +594,7 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
       | `extent` `(` $extent `:` type($extent) `)`
       | `stride` `(` $stride `:` type($stride) `)`
       | `startIdx` `(` $startIdx `:` type($startIdx) `)`
-    ) attr-dict
+    ) (`strideInBytes` `(` $strideInBytes^ `)`)? attr-dict
   }];
 
   let hasVerifier = 1;
@@ -817,7 +817,11 @@ class OpenACC_DataEntryOp<string mnemonic, string clause,
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `recipe` `(` custom<RecipeSym>($recipe) `)`
-    ) `->` type($accVar) attr-dict
+      | `dataClause` `(` qualified($dataClause) `)`
+      | `structured` `(` $structured `)`
+      | `implicit` `(` $implicit `)`
+      | `name` `(` $name `)`
+    ) prop-dict `->` type($accVar) attr-dict
   }];
 
   let hasVerifier = 1;
@@ -1206,7 +1210,13 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
     (`async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)^)?
     `to` custom<Var>($var) `:` custom<VarPtrType>(type($var), $varType)
-    attr-dict
+    oilist(
+        `dataClause` `(` qualified($dataClause) `)`
+      | `structured` `(` $structured `)`
+      | `implicit` `(` $implicit `)`
+      | `name` `(` $name `)`
+    )
+    prop-dict attr-dict
   }];
 
   let builders = [
@@ -1278,7 +1288,13 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause>
     (`bounds` `(` $bounds^ `)` )?
     (`async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)^)?
-    attr-dict
+    oilist(
+        `dataClause` `(` qualified($dataClause) `)`
+      | `structured` `(` $structured `)`
+      | `implicit` `(` $implicit `)`
+      | `name` `(` $name `)`
+    )
+    prop-dict attr-dict
   }];
 
   let builders = [
@@ -1375,7 +1391,8 @@ def OpenACC_UpdateHostOp : OpenACC_DataExitOpWithVarPtr<"update_host",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_PrivateRecipeOp
-    : OpenACC_Op<"private.recipe", [IsolatedFromAbove, Symbol, RecipeInterface,
+    : OpenACC_Op<"private.recipe", [IsolatedFromAbove, SymbolName,
+                                    SymbolVisibility, Symbol, RecipeInterface,
                                     AutomaticAllocationScope]> {
   let summary = "privatization recipe";
 
@@ -1388,10 +1405,12 @@ def OpenACC_PrivateRecipeOp
          default initialization. The region has an argument that contains the
          original value that needs to be privatized, followed by bounds arguments
          (if any) in order from innermost to outermost dimension. The region
-         must yield the privatized copy.
+         must yield the privatized copy first and may yield additional values
+         that are used only for destruction.
       2. The destroy region specifies how to destruct the value when it reaches
          its end of life. It takes the original value, the privatized value, and
-         bounds arguments (if any) in the same order as the init region.
+         any additional destruction values yielded by the init region, followed
+         by bounds arguments (if any) in the same order as the init region.
 
     A single privatization recipe can be used for multiple operand if they have
     the same type and do not require a specific default initialization.
@@ -1433,13 +1452,15 @@ def OpenACC_PrivateRecipeOp
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$type);
 
   let regions = (region AnyRegion:$initRegion,
                         AnyRegion:$destroyRegion);
 
   let assemblyFormat = [{
-    $sym_name `:` $type attr-dict-with-keyword `init` $initRegion
+    ($sym_visibility^)? $sym_name `:` $type attr-dict-with-keyword
+    `init` $initRegion
     (`destroy` $destroyRegion^)?
   }];
 
@@ -1484,8 +1505,8 @@ def OpenACC_PrivateRecipeOp
 //===----------------------------------------------------------------------===//
 
 def OpenACC_FirstprivateRecipeOp
-    : OpenACC_Op<"firstprivate.recipe", [IsolatedFromAbove, Symbol,
-                                         RecipeInterface,
+    : OpenACC_Op<"firstprivate.recipe", [IsolatedFromAbove, SymbolName,
+                                         SymbolVisibility, Symbol, RecipeInterface,
                                          AutomaticAllocationScope]> {
   let summary = "privatization recipe";
 
@@ -1498,13 +1519,15 @@ def OpenACC_FirstprivateRecipeOp
          default initialization. The region has an argument that contains the
          original value that needs to be privatized, followed by bounds arguments
          (if any) in order from innermost to outermost dimension. The region must
-         yield the privatized copy.
+         yield the privatized copy first and may yield additional values that
+         are used only for destruction.
       2. The copy region specifies how to copy the initial value to the newly
          created private value. It takes the original value, the privatized
          value, followed by bounds arguments (if any) in the same order.
       3. The destroy region specifies how to destruct the value when it reaches
-         its end of life. It takes the original value, the privatized value, and
-         bounds arguments (if any) in the same order. It is optional.
+         its end of life. It takes the original value, the privatized value, any
+         additional destruction values yielded by the init region, and bounds
+         arguments (if any) in the same order. It is optional.
 
     A single privatization recipe can be used for multiple operand if they have
     the same type and do not require a specific default initialization.
@@ -1559,13 +1582,15 @@ def OpenACC_FirstprivateRecipeOp
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$type);
 
   let regions = (region AnyRegion:$initRegion, AnyRegion:$copyRegion,
                         AnyRegion:$destroyRegion);
 
   let assemblyFormat = [{
-    $sym_name `:` $type attr-dict-with-keyword `init` $initRegion
+    ($sym_visibility^)? $sym_name `:` $type attr-dict-with-keyword
+    `init` $initRegion
     `copy` $copyRegion
     (`destroy` $destroyRegion^)?
   }];
@@ -1598,8 +1623,8 @@ def OpenACC_FirstprivateRecipeOp
 //===----------------------------------------------------------------------===//
 
 def OpenACC_ReductionRecipeOp
-    : OpenACC_Op<"reduction.recipe", [IsolatedFromAbove, Symbol,
-                                      RecipeInterface,
+    : OpenACC_Op<"reduction.recipe", [IsolatedFromAbove, SymbolName,
+                                      SymbolVisibility, Symbol, RecipeInterface,
                                       AutomaticAllocationScope]> {
   let summary = "reduction recipe";
 
@@ -1702,6 +1727,7 @@ def OpenACC_ReductionRecipeOp
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$type,
                        OpenACC_ReductionOperatorAttr:$reductionOperator);
 
@@ -1710,7 +1736,7 @@ def OpenACC_ReductionRecipeOp
                         AnyRegion:$destroyRegion);
 
   let assemblyFormat = [{
-    $sym_name `:` $type attr-dict-with-keyword
+    ($sym_visibility^)? $sym_name `:` $type attr-dict-with-keyword
     `reduction_operator` $reductionOperator
     `init` $initRegion `combiner` $combinerRegion
     (`destroy` $destroyRegion^)?
@@ -1925,7 +1951,12 @@ def OpenACC_ParallelOp
       | `if` `(` $ifCond `)`
       | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )
-    $region attr-dict-with-keyword
+    $region
+    oilist(
+        `defaultAttr` `(` qualified($defaultAttr) `)`
+      | `selfAttr` $selfAttr
+    )
+    attr-dict-with-keyword
   }];
 
   let hasVerifier = 1;
@@ -2067,7 +2098,12 @@ def OpenACC_SerialOp
       | `if` `(` $ifCond `)`
       | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )
-    $region attr-dict-with-keyword
+    $region
+    oilist(
+        `defaultAttr` `(` qualified($defaultAttr) `)`
+      | `selfAttr` $selfAttr
+    )
+    attr-dict-with-keyword
   }];
 
   let hasVerifier = 1;
@@ -2258,7 +2294,12 @@ def OpenACC_KernelsOp
       | `if` `(` $ifCond `)`
       | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )
-    $region attr-dict-with-keyword
+    $region
+    oilist(
+        `defaultAttr` `(` qualified($defaultAttr) `)`
+      | `selfAttr` $selfAttr
+    )
+    attr-dict-with-keyword
   }];
 
   let hasVerifier = 1;
@@ -2374,7 +2415,9 @@ def OpenACC_DataOp
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
           $waitOnly)
     )
-    $region attr-dict-with-keyword
+    $region
+    (`defaultAttr` `(` qualified($defaultAttr)^ `)`)?
+    attr-dict-with-keyword
   }];
   let hasVerifier = 1;
 }
@@ -2534,6 +2577,7 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
       | `wait` `` custom<OperandsWithKeywordOnly>($waitOperands,
             type($waitOperands), $wait)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+      | `finalize` $finalize
     )
     attr-dict-with-keyword
   }];
@@ -2579,7 +2623,7 @@ def OpenACC_HostDataOp
         `if` `(` $ifCond `)`
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
-    $region attr-dict-with-keyword
+    $region (`ifPresent` $ifPresent^)? attr-dict-with-keyword
   }];
 
   let hasVerifier = 1;
@@ -2876,6 +2920,15 @@ def OpenACC_LoopOp
     custom<LoopControl>($region, $lowerbound, type($lowerbound), $upperbound,
         type($upperbound), $step, type($step))
     ( `(` type($results)^ `)` )?
+    oilist(
+        `inclusiveUpperbound` `(` custom<DenseBoolArrayAttr>($inclusiveUpperbound) `)`
+      | `collapse` `(` custom<ArrayAttr>($collapse) `)`
+      | `collapseDeviceType` `(` custom<ArrayAttr>($collapseDeviceType) `)`
+      | `seq` custom<DeviceTypeArrayAttr>($seq)
+      | `independent` custom<DeviceTypeArrayAttr>($independent)
+      | `auto_` custom<DeviceTypeArrayAttr>($auto_)
+      | `unstructured` $unstructured
+    )
     attr-dict-with-keyword
   }];
 
@@ -3183,7 +3236,8 @@ def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit",
 }
 
 def OpenACC_GlobalConstructorOp : OpenACC_Op<"global_ctor",
-                                             [IsolatedFromAbove, Symbol]> {
+                                             [IsolatedFromAbove, SymbolName,
+                                              SymbolVisibility, Symbol]> {
   let summary = "Used to hold construction operations associated with globals such as declare";
 
   let description = [{
@@ -3206,18 +3260,20 @@ def OpenACC_GlobalConstructorOp : OpenACC_Op<"global_ctor",
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
-    $sym_name $region attr-dict-with-keyword
+    ($sym_visibility^)? $sym_name $region attr-dict-with-keyword
   }];
 
   let hasVerifier = 0;
 }
 
 def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
-                                            [IsolatedFromAbove, Symbol]> {
+                                            [IsolatedFromAbove, SymbolName,
+                                             SymbolVisibility, Symbol]> {
   let summary = "Used to hold destruction operations associated with globals such as declare";
 
   let description = [{
@@ -3241,11 +3297,12 @@ def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
-    $sym_name $region attr-dict-with-keyword
+    ($sym_visibility^)? $sym_name $region attr-dict-with-keyword
   }];
 
   let hasVerifier = 0;
@@ -3287,7 +3344,9 @@ def OpenACC_DeclareOp : OpenACC_Op<"declare",
 // 2.15.1 Routine Directive
 //===----------------------------------------------------------------------===//
 
-def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
+def OpenACC_RoutineOp
+    : OpenACC_Op<"routine", [IsolatedFromAbove, SymbolName, SymbolVisibility,
+                             Symbol]> {
   let summary = "acc routine operation";
 
   let description = [{
@@ -3312,7 +3371,8 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
     must be modified as well.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name, SymbolRefAttr:$func_name,
+  let arguments = (ins SymbolNameAttr:$sym_name,
+      OptionalAttr<StrAttr>:$sym_visibility, SymbolRefAttr:$func_name,
       OptionalAttr<SymbolRefArrayAttr>:$bindIdName,
       OptionalAttr<StrArrayAttr>:$bindStrName,
       OptionalAttr<DeviceTypeArrayAttr>:$bindIdNameDeviceType,
@@ -3330,7 +3390,8 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
                             ::mlir::Location location,
                             ::llvm::StringRef sym_name,
                             mlir::SymbolRefAttr func_name, bool implicit) {
-      return create(builder, location, sym_name, func_name, /*bindIDName=*/{},
+      return create(builder, location, sym_name, /*sym_visibility=*/nullptr,
+                    func_name, /*bindIDName=*/{},
                     /*bindStrName=*/{}, /*bindIdNameDeviceType=*/{},
                     /*bindStrnameDeviceType=*/{}, /*worker=*/{}, /*vector=*/{},
                     /*seq=*/{}, /*nohost=*/false, implicit, /*gang=*/{},
@@ -3395,7 +3456,7 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
   }];
 
   let assemblyFormat = [{
-    $sym_name `func` `(` $func_name `)`
+    ($sym_visibility^)? $sym_name `func` `(` $func_name `)`
     oilist (
         `bind` `(` custom<BindName>($bindIdName, $bindStrName ,$bindIdNameDeviceType, $bindStrNameDeviceType) `)`
       | `gang` `` custom<RoutineGangClause>($gang, $gangDim, $gangDimDeviceType)
@@ -3506,6 +3567,7 @@ def OpenACC_InitOp : OpenACC_Op<"init", [AttrSizedOperandSegments]> {
   let assemblyFormat = [{
     oilist(`device_num` `(` $deviceNum `:` type($deviceNum) `)`
       | `if` `(` $ifCond `)`
+      | `device_types` `(` qualified($device_types) `)`
     ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
@@ -3542,6 +3604,7 @@ def OpenACC_ShutdownOp : OpenACC_Op<"shutdown", [AttrSizedOperandSegments]> {
   let assemblyFormat = [{
     oilist(`device_num` `(` $deviceNum `:` type($deviceNum) `)`
     |`if` `(` $ifCond `)`
+    | `device_types` `(` qualified($device_types) `)`
     ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
@@ -3574,6 +3637,7 @@ def OpenACC_SetOp : OpenACC_Op<"set", [AttrSizedOperandSegments,
     oilist(`default_async` `(` $defaultAsync `:` type($defaultAsync) `)`
     | `device_num` `(` $deviceNum `:` type($deviceNum) `)`
     | `if` `(` $ifCond `)`
+    | `device_type` `(` qualified($device_type) `)`
     ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
@@ -3678,6 +3742,7 @@ def OpenACC_UpdateOp : OpenACC_Op<"update",
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
           $waitOnly)
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+      | `ifPresent` $ifPresent
     )
     attr-dict-with-keyword
   }];

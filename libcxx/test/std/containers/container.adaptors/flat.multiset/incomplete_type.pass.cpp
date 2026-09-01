@@ -13,6 +13,9 @@
 // Check that std::flat_multiset and its iterators can be instantiated with an incomplete
 // type.
 
+// FIXME: We should avoid SFINAEing in any of this code
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-sfinae-incomplete
+
 #include <flat_set>
 #include <vector>
 

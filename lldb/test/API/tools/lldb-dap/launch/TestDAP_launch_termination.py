@@ -2,6 +2,7 @@
 Test lldb-dap launch request.
 """
 
+from lldbsuite.test.decorators import requireSocketPermission
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.utils import DebugAdapter
 
@@ -13,6 +14,7 @@ class TestDAP_launch_termination(DAPTestCaseBase):
 
     USE_DEFAULT_DEBUG_ADAPTER = False
 
+    @requireSocketPermission
     def test_termination_socket(self):
         adapter = self.create_server_debug_adapter(
             connection="listen://localhost:0",
