@@ -5,10 +5,6 @@
 ; not defeat the AGPR allocation inference, which conservatively gives up on
 ; any call that is not nocallback.
 
-declare void @llvm.amdgcn.asyncmark()
-
-declare void @llvm.amdgcn.wait.asyncmark(i16 immarg)
-
 ; CHECK: define amdgpu_kernel void @asyncmark_kernel({{.*}}) #[[ATTR:[0-9]+]]
 define amdgpu_kernel void @asyncmark_kernel(ptr addrspace(1) %out) {
   call void @llvm.amdgcn.asyncmark()
