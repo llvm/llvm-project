@@ -1187,7 +1187,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 
   // Non-RDC SYCL device code is finalized by a clang-linker-wrapper job
   // bound to one device toolchain, so only one SYCL target can be requested
-  // now.
+  // for now. This restriction might be relaxed in future updates.
   if (Kinds.contains(Action::OFK_SYCL)) {
     const Arg *RDCArg = C.getInputArgs().getLastArg(options::OPT_fgpu_rdc,
                                                     options::OPT_fno_gpu_rdc);

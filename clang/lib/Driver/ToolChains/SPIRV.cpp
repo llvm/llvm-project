@@ -162,11 +162,12 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
 
-  // A SYCL fat binary is produced by clang-linker-wrapper, which drives the
-  // device link itself by re-invoking the driver with --sycl-link once per
-  // device image. It discards this command apart from its executable, which is
-  // eventually also ignored.
   if (JA.getType() == types::TY_SYCL_FATBIN) {
+    // This command is never executed. LinkerWrapper::ConstructJob rewrites it
+    // in place into the clang-linker-wrapper invocation, reusing the executable
+    // as the wrapper's --linker-path=. The device link itself happens when the
+    // wrapper re-invokes the driver with --sycl-link, which re-enters this
+    // function through the OPT_sycl_link branches.
     C.addCommand(std::make_unique<Command>(
         JA, *this, ResponseFileSupport::None(),
         Args.MakeArgString(ToolChain.GetProgramPath("clang-sycl-linker")),
