@@ -339,10 +339,13 @@ static bool isKnownNonDecreasingInLoop(const SCEV *S, const Loop *L,
     return SE.isLoopInvariant(UDiv->getRHS(), L) &&
            isKnownNonDecreasingInLoop(UDiv->getLHS(), L, SE);
   }
-  case scAddRecExpr:
-    return SE.getMonotonicPredicateType(cast<SCEVAddRecExpr>(S),
-                                        ICmpInst::ICMP_UGE) ==
+  case scAddRecExpr: {
+    auto *AR = cast<SCEVAddRecExpr>(S);
+    assert(AR->getLoop() == L &&
+           "trying to check for AddRec in different loop");
+    return SE.getMonotonicPredicateType(AR, ICmpInst::ICMP_UGE) ==
            ScalarEvolution::MonotonicPredicateType::MonotonicallyIncreasing;
+  }
   default:
     return false;
   }
