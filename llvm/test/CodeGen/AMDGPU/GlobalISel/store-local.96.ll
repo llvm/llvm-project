@@ -60,7 +60,6 @@ define amdgpu_kernel void @store_lds_v3i32(ptr addrspace(3) %out, <3 x i32> %x) 
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-NEXT:    ds_store_b96 v3, v[0:2]
 ; GFX11-NEXT:    s_endpgm
-;
 ; GFX6-LABEL: store_lds_v3i32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
@@ -261,7 +260,6 @@ define amdgpu_kernel void @store_lds_v3i32_align1(ptr addrspace(3) %out, <3 x i3
 ; GFX11-NEXT:    ds_store_b8_d16_hi v6, v3 offset:10
 ; GFX11-NEXT:    ds_store_b8_d16_hi v6, v4 offset:11
 ; GFX11-NEXT:    s_endpgm
-;
 ; GFX6-LABEL: store_lds_v3i32_align1:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
@@ -426,7 +424,6 @@ define amdgpu_kernel void @store_lds_v3i32_align2(ptr addrspace(3) %out, <3 x i3
 ; GFX11-NEXT:    ds_store_b16 v1, v4 offset:8
 ; GFX11-NEXT:    ds_store_b16 v1, v6 offset:10
 ; GFX11-NEXT:    s_endpgm
-;
 ; GFX6-LABEL: store_lds_v3i32_align2:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
@@ -522,7 +519,6 @@ define amdgpu_kernel void @store_lds_v3i32_align4(ptr addrspace(3) %out, <3 x i3
 ; GFX11-NEXT:    ds_store_2addr_b32 v1, v0, v2 offset1:1
 ; GFX11-NEXT:    ds_store_b32 v1, v3 offset:8
 ; GFX11-NEXT:    s_endpgm
-;
 ; GFX6-LABEL: store_lds_v3i32_align4:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dword s6, s[4:5], 0x0
@@ -597,7 +593,6 @@ define amdgpu_kernel void @store_lds_v3i32_align8(ptr addrspace(3) %out, <3 x i3
 ; GFX11-NEXT:    ds_store_2addr_b32 v1, v0, v2 offset1:1
 ; GFX11-NEXT:    ds_store_b32 v1, v3 offset:8
 ; GFX11-NEXT:    s_endpgm
-;
 ; GFX6-LABEL: store_lds_v3i32_align8:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
@@ -671,7 +666,6 @@ define amdgpu_kernel void @store_lds_v3i32_align16(ptr addrspace(3) %out, <3 x i
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX11-NEXT:    ds_store_b96 v3, v[0:2]
 ; GFX11-NEXT:    s_endpgm
-;
 ; GFX6-LABEL: store_lds_v3i32_align16:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4

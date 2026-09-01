@@ -68,10 +68,9 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 %node_ptr, float %
 ; GFX11-TRUE16-LABEL: image_bvh_intersect_ray_a16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v9, v5 :: v_dual_mov_b32 v10, v8
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v7.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v10.h, v6.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v8.h, v9.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_perm_b32 v8, v9, v7, 0x5040100
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v7.h
 ; GFX11-TRUE16-NEXT:    image_bvh_intersect_ray v[0:3], [v0, v1, v[2:4], v[8:10]], s[0:3] a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -143,10 +142,9 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 %node_ptr, float
 ; GFX11-TRUE16-LABEL: image_bvh64_intersect_ray_a16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v10, v6 :: v_dual_mov_b32 v11, v9
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v9.l, v8.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v11.h, v7.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v9.h, v10.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_perm_b32 v9, v10, v8, 0x5040100
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v10.l, v8.h
 ; GFX11-TRUE16-NEXT:    image_bvh64_intersect_ray v[0:3], [v[0:1], v2, v[3:5], v[9:11]], s[0:3] a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -363,8 +361,8 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v16, v0 :: v_dual_mov_b32 v17, v1
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v13, v2 :: v_dual_mov_b32 v14, v3
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v15, v4
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v18.l, v7.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v18.h, v19.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    v_perm_b32 v18, v19, v7, 0x5040100
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v19.l, v7.h
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v20.h, v6.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, exec_lo
@@ -632,9 +630,8 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v5, v6 :: v_dual_mov_b32 v6, v9
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v17, v0 :: v_dual_mov_b32 v18, v1
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v19, v2 :: v_dual_mov_b32 v14, v3
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v8.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.h, v5.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_perm_b32 v4, v5, v8, 0x5040100
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v8.h
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.h, v7.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, exec_lo
