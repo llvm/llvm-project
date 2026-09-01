@@ -503,7 +503,7 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       if (moduleSlotTracker) {
         slot = moduleSlotTracker->getLocalSlot(bb);
       } else if (bb->getParent()) {
-        ModuleSlotTracker tmpTracker(bb->getModule());
+        ModuleSlotTracker tmpTracker(bb->getModule(), false);
         tmpTracker.incorporateFunction(*bb->getParent());
         slot = tmpTracker.getLocalSlot(bb);
       }
