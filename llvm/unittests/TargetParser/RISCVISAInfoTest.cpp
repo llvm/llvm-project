@@ -815,6 +815,11 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
     EXPECT_THAT(Error, ::testing::HasSubstr(ConflictingExt));
   }
 
+  for (StringRef Input : {"rv32idc_xqccmi0p2", "rv32i_zcd_xqccmi0p2"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'xqccmi' and 'zcd' extensions are incompatible");
+  }
+
   for (StringRef Input : {"rv32i_zcmp_xqccmp0p3", "rv64i_zcmp_xqccmp0p3"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcmp' and 'xqccmp' extensions are incompatible");
@@ -1670,6 +1675,7 @@ Experimental extensions
     ssijt                0.20
     ssip                 0.20
     svukte               1.0
+    xqccmi               0.2
     xqccmt               0.1
     xsfmclic             0.1
     xsfsclic             0.1

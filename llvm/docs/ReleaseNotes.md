@@ -210,6 +210,7 @@ Makes programs 10x faster by doing Special New Thing.
   push/pop extensions.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
+* Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension
 
 ### Changes to the WebAssembly Backend
 
