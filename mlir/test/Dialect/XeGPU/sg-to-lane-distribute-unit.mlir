@@ -1717,3 +1717,44 @@ gpu.func @convert_layout_broadcast_nested_slice() {
   gpu.return
 }
 }
+
+// -----
+
+// An input layout that lays out only part of the subgroup. `lane_layout = [8, 1]`
+// names 8 of the 16 lanes, and the lane id delinearizes modulo that, so lanes
+// 8-15 replicate lanes 0-7: the input is a replicated layout spelled without a
+// slice. The target hands out 2 fragments, so `slot` is `lane % 2` and the
+// donors sit 2, 4 and 6 lanes away, one per row of the target fragment beyond
+// the local one.
+// CHECK-LABEL: gpu.func @convert_layout_broadcast_partial_input
+// CHECK:         %[[SRC:.*]] = arith.constant dense<1.000000e+00> : vector<1x2xf8E8M0FNU>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<1x2xf8E8M0FNU> to vector<2xf8E8M0FNU>
+// CHECK:         %[[BITS:.*]] = vector.bitcast %[[FLAT]] : vector<2xf8E8M0FNU> to vector<2xi8>
+// CHECK:         %[[LANE:.*]] = gpu.lane_id
+// CHECK:         %[[C2:.*]] = arith.constant 2 : index
+// CHECK:         %[[SLOT:.*]] = arith.remui %[[LANE]], %[[C2]] : index
+// CHECK:         %[[E0:.*]] = vector.extract %[[BITS]][0] : i8 from vector<2xi8>
+// CHECK:         vector.insert %[[E0]], %{{.*}} [0] : i8 into vector<8xi8>
+// CHECK:         %[[E1:.*]] = vector.extract %[[BITS]][1] : i8 from vector<2xi8>
+// CHECK:         vector.insert %[[E1]], %{{.*}} [1] : i8 into vector<8xi8>
+// CHECK:         %[[SLOT_I32:.*]] = arith.index_cast %[[SLOT]] : index to i32
+// CHECK:         %[[D2:.*]] = arith.addi %[[SLOT_I32]], %{{.*}} : i32
+// CHECK:         gpu.shuffle idx %[[E0]], %[[D2]], %{{.*}} : i8
+// CHECK:         vector.insert %{{.*}} [2] : i8 into vector<8xi8>
+// CHECK:         gpu.shuffle idx %[[E1]], %{{.*}}, %{{.*}} : i8
+// CHECK:         vector.insert %{{.*}} [3] : i8 into vector<8xi8>
+// CHECK-COUNT-4: gpu.shuffle
+// CHECK:         %[[BACK:.*]] = vector.bitcast %{{.*}} : vector<8xi8> to vector<8xf8E8M0FNU>
+// CHECK:         vector.shape_cast %[[BACK]] : vector<8xf8E8M0FNU> to vector<4x2xf8E8M0FNU>
+gpu.module @xevm_module {
+gpu.func @convert_layout_broadcast_partial_input() {
+  %scale_src = arith.constant dense<1.0> : vector<8x2xf8E8M0FNU>
+  %cvt = xegpu.convert_layout %scale_src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [2, 1], lane_data = [1, 1]>
+    }> : vector<8x2xf8E8M0FNU>
+  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  gpu.return
+}
+}
