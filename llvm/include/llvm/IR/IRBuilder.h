@@ -1236,13 +1236,14 @@ public:
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
-  /// instruction. Copy branch meta data if available.
+  /// instruction. Copy applicable metadata from MDSrc if available.
   CondBrInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            Instruction *MDSrc) {
     CondBrInst *Br = CondBrInst::Create(Cond, True, False);
     if (MDSrc) {
-      unsigned WL[4] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
-                        LLVMContext::MD_make_implicit, LLVMContext::MD_dbg};
+      unsigned WL[5] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
+                        LLVMContext::MD_make_implicit, LLVMContext::MD_dbg,
+                        LLVMContext::MD_annotation};
       Br->copyMetadata(*MDSrc, WL);
     }
     return Insert(Br);

@@ -5034,7 +5034,6 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
       // We found both of the successors we were looking for.
       // Create a conditional branch sharing the condition of the select.
       CondBrInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB, OldTerm);
-      NewBI->copyMetadata(*OldTerm, {LLVMContext::MD_annotation});
       setBranchWeights(*NewBI, {TrueWeight, FalseWeight},
                        /*IsExpected=*/false, /*ElideAllZero=*/true);
       NewTerm = NewBI;
@@ -6174,7 +6173,6 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
 
   CondBrInst *NewCondBr = dyn_cast<CondBrInst>(NewBI);
   if (NewCondBr) {
-    NewCondBr->copyMetadata(*SI, {LLVMContext::MD_annotation});
     // The switch weights do not map directly to the new branch and are
     // recomputed below.
     NewCondBr->setMetadata(LLVMContext::MD_prof, nullptr);
