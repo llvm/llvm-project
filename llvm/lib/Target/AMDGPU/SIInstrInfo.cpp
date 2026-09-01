@@ -1119,10 +1119,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  // Returns true if \p Opc can encode \p Dst as its destination, i.e. \p Dst is
-  // a member of \p Opc's HwMode-resolved destination operand class. A wide VALU
-  // copy is used only when this holds; otherwise the copy is expanded
-  // element-wise with V_MOV_B32 below.
+  // Returns true if Dst is in Opc's HwMode-resolved destination operand class.
   auto IsDstInCopyInstrClass = [&](unsigned Opc, MCRegister Dst) {
     int16_t RCID = getOpRegClassID(get(Opc).operands()[0]);
     return RCID >= 0 && RI.getRegClass(RCID)->contains(Dst);
@@ -1186,16 +1183,12 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       NewOpcode = AMDGPU::V_PK_MOV_B32;
 
     if (NewOpcode != AMDGPU::INSTRUCTION_LIST_END) {
-      // The copy is expanded into 64-bit component moves below, so the wide
-      // move is usable only if it can encode each component. Components of a
-      // contiguous tuple share the base register's alignment, so it is enough
-      // to test the low component (sub0_sub1); for a 64-bit destination that
-      // component is the whole register. Otherwise fall through to the
-      // element-wise V_MOV_B32 expansion below (a Size == 64 copy reaches here
-      // when the wide moves above rejected its destination).
+      // Tuple components share alignment; test sub0_sub1 for wider registers.
       MCRegister WideDst = Size == 64
                                ? DestReg.asMCReg()
                                : RI.getSubReg(DestReg, AMDGPU::sub0_sub1);
+      // If the move cannot be used, the loop below expands element-wise with
+      // V_MOV_B32.
       if (IsDstInCopyInstrClass(NewOpcode, WideDst)) {
         Opcode = NewOpcode;
         EltSize = 8;
