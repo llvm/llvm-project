@@ -1030,8 +1030,8 @@ static Value unflatten(PatternRewriter &rewriter, Value flat,
 //
 // XeGPU layouts are expressed in terms of the N-D shape of the accessed data,
 // so a flattened gather/scatter forces layout propagation to reason through the
-// surrounding `vector.shape_cast` ops - which is either impossible or yields
-// layouts that cannot be distributed.
+// surrounding `vector.shape_cast` ops. That adds complexity and tends to yield
+// layouts that lower to unoptimized code.
 //
 // Before:
 //   %cst = arith.constant dense<0.0> : vector<8192xbf16>
@@ -1081,27 +1081,16 @@ struct UnflattenGatherScatter : public OpRewritePattern<OpTy> {
         return rewriter.notifyMatchFailure(op,
                                            "cannot un-flatten the pass-thru");
 
-      // Every use must cast back to N-D, else the rewrite would just move the
-      // shape_casts to the result.
-      SmallVector<vector::ShapeCastOp> resultCasts;
-      for (Operation *user : op->getUsers()) {
-        auto resultCast = dyn_cast<vector::ShapeCastOp>(user);
-        if (!resultCast || resultCast.getResultVectorType() != ndType)
-          return rewriter.notifyMatchFailure(
-              op, "result is not exclusively shape_cast back to N-D");
-        resultCasts.push_back(resultCast);
-      }
-      if (resultCasts.empty())
-        return rewriter.notifyMatchFailure(op, "result is unused");
-
       Value mask = unflatten(rewriter, op.getMask(), ndMaskType);
       Value passThru = unflatten(rewriter, op.getPassThru(), ndType);
       auto ndGather = vector::GatherOp::create(
           rewriter, op.getLoc(), ndType, op.getBase(), op.getOffsets(),
           indexCast.getSource(), mask, passThru, op.getAlignmentAttr());
-      for (vector::ShapeCastOp resultCast : resultCasts)
-        rewriter.replaceOp(resultCast, ndGather.getResult());
-      rewriter.eraseOp(op);
+      // Keep the uses on the flat type instead of inspecting them. Where a use
+      // already casts back to N-D, `ShapeCastOp::fold` collapses the two casts
+      // and then drops the resulting no-op, so nothing is left behind.
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, op.getVectorType(),
+                                                       ndGather);
     } else {
       if (!canUnflatten(op.getValueToStore(), ndType))
         return rewriter.notifyMatchFailure(
