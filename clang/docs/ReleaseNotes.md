@@ -96,6 +96,13 @@ features cannot lower the translation-unit ABI level;
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
 
+- On x86-64 System V, a non-zero-width unnamed bit-field now classifies the
+  eightbytes it occupies as INTEGER, like a named bit-field, matching GCC.
+  Aggregates where this changes the classification may be passed or returned
+  differently -- a struct holding a run of `__int128` bit-fields, for example,
+  now travels in the two integer registers the ABI assigns it. This also fixes
+  a crash when such a struct was passed or returned. (#GH202205)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
@@ -135,6 +142,13 @@ features cannot lower the translation-unit ABI level;
 - Clang now supports [P3658R1](https://wg21.link/p3658r1) (Adjust identifier
   following new Unicode recommendations), applied as a DR to all C++ language
   modes.
+
+- Clang now supports [P3670R4](https://wg21.link/p3670r4) (Pack indexing for
+  template names), which allows a pack of templates to be indexed, as in
+  `TT...[0]<int>`. Like pack indexing of types and expressions, this is
+  available in all C++ language modes as an extension, controlled by
+  `-Wc++2d-extensions` and `-Wpre-c++2d-compat`, and `__cpp_pack_indexing` is
+  bumped to `202606L`.
 
 #### C++2c Feature Support
 
@@ -198,6 +212,10 @@ features cannot lower the translation-unit ABI level;
 - Clang tools now resolve tool names without a path in compilation databases
   through `PATH`.
 
+- On musl targets, the driver now links ``libssp_nonshared.a`` when stack
+  protection is enabled and the library is present in the toolchain library
+  paths, matching what musl distributions configure GCC to do.
+
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
@@ -235,6 +253,10 @@ features cannot lower the translation-unit ABI level;
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
 
 ### Improvements to Clang's diagnostics
+
+- The `cannot overload a member function` diagnostic now describes the previous
+  declaration first, matching the order in which the declarations appear in the
+  source. (#GH219803)
 
 - More consistent rendering of Unicode characters in diagnostic messages.
 
@@ -416,6 +438,11 @@ features cannot lower the translation-unit ABI level;
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
+- Added `-Wcounter-extension` as a diagnostic group under `-Wc2y-extensions` to
+  control `__COUNTER__` being diagnosed as an extension. This allows `-pedantic`
+  users to disable the diagnostic with `-Wno-counter-extension` without having
+  to disable all pedantic diagnostics. (#GH196557)
+
 - Clang now diagnoses more details when a constraint evaluates to false.
 
 ### Improvements to Clang's time-trace
@@ -484,9 +511,9 @@ features cannot lower the translation-unit ABI level;
   producing a spurious "no matching function" error with no candidate notes.
   (#GH210822)
 
-- Fixed a crash when module directive export module foo not following a 
+- Fixed a crash when module directive export module foo not following a
   semicolon and there are no rest pp-tokens in current module file. (#GH187771)
-  
+
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
@@ -495,6 +522,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash on invalid code where a ``decltype`` not followed by ``(`` was
   parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
   Clang now diagnoses the error instead of asserting. (#GH211207)
+
+- Fixed an assertion failure when a parenthesized structured binding declarator
+  was followed by a function declarator and body (e.g. ``([a, b])() {}``).
+  (#GH218144, #GH193687)
 
 - Fixed a crash when computing the implicit deletion of a defaulted comparison
   operator required an access check that ran while an enclosing declaration
@@ -522,6 +553,10 @@ features cannot lower the translation-unit ABI level;
   using ``__is_constructible`` on a nested class template inside the definition
   of the containing class. (#GH215166)
 
+- Fixed a bug where Clang incorrectly required `promise.return_value()` for a
+  dependent `co_return` operand that inits to `void`, instead of using
+  `promise.return_void()`. (#GH218368)
+
 - Fixed merging of lambdas across modules in the case where neither lambda is
   imported from an AST file. (#GH214560)
 
@@ -536,11 +571,28 @@ features cannot lower the translation-unit ABI level;
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
+- Allow redeclaration lookup to consider conversion function templates, allowing
+  Clang to match an in-class specialization such as `template<> operator int()`
+  against a prior conversion function template `template<class T> operator T()`.
+  (#GH218261)
+
+- Fixed an assertion when an ill-formed qualified member function definition
+  inside a union caused the union to be treated as a polymorphic class.
+  (#GH213854)
+
+- Fixed an assertion when a type-trait keyword that had already been made
+  available as an identifier (e.g. `struct __make_unsigned`) was seen again
+  in a token that was lexed and cached before the first occurrence was parsed.
+  (#GH214128)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
   serialized PCH/AST files and `-Wunused-local-typedef` diagnostics
   non-reproducible across runs. (#GH209639)
+
+- `FunctionDecl::getReturnTypeSourceRange()` now returns correct source
+  location of a trailing return type. (#GH162649)
 
 #### Miscellaneous Bug Fixes
 
@@ -550,6 +602,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
+- Fixed a crash in codegen on 32-bit targets caused by a struct too large to
+  represent in `size_t`. The `err_struct_too_large` check now scales the
+  threshold to the target's `size_t` width instead of using a fixed
+  threshold of `1 << 60` regardless of the target.
+- Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
 
 ### OpenACC Specific Changes
 
@@ -572,6 +629,11 @@ features cannot lower the translation-unit ABI level;
   - `__builtin_amdgcn_sicmpl`
   - `__builtin_amdgcn_fcmp`
   - `__builtin_amdgcn_fcmpf`
+
+#### DirectX Support
+
+- `clang-dxc` and HLSL support are now enabled by default, following the
+  promotion of the DirectX backend to an official LLVM target.
 
 #### NVPTX Support
 
@@ -648,6 +710,9 @@ features cannot lower the translation-unit ABI level;
 
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
+- Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
+  body of requires expressions. It is enabled by the `Allman`, `Whitesmiths`,
+  and `GNU` styles of `BreakBeforeBraces`.
 
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
@@ -678,6 +743,8 @@ features cannot lower the translation-unit ABI level;
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
 #### Moved checkers
+
+The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.UseAfterLifetimeEnd`.
 
 #### Diagnostic changes
 

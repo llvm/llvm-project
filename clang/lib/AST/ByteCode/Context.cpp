@@ -363,13 +363,10 @@ std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
       if (Off < 0)
         return false;
 
-      unsigned Length = 0;
-      for (uint64_t I = Off; I != Lit->getLength(); ++I) {
-        if (Lit->getCodeUnit(I) == 0)
-          break;
-        ++Length;
-      }
-      Result = Length;
+      UnsignedOrNone ZeroIndex = Lit->findZeroCodeUnit(Off);
+      if (!ZeroIndex)
+        return false;
+      Result = *ZeroIndex;
       return true;
     }
 
@@ -675,7 +672,6 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   }
   // Set up argument indices.
   unsigned ParamOffset = 0;
-  llvm::SmallVector<Function::ParamDescriptor> ParamDescriptors;
 
   // If the return is not a primitive, a pointer to the storage where the
   // value is initialized in is passed as the first argument. See 'RVO'
@@ -718,6 +714,9 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
 
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
+  llvm::SmallVector<Function::ParamDescriptor> ParamDescriptors;
+  ParamDescriptors.reserve(FuncDecl->getNumParams());
+
   const auto *FuncProto = FuncDecl->getType()->getAs<FunctionProtoType>();
   unsigned BlockOffset = 0;
   for (auto [ParamIndex, PD] : llvm::enumerate(FuncDecl->parameters())) {

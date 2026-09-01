@@ -42,7 +42,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <map>
 #include <utility>
 
 using namespace llvm;

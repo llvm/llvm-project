@@ -201,7 +201,8 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   // -gpu=mem:unified|managed the unified/managed allocators are required for
   // correctness, so this must not depend on which placement pass is selected
   // or on -disable-memory-allocation-opt.
-  pm.addPass(fir::createCudaHeapAllocPromotion());
+  pm.addPass(fir::createCudaHeapAllocPromotion(
+      fir::CudaHeapAllocPromotionOptions{pc.StackArrays}));
 
   if (enableAllocationPlacement)
     fir::addAllocationPlacement(pm, pc.StackArrays);
@@ -217,7 +218,7 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   pm.addPass(mlir::createCSEPass());
 
   // Run LICM after CSE, which may reduce the number of operations to hoist.
-  if (enableFirLICM && pc.OptLevel != llvm::OptimizationLevel::O0)
+  if (!disableFirLICM && pc.OptLevel != llvm::OptimizationLevel::O0)
     pm.addPass(fir::createLoopInvariantCodeMotion());
 
   // Polymorphic types
