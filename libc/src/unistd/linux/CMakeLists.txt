@@ -290,6 +290,29 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpgid
+  SRCS
+    getpgid.cpp
+  HDRS
+    ../getpgid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpgid
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getpgrp
+  SRCS
+    getpgrp.cpp
+  HDRS
+    ../getpgrp.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpgid
+)
+
+add_entrypoint_object(
   getpid
   SRCS
     getpid.cpp
@@ -565,6 +588,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setpgid
+  SRCS
+    setpgid.cpp
+  HDRS
+    ../setpgid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setpgid
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   setregid
   SRCS
     setregid.cpp
@@ -684,6 +719,32 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.auxv
     libc.src.__support.OSUtil.linux.syscall_wrappers.prlimit
     libc.src.__support.OSUtil.linux.syscall_wrappers.sysinfo
+)
+
+add_entrypoint_object(
+  tcgetpgrp
+  SRCS
+    tcgetpgrp.cpp
+  HDRS
+    ../tcgetpgrp.h
+  DEPENDS
+    libc.hdr.sys_ioctl_macros
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  tcsetpgrp
+  SRCS
+    tcsetpgrp.cpp
+  HDRS
+    ../tcsetpgrp.h
+  DEPENDS
+    libc.hdr.sys_ioctl_macros
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
