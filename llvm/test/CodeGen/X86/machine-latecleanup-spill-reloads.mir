@@ -1,0 +1,196 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=machine-latecleanup %s \
+# RUN:   -o - -verify-machineinstrs | FileCheck %s
+
+--- |
+  define void @remove_redundant_spill_reload() {
+    ret void
+  }
+
+  define void @same_spill_slot_store_blocks_reload_reuse() {
+    ret void
+  }
+
+  define void @different_spill_slot_store_keeps_reload_reusable() {
+    ret void
+  }
+
+  define void @non_spill_stack_slot_reload_is_not_reused() {
+    ret void
+  }
+
+  define void @call_blocks_reload_reuse() #0 {
+    ret void
+  }
+
+  define void @reload_reused_from_predecessors() {
+    ret void
+  }
+
+  declare void @sink()
+
+  attributes #0 = { "frame-pointer"="all" }
+...
+---
+name:            remove_redundant_spill_reload
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: remove_redundant_spill_reload
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: $rcx = MOV64ri 1
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    $rcx = MOV64ri 1
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+name:            same_spill_slot_store_blocks_reload_reuse
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $rcx
+
+    ; CHECK-LABEL: name: same_spill_slot_store_blocks_reload_reuse
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 32, $noreg, $rcx :: (store (s64) into %stack.0)
+    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 32, $noreg, $rcx :: (store (s64) into %stack.0)
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+name:            different_spill_slot_store_keeps_reload_reusable
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       56
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+  - { id: 2, type: spill-slot, offset: -32, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $rcx
+
+    ; CHECK-LABEL: name: different_spill_slot_store_keeps_reload_reusable
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rcx :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 48, $noreg, $rax :: (store (s64) into %stack.2)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rcx :: (store (s64) into %stack.1)
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 48, $noreg, $rax :: (store (s64) into %stack.2)
+    RET64
+...
+---
+name:            non_spill_stack_slot_reload_is_not_reused
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+stack:
+  - { id: 0, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: non_spill_stack_slot_reload_is_not_reused
+    ; CHECK:      $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: $rcx = MOV64ri 1
+    ; CHECK-NEXT: $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    $rcx = MOV64ri 1
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
+---
+# The reload target is callee-saved and the frame register is $rbp, so neither
+# the call's regmask nor its implicit-def $rsp drops the tracked reload on its
+# own; only treating the call as a memory clobber keeps the second reload.
+name:            call_blocks_reload_reuse
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+  hasCalls:        true
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $rbp
+
+    ; CHECK-LABEL: name: call_blocks_reload_reuse
+    ; CHECK:      $rbx = MOV64rm $rbp, 1, $noreg, -16, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: CALL64pcrel32
+    ; CHECK-NEXT: $rbx = MOV64rm $rbp, 1, $noreg, -16, $noreg :: (load (s64) from %stack.0)
+    ; CHECK-NEXT: MOV64mr $rbp, 1, $noreg, -24, $noreg, $rbx :: (store (s64) into %stack.1)
+    ; CHECK-NEXT: RET64
+    $rbx = MOV64rm $rbp, 1, $noreg, -16, $noreg :: (load (s64) from %stack.0)
+    CALL64pcrel32 target-flags(x86-plt) @sink, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    $rbx = MOV64rm $rbp, 1, $noreg, -16, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rbp, 1, $noreg, -24, $noreg, $rbx :: (store (s64) into %stack.1)
+    RET64
+...
+---
+name:            reload_reused_from_predecessors
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       48
+  maxAlignment:    8
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 8 }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+body:             |
+  ; CHECK-LABEL: name: reload_reused_from_predecessors
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $edi
+
+    TEST32rr $edi, $edi, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
+
+  bb.1:
+    successors: %bb.3
+
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    JMP_1 %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+
+  bb.3:
+    liveins: $rax
+
+    ; CHECK:     bb.3:
+    ; CHECK-NOT:   MOV64rm
+    ; CHECK:       MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    ; CHECK-NEXT:  RET64
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 40, $noreg, $rax :: (store (s64) into %stack.1)
+    RET64
+...
