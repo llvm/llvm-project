@@ -1131,7 +1131,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
       return;
 
     // The latch condition ensures ContinuePred holds in the header on each
-    // iteration other than the first. Together we a precondition on the start
+    // iteration other than the first. Together with a precondition on the start
     // value (StartValue ContinuePred B), we can add B as bound of PN.
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
