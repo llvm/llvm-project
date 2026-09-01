@@ -2001,6 +2001,20 @@ TEST_F(DISubrangeTest, fortranAllocatableExpr) {
   EXPECT_NE(N, DISubrange::get(Context, nullptr, LVother, UE, SE));
 }
 
+// Regression test: MDNodeKeyImpl<DISubrange>::isKeyOf() (like its
+// DISubrangeType counterpart) must not crash when a bound operand is
+// ConstantAsMetadata wrapping a non-ConstantInt Constant.
+TEST_F(DISubrangeTest, boundsCompareNonConstantIntSafely) {
+  auto *LowerUndef =
+      ConstantAsMetadata::get(UndefValue::get(Type::getInt64Ty(Context)));
+  auto *LowerInt = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), -7));
+
+  auto *N1 = DISubrange::get(Context, nullptr, LowerUndef, nullptr, nullptr);
+  auto *N2 = DISubrange::get(Context, nullptr, LowerInt, nullptr, nullptr);
+  EXPECT_NE(N1, N2);
+}
+
 typedef MetadataTest DISubrangeTypeTest;
 
 TEST_F(DISubrangeTypeTest, get) {
@@ -2032,6 +2046,62 @@ TEST_F(DISubrangeTypeTest, get) {
 
   TempDISubrangeType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+}
+
+// MDNodeKeyImpl<DISubrangeType>::isKeyOf() compares bound operands that are
+// ConstantAsMetadata by comparing the wrapped ConstantInt's *value* rather
+// than requiring pointer identity. Use two different integer widths (i32
+// and i64) holding the same signed value: ConstantInt::get uniques per
+// (type, value), so these are genuinely distinct ConstantInt/ConstantAsMetadata
+// instances -- unlike same-width same-value constants, which LLVM would
+// already unique to an identical pointer, making the value-comparison branch
+// unreachable in that case.
+TEST_F(DISubrangeTypeTest, boundsEqualDistinctConstantAsMetadata) {
+  auto *Base =
+      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "test_integer", 32, 0,
+                       dwarf::DW_ATE_signed, 100, DINode::FlagZero);
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+
+  auto *Lower1 =
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, -7, true)));
+  auto *Lower2 =
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(64, -7, true)));
+  ASSERT_NE(Lower1, Lower2);
+  auto *Upper = ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 23, true)));
+
+  auto *N1 = DISubrangeType::get(Context, StringRef(), File, 101, Scope, 32, 0,
+                                 DINode::FlagZero, Base, Lower1, Upper,
+                                 nullptr, nullptr);
+  auto *N2 = DISubrangeType::get(Context, StringRef(), File, 101, Scope, 32, 0,
+                                 DINode::FlagZero, Base, Lower2, Upper,
+                                 nullptr, nullptr);
+  EXPECT_EQ(N1, N2);
+}
+
+// Regression test: a bound operand may be ConstantAsMetadata wrapping a
+// Constant that is not a ConstantInt (e.g. UndefValue). isKeyOf() must not
+// crash comparing such nodes -- it should safely treat them as unequal
+// instead of unconditionally casting to ConstantInt.
+TEST_F(DISubrangeTypeTest, boundsCompareNonConstantIntSafely) {
+  auto *Base =
+      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "test_integer", 32, 0,
+                       dwarf::DW_ATE_signed, 100, DINode::FlagZero);
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+
+  auto *Lower1 = ConstantAsMetadata::get(UndefValue::get(Type::getInt32Ty(Context)));
+  auto *Lower2 =
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, -7, true)));
+  auto *Upper = ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 23, true)));
+
+  auto *N1 = DISubrangeType::get(Context, StringRef(), File, 101, Scope, 32, 0,
+                                 DINode::FlagZero, Base, Lower1, Upper,
+                                 nullptr, nullptr);
+  auto *N2 = DISubrangeType::get(Context, StringRef(), File, 102, Scope, 32, 0,
+                                 DINode::FlagZero, Base, Lower2, Upper,
+                                 nullptr, nullptr);
+  EXPECT_NE(N1, N2);
 }
 
 typedef MetadataTest DIGenericSubrangeTest;
