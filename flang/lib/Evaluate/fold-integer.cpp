@@ -1456,13 +1456,6 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       auto realBytes{
           context.targetCharacteristics().GetByteSize(TypeCategory::Real,
               context.defaults().GetDefaultKind(TypeCategory::Real))};
-      if (intBytes != realBytes) {
-        // Using the low-level API to bypass the module file check in this case.
-        context.messages().Warn(
-            /*isInModuleFile=*/false, context.languageFeatures(),
-            common::UsageWarning::FoldingValueChecks, *context.moduleFileName(),
-            "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined when default INTEGER and REAL are not consistent due to compiler options"_warn_en_US);
-      }
       return Expr<T>{8 * std::min(intBytes, realBytes)};
     }
   }

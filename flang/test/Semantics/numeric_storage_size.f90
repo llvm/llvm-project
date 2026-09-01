@@ -13,9 +13,11 @@ use iso_fortran_env
 !CHECK-I4: nss = 32_4
 !CHECK-R4: nss = 32_4
 !CHECK-I4-R4: nss = 32_4
-!CHECK-I8: warning: NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined when default INTEGER and REAL are not consistent due to compiler options
+!CHECK-I8: warning: NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined because compiler options make default INTEGER(KIND=8) and REAL(KIND=4) have different storage sizes (8 and 4 bytes, respectively)
+!CHECK-I8: USE-associated here
 !CHECK-I8: nss = 32_4
-!CHECK-R8: warning: NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined when default INTEGER and REAL are not consistent due to compiler options
+!CHECK-R8: warning: NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined because compiler options make default INTEGER(KIND=4) and REAL(KIND=8) have different storage sizes (4 and 8 bytes, respectively)
+!CHECK-R8: USE-associated here
 !CHECK-R8: nss = 32_4
 !CHECK-I8-R8: nss = 64_4
 integer, parameter :: nss = numeric_storage_size

@@ -1198,6 +1198,7 @@ protected:
   void CheckEquivalenceSets();
   bool CheckNotInBlock(const char *);
   bool NameIsKnownOrIntrinsic(const parser::Name &);
+  void WarnForNumericStorageSize(const parser::Name &, const Symbol &);
   void FinishNamelists();
 
   // Each of these returns a pointer to a resolved Name (i.e. with symbol)
@@ -9756,6 +9757,40 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
       x.u);
 }
 
+void DeclarationVisitor::WarnForNumericStorageSize(
+    const parser::Name &name, const Symbol &symbol) {
+  const Symbol *associated{&symbol};
+  while (const auto *host{associated->detailsIf<HostAssocDetails>()}) {
+    associated = &host->symbol();
+  }
+  const auto *use{associated->detailsIf<UseDetails>()};
+  const Symbol &ultimate{symbol.GetUltimate()};
+  const Scope &owner{ultimate.owner()};
+  if (ultimate.name() != "numeric_storage_size" || !owner.IsModule() ||
+      !owner.parent().IsIntrinsicModules() || !owner.GetName() ||
+      owner.GetName().value() != "iso_fortran_env") {
+    return;
+  }
+  const auto &defaults{context().defaultKinds()};
+  const auto &targetCharacteristics{context().targetCharacteristics()};
+  auto intKind{defaults.GetDefaultKind(TypeCategory::Integer)};
+  auto realKind{defaults.GetDefaultKind(TypeCategory::Real)};
+  auto intBytes{
+      targetCharacteristics.GetByteSize(TypeCategory::Integer, intKind)};
+  auto realBytes{
+      targetCharacteristics.GetByteSize(TypeCategory::Real, realKind)};
+  if (intBytes != realBytes) {
+    if (auto *message{context().Warn(common::UsageWarning::FoldingValueChecks,
+            name.source,
+            "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined because compiler options make default INTEGER(KIND=%d) and REAL(KIND=%d) have different storage sizes (%d and %d bytes, respectively)"_warn_en_US,
+            intKind, realKind, intBytes, realBytes)}) {
+      if (use) {
+        message->Attach(use->location(), "USE-associated here"_en_US);
+      }
+    }
+  }
+}
+
 // If implicit types are allowed, ensure name is in the symbol table.
 // Otherwise, report an error if it hasn't been declared.
 const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
@@ -9768,6 +9803,7 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
     if (CheckUseError(name)) {
       return nullptr; // reported an error
     }
+    WarnForNumericStorageSize(name, *symbol);
     NotePossibleBadForwardRef(name);
     symbol->set(Symbol::Flag::ImplicitOrError, false);
     if (IsUplevelReference(*symbol)) {
