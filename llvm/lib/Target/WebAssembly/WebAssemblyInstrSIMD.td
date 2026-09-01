@@ -603,7 +603,7 @@ def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             imm:$m4, imm:$m5, imm:$m6, imm:$m7,
             imm:$m8, imm:$m9, imm:$mA, imm:$mB,
             imm:$mC, imm:$mD, imm:$mE, imm:$mF)>;
-// Normal shufflevector instructions may have normal constant arguemnts.
+// Normal shufflevector instructions may have normal constant arguments.
 def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             (i32 LaneIdx32:$m0), (i32 LaneIdx32:$m1),
             (i32 LaneIdx32:$m2), (i32 LaneIdx32:$m3),
@@ -1345,9 +1345,11 @@ defm MUL : SIMDBinaryFP<fmul, "mul", 230>;
 defm DIV : SIMDBinaryFP<fdiv, "div", 231>;
 
 // NaN-propagating minimum: min
+let isCommutable = 1 in
 defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 
 // NaN-propagating maximum: max
+let isCommutable = 1 in
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin
