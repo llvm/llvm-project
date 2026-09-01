@@ -60600,6 +60600,12 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::SUB, DL, VT, ADC.getValue(0), Op1.getOperand(0));
   }
 
+  // Fold SUB(~A,~B) -> SUB(B,A)
+  if (isBitwiseNot(Op0) && Op0.hasOneUse() &&
+      isBitwiseNot(Op1) && Op1.hasOneUse()) {
+    return DAG.getNode(ISD::SUB, DL, VT, Op1.getOperand(0), Op0.getOperand(0));
+  }
+
   if (SDValue V = combineXorSubCTLZ(N, DL, DAG, Subtarget))
     return V;
 

@@ -70,59 +70,59 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; PPC32-NEXT:    lbz 4, 115(1)
 ; PPC32-NEXT:    lbz 22, 119(1)
 ; PPC32-NEXT:    lbz 21, 123(1)
-; PPC32-NEXT:    add 4, 4, 5
-; PPC32-NEXT:    add 5, 22, 6
+; PPC32-NEXT:    add 4, 5, 4
+; PPC32-NEXT:    add 5, 6, 22
 ; PPC32-NEXT:    lbz 22, 131(1)
-; PPC32-NEXT:    add 6, 21, 7
+; PPC32-NEXT:    add 6, 7, 21
 ; PPC32-NEXT:    lbz 21, 135(1)
 ; PPC32-NEXT:    addi 6, 6, 1
 ; PPC32-NEXT:    stw 20, 16(1) # 4-byte Folded Spill
-; PPC32-NEXT:    add 9, 22, 9
+; PPC32-NEXT:    add 9, 9, 22
 ; PPC32-NEXT:    lbz 20, 127(1)
-; PPC32-NEXT:    add 10, 21, 10
+; PPC32-NEXT:    add 10, 10, 21
 ; PPC32-NEXT:    stw 25, 36(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    addi 5, 5, 1
-; PPC32-NEXT:    lbz 25, 83(1)
-; PPC32-NEXT:    add 7, 20, 8
-; PPC32-NEXT:    lbz 21, 147(1)
+; PPC32-NEXT:    lbz 25, 147(1)
+; PPC32-NEXT:    add 7, 8, 20
+; PPC32-NEXT:    lbz 21, 83(1)
 ; PPC32-NEXT:    addi 7, 7, 1
 ; PPC32-NEXT:    stw 24, 32(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    addi 4, 4, 1
-; PPC32-NEXT:    lbz 24, 79(1)
+; PPC32-NEXT:    lbz 24, 143(1)
 ; PPC32-NEXT:    add 25, 21, 25
-; PPC32-NEXT:    lbz 22, 143(1)
+; PPC32-NEXT:    lbz 22, 79(1)
 ; PPC32-NEXT:    stw 23, 28(1) # 4-byte Folded Spill
-; PPC32-NEXT:    lbz 23, 75(1)
+; PPC32-NEXT:    lbz 23, 139(1)
 ; PPC32-NEXT:    add 24, 22, 24
-; PPC32-NEXT:    lbz 8, 139(1)
+; PPC32-NEXT:    lbz 8, 75(1)
 ; PPC32-NEXT:    stw 28, 48(1) # 4-byte Folded Spill
-; PPC32-NEXT:    lbz 28, 95(1)
+; PPC32-NEXT:    lbz 28, 159(1)
 ; PPC32-NEXT:    add 8, 8, 23
-; PPC32-NEXT:    lbz 21, 159(1)
+; PPC32-NEXT:    lbz 21, 95(1)
 ; PPC32-NEXT:    addi 8, 8, 1
 ; PPC32-NEXT:    stw 27, 44(1) # 4-byte Folded Spill
-; PPC32-NEXT:    lbz 27, 91(1)
+; PPC32-NEXT:    lbz 27, 155(1)
 ; PPC32-NEXT:    add 28, 21, 28
-; PPC32-NEXT:    lbz 22, 155(1)
+; PPC32-NEXT:    lbz 22, 91(1)
 ; PPC32-NEXT:    stw 26, 40(1) # 4-byte Folded Spill
-; PPC32-NEXT:    lbz 26, 87(1)
+; PPC32-NEXT:    lbz 26, 151(1)
 ; PPC32-NEXT:    add 27, 22, 27
-; PPC32-NEXT:    lbz 23, 151(1)
-; PPC32-NEXT:    lbz 11, 111(1)
-; PPC32-NEXT:    lbz 21, 175(1)
+; PPC32-NEXT:    lbz 23, 87(1)
+; PPC32-NEXT:    lbz 11, 175(1)
+; PPC32-NEXT:    lbz 21, 111(1)
 ; PPC32-NEXT:    add 26, 23, 26
-; PPC32-NEXT:    lbz 12, 107(1)
-; PPC32-NEXT:    lbz 0, 171(1)
+; PPC32-NEXT:    lbz 12, 171(1)
+; PPC32-NEXT:    lbz 0, 107(1)
 ; PPC32-NEXT:    add 11, 21, 11
 ; PPC32-NEXT:    stw 30, 56(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    addi 11, 11, 1
-; PPC32-NEXT:    lbz 30, 103(1)
+; PPC32-NEXT:    lbz 30, 167(1)
 ; PPC32-NEXT:    add 12, 0, 12
-; PPC32-NEXT:    lbz 22, 167(1)
+; PPC32-NEXT:    lbz 22, 103(1)
 ; PPC32-NEXT:    stw 29, 52(1) # 4-byte Folded Spill
-; PPC32-NEXT:    lbz 29, 99(1)
+; PPC32-NEXT:    lbz 29, 163(1)
 ; PPC32-NEXT:    add 30, 22, 30
-; PPC32-NEXT:    lbz 23, 163(1)
+; PPC32-NEXT:    lbz 23, 99(1)
 ; PPC32-NEXT:    stb 11, 15(3)
 ; PPC32-NEXT:    addi 11, 12, 1
 ; PPC32-NEXT:    add 29, 23, 29
@@ -179,50 +179,50 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; AIX-PPC64-NEXT:    std 31, -8(1) # 8-byte Folded Spill
 ; AIX-PPC64-NEXT:    lbz 24, 199(1)
 ; AIX-PPC64-NEXT:    lbz 25, 191(1)
-; AIX-PPC64-NEXT:    add 6, 23, 6
+; AIX-PPC64-NEXT:    add 6, 6, 23
 ; AIX-PPC64-NEXT:    lbz 23, 231(1)
-; AIX-PPC64-NEXT:    add 5, 24, 5
+; AIX-PPC64-NEXT:    add 5, 5, 24
 ; AIX-PPC64-NEXT:    lbz 24, 223(1)
-; AIX-PPC64-NEXT:    add 4, 25, 4
+; AIX-PPC64-NEXT:    add 4, 4, 25
 ; AIX-PPC64-NEXT:    lbz 25, 215(1)
-; AIX-PPC64-NEXT:    add 9, 23, 9
-; AIX-PPC64-NEXT:    lbz 27, 127(1)
-; AIX-PPC64-NEXT:    add 8, 24, 8
-; AIX-PPC64-NEXT:    lbz 23, 255(1)
-; AIX-PPC64-NEXT:    add 7, 25, 7
-; AIX-PPC64-NEXT:    lbz 26, 119(1)
+; AIX-PPC64-NEXT:    add 9, 9, 23
+; AIX-PPC64-NEXT:    lbz 27, 255(1)
+; AIX-PPC64-NEXT:    add 8, 8, 24
+; AIX-PPC64-NEXT:    lbz 23, 127(1)
+; AIX-PPC64-NEXT:    add 7, 7, 25
+; AIX-PPC64-NEXT:    lbz 26, 247(1)
 ; AIX-PPC64-NEXT:    addi 9, 9, 1
-; AIX-PPC64-NEXT:    lbz 24, 247(1)
+; AIX-PPC64-NEXT:    lbz 24, 119(1)
 ; AIX-PPC64-NEXT:    add 27, 23, 27
 ; AIX-PPC64-NEXT:    lbz 25, 239(1)
 ; AIX-PPC64-NEXT:    addi 8, 8, 1
-; AIX-PPC64-NEXT:    lbz 30, 151(1)
+; AIX-PPC64-NEXT:    lbz 30, 279(1)
 ; AIX-PPC64-NEXT:    add 26, 24, 26
-; AIX-PPC64-NEXT:    lbz 23, 279(1)
-; AIX-PPC64-NEXT:    add 10, 25, 10
-; AIX-PPC64-NEXT:    lbz 29, 143(1)
+; AIX-PPC64-NEXT:    lbz 23, 151(1)
+; AIX-PPC64-NEXT:    add 10, 10, 25
+; AIX-PPC64-NEXT:    lbz 29, 271(1)
 ; AIX-PPC64-NEXT:    addi 10, 10, 1
-; AIX-PPC64-NEXT:    lbz 24, 271(1)
+; AIX-PPC64-NEXT:    lbz 24, 143(1)
 ; AIX-PPC64-NEXT:    add 30, 23, 30
-; AIX-PPC64-NEXT:    lbz 28, 135(1)
+; AIX-PPC64-NEXT:    lbz 28, 263(1)
 ; AIX-PPC64-NEXT:    addi 7, 7, 1
-; AIX-PPC64-NEXT:    lbz 25, 263(1)
+; AIX-PPC64-NEXT:    lbz 25, 135(1)
 ; AIX-PPC64-NEXT:    add 29, 24, 29
-; AIX-PPC64-NEXT:    lbz 11, 183(1)
+; AIX-PPC64-NEXT:    lbz 11, 311(1)
 ; AIX-PPC64-NEXT:    addi 6, 6, 1
-; AIX-PPC64-NEXT:    lbz 23, 311(1)
+; AIX-PPC64-NEXT:    lbz 23, 183(1)
 ; AIX-PPC64-NEXT:    add 28, 25, 28
-; AIX-PPC64-NEXT:    lbz 12, 175(1)
+; AIX-PPC64-NEXT:    lbz 12, 303(1)
 ; AIX-PPC64-NEXT:    addi 5, 5, 1
-; AIX-PPC64-NEXT:    lbz 0, 303(1)
+; AIX-PPC64-NEXT:    lbz 0, 175(1)
 ; AIX-PPC64-NEXT:    add 11, 23, 11
-; AIX-PPC64-NEXT:    lbz 2, 167(1)
+; AIX-PPC64-NEXT:    lbz 2, 295(1)
 ; AIX-PPC64-NEXT:    addi 11, 11, 1
-; AIX-PPC64-NEXT:    lbz 24, 295(1)
+; AIX-PPC64-NEXT:    lbz 24, 167(1)
 ; AIX-PPC64-NEXT:    add 12, 0, 12
-; AIX-PPC64-NEXT:    lbz 31, 159(1)
+; AIX-PPC64-NEXT:    lbz 31, 287(1)
 ; AIX-PPC64-NEXT:    addi 4, 4, 1
-; AIX-PPC64-NEXT:    lbz 25, 287(1)
+; AIX-PPC64-NEXT:    lbz 25, 159(1)
 ; AIX-PPC64-NEXT:    add 2, 24, 2
 ; AIX-PPC64-NEXT:    stb 11, 15(3)
 ; AIX-PPC64-NEXT:    addi 11, 12, 1
@@ -263,8 +263,8 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ;
 ; PPC64LE-LABEL: vector_i128_i8:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    xxlnor 34, 34, 34
-; PPC64LE-NEXT:    vsububm 2, 3, 2
+; PPC64LE-NEXT:    xxlnor 35, 35, 35
+; PPC64LE-NEXT:    vsububm 2, 2, 3
 ; PPC64LE-NEXT:    blr
   %t0 = add <16 x i8> %x, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %t1 = add <16 x i8> %y, %t0
@@ -283,20 +283,20 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; PPC32-NEXT:    lhz 11, 70(1)
 ; PPC32-NEXT:    lhz 12, 66(1)
 ; PPC32-NEXT:    lhz 0, 62(1)
-; PPC32-NEXT:    add 10, 11, 10
+; PPC32-NEXT:    add 10, 10, 11
 ; PPC32-NEXT:    lhz 30, 58(1)
-; PPC32-NEXT:    add 9, 12, 9
+; PPC32-NEXT:    add 9, 9, 12
 ; PPC32-NEXT:    lhz 29, 50(1)
-; PPC32-NEXT:    add 8, 0, 8
+; PPC32-NEXT:    add 8, 8, 0
 ; PPC32-NEXT:    lhz 28, 42(1)
-; PPC32-NEXT:    add 7, 30, 7
+; PPC32-NEXT:    add 7, 7, 30
 ; PPC32-NEXT:    lhz 27, 46(1)
-; PPC32-NEXT:    add 5, 29, 5
+; PPC32-NEXT:    add 5, 5, 29
 ; PPC32-NEXT:    lhz 26, 54(1)
-; PPC32-NEXT:    add 3, 28, 3
-; PPC32-NEXT:    add 4, 27, 4
+; PPC32-NEXT:    add 3, 3, 28
+; PPC32-NEXT:    add 4, 4, 27
 ; PPC32-NEXT:    addi 3, 3, 1
-; PPC32-NEXT:    add 6, 26, 6
+; PPC32-NEXT:    add 6, 6, 26
 ; PPC32-NEXT:    addi 4, 4, 1
 ; PPC32-NEXT:    addi 5, 5, 1
 ; PPC32-NEXT:    addi 6, 6, 1
@@ -320,24 +320,24 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; AIX-PPC64-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; AIX-PPC64-NEXT:    std 31, -8(1) # 8-byte Folded Spill
 ; AIX-PPC64-NEXT:    std 2, -48(1) # 8-byte Folded Spill
-; AIX-PPC64-NEXT:    lhz 11, 118(1)
-; AIX-PPC64-NEXT:    lhz 12, 182(1)
+; AIX-PPC64-NEXT:    lhz 11, 182(1)
+; AIX-PPC64-NEXT:    lhz 12, 118(1)
 ; AIX-PPC64-NEXT:    lhz 0, 174(1)
 ; AIX-PPC64-NEXT:    lhz 2, 166(1)
 ; AIX-PPC64-NEXT:    add 11, 12, 11
 ; AIX-PPC64-NEXT:    lhz 31, 158(1)
-; AIX-PPC64-NEXT:    add 10, 0, 10
+; AIX-PPC64-NEXT:    add 10, 10, 0
 ; AIX-PPC64-NEXT:    lhz 30, 142(1)
-; AIX-PPC64-NEXT:    add 9, 2, 9
+; AIX-PPC64-NEXT:    add 9, 9, 2
 ; AIX-PPC64-NEXT:    lhz 29, 126(1)
-; AIX-PPC64-NEXT:    add 8, 31, 8
+; AIX-PPC64-NEXT:    add 8, 8, 31
 ; AIX-PPC64-NEXT:    lhz 28, 134(1)
-; AIX-PPC64-NEXT:    add 6, 30, 6
+; AIX-PPC64-NEXT:    add 6, 6, 30
 ; AIX-PPC64-NEXT:    lhz 27, 150(1)
-; AIX-PPC64-NEXT:    add 4, 29, 4
-; AIX-PPC64-NEXT:    add 5, 28, 5
+; AIX-PPC64-NEXT:    add 4, 4, 29
+; AIX-PPC64-NEXT:    add 5, 5, 28
 ; AIX-PPC64-NEXT:    addi 11, 11, 1
-; AIX-PPC64-NEXT:    add 7, 27, 7
+; AIX-PPC64-NEXT:    add 7, 7, 27
 ; AIX-PPC64-NEXT:    addi 10, 10, 1
 ; AIX-PPC64-NEXT:    addi 9, 9, 1
 ; AIX-PPC64-NEXT:    addi 8, 8, 1
@@ -363,8 +363,8 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ;
 ; PPC64LE-LABEL: vector_i128_i16:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    xxlnor 34, 34, 34
-; PPC64LE-NEXT:    vsubuhm 2, 3, 2
+; PPC64LE-NEXT:    xxlnor 35, 35, 35
+; PPC64LE-NEXT:    vsubuhm 2, 2, 3
 ; PPC64LE-NEXT:    blr
   %t0 = add <8 x i16> %x, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %t1 = add <8 x i16> %y, %t0
@@ -374,10 +374,10 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; PPC32-LABEL: vector_i128_i32:
 ; PPC32:       # %bb.0:
-; PPC32-NEXT:    add 3, 7, 3
-; PPC32-NEXT:    add 4, 8, 4
-; PPC32-NEXT:    add 5, 9, 5
-; PPC32-NEXT:    add 6, 10, 6
+; PPC32-NEXT:    add 3, 3, 7
+; PPC32-NEXT:    add 4, 4, 8
+; PPC32-NEXT:    add 5, 5, 9
+; PPC32-NEXT:    add 6, 6, 10
 ; PPC32-NEXT:    addi 3, 3, 1
 ; PPC32-NEXT:    addi 4, 4, 1
 ; PPC32-NEXT:    addi 5, 5, 1
@@ -386,10 +386,10 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ;
 ; PPC64BE-LABEL: vector_i128_i32:
 ; PPC64BE:       # %bb.0:
-; PPC64BE-NEXT:    add 6, 10, 6
-; PPC64BE-NEXT:    add 5, 9, 5
-; PPC64BE-NEXT:    add 4, 8, 4
-; PPC64BE-NEXT:    add 3, 7, 3
+; PPC64BE-NEXT:    add 6, 6, 10
+; PPC64BE-NEXT:    add 5, 5, 9
+; PPC64BE-NEXT:    add 4, 4, 8
+; PPC64BE-NEXT:    add 3, 3, 7
 ; PPC64BE-NEXT:    addi 6, 6, 1
 ; PPC64BE-NEXT:    addi 5, 5, 1
 ; PPC64BE-NEXT:    addi 4, 4, 1
@@ -398,8 +398,8 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ;
 ; PPC64LE-LABEL: vector_i128_i32:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    xxlnor 34, 34, 34
-; PPC64LE-NEXT:    vsubuwm 2, 3, 2
+; PPC64LE-NEXT:    xxlnor 35, 35, 35
+; PPC64LE-NEXT:    vsubuwm 2, 2, 3
 ; PPC64LE-NEXT:    blr
   %t0 = add <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %t1 = add <4 x i32> %y, %t0
@@ -409,28 +409,28 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; PPC32-LABEL: vector_i128_i64:
 ; PPC32:       # %bb.0:
-; PPC32-NEXT:    not 4, 4
-; PPC32-NEXT:    not 3, 3
-; PPC32-NEXT:    subc 4, 8, 4
-; PPC32-NEXT:    subfe 3, 3, 7
-; PPC32-NEXT:    not 6, 6
-; PPC32-NEXT:    not 5, 5
-; PPC32-NEXT:    subc 6, 10, 6
-; PPC32-NEXT:    subfe 5, 5, 9
+; PPC32-NEXT:    not 8, 8
+; PPC32-NEXT:    not 7, 7
+; PPC32-NEXT:    subc 4, 4, 8
+; PPC32-NEXT:    subfe 3, 7, 3
+; PPC32-NEXT:    not 7, 10
+; PPC32-NEXT:    not 9, 9
+; PPC32-NEXT:    subc 6, 6, 7
+; PPC32-NEXT:    subfe 5, 9, 5
 ; PPC32-NEXT:    blr
 ;
 ; PPC64BE-LABEL: vector_i128_i64:
 ; PPC64BE:       # %bb.0:
-; PPC64BE-NEXT:    add 3, 5, 3
-; PPC64BE-NEXT:    add 4, 6, 4
+; PPC64BE-NEXT:    add 3, 3, 5
+; PPC64BE-NEXT:    add 4, 4, 6
 ; PPC64BE-NEXT:    addi 3, 3, 1
 ; PPC64BE-NEXT:    addi 4, 4, 1
 ; PPC64BE-NEXT:    blr
 ;
 ; PPC64LE-LABEL: vector_i128_i64:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    xxlnor 34, 34, 34
-; PPC64LE-NEXT:    vsubudm 2, 3, 2
+; PPC64LE-NEXT:    xxlnor 35, 35, 35
+; PPC64LE-NEXT:    vsubudm 2, 2, 3
 ; PPC64LE-NEXT:    blr
   %t0 = add <2 x i64> %x, <i64 1, i64 1>
   %t1 = add <2 x i64> %y, %t0

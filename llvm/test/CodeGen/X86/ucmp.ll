@@ -440,25 +440,19 @@ define <4 x i32> @ucmp_normal_vectors(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; SSE2-LABEL: ucmp_normal_vectors:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pminud %xmm1, %xmm2
+; SSE2-NEXT:    pmaxud %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE2-NEXT:    pxor %xmm3, %xmm2
-; SSE2-NEXT:    pmaxud %xmm0, %xmm1
+; SSE2-NEXT:    pminud %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm3, %xmm0
 ; SSE2-NEXT:    psubd %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: ucmp_normal_vectors:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm2
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm2
-; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm1
+; AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm3, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
