@@ -287,8 +287,14 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
       .Case([&](const llvm::abi::FloatType *fltTy) {
         return cir::getFloatingPointType(*fltTy->getSemantics(), ctx);
       })
-      .Case([&](const llvm::abi::PointerType *) {
-        return cir::PointerType::get(cir::VoidType::get(ctx));
+      .Case([&](const llvm::abi::PointerType *ptrTy) -> mlir::Type {
+        // The pointee is dropped (a coerce pointer is opaque here), but the
+        // address space is preserved so a pointer coerced only in address
+        // space round-trips faithfully.
+        mlir::ptr::MemorySpaceAttrInterface addrSpace;
+        if (unsigned as = ptrTy->getAddrSpace())
+          addrSpace = cir::TargetAddressSpaceAttr::get(ctx, as);
+        return cir::PointerType::get(cir::VoidType::get(ctx), addrSpace);
       })
       .Case([&](const llvm::abi::VectorType *vecTy) -> mlir::Type {
         mlir::Type elemCIR = abiTypeToCIR(vecTy->getElementType(), ctx);
@@ -520,7 +526,8 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   }
   if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
-                                          info.getIndirectByVal());
+                                          info.getIndirectByVal(),
+                                          info.getIndirectAddrSpace());
   assert(info.isIgnore() && "Unexpected classification");
   return ArgClassification::getIgnore();
 }

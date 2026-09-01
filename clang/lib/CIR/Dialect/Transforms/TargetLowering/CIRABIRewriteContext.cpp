@@ -53,6 +53,30 @@ using namespace mlir::abi;
 
 namespace {
 
+/// The wire pointer type for an Indirect classification: a pointer to
+/// \p pointeeTy in \p ac.indirectAddrSpace.  A zero address space is the
+/// default space, which produces a pointer with no explicit attribute.
+cir::PointerType indirectPtrType(mlir::Type pointeeTy,
+                                 const ArgClassification &ac) {
+  mlir::ptr::MemorySpaceAttrInterface addrSpace;
+  if (ac.indirectAddrSpace)
+    addrSpace = cir::TargetAddressSpaceAttr::get(pointeeTy.getContext(),
+                                                 ac.indirectAddrSpace);
+  return cir::PointerType::get(pointeeTy, addrSpace);
+}
+
+/// Return \p ptr in \p wantTy, inserting a cir.cast address_space at the
+/// builder's current insertion point when the two differ only in address
+/// space.  A byref/byval pointer whose ABI address space is not the space its
+/// backing alloca lives in needs this cast to stay well-typed.
+mlir::Value castPtrAddrSpace(mlir::OpBuilder &builder, mlir::Location loc,
+                             mlir::Value ptr, cir::PointerType wantTy) {
+  if (ptr.getType() == wantTy)
+    return ptr;
+  return cir::CastOp::create(builder, loc, wantTy, cir::CastKind::address_space,
+                             ptr);
+}
+
 /// Return the coerced RecordType for a Direct classification that should be
 /// flattened into individual scalar arguments, or a null type if the
 /// classification does not call for flattening.
@@ -128,8 +152,9 @@ buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
       break;
     case ArgKind::Indirect:
       // byval and byref both pass a pointer.  Which of the two it is shows up
-      // in the attributes updateArgAttrs applies, not in the type.
-      newArgTypes.push_back(cir::PointerType::get(origTy));
+      // in the attributes updateArgAttrs applies, not in the type.  The ABI
+      // address space (e.g. AMDGPU private for a byref) rides on the type.
+      newArgTypes.push_back(indirectPtrType(origTy, ac));
       break;
     }
   }
@@ -666,11 +691,13 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
       // to adapted (now of the original type != the alloca's pointee type).
       blockArg.replaceAllUsesExcept(adapted, coercionOps);
     } else if (ac.kind == ArgKind::Indirect) {
-      // byval and byref share a !cir.ptr<T> wire type; the llvm.byval vs
-      // llvm.byref distinction is in the attrs applied by updateArgAttrs.
-      // Body lowering differs: byval copies into the callee (load at entry),
-      // while byref must operate on the caller's storage in place.
-      auto ptrTy = cir::PointerType::get(blockArg.getType());
+      // byval and byref share a pointer wire type (in the ABI address space);
+      // the llvm.byval vs llvm.byref distinction is in the attrs applied by
+      // updateArgAttrs.  Body lowering differs: byval copies into the callee
+      // (load at entry), while byref must operate on the caller's storage in
+      // place.
+      mlir::Type bodyPtrTy = cir::PointerType::get(blockArg.getType());
+      auto ptrTy = indirectPtrType(blockArg.getType(), ac);
 
       if (!ac.byVal) {
         // byref: CIRGen spills every by-value parameter into a local alloca
@@ -699,11 +726,21 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
         if (paramStore)
           paramStore->erase();
 
-        // Update the block argument to point to its original type.
+        // Update the block argument to the ABI pointer type.
         blockArg.setType(ptrTy);
 
         if (destAlloca) {
-          destAlloca.getResult().replaceAllUsesWith(blockArg);
+          // The body reads the parameter through the alloca's pointer type,
+          // which lives in the default (alloca) space.  When the ABI pointer
+          // is in another space, cast it back before rewiring the uses so the
+          // body stays well-typed.
+          mlir::Value forBody = blockArg;
+          if (ptrTy != bodyPtrTy) {
+            builder.setInsertionPointToStart(&entry);
+            forBody = castPtrAddrSpace(builder, funcOp.getLoc(), blockArg,
+                                       cast<cir::PointerType>(bodyPtrTy));
+          }
+          destAlloca.getResult().replaceAllUsesWith(forBody);
           destAlloca->erase();
         }
       } else {
@@ -1249,7 +1286,10 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
         assert(srcAlloca.getAlignment() >= ac.indirectAlign.value() &&
                "llvm.align on a byref argument must not overstate the "
                "forwarded slot");
-        newArgs.push_back(srcAlloca);
+        // The alloca lives in the default (alloca) space; cast it to the ABI
+        // address space when they differ so the operand matches the wire type.
+        newArgs.push_back(castPtrAddrSpace(builder, call.getLoc(), srcAlloca,
+                                           indirectPtrType(arg.getType(), ac)));
         deadRecordLoads.push_back(srcLoad);
         continue;
       }
@@ -1258,7 +1298,10 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
           builder, call.getLoc(), ptrTy, builder.getStringAttr("byval"),
           builder.getI64IntegerAttr(ac.indirectAlign.value()));
       cir::StoreOp::create(builder, call.getLoc(), arg, slot);
-      newArgs.push_back(slot);
+      // The fresh copy is allocated in the default space; cast it to the ABI
+      // address space when they differ so the operand matches the wire type.
+      newArgs.push_back(castPtrAddrSpace(builder, call.getLoc(), slot,
+                                         indirectPtrType(arg.getType(), ac)));
     } else {
       newArgs.push_back(arg);
     }
