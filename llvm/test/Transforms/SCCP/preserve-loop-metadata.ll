@@ -6,7 +6,7 @@ define void @f() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    br label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br label %[[LOOP]]{{$}}
 ;
 entry:
   br label %loop
@@ -18,7 +18,23 @@ exit:
   ret void
 }
 
+define void @drop_when_backedge_is_infeasible() {
+; CHECK-LABEL: define void @drop_when_backedge_is_infeasible() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]{{$}}
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  br i1 false, label %loop, label %exit, !llvm.loop !0
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0}
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]]}
-;.

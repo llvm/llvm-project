@@ -5024,11 +5024,12 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
   IRBuilder<> Builder(OldTerm);
 
   // Insert an appropriate new terminator.
+  Instruction *NewTerm = nullptr;
   if (!KeepEdge1 && !KeepEdge2) {
     if (TrueBB == FalseBB) {
       // We were only looking for one successor, and it was present.
       // Create an unconditional branch to it.
-      Builder.CreateBr(TrueBB, OldTerm);
+      NewTerm = Builder.CreateBr(TrueBB, OldTerm);
     } else {
       // We found both of the successors we were looking for.
       // Create a conditional branch sharing the condition of the select.
@@ -5036,6 +5037,7 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
       NewBI->copyMetadata(*OldTerm, {LLVMContext::MD_annotation});
       setBranchWeights(*NewBI, {TrueWeight, FalseWeight},
                        /*IsExpected=*/false, /*ElideAllZero=*/true);
+      NewTerm = NewBI;
     }
   } else if (KeepEdge1 && (KeepEdge2 || TrueBB == FalseBB)) {
     // Neither of the selected blocks were successors, so this
@@ -5047,12 +5049,14 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
     // the edge to the one that wasn't must be unreachable.
     if (!KeepEdge1) {
       // Only TrueBB was found.
-      Builder.CreateBr(TrueBB, OldTerm);
+      NewTerm = Builder.CreateBr(TrueBB, OldTerm);
     } else {
       // Only FalseBB was found.
-      Builder.CreateBr(FalseBB, OldTerm);
+      NewTerm = Builder.CreateBr(FalseBB, OldTerm);
     }
   }
+  if (NewTerm)
+    copyLoopMetadataIfSuccessorsPreserved(*OldTerm, *NewTerm);
   eraseTerminatorAndDCECond(OldTerm);
 
   if (DTU) {
@@ -6175,6 +6179,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
     // recomputed below.
     NewCondBr->setMetadata(LLVMContext::MD_prof, nullptr);
   }
+  copyLoopMetadataIfSuccessorsPreserved(*SI, *NewBI);
 
   // Update weight for the newly-created conditional branch.
   if (hasBranchWeightMD(*SI) && NewCondBr) {

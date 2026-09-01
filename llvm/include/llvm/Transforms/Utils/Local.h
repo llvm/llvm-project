@@ -54,6 +54,14 @@ class TargetTransformInfo;
 //  Local constant propagation.
 //
 
+/// Conservatively copy llvm.loop metadata from OldTerm to NewTerm if every
+/// successor of OldTerm is also a successor of NewTerm. This guarantees that
+/// the old backedge is preserved without having to identify which successor is
+/// the backedge. It may decline to copy valid metadata when only a non-backedge
+/// successor was removed. Both terminators must be in the same basic block.
+LLVM_ABI void copyLoopMetadataIfSuccessorsPreserved(const Instruction &OldTerm,
+                                                    Instruction &NewTerm);
+
 /// If a terminator instruction is predicated on a constant value, convert it
 /// into an unconditional branch to the constant destination.
 /// This is a nontrivial operation because the successors of this basic block

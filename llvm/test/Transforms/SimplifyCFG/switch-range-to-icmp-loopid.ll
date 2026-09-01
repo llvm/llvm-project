@@ -8,7 +8,7 @@ define void @f(i32 %x) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X]], 3
-; CHECK-NEXT:    br i1 [[SWITCH]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[SWITCH]], label %[[LOOP]], label %[[EXIT:.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -27,3 +27,6 @@ exit:
 }
 
 !0 = distinct !{!0}
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]]}
+;.
