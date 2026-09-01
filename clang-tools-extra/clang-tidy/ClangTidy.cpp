@@ -262,7 +262,9 @@ public:
 
     if (Inserted) {
       const StringRef Name = Error.DiagnosticName;
-      SarifRule Rule = SarifRule::create().setRuleId(Name).setName(Name);
+      SarifRule Rule =
+          SarifRule::create().setRuleId(Name).setName(Name).setDescription(
+              Error.Message.Message);
       if (!Name.starts_with("clang-diagnostic"))
         Rule = Rule.setHelpURI(buildClangTidyHelpURI(Name));
 
