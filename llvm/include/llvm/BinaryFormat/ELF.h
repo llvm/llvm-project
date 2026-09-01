@@ -842,7 +842,8 @@ enum {
   X(0x5e, EF_AMDGPU_MACH_AMDGCN_GFX1171, "gfx1171")                            \
   X(0x5f, EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")              \
   X(0x62, EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC, "gfx11-7-generic")            \
-  X(0x63, EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC, "gfx13-generic")
+  X(0x63, EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC, "gfx13-generic")                \
+  X(0xeb, EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT, "gfx1250-strict")
 
 enum : unsigned {
   // clang-format off
@@ -875,7 +876,7 @@ enum : unsigned {
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -973,6 +974,7 @@ enum : unsigned {
   EF_CUDA_SM100 = 0x64,
   EF_CUDA_SM101 = 0x65,
   EF_CUDA_SM103 = 0x67,
+  EF_CUDA_SM107 = 0x6b,
   EF_CUDA_SM110 = 0x6e,
   EF_CUDA_SM120 = 0x78,
   EF_CUDA_SM121 = 0x79,
@@ -1196,6 +1198,7 @@ enum : unsigned {
   SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
   SHT_LLVM_CFI_JUMP_TABLE = 0x6fff4c0e,     // LLVM CFI jump table.
   SHT_LLVM_CALL_GRAPH = 0x6fff4c0f,         // LLVM Call Graph Section.
+  SHT_LLVM_DYNDBG_ELF = 0x6fff4c10,         // LLVM Dynamic Debugging ELF.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
@@ -1970,6 +1973,7 @@ enum {
   NT_OPENBSD_FPREGS = 21,
   NT_OPENBSD_XFPREGS = 22,
   NT_OPENBSD_WCOOKIE = 23,
+  NT_OPENBSD_PACMASK = 24,
 };
 
 // AMDGPU-specific section indices.

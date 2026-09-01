@@ -9,8 +9,7 @@ define i1 @srem_sge_zero(i32 noundef %x, i32 noundef %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[R]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp sge i32 %x, 0
   call void @llvm.assume(i1 %cmp)
@@ -27,8 +26,7 @@ define i1 @srem_slt_divisor_bound(i32 noundef %x, i32 noundef %n, i32 noundef %m
 ; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[N]], [[M]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LE]])
 ; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[R]], [[M]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pos = icmp sgt i32 %n, 0
   call void @llvm.assume(i1 %pos)
@@ -47,8 +45,7 @@ define i1 @srem_sle_dividend_bound(i32 noundef %x, i32 noundef %n, i32 noundef %
 ; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[X]], [[LIMIT]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LE]])
 ; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[R]], [[LIMIT]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nneg = icmp sge i32 %x, 0
   call void @llvm.assume(i1 %nneg)
@@ -69,8 +66,7 @@ define i1 @srem_ult_divisor_bound_via_transfer(i32 noundef %x, i32 noundef %n, i
 ; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[N]], [[M]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LE]])
 ; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[R]], [[M]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nneg = icmp sge i32 %x, 0
   call void @llvm.assume(i1 %nneg)
@@ -87,8 +83,7 @@ define i1 @srem_const_dividend(i32 noundef %n) {
 ; CHECK-LABEL: define i1 @srem_const_dividend(
 ; CHECK-SAME: i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = srem i32 42, [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[R]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %r = srem i32 42, %n
   %c = icmp sge i32 %r, 0
@@ -99,8 +94,7 @@ define i1 @srem_const_divisor(i32 noundef %x) {
 ; CHECK-LABEL: define i1 @srem_const_divisor(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 10
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[R]], 10
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %r = srem i32 %x, 10
   %c = icmp slt i32 %r, 10
@@ -115,8 +109,7 @@ define i1 @srem_i64(i64 noundef %x, i64 noundef %n, i64 noundef %m) {
 ; CHECK-NEXT:    [[LE:%.*]] = icmp sle i64 [[N]], [[M]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LE]])
 ; CHECK-NEXT:    [[R:%.*]] = srem i64 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[R]], [[M]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pos = icmp sgt i64 %n, 0
   call void @llvm.assume(i1 %pos)
@@ -183,8 +176,7 @@ define i1 @neg_srem_divisor_may_be_zero(i32 noundef %x, i32 noundef %n, i32 noun
 ; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[N]], [[M]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LE]])
 ; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[R]], [[M]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nneg = icmp sge i32 %n, 0
   call void @llvm.assume(i1 %nneg)

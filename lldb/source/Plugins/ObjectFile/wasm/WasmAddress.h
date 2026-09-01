@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_WASM_WASMADDRESS_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_WASM_WASMADDRESS_H
 
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include <cstdint>
 
@@ -56,6 +57,13 @@ static constexpr uint64_t kWasmModuleIDMask =
 static constexpr uint64_t kWasmAddressTypeMask =
     MakeFieldMask(kWasmAddressTypeBits, kWasmAddressTypeShift);
 
+/// A value that names no module. Every value the id field can hold names a
+/// module, zero included, so the sentinel has to come from outside that range.
+static constexpr uint32_t kWasmInvalidModuleID = UINT32_MAX;
+
+static_assert(kWasmInvalidModuleID > (kWasmModuleIDMask >> kWasmModuleIDShift),
+              "the sentinel has to fall outside the range of a module id");
+
 /// For the purpose of debugging, we can represent all these separated 32-bit
 /// address spaces with a single virtual 64-bit address space. The
 /// wasm_addr_t provides this encoding using bitfields.
@@ -80,6 +88,14 @@ struct wasm_addr_t {
 };
 
 static_assert(sizeof(wasm_addr_t) == 8, "");
+
+/// The module an address belongs to, or kWasmInvalidModuleID for an invalid
+/// address.
+inline uint32_t GetWasmModuleID(lldb::addr_t addr) {
+  if (addr == LLDB_INVALID_ADDRESS)
+    return kWasmInvalidModuleID;
+  return wasm_addr_t(addr).GetModuleID();
+}
 
 } // namespace wasm
 } // namespace lldb_private

@@ -19,8 +19,8 @@ export void foo(int idx) {
 // CHECK: [[TMP_INC:%.*]] = alloca %"class.hlsl::RWStructuredBuffer"
 // CHECK: [[TMP_DEC:%.*]] = alloca %"class.hlsl::RWStructuredBuffer"
 // CHECK: store i32 %[[IDX_ARG]], ptr %[[IDX_ADDR]]
-// CHECK: call void @_ZN4hlsl18RWStructuredBufferIfE46__createFromImplicitBindingWithImplicitCounterEjjijPKcj(ptr {{.*}} [[TMP_INC]], i32 noundef 0, i32 noundef 0, i32 noundef 4, i32 noundef 0, ptr noundef @[[BufArrayStr]], i32 noundef 1)
-// CHECK: call noundef i32 @_ZN4hlsl18RWStructuredBufferIfE16IncrementCounterEv(ptr {{.*}} [[TMP_INC]])
+// CHECK: call {{(spir_func )?}}void @_ZN4hlsl18RWStructuredBufferIfE46__createFromImplicitBindingWithImplicitCounterEjjijPKcj(ptr {{.*}} [[TMP_INC]], i32 noundef 0, i32 noundef 0, i32 noundef 4, i32 noundef 0, ptr noundef @[[BufArrayStr]], i32 noundef 1)
+// CHECK: call {{(spir_func )?}}noundef i32 @_ZN4hlsl18RWStructuredBufferIfE16IncrementCounterEv(ptr {{.*}} [[TMP_INC]])
 // CHECK: %[[IDX_LOADED:.*]] = load i32, ptr %[[IDX_ADDR]]
-// CHECK: call void @_ZN4hlsl18RWStructuredBufferIfE46__createFromImplicitBindingWithImplicitCounterEjjijPKcj(ptr {{.*}} [[TMP_DEC]], i32 noundef 0, i32 noundef 0, i32 noundef 4, i32 noundef %[[IDX_LOADED]], ptr noundef @[[BufArrayStr]], i32 noundef 1)
-// CHECK: call noundef i32 @_ZN4hlsl18RWStructuredBufferIfE16DecrementCounterEv(ptr {{.*}} [[TMP_DEC]])
+// CHECK: call {{(spir_func )?}}void @_ZN4hlsl18RWStructuredBufferIfE46__createFromImplicitBindingWithImplicitCounterEjjijPKcj(ptr {{.*}} [[TMP_DEC]], i32 noundef 0, i32 noundef 0, i32 noundef 4, i32 noundef %[[IDX_LOADED]], ptr noundef @[[BufArrayStr]], i32 noundef 1)
+// CHECK: call {{(spir_func )?}}noundef i32 @_ZN4hlsl18RWStructuredBufferIfE16DecrementCounterEv(ptr {{.*}} [[TMP_DEC]])

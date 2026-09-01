@@ -6,9 +6,6 @@
 ; RUN:   -S -mtriple=aarch64-- -mcpu=neoverse-v2 \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,STLF-OFF
 
-target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-unknown-linux-gnu"
-
 ; The store-to-load forwarding cost model exercised on a non-X86 target. AArch64
 ; subtargets do not set StoreLoadForwardingPenalty in their scheduling models, so
 ; it resolves to the target-independent default

@@ -44,6 +44,25 @@
 # Check that lld emitted the warning about skipping category merging
 MERGE_WARNING: warning: ObjC category merging skipped for class symbol' _OBJC_CLASS_$_MyBaseClass'
 
+############ Test merging skipped due to missing base class metadata ############
+# Replace the base class's metaclass pointer with null. The class symbol is
+# still defined, but it does not contain the metadata required for merging.
+# RUN: awk '/^_OBJC_CLASS_\$_MyBaseClass:/ { print; getline; sub(/^[ \t]*\.quad[ \t]+_OBJC_METACLASS_\$_MyBaseClass$/, "\t.quad\t0"); print; next } { print }' merge_base_class_minimal.s > merge_base_class_missing_metadata.s
+
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_base_class_missing_metadata.o merge_base_class_missing_metadata.s
+
+# RUN: %no-fatal-warnings-lld -arch arm64 -dylib -objc_category_merging -o merge_base_class_missing_metadata.dylib merge_base_class_missing_metadata.o merge_cat_minimal.o 2>&1 | FileCheck %s --check-prefix=MISSING_METADATA_WARNING
+# RUN: llvm-objdump --objc-meta-data --macho merge_base_class_missing_metadata.dylib | FileCheck %s --check-prefixes=NO_MERGE_INTO_BASE
+
+# The unsupported base class is skipped instead of being dereferenced.
+MISSING_METADATA_WARNING: warning: ObjC category merging skipped for class symbol' _OBJC_CLASS_$_MyBaseClass'
+
+############ Test merging a category with an unconventional symbol name ############
+# RUN: sed 's/__OBJC_\$_CATEGORY_MyBaseClass_\$_Category01/l_unconventional_category_symbol/g' merge_cat_minimal.s > merge_cat_minimal_unconventional_symbol.s
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o merge_cat_minimal_unconventional_symbol.o merge_cat_minimal_unconventional_symbol.s
+# RUN: %lld -arch arm64 -dylib -objc_category_merging -o merge_cat_minimal_unconventional_symbol.dylib a64_fakedylib.dylib merge_cat_minimal_unconventional_symbol.o
+# RUN: llvm-objdump --objc-meta-data --macho merge_cat_minimal_unconventional_symbol.dylib | FileCheck %s --check-prefix=MERGE_CATS
+
 #### Check merge categories enabled ###
 # Check that the original categories are not there
 MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category01

@@ -13,7 +13,7 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__filesystem/path.h>
-#include <__locale>
+#include <__locale_dir/utf8_conversions.h>
 #include <string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

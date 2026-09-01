@@ -55,5 +55,7 @@ extern template class std::basic_string<char16, string16_char_traits>;
 int main(int, char**) {
   std::basic_string<char16, string16_char_traits> s;
   s.shrink_to_fit();
+
+  return 0;
 }
 #endif
