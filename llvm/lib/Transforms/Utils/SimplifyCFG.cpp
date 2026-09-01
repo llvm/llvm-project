@@ -6155,24 +6155,29 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   if (NumCases->isOneValue()) {
     assert(Max->getValue() == Min->getValue());
     Value *Cmp = Builder.CreateICmpEQ(SI->getCondition(), Min);
-    NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest);
+    NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest, SI);
   }
   // If NumCases overflowed, then all possible values jump to the successor.
   else if (NumCases->isNullValue() && !Cases->empty()) {
-    NewBI = Builder.CreateBr(Dest);
+    NewBI = Builder.CreateBr(Dest, SI);
   } else {
     Value *Sub = SI->getCondition();
     if (!Offset->isNullValue())
       Sub = Builder.CreateAdd(Sub, Offset, Sub->getName() + ".off");
     Value *Cmp = Builder.CreateICmpULT(Sub, NumCases, "switch");
-    NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest);
+    NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest, SI);
   }
 
-  NewBI->copyMetadata(*SI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
-                            LLVMContext::MD_annotation});
+  CondBrInst *NewCondBr = dyn_cast<CondBrInst>(NewBI);
+  if (NewCondBr) {
+    NewCondBr->copyMetadata(*SI, {LLVMContext::MD_annotation});
+    // The switch weights do not map directly to the new branch and are
+    // recomputed below.
+    NewCondBr->setMetadata(LLVMContext::MD_prof, nullptr);
+  }
 
   // Update weight for the newly-created conditional branch.
-  if (hasBranchWeightMD(*SI) && isa<CondBrInst>(NewBI)) {
+  if (hasBranchWeightMD(*SI) && NewCondBr) {
     SmallVector<uint64_t, 8> Weights;
     getBranchWeights(SI, Weights);
     if (Weights.size() == 1 + SI->getNumCases()) {
@@ -6188,7 +6193,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
         TrueWeight /= 2;
         FalseWeight /= 2;
       }
-      setFittedBranchWeights(*NewBI, {TrueWeight, FalseWeight},
+      setFittedBranchWeights(*NewCondBr, {TrueWeight, FalseWeight},
                              /*IsExpected=*/false, /*ElideAllZero=*/true);
     }
   }
