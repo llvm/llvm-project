@@ -962,17 +962,19 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
 /// \c DICompileUnit, or non-scope). Mirrors \c DIScope::getScope() without
 /// asserting on unexpected metadata kinds.
 static const Metadata *getRawDIScopeParent(const Metadata *S) {
-  if (auto *T = dyn_cast_or_null<DIType>(S))
+  if (!S)
+    return nullptr;
+  if (auto *T = dyn_cast<DIType>(S))
     return T->getRawScope();
-  if (auto *SP = dyn_cast_or_null<DISubprogram>(S))
+  if (auto *SP = dyn_cast<DISubprogram>(S))
     return SP->getRawScope();
-  if (auto *LB = dyn_cast_or_null<DILexicalBlockBase>(S))
+  if (auto *LB = dyn_cast<DILexicalBlockBase>(S))
     return LB->getRawScope();
-  if (auto *NS = dyn_cast_or_null<DINamespace>(S))
+  if (auto *NS = dyn_cast<DINamespace>(S))
     return NS->getRawScope();
-  if (auto *CB = dyn_cast_or_null<DICommonBlock>(S))
+  if (auto *CB = dyn_cast<DICommonBlock>(S))
     return CB->getRawScope();
-  if (auto *M = dyn_cast_or_null<DIModule>(S))
+  if (auto *M = dyn_cast<DIModule>(S))
     return M->getRawScope();
   return nullptr;
 }
