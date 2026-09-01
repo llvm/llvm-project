@@ -97,7 +97,7 @@ public:
   /// Whether M is in the list.
   bool contains(const CapabilityExpr &CapE) const {
     return llvm::any_of(
-        *this, [=](const CapabilityExpr &CapE2) { return CapE.equals(CapE2); });
+        *this, [&](const CapabilityExpr &CapE2) { return CapE.equals(CapE2); });
   }
 
   /// Push M onto list, but discard duplicates.
@@ -1850,6 +1850,13 @@ class ThreadSafetyAnalyzer {
   struct TryAcquireCaps {
     CapExprSet TruthyExclusive, TruthyShared;
     CapExprSet FalsyExclusive, FalsyShared;
+    /// Capabilities reconcileTryAcquireCaps() moved out of the polarity
+    /// groups: acquired regardless of the call's result. handleCall()
+    /// turns them into unconditional acquisitions, with the diagnostic.
+    /// Exclusive only when both polarities promised an exclusive hold; a
+    /// cross-kind pairing guarantees no more than a shared hold either
+    /// way.
+    CapExprSet UnconditionalExclusive, UnconditionalShared;
   };
   // Maps each try-acquire call to its attributes' capabilities, memoized
   // before the lockset walk.
@@ -1879,9 +1886,13 @@ public:
   void getMutexIDs(CapExprSet &Mtxs, AttrType *Attr, const Expr *Exp,
                    const NamedDecl *D, til::SExpr *Self = nullptr);
 
-  void recordTryAcquireCall(const Expr *Exp, const NamedDecl *D,
-                            til::SExpr *Self = nullptr);
+  const TryAcquireCaps &
+  recordTryAcquireCall(const Expr *Exp, const NamedDecl *D,
+                       til::SExpr *Self = nullptr,
+                       TryAcquireCaps *NoExprCaps = nullptr);
+  const TryAcquireCaps *recordedTryAcquireCaps(const Expr *Exp) const;
   void recordTryAcquireCalls();
+  void reconcileTryAcquireCaps(TryAcquireCaps &Caps);
 
   /// What decodeTrylockCond()'s walk over a branched-on condition has learned
   /// about the expressions applied to the try-acquire call's result.
@@ -2434,6 +2445,11 @@ ThreadSafetyAnalyzer::decodeTrylockBranch(const CFGBlock *Block) {
     AddCaps(Caps.FalsyExclusive, LK_Exclusive, /*Success=*/false);
     AddCaps(Caps.FalsyShared, LK_Shared, /*Success=*/false);
   }
+  // A fully-reconciled call (every capability moved to the unconditional
+  // groups) records nothing here: it creates no try facts, and a branch
+  // on its result proves nothing.
+  if (Result.OnTrue.empty() && Result.OnFalse.empty())
+    return CacheMiss();
   return Memo.emplace(std::move(Result));
 }
 
@@ -3004,6 +3020,11 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
   CapExprSet ExclusiveLocksToAdd, SharedLocksToAdd;
   CapExprSet ExclusiveLocksToRemove, SharedLocksToRemove, GenericLocksToRemove;
   CapExprSet ScopedReqsAndExcludes;
+  // Try-acquire capabilities of a call without an expression (a destructor
+  // or cleanup function): there is no result to branch on, but a reconciled
+  // unconditional acquisition still applies. Materialized only for such a
+  // call, since the record of every other lives in TryAcquireCapsMap.
+  std::optional<ThreadSafetyAnalyzer::TryAcquireCaps> NoExprTryCaps;
 
   // Figure out if we're constructing an object of scoped lockable class
   CapabilityExpr Scp;
@@ -3026,6 +3047,23 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     Loc = Exp->getExprLoc();
   }
 
+  // Try-acquired capabilities were recorded before the walk for a CallExpr,
+  // so only a constructor or an expression-less call (a destructor or cleanup
+  // function) records here, where its object placeholder is available. The
+  // conditional locks are added to our lockset below, from the record.
+  const ThreadSafetyAnalyzer::TryAcquireCaps *TryCaps = nullptr;
+  if (D->hasAttr<TryAcquireCapabilityAttr>()) {
+    if (!Exp || (isa<CXXConstructExpr>(Exp) &&
+                 !Analyzer->TryAcquireCapsMap.contains(Exp))) {
+      auto PostContextForThisScope =
+          LVarCtx.switchToContextForScope(DualLocalVarContext::Post);
+      TryCaps = &Analyzer->recordTryAcquireCall(
+          Exp, D, Self, Exp ? nullptr : &NoExprTryCaps.emplace());
+    } else {
+      TryCaps = Analyzer->recordedTryAcquireCaps(Exp);
+    }
+  }
+
   for(const Attr *At : D->attrs()) {
     switch (At->getKind()) {
       // When we encounter a lock function, we need to add the lock to our
@@ -3040,20 +3078,9 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
         break;
       }
 
-      // Try-acquired capabilities were already recorded for CallExprs, so only
-      // a constructor is recorded here, on its first try-acquire attribute,
-      // where its constructed-object placeholder is available.
-      // The conditional locks are added to our lockset below, from the recorded
-      // capabilities in TryAcquireCapsMap.
-      case attr::TryAcquireCapability: {
-        if (Exp && (!isa<CXXConstructExpr>(Exp) ||
-                    Analyzer->TryAcquireCapsMap.contains(Exp)))
-          break;
-        auto PostContextForThisScope =
-            LVarCtx.switchToContextForScope(DualLocalVarContext::Post);
-        Analyzer->recordTryAcquireCall(Exp, D, Self);
+      // Try-acquired capabilities are recorded above, before this loop.
+      case attr::TryAcquireCapability:
         break;
-      }
 
       // An assert will add a lock to the lockset, but will not generate
       // a warning if it is already there, and will not generate a warning
@@ -3113,6 +3140,24 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       default:
         break;
     }
+  }
+
+  // Recording reconciled the polarity groups (recordTryAcquireCall); the
+  // capabilities the reconciliation moved out of them are acquired regardless
+  // of the call's result: diagnose and add them unconditionally. The
+  // diagnostic is emitted here in the walk rather than at recording, where
+  // the handler and the call's location are, and once per visited call.
+  if (TryCaps) {
+    auto AddRegardless = [&](const CapExprSet &Unconditional,
+                             CapExprSet &LocksToAdd) {
+      for (const auto &M : Unconditional) {
+        Analyzer->Handler.handleTryLockRegardlessOfResult(M.getKind(),
+                                                          M.toString(), Loc, D);
+        LocksToAdd.push_back_nodup(M);
+      }
+    };
+    AddRegardless(TryCaps->UnconditionalExclusive, ExclusiveLocksToAdd);
+    AddRegardless(TryCaps->UnconditionalShared, SharedLocksToAdd);
   }
 
   std::optional<CallExpr::const_arg_range> Args;
@@ -3240,28 +3285,24 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
   // capability only if the guard holds it -- so it disarms the try fact
   // silently (handleUncheckedConditionalUnlock()).
   CapExprSet TryLocksManaged;
-  if (Exp) {
-    if (auto It = Analyzer->TryAcquireCapsMap.find(Exp);
-        It != Analyzer->TryAcquireCapsMap.end()) {
-      const ThreadSafetyAnalyzer::TryAcquireCaps &Caps = It->second;
-      // A scoped object manages the try facts its construction created, and
-      // only those, each once whatever its kinds: a capability the
-      // construction also acquires definitely is managed by that acquisition,
-      // and one whose try fact addTryLock() declined was never acquired
-      // conditionally, so the destructor has nothing of its to release.
-      auto AddTry = [&](const CapExprSet &CapSet, LockKind LK) {
-        for (const CapabilityExpr &M : CapSet) {
-          if (ExclusiveLocksToAdd.contains(M) || SharedLocksToAdd.contains(M))
-            continue;
-          if (Analyzer->addTryLock(FSet, M, LK, Loc, Exp, Source))
-            TryLocksManaged.push_back_nodup(M);
-        }
-      };
-      AddTry(Caps.TruthyExclusive, LK_Exclusive);
-      AddTry(Caps.FalsyExclusive, LK_Exclusive);
-      AddTry(Caps.TruthyShared, LK_Shared);
-      AddTry(Caps.FalsyShared, LK_Shared);
-    }
+  if (Exp && TryCaps) {
+    // A scoped object manages the try facts its construction created, and
+    // only those, each once whatever its kinds: a capability the construction
+    // also acquires definitely is managed by that acquisition, and one whose
+    // try fact addTryLock() declined was never acquired conditionally, so the
+    // destructor has nothing of its to release.
+    auto AddTry = [&](const CapExprSet &CapSet, LockKind LK) {
+      for (const CapabilityExpr &M : CapSet) {
+        if (ExclusiveLocksToAdd.contains(M) || SharedLocksToAdd.contains(M))
+          continue;
+        if (Analyzer->addTryLock(FSet, M, LK, Loc, Exp, Source))
+          TryLocksManaged.push_back_nodup(M);
+      }
+    };
+    AddTry(TryCaps->TruthyExclusive, LK_Exclusive);
+    AddTry(TryCaps->FalsyExclusive, LK_Exclusive);
+    AddTry(TryCaps->TruthyShared, LK_Shared);
+    AddTry(TryCaps->FalsyShared, LK_Shared);
   }
 
   if (!Scp.shouldIgnore()) {
@@ -4013,15 +4054,62 @@ static bool neverReturns(const CFGBlock *B) {
   return false;
 }
 
+/// The same capability listed under opposite success values -- of either
+/// lock kind -- is acquired regardless of the call's result: move it out
+/// of the polarity groups into an unconditional group, leaving every
+/// remaining capability recorded under one polarity only. A capability
+/// listed twice under the same polarity keeps both of its kinds; the
+/// acquisition itself decides what to do with the second (addTryLock()).
+/// Exclusive under both polarities stays exclusive. A cross-kind pairing
+/// (e.g. exclusive on success, shared on failure) may be a deliberate
+/// API, but a single fact cannot represent a hold whose kind varies with
+/// the result, so it keeps only the guarantee that holds either way: an
+/// unconditional shared hold. handleCall() adds the unconditional groups
+/// to the lockset, with the diagnostic.
+void ThreadSafetyAnalyzer::reconcileTryAcquireCaps(TryAcquireCaps &Caps) {
+  // A capability promised on both outcomes is acquired regardless of the
+  // result, in the weaker kind if the two outcomes disagree about it.
+  for (const CapabilityExpr &M : Caps.TruthyExclusive)
+    if (Caps.FalsyExclusive.contains(M))
+      Caps.UnconditionalExclusive.push_back_nodup(M);
+    else if (Caps.FalsyShared.contains(M))
+      Caps.UnconditionalShared.push_back_nodup(M);
+  for (const CapabilityExpr &M : Caps.TruthyShared)
+    if (!Caps.UnconditionalExclusive.contains(M) &&
+        (Caps.FalsyExclusive.contains(M) || Caps.FalsyShared.contains(M)))
+      Caps.UnconditionalShared.push_back_nodup(M);
+  if (Caps.UnconditionalExclusive.empty() && Caps.UnconditionalShared.empty())
+    return;
+  auto DropRegardless = [&](CapExprSet &Set) {
+    llvm::erase_if(Set, [&](const CapabilityExpr &M) {
+      return Caps.UnconditionalExclusive.contains(M) ||
+             Caps.UnconditionalShared.contains(M);
+    });
+  };
+  DropRegardless(Caps.TruthyExclusive);
+  DropRegardless(Caps.TruthyShared);
+  DropRegardless(Caps.FalsyExclusive);
+  DropRegardless(Caps.FalsyShared);
+}
+
 /// Record the capabilities named by the try-acquire attributes of the call
 /// or construction \p Exp to \p D into TryAcquireCapsMap, translated in the
-/// currently installed context. Without an expression there is nothing to
-/// record or branch on; translate only for the diagnostics.
-void ThreadSafetyAnalyzer::recordTryAcquireCall(const Expr *Exp,
-                                                const NamedDecl *D,
-                                                til::SExpr *Self) {
-  TryAcquireCaps DiscardedCaps;
-  TryAcquireCaps &Caps = Exp ? TryAcquireCapsMap[Exp] : DiscardedCaps;
+/// currently installed context, and reconcile degenerate annotations. A
+/// call without an expression (a destructor or cleanup function) records
+/// into \p NoExprCaps instead: there is no result to branch on, but a
+/// reconciled unconditional acquisition still applies.
+const ThreadSafetyAnalyzer::TryAcquireCaps *
+ThreadSafetyAnalyzer::recordedTryAcquireCaps(const Expr *Exp) const {
+  auto It = TryAcquireCapsMap.find(Exp);
+  return It == TryAcquireCapsMap.end() ? nullptr : &It->second;
+}
+
+const ThreadSafetyAnalyzer::TryAcquireCaps &
+ThreadSafetyAnalyzer::recordTryAcquireCall(const Expr *Exp, const NamedDecl *D,
+                                           til::SExpr *Self,
+                                           TryAcquireCaps *NoExprCaps) {
+  assert((Exp || NoExprCaps) && "expression-less call without a caps store");
+  TryAcquireCaps &Caps = Exp ? TryAcquireCapsMap[Exp] : *NoExprCaps;
   for (const Attr *At : D->attrs()) {
     const auto *A = dyn_cast<TryAcquireCapabilityAttr>(At);
     if (!A)
@@ -4035,6 +4123,8 @@ void ThreadSafetyAnalyzer::recordTryAcquireCall(const Expr *Exp,
     for (const auto &M : AttrCaps)
       Group.push_back_nodup(M);
   }
+  reconcileTryAcquireCaps(Caps);
+  return Caps;
 }
 
 /// Populate TryAcquireCapsMap for every try-acquire CallExpr in the

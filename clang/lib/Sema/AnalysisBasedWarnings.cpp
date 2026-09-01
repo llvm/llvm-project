@@ -2074,6 +2074,23 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
                           makeLockedHereNote(LocLocked, Kind));
   }
 
+  void handleTryLockRegardlessOfResult(StringRef Kind, Name LockName,
+                                       SourceLocation Loc,
+                                       const NamedDecl *D) override {
+    if (Loc.isInvalid())
+      Loc = FunLocation;
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_try_lock_regardless_of_result)
+                 << Kind << LockName);
+    // The attributes at fault are the callee's, which for a destructor or a
+    // cleanup function is nowhere near the location reported above.
+    Warnings.emplace_back(
+        std::move(Warning),
+        D ? getNotes(PartialDiagnosticAt(D->getLocation(),
+                                         S.PDiag(diag::note_declared_at)))
+          : getNotes());
+  }
+
   void handleDoubleLock(StringRef Kind, Name LockName, SourceLocation LocLocked,
                         SourceLocation LocDoubleLock, bool MaybeHeld) override {
     if (LocDoubleLock.isInvalid())

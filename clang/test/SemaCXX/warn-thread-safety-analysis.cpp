@@ -2503,6 +2503,73 @@ struct TestTryLock {
     }
   }
 
+  // The same capability listed under opposite success values is acquired
+  // regardless of the call's result: warns, then treated as an
+  // unconditional acquisition.
+  bool TryLockEitherWay() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu) // expected-note 2{{declared here}}
+      EXCLUSIVE_TRYLOCK_FUNCTION(false, mu);
+  void tryheld_regardless_of_result() {
+    if (TryLockEitherWay()) { // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+      a = 1;
+      mu.Unlock();
+    } else {
+      a = 2;
+      mu.Unlock();
+    }
+  }
+
+  void tryheld_regardless_of_result_unbranched() {
+    TryLockEitherWay(); // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+    a = 1;
+    mu.Unlock();
+  }
+
+  // The shared analogue: share-held regardless of the result.
+  bool TryReadEitherWay() SHARED_TRYLOCK_FUNCTION(true, mu) // expected-note {{declared here}}
+      SHARED_TRYLOCK_FUNCTION(false, mu);
+  void tryheld_regardless_of_result_shared() {
+    TryReadEitherWay(); // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+    int r = a;
+    (void)r;
+    mu.ReaderUnlock();
+  }
+
+  // A cross-kind pairing -- exclusive on success, shared on failure -- may
+  // be a deliberate API, but a single fact cannot represent a hold whose
+  // kind varies with the result, so it keeps only the guarantee that holds
+  // either way: an unconditional *shared* hold. Exclusive access on the
+  // success arm is then (conservatively) diagnosed.
+  bool TryUpgrade() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu) // expected-note {{declared here}}
+      SHARED_TRYLOCK_FUNCTION(false, mu);
+  void tryheld_regardless_of_result_cross_kind() {
+    if (TryUpgrade()) { // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+      a = 1; // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+      mu.ReaderUnlock();
+    } else {
+      mu.ReaderUnlock();
+    }
+  }
+
+  // Degenerate in both kinds at once: one diagnostic, one unconditional
+  // acquisition -- exclusive, since both polarities promised it.
+  bool TryLockEveryWay() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu) // expected-note {{declared here}}
+      EXCLUSIVE_TRYLOCK_FUNCTION(false, mu) SHARED_TRYLOCK_FUNCTION(true, mu)
+      SHARED_TRYLOCK_FUNCTION(false, mu);
+  void tryheld_regardless_of_result_both_kinds() {
+    TryLockEveryWay(); // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+    a = 1;
+    mu.Unlock();
+  }
+
+  // A call the analysis never reaches is silent, as for every other
+  // diagnostic (both the recording and the walk visit reachable blocks
+  // only).
+  void tryheld_regardless_of_result_unreachable() {
+    fail();
+    TryLockEitherWay();
+    mu.Unlock();
+  }
+
   void tryheld_assign_as_condition() {
     bool b;
     if ((b = mu.TryLock())) {
@@ -2553,7 +2620,7 @@ void leak() {
 // With mixed success values each fact is re-identified by matching its
 // capability against the ones recorded at the call, so the reassignment
 // does not keep the facts from resolving, nor swap their polarities.
-bool try_lock_ptr_split(Mutex *m1, Mutex *m2)
+bool try_lock_ptr_split(Mutex *m1, Mutex *m2) // expected-note {{declared here}}
     EXCLUSIVE_TRYLOCK_FUNCTION(true, m1) EXCLUSIVE_TRYLOCK_FUNCTION(false, m2);
 
 void mixed_success_after_reassignment() {
@@ -2568,7 +2635,42 @@ void mixed_success_after_reassignment() {
   }
 }
 
+// Whether opposite success values name the same capability can depend on
+// the call's arguments: aliased pointers collapse the mixed attributes into
+// an unconditional acquisition, diagnosed at the call.
+void mixed_success_aliased() {
+  try_lock_ptr_split(&pmu1, &pmu1); // expected-warning {{mutex 'pmu1' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+  pdata = 1;
+  pmu1.Unlock();
+}
+
 } // end namespace TryLockPointerRetranslation
+
+// Degenerate try-acquire annotations reconcile on every recording path,
+// not just pre-walk CallExprs: constructors (recorded in handleCall's
+// attribute loop) and expression-less calls (a destructor: no result to
+// branch on at all).
+namespace TryLockRegardlessCtorDtor {
+
+Mutex mu;
+int data GUARDED_BY(mu);
+
+// A constructor's degenerate attributes are covered by
+// ScopedTryLock::eitherWay(); what is unique here is a call with no
+// expression of its own.
+
+struct LockEitherWayOnExit {
+  ~LockEitherWayOnExit() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu) // expected-note {{declared here}}
+      EXCLUSIVE_TRYLOCK_FUNCTION(false, mu);
+};
+
+void dtor_regardless_of_result() {
+  { LockEitherWayOnExit guard; } // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+  data = 1;
+  mu.Unlock();
+}
+
+} // end namespace TryLockRegardlessCtorDtor
 
 // A try-acquire attribute's success value is decoded by constant evaluation,
 // which handles template parameters for example.
@@ -3832,6 +3934,13 @@ public:
   ~DoubleMutexLockMaybe() UNLOCK_FUNCTION();
 };
 
+class SCOPED_LOCKABLE MutexLockEitherWay {
+public:
+  MutexLockEitherWay(Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu) // expected-note {{declared here}}
+      EXCLUSIVE_TRYLOCK_FUNCTION(false, mu);
+  ~MutexLockEitherWay() UNLOCK_FUNCTION();
+};
+
 class SCOPED_LOCKABLE MutexLockAndMaybe {
 public:
   MutexLockAndMaybe(Mutex *m1, Mutex *m2) EXCLUSIVE_LOCK_FUNCTION(m1)
@@ -3945,6 +4054,14 @@ void unlockThenLockUnderTryGuard() {
 void relockOverTryHeld() {
   RelockableMutexLockMaybe scope(&mu); // expected-note {{mutex acquired here}}
   scope.Lock(); // expected-warning {{acquiring mutex 'mu' that may already be held}}
+  x = 1;
+}
+
+// The same capability under opposite success values is acquired regardless
+// of the result: an unconditional managed acquisition, released for real
+// by the destructor.
+void eitherWay() {
+  MutexLockEitherWay scope(&mu); // expected-warning {{mutex 'mu' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
   x = 1;
 }
 
