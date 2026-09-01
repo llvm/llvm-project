@@ -1308,7 +1308,8 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (auto *arg = args.getLastArg(clang::options::OPT_fopenmp_version_EQ)) {
-    llvm::ArrayRef<unsigned> ompVersions = llvm::omp::getOpenMPVersions();
+    llvm::ArrayRef<llvm::omp::Version> ompVersions =
+        llvm::omp::getOpenMPVersions();
     unsigned oldVersions[] = {11, 20, 25, 30};
     unsigned version = 0;
 
