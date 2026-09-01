@@ -2450,6 +2450,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       // 2) If a destination operand that was used by a recent export/store ins,
       // add s_waitcnt on exp_cnt to guarantee the WAR order.
 
+      if (TII.mayWriteLDSThroughDMA(MI) &&
+          ScoreBrackets.hasPendingLDSMemAtFence()) {
+        Wait.add(AMDGPU::DS_CNT, ScoreBrackets.getPendingLDSMemAtFenceWait());
+        ScoreBrackets.clearPendingLDSMemAtFence();
+      }
+
       for (const MachineMemOperand *Memop : MI.memoperands()) {
         const Value *Ptr = Memop->getValue();
         if (Memop->isStore()) {
@@ -2462,14 +2468,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         unsigned AS = Memop->getAddrSpace();
         if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
           continue;
-        if (TII.mayWriteLDSThroughDMA(MI)) {
-          if (ScoreBrackets.hasPendingLDSMemAtFence()) {
-            Wait.add(AMDGPU::DS_CNT,
-                     ScoreBrackets.getPendingLDSMemAtFenceWait());
-            ScoreBrackets.clearPendingLDSMemAtFence();
-          }
+        // No need to wait before load from VMEM to LDS.
+        if (TII.mayWriteLDSThroughDMA(MI))
           continue;
-        }
 
         // LOAD_CNT is only relevant to vgpr or LDS.
         unsigned TID = LDSDMA_BEGIN;

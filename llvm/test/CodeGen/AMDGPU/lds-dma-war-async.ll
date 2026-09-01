@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=amdgpu12.50 < %s | FileCheck %s
 
 declare void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture, i32, i32)
+declare void @llvm.amdgcn.tensor.load.to.lds(<4 x i32>, <8 x i32>, <4 x i32>, <4 x i32>, <8 x i32>, i32)
 
 define i32 @global_load_async_to_lds_war_wg(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds) #0 {
 ; CHECK-LABEL: global_load_async_to_lds_war_wg:
@@ -159,6 +160,64 @@ define void @global_load_async_to_lds_war_no_prior_read(ptr addrspace(1) %g, ptr
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 0, i32 0)
   store i32 %r, ptr addrspace(3) %lds2, align 4
   ret void
+}
+
+define i32 @tensor_load_to_lds_war_wave(<4 x i32> inreg %D0, <8 x i32> inreg %D1, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: tensor_load_to_lds_war_wave:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s24
+; CHECK-NEXT:    ds_load_b32 v0, v0
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+  %v = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("wavefront") release, !mmra !0
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+  ret i32 %v
+}
+
+define i32 @tensor_load_to_lds_war_wave_partial(<4 x i32> inreg %D0, <8 x i32> inreg %D1, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: tensor_load_to_lds_war_wave_partial:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
+; CHECK-NEXT:    ds_load_b32 v0, v0
+; CHECK-NEXT:    ds_load_b32 v1, v1
+; CHECK-NEXT:    s_wait_dscnt 0x1
+; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+  %v1 = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("wavefront") release, !mmra !0
+  %v2 = load i32, ptr addrspace(3) %lds2, align 4
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+  %s = add i32 %v1, %v2
+  ret i32 %s
+}
+
+define i32 @tensor_load_to_lds_war_wg_partial(<4 x i32> inreg %D0, <8 x i32> inreg %D1, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: tensor_load_to_lds_war_wg_partial:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
+; CHECK-NEXT:    ds_load_b32 v0, v0
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    ds_load_b32 v1, v1
+; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
+; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+  %v1 = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("workgroup") release, !mmra !0
+  %v2 = load i32, ptr addrspace(3) %lds2, align 4
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+  %s = add i32 %v1, %v2
+  ret i32 %s
 }
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,32" }
