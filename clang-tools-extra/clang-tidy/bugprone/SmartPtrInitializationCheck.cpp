@@ -199,7 +199,7 @@ private:
     const clang::CXXRecordDecl *RD = QT->getAsCXXRecordDecl();
     if (!RD)
       return false;
-    if (RD->getNameAsString() != "shared_ptr")
+    if (!RD->getDeclName().isIdentifier() || RD->getName() != "shared_ptr")
       return false;
     return RD->isInStdNamespace();
   }
@@ -211,7 +211,7 @@ private:
     const clang::CXXRecordDecl *RD = QT->getAsCXXRecordDecl();
     if (!RD)
       return false;
-    if (RD->getNameAsString() != "unique_ptr")
+    if (!RD->getDeclName().isIdentifier() || RD->getName() != "unique_ptr")
       return false;
     return RD->isInStdNamespace();
   }
@@ -343,7 +343,10 @@ private:
 
   void handleSmartPtrReset(const clang::CXXMemberCallExpr *ME,
                            const clang::Stmt *EnclosingStmt) {
-    if (ME->getMethodDecl()->getNameAsString() != "reset")
+    assert(ME);
+    if (!ME->getMethodDecl())
+      return;
+    if (!ME->getMethodDecl()->getDeclName().isIdentifier() || ME->getMethodDecl()->getName() != "reset")
       return;
     if (!isSmartPtrType(ME->getImplicitObjectArgument()->getType()))
       return;
@@ -918,6 +921,7 @@ std::string SmartPtrInitializationCheck::getRawPointerDescription(
   Policy.SuppressSpecifiers = false;
   Policy.SuppressTagKeyword = true;
 
+  // TODO: get ride of getAsString()??
   std::string Result = ExprType.getAsString(Policy);
 
   size_t Pos = Result.find(" *");
