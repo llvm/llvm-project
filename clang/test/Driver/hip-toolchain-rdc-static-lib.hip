@@ -31,7 +31,6 @@
 // CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
-// CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[A_BC1:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
@@ -42,7 +41,6 @@
 // CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device"
-// CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[B_BC1:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
@@ -62,7 +60,6 @@
 // CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
-// CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[A_BC2:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
@@ -73,7 +70,6 @@
 // CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device"
-// CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[B_BC2:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
@@ -90,7 +86,7 @@
 
 // combine images generated into hip fat binary object
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
-// CHECK-SAME: "-targets={{.*}},hipv4-amdgpu8.03-amd-amdhsa--gfx803,hipv4-amdgpu9.00-amd-amdhsa--gfx900"
+// CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
 // CHECK-SAME: "-input=[[IMG_DEV1]]" "-input=[[IMG_DEV2]]" "-output=[[BUNDLE:.*hipfb]]"
 
 // CHECK: [[MC:".*clang.*"]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"

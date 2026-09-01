@@ -19,6 +19,12 @@ namespace formatters {
 bool GenericOptionalSummaryProvider(ValueObject &valobj, Stream &stream,
                                     const TypeSummaryOptions &options);
 
+bool GenericErrorCodeSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+GenericErrorCodeSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                         lldb::ValueObjectSP valobj_sp);
+
 bool GenericFilesystemPathSummaryProvider(ValueObject &valobj, Stream &stream,
                                           const TypeSummaryOptions &options);
 

@@ -20,7 +20,7 @@ func.func @vector_load_i2() -> vector<3x3xi2> {
 // CHECK: %[[INDEX:.+]] = arith.constant 1 : index
 // CHECK: %[[VEC:.+]] = vector.load %[[ALLOC]][%[[INDEX]]] : memref<3xi8>, vector<2xi8>
 // CHECK: %[[VEC_I2:.+]] = vector.bitcast %[[VEC]] : vector<2xi8> to vector<8xi2>
-// CHECK: %[[EXCTRACT:.+]] = vector.extract_strided_slice %[[VEC_I2]] {offsets = [2], sizes = [3], strides = [1]} : vector<8xi2> to vector<3xi2>
+// CHECK: %[[EXCTRACT:.+]] = vector.extract_strided_slice %[[VEC_I2]] offsets = [2], sizes = [3], strides = [1] : vector<8xi2> to vector<3xi2>
 
 // -----
 
@@ -38,7 +38,7 @@ func.func @vector_transfer_read_i2() -> vector<3xi2> {
 // CHECK: %[[INDEX:.+]] = arith.constant 1 : index
 // CHECK: %[[READ:.+]] = vector.transfer_read %[[ALLOC]][%[[INDEX]]], %0 : memref<3xi8>, vector<2xi8>
 // CHECK: %[[BITCAST:.+]] = vector.bitcast %[[READ]] : vector<2xi8> to vector<8xi2>
-// CHECK: vector.extract_strided_slice %[[BITCAST]] {offsets = [2], sizes = [3], strides = [1]} : vector<8xi2> to vector<3xi2>
+// CHECK: vector.extract_strided_slice %[[BITCAST]] offsets = [2], sizes = [3], strides = [1] : vector<8xi2> to vector<3xi2>
 
 // -----
 
@@ -58,7 +58,7 @@ func.func @vector_constant_mask_maskedload_i2(%passthru: vector<5xi2>) -> vector
 // CHECK: %[[NEWMASK:.+]] = vector.constant_mask [2] : vector<2xi1>
 // CHECK: %[[VESSEL:.+]] = arith.constant dense<0> : vector<8xi2>
 // CHECK: %[[INSERT1:.+]] = vector.insert_strided_slice %[[ARG0]], %[[VESSEL]]
-// CHECK-SAME: {offsets = [2], strides = [1]} : vector<5xi2> into vector<8xi2>
+// CHECK-SAME: offsets = [2], strides = [1] : vector<5xi2> into vector<8xi2>
 // CHECK: %[[BITCAST1:.+]] = vector.bitcast %[[INSERT1]] : vector<8xi2> to vector<2xi8>
 // CHECK: %[[C2:.+]] = arith.constant 2 : index
 // CHECK: %[[MASKEDLOAD:.+]] = vector.maskedload %alloc[%[[C2]]], %[[NEWMASK:.+]], %[[BITCAST1]]
@@ -66,9 +66,9 @@ func.func @vector_constant_mask_maskedload_i2(%passthru: vector<5xi2>) -> vector
 // CHECK: %[[BITCAST2:.+]] = vector.bitcast %[[MASKEDLOAD]] : vector<2xi8> to vector<8xi2>
 // CHECK: %[[CST2:.+]] = arith.constant dense<false> : vector<8xi1>
 // CHECK: %[[INSERT2:.+]] = vector.insert_strided_slice %[[ORIGINMASK]], %[[CST2]]
-// CHECK-SAME: {offsets = [2], strides = [1]} : vector<5xi1> into vector<8xi1>
+// CHECK-SAME: offsets = [2], strides = [1] : vector<5xi1> into vector<8xi1>
 // CHECK: %[[SELECT:.+]] = arith.select %[[INSERT2]], %[[BITCAST2]], %[[INSERT1]] : vector<8xi1>, vector<8xi2>
-// CHECK: vector.extract_strided_slice %[[SELECT]] {offsets = [2], sizes = [5], strides = [1]} : vector<8xi2> to vector<5xi2>
+// CHECK: vector.extract_strided_slice %[[SELECT]] offsets = [2], sizes = [5], strides = [1] : vector<8xi2> to vector<5xi2>
 
 // -----
 
@@ -341,7 +341,7 @@ func.func @vector_maskedload_i2_constant_mask_unaligned(%passthru: vector<5xi2>)
 // CHECK: %[[COMPRESSED_MASK:.+]] = arith.constant dense<true> : vector<2xi1>
 // CHECK: %[[EMPTY:.+]] = arith.constant dense<0> : vector<8xi2>
 // CHECK: %[[PTH_PADDED:.+]] = vector.insert_strided_slice %[[PTH]], %[[EMPTY]]
-// CHECK-SAME: {offsets = [1], strides = [1]} : vector<5xi2> into vector<8xi2>
+// CHECK-SAME: offsets = [1], strides = [1] : vector<5xi2> into vector<8xi2>
 // CHECK: %[[PTH_PADDED_UPCAST:.+]] = vector.bitcast %[[PTH_PADDED]] : vector<8xi2> to vector<2xi8>
 // CHECK: %[[C1:.+]] = arith.constant 1 : index
 // CHECK: %[[MASKLOAD:.+]] = vector.maskedload %[[ALLOC]][%[[C1]]], %[[COMPRESSED_MASK]], %[[PTH_PADDED_UPCAST]]
@@ -351,10 +351,10 @@ func.func @vector_maskedload_i2_constant_mask_unaligned(%passthru: vector<5xi2>)
 // TODO: fold insert_strided_slice into source if possible.
 // CHECK: %[[EMPTY_MASK:.+]] = arith.constant dense<false> : vector<8xi1>
 // CHECK: %[[MASK_PADDED:.+]] = vector.insert_strided_slice %[[MASK]], %[[EMPTY_MASK]]
-// CHECK-SAME: {offsets = [1], strides = [1]} : vector<5xi1> into vector<8xi1>
+// CHECK-SAME: offsets = [1], strides = [1] : vector<5xi1> into vector<8xi1>
 // CHECK: %[[SELECT:.+]] = arith.select %[[MASK_PADDED]], %[[MASKLOAD_DOWNCAST]], %[[PTH_PADDED]] : vector<8xi1>, vector<8xi2>
 // CHECK: %[[RESULT:.+]] = vector.extract_strided_slice %[[SELECT]]
-// CHECK-SAME: {offsets = [1], sizes = [5], strides = [1]} : vector<8xi2> to vector<5xi2>
+// CHECK-SAME: offsets = [1], sizes = [5], strides = [1] : vector<8xi2> to vector<5xi2>
 // CHECK: return %[[RESULT]] : vector<5xi2>
 
 ///----------------------------------------------------------------------------------------
@@ -399,8 +399,8 @@ func.func @vector_store_i2_const_index_two_partial_stores(%arg0: vector<4xi2>) {
 // CHECK:           %[[IDX_1:.*]] = arith.constant 0 : index
 // CHECK:           %[[MASK_1:.*]] = arith.constant dense<[false, false, false, true]> : vector<4xi1>
 // CHECK:           %[[INIT:.*]] = arith.constant dense<0> : vector<4xi2>
-// CHECK:           %[[SLICE_1:.*]] = vector.extract_strided_slice %[[ARG_0]] {offsets = [0], sizes = [1], strides = [1]} : vector<4xi2> to vector<1xi2>
-// CHECK:           %[[V1:.*]] = vector.insert_strided_slice %[[SLICE_1]], %[[INIT]] {offsets = [3], strides = [1]} : vector<1xi2> into vector<4xi2>
+// CHECK:           %[[SLICE_1:.*]] = vector.extract_strided_slice %[[ARG_0]] offsets = [0], sizes = [1], strides = [1] : vector<4xi2> to vector<1xi2>
+// CHECK:           %[[V1:.*]] = vector.insert_strided_slice %[[SLICE_1]], %[[INIT]] offsets = [3], strides = [1] : vector<1xi2> into vector<4xi2>
 // CHECK:           memref.generic_atomic_rmw %[[VAL_1]]{{\[}}%[[IDX_1]]] : memref<4xi8> {
 // CHECK:           ^bb0(%[[VAL_8:.*]]: i8):
 // CHECK:             %[[VAL_9:.*]] = vector.from_elements %[[VAL_8]] : vector<1xi8>
@@ -414,8 +414,8 @@ func.func @vector_store_i2_const_index_two_partial_stores(%arg0: vector<4xi2>) {
 // Second atomic RMW:
 // CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
 // CHECK:           %[[IDX_2:.*]] = arith.addi %[[IDX_1]], %[[VAL_14]] : index
-// CHECK:           %[[VAL_16:.*]] = vector.extract_strided_slice %[[ARG_0]] {offsets = [1], sizes = [3], strides = [1]} : vector<4xi2> to vector<3xi2>
-// CHECK:           %[[V2:.*]] = vector.insert_strided_slice %[[VAL_16]], %[[INIT]] {offsets = [0], strides = [1]} : vector<3xi2> into vector<4xi2>
+// CHECK:           %[[VAL_16:.*]] = vector.extract_strided_slice %[[ARG_0]] offsets = [1], sizes = [3], strides = [1] : vector<4xi2> to vector<3xi2>
+// CHECK:           %[[V2:.*]] = vector.insert_strided_slice %[[VAL_16]], %[[INIT]] offsets = [0], strides = [1] : vector<3xi2> into vector<4xi2>
 // CHECK:           %[[MASK_2:.*]] = arith.constant dense<[true, true, true, false]> : vector<4xi1>
 // CHECK:            memref.generic_atomic_rmw %[[VAL_1]]{{\[}}%[[IDX_2]]] : memref<4xi8> {
 // CHECK:           ^bb0(%[[VAL_20:.*]]: i8):
@@ -450,9 +450,9 @@ func.func @vector_store_i2_const_index_two_partial_stores(%arg0: vector<3xi2>) {
 
 // Part 1 atomic RMW sequence (load bits [12, 16) from %src_as_bytes[1])
 // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[ARG0]]
-// CHECK-SAME: {offsets = [0], sizes = [2], strides = [1]} : vector<3xi2> to vector<2xi2>
+// CHECK-SAME: offsets = [0], sizes = [2], strides = [1] : vector<3xi2> to vector<2xi2>
 // CHECK: %[[INSERT:.+]] = vector.insert_strided_slice %[[EXTRACT]], %[[CST_0]]
-// CHECK-SAME: {offsets = [2], strides = [1]} : vector<2xi2> into vector<4xi2>
+// CHECK-SAME: offsets = [2], strides = [1] : vector<2xi2> into vector<4xi2>
 // CHECK: %[[ATOMIC_RMW:.+]] = memref.generic_atomic_rmw %[[ALLOC]][%[[C1]]] : memref<3xi8> {
 // CHECK: %[[ARG:.+]]: i8):
 // CHECK: %[[FROM_ELEM:.+]] = vector.from_elements %[[ARG]] : vector<1xi8>
@@ -465,9 +465,9 @@ func.func @vector_store_i2_const_index_two_partial_stores(%arg0: vector<3xi2>) {
 // Part 2 atomic RMW sequence (load bits [16, 18) from %src_as_bytes[2])
 // CHECK: %[[ADDR2:.+]] = arith.addi %[[C1]], %[[C1]] : index
 // CHECK: %[[EXTRACT3:.+]] = vector.extract_strided_slice %[[ARG0]]
-// CHECK-SAME: {offsets = [2], sizes = [1], strides = [1]} : vector<3xi2> to vector<1xi2>
+// CHECK-SAME: offsets = [2], sizes = [1], strides = [1] : vector<3xi2> to vector<1xi2>
 // CHECK: %[[INSERT2:.+]] = vector.insert_strided_slice %[[EXTRACT3]], %[[CST_0]]
-// CHECK-SAME: {offsets = [0], strides = [1]} : vector<1xi2> into vector<4xi2>
+// CHECK-SAME: offsets = [0], strides = [1] : vector<1xi2> into vector<4xi2>
 // CHECK: %[[CST1:.+]] = arith.constant dense<[true, false, false, false]> : vector<4xi1>
 // CHECK: %[[ATOMIC_RMW2:.+]] = memref.generic_atomic_rmw %[[ALLOC]][%[[ADDR2]]] : memref<3xi8> {
 // CHECK: %[[ARG2:.+]]: i8):
@@ -498,9 +498,9 @@ func.func @vector_store_i2_two_partial_one_full_stores(%arg0: vector<7xi2>) {
 
 // First atomic RMW:
 // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[ARG0]]
-// CHECK-SAME: {offsets = [0], sizes = [1], strides = [1]} : vector<7xi2> to vector<1xi2>
+// CHECK-SAME: offsets = [0], sizes = [1], strides = [1] : vector<7xi2> to vector<1xi2>
 // CHECK: %[[INSERT:.+]] = vector.insert_strided_slice %[[EXTRACT]], %[[CST0]]
-// CHECK-SAME: {offsets = [3], strides = [1]} : vector<1xi2> into vector<4xi2>
+// CHECK-SAME: offsets = [3], strides = [1] : vector<1xi2> into vector<4xi2>
 // CHECK: %[[ATOMIC_RMW:.+]] = memref.generic_atomic_rmw %[[ALLOC]][%[[C1]]] : memref<6xi8> {
 // CHECK: %[[ARG:.+]]: i8):
 // CHECK: %[[FROM_ELEM:.+]] = vector.from_elements %[[ARG]] : vector<1xi8>
@@ -513,16 +513,16 @@ func.func @vector_store_i2_two_partial_one_full_stores(%arg0: vector<7xi2>) {
 // Non-atomic store:
 // CHECK: %[[ADDR:.+]] = arith.addi %[[C1]], %[[C1]] : index
 // CHECK: %[[EXTRACT2:.+]] = vector.extract_strided_slice %[[ARG0]]
-// CHECK-SAME: {offsets = [1], sizes = [4], strides = [1]} : vector<7xi2> to vector<4xi2>
+// CHECK-SAME: offsets = [1], sizes = [4], strides = [1] : vector<7xi2> to vector<4xi2>
 // CHECK: %[[BITCAST3:.+]] = vector.bitcast %[[EXTRACT2]] : vector<4xi2> to vector<1xi8>
 // CHECK: vector.store %[[BITCAST3]], %[[ALLOC]][%[[ADDR]]] : memref<6xi8>, vector<1xi8>
 
 // Second atomic RMW:
 // CHECK: %[[ADDR2:.+]] = arith.addi %[[ADDR]], %[[C1]] : index
 // CHECK: %[[EXTRACT3:.+]] = vector.extract_strided_slice %[[ARG0]]
-// CHECK-SAME: {offsets = [5], sizes = [2], strides = [1]} : vector<7xi2> to vector<2xi2>
+// CHECK-SAME: offsets = [5], sizes = [2], strides = [1] : vector<7xi2> to vector<2xi2>
 // CHECK: %[[INSERT2:.+]] = vector.insert_strided_slice %[[EXTRACT3]], %[[CST0]]
-// CHECK-SAME: {offsets = [0], strides = [1]} : vector<2xi2> into vector<4xi2>
+// CHECK-SAME: offsets = [0], strides = [1] : vector<2xi2> into vector<4xi2>
 // CHECK: %[[CST1:.+]] = arith.constant dense<[true, true, false, false]> : vector<4xi1> 
 // CHECK: %[[ATOMIC_RMW2:.+]] = memref.generic_atomic_rmw %[[ALLOC]][%[[ADDR2]]] : memref<6xi8> {
 // CHECK: %[[ARG2:.+]]: i8):
@@ -552,7 +552,7 @@ func.func @vector_store_i2_const_index_one_partial_store(%arg0: vector<1xi2>) {
 // CHECK: %[[CST:.+]] = arith.constant dense<[false, true, false, false]> : vector<4xi1>
 // CHECK: %[[CST0:.+]] = arith.constant dense<0> : vector<4xi2>
 // CHECK: %[[INSERT:.+]] = vector.insert_strided_slice %[[ARG0]], %[[CST0]]
-// CHECK-SAME: {offsets = [1], strides = [1]} : vector<1xi2> into vector<4xi2>
+// CHECK-SAME: offsets = [1], strides = [1] : vector<1xi2> into vector<4xi2>
 
 // CHECK: %[[ATOMIC_RMW:.+]] = memref.generic_atomic_rmw %[[ALLOC]][%[[C0]]] : memref<1xi8> {
 // CHECK: %[[ARG:.+]]: i8):

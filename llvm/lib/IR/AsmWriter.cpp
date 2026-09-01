@@ -71,7 +71,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2697,6 +2696,18 @@ static void writeDIObjCProperty(raw_ostream &Out, const DIObjCProperty *N,
   Printer.printString("getter", N->getGetterName());
   Printer.printInt("attributes", N->getAttributes());
   Printer.printMetadata("type", N->getRawType());
+  Out << ")";
+}
+
+static void writeDIProperty(raw_ostream &Out, const DIProperty *N,
+                            AsmWriterContext &WriterCtx) {
+  Out << "!DIProperty(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printString("name", N->getName());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
+  Printer.printMetadata("type", N->getRawType());
+  Printer.printMetadata("backing_storage", N->getRawBackingStorage());
   Out << ")";
 }
 

@@ -27,12 +27,8 @@
 #include "AMDGPUHWEvents.h"
 #include "AMDGPUWaitcntUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -3688,8 +3684,7 @@ bool SIInsertWaitcnts::run() {
              (MF.getFrameInfo().hasCalls() ||
               ST.getOccupancyWithNumVGPRs(
                   TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass),
-                  /*IsDynamicVGPR=*/false) <
-                  AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+                  /*IsDynamicVGPR=*/false) < ST.getMaxWavesPerEU())) {
     for (auto [MI, Flag] : EndPgmInsts) {
       if (Flag) {
         if (ST.requiresNopBeforeDeallocVGPRs()) {
