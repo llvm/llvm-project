@@ -77,6 +77,9 @@ defm auto_expr : CXX23Compat<"'auto' as a functional-style cast is">;
 // C++26 compatibility with C++23 and earlier.
 defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a condition is">;
 
+// C++29 compatibility with C++26 and earlier.
+defm pack_indexing_template : CXX29Compat<"pack indexing for template names is">;
+
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
   defm cxx#std#_constexpr_body_invalid_stmt : CompatWarning<
@@ -14333,6 +14336,8 @@ def note_amdgpu_named_barrier_reason_inherited : Note<
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_invalid_sync_scope
+    : Error<"unsupported atomic synchronization scope '%0'">;
 def err_amdgcn_processor_is_arg_not_literal
     : Error<"the argument to __builtin_amdgcn_processor_is must be a string "
             "literal">;
