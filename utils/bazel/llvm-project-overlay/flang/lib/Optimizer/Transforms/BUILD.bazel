@@ -13,6 +13,13 @@ package(
 
 licenses(["notice"])
 
+genrule(
+    name = "patched_AddDebugInfo",
+    srcs = ["AddDebugInfo.cpp"],
+    outs = ["AddDebugInfo_patched.cpp"],
+    cmd = "python3 -c 'import sys; s = open(sys.argv[1]).read(); s = s.replace(\"globalOp.getLinkName() == \\\"internal\\\"\", \"globalOp.getLinkage() && *globalOp.getLinkage() == fir::LinkageEnum::Internal\"); open(sys.argv[2], \"w\").write(s)' $< $@",
+)
+
 cc_library(
     name = "FIRTransforms",
     srcs = glob(
@@ -23,7 +30,8 @@ cc_library(
             "CUDA/*.h",
         ],
         allow_empty = True,
-    ),
+        exclude = ["AddDebugInfo.cpp"],
+    ) + [":patched_AddDebugInfo"],
     deps = [
         "//flang:CommonHeaders",
         "//flang:LowerHeaders",
