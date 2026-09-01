@@ -668,6 +668,8 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   EHStreamer *ES = nullptr;
   switch (MAI.getExceptionHandlingType()) {
+  case ExceptionHandling::Default:
+    llvm_unreachable("should have resolved exception model kind");
   case ExceptionHandling::None:
     if (!usesCFIWithoutEH())
       break;

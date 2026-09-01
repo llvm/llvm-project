@@ -4,6 +4,7 @@
 ; RUN: llvm-as < %t/arm.ll | llvm-dis | FileCheck %s --check-prefix=ARM
 ; RUN: llvm-as < %t/wineh.ll | llvm-dis | FileCheck %s --check-prefix=WINEH
 ; RUN: llvm-as < %t/wasm.ll | llvm-dis | FileCheck %s --check-prefix=WASM
+; RUN: llvm-as < %t/none.ll | llvm-dis | FileCheck %s --check-prefix=NONE
 
 ;--- dwarf.ll
 !llvm.module.flags = !{!0}
@@ -29,3 +30,8 @@
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"exception-model", !"wasm"}
 ; WASM: !0 = !{i32 1, !"exception-model", !"wasm"}
+
+;--- none.ll
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"none"}
+; NONE: !0 = !{i32 1, !"exception-model", !"none"}

@@ -52,6 +52,7 @@ namespace llvm {
   }
 
   enum class ExceptionHandling : int {
+    Default,  ///< Not specified; resolve to the target's default model
     None,     ///< No exception support
     DwarfCFI, ///< DWARF-like instruction based exceptions
     SjLj,     ///< setjmp/longjmp based exceptions
@@ -63,11 +64,13 @@ namespace llvm {
          ///< PPA1 is used instead of an .eh_frame section.
   };
 
-  /// Returns the string spelling used by the "exception-model" IR module flag
-  /// for an ExceptionHandling value. Models that are not user-selectable (None,
-  /// AIX, ZOS) have no spelling and return the empty string.
+  /// Returns the "exception-model" module flag spelling for an
+  /// ExceptionHandling value. Default, AIX, and ZOS have no spelling and return
+  /// "".
   inline StringRef getExceptionModelName(ExceptionHandling EH) {
     switch (EH) {
+    case ExceptionHandling::None:
+      return "none";
     case ExceptionHandling::DwarfCFI:
       return "dwarf";
     case ExceptionHandling::SjLj:
@@ -78,7 +81,7 @@ namespace llvm {
       return "wineh";
     case ExceptionHandling::Wasm:
       return "wasm";
-    case ExceptionHandling::None:
+    case ExceptionHandling::Default:
     case ExceptionHandling::AIX:
     case ExceptionHandling::ZOS:
       break;
@@ -90,6 +93,8 @@ namespace llvm {
   /// into an ExceptionHandling value, returning std::nullopt if it does not
   /// name a supported exception model.
   inline std::optional<ExceptionHandling> parseExceptionModel(StringRef Name) {
+    if (Name == "none")
+      return ExceptionHandling::None;
     if (Name == "dwarf")
       return ExceptionHandling::DwarfCFI;
     if (Name == "sjlj")
