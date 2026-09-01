@@ -61,6 +61,8 @@ def ZfhDExt    : ExtInfo<"", "", [HasStdExtZfh, HasStdExtD],
                          ?, ?, FPR32, FPR64, FPR16>;
 def ZfhminDExt : ExtInfo<"", "", [HasStdExtZfhmin, HasStdExtD],
                          ?, ?, FPR32, FPR64, FPR16>;
+def ZfhminQExt : ExtInfo<"", "", [HasStdExtZfhmin, HasStdExtQ],
+                         ?, ?, FPR32, FPR64, FPR16>;
 
 def ZhinxExt            : ExtInfo<"_INX", "Zfinx",
                                   [HasStdExtZhinx],
@@ -224,6 +226,14 @@ foreach Ext = ZfhminDExts in {
                                           Ext.F16Ty, "fcvt.d.h">,
                   Sched<[WriteFCvtF16ToF64, ReadFCvtF16ToF64]>;
 } // foreach Ext = ZfhminDExts
+
+defm FCVT_H_Q : FPUnaryOp_r_frm_m<0b0100010, 0b00011, ZfhminQExt,
+                                  ZfhminQExt.F16Ty, FPR128, "fcvt.h.q">,
+                 Sched<[WriteFCvtF128ToF16, ReadFCvtF128ToF16]>;
+
+defm FCVT_Q_H : FPUnaryOp_r_frmlegacy_m<0b0100011, 0b00010, ZfhminQExt,
+                                        FPR128, ZfhminQExt.F16Ty, "fcvt.q.h">,
+                 Sched<[WriteFCvtF16ToF128, ReadFCvtF16ToF128]>;
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
