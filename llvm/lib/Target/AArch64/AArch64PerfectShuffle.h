@@ -107,7 +107,6 @@ inline bool isZIPMask(ArrayRef<int> M, unsigned NumElts,
 /// isZIP_v_undef_Mask - Special case of isZIPMask for canonical form of
 /// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
 /// Mask is e.g., <0, 0, 1, 1> instead of <0, 4, 1, 5>.
-//GlobalISel
 inline bool isZIP_v_undef_Mask(ArrayRef<int> M, unsigned NumElts,
                                unsigned &WhichResult) {
   if (NumElts % 2 != 0)

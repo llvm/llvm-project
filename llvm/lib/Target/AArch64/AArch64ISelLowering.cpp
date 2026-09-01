@@ -35527,8 +35527,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
   unsigned WhichResult;
   unsigned OperandOrder;
   unsigned NumElts = VT.getVectorNumElements();
-  if (isZIPMask(ShuffleMask, NumElts, WhichResult,
-                OperandOrder) &&
+  if (isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder) &&
       WhichResult == 0) {
     SDValue ZIP = DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT,
                               OperandOrder == 0 ? Op1 : Op2,
@@ -35583,8 +35582,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     }
 
     unsigned NumElts = VT.getVectorNumElements();
-    if (isZIPMask(ShuffleMask, NumElts, WhichResult,
-                  OperandOrder) &&
+    if (isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder) &&
         WhichResult != 0) {
       SDValue ZIP = DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT,
                                 OperandOrder == 0 ? Op1 : Op2,
@@ -35598,7 +35596,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op2));
     }
 
-    if (isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult) && WhichResult != 0)
+    if (isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult) &&
+        WhichResult != 0)
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT, Op1, Op1));
 
