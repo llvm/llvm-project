@@ -510,7 +510,7 @@ unsigned AMDGPU::getLDSBankCount(Triple::SubArchType SubArch) {
 
 std::optional<unsigned> AMDGPU::getBufferResourceNumRecordsWidth(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
-  if (!Info)
+  if (!Info || Info->BufferResourceNumRecordsWidth == 0)
     return std::nullopt;
   return Info->BufferResourceNumRecordsWidth;
 }
