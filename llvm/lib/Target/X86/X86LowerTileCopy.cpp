@@ -36,60 +36,61 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-lower-tile-copy"
 
-/// Generate ACE-specific tile copy using TILEMOVROW row-by-row.
-/// ACE v1 doesn't have TILELOADD/TILESTORED, so we need to copy
-/// tiles through ZMM registers, one row at a time.
-///
-/// Spill sequence (tile -> stack):
-///   for row = 0 to 15:
-///     TILEMOVROW zmm_temp, tmm_src, row   ; read row from tile to ZMM
-///     VMOVUPS [stack + row*64], zmm_temp  ; store ZMM to stack
-///
-/// Reload sequence (stack -> tile):
-///   for row = 0 to 15:
-///     VMOVUPS zmm_temp, [stack + row*64]  ; load ZMM from stack
-///     TILEMOVROW tmm_dst, zmm_temp, row   ; write row from ZMM to tile
-///
-static void emitACETileCopy(MachineBasicBlock &MBB, MachineInstr &MI,
-                            const X86Subtarget &ST, const X86InstrInfo *TII,
-                            const TargetRegisterInfo *TRI, Register SrcReg,
-                            Register DstReg, bool SrcKill, int TileSS,
-                            Register ScratchZMM) {
-  const DebugLoc &DL = MI.getDebugLoc();
+// ACE has no TILELOADD/TILESTORED, so a tile moves to and from memory one row
+// at a time through a scratch ZMM. Each tile is 16 rows of 64 bytes (1KB).
+static const unsigned ACENumTileRows = 16;
+static const unsigned ACETileRowSize = 64;
 
-  // Each tile has 16 rows of 64 bytes each (1KB total)
-  const unsigned NumRows = 16;
-  const unsigned RowSize = 64;
-
-  // Spill: Read each row from source tile to ZMM, then store to stack
-  for (unsigned Row = 0; Row < NumRows; ++Row) {
-    // TILEMOVROW zmm, tmm, imm8 (read direction: tile -> ZMM)
-    // Uses TILEMOVROWrti instruction
-    // Only kill src on the last row read
-    bool KillSrcNow = (Row == NumRows - 1) && SrcKill;
+/// Emit the ACE tile spill sequence, storing \p SrcReg to \p TileSS.
+static void emitACETileSpill(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MI,
+                             const X86InstrInfo *TII, Register SrcReg,
+                             bool SrcKill, int TileSS, Register ScratchZMM) {
+  const DebugLoc &DL = MI->getDebugLoc();
+  for (unsigned Row = 0; Row < ACENumTileRows; ++Row) {
+    // tilemovrow $row, %tmm, %zmm
+    // Only kill src on the last row read.
+    bool KillSrcNow = (Row == ACENumTileRows - 1) && SrcKill;
     BuildMI(MBB, MI, DL, TII->get(X86::TILEMOVROWrti), ScratchZMM)
         .addReg(SrcReg, getKillRegState(KillSrcNow))
         .addImm(Row);
 
-    // VMOVUPS [stack + row*64], zmm
+    // vmovups %zmm, row*64(%sp)
     MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZmr));
-    addFrameReference(MIB, TileSS, Row * RowSize);
+    addFrameReference(MIB, TileSS, Row * ACETileRowSize);
     MIB.addReg(ScratchZMM, RegState::Kill);
   }
+}
 
-  // Reload: Load each row from stack to ZMM, then write to dest tile
-  for (unsigned Row = 0; Row < NumRows; ++Row) {
-    // VMOVUPS zmm, [stack + row*64]
+/// Emit the ACE tile reload sequence, loading \p DstReg from \p TileSS.
+static void emitACETileReload(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              const X86InstrInfo *TII, Register DstReg,
+                              int TileSS, Register ScratchZMM) {
+  const DebugLoc &DL = MI->getDebugLoc();
+  for (unsigned Row = 0; Row < ACENumTileRows; ++Row) {
+    // vmovups row*64(%sp), %zmm
     MachineInstrBuilder MIB =
         BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZrm), ScratchZMM);
-    addFrameReference(MIB, TileSS, Row * RowSize);
+    addFrameReference(MIB, TileSS, Row * ACETileRowSize);
 
-    // TILEMOVROW tmm, zmm, imm8 (write direction: ZMM -> tile)
-    // Uses TILEMOVROWri instruction (ACE-specific)
+    // tilemovrow $row, %zmm, %tmm
     BuildMI(MBB, MI, DL, TII->get(X86::TILEMOVROWri), DstReg)
         .addReg(ScratchZMM, RegState::Kill)
         .addImm(Row);
   }
+}
+
+/// Pick a ZMM that is dead here, or NoRegister if none is available.
+static Register findScratchZMM(MachineFunction &MF,
+                               const TargetRegisterInfo *TRI,
+                               const LiveRegUnits &UsedRegs) {
+  BitVector VR512Regs =
+      TRI->getAllocatableSet(MF, TRI->getRegClass(X86::VR512RegClassID));
+  for (auto RegT : VR512Regs.set_bits())
+    if (UsedRegs.available(RegT))
+      return RegT;
+  return X86::NoRegister;
 }
 
 namespace {
@@ -148,6 +149,48 @@ static bool lowerTileCopy(MachineFunction &MF) {
       if (MI.isDebugInstr())
         continue;
       UsedRegs.stepBackward(MI);
+
+      // Expand the tile spill/reload pseudos inserted by the register
+      // allocator. getLoadStoreRegOpcode is the only place these are created,
+      // and it only does so for ACE targets.
+      unsigned Opcode = MI.getOpcode();
+      if (Opcode == X86::ACE_TILESPILL || Opcode == X86::ACE_TILERELOAD) {
+        assert(ST.hasACEV1() && "ACE tile spill pseudo on non-ACE target");
+        bool IsSpill = Opcode == X86::ACE_TILESPILL;
+        // ACE_TILESPILL is (mem, tile), ACE_TILERELOAD is (tile, mem).
+        MachineOperand &TileMO =
+            MI.getOperand(IsSpill ? X86::AddrNumOperands : 0);
+        int TileSS =
+            MI.getOperand((IsSpill ? 0 : 1) + X86::AddrBaseReg).getIndex();
+        const DebugLoc &DL = MI.getDebugLoc();
+
+        Register ScratchZMM = findScratchZMM(MF, TRI, UsedRegs);
+        int ZmmSS = -1;
+        if (!ScratchZMM) {
+          // No available register? Save ZMM0 and reload it after use.
+          ScratchZMM = X86::ZMM0;
+          ZmmSS = MF.getFrameInfo().CreateSpillStackObject(64, Align(64));
+          addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZmr)),
+                            ZmmSS)
+              .addReg(X86::ZMM0);
+        }
+
+        if (IsSpill)
+          emitACETileSpill(MBB, MI, TII, TileMO.getReg(), TileMO.isKill(),
+                           TileSS, ScratchZMM);
+        else
+          emitACETileReload(MBB, MI, TII, TileMO.getReg(), TileSS, ScratchZMM);
+
+        if (ZmmSS != -1)
+          addFrameReference(
+              BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZrm), X86::ZMM0),
+              ZmmSS);
+
+        MI.eraseFromParent();
+        Changed = true;
+        continue;
+      }
+
       if (!MI.isCopy())
         continue;
       MachineOperand &DstMO = MI.getOperand(0);
@@ -164,47 +207,28 @@ static bool lowerTileCopy(MachineFunction &MF) {
 
       const DebugLoc &DL = MI.getDebugLoc();
 
-      // Check if this is ACE-only (no AMX TILELOADD/TILESTORED available)
-      if (ST.hasACEV1() && !ST.hasAMXTILE()) {
-        // ACE v1: Use TILEMOVROW row-by-row copy
-        // Need a scratch ZMM register for the transfer
-
-        // Find an available ZMM register
-        BitVector VR512Regs =
-            TRI->getAllocatableSet(MF, TRI->getRegClass(X86::VR512RegClassID));
-        Register ScratchZMM = X86::NoRegister;
-        for (auto RegT : VR512Regs.set_bits()) {
-          if (UsedRegs.available(RegT)) {
-            ScratchZMM = RegT;
-            break;
-          }
-        }
-
+      // ACE configures palette 2, which has no TILELOADD/TILESTORED, so copy
+      // the tile row-by-row through a scratch ZMM.
+      if (ST.hasACEV1()) {
+        Register ScratchZMM = findScratchZMM(MF, TRI, UsedRegs);
+        int ZmmSS = -1;
         if (!ScratchZMM) {
-          // If no ZMM available, use ZMM0 and save/restore it
+          // No available register? Save ZMM0 and reload it after use.
           ScratchZMM = X86::ZMM0;
-
-          // Allocate stack slot for scratch ZMM
-          int ZmmSS = MF.getFrameInfo().CreateSpillStackObject(64, Align(64));
-
-          // Save ZMM0
-          MachineInstrBuilder MIB =
-              BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZmr));
-          addFrameReference(MIB, ZmmSS);
-          MIB.addReg(X86::ZMM0);
-
-          // Emit ACE tile copy
-          emitACETileCopy(MBB, MI, ST, TII, TRI, SrcReg, DstReg, SrcMO.isKill(),
-                          TileSS, ScratchZMM);
-
-          // Restore ZMM0
-          MIB = BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZrm), X86::ZMM0);
-          addFrameReference(MIB, ZmmSS);
-        } else {
-          // Use available scratch ZMM
-          emitACETileCopy(MBB, MI, ST, TII, TRI, SrcReg, DstReg, SrcMO.isKill(),
-                          TileSS, ScratchZMM);
+          ZmmSS = MF.getFrameInfo().CreateSpillStackObject(64, Align(64));
+          addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZmr)),
+                            ZmmSS)
+              .addReg(X86::ZMM0);
         }
+
+        emitACETileSpill(MBB, MI, TII, SrcReg, SrcMO.isKill(), TileSS,
+                         ScratchZMM);
+        emitACETileReload(MBB, MI, TII, DstReg, TileSS, ScratchZMM);
+
+        if (ZmmSS != -1)
+          addFrameReference(
+              BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZrm), X86::ZMM0),
+              ZmmSS);
       } else {
         // AMX: Use TILESTORED/TILELOADD (original code)
         int StrideSS = 0;
