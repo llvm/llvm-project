@@ -6,7 +6,7 @@
 define amdgpu_kernel void @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:   ; %bb.1:                                ; %LeafBlock1
+; CHECK-NEXT:  ; %bb.1: ; %LeafBlock1
 ; CHECK-NEXT:    s_cmp_eq_u32 s0, 10
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_3
 ; CHECK-NEXT:  ; %bb.2: ; %foo.exit

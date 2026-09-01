@@ -115,10 +115,17 @@ GCNBreakLoadClusterDepsImpl::getVGPR32Components(Register Reg) const {
 
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
   unsigned NumLanes = TRI->getRegSizeInBits(*RC).getFixedValue() / 32;
-  if (NumLanes <= 1) { // already a VGPR_32
+  if (NumLanes == 1) { // already a VGPR_32
     ToReturn[Reg - AMDGPU::VGPR0] = true;
     return ToReturn;
   }
+  if (NumLanes == 0) // less than a VGPR_32
+    for (Register Super : TRI->superregs(Reg))
+      if (TRI->getPhysRegBaseClass(Super)->getSizeInBits() == 32) {
+        ToReturn[Super - AMDGPU::VGPR0] = true;
+        return ToReturn;
+      }
+
   for (unsigned C = 0; C < NumLanes; ++C)
     ToReturn[TRI->getSubReg(Reg, TRI->getSubRegFromChannel(C)) -
              AMDGPU::VGPR0] = true;

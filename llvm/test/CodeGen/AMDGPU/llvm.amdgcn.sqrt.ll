@@ -11,6 +11,16 @@ define float @v_sqrt_f32(float %src)  {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_sqrt_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sqrt_f32_e32 v0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call float @llvm.amdgcn.sqrt.f32(float %src)
   ret float %sqrt
 }
@@ -21,6 +31,16 @@ define float @v_fabs_sqrt_f32(float %src)  {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_sqrt_f32_e64 v0, |v0|
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fabs_sqrt_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sqrt_f32_e64 v0, |v0|
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fabs.src = call float @llvm.fabs.f32(float %src)
   %sqrt = call float @llvm.amdgcn.sqrt.f32(float %fabs.src)
   ret float %sqrt
@@ -32,6 +52,16 @@ define float @v_fneg_fabs_sqrt_f32(float %src)  {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_sqrt_f32_e64 v0, -|v0|
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fneg_fabs_sqrt_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sqrt_f32_e64 v0, -|v0|
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fabs.src = call float @llvm.fabs.f32(float %src)
   %neg.fabs.src = fneg float %fabs.src
   %sqrt = call float @llvm.amdgcn.sqrt.f32(float %neg.fabs.src)
@@ -44,6 +74,16 @@ define double @v_sqrt_f64(double %src)  {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_sqrt_f64_e32 v[0:1], v[0:1]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_sqrt_f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sqrt_f64_e32 v[0:1], v[0:1]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call double @llvm.amdgcn.sqrt.f64(double %src)
   ret double %sqrt
 }
@@ -54,6 +94,16 @@ define double @v_fabs_sqrt_f64(double %src)  {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_sqrt_f64_e64 v[0:1], |v[0:1]|
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fabs_sqrt_f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sqrt_f64_e64 v[0:1], |v[0:1]|
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fabs.src = call double @llvm.fabs.f64(double %src)
   %sqrt = call double @llvm.amdgcn.sqrt.f64(double %fabs.src)
   ret double %sqrt
@@ -65,6 +115,16 @@ define double @v_fneg_fabs_sqrt_f64(double %src)  {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_sqrt_f64_e64 v[0:1], -|v[0:1]|
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_fneg_fabs_sqrt_f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sqrt_f64_e64 v[0:1], -|v[0:1]|
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fabs.src = call double @llvm.fabs.f64(double %src)
   %neg.fabs.src = fneg double %fabs.src
   %sqrt = call double @llvm.amdgcn.sqrt.f64(double %neg.fabs.src)
@@ -72,10 +132,21 @@ define double @v_fneg_fabs_sqrt_f64(double %src)  {
 }
 
 define double @s_sqrt_f64(double inreg %src) {
+; GCN-LABEL: s_sqrt_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_sqrt_f64_e32 v[0:1], s[16:17]
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX12-LABEL: s_sqrt_f64:
 ; GFX12:       ; %bb.0:
-; GFX12:       v_sqrt_f64_e32 v[0:1], s[0:1]
-; GFX12-NEXT:  s_setpc_b64 s[30:31]
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_sqrt_f64_e32 v[0:1], s[0:1]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call double @llvm.amdgcn.sqrt.f64(double %src)
   ret double %sqrt
 }
