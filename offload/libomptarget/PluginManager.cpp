@@ -48,7 +48,8 @@ void PluginManager::init() {
 
   for (size_t I = 0, End = olGetInitializedPluginCount(); I != End; ++I) {
     GenericPluginTy *Plugin = olGetInitializedPlugin(I);
-    ODBG(ODT_Init) << "Adding plugin " << Plugin->getName() << " from liboffload";
+    ODBG(ODT_Init) << "Adding plugin " << Plugin->getName()
+                   << " from liboffload";
     Plugins.push_back(Plugin);
   }
 
