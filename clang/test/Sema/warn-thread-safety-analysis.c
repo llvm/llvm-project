@@ -104,6 +104,9 @@ int get_value(int *p) SHARED_LOCKS_REQUIRED(foo_.mu_){
 
 void unlock_scope(struct Mutex *const *mu) __attribute__((release_capability(**mu)));
 void unlock_scope_type_erased(int **priv) __attribute__((release_capability(*(struct Mutex **)priv)));
+// Degenerate try-acquire attributes: acquired whatever the result.
+void try_lock_scope_either_way(struct Mutex *const *mu) // expected-note {{declared here}}
+    EXCLUSIVE_TRYLOCK_FUNCTION(1, **mu) EXCLUSIVE_TRYLOCK_FUNCTION(0, **mu);
 
 // Verify late parsing:
 #ifdef LATE_PARSING
@@ -192,6 +195,16 @@ int main(void) {
   mutex_shared_unlock(&mu1);    // expected-warning {{releasing mutex 'mu1' that was not held}}
 
   /// Cleanup functions
+  {
+    // A cleanup function has no result to branch on, so a capability its
+    // try-acquire attributes name under both success values is acquired
+    // unconditionally, as for any other expression-less call.
+    // expected-warning@+2 {{mutex 'mu1' is acquired regardless of the result of the try-acquire call; treating the acquisition as unconditional}}
+    struct Mutex *const __attribute__((cleanup(try_lock_scope_either_way)))
+        try_scope = &mu1;
+    (void)try_scope;
+  } // The cleanup runs here, acquiring mu1 unconditionally.
+  mutex_exclusive_unlock(&mu1);
   {
     struct Mutex* const __attribute__((cleanup(unlock_scope))) scope = &mu1;
     mutex_exclusive_lock(scope);  // Lock through scope works.
