@@ -46,7 +46,7 @@ public:
 
   ~handler() = default;
 
-  /// Adds an event dependency to this command group.
+  /// \copybrief handler::depends_on(std::vector<event>const&)
   ///
   /// \param depEvent is the event that must complete before this command
   /// group is executed.
@@ -54,7 +54,7 @@ public:
     return depends_on(std::vector<event>{depEvent});
   }
 
-  /// Adds event dependencies to this command group.
+  /// \brief Adds event dependencies to this command group.
   ///
   /// \param depEvents are the events that must complete before this command
   /// group is executed.

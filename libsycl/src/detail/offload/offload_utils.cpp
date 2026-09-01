@@ -134,7 +134,7 @@ ol_kernel_launch_size_args_t convertToOlRange(const UnifiedRangeView &Range) {
   // So in order to ensure the correctness we update all the kernel
   // parameters accordingly.
   if (Range.MDims > 1) {
-    // TODO: Offset is not supported in liboffload so just ignore it for now.
+    // TODO: Offset is not yet supported in liboffload, so ignore it for now.
     std::swap(GlobalSize[0], GlobalSize[Range.MDims - 1]);
     std::swap(GroupSize[0], GroupSize[Range.MDims - 1]);
   }

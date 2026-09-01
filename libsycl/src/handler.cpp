@@ -13,7 +13,7 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-static void checkSingleCommand(
+static void checkCommandGroupFunction(
     const std::function<std::shared_ptr<detail::EventImpl>()> &CGF) {
   if (CGF) {
     throw sycl::exception(
@@ -24,7 +24,7 @@ static void checkSingleCommand(
 
 void handler::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
                                void *ArgData, size_t ArgSize) {
-  checkSingleCommand(MImpl.MCGF);
+  checkCommandGroupFunction(MImpl.MCGF);
   MImpl.MArgData.resize(ArgSize);
   std::memcpy(MImpl.MArgData.data(), ArgData, ArgSize);
   MImpl.MCGF = [this, &KernelInfo]() {
@@ -41,7 +41,7 @@ void handler::setKernelRange(const detail::UnifiedRangeView &Range) {
 }
 
 void handler::memcpy(void *dest, const void *src, std::size_t numBytes) {
-  checkSingleCommand(MImpl.MCGF);
+  checkCommandGroupFunction(MImpl.MCGF);
   MImpl.MCGF = [this, dest, src, numBytes]() {
     return MImpl.MQueue.memcpy(dest, src, numBytes,
                                detail::getSyclObjImpls(MDepEvents));
@@ -49,13 +49,11 @@ void handler::memcpy(void *dest, const void *src, std::size_t numBytes) {
 }
 
 std::shared_ptr<detail::EventImpl> handler::finalize() {
-  if (!MImpl.MCGF) {
-    auto EventsImpl = detail::getSyclObjImpls(MDepEvents);
-    return MImpl.MQueue.submitWait(EventsImpl);
-  }
+  if (MImpl.MCGF)
+    return MImpl.MCGF();
 
-  auto Event = MImpl.MCGF();
-  return Event;
+  auto EventsImpl = detail::getSyclObjImpls(MDepEvents);
+  return MImpl.MQueue.submitWait(EventsImpl);
 }
 
 _LIBSYCL_END_NAMESPACE_SYCL

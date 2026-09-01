@@ -97,15 +97,17 @@ public:
     return MCurrentSubmitInfo.LastEvent;
   }
 
-  /// Sets event dependencies and execution range for the next kernel
+  /// \brief Sets event dependencies and execution range for the next kernel
   /// submission.
   /// \param Events a collection of events that the kernel depends on.
   /// \param Range a unified range view of the execution range.
   void setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
                              const detail::UnifiedRangeView &Range);
 
-  /// Sets event dependencies and execution range for the next kernel
-  /// submission.
+  /// \copybrief
+  /// QueueImpl::setKernelLaunchParams(std::vector<EventImplPtr>&&,detail::UnifiedRangeView
+  /// const&)
+  ///
   /// \param Events a collection of events that the kernel depends on.
   /// \param Range a pre-converted liboffload kernel launch size args struct.
   void setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
