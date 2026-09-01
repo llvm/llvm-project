@@ -11,7 +11,7 @@
 // ADDITIONAL_COMPILE_FLAGS: -Wno-user-defined-warnings
 
 // Failing on linux: undefined reference to symbol '__atomic_compare_exchange@@LIBATOMIC_1.0'
-// XFAIL: libcpp-hardening-mode={{extensive|debug}}
+// XFAIL: target={{.*}}-linux{{.*}} && libcpp-hardening-mode={{extensive|debug}}
 
 // <atomic>
 
