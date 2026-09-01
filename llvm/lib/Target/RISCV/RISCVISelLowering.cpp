@@ -20942,8 +20942,8 @@ static SDValue performVWABDACombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   MVT VT = N->getSimpleValueType(0);
-  if (VT.getVectorElementType() != MVT::i16 &&
-      VT.getVectorElementType() != MVT::i32)
+  if (VT.getVectorElementType() != MVT::i8 &&
+      VT.getVectorElementType() != MVT::i16)
     return SDValue();
 
   SDValue Op0 = N->getOperand(0);
