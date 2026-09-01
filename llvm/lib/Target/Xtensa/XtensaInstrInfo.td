@@ -1595,6 +1595,42 @@ let Predicates = [HasESP32S2Ops] in {
 }
 
 //===----------------------------------------------------------------------===//
+// Xtensa ESP32S3 Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasESP32S3Ops] in {
+  def EE_WR_MASK_GPIO_OUT : RRR_Inst<0x04, 0x02, 0x07, (outs), (ins AR:$t, AR:$s),
+                                    "ee.wr_mask_gpio_out\t$t, $s", []> {
+    let r = 0x4;
+  }
+
+  def EE_SET_BIT_GPIO_OUT : RRR_Inst<0x04, 0x05, 0x07, (outs), (ins select_256:$imm),
+                                "ee.set_bit_gpio_out\t$imm", []> {
+    bits<8> imm;
+
+    let r = 0x4;
+    let s = imm{7-4};
+    let t = imm{3-0};
+  }
+
+  def EE_CLR_BIT_GPIO_OUT : RRR_Inst<0x04, 0x06, 0x07, (outs), (ins select_256:$imm),
+                                "ee.clr_bit_gpio_out\t$imm", []> {
+    bits<8> imm;
+
+    let r = 0x4;
+    let s = imm{7-4};
+    let t = imm{3-0};
+  }
+
+  def EE_GET_GPIO_IN : RRR_Inst<0x04, 0x05, 0x06, (outs AR:$t), (ins),
+                               "ee.get_gpio_in\t$t", []> {
+    let r = 0x0;
+    let s = 0x8;
+  }
+}
+include "XtensaS3DSPInstrInfo.td"
+
+//===----------------------------------------------------------------------===//
 // DSP Instructions
 //===----------------------------------------------------------------------===//
 include "XtensaDSPInstrInfo.td"
