@@ -694,8 +694,8 @@ static void emitCheckWithDbgMsg(raw_ostream &OS, indent Indent,
                                 const Twine &Args, bool SetDecodeCompleteOnFail,
                                 bool WithDebug) {
   OS << Indent << "if (!Check(S, " << CheckCall << ")) {\n";
-  // The LLVM_DEBUG line is debug-only; it is omitted from the de-duplication key
-  // so that it cannot perturb decoder sharing (see DecoderSet).
+  // The LLVM_DEBUG line is debug-only; it is omitted from the de-duplication
+  // key so that it cannot perturb decoder sharing (see DecoderSet).
   if (WithDebug)
     OS << Indent << "  LLVM_DEBUG(" << Helper << "(" << Args << "));\n";
   if (SetDecodeCompleteOnFail)
@@ -707,7 +707,8 @@ static void emitCheckWithDbgMsg(raw_ostream &OS, indent Indent,
 /// Operand-level decoder (emitBinaryParser).
 static void emitDecoderCheckWithOpcDebug(raw_ostream &OS, indent Indent,
                                          const OperandInfo &OpInfo,
-                                         const Twine &CheckCall, bool WithDebug) {
+                                         const Twine &CheckCall,
+                                         bool WithDebug) {
   StringRef OpName = OpInfo.Name.empty() ? "opd" : OpInfo.Name;
   StringRef DecoderName = OpInfo.Decoder;
 
@@ -733,11 +734,13 @@ static void emitDecoderCheckWithOpcDebug(raw_ostream &OS, indent Indent,
 static void emitDecoderMethodOpcDebug(raw_ostream &OS, indent Indent,
                                       const InstructionEncoding &Encoding,
                                       StringRef DecoderMethod, bool WithDebug) {
-  StringRef EncName = Encoding.getName();
+  // Report MI's opcode rather than this encoding's name: identical decoder
+  // bodies are shared between encodings, so a baked-in name would misreport
+  // every encoding but the first one that produced the body.
   emitCheckWithDbgMsg(OS, Indent,
                       formatv("{}(MI, insn, Address, Decoder)", DecoderMethod),
                       "reportInsnDecodeFailure",
-                      formatv("\"{}\", \"{}\"", EncName, DecoderMethod),
+                      formatv("MI.getOpcode(), \"{}\"", DecoderMethod),
                       !Encoding.hasCompleteDecoder(), WithDebug);
 }
 
@@ -1142,6 +1145,17 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
          "Table and instruction bitwidth mismatch");
 )";
   }
+
+  // Dump the encoding being decoded. This is the only dynamic-value print the
+  // feature needs: every later message names the field(base, width) it read, so
+  // the failing bits can be read off this one line. Emitting it here rather
+  // than at each decoder check keeps the per-check cost at zero.
+  OS << "\n  LLVM_DEBUG(reportInsnBits(insn, ";
+  if (SpecializeDecodersPerBitwidth)
+    OS << "BitWidth";
+  else
+    OS << "std::is_integral_v<InsnType> ? sizeof(InsnType) * 8 : 64";
+  OS << "));\n";
 
   OS << R"(
   SmallVector<const uint8_t *, 8> ScopeStack;
@@ -1603,10 +1617,27 @@ reportOperandDecodeFailure(const char *OperandName, const char *Decoder,
   dbgs() << " using " << Decoder << " : FAIL\n";
 }
 
-[[maybe_unused]] void reportInsnDecodeFailure(const char *InstName,
+[[maybe_unused]] void reportInsnDecodeFailure(unsigned Opcode,
                                               const char *Decoder) {
-  dbgs() << "OPC_Decode for " << InstName << ": insn using " << Decoder
+  dbgs() << "OPC_Decode for opcode " << Opcode << ": insn using " << Decoder
          << " : FAIL\n";
+}
+
+// Dump the raw encoding once per decode attempt, so that the field(base, width)
+// named by a failing operand or opcode can be read straight off it. Printed
+// most-significant nibble first, zero-padded to \p NumBits, in 64-bit chunks so
+// that encodings wider than 64 bits work too.
+template <typename InsnType>
+[[maybe_unused]] void reportInsnBits(const InsnType &Insn, unsigned NumBits) {
+  dbgs() << "decodeInstruction: insn = 0x";
+  for (unsigned Hi = NumBits; Hi != 0;) {
+    unsigned Width = std::min(Hi, 64U);
+    Hi -= Width;
+    uint64_t Chunk = fieldFromInstruction(Insn, Hi, Width);
+    for (int Shift = (Width + 3) / 4 * 4 - 4; Shift >= 0; Shift -= 4)
+      dbgs() << "0123456789abcdef"[(Chunk >> Shift) & 0xf];
+  }
+  dbgs() << '\n';
 }
 #endif // NDEBUG
 

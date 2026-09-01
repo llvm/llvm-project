@@ -47,10 +47,26 @@ def I : Instruction {
 // CHECK-NEXT:   dbgs() << " using " << Decoder << " : FAIL\n";
 // CHECK-NEXT: }
 
-// CHECK{LITERAL}: [[maybe_unused]] void reportInsnDecodeFailure(const char *InstName,
+// CHECK{LITERAL}: [[maybe_unused]] void reportInsnDecodeFailure(unsigned Opcode,
 // CHECK-NEXT:                          const char *Decoder) {
-// CHECK-NEXT:   dbgs() << "OPC_Decode for " << InstName << ": insn using " << Decoder
+// CHECK-NEXT:   dbgs() << "OPC_Decode for opcode " << Opcode << ": insn using " << Decoder
 // CHECK-NEXT:          << " : FAIL\n";
+// CHECK-NEXT: }
+
+// The raw encoding is dumped once per decode attempt rather than at each check,
+// so the dynamic bits behind every field(base, width) below are recoverable at
+// zero per-check cost. The chunked loop keeps encodings wider than 64 bits
+// working (exercised at runtime by AMDGPU's 96-bit encodings).
+// CHECK{LITERAL}: [[maybe_unused]] void reportInsnBits(const InsnType &Insn, unsigned NumBits) {
+// CHECK-NEXT:   dbgs() << "decodeInstruction: insn = 0x";
+// CHECK-NEXT:   for (unsigned Hi = NumBits; Hi != 0;) {
+// CHECK-NEXT:     unsigned Width = std::min(Hi, 64U);
+// CHECK-NEXT:     Hi -= Width;
+// CHECK-NEXT:     uint64_t Chunk = fieldFromInstruction(Insn, Hi, Width);
+// CHECK-NEXT:     for (int Shift = (Width + 3) / 4 * 4 - 4; Shift >= 0; Shift -= 4)
+// CHECK-NEXT:       dbgs() << "0123456789abcdef"[(Chunk >> Shift) & 0xf];
+// CHECK-NEXT:   }
+// CHECK-NEXT:   dbgs() << '\n';
 // CHECK-NEXT: }
 // CHECK-NEXT: #endif // NDEBUG
 
@@ -62,3 +78,6 @@ def I : Instruction {
 // CHECK-NEXT:      return MCDisassembler::Fail;
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return S;
+
+// Emitted once, in decodeInstruction -- not in any decoder body.
+// CHECK: LLVM_DEBUG(reportInsnBits(insn, std::is_integral_v<InsnType> ? sizeof(InsnType) * 8 : 64));

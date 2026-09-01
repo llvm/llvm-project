@@ -4,13 +4,26 @@
 # Exercises LLVM_DEBUG output from DecoderEmitter for dynamic bits like instruction operand.
 
 # blr x0 — valid; reaches per-operand checks and succeeds.
+# CHECK: decodeInstruction: insn = 0xd63f0000
 # CHECK: OPC_Decode: opcode {{[0-9]+}}, using decoder {{[0-9]+}}: PASS, decoding complete
 
 # Malformed `add (imm)` with `shift` field = 2 (only 0 and 1 are legal). The
 # whole-instruction decoder DecodeAddSubImmShift returns Fail, so the generated
-# table emits LLVM_DEBUG(reportInsnDecodeFailure("ADDXri", "DecodeAddSubImmShift")).
-# CHECK: OPC_Decode for ADDXri: insn using DecodeAddSubImmShift : FAIL
-# CHECK-NEXT: OPC_Decode: opcode {{[0-9]+}}, using decoder {{[0-9]+}}: FAIL, decoding complete
+# table emits LLVM_DEBUG(reportInsnDecodeFailure(MI.getOpcode(), "DecodeAddSubImmShift")).
+# The opcode must match the one OPC_Decode reports: decoder bodies are shared
+# between encodings, so a name baked into the body would name the wrong one.
+# CHECK: decodeInstruction: insn = 0x919998e5
+# CHECK: OPC_Decode for opcode [[OPC:[0-9]+]]: insn using DecodeAddSubImmShift : FAIL
+# CHECK-NEXT: OPC_Decode: opcode [[OPC]], using decoder {{[0-9]+}}: FAIL, decoding complete
+
+# Operand-level failure. The message names field(0,5); bits 0..4 of the dumped
+# encoding 0xd54ea035 are 0x15 = 21, which is what OPC_CheckField read from the
+# same field. That is how the dynamic bits are recovered without paying for a
+# value argument at every one of the thousands of generated check sites.
+# CHECK: decodeInstruction: insn = 0xd54ea035
+# CHECK: OPC_CheckField(0, 5, {{[0-9]+}}): FieldValue = 21, {{.*}}: FAIL
+# CHECK: OPC_Decode for Rt: field(0,5) using DecodeXSeqPairsClassRegisterClass : FAIL
 
 0x0 0x0 0x3f 0xd6
 0xe5 0x98 0x99 0x91
+0x35 0xa0 0x4e 0xd5
