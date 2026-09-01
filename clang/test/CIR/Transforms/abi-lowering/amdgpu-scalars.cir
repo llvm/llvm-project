@@ -4,10 +4,13 @@
 !s16i = !cir.int<s, 16>
 !u16i = !cir.int<u, 16>
 !s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
 !s64i = !cir.int<s, 64>
 
 !rec_E0 = !cir.struct<"E0" {}>
 !rec_Pair16 = !cir.struct<"Pair16" {data !s16i, data !s16i}>
+!rec_Pair32 = !cir.struct<"Pair32" {data !s32i, data !s32i}>
+!rec_Triple = !cir.struct<"Triple" {data !s32i, data !s32i, data !s32i}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -94,6 +97,25 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @takes_small(%{{.*}}: !u32i)
+
+  // A 33-64 bit aggregate is packed into a pair of i32 registers, coerced on
+  // the wire to a [2 x i32] array.
+  cir.func @takes_pair32(%arg0: !rec_Pair32) {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair32>
+    cir.store %arg0, %0 : !rec_Pair32, !cir.ptr<!rec_Pair32>
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_pair32(%{{.*}}: !cir.array<!u32i x 2>)
+
+  // A larger aggregate that still fits the register budget is passed directly
+  // in registers. The signature is left unchanged and the target backend will
+  // split it into registers.
+  cir.func @takes_triple(%arg0: !rec_Triple) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_triple(%arg0: !rec_Triple)
 
   // A kernel scalar argument stays Direct: the AMDGPU_KERNEL convention is
   // routed to the kernel classifier and the signature is unchanged.
