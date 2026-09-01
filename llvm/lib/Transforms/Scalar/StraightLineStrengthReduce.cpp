@@ -124,16 +124,11 @@ static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
 
-static cl::opt<int> SLSRBasisDistanceThreshold(
-    "slsr-basis-distance-threshold", cl::init(96), cl::Hidden,
-    cl::desc("SLSR: skip rewrite if in-block distance from Basis's last "
-             "same-block use to the candidate Inst exceeds this"));
-
 static cl::opt<bool> UseTTIForRP("slsr-tti-rp", cl::init(false),
                                  cl::desc("Use TTI to compute RP for SLSR-RP"));
 
 static cl::opt<bool> EnableRPFilter(
-    "slsr-rp-filter", cl::init(false), cl::Hidden,
+    "slsr-rp-filter", cl::init(true), cl::Hidden,
     cl::desc("SLSR: skip rewrites in blocks where they would push register "
              "pressure past the target's register budget"));
 
@@ -620,15 +615,6 @@ private:
     if (auto *StrideInst = dyn_cast<Instruction>(C.Stride))
       PropagateDependency(StrideInst);
   };
-
-  bool hasOperandsUsedInNonRewritableUsersInAnotherBlock(
-      llvm::Instruction *Inst) const;
-  bool hasRewritableCandidates(const Instruction *Inst) const;
-  bool basisTooFarInSameBlock(
-      const Candidate &C,
-      DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>>
-          &IndexCache,
-      const Instruction *Inst) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS,
@@ -1411,119 +1397,6 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
   return StraightLineStrengthReduce(DL, DT, SE, TTI).runOnFunction(F);
 }
 
-// Go through all operands of instruction, and check if any operand is used in
-// another block different from the instruction's block and the other use is
-// not rewritable. return true if such operand is found, otherwise return false.
-bool StraightLineStrengthReduce::
-    hasOperandsUsedInNonRewritableUsersInAnotherBlock(
-        llvm::Instruction *Inst) const {
-  llvm::BasicBlock *InstBB = Inst->getParent();
-
-  for (Value *OpVal : Inst->operand_values()) {
-    auto *OpInst = dyn_cast<Instruction>(OpVal);
-    if (!OpInst)
-      continue;
-
-    for (const User *U : OpInst->users())
-      if (auto *UI = dyn_cast<Instruction>(U)) {
-        if (UI->isDebugOrPseudoInst())
-          continue;
-        if (UI->getParent() != InstBB && !hasRewritableCandidates(UI)) {
-          LLVM_DEBUG(dbgs()
-                     << "Inst's operand is used in another block "
-                     << "("
-                     << (InstBB->hasName() ? InstBB->getName() : "unnamed")
-                     << " -> "
-                     << (UI->getParent() && UI->getParent()->hasName()
-                             ? UI->getParent()->getName()
-                             : "unnamed")
-                     << ") " << *UI << "\n");
-          return true;
-        }
-      }
-  }
-  return false;
-}
-
-bool StraightLineStrengthReduce::hasRewritableCandidates(
-    const Instruction *Inst) const {
-  if (!RewriteCandidates.count(Inst))
-    return false;
-
-  for (const Candidate *C : RewriteCandidates.at(Inst))
-    if (C->Basis)
-      return true;
-
-  return false;
-}
-
-// Assign a monotonically increasing index to each (non-debug/pseudo)
-// instruction in BB so in-block distances can be queried in O(1) once built.
-static DenseMap<const Instruction *, int>
-buildBlockIndexMap(const BasicBlock &BB) {
-  DenseMap<const Instruction *, int> IndexMap;
-  int Index = 0;
-  for (const Instruction &I : BB) {
-    // Skip debug/pseudo instructions so the distance math is identical
-    // between debug and release builds.
-    if (I.isDebugOrPseudoInst())
-      continue;
-    IndexMap[&I] = Index++;
-  }
-  return IndexMap;
-}
-
-// Return true
-// 1. if C.Basis used only in C.Ins's block before C.Ins
-// AND
-// 2. if any use of C.Basis before C.Ins and C.Ins exceeds
-// SLSRBasisDistanceThreshold.
-bool StraightLineStrengthReduce::basisTooFarInSameBlock(
-    const Candidate &C,
-    DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>>
-        &IndexCache,
-    const Instruction *I) const {
-  Instruction *Inst = C.Ins;
-  assert(Inst == I);
-  Instruction *BasisInst = C.Basis ? C.Basis->Ins : nullptr;
-  if (!BasisInst)
-    return false;
-
-  const BasicBlock *BB = Inst->getParent();
-  auto [It, Inserted] = IndexCache.try_emplace(BB);
-  if (Inserted)
-    It->second = buildBlockIndexMap(*BB);
-  const DenseMap<const Instruction *, int> &IndexMap = It->second;
-
-  auto InstIt = IndexMap.find(Inst);
-  if (InstIt == IndexMap.end())
-    return false;
-  int InstIdx = InstIt->second;
-
-  int LastUseIdx = 0;
-
-  bool FoundSameBlockUse = false;
-  for (const User *U : BasisInst->users()) {
-    const auto *UI = dyn_cast<Instruction>(U);
-    if (!UI)
-      continue;
-    // If one of the uses is not in the same block, return false.
-    if (UI->getParent() != BB)
-      return false;
-    auto UseIt = IndexMap.find(UI);
-    // If any same block use is later than Inst, return false.
-    if (UseIt == IndexMap.end() || UseIt->second >= InstIdx)
-      return false;
-    FoundSameBlockUse = true;
-    LastUseIdx = std::max(LastUseIdx, UseIt->second);
-  }
-
-  if (!FoundSameBlockUse)
-    return false;
-
-  return (InstIdx - LastUseIdx) > SLSRBasisDistanceThreshold;
-}
-
 namespace {
 
 // TODO: Currently, I am considering (Basis, Cand) pair that are both in the
@@ -1555,15 +1428,6 @@ public:
 
     DEBUG_SLSR_RP(dbgs() << "-- MaxRP of BBs -- \n");
     for (auto &BB : *F) {
-#if 0
-      unsigned RP = maxPressureInBlock(BB, BBToLiveness[&BB].LiveIn,
-                                       BBToLiveness[&BB].LiveOut);
-      unsigned RPBackward = maxPressureInBlockBackward(BB, BBToLiveness[&BB].LiveIn,
-                                      BBToLiveness[&BB].LiveOut);
-      DEBUG_WITH_TYPE("slsr-rp", {
-        dbgs() << "MaxRP:" << BB.getName() << ":" << RP << "," << RPBackward << "\n";
-      });
-#else
       const BlockLiveness &BL = getLiveness(&BB);
       auto [MaxRP, MaxRPWithSLSR] =
           maxPressureInBlockBackward(BB, BL.LiveIn, BL.LiveOut);
@@ -1572,7 +1436,6 @@ public:
 
       if (Budget && rewriteWouldOverflowBudget(MaxRP, MaxRPWithSLSR, *Budget))
         skipRewritesInBlock(BB, ToSkipRewrite);
-#endif
     }
   }
 
@@ -2022,46 +1885,15 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
     if (Candidate *C = pickRewriteCandidate(I))
       PickedCandidateMap[I] = C;
 
-  // Candidates whose rewrite is predicted to hurt more than it helps.
+  // Candidates whose rewrite would push their block's register pressure past
+  // what the target can allocate. Evaluated on the original IR, before any
+  // rewriteCandidate mutates it: rewriting inserts instructions and calls
+  // replaceAllUsesWith, which would invalidate the liveness and pressure
+  // analyses the filter relies on.
   DenseSet<Instruction *> ToSkipRewrite;
 
   RPFilter RPFilter(&F, PickedCandidateMap, TTI);
   RPFilter.run(ToSkipRewrite);
-
-  // From SortedCandidateInsts, remove some candidates that are likely to
-  // increase register pressure. The candidate's Inst is the source of
-  // replacement. A candidate in the following criteria should be removed:
-  // 1. The candidate's Inst "has operands used in non-rewritable users in
-  // another block"
-  //    -- checked by hasOperandsUsedInNonRewritableUsersInAnotherBlock(Inst)
-  //    -- This means the candidate's Inst's original operands are live in
-  //    another block, so even if rewrite the Inst, the operands may be still
-  //    live out to another block.
-  //    -- Thus, rewriting the Inst based on Basis might add another long live
-  //    range from the Basis by increasing the live range of the Basis.
-  //    -- TODO: If needed, a refinement to check that "another block" is
-  //    properly dominated by the candidate's Inst's block can be added.
-  // 2. When the candidate's Basis's is only used in the the same block
-  // and its last use is before the candidate's Inst, the difference between the
-  // last use of Basis and the Inst is larger than a threshold.
-  //    -- This is also for avoiding increasing the live range of the Basis by
-  //    rewriting the Inst.
-  //
-  // A candidate satisfies both conditions 1 and 2 should be removed.
-
-  // Collect candidates likely to increase register pressure.
-  // Evaluate on the original IR, before any rewriteCandidate mutates it
-  // Done before rewriting: rewriting inserts instructions and does
-  // replaceAllUsesWith, which would invalidate both the in-block index map and
-  // operands' user sets.
-  {
-    DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>> IndexCache;
-    for (Instruction *I : SortedCandidateInsts)
-      if (Candidate *C = pickRewriteCandidate(I))
-        if (hasOperandsUsedInNonRewritableUsersInAnotherBlock(I) &&
-            basisTooFarInSameBlock(*C, IndexCache, I))
-          ToSkipRewrite.insert(I);
-  }
 
   // Rewrite candidates in the topological order that rewrites a Candidate
   // always before rewriting its Basis
