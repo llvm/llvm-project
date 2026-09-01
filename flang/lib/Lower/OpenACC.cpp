@@ -4090,26 +4090,26 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
   std::stringstream asFortran;
   asFortran << Fortran::lower::mangle::demangleName(globalOp.getSymName());
 
-  std::stringstream postDeallocFuncName;
-  postDeallocFuncName << globalOp.getSymName().str()
-                      << Fortran::lower::declarePostDeallocSuffix.str();
-  auto postDeallocOp =
-      createDeclareFunc(modBuilder, builder, loc, postDeallocFuncName.str(),
+  // No post-dealloc recipe: it would run after the host storage is freed,
+  // when the descriptor no longer holds the address the mapping is keyed on.
+  std::stringstream preDeallocFuncName;
+  preDeallocFuncName << globalOp.getSymName().str()
+                     << Fortran::lower::declarePreDeallocSuffix.str();
+  auto preDeallocOp =
+      createDeclareFunc(modBuilder, builder, loc, preDeallocFuncName.str(),
                         /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
-
   fir::AddrOfOp addrOp = fir::AddrOfOp::create(
       builder, loc, fir::ReferenceType::get(globalOp.getType()),
       globalOp.getSymbol());
   llvm::SmallVector<mlir::Value> bounds;
-  // End the structured declare region using declare_exit.
   mlir::acc::GetDevicePtrOp descEntryOp =
       createDataEntryOp<mlir::acc::GetDevicePtrOp>(
           builder, loc, addrOp, asFortran, bounds,
-          /*structured=*/false, /*implicit=*/true, clause, addrOp.getType(),
+          /*structured=*/false, /*implicit=*/false, clause, addrOp.getType(),
           /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
   mlir::acc::DeclareExitOp::create(builder, loc, mlir::Value{},
                                    mlir::ValueRange(descEntryOp.getAccVar()));
-  modBuilder.setInsertionPointAfter(postDeallocOp);
+  modBuilder.setInsertionPointAfter(preDeallocOp);
 }
 
 static std::optional<Fortran::semantics::Symbol::Flag>
@@ -5252,7 +5252,7 @@ void Fortran::lower::declareExternalAccModuleDeclareActionRecipes(
   if (ultimate.test(Flag::AccCreate) || ultimate.test(Flag::AccCopyIn) ||
       ultimate.test(Flag::AccCopyInReadOnly) || ultimate.test(Flag::AccCopy) ||
       ultimate.test(Flag::AccCopyOut) || ultimate.test(Flag::AccDeviceResident))
-    declareExternalRecipe(declarePostDeallocSuffix);
+    declareExternalRecipe(declarePreDeallocSuffix);
 }
 
 void Fortran::lower::attachDeclarePostAllocAction(
@@ -5332,6 +5332,12 @@ void Fortran::lower::attachDeclarePostDeallocAction(
     AbstractConverter &converter, fir::FirOpBuilder &builder,
     const Fortran::semantics::Symbol &sym) {
   if (isUnifiedMemoryMode(converter))
+    return;
+
+  // A module variable has no post-dealloc recipe: it would run once the
+  // descriptor no longer holds the address the mapping is keyed on.
+  if (sym.GetUltimate().owner().kind() ==
+      Fortran::semantics::Scope::Kind::Module)
     return;
 
   if (!sym.test(Fortran::semantics::Symbol::Flag::AccCreate) &&
