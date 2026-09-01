@@ -3107,6 +3107,20 @@ TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetLDSBankCount) {
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch702), 16u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch900), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1030), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1200), 32u);
+  // gfx12.5 doubled the bank count.
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1250), 64u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX900), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX1250), 64u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX1251), 64u);
+}
+
 TEST(TargetParserTest, testAMDGPUgetMaxWavesPerEU) {
   EXPECT_EQ(AMDGPU::getMinWavesPerEU(), 1u);
 
