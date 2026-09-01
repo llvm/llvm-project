@@ -32,7 +32,7 @@
 /// VL := 512
 /// VL_bytes := VL >> 3
 /// row_index := row & 0xf
-/// IF row_index > tsrc.rows
+/// IF row_index >= tsrc.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes / 4) - 1
@@ -68,7 +68,7 @@
 /// VL := 512
 /// VL_bytes := VL >> 3
 /// row_index := imm8 & 0xf
-/// IF row_index > tsrc.rows
+/// IF row_index >= tsrc.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes / 4) - 1
@@ -105,7 +105,7 @@
 /// VL := 512
 /// VL_bytes := VL >> 3
 /// row_index := row & 0xf
-/// IF row_index > tsrc.rows
+/// IF row_index >= tsrc.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes / 4) - 1
@@ -144,7 +144,7 @@
 /// VL := 512
 /// VL_bytes := VL >> 3
 /// row_index := imm8 & 0xf
-/// IF row_index > tsrc.rows
+/// IF row_index >= tsrc.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes / 4) - 1
@@ -183,7 +183,7 @@
 /// VL := 512
 /// VL_bytes := VL >> 3
 /// row_index := row & 0xf
-/// IF row_index > tsrc.rows
+/// IF row_index >= tsrc.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes / 4) - 1
@@ -222,7 +222,7 @@
 /// VL := 512
 /// VL_bytes := VL >> 3
 /// row_index := imm8 & 0xf
-/// IF row_index > tsrc.rows
+/// IF row_index >= tsrc.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes / 4) - 1
@@ -261,7 +261,7 @@
 /// VL := 512
 /// VL_bytes := VL >> 3
 /// row_index := row & 0xf
-/// IF row_index > tsrc.rows
+/// IF row_index >= tsrc.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes / 4) - 1
@@ -299,7 +299,7 @@
 /// VL := 512
 /// VL_bytes := VL >> 3
 /// row_index := imm8 & 0xf
-/// IF row_index > tsrc.rows
+/// IF row_index >= tsrc.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes / 4) - 1
@@ -338,7 +338,7 @@
 /// VL := 512
 /// VL_bytes := VL >> 3
 /// row_index := row & 0xf
-/// IF row_index > tsrc.rows
+/// IF row_index >= tsrc.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes / 4) - 1
@@ -376,7 +376,7 @@
 /// VL := 512
 /// VL_bytes := VL >> 3
 /// row_index := imm8 & 0xf
-/// IF row_index > tsrc.rows
+/// IF row_index >= tsrc.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes / 4) - 1
@@ -422,7 +422,7 @@
 /// VL := 512
 /// VL_bytes := VL>>3
 /// row_index := b&0xf
-/// IF row_index > a.rows
+/// IF row_index >= a.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes-1)
@@ -457,7 +457,7 @@
 /// VL := 512
 /// VL_bytes := VL>>3
 /// row_index := b&0xf
-/// IF row_index > a.rows
+/// IF row_index >= a.rows
 ///     dst[VL-1:0] := 0
 /// ELSE
 ///     FOR i := 0 TO (VL_bytes-1)
