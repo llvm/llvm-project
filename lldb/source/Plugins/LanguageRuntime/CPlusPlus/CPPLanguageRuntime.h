@@ -16,7 +16,6 @@
 #include "CommonABIRuntime.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Utility/Locked.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -154,8 +153,8 @@ private:
   llvm::Expected<VTableInfoEntry> GetVTableInfoEntry(ValueObject &in_value,
                                                      bool check_type);
 
-  using VTableInfoMap = std::map<Address, VTableInfoEntry>;
-  Guarded<VTableInfoMap, std::mutex> m_vtable_info_map;
+  std::map<Address, VTableInfoEntry> m_vtable_info_map;
+  std::mutex m_vtable_mutex;
 };
 
 } // namespace lldb_private
