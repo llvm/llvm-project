@@ -41,6 +41,22 @@ add_flang_nongtest_unittest(logical
   FortranSemantics
 )
 
+add_flang_unittest(FlangEvaluateTests
+  PARTIAL_SOURCES_INTENDED
+  CharacterValueTest.cpp
+  ComplexValueTest.cpp
+  IntegerValueTest.cpp
+  LogicalValueTest.cpp
+  RealValueTest.cpp
+)
+
+target_link_libraries(FlangEvaluateTests
+  PRIVATE
+  FortranEvaluate
+  FortranDecimal
+  FortranSemantics
+)
+
 # GCC -fno-exceptions breaks the fenv.h interfaces needed to capture
 # IEEE exception flags (different use of the word "exception")
 # in the actual hardware floating-point status register, so ensure that
