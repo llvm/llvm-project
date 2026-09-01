@@ -1038,10 +1038,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
     return (*MI.memoperands_begin())->getAlign() >= Align(4);
   });
 
-  Predicate hasDwordAlignedConstantOffset([=](const MachineInstr &MI) -> bool {
-    if (ST->getGeneration() < AMDGPUSubtarget::GFX11)
-      return true;
-
+  Predicate hasDwordAlignedConstantOffset([](const MachineInstr &MI) -> bool {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     MachineInstr *PtrDef = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
     if (!PtrDef || (PtrDef->getOpcode() != TargetOpcode::G_PTR_ADD &&
@@ -1181,7 +1178,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{{UniS16, P4}, isNaturalAligned && isUL}, {{Sgpr32Trunc}, {SgprP4}}}, usesTrue16 && hasSMRDSmall) // s16 load
       .Any({{{UniS16, P4}, canWidenScalarSubwordLoad}, {{Sgpr32Trunc}, {SgprP4}, WidenMMOToS32}}, usesTrue16 && !hasSMRDSmall) // s16 load to 32-bit load
       .Any({{{UniB32, P4}, isNaturalAligned && isUL}, {{SgprB32}, {SgprP4}}}, hasSMRDSmall) //32-bit load, 8-bit and 16-bit any-extending load
-      .Any({{{UniB32, P4}, is8Or16BitMMO && isAlign4 && isUL}, {{SgprB32}, {SgprP4}, WidenMMOToS32}}, !hasSMRDSmall)  //8-bit and 16-bit any-extending load to 32-bit load
+      .Any({{{UniB32, P4}, is8Or16BitMMO && canWidenScalarSubwordLoad}, {{SgprB32}, {SgprP4}, WidenMMOToS32}}, !hasSMRDSmall)  //8-bit and 16-bit any-extending load to 32-bit load
       .Any({{{UniB32, P4}, is32BitMMO && isAlign4 && isUL}, {{SgprB32}, {SgprP4}}}) //32-bit load
       .Any({{{UniB64, P4}, isAlign4 && isUL}, {{SgprB64}, {SgprP4}}})
       .Any({{{UniB96, P4}, isAlign16 && isUL}, {{SgprB96}, {SgprP4}, WidenLoad}}, !hasSMRDx3)
@@ -1195,7 +1192,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{{UniS16, P4}, !isNaturalAligned || !isUL}, {{UniInVgprS16}, {SgprP4}}}, usesTrue16 && hasSMRDSmall) // s16 load
       .Any({{{UniS16, P4}, !canWidenScalarSubwordLoad}, {{UniInVgprS16}, {SgprP4}}}, usesTrue16 && !hasSMRDSmall) // s16 load
       .Any({{{UniB32, P4}, !isNaturalAligned || !isUL}, {{UniInVgprB32}, {SgprP4}}}, hasSMRDSmall) //32-bit load, 8-bit and 16-bit any-extending load
-      .Any({{{UniB32, P4}, !isAlign4 || !isUL}, {{UniInVgprB32}, {SgprP4}}}, !hasSMRDSmall)  //32-bit load, 8-bit and 16-bit any-extending load
+      .Any({{{UniB32, P4}, is8Or16BitMMO && !canWidenScalarSubwordLoad}, {{UniInVgprB32}, {SgprP4}}}, !hasSMRDSmall)  //8-bit and 16-bit any-extending load
+      .Any({{{UniB32, P4}, is32BitMMO && (!isAlign4 || !isUL)}, {{UniInVgprB32}, {SgprP4}}}, !hasSMRDSmall) //32-bit load
       .Any({{{UniB64, P4}, !isAlign4 || !isUL}, {{UniInVgprB64}, {SgprP4}}})
       .Any({{{UniB96, P4}, !isAlign4 || !isUL}, {{UniInVgprB96}, {SgprP4}}})
       .Any({{{UniB128, P4}, !isAlign4 || !isUL}, {{UniInVgprB128}, {SgprP4}}})
