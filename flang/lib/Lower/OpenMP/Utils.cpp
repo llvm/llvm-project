@@ -1384,16 +1384,18 @@ static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
   return llvm::Triple();
 }
 
-bool hasAMDGCNTarget(mlir::ModuleOp module) {
+bool hasOnlyAMDGCNTargets(mlir::ModuleOp module) {
   auto offloadModule =
       llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
   if (offloadModule.getIsTargetDevice())
     return fir::getTargetTriple(module).isAMDGCN();
-  return llvm::any_of(
-      offloadModule.getTargetTriples(), [](mlir::Attribute attr) {
-        auto tripleAttr = llvm::dyn_cast<mlir::StringAttr>(attr);
-        return tripleAttr && llvm::Triple(tripleAttr.getValue()).isAMDGCN();
-      });
+  llvm::ArrayRef<mlir::Attribute> targetTriples =
+      offloadModule.getTargetTriples();
+  return !targetTriples.empty() &&
+         llvm::all_of(targetTriples, [](mlir::Attribute attr) {
+           auto tripleAttr = llvm::dyn_cast<mlir::StringAttr>(attr);
+           return tripleAttr && llvm::Triple(tripleAttr.getValue()).isAMDGCN();
+         });
 }
 
 static bool scopeRequiresUnifiedSharedMemory(const semantics::Scope &scope) {

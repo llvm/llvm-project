@@ -4424,7 +4424,7 @@ static mlir::Operation *tryGenTargetUpdateKernel(
   // This addresses the AMDGPU runtime transfer cost and is only enabled when
   // an AMDGPU image will actually be emitted.
   mlir::ModuleOp module = converter.getModuleOp();
-  if (!hasAMDGCNTarget(module) ||
+  if (!hasOnlyAMDGCNTargets(module) ||
       requiresUnifiedSharedMemory(module, semaCtx) ||
       clauseOps.mapVars.size() < 2 || !clauseOps.dependVars.empty() ||
       !clauseOps.dependIterated.empty() || !clauseOps.mapIterated.empty() ||

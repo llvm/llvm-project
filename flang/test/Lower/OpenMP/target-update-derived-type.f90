@@ -1,6 +1,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s --check-prefix=HOST
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda %s -o - | FileCheck %s --check-prefix=NONAMD
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,nvptx64-nvidia-cuda %s -o - | FileCheck %s --check-prefix=MIXED
 ! RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEVICE
 
 module target_update_derived_type
@@ -22,6 +23,21 @@ contains
 ! DEVICE-LABEL: func.func @_QMtarget_update_derived_typePupdate_with_if(
 ! DEVICE: omp.target kernel_type(generic)
 ! DEVICE-NOT: omp.target_update
+! HOST-LABEL: func.func @_QMtarget_update_derived_typePupdate_with_if(
+! HOST-NOT: omp.target kernel_type(generic)
+! HOST: omp.target_update
+! HOST-NOT: omp.target kernel_type(generic)
+! HOST-LABEL: func.func @_QMtarget_update_derived_typePupdate_without_if(
+! NONAMD-LABEL: func.func @_QMtarget_update_derived_typePupdate_with_if(
+! NONAMD-NOT: omp.target kernel_type(generic)
+! NONAMD: omp.target_update
+! NONAMD-NOT: omp.target kernel_type(generic)
+! NONAMD-LABEL: func.func @_QMtarget_update_derived_typePupdate_without_if(
+! MIXED-LABEL: func.func @_QMtarget_update_derived_typePupdate_with_if(
+! MIXED-NOT: omp.target kernel_type(generic)
+! MIXED: omp.target_update
+! MIXED-NOT: omp.target kernel_type(generic)
+! MIXED-LABEL: func.func @_QMtarget_update_derived_typePupdate_without_if(
 subroutine update_with_if(w, enabled)
   type(wavefun) :: w
   logical :: enabled
@@ -74,8 +90,6 @@ subroutine update_with_if(w, enabled)
   ! CHECK-NEXT: omp.terminator
   ! CHECK-NOT: omp.target_update
   ! CHECK: return
-  ! HOST: omp.target_update
-  ! NONAMD: omp.target_update
   !$omp target update to(w%ferwe, w%celen, w%nb, w%isp, w%ldo) if(enabled)
 end subroutine
 
@@ -101,18 +115,20 @@ end subroutine
 subroutine update_pointer(w)
   type(wavefun) :: w
 
-  ! CHECK: omp.map.info {{.*}} map_clauses(to)
-  ! CHECK: omp.target_update map_entries(
-  !$omp target update to(w%ptr)
+  ! CHECK: %[[FERWE_MAP:.*]] = omp.map.info {{.*}} map_clauses(to)
+  ! CHECK: %[[PTR_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) {{.*}}name("w%ptr")
+  ! CHECK: omp.target_update map_entries(%[[FERWE_MAP]], %[[PTR_MAP]],
+  !$omp target update to(w%ferwe, w%ptr)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMtarget_update_derived_typePupdate_device(
 subroutine update_device(w)
   type(wavefun) :: w
 
-  ! CHECK: %[[MAP:.*]] = omp.map.info {{.*}} map_clauses(to)
-  ! CHECK: omp.target_update device({{.*}}) map_entries(%[[MAP]]
-  !$omp target update to(w%ferwe) device(0)
+  ! CHECK: %[[FERWE_MAP:.*]] = omp.map.info {{.*}} map_clauses(to)
+  ! CHECK: %[[NB_MAP:.*]] = omp.map.info {{.*}} map_clauses(to)
+  ! CHECK: omp.target_update device({{.*}}) map_entries(%[[FERWE_MAP]], %[[NB_MAP]]
+  !$omp target update to(w%ferwe, w%nb) device(0)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMtarget_update_derived_typePupdate_single(
@@ -139,18 +155,20 @@ end subroutine
 subroutine update_from(w)
   type(wavefun) :: w
 
-  ! CHECK: %[[MAP:.*]] = omp.map.info {{.*}} map_clauses(from)
-  ! CHECK: omp.target_update map_entries(%[[MAP]]
-  !$omp target update from(w%ferwe)
+  ! CHECK: %[[FERWE_MAP:.*]] = omp.map.info {{.*}} map_clauses(from)
+  ! CHECK: %[[NB_MAP:.*]] = omp.map.info {{.*}} map_clauses(from)
+  ! CHECK: omp.target_update map_entries(%[[FERWE_MAP]], %[[NB_MAP]]
+  !$omp target update from(w%ferwe, w%nb)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMtarget_update_derived_typePupdate_nowait(
 subroutine update_nowait(w)
   type(wavefun) :: w
 
-  ! CHECK: %[[MAP:.*]] = omp.map.info {{.*}} map_clauses(to)
-  ! CHECK: omp.target_update map_entries(%[[MAP]]{{.*}}) nowait
-  !$omp target update to(w%ferwe) nowait
+  ! CHECK: %[[FERWE_MAP:.*]] = omp.map.info {{.*}} map_clauses(to)
+  ! CHECK: %[[NB_MAP:.*]] = omp.map.info {{.*}} map_clauses(to)
+  ! CHECK: omp.target_update map_entries(%[[FERWE_MAP]], %[[NB_MAP]]{{.*}}) nowait
+  !$omp target update to(w%ferwe, w%nb) nowait
 end subroutine
 
 end module
