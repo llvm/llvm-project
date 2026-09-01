@@ -190,6 +190,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpgid
+)
+
+add_entrypoint_object(
+  getpgrp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpgrp
+)
+
+add_entrypoint_object(
   getpid
   ALIAS
   DEPENDS
@@ -327,6 +341,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.setgid
+)
+
+add_entrypoint_object(
+  setpgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setpgid
 )
 
 add_entrypoint_object(
