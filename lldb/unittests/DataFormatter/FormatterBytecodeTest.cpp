@@ -1,8 +1,11 @@
 #include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
+
+#include <limits>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -259,6 +262,128 @@ TEST_F(FormatterBytecodeTest, ArithOps) {
     ASSERT_EQ(data.Pop<uint64_t>(), 1u);
     ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 1, op_ge}, data));
     ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+}
+
+TEST_F(FormatterBytecodeTest, IntegerOps) {
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 23, op_dup, op_plus}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(46));
+  }
+  {
+    DataStack data;
+    unsigned char minus_one = 127;
+    ASSERT_TRUE(Interpret({op_lit_integer, minus_one}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(-1));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_lit_integer, 6, op_lit_integer, 2, op_div}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(3));
+  }
+  {
+    DataStack data;
+    ASSERT_FALSE(
+        Interpret({op_lit_integer, 23, op_lit_integer, 0, op_div}, data));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 1, op_lit_uint, 2, op_shl}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(4));
+  }
+  {
+    // Bitwise/shift ops operate on the two's complement bit pattern: a
+    // negative operand's bits are used as-is, and >> is always logical
+    // (zero-filling), so shifting -2 right is not the same as dividing by 2.
+    DataStack data;
+    unsigned char minus_two = 126;
+    ASSERT_TRUE(
+        Interpret({op_lit_integer, minus_two, op_lit_uint, 1, op_shr}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(),
+              llvm::APSInt::get(std::numeric_limits<int64_t>::max()));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 4, op_lit_uint, 1, op_shr}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(2));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 0, op_lit_integer, 1, op_eq}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(0));
+    ASSERT_TRUE(Interpret({op_lit_integer, 0, op_lit_integer, 0, op_eq}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 0, op_lit_integer, 1, op_lt}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_integer, 5, op_not}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(-6));
+  }
+  {
+    // ~ also operates on the bit pattern: ~(-1) is 0, not an error.
+    DataStack data;
+    unsigned char minus_one = 127;
+    ASSERT_TRUE(Interpret({op_lit_integer, minus_one, op_not}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(0));
+  }
+}
+
+TEST_F(FormatterBytecodeTest, IntegerSignednessOps) {
+  {
+    // Every Integer on the stack is signed; nothing today produces an
+    // unsigned-tagged one, so mismatched tags on +/-/etc are rejected. This
+    // only guards direct DataStack use bypassing the bytecode.
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1));
+    data.Push(llvm::APSInt::getUnsigned(1));
+    ASSERT_FALSE(Interpret({op_plus}, data));
+  }
+  {
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1));
+    data.Push(llvm::APSInt::getUnsigned(1));
+    ASSERT_FALSE(Interpret({op_lt}, data));
+  }
+  {
+    // Matching signedness still works.
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1));
+    data.Push(llvm::APSInt::get(1));
+    ASSERT_TRUE(Interpret({op_lt}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+  }
+  {
+    // Mismatched bit widths are still rejected, regardless of signedness.
+    DataStack data;
+    data.Push(llvm::APSInt(llvm::APInt(32, 5), /*isUnsigned=*/false));
+    data.Push(llvm::APSInt(llvm::APInt(64, 1), /*isUnsigned=*/true));
+    ASSERT_FALSE(Interpret({op_plus}, data));
+  }
+  {
+    // Bitwise ops, unlike arithmetic, don't care about the tag at all: they
+    // operate on the two's complement bit pattern directly, so a negative
+    // (or mismatched-tag) operand is not an error.
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1));
+    data.Push(llvm::APSInt::getUnsigned(1));
+    ASSERT_TRUE(Interpret({op_and}, data));
+    llvm::APSInt result = data.Pop<llvm::APSInt>();
+    ASSERT_FALSE(result.isUnsigned());
+    ASSERT_EQ(result, llvm::APSInt::get(1));
+  }
+  {
+    // Bit width still has to match for bitwise ops.
+    DataStack data;
+    data.Push(llvm::APSInt(llvm::APInt(32, 5), /*isUnsigned=*/false));
+    data.Push(llvm::APSInt(llvm::APInt(64, 1), /*isUnsigned=*/true));
+    ASSERT_FALSE(Interpret({op_and}, data));
   }
 }
 

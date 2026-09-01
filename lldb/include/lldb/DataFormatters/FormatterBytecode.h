@@ -11,12 +11,22 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "llvm/ADT/APSInt.h"
 
 namespace lldb_private {
 
 namespace FormatterBytecode {
 
-enum DataType : uint8_t { Any, String, Int, UInt, Object, Type, Selector };
+enum DataType : uint8_t {
+  Any,
+  String,
+  Int,  // Deprecated: use Integer.
+  UInt, // Deprecated: use Integer.
+  Object,
+  Type,
+  Selector,
+  Integer,
+};
 
 enum OpCodes : uint8_t {
 #define DEFINE_OPCODE(OP, MNEMONIC, NAME) op_##NAME = OP,
@@ -38,9 +48,11 @@ enum Signatures : uint8_t {
 
 using ControlStackElement = llvm::StringRef;
 using ControlStack = std::vector<ControlStackElement>;
+// uint64_t and int64_t are kept for compatibility with the deprecated
+// uint/int opcodes. New code should instead use APSInt (op_lit_integer).
 using DataStackElement =
     std::variant<std::string, uint64_t, int64_t, lldb::ValueObjectSP,
-                 CompilerType, Selectors>;
+                 CompilerType, Selectors, llvm::APSInt>;
 struct DataStack : public std::vector<DataStackElement> {
   DataStack() = default;
   DataStack(lldb::ValueObjectSP initial_value)

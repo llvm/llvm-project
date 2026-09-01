@@ -68,6 +68,8 @@ std::string toString(const FormatterBytecode::DataStack &data) {
       os << *u << 'u';
     else if (auto i = std::get_if<int64_t>(&d))
       os << *i;
+    else if (auto ap = std::get_if<llvm::APSInt>(&d))
+      os << *ap;
     else if (auto valobj = std::get_if<ValueObjectSP>(&d)) {
       if (!valobj->get())
         os << "null";
@@ -119,6 +121,8 @@ static llvm::Error FormatImpl(DataStack &data) {
       format(FormatFunctor(u));
     else if (auto i = std::get_if<int64_t>(&arg))
       format(FormatFunctor(i));
+    else if (auto ap = std::get_if<llvm::APSInt>(&arg))
+      format(FormatFunctor(*ap));
     else if (auto valobj = std::get_if<ValueObjectSP>(&arg)) {
       if (!valobj->get())
         format(FormatFunctor("null object"));
@@ -166,6 +170,10 @@ static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
     if (!std::holds_alternative<Selectors>(elem))
       return llvm::createStringError("expected Selector");
     break;
+  case Integer:
+    if (!std::holds_alternative<llvm::APSInt>(elem))
+      return llvm::createStringError("expected Integer");
+    break;
   }
   return llvm::Error::success();
 }
@@ -182,6 +190,19 @@ static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
   if (auto error = TypeCheck(data, type3))
     return error;
   return TypeCheck(data.drop_back(1), type2, type1);
+}
+
+/// Wrap the result of a binary operator applied to two APSInts back into a
+/// DataStackElement. Comparison operators yield bool and need bit_width/
+/// is_unsigned to construct the boolean's APSInt representation; arithmetic
+/// operators already yield a correctly-tagged APSInt and ignore them.
+template <typename T>
+static DataStackElement WrapAPSIntResult(T result, unsigned bit_width,
+                                         bool is_unsigned) {
+  if constexpr (std::is_same_v<T, bool>)
+    return llvm::APSInt(llvm::APInt(bit_width, result), is_unsigned);
+  else
+    return DataStackElement(std::move(result));
 }
 
 llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
@@ -290,24 +311,40 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       control.push_back(block);
       continue;
     }
-    case op_if:
-      TYPE_CHECK(UInt);
-      if (data.Pop<uint64_t>() != 0) {
+    case op_if: {
+      auto cond = data.PopAny();
+      bool truthy;
+      if (auto *ap = std::get_if<llvm::APSInt>(&cond))
+        truthy = !ap->isZero();
+      else if (auto *u = std::get_if<uint64_t>(&cond))
+        truthy = *u != 0;
+      else
+        return error("expected Integer or UInt");
+      if (truthy) {
         if (!cur_block.size())
           return error("empty control stack");
         activate_block();
       } else
         control.pop_back();
       continue;
-    case op_ifelse:
-      TYPE_CHECK(UInt);
+    }
+    case op_ifelse: {
       if (cur_block.size() < 2)
         return error("empty control stack");
-      if (data.Pop<uint64_t>() == 0)
+      auto cond = data.PopAny();
+      bool truthy;
+      if (auto *ap = std::get_if<llvm::APSInt>(&cond))
+        truthy = !ap->isZero();
+      else if (auto *u = std::get_if<uint64_t>(&cond))
+        truthy = *u != 0;
+      else
+        return error("expected Integer or UInt");
+      if (!truthy)
         control[control.size() - 2] = control.back();
       control.pop_back();
       activate_block();
       continue;
+    }
     case op_return:
       control.clear();
       return pc.takeError();
@@ -318,6 +355,9 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       continue;
     case op_lit_int:
       data.Push(cur_block.getSLEB128(pc));
+      continue;
+    case op_lit_integer:
+      data.Push(cur_block.getSLEB128APSInt(pc));
       continue;
     case op_lit_selector:
       data.Push(Selectors(cur_block.getU8(pc)));
@@ -350,7 +390,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       continue;
     }
 
-    // Arithmetic, logic, etc.
+// Arithmetic operations.
 #define BINOP_IMPL(OP, CHECK_ZERO)                                             \
   {                                                                            \
     TYPE_CHECK(Any, Any);                                                      \
@@ -365,11 +405,75 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         return error(#OP " by zero");                                          \
       TYPE_CHECK(Int);                                                         \
       data.Push((int64_t)(data.Pop<int64_t>() OP std::get<int64_t>(y)));       \
+    } else if (std::holds_alternative<llvm::APSInt>(y)) {                      \
+      TYPE_CHECK(Integer);                                                     \
+      llvm::APSInt rhs = std::get<llvm::APSInt>(y);                            \
+      llvm::APSInt lhs = data.Pop<llvm::APSInt>();                             \
+      if (lhs.getBitWidth() != rhs.getBitWidth())                              \
+        return error("bit width mismatch");                                    \
+      if (lhs.isUnsigned() != rhs.isUnsigned())                                \
+        return error("signedness mismatch");                                   \
+      if (CHECK_ZERO && rhs.isZero())                                          \
+        return error(#OP " by zero");                                          \
+      data.Push(WrapAPSIntResult(lhs OP rhs, lhs.getBitWidth(),                \
+                                 lhs.isUnsigned()));                          \
     } else                                                                     \
       return error("unsupported data types");                                  \
   }
 #define BINOP(OP) BINOP_IMPL(OP, false)
 #define BINOP_CHECKZERO(OP) BINOP_IMPL(OP, true)
+
+// Comparision operations.
+#define CMPOP(OP)                                                              \
+  {                                                                            \
+    TYPE_CHECK(Any, Any);                                                      \
+    auto y = data.PopAny();                                                    \
+    if (std::holds_alternative<uint64_t>(y)) {                                 \
+      TYPE_CHECK(UInt);                                                        \
+      data.Push((uint64_t)(data.Pop<uint64_t>() OP std::get<uint64_t>(y)));    \
+    } else if (std::holds_alternative<int64_t>(y)) {                           \
+      TYPE_CHECK(Int);                                                         \
+      data.Push((int64_t)(data.Pop<int64_t>() OP std::get<int64_t>(y)));       \
+    } else if (std::holds_alternative<llvm::APSInt>(y)) {                      \
+      TYPE_CHECK(Integer);                                                     \
+      llvm::APSInt rhs = std::get<llvm::APSInt>(y);                            \
+      llvm::APSInt lhs = data.Pop<llvm::APSInt>();                             \
+      if (lhs.getBitWidth() != rhs.getBitWidth())                              \
+        return error("bit width mismatch");                                    \
+      if (lhs.isUnsigned() != rhs.isUnsigned())                                \
+        return error("signedness mismatch");                                   \
+      data.Push(WrapAPSIntResult(lhs OP rhs, lhs.getBitWidth(),                \
+                                 lhs.isUnsigned()));                          \
+    } else                                                                     \
+      return error("unsupported data types");                                  \
+  }
+
+// Bitwise operations use an Integer's underlying bit pattern, not its
+// mathematical value (ie signed-ness is ignored). This means >> is always a
+// logical (zero-filling) shift, never an arithmetic shift.
+#define BITOP(OP)                                                              \
+  {                                                                            \
+    TYPE_CHECK(Any, Any);                                                      \
+    auto y = data.PopAny();                                                    \
+    if (std::holds_alternative<uint64_t>(y)) {                                 \
+      TYPE_CHECK(UInt);                                                        \
+      data.Push((uint64_t)(data.Pop<uint64_t>() OP std::get<uint64_t>(y)));    \
+    } else if (std::holds_alternative<int64_t>(y)) {                           \
+      TYPE_CHECK(Int);                                                         \
+      data.Push((int64_t)(data.Pop<int64_t>() OP std::get<int64_t>(y)));       \
+    } else if (std::holds_alternative<llvm::APSInt>(y)) {                      \
+      TYPE_CHECK(Integer);                                                     \
+      llvm::APSInt rhs = std::get<llvm::APSInt>(y);                            \
+      llvm::APSInt lhs = data.Pop<llvm::APSInt>();                             \
+      if (lhs.getBitWidth() != rhs.getBitWidth())                              \
+        return error("bit width mismatch");                                    \
+      llvm::APInt bits = static_cast<const llvm::APInt &>(lhs)                 \
+          OP static_cast<const llvm::APInt &>(rhs);                            \
+      data.Push(llvm::APSInt(std::move(bits), /*isUnsigned=*/false));          \
+    } else                                                                     \
+      return error("unsupported data types");                                  \
+  }
+
     case op_plus:
       BINOP(+);
       continue;
@@ -402,6 +506,14 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       if (y > 64)                                                              \
         return error("shift out of bounds");                                   \
       data.Push(x OP y);                                                       \
+    } else if (std::holds_alternative<llvm::APSInt>(data.back())) {            \
+      llvm::APSInt x = data.Pop<llvm::APSInt>();                               \
+      if (y > x.getBitWidth())                                                 \
+        return error("shift out of bounds");                                   \
+      const llvm::APInt &bits = x;                                             \
+      llvm::APInt shifted =                                                    \
+          LEFT ? bits.shl((unsigned)y) : bits.lshr((unsigned)y);               \
+      data.Push(llvm::APSInt(std::move(shifted), /*isUnsigned=*/false));       \
     } else                                                                     \
       return error("unsupported data types");                                  \
   }
@@ -411,35 +523,43 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       SHIFTOP(>>, false);
       continue;
     case op_and:
-      BINOP(&);
+      BITOP(&);
       continue;
     case op_or:
-      BINOP(|);
+      BITOP(|);
       continue;
     case op_xor:
-      BINOP(^);
+      BITOP(^);
       continue;
-    case op_not:
-      TYPE_CHECK(UInt);
-      data.Push(~data.Pop<uint64_t>());
+    case op_not: {
+      TYPE_CHECK(Any);
+      auto x = data.PopAny();
+      if (std::holds_alternative<uint64_t>(x))
+        data.Push(~std::get<uint64_t>(x));
+      else if (auto *ap = std::get_if<llvm::APSInt>(&x)) {
+        llvm::APInt bits = ~static_cast<const llvm::APInt &>(*ap);
+        data.Push(llvm::APSInt(std::move(bits), /*isUnsigned=*/false));
+      } else
+        return error("unsupported data types");
       continue;
+    }
     case op_eq:
-      BINOP(==);
+      CMPOP(==);
       continue;
     case op_neq:
-      BINOP(!=);
+      CMPOP(!=);
       continue;
     case op_lt:
-      BINOP(<);
+      CMPOP(<);
       continue;
     case op_gt:
-      BINOP(>);
+      CMPOP(>);
       continue;
     case op_le:
-      BINOP(<=);
+      CMPOP(<=);
       continue;
     case op_ge:
-      BINOP(>=);
+      CMPOP(>=);
       continue;
     case op_call: {
       TYPE_CHECK(Selector);
