@@ -44,6 +44,8 @@ using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
+// TODO: Remove this once the partial reduction intrinsics are no worse than
+//       normal vector operations.
 static cl::opt<bool>
     UsePartialReduceByDefault("use-partial-reduce-by-default", cl::init(false),
                               cl::Hidden,
@@ -5282,10 +5284,14 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
             [&CostCtx, Rdx, Backedge](ElementCount VF) {
               InstructionCost CurrentCost = Backedge->computeCost(VF, CostCtx);
               Type *ScalarTy = Backedge->getScalarType();
+              auto FMF = ScalarTy->isFloatingPointTy()
+                             ? std::make_optional(Rdx->getFastMathFlagsOrNone())
+                             : std::nullopt;
+
               InstructionCost PRCost = CostCtx.TTI.getPartialReductionCost(
-                  Backedge->getOpcode(), ScalarTy, ScalarTy, ScalarTy, VF,
-                  TTI::PR_None, TTI::PR_None, std::nullopt, CostCtx.CostKind,
-                  Rdx->getFastMathFlagsOrNone());
+                  Backedge->getOpcode(), ScalarTy, /*InputTypeB=*/nullptr,
+                  ScalarTy, VF, TTI::PR_None, TTI::PR_None,
+                  /*BinOp=*/std::nullopt, CostCtx.CostKind, FMF);
               return PRCost <= CurrentCost;
             },
             Range))
