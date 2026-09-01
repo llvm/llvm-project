@@ -193,6 +193,7 @@ const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
     return MaxConst;
 
   SmallVector<const MCExpr *, 8> MaxArgs;
+  MaxArgs.reserve(Unassigned.size() + 1);
   MaxArgs.push_back(MaxConst);
   for (const MCSymbol *Sym : Unassigned)
     MaxArgs.push_back(MCSymbolRefExpr::create(Sym, OutContext));
