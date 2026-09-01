@@ -830,7 +830,9 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     std::unique_ptr<PHINode> HandlePhi(
         PHINode::Create(Builder.getInt32Ty(), NumEdges));
 
-    // Register a ref to this phi for a recursive phi
+    // Register a ref to this phi for a recursive phi. This is safe to add to
+    // the map even if we end up deleting newly created phi below since we can't
+    // possibly have a constant value if we recursed.
     if (Phi->getType()->isTargetExtTy())
       VisitedPhis[Phi] = HandlePhi.get();
 
