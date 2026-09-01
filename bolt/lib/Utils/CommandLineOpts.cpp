@@ -280,6 +280,21 @@ cl::opt<bool> Hugify(
              "--hot-text relies on)."),
     cl::cat(BoltOptCategory));
 
+cl::opt<bool> HugifyAllText(
+    "hugify-all-text",
+    cl::desc("When used with --hugify, anonymously remap all file-backed "
+             "executable VMAs and advise them for 2MB transparent huge pages "
+             "at runtime instead of only the hot text range. This avoids "
+             "file-backed THP alignment and CONFIG_READ_ONLY_THP_FOR_FS "
+             "requirements."),
+    cl::cat(BoltOptCategory));
+
+cl::opt<bool> HugifyAllTextStats(
+    "hugify-all-text-stats",
+    cl::desc("When used with --hugify-all-text, read /proc/self/smaps and "
+             "print actual huge-page usage at runtime."),
+    cl::init(false), cl::cat(BoltOptCategory));
+
 cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),
