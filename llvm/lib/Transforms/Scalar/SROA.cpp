@@ -154,25 +154,6 @@ using RewriteableMemOp =
     std::variant<PossiblySpeculatableLoad, UnspeculatableStore>;
 using RewriteableMemOps = SmallVector<RewriteableMemOp, 2>;
 
-/// Select instructions that use an alloca and are subsequently loaded can be
-/// rewritten to load both input pointers and then select between the result,
-/// allowing the load of the alloca to be promoted.
-/// From this:
-///   %P2 = select i1 %cond, ptr %Alloca, ptr %Other
-///   %V = load <type>, ptr %P2
-/// to:
-///   %V1 = load <type>, ptr %Alloca      -> will be mem2reg'd
-///   %V2 = load <type>, ptr %Other
-///   %V = select i1 %cond, <type> %V1, <type> %V2
-///
-/// We can do this to a select if its only uses are loads
-/// and if either the operand to the select can be loaded unconditionally,
-///        or if we are allowed to perform CFG modifications.
-/// If found an intervening bitcast with a single use of the load,
-/// allow the promotion.
-static std::optional<RewriteableMemOps>
-isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
-
 /// An optimization pass providing Scalar Replacement of Aggregates.
 ///
 /// This pass takes allocations which can be completely analyzed (that is, they
@@ -1481,21 +1462,12 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 /// Find a common load/store type used through a pointer select.
 ///
 /// Look through a select to see if all of its users are loads or stores of one
-/// common type. If there is a common type that matches a common type for the
-/// rest of the alloca slices, then we can transform this select to use branched
-/// control flow, with direct loads/stores to the alloca, and promote through
-/// the common type.
-static Type *findCommonTypeThroughSelect(SelectInst &SI, bool PreserveCFG) {
-  if (!isSafeSelectToSpeculate(SI, PreserveCFG))
-    return nullptr;
-
+/// common type. Whether those accesses can be speculated does not affect the
+/// type they use and is checked separately when attempting promotion.
+static Type *findCommonTypeThroughSelect(SelectInst &SI) {
   Type *Ty = nullptr;
 
   for (User *U : SI.users()) {
-    // Look through bitcasting the select result
-    if (auto *BC = dyn_cast<BitCastInst>(U); BC && BC->hasOneUse())
-      U = *BC->user_begin();
-
     Type *UserTy = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(U))
       UserTy = LI->getType();
@@ -1516,7 +1488,7 @@ static Type *findCommonTypeThroughSelect(SelectInst &SI, bool PreserveCFG) {
 /// sequence of slices.
 static std::pair<Type *, IntegerType *>
 findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
-               uint64_t EndOffset, bool PreserveCFG) {
+               uint64_t EndOffset) {
   Type *Ty = nullptr;
   bool TyIsCommon = true;
   IntegerType *ITy = nullptr;
@@ -1536,7 +1508,7 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
     } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
       UserTy = SI->getValueOperand()->getType();
     } else if (auto *SI = dyn_cast<SelectInst>(U->getUser())) {
-      UserTy = findCommonTypeThroughSelect(*SI, PreserveCFG);
+      UserTy = findCommonTypeThroughSelect(*SI);
     }
 
     if (IntegerType *UserITy = dyn_cast_or_null<IntegerType>(UserTy)) {
@@ -5432,7 +5404,7 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
 ///     nullptr.
 static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
-                    LLVMContext &C, bool AggregateToVector, bool PreserveCFG) {
+                    LLVMContext &C, bool AggregateToVector) {
   auto LogSelection = [&](StringRef Path, Type *SelectedTy,
                           VectorType *SelectedVecTy, bool SelectedIntWidening) {
     LLVM_DEBUG({
@@ -5477,7 +5449,7 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // Check if there is a common type that all slices of the partition use that
   // spans the partition.
   auto [CommonUseTy, LargestIntTy] =
-      findCommonType(P.begin(), P.end(), P.endOffset(), PreserveCFG);
+      findCommonType(P.begin(), P.end(), P.endOffset());
   if (CommonUseTy) {
     TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
     if (CommonUseSize.isFixed() && CommonUseSize.getFixedValue() >= P.size()) {
@@ -5574,7 +5546,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
   // Select the type for the new alloca that spans the partition.
   auto [PartitionTy, IsIntegerWideningViable, VecTy] =
-      selectPartitionType(P, DL, AI, *C, AggregateToVector, PreserveCFG);
+      selectPartitionType(P, DL, AI, *C, AggregateToVector);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that

@@ -4,9 +4,11 @@
 
 %pair = type { i32, i32 }
 
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1 immarg)
+
 define i64 @load_same_type(i1 %cond, ptr %other) {
 ; PRESERVE-LABEL: define i64 @load_same_type(
-; PRESERVE:         [[ZERO:%.*]] = alloca [[PAIR:%.*]], align 8
+; PRESERVE:         [[ZERO:%.*]] = alloca i64, align 8
 ; PRESERVE-NEXT:    store i64 0, ptr [[ZERO]], align 8
 ; PRESERVE-NEXT:    [[ADDR:%.*]] = select i1 {{%.*}}, ptr [[OTHER:%.*]], ptr [[ZERO]]
 ; PRESERVE-NEXT:    [[VALUE:%.*]] = load i64, ptr [[ADDR]], align 8
@@ -33,7 +35,7 @@ entry:
 
 define i64 @store_same_type(i64 %initial, i64 %value, i1 %cond, ptr %other) {
 ; PRESERVE-LABEL: define i64 @store_same_type(
-; PRESERVE:         [[TEMPORARY:%.*]] = alloca [[PAIR:%.*]], align 8
+; PRESERVE:         [[TEMPORARY:%.*]] = alloca i64, align 8
 ; PRESERVE-NEXT:    store i64 [[INITIAL:%.*]], ptr [[TEMPORARY]], align 8
 ; PRESERVE-NEXT:    [[ADDR:%.*]] = select i1 {{%.*}}, ptr [[TEMPORARY]], ptr [[OTHER:%.*]]
 ; PRESERVE-NEXT:    store i64 [[VALUE:%.*]], ptr [[ADDR]], align 8
@@ -88,14 +90,14 @@ define i64 @volatile_load_same_type(i1 %cond, ptr %other) {
 ; CHECK-LABEL: define i64 @volatile_load_same_type(
 ; CHECK-SAME: i1 [[COND:%.*]], ptr [[OTHER:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[ZERO:%.*]] = alloca [[PAIR:%.*]], align 8
+; CHECK-NEXT:    [[ZERO:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    store i64 0, ptr [[ZERO]], align 8
 ; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND]], ptr [[OTHER]], ptr [[ZERO]]
 ; CHECK-NEXT:    [[VALUE:%.*]] = load volatile i64, ptr [[ADDR]], align 8
 ; CHECK-NEXT:    ret i64 [[VALUE]]
 ;
 ; PRESERVE-LABEL: define i64 @volatile_load_same_type(
-; PRESERVE:         [[ZERO:%.*]] = alloca [[PAIR:%.*]], align 8
+; PRESERVE:         [[ZERO:%.*]] = alloca i64, align 8
 ;
 entry:
   %zero = alloca %pair, align 8
@@ -103,4 +105,20 @@ entry:
   %addr = select i1 %cond, ptr %other, ptr %zero
   %value = load volatile i64, ptr %addr, align 8
   ret i64 %value
+}
+
+define ptr @volatile_load_ptr_same_type(i1 %cond, ptr %source, ptr %other) {
+; CHECK-LABEL: define ptr @volatile_load_ptr_same_type(
+; CHECK:         [[TEMPORARY:%.*]] = alloca ptr, align 8
+;
+; PRESERVE-LABEL: define ptr @volatile_load_ptr_same_type(
+; PRESERVE:         [[TEMPORARY:%.*]] = alloca ptr, align 8
+;
+entry:
+  %temporary = alloca [1 x i64], align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %temporary,
+                                  ptr align 8 %source, i64 8, i1 false)
+  %addr = select i1 %cond, ptr %other, ptr %temporary
+  %value = load volatile ptr, ptr %addr, align 8
+  ret ptr %value
 }
