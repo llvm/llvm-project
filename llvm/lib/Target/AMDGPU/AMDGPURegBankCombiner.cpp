@@ -631,8 +631,11 @@ bool AMDGPURegBankCombinerImpl::isClampZeroToOne(MachineInstr *K0,
 static bool runCombiner(MachineFunction &MF,
                         function_ref<GISelValueTracking *()> GetVT,
                         function_ref<MachineDominatorTree *()> GetMDT,
-                        const AMDGPURegBankCombinerImplRuleConfig &RuleConfig,
                         bool EnableOpt) {
+  AMDGPURegBankCombinerImplRuleConfig RuleConfig;
+  if (!RuleConfig.parseCommandLineOption())
+    reportFatalUsageError("Invalid rule identifier");
+
   if (MF.getProperties().hasFailedISel())
     return false;
 
@@ -663,7 +666,8 @@ class AMDGPURegBankCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPURegBankCombinerLegacy(bool IsOptNone = false);
+  AMDGPURegBankCombinerLegacy(bool IsOptLevelNone = false)
+      : MachineFunctionPass(ID), IsOptLevelNone(IsOptLevelNone) {}
 
   StringRef getPassName() const override { return "AMDGPURegBankCombiner"; }
 
@@ -672,8 +676,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  bool IsOptNone;
-  AMDGPURegBankCombinerImplRuleConfig RuleConfig;
+  bool IsOptLevelNone;
 };
 } // end anonymous namespace
 
@@ -682,16 +685,10 @@ void AMDGPURegBankCombinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
-  if (!IsOptNone) {
+  if (!IsOptLevelNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
   }
   MachineFunctionPass::getAnalysisUsage(AU);
-}
-
-AMDGPURegBankCombinerLegacy::AMDGPURegBankCombinerLegacy(bool IsOptNone)
-    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
 }
 
 bool AMDGPURegBankCombinerLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -705,11 +702,11 @@ bool AMDGPURegBankCombinerLegacy::runOnMachineFunction(MachineFunction &MF) {
         return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
       },
       [&]() -> MachineDominatorTree * {
-        return IsOptNone ? nullptr
-                         : &getAnalysis<MachineDominatorTreeWrapperPass>()
-                                .getDomTree();
+        return IsOptLevelNone ? nullptr
+                              : &getAnalysis<MachineDominatorTreeWrapperPass>()
+                                     .getDomTree();
       },
-      RuleConfig, EnableOpt);
+      EnableOpt);
 }
 
 char AMDGPURegBankCombinerLegacy::ID = 0;
@@ -721,20 +718,16 @@ INITIALIZE_PASS_END(AMDGPURegBankCombinerLegacy, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after regbankselect", false,
                     false)
 
-FunctionPass *llvm::createAMDGPURegBankCombinerLegacy(bool IsOptNone) {
-  return new AMDGPURegBankCombinerLegacy(IsOptNone);
+FunctionPass *llvm::createAMDGPURegBankCombinerLegacy(bool IsOptLevelNone) {
+  return new AMDGPURegBankCombinerLegacy(IsOptLevelNone);
 }
 
-AMDGPURegBankCombinerPass::AMDGPURegBankCombinerPass(bool IsOptNone)
-    : IsOptNone(IsOptNone) {}
+AMDGPURegBankCombinerPass::AMDGPURegBankCombinerPass(bool IsOptLevelNone)
+    : IsOptLevelNone(IsOptLevelNone) {}
 
 PreservedAnalyses
 AMDGPURegBankCombinerPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
-  AMDGPURegBankCombinerImplRuleConfig RuleConfig;
-  if (!RuleConfig.parseCommandLineOption())
-    reportFatalUsageError("Invalid rule identifier");
-
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !F.hasOptNone();
@@ -742,11 +735,11 @@ AMDGPURegBankCombinerPass::run(MachineFunction &MF,
   if (!runCombiner(
           MF, [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
           [&]() -> MachineDominatorTree * {
-            return IsOptNone
+            return IsOptLevelNone
                        ? nullptr
                        : &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
           },
-          RuleConfig, EnableOpt))
+          EnableOpt))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
