@@ -170,6 +170,26 @@ void VirtualUnwinder::unwindReturn(UnwindState &State) {
   // Add extra frame as we unwind through the return
   const LBREntry &LBR = State.getCurrentLBR();
   uint64_t CallAddr = Binary->getCallAddrFromFrameAddr(LBR.Target);
+  if (!CallAddr) {
+    // The LBR target is not preceded by a call instruction, so there is no
+    // caller frame to materialize. isReturnState() classifies a branch as a
+    // return from its *source* alone (the source is a `ret`); it never
+    // validates the target, unlike isReturnFromExternal() which does check
+    // getCallAddrFromFrameAddr() != 0. So a `ret` whose recorded target is not
+    // a call-return site reaches here: e.g. a `ret` used as an indirect jump
+    // (retpoline or `push addr; ret` thunks), a non-local exit (longjmp,
+    // _Unwind_Resume, sigreturn), a stale binary whose disassembly no longer
+    // matches the one that was profiled, or synthesized branch records that
+    // pair imperfectly across trace-window seams.
+    //
+    // Truncate the trace rather than materializing a zero-address frame, the
+    // same way extractCallstack() already handles the identical
+    // getCallAddrFromFrameAddr() == 0 case. Note the assert in
+    // getOrCreateChildFrame() only fires with assertions enabled; otherwise a
+    // zero-address frame is silently folded into the profile instead.
+    State.setInvalid();
+    return;
+  }
   State.switchToFrame(CallAddr);
   State.pushFrame(LBR.Source);
   State.InstPtr.update(LBR.Source);
