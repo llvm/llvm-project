@@ -403,6 +403,8 @@ static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::truncf128(Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::ldexpf128(Float128(0.0), 0));
 
 //===----------------------------------------------------------------------===//
 //                       Native Float128 Tests

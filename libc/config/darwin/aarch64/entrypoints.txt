@@ -231,6 +231,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ffma
     libc.src.math.ffmal
     libc.src.math.floor
+    libc.src.math.ldexpf128
     libc.src.math.floorf
     libc.src.math.floorf128
     libc.src.math.floorl
@@ -599,7 +600,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
-    libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.logbf128
     libc.src.math.modff128
