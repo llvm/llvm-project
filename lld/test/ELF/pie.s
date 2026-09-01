@@ -51,7 +51,10 @@
 # CHECK:        0x000000006FFFFFFB FLAGS_1 PIE
 
 ## Check -nopie
-# RUN: ld.lld -no-pie %t1.o -o %t2
+# RUN: ld.lld -pie -no-pie %t1.o -o %t2
+# RUN: llvm-readobj --file-headers -r %t2 | FileCheck %s --check-prefix=NOPIE
+
+# RUN: ld.lld -pie -nopie %t1.o -o %t2
 # RUN: llvm-readobj --file-headers -r %t2 | FileCheck %s --check-prefix=NOPIE
 # NOPIE-NOT: Type: SharedObject
 
