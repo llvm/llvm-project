@@ -96,20 +96,30 @@ class SHOpClass<string name,
 
 // Immediates
 class SHImmClass<int width> : SHOpClass<"Imm" # width> {
-    let PredicateMethod = "isImm";
-    let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isImm";
+  let ParserMethod = "parseImm";
+  let RenderMethod = "addImmOperands";
 }
 
 // Displacements
 class SHDispClass<int width> : SHOpClass<"Disp" # width> {
-    let PredicateMethod = "isDisp";
-    let RenderMethod = "addDispOperands";
+  let PredicateMethod = "isDisp";
+  let ParserMethod = "parseDisp";
+  let RenderMethod = "addDispOperands";
 }
 
-// Memory Ops
-def SHMemClass : SHOpClass<"Mem"> {
-  let PredicateMethod = "isMem";
-  let RenderMethod = "addMemOperands";
+// PC-Relative Addressing
+class SHPCRelClass : SHOpClass<"PCRel"> {
+  let PredicateMethod = "isPCRel";
+  let ParserMethod = "parsePCRel";
+  let RenderMethod = "addPCRelOperands";
+}
+
+// Register Indirect Ops
+class SHRegIndirectClass<string op> : SHOpClass<"IReg" # op> {
+  let PredicateMethod = "isIReg" # op;
+  let ParserMethod = "parseRegisterIndirect";
+  let RenderMethod = "addIRegOperands";
 }
 
 //===--------------------------------------------------------------------------===//
@@ -121,6 +131,7 @@ class SHImmOp<int width, ValueType vt>
       : Operand<vt> {
     let ParserMatchClass = SHImmClass<width>;
     let OperandType = "OPERAND_IMMEDIATE";
+    let PrintMethod = "printImm";
     let MCOperandPredicate = [{int64_t Imm; return MCOp.evaluateAsConstantImm(Imm) ? isInt<}] # width # [{>(Imm) : false;}];
 }
 def imm8 : SHImmOp<8, i32>, ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
@@ -130,6 +141,7 @@ class SHDispOp<int width, ValueType vt>
       : Operand<vt>, PatLeaf<(imm), [{ return isUInt<}] # width # [{>(N->getZExtValue()); }]> {
     let ParserMatchClass = SHDispClass<width>;
     let OperandType = "OPERAND_IMMEDIATE";
+    let PrintMethod = "printDisp";
     let MCOperandPredicate = [{
         int64_t Imm;
         if (MCOp.evaluateAsConstantImm(Imm))
@@ -141,7 +153,28 @@ def disp4   : SHDispOp<4, i4>;
 def disp8   : SHDispOp<8, i8>;
 def disp12  : SHDispOp<12, i16>;
 
+// PC-Relative Adressing
+class SHPCRelOp<int width, ValueType vt>
+      : Operand<vt>, PatLeaf<(imm), [{ return isUInt<}] # width # [{>(N->getZExtValue()); }]> {
+  let ParserMatchClass = SHPCRelClass<>;
+  let OperandType = "OPERAND_PCREL";
+  let EncoderMethod = "getPCRelOpValue";
+  let DecoderMethod = "DecodePCRelDisp";
+  let PrintMethod = "printPCRelImm";
+    let MCOperandPredicate = [{
+        int64_t Imm;
+        if (MCOp.evaluateAsConstantImm(Imm))
+            return isUInt<#width>(Imm);
+        return MCOp.isBareSymbolRef();
+    }];
+}
+
+def pcrel8       : SHPCRelOp<8, i8>;
+def pcrel12      : SHPCRelOp<12, i16>;
+
+// Branch Targets
 def brtarget       : Operand<OtherVT> {
+  let ParserMatchClass = SHPCRelClass<>;
   let EncoderMethod = "getBranchTargetOpValue";
   let DecoderMethod = "DecodeBranchTarget";
   let PrintMethod = "printPCRelImm";
@@ -153,13 +186,21 @@ def cpinst_operand : Operand<i32> {
   let PrintMethod = "printCPInstOperand";
 }
 
-// Memory
-class SHMemRegOp<RegisterClass regClass> 
+// Register Indirect
+class SHIndirectRegOp<RegisterClass regClass, string op> 
       : RegisterOperand<regClass> {
-    let ParserMatchClass = SHMemClass;
+    let ParserMatchClass = SHRegIndirectClass<op>;
     let OperandType = "OPERAND_MEMORY";
+    let PrintMethod = "printIReg" # op;
 }
-def GPRMem : SHMemRegOp<GPR>;
+def IGPR    : SHIndirectRegOp<GPR, "">;
+def IGPRInc : SHIndirectRegOp<GPR, "Inc">;
+def IGPRDec : SHIndirectRegOp<GPR, "Dec">;
+
+// Addressing mode pattern reg+imm6
+let WantsRoot = true in
+def addr : ComplexPattern<iPTR, 2, "SelectAddr">;
+
 
 //===--------------------------------------------------------------------------===//
 // Predicates
