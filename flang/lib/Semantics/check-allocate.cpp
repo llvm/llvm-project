@@ -715,6 +715,21 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           "Object in ALLOCATE must have DEVICE attribute when STREAM option is specified"_err_en_US);
     }
   }
+  if (const auto *component{
+          std::get_if<parser::StructureComponent>(&allocateObject_.u)};
+      component && GetCUDADataAttr(ultimate_) == common::CUDADataAttr::Pinned) {
+    // A PINNED allocatable is allocated in host page-locked memory, so its
+    // descriptor must be host accessible.  The descriptors of a DEVICE object
+    // live in device global memory.
+    const parser::Name &base{parser::GetFirstName(*component)};
+    if (base.symbol &&
+        GetCUDADataAttr(&base.symbol->GetUltimate()) ==
+            common::CUDADataAttr::Device) {
+      context.Say(name_.source,
+          "PINNED allocatable component '%s' must not be allocated in DEVICE object '%s'"_err_en_US,
+          name_.source, base.source);
+    }
+  }
 
   if (const SomeExpr *allocObj{GetExpr(context, allocateObject_)}) {
     if (AreSameAllocation(allocObj, allocateInfo_.statVar)) {

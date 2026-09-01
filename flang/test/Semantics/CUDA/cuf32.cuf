@@ -1,0 +1,58 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! PINNED allocatables must live in host page-locked memory, so a PINNED
+! allocatable component of a DEVICE object may not be allocated.
+module m
+  type :: t
+    integer(4), allocatable, pinned :: pc(:)
+  end type
+  type :: inner_alloc
+    type(t), allocatable :: x
+  end type
+
+  type(t), device :: mds(10)
+
+contains
+  subroutine test_device_derived_pinned()
+    type(t), allocatable, device :: d(:)
+    type(t), device :: ds(10)
+    type(t), allocatable :: h(:)
+    type(t), allocatable, managed :: md(:)
+    type(inner_alloc), allocatable, device :: nest(:)
+    integer :: n, i
+    n = 2
+    i = 1
+
+    allocate(h(n))
+    allocate(h(i)%pc(3))
+    h(i)%pc = 10
+
+    allocate(md(n))
+    allocate(md(i)%pc(3))
+
+    allocate(d(n))
+    !ERROR: PINNED allocatable component 'pc' must not be allocated in DEVICE object 'd'
+    allocate(d(i)%pc(3))
+
+    !ERROR: PINNED allocatable component 'pc' must not be allocated in DEVICE object 'ds'
+    allocate(ds(i)%pc(3))
+
+    !ERROR: PINNED allocatable component 'pc' must not be allocated in DEVICE object 'mds'
+    allocate(mds(i)%pc(3))
+
+    allocate(nest(n))
+    allocate(nest(i)%x)
+    !ERROR: PINNED allocatable component 'pc' must not be allocated in DEVICE object 'nest'
+    allocate(nest(i)%x%pc(3))
+  end subroutine
+
+  subroutine dummy_ok(h)
+    type(t), intent(inout) :: h(:)
+    allocate(h(1)%pc(3))
+  end subroutine
+
+  subroutine dummy_device(d)
+    type(t), device :: d(:)
+    !ERROR: PINNED allocatable component 'pc' must not be allocated in DEVICE object 'd'
+    allocate(d(1)%pc(3))
+  end subroutine
+end module
