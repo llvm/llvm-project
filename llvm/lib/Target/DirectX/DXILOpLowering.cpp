@@ -274,7 +274,7 @@ public:
     CI->eraseFromParent();
 
     if (NameGlobal && NameGlobal->use_empty())
-      NameGlobal->removeFromParent();
+      NameGlobal->eraseFromParent();
   }
 
   bool hasNonUniformIndex(Value *IndexOp) {

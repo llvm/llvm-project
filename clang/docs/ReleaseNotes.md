@@ -96,6 +96,13 @@ features cannot lower the translation-unit ABI level;
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
 
+- On x86-64 System V, a non-zero-width unnamed bit-field now classifies the
+  eightbytes it occupies as INTEGER, like a named bit-field, matching GCC.
+  Aggregates where this changes the classification may be passed or returned
+  differently -- a struct holding a run of `__int128` bit-fields, for example,
+  now travels in the two integer registers the ABI assigns it. This also fixes
+  a crash when such a struct was passed or returned. (#GH202205)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
@@ -204,6 +211,10 @@ features cannot lower the translation-unit ABI level;
 
 - Clang tools now resolve tool names without a path in compilation databases
   through `PATH`.
+
+- On musl targets, the driver now links ``libssp_nonshared.a`` when stack
+  protection is enabled and the library is present in the toolchain library
+  paths, matching what musl distributions configure GCC to do.
 
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
@@ -555,6 +566,9 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
 
+- Fixed a regression where deprecation warnings were omitted for synthesized
+  deduction guide. (#GH160543)
+
 - Fixed an assertion when a redeclaration of a function template or an out-of-line
   definition of a member of a class template added a default argument to a
   parameter that follows a parameter pack (e.g.
@@ -618,6 +632,11 @@ features cannot lower the translation-unit ABI level;
   - `__builtin_amdgcn_sicmpl`
   - `__builtin_amdgcn_fcmp`
   - `__builtin_amdgcn_fcmpf`
+
+#### DirectX Support
+
+- `clang-dxc` and HLSL support are now enabled by default, following the
+  promotion of the DirectX backend to an official LLVM target.
 
 #### NVPTX Support
 
