@@ -1081,6 +1081,15 @@ print *, [(j,j=1,10)]
   are noted only as warnings when they appear in code known to be
   dead anyway at compilation time.
 
+* A subscript value is required to be within its bounds only when the
+  reference is actually executed, so a reference with an out-of-range
+  constant subscript that never runs does not make a program
+  nonconforming.  That case cannot be recognized in general -- consider a
+  procedure whose only call is in dead code, or one that is never called
+  at all -- so these subscripts are errors by default.  Use
+  `-fout-of-bounds-subscripts` to accept them with a warning instead;
+  the warning can then be silenced with `-Wno-out-of-bounds-subscripts`.
+
 ## Behavior in cases where the standard is clear but disputed
 
 * Unless one uses `-ffast-math`, directly or by implication,

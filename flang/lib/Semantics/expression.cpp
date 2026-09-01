@@ -343,7 +343,7 @@ static bool FoldSubscripts(semantics::SemanticsContext &context,
   return !anyPossiblyEmptyDim;
 }
 
-static void ValidateSubscriptValue(parser::ContextualMessages &messages,
+static void ValidateSubscriptValue(semantics::SemanticsContext &context,
     const Symbol &symbol, ConstantSubscript val,
     std::optional<ConstantSubscript> lb, std::optional<ConstantSubscript> ub,
     int dim, const char *co = "") {
@@ -363,7 +363,24 @@ static void ValidateSubscriptValue(parser::ContextualMessages &messages,
       msg->set_severity(parser::Severity::Warning);
     }
   }
-  if (msg) {
+  if (!msg) {
+    return;
+  }
+  parser::ContextualMessages &messages{context.foldingContext().messages()};
+  if (msg->severity() == parser::Severity::ErrorUnlessDeadCode &&
+      context.IsEnabled(common::LanguageFeature::OutOfBoundsSubscripts)) {
+    // A subscript value is required to be within its bounds only when the
+    // reference is executed (F'2023 9.5.3.1 p2), so a reference that appears
+    // in code that never runs does not render the program nonconforming.
+    // That case can't be recognized in general, so this extension accepts
+    // any out-of-bounds constant subscript with a warning.
+    msg->set_severity(parser::Severity::Warning);
+    AttachDeclaration(
+        context.Warn(messages, common::LanguageFeature::OutOfBoundsSubscripts,
+            std::move(*msg), co, static_cast<std::intmax_t>(val), co,
+            static_cast<std::intmax_t>(bound.value()), co, dim + 1),
+        symbol);
+  } else {
     AttachDeclaration(
         messages.Say(std::move(*msg), co, static_cast<std::intmax_t>(val), co,
             static_cast<std::intmax_t>(bound.value()), co, dim + 1),
@@ -416,8 +433,8 @@ static void ValidateSubscripts(semantics::SemanticsContext &context,
     }
     for (int j{0}; j < vals; ++j) {
       if (val[j]) {
-        ValidateSubscriptValue(context.foldingContext().messages(), arraySymbol,
-            *val[j], dimLB, dimUB, dim);
+        ValidateSubscriptValue(
+            context, arraySymbol, *val[j], dimLB, dimUB, dim);
       }
     }
     ++dim;
@@ -441,7 +458,7 @@ static void CheckCosubscripts(
   for (auto &expr : ref.cosubscript()) {
     expr = Fold(foldingContext, std::move(expr));
     if (auto val{ToInt64(expr)}) {
-      ValidateSubscriptValue(foldingContext.messages(), coarraySymbol, *val,
+      ValidateSubscriptValue(context, coarraySymbol, *val,
           ToInt64(GetLCOBOUND(coarraySymbol, dim)),
           ToInt64(GetUCOBOUND(coarraySymbol, dim)), dim, "co");
     }
