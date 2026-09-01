@@ -1,0 +1,26 @@
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
+# RUN:   -run-pass=si-load-store-opt -verify-machineinstrs -o - %s \
+# RUN:   | FileCheck %s
+
+---
+name: handoff_does_not_block_global_load_merge
+tracksRegLiveness: true
+selected: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: handoff_does_not_block_global_load_merge
+    ; CHECK: [[ADDR:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[SRC:%[0-9]+]]:av_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[WIDE:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[ADDR]], 0, 0, implicit $exec
+    ; CHECK-NEXT: [[LO:%[0-9]+]]:vgpr_32 = COPY [[WIDE]].sub0
+    ; CHECK-NEXT: [[HI:%[0-9]+]]:vgpr_32 = COPY killed [[WIDE]].sub1
+    ; CHECK-NEXT: [[HANDOFF:%[0-9]+]]:vgpr_32 = nomerge REGALLOC_HANDOFF_VGPR [[SRC]]
+    ; CHECK-NEXT: S_NOP 0, implicit [[LO]], implicit [[HANDOFF]], implicit [[HI]]
+
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:av_32 = IMPLICIT_DEF
+    %2:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) poison`, align 4, addrspace 1)
+    %3:vgpr_32 = nomerge REGALLOC_HANDOFF_VGPR %1
+    %4:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) poison` + 4, align 4, addrspace 1)
+    S_NOP 0, implicit %2, implicit %3, implicit %4
+...

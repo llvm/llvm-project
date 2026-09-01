@@ -4779,6 +4779,12 @@ public:
     return false;
   }
 
+  /// Return true if the target supports the named register-allocation
+  /// handoff constraint.
+  virtual bool supportsRegAllocHandoff(StringRef Constraint) const {
+    return false;
+  }
+
   /// Return true if the target supports swifterror attribute. It optimizes
   /// loads and stores to reading and writing a specific register.
   virtual bool supportSwiftError() const {

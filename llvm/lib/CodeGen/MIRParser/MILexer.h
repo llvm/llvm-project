@@ -151,6 +151,7 @@ struct MIToken {
     kw_ir_block_address_taken,
     kw_machine_block_address_taken,
     kw_call_frame_size,
+    kw_nomerge,
     kw_noconvergent,
     kw_mmra,
     kw_lr_split,

@@ -1,0 +1,26 @@
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa -run-pass=machine-cp \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+
+--- |
+  define amdgpu_kernel void @preserve_requested_banks() { ret void }
+...
+---
+name: preserve_requested_banks
+tracksRegLiveness: true
+selected: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $agpr1
+    ; CHECK-LABEL: name: preserve_requested_banks
+    ; CHECK: renamable $agpr0 = REGALLOC_HANDOFF_AGPR renamable $vgpr0
+    ; CHECK-NEXT: renamable $vgpr1 = COPY killed renamable $agpr0
+    ; CHECK-NEXT: renamable $vgpr2 = REGALLOC_HANDOFF_VGPR renamable $agpr1
+    ; CHECK-NEXT: renamable $agpr2 = COPY killed renamable $vgpr2
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr1, implicit $agpr2
+    renamable $agpr0 = REGALLOC_HANDOFF_AGPR renamable $vgpr0
+    renamable $vgpr1 = COPY killed renamable $agpr0
+    renamable $vgpr2 = REGALLOC_HANDOFF_VGPR renamable $agpr1
+    renamable $agpr2 = COPY killed renamable $vgpr2
+    S_ENDPGM 0, implicit $vgpr1, implicit $agpr2
+...

@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Pass.h"
@@ -1127,6 +1128,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (PGOOpt && PGOOpt->PseudoProbeForProfiling && !isThinLTOPostLink(Phase))
     MPM.addPass(SampleProfileProbePass(TM));
 
+  MPM.addPass(PreISelIntrinsicLoweringPass(
+      TM, PreISelIntrinsicLoweringMode::RegAllocHandoffOnly));
+
   bool HasSampleProfile = PGOOpt && (PGOOpt->Action == PGOOptions::SampleUse);
 
   // In ThinLTO mode, when flattened profile is used, all the available
@@ -1990,6 +1994,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
+    MPM.addPass(PreISelIntrinsicLoweringPass(
+        TM, PreISelIntrinsicLoweringMode::RegAllocHandoffOnly));
     MPM.addPass(
         buildModuleInlinerPipeline(Level, ThinOrFullLTOPhase::ThinLTOPostLink));
   } else {
@@ -2024,6 +2030,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   instructionCountersPass(MPM, /* IsPreOptimization */ true);
 
   invokeFullLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
+
+  if (Level != OptimizationLevel::O0)
+    MPM.addPass(PreISelIntrinsicLoweringPass(
+        TM, PreISelIntrinsicLoweringMode::RegAllocHandoffOnly));
 
   // If we are invoking this without a summary index noting that we are linking
   // with a library containing the necessary APIs, remove any MemProf related

@@ -116,9 +116,9 @@ public:
                              // known to be exact.
     NoFPExcept = 1 << 14,    // Instruction does not raise
                              // floatint-point exceptions.
-    NoMerge = 1 << 15,       // Passes that drop source location info
-                             // (e.g. branch folding) should skip
-                             // this instruction.
+    NoMerge = 1 << 15,       // Passes must not merge this instruction with
+                             // another occurrence or drop its source location.
+                             // isSafeToMove also returns false.
     Unpredictable = 1 << 16, // Instruction with unpredictable condition.
     NoConvergent = 1 << 17,  // Call does not require convergence guarantees.
     NonNeg = 1 << 18,        // The operand is non-negative.

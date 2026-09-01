@@ -1167,6 +1167,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
 const GCNSubtarget *SITargetLowering::getSubtarget() const { return Subtarget; }
 
+bool SITargetLowering::supportsRegAllocHandoff(StringRef Constraint) const {
+  return Constraint == "amdgpu.vgpr" ||
+         (Constraint == "amdgpu.agpr" && Subtarget->hasMAIInsts());
+}
+
 ArrayRef<MCPhysReg> SITargetLowering::getRoundingControlRegisters() const {
   static const MCPhysReg RCRegs[] = {AMDGPU::MODE};
   return RCRegs;
@@ -20081,6 +20086,51 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     for (auto &MBB : MF) {
       for (auto &MI : MBB) {
         TII->fixImplicitOperands(MI);
+      }
+    }
+  }
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!SIInstrInfo::isRegAllocHandoff(MI.getOpcode()))
+        continue;
+
+      Register Dst = MI.getOperand(0).getReg();
+      if (!Dst.isVirtual())
+        continue;
+      Register PreferredSrc = MI.getOperand(1).getReg();
+      const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(Dst);
+      // Standalone finalize-isel accepts non-SSA MIR. Keep the direct source
+      // hint instead of using the SSA-only getVRegDef in that case.
+      while (MRI.isSSA() && PreferredSrc.isVirtual()) {
+        MachineInstr *Def = MRI.getVRegDef(PreferredSrc);
+        if (!Def || !Def->isCopy() || Def->getOperand(0).getSubReg() ||
+            Def->getOperand(1).getSubReg())
+          break;
+
+        Register CopySrc = Def->getOperand(1).getReg();
+        if (CopySrc.isPhysical()) {
+          if (DstRC && DstRC->contains(CopySrc))
+            PreferredSrc = CopySrc;
+          break;
+        }
+
+        const TargetRegisterClass *CopySrcRC = MRI.getRegClassOrNull(CopySrc);
+        if (!DstRC || !CopySrcRC || !TRI->getCommonSubClass(DstRC, CopySrcRC))
+          break;
+        PreferredSrc = CopySrc;
+      }
+
+      MRI.setSimpleHint(Dst, PreferredSrc);
+      for (MachineOperand &Use : MRI.use_nodbg_operands(Dst)) {
+        MachineInstr *UseMI = Use.getParent();
+        if (!UseMI->isCopy() || &Use != &UseMI->getOperand(1) ||
+            !UseMI->getOperand(0).isReg() || UseMI->getOperand(0).getSubReg() ||
+            !UseMI->getOperand(1).isReg() || UseMI->getOperand(1).getSubReg())
+          continue;
+        Register CopyDst = UseMI->getOperand(0).getReg();
+        if (CopyDst.isVirtual())
+          MRI.setSimpleHint(CopyDst, PreferredSrc);
       }
     }
   }

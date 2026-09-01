@@ -109,6 +109,28 @@ template <class T> static bool forEachCall(Function &Intrin, T Callback) {
   return Changed;
 }
 
+static bool lowerRegAllocHandoff(Function &F, const TargetMachine *TM) {
+  if (!TM)
+    return false;
+
+  return forEachCall(F, [&](CallInst *CI) {
+    const auto *ConstraintMD =
+        cast<MetadataAsValue>(CI->getArgOperand(1))->getMetadata();
+    const auto *ConstraintNode = dyn_cast<MDNode>(ConstraintMD);
+    const auto *Constraint =
+        ConstraintNode && ConstraintNode->getNumOperands() == 1
+            ? dyn_cast<MDString>(ConstraintNode->getOperand(0))
+            : nullptr;
+    const TargetLowering *TL =
+        TM->getSubtargetImpl(*CI->getFunction())->getTargetLowering();
+    if (Constraint && TL->supportsRegAllocHandoff(Constraint->getString()))
+      return false;
+    CI->replaceAllUsesWith(CI->getArgOperand(0));
+    CI->eraseFromParent();
+    return true;
+  });
+}
+
 static bool lowerLoadRelative(Function &F) {
   if (F.use_empty())
     return false;
@@ -781,6 +803,9 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::objc_sync_exit:
       Changed |= lowerObjCCall(F, RTLIB::impl_objc_sync_exit);
       break;
+    case Intrinsic::experimental_regalloc_handoff:
+      Changed |= lowerRegAllocHandoff(F, TM);
+      break;
     case Intrinsic::acos:
     case Intrinsic::asin:
     case Intrinsic::atan:
@@ -884,6 +909,19 @@ ModulePass *llvm::createPreISelIntrinsicLoweringPass() {
 
 PreservedAnalyses
 PreISelIntrinsicLoweringPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  if (Mode == PreISelIntrinsicLoweringMode::RegAllocHandoffOnly) {
+    // Without a target, support is unknown. Leave the marker for the target's
+    // normal pre-ISel lowering rather than treating it as unsupported.
+    if (!TM)
+      return PreservedAnalyses::all();
+
+    bool Changed = false;
+    for (Function &F : M)
+      if (F.getIntrinsicID() == Intrinsic::experimental_regalloc_handoff)
+        Changed |= lowerRegAllocHandoff(F, TM);
+    return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  }
+
   const ModuleLibcallLoweringInfo &LibcallLowering =
       MAM.getResult<LibcallLoweringModuleAnalysis>(M);
 

@@ -330,6 +330,8 @@ private:
 public:
   SITargetLowering(const TargetMachine &tm, const GCNSubtarget &STI);
 
+  bool supportsRegAllocHandoff(StringRef Constraint) const override;
+
   const GCNSubtarget *getSubtarget() const;
 
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;

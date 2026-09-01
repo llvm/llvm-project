@@ -22,6 +22,8 @@
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "amdgpu-reg-bank-select"
@@ -161,6 +163,37 @@ public:
     }
   }
 
+  Register buildHandoffReadFirstLane(Register Src) {
+    LLT Ty = MRI.getType(Src);
+    Register VgprSrc = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    MRI.setType(VgprSrc, Ty);
+    B.buildCopy(VgprSrc, Src);
+
+    Register Sgpr = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+    MRI.setType(Sgpr, Ty);
+    B.buildInstr(AMDGPU::V_READFIRSTLANE_B32, {Sgpr}, {VgprSrc});
+    return Sgpr;
+  }
+
+  bool isSGPR(Register Reg) {
+    if (Reg.isPhysical())
+      return TRI.isSGPRPhysReg(Reg);
+    if (const TargetRegisterClass *RC = MRI.getRegClassOrNull(Reg))
+      return SIRegisterInfo::isSGPRClass(RC);
+    if (const RegisterBank *RB = MRI.getRegBankOrNull(Reg))
+      return RB == SgprRB;
+    return getRegBankToAssign(Reg) == SgprRB;
+  }
+
+  bool isVectorOnly(Register Reg) {
+    if (const TargetRegisterClass *RC = MRI.getRegClassOrNull(Reg))
+      return SIRegisterInfo::hasVectorRegisters(RC) &&
+             !SIRegisterInfo::hasSGPRs(RC);
+    if (const RegisterBank *RB = MRI.getRegBankOrNull(Reg))
+      return RB == VgprRB;
+    return getRegBankToAssign(Reg) == VgprRB;
+  }
+
   // %a = G_ ..., %rc
   // ->
   // %rb:RegBank(s32) = COPY %rc
@@ -168,10 +201,6 @@ public:
   void constrainRegBankUse(MachineInstr &MI, MachineOperand &UseOP,
                            const RegisterBank *RB) {
     Register Reg = UseOP.getReg();
-
-    LLT Ty = MRI.getType(Reg);
-    Register NewReg = MRI.createVirtualRegister({RB, Ty});
-    UseOP.setReg(NewReg);
 
     if (MI.isPHI()) {
       auto DefMI = MRI.getVRegDef(Reg)->getIterator();
@@ -181,7 +210,113 @@ public:
       B.setInstr(MI);
     }
 
+    MachineInstr *DefMI = MRI.getVRegDef(Reg);
+    // The chosen insertion point may be behind this pass's cursor, so repair
+    // a direct scalar handoff use immediately.
+    if (RB == SgprRB && SIInstrInfo::isRegAllocHandoff(DefMI->getOpcode()))
+      Reg = buildHandoffReadFirstLane(Reg);
+
+    Register NewReg = MRI.createVirtualRegister({RB, MRI.getType(Reg)});
     B.buildCopy(NewReg, Reg);
+    UseOP.setReg(NewReg);
+  }
+
+  bool lowerRegAllocHandoff(MachineInstr &MI, bool HasMAIInsts) {
+    if (MI.getOpcode() != AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS ||
+        MI.getNumExplicitOperands() != 4 || !MI.getOperand(1).isIntrinsicID() ||
+        MI.getOperand(1).getIntrinsicID() !=
+            Intrinsic::experimental_regalloc_handoff)
+      return false;
+
+    MachineOperand &DstOp = MI.getOperand(0);
+    MachineOperand &SrcOp = MI.getOperand(2);
+    MachineOperand &ConstraintOp = MI.getOperand(3);
+    if (!DstOp.isReg() || !DstOp.isDef() || !DstOp.getReg().isVirtual() ||
+        !SrcOp.isReg() || !SrcOp.isUse() || !SrcOp.getReg().isVirtual() ||
+        !ConstraintOp.isMetadata())
+      return false;
+
+    const auto *ConstraintNode = dyn_cast<MDNode>(ConstraintOp.getMetadata());
+    const MDString *Constraint =
+        ConstraintNode && ConstraintNode->getNumOperands() == 1
+            ? dyn_cast<MDString>(ConstraintNode->getOperand(0))
+            : nullptr;
+    StringRef ConstraintName = Constraint ? Constraint->getString() : "";
+    const TargetRegisterClass *DstRC = nullptr;
+    unsigned HandoffOpcode = AMDGPU::INSTRUCTION_LIST_END;
+    if (ConstraintName == "amdgpu.vgpr") {
+      DstRC = &AMDGPU::VGPR_32RegClass;
+      HandoffOpcode = AMDGPU::REGALLOC_HANDOFF_VGPR;
+    } else if (ConstraintName == "amdgpu.agpr" && HasMAIInsts) {
+      DstRC = &AMDGPU::AGPR_32RegClass;
+      HandoffOpcode = AMDGPU::REGALLOC_HANDOFF_AGPR;
+    }
+
+    Register Dst = DstOp.getReg();
+    Register Src = SrcOp.getReg();
+    if (MRI.getType(Dst) != LLT::scalar(32) ||
+        MRI.getType(Src) != LLT::scalar(32))
+      return false;
+
+    bool DstConstrained =
+        MRI.getRegClassOrNull(Dst) || MRI.getRegBankOrNull(Dst);
+    if (!DstRC) {
+      if (Dst == Src) {
+        MI.eraseFromParent();
+        return true;
+      }
+
+      if (!DstConstrained) {
+        MRI.replaceRegWith(Dst, Src);
+      } else {
+        B.setInstr(MI);
+        Register CopySrc = Src;
+        if (isSGPR(Dst) && isVectorOnly(Src))
+          CopySrc = buildHandoffReadFirstLane(Src);
+        B.buildCopy(Dst, CopySrc);
+      }
+      MI.eraseFromParent();
+      return true;
+    }
+
+    Register HandoffDst = Dst;
+    if (DstConstrained) {
+      HandoffDst = MRI.createVirtualRegister(DstRC);
+      MRI.setType(HandoffDst, MRI.getType(Dst));
+    } else {
+      MRI.setRegClass(Dst, DstRC);
+    }
+
+    Register AVSrc = MRI.createVirtualRegister(&AMDGPU::AV_32RegClass);
+    MRI.setType(AVSrc, MRI.getType(Src));
+    B.setInstr(MI);
+    B.buildCopy(AVSrc, Src);
+    B.buildInstr(HandoffOpcode, {HandoffDst}, {AVSrc})
+        .setMIFlag(MachineInstr::NoMerge);
+    if (HandoffDst != Dst)
+      B.buildCopy(Dst, HandoffDst);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  bool repairHandoffScalarCopy(MachineInstr &MI) {
+    if (!MI.isCopy() || !MI.getOperand(0).isReg() || !MI.getOperand(1).isReg())
+      return false;
+
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    if (!Src.isVirtual())
+      return false;
+    MachineInstr *SrcDef = MRI.getVRegDef(Src);
+    if (!SrcDef || !SIInstrInfo::isRegAllocHandoff(SrcDef->getOpcode()))
+      return false;
+
+    if (!isSGPR(Dst))
+      return false;
+
+    B.setInstr(MI);
+    MI.getOperand(1).setReg(buildHandoffReadFirstLane(Src));
+    return true;
   }
 };
 
@@ -223,6 +358,25 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   RegBankSelectHelper RBSHelper(B, ILMA, MUI, *ST.getRegisterInfo(),
                                 *ST.getRegBankInfo());
+
+  // Lower all handoff markers before ordinary bank assignment. This makes the
+  // exact requested class visible even when a PHI or another use appears
+  // before its defining block in machine layout.
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      if (MI.getOpcode() != AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS ||
+          MI.getNumExplicitOperands() < 2 ||
+          !MI.getOperand(1).isIntrinsicID() ||
+          MI.getOperand(1).getIntrinsicID() !=
+              Intrinsic::experimental_regalloc_handoff)
+        continue;
+      if (!RBSHelper.lowerRegAllocHandoff(MI, ST.hasMAIInsts())) {
+        MF.getProperties().setFailedISel();
+        return true;
+      }
+    }
+  }
+
   // Virtual registers at this point don't have register banks.
   // Virtual registers in def and use operands of already inst-selected
   // instruction have register class.
@@ -232,11 +386,15 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
       // Vregs in def and use operands of COPY can have either register class
       // or bank. If there is neither on vreg in def operand, assign bank.
       if (MI.isCopy()) {
+        RBSHelper.repairHandoffScalarCopy(MI);
         Register DefReg = getVReg(MI.getOperand(0));
         if (!DefReg.isValid() || MRI.getRegClassOrNull(DefReg))
           continue;
 
-        assert(!MRI.getRegBankOrNull(DefReg));
+        // Scalar handoff repair can insert a banked copy in a predecessor that
+        // has not been visited yet.
+        if (MRI.getRegBankOrNull(DefReg))
+          continue;
         MRI.setRegBank(DefReg, *RBSHelper.getRegBankToAssign(DefReg));
         continue;
       }

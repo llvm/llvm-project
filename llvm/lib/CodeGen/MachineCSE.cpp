@@ -398,7 +398,7 @@ bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
 bool MachineCSEImpl::isCSECandidate(MachineInstr *MI) {
   if (MI->isPosition() || MI->isPHI() || MI->isImplicitDef() || MI->isKill() ||
       MI->isInlineAsm() || MI->isDebugInstr() || MI->isJumpTableDebugInfo() ||
-      MI->isFakeUse())
+      MI->isFakeUse() || MI->getFlag(MachineInstr::NoMerge))
     return false;
 
   // Ignore copies.

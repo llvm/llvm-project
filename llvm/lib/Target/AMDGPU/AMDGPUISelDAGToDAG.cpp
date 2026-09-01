@@ -3263,6 +3263,56 @@ void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   unsigned IntrID = N->getConstantOperandVal(1);
   switch (IntrID) {
+  case Intrinsic::experimental_regalloc_handoff: {
+    const auto *ConstraintNode = dyn_cast<MDNodeSDNode>(N->getOperand(3));
+    const MDString *Constraint =
+        ConstraintNode && ConstraintNode->getMD()->getNumOperands() == 1
+            ? dyn_cast<MDString>(ConstraintNode->getMD()->getOperand(0))
+            : nullptr;
+    StringRef ConstraintName = Constraint ? Constraint->getString() : "";
+    if (!Subtarget->getTargetLowering()->supportsRegAllocHandoff(
+            ConstraintName)) {
+      ReplaceUses(SDValue(N, 0), N->getOperand(2));
+      ReplaceUses(SDValue(N, 1), N->getOperand(0));
+      CurDAG->RemoveDeadNode(N);
+      return;
+    }
+
+    bool IsAGPR = ConstraintName == "amdgpu.agpr";
+    unsigned HandoffOpcode =
+        IsAGPR ? AMDGPU::REGALLOC_HANDOFF_AGPR : AMDGPU::REGALLOC_HANDOFF_VGPR;
+
+    SDLoc DL(N);
+    SDValue AVClass =
+        CurDAG->getTargetConstant(AMDGPU::AV_32RegClassID, DL, MVT::i32);
+    SDValue Src(CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, DL,
+                                       MVT::i32, N->getOperand(2), AVClass),
+                0);
+    SDValue HandoffOps[] = {Src, N->getOperand(0)};
+    SDNode *Handoff = CurDAG->getMachineNode(
+        HandoffOpcode, DL, CurDAG->getVTList(MVT::i32, MVT::Other), HandoffOps);
+    CurDAG->addNoMergeSiteInfo(Handoff, true);
+    SDValue Result(Handoff, 0);
+
+    if (!N->isDivergent()) {
+      if (IsAGPR) {
+        SDValue VGPRClass =
+            CurDAG->getTargetConstant(AMDGPU::VGPR_32RegClassID, DL, MVT::i32);
+        Result =
+            SDValue(CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, DL,
+                                           MVT::i32, Result, VGPRClass),
+                    0);
+      }
+      Result = SDValue(CurDAG->getMachineNode(AMDGPU::V_READFIRSTLANE_B32, DL,
+                                              MVT::i32, Result),
+                       0);
+    }
+
+    ReplaceUses(SDValue(N, 0), Result);
+    ReplaceUses(SDValue(N, 1), SDValue(Handoff, 1));
+    CurDAG->RemoveDeadNode(N);
+    return;
+  }
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume: {
     if (N->getValueType(0) != MVT::i32)

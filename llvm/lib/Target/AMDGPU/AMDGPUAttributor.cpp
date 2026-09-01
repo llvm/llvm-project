@@ -1360,6 +1360,20 @@ struct AAAMDGPUMinAGPRAlloc
 
         return true;
       }
+      case Intrinsic::experimental_regalloc_handoff: {
+        const auto *ConstraintMD =
+            dyn_cast<MetadataAsValue>(CB.getArgOperand(1));
+        const auto *ConstraintNode =
+            ConstraintMD ? dyn_cast<MDNode>(ConstraintMD->getMetadata())
+                         : nullptr;
+        const auto *Constraint =
+            ConstraintNode && ConstraintNode->getNumOperands() == 1
+                ? dyn_cast<MDString>(ConstraintNode->getOperand(0))
+                : nullptr;
+        if (Constraint && Constraint->getString() == "amdgpu.agpr")
+          Maximum.takeAssumedMaximum(1);
+        return true;
+      }
       // Trap-like intrinsics such as llvm.trap and llvm.debugtrap do not have
       // the nocallback attribute, so the AMDGPU attributor can conservatively
       // drop all implicitly-known inputs and AGPR allocation information. Make

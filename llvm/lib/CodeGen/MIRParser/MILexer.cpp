@@ -299,6 +299,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("machine-block-address-taken",
             MIToken::kw_machine_block_address_taken)
       .Case("call-frame-size", MIToken::kw_call_frame_size)
+      .Case("nomerge", MIToken::kw_nomerge)
       .Case("noconvergent", MIToken::kw_noconvergent)
       .Case("mmra", MIToken::kw_mmra)
       .Case("lr-split", MIToken::kw_lr_split)

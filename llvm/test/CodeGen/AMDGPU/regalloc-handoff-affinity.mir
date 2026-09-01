@@ -1,0 +1,66 @@
+# RUN: split-file %s %t
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=finalize-isel \
+# RUN:   -verify-machineinstrs %t/ssa.mir -o - \
+# RUN:   | FileCheck %s --check-prefix=SSA
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=finalize-isel \
+# RUN:   -verify-machineinstrs %t/nonssa.mir -o - \
+# RUN:   | FileCheck %s --check-prefix=NONSSA
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=finalize-isel \
+# RUN:   -verify-machineinstrs %t/physical.mir -o - \
+# RUN:   | FileCheck %s --check-prefix=PHYS
+
+#--- ssa.mir
+---
+name: copy_chain
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '' }
+  - { id: 1, class: av_32, preferred-register: '' }
+  - { id: 2, class: vgpr_32, preferred-register: '' }
+  - { id: 3, class: vgpr_32, preferred-register: '' }
+body: |
+  bb.0:
+    ; The source class copy is transparent to the hint, and the result class
+    ; copy inherits that same preference.
+    ; SSA-LABEL: name: copy_chain
+    ; SSA: - { id: 2, class: vgpr_32, preferred-register: '%0'
+    ; SSA-NEXT: - { id: 3, class: vgpr_32, preferred-register: '%0'
+    ; SSA: %2:vgpr_32 = REGALLOC_HANDOFF_VGPR %1
+    ; SSA-NEXT: %3:vgpr_32 = COPY %2
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:av_32 = COPY %0
+    %2:vgpr_32 = REGALLOC_HANDOFF_VGPR %1
+    %3:vgpr_32 = COPY %2
+    S_ENDPGM 0, implicit %3
+...
+
+#--- nonssa.mir
+---
+name: nonssa
+isSSA: false
+registers:
+  - { id: 0, class: av_32, preferred-register: '' }
+  - { id: 1, class: agpr_32, preferred-register: '' }
+body: |
+  bb.0:
+    ; NONSSA-LABEL: name: nonssa
+    ; NONSSA: - { id: 1, class: agpr_32, preferred-register: '%0'
+    ; NONSSA: %1:agpr_32 = REGALLOC_HANDOFF_AGPR %0
+    %0:av_32 = IMPLICIT_DEF
+    %0:av_32 = IMPLICIT_DEF
+    %1:agpr_32 = REGALLOC_HANDOFF_AGPR %0
+    S_ENDPGM 0, implicit %1
+...
+
+#--- physical.mir
+---
+name: physical_destination
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; PHYS-LABEL: name: physical_destination
+    ; PHYS: $vgpr1 = REGALLOC_HANDOFF_VGPR $vgpr0
+    ; PHYS-NEXT: S_ENDPGM 0, implicit $vgpr1
+    $vgpr1 = REGALLOC_HANDOFF_VGPR $vgpr0
+    S_ENDPGM 0, implicit $vgpr1
+...

@@ -681,4 +681,27 @@ TEST(MachineInstr, EraseFromParentReturnedIteratorBundle) {
   EXPECT_EQ(It2, MBB->end());
 }
 
+TEST(MachineInstr, NoMergeSafeToMove) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+
+  MCInstrDesc PureDesc = {TargetOpcode::COPY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MachineInstr *Pure = MF->CreateMachineInstr(PureDesc, DebugLoc());
+  Pure->setFlag(MachineInstr::NoMerge);
+
+  bool SawStore = false;
+  EXPECT_FALSE(Pure->isSafeToMove(SawStore));
+  EXPECT_FALSE(SawStore);
+
+  MCInstrDesc StoreDesc = {TargetOpcode::COPY,     0, 0, 0, 0, 0, 0, 0, 0,
+                           1ULL << MCID::MayStore, 0};
+  MachineInstr *Store = MF->CreateMachineInstr(StoreDesc, DebugLoc());
+  Store->setFlag(MachineInstr::NoMerge);
+
+  SawStore = false;
+  EXPECT_FALSE(Store->isSafeToMove(SawStore));
+  EXPECT_TRUE(SawStore);
+}
+
 } // end namespace

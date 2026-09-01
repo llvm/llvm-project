@@ -859,6 +859,11 @@ public:
            Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0;
   }
 
+  static bool isRegAllocHandoff(unsigned Opcode) {
+    return Opcode == AMDGPU::REGALLOC_HANDOFF_VGPR ||
+           Opcode == AMDGPU::REGALLOC_HANDOFF_AGPR;
+  }
+
   static bool isCBranchVCCZRead(const MachineInstr &MI) {
     unsigned Opc = MI.getOpcode();
     return (Opc == AMDGPU::S_CBRANCH_VCCNZ || Opc == AMDGPU::S_CBRANCH_VCCZ) &&

@@ -54,6 +54,7 @@
 ; CHECK-EP-PIPELINE-START-NEXT: Running pass: NoOpModulePass
 ; CHECK-DIS-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-DIS-NEXT: Running pass: AddDiscriminatorsPass
+; CHECK-O-NEXT: Running pass: PreISelIntrinsicLoweringPass
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NODIS-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis

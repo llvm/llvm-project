@@ -2041,6 +2041,16 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   switch (MI.getOpcode()) {
   default: return TargetInstrInfo::expandPostRAPseudo(MI);
+  case AMDGPU::REGALLOC_HANDOFF_VGPR:
+  case AMDGPU::REGALLOC_HANDOFF_AGPR:
+    assert(MI.getNumOperands() == 2 && MI.getOperand(0).isReg() &&
+           MI.getOperand(1).isReg());
+    if (MI.getOperand(0).getReg() == MI.getOperand(1).getReg()) {
+      MI.eraseFromParent();
+      return true;
+    }
+    MI.setDesc(get(TargetOpcode::COPY));
+    return false;
   case AMDGPU::S_MOV_B64_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
@@ -5244,6 +5254,10 @@ static Register findImplicitSGPRRead(const MachineInstr &MI) {
 }
 
 static bool shouldReadExec(const MachineInstr &MI) {
+  // This pseudo only guides register allocation; it is not lane-executed.
+  if (SIInstrInfo::isRegAllocHandoff(MI.getOpcode()))
+    return false;
+
   if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:

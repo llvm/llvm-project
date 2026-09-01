@@ -1,0 +1,270 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 \
+# RUN:   -run-pass=amdgpu-reg-bank-select -verify-machineinstrs -o - %s \
+# RUN:   | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 \
+# RUN:   -run-pass=amdgpu-reg-bank-select -verify-machineinstrs -o - %s \
+# RUN:   | FileCheck %s --check-prefix=GFX9
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 \
+# RUN:   -run-pass=none -verify-machineinstrs -o /dev/null %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 \
+# RUN:   -run-pass=none -verify-machineinstrs -o /dev/null %s
+
+--- |
+  declare i32 @llvm.experimental.regalloc.handoff(i32, metadata)
+
+  define amdgpu_kernel void @vgpr() { ret void }
+  define amdgpu_kernel void @agpr() { ret void }
+  define amdgpu_kernel void @vgpr_to_sgpr() { ret void }
+  define amdgpu_kernel void @agpr_to_sgpr() { ret void }
+  define amdgpu_kernel void @vgpr_uniform_consumer() { ret void }
+  define amdgpu_kernel void @agpr_uniform_consumer() { ret void }
+  define amdgpu_kernel void @gfx900_agpr_identity() { ret void }
+  define amdgpu_kernel void @vgpr_phi_forward() { ret void }
+  define amdgpu_kernel void @agpr_phi_forward() { ret void }
+  define amdgpu_kernel void @phi_backedge() { ret void }
+  define amdgpu_kernel void @classed_vgpr_copy() { ret void }
+  define amdgpu_kernel void @preclassed_agpr_to_sgpr() { ret void }
+
+  !0 = !{!"amdgpu.vgpr"}
+  !1 = !{!"amdgpu.agpr"}
+...
+---
+name: vgpr
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vgpr
+    ; CHECK: [[SRC:%[0-9]+]]:av_32(s32) = COPY
+    ; CHECK-NEXT: [[DST:%[0-9]+]]:vgpr_32(s32) = nomerge REGALLOC_HANDOFF_VGPR [[SRC]]
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !0
+    S_ENDPGM 0
+...
+---
+name: agpr
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: agpr
+    ; CHECK: [[SRC:%[0-9]+]]:av_32(s32) = COPY
+    ; CHECK-NEXT: [[DST:%[0-9]+]]:agpr_32(s32) = nomerge REGALLOC_HANDOFF_AGPR [[SRC]]
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !1
+    S_ENDPGM 0
+...
+---
+name: vgpr_to_sgpr
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vgpr_to_sgpr
+    ; CHECK: [[SRC:%[0-9]+]]:av_32(s32) = COPY
+    ; CHECK-NEXT: [[DST:%[0-9]+]]:vgpr_32(s32) = nomerge REGALLOC_HANDOFF_VGPR [[SRC]]
+    ; CHECK-NEXT: [[VECTOR:%[0-9]+]]:vgpr_32(s32) = COPY [[DST]](s32)
+    ; CHECK-NEXT: [[SCALAR:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[VECTOR]](s32), implicit $exec
+    ; CHECK-NEXT: $sgpr1 = COPY [[SCALAR]](s32)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !0
+    $sgpr1 = COPY %1
+    S_ENDPGM 0, implicit $sgpr1
+...
+---
+name: agpr_to_sgpr
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: agpr_to_sgpr
+    ; CHECK: [[SRC:%[0-9]+]]:av_32(s32) = COPY
+    ; CHECK-NEXT: [[DST:%[0-9]+]]:agpr_32(s32) = nomerge REGALLOC_HANDOFF_AGPR [[SRC]]
+    ; CHECK-NEXT: [[VECTOR:%[0-9]+]]:vgpr_32(s32) = COPY [[DST]](s32)
+    ; CHECK-NEXT: [[SCALAR:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[VECTOR]](s32), implicit $exec
+    ; CHECK-NEXT: $sgpr1 = COPY [[SCALAR]](s32)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !1
+    $sgpr1 = COPY %1
+    S_ENDPGM 0, implicit $sgpr1
+...
+---
+name: vgpr_uniform_consumer
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vgpr_uniform_consumer
+    ; CHECK: [[HANDOFF:%[0-9]+]]:vgpr_32(s32) = nomerge REGALLOC_HANDOFF_VGPR
+    ; CHECK: G_CONSTANT i32 1
+    ; CHECK-NEXT: [[VECTOR:%[0-9]+]]:vgpr_32(s32) = COPY [[HANDOFF]](s32)
+    ; CHECK-NEXT: [[SCALAR:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[VECTOR]](s32), implicit $exec
+    ; CHECK-NEXT: [[BANK:%[0-9]+]]:sgpr(s32) = COPY [[SCALAR]](s32)
+    ; CHECK: [[SUM:%[0-9]+]]:sgpr(s32) = G_ADD [[BANK]],
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !0
+    %2:_(s32) = G_CONSTANT i32 1
+    %3:_(s32) = G_ADD %1, %2
+    $sgpr1 = COPY %3
+    S_ENDPGM 0, implicit $sgpr1
+...
+---
+name: agpr_uniform_consumer
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: agpr_uniform_consumer
+    ; CHECK: [[HANDOFF:%[0-9]+]]:agpr_32(s32) = nomerge REGALLOC_HANDOFF_AGPR
+    ; CHECK: G_CONSTANT i32 1
+    ; CHECK-NEXT: [[VECTOR:%[0-9]+]]:vgpr_32(s32) = COPY [[HANDOFF]](s32)
+    ; CHECK-NEXT: [[SCALAR:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[VECTOR]](s32), implicit $exec
+    ; CHECK-NEXT: [[BANK:%[0-9]+]]:sgpr(s32) = COPY [[SCALAR]](s32)
+    ; CHECK: [[SUM:%[0-9]+]]:sgpr(s32) = G_ADD [[BANK]],
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !1
+    %2:_(s32) = G_CONSTANT i32 1
+    %3:_(s32) = G_ADD %1, %2
+    $sgpr1 = COPY %3
+    S_ENDPGM 0, implicit $sgpr1
+...
+---
+name: gfx900_agpr_identity
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: gfx900_agpr_identity
+    ; CHECK: [[SRC:%[0-9]+]]:av_32(s32) = COPY
+    ; CHECK-NEXT: [[HANDOFF:%[0-9]+]]:agpr_32(s32) = nomerge REGALLOC_HANDOFF_AGPR [[SRC]]
+    ; GFX9-LABEL: name: gfx900_agpr_identity
+    ; GFX9-NOT: agpr_32
+    ; GFX9: [[SRC:%[0-9]+]]:sgpr(s32) = G_IMPLICIT_DEF
+    ; GFX9-NOT: REGALLOC_HANDOFF_
+    ; GFX9: $sgpr1 = COPY [[SRC]](s32)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !1
+    $sgpr1 = COPY %1
+    S_ENDPGM 0, implicit $sgpr1
+...
+---
+name: vgpr_phi_forward
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    ; CHECK-LABEL: name: vgpr_phi_forward
+    ; CHECK: bb.0:
+    ; CHECK: [[HANDOFF:%[0-9]+]]:vgpr_32(s32) = nomerge REGALLOC_HANDOFF_VGPR
+    ; CHECK-NEXT: [[VECTOR:%[0-9]+]]:vgpr_32(s32) = COPY [[HANDOFF]](s32)
+    ; CHECK-NEXT: [[SCALAR:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[VECTOR]](s32), implicit $exec
+    ; CHECK-NEXT: [[BANK:%[0-9]+]]:sgpr(s32) = COPY [[SCALAR]](s32)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !0
+    S_BRANCH %bb.1
+
+  bb.1:
+    ; CHECK: bb.1:
+    ; CHECK: %{{[0-9]+}}:sgpr(s32) = G_PHI [[BANK]](s32), %bb.0
+    %2:_(s32) = G_PHI %1, %bb.0
+    $sgpr1 = COPY %2
+    S_ENDPGM 0, implicit $sgpr1
+...
+---
+name: agpr_phi_forward
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    ; CHECK-LABEL: name: agpr_phi_forward
+    ; CHECK: bb.0:
+    ; CHECK: [[HANDOFF:%[0-9]+]]:agpr_32(s32) = nomerge REGALLOC_HANDOFF_AGPR
+    ; CHECK-NEXT: [[VECTOR:%[0-9]+]]:vgpr_32(s32) = COPY [[HANDOFF]](s32)
+    ; CHECK-NEXT: [[SCALAR:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[VECTOR]](s32), implicit $exec
+    ; CHECK-NEXT: [[BANK:%[0-9]+]]:sgpr(s32) = COPY [[SCALAR]](s32)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !1
+    S_BRANCH %bb.1
+
+  bb.1:
+    ; CHECK: bb.1:
+    ; CHECK: %{{[0-9]+}}:sgpr(s32) = G_PHI [[BANK]](s32), %bb.0
+    %2:_(s32) = G_PHI %1, %bb.0
+    $sgpr1 = COPY %2
+    S_ENDPGM 0, implicit $sgpr1
+...
+---
+name: phi_backedge
+legalized: true
+tracksRegLiveness: true
+body: |
+  ; The PHI use precedes the handoff definition in layout and consumes it on a
+  ; backedge. Preselection must lower every marker before ordinary bank repair.
+  bb.0:
+    successors: %bb.1
+    %0:_(s32) = G_IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+    ; CHECK-LABEL: name: phi_backedge
+    ; CHECK: bb.1:
+    ; CHECK: %{{[0-9]+}}:{{[a-z0-9_]+}}(s32) = G_PHI %0(s32), %bb.0, [[BACK:%[0-9]+]](s32), %bb.2
+    %1:_(s32) = G_PHI %0, %bb.0, %2, %bb.2
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.1
+    ; CHECK: [[AV:%[0-9]+]]:av_32(s32) = COPY
+    ; CHECK-NEXT: [[HANDOFF:%[0-9]+]]:vgpr_32(s32) = nomerge REGALLOC_HANDOFF_VGPR [[AV]]
+    ; CHECK-NEXT: [[VECTOR:%[0-9]+]]:vgpr_32(s32) = COPY [[HANDOFF]](s32)
+    ; CHECK-NEXT: [[SCALAR:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[VECTOR]](s32), implicit $exec
+    ; CHECK-NEXT: [[BACK]]:sgpr(s32) = COPY [[SCALAR]](s32)
+    %2:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %1, !0
+    S_BRANCH %bb.1
+...
+---
+name: classed_vgpr_copy
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; A uniform destination already constrained to a vector class must not be
+    ; mistaken for an unassigned scalar copy.
+    ; CHECK-LABEL: name: classed_vgpr_copy
+    ; CHECK: [[HANDOFF:%[0-9]+]]:vgpr_32(s32) = nomerge REGALLOC_HANDOFF_VGPR
+    ; CHECK-NEXT: [[DST:%[0-9]+]]:vgpr_32(s32) = COPY [[HANDOFF]](s32)
+    ; CHECK-NOT: V_READFIRSTLANE_B32
+    ; CHECK: S_ENDPGM 0, implicit [[DST]]
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !0
+    %2:vgpr_32(s32) = COPY %1
+    S_ENDPGM 0, implicit %2
+...
+---
+name: preclassed_agpr_to_sgpr
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: preclassed_agpr_to_sgpr
+    ; CHECK: [[AV:%[0-9]+]]:av_32(s32) = COPY
+    ; CHECK-NEXT: [[HANDOFF:%[0-9]+]]:agpr_32(s32) = nomerge REGALLOC_HANDOFF_AGPR [[AV]]
+    ; CHECK-NEXT: [[VECTOR:%[0-9]+]]:vgpr_32(s32) = COPY [[HANDOFF]](s32)
+    ; CHECK-NEXT: [[SCALAR:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[VECTOR]](s32), implicit $exec
+    ; CHECK-NEXT: [[DST:%[0-9]+]]:sreg_32(s32) = COPY [[SCALAR]](s32)
+    ; CHECK-NEXT: [[SUM:%[0-9]+]]:sreg_32 = S_ADD_U32 [[DST]](s32), [[DST]](s32), implicit-def $scc
+    ; GFX9-LABEL: name: preclassed_agpr_to_sgpr
+    ; GFX9-NOT: REGALLOC_HANDOFF_
+    ; GFX9: [[VECTOR:%[0-9]+]]:vgpr_32(s32) = COPY %{{[0-9]+}}(s32)
+    ; GFX9-NEXT: [[SCALAR:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[VECTOR]](s32), implicit $exec
+    ; GFX9-NEXT: [[DST:%[0-9]+]]:sreg_32(s32) = COPY [[SCALAR]](s32)
+    ; GFX9-NEXT: [[SUM:%[0-9]+]]:sreg_32 = S_ADD_U32 [[DST]](s32), [[DST]](s32), implicit-def $scc
+    %0:vgpr_32(s32) = COPY $vgpr0, implicit $exec
+    %1:sreg_32(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.experimental.regalloc.handoff), %0, !1
+    %2:sreg_32 = S_ADD_U32 %1, %1, implicit-def $scc
+    S_ENDPGM 0, implicit %2
+...

@@ -1025,6 +1025,12 @@ def int_localaddress : DefaultAttrsIntrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 // Escapes local variables to allow access from other functions.
 def int_localescape : DefaultAttrsIntrinsic<[], [llvm_vararg_ty]>;
 
+// Carries a register-allocation boundary selected by an IR producer. Targets
+// that do not support the request lower it as an identity operation.
+def int_experimental_regalloc_handoff : DefaultAttrsIntrinsic<
+    [llvm_i32_ty], [llvm_i32_ty, llvm_metadata_ty],
+    [IntrInaccessibleMemOnly, IntrNoMerge, IntrNoCreateUndefOrPoison]>;
+
 // Given a function and the localaddress of a parent frame, returns a pointer
 // to an escaped allocation indicated by the index.
 def int_localrecover : DefaultAttrsIntrinsic<[llvm_ptr_ty],

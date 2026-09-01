@@ -20,11 +20,20 @@ namespace llvm {
 class Module;
 class TargetMachine;
 
+enum class PreISelIntrinsicLoweringMode {
+  All,
+  RegAllocHandoffOnly,
+};
+
 struct PreISelIntrinsicLoweringPass
     : RequiredPassInfoMixin<PreISelIntrinsicLoweringPass> {
   const TargetMachine *TM;
+  PreISelIntrinsicLoweringMode Mode;
 
-  PreISelIntrinsicLoweringPass(const TargetMachine *TM) : TM(TM) {}
+  PreISelIntrinsicLoweringPass(
+      const TargetMachine *TM,
+      PreISelIntrinsicLoweringMode Mode = PreISelIntrinsicLoweringMode::All)
+      : TM(TM), Mode(Mode) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

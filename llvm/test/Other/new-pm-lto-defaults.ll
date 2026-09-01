@@ -31,7 +31,9 @@
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O23,CHECK-EP-CGSCC-LATE
 
 ; CHECK-EP: Running pass: NoOpModulePass
-; CHECK-O: Running pass: CrossDSOCFIPass
+; CHECK-O: Running pass: PreISelIntrinsicLoweringPass
+; CHECK-O-NEXT: Running pass: MemProfRemoveInfo
+; CHECK-O-NEXT: Running pass: CrossDSOCFIPass
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass

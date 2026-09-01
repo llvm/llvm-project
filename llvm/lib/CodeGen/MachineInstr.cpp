@@ -1357,6 +1357,12 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
     return false;
   }
 
+  // Keep NoMerge instructions out of passes that use isSafeToMove for motion
+  // or dead-code removal. This deliberately does not set SawStore: other
+  // instructions may still move across them.
+  if (getFlag(MachineInstr::NoMerge))
+    return false;
+
   // Don't touch instructions that have non-trivial invariants.  For example,
   // terminators have to be at the end of a basic block.
   if (isPosition() || isDebugInstr() || isTerminator() ||

@@ -224,6 +224,13 @@ def WWM_COPY : SPseudoInstSI <
   let isConvergent = 1;
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = []<Register> in {
+def REGALLOC_HANDOFF_VGPR
+    : PseudoInstSI<(outs VGPR_32:$dst), (ins AV_32:$src)>;
+def REGALLOC_HANDOFF_AGPR
+    : PseudoInstSI<(outs AGPR_32:$dst), (ins AV_32:$src)>;
+}
+
 def ENTER_STRICT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
   let Uses = [EXEC];
   let Defs = [EXEC, SCC];

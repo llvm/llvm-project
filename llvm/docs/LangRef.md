@@ -26514,6 +26514,59 @@ attach various forms of information to operands that dominate specific
 uses.  It is not meant for general use, only for building temporary
 renaming forms that require value splits at certain points.
 
+(int_experimental_regalloc_handoff)=
+
+#### '`llvm.experimental.regalloc.handoff`' Intrinsic
+
+##### Syntax:
+
+This intrinsic operates on ``i32`` values.
+
+```
+declare i32 @llvm.experimental.regalloc.handoff(i32 %value, metadata %constraint)
+```
+
+##### Overview:
+
+The `llvm.experimental.regalloc.handoff` intrinsic marks a producer-selected
+register-allocation boundary with a target-specific constraint. It is a
+bitwise identity operation. A supporting target preserves every potentially
+executed call that carries a constraint it accepts until register allocation.
+
+##### Arguments:
+
+The value argument and result are ``i32``. An accepted constraint is encoded as
+a metadata node containing exactly one metadata string. Other metadata forms
+are unsupported constraints and use the identity fallback described below.
+
+##### Semantics:
+
+The result is bitwise identical to the argument. Poison remains poison and
+`undef` retains its ordinary semantics; this intrinsic is not a `freeze`
+operation.
+
+Each accepted call is a distinct compiler-visible allocation event. Before
+target-specific lowering, generic transformations must preserve the dynamic
+executions of every potentially executed call. They may not merge distinct
+call sites, introduce an execution by speculation, or remove an execution
+merely because its result is unused or its arguments are identical. They may
+delete unreachable calls or clone and replace a call when doing so preserves
+its dynamic executions; each surviving clone is then a separate allocation
+event. The intrinsic does not access program-visible memory. Its
+compiler-visible allocation effect is modeled as an access to inaccessible
+memory so that it remains distinct without clobbering ordinary loads or stores.
+
+A target that does not accept the constraint lowers the call to the identity
+operation before instruction selection. The allocation effect does not change
+the program's value semantics.
+
+For AMDGPU, the accepted constraint strings are `amdgpu.vgpr`, which requests a
+32-bit VGPR, and `amdgpu.agpr`, which requests a 32-bit AGPR on subtargets that
+support MAI/AGPR instructions. `amdgpu.agpr` is an identity operation on other
+AMDGPU subtargets. Each accepted request starts a distinct outgoing virtual
+register interval in the requested class. Compatible incoming and outgoing
+intervals may still receive the same physical register.
+
 (type.test)=
 
 #### '`llvm.type.test`' Intrinsic

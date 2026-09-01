@@ -416,7 +416,8 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
           }
 
           if (I->mayStore() || I->isBarrier() || I->isCall() ||
-              I->hasUnmodeledSideEffects() || I->hasOrderedMemoryRef())
+              I->hasUnmodeledSideEffects() || I->hasOrderedMemoryRef() ||
+              I->getFlag(MachineInstr::NoMerge))
             break;
 
           LLVM_DEBUG(dbgs()
