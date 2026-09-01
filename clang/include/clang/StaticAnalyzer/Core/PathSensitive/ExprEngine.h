@@ -630,8 +630,8 @@ public:
                              ExplodedNodeSet &Dst);
 
   void VisitObjCIndirectCopyRestoreExpr(const ObjCIndirectCopyRestoreExpr *OIE,
-                                         ExplodedNode *Pred,
-                                         ExplodedNodeSet &Dst);
+                                        ExplodedNode *Pred,
+                                        ExplodedNodeSet &Dst);
 
   /// Handle ++ and -- (both pre- and post-increment).
   void VisitIncrementDecrementOperator(const UnaryOperator* U,

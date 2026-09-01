@@ -2374,7 +2374,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
     case Expr::ObjCIndirectCopyRestoreExprClass:
       VisitObjCIndirectCopyRestoreExpr(cast<ObjCIndirectCopyRestoreExpr>(S),
-                                        Pred, Dst);
+                                       Pred, Dst);
       break;
     }
 }
