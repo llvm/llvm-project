@@ -3164,6 +3164,8 @@ Parser::codeCompleteConstraintName(ast::Type inferredType,
 
 LogicalResult Parser::codeCompleteDialectName() {
   codeCompleteContext->codeCompleteDialectName();
+  return failure();
+}
 
 //===----------------------------------------------------------------------===//
 // TypeConversionExpr
