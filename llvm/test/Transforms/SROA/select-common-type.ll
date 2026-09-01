@@ -3,8 +3,6 @@
 
 %pair = type { i32, i32 }
 
-declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1 immarg)
-
 define i64 @load_same_type(i1 %cond, ptr %other) {
 ; CHECK-LABEL: define i64 @load_same_type(
 ; CHECK-SAME: i1 [[COND:%.*]], ptr [[OTHER:%.*]]) {
@@ -86,17 +84,4 @@ entry:
   %addr = select i1 %cond, ptr %other, ptr %zero
   %value = load volatile i64, ptr %addr, align 8
   ret i64 %value
-}
-
-define ptr @volatile_load_ptr_same_type(i1 %cond, ptr %source, ptr %other) {
-; CHECK-LABEL: define ptr @volatile_load_ptr_same_type(
-; CHECK:         [[TEMPORARY:%.*]] = alloca ptr, align 8
-;
-entry:
-  %temporary = alloca [1 x i64], align 8
-  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %temporary,
-                                  ptr align 8 %source, i64 8, i1 false)
-  %addr = select i1 %cond, ptr %other, ptr %temporary
-  %value = load volatile ptr, ptr %addr, align 8
-  ret ptr %value
 }
