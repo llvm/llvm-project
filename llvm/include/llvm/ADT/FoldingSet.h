@@ -180,7 +180,7 @@ public:
   // The hash value is not guaranteed to be deterministic across processes.
   // Never returns NotAHash: FoldingSetBase reserves it for the empty insert
   // token and for a node belonging to no set.
-  unsigned ComputeHash() const {
+  unsigned computeHash() const {
     unsigned Hash =
         static_cast<unsigned>(hash_combine_range(Data, Data + Size));
     return Hash == NotAHash ? 1 : Hash;
@@ -262,8 +262,8 @@ public:
   // Compute a strong hash value for this FoldingSetNodeID, used to lookup the
   // node in the FoldingSetBase. The hash value is not guaranteed to be
   // deterministic across processes.
-  unsigned ComputeHash() const {
-    return FoldingSetNodeIDRef(Bits.data(), Bits.size()).ComputeHash();
+  unsigned computeHash() const {
+    return FoldingSetNodeIDRef(Bits.data(), Bits.size()).computeHash();
   }
 
   // Compute a deterministic hash value across processes that is suitable for
@@ -385,7 +385,7 @@ protected:
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
-  LLVM_ABI bool RemoveNode(Node *N);
+  LLVM_ABI bool erase(Node *N);
 
   /// Walk the probe chain for \p Hash, offering each node whose cached hash
   /// matches to \p IsMatch. \p IsMatch is a template parameter so that it, and
@@ -492,7 +492,7 @@ public:
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
-  bool erase(T *N) { return FoldingSetBase::RemoveNode(N); }
+  bool erase(T *N) { return FoldingSetBase::erase(N); }
 
   /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
@@ -513,7 +513,7 @@ public:
   /// \p Token; otherwise return null and set \p Token for a subsequent insert.
   T *lookup(const FoldingSetNodeID &ID, FoldingSetInsertToken &Token) {
     return static_cast<T *>(
-        probe(ID.ComputeHash(), Token,
+        probe(ID.computeHash(), Token,
               [&](FoldingSetNode *N) { return nodeEquals(N, ID); }));
   }
 

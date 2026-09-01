@@ -589,7 +589,8 @@ bool BundleVec::tryVectorize(ArrayRef<Value *> Bndl,
 
 bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
   const auto &SeedSlice = Rgn.getAux();
-  assert(SeedSlice.size() >= 2 && "Bad slice!");
+  if (SeedSlice.size() < 2)
+    return false;
   Function &F = *SeedSlice[0]->getParent()->getParent();
   IMaps = std::make_unique<InstrMaps>();
   LegalityAnalysis Legality(A.getAA(), A.getScalarEvolution(),

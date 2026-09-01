@@ -2,6 +2,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedCallArgsChecker -verify %s
 
 #include "objc-mock-types.h"
+#include "mock-types.h"
 
 SomeObj *provide();
 void consume_obj(SomeObj*);

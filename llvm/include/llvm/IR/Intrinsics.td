@@ -1986,7 +1986,7 @@ def int_coro_id_retcon_once : Intrinsic<[llvm_token_ty],
     [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty,
      llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
     []>;
-def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], []>;
+def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], [IntrNoMem]>;
 def int_coro_id_async : Intrinsic<[llvm_token_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
   []>;
@@ -2007,10 +2007,10 @@ def int_coro_suspend_async
 def int_coro_prepare_async : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
                                        [IntrNoMem]>;
 def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
-                               [WriteOnly<ArgIndex<1>>]>;
+                               [IntrArgMemOnly, WriteOnly<ArgIndex<1>>]>;
 def int_coro_begin_custom_abi : Intrinsic<[llvm_ptr_ty],
                                   [llvm_token_ty, llvm_ptr_ty, llvm_i32_ty],
-                                  [WriteOnly<ArgIndex<1>>]>;
+                                  [IntrArgMemOnly, WriteOnly<ArgIndex<1>>]>;
 def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                               [IntrReadMem, IntrArgMemOnly,
                                ReadOnly<ArgIndex<1>>,

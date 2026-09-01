@@ -199,7 +199,7 @@ void FoldingSetBase::insert(Node *N, FoldingSetInsertToken Token) {
   N->setFoldingSetHash(Hash);
 }
 
-bool FoldingSetBase::RemoveNode(Node *N) {
+bool FoldingSetBase::erase(Node *N) {
   uint32_t Hash = N->getFoldingSetHash();
   if (Hash == FoldingSetNodeIDRef::NotAHash)
     return false; // Never inserted.
