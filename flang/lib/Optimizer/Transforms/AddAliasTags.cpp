@@ -833,12 +833,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       else if (mlir::StringAttr nameAttr =
                    sourceOp->getDiscardableAttrOfType<mlir::StringAttr>(
                        fir::getUniqNameAttrName()))
-        // Keep a view into the StringAttr storage; str() returns a temporary.
         name = nameAttr.getValue();
-
-      // Treat an empty uniq_name like an absent one.
-      if (name && name->empty())
-        name.reset();
     }
 
     // Check if this allocation is a local copy of a VALUE dummy argument.

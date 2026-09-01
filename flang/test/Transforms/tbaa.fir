@@ -294,7 +294,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 
 // -----
 
-// An empty uniq_name is treated as absent.
+// An explicit empty uniq_name gets its own subtree, distinguishing it from an
+// allocation with no uniq_name.
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
   func.func @_QPemptyname() {
     %0 = memref.alloca() {uniq_name = ""} : memref<i32>
@@ -304,9 +305,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     return
   }
 
-// CHECK: #[[EMPTY_ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {{{.*}}}>
-// CHECK: #[[EMPTY_ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[EMPTY_ANY_DATA]], 0>}>
-// CHECK-NOT: #llvm.tbaa_type_desc<id = "allocated data/
+// CHECK: #[[EMPTY_ALLOC_PARENT:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {{{.*}}}>
+// CHECK: #[[EMPTY_ALLOC_DATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data/", members = {<#[[EMPTY_ALLOC_PARENT]], 0>}>
 // CHECK: #[[EMPTY_ALLOC_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[EMPTY_ALLOC_DATA]], access_type = #[[EMPTY_ALLOC_DATA]], offset = 0>
 // CHECK-LABEL: func.func @_QPemptyname(
 // CHECK: fir.load {{.*}} {tbaa = [#[[EMPTY_ALLOC_TAG]]]}
