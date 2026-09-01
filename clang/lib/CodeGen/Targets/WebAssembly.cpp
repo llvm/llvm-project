@@ -89,10 +89,7 @@ public:
             Global->addAttribute("wasm-import-name", NameAttr->getImportName());
         }
         if (const auto *Attr = VD->getAttr<WebAssemblyExportNameAttr>()) {
-          StringRef Name = Attr->getExportName();
-          if (Name.empty())
-            Name = Global->getName();
-          Global->addAttribute("wasm-export-name", Name);
+          Global->addAttribute("wasm-export-name", Attr->getExportName());
         }
       }
       return;
@@ -127,10 +124,7 @@ public:
       if (const auto *Attr = FD->getAttr<WebAssemblyExportNameAttr>()) {
         llvm::Function *Fn = cast<llvm::Function>(GV);
         llvm::AttrBuilder B(GV->getContext());
-        StringRef Name = Attr->getExportName();
-        if (Name.empty())
-          Name = Fn->getName();
-        B.addAttribute("wasm-export-name", Name);
+        B.addAttribute("wasm-export-name", Attr->getExportName());
         Fn->addFnAttrs(B);
       }
     }
