@@ -35,7 +35,8 @@ using namespace Fortran::frontend;
 
 CompilerInstance::CompilerInstance(
     std::shared_ptr<CompilerInvocation> invocation)
-    : invocation(invocation), allSources(new Fortran::parser::AllSources()),
+    : invocation(std::move(invocation)),
+      allSources(new Fortran::parser::AllSources()),
       allCookedSources(new Fortran::parser::AllCookedSources(*allSources)),
       parsing(new Fortran::parser::Parsing(*allCookedSources)) {
   assert(invocation && "Invocation must not be null.");
