@@ -22,9 +22,13 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
-class SPARCV9 final : public TargetInfo {
+// Handles both the 64-bit (V9, EM_SPARCV9) and the 32-bit (V8, EM_SPARC)
+// psABIs, which share their relocation set. The width-dependent parts are the
+// absolute and TLS-GOT relocation types, the PLT entry, and the register width
+// a relaxed TLS load uses.
+class SPARC final : public TargetInfo {
 public:
-  SPARCV9(Ctx &);
+  SPARC(Ctx &, bool is64);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -37,36 +41,53 @@ public:
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
-    elf::scanSection1<SPARCV9, ELF64BE>(*this, sec, shard);
+    if (is64)
+      elf::scanSection1<SPARC, ELF64BE>(*this, sec, shard);
+    else
+      elf::scanSection1<SPARC, ELF32BE>(*this, sec, shard);
   }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+
+private:
+  bool is64;
 };
 } // namespace
 
-SPARCV9::SPARCV9(Ctx &ctx) : TargetInfo(ctx) {
+SPARC::SPARC(Ctx &ctx, bool is64) : TargetInfo(ctx), is64(is64) {
   copyRel = R_SPARC_COPY;
   gotRel = R_SPARC_GLOB_DAT;
   pltRel = R_SPARC_JMP_SLOT;
   relativeRel = R_SPARC_RELATIVE;
-  symbolicRel = R_SPARC_64;
-  tlsGotRel = R_SPARC_TLS_TPOFF64;
-  tlsModuleIndexRel = R_SPARC_TLS_DTPMOD64;
-  tlsOffsetRel = R_SPARC_TLS_DTPOFF64;
+  if (is64) {
+    symbolicRel = R_SPARC_64;
+    tlsGotRel = R_SPARC_TLS_TPOFF64;
+    tlsModuleIndexRel = R_SPARC_TLS_DTPMOD64;
+    tlsOffsetRel = R_SPARC_TLS_DTPOFF64;
+    pltEntrySize = 32;
+    defaultMaxPageSize = 0x100000;
+    defaultImageBase = 0x100000;
+  } else {
+    symbolicRel = R_SPARC_32;
+    tlsGotRel = R_SPARC_TLS_TPOFF32;
+    tlsModuleIndexRel = R_SPARC_TLS_DTPMOD32;
+    tlsOffsetRel = R_SPARC_TLS_DTPOFF32;
+    pltEntrySize = 12;
+    defaultMaxPageSize = 0x10000;
+    defaultImageBase = 0x10000;
+  }
   gotHeaderEntriesNum = 1;
-  pltEntrySize = 32;
   pltHeaderSize = 4 * pltEntrySize;
   usesGotPlt = false;
 
+  // Both ABIs share GNU ld's 8K common page size.
   defaultCommonPageSize = 8192;
-  defaultMaxPageSize = 0x100000;
-  defaultImageBase = 0x100000;
 }
 
 // Only needed to support relocations used by relocateNonAlloc and
 // preprocessRelocs.
-RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
-                            const uint8_t *loc) const {
+RelExpr SPARC::getRelExpr(RelType type, const Symbol &s,
+                          const uint8_t *loc) const {
   switch (type) {
   case R_SPARC_8:
   case R_SPARC_16:
@@ -87,13 +108,13 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
   }
 }
 
-RelType SPARCV9::getDynRel(RelType type) const {
-  if (type == R_SPARC_64)
+RelType SPARC::getDynRel(RelType type) const {
+  if (type == symbolicRel)
     return type;
   return R_SPARC_NONE;
 }
 
-int64_t SPARCV9::getImplicitAddend(const uint8_t *buf, RelType type) const {
+int64_t SPARC::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_SPARC_64:
   case R_SPARC_GLOB_DAT:
@@ -105,8 +126,8 @@ int64_t SPARCV9::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 template <class ELFT, class RelTy>
-void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
-                              unsigned shard) {
+void SPARC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                            unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   for (auto it = rels.begin(); it != rels.end(); ++it) {
@@ -257,8 +278,12 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   }
 }
 
-void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
-                       uint64_t val) const {
+void SPARC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  // relocateImpl sign-extends to the ABI width, so on the 32-bit ABI a value
+  // with bit 31 set arrives with every high bit set. The field writes mask
+  // those away, but the unsigned range checks would read them as an overflow.
+  const uint64_t uval = is64 ? val : uint32_t(val);
+
   switch (rel.type) {
   case R_SPARC_8:
     // V-byte8
@@ -274,7 +299,7 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
   case R_SPARC_32:
   case R_SPARC_UA32:
     // V-word32
-    checkUInt(ctx, loc, val, 32, rel);
+    checkUInt(ctx, loc, uval, 32, rel);
     write32be(loc, val);
     break;
   case R_SPARC_DISP8:
@@ -325,7 +350,7 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_SPARC_HI22:
     // V-imm22
-    checkUInt(ctx, loc, val, 32, rel);
+    checkUInt(ctx, loc, uval, 32, rel);
     write32be(loc, (read32be(loc) & ~0x003fffff) | ((val >> 10) & 0x003fffff));
     break;
   case R_SPARC_WDISP22:
@@ -445,6 +470,12 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     // module, or an offset within a module whose TLS block is known.
     write64be(loc, val);
     break;
+  case R_SPARC_TLS_DTPMOD32:
+  case R_SPARC_TLS_DTPOFF32:
+  case R_SPARC_TLS_TPOFF32:
+    // V-word32, the 32-bit ABI's GOT slots.
+    write32be(loc, val);
+    break;
   case R_SPARC_TLS_GD_HI22: {
     // T-imm22. Local Exec encodes the complement, as R_SPARC_TLS_LE_HIX22 does.
     uint64_t v = rel.expr == R_TPREL ? ~val : val;
@@ -462,8 +493,9 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_SPARC_TLS_GD_ADD:
     if (rel.expr == R_GOT_OFF)
-      // Initial Exec: add %rs1, %rs2, %rd -> ldx [%rs1 + %rs2], %rd.
-      write32be(loc, (read32be(loc) & 0x3e07c01f) | 0xc0000000 | (0x0b << 19));
+      // Initial Exec: add %rs1, %rs2, %rd -> ld/ldx [%rs1 + %rs2], %rd.
+      write32be(loc, (read32be(loc) & 0x3e07c01f) | 0xc0000000 |
+                         (is64 ? (0x0b << 19) : 0));
     else if (rel.expr == R_TPREL)
       // Local Exec: the GOT pointer becomes the thread pointer, %rs1 -> %g7.
       write32be(loc, (read32be(loc) & ~0x0007c000) | (7 << 14));
@@ -520,7 +552,7 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
-void SPARCV9::finalizeRelocScan() {
+void SPARC::finalizeRelocScan() {
   Symbol *tga = nullptr;
 
   // R_SPARC_TLS_GD_CALL/LDM_CALL name the TLS symbol, not the callee. Rebind
@@ -550,28 +582,51 @@ void SPARCV9::finalizeRelocScan() {
   }
 }
 
-void SPARCV9::writeGotHeader(uint8_t *buf) const {
+void SPARC::writeGotHeader(uint8_t *buf) const {
   // _GLOBAL_OFFSET_TABLE_[0] = _DYNAMIC
-  write64be(buf, ctx.in.dynamic->getVA());
+  if (is64)
+    write64be(buf, ctx.in.dynamic->getVA());
+  else
+    write32be(buf, ctx.in.dynamic->getVA());
 }
 
-void SPARCV9::writePlt(uint8_t *buf, const Symbol & /*sym*/,
-                       uint64_t pltEntryAddr) const {
+void SPARC::writePlt(uint8_t *buf, const Symbol & /*sym*/,
+                     uint64_t pltEntryAddr) const {
+  uint64_t off = pltEntryAddr - ctx.in.plt->getVA();
+  if (is64) {
+    const uint8_t pltData[] = {
+        0x03, 0x00, 0x00, 0x00, // sethi   (. - .PLT0), %g1
+        0x30, 0x68, 0x00, 0x00, // ba,a    %xcc, .PLT1
+        0x01, 0x00, 0x00, 0x00, // nop
+        0x01, 0x00, 0x00, 0x00, // nop
+        0x01, 0x00, 0x00, 0x00, // nop
+        0x01, 0x00, 0x00, 0x00, // nop
+        0x01, 0x00, 0x00, 0x00, // nop
+        0x01, 0x00, 0x00, 0x00  // nop
+    };
+    memcpy(buf, pltData, sizeof(pltData));
+    relocateNoSym(buf, R_SPARC_22, off);
+    relocateNoSym(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
+    return;
+  }
+
+  // The 32-bit entry is three words and branches to .PLT0, where the 64-bit
+  // one branches to .PLT1. The sethi carries the entry's own offset, which is
+  // how the resolver recovers the relocation index.
   const uint8_t pltData[] = {
-      0x03, 0x00, 0x00, 0x00, // sethi   (. - .PLT0), %g1
-      0x30, 0x68, 0x00, 0x00, // ba,a    %xcc, .PLT1
-      0x01, 0x00, 0x00, 0x00, // nop
-      0x01, 0x00, 0x00, 0x00, // nop
-      0x01, 0x00, 0x00, 0x00, // nop
-      0x01, 0x00, 0x00, 0x00, // nop
-      0x01, 0x00, 0x00, 0x00, // nop
+      0x03, 0x00, 0x00, 0x00, // sethi (. - .PLT0), %g1
+      0x30, 0x80, 0x00, 0x00, // ba,a  .PLT0
       0x01, 0x00, 0x00, 0x00  // nop
   };
   memcpy(buf, pltData, sizeof(pltData));
-
-  uint64_t off = pltEntryAddr - ctx.in.plt->getVA();
   relocateNoSym(buf, R_SPARC_22, off);
-  relocateNoSym(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
+  relocateNoSym(buf + 4, R_SPARC_WDISP22, -(off + 4));
 }
 
-void elf::setSPARCV9TargetInfo(Ctx &ctx) { ctx.target.reset(new SPARCV9(ctx)); }
+void elf::setSPARCV9TargetInfo(Ctx &ctx) {
+  ctx.target.reset(new SPARC(ctx, /*is64=*/true));
+}
+
+void elf::setSPARC32TargetInfo(Ctx &ctx) {
+  ctx.target.reset(new SPARC(ctx, /*is64=*/false));
+}
