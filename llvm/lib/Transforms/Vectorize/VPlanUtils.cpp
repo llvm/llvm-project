@@ -883,6 +883,15 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
     return Builder.createVScale(S->getType(), DL);
+  case scPowerOfTwo: {
+    // Expanded as `shl 1, Op`, matching SCEVExpander.
+    auto *P = cast<SCEVPowerOfTwoExpr>(S);
+    Type *Ty = P->getType();
+    VPValue *Amt = expand(P->getOperand());
+    return Builder.createNaryOp(
+        Instruction::Shl, {Builder.getPlan().getConstantInt(Ty, 1), Amt},
+        VPIRFlags::getDefaultFlags(Instruction::Shl), DL);
+  }
   case scAddExpr: {
     auto *AddE = cast<SCEVAddExpr>(S);
     VPIRFlags::WrapFlagsTy WrapFlags(AddE->hasNoUnsignedWrap(),

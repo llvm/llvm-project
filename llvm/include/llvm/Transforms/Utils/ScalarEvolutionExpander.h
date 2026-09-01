@@ -524,6 +524,8 @@ private:
 
   Value *visitVScale(SCEVUseT<const SCEVVScale *> S);
 
+  Value *visitPowerOfTwoExpr(SCEVUseT<const SCEVPowerOfTwoExpr *> S);
+
   Value *visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S);
 
   Value *visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S);

@@ -302,6 +302,11 @@ void SCEV::print(raw_ostream &OS) const {
   case scVScale:
     OS << "vscale";
     return;
+  case scPowerOfTwo: {
+    const SCEV *Op = cast<SCEVPowerOfTwoExpr>(this)->getOperand();
+    OS << "(2 ^ " << *Op << ")";
+    return;
+  }
   case scPtrToAddr: {
     const SCEVCastExpr *PtrCast = cast<SCEVCastExpr>(this);
     SCEVUse Op = PtrCast->getOperand();
@@ -409,6 +414,8 @@ ArrayRef<SCEVUse> SCEV::operands() const {
   case scVScale:
   case scUnknown:
     return {};
+  case scPowerOfTwo:
+    return cast<SCEVPowerOfTwoExpr>(this)->operands();
   case scPtrToAddr:
   case scTruncate:
   case scZeroExtend:
@@ -498,6 +505,37 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   SCEV *S = new (SCEVAllocator) SCEVVScale(ID.Intern(SCEVAllocator), Ty);
   UniqueSCEVs.insert(S, Token);
   S->computeAndSetCanonical(*this);
+  return S;
+}
+
+const SCEV *ScalarEvolution::getPowerOfTwoExpr(SCEVUse Op) {
+  Type *Ty = Op->getType();
+  assert(Ty->isIntegerTy() && "Can only raise two to an integer power!");
+  unsigned BitWidth = getTypeSizeInBits(Ty);
+
+  if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(Op)) {
+    const APInt &Amt = SC->getAPInt();
+    // A shift amount that is not less than the bit width produces poison. Do
+    // not refine that to a concrete value: the resolution chosen here may
+    // differ from the resolution chosen in other parts of the compiler, and
+    // the range computed below assumes the amount is in range, so folding to
+    // a value would make the two disagree about the same expression.
+    if (Amt.uge(BitWidth))
+      return getUnknown(PoisonValue::get(Ty));
+    return getConstant(APInt::getOneBitSet(BitWidth, Amt.getZExtValue()));
+  }
+
+  FoldingSetNodeID ID;
+  ID.AddInteger(scPowerOfTwo);
+  ID.AddPointer(Op.getOpaqueValue());
+  FoldingSetInsertToken Token;
+  if (const SCEV *S = UniqueSCEVs.lookup(ID, Token))
+    return S;
+  SCEV *S =
+      new (SCEVAllocator) SCEVPowerOfTwoExpr(ID.Intern(SCEVAllocator), Op);
+  UniqueSCEVs.insert(S, Token);
+  S->computeAndSetCanonical(*this);
+  registerUser(S, Op);
   return S;
 }
 
@@ -722,6 +760,7 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
     [[fallthrough]];
   }
 
+  case scPowerOfTwo:
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
@@ -4048,6 +4087,8 @@ public:
 
   RetVal visitVScale(const SCEVVScale *VScale) { return VScale; }
 
+  RetVal visitPowerOfTwoExpr(const SCEVPowerOfTwoExpr *Expr) { return Expr; }
+
   RetVal visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) { return Expr; }
 
   RetVal visitTruncateExpr(const SCEVTruncateExpr *Expr) { return Expr; }
@@ -4095,6 +4136,7 @@ static bool scevUnconditionallyPropagatesPoisonFromOperands(SCEVTypes Kind) {
   switch (Kind) {
   case scConstant:
   case scVScale:
+  case scPowerOfTwo:
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
@@ -4196,6 +4238,11 @@ bool ScalarEvolution::canReuseInstruction(
   SmallPtrSet<const Value *, 8> PoisonVals;
   getPoisonGeneratingValues(PoisonVals, S);
 
+  // The amounts of the powers of two in S, collected on first use below. Only
+  // a shift by a variable amount needs them, and reaching one is rare enough
+  // not to pay for a second traversal of S on every call.
+  std::optional<SmallPtrSet<const SCEV *, 4>> ModelledShiftAmounts;
+
   SmallVector<Value *> Worklist;
   SmallPtrSet<Value *, 8> Visited;
   Worklist.push_back(I);
@@ -4231,7 +4278,47 @@ bool ScalarEvolution::canReuseInstruction(
         II && II->getIntrinsicID() == Intrinsic::vscale)
       continue;
 
-    if (canCreatePoison(cast<Operator>(I), /*ConsiderFlagsAndMetadata*/ false))
+    // Ignoring flags, a shift by a variable amount creates poison only by
+    // shifting out of range. Where S models this shift as a multiply by a
+    // power of two, expanding S emits a shift by the same amount, so reusing
+    // the instruction is no more poisonous than not reusing it.
+    //
+    // That the power of two is still part of S is what makes this true, so it
+    // is checked rather than assumed. If the shift's contribution cancelled
+    // out, as in (X << V) + A - (X << V), expanding what remains would not
+    // reproduce its poison. The same check rejects (0 << V), whose SCEV folds
+    // to a constant containing no power of two.
+    auto ShiftIsModelledInS = [&](Instruction *Shl) {
+      Value *Amt = Shl->getOperand(1);
+      if (Shl->getType()->isVectorTy() || isa<Constant>(Amt) ||
+          !isSCEVable(Amt->getType()))
+        return false;
+      // Look the amount up without creating it. getSCEV would insert into
+      // ExprValueMap, whose sets are stored by value and handed out as
+      // ArrayRefs by getSCEVValues, and callers iterate one of those across
+      // this call. Inserting can reallocate the set being iterated, either by
+      // rehashing the map or, if the amount's SCEV is S itself, by growing that
+      // set directly. A missing entry refuses the reuse, which is conservative,
+      // but does make the decision depend on what has been queried before
+      // rather than on the IR alone.
+      const SCEV *AmtS = getExistingSCEV(Amt);
+      if (!AmtS)
+        return false;
+      if (!ModelledShiftAmounts) {
+        // Compare the amounts by pointer rather than as uses: 2 ^ V and
+        // 2 ^ (V<nuw>) are shifts by the same amount, and flags on the amount
+        // do not change which amount it is.
+        ModelledShiftAmounts.emplace();
+        SCEVExprContains(S, [&](const SCEV *Sub) {
+          if (const auto *P = dyn_cast<SCEVPowerOfTwoExpr>(Sub))
+            ModelledShiftAmounts->insert(P->getOperand().getPointer());
+          return false; // Never stop early; walk all of S.
+        });
+      }
+      return ModelledShiftAmounts->contains(AmtS);
+    };
+    if (!(I->getOpcode() == Instruction::Shl && ShiftIsModelledInS(I)) &&
+        canCreatePoison(cast<Operator>(I), /*ConsiderFlagsAndMetadata*/ false))
       return false;
 
     // If the instruction can't create poison, we can recurse to its operands.
@@ -6313,6 +6400,9 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S,
     return getConstantMultiple(cast<SCEVCastExpr>(S)->getOperand());
   case scUDivExpr:
   case scVScale:
+  // The operand of a power of two may be zero, so we cannot say more than
+  // that the result is a multiple of one.
+  case scPowerOfTwo:
     return APInt(BitWidth, 1);
   case scTruncate: {
     // Only multiples that are a power of 2 will hold after truncation.
@@ -6610,6 +6700,7 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
       [[fallthrough]];
     case scConstant:
     case scVScale:
+    case scPowerOfTwo:
     case scTruncate:
     case scZeroExtend:
     case scSignExtend:
@@ -6721,6 +6812,27 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     llvm_unreachable("Already handled above.");
   case scVScale:
     return setRange(S, SignHint, getVScaleRange(&F, BitWidth));
+  case scPowerOfTwo: {
+    const SCEVPowerOfTwoExpr *P = cast<SCEVPowerOfTwoExpr>(S);
+    ConstantRange AmtRange = getRangeRef(
+        P->getOperand(), ScalarEvolution::HINT_RANGE_UNSIGNED, Depth + 1);
+    // If the amount is out of range on every execution, the result is always
+    // poison. Claiming a value for it here would disagree with the other
+    // refinements made for such a shift, so say nothing instead.
+    if (AmtRange.isEmptySet() || AmtRange.getUnsignedMin().uge(BitWidth))
+      return setRange(S, SignHint, std::move(ConservativeResult));
+    // An amount that is in range for at least one execution is assumed to be
+    // in range, as larger amounts produce poison. The result is then a power
+    // of two in [1 << MinAmt, 1 << MaxAmt].
+    unsigned MinAmt = AmtRange.getUnsignedMin().getLimitedValue(BitWidth - 1);
+    unsigned MaxAmt = AmtRange.getUnsignedMax().getLimitedValue(BitWidth - 1);
+    APInt One(BitWidth, 1);
+    return setRange(
+        S, SignHint,
+        ConservativeResult.intersectWith(
+            ConstantRange::getNonEmpty(One << MinAmt, (One << MaxAmt) + 1),
+            RangeType));
+  }
   case scTruncate: {
     const SCEVTruncateExpr *Trunc = cast<SCEVTruncateExpr>(S);
     ConstantRange X = getRangeRef(Trunc->getOperand(), SignHint, Depth + 1);
@@ -7651,10 +7763,14 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
     case Instruction::URem:
       break;
     case Instruction::AShr:
-    case Instruction::Shl:
     case Instruction::Xor:
       if (!IsConstArg)
         return nullptr;
+      break;
+    case Instruction::Shl:
+      // Even a variable shift amount is modelled, as a multiply by a power of
+      // two, so createSCEV needs a SCEV for both operands. Without them it
+      // would have to build them recursively.
       break;
     case Instruction::And:
     case Instruction::Or:
@@ -8109,7 +8225,29 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
             getContext(), APInt::getOneBitSet(BitWidth, SA->getZExtValue()));
         return getMulExpr(getSCEV(BO->LHS), getConstant(X), Flags);
       }
-      break;
+      // Turn a shift left by a variable amount into a multiply by a power of
+      // two: X << V --> X * 2^V. Modelling the shift keeps expressions that
+      // differ only by a constant factor comparable, e.g. (3 << V) and
+      // (5 * (1 << V)). Instcombine canonicalizes X * (1 << V) to X << V, so
+      // without this both forms would be opaque and unrelated.
+      {
+        SCEVUse Amt = getSCEV(BO->RHS);
+        SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+        if (BO->Op) {
+          unsigned BitWidth = getTypeSizeInBits(BO->Op->getType());
+          auto MulFlags = getNoWrapFlagsFromUB(BO->Op);
+          // As in the constant case above, nsw in isolation is only preserved
+          // if we are not shifting by bitwidth - 1: for i8, (-1 << 7) is nsw,
+          // but the equivalent multiply -1 * -128 overflows.
+          if (any(MulFlags & SCEV::FlagNSW) &&
+              (any(MulFlags & SCEV::FlagNUW) ||
+               getUnsignedRange(Amt).getUnsignedMax().ult(BitWidth - 1)))
+            Flags = Flags | SCEV::FlagNSW;
+          if (any(MulFlags & SCEV::FlagNUW))
+            Flags = Flags | SCEV::FlagNUW;
+        }
+        return getMulExpr(getSCEV(BO->LHS), getPowerOfTwoExpr(Amt), Flags);
+      }
 
     case Instruction::AShr:
       // AShr X, C, where C is a constant.
@@ -10059,6 +10197,9 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
   case scCouldNotCompute:
   case scAddRecExpr:
   case scVScale:
+  // A power of two with a constant operand is folded on creation, so the
+  // operand here is not constant.
+  case scPowerOfTwo:
     return nullptr;
   case scConstant:
     return cast<SCEVConstant>(V)->getValue();
@@ -10132,6 +10273,8 @@ const SCEV *ScalarEvolution::getWithOperands(const SCEV *S,
     return getMulExpr(NewOps, cast<SCEVMulExpr>(S)->getNoWrapFlags());
   case scUDivExpr:
     return getUDivExpr(NewOps[0], NewOps[1]);
+  case scPowerOfTwo:
+    return getPowerOfTwoExpr(NewOps[0]);
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
@@ -10201,6 +10344,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
 
     return AddRec;
   }
+  case scPowerOfTwo:
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
@@ -14480,6 +14624,7 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
     // Otherwise it's loop-invariant.
     return LoopInvariant;
   }
+  case scPowerOfTwo:
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
@@ -14570,6 +14715,7 @@ ScalarEvolution::computeBlockDisposition(const SCEV *S, const BasicBlock *BB) {
     // Fall through into SCEVNAryExpr handling.
     [[fallthrough]];
   }
+  case scPowerOfTwo:
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:

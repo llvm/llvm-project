@@ -81,14 +81,15 @@ exit:
 define void @different_non_constant_strides_known_forward_via_assume(ptr %A, i64 %scale) {
 ; CHECK-LABEL: 'different_non_constant_strides_known_forward_via_assume'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %l = load i32, ptr %gep.mul.2, align 4 ->
+; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %A High: (1024 + %A))
-; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -119,14 +120,15 @@ exit:
 define void @different_non_constant_strides_known_forward_via_assume_min_distance_3(ptr %A, i64 %scale) {
 ; CHECK-LABEL: 'different_non_constant_strides_known_forward_via_assume_min_distance_3'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %l = load i32, ptr %gep.mul.2, align 4 ->
+; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %A High: (1024 + %A))
-; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -158,14 +160,15 @@ exit:
 define void @different_non_constant_strides_not_known_forward(ptr %A, i64 %scale) {
 ; CHECK-LABEL: 'different_non_constant_strides_not_known_forward'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %l = load i32, ptr %gep.mul.2, align 4 ->
+; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %A High: (1024 + %A))
-; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

@@ -937,7 +937,8 @@ static Immediate ExtractImmediateOperand(MutableArrayRef<SCEVUse> Ops,
 
   // Ops are sorted by their SCEVType (the order of SCEVTypes enum). So, for an
   // AddExpr the possible order of operands is:
-  // Constant < VScale < Truncate < ZeroExtend < SignExtend < MulExpr < ...
+  // Constant < VScale < PowerOfTwo < Truncate < ZeroExtend < SignExtend <
+  // MulExpr < ...
 
   // This means fixed-size immediates will always appear on the LHS:
   SCEVUse &S = Ops.front();
@@ -1149,6 +1150,10 @@ static bool isHighCostExpansion(const SCEV *S,
   case scConstant:
   case scVScale:
     return false;
+  case scPowerOfTwo:
+    // Expanded as a single shift.
+    return isHighCostExpansion(cast<SCEVPowerOfTwoExpr>(S)->getOperand(),
+                               Processed, SE);
   case scTruncate:
     return isHighCostExpansion(cast<SCEVTruncateExpr>(S)->getOperand(),
                                Processed, SE);
@@ -1178,6 +1183,12 @@ static bool isHighCostExpansion(const SCEV *S,
     // Multiplication by a constant is ok
     if (isa<SCEVConstant>(Op0))
       return isHighCostExpansion(Op1, Processed, SE);
+
+    // Multiplication by a power of two is expanded as a shift, so it is ok
+    // for the same reason.
+    if (const auto *P = dyn_cast<SCEVPowerOfTwoExpr>(Op0))
+      return isHighCostExpansion(P->getOperand(), Processed, SE) ||
+             isHighCostExpansion(Op1, Processed, SE);
 
     // If we have the value of one operand, check if an existing
     // multiplication already generates this expression.

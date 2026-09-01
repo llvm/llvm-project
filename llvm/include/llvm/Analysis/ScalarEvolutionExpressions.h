@@ -40,6 +40,7 @@ enum SCEVTypes : unsigned short {
   // folders simpler.
   scConstant,
   scVScale,
+  scPowerOfTwo,
   scTruncate,
   scZeroExtend,
   scSignExtend,
@@ -182,6 +183,41 @@ public:
   static bool classof(const SCEV *S) {
     return S->getSCEVType() == scSignExtend;
   }
+};
+
+/// This class represents a power of two, i.e. `2 ^ Op`.
+///
+/// It is used to model a left shift by a non-constant amount, since
+/// `X << Op` is `X * (2 ^ Op)`. Modelling the shift this way lets SCEV relate
+/// expressions that differ only by a constant factor, e.g. `(3 << V)` and
+/// `(5 * (1 << V))`, which would otherwise both be opaque.
+///
+/// The operand is assumed to be less than the bit width of the type, because a
+/// shift by a larger amount produces poison. This mirrors how KnownBits models
+/// shifts by a variable amount.
+class SCEVPowerOfTwoExpr : public SCEV {
+  friend class ScalarEvolution;
+
+  SCEVUse Op;
+
+  SCEVPowerOfTwoExpr(const FoldingSetNodeIDRef ID, SCEVUse op)
+      : SCEV(ID, scPowerOfTwo, computeExpressionSize(op), op->getType()),
+        Op(op) {}
+
+public:
+  SCEVUse getOperand() const { return Op; }
+  SCEVUse getOperand(unsigned i) const {
+    assert(i == 0 && "Operand index out of range!");
+    return Op;
+  }
+  ArrayRef<SCEVUse> operands() const { return Op; }
+  size_t getNumOperands() const { return 1; }
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const SCEV *S) {
+    return S->getSCEVType() == scPowerOfTwo;
+  }
+  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This node is a base class providing common functionality for
@@ -595,6 +631,8 @@ template <typename SC, typename RetVal = void> struct SCEVVisitor {
       return ((SC *)this)->visitConstant((const SCEVConstant *)S);
     case scVScale:
       return ((SC *)this)->visitVScale((const SCEVVScale *)S);
+    case scPowerOfTwo:
+      return ((SC *)this)->visitPowerOfTwoExpr((const SCEVPowerOfTwoExpr *)S);
     case scPtrToAddr:
       return ((SC *)this)->visitPtrToAddrExpr((const SCEVPtrToAddrExpr *)S);
     case scTruncate:
@@ -644,6 +682,9 @@ template <typename SC, typename RetVal = void> struct SCEVUseVisitor {
           ->visitConstant(cast<SCEVUseT<const SCEVConstant *>>(S));
     case scVScale:
       return ((SC *)this)->visitVScale(cast<SCEVUseT<const SCEVVScale *>>(S));
+    case scPowerOfTwo:
+      return ((SC *)this)
+          ->visitPowerOfTwoExpr(cast<SCEVUseT<const SCEVPowerOfTwoExpr *>>(S));
     case scPtrToAddr:
       return ((SC *)this)
           ->visitPtrToAddrExpr(cast<SCEVUseT<const SCEVPtrToAddrExpr *>>(S));
@@ -727,6 +768,7 @@ public:
       case scVScale:
       case scUnknown:
         continue;
+      case scPowerOfTwo:
       case scPtrToAddr:
       case scTruncate:
       case scZeroExtend:
@@ -815,6 +857,11 @@ public:
   const SCEV *visitConstant(const SCEVConstant *Constant) { return Constant; }
 
   const SCEV *visitVScale(const SCEVVScale *VScale) { return VScale; }
+
+  const SCEV *visitPowerOfTwoExpr(const SCEVPowerOfTwoExpr *Expr) {
+    const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());
+    return Operand == Expr->getOperand() ? Expr : SE.getPowerOfTwoExpr(Operand);
+  }
 
   const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
     const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());

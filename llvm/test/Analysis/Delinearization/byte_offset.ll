@@ -6,11 +6,11 @@
 ;     char *tmp = &A[i * i2];
 ;     if (c)
 ;       while (1)
-;          *((float*)&tmp[arg << arg]) = 0;
+;          *((float*)&tmp[unknown()]) = 0;
 ;   }
 ; }
 
-define void @foo(ptr %A, i64 %i2, i64 %arg, i1 %c) {
+define void @foo(ptr %A, i64 %i2, i1 %c) {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Inst: store float 0.000000e+00, ptr %arrayidx, align 4
 ; CHECK-NEXT:  AccessFunction: ({0,+,%i2}<%outer.loop> + %unknown)
@@ -26,7 +26,9 @@ outer.loop:
   br i1 %c, label %inner.preheader, label %outer.latch
 
 inner.preheader:
-  %unknown = shl i64 %arg, %arg
+  ; The offset must be opaque to SCEV for this test to exercise
+  ; delinearization of an unknown addend.
+  %unknown = call i64 @unknown()
   %arrayidx = getelementptr inbounds i8, ptr %tmp, i64 %unknown
   br label %inner.loop
 
@@ -38,3 +40,5 @@ outer.latch:
   %outer.iv.next = add nuw nsw i64 %outer.iv, 1
   br label %outer.loop
 }
+
+declare i64 @unknown()

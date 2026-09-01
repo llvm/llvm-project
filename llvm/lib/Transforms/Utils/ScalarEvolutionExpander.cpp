@@ -456,6 +456,7 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   case scConstant:
   case scVScale:
     return nullptr; // A constant has no relevant loops.
+  case scPowerOfTwo:
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
@@ -636,6 +637,25 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
   // Sort by loop. Use a stable sort so that constants follow non-constants.
   llvm::stable_sort(OpsAndLoops, LoopCompare(SE.DT));
 
+  // Emit powers of two last within each loop, so that each becomes a shift of
+  // the running product rather than a value materialized and multiplied by it.
+  // Reordering within a loop rather than across the whole vector preserves the
+  // grouping established above: a shift by a loop-invariant amount folds into
+  // the invariant part of the product, and so is hoisted along with it, rather
+  // than being emitted after operands from inner loops have been multiplied in.
+  for (auto I = OpsAndLoops.begin(), E = OpsAndLoops.end(); I != E;) {
+    const Loop *L = I->first;
+    auto GroupEnd = std::find_if(
+        I, E, [L](const std::pair<const Loop *, const SCEV *> &Op) {
+          return Op.first != L;
+        });
+    std::stable_partition(I, GroupEnd,
+                          [](const std::pair<const Loop *, const SCEV *> &Op) {
+                            return !isa<SCEVPowerOfTwoExpr>(Op.second);
+                          });
+    I = GroupEnd;
+  }
+
   // Emit instructions to mul all the operands. Hoist as much as possible
   // out of loops.
   Value *Prod = nullptr;
@@ -689,6 +709,25 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
       // Instead of doing a multiply by negative one, just do a negate.
       Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod,
                          SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
+      ++I;
+    } else if (const auto *P = dyn_cast<SCEVPowerOfTwoExpr>(I->second);
+               P &&
+               (std::next(I) == OpsAndLoops.end() || *std::next(I) != *I)) {
+      // Canonicalize Prod*(2^V) to Prod<<V, as in the constant case below.
+      // This recovers the shift the expression was created from, instead of
+      // materializing the power of two and multiplying by it.
+      assert(!Ty->isVectorTy() && "vector types are not SCEVable");
+      Value *Amt = expand(P->getOperand());
+      auto NWFlags = S.getNoWrapFlags();
+      // As in the constant case below, nsw only carries over if the shift
+      // cannot be by bitwidth - 1, where the multiplier 2^V is negative and
+      // the two flags stop meaning the same thing.
+      if (!SE.getUnsignedRange(P->getOperand())
+               .getUnsignedMax()
+               .ult(Ty->getScalarSizeInBits() - 1))
+        NWFlags = ScalarEvolution::clearFlags(NWFlags, SCEV::FlagNSW);
+      Prod = InsertBinop(Instruction::Shl, Prod, Amt, NWFlags,
+                         /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple mul.
@@ -1614,6 +1653,15 @@ Value *SCEVExpander::visitVScale(SCEVUseT<const SCEVVScale *> S) {
   return Builder.CreateVScale(S->getType());
 }
 
+Value *
+SCEVExpander::visitPowerOfTwoExpr(SCEVUseT<const SCEVPowerOfTwoExpr *> S) {
+  Value *V = expand(S->getOperand());
+  Type *Ty = S->getType();
+  // 2^V is the shift that the expression was created from, so it is poison for
+  // the same shift amounts as the original code.
+  return Builder.CreateShl(ConstantInt::get(Ty, 1), V);
+}
+
 Value *SCEVExpander::expandCodeFor(SCEVUse SH, Type *Ty,
                                    BasicBlock::iterator IP) {
   setInsertPoint(IP);
@@ -2086,6 +2134,10 @@ template<typename T> static InstructionCost costAndCollectOperands(
   case scConstant:
   case scVScale:
     return 0;
+  case scPowerOfTwo:
+    // Expanded as `shl 1, Op`.
+    Cost = ArithCost(Instruction::Shl, 1);
+    break;
   case scPtrToAddr:
     Cost = CastCost(Instruction::PtrToAddr);
     break;
@@ -2119,13 +2171,22 @@ template<typename T> static InstructionCost costAndCollectOperands(
     // Bin Pow algorithm actually used by the expander, see
     // SCEVExpander::visitMulExpr(), ExpandOpBinPowN().
     unsigned OpCode = Instruction::Mul;
-    if (S->getNumOperands() == 2)
-      if (auto *SC = dyn_cast<SCEVConstant>(S->getOperand(0))) {
+    if (S->getNumOperands() == 2) {
+      // A lone power-of-two operand is folded into a shift of the other one.
+      // Charging Shl here is what tells isHighCostExpansionHelper that the
+      // operand has already been paid for, so the two must agree: it treats a
+      // power of two reached through a Shl as free. Two of them stay on the Mul
+      // path below, where they are costed individually.
+      if (count_if(S->operands(),
+                   [](SCEVUse Op) { return isa<SCEVPowerOfTwoExpr>(Op); }) == 1)
+        OpCode = Instruction::Shl;
+      else if (auto *SC = dyn_cast<SCEVConstant>(S->getOperand(0))) {
         if (SC->getAPInt().isAllOnes()) // -1
           OpCode = Instruction::Sub;
         else if (SC->getAPInt().isPowerOf2())
           OpCode = Instruction::Shl;
       }
+    }
     Cost = ArithCost(OpCode, S->getNumOperands() - 1);
     break;
   }
@@ -2228,6 +2289,19 @@ bool SCEVExpander::isHighCostExpansionHelper(
   case scSignExtend: {
     Cost +=
         costAndCollectOperands<SCEVCastExpr>(WorkItem, TTI, CostKind, Worklist);
+    return false; // Will answer upon next entry into this function.
+  }
+  case scPowerOfTwo: {
+    // A power of two reached through a shift is one that the enclosing
+    // multiply folded into that shift, which has already been costed. Only
+    // the shift amount is left to expand.
+    if (WorkItem.ParentOpcode == Instruction::Shl) {
+      Worklist.emplace_back(Instruction::Shl, 1,
+                            cast<SCEVPowerOfTwoExpr>(S)->getOperand());
+      return false;
+    }
+    Cost += costAndCollectOperands<SCEVPowerOfTwoExpr>(WorkItem, TTI, CostKind,
+                                                       Worklist);
     return false; // Will answer upon next entry into this function.
   }
   case scUDivExpr: {

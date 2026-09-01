@@ -738,6 +738,10 @@ public:
   LLVM_ABI const SCEV *getTruncateExpr(SCEVUse Op, Type *Ty,
                                        unsigned Depth = 0);
   LLVM_ABI const SCEV *getVScale(Type *Ty);
+  /// Return an expression for `2 ^ Op`, used to model `1 << Op` for a
+  /// non-constant \p Op. The operand is assumed to be less than the bit width
+  /// of its type, as a larger shift amount produces poison.
+  LLVM_ABI const SCEV *getPowerOfTwoExpr(SCEVUse Op);
   LLVM_ABI const SCEV *
   getElementCount(Type *Ty, ElementCount EC,
                   SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
