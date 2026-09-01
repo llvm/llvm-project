@@ -22629,7 +22629,7 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
         // v4i32 (128-bit, SSE) and v8i32 (256-bit, AVX) are already covered
         // by CVTTPS2DQ/VCVTTPS2DQ via expandFP_TO_UINT_SSE
         SDValue Cvt;
-        if (Subtarget.hasAVX512())
+        if (SrcVT.is512BitVector() || Subtarget.hasVLX())
           Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, DstVT, Clamped);
         else
           Cvt = expandFP_TO_UINT_SSE(DstVT.getSimpleVT(), Clamped, dl, DAG,
