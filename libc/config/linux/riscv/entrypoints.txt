@@ -439,6 +439,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
+    libc.src.unistd.getegid
     libc.src.unistd.getentropy
     libc.src.unistd.geteuid
     libc.src.unistd.gethostname
@@ -462,7 +463,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.readlink
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
+    libc.src.unistd.setgid
+    libc.src.unistd.setregid
+    libc.src.unistd.setreuid
     libc.src.unistd.setsid
+    libc.src.unistd.setuid
     libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
