@@ -250,31 +250,6 @@
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+svpbmt"
 // MCPU-TT-ASCALON-X-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=veyron-v1 | FileCheck -check-prefix=MCPU-VEYRON-V1 %s
-// MCPU-VEYRON-V1: "-target-cpu" "veyron-v1"
-// MCPU-VEYRON-V1: "-target-feature" "+m"
-// MCPU-VEYRON-V1: "-target-feature" "+a"
-// MCPU-VEYRON-V1: "-target-feature" "+f"
-// MCPU-VEYRON-V1: "-target-feature" "+d"
-// MCPU-VEYRON-V1: "-target-feature" "+c"
-// MCPU-VEYRON-V1: "-target-feature" "+zicbom"
-// MCPU-VEYRON-V1: "-target-feature" "+zicbop"
-// MCPU-VEYRON-V1: "-target-feature" "+zicboz"
-// MCPU-VEYRON-V1: "-target-feature" "+zicntr"
-// MCPU-VEYRON-V1: "-target-feature" "+zicsr"
-// MCPU-VEYRON-V1: "-target-feature" "+zifencei"
-// MCPU-VEYRON-V1: "-target-feature" "+zihintpause"
-// MCPU-VEYRON-V1: "-target-feature" "+zihpm"
-// MCPU-VEYRON-V1: "-target-feature" "+zba"
-// MCPU-VEYRON-V1: "-target-feature" "+zbb"
-// MCPU-VEYRON-V1: "-target-feature" "+zbc"
-// MCPU-VEYRON-V1: "-target-feature" "+zbs"
-// MCPU-VEYRON-V1: "-target-feature" "+xventanacondops"
-// MCPU-VEYRON-V1: "-target-abi" "lp64d"
-
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=veyron-v1 | FileCheck -check-prefix=MTUNE-VEYRON-V1 %s
-// MTUNE-VEYRON-V1: "-tune-cpu" "veyron-v1"
-
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=xiangshan-nanhu | FileCheck -check-prefix=MTUNE-XIANGSHAN-NANHU %s
 // MTUNE-XIANGSHAN-NANHU: "-tune-cpu" "xiangshan-nanhu"
 

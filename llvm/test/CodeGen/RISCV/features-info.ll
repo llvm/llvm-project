@@ -211,7 +211,6 @@
 ; CHECK-NEXT:   unaligned-vector-mem             - Has reasonably performant unaligned vector loads and stores.
 ; CHECK-NEXT:   use-postra-scheduler             - Schedule again after register allocation.
 ; CHECK-NEXT:   v                                - 'V' (Vector Extension for Application Processors).
-; CHECK-NEXT:   ventana-veyron                   - Ventana Veyron-Series processors.
 ; CHECK-NEXT:   vl-dependent-latency             - Latency of vector instructions is dependent on the dynamic value of vl.
 ; CHECK-NEXT:   vxrm-pipeline-flush              - VXRM writes causes pipeline flush.
 ; CHECK-NEXT:   xaifet                           - 'XAIFET' (AI Foundry ET Extension).
