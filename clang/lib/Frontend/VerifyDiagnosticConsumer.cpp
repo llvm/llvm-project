@@ -610,10 +610,12 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           }
 
           FileID FID = SM.translateFile(*File);
-          // FIXME: Figure out character-encoding converter treatment.
-          if (FID.isInvalid())
+          if (FID.isInvalid()) {
+            llvm::StringRef InputEncodingName =
+                PP ? PP->getLangOpts().InputEncoding : llvm::StringRef{};
             FID = SM.createFileID(*File, Pos, SrcMgr::C_User,
-                                  /*InputEncodingName=*/{});
+                                  InputEncodingName);
+          }
 
           if (PH.Next(Line) && Line > 0)
             ExpectedLoc = SM.translateLineCol(FID, Line, 1);
