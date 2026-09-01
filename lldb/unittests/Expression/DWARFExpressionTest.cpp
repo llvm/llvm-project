@@ -1897,11 +1897,11 @@ public:
     return offset - data_offset;
   }
 
-  virtual bool ParseVendorDWARFOpcode(
-      uint8_t op, const llvm::DataExtractor &opcodes, lldb::offset_t &offset,
-
-      RegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
-      std::vector<lldb_private::Value> &stack) const override {
+  virtual bool
+  ParseVendorDWARFOpcode(uint8_t op, const llvm::DataExtractor &opcodes,
+                         lldb::offset_t &offset, RegisterContext *reg_ctx,
+                         lldb::RegisterKind reg_kind,
+                         DWARFExpression::Stack &stack) const override {
     if (op != DW_OP_WASM_location) {
       return false;
     }
@@ -2440,4 +2440,89 @@ TEST_F(DWARFExpressionMockProcessTest, deref_implicit_value) {
 
   EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_deref_size, 1}),
                        ExpectLoadAddress(0x01));
+}
+
+using DWARFStack = DWARFExpression::Stack;
+using LocationDescriptionKind = DWARFStack::LocationDescriptionKind;
+
+static Value MakeStackValue(uint64_t value) { return Value(Scalar(value)); }
+
+static void ExpectStackTop(const DWARFStack &stack, uint64_t value,
+                           LocationDescriptionKind loc_desc_kind) {
+  EXPECT_EQ(stack.back().GetScalar().ULongLong(), value);
+  EXPECT_EQ(stack.GetLocationDescriptionKind(), loc_desc_kind);
+}
+
+TEST(DWARFExpressionStackTest, PushPopAndSetLocationDescriptionKind) {
+  DWARFStack stack;
+  EXPECT_TRUE(stack.empty());
+
+  stack.push_back(MakeStackValue(1));
+  EXPECT_EQ(stack.size(), 1u);
+  ExpectStackTop(stack, 1, LocationDescriptionKind::Memory);
+
+  stack.SetLocationDescriptionKind(LocationDescriptionKind::Implicit);
+  ExpectStackTop(stack, 1, LocationDescriptionKind::Implicit);
+
+  stack.push_back(MakeStackValue(2), LocationDescriptionKind::Register);
+  EXPECT_EQ(stack.size(), 2u);
+  ExpectStackTop(stack, 2, LocationDescriptionKind::Register);
+  EXPECT_EQ(stack[0].GetScalar().ULongLong(), 1u);
+
+  stack.pop_back();
+  EXPECT_EQ(stack.size(), 1u);
+  ExpectStackTop(stack, 1, LocationDescriptionKind::Implicit);
+}
+
+TEST(DWARFExpressionStackTest, PushCopy) {
+  DWARFStack stack;
+  EXPECT_FALSE(stack.PushCopy(0));
+
+  stack.push_back(MakeStackValue(7), LocationDescriptionKind::Register);
+  EXPECT_TRUE(stack.PushCopy(0));
+  EXPECT_EQ(stack.size(), 2u);
+  ExpectStackTop(stack, 7, LocationDescriptionKind::Register);
+
+  stack.back().GetScalar() = Scalar(8);
+  stack.pop_back();
+  ExpectStackTop(stack, 7, LocationDescriptionKind::Register);
+
+  EXPECT_FALSE(stack.PushCopy(1));
+  EXPECT_EQ(stack.size(), 1u);
+}
+
+TEST(DWARFExpressionStackTest, SwapTopTwo) {
+  DWARFStack stack;
+  EXPECT_FALSE(stack.SwapTopTwo());
+
+  stack.push_back(MakeStackValue(1));
+  EXPECT_FALSE(stack.SwapTopTwo());
+  ExpectStackTop(stack, 1, LocationDescriptionKind::Memory);
+
+  stack.push_back(MakeStackValue(2), LocationDescriptionKind::Register);
+  EXPECT_TRUE(stack.SwapTopTwo());
+  ExpectStackTop(stack, 1, LocationDescriptionKind::Memory);
+
+  stack.pop_back();
+  ExpectStackTop(stack, 2, LocationDescriptionKind::Register);
+}
+
+TEST(DWARFExpressionStackTest, RotateTopThree) {
+  DWARFStack stack;
+  EXPECT_FALSE(stack.RotateTopThree());
+
+  stack.push_back(MakeStackValue(1));
+  EXPECT_FALSE(stack.RotateTopThree());
+
+  stack.push_back(MakeStackValue(2), LocationDescriptionKind::Register);
+  EXPECT_FALSE(stack.RotateTopThree());
+
+  stack.push_back(MakeStackValue(3), LocationDescriptionKind::Implicit);
+  EXPECT_TRUE(stack.RotateTopThree());
+
+  ExpectStackTop(stack, 2, LocationDescriptionKind::Register);
+  stack.pop_back();
+  ExpectStackTop(stack, 1, LocationDescriptionKind::Memory);
+  stack.pop_back();
+  ExpectStackTop(stack, 3, LocationDescriptionKind::Implicit);
 }

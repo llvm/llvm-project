@@ -11,6 +11,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/Value.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
@@ -18,7 +19,10 @@
 #include "lldb/lldb-private.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/Support/Error.h"
+#include <cstddef>
 #include <functional>
+#include <utility>
+#include <vector>
 
 namespace lldb_private {
 
@@ -35,7 +39,77 @@ namespace lldb_private {
 /// location expression or a location list and interprets it.
 class DWARFExpression {
 public:
-  using Stack = std::vector<Value>;
+  /// The stack used while evaluating a DWARF expression. Each eagerly
+  /// materialized value retains the kind of location description that
+  /// produced it.
+  class Stack {
+  public:
+    enum class LocationDescriptionKind { Empty, Memory, Register, Implicit };
+
+    bool empty() const { return m_entries.empty(); }
+    size_t size() const { return m_entries.size(); }
+
+    Value &back() { return m_entries.back().value; }
+    const Value &back() const { return m_entries.back().value; }
+
+    Value &operator[](size_t index) { return m_entries[index].value; }
+    const Value &operator[](size_t index) const {
+      return m_entries[index].value;
+    }
+
+    void push_back(Value value, LocationDescriptionKind loc_desc_kind =
+                                    LocationDescriptionKind::Memory) {
+      m_entries.push_back({std::move(value), loc_desc_kind});
+    }
+
+    /// Push a copy of the entry at \p index, or return false if it is invalid.
+    [[nodiscard]] bool PushCopy(size_t index) {
+      if (index >= size())
+        return false;
+      Entry entry = m_entries[index];
+      m_entries.push_back(std::move(entry));
+      return true;
+    }
+
+    void pop_back() { m_entries.pop_back(); }
+
+    LocationDescriptionKind GetLocationDescriptionKind() const {
+      return m_entries.back().loc_desc_kind;
+    }
+
+    void SetLocationDescriptionKind(LocationDescriptionKind loc_desc_kind) {
+      m_entries.back().loc_desc_kind = loc_desc_kind;
+    }
+
+    /// Swap the top two entries, or return false if fewer than two exist.
+    [[nodiscard]] bool SwapTopTwo() {
+      if (size() < 2)
+        return false;
+      const size_t last = size() - 1;
+      std::swap(m_entries[last], m_entries[last - 1]);
+      return true;
+    }
+
+    /// Rotate the top three entries, or return false if fewer than three exist.
+    [[nodiscard]] bool RotateTopThree() {
+      if (size() < 3)
+        return false;
+      const size_t last = size() - 1;
+      Entry old_top = m_entries[last];
+      m_entries[last] = m_entries[last - 1];
+      m_entries[last - 1] = m_entries[last - 2];
+      m_entries[last - 2] = std::move(old_top);
+      return true;
+    }
+
+  private:
+    struct Entry {
+      Value value;
+      LocationDescriptionKind loc_desc_kind;
+    };
+
+    std::vector<Entry> m_entries;
+  };
 
   class Delegate {
   public:
