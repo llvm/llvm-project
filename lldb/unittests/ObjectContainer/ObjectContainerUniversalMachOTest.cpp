@@ -8,8 +8,10 @@
 
 #include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
 #include "Plugins/ObjectContainer/Mach-O-Fileset/ObjectContainerMachOFileset.h"
+#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -17,15 +19,20 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+
+#include <vector>
 
 using namespace lldb_private;
 
 namespace {
 class ObjectContainerUniversalMachOTest : public ::testing::Test {
-  SubsystemRAII<FileSystem, ObjectContainerUniversalMachO> subsystems;
+  SubsystemRAII<FileSystem, ObjectContainerUniversalMachO, ObjectFileMachO>
+      subsystems;
 };
 } // namespace
 
@@ -120,6 +127,87 @@ Slices:
   EXPECT_EQ(Specs.GetSize(), 0u);
 
   ASSERT_THAT_ERROR(TmpFile->discard(), llvm::Succeeded());
+}
+
+// A fat Mach-O slice at offset 0 is self-referential.
+TEST_F(ObjectContainerUniversalMachOTest, GetObjectFileSelfReferentialSlice) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !fat-mach-o
+FatHeader:
+  magic:           0xCAFEBABE
+  nfat_arch:       1
+FatArchs:
+  - cputype:         0x01000007
+    cpusubtype:      0x00000003
+    offset:          0x00000000
+    size:            0x00001000
+    align:           12
+Slices:
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x01000007
+      cpusubtype:      0x00000003
+      filetype:        0x00000002
+      ncmds:           0
+      sizeofcmds:      0
+      flags:           0x00000000
+      reserved:        0x00000000
+    LoadCommands:    []
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  llvm::Expected<llvm::sys::fs::TempFile> TmpFile =
+      ExpectedFile->writeToTemporaryFile();
+  ASSERT_THAT_EXPECTED(TmpFile, llvm::Succeeded());
+
+  ArchSpec Arch;
+  Arch.SetArchitecture(eArchTypeMachO, 0x01000007, 0x00000003);
+  lldb::ModuleSP Module =
+      std::make_shared<lldb_private::Module>(FileSpec(TmpFile->TmpName), Arch);
+  EXPECT_EQ(Module->GetObjectFile(), nullptr);
+
+  ASSERT_THAT_ERROR(TmpFile->discard(), llvm::Succeeded());
+}
+
+// A fat Mach-O slice whose declared size is far larger than the file.
+TEST_F(ObjectContainerUniversalMachOTest, GetObjectFileOversizedSlice) {
+  std::vector<uint8_t> Data = {
+      0xCA, 0xFE, 0xBA, 0xBF,                         // magic: FAT_MAGIC_64
+      0x00, 0x00, 0x00, 0x01,                         // nfat_arch: 1
+      0x01, 0x00, 0x00, 0x07,                         // cputype: X86_64
+      0x00, 0x00, 0x00, 0x03,                         // cpusubtype: 3
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x28, // offset: 40
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, // size: 2^48 - 1
+      0x00, 0x00, 0x00, 0x0C,                         // align: 12
+      0x00, 0x00, 0x00, 0x00,                         // reserved: 0
+  };
+  // It is the plugin claiming this slice that goes on to request the declared
+  // size above.
+  llvm::MachO::mach_header_64 SliceHeader = {};
+  SliceHeader.magic = llvm::MachO::MH_MAGIC_64;
+  SliceHeader.cputype = llvm::MachO::CPU_TYPE_X86_64;
+  SliceHeader.cpusubtype = 3;
+  SliceHeader.filetype = llvm::MachO::MH_EXECUTE;
+  const auto *SliceBytes = reinterpret_cast<const uint8_t *>(&SliceHeader);
+  Data.insert(Data.end(), SliceBytes, SliceBytes + sizeof(SliceHeader));
+  Data.resize(40 + 512, 0);
+
+  llvm::Expected<llvm::sys::fs::TempFile> TmpFile =
+      llvm::sys::fs::TempFile::create("temp%%%%%%%%%%%%%%%%");
+  ASSERT_THAT_EXPECTED(TmpFile, llvm::Succeeded());
+  llvm::raw_fd_ostream(TmpFile->FD, /*shouldClose=*/false) << llvm::StringRef(
+      reinterpret_cast<const char *>(Data.data()), Data.size());
+
+  ArchSpec Arch;
+  Arch.SetArchitecture(eArchTypeMachO, 0x01000007, 0x00000003);
+  lldb::ModuleSP Module =
+      std::make_shared<lldb_private::Module>(FileSpec(TmpFile->TmpName), Arch);
+  ObjectFile *Obj = Module->GetObjectFile();
+  ASSERT_THAT_ERROR(TmpFile->discard(), llvm::Succeeded());
+  ASSERT_NE(Obj, nullptr);
+  EXPECT_EQ(Obj->GetByteSize(), 512u); // Clamped to the bytes available.
 }
 
 // Regression fixture: a Mach-O fileset whose single load command has
