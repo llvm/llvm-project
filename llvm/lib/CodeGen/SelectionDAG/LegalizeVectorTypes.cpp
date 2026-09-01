@@ -5531,6 +5531,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
       Res = WidenVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
   }
+  case ISD::PARTIAL_REDUCE_FMLA:
+    Res = WidenVecRes_PARTIAL_REDUCE_MLA(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -7589,6 +7592,42 @@ SDValue DAGTypeLegalizer::WidenVecRes_STRICT_FSETCC(SDNode *N) {
   ReplaceValueWith(SDValue(N, 1), NewChain);
 
   return DAG.getBuildVector(WidenVT, dl, Scalars);
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Acc = N->getOperand(0);
+  SDValue Input1 = N->getOperand(1);
+  EVT I1VT = Input1->getValueType(0);
+  SDValue Input2 = N->getOperand(2);
+  EVT I2VT = Input2->getValueType(0);
+
+  // Only need to handle fp types here; integers should be promoted.
+  assert(N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA &&
+         "Expected FP partial reduction");
+
+  // We need to widen the accumulator as well as the return, since the types
+  // should match.
+  assert(VT == Acc->getValueType(0) && "Type mismatch.");
+  EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+
+  // We may also need to widen the inputs to uphold invariants.
+  if (ElementCount::isKnownLT(I1VT.getVectorElementCount(),
+                              WideVT.getVectorElementCount())) {
+    I1VT = TLI.getTypeToTransformTo(*DAG.getContext(), I1VT);
+    Input1 = DAG.getInsertSubvector(DL, DAG.getPOISON(I1VT), Input1, 0);
+  }
+
+  if (ElementCount::isKnownLT(I2VT.getVectorElementCount(),
+                              WideVT.getVectorElementCount())) {
+    I2VT = TLI.getTypeToTransformTo(*DAG.getContext(), I2VT);
+    Input2 = DAG.getInsertSubvector(DL, DAG.getPOISON(I2VT), Input2, 0);
+  }
+
+  SDValue WideAcc = DAG.getInsertSubvector(DL, DAG.getPOISON(WideVT), Acc, 0);
+  return DAG.getNode(ISD::PARTIAL_REDUCE_FMLA, DL, WideVT, WideAcc, Input1,
+                     Input2);
 }
 
 //===----------------------------------------------------------------------===//
