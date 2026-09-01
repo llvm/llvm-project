@@ -1210,9 +1210,6 @@ public:
   LLVM_ABI void dumprWithDepth(const SelectionDAG *G = nullptr,
                                unsigned depth = 100) const;
 
-  /// Gather unique data for the node.
-  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
-
   /// This method should only be used by the SDUse class.
   void addUse(SDUse &U) { U.addToList(&UseList); }
 
