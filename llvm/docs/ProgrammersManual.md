@@ -2083,6 +2083,38 @@ stable: inserting or removing elements does not invalidate any pointers to other
 elements.  The iterators, however, are invalidated whenever an insertion or
 erasure occurs, as in `DenseMap` and `StringMap`.
 
+See {ref}`UniquingSet <dss_uniquingset>` for a variant keyed on a typed key.
+
+(dss_uniquingset)=
+
+#### UniquingSet (llvm/ADT/FoldingSet.h)
+
+`UniquingSet` is a {ref}`FoldingSet <dss_FoldingSet>` whose nodes are compared
+against a typed key instead of a serialized `FoldingSetNodeID`.  Each node
+supplies its key through `getKey()`; a lookup builds the same key from what it
+already holds and hashes it inline with `DenseMapInfo`, and `lookup` returns the
+matching node or an insertion token for `insert`.  Growth and removal use the
+hash cached in each node and never call `getKey`.  An `Info` template argument
+can override the key type or the hash.
+
+```cpp
+std::tuple<unsigned, const Value *, const Value *> FooNode::getKey() const {
+  return {Opcode, LHS, RHS};
+}
+
+UniquingSet<FooNode> Pool;
+FoldingSetInsertToken Token;
+if (FooNode *N = Pool.lookup({Opcode, LHS, RHS}, Token))
+  return N;
+Pool.insert(new (Allocator) FooNode(Opcode, LHS, RHS), Token);
+```
+
+Prefer `UniquingSet` when a key can be read out of a node in O(1) and the lookup
+key is built next to `getKey`.  Keep `FoldingSet` for keys that are wide,
+polymorphic, or assembled at many call sites: one `Profile` helper then keeps
+both sides consistent, whereas `getKey` and a lookup site can silently disagree.
+`insert` asserts that a node hashes as its lookup did.
+
 (dss_set)=
 
 #### `<set>`
