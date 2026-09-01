@@ -625,8 +625,9 @@ define amdgpu_kernel void @fp_to_uint_v4f32_to_v4i64(ptr addrspace(1) %out, <4 x
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-SDAG-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v6
 ; GFX11-SDAG-NEXT:    v_fmac_f32_e32 v8, 0xcf800000, v2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_4)
-; GFX11-SDAG-NEXT:    v_dual_fmac_f32 v4, 0xcf800000, v7 :: v_dual_fmac_f32 v9, 0xcf800000, v5
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-SDAG-NEXT:    v_fmac_f32_e32 v4, 0xcf800000, v7
+; GFX11-SDAG-NEXT:    v_fmac_f32_e32 v9, 0xcf800000, v5
 ; GFX11-SDAG-NEXT:    v_cvt_u32_f32_e32 v3, v6
 ; GFX11-SDAG-NEXT:    v_cvt_u32_f32_e32 v7, v7
 ; GFX11-SDAG-NEXT:    v_cvt_u32_f32_e32 v5, v5
