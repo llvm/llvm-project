@@ -1834,39 +1834,64 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // What it declines
 // ----------------
 //
-// Each of these reports a match failure rather than lowering. Same notation,
+// Each of these reports a match failure naming a `RedistributionLimit`, so this
+// list and the enum are the same list. Grouped by what the limit constrains,
+// which is where the two layouts are and are not treated alike. Same notation,
 // and `vector<8x2>` over 16 lanes unless said otherwise.
 //
-//  * `lane_data` differing between the two layouts:
+// Relational -- properties of the pair, neither side alone:
+//
+//  * LaneDataDiffers, `lane_data` differing between the layouts (fundamental
+//    here):
 //
 //      layout<[8, 1], [1, 1]>  ->  layout<[1, 8], [1, 2]>
 //
 //    A `lane_data`-only change is the repack pattern's job; changing it and
 //    `lane_layout` together is handled by neither.
 //
-//  * `lane_data` equal but not unit:
+//  * NoDonorDelta, no donor group holding an element through a single extract
+//    (fundamental: `gpu.shuffle idx` reads one value per lane).
 //
-//      slice<layout<[1, 1, 16], [1, 2, 1]>, dims = [2]>
-//        ->  layout<[8, 1], [1, 2]>
-//
-//    A lane then holds two elements per distribution unit, which the ownership
-//    tables do not enumerate.
-//
-//  * elements narrower than a byte:
-//
-//      slice<layout<[1, 1, 16]>, dims = [2]>  ->  layout<[8, 1]>
-//        on vector<8x2xf4E2M1FN>
-//
-//    There is no type for `gpu.shuffle` to carry a 4-bit element in.
-//
-//  * a lane's element index not being one dimension of the target lane layout,
-//    as when `order` transposes it:
+//  * IndexNotLaneAffine, an index the restricted form cannot express
+//    (implementation: an arbitrary one needs a materialized table and a
+//    gather), as when `order` transposes it:
 //
 //      slice<layout<[1, 1, 16]>, dims = [2]>
 //        ->  layout<[4, 4], order = [0, 1]>        on vector<4x4>
 //
-//    Lane `i` would need element `(i % 4) * 4 + i / 4`, which the restricted
-//    index form below cannot express.
+//    Lane `i` would need element `(i % 4) * 4 + i / 4`.
+//
+// Per layout -- the same rule applied to each side:
+//
+//  * LaneDataNotUnit, `lane_data` equal but not all ones (implementation):
+//
+//      slice<layout<[1, 1, 16], [1, 2, 1]>, dims = [2]>
+//        ->  layout<[8, 1], [1, 2]>
+//
+//    The ownership tables hold one coordinate per distribution unit while the
+//    algorithm indexes elements; the two coincide only when a unit is a single
+//    element. See `computeOwnedCoords` for what lifting it needs. This also
+//    covers sub-byte elements in practice, which come with `lane_data` 2 so
+//    that a pair fills a byte.
+//
+//  * FragmentSizeMismatch, a layout not distributing what its vector type
+//    accounts for (fundamental: the caller derived one from the other).
+//
+// Target only -- the one asymmetry:
+//
+//  * LanePeriodNotDivisor, the target's lane period not dividing the subgroup
+//    size (fundamental to the donor walk, see `isSupportedLanePeriod`). The
+//    input's period is unconstrained because it is only ever indexed.
+//
+// Value only -- neither layout:
+//
+//  * SubByteElement, an element `gpu.shuffle` has no type for:
+//
+//      slice<layout<[1, 1, 16]>, dims = [2]>  ->  layout<[8, 1]>
+//        on vector<8x2xf4E2M1FN>
+//
+//    Reachable only with unit `lane_data`; otherwise LaneDataNotUnit declines
+//    first.
 //
 // Concepts
 // --------
@@ -2004,9 +2029,62 @@ static int64_t getLanePeriod(xegpu::DistributeLayoutAttr layout) {
   return computeProduct(layout.getEffectiveLaneLayoutAsInt());
 }
 
-/// Matches the layout change `redistributeBroadcastedValue` implements: both
-/// layouts hand the lanes the same distribution unit (equal effective
-/// lane_data), so only the assignment of elements to lanes changes.
+/// Why a `convert_layout` is not the redistribution
+/// `redistributeBroadcastedValue` implements. Every failure path below reports
+/// one of these, so the limitations listed in the section header are exactly
+/// the values here.
+enum class RedistributionLimit {
+  LaneDataDiffers,
+  LaneDataNotUnit,
+  LanePeriodNotDivisor,
+  SubByteElement,
+  FragmentSizeMismatch,
+  NoDonorDelta,
+  IndexNotLaneAffine,
+};
+
+static StringRef describe(RedistributionLimit limit) {
+  switch (limit) {
+  case RedistributionLimit::LaneDataDiffers:
+    return "input and target lane_data differ";
+  case RedistributionLimit::LaneDataNotUnit:
+    return "lane_data is not all ones";
+  case RedistributionLimit::LanePeriodNotDivisor:
+    return "the target lane period does not divide the subgroup size";
+  case RedistributionLimit::SubByteElement:
+    return "no gpu.shuffle type carries the element";
+  case RedistributionLimit::FragmentSizeMismatch:
+    return "a layout does not distribute what its vector type accounts for";
+  case RedistributionLimit::NoDonorDelta:
+    return "no donor group holds an element through a single extract";
+  case RedistributionLimit::IndexNotLaneAffine:
+    return "the fragment index is not an affine function of the lane id";
+  }
+  llvm_unreachable("unhandled RedistributionLimit");
+}
+
+/// Relational rule: both layouts have to hand the lanes the same distribution
+/// unit, so that only the assignment of elements to lanes changes.
+static bool haveSameDistributionUnit(xegpu::DistributeLayoutAttr inputLayout,
+                                     xegpu::DistributeLayoutAttr targetLayout) {
+  return inputLayout.getEffectiveLaneDataAsInt() ==
+         targetLayout.getEffectiveLaneDataAsInt();
+}
+
+/// Target-side rule: `deriveElementSource` walks the donor groups by stepping
+/// `delta` in multiples of the lane period while `delta < subgroupSize`, and a
+/// slot is smaller than the period. The period therefore has to divide the
+/// subgroup size, or `slot + delta` would name a lane past the last one.
+///
+/// The input has no counterpart: it is only ever indexed, never used to derive
+/// a delta, so its own period is unconstrained.
+static bool isSupportedLanePeriod(xegpu::DistributeLayoutAttr targetLayout,
+                                  int64_t subgroupSize) {
+  int64_t lanePeriod = getLanePeriod(targetLayout);
+  return lanePeriod > 0 && subgroupSize % lanePeriod == 0;
+}
+
+/// Matches the layout change `redistributeBroadcastedValue` implements.
 ///
 /// Neither layout has to lay out the whole subgroup. A layout whose lane_layout
 /// covers fewer lanes replicates its fragments over the rest, because
@@ -2017,16 +2095,20 @@ static int64_t getLanePeriod(xegpu::DistributeLayoutAttr layout) {
 ///
 /// That the layouts differ is not checked: they are already known to be
 /// incompatible here, and the difference may equally be in `order`.
-static bool isBroadcastRedistribution(xegpu::DistributeLayoutAttr inputLayout,
-                                      xegpu::DistributeLayoutAttr targetLayout,
-                                      int64_t subgroupSize) {
-  // TODO: computeOwnedCoords only tabulates unit lane_data, so equal but
-  // non-unit lane_data is rejected further down rather than here.
-  if (inputLayout.getEffectiveLaneDataAsInt() !=
-      targetLayout.getEffectiveLaneDataAsInt())
+static bool
+isBroadcastRedistribution(xegpu::DistributeLayoutAttr inputLayout,
+                          xegpu::DistributeLayoutAttr targetLayout,
+                          int64_t subgroupSize,
+                          std::optional<RedistributionLimit> &limit) {
+  if (!haveSameDistributionUnit(inputLayout, targetLayout)) {
+    limit = RedistributionLimit::LaneDataDiffers;
     return false;
-  int64_t lanePeriod = getLanePeriod(targetLayout);
-  return lanePeriod > 0 && subgroupSize % lanePeriod == 0;
+  }
+  if (!isSupportedLanePeriod(targetLayout, subgroupSize)) {
+    limit = RedistributionLimit::LanePeriodNotDivisor;
+    return false;
+  }
+  return true;
 }
 
 /// Ownership table: `owned[lane][i]` is the coordinate, in the undistributed
@@ -2034,14 +2116,25 @@ static bool isBroadcastRedistribution(xegpu::DistributeLayoutAttr inputLayout,
 using OwnedCoords = SmallVector<SmallVector<SmallVector<int64_t>>>;
 
 /// Tabulates the fragment every lane of the subgroup owns of `shape` under
-/// `layout`. Fails for non-unit lane_data, where a lane's elements are not a
-/// plain enumeration of the distribution unit starts.
+/// `layout`: `owned[lane][i]` is the coordinate of element `i` of that
+/// fragment, numbered as the flattened fragment `vector.extract` indexes.
+///
+/// Fails for non-unit lane_data. `computeStaticDistributedCoords` yields one
+/// coordinate per distribution unit -- the block start -- and those coincide
+/// with the elements only when a unit is a single element. Lifting this needs
+/// the block starts expanded in fragment order; `expandBlockCoords` in
+/// XeGPUDialect.cpp does such an expansion for layout comparison, but emits a
+/// whole unit before moving to the next, which matches the fragment only when
+/// lane_data is non-unit on the innermost dimension alone.
 static FailureOr<OwnedCoords>
 computeOwnedCoords(xegpu::DistributeLayoutAttr layout, ArrayRef<int64_t> shape,
-                   int64_t subgroupSize) {
+                   int64_t subgroupSize,
+                   std::optional<RedistributionLimit> &limit) {
   SmallVector<int64_t> laneData = layout.getEffectiveLaneDataAsInt();
-  if (!llvm::all_of(laneData, [](int64_t d) { return d == 1; }))
+  if (!llvm::all_of(laneData, [](int64_t d) { return d == 1; })) {
+    limit = RedistributionLimit::LaneDataNotUnit;
     return failure();
+  }
   OwnedCoords owned;
   for (int64_t lane = 0; lane < subgroupSize; lane++)
     owned.push_back(layout.computeStaticDistributedCoords(lane, shape));
@@ -2115,11 +2208,13 @@ static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
 }
 
 /// Works out where element `pos` of the target fragment comes from. Fails when
-/// no donor group provides it through a single extract.
+/// no donor group provides it through a single extract whose index is affine in
+/// the lane id.
 static FailureOr<ElementSource>
 deriveElementSource(const OwnedCoords &inputOwned,
                     const OwnedCoords &targetOwned, int64_t pos,
-                    int64_t subgroupSize, int64_t lanePeriod) {
+                    int64_t subgroupSize, int64_t lanePeriod,
+                    std::optional<RedistributionLimit> &limit) {
   // Index of the element with coordinate `coord` in the fragment `lane` holds,
   // or -1 if it holds none.
   auto findInFragment = [&](int64_t lane, ArrayRef<int64_t> coord) -> int64_t {
@@ -2129,7 +2224,10 @@ deriveElementSource(const OwnedCoords &inputOwned,
     return -1;
   };
 
-  // Donor groups, smallest `delta` first.
+  // Donor groups, smallest `delta` first. `sawCompleteDonor` records whether
+  // any group held the element at all, which is what distinguishes the two ways
+  // this fails.
+  bool sawCompleteDonor = false;
   for (int64_t donorDelta = 0; donorDelta < subgroupSize;
        donorDelta += lanePeriod) {
     // Where in its fragment each slot's donor keeps the element it needs.
@@ -2142,6 +2240,7 @@ deriveElementSource(const OwnedCoords &inputOwned,
     }
     if (static_cast<int64_t>(needed.size()) != lanePeriod)
       continue;
+    sawCompleteDonor = true;
 
     FailureOr<FragmentIndex> index = fitFragmentIndex(needed, lanePeriod);
     if (failed(index))
@@ -2152,44 +2251,55 @@ deriveElementSource(const OwnedCoords &inputOwned,
     // extract is local by construction.
     return ElementSource{*index, donorDelta, /*needsShuffle=*/donorDelta != 0};
   }
+  limit = sawCompleteDonor ? RedistributionLimit::IndexNotLaneAffine
+                           : RedistributionLimit::NoDonorDelta;
   return failure();
 }
 
 /// Redistributes `src`, the fragment the lane holds under `inputLayout`, into
 /// the `resTy` fragment it owns under `targetLayout`. Fails if the layout
 /// change is not of the form described above.
-static FailureOr<Value>
-redistributeBroadcastedValue(ConversionPatternRewriter &rewriter, Location loc,
-                             Value src, VectorType resTy,
-                             xegpu::DistributeLayoutAttr inputLayout,
-                             xegpu::DistributeLayoutAttr targetLayout,
-                             ArrayRef<int64_t> shape, int64_t subgroupSize) {
+static FailureOr<Value> redistributeBroadcastedValue(
+    ConversionPatternRewriter &rewriter, Location loc, Value src,
+    VectorType resTy, xegpu::DistributeLayoutAttr inputLayout,
+    xegpu::DistributeLayoutAttr targetLayout, ArrayRef<int64_t> shape,
+    int64_t subgroupSize, std::optional<RedistributionLimit> &limit) {
   auto srcTy = dyn_cast<VectorType>(src.getType());
   if (!srcTy)
     return failure();
   int64_t srcNumElems = srcTy.getNumElements();
   int64_t resNumElems = resTy.getNumElements();
   int64_t lanePeriod = getLanePeriod(targetLayout);
-  if (lanePeriod < 1 || subgroupSize % lanePeriod != 0)
+  if (!isSupportedLanePeriod(targetLayout, subgroupSize)) {
+    limit = RedistributionLimit::LanePeriodNotDivisor;
     return failure();
+  }
   // gpu.shuffle only moves the integer widths a lane can hold.
   int64_t elemBitWidth = srcTy.getElementTypeBitWidth();
   if (!llvm::isPowerOf2_64(elemBitWidth) || elemBitWidth < 8 ||
-      elemBitWidth > 64)
+      elemBitWidth > 64) {
+    limit = RedistributionLimit::SubByteElement;
     return failure();
+  }
 
   // Tabulate ownership: what each lane brings and what each slot needs.
-  auto inputOwned = computeOwnedCoords(inputLayout, shape, subgroupSize);
-  auto targetOwned = computeOwnedCoords(targetLayout, shape, subgroupSize);
+  auto inputOwned = computeOwnedCoords(inputLayout, shape, subgroupSize, limit);
+  auto targetOwned =
+      computeOwnedCoords(targetLayout, shape, subgroupSize, limit);
   if (failed(inputOwned) || failed(targetOwned))
     return failure();
-  // Require the layouts to distribute what the vector types account for, and
-  // the lanes past the first `lanePeriod` to be replicas.
+  // Require the layouts to distribute what the vector types account for. The
+  // lanes past the first `lanePeriod` are replicas by construction: both
+  // computeStaticDistributedCoords implementations delinearize the lane id
+  // modulo the lane_layout extents, whose product is `lanePeriod`.
   for (int64_t lane = 0; lane < subgroupSize; lane++) {
+    assert((*targetOwned)[lane] == (*targetOwned)[lane % lanePeriod] &&
+           "target ownership is not periodic in the lane period");
     if (static_cast<int64_t>((*inputOwned)[lane].size()) != srcNumElems ||
-        static_cast<int64_t>((*targetOwned)[lane].size()) != resNumElems ||
-        (*targetOwned)[lane] != (*targetOwned)[lane % lanePeriod])
+        static_cast<int64_t>((*targetOwned)[lane].size()) != resNumElems) {
+      limit = RedistributionLimit::FragmentSizeMismatch;
       return failure();
+    }
   }
 
   // Work out where every element of the result comes from before emitting
@@ -2197,7 +2307,7 @@ redistributeBroadcastedValue(ConversionPatternRewriter &rewriter, Location loc,
   SmallVector<ElementSource> sources;
   for (int64_t pos = 0; pos < resNumElems; pos++) {
     FailureOr<ElementSource> source = deriveElementSource(
-        *inputOwned, *targetOwned, pos, subgroupSize, lanePeriod);
+        *inputOwned, *targetOwned, pos, subgroupSize, lanePeriod, limit);
     if (failed(source))
       return failure();
     sources.push_back(*source);
@@ -2409,18 +2519,20 @@ struct SgToLaneConvertLayout
       }
     }
 
-    // Input layout replicates over broadcast groups of lanes while the target
-    // distributes, so data has to move across lanes.
+    // The two layouts assign the same distribution unit to different lanes, so
+    // data has to move across lanes.
     const auto *uArch =
         xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     FailureOr<VectorType> resDistTy = xegpu::getDistVecTypeBasedOnLaneLayout(
         targetLayout, cast<VectorType>(valType));
+    std::optional<RedistributionLimit> limit;
     if (uArch && succeeded(resDistTy)) {
       int64_t subgroupSize = uArch->getSubgroupSize();
-      if (isBroadcastRedistribution(inputLayout, targetLayout, subgroupSize)) {
+      if (isBroadcastRedistribution(inputLayout, targetLayout, subgroupSize,
+                                    limit)) {
         FailureOr<Value> res = redistributeBroadcastedValue(
             rewriter, op.getLoc(), adaptor.getSource(), *resDistTy, inputLayout,
-            targetLayout, resShapeVec, subgroupSize);
+            targetLayout, resShapeVec, subgroupSize, limit);
         if (succeeded(res)) {
           rewriter.replaceOp(op, *res);
           return success();
@@ -2428,6 +2540,11 @@ struct SgToLaneConvertLayout
       }
     }
 
+    if (limit)
+      return rewriter.notifyMatchFailure(
+          op, Twine("convert_layout is not a redistribution this pattern "
+                    "lowers: ") +
+                  describe(*limit));
     return rewriter.notifyMatchFailure(
         op, "lowering incompatible convert_layout not yet supported");
   }
