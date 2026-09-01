@@ -90,9 +90,9 @@ static const Decl *findRVRefOverload(const FunctionDecl &FD,
   for (const Decl *Overload : LookupResult) {
     if (Overload == &FD)
       continue;
-    if (const auto *O = dyn_cast<FunctionDecl>(Overload))
-      if (hasSameParameterTypes(FD, *O, PD))
-        return O;
+    if (const auto *O = dyn_cast<FunctionDecl>(Overload);
+        O && hasSameParameterTypes(FD, *O, PD))
+      return O;
   }
   return nullptr;
 }

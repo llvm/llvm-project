@@ -26,6 +26,44 @@ public:
   void runOnOperation() override;
 };
 
+// Rebuild the typed induction variable as low + step * canonicalIV. The
+// arithmetic is done in i64, which cannot wrap for any trip count flang
+// supports, so the result is a value of the loop variable and the final
+// narrowing is exact. Spelling it as an arith.trunci carrying nsw lets loop
+// analyses recover the recurrence in the narrower type; a fir.convert lowers
+// to a bare trunc and loses it. Not nuw: the loop variable may be negative.
+static mlir::Value buildTypedIV(mlir::PatternRewriter &rewriter,
+                                mlir::Location loc, mlir::Value canonicalIV,
+                                mlir::Value low, mlir::Value step,
+                                mlir::arith::IntegerOverflowFlagsAttr iofAttr,
+                                bool setNSW) {
+  mlir::Type ivType = low.getType();
+  auto intType = mlir::dyn_cast<mlir::IntegerType>(ivType);
+  if (!setNSW || !intType || intType.getWidth() >= 64) {
+    mlir::Value narrowIV =
+        fir::ConvertOp::create(rewriter, loc, ivType, canonicalIV);
+    mlir::Value scaled =
+        mlir::arith::MulIOp::create(rewriter, loc, narrowIV, step, iofAttr);
+    return mlir::arith::AddIOp::create(rewriter, loc, low, scaled, iofAttr);
+  }
+
+  mlir::Type wideType = rewriter.getI64Type();
+  mlir::Value wideIV =
+      fir::ConvertOp::create(rewriter, loc, wideType, canonicalIV);
+  mlir::Value wideLow = fir::ConvertOp::create(rewriter, loc, wideType, low);
+  mlir::Value wideStep = fir::ConvertOp::create(rewriter, loc, wideType, step);
+  mlir::Value scaled =
+      mlir::arith::MulIOp::create(rewriter, loc, wideIV, wideStep, iofAttr);
+  mlir::Value wideVal =
+      mlir::arith::AddIOp::create(rewriter, loc, wideLow, scaled, iofAttr);
+  mlir::arith::IntegerOverflowFlags flags{};
+  flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
+  auto noWrapAttr =
+      mlir::arith::IntegerOverflowFlagsAttr::get(rewriter.getContext(), flags);
+  return mlir::arith::TruncIOp::create(rewriter, loc, intType, wideVal,
+                                       noWrapAttr);
+}
+
 struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
   using OpRewritePattern<fir::DoLoopOp>::OpRewritePattern;
 
@@ -54,7 +92,7 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
     mlir::Value step = doLoopOp.getStep();
     bool hasTypedIV = !low.getType().isIndex();
     mlir::SmallVector<mlir::Value> iterArgs;
-    if (hasTypedIV || hasFinalValue)
+    if (hasFinalValue)
       iterArgs.push_back(low);
     iterArgs.append(doLoopOp.getIterOperands().begin(),
                     doLoopOp.getIterOperands().end());
@@ -104,18 +142,24 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
 
     rewriter.setInsertionPointToStart(&scfLoopBody);
     mlir::Value iv;
-    if (hasTypedIV) {
+    if (hasTypedIV && hasFinalValue) {
       iv = scfLoopLikeOp.getRegionIterArgs().front();
     } else {
-      iv = mlir::arith::MulIOp::create(
-          rewriter, loc, scfLoopLikeOp.getSingleInductionVar().value(), step);
-      iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv);
+      mlir::Value canonicalIV = scfLoopLikeOp.getSingleInductionVar().value();
+      if (hasTypedIV) {
+        iv = buildTypedIV(rewriter, loc, canonicalIV, low, step, iofAttr,
+                          setNSW);
+      } else {
+        iv = mlir::arith::MulIOp::create(rewriter, loc, canonicalIV, step,
+                                         iofAttr);
+        iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv, iofAttr);
+      }
     }
     mlir::Value firIV = doLoopOp.getInductionVar();
     firIV.replaceAllUsesWith(iv);
 
     mlir::Value finalValue;
-    if (hasTypedIV) {
+    if (hasTypedIV && hasFinalValue) {
       finalValue =
           mlir::arith::AddIOp::create(rewriter, loc, iv, step, iofAttr);
     } else if (hasFinalValue) {
@@ -134,23 +178,21 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
             mlir::arith::AddIOp::create(rewriter, loc, iv, step, iofAttr);
     }
 
-    if (hasTypedIV || hasFinalValue || !results.empty()) {
+    if (hasFinalValue || !results.empty()) {
       rewriter.setInsertionPointToEnd(&scfLoopBody);
       llvm::SmallVector<mlir::Value> yieldOperands;
-      if (hasTypedIV || hasFinalValue) {
+      if (hasFinalValue) {
         yieldOperands.push_back(finalValue);
-      }
-      if (hasFinalValue)
         llvm::append_range(yieldOperands, results.drop_front());
-      else
+      } else {
         llvm::append_range(yieldOperands, results);
+      }
       mlir::scf::YieldOp::create(rewriter, resultOp->getLoc(), yieldOperands);
     }
     rewriter.replaceAllUsesWith(
         doLoopOp.getRegionIterArgs(),
-        hasTypedIV || hasFinalValue
-            ? scfLoopLikeOp.getRegionIterArgs().drop_front()
-            : scfLoopLikeOp.getRegionIterArgs());
+        hasFinalValue ? scfLoopLikeOp.getRegionIterArgs().drop_front()
+                      : scfLoopLikeOp.getRegionIterArgs());
 
     // Copy loop annotations from the fir.do_loop to scf loop op.
     if (auto ann = doLoopOp.getLoopAnnotation())
@@ -161,10 +203,7 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
     if (auto parDims = doLoopOp->getAttr(mlir::acc::GPUParallelDimsAttr::name))
       scfLoopOp->setAttr(mlir::acc::GPUParallelDimsAttr::name, parDims);
 
-    mlir::ValueRange scfResults = scfLoopOp->getResults();
-    if (hasTypedIV && !hasFinalValue)
-      scfResults = scfResults.drop_front();
-    rewriter.replaceOp(doLoopOp, scfResults);
+    rewriter.replaceOp(doLoopOp, scfLoopOp->getResults());
     return mlir::success();
   }
 

@@ -1,5 +1,9 @@
 // RUN: fir-opt %s --fir-to-scf --split-input-file | FileCheck %s --check-prefixes=CHECK,NO-PARALLEL
 // RUN: fir-opt %s --fir-to-scf='parallel-unordered' --split-input-file | FileCheck %s --check-prefixes=CHECK,PARALLEL
+// Without the no-wrap flags there is nothing to preserve, so the narrowing
+// stays a plain conversion.
+// RUN: fir-opt %s --fir-to-scf='set-nsw=false' --split-input-file | FileCheck %s --check-prefix=NONSW
+// NONSW-NOT: arith.trunci
 
 // CHECK-LABEL:   func.func @simple_loop(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>) {
@@ -13,8 +17,8 @@
 // CHECK:           %[[VAL_7:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_8:.*]] = arith.constant 1 : index
 // CHECK:           scf.for %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_6]] step %[[VAL_8]] {
-// CHECK:             %[[VAL_10:.*]] = arith.muli %[[VAL_9]], %[[VAL_0]] : index
-// CHECK:             %[[VAL_11:.*]] = arith.addi %[[VAL_0]], %[[VAL_10]] : index
+// CHECK:             %[[VAL_10:.*]] = arith.muli %[[VAL_9]], %[[VAL_0]] overflow<nsw> : index
+// CHECK:             %[[VAL_11:.*]] = arith.addi %[[VAL_0]], %[[VAL_10]] overflow<nsw> : index
 // CHECK:             %[[VAL_12:.*]] = fir.array_coor %[[ARG0]](%[[VAL_2]]) %[[VAL_11]] : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:             fir.store %[[VAL_3]] to %[[VAL_12]] : !fir.ref<i32>
 // CHECK:           }
@@ -34,6 +38,8 @@ func.func @simple_loop(%arg0: !fir.ref<!fir.array<100xi32>>) {
 
 // -----
 
+// A typed induction variable is recomputed in closed form from the canonical
+// induction variable, so it adds neither an iter_arg nor a loop result.
 // CHECK-LABEL: func.func @typed_loop(
 // CHECK-SAME: %[[LB:.*]]: i32, %[[UB:.*]]: i32, %[[STEP:.*]]: i32,
 // CHECK-SAME: %[[ADDR:.*]]: !fir.ref<i32>) {
@@ -45,13 +51,129 @@ func.func @simple_loop(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK: %[[TRIP:.*]] = arith.divsi %[[DISTANCE]], %[[STEP_IDX]] : index
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[C1:.*]] = arith.constant 1 : index
-// CHECK: scf.for %{{.*}} = %[[C0]] to %[[TRIP]] step %[[C1]] iter_args(%[[IV:.*]] = %[[LB]]) -> (i32) {
-// CHECK:   %[[NEXT:.*]] = arith.addi %[[IV]], %[[STEP]] overflow<nsw> : i32
+// CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[TRIP]] step %[[C1]] {
+// CHECK:   %[[I_WIDE:.*]] = fir.convert %[[I]] : (index) -> i64
+// CHECK:   %[[LB_WIDE:.*]] = fir.convert %[[LB]] : (i32) -> i64
+// CHECK:   %[[STEP_WIDE:.*]] = fir.convert %[[STEP]] : (i32) -> i64
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_WIDE]], %[[STEP_WIDE]] overflow<nsw> : i64
+// CHECK:   %[[WIDE_IV:.*]] = arith.addi %[[LB_WIDE]], %[[SCALED]] overflow<nsw> : i64
+// CHECK:   %[[IV:.*]] = arith.trunci %[[WIDE_IV]] overflow<nsw> : i64 to i32
 // CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.ref<i32>
-// CHECK:   scf.yield %[[NEXT]] : i32
 // CHECK: }
+// CHECK-NOT: iter_args
 func.func @typed_loop(%lb: i32, %ub: i32, %step: i32,
                       %addr: !fir.ref<i32>) {
+  fir.do_loop %iv = %lb to %ub step %step : i32 {
+    fir.store %iv to %addr : !fir.ref<i32>
+  }
+  return
+}
+
+// -----
+
+// Only the loop's own iter_args survive; the typed IV does not add one.
+// CHECK-LABEL: func.func @typed_loop_iter_args(
+// CHECK: %[[C0:.*]] = arith.constant 0 : i32
+// CHECK: %[[C1:.*]] = arith.constant 1 : i32
+// CHECK: %[[TRIP:.*]] = arith.divsi
+// CHECK: %[[C0_IDX:.*]] = arith.constant 0 : index
+// CHECK: %[[C1_IDX:.*]] = arith.constant 1 : index
+// CHECK: %[[RES:.*]] = scf.for %[[I:.*]] = %[[C0_IDX]] to %[[TRIP]] step %[[C1_IDX]] iter_args(%[[ACC:.*]] = %[[C0]]) -> (i32) {
+// CHECK:   %[[I_WIDE:.*]] = fir.convert %[[I]] : (index) -> i64
+// CHECK:   %[[LB_WIDE:.*]] = fir.convert %[[C1]] : (i32) -> i64
+// CHECK:   %[[STEP_WIDE:.*]] = fir.convert %[[C1]] : (i32) -> i64
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_WIDE]], %[[STEP_WIDE]] overflow<nsw> : i64
+// CHECK:   %[[WIDE_IV:.*]] = arith.addi %[[LB_WIDE]], %[[SCALED]] overflow<nsw> : i64
+// CHECK:   %[[IV:.*]] = arith.trunci %[[WIDE_IV]] overflow<nsw> : i64 to i32
+// CHECK:   %[[SUM:.*]] = arith.addi %[[ACC]], %[[IV]] : i32
+// CHECK:   scf.yield %[[SUM]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @typed_loop_iter_args(%addr: !fir.ref<i32>) -> i32 {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %r = fir.do_loop %iv = %c1_i32 to %c10_i32 step %c1_i32 iter_args(%acc = %c0_i32) -> (i32) : i32 {
+    %v = arith.addi %acc, %iv : i32
+    fir.result %v : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// A negative step is handled by the same closed form, so it does not need an
+// iter_arg either.
+// CHECK-LABEL: func.func @typed_loop_negative_step(
+// CHECK-SAME: %[[ADDR:.*]]: !fir.ref<i32>) {
+// CHECK: %[[C1:.*]] = arith.constant 1 : i32
+// CHECK: %[[C10:.*]] = arith.constant 10 : i32
+// CHECK: %[[CM1:.*]] = arith.constant -1 : i32
+// CHECK: %[[LB_IDX:.*]] = fir.convert %[[C10]] : (i32) -> index
+// CHECK: %[[UB_IDX:.*]] = fir.convert %[[C1]] : (i32) -> index
+// CHECK: %[[STEP_IDX:.*]] = fir.convert %[[CM1]] : (i32) -> index
+// CHECK: %[[DIFF:.*]] = arith.subi %[[UB_IDX]], %[[LB_IDX]] : index
+// CHECK: %[[DISTANCE:.*]] = arith.addi %[[DIFF]], %[[STEP_IDX]] : index
+// CHECK: %[[TRIP:.*]] = arith.divsi %[[DISTANCE]], %[[STEP_IDX]] : index
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1_IDX:.*]] = arith.constant 1 : index
+// CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[TRIP]] step %[[C1_IDX]] {
+// CHECK:   %[[I_WIDE:.*]] = fir.convert %[[I]] : (index) -> i64
+// CHECK:   %[[LB_WIDE:.*]] = fir.convert %[[C10]] : (i32) -> i64
+// CHECK:   %[[STEP_WIDE:.*]] = fir.convert %[[CM1]] : (i32) -> i64
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_WIDE]], %[[STEP_WIDE]] overflow<nsw> : i64
+// CHECK:   %[[WIDE_IV:.*]] = arith.addi %[[LB_WIDE]], %[[SCALED]] overflow<nsw> : i64
+// CHECK:   %[[IV:.*]] = arith.trunci %[[WIDE_IV]] overflow<nsw> : i64 to i32
+// CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.ref<i32>
+// CHECK: }
+// CHECK-NOT: iter_args
+func.func @typed_loop_negative_step(%addr: !fir.ref<i32>) {
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %cm1_i32 = arith.constant -1 : i32
+  fir.do_loop %iv = %c10_i32 to %c1_i32 step %cm1_i32 : i32 {
+    fir.store %iv to %addr : !fir.ref<i32>
+  }
+  return
+}
+
+// -----
+
+// An induction variable that is not narrower than the canonical one needs no
+// truncation, so it keeps the plain conversion.
+// CHECK-LABEL: func.func @typed_loop_i64(
+// CHECK: scf.for %[[I:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:   %[[I_TYPED:.*]] = fir.convert %[[I]] : (index) -> i64
+// CHECK-NOT: arith.trunci
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_TYPED]], %{{.*}} overflow<nsw> : i64
+func.func @typed_loop_i64(%lb: i64, %ub: i64, %step: i64,
+                          %addr: !fir.ref<i64>) {
+  fir.do_loop %iv = %lb to %ub step %step : i64 {
+    fir.store %iv to %addr : !fir.ref<i64>
+  }
+  return
+}
+
+// -----
+
+// do i = -huge(i), huge(i)-1 has a trip count of 2^32-2, which does not fit in
+// the i32 loop variable. The arithmetic stays in i64 so nothing wraps, and only
+// the result is narrowed.
+// CHECK-LABEL: func.func @typed_loop_huge_trip_count(
+// CHECK: %[[LB:.*]] = arith.constant -2147483647 : i32
+// CHECK: %[[UB:.*]] = arith.constant 2147483646 : i32
+// CHECK: %[[STEP:.*]] = arith.constant 1 : i32
+// CHECK: scf.for %[[I:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:   %[[I_WIDE:.*]] = fir.convert %[[I]] : (index) -> i64
+// CHECK:   %[[LB_WIDE:.*]] = fir.convert %[[LB]] : (i32) -> i64
+// CHECK:   %[[STEP_WIDE:.*]] = fir.convert %[[STEP]] : (i32) -> i64
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_WIDE]], %[[STEP_WIDE]] overflow<nsw> : i64
+// CHECK:   %[[WIDE_IV:.*]] = arith.addi %[[LB_WIDE]], %[[SCALED]] overflow<nsw> : i64
+// CHECK:   %[[IV:.*]] = arith.trunci %[[WIDE_IV]] overflow<nsw> : i64 to i32
+func.func @typed_loop_huge_trip_count(%addr: !fir.ref<i32>) {
+  %lb = arith.constant -2147483647 : i32
+  %ub = arith.constant 2147483646 : i32
+  %step = arith.constant 1 : i32
   fir.do_loop %iv = %lb to %ub step %step : i32 {
     fir.store %iv to %addr : !fir.ref<i32>
   }
@@ -73,8 +195,8 @@ func.func @typed_loop(%lb: i32, %ub: i32, %step: i32,
 // CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_8]] to %[[VAL_7]] step %[[VAL_9]] {
-// CHECK:             %[[VAL_11:.*]] = arith.muli %[[VAL_10]], %[[VAL_2]] : index
-// CHECK:             %[[VAL_12:.*]] = arith.addi %[[VAL_0]], %[[VAL_11]] : index
+// CHECK:             %[[VAL_11:.*]] = arith.muli %[[VAL_10]], %[[VAL_2]] overflow<nsw> : index
+// CHECK:             %[[VAL_12:.*]] = arith.addi %[[VAL_0]], %[[VAL_11]] overflow<nsw> : index
 // CHECK:             %[[VAL_13:.*]] = fir.array_coor %[[ARG0]](%[[VAL_3]]) %[[VAL_12]] : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:             fir.store %[[VAL_4]] to %[[VAL_13]] : !fir.ref<i32>
 // CHECK:           }
@@ -108,8 +230,8 @@ func.func @loop_with_negtive_step(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:           %[[VAL_7:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_8:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_9:.*]] = scf.for %[[VAL_10:.*]] = %[[VAL_7]] to %[[VAL_6]] step %[[VAL_8]] iter_args(%[[VAL_11:.*]] = %[[VAL_1]]) -> (i32) {
-// CHECK:             %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_0]] : index
-// CHECK:             %[[VAL_13:.*]] = arith.addi %[[VAL_0]], %[[VAL_12]] : index
+// CHECK:             %[[VAL_12:.*]] = arith.muli %[[VAL_10]], %[[VAL_0]] overflow<nsw> : index
+// CHECK:             %[[VAL_13:.*]] = arith.addi %[[VAL_0]], %[[VAL_12]] overflow<nsw> : index
 // CHECK:             %[[VAL_14:.*]] = fir.array_coor %[[ARG0]](%[[VAL_3]]) %[[VAL_13]] : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<i32>
 // CHECK:             %[[VAL_16:.*]] = arith.addi %[[VAL_11]], %[[VAL_15]] : i32
@@ -149,8 +271,8 @@ func.func @loop_with_results(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !fir.r
 // CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_10:.*]]:2 = scf.for %[[VAL_11:.*]] = %[[VAL_8]] to %[[VAL_7]] step %[[VAL_9]] iter_args(%[[VAL_12:.*]] = %[[VAL_0]], %[[VAL_13:.*]] = %[[VAL_1]]) -> (index, i32) {
-// CHECK:             %[[VAL_14:.*]] = arith.muli %[[VAL_11]], %[[VAL_0]] : index
-// CHECK:             %[[VAL_15:.*]] = arith.addi %[[VAL_0]], %[[VAL_14]] : index
+// CHECK:             %[[VAL_14:.*]] = arith.muli %[[VAL_11]], %[[VAL_0]] overflow<nsw> : index
+// CHECK:             %[[VAL_15:.*]] = arith.addi %[[VAL_0]], %[[VAL_14]] overflow<nsw> : index
 // CHECK:             %[[VAL_16:.*]] = fir.array_coor %[[ARG0]](%[[VAL_4]]) %[[VAL_15]] : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:             %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
 // CHECK:             %[[VAL_18:.*]] = arith.addi %[[VAL_15]], %[[VAL_0]] overflow<nsw> : index
@@ -244,8 +366,8 @@ func.func @loop_with_final_value_and_result() {
 // CHECK:           %[[CONSTANT_4:.*]] = arith.constant 1 : index
 // PARALLEL:        scf.parallel (%[[VAL_0:.*]]) = (%[[CONSTANT_3]]) to (%[[DIVSI_0]]) step (%[[CONSTANT_4]]) {
 // NO-PARALLEL:     scf.for %[[VAL_0:.*]] = %[[CONSTANT_3]] to %[[DIVSI_0]] step %[[CONSTANT_4]] {
-// CHECK:             %[[MULI_0:.*]] = arith.muli %[[VAL_0]], %[[CONSTANT_0]] : index
-// CHECK:             %[[ADDI_1:.*]] = arith.addi %[[CONSTANT_0]], %[[MULI_0]] : index
+// CHECK:             %[[MULI_0:.*]] = arith.muli %[[VAL_0]], %[[CONSTANT_0]] overflow<nsw> : index
+// CHECK:             %[[ADDI_1:.*]] = arith.addi %[[CONSTANT_0]], %[[MULI_0]] overflow<nsw> : index
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[ARG0]](%[[SHAPE_0]]) %[[ADDI_1]] : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:             fir.store %[[CONSTANT_2]] to %[[ARRAY_COOR_0]] : !fir.ref<i32>
 // PARALLEL:          scf.reduce
@@ -282,8 +404,8 @@ func.func @loop_with_unordered_attr(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_8]] to %[[VAL_7]] step %[[VAL_9]] {
-// CHECK:             %[[VAL_11:.*]] = arith.muli %[[VAL_10]], %[[VAL_0]] : index
-// CHECK:             %[[VAL_12:.*]] = arith.addi %[[VAL_0]], %[[VAL_11]] : index
+// CHECK:             %[[VAL_11:.*]] = arith.muli %[[VAL_10]], %[[VAL_0]] overflow<nsw> : index
+// CHECK:             %[[VAL_12:.*]] = arith.addi %[[VAL_0]], %[[VAL_11]] overflow<nsw> : index
 // CHECK:             %[[VAL_13:.*]] = fir.array_coor %[[ARG0]](%[[VAL_4]]) %[[VAL_12]] : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:             %[[VAL_14:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
 // CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
@@ -326,16 +448,16 @@ func.func @loop_with_attribute(%arg0: !fir.ref<!fir.array<100xi32>>, %arg1: !fir
 // CHECK:           %[[VAL_7:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_8:.*]] = arith.constant 1 : index
 // CHECK:           scf.for %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_6]] step %[[VAL_8]] {
-// CHECK:             %[[VAL_10:.*]] = arith.muli %[[VAL_9]], %[[VAL_0]] : index
-// CHECK:             %[[VAL_11:.*]] = arith.addi %[[VAL_0]], %[[VAL_10]] : index
+// CHECK:             %[[VAL_10:.*]] = arith.muli %[[VAL_9]], %[[VAL_0]] overflow<nsw> : index
+// CHECK:             %[[VAL_11:.*]] = arith.addi %[[VAL_0]], %[[VAL_10]] overflow<nsw> : index
 // CHECK:             %[[VAL_12:.*]] = arith.subi %[[VAL_2]], %[[VAL_0]] : index
 // CHECK:             %[[VAL_13:.*]] = arith.addi %[[VAL_12]], %[[VAL_0]] : index
 // CHECK:             %[[VAL_14:.*]] = arith.divsi %[[VAL_13]], %[[VAL_0]] : index
 // CHECK:             %[[VAL_15:.*]] = arith.constant 0 : index
 // CHECK:             %[[VAL_16:.*]] = arith.constant 1 : index
 // CHECK:             scf.for %[[VAL_17:.*]] = %[[VAL_15]] to %[[VAL_14]] step %[[VAL_16]] {
-// CHECK:               %[[VAL_18:.*]] = arith.muli %[[VAL_17]], %[[VAL_0]] : index
-// CHECK:               %[[VAL_19:.*]] = arith.addi %[[VAL_0]], %[[VAL_18]] : index
+// CHECK:               %[[VAL_18:.*]] = arith.muli %[[VAL_17]], %[[VAL_0]] overflow<nsw> : index
+// CHECK:               %[[VAL_19:.*]] = arith.addi %[[VAL_0]], %[[VAL_18]] overflow<nsw> : index
 // CHECK:               %[[VAL_20:.*]] = fir.array_coor %[[ARG0]](%[[VAL_3]]) %[[VAL_19]], %[[VAL_11]] : (!fir.ref<!fir.array<100x100xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
 // CHECK:               fir.store %[[VAL_1]] to %[[VAL_20]] : !fir.ref<i32>
 // CHECK:             }

@@ -6,6 +6,8 @@
 // Must not be implemented, no other reason to install interceptors.
 // XFAIL: ubsan
 
+// UNSUPPORTED: rtsan
+
 #include <assert.h>
 #include <sanitizer/allocator_interface.h>
 #include <stdlib.h>

@@ -4189,7 +4189,7 @@ static std::pair<bool, bool> parsePhysicalReg(StringRef C, StringRef &Prefix,
 EVT MipsTargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
                                             ISD::NodeType) const {
   bool Cond = !Subtarget.isABI_O32() && VT.getSizeInBits() == 32;
-  EVT MinVT = getRegisterType(Cond ? MVT::i64 : MVT::i32);
+  EVT MinVT = getRegisterType(Context, Cond ? MVT::i64 : MVT::i32);
   return VT.bitsLT(MinVT) ? MinVT : VT;
 }
 
@@ -5002,9 +5002,23 @@ MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
   // 3. Get register.
   if (regIdx >= 0 && regIdx < 32) {
     const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
-    const MCRegisterClass &RC = Subtarget.isGP64bit()
-                                    ? MRI->getRegClass(Mips::GPR64RegClassID)
-                                    : MRI->getRegClass(Mips::GPR32RegClassID);
+    unsigned RegClassID = Mips::GPR32RegClassID;
+    if (VT.isValid()) {
+      if (VT.getSizeInBits() == 64) {
+        if (!Subtarget.isGP64bit())
+          report_fatal_error("64-bit registers not supported on 32-bit target");
+        RegClassID = Mips::GPR64RegClassID;
+      } else if (VT.getSizeInBits() == 32) {
+        RegClassID = Mips::GPR32RegClassID;
+      } else {
+        report_fatal_error(Twine("Invalid register \"" + StringRef(RegName) +
+                                 "\" for " + Twine(VT.getSizeInBits()) +
+                                 "-bit type."));
+      }
+    } else if (Subtarget.isGP64bit()) {
+      RegClassID = Mips::GPR64RegClassID;
+    }
+    const MCRegisterClass &RC = MRI->getRegClass(RegClassID);
     return RC.getRegister(regIdx);
   }
 

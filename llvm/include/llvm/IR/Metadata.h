@@ -1079,11 +1079,11 @@ class MDNode : public Metadata {
   /// Explicity set alignment because bitfields by default have an
   /// alignment of 1 on z/OS.
   struct alignas(alignof(size_t)) Header {
-    size_t IsResizable : 1;
-    size_t IsLarge : 1;
-    size_t SmallSize : 4;
-    size_t SmallNumOps : 4;
-    size_t : sizeof(size_t) * CHAR_BIT - 10;
+    uint32_t IsResizable : 1;
+    uint32_t IsLarge : 1;
+    uint32_t SmallSize : 4;
+    uint32_t SmallNumOps : 4;
+    uint32_t MetadataPrintID;
 
     unsigned NumUnresolved = 0;
     using LargeStorageVector = SmallVector<MDOperand, 0>;

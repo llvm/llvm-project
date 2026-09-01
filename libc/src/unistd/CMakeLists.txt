@@ -1,6 +1,6 @@
 if(NOT TARGET libc.src.__support.OSUtil.osutil)
   message(STATUS "libc.src.__support.OSUtil.osutil is not avaiable. "
-                 "Skip unistd targets.")
+    "Skip unistd targets.")
   return()
 endif()
 
@@ -45,6 +45,22 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.chown
+)
+
+add_entrypoint_object(
+  confstr
+  SRCS
+    confstr.cpp
+  HDRS
+    confstr.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.unistd_macros
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -111,6 +127,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execle
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execle
+)
+
+add_entrypoint_object(
   execv
   ALIAS
   DEPENDS
@@ -143,6 +166,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.getcwd
+)
+
+add_entrypoint_object(
+  getegid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getegid
 )
 
 add_entrypoint_object(
@@ -236,7 +266,6 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.pathconf
 )
 
-
 add_entrypoint_object(
   pipe
   ALIAS
@@ -294,10 +323,45 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setgid
+)
+
+add_entrypoint_object(
+  setregid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setregid
+)
+
+add_entrypoint_object(
+  setreuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setreuid
+)
+
+add_entrypoint_object(
   setsid
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.setsid
+)
+
+add_entrypoint_object(
+  setuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setuid
+)
+
+add_entrypoint_object(
+  sleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sleep
 )
 
 add_entrypoint_object(
@@ -347,6 +411,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.unlinkat
+)
+
+add_entrypoint_object(
+  usleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.usleep
 )
 
 add_entrypoint_object(

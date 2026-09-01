@@ -12,7 +12,7 @@
 #include "../utils/ASTUtils.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/Lex/PPCallbacks.h"
-#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -94,6 +94,7 @@ namespace readability {
     m(LocalConstantPointer) \
     m(LocalPointer) \
     m(LocalVariable) \
+    m(LambdaCapture) \
     m(StaticConstexprVariable) \
     m(StaticConstant) \
     m(StaticVariable) \
@@ -416,6 +417,9 @@ IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
 bool IdentifierNamingCheck::HungarianNotation::checkOptionValid(
     int StyleKindIndex) const {
+  if (StyleKindIndex == SK_Default)
+    return true;
+
   if ((StyleKindIndex >= SK_EnumConstant) &&
       (StyleKindIndex <= SK_ConstantParameter))
     return true;
@@ -643,7 +647,7 @@ StringRef IdentifierNamingCheck::HungarianNotation::getClassPrefix(
       !isOptionEnabled("TreatStructAsClass", HNOption.General))
     return {};
 
-  return CRD->isAbstract() ? "I" : "C";
+  return CRD->hasDefinition() && CRD->isAbstract() ? "I" : "C";
 }
 
 std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
@@ -1241,9 +1245,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   // C++17 structured bindings: treat each binding as if it were a variable
   // with the same storage and qualifiers as the parent DecompositionDecl.
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
-    if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl()))
-      if (!BD->getType().isNull())
-        return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
+    if (const DecompositionDecl *Decomp = BD->getDecomposedDecl();
+        Decomp && !BD->getType().isNull())
+      return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
     return SK_Invalid;
   }
 
@@ -1255,9 +1259,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     // If this method has the same name as any base method, this is likely
     // necessary even if it's not an override. e.g. CRTP.
     for (const CXXBaseSpecifier &Base : Decl->getParent()->bases())
-      if (const auto *RD = Base.getType()->getAsCXXRecordDecl())
-        if (RD->hasMemberName(Decl->getDeclName()))
-          return SK_Invalid;
+      if (const auto *RD = Base.getType()->getAsCXXRecordDecl();
+          RD && RD->hasMemberName(Decl->getDeclName()))
+        return SK_Invalid;
 
     if (Decl->isConstexpr() && NamingStyles[SK_ConstexprMethod])
       return SK_ConstexprMethod;
@@ -1518,6 +1522,9 @@ StyleKind IdentifierNamingCheck::findStyleKindForField(
 StyleKind IdentifierNamingCheck::findStyleKindForVar(
     const VarDecl *Var, QualType Type,
     ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+  if (Var->isInitCapture() && NamingStyles[SK_LambdaCapture])
+    return SK_LambdaCapture;
+
   if (Var->isConstexpr()) {
     if (Var->isStaticDataMember() && NamingStyles[SK_ClassConstexpr])
       return SK_ClassConstexpr;

@@ -70,7 +70,6 @@
 
 #include "AMDGPURegisterBankInfo.h"
 
-#include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
@@ -4897,9 +4896,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_sqrt: {
-      unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-      if (Subtarget.hasPseudoScalarTrans() && (Size == 16 || Size == 32) &&
-          isSALUMapping(MI))
+      LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+      unsigned Size = Ty.getSizeInBits();
+      // There is no pseudo scalar transcendental instruction for bf16.
+      if (Subtarget.hasPseudoScalarTrans() && !Ty.isBFloat16() &&
+          (Size == 16 || Size == 32) && isSALUMapping(MI))
         return getDefaultMappingSOP(MI);
       return getDefaultMappingVOP(MI);
     }
@@ -4967,16 +4968,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, DstSize);
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Src0Size);
       OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Src1Size);
-      break;
-    }
-    case Intrinsic::amdgcn_icmp:
-    case Intrinsic::amdgcn_fcmp: {
-      unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-      // This is not VCCRegBank because this is not used in boolean contexts.
-      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, DstSize);
-      unsigned OpSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
-      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, OpSize);
-      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, OpSize);
       break;
     }
     case Intrinsic::amdgcn_readlane: {
