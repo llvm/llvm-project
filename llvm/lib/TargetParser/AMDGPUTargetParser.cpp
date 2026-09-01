@@ -171,6 +171,10 @@ Triple::SubArchType llvm::AMDGPU::getSubArch(GPUKind AK) {
   return Info ? Info->SubArch : Triple::SubArchType::NoSubArch;
 }
 
+Triple::SubArchType llvm::AMDGPU::getSubArchFromGPUName(StringRef CPU) {
+  return getSubArch(parseArchAMDGCN(CPU));
+}
+
 StringRef llvm::AMDGPU::getBaseArchNameAMDGCN(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? AMDGPUNameStrTab[Info->BaseName] : "";
