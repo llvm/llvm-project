@@ -19,7 +19,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_cfa_constant_address 0, 6
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
@@ -69,7 +69,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_cfa_constant_address 0, 6
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
@@ -119,7 +119,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_cfa_constant_address 0, 6
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
@@ -170,7 +170,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_cfa_constant_address 0, 6
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
@@ -223,7 +223,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_cfa_constant_address 0, 6
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc

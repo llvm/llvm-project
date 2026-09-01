@@ -107,7 +107,7 @@ body:             |
   ; FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; FLATSCR-NEXT:   liveins: $sgpr40, $sgpr41, $vgpr1
   ; FLATSCR-NEXT: {{  $}}
-  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr4
@@ -143,7 +143,7 @@ body:             |
   ; FLATSCR-NEXT:   $sgpr41 = frame-setup COPY $sgpr34
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr41
   ; FLATSCR-NEXT:   $sgpr34 = frame-setup COPY $sgpr32
-  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr33, 4, 6, 6
   ; FLATSCR-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 172032, implicit-def dead $scc
   ; FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; FLATSCR-NEXT:   S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr28, implicit-def $sgpr29, implicit-def $sgpr30, implicit-def $sgpr31, implicit-def $vcc
@@ -169,7 +169,7 @@ body:             |
   ; FLATSCR-NEXT: {{  $}}
   ; FLATSCR-NEXT:   $sgpr32 = frame-destroy COPY $sgpr34
   ; FLATSCR-NEXT:   $sgpr34 = frame-destroy COPY $sgpr41
-  ; FLATSCR-NEXT:   frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+  ; FLATSCR-NEXT:   frame-destroy CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
   ; FLATSCR-NEXT:   $sgpr33 = frame-destroy COPY $sgpr40
   ; FLATSCR-NEXT:   S_ENDPGM 0
   bb.0:

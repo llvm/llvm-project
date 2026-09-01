@@ -8,7 +8,7 @@ define amdgpu_kernel void @_Z3fooPiiii(ptr addrspace(1) nocapture noundef writeo
 ; CHECK-NEXT:    .cfi_sections .debug_frame
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02 ; CFA is 0 in private_wave aspace
+; CHECK-NEXT:    .cfi_llvm_def_cfa_constant_address 0, 6
 ; CHECK-NEXT:    .cfi_undefined 16
 ; CHECK-NEXT:    .file 1 "." "a.h"
 ; CHECK-NEXT:    .loc 1 5 12 prologue_end ; ./a.h:5:12 @[ a.hip:12:8 ]
