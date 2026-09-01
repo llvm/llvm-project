@@ -9027,7 +9027,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
 
   // Perform any unqualified lookups we're going to need to default this
   // function.
-  if (S) {
+  if (S && !FD->isInvalidDecl()) {
     UnresolvedSet<32> Operators;
     lookupOperatorsForDefaultedComparison(*this, S, Operators,
                                           FD->getOverloadedOperator());
@@ -19011,7 +19011,7 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   // Only allocate DefaultedOrDeletedFunctionInfo if we actually have
   // non-default FP features to stash. This avoids memory overhead for
   // the vast majority of defaulted functions.
-  if (!FD->getDefaultedOrDeletedInfo() &&
+  if (!FD->isInvalidDecl() && !FD->getDefaultedOrDeletedInfo() &&
       CurFPFeatureOverrides().requiresTrailingStorage()) {
     FD->setDefaultedOrDeletedInfo(
         FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
