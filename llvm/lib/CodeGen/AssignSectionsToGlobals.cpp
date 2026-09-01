@@ -125,7 +125,8 @@ bool AssignSections::run(Module &Mod, TargetMachine *TMIn) {
   // Iterate over objects, and assign sections
   for (GlobalObject &GO : M->global_objects()) {
     if (GO.isDeclarationForLinker() || GO.hasSection() ||
-        GO.hasCommonLinkage() || GO.getName().starts_with("llvm."))
+        GO.hasCommonLinkage() || GO.getName().starts_with("llvm.") ||
+        GO.hasMetadata(LLVMContext::MD_type))
       continue;
 
     GO.setSection(getDefaultSectionNameForGlobal(GO));
