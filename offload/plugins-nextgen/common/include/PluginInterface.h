@@ -961,8 +961,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
 
-  /// Get the index of the context group this device belongs to.
-  virtual uint32_t getContextGroupOffset() const { return 0; }
+  virtual uint32_t getDriverId() const { return 0; }
 
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
@@ -1551,9 +1550,6 @@ struct GenericPluginTy {
 
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
-
-  /// Get the number of context groups supported by this plugin.
-  virtual uint32_t getNumContextGroups() const { return 1; }
 
   /// Get the plugin-specific device identifier.
   int32_t getUserId(int32_t DeviceId) const {

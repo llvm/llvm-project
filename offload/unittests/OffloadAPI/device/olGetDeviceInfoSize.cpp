@@ -55,13 +55,13 @@ TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkSizePerDimension) {
   ASSERT_EQ(Size, sizeof(uint32_t) * 3);
 }
 
-TEST(olGetDeviceInfoSizeHostTest, SuccessContextGroupIndex) {
+TEST(olGetDeviceInfoSizeHostTest, SuccessDriverId) {
   ol_device_handle_t Host = TestEnvironment::getHostDevice();
   ASSERT_NE(Host, nullptr);
 
   size_t Size = 0;
   ASSERT_SUCCESS(
-      olGetDeviceInfoSize(Host, OL_DEVICE_INFO_CONTEXT_GROUP_INDEX, &Size));
+      olGetDeviceInfoSize(Host, OL_DEVICE_INFO_DRIVER_ID, &Size));
   ASSERT_EQ(Size, sizeof(uint32_t));
 }
 

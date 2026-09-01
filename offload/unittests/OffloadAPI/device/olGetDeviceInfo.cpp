@@ -91,11 +91,10 @@ TEST_P(olGetHostDeviceInfoTest, SuccessPlatform) {
   ASSERT_NE(Platform, nullptr);
 }
 
-TEST_P(olGetHostDeviceInfoTest, SuccessContextGroupIndex) {
-  uint32_t ContextGroupIndex = 0;
-  ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_CONTEXT_GROUP_INDEX,
-                                 sizeof(ContextGroupIndex),
-                                 &ContextGroupIndex));
+TEST_P(olGetHostDeviceInfoTest, SuccessDriverId) {
+  uint32_t DriverId = 0;
+  ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_DRIVER_ID,
+                                 sizeof(DriverId), &DriverId));
 }
 
 TEST_P(olGetHostDeviceInfoTest, InvalidNullHandleDevice) {

@@ -51,7 +51,7 @@ TEST(PlatformTest, APIGetPlatformsDefaultMock) {
 
 namespace {
 
-class PlatformContextGroupTest : public Test {
+class PlatformDriverIdTest : public Test {
 protected:
   void SetUp() override {
     Platform = mock::createDummyHandle<ol_platform_handle_t>();
@@ -69,15 +69,15 @@ protected:
         });
 
     ON_CALL(Helper.Mock.get(),
-            olGetDeviceInfo(_, OL_DEVICE_INFO_CONTEXT_GROUP_INDEX, _, _))
+            olGetDeviceInfo(_, OL_DEVICE_INFO_DRIVER_ID, _, _))
         .WillByDefault([this](ol_device_handle_t Device,
                               ol_device_info_t /*PropName*/, size_t PropSize,
                               void *PropValue) -> ol_result_t {
           EXPECT_EQ(PropSize, sizeof(uint32_t));
-          if (FailContextGroupQuery)
+          if (FailDriverIdQuery)
             return Helper.Mock.get().makeEmptyStrError(OL_ERRC_UNIMPLEMENTED);
 
-          *static_cast<uint32_t *>(PropValue) = getContextGroup(Device);
+          *static_cast<uint32_t *>(PropValue) = getDriverId(Device);
           return OL_SUCCESS;
         });
   }
@@ -86,7 +86,7 @@ protected:
     mock::releaseDummyHandles(Devices[0], Devices[1], Devices[2], Platform);
   }
 
-  uint32_t getContextGroup(ol_device_handle_t Device) const {
+  uint32_t getDriverId(ol_device_handle_t Device) const {
     if (Device == Devices[0] || Device == Devices[2])
       return 0;
     if (Device == Devices[1])
@@ -98,10 +98,10 @@ protected:
   unittests::UnittestsHelper Helper;
   ol_platform_handle_t Platform{};
   std::array<ol_device_handle_t, 3> Devices{};
-  bool FailContextGroupQuery = false;
+  bool FailDriverIdQuery = false;
 };
 
-TEST_F(PlatformContextGroupTest, CreatesPlatformForEachContextGroup) {
+TEST_F(PlatformDriverIdTest, CreatesPlatformForEachDriverId) {
   EXPECT_CALL(Helper.Mock.get(), olCreateContext(_, _, _))
       .Times(2)
       .WillRepeatedly([this](size_t NumDevices,
@@ -110,9 +110,9 @@ TEST_F(PlatformContextGroupTest, CreatesPlatformForEachContextGroup) {
         EXPECT_GT(NumDevices, 0u);
         if (NumDevices == 0)
           return Helper.Mock.get().makeEmptyStrError(OL_ERRC_INVALID_SIZE);
-        const uint32_t ContextGroup = getContextGroup(ContextDevices[0]);
+        const uint32_t ExpectedDriverId = getDriverId(ContextDevices[0]);
         for (size_t I = 1; I < NumDevices; ++I)
-          EXPECT_EQ(getContextGroup(ContextDevices[I]), ContextGroup);
+          EXPECT_EQ(getDriverId(ContextDevices[I]), ExpectedDriverId);
 
         *Context = mock::createDummyHandle<ol_context_handle_t>();
         return OL_SUCCESS;
@@ -154,8 +154,8 @@ TEST_F(PlatformContextGroupTest, CreatesPlatformForEachContextGroup) {
   EXPECT_EQ(Queue1.get_context(), Context1);
 }
 
-TEST_F(PlatformContextGroupTest, ContextGroupQueryFailureUsesDefaultGroup) {
-  FailContextGroupQuery = true;
+TEST_F(PlatformDriverIdTest, DriverIdQueryFailureUsesDefaultGroup) {
+  FailDriverIdQuery = true;
 
   EXPECT_CALL(Helper.Mock.get(), olCreateContext(3, _, _)).Times(1);
 

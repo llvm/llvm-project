@@ -45,7 +45,6 @@ struct ol_platform_impl_t {
                      ol_platform_backend_t BackendType)
       : BackendType(BackendType), Plugin(std::move(Plugin)) {}
   ol_platform_backend_t BackendType;
-  uint32_t ContextGroupBase = 0;
 
   /// Complete all pending work for this platform and perform any needed
   /// cleanup.
@@ -77,11 +76,6 @@ struct ol_device_impl_t {
   ol_platform_impl_t &Platform;
   InfoTreeNode Info;
 };
-
-static uint32_t getContextGroupIndex(ol_device_handle_t Device) {
-  return Device->Platform.ContextGroupBase +
-         Device->Device->getContextGroupOffset();
-}
 
 llvm::Error ol_platform_impl_t::destroy() { return Plugin->deinit(); }
 
@@ -339,13 +333,6 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
       return Err;
   }
 
-  uint32_t CurCtxGroupBase = 0;
-  for (auto &Platform : Context.Platforms) {
-    Platform->ContextGroupBase = CurCtxGroupBase;
-    CurCtxGroupBase +=
-        Platform->Plugin ? Platform->Plugin->getNumContextGroups() : 1;
-  }
-
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
 
@@ -496,8 +483,8 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.write<uint64_t>(Mem);
   } break;
 
-  case OL_DEVICE_INFO_CONTEXT_GROUP_INDEX:
-    return Info.write<uint32_t>(getContextGroupIndex(Device));
+  case OL_DEVICE_INFO_DRIVER_ID:
+    return Info.write<uint32_t>(Device->Device->getDriverId());
 
   default:
     break;
@@ -642,10 +629,10 @@ Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
       return createOffloadError(
           ErrorCode::INVALID_DEVICE,
           "all devices in a context must belong to the same platform");
-    if (getContextGroupIndex(Devices[I]) != getContextGroupIndex(Devices[0]))
+    if (Devices[I]->Device->getDriverId() != Devices[0]->Device->getDriverId())
       return createOffloadError(
           ErrorCode::INVALID_DEVICE,
-          "all devices in a context must belong to the same context group");
+          "all devices in a context must have the same driver ID");
     DeviceList.push_back(Devices[I]);
     PluginDevices.push_back(Devices[I]->Device);
   }

@@ -29,18 +29,18 @@ namespace detail {
 struct OffloadDeviceDesc {
   ol_platform_handle_t Platform;
   ol_device_handle_t Device;
-  uint32_t ContextGroupIndex;
+  uint32_t DriverId;
 };
 
 using Platform2DevContainer = std::vector<OffloadDeviceDesc>;
 
 struct OffloadPlatformGroup {
   ol_platform_handle_t Platform;
-  uint32_t ContextGroupIndex;
+  uint32_t DriverId;
   std::vector<ol_device_handle_t> Devices;
 };
 
-/// Storage of platform context groups and their device handles for a backend.
+/// Storage of platform driver groups and their device handles for a backend.
 struct OffloadTopology {
   OffloadTopology() : MBackend(OL_PLATFORM_BACKEND_UNKNOWN) {}
   OffloadTopology(ol_platform_backend_t OlBackend) : MBackend(OlBackend) {}
@@ -55,14 +55,14 @@ struct OffloadTopology {
   /// \returns backend of this topology.
   ol_platform_backend_t getBackend() const { return MBackend; }
 
-  /// Returns all platform context groups associated with this topology.
+  /// Returns all platform driver groups associated with this topology.
   ///
-  /// \returns platform context groups associated with this topology.
+  /// \returns platform driver groups associated with this topology.
   const std::vector<OffloadPlatformGroup> &getPlatformGroups() const {
     return MPlatformGroups;
   }
 
-  /// Registers platform context groups and devices into this topology.
+  /// Registers platform driver groups and devices into this topology.
   ///
   /// \param PlatformsAndDev collection of platforms & devices.
   void

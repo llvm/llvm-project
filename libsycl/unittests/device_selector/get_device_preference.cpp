@@ -51,7 +51,7 @@ protected:
         });
 
     EXPECT_CALL(Helper.Mock.get(),
-                olGetDeviceInfo(_, OL_DEVICE_INFO_CONTEXT_GROUP_INDEX, _, _))
+                olGetDeviceInfo(_, OL_DEVICE_INFO_DRIVER_ID, _, _))
         .WillRepeatedly([](ol_device_handle_t /*Device*/,
                            ol_device_info_t /*PropName*/, size_t PropSize,
                            void *PropValue) -> ol_result_t {

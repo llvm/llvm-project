@@ -23,11 +23,11 @@ void OffloadTopology::registerNewPlatformsAndDevices(
     auto GroupIt = std::find_if(MPlatformGroups.begin(), MPlatformGroups.end(),
                                 [&](const OffloadPlatformGroup &Group) {
                                   return Group.Platform == Entry.Platform &&
-                                         Group.ContextGroupIndex ==
-                                             Entry.ContextGroupIndex;
+                                         Group.DriverId ==
+                                             Entry.DriverId;
                                 });
     if (GroupIt == MPlatformGroups.end()) {
-      MPlatformGroups.push_back({Entry.Platform, Entry.ContextGroupIndex, {}});
+      MPlatformGroups.push_back({Entry.Platform, Entry.DriverId, {}});
       GroupIt = MPlatformGroups.end() - 1;
     }
     GroupIt->Devices.push_back(Entry.Device);
@@ -73,16 +73,16 @@ void discoverOffloadDevices() {
         if (OlBackend >= OL_PLATFORM_BACKEND_LAST)
           return true;
 
-        uint32_t ContextGroupIndex = 0;
+        uint32_t DriverId = 0;
         Res = callNoCheck(olGetDeviceInfo, Dev,
-                          OL_DEVICE_INFO_CONTEXT_GROUP_INDEX,
-                          sizeof(ContextGroupIndex), &ContextGroupIndex);
+                          OL_DEVICE_INFO_DRIVER_ID,
+                          sizeof(DriverId), &DriverId);
         if (Res != OL_SUCCESS)
-          ContextGroupIndex = 0;
+          DriverId = 0;
 
         auto BackendIndex = static_cast<size_t>(OlBackend);
         auto &DeviceDescVec = (*Data)[BackendIndex];
-        DeviceDescVec.push_back({Platform, Dev, ContextGroupIndex});
+        DeviceDescVec.push_back({Platform, Dev, DriverId});
         return true;
       },
       &Mapping);
