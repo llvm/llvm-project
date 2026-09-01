@@ -1,656 +1,637 @@
-llvm-pdbutil - PDB File forensics and diagnostics
-=================================================
+# llvm-pdbutil - PDB File forensics and diagnostics
 
-.. program:: llvm-pdbutil
+:::{program} llvm-pdbutil
+:::
 
+## Synopsis
 
-Synopsis
---------
+{program}`llvm-pdbutil` \[*subcommand*\] \[*options*\]
 
-:program:`llvm-pdbutil` [*subcommand*] [*options*]
-
-Description
------------
+## Description
 
 Display types, symbols, CodeView records, and other information from a
-PDB file, as well as manipulate and create PDB files.  :program:`llvm-pdbutil`
+PDB file, as well as manipulate and create PDB files. {program}`llvm-pdbutil`
 is normally used by FileCheck-based tests to test LLVM's PDB reading and
 writing functionality, but can also be used for general PDB file investigation
 and forensics, or as a replacement for cvdump.
 
-Subcommands
------------
+## Subcommands
 
-:program:`llvm-pdbutil` is separated into several subcommands each tailored to
-a different purpose.  A brief summary of each command follows, with more detail
+{program}`llvm-pdbutil` is separated into several subcommands each tailored to
+a different purpose. A brief summary of each command follows, with more detail
 in the sections that follow.
 
-  * :ref:`pretty_subcommand` - Dump symbol and type information in a format that
-    tries to look as much like the original source code as possible.
-  * :ref:`dump_subcommand` - Dump low level types and structures from the PDB
-    file, including CodeView records, hash tables, PDB streams, etc.
-  * :ref:`bytes_subcommand` - Dump data from the PDB file's streams, records,
-    types, symbols, etc as raw bytes.
-  * :ref:`yaml2pdb_subcommand` - Given a yaml description of a PDB file, produce
-    a valid PDB file that matches that description.
-  * :ref:`pdb2yaml_subcommand` - For a given PDB file, produce a YAML
-    description of some or all of the file in a way that the PDB can be
-    reconstructed.
-  * :ref:`merge_subcommand` - Given two PDBs, produce a third PDB that is the
-    result of merging the two input PDBs.
-  * :ref:`export_subcommand` - Write the contents of a PDB stream to a file.
+- {ref}`pretty-subcommand` - Dump symbol and type information in a format that
+  tries to look as much like the original source code as possible.
+- {ref}`dump-subcommand` - Dump low level types and structures from the PDB
+  file, including CodeView records, hash tables, PDB streams, etc.
+- {ref}`bytes-subcommand` - Dump data from the PDB file's streams, records,
+  types, symbols, etc as raw bytes.
+- {ref}`yaml2pdb-subcommand` - Given a yaml description of a PDB file, produce
+  a valid PDB file that matches that description.
+- {ref}`pdb2yaml-subcommand` - For a given PDB file, produce a YAML
+  description of some or all of the file in a way that the PDB can be
+  reconstructed.
+- {ref}`merge-subcommand` - Given two PDBs, produce a third PDB that is the
+  result of merging the two input PDBs.
+- {ref}`export-subcommand` - Write the contents of a PDB stream to a file.
 
-.. _pretty_subcommand:
+(pretty-subcommand)=
 
-pretty
-~~~~~~
+### pretty
 
-.. program:: llvm-pdbutil pretty
+:::{program} llvm-pdbutil pretty
+:::
 
-.. important::
-   The **pretty** subcommand is built on the Windows DIA SDK, and as such is not
-   supported on non-Windows platforms.
+:::{important}
+The **pretty** subcommand is built on the Windows DIA SDK, and as such is not
+supported on non-Windows platforms.
+:::
 
-USAGE: :program:`llvm-pdbutil` pretty [*options*] <input PDB file>
+USAGE: {program}`llvm-pdbutil` pretty \[*options*\] \<input PDB file>
 
-Summary
-^^^^^^^^^^^
+#### Summary
 
 The *pretty* subcommand displays a very high level representation of your
-program's debug info.  Since it is built on the Windows DIA SDK which is the
+program's debug info. Since it is built on the Windows DIA SDK which is the
 standard API that Windows tools and debuggers query debug information, it
 presents a more authoritative view of how a debugger is going to interpret your
 debug information than a mode which displays low-level CodeView records.
 
-Options
-^^^^^^^
-
-Filtering and Sorting Options
-+++++++++++++++++++++++++++++
-
-.. note::
-   *exclude* filters take priority over *include* filters.  So if a filter
-   matches both an include and an exclude rule, then it is excluded.
-
-.. option:: -exclude-compilands=<string>
-
- When dumping compilands, compiland source-file contributions, or per-compiland
- symbols, this option instructs **llvm-pdbutil** to omit any compilands that
- match the specified regular expression.
-
-.. option:: -exclude-symbols=<string>
-
- When dumping global, public, or per-compiland symbols, this option instructs
- **llvm-pdbutil** to omit any symbols that match the specified regular
- expression.
-
-.. option:: -exclude-types=<string>
-
- When dumping types, this option instructs **llvm-pdbutil** to omit any types
- that match the specified regular expression.
-
-.. option:: -include-compilands=<string>
-
- When dumping compilands, compiland source-file contributions, or per-compiland
- symbols, limit the initial search to only those compilands that match the
- specified regular expression.
-
-.. option:: -include-symbols=<string>
-
- When dumping global, public, or per-compiland symbols, limit the initial
- search to only those symbols that match the specified regular expression.
-
-.. option:: -include-types=<string>
-
- When dumping types, limit the initial search to only those types that match
- the specified regular expression.
-
-.. option:: -min-class-padding=<uint>
-
- Only display types that have at least the specified amount of alignment
- padding, accounting for padding in base classes and aggregate field members.
-
-.. option:: -min-class-padding-imm=<uint>
-
- Only display types that have at least the specified amount of alignment
- padding, ignoring padding in base classes and aggregate field members.
-
-.. option:: -min-type-size=<uint>
-
- Only display types T where sizeof(T) is greater than or equal to the specified
- amount.
-
-.. option:: -no-compiler-generated
-
- Don't show compiler generated types and symbols
-
-.. option:: -no-enum-definitions
-
- When dumping an enum, don't show the full enum (e.g. the individual enumerator
- values).
-
-.. option:: -no-system-libs
-
- Don't show symbols from system libraries
-
-Symbol Type Options
-+++++++++++++++++++
-.. option:: -all
-
- Implies all other options in this category.
-
-.. option:: -class-definitions=<format>
-
- Displays class definitions in the specified format.
-
- .. code-block:: text
-
-    =all      - Display all class members including data, constants, typedefs, functions, etc (default)
-    =layout   - Only display members that contribute to class size.
-    =none     - Don't display class definitions (e.g. only display the name and base list)
-
-.. option:: -class-order
-
- Displays classes in the specified order.
-
- .. code-block:: text
-
-    =none            - Undefined / no particular sort order (default)
-    =name            - Sort classes by name
-    =size            - Sort classes by size
-    =padding         - Sort classes by amount of padding
-    =padding-pct     - Sort classes by percentage of space consumed by padding
-    =padding-imm     - Sort classes by amount of immediate padding
-    =padding-pct-imm - Sort classes by percentage of space consumed by immediate padding
-
-.. option::  -class-recurse-depth=<uint>
-
- When dumping class definitions, stop after recursing the specified number of times.  The
- default is 0, which is no limit.
-
-.. option::  -classes
-
- Display classes
-
-.. option::  -compilands
-
- Display compilands (e.g. object files)
-
-.. option::  -enums
-
- Display enums
-
-.. option::  -externals
-
- Dump external (e.g. exported) symbols
-
-.. option::  -globals
-
- Dump global symbols
-
-.. option::  -lines
-
- Dump the mappings between source lines and code addresses.
-
-.. option::  -module-syms
-
- Display symbols (variables, functions, etc) for each compiland
-
-.. option::  -sym-types=<types>
-
- Type of symbols to dump when -globals, -externals, or -module-syms is
- specified. (default all)
-
- .. code-block:: text
-
-    =thunks - Display thunk symbols
-    =data   - Display data symbols
-    =funcs  - Display function symbols
-    =all    - Display all symbols (default)
-
-.. option::  -symbol-order=<order>
-
- For symbols dumped via the -module-syms, -globals, or -externals options, sort
- the results in specified order.
-
- .. code-block:: text
-
-    =none - Undefined / no particular sort order
-    =name - Sort symbols by name
-    =size - Sort symbols by size
-
-.. option::  -typedefs
-
- Display typedef types
-
-.. option::  -types
-
- Display all types (implies -classes, -enums, -typedefs)
-
-Other Options
-+++++++++++++
-
-.. option:: -color-output
-
- Force color output on or off.  By default, color if used if outputting to a
- terminal.
-
-.. option:: -load-address=<uint>
-
- When displaying relative virtual addresses, assume the process is loaded at the
- given address and display what would be the absolute address.
-
-.. _dump_subcommand:
-
-dump
-~~~~
-
-USAGE: :program:`llvm-pdbutil` dump [*options*] <input PDB file>
-
-.. program:: llvm-pdbutil dump
-
-Summary
-^^^^^^^^^^^
+#### Options
+
+##### Filtering and Sorting Options
+
+:::{note}
+*exclude* filters take priority over *include* filters. So if a filter
+matches both an include and an exclude rule, then it is excluded.
+:::
+
+:::{option} -exclude-compilands=<string>
+When dumping compilands, compiland source-file contributions, or per-compiland
+symbols, this option instructs **llvm-pdbutil** to omit any compilands that
+match the specified regular expression.
+:::
+
+:::{option} -exclude-symbols=<string>
+When dumping global, public, or per-compiland symbols, this option instructs
+**llvm-pdbutil** to omit any symbols that match the specified regular
+expression.
+:::
+
+:::{option} -exclude-types=<string>
+When dumping types, this option instructs **llvm-pdbutil** to omit any types
+that match the specified regular expression.
+:::
+
+:::{option} -include-compilands=<string>
+When dumping compilands, compiland source-file contributions, or per-compiland
+symbols, limit the initial search to only those compilands that match the
+specified regular expression.
+:::
+
+:::{option} -include-symbols=<string>
+When dumping global, public, or per-compiland symbols, limit the initial
+search to only those symbols that match the specified regular expression.
+:::
+
+:::{option} -include-types=<string>
+When dumping types, limit the initial search to only those types that match
+the specified regular expression.
+:::
+
+:::{option} -min-class-padding=<uint>
+Only display types that have at least the specified amount of alignment
+padding, accounting for padding in base classes and aggregate field members.
+:::
+
+:::{option} -min-class-padding-imm=<uint>
+Only display types that have at least the specified amount of alignment
+padding, ignoring padding in base classes and aggregate field members.
+:::
+
+:::{option} -min-type-size=<uint>
+Only display types T where sizeof(T) is greater than or equal to the specified
+amount.
+:::
+
+:::{option} -no-compiler-generated
+Don't show compiler generated types and symbols
+:::
+
+:::{option} -no-enum-definitions
+When dumping an enum, don't show the full enum (e.g. the individual enumerator
+values).
+:::
+
+:::{option} -no-system-libs
+Don't show symbols from system libraries
+:::
+
+##### Symbol Type Options
+
+:::{option} -all
+Implies all other options in this category.
+:::
+
+:::{option} -class-definitions=<format>
+Displays class definitions in the specified format.
+
+```text
+=all      - Display all class members including data, constants, typedefs, functions, etc (default)
+=layout   - Only display members that contribute to class size.
+=none     - Don't display class definitions (e.g. only display the name and base list)
+```
+:::
+
+:::{option} -class-order
+Displays classes in the specified order.
+
+```text
+=none            - Undefined / no particular sort order (default)
+=name            - Sort classes by name
+=size            - Sort classes by size
+=padding         - Sort classes by amount of padding
+=padding-pct     - Sort classes by percentage of space consumed by padding
+=padding-imm     - Sort classes by amount of immediate padding
+=padding-pct-imm - Sort classes by percentage of space consumed by immediate padding
+```
+:::
+
+:::{option} -class-recurse-depth=<uint>
+When dumping class definitions, stop after recursing the specified number of times. The
+default is 0, which is no limit.
+:::
+
+:::{option} -classes
+Display classes
+:::
+
+:::{option} -compilands
+Display compilands (e.g. object files)
+:::
+
+:::{option} -enums
+Display enums
+:::
+
+:::{option} -externals
+Dump external (e.g. exported) symbols
+:::
+
+:::{option} -globals
+Dump global symbols
+:::
+
+:::{option} -lines
+Dump the mappings between source lines and code addresses.
+:::
+
+:::{option} -module-syms
+Display symbols (variables, functions, etc) for each compiland
+:::
+
+:::{option} -sym-types=<types>
+Type of symbols to dump when -globals, -externals, or -module-syms is
+specified. (default all)
+
+```text
+=thunks - Display thunk symbols
+=data   - Display data symbols
+=funcs  - Display function symbols
+=all    - Display all symbols (default)
+```
+:::
+
+:::{option} -symbol-order=<order>
+For symbols dumped via the -module-syms, -globals, or -externals options, sort
+the results in specified order.
+
+```text
+=none - Undefined / no particular sort order
+=name - Sort symbols by name
+=size - Sort symbols by size
+```
+:::
+
+:::{option} -typedefs
+Display typedef types
+:::
+
+:::{option} -types
+Display all types (implies -classes, -enums, -typedefs)
+:::
+
+##### Other Options
+
+:::{option} -color-output
+Force color output on or off. By default, color if used if outputting to a
+terminal.
+:::
+
+:::{option} -load-address=<uint>
+When displaying relative virtual addresses, assume the process is loaded at the
+given address and display what would be the absolute address.
+:::
+
+(dump-subcommand)=
+
+### dump
+
+USAGE: {program}`llvm-pdbutil` dump \[*options*\] \<input PDB file>
+
+:::{program} llvm-pdbutil dump
+:::
+
+#### Summary
 
 The **dump** subcommand displays low level information about the structure of a
-PDB file.  It is used heavily by LLVM's testing infrastructure, but can also be
-used for PDB forensics.  It serves a role similar to that of Microsoft's
+PDB file. It is used heavily by LLVM's testing infrastructure, but can also be
+used for PDB forensics. It serves a role similar to that of Microsoft's
 `cvdump` tool.
 
-.. note::
-   The **dump** subcommand exposes internal details of the file format.  As
-   such, the reader should be familiar with :doc:`/PDB/index` before using this
-   command.
+:::{note}
+The **dump** subcommand exposes internal details of the file format. As
+such, the reader should be familiar with {doc}`/PDB/index` before using this
+command.
+:::
+
+#### Options
 
-Options
-^^^^^^^
+##### MSF Container Options
+
+:::{option} -streams
+dump a summary of all of the streams in the PDB file.
+:::
+
+:::{option} -stream-blocks
+In conjunction with {option}`-streams`, add information to the output about
+what blocks the specified stream occupies.
+:::
+
+:::{option} -summary
+Dump MSF and PDB header information.
+:::
+
+##### Module & File Options
+
+:::{option} -modi=<uint>
+For all options that dump information from each module/compiland, limit to
+the specified module.
+:::
+
+:::{option} -files
+Dump the source files that contribute to each displayed module.
+:::
+
+:::{option} -il
+Dump inlinee line information (DEBUG_S_INLINEELINES CodeView subsection)
+:::
+
+:::{option} -l
+Dump line information (DEBUG_S_LINES CodeView subsection)
+:::
+
+:::{option} -modules
+Dump compiland information
+:::
+
+:::{option} -xme
+Dump cross module exports (DEBUG_S_CROSSSCOPEEXPORTS CodeView subsection)
+:::
+
+:::{option} -xmi
+Dump cross module imports (DEBUG_S_CROSSSCOPEIMPORTS CodeView subsection)
+:::
+
+##### Symbol Options
+
+:::{option} -globals
+dump global symbol records
+:::
+
+:::{option} -global-extras
+dump additional information about the globals, such as hash buckets and hash
+values.
+:::
+
+:::{option} -publics
+dump public symbol records
+:::
 
-MSF Container Options
-+++++++++++++++++++++
+:::{option} -public-extras
+dump additional information about the publics, such as hash buckets and hash
+values.
+:::
 
-.. option:: -streams
+:::{option} -symbols
+dump symbols (functions, variables, etc) for each module dumped.
+:::
 
- dump a summary of all of the streams in the PDB file.
+:::{option} -sym-data
+For each symbol record dumped as a result of the {option}`-symbols` option,
+display the full bytes of the record in binary as well.
+:::
 
-.. option:: -stream-blocks
+##### Type Record Options
 
- In conjunction with :option:`-streams`, add information to the output about
- what blocks the specified stream occupies.
+:::{option} -types
+Dump CodeView type records from TPI stream
+:::
 
-.. option:: -summary
+:::{option} -type-extras
+Dump additional information from the TPI stream, such as hashes and the type
+index offsets array.
+:::
 
- Dump MSF and PDB header information.
+:::{option} -type-data
+For each type record dumped, display the full bytes of the record in binary as
+well.
+:::
 
-Module & File Options
-+++++++++++++++++++++
+:::{option} -type-index=<uint>
+Only dump types with the specified type index.
+:::
 
-.. option:: -modi=<uint>
+:::{option} -ids
+Dump CodeView type records from IPI stream.
+:::
 
- For all options that dump information from each module/compiland, limit to
- the specified module.
+:::{option} -id-extras
+Dump additional information from the IPI stream, such as hashes and the type
+index offsets array.
+:::
 
-.. option:: -files
+:::{option} -id-data
+For each ID record dumped, display the full bytes of the record in binary as
+well.
+:::
 
- Dump the source files that contribute to each displayed module.
+:::{option} -id-index=<uint>
+only dump ID records with the specified hexadecimal type index.
+:::
 
-.. option:: -il
+:::{option} -dependents
+When used in conjunction with {option}`-type-index` or {option}`-id-index`,
+dumps the entire dependency graph for the specified index instead of just the
+single record with the specified index. For example, if type index 0x4000 is
+a function whose return type has index 0x3000, and you specify
+`-dependents=0x4000`, then this would dump both records (as well as any other
+dependents in the tree).
+:::
 
- Dump inlinee line information (DEBUG_S_INLINEELINES CodeView subsection)
+##### Miscellaneous Options
 
-.. option:: -l
+:::{option} -all
+Implies most other options.
+:::
 
- Dump line information (DEBUG_S_LINES CodeView subsection)
+:::{option} -section-contribs
+Dump section contributions.
+:::
 
-.. option:: -modules
+:::{option} -section-headers
+Dump image section headers.
+:::
 
- Dump compiland information
+:::{option} -dxcontainer
+Dump a summary of the DXContainer stored in the PDB file's DXContainer stream.
+Shader companion PDB files produced by the DirectX backend store debug-related
+container parts in this stream. For example:
 
-.. option:: -xme
+```
+llvm-pdbutil dump --dxcontainer shader.pdb
+```
+:::
 
- Dump cross module exports (DEBUG_S_CROSSSCOPEEXPORTS CodeView subsection)
+:::{option} -section-map
+Dump section map.
+:::
 
-.. option:: -xmi
+:::{option} -string-table
+Dump PDB string table.
+:::
 
- Dump cross module imports (DEBUG_S_CROSSSCOPEIMPORTS CodeView subsection)
+(bytes-subcommand)=
 
-Symbol Options
-++++++++++++++
+### bytes
 
-.. option:: -globals
+USAGE: {program}`llvm-pdbutil` bytes \[*options*\] \<input PDB file>
 
- dump global symbol records
+:::{program} llvm-pdbutil bytes
+:::
 
-.. option:: -global-extras
-
- dump additional information about the globals, such as hash buckets and hash
- values.
-
-.. option:: -publics
-
- dump public symbol records
-
-.. option:: -public-extras
-
- dump additional information about the publics, such as hash buckets and hash
- values.
-
-.. option:: -symbols
-
- dump symbols (functions, variables, etc) for each module dumped.
-
-.. option:: -sym-data
-
- For each symbol record dumped as a result of the :option:`-symbols` option,
- display the full bytes of the record in binary as well.
-
-Type Record Options
-+++++++++++++++++++
-
-.. option:: -types
-
- Dump CodeView type records from TPI stream
-
-.. option:: -type-extras
-
- Dump additional information from the TPI stream, such as hashes and the type
- index offsets array.
-
-.. option:: -type-data
-
- For each type record dumped, display the full bytes of the record in binary as
- well.
-
-.. option:: -type-index=<uint>
-
- Only dump types with the specified type index.
-
-.. option:: -ids
-
- Dump CodeView type records from IPI stream.
-
-.. option:: -id-extras
-
- Dump additional information from the IPI stream, such as hashes and the type
- index offsets array.
-
-.. option:: -id-data
-
- For each ID record dumped, display the full bytes of the record in binary as
- well.
-
-.. option:: -id-index=<uint>
-
- only dump ID records with the specified hexadecimal type index.
-
-.. option:: -dependents
-
- When used in conjunction with :option:`-type-index` or :option:`-id-index`,
- dumps the entire dependency graph for the specified index instead of just the
- single record with the specified index.  For example, if type index 0x4000 is
- a function whose return type has index 0x3000, and you specify
- `-dependents=0x4000`, then this would dump both records (as well as any other
- dependents in the tree).
-
-Miscellaneous Options
-+++++++++++++++++++++
-
-.. option:: -all
-
- Implies most other options.
-
-.. option:: -section-contribs
-
- Dump section contributions.
-
-.. option:: -section-headers
-
- Dump image section headers.
-
-.. option:: -dxcontainer
-
- Dump a summary of the DXContainer stored in the PDB file's DXContainer stream.
- Shader companion PDB files produced by the DirectX backend store debug-related
- container parts in this stream. For example::
-
-   llvm-pdbutil dump --dxcontainer shader.pdb
-
-.. option:: -section-map
-
- Dump section map.
-
-.. option:: -string-table
-
- Dump PDB string table.
-
-.. _bytes_subcommand:
-
-bytes
-~~~~~
-
-USAGE: :program:`llvm-pdbutil` bytes [*options*] <input PDB file>
-
-.. program:: llvm-pdbutil bytes
-
-Summary
-^^^^^^^
+#### Summary
 
 Like the **dump** subcommand, the **bytes** subcommand displays low level
 information about the structure of a PDB file, but it is used for even deeper
-forensics.  The **bytes** subcommand finds various structures in a PDB file
-based on the command line options specified, and dumps them in hex.  Someone
+forensics. The **bytes** subcommand finds various structures in a PDB file
+based on the command line options specified, and dumps them in hex. Someone
 working on support for emitting PDBs would use this heavily, for example, to
-compare one PDB against another PDB to ensure byte-for-byte compatibility.  It
+compare one PDB against another PDB to ensure byte-for-byte compatibility. It
 is not enough to simply compare the bytes of an entire file, or an entire stream
 because it's perfectly fine for the same structure to exist at different
 locations in two different PDBs, and "finding" the structure is half the battle.
 
-Options
-^^^^^^^
+#### Options
 
-MSF File Options
-++++++++++++++++
+##### MSF File Options
 
-.. option:: -block-range=<start[-end]>
+:::{option} -block-range=<start[-end]>
+Dump binary data from specified range of MSF file blocks.
+:::
 
- Dump binary data from specified range of MSF file blocks.
+:::{option} -byte-range=<start[-end]>
+Dump binary data from specified range of bytes in the file.
+:::
 
-.. option:: -byte-range=<start[-end]>
+:::{option} -fpm
+Dump the MSF free page map.
+:::
 
- Dump binary data from specified range of bytes in the file.
+:::{option} -stream-data=<string>
+Dump binary data from the specified streams. Format is SN[:Start][@Size].
+For example, `-stream-data=7:3@12` dumps 12 bytes from stream 7, starting
+at offset 3 in the stream.
+:::
 
-.. option:: -fpm
+##### PDB Stream Options
 
- Dump the MSF free page map.
+:::{option} -name-map
+Dump bytes of PDB Name Map
+:::
 
-.. option:: -stream-data=<string>
+##### DBI Stream Options
 
- Dump binary data from the specified streams.  Format is SN[:Start][@Size].
- For example, `-stream-data=7:3@12` dumps 12 bytes from stream 7, starting
- at offset 3 in the stream.
+:::{option} -ec
+Dump the edit and continue map substream of the DBI stream.
+:::
 
-PDB Stream Options
-++++++++++++++++++
+:::{option} -files
+Dump the file info substream of the DBI stream.
+:::
 
-.. option:: -name-map
+:::{option} -modi
+Dump the modi substream of the DBI stream.
+:::
 
- Dump bytes of PDB Name Map
+:::{option} -sc
+Dump section contributions substream of the DBI stream.
+:::
 
-DBI Stream Options
-++++++++++++++++++
+:::{option} -sm
+Dump the section map from the DBI stream.
+:::
 
-.. option:: -ec
+:::{option} -type-server
+Dump the type server map from the DBI stream.
+:::
 
- Dump the edit and continue map substream of the DBI stream.
+##### Module Options
 
-.. option:: -files
+:::{option} -mod=<uint>
+Limit all options in this category to the specified module index. By default,
+options in this category will dump bytes from all modules.
+:::
 
- Dump the file info substream of the DBI stream.
+:::{option} -chunks
+Dump the bytes of each module's C13 debug subsection.
+:::
 
-.. option:: -modi
+:::{option} -split-chunks
+When specified with {option}`-chunks`, split the C13 debug subsection into a
+separate chunk for each subsection type, and dump them separately.
+:::
 
- Dump the modi substream of the DBI stream.
+:::{option} -syms
+Dump the symbol record substream from each module.
+:::
 
-.. option:: -sc
+##### Type Record Options
 
- Dump section contributions substream of the DBI stream.
+:::{option} -id=<uint>
+Dump the record from the IPI stream with the given type index.
+:::
 
-.. option:: -sm
+:::{option} -type=<uint>
+Dump the record from the TPI stream with the given type index.
+:::
 
- Dump the section map from the DBI stream.
+(pdb2yaml-subcommand)=
 
-.. option:: -type-server
+### pdb2yaml
 
- Dump the type server map from the DBI stream.
+USAGE: {program}`llvm-pdbutil` pdb2yaml \[*options*\] \<input PDB file>
 
-Module Options
-++++++++++++++
+:::{program} llvm-pdbutil pdb2yaml
+:::
 
-.. option:: -mod=<uint>
-
- Limit all options in this category to the specified module index.  By default,
- options in this category will dump bytes from all modules.
-
-.. option:: -chunks
-
- Dump the bytes of each module's C13 debug subsection.
-
-.. option:: -split-chunks
-
- When specified with :option:`-chunks`, split the C13 debug subsection into a
- separate chunk for each subsection type, and dump them separately.
-
-.. option:: -syms
-
- Dump the symbol record substream from each module.
-
-Type Record Options
-+++++++++++++++++++
-
-.. option:: -id=<uint>
-
- Dump the record from the IPI stream with the given type index.
-
-.. option:: -type=<uint>
-
- Dump the record from the TPI stream with the given type index.
-
-.. _pdb2yaml_subcommand:
-
-pdb2yaml
-~~~~~~~~
-
-USAGE: :program:`llvm-pdbutil` pdb2yaml [*options*] <input PDB file>
-
-.. program:: llvm-pdbutil pdb2yaml
-
-Summary
-^^^^^^^
+#### Summary
 
 Produce a YAML description of some or all of a PDB file's contents.
 
-Options
-^^^^^^^
+#### Options
 
-.. option:: -all
+:::{option} -all
+Implies most other options in this category.
+:::
 
- Implies most other options in this category.
+:::{option} -dxcontainer
+Dump the DXContainer stored in the PDB file's DXContainer stream to YAML.
+For example:
 
-.. option:: -dxcontainer
+```
+llvm-pdbutil pdb2yaml --dxcontainer shader.pdb
+```
+:::
 
- Dump the DXContainer stored in the PDB file's DXContainer stream to YAML.
- For example::
+(yaml2pdb-subcommand)=
 
-   llvm-pdbutil pdb2yaml --dxcontainer shader.pdb
+### yaml2pdb
 
-.. _yaml2pdb_subcommand:
+USAGE: {program}`llvm-pdbutil` yaml2pdb \[*options*\] \<input YAML file>
 
-yaml2pdb
-~~~~~~~~
+:::{program} llvm-pdbutil yaml2pdb
+:::
 
-USAGE: :program:`llvm-pdbutil` yaml2pdb [*options*] <input YAML file>
+#### Summary
 
-.. program:: llvm-pdbutil yaml2pdb
-
-Summary
-^^^^^^^
-
-Generate a PDB file from a YAML description.  The YAML syntax is not described
-here.  Instead, use :ref:`llvm-pdbutil pdb2yaml <pdb2yaml_subcommand>` and
+Generate a PDB file from a YAML description. The YAML syntax is not described
+here. Instead, use {ref}`llvm-pdbutil pdb2yaml <pdb2yaml-subcommand>` and
 examine the output for an example starting point.
 
-Options
-^^^^^^^
+#### Options
 
-.. option:: -pdb=<file-name>
+:::{option} -pdb=<file-name>
+:::
 
 Write the resulting PDB to the specified file.
 
-.. _export_subcommand:
+(export-subcommand)=
 
-export
-~~~~~~
+### export
 
-USAGE: :program:`llvm-pdbutil` export --out=<file> [*options*] <input PDB file>
+USAGE: {program}`llvm-pdbutil` export --out=\<file> \[*options*\] \<input PDB file>
 
-.. program:: llvm-pdbutil export
+:::{program} llvm-pdbutil export
+:::
 
-Summary
-^^^^^^^
+#### Summary
 
 Write the binary contents of a PDB stream to a file.
 
-DirectX Shader PDBs
-^^^^^^^^^^^^^^^^^^^
+#### DirectX Shader PDBs
 
 When a DirectX shader is compiled with debug information and a companion PDB
 file is requested, the PDB contains a DXContainer stream with debug-related
 parts such as ILDB, ILDN, SRCI, and VERS. To extract that container as a
-standalone DXContainer file::
+standalone DXContainer file:
 
-  llvm-pdbutil export --dxcontainer --out=shader.dxbc shader.pdb
+```
+llvm-pdbutil export --dxcontainer --out=shader.dxbc shader.pdb
+```
 
 The resulting file can be inspected with the same DXContainer tooling used for
-the main shader output, such as :program:`obj2yaml` and
-:program:`llvm-objcopy`. See :doc:`../DirectX/DXContainer` for part format
+the main shader output, such as {program}`obj2yaml` and
+{program}`llvm-objcopy`. See {doc}`../DirectX/DXContainer` for part format
 details. To inspect the embedded container without extracting it, use
-:ref:`llvm-pdbutil dump <dump_subcommand>` or
-:ref:`llvm-pdbutil pdb2yaml <pdb2yaml_subcommand>`.
+{ref}`llvm-pdbutil dump <dump-subcommand>` or
+{ref}`llvm-pdbutil pdb2yaml <pdb2yaml-subcommand>`.
 
-Options
-^^^^^^^
+#### Options
 
-.. option:: --out=<file>
+:::{option} --out=<file>
+The file to write the exported stream data to.
+:::
 
- The file to write the exported stream data to.
+:::{option} --dxcontainer
+A synonym for the {option}`--stream=5` option.
+Export the DXContainer stored in the PDB file's DXContainer stream. This is
+the usual way to recover the debug-related container parts from a shader
+companion PDB file.
+:::
 
-.. option:: --dxcontainer
+:::{option} --stream=<index-or-name>
+Export the contents of the specified PDB stream.
+:::
 
- A synonym for the :option:`--stream=5` option.
- Export the DXContainer stored in the PDB file's DXContainer stream. This is
- the usual way to recover the debug-related container parts from a shader
- companion PDB file.
+(merge-subcommand)=
 
-.. option:: --stream=<index-or-name>
+### merge
 
- Export the contents of the specified PDB stream.
+USAGE: {program}`llvm-pdbutil` merge \[*options*\] \<input PDB file 1> \<input PDB file 2>
 
-.. _merge_subcommand:
+:::{program} llvm-pdbutil merge
+:::
 
-merge
-~~~~~
-
-USAGE: :program:`llvm-pdbutil` merge [*options*] <input PDB file 1> <input PDB file 2>
-
-.. program:: llvm-pdbutil merge
-
-Summary
-^^^^^^^
+#### Summary
 
 Merge two PDB files into a single file.
 
-Options
-^^^^^^^
+#### Options
 
-.. option:: -pdb=<file-name>
+:::{option} -pdb=<file-name>
+:::
 
 Write the resulting PDB to the specified file.
+

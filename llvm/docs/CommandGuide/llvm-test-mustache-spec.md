@@ -1,18 +1,16 @@
-llvm-test-mustache-spec - LLVM tool to test Mustache library compliance
-=======================================================================
+# llvm-test-mustache-spec - LLVM tool to test Mustache library compliance
 
-.. program:: llvm-test-mustache-spec
+:::{program} llvm-test-mustache-spec
+:::
 
-SYNOPSIS
---------
+## SYNOPSIS
 
-:program:`llvm-test-mustache-spec` [*inputs...*]
+{program}`llvm-test-mustache-spec` \[*inputs...*\]
 
-Description
------------
+## Description
 
-``llvm-test-mustache-spec`` tests the mustache spec conformance of the LLVM
-mustache library. The spec can be found here: https://github.com/mustache/spec
+`llvm-test-mustache-spec` tests the mustache spec conformance of the LLVM
+mustache library. The spec can be found here: <https://github.com/mustache/spec>
 
 To test against the spec, simply download the spec and pass the test JSON files
 to the driver. Each spec file should have a list of tests for compliance with
@@ -28,10 +26,8 @@ marked as XFail and are removed from the XFail list as they are fixed.
 The tool prints the number of test failures and successes in each of the test
 files to standard output.
 
-EXAMPLE
--------
+## EXAMPLE
 
-.. code-block:: console
-
-   $ llvm-test-mustache-spec path/to/specs/\*.json
-
+```console
+$ llvm-test-mustache-spec path/to/specs/*.json
+```

@@ -1,127 +1,121 @@
-llvm-reduce - LLVM automatic testcase reducer.
-==============================================
+# llvm-reduce - LLVM automatic testcase reducer.
 
-.. program:: llvm-reduce
+:::{program} llvm-reduce
+:::
 
-SYNOPSIS
---------
+## SYNOPSIS
 
-:program:`llvm-reduce` [*options*] [*input...*]
+{program}`llvm-reduce` \[*options*\] \[*input...*\]
 
-DESCRIPTION
------------
+## DESCRIPTION
 
-The :program:`llvm-reduce` tool project that can be used for reducing the size of LLVM test cases.
+The {program}`llvm-reduce` tool project that can be used for reducing the size of LLVM test cases.
 It works by removing redundant or unnecessary code from LLVM test cases while still preserving
 their ability to detect bugs.
 
-If ``input`` is "``-``", :program:`llvm-reduce` reads from standard
-input. Otherwise, it will read from the specified ``filenames``.
+If `input` is "`-`", {program}`llvm-reduce` reads from standard
+input. Otherwise, it will read from the specified `filenames`.
 
 LLVM-Reduce is a useful tool for reducing the size and
 complexity of LLVM test cases, making it easier to identify and debug issues in
 the LLVM compiler infrastructure.
 
-GENERIC OPTIONS
----------------
+## GENERIC OPTIONS
 
+:::{option} --help
+Display available options (--help-hidden for more).
+:::
 
-.. option:: --help
+:::{option} --abort-on-invalid-reduction
+Abort if any reduction results in invalid IR
+:::
 
- Display available options (--help-hidden for more).
+:::{option} --delta-passes=<string>
+A comma-separated list of delta passes to run. By default, {program}`llvm-reduce`
+runs all available delta passes for the input format (IR or MIR). When specified,
+only the listed passes will be executed, in the given order.
 
-.. option:: --abort-on-invalid-reduction
+Available delta passes can be listed using {option}`--print-delta-passes`.
+Specific passes can also be excluded using {option}`--skip-delta-passes`.
+If an unrecognized pass name is specified, {program}`llvm-reduce` will report an
+error and exit.
+:::
 
- Abort if any reduction results in invalid IR
+:::{option} --in-place
+WARNING: This option will replace your input file with the reduced version!
+:::
 
-.. option:: --delta-passes=<string>
+:::{option} --ir-passes=<string>
+A textual description of the pass pipeline, same as what's passed to `opt -passes`.
+:::
 
- A comma-separated list of delta passes to run. By default, :program:`llvm-reduce`
- runs all available delta passes for the input format (IR or MIR). When specified,
- only the listed passes will be executed, in the given order.
+:::{option} -j <uint>
+Maximum number of threads to use to process chunks. Set to 1 to disable parallelism.
+:::
 
- Available delta passes can be listed using :option:`--print-delta-passes`.
- Specific passes can also be excluded using :option:`--skip-delta-passes`.
- If an unrecognized pass name is specified, :program:`llvm-reduce` will report an
- error and exit.
+:::{option} --max-pass-iterations=<int>
+Maximum number of times to run the full set of delta passes (default=5).
+:::
 
-.. option:: --in-place
+:::{option} --mtriple=<string>
+Set the target triple.
+:::
 
- WARNING: This option will replace your input file with the reduced version!
+:::{option} --preserve-debug-environment
+Don't disable features used for crash debugging (crash reports, llvm-symbolizer and core dumps)
+:::
 
-.. option:: --ir-passes=<string>
+:::{option} --print-delta-passes
+Print list of delta passes, passable to {option}`--delta-passes` as a comma-separated list.
+:::
 
- A textual description of the pass pipeline, same as what's passed to `opt -passes`.
+:::{option} --skip-delta-passes=<string>
+Delta passes to not run, separated by commas. By default, run all delta passes.
+:::
 
-.. option:: -j <uint>
+:::{option} --skip-verify-interesting-after-counting-chunks
+Do not validate testcase is interesting after counting chunks. This
+will save time by avoiding extra executions of the interestingness
+test, but a warning will no longer be printed on flaky reproducers.
+:::
 
- Maximum number of threads to use to process chunks. Set to 1 to disable parallelism.
+:::{option} --starting-granularity-level=<uint>
+Number of times to divide chunks prior to first test.
 
-.. option::  --max-pass-iterations=<int>
+Note : Granularity refers to the level of detail at which the reduction process operates.
+A lower granularity means that the reduction process operates at a more coarse-grained level,
+while a higher granularity means that it operates at a more fine-grained level.
+:::
 
-  Maximum number of times to run the full set of delta passes (default=5).
+:::{option} --test=<string>
+Name of the interesting-ness test to be run.
+:::
 
-.. option:: --mtriple=<string>
+:::{option} --test-arg=<string>
+Arguments passed onto the interesting-ness test.
+:::
 
- Set the target triple.
+:::{option} --verbose
+Print extra debugging information.
+:::
 
-.. option:: --preserve-debug-environment
+:::{option} --write-tmp-files-as-bitcode
+Always write temporary files as bitcode instead of textual IR.
+:::
 
- Don't disable features used for crash debugging (crash reports, llvm-symbolizer and core dumps)
+:::{option} -x={ir|mir}
+Input language as ir or mir.
+:::
 
-.. option:: --print-delta-passes
+## EXIT STATUS
 
- Print list of delta passes, passable to :option:`--delta-passes` as a comma-separated list.
-
-.. option:: --skip-delta-passes=<string>
-
- Delta passes to not run, separated by commas. By default, run all delta passes.
-
-.. option:: --skip-verify-interesting-after-counting-chunks
-
- Do not validate testcase is interesting after counting chunks. This
- will save time by avoiding extra executions of the interestingness
- test, but a warning will no longer be printed on flaky reproducers.
-
-.. option:: --starting-granularity-level=<uint>
-
-  Number of times to divide chunks prior to first test.
-
-  Note : Granularity refers to the level of detail at which the reduction process operates.
-  A lower granularity means that the reduction process operates at a more coarse-grained level,
-  while a higher granularity means that it operates at a more fine-grained level.
-
-.. option::  --test=<string>
-
- Name of the interesting-ness test to be run.
-
-.. option:: --test-arg=<string>
-
- Arguments passed onto the interesting-ness test.
-
-.. option:: --verbose
-
- Print extra debugging information.
-
-.. option::  --write-tmp-files-as-bitcode
-
- Always write temporary files as bitcode instead of textual IR.
-
-.. option:: -x={ir|mir}
-
- Input language as ir or mir.
-
-EXIT STATUS
-------------
-
-:program:`llvm-reduce` returns 0 under normal operation. It returns a
+{program}`llvm-reduce` returns 0 under normal operation. It returns a
 non-zero exit code if there were any errors. Returns 2 if the
 interestingness test reported the initial input was not interesting.
 
-EXAMPLE
--------
+## EXAMPLE
 
-:program:`llvm-reduce` can be used to simplify a test that causes a
+{program}`llvm-reduce` can be used to simplify a test that causes a
 compiler crash.
 
 For example, let's assume that `opt` is crashing on the IR file
@@ -131,20 +125,21 @@ WhateverFile.cpp`, when running at `-O2`.
 The test case of `test.ll` can be reduced by invoking the following
 command:
 
-.. code-block:: bash
-
-   $(LLVM_BUILD_FOLDER)/bin/llvm-reduce --test=script.sh <path to>/test.ll
+```bash
+$(LLVM_BUILD_FOLDER)/bin/llvm-reduce --test=script.sh <path to>/test.ll
+```
 
 The shell script passed to the option `test` consists of the
 following:
 
-.. code-block:: bash
-
-   $(LLVM_BUILD_FOLDER)/bin/opt -O2 -disable-output $1 \
-     |& grep "Assertion failed at line 1234 of WhateverFile.cpp"
+```bash
+$(LLVM_BUILD_FOLDER)/bin/opt -O2 -disable-output $1 \
+  |& grep "Assertion failed at line 1234 of WhateverFile.cpp"
+```
 
 (In this script, `grep` exits with 0 if it finds the string and that
 becomes the whole script's status.)
 
 This example can be generalized to other tools that process IR files,
 for example `llc`.
+

@@ -1,22 +1,20 @@
-mlir-tblgen - Description to C++ Code for MLIR
-==============================================
+# mlir-tblgen - Description to C++ Code for MLIR
 
-.. program:: mlir-tblgen
+:::{program} mlir-tblgen
+:::
 
-SYNOPSIS
---------
+## SYNOPSIS
 
-:program:`mlir-tblgen` [*options*] [*filename*]
+{program}`mlir-tblgen` \[*options*\] \[*filename*\]
 
+## DESCRIPTION
 
-DESCRIPTION
------------
-
-:program:`mlir-tblgen` is a program that translates compiler-related target
-description (``.td``) files into C++ code and other output formats. Most
+{program}`mlir-tblgen` is a program that translates compiler-related target
+description (`.td`) files into C++ code and other output formats. Most
 users of LLVM will not need to use this program. It is used only for writing
 parts of the compiler.
 
-Please see :doc:`tblgen - Description to C++ Code<./tblgen>`
+Please see {doc}`tblgen - Description to C++ Code<./tblgen>`
 for a description of the *filename* argument and options, including the
-options common to all :program:`*-tblgen` programs.
+options common to all {program}`*-tblgen` programs.
+

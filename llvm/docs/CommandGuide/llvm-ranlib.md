@@ -1,23 +1,21 @@
-llvm-ranlib - generates an archive index
-========================================
+# llvm-ranlib - generates an archive index
 
-.. program:: llvm-ranlib
+:::{program} llvm-ranlib
+:::
 
-SYNOPSIS
---------
+## SYNOPSIS
 
-:program:`llvm-ranlib` [*options*] *archive...*
+{program}`llvm-ranlib` \[*options*\] *archive...*
 
-DESCRIPTION
------------
+## DESCRIPTION
 
-:program:`llvm-ranlib` is an alias for the :doc:`llvm-ar <llvm-ar>` tool that
+{program}`llvm-ranlib` is an alias for the {doc}`llvm-ar <llvm-ar>` tool that
 generates an index for one or more archives. It can be used as a replacement for GNU's
-:program:`ranlib` tool.
+{program}`ranlib` tool.
 
-Running :program:`llvm-ranlib` is equivalent to running ``llvm-ar s``.
+Running {program}`llvm-ranlib` is equivalent to running `llvm-ar s`.
 
-SEE ALSO
---------
+## SEE ALSO
 
-:manpage:`llvm-ar(1)`
+{manpage}`llvm-ar(1)`
+
