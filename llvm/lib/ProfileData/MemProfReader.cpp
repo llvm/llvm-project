@@ -511,8 +511,8 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
     return E;
 
   // Create a symbolizer for every supplied module after its build ID has been
-  // matched to the raw profile. Each ProfiledModule owns both the binary and
-  // symbolizer so their backing data remains live during frame processing.
+  // matched to the raw profile. The module keeps the binary and symbolizer
+  // alive throughout frame processing.
   for (auto &Module : ProfiledModules) {
     auto *Object = cast<object::ObjectFile>(Module->Binary.getBinary());
     std::unique_ptr<DIContext> Context = DWARFContext::create(
@@ -527,6 +527,12 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
 
   if (Error E = symbolizeAndFilterStackFrames())
     return E;
+
+  // Symbolization is complete, so release the symbolizers and their DWARF
+  // contexts before mapping the raw profile into records. This reduces peak
+  // memory usage because these objects are no longer needed.
+  for (auto &Module : ProfiledModules)
+    Module->Symbolizer.reset();
 
   return mapRawProfileToRecords();
 }
