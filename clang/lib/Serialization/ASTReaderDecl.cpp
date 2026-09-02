@@ -3590,13 +3590,9 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
     if (!C.isSameEntity(Existing, D))
       return false;
 
-    if (!C.getLangOpts().ModulesUniqueGMFInternalLinkage)
-      return true;
-
     auto *FD = dyn_cast<FunctionDecl>(D);
     auto *ExistingFD = dyn_cast<FunctionDecl>(Existing);
-    if (!FD || !ExistingFD ||
-        FD->getFormalLinkage() != Linkage::Internal ||
+    if (!FD || !ExistingFD || FD->getFormalLinkage() != Linkage::Internal ||
         ExistingFD->getFormalLinkage() != Linkage::Internal)
       return true;
 
@@ -3606,6 +3602,13 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
         !ExistingM->isGlobalModule())
       return true;
 
+    // Keep ordinary internal-linkage names. Identical definitions can share
+    // one entity. Diagnose non-equivalent definitions through the usual
+    // function ODR path after their lazy bodies have been loaded.
+    if (FD->getODRHash() == ExistingFD->getODRHash())
+      return true;
+
+    Reader.PendingFunctionOdrMergeFailures[FD].push_back(ExistingFD);
     return false;
   };
   DeclContext *DC = D->getDeclContext()->getRedeclContext();

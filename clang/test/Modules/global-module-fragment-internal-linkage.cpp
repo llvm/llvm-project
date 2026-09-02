@@ -3,72 +3,59 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fno-skip-odr-check-in-gmf \
-// RUN:   -fmodules-unique-gmf-internal-linkage \
-// RUN:   -emit-module-interface %t/part1.cppm -o %t/A-Part1.pcm
+// RUN:   -fskip-odr-check-in-gmf -emit-module-interface %t/part1.cppm \
+// RUN:   -o %t/A-Part1.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fno-skip-odr-check-in-gmf \
-// RUN:   -fmodules-unique-gmf-internal-linkage \
-// RUN:   -emit-module-interface %t/part2.cppm -o %t/A-Part2.pcm
+// RUN:   -fskip-odr-check-in-gmf -emit-module-interface %t/part2.cppm \
+// RUN:   -o %t/A-Part2.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fno-skip-odr-check-in-gmf \
-// RUN:   -fmodules-unique-gmf-internal-linkage \
-// RUN:   -emit-module-interface %t/A.cppm \
+// RUN:   -fskip-odr-check-in-gmf -emit-module-interface %t/A.cppm \
 // RUN:   -fmodule-file=A:Part1=%t/A-Part1.pcm \
-// RUN:   -fmodule-file=A:Part2=%t/A-Part2.pcm \
-// RUN:   -o %t/A.pcm
+// RUN:   -fmodule-file=A:Part2=%t/A-Part2.pcm -o %t/A.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -emit-llvm -o - \
-// RUN:   -fno-skip-odr-check-in-gmf \
-// RUN:   -fmodules-unique-gmf-internal-linkage \
-// RUN:   %t/use.cpp -fmodule-file=%t/A.pcm \
+// RUN:   -fskip-odr-check-in-gmf %t/use.cpp -fmodule-file=%t/A.pcm \
 // RUN:   -fmodule-file=A:Part1=%t/A-Part1.pcm \
-// RUN:   -fmodule-file=A:Part2=%t/A-Part2.pcm \
-// RUN:   | FileCheck %s
+// RUN:   -fmodule-file=A:Part2=%t/A-Part2.pcm | FileCheck %s --check-prefix=SAME
 //
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -DRETURN_VALUE=2 \
+// RUN:   -fskip-odr-check-in-gmf -emit-module-interface %t/part2.cppm \
+// RUN:   -o %t/different-A-Part2.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fskip-odr-check-in-gmf \
-// RUN:   -fno-modules-unique-gmf-internal-linkage \
-// RUN:   -emit-module-interface %t/part1.cppm -o %t/no-A-Part1.pcm
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fskip-odr-check-in-gmf \
-// RUN:   -fno-modules-unique-gmf-internal-linkage \
-// RUN:   -emit-module-interface %t/part2.cppm -o %t/no-A-Part2.pcm
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 \
-// RUN:   -fskip-odr-check-in-gmf \
-// RUN:   -fno-modules-unique-gmf-internal-linkage \
-// RUN:   -emit-module-interface %t/A.cppm \
-// RUN:   -fmodule-file=A:Part1=%t/no-A-Part1.pcm \
-// RUN:   -fmodule-file=A:Part2=%t/no-A-Part2.pcm \
-// RUN:   -o %t/no-A.pcm
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -emit-llvm -o - \
-// RUN:   -fskip-odr-check-in-gmf \
-// RUN:   -fno-modules-unique-gmf-internal-linkage \
-// RUN:   %t/use.cpp -fmodule-file=%t/no-A.pcm \
-// RUN:   -fmodule-file=A:Part1=%t/no-A-Part1.pcm \
-// RUN:   -fmodule-file=A:Part2=%t/no-A-Part2.pcm \
-// RUN:   | FileCheck %s --check-prefix=NO-DISAMBIGUATION
+// RUN:   -fskip-odr-check-in-gmf -emit-module-interface %t/A.cppm \
+// RUN:   -fmodule-file=A:Part1=%t/A-Part1.pcm \
+// RUN:   -fmodule-file=A:Part2=%t/different-A-Part2.pcm \
+// RUN:   -o %t/different-A.pcm
+// RUN: not %clang_cc1 -triple %itanium_abi_triple -std=c++20 -emit-llvm -o - \
+// RUN:   -fskip-odr-check-in-gmf %t/use.cpp -fmodule-file=%t/different-A.pcm \
+// RUN:   -fmodule-file=A:Part1=%t/A-Part1.pcm \
+// RUN:   -fmodule-file=A:Part2=%t/different-A-Part2.pcm 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DIFFERENT
 //
-// Identical internal functions from the same textual header must remain
-// distinct when separate global module fragments are imported together.
-// CHECK-DAG: define internal {{.*}} @_ZW1AWP5Part1L6helperv()
-// CHECK-DAG: define internal {{.*}} @_ZW1AWP5Part2L6helperv()
-// CHECK-DAG: call {{.*}} @_ZW1AWP5Part1L6helperv()
-// CHECK-DAG: call {{.*}} @_ZW1AWP5Part2L6helperv()
-// CHECK-DAG: ret i32 1
-// CHECK-DAG: ret i32 1
+// Equivalent definitions are merged and retain the ordinary internal-linkage
+// name.
+// SAME-COUNT-2: call {{.*}} @_ZL6helperv()
+// SAME-COUNT-1: define internal {{.*}} @_ZL6helperv()
 
-// NO-DISAMBIGUATION: define internal {{.*}} @_ZL6helperv()
-// NO-DISAMBIGUATION-NOT: @_ZW1AWP5Part
+// Non-equivalent definitions remain distinct and are diagnosed through the
+// function ODR path, even when general GMF ODR checking is skipped.
+// DIFFERENT: error: 'helper' has different definitions in different modules
 
 //--- part1.cppm
 module;
+extern "C" {
 static inline __attribute__((noinline)) int helper() { return 1; }
+}
 export module A:Part1;
 export inline int part1() { return helper(); }
 
 //--- part2.cppm
 module;
-static inline __attribute__((noinline)) int helper() { return 1; }
+#ifndef RETURN_VALUE
+#define RETURN_VALUE 1
+#endif
+extern "C" {
+static inline __attribute__((noinline)) int helper() { return RETURN_VALUE; }
+}
 export module A:Part2;
 export inline int part2() { return helper(); }
 
