@@ -124,27 +124,31 @@ def CIR_OffloadKind : CIR_I32EnumAttr<"OffloadKind", "offload kind", [
 def CIR_OffloadKindAttr : CIR_EnumAttr<CIR_OffloadKind, "offload_kind"> {
   let summary = "Offload kind of a module in an offload container";
   let description = [{
-    Marks a module as either the host module or one of the device modules of
-    an offload container, keeping a host CIR module and its associated device
-    CIR modules in one IR unit while offload merge/split pipeline passes need
-    visibility into both sides.
-
-    A module carrying the `cir.offload.container` unit attribute is such a
-    container. Its body holds only nested modules: the first one is the host
-    module and must carry `cir.offload.kind = #cir.offload_kind<host>`, and
-    all remaining ones are device modules and must carry
-    `cir.offload.kind = #cir.offload_kind<device>`. There must be at least one
-    device module. Keeping the host module first gives later passes a simple
-    convention for finding the host side while iterating the remaining device
-    modules.
+    Marks a module nested inside an offload container - identified by the
+    `cir.offload.container` unit attribute - as either the host module (carrying
+    `cir.offload.kind = #cir.offload_kind<host>`) or one of the device modules
+    (carrying `cir.offload.kind = #cir.offload_kind<device>`) of the offload
+    container. This creates a tiered module layout, where a singular offload
+    container contains a single host module and one or more device modules,
+    granting the offload merge/split pipeline passes the cross-boundary view.
 
     Example:
     ```mlir
     module attributes {cir.offload.container} {
       module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {}
-      module @device attributes {cir.offload.kind = #cir.offload_kind<device>} {}
+      module @device1 attributes {cir.offload.kind = #cir.offload_kind<device>} {}
+      module @device2 attributes {cir.offload.kind = #cir.offload_kind<device>} {}
     }
     ```
+
+    Note: In order to simplify offload passes, the offload container module
+    requires that the first module inside it is the host module and the rest
+    of the modules are device modules.
+
+    The nested modules are plain `builtin.module` ops rather than a dedicated
+    container op, so that the existing module infrastructure applies to them
+    unchanged; the layout above is enforced by the CIR dialect attribute
+    verifier, following the `gpu.container_module` precedent.
 
     The attribute names `cir.offload.container` and `cir.offload.kind` are
     defined by the `getOffloadContainerAttrName` and `getOffloadKindAttrName`

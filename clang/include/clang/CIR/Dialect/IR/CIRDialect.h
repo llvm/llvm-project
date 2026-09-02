@@ -45,18 +45,6 @@ void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);
 /// Look up the RecordLayoutAttr for a named record in the module's
 /// cir.record_layouts dictionary.  Asserts if the entry is missing.
 RecordLayoutAttr getRecordLayout(mlir::ModuleOp module, mlir::StringAttr name);
-
-/// Returns whether the module is an offload container, i.e. whether it carries
-/// the cir.offload.container unit attribute.  See CIR_OffloadKindAttr for the
-/// structure such a module is required to have.
-bool isOffloadContainer(mlir::ModuleOp module);
-
-/// Returns the host module of an offload container.
-mlir::ModuleOp getOffloadHostModule(mlir::ModuleOp container);
-
-/// Returns the device modules of an offload container, in container order.
-llvm::iterator_range<mlir::Block::op_iterator<mlir::ModuleOp>>
-getOffloadDeviceModules(mlir::ModuleOp container);
 } // namespace cir
 
 // TableGen'erated files for MLIR dialects require that a macro be defined when
