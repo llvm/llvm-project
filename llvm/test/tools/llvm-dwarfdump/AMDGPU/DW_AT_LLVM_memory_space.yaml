@@ -1,0 +1,64 @@
+# Test that DW_AT_LLVM_memory_space values are printed with their symbolic
+# names. Unlike address spaces, memory space encodings are target-independent.
+# Values outside the defined encodings are printed as plain integers.
+
+# RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
+
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_none)
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_global)
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_group)
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_private)
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_LLVM_memory_space (0x00000007)
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  OSABI:      ELFOSABI_AMDGPU_HSA
+  ABIVersion: 0x02
+  Type:       ET_REL
+  Machine:    EM_AMDGPU
+  Flags:      [ EF_AMDGPU_MACH_AMDGCN_GFX900 ]
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:     0x00000001
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+        - Code:     0x00000002
+          Tag:      DW_TAG_variable
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_LLVM_memory_space
+              Form:      DW_FORM_data4
+  debug_info:
+    - Version:    5
+      UnitType:   DW_UT_compile
+      AbbrOffset: 0
+      AddrSize:   8
+      Entries:
+        - AbbrCode: 0x00000001
+          Values:   []
+        - AbbrCode: 0x00000002
+          Values:
+            - Value: 0x0000000000000000
+        - AbbrCode: 0x00000002
+          Values:
+            - Value: 0x0000000000000001
+        - AbbrCode: 0x00000002
+          Values:
+            - Value: 0x0000000000000003
+        - AbbrCode: 0x00000002
+          Values:
+            - Value: 0x0000000000000004
+        - AbbrCode: 0x00000002
+          Values:
+            - Value: 0x0000000000000007
+        - AbbrCode: 0x00000000
+          Values:   []
+...
