@@ -86,18 +86,20 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
     // No Err - it was ErrorCode::UNSUPPORTED, continue into fallback
   }
 
-  if (KEnv.ArgPtrs == nullptr)
+  auto &KernelProperties = KEnv.KernelPR;
+  if (KernelProperties.NumKernelArgs > 0 &&
+      (KEnv.ArgPtrs == nullptr || KEnv.ArgSizes == nullptr))
     return error::createOffloadError(
-        ErrorCode::UNSUPPORTED,
+        ErrorCode::INVALID_ARGUMENT,
         "zeCommandListAppendLaunchKernelWithArguments is not supported on this "
-        "platform and fallback is not possible!");
+        "platform and fallback is not possible, becaue ArgPtrs(%p) or "
+        "ArgSizes(%p) were not provided!",
+        KEnv.ArgPtrs, KEnv.ArgSizes);
 
   // Submit kernel using older set of APIs - zeKernelSetArgumentValue
   auto &GroupSizes = KEnv.GroupSizes;
   CALL_ZE_RET_ERROR(zeKernelSetGroupSize, Kernel, GroupSizes.groupSizeX,
                     GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
-
-  auto &KernelProperties = KEnv.KernelPR;
 
   for (uint32_t KernelArg = 0; KernelArg < KernelProperties.NumKernelArgs;
        KernelArg++) {
