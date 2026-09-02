@@ -422,16 +422,14 @@ public:
   std::map<PointerLocation, std::vector<Transition>>
   find(const llvm::SmallPtrSet<const clang::VarDecl *, 32> &PtrVars,
        const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &PtrFields,
-       const FunctionDecl *Func, const Stmt *Body) {
+       const FunctionDecl *Func, Stmt *Body) {
     // Settings to build CFG
     CFG::BuildOptions Options;
     Options.AddImplicitDtors = true;
     Options.AddTemporaryDtors = true;
     Options.AddInitializers = true;
 
-    // TODO: without const_cast??
-    std::unique_ptr<CFG> TheCFG =
-        CFG::buildCFG(Func, const_cast<Stmt *>(Body), Context, Options);
+    std::unique_ptr<CFG> TheCFG = CFG::buildCFG(Func, Body, Context, Options);
     if (!TheCFG)
       return {};
 
@@ -718,7 +716,7 @@ private:
     if (!Func || !Func->hasBody())
       return;
 
-    const auto *Body = Func->getBody();
+    Stmt *Body = Func->getBody();
     if (!Body)
       return;
 
