@@ -597,8 +597,7 @@ ParseStatus SuperHAsmParser::tryParseRegIndirect(MCRegister &Reg, bool &IsInc, b
   // You can't do both increment and decrement.
   // this is just a straight up syntax error.
   if (IsInc && IsDec) {
-    getLexer().UnLex(Tok);
-    return Error(getTok().getLoc(), "either pre-decrement or post-increment expected");
+    return Error(E, "either pre-decrement or post-increment expected");
   }
 
   EndLoc = Parser.getTok().getLoc();
@@ -689,11 +688,6 @@ ParseStatus SuperHAsmParser::parseRegister(OperandVector &Operands) {
   MCRegister Reg;
   unsigned RegKind;
   if (tryParseRegister(Reg, RegKind, StartLoc, EndLoc).isSuccess()) {
-    LLVM_DEBUG({
-      dbgs() << __FUNCTION__ << " (next): ";
-      getTok().dump(dbgs());
-      dbgs() << "\n";
-    });
     Operands.push_back(SuperHOperand::CreateReg(Reg, RegKind, StartLoc, EndLoc));
     return ParseStatus::Success;
   }
@@ -792,10 +786,11 @@ bool SuperHAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Mne
       continue;
     }
 
+    // NOTE:  All the Failure states are Errors in of themselves,
+    //        as such we don't return an error in this branch.
     if (Result.isFailure()) {
-      SMLoc Loc = getLexer().getLoc();
       Parser.eatToEndOfStatement();
-      return Error(Loc, "unexpected token");
+      return true;
     }
     
     // Initial operand
