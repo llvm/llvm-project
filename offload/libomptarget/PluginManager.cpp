@@ -26,7 +26,8 @@ using namespace llvm::omp::target::debug;
 
 // Temporary helper from liboffload to allow to use both liboffoad and
 // the plugin interface at the same time.
-extern "C" GenericPluginTy *olGetPluginFromPlatform(ol_platform_handle_t Platform);
+extern "C" GenericPluginTy *
+olGetPluginFromPlatform(ol_platform_handle_t Platform);
 
 PluginManager *PM = nullptr;
 

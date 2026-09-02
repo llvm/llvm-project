@@ -87,9 +87,8 @@ llvm::Error DeviceTy::init() {
   if (ol_result_t Res =
           olPlatformInitDevice(PlatformHandle, RTLDeviceID, &DeviceHandle))
     return error::createOffloadError(
-        error::ErrorCode::BACKEND_FAILURE,
-        "failed to initialize device %d: %s", DeviceID,
-        Res->Details ? Res->Details : "(no details)");
+        error::ErrorCode::BACKEND_FAILURE, "failed to initialize device %d: %s",
+        DeviceID, Res->Details ? Res->Details : "(no details)");
 
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
