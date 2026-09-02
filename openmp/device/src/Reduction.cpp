@@ -256,7 +256,8 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
   if (NumTeams <= 1)
     return ThreadId == 0;
 
-  uint32_t &TeamsDone = state::getKernelLaunchEnvironment().ReductionTeamsDone;
+  Global<uint32_t> &TeamsDone =
+      state::getKernelLaunchEnvironment().ReductionTeamsDone;
   void *GlobalBuffer = state::getKernelLaunchEnvironment().ReductionBuffer;
   [[clang::loader_uninitialized]] static Local<uint32_t> TeamsDoneResult;
 

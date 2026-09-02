@@ -31,6 +31,13 @@ defm templ_default_in_function_templ : CXX11Compat<
 defm template_arg_extra_parens : CXX11Compat<
   "parentheses around address non-type template argument are">;
 defm typename_outside_of_template : CXX11Compat<"'typename' outside of a template is">;
+defm template_arg_object_internal : CXX11Compat<
+  "non-type template argument referring to %select{function|object}0 %1 with "
+  "internal linkage is">;
+defm template_outside_of_template : CXX11Compat<
+  "use of 'template' keyword outside of a template is">;
+defm explicit_conversion_functions : CXX11Compat<
+  "explicit conversion functions are">;
 
 // C++14 compatibility with C++11 and earlier.
 defm constexpr_type_definition : CXX14Compat<
@@ -40,10 +47,14 @@ defm constexpr_local_var : CXX14Compat<
 defm constexpr_body_multiple_return : CXX14Compat<
   "multiple return statements in constexpr function is">;
 defm variable_template : CXX14Compat<"variable templates are">;
+defm init_capture : CXX14Compat<"initialized lambda captures are">;
 
 // C++17 compatibility with C++14 and earlier.
 defm decomp_decl : CXX17Compat<"structured binding declarations are">;
 defm inline_variable : CXX17Compat<"inline variables are">;
+defm for_range_begin_end_types_differ : CXX17Compat<
+  "'begin' and 'end' returning different types (%0 and %1) is">;
+defm star_this_lambda_capture : CXX17Compat<"by value capture of '*this' is">;
 
 // C++20 compatibility with C++17 and earlier.
 defm decomp_decl_spec
@@ -63,19 +74,29 @@ defm ctad_for_alias_templates
     : CXX20Compat<"class template argument deduction for alias templates is">;
 defm implicit_typename
     : CXX20Compat<"missing 'typename' prior to dependent type name %0 is">;
-
 defm auto_param : CXX20Compat<"'auto' parameters are">;
+defm using_decl_scoped_enumerator : CXX20Compat<
+  "using declaration naming a scoped enumerator is">;
+defm init_capture_pack : CXX20Compat<"initialized lambda capture packs are">;
+defm equals_this_lambda_capture : CXX20Compat<
+  "explicit capture of 'this' with a capture default of '=' is">;
+defm capture_binding : CXX20Compat<"captured structured bindings are">;
+defm defaulted_comparison : CXX20Compat<"defaulted comparison operators are">;
 
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
   "definition of a %select{static|thread_local}1 variable "
   "in a constexpr %select{function|constructor}0 "
   "is">;
+defm operator_overload_static : CXX23Compat<
+  "declaring overloaded %0 as 'static' is">;
 
 defm auto_expr : CXX23Compat<"'auto' as a functional-style cast is">;
 
 // C++26 compatibility with C++23 and earlier.
 defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a condition is">;
+defm pack_indexing : CXX26Compat<"pack indexing is">;
+defm placeholder_var_definition : CXX26Compat<"placeholder variables are">;
 
 // C++29 compatibility with C++26 and earlier.
 defm pack_indexing_template : CXX29Compat<"pack indexing for template names is">;
@@ -720,12 +741,6 @@ def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration cannot refer to a namespace">;
 def note_namespace_using_decl : Note<
   "did you mean 'using namespace'?">;
-def warn_cxx17_compat_using_decl_scoped_enumerator: Warning<
-  "using declaration naming a scoped enumerator is incompatible with "
-  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-def ext_using_decl_scoped_enumerator : ExtWarn<
-  "using declaration naming a scoped enumerator is a C++20 extension">,
-  InGroup<CXX20>;
 def err_using_decl_constructor : Error<
   "using declaration cannot refer to a constructor">;
 def warn_cxx98_compat_using_decl_constructor : Warning<
@@ -2972,12 +2987,6 @@ def err_for_range_incomplete_type : Error<
   "cannot use incomplete type %0 as a range">;
 def err_for_range_iter_deduction_failure : Error<
   "cannot use type %0 as an iterator">;
-def ext_for_range_begin_end_types_differ : ExtWarn<
-  "'begin' and 'end' returning different types (%0 and %1) is a C++17 extension">,
-  InGroup<CXX17>;
-def warn_for_range_begin_end_types_differ : Warning<
-  "'begin' and 'end' returning different types (%0 and %1) is incompatible "
-  "with C++ standards before C++17">, InGroup<CXXPre17Compat>, DefaultIgnore;
 def note_in_for_range: Note<
   "when looking up '%select{begin|end}0' function for range expression "
   "of type %1">;
@@ -5796,13 +5805,6 @@ def err_template_arg_method : Error<
 def err_template_arg_object_no_linkage : Error<
   "non-type template argument refers to %select{function|object}0 %1 that "
   "does not have linkage">;
-def warn_cxx98_compat_template_arg_object_internal : Warning<
-  "non-type template argument referring to %select{function|object}0 %1 with "
-  "internal linkage is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
-def ext_template_arg_object_internal : ExtWarn<
-  "non-type template argument referring to %select{function|object}0 %1 with "
-  "internal linkage is a C++11 extension">, InGroup<CXX11>;
 def err_template_arg_thread_local : Error<
   "non-type template argument refers to thread-local object">;
 def note_template_arg_internal_object : Note<
@@ -6252,11 +6254,6 @@ def note_referenced_type_template : Note<
   "%select{class|type alias}0 template declared here">;
 def err_template_kw_missing
     : Error<"missing 'template' keyword prior to dependent template name %0">;
-def ext_template_outside_of_template : ExtWarn<
-  "'template' keyword outside of a template">, InGroup<CXX11>;
-def warn_cxx98_compat_template_outside_of_template : Warning<
-  "use of 'template' keyword outside of a template is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 
 def err_non_type_template_in_nested_name_specifier : Error<
   "qualified name refers into a specialization of %select{function|variable}0 "
@@ -6326,12 +6323,6 @@ def err_expected_name_of_pack : Error<
 
 def err_pack_index_out_of_bound : Error<
   "invalid index %0 for pack %1 of size %2">;
-
-def ext_pack_indexing : ExtWarn<
-  "pack indexing is a C++2c extension">, InGroup<CXX26>;
-def warn_cxx23_pack_indexing : Warning<
-  "pack indexing is incompatible with C++ standards before C++2c">,
-  DefaultIgnore, InGroup<CXXPre26Compat>;
 
 def err_pack_outside_template : Error<
   "pack declaration outside of template">;
@@ -7540,11 +7531,6 @@ def err_using_placeholder_variable : Error<
   "ambiguous reference to placeholder '_', which is defined multiple times">;
 def note_reference_placeholder : Note<
   "placeholder declared here">;
-def ext_placeholder_var_definition : ExtWarn<
-  "placeholder variables are a C++2c extension">, InGroup<CXX26>;
-def warn_cxx23_placeholder_var_definition : Warning<
-  "placeholder variables are incompatible with C++ standards before C++2c">,
-  DefaultIgnore, InGroup<CXXPre26Compat>;
 
 def ext_sizeof_alignof_function_type : Extension<
   "invalid application of '%0' to a function type">, InGroup<PointerArith>;
@@ -8976,11 +8962,6 @@ let CategoryName = "Lambda Issue" in {
     "%select{| explicitly}1 captured here">;
 
   // C++14 lambda init-captures.
-  def warn_cxx11_compat_init_capture : Warning<
-    "initialized lambda captures are incompatible with C++ standards "
-    "before C++14">, InGroup<CXXPre14Compat>, DefaultIgnore;
-  def ext_init_capture : ExtWarn<
-    "initialized lambda captures are a C++14 extension">, InGroup<CXX14>;
   def err_init_capture_no_expression : Error<
     "initializer missing for lambda capture %0">;
   def err_init_capture_multiple_expressions : Error<
@@ -8992,11 +8973,6 @@ let CategoryName = "Lambda Issue" in {
     "cannot deduce type for lambda capture %0 from initializer of type %2">;
   def err_init_capture_deduction_failure_from_init_list : Error<
     "cannot deduce type for lambda capture %0 from initializer list">;
-  def warn_cxx17_compat_init_capture_pack : Warning<
-    "initialized lambda capture packs are incompatible with C++ standards "
-    "before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-  def ext_init_capture_pack : ExtWarn<
-    "initialized lambda pack captures are a C++20 extension">, InGroup<CXX20>;
 
   // C++14 generic lambdas.
   def warn_cxx11_compat_generic_lambda : Warning<
@@ -9005,24 +8981,11 @@ let CategoryName = "Lambda Issue" in {
   def err_lambda_explicit_temp_spec : Error<
     "a member of a lambda should not be explicitly %select{specialized|instantiated}0">;
 
-  // C++17 '*this' captures.
-  def warn_cxx14_compat_star_this_lambda_capture : Warning<
-    "by value capture of '*this' is incompatible with C++ standards before C++17">,
-     InGroup<CXXPre17Compat>, DefaultIgnore;
-  def ext_star_this_lambda_capture_cxx17 : ExtWarn<
-    "capture of '*this' by copy is a C++17 extension">, InGroup<CXX17>;
-
   // C++17 parameter shadows capture
   def err_parameter_shadow_capture : Error<
     "a lambda parameter cannot shadow an explicitly captured entity">;
 
   // C++20 [=, this] captures.
-  def warn_cxx17_compat_equals_this_lambda_capture : Warning<
-    "explicit capture of 'this' with a capture default of '=' is incompatible "
-    "with C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-  def ext_equals_this_lambda_capture_cxx20 : ExtWarn<
-    "explicit capture of 'this' with a capture default of '=' "
-    "is a C++20 extension">, InGroup<CXX20>;
   def warn_deprecated_this_capture : Warning<
     "implicit capture of 'this' with a capture default of '=' is deprecated">,
     InGroup<DeprecatedThisCapture>;
@@ -10343,12 +10306,6 @@ def err_local_nested_class_invalid_scope : Error<
   "nested local class %0 must be defined in the same block scope as %1">;
 def err_capture_binding_openmp : Error<
   "capturing a structured binding is not yet supported in OpenMP">;
-def ext_capture_binding : ExtWarn<
-  "captured structured bindings are a C++20 extension">, InGroup<CXX20>;
-def warn_cxx17_compat_capture_binding : Warning<
-  "captured structured bindings are incompatible with "
-  "C++ standards before C++20">,
-  InGroup<CXXPre20Compat>, DefaultIgnore;
 
 def err_static_data_member_not_allowed_in_local_class : Error<
   "static data member %0 not allowed in local %sub{select_tag_type_kind}2 %1">;
@@ -10400,11 +10357,6 @@ def err_operator_overload_needs_class_or_enum : Error<
   "or enumeration type">;
 
 def err_operator_overload_variadic : Error<"overloaded %0 cannot be variadic">;
-def warn_cxx20_compat_operator_overload_static : Warning<
-  "declaring overloaded %0 as 'static' is incompatible with C++ standards "
-  "before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
-def ext_operator_overload_static : ExtWarn<
-  "declaring overloaded %0 as 'static' is a C++23 extension">, InGroup<CXX23>;
 def err_operator_overload_static : Error<
   "overloaded %0 cannot be a static member function">;
 def err_operator_overload_default_arg : Error<
@@ -10547,13 +10499,6 @@ def warn_conv_to_void_not_used : Warning<
 def warn_not_compound_assign : Warning<
   "use of unary operator that may be intended as compound assignment (%0=)">;
 
-// C++11 explicit conversion operators
-def ext_explicit_conversion_functions : ExtWarn<
-  "explicit conversion functions are a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_explicit_conversion_functions : Warning<
-  "explicit conversion functions are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
-
 // C++11 defaulted functions
 def err_defaulted_special_member_params : Error<
   "an explicitly-defaulted %sub{select_special_member_kind}0 cannot "
@@ -10615,11 +10560,6 @@ def note_vbase_moved_here : Note<
 def select_defaulted_comparison_kind : TextSubstitution<
   "%select{<ERROR>|equality|three-way|equality|relational}0 comparison "
   "operator">;
-def ext_defaulted_comparison : ExtWarn<
-  "defaulted comparison operators are a C++20 extension">, InGroup<CXX20>;
-def warn_cxx17_compat_defaulted_comparison : Warning<
-  "defaulted comparison operators are incompatible with C++ standards "
-  "before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_defaulted_comparison_template : Error<
   "comparison operator template cannot be defaulted">;
 def err_defaulted_comparison_num_args : Error<
