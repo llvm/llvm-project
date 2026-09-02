@@ -340,7 +340,7 @@ mlir::Value emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
   // Sizes are compared two ways on purpose: relative size in
   // coercionByteSize terms, which is how slotTy was picked, and capacity in
   // getTypeSize terms, which is what the alloca is given.
-  [[maybe_unused]] mlir::Type coercedTy = slotTy == srcTy ? dstTy : srcTy;
+  [[maybe_unused]] mlir::Type coercedTy = ((slotTy == srcTy) ? dstTy : srcTy);
   assert((offset == 0 ||
           coercionByteSize(coercedTy, dl) < coercionByteSize(slotTy, dl)) &&
          "a direct offset must land on the coerced side, the smaller one");
