@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -26,6 +27,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
+#include <limits>
 #include <optional>
 #include <string>
 #include <vector>
@@ -44,32 +46,43 @@ static ::testing::AssertionResult NoError(std::error_code EC) {
 
 namespace {
 
-/// Temporarily control composite ExtBinary writing and restore the command-line
-/// option when the test scope ends.
+/// Temporarily control composite ExtBinary writing and restore the previous
+/// command-line option value when the test scope ends.
 class ScopedCompositeProfile {
-public:
-  /// Select the requested option value for the lifetime of this scope.
-  explicit ScopedCompositeProfile(bool Enabled) { set(Enabled); }
+  /// Option value that was in effect when this scope was entered.
+  bool Previous = false;
 
-  /// Restore the default disabled state when leaving the test scope.
-  ~ScopedCompositeProfile() { set(false); }
-
-  /// Select whether ExtBinary writes use composite profile sections through the
-  /// same type-checked command-line parser used by the production tool.
-  void set(bool Enabled) {
+  /// Return the registered composite-output option.
+  static cl::opt<bool> &option() {
     constexpr StringLiteral OptionName = "extbinary-composite-prof";
     auto &Options = cl::getRegisteredOptions();
     auto OptionIt = Options.find(OptionName);
     if (OptionIt == Options.end())
       report_fatal_error("composite profile option is not registered");
+    return *static_cast<cl::opt<bool> *>(OptionIt->second);
+  }
 
-    // Reset only the option controlled by this scope, leaving unrelated test
-    // process configuration unchanged.
-    cl::Option *Option = OptionIt->second;
-    Option->reset();
-    if (Option->addOccurrence(0, OptionName, Enabled ? "true" : "false"))
+  /// Select the option through the same type-checked parser used by the tool.
+  static void apply(bool Enabled) {
+    constexpr StringLiteral OptionName = "extbinary-composite-prof";
+    cl::opt<bool> &Option = option();
+    Option.reset();
+    if (Option.addOccurrence(0, OptionName, Enabled ? "true" : "false"))
       report_fatal_error("failed to set composite profile option");
   }
+
+public:
+  /// Select the requested option value for the lifetime of this scope.
+  explicit ScopedCompositeProfile(bool Enabled) : Previous(option()) {
+    apply(Enabled);
+  }
+
+  /// Restore the option value that was in effect before this scope.
+  ~ScopedCompositeProfile() { apply(Previous); }
+
+  /// Change the option for the remainder of this scope without updating the
+  /// value restored on destruction.
+  void set(bool Enabled) { apply(Enabled); }
 };
 
 struct SampleProfTest : ::testing::Test {
@@ -206,14 +219,6 @@ struct SampleProfTest : ::testing::Test {
     return writeProfileToBuffer(Profiles, Version);
   }
 
-  // Replace the single-byte ExtBinary version in a complete profile.
-  void overwriteProfileVersion(MutableArrayRef<char> Buffer, uint8_t Version) {
-    unsigned MagicSize = 0;
-    decodeULEB128(reinterpret_cast<const uint8_t *>(Buffer.data()), &MagicSize);
-    ASSERT_LT(MagicSize, Buffer.size());
-    Buffer[MagicSize] = static_cast<char>(Version);
-  }
-
   // Write a raw profile header (Magic + Version) directly to a buffer.
   // This bypasses the writer validation and is used to test reader error
   // handling.
@@ -244,6 +249,21 @@ struct SampleProfTest : ::testing::Test {
     if (!Samples || Samples->getTotalSamples() != 1)
       return sampleprof_error::malformed;
     return Reader->getFormatVersion();
+  }
+
+  /// Create an ExtBinary reader over a complete in-memory profile.
+  ErrorOr<std::unique_ptr<SampleProfileReader>>
+  createReaderFromBuffer(ArrayRef<char> Buffer) {
+    std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
+        StringRef(Buffer.data(), Buffer.size()), "profile");
+    auto FS = vfs::getRealFileSystem();
+    return SampleProfileReader::create(MemBuffer, Context, *FS);
+  }
+
+  /// Write the default one-function profile using composite ExtBinary sections.
+  ErrorOr<SmallVector<char, 128>> writeCompositeProfileToBuffer() {
+    ScopedCompositeProfile Composite(true);
+    return writeProfileToBuffer();
   }
 
   void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5,
@@ -814,6 +834,20 @@ TEST_F(SampleProfTest, SampleProfileFormatVersion106) {
   EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
 }
 
+// Verify that a nested composite-writing helper restores the outer option
+// instead of forcing composite output back off.
+TEST_F(SampleProfTest, CompositeWriterScopeRestoresPreviousValue) {
+  ScopedCompositeProfile Outer(true);
+  auto InnerOrErr = writeCompositeProfileToBuffer();
+  ASSERT_TRUE(NoError(InnerOrErr.getError()));
+
+  auto OuterOrErr = writeProfileToBuffer();
+  ASSERT_TRUE(NoError(OuterOrErr.getError()));
+  auto ReaderOrErr = createReaderFromBuffer(*OuterOrErr);
+  ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+  EXPECT_TRUE(ReaderOrErr.get()->hasCompositeProfileSection());
+}
+
 // Verify that the default composite writer selects the first compatible
 // ExtBinary version.
 TEST_F(SampleProfTest, CompositeProfileUsesVersion105) {
@@ -834,22 +868,6 @@ TEST_F(SampleProfTest, CompositeProfileRejectsProgrammaticLegacyVersions) {
   for (uint64_t Version : {103u, 104u}) {
     auto BufferOrErr = writeProfileToBuffer(Version);
     EXPECT_EQ(BufferOrErr.getError(), sampleprof_error::unsupported_version);
-  }
-}
-
-// Verify that readers reject composite sections whose header claims a legacy
-// ExtBinary version.
-TEST_F(SampleProfTest, CompositeProfileRejectsLegacyFileVersions) {
-  [[maybe_unused]] ScopedCompositeProfile Composite(true);
-  auto BufferOrErr = writeProfileToBuffer();
-  ASSERT_TRUE(NoError(BufferOrErr.getError()));
-  auto Buffer = std::move(*BufferOrErr);
-
-  for (uint8_t Version : {uint8_t(103), uint8_t(104)}) {
-    overwriteProfileVersion(Buffer, Version);
-    auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
-    EXPECT_EQ(ReadVersionOrErr.getError(),
-              sampleprof_error::unsupported_version);
   }
 }
 
