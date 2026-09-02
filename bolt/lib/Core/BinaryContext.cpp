@@ -1540,21 +1540,23 @@ void BinaryContext::processInterproceduralReferences() {
 }
 
 void BinaryContext::postProcessSymbolTable() {
-  fixBinaryDataHoles();
-  bool Valid = true;
-  for (auto &Entry : BinaryDataMap) {
-    BinaryData *BD = Entry.second;
-    if ((BD->getName().starts_with("SYMBOLat") ||
-         BD->getName().starts_with("DATAat")) &&
-        !BD->getParent() && !BD->getSize() && !BD->isAbsolute() &&
-        BD->getSection()) {
-      this->errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD
-                   << "\n";
-      Valid = false;
+  if (!opts::ReorderData.empty()) {
+    fixBinaryDataHoles();
+    bool Valid = true;
+    for (auto &Entry : BinaryDataMap) {
+      BinaryData *BD = Entry.second;
+      if ((BD->getName().starts_with("SYMBOLat") ||
+           BD->getName().starts_with("DATAat")) &&
+          !BD->getParent() && !BD->getSize() && !BD->isAbsolute() &&
+          BD->getSection()) {
+        this->errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD
+                     << "\n";
+        Valid = false;
+      }
     }
+    assert(Valid);
+    (void)Valid;
   }
-  assert(Valid);
-  (void)Valid;
   generateSymbolHashes();
 }
 
@@ -1826,6 +1828,24 @@ std::optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
   if (!DWOCU || !DWOCU->isDWOUnit())
     return std::nullopt;
   return DWOCU;
+}
+
+void BinaryContext::openSharedDWOContext() {
+  if (!UsesDWP)
+    return;
+  DWARFContext *DWOCtx = nullptr;
+  for (auto &KV : DWOIdToSkeletonCU)
+    if (std::optional<DWARFUnit *> DWOCU = getDWOCU(KV.first))
+      DWOCtx = &(*DWOCU)->getContext();
+  if (!DWOCtx)
+    return;
+  // Avoid dwp races on type units needing abbreviations
+  // (buildDWPTypeUnitsForUnit) by making sure all abbreviations are set up.
+  for (const std::unique_ptr<DWARFUnit> &U : DWOCtx->dwo_info_section_units())
+    U->getAbbreviations();
+  // DWARF4-equivalent, which keeps split type units in .debug_types.dwo
+  for (const std::unique_ptr<DWARFUnit> &U : DWOCtx->dwo_types_section_units())
+    U->getAbbreviations();
 }
 
 void BinaryContext::releaseDWOCU(uint64_t DWOId) {

@@ -99,9 +99,8 @@ TEST(CodeGenAction, GracefullyHandleLLVMConversionFailure) {
   auto diagPrinter = std::make_unique<Fortran::frontend::TextDiagnosticPrinter>(
       diagnosticsOS, diagOpts);
 
-  CompilerInstance ci;
+  CompilerInstance ci(std::make_shared<CompilerInvocation>());
   ci.createDiagnostics(diagPrinter.get(), /*ShouldOwnClient=*/false);
-  ci.setInvocation(std::make_shared<CompilerInvocation>());
   ci.setOutputStream(std::make_unique<llvm::raw_null_ostream>());
   ci.getInvocation().getCodeGenOpts().OptimizationLevel = 0;
 

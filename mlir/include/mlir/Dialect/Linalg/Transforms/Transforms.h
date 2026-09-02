@@ -2004,6 +2004,15 @@ void populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns,
     const ControlFusionFn &controlElementwiseOpFusion);
 
+/// Patterns that split elementwise `linalg.generic` operations at the
+/// boundaries of compatible `tensor.concat` inputs, exposing more producer
+/// operations to elementwise fusion. Tensor elementwise operations are
+/// represented as `linalg.generic` after `-convert-elementwise-to-linalg`, so
+/// the patterns implement the elementwise/concat interchange in the Linalg
+/// fusion pipeline.
+void populateSplitElementwiseOpsWithConcatInputsPatterns(
+    RewritePatternSet &patterns);
+
 /// Function type which is used to control propagation of linalg.pack/unpack
 /// ops.
 using ControlPropagationFn = std::function<bool(OpOperand *opOperand)>;

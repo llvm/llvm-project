@@ -899,8 +899,8 @@ add_header_library(
   HDRS
     fmaximumf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
 )
 
@@ -1175,8 +1175,8 @@ add_header_library(
   HDRS
     fminimumf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
 )
 
@@ -2765,7 +2765,7 @@ add_header_library(
   HDRS
     copysignf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
@@ -3246,7 +3246,7 @@ add_header_library(
   HDRS
     fabsf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
@@ -3806,6 +3806,17 @@ add_header_library(
 )
 
 add_header_library(
+  gamma_util
+  HDRS
+    gamma_util.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   getpayload
   HDRS
     getpayload.h
@@ -3965,12 +3976,32 @@ add_header_library(
 )
 
 add_header_library(
+  lgammaf
+  HDRS
+    lgammaf.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.math.gamma_util
+    libc.src.__support.math.log
+)
+
+add_header_library(
   lgammaf16
   HDRS
     lgammaf16.h
   DEPENDS
     libc.include.llvm-libc-macros.float16_macros
-    libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -3980,6 +4011,7 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.types
+    libc.src.__support.math.gamma_util
 )
 
 add_header_library(

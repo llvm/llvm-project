@@ -74,12 +74,10 @@
 #include "SIOptimizeVGPRLiveRange.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
@@ -220,7 +218,8 @@ void SIOptimizeVGPRLiveRange::findNonPHIUsesInBlock(
     Register Reg, MachineBasicBlock *MBB,
     SmallVectorImpl<MachineInstr *> &Uses) const {
   for (auto &UseMI : MRI->use_nodbg_instructions(Reg)) {
-    if (UseMI.getParent() == MBB && !UseMI.isPHI())
+    if (UseMI.getParent() == MBB && !UseMI.isPHI() &&
+        UseMI.readsVirtualRegister(Reg))
       Uses.push_back(&UseMI);
   }
 }

@@ -16,6 +16,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegisterInfo.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
 #include "gtest/gtest.h"
 
@@ -158,6 +159,70 @@ TEST_F(RegisterTypeBuilderClangTest, CacheFollowsScratchTypeSystem) {
   ASSERT_TRUE(second_type_system);
   EXPECT_NE(first_type_system, second_type_system);
   EXPECT_NE(first, second);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsFixedSizeBuiltin) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin builtin("uint32", eEncodingUint, eFormatHex, 4);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(MakeRegisterInfo(builtin, 4));
+  lldb::TypeSystemClangSP type_system =
+      ScratchTypeSystemClang::GetForTarget(target);
+
+  ASSERT_TRUE(type);
+  ASSERT_TRUE(type_system);
+  EXPECT_EQ(type,
+            type_system->GetType(type_system->getASTContext().UnsignedIntTy));
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsNamedBuiltins) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin boolean("bool", eEncodingUint, eFormatBoolean, 1);
+  RegisterTypeBuiltin ieee_half("ieee_half", eEncodingIEEE754, eFormatFloat, 2);
+  RegisterTypeBuiltin bfloat16("bfloat16", eEncodingIEEE754, eFormatFloat, 2);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType bool_type =
+      builder.GetRegisterType(MakeRegisterInfo(boolean, 1));
+  CompilerType half_type =
+      builder.GetRegisterType(MakeRegisterInfo(ieee_half, 2));
+  CompilerType bfloat_type =
+      builder.GetRegisterType(MakeRegisterInfo(bfloat16, 2));
+  lldb::TypeSystemClangSP type_system =
+      ScratchTypeSystemClang::GetForTarget(target);
+
+  ASSERT_TRUE(type_system);
+  clang::ASTContext &ast = type_system->getASTContext();
+  EXPECT_EQ(bool_type, type_system->GetType(ast.BoolTy));
+  EXPECT_EQ(half_type, type_system->GetType(ast.HalfTy));
+  EXPECT_EQ(bfloat_type, type_system->GetType(ast.BFloat16Ty));
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsTargetSizedPointer) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin builtin("data_ptr", eEncodingUint, eFormatAddressInfo,
+                              std::nullopt);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(MakeRegisterInfo(builtin, 8));
+  lldb::TypeSystemClangSP type_system =
+      ScratchTypeSystemClang::GetForTarget(target);
+
+  ASSERT_TRUE(type);
+  ASSERT_TRUE(type_system);
+  EXPECT_EQ(type, type_system->GetType(type_system->getASTContext().VoidPtrTy));
+}
+
+TEST_F(RegisterTypeBuilderClangTest, RejectsSizeMismatch) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin uint32("uint32", eEncodingUint, eFormatHex, 4);
+  RegisterTypeBuiltin pointer("data_ptr", eEncodingUint, eFormatAddressInfo,
+                              std::nullopt);
+  RegisterTypeBuilderClang builder(target);
+
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(uint32, 8)));
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(pointer, 4)));
 }
 
 } // namespace
