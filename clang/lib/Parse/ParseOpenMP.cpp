@@ -1997,7 +1997,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       CachedTokens Toks;
       unsigned Cnt = 1;
       Toks.push_back(Tok);
-      while (Cnt && Tok.isNot(tok::eof)) {
+      while (Cnt && !isAtInputEnd(Tok)) {
         (void)ConsumeAnyToken();
         if (Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp))
           ++Cnt;

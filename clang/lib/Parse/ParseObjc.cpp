@@ -3324,7 +3324,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
     // expensive isBeforeInTranslationUnit call.
     if (PP.getSourceManager().isBeforeInTranslationUnit(Tok.getLocation(),
                                                      OrigLoc))
-      while (Tok.getLocation() != OrigLoc && Tok.isNot(tok::eof))
+      while (Tok.getLocation() != OrigLoc && !isAtInputEnd(Tok))
         ConsumeAnyToken();
   }
   // Clean up the remaining EOF token, only if it's inserted by us. Otherwise
