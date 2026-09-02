@@ -262,9 +262,9 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+  } else if ((Device.PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
               !HasCloseModifier) ||
-             (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
+             (Device.PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
 
     // If unified shared memory is active, implicitly mapped variables that are
     // not privatized use host address. Any explicitly mapped variables also use
@@ -472,8 +472,8 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
          LR.TPR.getEntry()->dynRefCountToStr().c_str(), DynRefCountAction,
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
     LR.TPR.TargetPointer = (void *)TP;
-  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
-             PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
+  } else if (Device.PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
+             Device.PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
