@@ -33035,6 +33035,7 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(
   if (Subtarget->hasLSFE() && !F.isStrictFP() &&
       F.getFnAttribute("no-trapping-math").getValueAsBool() &&
       (AI->getOperation() == AtomicRMWInst::FAdd ||
+       AI->getOperation() == AtomicRMWInst::FSub ||
        AI->getOperation() == AtomicRMWInst::FMax ||
        AI->getOperation() == AtomicRMWInst::FMin ||
        AI->getOperation() == AtomicRMWInst::FMaximum ||

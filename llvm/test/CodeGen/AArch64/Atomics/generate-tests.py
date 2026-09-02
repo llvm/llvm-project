@@ -158,6 +158,8 @@ class FPFeature(enum.Flag):
     def mattr(self):
         if self == FPFeature.v8a_fp:
             return "+v8a"
+        if self == FPFeature.lsfe:
+            return "+lsfe,+fullfp16"
         return "+" + self.name
 
 
@@ -195,7 +197,7 @@ def relpath():
 
 
 def generate_unused_res_test(featname, ordering, op, alignval):
-    if featname != "lsfe" or op == "fsub" or alignval == 1:
+    if featname != "lsfe" or alignval == 1:
         return False
     if ordering not in [AtomicOrder.monotonic, AtomicOrder.release]:
         return False
@@ -404,6 +406,8 @@ def write_lit_tests(feature, datatypes, ops):
         for feat in feature:
             with open(f"{triple}-atomicrmw-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
+                if feat.name == "lsfe":
+                    filter_args = filter_args.replace("|orn", "|fneg|orn")
                 header(f, triple, [feat], filter_args)
                 all_atomicrmw(f, datatypes, ops, feat.name)
 
