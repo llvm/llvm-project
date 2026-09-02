@@ -112,30 +112,6 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
 }
 
 //===----------------------------------------------------------------------===//
-// Offload container helpers
-//===----------------------------------------------------------------------===//
-
-bool cir::isOffloadContainer(mlir::ModuleOp module) {
-  return module->hasAttr(cir::CIRDialect::getOffloadContainerAttrName());
-}
-
-mlir::ModuleOp cir::getOffloadHostModule(mlir::ModuleOp container) {
-  assert(isOffloadContainer(container) && "expected an offload container");
-  return mlir::cast<mlir::ModuleOp>(container.getBody()->front());
-}
-
-llvm::iterator_range<mlir::Block::op_iterator<mlir::ModuleOp>>
-cir::getOffloadDeviceModules(mlir::ModuleOp container) {
-  assert(isOffloadContainer(container) && "expected an offload container");
-  mlir::Block &body = *container.getBody();
-  auto begin = body.op_begin<mlir::ModuleOp>();
-  auto end = body.op_end<mlir::ModuleOp>();
-  if (begin != end)
-    ++begin;
-  return {begin, end};
-}
-
-//===----------------------------------------------------------------------===//
 // Dialect attribute verification
 //===----------------------------------------------------------------------===//
 
@@ -178,20 +154,19 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
   if (failed(verifyOffloadKind(host, cir::OffloadKind::Host)))
     return failure();
 
-  unsigned numDevices = 0;
   auto it = body.begin();
-  for (++it; it != body.end(); ++it) {
+  ++it;
+  if (it == body.end())
+    return container.emitOpError() << "expects at least one device module";
+
+  for (; it != body.end(); ++it) {
     auto module = mlir::dyn_cast<mlir::ModuleOp>(*it);
     if (!module)
       return container.emitOpError()
              << "expects only nested builtin.module ops";
     if (failed(verifyOffloadKind(module, cir::OffloadKind::Device)))
       return failure();
-    ++numDevices;
   }
-
-  if (numDevices == 0)
-    return container.emitOpError() << "expects at least one device module";
   return success();
 }
 
