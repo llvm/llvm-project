@@ -331,7 +331,6 @@ void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
       Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, V));
       return;
     }
-    // Explicitly proceed with default handler for this case cascade.
     handleLValueBitCast(State, Ex, SF, T, ExTy, CastE, Dst, Pred);
     return;
   }
@@ -347,7 +346,6 @@ void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
       Dst.insert(Engine.makeNodeWithBinding(Pred, CastE, UnknownVal()));
       return;
     }
-    // Explicitly proceed with default handler for this case cascade.
     handleLValueBitCast(State, Ex, SF, T, ExTy, CastE, Dst, Pred);
     return;
   }
