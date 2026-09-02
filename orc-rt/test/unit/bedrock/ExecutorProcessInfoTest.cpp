@@ -12,7 +12,7 @@
 
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
 #include "orc-rt-internal/bedrock/TargetDetails.h"
-#include "orc-rt/support/Math.h"
+#include "orc-rt/support/bit.h"
 #include "gtest/gtest.h"
 
 #include <algorithm>
@@ -49,7 +49,7 @@ TEST(ExecutorProcessInfoTest, DetectSucceeds) {
 TEST(ExecutorProcessInfoTest, DetectPageSizeIsPowerOfTwo) {
   auto EPI = cantFail(ExecutorProcessInfo::Detect());
   EXPECT_GT(EPI.pageSize(), 0U);
-  EXPECT_TRUE(isPowerOf2(EPI.pageSize()));
+  EXPECT_TRUE(has_single_bit(EPI.pageSize()));
 }
 
 TEST(ExecutorProcessInfoTest, DetectPageSizeAtLeast4096) {

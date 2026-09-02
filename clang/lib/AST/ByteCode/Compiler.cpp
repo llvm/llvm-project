@@ -116,7 +116,7 @@ public:
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {
-    if (!Idx)
+    if (!Idx || ExplicitlyDestroyed)
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
     removeStoredOpaqueValues();
@@ -130,6 +130,7 @@ public:
     // calls to destroyLocals().
     bool Success = this->emitDestructors(E);
     this->Ctx->emitDestroy(*Idx, E);
+    ExplicitlyDestroyed = true;
     return Success;
   }
 
@@ -212,6 +213,7 @@ public:
 
   /// Index of the scope in the chain.
   UnsignedOrNone Idx = std::nullopt;
+  bool ExplicitlyDestroyed = false;
 };
 
 template <class Emitter> class ArrayIndexScope final {
@@ -638,7 +640,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     if (E->getType()->isVectorType())
       return this->emitVectorConversion(E->getSubExpr(), E);
     if (!SubExpr->getType()->isRealFloatingType() ||
-        !E->getType()->isBooleanType())
+        !E->getType()->hasBooleanRepresentation())
       return false;
     if (const auto *FL = dyn_cast<FloatingLiteral>(SubExpr))
       return this->emitConstBool(FL->getValue().isNonZero(), E);
@@ -1551,7 +1553,6 @@ bool Compiler<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
   BinaryOperatorKind Op = E->getOpcode();
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  OptPrimType T = classify(E->getType());
 
   if (Op == BO_LOr) {
     // Logical OR. Visit LHS and only evaluate RHS if LHS was FALSE.
@@ -1600,9 +1601,10 @@ bool Compiler<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
     return this->emitPopBool(E);
 
   // For C, cast back to integer type.
-  assert(T);
-  if (T != PT_Bool)
-    return this->emitCast(PT_Bool, *T, E);
+  if (!E->getType()->isBooleanType()) {
+    PrimType T = classifyPrim(E->getType());
+    return this->emitCast(PT_Bool, T, E);
+  }
   return true;
 }
 
@@ -7282,9 +7284,9 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
     const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
     FunctionTemplateDecl *CallOpTemplate =
         LambdaCallOp->getDescribedFunctionTemplate();
-    void *InsertPos = nullptr;
+    llvm::FoldingSetInsertToken InsertToken;
     const FunctionDecl *CorrespondingCallOpSpecialization =
-        CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+        CallOpTemplate->findSpecialization(TAL->asArray(), InsertToken);
     assert(CorrespondingCallOpSpecialization);
     LambdaCallOp = CorrespondingCallOpSpecialization;
   } else {

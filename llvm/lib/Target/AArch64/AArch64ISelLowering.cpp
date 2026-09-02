@@ -1551,6 +1551,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+
+      // Wider reductions are built from a ladder of the rungs above.
+      setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v4i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
     }
 
     if (Subtarget->hasDotProd()) {
@@ -1654,7 +1662,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       for (MVT VT : {MVT::nxv16i1, MVT::nxv8i1})
         setOperationAction(ISD::VECTOR_MATCH, VT, Custom);
 
-      for (MVT VT : {MVT::v16i1, MVT::v8i1, MVT::v16i8, MVT::v8i8})
+      for (MVT VT :
+           {MVT::v16i1, MVT::v8i1, MVT::v16i8, MVT::v8i8, MVT::v3i8, MVT::v4i8})
         setOperationAction(ISD::VECTOR_MATCH, VT, Custom);
     }
 
@@ -2218,17 +2227,32 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT :
          {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
+                    MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
+                    MVT::nxv4i32, MVT::nxv4f32}) {
+      // Use a custom lowering for masked stores that could be a supported
+      // compressing store. Note: These types still use the normal (Legal)
+      // lowering for non-compressing masked stores.
+      setOperationAction(ISD::MSTORE, VT, Custom);
+    }
 
     // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
     // bits of the SVE register.
     for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
-                    MVT::v2f64})
+                    MVT::v2f64}) {
+      setOperationAction(ISD::MSTORE, VT, Custom);
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    }
 
     if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
       // With +sve2p2/+sme2p2 the full range of vector types are supported.
-      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16})
+      for (auto VT :
+           {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16}) {
+        // Use custom lowering for MSTORE so we can handle compressstore (using
+        // VECTOR_COMPRESS).
+        setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      }
 
       for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v4f16,
                       MVT::v8f16, MVT::v4bf16, MVT::v8bf16})
@@ -2274,15 +2298,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::nxv4f32, MVT::nxv2f64, MVT::v4f16, MVT::v8f16,
                     MVT::v2f32, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
-
-    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
-                    MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
-                    MVT::nxv4i32, MVT::nxv4f32}) {
-      // Use a custom lowering for masked stores that could be a supported
-      // compressing store. Note: These types still use the normal (Legal)
-      // lowering for non-compressing masked stores.
-      setOperationAction(ISD::MSTORE, VT, Custom);
-    }
 
     // Histcnt is SVE2 only
     if (Subtarget->hasSVE2()) {
@@ -6512,6 +6527,31 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
   EVT Op1VT = Op1.getValueType();
   EVT Op2VT = Op2.getValueType();
   EVT ResVT = Op.getValueType();
+
+  if ((Op2VT == MVT::v3i8 || Op2VT == MVT::v4i8)) {
+    SDValue Needle = Op2;
+    EVT NeedleVT = Op2VT;
+
+    if (NeedleVT == MVT::v3i8) {
+      // Pad a v3i8 needle to v4i8.
+      SDValue Pad = DAG.getExtractVectorElt(DL, MVT::i8, Needle, 0);
+      Needle = DAG.getInsertSubvector(DL, DAG.getPOISON(MVT::v4i8), Needle, 0);
+      Needle = DAG.getInsertVectorElt(DL, Needle, Pad, 3);
+    }
+
+    // Extend the v4i8 needle to v16i8.
+    Needle = DAG.getBitcast(MVT::v1i32, Needle);
+    Needle = DAG.getExtractVectorElt(DL, MVT::i32, Needle, 0);
+    Needle = DAG.getSplatVector(MVT::v4i32, DL, Needle);
+    Needle = DAG.getBitcast(MVT::v16i8, Needle);
+
+    return DAG.getNode(ISD::VECTOR_MATCH, DL, Op.getValueType(), Op1, Needle,
+                       Mask);
+  }
+
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(ResVT) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(Op1VT))
+    return SDValue();
 
   assert((Op1VT.getVectorElementType() == MVT::i8 ||
           Op1VT.getVectorElementType() == MVT::i16) &&
@@ -30884,7 +30924,11 @@ static SDValue performBSPExpandForSVE(SDNode *N, SelectionDAG &DAG,
 static SDValue performDupLane128Combine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
 
-  SDValue Insert = N->getOperand(0);
+  SDValue Op = N->getOperand(0);
+  if (Op.getOpcode() == ISD::SPLAT_VECTOR && Op.getValueType() == VT)
+    return Op;
+
+  SDValue Insert = Op;
   if (Insert.getOpcode() != ISD::INSERT_SUBVECTOR)
     return SDValue();
 
@@ -33680,7 +33724,7 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
 
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-      if (AI->getAllocatedType()->isScalableTy())
+      if (AI->isScalable())
         return true;
     }
   }
@@ -35158,6 +35202,12 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                     DAG.getConstant(0, DL, ResultVT), SignFlipMask, RHS);
     return DAG.getNode(ISD::SUB, DL, ResultVT, BiasedDot, BiasCorrection);
   }
+
+  // The wider Neon shapes left here have no single instruction, so leave them
+  // to the generic expansion, which chains the two-way reductions above.
+  if (!Subtarget->isSVEorStreamingSVEAvailable() &&
+      OpVT.getVectorNumElements() > 2 * ResultVT.getVectorNumElements())
+    return SDValue();
 
   bool ConvertToScalable = ResultVT.isFixedLengthVector() &&
                            Subtarget->isSVEorStreamingSVEAvailable();

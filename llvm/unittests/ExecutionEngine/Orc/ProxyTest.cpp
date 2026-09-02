@@ -256,6 +256,67 @@ TEST(ProxyTest, RecordProxyWeaklyReferencedAbsent) {
   cantFail(ES.endSession());
 }
 
+// recordProxy with an explicitly-supplied dispatch function and an
+// already-interned name -- the SymbolStringPtr counterpart of
+// RecordProxyExplicitDispatch above.
+TEST(ProxyTest, RecordProxySymbolStringPtrExplicitDispatch) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  auto &JD = ES.getBootstrapJITDylib();
+  cantFail(JD.define(absoluteSymbols(
+      {{ES.intern(AddOneSpec::Name),
+        {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
+
+  AddOneProxy Call;
+  cantFail(lookupAndApply(
+      JD, {recordProxy(&Call, AddOneDispatch, ES.intern(AddOneSpec::Name))}));
+  ASSERT_TRUE(static_cast<bool>(Call));
+
+  Expected<int32_t> R = Call(ES, 41);
+  ASSERT_THAT_EXPECTED(R, Succeeded());
+  EXPECT_EQ(*R, 42);
+
+  cantFail(ES.endSession());
+}
+
+// recordProxy with a spec but an overridden, already-interned lookup name --
+// the SymbolStringPtr counterpart of RecordProxySpecNameOverride above.
+TEST(ProxyTest, RecordProxySpecSymbolStringPtrNameOverride) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  auto &JD = ES.getBootstrapJITDylib();
+  cantFail(JD.define(absoluteSymbols(
+      {{ES.intern("add_one_alias"),
+        {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
+
+  AddOneProxy Call;
+  cantFail(lookupAndApply(
+      JD, {recordProxy<AddOneSpec>(&Call, ES.intern("add_one_alias"))}));
+  ASSERT_TRUE(static_cast<bool>(Call));
+
+  Expected<int32_t> R = Call(ES, 41);
+  ASSERT_THAT_EXPECTED(R, Succeeded());
+  EXPECT_EQ(*R, 42);
+
+  cantFail(ES.endSession());
+}
+
+// lookupAndApply propagates the lookup flags for the SymbolStringPtr
+// overload too: a weakly-referenced recordProxy for a missing symbol yields a
+// null proxy rather than failing the lookup.
+TEST(ProxyTest, RecordProxySymbolStringPtrWeaklyReferencedAbsent) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  AddOneProxy Call;
+  cantFail(lookupAndApply(
+      ES.getBootstrapJITDylib(),
+      {recordProxy<AddOneSpec>(&Call, ES.intern(AddOneSpec::Name),
+                               SymbolLookupFlags::WeaklyReferencedSymbol)}));
+  EXPECT_FALSE(static_cast<bool>(Call));
+
+  cantFail(ES.endSession());
+}
+
 // A callee returning Error delivers its result as Error (not Expected<Error>),
 // through both call operators, for both success and failure.
 TEST(ProxyTest, ErrorReturn) {
