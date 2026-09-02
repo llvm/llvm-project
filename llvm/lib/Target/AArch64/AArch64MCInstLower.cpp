@@ -347,13 +347,7 @@ bool AArch64MCInstLower::lowerOperand(const MachineOperand &MO,
     MCOp = MCOperand::createImm(MO.getImm());
     break;
   case MachineOperand::MO_MachineBasicBlock:
-    // A flagged block operand (Windows catchret's ADRP/ADD) needs its
-    // relocation specifier; a plain branch target does not.
-    if (MO.getTargetFlags() & AArch64II::MO_FRAGMENT)
-      MCOp = LowerSymbolOperand(MO, MO.getMBB()->getSymbol());
-    else
-      MCOp = MCOperand::createExpr(
-          MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
+    MCOp = LowerSymbolOperand(MO, MO.getMBB()->getSymbol());
     break;
   case MachineOperand::MO_GlobalAddress:
     MCOp = LowerSymbolOperand(MO, GetGlobalAddressSymbol(MO));
