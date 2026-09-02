@@ -10,6 +10,7 @@
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -1663,11 +1664,7 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   // silently trusted to region forwarding.
   auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
   if (!consumerLayout) {
-    // TODO: handle scf.while's "after" region arguments. They are tied to no
-    // init operand, so nothing records the layout they require, and the
-    // conflict on the scf.condition operand feeding them is left unresolved
-    // rather than converted.
-    if (isa<RegionBranchTerminatorOpInterface>(consumerOp))
+    if (isa<func::ReturnOp>(consumerOp) || isa<gpu::ReturnOp>(consumerOp))
       return success();
     return consumerOp->emitError(
         "No consumer layout found for vector operand.");
@@ -1755,10 +1752,11 @@ ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
         conflictingCreateNdOp.getContext(), currTDescType.getShape(),
         currTDescType.getElementType(), currTDescType.getEncoding(),
         expectedLayout);
-    xegpu::CreateNdDescOp newOp = xegpu::CreateNdDescOp::create(
-        builder, consumerOp->getLoc(), newTensorDescType,
+    auto newOp = xegpu::CreateNdDescOp::create(
+        builder, consumerOp->getLoc(), TypeRange{newTensorDescType},
         conflictingCreateNdOp->getOperands(),
-        conflictingCreateNdOp->getAttrs());
+        conflictingCreateNdOp.getProperties(),
+        conflictingCreateNdOp->getDiscardableAttrDictionary().getValue());
     // Replace the tensor descriptor operand in the consumer op with the new
     // tensor descriptor.
     consumerOp->replaceUsesOfWith(tdescValue, newOp.getResult());
