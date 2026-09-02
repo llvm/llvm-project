@@ -410,12 +410,119 @@ static ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
                           IndexC->getValue().zextOrTrunc(64));
 }
 
+/// Collect the per-lane values of a fixed-length vector fully defined by an
+/// insertelement chain into poison/undef with constant lane indices. Returns
+/// false if the vector is not built this way or any lane is left undefined.
+static bool collectInsertedVectorElements(Value *V,
+                                          SmallVectorImpl<Value *> &Elts) {
+  auto *VecTy = dyn_cast<FixedVectorType>(V->getType());
+  if (!VecTy)
+    return false;
+
+  Elts.assign(VecTy->getNumElements(), nullptr);
+  // Walk the chain outermost-first; the first value seen for a lane wins.
+  for (Value *Cur = V; auto *IE = dyn_cast<InsertElementInst>(Cur);
+       Cur = IE->getOperand(0)) {
+    // Intermediate chain nodes must be single-use so the whole build becomes
+    // dead once the extractelement(s) fold. The outermost node (Cur == V) may
+    // feed several extractelements; the caller checks it has no other users.
+    if (Cur != V && !IE->hasOneUse())
+      return false;
+    auto *Lane = dyn_cast<ConstantInt>(IE->getOperand(2));
+    if (!Lane || Lane->getValue().uge(Elts.size()))
+      return false;
+    if (Value *&Slot = Elts[Lane->getZExtValue()]; !Slot)
+      Slot = IE->getOperand(1);
+  }
+  return all_of(Elts, [](Value *E) { return E; });
+}
+
+/// Fold an extractelement of a vector of GEPs into a scalar GEP -- the GEP
+/// analog of the extractelement-of-unop/binop/cmp scalarization folds below:
+///   extractelement (<gep P0, Idxs>, <gep P1, Idxs>, ...), N
+///     --> gep (extractelement <P0, P1, ...>, N), Idxs
+/// The GEPs must be single-use and share the same source element type and index
+/// operands, differing only in the pointer operand. This scalarizes the GEP and
+/// exposes a (frequently loop-invariant) pointer selection that LICM can hoist,
+/// while the common indices stay with the GEP. Only run for a non-constant
+/// index; the constant-index case is handled by the insertelement fold above.
+static Instruction *foldExtractOfGEPVector(ExtractElementInst &EI,
+                                           InstCombiner::BuilderTy &Builder) {
+  auto *VecTy = dyn_cast<FixedVectorType>(EI.getVectorOperandType());
+  if (!VecTy || !VecTy->getElementType()->isPointerTy())
+    return nullptr;
+
+  // The source vector must feed only extractelements, otherwise the
+  // insertelement build (and the GEPs) stay live after folding and we would
+  // duplicate IR. Multiple extractelement users are fine -- they each fold and
+  // the build dies once the last one does.
+  if (!all_of(EI.getVectorOperand()->users(),
+              [](User *U) { return isa<ExtractElementInst>(U); }))
+    return nullptr;
+
+  SmallVector<Value *, 4> Elts;
+  if (!collectInsertedVectorElements(EI.getVectorOperand(), Elts))
+    return nullptr;
+
+  auto *FirstGEP = dyn_cast<GetElementPtrInst>(Elts[0]);
+  if (!FirstGEP || !FirstGEP->hasOneUse())
+    return nullptr;
+
+  // Bail on GEPs that index into a vector; creating one is discouraged.
+  Type *SrcElemTy = FirstGEP->getSourceElementType();
+  if (SrcElemTy->isVectorTy())
+    return nullptr;
+
+  SmallVector<Value *, 4> Indices(FirstGEP->idx_begin(), FirstGEP->idx_end());
+  if (Indices.empty())
+    return nullptr;
+
+  GEPNoWrapFlags NW = FirstGEP->getNoWrapFlags();
+  SmallVector<Value *, 4> BasePtrs;
+  BasePtrs.reserve(Elts.size());
+  BasePtrs.push_back(FirstGEP->getPointerOperand());
+
+  for (Value *Elt : drop_begin(Elts)) {
+    auto *GEP = dyn_cast<GetElementPtrInst>(Elt);
+    if (!GEP || !GEP->hasOneUse() || GEP->getSourceElementType() != SrcElemTy ||
+        GEP->getNumIndices() != Indices.size())
+      return nullptr;
+    for (auto [K, Idx] : enumerate(Indices))
+      if (GEP->getOperand(1 + K) != Idx)
+        return nullptr;
+    // The result is whichever arm the index selects at runtime, so a no-wrap
+    // flag holds only if it holds for every arm.
+    NW = NW & GEP->getNoWrapFlags();
+    BasePtrs.push_back(GEP->getPointerOperand());
+  }
+
+  // Build <P0, P1, ...>, extract the selected base, then re-apply the common
+  // GEP. Constant base pointers fold the vector + extract to a loop-invariant
+  // value that LICM can hoist.
+  Value *BaseVec = PoisonValue::get(
+      FixedVectorType::get(BasePtrs[0]->getType(), BasePtrs.size()));
+  for (auto [Lane, BasePtr] : enumerate(BasePtrs))
+    BaseVec =
+        Builder.CreateInsertElement(BaseVec, BasePtr, Builder.getInt64(Lane));
+  Value *Picked = Builder.CreateExtractElement(BaseVec, EI.getIndexOperand());
+
+  return GetElementPtrInst::Create(SrcElemTy, Picked, Indices, NW);
+}
+
 Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *SrcVec = EI.getVectorOperand();
   Value *Index = EI.getIndexOperand();
   if (Value *V = simplifyExtractElementInst(SrcVec, Index,
                                             SQ.getWithInstruction(&EI)))
     return replaceInstUsesWith(EI, V);
+
+  // extractelement (<gep(P0, Idxs), gep(P1, Idxs)>), N (non-constant N)
+  //   --> gep (extractelement <P0, P1>, N), Idxs
+  // Scalarizes the GEP so a loop-invariant pointer selection can be hoisted
+  // (the indices stay with the GEP).
+  if (!isa<Constant>(Index))
+    if (Instruction *R = foldExtractOfGEPVector(EI, Builder))
+      return R;
 
   // extractelt (select %x, %vec1, %vec2), %const ->
   // select %x, %vec1[%const], %vec2[%const]
