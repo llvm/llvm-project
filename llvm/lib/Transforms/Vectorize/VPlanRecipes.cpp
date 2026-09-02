@@ -4946,35 +4946,6 @@ void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
-  auto &Builder = State.Builder;
-  // Create a vector from the initial value.
-  auto *VectorInit = getStartValue()->getLiveInIRValue();
-
-  Type *VecTy = State.VF.isScalar()
-                    ? VectorInit->getType()
-                    : VectorType::get(VectorInit->getType(), State.VF);
-
-  BasicBlock *VectorPH =
-      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-  if (State.VF.isVector()) {
-    auto *IdxTy = Builder.getInt32Ty();
-    auto *One = ConstantInt::get(IdxTy, 1);
-    IRBuilder<>::InsertPointGuard Guard(Builder);
-    Builder.SetInsertPoint(VectorPH->getTerminator());
-    auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, State.VF);
-    auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
-    VectorInit = Builder.CreateInsertElement(
-        PoisonValue::get(VecTy), VectorInit, LastIdx, "vector.recur.init");
-  }
-
-  // Create a phi node for the new recurrence.
-  PHINode *Phi = PHINode::Create(VecTy, 2, "vector.recur");
-  Phi->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
-  Phi->addIncoming(VectorInit, VectorPH);
-  State.set(this, Phi);
-}
-
 InstructionCost
 VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
                                              VPCostContext &Ctx) const {
