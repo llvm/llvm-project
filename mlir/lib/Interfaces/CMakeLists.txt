@@ -13,6 +13,7 @@ set(LLVM_OPTIONAL_SOURCES
   InferIntRangeInterface.cpp
   InferStridedMetadataInterface.cpp
   InferTypeOpInterface.cpp
+  LoopInvariantConditionInterface.cpp
   LoopLikeInterface.cpp
   MemOpInterfaces.cpp
   MemorySlotInterfaces.cpp
@@ -99,6 +100,20 @@ add_mlir_library(MLIRLoopLikeInterface
   MLIRIR
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
+)
+
+add_mlir_library(MLIRLoopInvariantConditionInterface
+  LoopInvariantConditionInterface.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+
+  DEPENDS
+  MLIRLoopInvariantConditionInterfaceIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRLoopLikeInterface
 )
 
 add_mlir_interface_library(MemOpInterfaces)

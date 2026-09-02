@@ -112,6 +112,22 @@ size_t moveLoopInvariantCode(LoopLikeOpInterface loopLike);
 LoopLikeOpInterface hoistLoopInvariantSubsets(RewriterBase &rewriter,
                                               LoopLikeOpInterface loopLike);
 
+/// Hoists pure operations out of an unconditionally entered if-like region
+/// into just before region's parent op.
+/// An operation in region is hoisted if it is
+/// pure and all of its operands are either defined outside loopLike or
+/// produced by another already-hoisted operation from the same region.
+///
+/// This is dialect-agnostic, it does not name any specific if-like op.
+/// Whether any given nested op qualifies is answered entirely by that op's
+/// own LoopInvariantConditionOpInterface implementation
+/// affine::registerLoopInvariantConditionOpInterfaceExternalModels and
+/// scf::registerLoopInvariantConditionOpInterfaceExternalModels).
+///
+/// Returns the number of operations hoisted.
+size_t hoistFromInvariantConditions(RewriterBase &rewriter,
+                                    LoopLikeOpInterface loopLike);
+
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_LOOPINVARIANTCODEMOTIONUTILS_H

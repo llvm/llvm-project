@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRSCFDialect
   SCF.cpp
   DeviceMappingInterface.cpp
+  LoopInvariantConditionOpInterfaceImpl.cpp
   MemorySlot.cpp
   ValueBoundsOpInterfaceImpl.cpp
 
@@ -16,6 +17,7 @@ add_mlir_dialect_library(MLIRSCFDialect
   MLIRDialectUtils
   MLIRFunctionInterfaces
   MLIRIR
+  MLIRLoopInvariantConditionInterface
   MLIRLoopLikeInterface
   MLIRMemorySlotUtils
   MLIRSideEffectInterfaces
