@@ -3464,7 +3464,7 @@ func.func @all_true_vector_mask_no_result(%a : vector<3x4xf32>, %m : memref<3x4x
 // -----
 
 // +---------------------------------------------------------------------------
-// Tests for ShapeCastCreateMaskFolderTrailingOneDim
+// Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Trailing>
 // +---------------------------------------------------------------------------
 
 // CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit(
@@ -3521,9 +3521,9 @@ func.func @fold_shape_cast_with_mask_trailing_unit_scalable_one(%arg0: tensor<1x
 // CHECK-LABEL:   func.func @fold_shape_cast_with_constant_mask_trailing_unit() -> vector<4xi1> {
 func.func @fold_shape_cast_with_constant_mask_trailing_unit() -> vector<4xi1>{
 // CHECK-NOT: vector.shape_cast
-// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [1] : vector<4xi1>
+// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [3] : vector<4xi1>
 // CHECK:           return %[[VAL_0]] : vector<4xi1>
-  %1 = vector.constant_mask [1, 1, 1] : vector<4x1x1xi1>
+  %1 = vector.constant_mask [3, 1, 1] : vector<4x1x1xi1>
   %2 = vector.shape_cast %1 : vector<4x1x1xi1> to vector<4xi1>
   return %2 : vector<4xi1>
 }
@@ -3531,7 +3531,7 @@ func.func @fold_shape_cast_with_constant_mask_trailing_unit() -> vector<4xi1>{
 // -----
 
 // +---------------------------------------------------------------------------
-// Tests for CastAwayTransferWriteLeadingOneDim
+// Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Leading>
 // +---------------------------------------------------------------------------
 
 // CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit(
@@ -3588,9 +3588,9 @@ func.func @fold_shape_cast_with_mask_leading_unit_scalable_one(%arg0: tensor<1x?
 // CHECK-LABEL:   func.func @fold_shape_cast_with_constant_mask_leading_unit() -> vector<4xi1> {
 func.func @fold_shape_cast_with_constant_mask_leading_unit() -> vector<4xi1>{
 // CHECK-NOT: vector.shape_cast
-// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [1] : vector<4xi1>
+// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [3] : vector<4xi1>
 // CHECK:           return %[[VAL_0]] : vector<4xi1>
-  %1 = vector.constant_mask [1, 1, 1] : vector<1x1x4xi1>
+  %1 = vector.constant_mask [1, 1, 3] : vector<1x1x4xi1>
   %2 = vector.shape_cast %1 : vector<1x1x4xi1> to vector<4xi1>
   return %2 : vector<4xi1>
 }
