@@ -24,11 +24,12 @@ using namespace llvm;
 using namespace llvm::sys;
 using namespace llvm::omp::target::debug;
 
-PluginManager *PM = nullptr;
+// Temporary helper from liboffload to allow to use both liboffoad and
+// the plugin interface at the same time.
+extern "C" GenericPluginTy *
+olGetPluginFromPlatform(ol_platform_handle_t Platform);
 
-// Every plugin exports this method to create an instance of the plugin type.
-#define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
-#include "Shared/Targets.def"
+PluginManager *PM = nullptr;
 
 void PluginManager::init() {
   TIMESCOPE();
@@ -38,14 +39,25 @@ void PluginManager::init() {
   }
 
   ODBG(ODT_Init) << "Loading RTLs";
+  ol_init_args_t InitArgs = OL_INIT_ARGS_INIT;
+  InitArgs.LazyInit = true;
+  if (ol_result_t Res = olInit(&InitArgs))
+    REPORT() << "Failed to initialize liboffload: "
+             << (Res->Details ? Res->Details : "(no details)");
 
-  // Attempt to create an instance of each supported plugin.
-#define PLUGIN_TARGET(Name)                                                    \
-  do {                                                                         \
-    Plugins.emplace_back(                                                      \
-        std::unique_ptr<GenericPluginTy>(createPlugin_##Name()));              \
-  } while (false);
-#include "Shared/Targets.def"
+  if (ol_result_t Res = olIteratePlatforms(
+          [](ol_platform_handle_t Platform, void *Data) {
+            auto *Self = static_cast<PluginManager *>(Data);
+            GenericPluginTy *Plugin = olGetPluginFromPlatform(Platform);
+            ODBG(ODT_Init) << "Adding plugin " << Plugin->getName()
+                           << " from liboffload";
+            Self->Plugins.push_back(Plugin);
+            Self->PluginToPlatform[Plugin] = Platform;
+            return true;
+          },
+          this))
+    REPORT() << "Failed to iterate platforms: "
+             << (Res->Details ? Res->Details : "(no details)");
 
   ODBG(ODT_Init) << "RTLs loaded!";
 }
@@ -54,16 +66,10 @@ void PluginManager::deinit() {
   TIMESCOPE();
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
-  for (auto &Plugin : Plugins) {
-    if (!Plugin->is_initialized())
-      continue;
-
-    if (auto Err = Plugin->deinit()) {
-      std::string InfoMsg = toString(std::move(Err));
-      ODBG(ODT_Deinit) << "Failed to deinit plugin: " << InfoMsg;
-    }
-    Plugin.release();
-  }
+  Plugins.clear();
+  if (ol_result_t Res = olShutDown())
+    REPORT() << "Failed to shut down liboffload: "
+             << (Res->Details ? Res->Details : "(no details)");
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
 }
@@ -104,7 +110,8 @@ bool PluginManager::initializeDevice(GenericPluginTy &Plugin,
   Plugin.set_device_identifier(UserId, DeviceId);
 #endif
 
-  auto Device = std::make_unique<DeviceTy>(&Plugin, UserId, DeviceId);
+  ol_platform_handle_t Platform = PluginToPlatform[&Plugin];
+  auto Device = std::make_unique<DeviceTy>(&Plugin, Platform, UserId, DeviceId);
   if (auto Err = Device->init()) {
     std::string InfoMsg = toString(std::move(Err));
     ODBG(ODT_Init) << "Failed to init device " << DeviceId << ": " << InfoMsg;

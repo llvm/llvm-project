@@ -83,6 +83,12 @@ VERS1.0 {
     __llvmPushCallConfiguration;
     __llvmPopCallConfiguration;
     llvmLaunchKernel;
+    # OMPT symbols that currently need to be seen by liboffload.
+    extern "C++" {
+      llvm::omp::target::ompt::Initialized;
+      llvm::omp::target::ompt::lookupCallbackByCode;
+      llvm::omp::target::ompt::lookupCallbackByName;
+    };
   local:
     *;
 };

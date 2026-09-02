@@ -43,6 +43,7 @@ add_offload_unittest("memory"
     memory/olMemRegister.cpp)
 
 add_offload_unittest("platform"
+    platform/olIteratePlatforms.cpp
     platform/olGetPlatformInfo.cpp
     platform/olGetPlatformInfoSize.cpp)
 
