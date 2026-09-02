@@ -14,9 +14,9 @@ define i64 @pr97452_scalable_vf1_for_live_out(ptr %src) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 23, [[TMP0]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 23, [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], 1
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], 1
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 0, i32 [[TMP2]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -80,9 +80,9 @@ define void @pr97452_scalable_vf1_for_no_live_out(ptr %src, ptr noalias %dst) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 23, [[TMP0]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 23, [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], 1
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], 1
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 0, i32 [[TMP2]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

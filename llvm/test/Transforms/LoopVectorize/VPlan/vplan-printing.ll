@@ -1042,22 +1042,25 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = trunc vp<[[VP0]]> to i32
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%vector.recur.init> = insertelement ir<poison>, ir<22>, vp<[[VP4]]>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[VP4]]>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%for.1.next> = load vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-order splice ir<%for.1>, ir<%for.1.next>
-; CHECK-NEXT:      WIDEN ir<%add> = add vp<[[VP6]]>, ir<1>
+; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi vp<%vector.recur.init>, ir<%for.1.next>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[VP6]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%add>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      WIDEN ir<%for.1.next> = load vp<[[VP7]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = first-order splice ir<%for.1>, ir<%for.1.next>
+; CHECK-NEXT:      WIDEN ir<%add> = add vp<[[VP8]]>, ir<1>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds i16, ir<%gep.ptr>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP9]]>, ir<%add>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
@@ -1065,8 +1068,8 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<%vector.recur.extract.for.phi> = extract-penultimate-element ir<%for.1.next>
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-part ir<%for.1.next>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part ir<%for.1.next>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
