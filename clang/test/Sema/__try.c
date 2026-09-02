@@ -271,6 +271,19 @@ void test_jump_out_of___finally(void) {
 
   __try {
   } __finally {
+    goto out; // expected-warning{{jump out of __finally block has undefined behavior}}
+  }
+out:
+  __try {
+  } __finally {
+  inside:
+    if (__abnormal_termination())
+      // A goto that stays inside the SEH handler shouldn't trigger the warning.
+      goto inside;
+  }
+
+  __try {
+  } __finally {
     return; // expected-warning{{jump out of __finally block has undefined behavior}}
   }
 

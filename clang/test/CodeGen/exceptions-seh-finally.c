@@ -286,6 +286,116 @@ void finally_with_func(void) {
 // CHECK-LABEL: define internal {{.*}}void @"?fin$0@0@finally_with_func@@"({{[^)]*}})
 // CHECK: call {{.*}}void @cleanup_with_func(ptr noundef @"??_C@_0BC@COAGBPGM@finally_with_func?$AA@")
 
+// Jumping out of a __finally is UB, check that unreachable is emitted rather
+// than a br out of __finally (which is illegal).
+void goto_out_of_finally(void) {
+  __try {
+    might_crash();
+  } __finally {
+    goto out;
+  }
+out:
+  cleanup();
+}
+
+// CHECK-LABEL: define dso_local {{.*}}void @goto_out_of_finally()
+// CHECK: call {{.*}}void @"?fin$0@0@goto_out_of_finally@@"({{.*}})
+// CHECK: br label %[[out:[^ ]*]]
+//
+// CHECK: [[out]]
+// CHECK: call {{.*}}void @cleanup()
+// CHECK-NEXT: ret void
+
+// CHECK-LABEL: define internal {{.*}}void @"?fin$0@0@goto_out_of_finally@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
+// CHECK-NOT: br
+// CHECK-NOT: ret void
+// CHECK: unreachable
+
+// Jumping inside a __finally should still be legal, so check that br is still
+// emitted for jumps inside the SEH handler.
+void goto_in_and_out_of_finally(void) {
+before:
+  __try {
+    might_crash();
+  } __finally {
+    if (check_condition())
+      goto inside;
+    if (check_condition())
+      goto before;
+  inside:
+    if (check_condition())
+      goto after;
+    cleanup();
+  }
+after:
+  cleanup();
+}
+
+// CHECK-LABEL: define internal {{.*}}void @"?fin$0@0@goto_in_and_out_of_finally@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
+// CHECK: call {{.*}}i32 @check_condition()
+// CHECK: br {{.*}}, label %[[ifthen1:[^ ]*]], label %[[ifend1:[^ ]*]]
+//
+// CHECK: [[ifthen1]]
+// Internal jump should still generate.
+// CHECK: br label %[[inside:[^ ]*]]
+//
+// CHECK: [[ifend1]]
+// CHECK: call {{.*}}i32 @check_condition()
+// CHECK: br {{.*}}, label %[[ifthen2:[^ ]*]], label %[[ifend2:[^ ]*]]
+//
+// CHECK: [[ifthen2]]
+// Backwards jumps still leave the helper.
+// CHECK: unreachable
+//
+// CHECK: [[ifend2]]
+// CHECK: br label %[[inside]]
+//
+// CHECK: [[inside]]
+// CHECK: call {{.*}}i32 @check_condition()
+// CHECK: br {{.*}}, label %[[ifthen3:[^ ]*]], label %[[ifend3:[^ ]*]]
+//
+// CHECK: [[ifthen3]]
+// Forward jumps still leave the helper.
+// CHECK: unreachable
+//
+// CHECK: [[ifend3]]
+// CHECK: call {{.*}}void @cleanup()
+// CHECK-NEXT: ret void
+
+// The label can be nested arbitrarily deeply inside the __finally, but alas
+// still legal and a br should still be generated.
+void deep_label_in_finally(void) {
+  __try {
+    might_crash();
+  } __finally {
+    while (check_condition()) {
+      switch (check_condition()) {
+      case 1:
+      deep:
+        cleanup();
+        break;
+      default:
+        goto deep;
+      }
+    }
+  }
+}
+
+// CHECK-LABEL: define internal {{.*}}void @"?fin$0@0@deep_label_in_finally@@"({{.*}})
+// CHECK-SAME: [[finally_attrs]]
+// CHECK: switch i32 %{{[^,]*}}, label %[[swdefault:[^ ]*]] [
+// CHECK: br label %[[deep:[^ ]*]]
+//
+// CHECK: [[deep]]
+// CHECK: call {{.*}}void @cleanup()
+//
+// CHECK: [[swdefault]]
+// CHECK-NEXT: br label %[[deep]]
+// CHECK-NOT: unreachable
+// CHECK: ret void
+
 // Look for the absence of noinline.  nounwind is expected; any further
 // attributes should be string attributes.
 // CHECK: attributes [[finally_attrs]] = { nounwind "{{.*}}" }
