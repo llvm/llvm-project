@@ -354,6 +354,60 @@ int __prctl(int Option, unsigned long Arg2, unsigned long Arg3,
   return Ret;
 }
 
+#if defined(BOLT_RT_HUGIFY)
+static void syncInstructionCache(uint8_t *, uint8_t *) {}
+
+// This stub is copied to an isolated executable mapping before use. Its
+// operation is equivalent to:
+//   if (mmap(Target, Size, PROT_READ | PROT_WRITE,
+//            MAP_FIXED | MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
+//     return false;
+//   madvise(Target, Size, MADV_HUGEPAGE);
+//   memcpy(Target, Copy, Size);
+//   mprotect(Target, Size, PROT_READ | PROT_EXEC);
+//   return true;
+extern "C" __attribute((naked, used)) bool
+__bolt_hugify_remap_stub(void *Args) {
+  __asm__ __volatile__(".global __bolt_hugify_remap_stub_start\n"
+                       "__bolt_hugify_remap_stub_start:\n"
+                       "push %rbx\n"
+                       "mov %rdi, %rbx\n"
+                       "mov $9, %rax\n"
+                       "mov 0(%rbx), %rdi\n"
+                       "mov 16(%rbx), %rsi\n"
+                       "mov $3, %rdx\n"
+                       "mov $0x32, %r10\n"
+                       "mov $-1, %r8\n"
+                       "xor %r9d, %r9d\n"
+                       "syscall\n"
+                       "cmp $-4095, %rax\n"
+                       "jae 2f\n"
+                       "mov $28, %rax\n"
+                       "mov 0(%rbx), %rdi\n"
+                       "mov 16(%rbx), %rsi\n"
+                       "mov $14, %rdx\n"
+                       "syscall\n"
+                       "mov 0(%rbx), %rdi\n"
+                       "mov 8(%rbx), %rsi\n"
+                       "mov 16(%rbx), %rcx\n"
+                       "rep movsb\n"
+                       "mov $10, %rax\n"
+                       "mov 0(%rbx), %rdi\n"
+                       "mov 16(%rbx), %rsi\n"
+                       "mov $5, %rdx\n"
+                       "syscall\n"
+                       "mov $1, %eax\n"
+                       "pop %rbx\n"
+                       "ret\n"
+                       "2:\n"
+                       "xor %eax, %eax\n"
+                       "pop %rbx\n"
+                       "ret\n"
+                       ".global __bolt_hugify_remap_stub_end\n"
+                       "__bolt_hugify_remap_stub_end:\n");
+}
+#endif
+
 #endif
 
 } // anonymous namespace

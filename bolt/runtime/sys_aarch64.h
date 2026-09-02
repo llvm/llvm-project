@@ -391,6 +391,107 @@ int __prctl(int option, unsigned long arg2, unsigned long arg3,
   return ret;
 }
 
+#if defined(BOLT_RT_HUGIFY)
+static void syncInstructionCache(uint8_t *From, uint8_t *To) {
+  uint64_t CacheType;
+  __asm__ __volatile__("mrs %0, ctr_el0" : "=r"(CacheType));
+
+  const uint64_t DCacheLineSize = 4 << ((CacheType >> 16) & 15);
+  const uint64_t ICacheLineSize = 4 << (CacheType & 15);
+  uint64_t Address = reinterpret_cast<uint64_t>(From) & ~(DCacheLineSize - 1);
+  const uint64_t End = reinterpret_cast<uint64_t>(To);
+
+  for (; Address < End; Address += DCacheLineSize)
+    __asm__ __volatile__("dc cvau, %0" : : "r"(Address) : "memory");
+  __asm__ __volatile__("dsb ish" : : : "memory");
+
+  Address = reinterpret_cast<uint64_t>(From) & ~(ICacheLineSize - 1);
+  for (; Address < End; Address += ICacheLineSize)
+    __asm__ __volatile__("ic ivau, %0" : : "r"(Address) : "memory");
+  __asm__ __volatile__("dsb ish\nisb" : : : "memory");
+}
+
+// This stub is copied to an isolated executable mapping before use. Its
+// operation is equivalent to:
+//   if (mmap(Target, Size, PROT_READ | PROT_WRITE,
+//            MAP_FIXED | MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
+//     return false;
+//   madvise(Target, Size, MADV_HUGEPAGE);
+//   memcpy(Target, Copy, Size);
+//   mprotect(Target, Size, PROT_READ | PROT_EXEC);
+//   return true;
+extern "C" __attribute((naked, used)) bool
+__bolt_hugify_remap_stub(void *Args) {
+  __asm__ __volatile__(".global __bolt_hugify_remap_stub_start\n"
+                       "__bolt_hugify_remap_stub_start:\n"
+                       "mov x9, x0\n"
+                       "ldr x0, [x9, #0]\n"
+                       "ldr x1, [x9, #16]\n"
+                       "mov x2, #3\n"
+                       "mov x3, #0x32\n"
+                       "mov x4, #-1\n"
+                       "mov x5, #0\n"
+                       "mov x8, #222\n"
+                       "svc #0\n"
+                       "cmp x0, #0\n"
+                       "b.lt 2f\n"
+                       "ldr x0, [x9, #0]\n"
+                       "ldr x1, [x9, #16]\n"
+                       "mov x2, #14\n"
+                       "mov x8, #233\n"
+                       "svc #0\n"
+                       "ldr x10, [x9, #0]\n"
+                       "ldr x11, [x9, #8]\n"
+                       "ldr x12, [x9, #16]\n"
+                       "1:\n"
+                       "ldr x13, [x11], #8\n"
+                       "str x13, [x10], #8\n"
+                       "subs x12, x12, #8\n"
+                       "b.ne 1b\n"
+                       "mrs x14, ctr_el0\n"
+                       "ubfx x15, x14, #16, #4\n"
+                       "mov x17, #4\n"
+                       "lsl x17, x17, x15\n"
+                       "sub x15, x17, #1\n"
+                       "ldr x10, [x9, #0]\n"
+                       "bic x10, x10, x15\n"
+                       "ldr x12, [x9, #0]\n"
+                       "ldr x13, [x9, #16]\n"
+                       "add x12, x12, x13\n"
+                       "3:\n"
+                       "dc cvau, x10\n"
+                       "add x10, x10, x17\n"
+                       "cmp x10, x12\n"
+                       "b.lo 3b\n"
+                       "dsb ish\n"
+                       "ubfx x15, x14, #0, #4\n"
+                       "mov x17, #4\n"
+                       "lsl x17, x17, x15\n"
+                       "sub x15, x17, #1\n"
+                       "ldr x10, [x9, #0]\n"
+                       "bic x10, x10, x15\n"
+                       "4:\n"
+                       "ic ivau, x10\n"
+                       "add x10, x10, x17\n"
+                       "cmp x10, x12\n"
+                       "b.lo 4b\n"
+                       "dsb ish\n"
+                       "isb\n"
+                       "ldr x0, [x9, #0]\n"
+                       "ldr x1, [x9, #16]\n"
+                       "mov x2, #5\n"
+                       "mov x8, #226\n"
+                       "svc #0\n"
+                       "mov x0, #1\n"
+                       "ret\n"
+                       "2:\n"
+                       "mov x0, #0\n"
+                       "ret\n"
+                       ".global __bolt_hugify_remap_stub_end\n"
+                       "__bolt_hugify_remap_stub_end:\n");
+}
+#endif
+
 } // anonymous namespace
 
 #endif

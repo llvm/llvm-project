@@ -289,12 +289,6 @@ cl::opt<bool> HugifyAllText(
              "requirements."),
     cl::cat(BoltOptCategory));
 
-cl::opt<bool> HugifyAllTextStats(
-    "hugify-all-text-stats",
-    cl::desc("When used with --hugify-all-text, read /proc/self/smaps and "
-             "print actual huge-page usage at runtime."),
-    cl::init(false), cl::cat(BoltOptCategory));
-
 cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),
