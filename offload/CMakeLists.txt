@@ -391,7 +391,7 @@ if(OFFLOAD_INCLUDE_TESTS)
   add_subdirectory(unittests)
 endif()
 
-foreach(target omptarget LLVMOffload LLVMOffloadKernel)
+foreach(target omptarget acctarget LLVMOffload LLVMOffloadKernel)
   if(TARGET ${target})
     add_dependencies(offload ${target})
   endif()

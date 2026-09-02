@@ -282,7 +282,8 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
                                                     Image->EntriesEnd);
   llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
   for (const auto &Entry : Entries) {
-    if (Entry.Kind != llvm::object::OffloadKind::OFK_OpenMP ||
+    if ((Entry.Kind != llvm::object::OffloadKind::OFK_OpenMP &&
+         Entry.Kind != llvm::object::OffloadKind::OFK_OpenACC) ||
         Entry.Size == 0 ||
         (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
          !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE)))
@@ -546,6 +547,64 @@ int32_t DeviceTy::submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin,
   return OFFLOAD_SUCCESS;
 }
 
+/// Copy a non-contiguous region chunk by chunk, walking the dimensions of
+/// \p CopyInfo. \p CopyChunk copies one contiguous chunk given an offset into
+/// the region.
+template <typename CopyFnTy>
+static int32_t copyNonContiguous(const NonContigDescTy &CopyInfo,
+                                 unsigned CurrentDim, uint64_t Offset,
+                                 CopyFnTy &CopyChunk) {
+  ODBG(ODT_Mapping) << "Non Contig Copy of Dim " << CurrentDim;
+  if (CurrentDim == CopyInfo.getRank())
+    return CopyChunk(Offset, CopyInfo.getLastDimCopySize());
+
+  for (unsigned int I = 0; I < CopyInfo.Dims[CurrentDim].Count; ++I) {
+    uint64_t CurOffset =
+        CopyInfo.Dims[CurrentDim].Offset + I * CopyInfo.Dims[CurrentDim].Stride;
+    // we only need to transfer the first element for the last dimension
+    // since we've already got a contiguous piece.
+    if (CurrentDim != CopyInfo.getRank() - 1 || I == 0) {
+      int32_t Ret = copyNonContiguous(CopyInfo, CurrentDim + 1,
+                                      Offset + CurOffset, CopyChunk);
+      if (Ret != OFFLOAD_SUCCESS)
+        return Ret;
+    }
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t
+DeviceTy::submitNonContigData(void *TgtPtrBegin, void *HstPtrBegin,
+                              const NonContigDescTy &CopyInfo,
+                              AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
+                              MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_FAIL;
+
+  if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
+    MappingInfo.printNonContigCopyInfo(TgtPtrBegin, HstPtrBegin, CopyInfo,
+                                       /*H2D=*/true, Entry, HDTTMapPtr);
+
+  NonContigDescTy MergedCopyInfo = CopyInfo;
+  MergedCopyInfo.mergeContiguousDims();
+  auto CopyChunk = [&](uint64_t Offset, uint64_t Size) {
+    if (auto Res = olMemcpy(Queue, static_cast<char *>(TgtPtrBegin) + Offset,
+                            DeviceHandle,
+                            static_cast<const char *>(HstPtrBegin) + Offset,
+                            /*SrcDevice=*/nullptr, Size)) {
+      REPORT() << "Failure to copy non-contiguous data from host to device. "
+               << "Pointers: host = " << HstPtrBegin
+               << ", device = " << TgtPtrBegin << ": " << Res->Details;
+      return OFFLOAD_FAIL;
+    }
+    return OFFLOAD_SUCCESS;
+  };
+  return copyNonContiguous(MergedCopyInfo, /*CurrentDim=*/0, /*Offset=*/0,
+                           CopyChunk);
+}
+
 // Retrieve data from device
 int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                int64_t Size, AsyncInfoTy &AsyncInfo,
@@ -593,6 +652,36 @@ int32_t DeviceTy::retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin,
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
+}
+
+int32_t DeviceTy::retrieveNonContigData(
+    void *HstPtrBegin, void *TgtPtrBegin, const NonContigDescTy &CopyInfo,
+    AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
+    MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_FAIL;
+
+  if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
+    MappingInfo.printNonContigCopyInfo(TgtPtrBegin, HstPtrBegin, CopyInfo,
+                                       /*H2D=*/false, Entry, HDTTMapPtr);
+
+  NonContigDescTy MergedCopyInfo = CopyInfo;
+  MergedCopyInfo.mergeContiguousDims();
+  auto CopyChunk = [&](uint64_t Offset, uint64_t Size) {
+    if (auto Res = olMemcpy(Queue, static_cast<char *>(HstPtrBegin) + Offset,
+                            /*DstDevice=*/nullptr,
+                            static_cast<const char *>(TgtPtrBegin) + Offset,
+                            DeviceHandle, Size)) {
+      REPORT() << "Failure to copy non-contiguous data from device to host. "
+               << "Pointers: host = " << HstPtrBegin
+               << ", device = " << TgtPtrBegin << ": " << Res->Details;
+      return OFFLOAD_FAIL;
+    }
+    return OFFLOAD_SUCCESS;
+  };
+  return copyNonContiguous(MergedCopyInfo, /*CurrentDim=*/0, /*Offset=*/0,
+                           CopyChunk);
 }
 
 // Copy data from current device to destination device directly
@@ -1405,6 +1494,19 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   return OFFLOAD_SUCCESS;
 }
 
+int32_t DeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
+                                  AsyncInfoTy &AsyncInfo) {
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_FAIL;
+  if (auto Res = olLaunchHostFunction(Queue, Callback, UserData)) {
+    REPORT() << "Failure to enqueue host call in device " << DeviceID << ": "
+             << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
   ol_queue_handle_t Queue = AsyncInfo.getQueue();
   if (!Queue)
@@ -1417,6 +1519,12 @@ int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
   return OFFLOAD_SUCCESS;
 }
 
+int32_t DeviceTy::synchronizeStatic(AsyncInfoTy &AsyncInfo) {
+  // The queue is owned by the AsyncInfoTy and is never released by
+  // synchronization, so this is the same as the regular synchronization.
+  return synchronize(AsyncInfo);
+}
+
 int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
   ol_queue_handle_t Queue = AsyncInfo.getQueue();
   if (!Queue)
@@ -1426,6 +1534,18 @@ int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
+}
+
+int32_t DeviceTy::queryAsyncStatic(AsyncInfoTy &AsyncInfo) {
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return 0;
+  bool IsComplete = false;
+  if (auto Res = olQueryQueue(Queue, &IsComplete)) {
+    REPORT() << "Failure to query stream " << Queue << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return IsComplete ? 0 : 1;
 }
 
 int32_t DeviceTy::recordEvent(void **Event, AsyncInfoTy &AsyncInfo) {

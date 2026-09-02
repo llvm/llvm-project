@@ -6,6 +6,14 @@ add_library(acctarget SHARED
   Interface.cpp
   RuntimeState.cpp
 
+  DeviceManager.cpp
+  QueueManager.cpp
+
+  RuntimeImpl.cpp
+  RuntimeInterface.cpp
+  DataRuntimeInterface.cpp
+  CfiDataRuntimeInterface.cpp
+
   ${LIBOMPACCSUPPORT_SOURCES}
 )
 
@@ -19,10 +27,12 @@ target_include_directories(acctarget PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include
   ${CMAKE_CURRENT_BINARY_DIR}/../plugins-nextgen/common/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 if(LLVM_HAVE_LINK_VERSION_SCRIPT)
   target_link_libraries(acctarget PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
+  set_property(TARGET acctarget APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/exports)
 endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
@@ -33,6 +43,16 @@ target_compile_definitions(acctarget PRIVATE
 
 
 target_link_libraries(acctarget PRIVATE LLVMOffloadStatic)
+
+# Link against flang_rt.runtime for Fortran descriptor support.
+# flang_rt.runtime is a sibling runtime; link against the shared library target.
+if(TARGET flang_rt.runtime.dynamic)
+  target_link_libraries(acctarget PRIVATE flang_rt.runtime.dynamic)
+elseif(TARGET flang_rt.runtime.static)
+  target_link_libraries(acctarget PRIVATE flang_rt.runtime.static)
+else()
+  message(FATAL_ERROR "flang_rt.runtime target not found")
+endif()
 
 target_compile_options(acctarget PRIVATE ${offload_compile_flags})
 target_link_options(acctarget PRIVATE ${offload_link_flags})

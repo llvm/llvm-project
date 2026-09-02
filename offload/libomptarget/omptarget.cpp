@@ -577,10 +577,12 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // PTR_AND_OBJ entry is handled below, and so the allocation might fail
       // when HasPresentModifier.
       PointerTpr = Device.getMappingInfo().getTargetPointer(
-          HDTTMap, HstPtrBase, HstPtrBase, /*TgtPadding=*/0, sizeof(void *),
+          HDTTMap, HstPtrBase, HstPtrBase, /*TgtPadding=*/0,
+          static_cast<int64_t>(sizeof(void *)),
           /*HstPtrName=*/nullptr,
           /*HasFlagTo=*/false, /*HasFlagAlways=*/false, IsImplicit, UpdateRef,
-          HasCloseModifier, HasPresentModifier, HasHoldModifier, AsyncInfo,
+          HasCloseModifier, HasPresentModifier, HasHoldModifier,
+          /*IsNoCreate=*/false, AsyncInfo,
           /*OwnedTPR=*/nullptr, /*ReleaseHDTTMap=*/false);
       PointerTgtPtrBegin = PointerTpr.TargetPointer;
       IsHostPtr = PointerTpr.Flags.IsHostPointer;
@@ -616,7 +618,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     auto TPR = Device.getMappingInfo().getTargetPointer(
         HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
         HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
-        HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry(),
+        HasPresentModifier, HasHoldModifier, /*IsNoCreate=*/false, AsyncInfo,
+        PointerTpr.getEntry(),
         /*ReleaseHDTTMap=*/true, StateInfo, Loc);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
@@ -1580,39 +1583,7 @@ static bool isLambdaMapping(int64_t Mapping) {
 namespace {
 /// Find the table information in the map or look it up in the translation
 /// tables.
-TableMap *getTableMap(void *HostPtr) {
-  std::lock_guard<std::mutex> TblMapLock(PM->TblMapMtx);
-  HostPtrToTableMapTy::iterator TableMapIt =
-      PM->HostPtrToTableMap.find(HostPtr);
-
-  if (TableMapIt != PM->HostPtrToTableMap.end())
-    return &TableMapIt->second;
-
-  // We don't have a map. So search all the registered libraries.
-  TableMap *TM = nullptr;
-  std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
-  for (HostEntriesBeginToTransTableTy::iterator Itr =
-           PM->HostEntriesBeginToTransTable.begin();
-       Itr != PM->HostEntriesBeginToTransTable.end(); ++Itr) {
-    // get the translation table (which contains all the good info).
-    TranslationTable *TransTable = &Itr->second;
-    // iterate over all the host table entries to see if we can locate the
-    // host_ptr.
-    llvm::offloading::EntryTy *Cur = TransTable->HostTable.EntriesBegin;
-    for (uint32_t I = 0; Cur < TransTable->HostTable.EntriesEnd; ++Cur, ++I) {
-      if (Cur->Address != HostPtr)
-        continue;
-      // we got a match, now fill the HostPtrToTableMap so that we
-      // may avoid this search next time.
-      TM = &(PM->HostPtrToTableMap)[HostPtr];
-      TM->Table = TransTable;
-      TM->Index = I;
-      return TM;
-    }
-  }
-
-  return nullptr;
-}
+TableMap *getTableMap(void *HostPtr) { return PM->getTableMap(HostPtr); }
 
 /// A class manages private arguments in a target region.
 class PrivateArgumentManagerTy {

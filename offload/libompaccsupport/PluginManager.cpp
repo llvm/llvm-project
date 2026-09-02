@@ -339,7 +339,8 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   TblMapMtx.lock();
   for (llvm::offloading::EntryTy *Cur = Desc->HostEntriesBegin;
        Cur < Desc->HostEntriesEnd; ++Cur) {
-    if (Cur->Kind == object::OffloadKind::OFK_OpenMP)
+    if (Cur->Kind == object::OffloadKind::OFK_OpenMP ||
+        Cur->Kind == object::OffloadKind::OFK_OpenACC)
       HostPtrToTableMap.erase(Cur->Address);
   }
 
@@ -408,7 +409,8 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
           TransTable->TargetsEntries[DeviceId];
       for (llvm::offloading::EntryTy &Entry :
            llvm::make_range(Img->EntriesBegin, Img->EntriesEnd)) {
-        if (Entry.Kind != object::OffloadKind::OFK_OpenMP)
+        if (Entry.Kind != object::OffloadKind::OFK_OpenMP &&
+            Entry.Kind != object::OffloadKind::OFK_OpenACC)
           continue;
 
         ProgramTy &Program = *LoadedOrErr;
@@ -537,7 +539,8 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
            CurrDeviceEntry != EntryDeviceEnd;
            CurrDeviceEntry++, CurrHostEntry++) {
         if (CurrDeviceEntry->Size == 0 ||
-            CurrDeviceEntry->Kind != object::OffloadKind::OFK_OpenMP)
+            (CurrDeviceEntry->Kind != object::OffloadKind::OFK_OpenMP &&
+             CurrDeviceEntry->Kind != object::OffloadKind::OFK_OpenACC))
           continue;
 
         assert(CurrDeviceEntry->Size == CurrHostEntry->Size &&
@@ -560,7 +563,7 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
           void *DevPtr;
           Device.retrieveData(&DevPtr, CurrDeviceEntryAddr, sizeof(void *),
                               AsyncInfo, /*Entry=*/nullptr, &HDTTMap);
-          if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
+          if (AsyncInfo.finalize() != OFFLOAD_SUCCESS)
             return OFFLOAD_FAIL;
           CurrDeviceEntryAddr = DevPtr;
         }
@@ -636,4 +639,54 @@ int PluginManager::getNumActivePlugins() const {
     consumeError(std::move(Err));
   }
   return count;
+}
+
+TableMap *PluginManager::getTableMap(void *HostPtr) {
+  std::lock_guard<std::mutex> TblMapLock(TblMapMtx);
+  HostPtrToTableMapTy::iterator TableMapIt = HostPtrToTableMap.find(HostPtr);
+
+  if (TableMapIt != HostPtrToTableMap.end())
+    return &TableMapIt->second;
+
+  // We don't have a map. So search all the registered libraries.
+  TableMap *TM = nullptr;
+  std::lock_guard<std::mutex> TrlTblLock(TrlTblMtx);
+  for (HostEntriesBeginToTransTableTy::iterator Itr =
+           HostEntriesBeginToTransTable.begin();
+       Itr != HostEntriesBeginToTransTable.end(); ++Itr) {
+    // get the translation table (which contains all the good info).
+    TranslationTable *TransTable = &Itr->second;
+    // iterate over all the host table entries to see if we can locate the
+    // host_ptr.
+    llvm::offloading::EntryTy *Cur = TransTable->HostTable.EntriesBegin;
+    for (uint32_t I = 0; Cur < TransTable->HostTable.EntriesEnd; ++Cur, ++I) {
+      if (Cur->Address != HostPtr)
+        continue;
+      // we got a match, now fill the HostPtrToTableMap so that we
+      // may avoid this search next time.
+      TM = &(HostPtrToTableMap)[HostPtr];
+      TM->Table = TransTable;
+      TM->Index = I;
+      return TM;
+    }
+  }
+
+  return nullptr;
+}
+
+void llvm::omp::target::helpers::registerRPCCallback(
+    unsigned (*Callback)(void *, unsigned)) {
+  // Without an initialized liboffload there are no platforms to register with.
+  if (auto Err = iteratePlatforms(
+          [](ol_platform_handle_t Platform, void *Data) {
+            bool Active = false;
+            if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
+                                  sizeof(Active), &Active) == OL_SUCCESS &&
+                Active)
+              olPlatformRegisterRPCCallback(
+                  Platform, reinterpret_cast<ol_platform_rpc_cb_t>(Data));
+            return true;
+          },
+          reinterpret_cast<void *>(Callback)))
+    consumeError(std::move(Err));
 }

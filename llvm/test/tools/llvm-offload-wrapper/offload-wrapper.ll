@@ -28,6 +28,22 @@
 ; OMP-NEXT:   ret void
 ; OMP-NEXT: }
 
+; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=openacc %s -o %t.bc
+; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=ACC
+
+;      ACC: define internal void @.omp_offloading.descriptor_reg() section ".text.startup" {
+; ACC-NEXT: entry:
+; ACC-NEXT:   call void @__tgt_acc_register_lib(ptr @.omp_offloading.descriptor)
+; ACC-NEXT:   %0 = call i32 @atexit(ptr @.omp_offloading.descriptor_unreg)
+; ACC-NEXT:   ret void
+; ACC-NEXT: }
+
+;      ACC: define internal void @.omp_offloading.descriptor_unreg() section ".text.startup" {
+; ACC-NEXT: entry:
+; ACC-NEXT:   call void @__tgt_acc_unregister_lib(ptr @.omp_offloading.descriptor)
+; ACC-NEXT:   ret void
+; ACC-NEXT: }
+
 ; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=hip %s -o %t.bc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=HIP
 

@@ -72,9 +72,10 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
 
   switch (Kind) {
   case llvm::object::OFK_OpenMP:
-    if (Error Err = offloading::wrapOpenMPBinaries(
+  case llvm::object::OFK_OpenACC:
+    if (Error Err = offloading::wrapOpenMPOpenACCBinaries(
             M, BuffersToWrap, offloading::getOffloadEntryArray(M),
-            /*Suffix=*/"", /*Relocatable=*/Relocatable))
+            /*Suffix=*/"", /*Relocatable=*/Relocatable, Kind))
       return Err;
     break;
   case llvm::object::OFK_Cuda:

@@ -189,12 +189,24 @@ struct DeviceTy {
   // Data transfer. The transfer is enqueued on the queue associated with
   // \p AsyncInfo; the *Sync variants below do not need a queue and always
   // transfer the data synchronously.
+  int32_t
+  submitNonContigData(void *TgtPtrBegin, void *HstPtrBegin,
+                      const NonContigDescTy &CopyInfo, AsyncInfoTy &AsyncInfo,
+                      HostDataToTargetTy *Entry = nullptr,
+                      MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
                      HostDataToTargetTy *Entry = nullptr,
                      MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
                      const ident_t *Loc = nullptr, const char *Name = nullptr);
+
+  int32_t
+  retrieveNonContigData(void *HstPtrBegin, void *TgtPtrBegin,
+                        const NonContigDescTy &CopyInfo, AsyncInfoTy &AsyncInfo,
+                        HostDataToTargetTy *Entry = nullptr,
+                        MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
 
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
@@ -226,6 +238,11 @@ struct DeviceTy {
                    MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr,
                    const ident_t *Loc = nullptr);
 
+  /// Whether data can be exchanged directly with \p DstDevice.
+  bool isDataExchangable(const DeviceTy &DstDevice) const {
+    return RTL == DstDevice.RTL;
+  }
+
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
@@ -253,15 +270,28 @@ struct DeviceTy {
                        KernelReplayOutcomeTy *ReplayOutcome,
                        AsyncInfoTy &AsyncInfo);
 
+  // Enqueues a host function in the asynchronous queue.
+  int32_t enqueueHostCall(void (*Callback)(void *), void *UserData,
+                          AsyncInfoTy &AsyncInfo);
+
   /// Synchronize device/queue/event based on \p AsyncInfo and return
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
   int32_t synchronize(AsyncInfoTy &AsyncInfo);
+
+  /// Synchronize device/queue/event based on \p AsyncInfo without releasing the
+  /// queue and return OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
+  int32_t synchronizeStatic(AsyncInfoTy &AsyncInfo);
 
   /// Query for device/queue/event based completion on \p AsyncInfo in a
   /// non-blocking manner and return OFFLOAD_SUCCESS/OFFLOAD_FAIL when
   /// succeeds/fails. Must be called multiple times until AsyncInfo is
   /// completed and AsyncInfo.isDone() returns true.
   int32_t queryAsync(AsyncInfoTy &AsyncInfo);
+
+  /// Query the queue of \p AsyncInfo without releasing it and return 0 when all
+  /// its operations are done, 1 when they are pending and OFFLOAD_FAIL on
+  /// error.
+  int32_t queryAsyncStatic(AsyncInfoTy &AsyncInfo);
 
   /// Event related interfaces.
   /// {

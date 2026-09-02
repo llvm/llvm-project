@@ -34,6 +34,7 @@
 #include "llvm/Support/Error.h"
 
 #include <cstdint>
+#include <functional>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -101,18 +102,23 @@ struct PluginManager {
   // Work around for plugins that call dlopen on shared libraries that call
   // tgt_register_lib during their initialisation. Stash the pointers in a
   // vector until the plugins are all initialised and then register them.
-  bool delayRegisterLib(__tgt_bin_desc *Desc) {
+  /// Find the table information in the map or look it up in the translation
+  /// tables.
+  TableMap *getTableMap(void *HostPtr);
+
+  bool delayRegisterLib(std::function<void(__tgt_bin_desc *)> RegisterFunc,
+                        __tgt_bin_desc *Desc) {
     if (RTLsLoaded)
       return false;
-    DelayedBinDesc.push_back(Desc);
+    DelayedBinDesc.push_back({RegisterFunc, Desc});
     return true;
   }
 
   void registerDelayedLibraries() {
     // Only called by libomptarget constructor
     RTLsLoaded = true;
-    for (auto *Desc : DelayedBinDesc)
-      __tgt_register_lib(Desc);
+    for (auto &[RegisterFunc, Desc] : DelayedBinDesc)
+      RegisterFunc(Desc);
     DelayedBinDesc.clear();
   }
 
@@ -156,7 +162,9 @@ private:
   bool RTLsLoaded = false;
   // Whether init() called olInit, so deinit() must call olShutDown.
   bool LibOffloadInitialized = false;
-  llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
+  llvm::SmallVector<
+      std::pair<std::function<void(__tgt_bin_desc *)>, __tgt_bin_desc *>>
+      DelayedBinDesc;
 
   // List of all plugins, in use or not.
   llvm::SmallVector<GenericPluginTy *> Plugins;
@@ -244,6 +252,10 @@ llvm::Error iteratePlatforms(CallbackTy Callback) {
       iterate<ol_platform_handle_t>(olIteratePlatforms, Callback),
       "Failed to iterate platforms");
 }
+
+/// Register \p Callback to serve the RPC calls of every active platform of this
+/// runtime's liboffload.
+void registerRPCCallback(unsigned (*Callback)(void *, unsigned));
 
 // Iterate devices
 template <typename CallbackTy>
