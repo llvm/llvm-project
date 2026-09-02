@@ -2014,7 +2014,18 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Algorithm
 // ---------
 //
+// Also the map into the code: a `[name]` tag gives the function carrying out
+// the step under it. `redistributeBroadcastedValue` is the enclosing one -- it
+// owns both tables and emits the result -- and `SgToLaneConvertLayout` reaches
+// it only after the two narrower `convert_layout` paths decline.
+//
+//   [isBroadcastRedistribution]
+//   gate the layout pair: `lane_data` equal, target period divides `S`
+//
+//   [computeOwnedCoords]  once per side
 //   tabulate inputOwned[lane] and targetOwned[lane]  // element coordinates
+//
+//   [deriveElementSource]  once per element of the target fragment
 //   for each element `pos` of the target fragment:
 //     for donorDelta = 0, targetLanePeriod, 2 * targetLanePeriod, ...
 //                                                          // smallest first
@@ -2022,10 +2033,15 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //         needed[slot] = index of the element targetOwned[slot][pos] in the
 //                        fragment of its donor, lane `slot + donorDelta`
 //         if that donor does not hold the element: give up on this donorDelta
+//
+//       [fitFragmentIndex]
 //       look for one stride/offset/dimStride/dimExtent whose index reproduces
 //       every needed[slot]; if there is none: next donorDelta
+//
 //       accept (donorDelta, index) and stop
 //     if no donorDelta fits: fail, the layout change is not of this form
+//
+//   [redistributeBroadcastedValue, after the loop]
 //   emit, per element source: an extract at index(slot), a `gpu.shuffle idx`
 //     from `slot + donorDelta` unless that is the lane itself, and an insert.
 //
