@@ -559,6 +559,10 @@ add_subdirectory(lib)
 add_subdirectory(tools)
 add_subdirectory(runtime)
 
+if(LLVM_INCLUDE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()
+
 option(CLANG_BUILD_EXAMPLES "Build CLANG example programs by default." OFF)
 option(CLANG_INCLUDE_EXAMPLES
        "Generate build targets for the Clang examples."
