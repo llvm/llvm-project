@@ -1040,7 +1040,6 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
-        targetMachine->Options.ExceptionModel,
         targetMachine->Options.MCOptions.ABIName,
         targetMachine->Options.VecLib);
   });

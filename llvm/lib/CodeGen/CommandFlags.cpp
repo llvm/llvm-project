@@ -727,6 +727,26 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
     }
   }
 
+  // Synthesize the "exception-model" module flag from the -exception-model
+  // option.
+  ExceptionHandling EH = getExceptionModel();
+  if (EH != ExceptionHandling::Default) {
+    if (auto *Existing =
+            dyn_cast_or_null<MDString>(M.getModuleFlag("exception-model"))) {
+      // The module already records an exception model; -exception-model must
+      // not contradict it.
+      if (Existing->getString() != getExceptionModelName(EH)) {
+        reportFatalUsageError(
+            "-exception-model=" + getExceptionModelName(EH) +
+            " conflicts with the \"exception-model\" module flag \"" +
+            Existing->getString() + "\"");
+      }
+    } else {
+      M.addModuleFlag(Module::Error, "exception-model",
+                      MDString::get(M.getContext(), getExceptionModelName(EH)));
+    }
+  }
+
   for (Function &F : M)
     setFunctionAttributes(F, CPU, Features, TuneCPU);
 }
