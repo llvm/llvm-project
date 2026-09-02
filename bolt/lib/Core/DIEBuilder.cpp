@@ -989,8 +989,8 @@ void DIEBuilder::assignAbbrev(DIEAbbrev &Abbrev) {
   // Check the set for priors.
   FoldingSetNodeID ID;
   Abbrev.Profile(ID);
-  void *InsertToken;
-  DIEAbbrev *InSet = AbbreviationsSet.FindNodeOrInsertPos(ID, InsertToken);
+  FoldingSetInsertToken Token;
+  DIEAbbrev *InSet = AbbreviationsSet.lookup(ID, Token);
 
   // If it's newly added.
   if (InSet) {
@@ -1002,7 +1002,7 @@ void DIEBuilder::assignAbbrev(DIEAbbrev &Abbrev) {
         std::make_unique<DIEAbbrev>(Abbrev.getTag(), Abbrev.hasChildren()));
     for (const auto &Attr : Abbrev.getData())
       Abbreviations.back()->AddAttribute(Attr);
-    AbbreviationsSet.InsertNode(Abbreviations.back().get(), InsertToken);
+    AbbreviationsSet.insert(Abbreviations.back().get(), Token);
     // Assign the unique abbreviation number.
     Abbrev.setNumber(Abbreviations.size());
     Abbreviations.back()->setNumber(Abbreviations.size());

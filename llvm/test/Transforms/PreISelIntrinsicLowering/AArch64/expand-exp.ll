@@ -13,7 +13,7 @@ define <vscale x 4 x float> @scalable_vec_exp(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.exp.f32(float [[TMP6]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call nnan ninf afn float @llvm.exp.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], [[TMP2]]
@@ -21,7 +21,7 @@ define <vscale x 4 x float> @scalable_vec_exp(<vscale x 4 x float> %input) {
 ; CHECK:       [[BB11]]:
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP8]]
 ;
-  %output = call <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float> %input)
+  %output = call nnan ninf afn <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float> %input)
   ret <vscale x 4 x float> %output
 }
 

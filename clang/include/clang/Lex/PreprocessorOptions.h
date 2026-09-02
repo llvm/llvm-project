@@ -84,6 +84,11 @@ public:
   /// Perform extra checks when loading PCM files for mutable file systems.
   bool ModulesCheckRelocated = true;
 
+  /// Perform redundant module lookups. This is typically for
+  /// compilations that rely on side effects of module lookup due to
+  /// poor modularization.
+  bool ModulesForceRedundantLookup = false;
+
   /// Initialize the preprocessor with the compiler and target specific
   /// predefines.
   bool UsePredefines = true;

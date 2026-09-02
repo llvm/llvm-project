@@ -26,8 +26,8 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
     %6 = llvm.insertvalue %5, %4[1, 0] : !llvm.array<2 x array<2 x i32>>
     %7 = llvm.mlir.constant(4 : i32) : i32
     %8 = llvm.insertvalue %7, %6[1, 1] : !llvm.array<2 x array<2 x i32>>
-    %9 = llvm.mlir.constant(2 : index) : i64
-    %10 = llvm.mlir.constant(2 : index) : i64
+    %9 = llvm.mlir.constant(2 : i64) : i64
+    %10 = llvm.mlir.constant(2 : i64) : i64
     llvm.return %8 : !llvm.array<2 x array<2 x i32>>
   }
 

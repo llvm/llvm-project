@@ -885,53 +885,54 @@ ModuleSpecList ObjectFileMachO::GetModuleSpecifications(
   return specs;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameTEXT() {
-  static ConstString g_segment_name_TEXT("__TEXT");
+llvm::StringRef ObjectFileMachO::GetSegmentNameTEXT() {
+  static constexpr llvm::StringLiteral g_segment_name_TEXT("__TEXT");
   return g_segment_name_TEXT;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameDATA() {
-  static ConstString g_segment_name_DATA("__DATA");
+llvm::StringRef ObjectFileMachO::GetSegmentNameDATA() {
+  static constexpr llvm::StringLiteral g_segment_name_DATA("__DATA");
   return g_segment_name_DATA;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameDATA_DIRTY() {
-  static ConstString g_segment_name("__DATA_DIRTY");
+llvm::StringRef ObjectFileMachO::GetSegmentNameDATA_DIRTY() {
+  static constexpr llvm::StringLiteral g_segment_name("__DATA_DIRTY");
   return g_segment_name;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameDATA_CONST() {
-  static ConstString g_segment_name("__DATA_CONST");
+llvm::StringRef ObjectFileMachO::GetSegmentNameDATA_CONST() {
+  static constexpr llvm::StringLiteral g_segment_name("__DATA_CONST");
   return g_segment_name;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameOBJC() {
-  static ConstString g_segment_name_OBJC("__OBJC");
+llvm::StringRef ObjectFileMachO::GetSegmentNameOBJC() {
+  static constexpr llvm::StringLiteral g_segment_name_OBJC("__OBJC");
   return g_segment_name_OBJC;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameLINKEDIT() {
-  static ConstString g_section_name_LINKEDIT("__LINKEDIT");
+llvm::StringRef ObjectFileMachO::GetSegmentNameLINKEDIT() {
+  static constexpr llvm::StringLiteral g_section_name_LINKEDIT("__LINKEDIT");
   return g_section_name_LINKEDIT;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameDWARF() {
-  static ConstString g_section_name("__DWARF");
+llvm::StringRef ObjectFileMachO::GetSegmentNameDWARF() {
+  static constexpr llvm::StringLiteral g_section_name("__DWARF");
   return g_section_name;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameLLVM_COV() {
-  static ConstString g_section_name("__LLVM_COV");
+llvm::StringRef ObjectFileMachO::GetSegmentNameLLVM_COV() {
+  static constexpr llvm::StringLiteral g_section_name("__LLVM_COV");
   return g_section_name;
 }
 
-ConstString ObjectFileMachO::GetSectionNameEHFrame() {
-  static ConstString g_section_name_eh_frame("__eh_frame");
+llvm::StringRef ObjectFileMachO::GetSectionNameEHFrame() {
+  static constexpr llvm::StringLiteral g_section_name_eh_frame("__eh_frame");
   return g_section_name_eh_frame;
 }
 
-ConstString ObjectFileMachO::GetSectionNameLLDBNoNlist() {
-  static ConstString g_section_name_lldb_no_nlist("__lldb_no_nlist");
+llvm::StringRef ObjectFileMachO::GetSectionNameLLDBNoNlist() {
+  static constexpr llvm::StringLiteral g_section_name_lldb_no_nlist(
+      "__lldb_no_nlist");
   return g_section_name_lldb_no_nlist;
 }
 
@@ -1392,11 +1393,11 @@ void ObjectFileMachO::SanitizeSegmentCommand(
     // shared cache file, and not the specific image we are
     // examining. Let's fix this up so that it looks like a normal
     // image.
-    if (strncmp(seg_cmd.segname, GetSegmentNameTEXT().GetCString(),
-                sizeof(seg_cmd.segname)) == 0)
+    llvm::StringRef segname(seg_cmd.segname,
+                            strnlen(seg_cmd.segname, sizeof(seg_cmd.segname)));
+    if (segname == GetSegmentNameTEXT())
       m_text_address = seg_cmd.vmaddr;
-    if (strncmp(seg_cmd.segname, GetSegmentNameLINKEDIT().GetCString(),
-                sizeof(seg_cmd.segname)) == 0)
+    if (segname == GetSegmentNameLINKEDIT())
       m_linkedit_original_offset = seg_cmd.fileoff;
 
     seg_cmd.fileoff = seg_cmd.vmaddr - m_text_address;
@@ -1453,43 +1454,57 @@ GetSegmentPermissions(const llvm::MachO::segment_command_64 &seg_cmd) {
 }
 
 static lldb::SectionType GetSectionType(uint32_t flags,
-                                        ConstString section_name) {
+                                        llvm::StringRef section_name) {
 
   if (flags & (S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS))
     return eSectionTypeCode;
 
   uint32_t mach_sect_type = flags & SECTION_TYPE;
-  static ConstString g_sect_name_objc_data("__objc_data");
-  static ConstString g_sect_name_objc_msgrefs("__objc_msgrefs");
-  static ConstString g_sect_name_objc_selrefs("__objc_selrefs");
-  static ConstString g_sect_name_objc_classrefs("__objc_classrefs");
-  static ConstString g_sect_name_objc_superrefs("__objc_superrefs");
-  static ConstString g_sect_name_objc_const("__objc_const");
-  static ConstString g_sect_name_objc_classlist("__objc_classlist");
-  static ConstString g_sect_name_cfstring("__cfstring");
+  static constexpr llvm::StringLiteral g_sect_name_objc_data("__objc_data");
+  static constexpr llvm::StringLiteral g_sect_name_objc_msgrefs(
+      "__objc_msgrefs");
+  static constexpr llvm::StringLiteral g_sect_name_objc_selrefs(
+      "__objc_selrefs");
+  static constexpr llvm::StringLiteral g_sect_name_objc_classrefs(
+      "__objc_classrefs");
+  static constexpr llvm::StringLiteral g_sect_name_objc_superrefs(
+      "__objc_superrefs");
+  static constexpr llvm::StringLiteral g_sect_name_objc_const("__objc_const");
+  static constexpr llvm::StringLiteral g_sect_name_objc_classlist(
+      "__objc_classlist");
+  static constexpr llvm::StringLiteral g_sect_name_cfstring("__cfstring");
 
-  static ConstString g_sect_name_dwarf_debug_str_offs("__debug_str_offs");
-  static ConstString g_sect_name_dwarf_debug_str_offs_dwo("__debug_str_offs.dwo");
-  static ConstString g_sect_name_dwarf_apple_names("__apple_names");
-  static ConstString g_sect_name_dwarf_apple_types("__apple_types");
-  static ConstString g_sect_name_dwarf_apple_namespaces("__apple_namespac");
-  static ConstString g_sect_name_dwarf_apple_objc("__apple_objc");
-  static ConstString g_sect_name_eh_frame("__eh_frame");
-  static ConstString g_sect_name_compact_unwind("__unwind_info");
-  static ConstString g_sect_name_text("__text");
-  static ConstString g_sect_name_data("__data");
-  static ConstString g_sect_name_go_symtab("__gosymtab");
-  static ConstString g_sect_name_ctf("__ctf");
-  static ConstString g_sect_name_lldb_summaries("__lldbsummaries");
-  static ConstString g_sect_name_lldb_formatters("__lldbformatters");
-  static ConstString g_sect_name_swift_ast("__swift_ast");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_debug_str_offs(
+      "__debug_str_offs");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_debug_str_offs_dwo(
+      "__debug_str_offs.dwo");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_apple_names(
+      "__apple_names");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_apple_types(
+      "__apple_types");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_apple_namespaces(
+      "__apple_namespac");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_apple_objc(
+      "__apple_objc");
+  static constexpr llvm::StringLiteral g_sect_name_eh_frame("__eh_frame");
+  static constexpr llvm::StringLiteral g_sect_name_compact_unwind(
+      "__unwind_info");
+  static constexpr llvm::StringLiteral g_sect_name_text("__text");
+  static constexpr llvm::StringLiteral g_sect_name_data("__data");
+  static constexpr llvm::StringLiteral g_sect_name_go_symtab("__gosymtab");
+  static constexpr llvm::StringLiteral g_sect_name_ctf("__ctf");
+  static constexpr llvm::StringLiteral g_sect_name_lldb_summaries(
+      "__lldbsummaries");
+  static constexpr llvm::StringLiteral g_sect_name_lldb_formatters(
+      "__lldbformatters");
+  static constexpr llvm::StringLiteral g_sect_name_swift_ast("__swift_ast");
 
   if (section_name == g_sect_name_dwarf_debug_str_offs)
     return eSectionTypeDWARFDebugStrOffsets;
   if (section_name == g_sect_name_dwarf_debug_str_offs_dwo)
     return eSectionTypeDWARFDebugStrOffsetsDwo;
 
-  llvm::StringRef stripped_name = section_name.GetStringRef();
+  llvm::StringRef stripped_name = section_name;
   if (stripped_name.consume_front("__debug_"))
     return ObjectFile::GetDWARFSectionTypeFromName(stripped_name);
 
@@ -1604,13 +1619,12 @@ void ObjectFileMachO::ProcessSegmentCommand(
   const bool is_dsym = (m_header.filetype == MH_DSYM);
   bool add_section = true;
   bool add_to_unified = true;
-  ConstString const_segname(
-      load_cmd.segname, strnlen(load_cmd.segname, sizeof(load_cmd.segname)));
+  llvm::StringRef segname(load_cmd.segname,
+                          strnlen(load_cmd.segname, sizeof(load_cmd.segname)));
 
-  SectionSP unified_section_sp(
-      context.UnifiedList.FindSectionByName(const_segname));
+  SectionSP unified_section_sp(context.UnifiedList.FindSectionByName(segname));
   if (is_dsym && unified_section_sp) {
-    if (const_segname == GetSegmentNameLINKEDIT()) {
+    if (segname == GetSegmentNameLINKEDIT()) {
       // We need to keep the __LINKEDIT segment private to this object file
       // only
       add_to_unified = false;
@@ -1636,7 +1650,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
   // Use a segment ID of the segment index shifted left by 8 so they never
   // conflict with any of the sections.
   SectionSP segment_sp;
-  if (add_section && (const_segname || is_core)) {
+  if (add_section && (!segname.empty() || is_core)) {
     segment_sp = std::make_shared<Section>(
         module_sp, // Module to which this section belongs
         this,      // Object file to which this sections belongs
@@ -1644,7 +1658,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
             << 8, // Section ID is the 1 based segment index
         // shifted right by 8 bits as not to collide with any of the 256
         // section IDs that are possible
-        const_segname,         // Name of this section
+        ConstString(segname),  // Name of this section
         eSectionTypeContainer, // This section is a container of other
         // sections.
         load_cmd.vmaddr, // File VM address == addresses as they are
@@ -1676,8 +1690,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
       LLDB_LOG(GetLog(LLDBLog::Symbols),
                "Installing dSYM's {0} segment file address over ObjectFile's "
                "so symbol table/debug info resolves correctly for {1}",
-               const_segname.AsCString(""),
-               module_sp->GetFileSpec().GetFilename());
+               segname, module_sp->GetFileSpec().GetFilename());
 
       // Make sure we've parsed the symbol table from the ObjectFile before
       // we go around changing its Sections.
@@ -1743,18 +1756,18 @@ void ObjectFileMachO::ProcessSegmentCommand(
       section_offset_adjust += end_section_offset & 0xFFFFFFFF00000000ull;
 
     if (add_section) {
-      ConstString section_name(
+      llvm::StringRef section_name(
           sect64.sectname, strnlen(sect64.sectname, sizeof(sect64.sectname)));
-      if (!const_segname) {
+      if (segname.empty()) {
         // We have a segment with no name so we need to conjure up segments
         // that correspond to the section's segname if there isn't already such
         // a section. If there is such a section, we resize the section so that
         // it spans all sections.  We also mark these sections as fake so
         // address matches don't hit if they land in the gaps between the child
         // sections.
-        const_segname.SetTrimmedCStringWithLength(sect64.segname,
-                                                  sizeof(sect64.segname));
-        segment_sp = context.UnifiedList.FindSectionByName(const_segname);
+        segname = llvm::StringRef(
+            sect64.segname, strnlen(sect64.segname, sizeof(sect64.segname)));
+        segment_sp = context.UnifiedList.FindSectionByName(segname);
         if (segment_sp.get()) {
           Section *segment = segment_sp.get();
           // Grow the section size as needed.
@@ -1809,7 +1822,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
               // shifted right by 8 bits as not to
               // collide with any of the 256 section IDs
               // that are possible
-              const_segname,         // Name of this section
+              ConstString(segname),  // Name of this section
               eSectionTypeContainer, // This section is a container of
               // other sections.
               sect64.addr, // File VM address == addresses as they are
@@ -1835,8 +1848,9 @@ void ObjectFileMachO::ProcessSegmentCommand(
       lldb::SectionType sect_type = GetSectionType(sect64.flags, section_name);
 
       SectionSP section_sp = std::make_shared<Section>(
-          segment_sp, module_sp, this, ++context.NextSectionIdx, section_name,
-          sect_type, sect64.addr - segment_sp->GetFileAddress(), sect64.size,
+          segment_sp, module_sp, this, ++context.NextSectionIdx,
+          ConstString(section_name), sect_type,
+          sect64.addr - segment_sp->GetFileAddress(), sect64.size,
           section_file_offset, section_file_offset == 0 ? 0 : sect64.size,
           sect64.align, sect64.flags);
       // Set the section to be encrypted to match the segment
@@ -1852,7 +1866,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
 
       if (segment_sp->IsFake()) {
         segment_sp.reset();
-        const_segname.Clear();
+        segname = {};
       }
     }
   }
@@ -2242,27 +2256,22 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   bool is_shared_cache_image = IsSharedCacheBinary();
   bool is_local_shared_cache_image = is_shared_cache_image && !IsInMemory();
 
-  ConstString g_segment_name_TEXT = GetSegmentNameTEXT();
-  ConstString g_segment_name_DATA = GetSegmentNameDATA();
-  ConstString g_segment_name_DATA_DIRTY = GetSegmentNameDATA_DIRTY();
-  ConstString g_segment_name_DATA_CONST = GetSegmentNameDATA_CONST();
-  ConstString g_segment_name_OBJC = GetSegmentNameOBJC();
-  ConstString g_section_name_eh_frame = GetSectionNameEHFrame();
-  ConstString g_section_name_lldb_no_nlist = GetSectionNameLLDBNoNlist();
   SectionSP text_section_sp(
-      section_list->FindSectionByName(g_segment_name_TEXT));
+      section_list->FindSectionByName(GetSegmentNameTEXT()));
   SectionSP data_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA));
+      section_list->FindSectionByName(GetSegmentNameDATA()));
   SectionSP linkedit_section_sp(
       section_list->FindSectionByName(GetSegmentNameLINKEDIT()));
   SectionSP data_dirty_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA_DIRTY));
+      section_list->FindSectionByName(GetSegmentNameDATA_DIRTY()));
   SectionSP data_const_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA_CONST));
+      section_list->FindSectionByName(GetSegmentNameDATA_CONST()));
   SectionSP objc_section_sp(
-      section_list->FindSectionByName(g_segment_name_OBJC));
+      section_list->FindSectionByName(GetSegmentNameOBJC()));
   SectionSP eh_frame_section_sp;
   SectionSP lldb_no_nlist_section_sp;
+  llvm::StringRef g_section_name_eh_frame = GetSectionNameEHFrame();
+  llvm::StringRef g_section_name_lldb_no_nlist = GetSectionNameLLDBNoNlist();
   if (text_section_sp.get()) {
     eh_frame_section_sp = text_section_sp->GetChildren().FindSectionByName(
         g_section_name_eh_frame);

@@ -12,6 +12,7 @@
 
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "RISCVMCSymbolizer.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
@@ -38,6 +39,12 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 
 public:
   using MCPlusBuilder::MCPlusBuilder;
+
+  std::unique_ptr<MCSymbolizer>
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols) const override {
+    return std::make_unique<RISCVMCSymbolizer>(Function, CreateNewSymbols);
+  }
 
   bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
@@ -109,6 +116,7 @@ public:
     default:
       return MCPlusBuilder::isPseudo(Inst);
     case RISCV::PseudoCALL:
+    case RISCV::PseudoCALLReg:
     case RISCV::PseudoTAIL:
       return false;
     }
@@ -159,6 +167,10 @@ public:
       return RISCV::C_BNEZ;
     case RISCV::C_BNEZ:
       return RISCV::C_BEQZ;
+    case RISCV::BEQI:
+      return RISCV::BNEI;
+    case RISCV::BNEI:
+      return RISCV::BEQI;
     }
   }
 
@@ -259,16 +271,33 @@ public:
   }
 
   void createCall(unsigned Opcode, MCInst &Inst, const MCSymbol *Target,
-                  MCContext *Ctx) {
+                  MCContext *Ctx, MCRegister LinkReg = MCRegister()) const {
     Inst.setOpcode(Opcode);
     Inst.clear();
+    if (LinkReg.isValid())
+      Inst.addOperand(MCOperand::createReg(LinkReg));
     Inst.addOperand(MCOperand::createExpr(MCSpecifierExpr::create(
         MCSymbolRefExpr::create(Target, *Ctx), RISCV::S_CALL_PLT, *Ctx)));
   }
 
+  MCPhysReg getCallLinkRegister(const MCInst &Inst) const {
+    switch (Inst.getOpcode()) {
+    default:
+      return RISCV::X1;
+    case RISCV::JAL:
+    case RISCV::JALR:
+    case RISCV::PseudoCALLReg:
+      return Inst.getOperand(0).getReg();
+    }
+  }
+
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
-    return createCall(RISCV::PseudoCALL, Inst, Target, Ctx);
+    MCPhysReg LinkReg = getCallLinkRegister(Inst);
+    if (LinkReg == RISCV::X1)
+      createCall(RISCV::PseudoCALL, Inst, Target, Ctx);
+    else
+      createCall(RISCV::PseudoCALLReg, Inst, Target, Ctx, LinkReg);
   }
 
   void createLongTailCall(InstructionListType &Seq, const MCSymbol *Target,
@@ -279,6 +308,59 @@ public:
   void createTailCall(MCInst &Inst, const MCSymbol *Target,
                       MCContext *Ctx) override {
     return createCall(RISCV::PseudoTAIL, Inst, Target, Ctx);
+  }
+
+  InstructionListType createIndirectPLTCall(MCInst &&DirectCall,
+                                            const MCSymbol *TargetLocation,
+                                            MCContext *Ctx) override {
+    const bool IsTailCall = isTailCall(DirectCall);
+    assert(((DirectCall.getOpcode() == RISCV::PseudoCALL && !IsTailCall) ||
+            (DirectCall.getOpcode() == RISCV::PseudoTAIL && IsTailCall)) &&
+           "RISC-V direct (tail) call instruction expected");
+
+    // Load the resolved function address directly from its GOT slot:
+    //
+    //   auipc t3, %pcrel_hi(TargetLocation)
+    //   l[dw] t3, %pcrel_lo(.Lpcrel_hi)(t3)
+    //   jalr  ra, t3, 0
+    //
+    // A tail call uses zero instead of ra as the JALR destination.
+    InstructionListType Code;
+    // Use t3 (x28), the scratch register used by linker-generated RISC-V
+    // PLT/IPLT entries. It is caller-saved, is not an argument register, and
+    // the original call through the PLT already clobbers it.
+    const MCPhysReg PLTScratchReg = RISCV::X28;
+    MCSymbol *AUIPCLabel = Ctx->createNamedTempSymbol("pcrel_hi");
+
+    MCInst InstAUIPC =
+        MCInstBuilder(RISCV::AUIPC).addReg(PLTScratchReg).addImm(0);
+    // TargetLocation is already registered at the existing GOT slot, so use a
+    // direct PC-relative relocation to that slot instead of R_RISCV_GOT_HI20,
+    // which is used when starting from the referenced function symbol.
+    setOperandToSymbolRef(InstAUIPC, /*OpNum=*/1, TargetLocation,
+                          /*Addend=*/0, Ctx, ELF::R_RISCV_PCREL_HI20);
+    setInstLabel(InstAUIPC, AUIPCLabel);
+    Code.emplace_back(std::move(InstAUIPC));
+
+    // Load the call target from the GOT slot using LD on RV64 or LW on RV32.
+    MCInst InstLoad = MCInstBuilder(loadOpc())
+                          .addReg(PLTScratchReg)
+                          .addReg(PLTScratchReg)
+                          .addImm(0);
+    // Pair the I-type LD/LW immediate with the label on AUIPC. RISC-V
+    // R_RISCV_PCREL_LO12_I relocations name the corresponding HI20 location.
+    setOperandToSymbolRef(InstLoad, /*OpNum=*/2, AUIPCLabel,
+                          /*Addend=*/0, Ctx, ELF::R_RISCV_PCREL_LO12_I);
+    Code.emplace_back(std::move(InstLoad));
+
+    MCInst InstCall = MCInstBuilder(RISCV::JALR)
+                          .addReg(IsTailCall ? RISCV::X0 : RISCV::X1)
+                          .addReg(PLTScratchReg)
+                          .addImm(0);
+    moveAnnotations(std::move(DirectCall), InstCall);
+    Code.emplace_back(std::move(InstCall));
+
+    return Code;
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
@@ -342,6 +424,9 @@ public:
     case RISCV::PseudoTAIL:
       OpNum = 0;
       return true;
+    case RISCV::PseudoCALLReg:
+      OpNum = 1;
+      return true;
     case RISCV::AUIPC:
     case RISCV::JAL:
     case RISCV::C_BEQZ:
@@ -354,6 +439,8 @@ public:
     case RISCV::BNE:
     case RISCV::BLT:
     case RISCV::BLTU:
+    case RISCV::BEQI:
+    case RISCV::BNEI:
       OpNum = 2;
       return true;
     }

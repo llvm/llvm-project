@@ -57,22 +57,45 @@ Error L0ContextTy::init() {
     return Err;
   }
 
-  ze_result_t RC;
-  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
-          "zexKernelGetArgumentSize", (void **)&zexKernelGetArgumentSize);
-  if (RC != ZE_RESULT_SUCCESS)
-    zexKernelGetArgumentSize = nullptr;
+  ODBG(OLDT_Init) << "APIs supported by the context with dlopen: ";
+  ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
+                  << (LaunchKernelWithArguments.available() ? "yes" : "no");
+  ODBG(OLDT_Init) << "  zexKernelGetArgumentSize: "
+                  << (KernelGetArgumentSize.available() ? "yes" : "no");
+  ODBG(OLDT_Init) << "  zeCommandListAppendHostFunction: "
+                  << (CommandListAppendHostFunction.available() ? "yes" : "no");
+  ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
+                  << (DriverGetDefaultContext.available() ? "yes" : "no");
 
-  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
-          "zeCommandListAppendHostFunction",
-          (void **)&zeCommandListAppendHostFunction);
-  if (RC != ZE_RESULT_SUCCESS)
-    zeCommandListAppendHostFunction = nullptr;
+  if (!LaunchKernelWithArguments)
+    LaunchKernelWithArguments.loadExperimental(
+        zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
 
-  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
-          "zeDriverGetDefaultContext", (void **)&zeDriverGetDefaultContext);
-  if (RC != ZE_RESULT_SUCCESS)
-    zeDriverGetDefaultContext = nullptr;
+  if (!KernelGetArgumentSize)
+    KernelGetArgumentSize.loadExperimental(zeDriver,
+                                           "zexKernelGetArgumentSize");
+
+  if (!CommandListAppendHostFunction)
+    CommandListAppendHostFunction.loadExperimental(
+        zeDriver, "zeCommandListAppendHostFunction");
+  if (!CommandListAppendHostFunction)
+    // Try again with a name used in compute runtime 25.35 to 25.48
+    CommandListAppendHostFunction.loadExperimental(
+        zeDriver, "zexCommandListAppendHostFunction");
+
+  if (!DriverGetDefaultContext)
+    DriverGetDefaultContext.loadExperimental(zeDriver,
+                                             "zeDriverGetDefaultContext");
+
+  ODBG(OLDT_Init) << "APIs supported by the context with added extensions: ";
+  ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
+                  << (LaunchKernelWithArguments.available() ? "yes" : "no");
+  ODBG(OLDT_Init) << "  zexKernelGetArgumentSize: "
+                  << (KernelGetArgumentSize.available() ? "yes" : "no");
+  ODBG(OLDT_Init) << "  zeCommandListAppendHostFunction: "
+                  << (CommandListAppendHostFunction.available() ? "yes" : "no");
+  ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
+                  << (DriverGetDefaultContext.available() ? "yes" : "no");
 
   DefaultUserCtx = std::make_unique<LevelZeroPluginContextTy>(
       Plugin, /*Devices=*/llvm::ArrayRef<GenericDeviceTy *>{}, zeDriver,

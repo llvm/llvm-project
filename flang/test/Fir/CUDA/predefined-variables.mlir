@@ -346,8 +346,8 @@ func.func @_QMoutermodPouter(%arg0: !fir.ref<!fir.array<?x?xf64>> {fir.bindc_nam
   %15 = fir.embox %14(%13) : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf64>>
   %16 = fir.declare %arg1(%13) dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QMoutermodFouterEb"} : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<?x?xf64>>
   %17 = fir.embox %16(%13) : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf64>>
-  %18 = acc.present var(%15 : !fir.box<!fir.array<?x?xf64>>) -> !fir.box<!fir.array<?x?xf64>> {name = "a"}
-  %19 = acc.present var(%17 : !fir.box<!fir.array<?x?xf64>>) -> !fir.box<!fir.array<?x?xf64>> {name = "b"}
+  %18 = acc.present var(%15 : !fir.box<!fir.array<?x?xf64>>) name("a") -> !fir.box<!fir.array<?x?xf64>>
+  %19 = acc.present var(%17 : !fir.box<!fir.array<?x?xf64>>) name("b") -> !fir.box<!fir.array<?x?xf64>>
   acc.parallel combined(loop) dataOperands(%18, %19 : !fir.box<!fir.array<?x?xf64>>, !fir.box<!fir.array<?x?xf64>>) {
     %20 = fir.box_addr %18 : (!fir.box<!fir.array<?x?xf64>>) -> !fir.ref<!fir.array<?x?xf64>>
     %21 = fir.dummy_scope : !fir.dscope
@@ -355,7 +355,7 @@ func.func @_QMoutermodPouter(%arg0: !fir.ref<!fir.array<?x?xf64>> {fir.bindc_nam
     %23 = fir.box_addr %19 : (!fir.box<!fir.array<?x?xf64>>) -> !fir.ref<!fir.array<?x?xf64>>
     %24 = fir.declare %23(%13) dummy_scope %21 arg 2 {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QMoutermodFouterEb"} : (!fir.ref<!fir.array<?x?xf64>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<?x?xf64>>
     %25 = fir.load %4 : !fir.ref<i32>
-    %26 = acc.private varPtr(%6 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
+    %26 = acc.private varPtr(%6 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("j") -> !fir.ref<i32>
     %27 = fir.load %2 : !fir.ref<i32>
     %28 = fir.address_of(@_QM__fortran_builtinsE__builtin_blockdim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
     %29 = fir.address_of(@_QM__fortran_builtinsE__builtin_blockidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
@@ -405,11 +405,11 @@ func.func @_QMoutermodPouter(%arg0: !fir.ref<!fir.array<?x?xf64>> {fir.bindc_nam
       }
       fir.store %57 to %45 : !fir.ref<i32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
-  acc.delete accVar(%18 : !fir.box<!fir.array<?x?xf64>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
-  acc.delete accVar(%19 : !fir.box<!fir.array<?x?xf64>>) {dataClause = #acc<data_clause acc_present>, name = "b"}
+  acc.delete accVar(%18 : !fir.box<!fir.array<?x?xf64>>) dataClause(acc_present) name("a")
+  acc.delete accVar(%19 : !fir.box<!fir.array<?x?xf64>>) dataClause(acc_present) name("b")
   return
 }
 
