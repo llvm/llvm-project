@@ -2468,12 +2468,17 @@ static bool foldMulHigh(Instruction &I) {
 /// Inserts a conditional branch around the memset and specialises the
 /// executed path to a constant length of one.
 static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
-                                      DominatorTree &DT, bool &MadeCFGChange) {
+                                      TargetLibraryInfo &TLI,
+                                      AssumptionCache &AC, DominatorTree &DT,
+                                      bool &MadeCFGChange) {
   auto *MI = dyn_cast<MemSetInst>(&I);
   if (!MI || isa<ConstantInt>(MI->getLength()))
     return false;
 
-  KnownBits KnownLen = computeKnownBits(MI->getLength(), DL);
+  SimplifyQuery SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo=*/true,
+                   /*CanUseUndef=*/false);
+  KnownBits KnownLen =
+      computeKnownBits(MI->getLength(), SQ.getWithInstruction(MI));
   if (!KnownLen.getMaxValue().isOne())
     return false;
 
@@ -2524,7 +2529,8 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
       MadeChange |= foldMulHigh(I);
-      MadeChange |= foldMemSetZeroOrOneLength(I, DL, DT, MadeCFGChange);
+      MadeChange |=
+          foldMemSetZeroOrOneLength(I, DL, TLI, AC, DT, MadeCFGChange);
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
