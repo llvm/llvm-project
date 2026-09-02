@@ -129,11 +129,30 @@ This feature uses a hybrid approach:
 To enable this feature, pass the following flags to the compiler:
 
 - `-fpartition-static-data-sections`: Instructs the compiler to generate `.hot` and `.unlikely` section prefixes for hot and cold static data respectively in the relocatable object files.
-- `-Wl,-z,keep-data-section-prefix`: Informs the LLD linker that `.data.rel.ro.hot` and `.data.rel.ro.unlikely` as relro sections. LLD requires all relro sections to be contiguous and this flag allows us to interleave the hotness-suffixed `.data.rel.ro` sections with other relro sections.
-- `-Wl,-script=<linker_script>`: Group hot and/or cold data sections, and order the data sections.
+- `-Wl,-z,keep-data-section-prefix`: This flag is currently only supported in LLD. It informs the linker that `.data.rel.ro.hot` and `.data.rel.ro.unlikely` are relro sections (rather than only recognizing `.data.rel.ro`). LLD requires all relro sections to be contiguous and this flag allows us to interleave the hotness-suffixed `.data.rel.ro` sections with other relro sections.
+- `-Wl,-script=<linker_script>`: Group hot and/or cold data sections, and order the data sections. Without explicitly accounting for hotness suffixed data sections in a linker script, LLD will simply combine them, negating the effect. A simple linker script like the following should work on must Linux setups:
+
+```ld
+SECTIONS {
+  .rodata.unlikely : { *(.rodata.unlikely.); *(.rodata.cst*.unlikely); }
+  .rodata : { .rodata }
+} INSERT AFTER .fini
+
+SECTIONS {
+  .data.rel.ro : { .data.rel.ro }
+  .data.rel.ro.unlikely : { *(.data.rel.ro.unlikely.); }
+} INSERT AFTER .fini_array
+
+SECTIONS {
+  .data : { .data }
+  .data.unlikely : { *(.data.unlikely.); }
+  .bss : { .bss }
+  .bss.unlikely : { *(.bss.unlikely.); }
+} INSERT AFTER .got.plt
+```
 
 ```bash
-clang++ -fmemory-profile-use=memprof.memprofdata -fpartition-static-data-sections -fuse-ld=lld -Wl,-z,keep-data-section-prefix -O2 source.cpp -o optimized_app
+clang++ -fmemory-profile-use=memprof.memprofdata -fpartition-static-data-sections -fuse-ld=lld -Wl,-z,keep-data-section-prefix -Wl,-script=<linker_script> -O2 source.cpp -o optimized_app
 ```
 
 The optimized layout clusters hot static data, improving dTLB and cache efficiency.
