@@ -22,8 +22,8 @@ def INSTR_FOO_I32_I16 : Instruction {
 // SDAG: OPC_CheckTypeRes, 1, MVT::i32
 // SDAG: OPC_MorphNodeTo2Chain, TARGET_VAL(::INSTR_FOO_I16_I32)
 
-// GISEL: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s16
-// GISEL: GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32
+// GISEL: GIM_RootCheckType0, /*Type*/GILLT_s16
+// GISEL: GIM_RootCheckType1, /*Type*/GILLT_s32
 // GISEL: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(::INSTR_FOO_I16_I32)
 def : Pat<([i16, i32] (int_foo)), ([i16, i32] (INSTR_FOO_I16_I32))>;
 
@@ -31,7 +31,7 @@ def : Pat<([i16, i32] (int_foo)), ([i16, i32] (INSTR_FOO_I16_I32))>;
 // SDAG: OPC_CheckTypeRes, 1, MVT::i16
 // SDAG: OPC_MorphNodeTo2Chain, TARGET_VAL(::INSTR_FOO_I32_I16)
 
-// GISEL: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32
-// GISEL: GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s16
+// GISEL: GIM_RootCheckType0, /*Type*/GILLT_s32
+// GISEL: GIM_RootCheckType1, /*Type*/GILLT_s16
 // GISEL: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(::INSTR_FOO_I32_I16)
 def : Pat<([i32, i16] (int_foo)), ([i32, i16] (INSTR_FOO_I32_I16))>;

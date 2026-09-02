@@ -301,29 +301,29 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
 // R19O:       // Label [[CASE_SELECT_NUM]]: @[[CASE_SELECT]]
 // R19O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ GIMT_Encode4([[GROUP:[0-9]+]]),
-// R19O-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R19O-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// R19O-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// R19O-NEXT:    GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_s32,
+// R19O-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R19O-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// R19O-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
+// R19O-NEXT:    GIM_RootCheckType3, /*Type*/GILLT_s32,
 //
 // R19C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
 //
-// R19O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
-// R19O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R19O-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R19O-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R19N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // R19N-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SELECT),
 // R19N-NEXT:    // MIs[0] DstI[dst]
-// R19N-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R19N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R19N-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R19N-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R19N-NEXT:    // MIs[0] src1
-// R19N-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// R19N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R19N-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// R19N-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R19N-NEXT:    // MIs[0] complex_rr:src2a:src2b
-// R19N-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// R19N-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 //
 // R19N-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/GIMT_Encode2(0), GIMT_Encode2(GICP_gi_complex_rr),
 // R19N-NEXT:    // MIs[0] Operand 3
-// R19N-NEXT:    GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_s32,
+// R19N-NEXT:    GIM_RootCheckType3, /*Type*/GILLT_s32,
 // R19C-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/3, // MIs[1]
 // R19N-NEXT:    GIM_CheckNumOperands, /*MI*/1, /*Expected*/4,
 // R19C-NEXT:    GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_SELECT),
@@ -355,8 +355,8 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19C-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/1, /*RendererID*/GIMT_Encode2(2), /*SubOperand*/1, // src5b
 // R19C-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // R19C-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::INSN3),
-// R19C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
-// R19C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
+// R19C-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
+// R19C-NEXT:    GIR_RootToRootCopy1, // src1
 // R19C-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/1, // src2b
 // R19C-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, // src2a
 // R19C-NEXT:    GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
@@ -377,10 +377,10 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // EXTENDED:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
 // EXTENDED:       // Label [[CASE_SELECT_NUM]]: @[[CASE_SELECT]]
 // EXTENDED-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ GIMT_Encode4([[GROUP:[0-9]+]]),
-// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_i32,
-// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_i32,
-// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_i32,
-// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_i32,
+// EXTENDED-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_i32,
+// EXTENDED-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_i32,
+// EXTENDED-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_i32,
+// EXTENDED-NEXT:    GIM_RootCheckType3, /*Type*/GILLT_i32,
 
 def INSN3 : I<(outs GPR32:$dst),
               (ins GPR32Op:$src1, GPR32:$src2a, GPR32:$src2b, GPR32:$scr), []>;
@@ -400,10 +400,10 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
 // R21O:       // Label [[CASE_SELECT_NUM]]: @[[CASE_SELECT]]
 // R21O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ GIMT_Encode4([[GROUP:[0-9]+]]),
-// R21O-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R21O-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// R21O-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// R21O-NEXT:    GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_s32,
+// R21O-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R21O-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// R21O-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
+// R21O-NEXT:    GIM_RootCheckType3, /*Type*/GILLT_s32,
 //
 // R21C-NEXT:  GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 20 //
 // R21C-NOT:     GIR_EraseRootFromParent_Done,
@@ -412,30 +412,30 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21C-NEXT:  // Label [[PREV_NUM]]: @[[PREV]]
 // R21C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), // Rule ID 22 //
 //
-// R21O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
-// R21O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R21O-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R21O-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R21N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // R21N-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SELECT),
 // R21N-NEXT:    // MIs[0] DstI[dst]
-// R21N-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R21N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R21N-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R21N-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R21N-NEXT:    // MIs[0] src1
-// R21N-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// R21N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R21N-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// R21N-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R21N-NEXT:    // MIs[0] src2
-// R21N-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// R21N-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 //
 // R21O-NEXT:    GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_frag),
 // R21C-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/GIMT_Encode2(0), GIMT_Encode2(GICP_gi_complex),
 // R21N-NEXT:    // MIs[0] src3
-// R21N-NEXT:    GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_s32,
+// R21N-NEXT:    GIM_RootCheckType3, /*Type*/GILLT_s32,
 // R21C-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/3, /*Renderer*/GIMT_Encode2(1), GIMT_Encode2(GICP_gi_complex),
 // R21N-NEXT:    GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_frag),
 // R21C-NEXT:    // (select:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2, complex:{ *:[i32] }:$src3)<<P:Predicate_frag>> => (INSN2:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src3, complex:{ *:[i32] }:$src2)
 
 // R21C-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::INSN2),
-// R21C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
-// R21C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
+// R21C-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
+// R21C-NEXT:    GIR_RootToRootCopy1, // src1
 // R21C-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(1),
 // R21C-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0),
 // R21C-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/1, /*MergeInsnID's*/0
@@ -459,10 +459,10 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R20O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
 // R20O:       // Label [[CASE_SUB_NUM]]: @[[CASE_SUB]]
 // R20O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ GIMT_Encode4([[GROUP:[0-9]+]]),
-// R20O-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R20O-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// R20O-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// R20O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R20O-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R20O-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// R20O-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
+// R20O-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 //
 // R20N:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 22 //
 // R20N:       // Label [[PREV_NUM]]: @[[PREV]]
@@ -472,20 +472,20 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R20N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // R20N-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
 // R20N-NEXT:    // MIs[0] DstI[dst]
-// R20N-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R20N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R20N-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R20N-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R20N-NEXT:    // MIs[0] src1
-// R20N-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
+// R20N-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
 //
-// R20N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R20N-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R20N-NEXT:    // MIs[0] src2
-// R20N-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// R20O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R20N-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
+// R20O-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R20C-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/GIMT_Encode2(0), GIMT_Encode2(GICP_gi_complex),
 // R20C-NEXT:    // (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2) => (INSN1:{ *:[i32] } GPR32:{ *:[i32] }:$src1, complex:{ *:[i32] }:$src2)
 // R20C-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::INSN1),
-// R20C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
-// R20C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
+// R20C-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
+// R20C-NEXT:    GIR_RootToRootCopy1, // src1
 // R20C-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0),
 // R20C-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // R20C-NEXT:    // GIR_Coverage, 21,
@@ -523,10 +523,10 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
 // R00O:       // Label [[CASE_SUB_NUM]]: @[[CASE_SUB]]
 // R00O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ GIMT_Encode4([[GROUP:[0-9]+]]),
-// R00O-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R00O-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// R00O-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// R00O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R00O-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R00O-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// R00O-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
+// R00O-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 //
 // R00C:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 21 //
 // R00C:       // Label [[PREV_NUM]]: @[[PREV]]
@@ -535,10 +535,10 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // R00N-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
 // R00N-NEXT:    // MIs[0] DstI[dst]
-// R00N-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R00N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R00N-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R00N-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R00N-NEXT:    // MIs[0] Operand 1
-// R00N-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
+// R00N-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
 // R00C-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
 // R00N-NEXT:    GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
 // R00C-NEXT:    GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_SUB),
@@ -552,7 +552,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00N-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
 // R00N-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R00N-NEXT:    // MIs[0] Operand 2
-// R00N-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// R00N-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 // R00O-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R00O-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R00C-NEXT:    GIM_RecordInsn, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
@@ -572,7 +572,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00C-NEXT:    GIM_CheckIsSafeToFold, /*NumInsns*/2,
 // R00C-NEXT:    // (sub:{ *:[i32] } (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2), (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src3, GPR32:{ *:[i32] }:$src4)) => (INSNBOB:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2, GPR32:{ *:[i32] }:$src3, GPR32:{ *:[i32] }:$src4)
 // R00C-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::INSNBOB),
-// R00C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// R00C-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // R00C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
 // R00C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
 // R00C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/1, // src3
@@ -587,7 +587,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O-NEXT:  GIM_Reject,
 // R00O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
 // R00O-NEXT:  GIM_Reject,
-// R00O-NEXT:  }; // Size: 1930 bytes
+// R00O-NEXT:  }; // Size: 1836 bytes
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,
@@ -609,24 +609,24 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // R01C-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 //
 // R01O-NEXT:    GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode2(Intrinsic::mytarget_nop),
-// R01O-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R01O-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// R01O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R01O-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R01O-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
+// R01O-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 //
 // R01N-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC),
 // R01N-NEXT:    // MIs[0] DstI[dst]
-// R01N-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R01N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R01N-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R01N-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R01N-NEXT:    // MIs[0] Operand 1
 // R01N-NEXT:    GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode2(Intrinsic::mytarget_nop),
 // R01N-NEXT:    // MIs[0] src1
-// R01N-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// R01N-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 //
-// R01C-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R01C-NEXT:    GIM_RootCheckRegBankForClass2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R01C-NEXT:    // (intrinsic_wo_chain:{ *:[i32] } [[ID:[0-9]+]]:{ *:[iPTR] }, GPR32:{ *:[i32] }:$src1) => (MOV:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // R01C-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOV),
-// R01C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
-// R01C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/2, // src1
+// R01C-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
+// R01C-NEXT:    GIR_RootToRootCopy2, // src1
 // R01C-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // R01C-NEXT:    // GIR_Coverage, 1,
 // R01C-NEXT:    GIR_EraseRootFromParent_Done,
@@ -647,11 +647,11 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // R02O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
 // R02O:       // Label [[CASE_XOR_NUM]]: @[[CASE_XOR]]
 // R02O-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ GIMT_Encode4([[GROUP:[0-9]+]]),
-// R02O-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R02O-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// R02O-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// R02O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
-// R02O-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R02O-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R02O-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// R02O-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
+// R02O-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R02O-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 //
 // R02N:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 1 //
 // R02N:       // Label [[PREV_NUM]]: @[[PREV]]
@@ -661,20 +661,20 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // R02N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // R02N-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_XOR),
 // R02N-NEXT:    // MIs[0] DstI[dst]
-// R02N-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// R02N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R02N-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// R02N-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R02N-NEXT:    // MIs[0] src1
-// R02N-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// R02N-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// R02N-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// R02N-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R02N-NEXT:    // MIs[0] Operand 2
-// R02N-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// R02N-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 //
 // R02C-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 254,
 // R02C-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -2:{ *:[i32] }) => (XORI:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // R02C-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::XORI),
-// R02C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// R02C-NEXT:    GIR_RootToRootCopy0, // DstI[dst]
 // R02C-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/255,
-// R02C-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
+// R02C-NEXT:    GIR_RootToRootCopy1, // src1
 // R02C-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // R02C-NEXT:    // GIR_Coverage, 2,
 // R02C-NEXT:    GIR_EraseRootFromParent_Done,
@@ -693,19 +693,19 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_XOR),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src1
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 253,
 // NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -3:{ *:[i32] }) => (XOR:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::XOR),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
+// NOOPT-NEXT:    GIR_RootToRootCopy1, // src1
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 3,
 // NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
@@ -721,20 +721,20 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_XOR),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src1
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 252,
 // NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -4:{ *:[i32] }) => (XORlike:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::XORlike),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, // DstI[dst]
 // NOOPT-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/255,
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
+// NOOPT-NEXT:    GIR_RootToRootCopy1, // src1
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 4,
 // NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
@@ -750,21 +750,21 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_XOR),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src1
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 251,
 // NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -5:{ *:[i32] }) => (XORManyDefaults:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::XORManyDefaults),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, // DstI[dst]
 // NOOPT-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/255,
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
+// NOOPT-NEXT:    GIR_RootToRootCopy1, // src1
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 5,
 // NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
@@ -780,19 +780,19 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_XOR),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src1
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 250,
 // NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -6:{ *:[i32] }) => (XORIb:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::XORIb),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, // DstI[dst]
 // NOOPT-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/13,
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
+// NOOPT-NEXT:    GIR_RootToRootCopy1, // src1
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 6,
 // NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
@@ -811,19 +811,19 @@ def XORIb : I<(outs GPR32:$dst), (ins mb:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_XOR),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Wm
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 255,
 // NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$Wm, -1:{ *:[i32] }) => (ORN:{ *:[i32] } R0:{ *:[i32] }, GPR32:{ *:[i32] }:$Wm)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::ORN),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // Wm
+// NOOPT-NEXT:    GIR_RootToRootCopy1, // Wm
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 23,
 // NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
@@ -838,10 +838,10 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 1
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_ADD),
@@ -854,15 +854,15 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // NOOPT-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src3
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // NOOPT-NEXT:    // (mul:{ *:[i32] } (add:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2), GPR32:{ *:[i32] }:$src3)  =>  (MULADD:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2, GPR32:{ *:[i32] }:$src3)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MULADD),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/2, // src3
+// NOOPT-NEXT:    GIR_RootToRootCopy2, // src3
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 7,
 // NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
@@ -874,13 +874,13 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src3
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 2
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/2,
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_ADD),
@@ -895,10 +895,10 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // NOOPT-NEXT:    GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // NOOPT-NEXT:    // (mul:{ *:[i32] } GPR32:{ *:[i32] }:$src3, (add:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2))  =>  (MULADD:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2, GPR32:{ *:[i32] }:$src3)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MULADD),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src3
+// NOOPT-NEXT:    GIR_RootToRootCopy1, // src3
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 29,
 // NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
@@ -911,24 +911,24 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 
 //===- Test a simple pattern with a PatLeaf and a predicate. ---------===//
 //
-// NOOPT-NEXT:     /*  879 */ GIM_Try, /*On fail goto*//*Label 13*/ GIMT_Encode4(921), // Rule ID 24 //
-// NOOPT-NEXT:     /*  884 */   GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
-// NOOPT-NEXT:     /*  887 */   GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
-// NOOPT-NEXT:     /*  891 */   // MIs[0] DstI[dst]
-// NOOPT-NEXT:     /*  891 */   GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:     /*  894 */   GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
-// NOOPT-NEXT:     /*  898 */   // MIs[0] src1
-// NOOPT-NEXT:     /*  898 */   GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:     /*  901 */   GIM_CheckLeafOperandPredicate, /*MI*/0, /*MO*/1, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
-// NOOPT-NEXT:     /*  906 */   // MIs[0] src2
-// NOOPT-NEXT:     /*  906 */   GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:     /*  909 */   GIM_CheckLeafOperandPredicate, /*MI*/0, /*MO*/2, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
-// NOOPT-NEXT:     /*  914 */   // (sub:{ *:[i32] } GPR32:{ *:[i32] }<<P:Predicate_leaf>>:$src1, GPR32:{ *:[i32] }<<P:Predicate_leaf>>:$src2)  =>  (INSN5:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2)
-// NOOPT-NEXT:     /*  914 */   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::INSN5),
-// NOOPT-NEXT:     /*  919 */   GIR_RootConstrainSelectedInstOperands,
-// NOOPT-NEXT:     /*  920 */   // GIR_Coverage, 24,
-// NOOPT-NEXT:     /*  920 */   GIR_Done,
-// NOOPT-NEXT:     /*  921 */ // Label 13: @921
+// NOOPT-NEXT:     /*  789 */ GIM_Try, /*On fail goto*//*Label 13*/ GIMT_Encode4(827), // Rule ID 24 //
+// NOOPT-NEXT:     /*  794 */   GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+// NOOPT-NEXT:     /*  797 */   GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
+// NOOPT-NEXT:     /*  801 */   // MIs[0] DstI[dst]
+// NOOPT-NEXT:     /*  801 */   GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:     /*  803 */   GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:     /*  806 */   // MIs[0] src1
+// NOOPT-NEXT:     /*  806 */   GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:     /*  808 */   GIM_CheckLeafOperandPredicate, /*MI*/0, /*MO*/1, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
+// NOOPT-NEXT:     /*  813 */   // MIs[0] src2
+// NOOPT-NEXT:     /*  813 */   GIM_RootCheckType2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:     /*  815 */   GIM_CheckLeafOperandPredicate, /*MI*/0, /*MO*/2, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
+// NOOPT-NEXT:     /*  820 */   // (sub:{ *:[i32] } GPR32:{ *:[i32] }<<P:Predicate_leaf>>:$src1, GPR32:{ *:[i32] }<<P:Predicate_leaf>>:$src2)  =>  (INSN5:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2)
+// NOOPT-NEXT:     /*  820 */   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::INSN5),
+// NOOPT-NEXT:     /*  825 */   GIR_RootConstrainSelectedInstOperands,
+// NOOPT-NEXT:     /*  826 */   // GIR_Coverage, 24,
+// NOOPT-NEXT:     /*  826 */   GIR_Done,
+// NOOPT-NEXT:     /*  827 */ // Label 13: @827
 
 def leaf: PatLeaf<(i32 GPR32:$src), [{ return true; // C++ code }]> {
   let GISelLeafPredicateCode = [{ return true; }];
@@ -944,13 +944,13 @@ def : Pat<(sub leaf:$src1, leaf:$src2), (INSN5 GPR32:$src1, GPR32:$src2)>;
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 1
 // NOOPT-NEXT:    GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, GIMT_Encode8(1),
 // NOOPT-NEXT:    // 1:{ *:[i32] }  =>  (MOV1:{ *:[i32] })
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOV1),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 8,
 // NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
@@ -965,13 +965,13 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // NOOPT-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_I64_Predicate_simm8),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 1
 // NOOPT-NEXT:    // No operand predicates
 // NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_simm8>>:$imm => (MOVimm8:{ *:[i32] } (imm:{ *:[i32] }):$imm)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVimm8),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 9,
@@ -988,13 +988,13 @@ def MOVimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm8:$i
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // NOOPT-NEXT:    GIM_CheckAPIntImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_APInt_Predicate_simm9),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 1
 // NOOPT-NEXT:    // No operand predicates
 // NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_simm9>>:$imm =>  (MOVimm9:{ *:[i32] } (imm:{ *:[i32] }):$imm)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVimm9),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 10,
@@ -1011,13 +1011,13 @@ def MOVimm9 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm9:$i
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // NOOPT-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_I64_Predicate_cimm8),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 1
 // NOOPT-NEXT:    // No operand predicates
 // NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_cimm8>><<X:cimm8_xform>>:$imm  =>  (MOVcimm8:{ *:[i32] } (cimm8_xform:{ *:[i32] } (imm:{ *:[i32] }):$imm))
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVcimm8),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GIMT_Encode2(GICR_renderImm), // imm
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 11,
@@ -1033,13 +1033,13 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_FCONSTANT),
 // NOOPT-NEXT:    GIM_CheckAPFloatImmPredicate, /*MI*/0, /*Predicate*/GIMT_Encode2(GICXXPred_APFloat_Predicate_fpimmz),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::FPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::FPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 1
 // NOOPT-NEXT:    // No operand predicates
 // NOOPT-NEXT:    // (fpimm:{ *:[f32] })<<P:Predicate_fpimmz>>:$imm =>  (MOVfpimmz:{ *:[f32] } (fpimm:{ *:[f32] }):$imm)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVfpimmz),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_CopyFConstantAsFPImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 18,
@@ -1054,11 +1054,11 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 // NOOPT-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // NOOPT-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src1
 // NOOPT-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>> => (LOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
@@ -1077,11 +1077,11 @@ def LOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // NOOPT-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // NOOPT-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_p0s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_p0s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src
 // NOOPT-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
@@ -1100,11 +1100,11 @@ def : Pat<(load GPR32:$src),
 // NOOPT-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // NOOPT-NEXT:    GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/GIMT_Encode4(2),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src1
 // NOOPT-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_sextload>><<P:Predicate_sextloadi16>>  =>  (SEXTLOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::SEXTLOAD),
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
@@ -1121,14 +1121,14 @@ def SEXTLOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ADD),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src1
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID)
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID)
 // NOOPT-NEXT:    // MIs[0] src2
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // (add:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2) => (ADD:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::ADD),
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
@@ -1145,17 +1145,17 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ADD),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src{{$}}
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src{{$}}
 // NOOPT-NEXT:    GIM_CheckIsSameOperand, /*MI*/0, /*OpIdx*/2, /*OtherMI*/0, /*OtherOpIdx*/1,
 // NOOPT-NEXT:    // (add:{ *:[i32] } GPR32:{ *:[i32] }:$src, GPR32:{ *:[i32] }:$src) => (DOUBLE:{ *:[i32] } GPR32:{ *:[i32] }:$src)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::DOUBLE),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy1, // src
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 15,
 // NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
@@ -1175,12 +1175,12 @@ def DOUBLE : I<(outs GPR32:$dst), (ins GPR32:$src), [(set GPR32:$dst, (add GPR32
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ADD),
 // NOOPT-NEXT:    // MIs[0] DstI[samename]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] samename
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    // MIs[0] othername
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    // (add:{ *:[i32] } i32:{ *:[i32] }:$samename, i32:{ *:[i32] }:$othername)  =>  (InsnWithSpeciallyNamedDef:{ *:[i32] } i32:{ *:[i32] }:$samename, i32:{ *:[i32] }:$othername)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::InsnWithSpeciallyNamedDef),
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
@@ -1198,12 +1198,12 @@ def : Pat<(add i32:$samename, i32:$othername),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ADD),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src1
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    // MIs[0] src2
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
 // NOOPT-NEXT:    // (add:{ *:[i32] } i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2) => (ADD:{ *:[i32] } i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::ADD),
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
@@ -1220,19 +1220,19 @@ def : Pat<(add i32:$src1, i32:$src2),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src1
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src2
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // (mul:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2) => (MUL:{ *:[i32] } GPR32:{ *:[i32] }:$src2, GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MUL),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/2, // src2
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/1, // src1
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy2, // src2
+// NOOPT-NEXT:    GIR_RootToRootCopy1, // src1
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 16,
 // NOOPT-NEXT:    GIR_EraseRootFromParent_Done,
@@ -1249,11 +1249,11 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_BITCAST),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] src1
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::FPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::FPR32RegClassID),
 // NOOPT-NEXT:    // (bitconvert:{ *:[i32] } FPR32:{ *:[f32] }:$src1) => (COPY_TO_REGCLASS:{ *:[i32] } FPR32:{ *:[f32] }:$src1, GPR32:{ *:[i32] })
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // NOOPT-NEXT:    GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(MyTarget::GPR32RegClassID),
@@ -1270,13 +1270,13 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
-// NOOPT-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    GIM_RootCheckType0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:    // MIs[0] Operand 1
 // NOOPT-NEXT:    // No operand predicates
 // NOOPT-NEXT:    // (imm:{ *:[i32] }):$imm =>  (MOVimm:{ *:[i32] } (imm:{ *:[i32] }):$imm)
 // NOOPT-NEXT:    GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MOVimm),
-// NOOPT-NEXT:    GIR_RootToRootCopy, /*OpIdx*/0, //  DstI[dst]
+// NOOPT-NEXT:    GIR_RootToRootCopy0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
 // NOOPT-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // NOOPT-NEXT:    // GIR_Coverage, 17,
@@ -1306,5 +1306,5 @@ def BR : I<(outs), (ins unknown:$target),
             [(br bb:$target)]>;
 
 // NOOPT-NEXT:    GIM_Reject,
-// NOOPT-NEXT:  }; // Size: 1497 bytes
+// NOOPT-NEXT:  }; // Size: 1343 bytes
 // NOOPT-NEXT:  return MatchTable0;

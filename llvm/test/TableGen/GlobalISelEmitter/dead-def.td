@@ -20,7 +20,7 @@ def : Pat<(abs i32:$x), (I1 (I2 $x))>;
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // x
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::I1),
-// CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[same_name]
+// CHECK-NEXT: GIR_RootToRootCopy0, // DstI[same_name]
 // CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT: // GIR_Coverage, 0,

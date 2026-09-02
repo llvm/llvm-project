@@ -104,7 +104,7 @@ def truncstorei16_addrspace : PatFrag<(ops node:$val, node:$ptr),
 // GISEL-NEXT: GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/GIMT_Encode4(2),
 // GISEL-NEXT: GIM_CheckMemoryAddressSpace, /*MI*/0, /*MMO*/0, /*NumAddrSpace*/2, /*AddrSpace*/123, /*AddrSpace*//* 455(*/0xC7, 0x03/*)*/,
 // GISEL-NEXT: // MIs[0] src0
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckType0, /*Type*/GILLT_s32,
 
 
 

@@ -72,7 +72,7 @@ def : Pat<(sub (complex DOP:$src1, DOP:$src2), 77),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/0, GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, GIMT_Encode2(Test::DRegsRegClassID),
 // CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::SOME_INSN2),
-// CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT: GIR_RootToRootCopy0, // DstI[dst]
 // CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/1,
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
@@ -88,9 +88,9 @@ def : Pat<(i32 (anyext i16:$src)), (INSERT_SUBREG (i32 (IMPLICIT_DEF)), SOP:$src
 // CHECK-NEXT:            GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // CHECK-NEXT:            GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // CHECK-NEXT:            GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::INSERT_SUBREG),
-// CHECK-NEXT:            GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT:            GIR_RootToRootCopy0, // DstI[dst]
 // CHECK-NEXT:            GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// CHECK-NEXT:            GIR_RootToRootCopy, /*OpIdx*/1, // src
+// CHECK-NEXT:            GIR_RootToRootCopy1, // src
 // CHECK-NEXT:            GIR_AddImm8, /*InsnID*/0, /*Imm*/1,
 // CHECK-NEXT:            GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(Test::DRegsRegClassID),
 // CHECK-NEXT:            GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/1, GIMT_Encode2(Test::DRegsRegClassID),
@@ -117,7 +117,7 @@ def : Pat<(i32 (anyext i16:$src)), (SOME_INSN (INSERT_SUBREG (i32 (IMPLICIT_DEF)
 // CHECK-NEXT:            GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, GIMT_Encode2(Test::DRegsRegClassID),
 // CHECK-NEXT:            GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/2, GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT:            GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::SOME_INSN),
-// CHECK-NEXT:            GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT:            GIR_RootToRootCopy0, // DstI[dst]
 // CHECK-NEXT:            GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:            GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:            // GIR_Coverage, 4,
@@ -148,7 +148,7 @@ def : Pat<(i32 (anyext i16:$src)), (INSERT_SUBREG (i32 (IMPLICIT_DEF)), (SUBSOME
 // CHECK-NEXT:          GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // CHECK-NEXT:          GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // CHECK-NEXT:          GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::INSERT_SUBREG),
-// CHECK-NEXT:          GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT:          GIR_RootToRootCopy0, // DstI[dst]
 // CHECK-NEXT:          GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:          GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/1,
 // CHECK-NEXT:          GIR_AddImm8, /*InsnID*/0, /*Imm*/1,
@@ -186,7 +186,7 @@ def : Pat<(i16 (trunc (bitreverse DOP:$src))),
 // CHECK-NEXT:  GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, // src
 // CHECK-NEXT:  GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // CHECK-NEXT:  GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
-// CHECK-NEXT:  GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT:  GIR_RootToRootCopy0, // DstI[dst]
 // CHECK-NEXT:  GIR_AddTempSubRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(0), GIMT_Encode2(sub0),
 // CHECK-NEXT:  GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT:  GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/1, GIMT_Encode2(Test::DRegsRegClassID),
@@ -212,7 +212,7 @@ def : Pat<(i16 (trunc (bitreverse DOP:$src))),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/0, GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, GIMT_Encode2(Test::DRegsRegClassID),
 // CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::SUBSOME_INSN2),
-// CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT: GIR_RootToRootCopy0, // DstI[dst]
 // CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT: // GIR_Coverage, 9,
@@ -225,7 +225,7 @@ def : Pat<(i16 (trunc DOP:$src)),
            (EXTRACT_SUBREG DOP:$src, sub0)>;
 // CHECK-LABEL: // (trunc:{ *:[i16] } DOP:{ *:[i32] }:$src)  =>  (EXTRACT_SUBREG:{ *:[i16] } DOP:{ *:[i32] }:$src, sub0:{ *:[i32] })
 // CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
-// CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT: GIR_RootToRootCopy0, // DstI[dst]
 // CHECK-NEXT: GIR_CopySubReg, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, /*SubRegIdx*/GIMT_Encode2(1), // src
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/1, GIMT_Encode2(Test::DRegsRegClassID),
@@ -242,7 +242,7 @@ def : Pat<(i32 (zext SOP:$src)),
 // CHECK-NEXT:        GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // src
 // CHECK-NEXT:        GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // CHECK-NEXT:        GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::SUBREG_TO_REG),
-// CHECK-NEXT:        GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
+// CHECK-NEXT:        GIR_RootToRootCopy0, // DstI[dst]
 // CHECK-NEXT:        GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:        GIR_AddImm8, /*InsnID*/0, /*Imm*/1,
 // CHECK-NEXT:        GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(Test::DRegsRegClassID),

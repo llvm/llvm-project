@@ -19,8 +19,8 @@ def LOAD : I<(outs GPR32:$dst), (ins GPR32Op:$src), []>;
 // CHECK: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS),
 // CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/4,
 // CHECK-NEXT: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode2(Intrinsic::tgt_metadata_intrinsic),
-// CHECK-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// CHECK-NEXT: GIM_RootCheckType0, /*Type*/GILLT_s32,
+// CHECK-NEXT: GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // MIs[0] src
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/2, /*SizeInBits*/32,
 // CHECK-NEXT: // MIs[0] Operand 3

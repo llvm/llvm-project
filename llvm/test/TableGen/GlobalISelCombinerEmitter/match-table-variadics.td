@@ -129,9 +129,9 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // Combiner Rule #5: VariadicTypeTestReuse
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_MERGE_VALUES),
-// CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/0, // a
+// CHECK-NEXT:       GIR_RootToRootCopy0, // a
 // CHECK-NEXT:       GIR_CopyRemaining, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // b
-// CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/1, // c
+// CHECK-NEXT:       GIR_RootToRootCopy1, // c
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
 // CHECK-NEXT:     // Label 7: @{{[0-9]+}}
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 0 //
@@ -151,6 +151,6 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     // Label 2: @{{[0-9]+}}
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     }; // Size: 128 bytes
+// CHECK-NEXT:     }; // Size: 126 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }

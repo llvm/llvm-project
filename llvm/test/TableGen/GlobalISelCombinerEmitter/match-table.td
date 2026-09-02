@@ -186,7 +186,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:     // Label 1: @[[L1]]
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 9*/ GIMT_Encode4([[L9:[0-9]+]]), // Rule ID 6 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule5Enabled),
-// CHECK-NEXT:       GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:       GIM_RootCheckType2, /*Type*/GILLT_s32,
 // CHECK-NEXT:       // MIs[0] dst
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] x
@@ -198,7 +198,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // CHECK-NEXT:       // Combiner Rule #5: InOutInstTest1
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_TRUNC),
-// CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/0, // dst
+// CHECK-NEXT:       GIR_RootToRootCopy0, // dst
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // z
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
 // CHECK-NEXT:     // Label 9: @[[L9]]
@@ -217,7 +217,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // Combiner Rule #4: InOutInstTest0
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_STORE),
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // ext
-// CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/1, // ptr
+// CHECK-NEXT:       GIR_RootToRootCopy1, // ptr
 // CHECK-NEXT:       GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/2, /*MergeInsnID's*/0, 1,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
 // CHECK-NEXT:     // Label 10: @[[L10]]
@@ -253,7 +253,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/0, /*Val*/GIMT_Encode8(0),
 // CHECK-NEXT:       // Combiner Rule #6: PatFragTest0 @ [__PatFragTest0_match_1[0]]
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
-// CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/0, // dst
+// CHECK-NEXT:       GIR_RootToRootCopy0, // dst
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
 // CHECK-NEXT:     // Label 14: @[[L14]]
