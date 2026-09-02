@@ -27160,9 +27160,9 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         if (ScheduleCopyableDataMapByUsers[I].empty())
           ScheduleCopyableDataMapByUsers.erase(I);
         ScheduleCopyableDataMap.erase(KV);
-        // Need to recalculate dependencies for the actual schedule data.
-        if (ScheduleData *OpSD = getScheduleData(I);
-            OpSD && OpSD->hasValidDependencies()) {
+        // Need to recalculate dependencies for the actual schedule data, even
+        // if they were already cleared by the failed bundle scheduling attempt.
+        if (ScheduleData *OpSD = getScheduleData(I)) {
           OpSD->clearDirectDependencies();
           ControlDependentMembers.push_back(OpSD);
           if (any_of(VL, [&](Value *V) { return S.isExpandedBinOp(V); })) {
