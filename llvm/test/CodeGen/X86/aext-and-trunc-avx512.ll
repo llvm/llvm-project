@@ -39,3 +39,27 @@ define i8 @ctpop_aext_i3_v3i1(ptr %p) {
   %ext = zext i3 %ct to i8
   ret i8 %ext
 }
+
+define i64 @pr120389(<8 x i64> %0) {
+; BW-LABEL: pr120389:
+; BW:       # %bb.0:
+; BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BW-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
+; BW-NEXT:    kmovd %k0, %eax
+; BW-NEXT:    andl $1, %eax
+; BW-NEXT:    vzeroupper
+; BW-NEXT:    retq
+;
+; DQ-LABEL: pr120389:
+; DQ:       # %bb.0:
+; DQ-NEXT:    vpmovq2m %zmm0, %k0
+; DQ-NEXT:    kmovd %k0, %eax
+; DQ-NEXT:    andl $1, %eax
+; DQ-NEXT:    vzeroupper
+; DQ-NEXT:    retq
+  %2 = icmp slt <8 x i64> %0, zeroinitializer
+  %3 = bitcast <8 x i1> %2 to i8
+  %4 = and i8 %3, 1
+  %5 = zext nneg i8 %4 to i64
+  ret i64 %5
+}

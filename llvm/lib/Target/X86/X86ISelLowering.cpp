@@ -58098,6 +58098,52 @@ static SDValue widenBuildVec(SDNode *Extend, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// zext(and(bitcast(mask), C)) --> and(anyext(bitcast(mask)), zext(C)).
+static SDValue combineZextMaskLogicToGPR(SDNode *N, SelectionDAG &DAG,
+                                         const X86Subtarget &Subtarget) {
+  if (N->getOpcode() != ISD::ZERO_EXTEND || !Subtarget.hasAVX512())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDValue Logic = N->getOperand(0);
+  if (Logic.getOpcode() != ISD::AND || !Logic.hasOneUse())
+    return SDValue();
+
+  EVT NarrowVT = Logic.getValueType();
+  if (NarrowVT != MVT::i8 && NarrowVT != MVT::i16)
+    return SDValue();
+
+  auto GetMaskBitcast = [](SDValue V) -> SDValue {
+    if (V.getOpcode() != ISD::BITCAST)
+      return SDValue();
+    EVT SrcVT = V.getOperand(0).getValueType();
+    if (!SrcVT.isVector() || SrcVT.getVectorElementType() != MVT::i1)
+      return SDValue();
+    return V;
+  };
+
+  SDValue MaskBC = GetMaskBitcast(Logic.getOperand(0));
+  SDValue Other = Logic.getOperand(1);
+  if (!MaskBC) {
+    MaskBC = GetMaskBitcast(Logic.getOperand(1));
+    Other = Logic.getOperand(0);
+  }
+  if (!MaskBC)
+    return SDValue();
+
+  if (!isa<ConstantSDNode>(Other))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue WideMask = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, MaskBC);
+  SDValue WideOther = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, Other);
+  SDValue Wide = DAG.getNode(ISD::AND, DL, MVT::i32, WideMask, WideOther);
+  return DAG.getZExtOrTrunc(Wide, DL, VT);
+}
+
 static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
                            const X86Subtarget &Subtarget) {
@@ -58122,6 +58168,9 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
 
     return SDValue(N, 0);
   }
+
+  if (SDValue V = combineZextMaskLogicToGPR(N, DAG, Subtarget))
+    return V;
 
   if (SDValue NewCMov = combineToExtendCMOV(N, DAG))
     return NewCMov;
