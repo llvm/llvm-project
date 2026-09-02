@@ -112,6 +112,8 @@ public:
                                                 bool IsArray = false);
   BuiltinTypeDeclBuilder &addTextureLoadMSMethods(ResourceDimension Dim,
                                                   bool IsArray = false);
+  BuiltinTypeDeclBuilder &addRWTextureLoadMethods(ResourceDimension Dim,
+                                                  bool IsArray = false);
   BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferInterlockedMethods();
@@ -137,12 +139,14 @@ public:
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
                                                   bool IsConstReturn,
                                                   bool IsRef, QualType IndexTy,
-                                                  QualType ElemTy = QualType());
+                                                  QualType ElemTy = QualType(),
+                                                  bool TransposeResult = false);
   BuiltinTypeDeclBuilder &
   addLoadWithStatusFunction(DeclarationName &Name,
                             QualType ReturnTy = QualType());
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
-                                           QualType ValueType);
+                                           QualType ValueType,
+                                           bool TransposeArg = false);
   BuiltinTypeDeclBuilder &
   addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
                                         StringRef BuiltinName);

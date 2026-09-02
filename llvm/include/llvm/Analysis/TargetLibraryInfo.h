@@ -48,23 +48,33 @@ class VecDesc {
   ElementCount VectorizationFactor;
   bool Masked;
   StringRef VABIPrefix;
-  std::optional<CallingConv::ID> CC;
+  /// Encoded calling convention: 0 means absent (std::nullopt), otherwise
+  /// stores CallingConv::ID + 1 so an explicit C (0) remains representable.
+  /// TODO: Since C++20 standard becomes default in LLVM we can return back to
+  /// use std::optional<CallingConv::ID> instead of unsigned and value_or()
+  /// in default constructor.
+  unsigned CC;
 
 public:
   VecDesc() = delete;
-  VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
-          ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix,
-          std::optional<CallingConv::ID> Conv)
+  constexpr VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
+                    ElementCount VectorizationFactor, bool Masked,
+                    StringRef VABIPrefix, std::optional<CallingConv::ID> Conv)
       : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
         VectorizationFactor(VectorizationFactor), Masked(Masked),
-        VABIPrefix(VABIPrefix), CC(Conv) {}
+        VABIPrefix(VABIPrefix),
+        CC(Conv ? static_cast<unsigned>(*Conv) + 1u : 0u) {}
 
   StringRef getScalarFnName() const { return ScalarFnName; }
   StringRef getVectorFnName() const { return VectorFnName; }
   ElementCount getVectorizationFactor() const { return VectorizationFactor; }
   bool isMasked() const { return Masked; }
   StringRef getVABIPrefix() const { return VABIPrefix; }
-  std::optional<CallingConv::ID> getCallingConv() const { return CC; }
+  std::optional<CallingConv::ID> getCallingConv() const {
+    if (CC == 0)
+      return std::nullopt;
+    return static_cast<CallingConv::ID>(CC - 1);
+  }
 
   /// Returns a vector function ABI variant string on the form:
   ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)

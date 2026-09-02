@@ -360,6 +360,18 @@ defm prefetch_inputs : B<"prefetch-inputs",
                          "possible, to improve link times",
                          "Do not prefetch input files (default)">;
 
+def opt_remarks_filename: P<"opt-remarks-filename",
+  "YAML output file for optimization remarks">;
+def opt_remarks_passes: P<"opt-remarks-passes",
+  "Regex for the passes that need to be serialized to the output file">;
+def opt_remarks_format: P<"opt-remarks-format",
+  "The format used for serializing remarks (default: YAML)">;
+def opt_remarks_with_hotness: F<"opt-remarks-with-hotness">,
+  HelpText<"Include hotness information in the optimization remarks file">;
+def opt_remarks_hotness_threshold: P<"opt-remarks-hotness-threshold",
+  "Minimum profile count required for an optimization remark to be output. "
+  "Use 'auto' to apply the threshold from profile summary.">;
+
 // Flags for debugging
 def lldmap : F<"lldmap">;
 def lldmap_file : P_priv<"lldmap">;

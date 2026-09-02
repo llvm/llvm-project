@@ -1,8 +1,6 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -mconstructor-aliases -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -mconstructor-aliases -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
@@ -43,7 +41,7 @@ void test_destroying_delete(S *s) {
 // CIR:   %[[NOT_NULL:.*]] = cir.cmp ne %[[S]], %[[NULL]] : !cir.ptr<!rec_S>
 // CIR:   cir.if %[[NOT_NULL]] {
 // CIR:     %[[TAG:.*]] = cir.load{{.*}} %[[TAG_ADDR]]
-// CIR:     cir.call @_ZN1SdlEPS_St19destroying_delete_t(%[[S]], %[[TAG]]){{.*}} : (!cir.ptr<!rec_S> {{.*}}, !rec_std3A3Adestroying_delete_t) -> ()
+// CIR:     cir.call @_ZN1SdlEPS_St19destroying_delete_t(%[[S]]){{.*}} : (!cir.ptr<!rec_S> {{.*}}) -> ()
 // CIR-NOT: cir.call @_ZN1SD{{[12]}}Ev
 // CIR:   }
 // CIR:   cir.return
@@ -57,18 +55,15 @@ void test_destroying_delete(S *s) {
 // LLVM:   br i1 %[[NOT_NULL]], label %[[NOTNULL:.*]], label %[[END:.*]]
 // LLVM: [[NOTNULL]]:
 // LLVM:   %[[TAG:.*]] = load %"struct.std::destroying_delete_t", ptr %[[TAG_ADDR]]
-// LLVM:   call void @_ZN1SdlEPS_St19destroying_delete_t(ptr noundef %[[S]], %"struct.std::destroying_delete_t" %[[TAG]])
+// LLVM:   call void @_ZN1SdlEPS_St19destroying_delete_t(ptr noundef %[[S]])
 // LLVM-NOT: call void @_ZN1SD{{[12]}}Ev
 // LLVM: [[END]]:
 // LLVM:   ret void
 
 // S::operator delete(S *, std::destroying_delete_t)
-// CIR: cir.func private @_ZN1SdlEPS_St19destroying_delete_t(!cir.ptr<!rec_S> {llvm.noundef}, !rec_std3A3Adestroying_delete_t)
-// LLVM: declare void @_ZN1SdlEPS_St19destroying_delete_t(ptr noundef, %"struct.std::destroying_delete_t")
+// CIR: cir.func private @_ZN1SdlEPS_St19destroying_delete_t(!cir.ptr<!rec_S> {llvm.noundef})
+// LLVM: declare void @_ZN1SdlEPS_St19destroying_delete_t(ptr noundef)
 
-// Classic codegen elides empty-class parameters at the ABI level, so the
-// destroying_delete_t tag disappears from both the declaration and the call.
-// Either way, no destructor call is emitted from the caller.
 // OGCG: define {{.*}} void @_Z22test_destroying_deleteP1S(ptr {{.*}} %[[ARG:.*]])
 // OGCG:   %[[S_ADDR:.*]] = alloca ptr
 // OGCG:   store ptr %[[ARG]], ptr %[[S_ADDR]]

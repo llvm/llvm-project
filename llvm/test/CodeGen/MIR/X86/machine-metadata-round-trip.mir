@@ -1,0 +1,35 @@
+# RUN: llc -mtriple=x86_64 -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass=none -o - %s | llc -mtriple=x86_64 -x mir -run-pass=none -filetype=null
+
+--- |
+  define i8 @test(ptr %p) {
+    %value = load i8, ptr %p
+    ret i8 %value
+  }
+...
+---
+name: test
+machineMetadataNodes:
+  - '!0 = !{!"heap"}'
+  - '!1 = !{!"pcsections"}'
+  - '!2 = !{!"tag", !"value"}'
+  - '!3 = !{i32 1}'
+  - '!4 = !{i8 0, i8 10}'
+  - '!5 = !{i32 0, !6}'
+  - '!6 = !{!"cache", !"streaming"}'
+body: |
+  bb.0:
+    liveins: $rdi
+
+    ; CHECK: machineMetadataNodes:
+    ; CHECK-DAG: - '![[HEAP:[0-9]+]] = !{!"heap"}'
+    ; CHECK-DAG: - '![[PCSECTIONS:[0-9]+]] = !{!"pcsections"}'
+    ; CHECK-DAG: - '![[MMRA:[0-9]+]] = !{!"tag", !"value"}'
+    ; CHECK-DAG: - '![[NOALIAS:[0-9]+]] = !{i32 1}'
+    ; CHECK-DAG: - '![[RANGE:[0-9]+]] = !{i8 0, i8 10}'
+    ; CHECK-DAG: - '![[CACHE:[0-9]+]] = !{i32 0, ![[CACHE_HINT:[0-9]+]]}'
+    ; CHECK-DAG: - '![[CACHE_HINT]] = !{!"cache", !"streaming"}'
+    ; CHECK: renamable $al = MOV8rm killed renamable $rdi, 1, $noreg, 0, $noreg, heap-alloc-marker ![[HEAP]], pcsections ![[PCSECTIONS]], mmra ![[MMRA]] :: (load (s8) from %ir.p, !noalias.addrspace ![[NOALIAS]], !range ![[RANGE]], !mem.cache_hint ![[CACHE]])
+    renamable $al = MOV8rm killed renamable $rdi, 1, $noreg, 0, $noreg, heap-alloc-marker !0, pcsections !1, mmra !2 :: (load (s8) from %ir.p, !noalias.addrspace !3, !range !4, !mem.cache_hint !5)
+    RET64 implicit killed $al
+...

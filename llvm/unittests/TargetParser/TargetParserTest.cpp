@@ -2515,6 +2515,8 @@ TEST(TargetParserTest, testAMDGPUArch) {
     EXPECT_EQ(Triple("amdgpu12.00--").getSubArch(), Triple::AMDGPUSubArch1200);
     EXPECT_EQ(Triple("amdgpu12.01--").getSubArch(), Triple::AMDGPUSubArch1201);
     EXPECT_EQ(Triple("amdgpu12.5--").getSubArch(), Triple::AMDGPUSubArch12_5);
+    EXPECT_EQ(Triple("amdgpu12.50s--").getSubArch(),
+              Triple::AMDGPUSubArch1250S);
     EXPECT_EQ(Triple("amdgpu12.50--").getSubArch(), Triple::AMDGPUSubArch1250);
     EXPECT_EQ(Triple("amdgpu12.51--").getSubArch(), Triple::AMDGPUSubArch1251);
     EXPECT_EQ(Triple("amdgpu122--").getSubArch(), Triple::NoSubArch); // Unknown
@@ -2636,6 +2638,40 @@ TEST(TargetParserTest, testAMDGPUisSubArchCompatible) {
   // An unrecognized subarch is incompatible with any recognized subarch.
   EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu9.99-amd-amdhsa"),
                                            Triple("amdgpu9.00-amd-amdhsa")));
+
+  // subarch 12.50s is its own major, so it is compatible only with itself; the
+  // 12.5 family, gfx1250, and sibling gfx1251 all reject it, both directions.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250S,
+                                          Triple::AMDGPUSubArch1250S));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch12_5,
+                                           Triple::AMDGPUSubArch1250S));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250S,
+                                           Triple::AMDGPUSubArch12_5));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250S,
+                                           Triple::AMDGPUSubArch1250));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250,
+                                           Triple::AMDGPUSubArch1250S));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250S,
+                                           Triple::AMDGPUSubArch1251));
+
+  // gfx1250 remains a normal member of the gfx12.5 family.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch12_5,
+                                          Triple::AMDGPUSubArch1250));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250,
+                                          Triple::AMDGPUSubArch12_5));
+
+  // Same, via triple spellings: only amdgpu12.50s accepts it; amdgpu12.5 and
+  // amdgpu12.50 both reject it.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple("amdgpu12.50s-amd-amdhsa"),
+                                          Triple("amdgpu12.50s-amd-amdhsa")));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu12.5-amd-amdhsa"),
+                                           Triple("amdgpu12.50s-amd-amdhsa")));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu12.50s-amd-amdhsa"),
+                                           Triple("amdgpu12.5-amd-amdhsa")));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu12.50-amd-amdhsa"),
+                                           Triple("amdgpu12.50s-amd-amdhsa")));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu12.50s-amd-amdhsa"),
+                                           Triple("amdgpu12.50-amd-amdhsa")));
 }
 
 TEST(TargetParserTest, testAMDGPUisCPUValidForSubArch) {
@@ -2946,6 +2982,7 @@ TEST(TargetParserTest, testAMDGPUgetGPUKindFromSubArch) {
       {Triple::AMDGPUSubArch1200, AMDGPU::GK_GFX1200},
       {Triple::AMDGPUSubArch1201, AMDGPU::GK_GFX1201},
       {Triple::AMDGPUSubArch12_5, AMDGPU::GK_GFX12_5_GENERIC},
+      {Triple::AMDGPUSubArch1250S, AMDGPU::GK_GFX1250_STRICT},
       {Triple::AMDGPUSubArch1250, AMDGPU::GK_GFX1250},
       {Triple::AMDGPUSubArch1251, AMDGPU::GK_GFX1251},
 
@@ -2958,6 +2995,33 @@ TEST(TargetParserTest, testAMDGPUgetGPUKindFromSubArch) {
     EXPECT_EQ(AMDGPU::getGPUKindFromSubArch(Mapping.SubArch), Mapping.Kind);
 }
 
+TEST(TargetParserTest, testAMDGPUgetSubArchFromGPUName) {
+  // Concrete GPU names map to their subarch.
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx600"), Triple::AMDGPUSubArch600);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx900"), Triple::AMDGPUSubArch900);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx90a"), Triple::AMDGPUSubArch90A);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx1030"),
+            Triple::AMDGPUSubArch1030);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx1250"),
+            Triple::AMDGPUSubArch1250);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx1250-strict"),
+            Triple::AMDGPUSubArch1250S);
+
+  // A legacy alias resolves to the same subarch as its canonical name.
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("tahiti"),
+            AMDGPU::getSubArchFromGPUName("gfx600"));
+
+  // Generic/family names map to their family subarch.
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("gfx9-generic"),
+            Triple::AMDGPUSubArch9);
+
+  // Pseudo targets and unrecognized names have no subarch.
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("generic"), Triple::NoSubArch);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("generic-hsa"), Triple::NoSubArch);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName("not-a-gpu"), Triple::NoSubArch);
+  EXPECT_EQ(AMDGPU::getSubArchFromGPUName(""), Triple::NoSubArch);
+}
+
 TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
   // Concrete subarches map to their exact ISA version.
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch600),
@@ -2965,6 +3029,8 @@ TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch900),
             (AMDGPU::IsaVersion{9, 0, 0}));
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1250),
+            (AMDGPU::IsaVersion{12, 5, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1250S),
             (AMDGPU::IsaVersion{12, 5, 0}));
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1251),
             (AMDGPU::IsaVersion{12, 5, 1}));
@@ -3029,6 +3095,105 @@ TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX600), 8u);
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX802), 16u);
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX1030), 106u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetVGPRAllocGranule) {
+  // Wave64 / wave32. gfx90a+ has a fixed granule; targets with 1536 physical
+  // VGPRs use 12/24; gfx10.3+ uses 8/16; everything else 4/8.
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX600, false), 4u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX600, true), 8u);
+
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX90A, false), 8u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX90A, true), 8u);
+
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1010, false), 4u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1010, true), 8u);
+
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1030, false), 8u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1030, true), 16u);
+
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1100, false), 12u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_GFX1100, true), 24u);
+
+  // An unknown GPU falls back to the base granule.
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_NONE, false), 4u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(AMDGPU::GK_NONE, true), 8u);
+
+  // The SubArch overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(Triple::AMDGPUSubArch90A, true), 8u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(Triple::AMDGPUSubArch1030, true), 16u);
+  EXPECT_EQ(AMDGPU::getVGPRAllocGranule(Triple::AMDGPUSubArch1100, true), 24u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetMaxHWAddressableLocalMemorySize) {
+  // The addressable cap is a fixed hardware property, independent of how many
+  // SIMDs a work-group runs on.
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch600),
+      32768u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch700),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch900),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch950),
+      163840u);
+  // gfx10+ addresses 64 KiB even though the physical block is 128 KiB.
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch1030),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch1250),
+      327680u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getMaxHWAddressableLocalMemorySize(AMDGPU::GK_GFX900),
+            65536u);
+  EXPECT_EQ(AMDGPU::getMaxHWAddressableLocalMemorySize(AMDGPU::GK_GFX950),
+            163840u);
+  EXPECT_EQ(AMDGPU::getMaxHWAddressableLocalMemorySize(AMDGPU::GK_GFX1250),
+            327680u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
+  EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(true), 4u);
+  EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetLDSBankCount) {
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch702), 16u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch900), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1030), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1200), 32u);
+  // gfx12.5 doubled the bank count.
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1250), 64u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX900), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX1250), 64u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX1251), 64u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetMaxWavesPerEU) {
+  EXPECT_EQ(AMDGPU::getMinWavesPerEU(), 1u);
+
+  // GFX90A/GFX9.4/GFX9.5 -> 8, other pre-GFX10 -> 10, GFX10.1 -> 20,
+  // GFX10.3 and every later generation -> 16.
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch900), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch908), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch90A), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch942), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch950), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1010), 20u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1030), 16u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1250), 16u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX908), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX90A), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX1030), 16u);
 }
 
 TEST(TargetParserTest, testAMDGPUParseTargetIDString) {

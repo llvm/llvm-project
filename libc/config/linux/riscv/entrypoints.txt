@@ -330,7 +330,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.random.getrandom
 
     # sys/resource.h entrypoints
+    libc.src.sys.resource.getpriority
     libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.getrusage
+    libc.src.sys.resource.setpriority
     libc.src.sys.resource.setrlimit
 
     # sys/sendfile.h entrypoints
@@ -422,6 +425,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
+    libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -435,10 +439,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
+    libc.src.unistd.getegid
     libc.src.unistd.getentropy
     libc.src.unistd.geteuid
     libc.src.unistd.gethostname
     libc.src.unistd.getpagesize
+    libc.src.unistd.getpgid
+    libc.src.unistd.getpgrp
     libc.src.unistd.getpid
     libc.src.unistd.getppid
     libc.src.unistd.getsid
@@ -458,11 +465,18 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.readlink
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
+    libc.src.unistd.setgid
+    libc.src.unistd.setpgid
+    libc.src.unistd.setregid
+    libc.src.unistd.setreuid
     libc.src.unistd.setsid
+    libc.src.unistd.setuid
     libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
     libc.src.unistd.sysconf
+    libc.src.unistd.tcgetpgrp
+    libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
@@ -723,6 +737,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
+    libc.src.math.lgammaf
     libc.src.math.llogb
     libc.src.math.llogbf
     libc.src.math.llogbl
@@ -1517,6 +1532,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime
     libc.src.time.ctime_r
     libc.src.time.clock
+    libc.src.time.clock_getcpuclockid
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime
@@ -1532,6 +1548,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.timespec_get
     libc.src.time.timer_create
     libc.src.time.timer_delete
+    libc.src.time.timer_gettime
+    libc.src.time.timer_settime
 
     # locale.h entrypoints
     libc.src.locale.localeconv
@@ -1592,6 +1610,9 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # fnmatch.h entrypoints
+      libc.src.fnmatch.fnmatch
+
       # net/if.h entrypoints
       libc.src.net.if_freenameindex
       libc.src.net.if_nameindex

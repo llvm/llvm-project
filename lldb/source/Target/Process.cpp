@@ -38,6 +38,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
@@ -140,7 +141,6 @@ static constexpr unsigned g_string_read_width = 256;
 enum {
 #define LLDB_PROPERTIES_process
 #include "TargetPropertiesEnum.inc"
-  ePropertyExperimental,
 };
 
 #define LLDB_PROPERTIES_process_experimental
@@ -173,9 +173,24 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     // Global process properties, set them up one time
     m_collection_sp = std::make_shared<ProcessOptionValueProperties>("process");
     m_collection_sp->Initialize(g_process_properties_def);
+    // MemoryCache divides by the cache line size and holds it in a uint32_t, so
+    // reject a value it could not use.
+    OptionValueUInt64 *line_size =
+        m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
+            ePropertyMemCacheLineSize);
+    line_size->SetMinimumValue(1);
+    line_size->SetMaximumValue(UINT32_MAX);
     m_collection_sp->AppendProperty(
         "thread", "Settings specific to threads.", true,
         Thread::GetGlobalProperties().GetValueProperties());
+
+    m_experimental_properties_up =
+        std::make_unique<ProcessExperimentalProperties>();
+    m_collection_sp->AppendProperty(
+        Properties::GetExperimentalSettingsName(),
+        "Experimental settings - setting these won't produce "
+        "errors if the setting is not present.",
+        true, m_experimental_properties_up->GetValueProperties());
   } else {
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Process::GetGlobalProperties());
@@ -186,14 +201,6 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
         ePropertyDisableLangRuntimeUnwindPlans,
         [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
   }
-
-  m_experimental_properties_up =
-      std::make_unique<ProcessExperimentalProperties>();
-  m_collection_sp->AppendProperty(
-      Properties::GetExperimentalSettingsName(),
-      "Experimental settings - setting these won't produce "
-      "errors if the setting is not present.",
-      true, m_experimental_properties_up->GetValueProperties());
 }
 
 ProcessProperties::~ProcessProperties() = default;
@@ -203,6 +210,14 @@ bool ProcessProperties::GetDisableMemoryCache() const {
   return GetPropertyAtIndexAs<bool>(
       idx, g_process_properties[idx].default_uint_value != 0);
 }
+
+#ifndef NDEBUG
+bool ProcessProperties::GetVerifyMemoryReads() const {
+  const uint32_t idx = ePropertyVerifyMemoryReads;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+#endif
 
 uint64_t ProcessProperties::GetMemoryCacheLineSize() const {
   const uint32_t idx = ePropertyMemCacheLineSize;
@@ -370,26 +385,25 @@ Args ProcessProperties::GetAlwaysRunThreadNames() const {
   return args;
 }
 
+OptionValueProperties *ProcessProperties::GetExperimentalProperties() const {
+  if (const Property *exp_property = m_collection_sp->GetProperty(
+          Properties::GetExperimentalSettingsName()))
+    return exp_property->GetValue()->GetAsProperties();
+  return nullptr;
+}
+
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
   const bool fail_value = true;
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
+  OptionValueProperties *exp_values = GetExperimentalProperties();
   if (!exp_values)
     return fail_value;
-
   return exp_values
       ->GetPropertyAtIndexAs<bool>(ePropertyOSPluginReportsAllThreads)
       .value_or(fail_value);
 }
 
 void ProcessProperties::SetOSPluginReportsAllThreads(bool does_report) {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
+  if (OptionValueProperties *exp_values = GetExperimentalProperties())
     exp_values->SetPropertyAtIndex(ePropertyOSPluginReportsAllThreads,
                                    does_report);
 }
@@ -2031,9 +2045,40 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
   return error;
 }
 
-// Uncomment to verify memory caching works after making changes to caching
-// code
-//#define VERIFY_MEMORY_READS
+#ifndef NDEBUG
+void Process::VerifyMemoryRead(addr_t addr, const void *cache_buf,
+                               size_t cache_bytes_read, size_t size,
+                               const Status &cache_error) {
+  // A failed cache read stopped early, so only the bytes it did return and
+  // the contents can be compared.
+  const bool truncated = cache_error.Fail();
+
+  std::vector<uint8_t> verify_buf(size, 0);
+  Status verify_error;
+  const size_t verify_bytes_read = ReadMemoryFromInferior(
+      addr, verify_buf.data(), verify_buf.size(), verify_error);
+  const size_t comparable = std::min(cache_bytes_read, verify_bytes_read);
+
+  const char *mismatch = nullptr;
+  if (!truncated && cache_bytes_read != verify_bytes_read)
+    mismatch = "byte count";
+  else if (memcmp(cache_buf, verify_buf.data(), comparable) != 0)
+    mismatch = "contents";
+  else if (!truncated && cache_error.Success() != verify_error.Success())
+    mismatch = "status";
+  if (!mismatch)
+    return;
+
+  // Log before the assert, which cannot carry the two results.
+  LLDB_LOG(GetLog(LLDBLog::Process),
+           "memory cache verification failed on {0}: read of {1} bytes at "
+           "{2:x} returned {3} bytes ({4}) from the cache and {5} bytes ({6}) "
+           "from the process",
+           mismatch, size, addr, cache_bytes_read, cache_error,
+           verify_bytes_read, verify_error);
+  assert(false && "memory cache returned something the process did not");
+}
+#endif
 
 size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
                            size_t size, Status &error) {
@@ -2042,43 +2087,15 @@ size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
     addr = abi_sp->FixAnyAddress(addr);
 
   error.Clear();
-  if (!GetDisableMemoryCache()) {
-#if defined(VERIFY_MEMORY_READS)
-    // Memory caching is enabled, with debug verification
-
-    if (buf && size) {
-      // Uncomment the line below to make sure memory caching is working.
-      // I ran this through the test suite and got no assertions, so I am
-      // pretty confident this is working well. If any changes are made to
-      // memory caching, uncomment the line below and test your changes!
-
-      // Verify all memory reads by using the cache first, then redundantly
-      // reading the same memory from the inferior and comparing to make sure
-      // everything is exactly the same.
-      std::string verify_buf(size, '\0');
-      assert(verify_buf.size() == size);
-      const size_t cache_bytes_read =
-          m_memory_cache.Read(this, addr, buf, size, error);
-      Status verify_error;
-      const size_t verify_bytes_read =
-          ReadMemoryFromInferior(addr, const_cast<char *>(verify_buf.data()),
-                                 verify_buf.size(), verify_error);
-      assert(cache_bytes_read == verify_bytes_read);
-      assert(memcmp(buf, verify_buf.data(), verify_buf.size()) == 0);
-      assert(verify_error.Success() == error.Success());
-      return cache_bytes_read;
-    }
-    return 0;
-#else  // !defined(VERIFY_MEMORY_READS)
-    // Memory caching is enabled, without debug verification
-
-    return m_memory_cache.Read(addr, buf, size, error);
-#endif // defined (VERIFY_MEMORY_READS)
-  } else {
-    // Memory caching is disabled
-
+  if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
-  }
+
+  const size_t bytes_read = m_memory_cache.Read(addr, buf, size, error);
+#ifndef NDEBUG
+  if (buf && size && GetVerifyMemoryReads())
+    VerifyMemoryRead(addr, buf, bytes_read, size, error);
+#endif
+  return bytes_read;
 }
 
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
@@ -2089,9 +2106,23 @@ Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   for (const Range<lldb::addr_t, size_t> &range : ranges)
     fixed_ranges.emplace_back(FixAnyAddress(range.GetRangeBase()),
                               range.GetByteSize());
-  if (!GetDisableMemoryCache())
-    return m_memory_cache.ReadRanges(fixed_ranges, buffer);
-  return DoReadMemoryRanges(fixed_ranges, buffer);
+  if (GetDisableMemoryCache())
+    return DoReadMemoryRanges(fixed_ranges, buffer);
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> results =
+      m_memory_cache.ReadRanges(fixed_ranges, buffer);
+#ifndef NDEBUG
+  if (GetVerifyMemoryReads()) {
+    for (auto [range, result] : llvm::zip(fixed_ranges, results)) {
+      if (!result.empty()) {
+        Status error;
+        VerifyMemoryRead(range.GetRangeBase(), result.data(), result.size(),
+                         range.GetByteSize(), error);
+      }
+    }
+  }
+#endif
+  return results;
 }
 
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
@@ -2102,7 +2133,8 @@ Process::DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   // If the buffer is not large enough, this is a programmer error.
   // In production builds, gracefully fail by returning a length of 0 for all
   // ranges.
-  assert(buffer.size() >= total_ranges_len && "provided buffer is too short");
+  assert(buffer.size() >= total_ranges_len &&
+         "Process::DoReadMemoryRanges: provided buffer is too short");
   if (buffer.size() < total_ranges_len) {
     llvm::MutableArrayRef<uint8_t> empty;
     return {ranges.size(), empty};
