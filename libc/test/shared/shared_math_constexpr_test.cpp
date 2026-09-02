@@ -382,6 +382,11 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 
 static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::copysignf128(Float128(0.0),
+                                                   Float128(0.0)));
+static_assert(Float128(1.0) ==
+              LIBC_NAMESPACE::shared::fabsf128(Float128(-1.0)));
+static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::floorf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fmaxf128(Float128(0.0), Float128(0.0)));
@@ -415,11 +420,6 @@ static_assert(0 == [] {
   float128 x = float128(0.0);
   return LIBC_NAMESPACE::shared::canonicalizef128(&cx, &x);
 }());
-static_assert(float128(1.0) ==
-              LIBC_NAMESPACE::shared::fabsf128(float128(-1.0)));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::copysignf128(float128(0.0),
-                                                   float128(0.0)));
 static_assert(0.0 ==
               LIBC_NAMESPACE::shared::ddivf128(float128(0.0), float128(1.0)));
 static_assert(0.0 ==

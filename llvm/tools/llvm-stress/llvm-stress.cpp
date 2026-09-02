@@ -754,7 +754,6 @@ int main(int argc, char **argv) {
     report_fatal_error("Broken module found, compilation aborted!");
 
   // Output textual IR.
-  M->renumberMetadataForAssembly();
   M->print(Out->os(), nullptr);
 
   Out->keep();

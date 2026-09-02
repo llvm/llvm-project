@@ -35,16 +35,13 @@ class PrintModulePass : public RequiredPassInfoMixin<PrintModulePass> {
   std::string Banner;
   bool ShouldPreserveUseListOrder;
   bool EmitSummaryIndex;
-  bool ShouldRenumberMetadata;
 
 public:
   LLVM_ABI PrintModulePass();
-  /// If \p ShouldRenumberMetadata, renumber metadata for canonical assembly
-  /// output before printing.
   LLVM_ABI PrintModulePass(raw_ostream &OS, const std::string &Banner = "",
                            bool ShouldPreserveUseListOrder = false,
-                           bool EmitSummaryIndex = false,
-                           bool ShouldRenumberMetadata = false);
+                           bool EmitSummaryIndex = false);
+
   LLVM_ABI PreservedAnalyses run(Module &M, AnalysisManager<Module> &);
 };
 
