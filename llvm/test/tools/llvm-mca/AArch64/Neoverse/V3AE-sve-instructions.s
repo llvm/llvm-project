@@ -517,6 +517,7 @@
 # CHECK-NEXT:  1      2     0.50                        dupm	z0.s, #0xfffffff9
 # CHECK-NEXT:  1      2     0.50                        dupm	z23.h, #0xfff9
 # CHECK-NEXT:  1      2     0.50                        dupm	z5.b, #0xf9
+# CHECK-NEXT:  1      3     1.00                        mov	z0.s, w1
 # CHECK-NEXT:  1      2     0.50                        eor	p0.b, p0/z, p0.b, p1.b
 # CHECK-NEXT:  1      2     0.50                        eor	z0.d, z0.d, #0x6
 # CHECK-NEXT:  1      2     0.50                        eor	z0.d, z0.d, #0xfffffffffffffff9
@@ -3456,7 +3457,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     245.00 245.00 651.00 400.88 303.88 41.88  41.88  41.88  41.88  41.88  41.88  406.00 2380.50 1905.50
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     245.00 245.00 651.00 401.88 303.88 41.88  41.88  41.88  41.88  41.88  41.88  406.00 2380.50 1905.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
@@ -3967,6 +3968,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   dupm	z0.s, #0xfffffff9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   dupm	z23.h, #0xfff9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   dupm	z5.b, #0xf9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -     mov	z0.s, w1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     eor	p0.b, p0/z, p0.b, p1.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   eor	z0.d, z0.d, #0x6
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   eor	z0.d, z0.d, #0xfffffffffffffff9

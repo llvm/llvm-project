@@ -2473,8 +2473,17 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
 }
 
 bool CIRGenModule::isEmptyFieldForMemberPointer(const FieldDecl *field) {
-  return isEmptyFieldForLayout(astContext, field) &&
-         field->isPotentiallyOverlapping();
+  if (!field->isPotentiallyOverlapping() ||
+      !isEmptyFieldForLayout(astContext, field))
+    return false;
+
+  // Unions always have a field even if they are empty.
+  const RecordDecl *rec = field->getParent();
+  if (rec->isUnion())
+    return true;
+
+  // Otherwise, count on whether accumulateFields gave this a member.
+  return !getTypes().getCIRGenRecordLayout(rec).hasCIRField(field);
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {

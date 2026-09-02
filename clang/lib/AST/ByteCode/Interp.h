@@ -2225,6 +2225,46 @@ bool LoadPop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// Like LoadPop above, but if any of the checks fail, we
+/// turn the pointer into an opaque pointer of appropriate type.
+inline bool LoadPopL(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  auto *P = S.getEvalStatus().Diag;
+  S.getEvalStatus().Diag = nullptr;
+
+  bool Failed = false;
+  if (!CheckLoad(S, OpPC, Ptr))
+    Failed = true;
+  if (!Ptr.isBlockPointer())
+    Failed = true;
+  if (!Failed && !Ptr.canDeref(PT_Ptr))
+    Failed = true;
+  S.getEvalStatus().Diag = P;
+
+  if (Failed) {
+    if (Ptr.isOpaquePointer()) {
+      const OpaquePointer &OP = Ptr.asOpaquePointer();
+
+      if (!Ptr.asOpaquePointer().Base->getType()->isPointerType())
+        return false;
+
+      QualType T = Ptr.getType();
+      S.Stk.push<Pointer>(OP.withFieldType(T.getTypePtr()),
+                          Ptr.getByteOffset());
+      return true;
+    }
+
+    // Convert the block pointer to an opaque pointer.
+    if (!Ptr.isBlockPointer())
+      return false;
+    // FIXME: I *think* we need more information here than just the base.
+    S.Stk.push<Pointer>(Ptr.getDeclDesc()->asValueDecl());
+  } else {
+    S.Stk.push<Pointer>(Ptr.deref<Pointer>());
+  }
+  return true;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Store(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
@@ -2631,10 +2671,22 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
   return Ptr.atIndex(static_cast<uint64_t>(Result));
 }
 
+std::optional<Pointer> addSubOffsetOpaque(InterpState &S, CodePtr OpPC,
+                                          const Pointer &Ptr, APSInt &&Offset,
+                                          ArithOp Op);
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool AddOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>().expand();
+
+  if (Ptr.isOpaquePointer()) {
+    if (std::optional<Pointer> Result =
+            addSubOffsetOpaque(S, OpPC, Ptr, Offset.toAPSInt(), ArithOp::Add)) {
+      S.Stk.push<Pointer>(*Result);
+      return true;
+    }
+    return false;
+  }
 
   if (std::optional<Pointer> Result = OffsetHelper<T, ArithOp::Add>(
           S, OpPC, Offset, Ptr, /*IsPointerArith=*/true)) {
@@ -2649,12 +2701,27 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>().expand();
 
+  if (Ptr.isOpaquePointer()) {
+    if (std::optional<Pointer> Result =
+            addSubOffsetOpaque(S, OpPC, Ptr, Offset.toAPSInt(), ArithOp::Sub)) {
+      S.Stk.push<Pointer>(*Result);
+      return true;
+    }
+    return false;
+  }
+
   if (std::optional<Pointer> Result = OffsetHelper<T, ArithOp::Sub>(
           S, OpPC, Offset, Ptr, /*IsPointerArith=*/true)) {
     S.Stk.push<Pointer>(Result->narrow());
     return true;
   }
   return false;
+}
+
+inline bool GetOpaquePtr(InterpState &S, const ValueDecl *VD,
+                         bool ConstexprUnknown) {
+  S.Stk.push<Pointer>(VD, ConstexprUnknown);
+  return true;
 }
 
 template <ArithOp Op>
@@ -2671,6 +2738,15 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
 
   // Get the current value on the stack.
   S.Stk.push<Pointer>(P);
+
+  if (P.isOpaquePointer()) {
+    if (std::optional<Pointer> Result =
+            addSubOffsetOpaque(S, OpPC, P, APSInt(APInt(1, 1), true), Op)) {
+      Ptr.deref<Pointer>() = *Result;
+      return true;
+    }
+    return false;
+  }
 
   // Now the current Ptr again and a constant 1.
   OneT One = OneT::from(1);
@@ -3420,6 +3496,36 @@ inline bool ExpandPtr(InterpState &S) {
   return true;
 }
 
+bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                        APSInt &&Index, bool AllowReplace = true);
+
+// Implementation for ArrayElemPtr and ArrayElemPtrPop ops.
+template <typename T>
+inline bool arrayElemPtr(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                         const T &Offset) {
+  if (Ptr.isOpaquePointer())
+    return arrayElemPtrOpaque(S, OpPC, Ptr, Offset.toAPSInt());
+
+  if (Offset.isZero()) {
+    if (const Descriptor *Desc = Ptr.getFieldDesc();
+        Desc && Desc->isArray() && Ptr.getIndex() == 0) {
+      S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
+      return true;
+    }
+    S.Stk.push<Pointer>(Ptr.narrow());
+    return true;
+  }
+
+  assert(!Offset.isZero());
+
+  if (std::optional<Pointer> Result =
+          OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr)) {
+    S.Stk.push<Pointer>(Result->narrow());
+    return true;
+  }
+  return false;
+}
+
 // 1) Pops an integral value from the stack
 // 2) Peeks a pointer
 // 3) Pushes a new pointer that's a narrowed array
@@ -3433,25 +3539,7 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (Offset.isZero()) {
-    if (const Descriptor *Desc = Ptr.getFieldDesc();
-        Desc && Desc->isArray() && Ptr.getIndex() == 0) {
-      S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
-      return true;
-    }
-    S.Stk.push<Pointer>(Ptr.narrow());
-    return true;
-  }
-
-  assert(!Offset.isZero());
-
-  if (std::optional<Pointer> Result =
-          OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr)) {
-    S.Stk.push<Pointer>(Result->narrow());
-    return true;
-  }
-
-  return false;
+  return arrayElemPtr<T>(S, OpPC, Ptr, Offset);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -3459,24 +3547,7 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Offset.isZero()) {
-    if (const Descriptor *Desc = Ptr.getFieldDesc();
-        Desc && Desc->isArray() && Ptr.getIndex() == 0) {
-      S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
-      return true;
-    }
-    S.Stk.push<Pointer>(Ptr.narrow());
-    return true;
-  }
-
-  assert(!Offset.isZero());
-
-  if (std::optional<Pointer> Result =
-          OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr)) {
-    S.Stk.push<Pointer>(Result->narrow());
-    return true;
-  }
-  return false;
+  return arrayElemPtr<T>(S, OpPC, Ptr, Offset);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -3548,18 +3619,33 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
       return false;
   }
 
-  if (Ptr.isRoot() || !Ptr.isUnknownSizeArray()) {
+  if (Ptr.isRoot() || !Ptr.isUnknownSizeArray() || !S.inConstantContext()) {
+    if (Ptr.isBlockPointer()) {
+      S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
+      return true;
+    }
+
     if (Ptr.isStringPointer()) {
       S.Stk.push<Pointer>(Ptr.asStringPointer().decay());
       return true;
     }
-    S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
-    return true;
+
+    if (!Ptr.isOpaquePointer()) {
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
+
+    if (!Ptr.getType()->isArrayType()) {
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
+    return arrayElemPtrOpaque(S, OpPC, Ptr,
+                              APSInt(APInt::getZero(1), /*IsUnsigned=*/true),
+                              /*AllowReplace=*/false);
   }
 
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_unsupported_unsized_array);
-
+  S.FFDiag(S.Current->getSource(OpPC),
+           diag::note_constexpr_unsupported_unsized_array);
   return false;
 }
 

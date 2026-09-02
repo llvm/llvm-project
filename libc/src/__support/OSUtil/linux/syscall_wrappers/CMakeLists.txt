@@ -653,6 +653,19 @@ add_header_library(
 )
 
 add_header_library(
+  getpgid
+  HDRS
+    getpgid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
   setuid
   HDRS
     setuid.h
@@ -697,6 +710,19 @@ add_header_library(
     setregid.h
   DEPENDS
     libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  setpgid
+  HDRS
+    setpgid.h
+  DEPENDS
+    libc.hdr.types.pid_t
     libc.include.sys_syscall
     libc.src.__support.common
     libc.src.__support.error_or

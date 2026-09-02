@@ -918,21 +918,30 @@ static void generateGetDirectivePureSince(const DirectiveLanguage &DirLang,
   StringRef VersionType = getVersionType(DirLang);
   OS << "constexpr " << VersionType
      << " getDirectivePureSince(Directive Dir) {\n";
-  OS << "  switch (Dir) {\n";
 
-  StringRef Prefix = DirLang.getDirectivePrefix();
+  // Only print the switch if we have any pure directives, as the switch with
+  // only a default is a warning on some compilers.
+  if (llvm::any_of(DirLang.getDirectives(), [](const Record *R) {
+        Directive D(R);
+        return D.getPureSince() != NeverPure;
+      })) {
+    OS << "  switch (Dir) {\n";
+    StringRef Prefix = DirLang.getDirectivePrefix();
 
-  for (const Record *R : DirLang.getDirectives()) {
-    Directive D(R);
-    int PureSince = D.getPureSince();
-    if (PureSince == NeverPure)
-      continue;
-    OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
-    OS << "    return " << VersionType << "(" << PureSince << ");\n";
+    for (const Record *R : DirLang.getDirectives()) {
+      Directive D(R);
+      int PureSince = D.getPureSince();
+      if (PureSince == NeverPure)
+        continue;
+      OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
+      OS << "    return " << VersionType << "(" << PureSince << ");\n";
+    }
+    OS << "  default:\n";
+    OS << "    return " << VersionType << "(" << NeverPure << ");\n";
+    OS << "  } // switch (Dir)\n";
+  } else {
+    OS << "  return " << VersionType << "(" << NeverPure << ");\n";
   }
-  OS << "  default:\n";
-  OS << "    return " << VersionType << "(0x7FFFFFFF);\n";
-  OS << "  } // switch (Dir)\n";
   OS << "}\n";
 }
 

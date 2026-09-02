@@ -167,11 +167,16 @@ public:
 
   void reportDanglingGlobal(const Expr *IssueExpr,
                             const VarDecl *DanglingGlobal,
-                            const Expr *MovedExpr,
-                            SourceLocation ExpiryLoc) override {
-    unsigned DiagID = MovedExpr
-                          ? diag::warn_lifetime_safety_dangling_global_moved
-                          : diag::warn_lifetime_safety_dangling_global;
+                            const Expr *MovedExpr, SourceLocation ExpiryLoc,
+                            bool IsMain = false) override {
+    unsigned DiagID;
+    if (IsMain) {
+      DiagID = MovedExpr ? diag::warn_lifetime_safety_dangling_global_moved
+                         : diag::warn_lifetime_safety_dangling_global_in_main;
+    } else {
+      DiagID = MovedExpr ? diag::warn_lifetime_safety_dangling_global_moved
+                         : diag::warn_lifetime_safety_dangling_global;
+    }
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
         << getDiagSubjectDescription(IssueExpr)

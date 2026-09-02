@@ -104,6 +104,25 @@ inline bool isZIPMask(ArrayRef<int> M, unsigned NumElts,
   return true;
 }
 
+/// isZIP_v_undef_Mask - Special case of isZIPMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 0, 1, 1> instead of <0, 4, 1, 5>.
+inline bool isZIP_v_undef_Mask(ArrayRef<int> M, unsigned NumElts,
+                               unsigned &WhichResult) {
+  if (NumElts % 2 != 0)
+    return false;
+  WhichResult = (M[0] == 0 ? 0 : 1);
+  unsigned Idx = WhichResult * NumElts / 2;
+  for (unsigned i = 0; i != NumElts; i += 2) {
+    if ((M[i] >= 0 && (unsigned)M[i] != Idx) ||
+        (M[i + 1] >= 0 && (unsigned)M[i + 1] != Idx))
+      return false;
+    Idx += 1;
+  }
+
+  return true;
+}
+
 /// Return true for uzp1 or uzp2 masks of the form:
 ///  <0, 2, 4, 6, 8, 10, 12, 14> or
 ///  <1, 3, 5, 7, 9, 11, 13, 15>

@@ -12,6 +12,7 @@
 #include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
 #include <detail/global_objects.hpp>
+#include <detail/handler_impl.hpp>
 #include <detail/program_manager.hpp>
 
 #include <algorithm>
@@ -20,47 +21,24 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-static void setKernelLaunchArgs(const detail::UnifiedRangeView &Range,
-                                ol_kernel_launch_size_args_t &ArgsToSet) {
-  assert(Range.MDims < 4 && "Invalid dimensions.");
-  uint32_t GlobalSize[3] = {1, 1, 1};
-  if (Range.MGlobalSize) {
-    for (size_t I = 0; I < Range.MDims; ++I) {
-      assert(Range.MGlobalSize[I] <= std::numeric_limits<uint32_t>::max());
-      GlobalSize[I] = static_cast<uint32_t>(Range.MGlobalSize[I]);
-    }
+thread_local bool NestedCallsDetector = false;
+class NestedCallsTracker {
+public:
+  NestedCallsTracker() {
+    if (NestedCallsDetectorRef)
+      throw sycl::exception(
+          make_error_code(errc::invalid),
+          "Calls to sycl::queue::submit cannot be nested. Command group "
+          "function objects should use the sycl::handler API instead.");
+    NestedCallsDetectorRef = true;
   }
 
-  uint32_t GroupSize[3] = {1, 1, 1};
-  if (Range.MLocalSize) {
-    for (size_t I = 0; I < Range.MDims; ++I) {
-      assert(Range.MLocalSize[I] <= std::numeric_limits<uint32_t>::max() &&
-             Range.MLocalSize[I] != 0);
-      GroupSize[I] = static_cast<uint32_t>(Range.MLocalSize[I]);
-    }
-  }
+  ~NestedCallsTracker() { NestedCallsDetectorRef = false; }
 
-  // We have the following mapping between dimensions with SPIR-V builtins:
-  // 1D: id[0] -> x
-  // 2D: id[0] -> y, id[1] -> x
-  // 3D: id[0] -> z, id[1] -> y, id[2] -> x
-  // So in order to ensure the correctness we update all the kernel
-  // parameters accordingly.
-  if (Range.MDims > 1) {
-    // TODO: Offset is not supported in liboffload so just ignore it for now.
-    std::swap(GlobalSize[0], GlobalSize[Range.MDims - 1]);
-    std::swap(GroupSize[0], GroupSize[Range.MDims - 1]);
-  }
-
-  ArgsToSet.Dimensions = Range.MDims;
-  ArgsToSet.NumGroups.x = GlobalSize[0] / GroupSize[0];
-  ArgsToSet.NumGroups.y = GlobalSize[1] / GroupSize[1];
-  ArgsToSet.NumGroups.z = GlobalSize[2] / GroupSize[2];
-  ArgsToSet.GroupSize.x = GroupSize[0];
-  ArgsToSet.GroupSize.y = GroupSize[1];
-  ArgsToSet.GroupSize.z = GroupSize[2];
-  ArgsToSet.DynSharedMemory = 0;
-}
+private:
+  // Cache the TLS location to decrease amount of TLS accesses.
+  bool &NestedCallsDetectorRef = NestedCallsDetector;
+};
 
 QueueImpl::QueueImpl(DeviceImpl &deviceImpl, const async_handler &asyncHandler,
                      const property_list &propList, PrivateTag)
@@ -113,17 +91,17 @@ static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
   }
 }
 
-void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
-                                    const detail::UnifiedRangeView &Range) {
+void QueueImpl::setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
+                                      const detail::UnifiedRangeView &Range) {
+  setKernelLaunchParams(std::move(Events), convertToOlRange(Range));
+}
+
+void QueueImpl::setKernelLaunchParams(
+    std::vector<EventImplPtr> &&Events,
+    const ol_kernel_launch_size_args_t &Range) {
   checkEventsPlatformMatch(Events, MDevice.getPlatformImpl());
-
-  // It is done at the beginning of a new submission to ensure that we can still
-  // submit a kernel properly if the previous submission throws.
-  MCurrentSubmitInfo.DepEvents.clear();
-  MCurrentSubmitInfo.Range = {};
-
   MCurrentSubmitInfo.DepEvents = std::move(Events);
-  setKernelLaunchArgs(Range, MCurrentSubmitInfo.Range);
+  MCurrentSubmitInfo.Range = Range;
 }
 
 void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
@@ -143,6 +121,7 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   auto Result =
       olLaunchKernel(MOffloadQueue, MDevice.getOLHandle(), Kernel,
                      &MCurrentSubmitInfo.Range, NULL, 1, ArgPtrs, ArgSizes);
+
   if (isFailed(Result))
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                           std::string("Kernel submission (") +
@@ -176,8 +155,7 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                   const std::vector<EventImplPtr> &DepEvents) {
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
   if (NumBytes == 0) {
-    handleEventDependencies(DepEvents);
-    return createEvent();
+    return submitWait(DepEvents);
   }
 
   if (!Dest || !Src) {
@@ -240,6 +218,22 @@ EventImplPtr QueueImpl::createEvent(std::vector<EventImplPtr> &&Deps) {
   callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
   return EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl(),
                                           std::move(Deps));
+}
+
+EventImplPtr QueueImpl::submitWithHandler(const TypelessCGF &CGF) {
+  detail::HandlerImpl HandlerImplVal(*this);
+  handler Handler(HandlerImplVal);
+  {
+    NestedCallsTracker tracker;
+    CGF(Handler);
+  }
+
+  return Handler.finalize();
+}
+
+EventImplPtr QueueImpl::submitWait(const std::vector<EventImplPtr> &DepEvents) {
+  handleEventDependencies(DepEvents);
+  return createEvent(std::vector<EventImplPtr>(DepEvents));
 }
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

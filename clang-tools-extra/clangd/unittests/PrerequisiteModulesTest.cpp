@@ -341,6 +341,30 @@ export module M;
   EXPECT_TRUE(MInfo->canReuse(*Invocation, FS.view(TestDir)));
 }
 
+TEST_F(PrerequisiteModulesTests, ObservedModuleOutsideCompilationDatabase) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+  CDB.addFile("Use.cpp", R"cpp(
+import M;
+  )cpp");
+
+  SmallString<256> ModulePath(TestDir);
+  llvm::sys::path::append(ModulePath, "M.cppm");
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(ModulePath, EC);
+  ASSERT_FALSE(EC);
+  OS << "export module M;";
+  OS.close();
+
+  ModulesBuilder Builder(CDB);
+  EXPECT_TRUE(Builder.observeSourcePath(ModulePath));
+  EXPECT_FALSE(Builder.observeSourcePath(ModulePath));
+  auto Info = Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+
+  HeaderSearchOptions HSOpts;
+  Info->adjustHeaderSearchOptions(HSOpts);
+  EXPECT_EQ(HSOpts.PrebuiltModuleFiles.count("M"), 1u);
+}
+
 TEST_F(PrerequisiteModulesTests, ModuleWithArgumentPatch) {
   MockDirectoryCompilationDatabase CDB(TestDir, FS);
 

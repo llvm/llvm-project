@@ -34,7 +34,7 @@ inline void clear_icache(void *Addr, size_t Size);
 
 #include "orc-rt-internal/support/sys/darwin/CacheControl.h"
 
-#elif __has_builtin(__builtin___clear_cache) || defined(__GNUC__)
+#elif ORC_RT_HAS_BUILTIN(__builtin___clear_cache) || defined(__GNUC__)
 
 namespace orc_rt::sys {
 

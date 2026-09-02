@@ -670,6 +670,8 @@ ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGetExtensionFunctionAddress(
     ze_driver_handle_t hDriver, const char *name, void **ppFunctionAddress);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGetExtensionProperties(
     ze_driver_handle_t hDriver, uint32_t *pCount, void *pExtensionProperties);
+ZE_APIEXPORT ze_context_handle_t ZE_APICALL
+zeDriverGetDefaultContext(ze_driver_handle_t hDriver);
 
 /* Device functions */
 ZE_APIEXPORT ze_result_t ZE_APICALL zeDeviceGet(ze_driver_handle_t hDriver,

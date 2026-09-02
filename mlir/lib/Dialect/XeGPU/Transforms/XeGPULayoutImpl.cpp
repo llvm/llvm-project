@@ -273,6 +273,20 @@ LogicalResult xegpu::propagateYieldOperandsToRegionResults(
       // Assign the yield operand's layout to the region op result it feeds.
       if (auto result = dyn_cast<OpResult>(successorInput))
         xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
+      // Restrict the input IR: a successor argument that is not tied to an init
+      // operand (scf.while's "after" arguments) must be fed by a pass-through,
+      // because nothing else identifies which value the region carries. Its
+      // layout is then that of the forwarded argument's init operand.
+      if (auto arg = dyn_cast<BlockArgument>(successorInput)) {
+        auto loop =
+            dyn_cast<LoopLikeOpInterface>(arg.getOwner()->getParentOp());
+        bool tiedToInit = loop && loop.getTiedLoopInit(arg);
+        if (!tiedToInit && !isa<BlockArgument>(successorOperand->get()))
+          return terminator->emitError(
+              "unsupported region structure: the successor argument it feeds "
+              "is not tied to an init operand, so its value must be passed "
+              "through from predecessor region argument.");
+      }
     }
   }
   return success();
@@ -2912,9 +2926,10 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
     return xegpu::getDistributeLayoutAttr(operand);
   // Region ops with forwarded operands (scf.for's and scf.while's inits) carry
   // the required operand layout as the layout_operand_N that
-  // propagateRegionArgsToInits back-propagated from the region argument.
-  // TODO: derive that layout from the region argument here instead, so this
-  // function is the only place an operand's required layout comes from.
+  // propagateRegionArgsToInits back-propagated from the region argument. Do not
+  // re-derive it from that argument here: conflict resolution inserts
+  // convert_layout ops as it walks, rewriting the argument's uses, so what
+  // those uses require depends on how far the walk has progressed.
   if (isa<RegionBranchOpInterface>(op))
     return xegpu::getDistributeLayoutAttr(operand);
   // A region terminator requires the layout of the successor input its operand

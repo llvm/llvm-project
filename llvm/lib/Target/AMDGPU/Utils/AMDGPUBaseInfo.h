@@ -193,15 +193,6 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                                    unsigned FlatWorkGroupSize);
 
-/// \returns Minimum flat work group size for given subtarget \p STI.
-unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI);
-
-/// \returns Maximum flat work group size
-constexpr unsigned getMaxFlatWorkGroupSize() {
-  // Some subtargets allow encoding 2048, but this isn't tested or supported.
-  return 1024;
-}
-
 /// \returns Number of waves per work group for given subtarget \p STI and
 /// \p FlatWorkGroupSize.
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,

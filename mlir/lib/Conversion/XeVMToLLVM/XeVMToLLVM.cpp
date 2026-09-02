@@ -1722,12 +1722,16 @@ private:
 
 // Checks if shufflevector is used as a way to extract a contiguous slice
 // from a vector.
-// - source vector V1 and V2 are the same vector.
+// - source vector V2 is either the same as V1, or a poison/undef value. In
+//   both cases the mask can only meaningfully address elements of V1, which
+//   the mask checks below enforce.
 // - mask size is not greater than the source vector size
 // - mask values represent a sequence of consecutive increasing numbers
 //   that stay in bounds of the source vector when used for indexing.
 static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
-  if (op.getV1() != op.getV2())
+  if (op.getV1() != op.getV2() &&
+      !isa_and_present<LLVM::PoisonOp, LLVM::UndefOp>(
+          op.getV2().getDefiningOp()))
     return false;
   auto maskAttr = op.getMask();
   int64_t maskSize = static_cast<int64_t>(maskAttr.size());
@@ -1735,6 +1739,8 @@ static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
   if (maskSize > sourceSize)
     return false;
   int64_t firstIndex = maskAttr[0];
+  if (firstIndex < 0 || firstIndex >= sourceSize)
+    return false;
   for (int64_t i = 1; i < maskSize; ++i) {
     int64_t index = maskAttr[i];
     if (index != firstIndex + i)

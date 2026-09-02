@@ -644,8 +644,8 @@ static_assert(std::is_same_v<UniquingSetInfo<RefKeyNode>::KeyTy,
                              std::pair<unsigned, unsigned>>,
               "KeyTy must decay to a value type");
 
-// A node with no getKey(): the Info supplies the three-member contract itself,
-// and the key aliases storage owned by the node.
+// A node with no getKey(): the Info supplies the whole contract itself, and the
+// key aliases storage owned by the node.
 struct VectorNode : FoldingSetNode {
   SmallVector<unsigned, 4> Elts;
   explicit VectorNode(ArrayRef<unsigned> E) : Elts(E) {}
@@ -659,6 +659,10 @@ struct VectorNodeInfo {
     for (unsigned E : Key)
       H = detail::combineHashValue(H, DenseMapInfo<unsigned>::getHashValue(E));
     return H;
+  }
+  // Compare against the node's storage rather than building a key from it.
+  static bool isEqual(const KeyTy &Key, const VectorNode &N) {
+    return Key == KeyTy(N.Elts);
   }
 };
 

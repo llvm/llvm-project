@@ -18,6 +18,15 @@ func.func @test_op_with_enum() -> () {
   return
 }
 
+// CHECK-LABEL: @test_op_with_enum_directive
+func.func @test_op_with_enum_directive() -> () {
+  // CHECK: test.op_with_enum_directive third
+  test.op_with_enum_directive third
+  // CHECK: test.op_with_enum_directive "non-keyword"
+  test.op_with_enum_directive "non-keyword"
+  return
+}
+
 // CHECK-LABEL: @test_match_op_with_enum
 func.func @test_match_op_with_enum() -> () {
   // CHECK: test.op_with_enum third tag 0 : i32
@@ -33,6 +42,19 @@ func.func @test_match_op_with_bit_enum() -> () {
   test.op_with_bit_enum <write> tag 0 : i32
   // CHECK: test.op_with_bit_enum <read, execute> tag 1 : i32
   test.op_with_bit_enum <execute, write> tag 0 : i32
+  return
+}
+
+// CHECK-LABEL: @test_op_with_bit_enum_directive
+func.func @test_op_with_bit_enum_directive() -> () {
+  // CHECK: test.op_with_bit_enum_directive none
+  test.op_with_bit_enum_directive none
+  // CHECK: test.op_with_bit_enum_directive read, execute
+  test.op_with_bit_enum_directive read, execute
+  // CHECK: test.op_with_bit_enum_vbar_directive none
+  test.op_with_bit_enum_vbar_directive none
+  // CHECK: test.op_with_bit_enum_vbar_directive user | other
+  test.op_with_bit_enum_vbar_directive user | other
   return
 }
 

@@ -1061,6 +1061,11 @@ static bool checkReductionKind(Loop *L, PHINode *PHI,
     if (RD.getExactFPMathInst() != nullptr)
       return false;
 
+    // The extra uses of a reduction phi outside of its reduction chain make
+    // the order in which the elements are visited observable.
+    if (RD.hasUsesOutsideReductionChain())
+      return false;
+
     RecurKind RK = RD.getRecurrenceKind();
     switch (RK) {
     case RecurKind::Or:

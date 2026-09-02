@@ -3671,8 +3671,9 @@ Register AMDGPUInstructionSelector::matchSignExtendFromS32(Register Reg) const {
                        m_SpecificICst(31))))
     return Def->getOperand(1).getReg();
 
-  if (VT->signBitIsZero(Reg))
-    return matchZeroExtendFromS32(Reg);
+  Register ZextSrc = matchZeroExtendFromS32(Reg);
+  if (ZextSrc && VT->signBitIsZero(ZextSrc))
+    return ZextSrc;
 
   return Register();
 }

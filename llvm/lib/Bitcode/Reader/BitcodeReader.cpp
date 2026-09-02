@@ -2148,6 +2148,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::FnRetThunkExtern;
   case bitc::ATTR_KIND_FLATTEN:
     return Attribute::Flatten;
+  case bitc::ATTR_KIND_HYBRID_PATCHABLE:
+    return Attribute::HybridPatchable;
   case bitc::ATTR_KIND_INLINE_HINT:
     return Attribute::InlineHint;
   case bitc::ATTR_KIND_IN_REG:

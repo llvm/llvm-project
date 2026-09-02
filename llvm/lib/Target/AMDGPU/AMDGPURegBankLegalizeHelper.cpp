@@ -534,10 +534,12 @@ std::pair<Register, Register> RegBankLegalizeHelper::unpackSExt(Register Reg) {
 }
 
 std::pair<Register, Register> RegBankLegalizeHelper::unpackAExt(Register Reg) {
-  auto PackedI32 = B.buildBitcast(SgprRB_I32, Reg);
-  auto Lo = PackedI32;
-  auto Hi = B.buildLShr(SgprRB_I32, PackedI32, B.buildConstant(SgprRB_I32, 16));
-  return {Lo.getReg(0), Hi.getReg(0)};
+  Register RegI32 = Reg;
+  if (MRI.getType(Reg) != I32)
+    RegI32 = B.buildBitcast(SgprRB_I32, Reg).getReg(0);
+
+  auto Hi = B.buildLShr(SgprRB_I32, RegI32, B.buildConstant(SgprRB_I32, 16));
+  return {RegI32, Hi.getReg(0)};
 }
 
 std::pair<Register, Register>

@@ -39,10 +39,6 @@ RecordType::getElementContainingOffset(unsigned OffsetInBits) const {
   };
 
   for (const FieldInfo &Base : getBaseClasses()) {
-    // Direct virtual bases are revisited by the virtual base loop below, which
-    // also covers the indirect ones.
-    if (Base.IsVirtualBase)
-      continue;
     const auto *BaseRT = dyn_cast<RecordType>(Base.FieldType);
     if ((!BaseRT || !BaseRT->isEmpty()) && Contains(Base))
       return &Base;

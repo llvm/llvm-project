@@ -20,6 +20,7 @@ unittest("CodeGenTests") {
   ]
   sources = [
     "AMDGPUMetadataTest.cpp",
+    "AccelTableTest.cpp",
     "AllocationOrderTest.cpp",
     "AsmPrinterDwarfTest.cpp",
     "CCStateTest.cpp",

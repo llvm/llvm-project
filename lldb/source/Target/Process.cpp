@@ -2082,11 +2082,23 @@ void Process::VerifyMemoryRead(addr_t addr, const void *cache_buf,
 
 size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
                            size_t size, Status &error) {
+  error.Clear();
+
+  // Non-default address spaces bypass the flat memory cache.
+  if (!process_addr.IsInDefaultAddressSpace()) {
+    llvm::Expected<AddressSpaceInfo> info =
+        GetAddressSpaceInfo(process_addr.GetAddressSpace());
+    if (!info) {
+      error = Status::FromError(info.takeError());
+      return 0;
+    }
+    return DoReadMemory(process_addr, buf, size, error);
+  }
+
   lldb::addr_t addr = process_addr.GetValue();
   if (ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
-  error.Clear();
   if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
 
@@ -2548,12 +2560,19 @@ int64_t Process::ReadSignedIntegerFromMemory(lldb::addr_t vm_addr,
   return fail_value;
 }
 
-addr_t Process::ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error) {
+llvm::Expected<addr_t> Process::ReadPointerFromMemory(lldb::addr_t vm_addr) {
   Scalar scalar;
+  Status error;
   if (ReadScalarIntegerFromMemory(vm_addr, GetAddressByteSize(), false, scalar,
-                                  error))
-    return scalar.ULongLong(LLDB_INVALID_ADDRESS);
-  return LLDB_INVALID_ADDRESS;
+                                  error)) {
+    assert(scalar.GetType() == Scalar::e_int &&
+           "a successful read always yields an integer");
+    return scalar.ULongLong();
+  }
+  if (error.Fail())
+    return error.ToError();
+  return llvm::createStringError(
+      "failed to read pointer from memory at 0x%" PRIx64, vm_addr);
 }
 
 llvm::SmallVector<std::optional<addr_t>>
@@ -7136,4 +7155,44 @@ void Process::SetAddressableBitMasks(AddressableBits bit_masks) {
     SetHighmemCodeAddressMask(high_addr_mask);
     SetHighmemDataAddressMask(high_addr_mask);
   }
+}
+
+llvm::Expected<AddressSpaceInfo>
+Process::GetAddressSpaceInfo(llvm::StringRef address_space_name) {
+  if (m_address_spaces.empty())
+    return llvm::createStringError("process doesn't support address spaces");
+
+  for (const AddressSpaceInfo &info : m_address_spaces) {
+    if (address_space_name == info.name)
+      return info;
+  }
+
+  std::string names = llvm::join(
+      llvm::map_range(m_address_spaces,
+                      [](const AddressSpaceInfo &info) { return info.name; }),
+      ", ");
+  return llvm::createStringError(
+      "invalid address space \"%s\", expected one of: %s",
+      address_space_name.str().c_str(), names.c_str());
+}
+
+llvm::Expected<AddressSpaceInfo>
+Process::GetAddressSpaceInfo(lldb::addr_space_t address_space_id) {
+  if (m_address_spaces.empty())
+    return llvm::createStringError("process doesn't support address spaces");
+
+  for (const AddressSpaceInfo &info : m_address_spaces) {
+    if (info.space_id == address_space_id)
+      return info;
+  }
+
+  std::string ids =
+      llvm::join(llvm::map_range(m_address_spaces,
+                                 [](const AddressSpaceInfo &info) {
+                                   return std::to_string(info.space_id);
+                                 }),
+                 ", ");
+  return llvm::createStringError("invalid address space id %" PRIu64
+                                 ", expected one of: %s",
+                                 address_space_id, ids.c_str());
 }

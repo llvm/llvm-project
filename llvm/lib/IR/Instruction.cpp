@@ -1099,7 +1099,7 @@ MemoryEffects Instruction::getMemoryEffects() const {
   }
   case Instruction::AtomicCmpXchg: {
     auto *CX = cast<AtomicCmpXchgInst>(this);
-    return GetEffects(ModRefInfo::ModRef, CX->getSuccessOrdering(),
+    return GetEffects(ModRefInfo::ModRef, CX->getMergedOrdering(),
                       CX->isVolatile());
   }
   }

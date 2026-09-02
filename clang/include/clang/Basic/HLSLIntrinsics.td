@@ -343,6 +343,7 @@ function returns its input unchanged.
   let Body = "return V;";
   let IsConstexpr = 1;
   let VaryingTypes = UnsignedIntTypes;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -703,6 +704,7 @@ def hlsl_degrees : HLSLOneArgInlineBuiltin<"degrees"> {
   let ParamNames = ["x"];
   let Body = "return x * (__detail::elem_type_t<decltype(x)>)(180.L / __detail::Pi);";
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
 }
 // Returns the cross product of two floating-point, 3D vectors.
 def hlsl_cross : HLSLTwoArgDetail<"cross", "cross_impl"> {
@@ -1188,6 +1190,7 @@ can equivalently be written as x + s(y-x).
 }];
   let ParamNames = ["x", "y", "s"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1286,7 +1289,6 @@ def hlsl_max : HLSLTwoArgBuiltin<"max", "__builtin_elementwise_max"> {
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the lesser of X and Y.
@@ -1299,7 +1301,6 @@ def hlsl_min : HLSLTwoArgBuiltin<"min", "__builtin_elementwise_min"> {
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Marks a resource index as non-uniform (varying across wave threads).
@@ -1402,6 +1403,7 @@ def hlsl_radians : HLSLOneArgInlineBuiltin<"radians"> {
   let ParamNames = ["Val"];
   let Body = "return Val * (__detail::elem_type_t<decltype(Val)>)(__detail::Pi / 180.L);";
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
 }
 
 // Calculates a fast, approximate, per-component reciprocal ie 1 / x.
@@ -1593,6 +1595,7 @@ between 0 and 1.
 }];
   let ParamNames = ["Min", "Max", "X"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1622,6 +1625,7 @@ Step is based on the following formula: (x >= y) ? 1 : 0
 }];
   let ParamNames = ["y", "x"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 

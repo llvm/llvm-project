@@ -17941,12 +17941,6 @@ TreeTransform<Derived>::TransformBlockExpr(BlockExpr *E) {
                                                  oldCapture));
       assert(blockScope->CaptureMap.count(newCapture));
     }
-
-    // The this pointer may not be captured by the instantiated block, even when
-    // it's captured by the original block, if the expression causing the
-    // capture is in the discarded branch of a constexpr if statement.
-    assert((!blockScope->isCXXThisCaptured() || oldBlock->capturesCXXThis()) &&
-           "this pointer isn't captured in the old block");
   }
 #endif
 

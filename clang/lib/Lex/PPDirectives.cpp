@@ -882,14 +882,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
 
         // Warn if using `#elifdef` & `#elifndef` in not C23 & C++23 mode even
         // if this branch is in a skipping block.
-        unsigned DiagID;
-        if (LangOpts.CPlusPlus)
-          DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
-                                        : diag::ext_cxx23_pp_directive;
-        else
-          DiagID = LangOpts.C23 ? diag::warn_c23_compat_pp_directive
-                                : diag::ext_c23_pp_directive;
-        Diag(Tok, DiagID) << (IsElifDef ? PED_Elifdef : PED_Elifndef);
+        unsigned DiagID = LangOpts.CPlusPlus ? diag_compat::cxx23_pp_directive
+                                             : diag_compat::c23_pp_directive;
+        DiagCompat(Tok, DiagID) << (IsElifDef ? PED_Elifdef : PED_Elifndef);
 
         // If this is a #elif with a #else before it, report the error.
         if (CondInfo.FoundElse)
@@ -3702,14 +3697,9 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
   switch (DirKind) {
   case PED_Elifdef:
   case PED_Elifndef:
-    unsigned DiagID;
-    if (LangOpts.CPlusPlus)
-      DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
-                                    : diag::ext_cxx23_pp_directive;
-    else
-      DiagID = LangOpts.C23 ? diag::warn_c23_compat_pp_directive
-                            : diag::ext_c23_pp_directive;
-    Diag(ElifToken, DiagID) << DirKind;
+    DiagCompat(ElifToken, LangOpts.CPlusPlus ? diag_compat::cxx23_pp_directive
+                                             : diag_compat::c23_pp_directive)
+        << DirKind;
     break;
   default:
     break;
