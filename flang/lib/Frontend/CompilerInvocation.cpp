@@ -1074,6 +1074,26 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (moduleDirList.size() == 1)
     res.setModuleDir(moduleDirList[0]);
 
+  // -fmodule-mismatch-check=<value>
+  if (const auto *arg =
+          args.getLastArg(clang::options::OPT_fmodule_mismatch_check_EQ)) {
+    using ModuleMismatchCheckTy =
+        Fortran::common::LangOptions::ModuleMismatchCheckTy;
+    auto check = llvm::StringSwitch<std::optional<ModuleMismatchCheckTy>>(
+                     arg->getValue())
+                     .Case("on", Fortran::common::LangOptions::MMC_On)
+                     .Case("warn", Fortran::common::LangOptions::MMC_Warn)
+                     .Case("non-intrinsic",
+                           Fortran::common::LangOptions::MMC_NonIntrinsic)
+                     .Default(std::nullopt);
+    if (check) {
+      res.getLangOpts().setModuleMismatchCheck(*check);
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getAsString(args) << arg->getValue();
+    }
+  }
+
   // -fdebug-module-writer option
   if (args.hasArg(clang::options::OPT_fdebug_module_writer)) {
     res.setDebugModuleDir(true);
