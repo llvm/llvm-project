@@ -1112,6 +1112,181 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
   default:
     return true;
 
+  // C++, OpenMP and ARC stuff we don't support yet.
+  case Stmt::CXXDependentScopeMemberExprClass:
+  case Stmt::CXXReflectExprClass:
+  case Stmt::CXXTryStmtClass:
+  case Stmt::CXXTypeidExprClass:
+  case Stmt::CXXUuidofExprClass:
+  case Stmt::CXXFoldExprClass:
+  case Stmt::MSPropertyRefExprClass:
+  case Stmt::MSPropertySubscriptExprClass:
+  case Stmt::CXXUnresolvedConstructExprClass:
+  case Stmt::DependentScopeDeclRefExprClass:
+  case Stmt::ArrayTypeTraitExprClass:
+  case Stmt::ExpressionTraitExprClass:
+  case Stmt::UnresolvedLookupExprClass:
+  case Stmt::UnresolvedMemberExprClass:
+  case Stmt::DependentTemplateIdExprClass:
+  case Stmt::RecoveryExprClass:
+  case Stmt::CXXNoexceptExprClass:
+  case Stmt::PackExpansionExprClass:
+  case Stmt::PackIndexingExprClass:
+  case Stmt::SubstNonTypeTemplateParmPackExprClass:
+  case Stmt::FunctionParmPackExprClass:
+  case Stmt::CoroutineBodyStmtClass:
+  case Stmt::CoawaitExprClass:
+  case Stmt::DependentCoawaitExprClass:
+  case Stmt::CoreturnStmtClass:
+  case Stmt::CoyieldExprClass:
+  case Stmt::SEHTryStmtClass:
+  case Stmt::SEHExceptStmtClass:
+  case Stmt::SEHLeaveStmtClass:
+  case Stmt::SEHFinallyStmtClass:
+  case Stmt::CXXExpansionStmtPatternClass:
+  case Stmt::CXXExpansionStmtInstantiationClass:
+  case Stmt::CXXExpansionSelectExprClass:
+  case Stmt::OMPCanonicalLoopClass:
+  case Stmt::OMPParallelDirectiveClass:
+  case Stmt::OMPSimdDirectiveClass:
+  case Stmt::OMPForDirectiveClass:
+  case Stmt::OMPForSimdDirectiveClass:
+  case Stmt::OMPSectionsDirectiveClass:
+  case Stmt::OMPSectionDirectiveClass:
+  case Stmt::OMPScopeDirectiveClass:
+  case Stmt::OMPSingleDirectiveClass:
+  case Stmt::OMPMasterDirectiveClass:
+  case Stmt::OMPCriticalDirectiveClass:
+  case Stmt::OMPParallelForDirectiveClass:
+  case Stmt::OMPParallelForSimdDirectiveClass:
+  case Stmt::OMPParallelSectionsDirectiveClass:
+  case Stmt::OMPParallelMasterDirectiveClass:
+  case Stmt::OMPParallelMaskedDirectiveClass:
+  case Stmt::OMPTaskDirectiveClass:
+  case Stmt::OMPTaskyieldDirectiveClass:
+  case Stmt::OMPBarrierDirectiveClass:
+  case Stmt::OMPTaskwaitDirectiveClass:
+  case Stmt::OMPErrorDirectiveClass:
+  case Stmt::OMPTaskgroupDirectiveClass:
+  case Stmt::OMPFlushDirectiveClass:
+  case Stmt::OMPDepobjDirectiveClass:
+  case Stmt::OMPScanDirectiveClass:
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+  case Stmt::OMPAtomicDirectiveClass:
+  case Stmt::OMPAssumeDirectiveClass:
+  case Stmt::OMPTargetDirectiveClass:
+  case Stmt::OMPTargetDataDirectiveClass:
+  case Stmt::OMPTargetEnterDataDirectiveClass:
+  case Stmt::OMPTargetExitDataDirectiveClass:
+  case Stmt::OMPTargetParallelDirectiveClass:
+  case Stmt::OMPTargetParallelForDirectiveClass:
+  case Stmt::OMPTargetUpdateDirectiveClass:
+  case Stmt::OMPTeamsDirectiveClass:
+  case Stmt::OMPCancellationPointDirectiveClass:
+  case Stmt::OMPCancelDirectiveClass:
+  case Stmt::OMPTaskLoopDirectiveClass:
+  case Stmt::OMPTaskLoopSimdDirectiveClass:
+  case Stmt::OMPMasterTaskLoopDirectiveClass:
+  case Stmt::OMPMaskedTaskLoopDirectiveClass:
+  case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
+  case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
+  case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
+  case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
+  case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
+  case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
+  case Stmt::OMPDistributeDirectiveClass:
+  case Stmt::OMPDistributeParallelForDirectiveClass:
+  case Stmt::OMPDistributeParallelForSimdDirectiveClass:
+  case Stmt::OMPDistributeSimdDirectiveClass:
+  case Stmt::OMPTargetParallelForSimdDirectiveClass:
+  case Stmt::OMPTargetSimdDirectiveClass:
+  case Stmt::OMPTeamsDistributeDirectiveClass:
+  case Stmt::OMPTeamsDistributeSimdDirectiveClass:
+  case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
+  case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
+  case Stmt::OMPTargetTeamsDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+  case Stmt::OMPReverseDirectiveClass:
+  case Stmt::OMPStripeDirectiveClass:
+  case Stmt::OMPTileDirectiveClass:
+  case Stmt::OMPInterchangeDirectiveClass:
+  case Stmt::OMPSplitDirectiveClass:
+  case Stmt::OMPFuseDirectiveClass:
+  case Stmt::OMPInteropDirectiveClass:
+  case Stmt::OMPDispatchDirectiveClass:
+  case Stmt::OMPMaskedDirectiveClass:
+  case Stmt::OMPGenericLoopDirectiveClass:
+  case Stmt::OMPTeamsGenericLoopDirectiveClass:
+  case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
+  case Stmt::OMPParallelGenericLoopDirectiveClass:
+  case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
+  case Stmt::CapturedStmtClass:
+  case Stmt::SYCLKernelCallStmtClass:
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
+  case Stmt::OpenACCComputeConstructClass:
+  case Stmt::OpenACCLoopConstructClass:
+  case Stmt::OpenACCCombinedConstructClass:
+  case Stmt::OpenACCDataConstructClass:
+  case Stmt::OpenACCEnterDataConstructClass:
+  case Stmt::OpenACCExitDataConstructClass:
+  case Stmt::OpenACCHostDataConstructClass:
+  case Stmt::OpenACCWaitConstructClass:
+  case Stmt::OpenACCCacheConstructClass:
+  case Stmt::OpenACCInitConstructClass:
+  case Stmt::OpenACCShutdownConstructClass:
+  case Stmt::OpenACCSetConstructClass:
+  case Stmt::OpenACCUpdateConstructClass:
+  case Stmt::OpenACCAtomicConstructClass:
+  case Stmt::OMPUnrollDirectiveClass:
+  case Stmt::OMPMetaDirectiveClass:
+  case Stmt::HLSLOutArgExprClass:
+    return false;
+
+  // ParenExprs already handled.
+  case Stmt::ParenExprClass:
+    return false;
+
+  // GenericSelectionExprs already handled.
+  case Stmt::GenericSelectionExprClass:
+    return false;
+
+  // Cases that should never be evaluated simply because they shouldn't
+  // appear in the CFG.
+  case Stmt::BreakStmtClass:
+  case Stmt::CaseStmtClass:
+  case Stmt::CompoundStmtClass:
+  case Stmt::ContinueStmtClass:
+  case Stmt::CXXForRangeStmtClass:
+  case Stmt::DefaultStmtClass:
+  case Stmt::DoStmtClass:
+  case Stmt::ForStmtClass:
+  case Stmt::GotoStmtClass:
+  case Stmt::IfStmtClass:
+  case Stmt::IndirectGotoStmtClass:
+  case Stmt::LabelStmtClass:
+  case Stmt::NoStmtClass:
+  case Stmt::NullStmtClass:
+  case Stmt::SwitchStmtClass:
+  case Stmt::WhileStmtClass:
+  case Stmt::DeferStmtClass:
+  case Expr::MSDependentExistsStmtClass:
+    return false;
+
+  // These nodes are shared in the CFG and would case caching out.
+  // Moreover, no additional evaluation required for them, the
+  // analyzer can reconstruct these values from the AST.
+  case Stmt::ImplicitValueInitExprClass:
+    return false;
+
+  // These are handled by PseudoObjectExpr
+  case Stmt::ObjCSubscriptRefExprClass:
+  case Stmt::ObjCPropertyRefExprClass:
+    return false;
+
   // FIXME: Does not call checkers
   case Stmt::GNUNullExprClass:
     return false;
@@ -1123,6 +1298,14 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
   // FIXME: They do not call checkers
   case Expr::ConstantExprClass:
   case Stmt::ExprWithCleanupsClass:
+    return false;
+
+  // Support for MatrixSingleSubscriptExprClass is not implemented.
+  case Stmt::MatrixSingleSubscriptExprClass:
+    return false;
+
+  // Support for MatrixSubscriptExpr is not implemented.
+  case Stmt::MatrixSubscriptExprClass:
     return false;
 
   // FIXME: Does not call checkers
