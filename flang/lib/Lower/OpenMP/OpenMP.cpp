@@ -1871,7 +1871,12 @@ static void markDeclareTargetWithDirective(
     mlir::Operation *op =
         mod.lookupSymbol(converter.mangleName(symClause.symbol));
 
-    // Do nothing if op is not found.
+    // Skip if no op is found. This happens during module declaration
+    // scope lowering for symbols that are deferred to be handled
+    // later in finalizeOpenMPLowering. This is also expected when
+    // handling a directive imported from a module file and the symbol
+    // is not used in the current translation unit, because no op is
+    // created for unused imports.
     if (!op)
       continue;
 
@@ -6802,10 +6807,6 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OmpDeclareTargetDirective &declareTargetConstruct) {
-
-  // Some symbols are deferred until later. These are skipped in
-  // markDeclareTargetWithDirective at this stage and handled later in
-  // finalizeOpenMPLowering.
   markDeclareTargetWithDirective(converter, semaCtx, eval,
                                  declareTargetConstruct);
 }
@@ -8128,10 +8129,6 @@ struct ModuleDeclareTargetVisitor {
   void Post(const T &) {}
 
   void Post(const parser::OmpDeclareTargetDirective &directive) {
-    // The directive might mention symbols that are not used in the
-    // current translation unit. Such symbols are ignored in
-    // markDeclareTargetWithDirective, as there exists no Operation
-    // that needs marking.
     markDeclareTargetWithDirective(converter, semaCtx, std::nullopt, directive);
   }
 };
