@@ -823,7 +823,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                                   .convertSwitchRangeToICmp(true)
                                   .convertSwitchToArithmetic(true)
                                   .hoistCommonInsts(true)
-                                  .sinkCommonInsts(true)));
+                                  .sinkCommonInsts(true)
+                                  .foldCondStoreToSelect(true)));
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
@@ -1432,7 +1433,8 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
                                   .convertSwitchToLookupTable(true)
                                   .needCanonicalLoops(false)
                                   .hoistCommonInsts(true)
-                                  .sinkCommonInsts(true)));
+                                  .sinkCommonInsts(true)
+                                  .foldCondStoreToSelect(true)));
 
   if (isFullLTOPostLink(LTOPhase)) {
     FPM.addPass(SCCPPass());

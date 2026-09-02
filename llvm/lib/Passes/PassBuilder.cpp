@@ -1253,6 +1253,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
       Result.sinkCommonInsts(Enable);
     } else if (ParamName == "speculate-unpredictables") {
       Result.speculateUnpredictables(Enable);
+    } else if (ParamName == "fold-cond-store-to-select") {
+      Result.foldCondStoreToSelect(Enable);
     } else if (Enable && ParamName.consume_front("bonus-inst-threshold=")) {
       APInt BonusInstThreshold;
       if (ParamName.getAsInteger(0, BonusInstThreshold))

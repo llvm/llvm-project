@@ -4366,6 +4366,297 @@ static StoreInst *findUniqueStoreInBlocks(BasicBlock *BB1, BasicBlock *BB2) {
   return S;
 }
 
+/// Return true if two pointer-producing values refer to the same address.
+/// Strips pointer casts and matches identical GEPs with the same base and
+/// indices.
+static bool isSameGEPAddress(Value *A, Value *B) {
+  if (A == B)
+    return true;
+  A = A->stripPointerCasts();
+  B = B->stripPointerCasts();
+  if (A == B)
+    return true;
+  auto *GA = dyn_cast<GetElementPtrInst>(A);
+  auto *GB = dyn_cast<GetElementPtrInst>(B);
+  if (!GA || !GB)
+    return false;
+  if (GA->getPointerOperand()->stripPointerCasts() !=
+      GB->getPointerOperand()->stripPointerCasts())
+    return false;
+  if (GA->getSourceElementType() != GB->getSourceElementType())
+    return false;
+  if (GA->getNumIndices() != GB->getNumIndices())
+    return false;
+  return std::equal(GA->idx_begin(), GA->idx_end(), GB->idx_begin());
+}
+
+/// Find the unique simple store in \p BB. Returns nullptr if there is no
+/// store, if there are multiple stores, or if the store is not simple.
+/// Also rejects blocks containing non-store instructions that are not safe
+/// to speculatively execute.
+static StoreInst *findUniqueSimpleStoreInBlock(BasicBlock *BB,
+                                               AssumptionCache *AC) {
+  StoreInst *Found = nullptr;
+  unsigned NumOther = 0;
+  for (Instruction &I : *BB) {
+    if (I.isTerminator())
+      continue;
+    auto *SI = dyn_cast<StoreInst>(&I);
+    if (SI) {
+      if (!SI->isSimple() || Found)
+        return nullptr;
+      Found = SI;
+      continue;
+    }
+    // Reject if non-store instruction is not safe to speculatively execute.
+    if (!isSafeToSpeculativelyExecute(&I, &I, AC))
+      return nullptr;
+    // Allow at most one non-store, non-terminator instruction. This ensures
+    // that HoistIfNeeded (which moves a single instruction) is sufficient —
+    // with only one instruction, its operands must come from outside the block.
+    if (++NumOther > 1)
+      return nullptr;
+  }
+  return Found;
+}
+
+/// Return true if none of the non-terminator, non-store instructions in \p BB
+/// are too expensive to speculate. Uses TTI::isExpensiveToSpeculativelyExecute
+/// which is the established LLVM norm for this check (e.g. CodeGenPrepare).
+/// \p FoldedStore is the store being folded and is considered free.
+static bool isBlockCheapToSpeculate(BasicBlock *BB, StoreInst *FoldedStore,
+                                    const TargetTransformInfo &TTI) {
+  return all_of(*BB, [FoldedStore, &TTI](const Instruction &I) {
+    return I.isTerminator() || &I == FoldedStore ||
+           !TTI.isExpensiveToSpeculativelyExecute(&I);
+  });
+}
+
+/// Fold a triangle+diamond CFG pattern where all three branches store to the
+/// same address into a single select+store in the head block.
+///
+///   HeadBB: br i1 %cond1, ThenBB, ElseBB
+///   ThenBB: store VThen, addr;  br MergeBB
+///   ElseBB: [cheap instrs]; br i1 %cond2, ElseThenBB, ElseElseBB
+///   ElseThenBB:  store VElseThen, addr;  br MergeBB
+///   ElseElseBB:  store VElseElse, addr;  br MergeBB
+///
+/// Transforms to:
+///   HeadBB: [hoisted ElseBB instrs]
+///           %sel = select cond1, VThen, (select cond2, VElseThen, VElseElse)
+///           store %sel, addr
+///           br MergeBB
+///
+/// The profitability check uses TTI::isExpensiveToSpeculativelyExecute on the
+/// four speculated blocks (ThenBB, ElseBB, ElseThenBB, ElseElseBB) — HeadBB
+/// instructions already execute unconditionally so they are not checked.
+static bool foldCondStoreToSelectImpl(CondBrInst *BI, DomTreeUpdater *DTU,
+                                      const TargetTransformInfo &TTI,
+                                      AssumptionCache *AC) {
+  BasicBlock *HeadBB = BI->getParent();
+  BasicBlock *ThenBB = BI->getSuccessor(0);
+  BasicBlock *ElseBB = BI->getSuccessor(1);
+
+  // ThenBB: single predecessor (HeadBB), one simple store, unconditional
+  // branch to MergeBB.
+  if (ThenBB->getSinglePredecessor() != HeadBB)
+    return false;
+  UncondBrInst *ThenTerm = dyn_cast<UncondBrInst>(ThenBB->getTerminator());
+  if (!ThenTerm)
+    return false;
+  BasicBlock *MergeBB = ThenTerm->getSuccessor(0);
+
+  StoreInst *ThenStore = findUniqueSimpleStoreInBlock(ThenBB, AC);
+  if (!ThenStore)
+    return false;
+
+  // ElseBB: single predecessor (HeadBB), conditional branch to two leaf
+  // blocks. May contain cheap instructions before the branch (e.g. icmp).
+  if (ElseBB->getSinglePredecessor() != HeadBB)
+    return false;
+  CondBrInst *ElseTerm = dyn_cast<CondBrInst>(ElseBB->getTerminator());
+  if (!ElseTerm)
+    return false;
+
+  // Collect non-terminator instructions in ElseBB to hoist into HeadBB.
+  // They must be side-effect-free and not read/write memory.
+  SmallVector<Instruction *, 4> ElseBBInstsToHoist;
+  for (Instruction &I : *ElseBB) {
+    if (&I == ElseTerm)
+      break;
+    if (I.mayHaveSideEffects() || I.mayReadOrWriteMemory())
+      return false;
+    ElseBBInstsToHoist.push_back(&I);
+  }
+
+  BasicBlock *ElseThenBB = ElseTerm->getSuccessor(0);
+  BasicBlock *ElseElseBB = ElseTerm->getSuccessor(1);
+
+  // Each leaf block: single predecessor (ElseBB), one simple store,
+  // unconditional branch to MergeBB.
+  auto CheckLeafBlock = [&](BasicBlock *BB, StoreInst *&Store) -> bool {
+    if (BB->getSinglePredecessor() != ElseBB)
+      return false;
+    UncondBrInst *Term = dyn_cast<UncondBrInst>(BB->getTerminator());
+    if (!Term || Term->getSuccessor(0) != MergeBB)
+      return false;
+    Store = findUniqueSimpleStoreInBlock(BB, AC);
+    return Store != nullptr;
+  };
+
+  StoreInst *ElseThenStore, *ElseElseStore;
+  if (!CheckLeafBlock(ElseThenBB, ElseThenStore) ||
+      !CheckLeafBlock(ElseElseBB, ElseElseStore))
+    return false;
+
+  // Bail out if any of the blocks contain PHI nodes. These are single-
+  // predecessor blocks so PHIs here are degenerate and not expected in
+  // well-optimized IR.
+  if (!ThenBB->phis().empty() || !ElseBB->phis().empty() ||
+      !ElseThenBB->phis().empty() || !ElseElseBB->phis().empty())
+    return false;
+
+  // All three stores must write to the same logical address and have the same
+  // value type.
+  Value *Addr = ThenStore->getPointerOperand();
+  if (!isSameGEPAddress(Addr, ElseThenStore->getPointerOperand()) ||
+      !isSameGEPAddress(Addr, ElseElseStore->getPointerOperand()))
+    return false;
+
+  Type *StoreTy = ThenStore->getValueOperand()->getType();
+  if (ElseThenStore->getValueOperand()->getType() != StoreTy ||
+      ElseElseStore->getValueOperand()->getType() != StoreTy)
+    return false;
+
+  // Profitability: reject if any of the four speculated blocks contains an
+  // instruction that is expensive to execute speculatively (e.g. fdiv).
+  // HeadBB is excluded — its instructions already run unconditionally.
+  if (!isBlockCheapToSpeculate(ThenBB, ThenStore, TTI) ||
+      !isBlockCheapToSpeculate(ElseBB, nullptr, TTI) ||
+      !isBlockCheapToSpeculate(ElseThenBB, ElseThenStore, TTI) ||
+      !isBlockCheapToSpeculate(ElseElseBB, ElseElseStore, TTI))
+    return false;
+
+  // MergeBB PHI nodes: all three leaf predecessors must supply the same value
+  // (since we're collapsing them into HeadBB).
+  for (PHINode &PHI : MergeBB->phis()) {
+    Value *Val = nullptr;
+    for (BasicBlock *Pred : {ThenBB, ElseThenBB, ElseElseBB}) {
+      int Idx = PHI.getBasicBlockIndex(Pred);
+      if (Idx < 0)
+        continue;
+      Value *InVal = PHI.getIncomingValue(Idx);
+      if (!Val)
+        Val = InVal;
+      else if (Val != InVal)
+        return false;
+    }
+  }
+
+  // All checks passed. Build select+store in HeadBB.
+  LLVM_DEBUG(dbgs() << "[foldCondStore] firing in function: "
+                    << HeadBB->getParent()->getName() << "\n");
+  IRBuilder<> Builder(BI);
+
+  // Hoist cheap ElseBB instructions (e.g. icmp for cond2) into HeadBB.
+  for (Instruction *I : ElseBBInstsToHoist)
+    I->moveBefore(BI->getIterator());
+
+  // Helper: if a value is defined inside one of the blocks being removed,
+  // hoist it into HeadBB (it must be a side-effect-free instruction whose
+  // operands are all available in HeadBB after the ElseBB hoist above).
+  auto IsInRemovedBlock = [&](Value *V) -> bool {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return false;
+    BasicBlock *DefBB = I->getParent();
+    return is_contained({ThenBB, ElseBB, ElseThenBB, ElseElseBB}, DefBB);
+  };
+  auto HoistIfNeeded = [&](Value *V) {
+    if (IsInRemovedBlock(V))
+      cast<Instruction>(V)->moveBefore(BI->getIterator());
+  };
+
+  // Hoist the store address and store values if they live in removed blocks.
+  HoistIfNeeded(Addr);
+  Value *VThen = ThenStore->getValueOperand();
+  Value *VElseThen = ElseThenStore->getValueOperand();
+  Value *VElseElse = ElseElseStore->getValueOperand();
+  HoistIfNeeded(VThen);
+  HoistIfNeeded(VElseThen);
+  HoistIfNeeded(VElseElse);
+
+  Value *Cond1 = BI->getCondition();
+  Value *Cond2 = ElseTerm->getCondition();
+
+  Value *SelVal;
+  if (VThen == VElseThen) {
+    // Simplify: select (cond1 || cond2), VThen, VElseElse
+    Value *CombinedCond = Builder.CreateOr(Cond1, Cond2, "cond.or");
+    SelVal = Builder.CreateSelect(CombinedCond, VThen, VElseElse, "store.sel");
+  } else {
+    // General: select cond1, VThen, (select cond2, VElseThen, VElseElse)
+    Value *InnerSel =
+        Builder.CreateSelect(Cond2, VElseThen, VElseElse, "store.sel.inner");
+    SelVal = Builder.CreateSelect(Cond1, VThen, InnerSel, "store.sel");
+  }
+
+  StoreInst *NewStore = Builder.CreateStore(SelVal, Addr);
+  NewStore->setAlignment(
+      std::min({ThenStore->getAlign(), ElseThenStore->getAlign(),
+                ElseElseStore->getAlign()}));
+
+  // Preserve metadata identical across all three original stores.
+  auto CopyIfEqual = [&](unsigned Kind) {
+    MDNode *MD = ThenStore->getMetadata(Kind);
+    if (MD && MD == ElseThenStore->getMetadata(Kind) &&
+        MD == ElseElseStore->getMetadata(Kind))
+      NewStore->setMetadata(Kind, MD);
+  };
+  CopyIfEqual(LLVMContext::MD_tbaa);
+  CopyIfEqual(LLVMContext::MD_alias_scope);
+  CopyIfEqual(LLVMContext::MD_noalias);
+  CopyIfEqual(LLVMContext::MD_nontemporal);
+  CopyIfEqual(LLVMContext::MD_access_group);
+
+  // Replace HeadBB's conditional branch with an unconditional branch to
+  // MergeBB.
+  Builder.CreateBr(MergeBB);
+  BI->eraseFromParent();
+
+  // Add HeadBB as the new incoming block for any MergeBB PHIs that had
+  // incoming values from the leaf blocks.
+  for (PHINode &PHI : MergeBB->phis()) {
+    Value *InVal = nullptr;
+    for (BasicBlock *Pred : {ThenBB, ElseThenBB, ElseElseBB}) {
+      int Idx = PHI.getBasicBlockIndex(Pred);
+      if (Idx < 0)
+        continue;
+      if (!InVal)
+        InVal = PHI.getIncomingValue(Idx);
+    }
+    if (InVal)
+      PHI.addIncoming(InVal, HeadBB);
+  }
+
+  // Detach the four now-unreachable blocks: removes their PHI contributions
+  // from successors and replaces their terminators with 'unreachable'.
+  // We do NOT erase them here — iterativelySimplifyCFG will see pred_empty
+  // and safely delete each one after BBIt has moved past it.
+  SmallVector<BasicBlock *, 4> DeadBlocks = {ThenBB, ElseBB, ElseThenBB,
+                                             ElseElseBB};
+  SmallVector<DominatorTree::UpdateType, 8> Updates;
+  detachDeadBlocks(DeadBlocks, DTU ? &Updates : nullptr,
+                   /*KeepOneInputPHIs=*/false);
+
+  if (DTU) {
+    Updates.push_back({DominatorTree::Insert, HeadBB, MergeBB});
+    DTU->applyUpdates(Updates);
+  }
+
+  return true;
+}
+
 static Value *ensureValueAvailableInSuccessor(Value *V, BasicBlock *BB,
                                               Value *AlternativeV = nullptr) {
   // PHI is going to be a PHI node that allows the value V that is defined in
@@ -8948,6 +9239,12 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
 
   // Look for nested conditional branches.
   if (mergeNestedCondBranch(BI, DTU))
+    return requestResimplify();
+
+  // Fold triangle+diamond pattern where three branches all store to the same
+  // address into a select+store in the head block, enabling vectorization.
+  if (Options.FoldCondStoreToSelect &&
+      foldCondStoreToSelectImpl(BI, DTU, TTI, Options.AC))
     return requestResimplify();
 
   return false;
