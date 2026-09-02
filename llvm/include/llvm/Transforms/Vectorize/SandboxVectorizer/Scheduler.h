@@ -277,6 +277,22 @@ public:
     return Where == Other.Where;
   }
 #ifndef NDEBUG
+  /// Returns true if the scheduling point is after \p I in program order.
+  bool comesBefore(Instruction &I) const {
+    if (BasicBlock *BB = atEndOrNull()) {
+      // All instructions are before BB end.
+      assert(BB == I.getParent() && "We don't support crossing BBs!");
+      return false;
+    }
+    if (BasicBlock *BB = atBeforeBeginOrNull()) {
+      // Before begin is always before any instruction.
+      assert(BB == I.getParent() && "We don't support crossing BBs!");
+      return true;
+    }
+    Instruction *SchedPointI = atInstrOrNull();
+    assert(SchedPointI != nullptr && "Should have been already handled!");
+    return SchedPointI->comesBefore(&I);
+  }
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif
@@ -340,8 +356,12 @@ class Scheduler {
   Scheduler(const Scheduler &) = delete;
   Scheduler &operator=(const Scheduler &) = delete;
 
-private:
   SchedDirection Dir = SchedDirection::BottomUp;
+#ifndef NDEBUG
+  /// Asserts that \p Instrs are above the scheduling frontier if scheduling
+  /// bottom-up or below it if scheduling top-down.
+  void assertSameDirection(ArrayRef<Instruction *> Instrs) const;
+#endif
 
 public:
   Scheduler(AAResults &AA, Context &Ctx, SchedDirection Dir)

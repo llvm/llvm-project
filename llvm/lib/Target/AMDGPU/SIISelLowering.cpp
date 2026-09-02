@@ -7548,6 +7548,12 @@ bool SITargetLowering::isFMADLegal(const SelectionDAG &DAG,
                      getDenormalFPEnv(DAG.getMachineFunction()));
 }
 
+bool SITargetLowering::isFMADLegal(const Function &F, Type *Ty) const {
+  return isFMADLegal(getValueType(F.getDataLayout(), Ty->getScalarType(),
+                                  /*AllowUnknown=*/true),
+                     F.getDenormalFPEnv());
+}
+
 //===----------------------------------------------------------------------===//
 // Custom DAG Lowering Operations
 //===----------------------------------------------------------------------===//

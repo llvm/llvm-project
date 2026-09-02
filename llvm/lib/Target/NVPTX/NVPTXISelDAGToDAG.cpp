@@ -70,12 +70,19 @@ private:
   LLVMContext *Context = nullptr;
 };
 
+enum class NVPTXMemCacheHintInstruction { Ld, St, Atom };
+
 struct NVPTXMemCacheHintAccess {
+  NVPTXMemCacheHintInstruction Instruction;
   NVPTX::AddressSpace AddrSpace;
-  bool IsLoad;
   unsigned NumElts;
   unsigned EltWidth;
   bool IsVolatile;
+};
+
+struct NVPTXMemCacheHintOperands {
+  SDValue EvictionAndPrefetchHint;
+  SDValue CachePolicyReg;
 };
 
 class NVPTXDAGToDAGISel : public SelectionDAGISel {
@@ -147,9 +154,9 @@ private:
   // dropped. If L2::cache_hint is active, returns the hint with
   // L2CacheHintBit set and a register containing the 64-bit cache policy
   // value. Otherwise returns NOREG for the policy operand.
-  std::pair<unsigned, SDValue>
+  NVPTXMemCacheHintOperands
   getMemCacheHintOperands(const MemSDNode *N, NVPTXMemCacheHintAccess Access,
-                          const SDLoc &DL);
+                          const SDLoc &DL, bool EmitDiagnostics = true);
 
   // Returns the Memory Order and Scope that the PTX memory instruction should
   // use, and inserts appropriate fence instruction before the memory
@@ -1177,19 +1184,20 @@ static std::optional<NVPTX::L2Prefetch> parseL2Prefetch(StringRef Str) {
 }
 
 template <typename T>
-static std::optional<T>
-parseMemCacheHintStringValue(LLVMContext &Ctx, StringRef Key,
-                             const Metadata *Value,
-                             std::optional<T> (*Parse)(StringRef)) {
+static std::optional<T> parseMemCacheHintStringValue(
+    LLVMContext &Ctx, StringRef Key, const Metadata *Value,
+    std::optional<T> (*Parse)(StringRef), bool EmitDiagnostics) {
   const auto *Val = dyn_cast<MDString>(Value);
   if (!Val) {
-    emitInvalidMemCacheHint(Ctx, Twine("'") + Key + "' expects a string value");
+    if (EmitDiagnostics)
+      emitInvalidMemCacheHint(Ctx,
+                              Twine("'") + Key + "' expects a string value");
     return std::nullopt;
   }
 
   StringRef ValStr = Val->getString();
   auto Parsed = Parse(ValStr);
-  if (!Parsed)
+  if (!Parsed && EmitDiagnostics)
     emitInvalidMemCacheHint(Ctx, Twine("unknown value '") + ValStr + "' for '" +
                                      Key + "'");
   return Parsed;
@@ -1200,6 +1208,21 @@ static bool isGlobalOrGeneric(NVPTX::AddressSpace AddrSpace) {
          AddrSpace == NVPTX::AddressSpace::Generic;
 }
 
+static bool isLdOrSt(NVPTXMemCacheHintAccess Access) {
+  return Access.Instruction == NVPTXMemCacheHintInstruction::Ld ||
+         Access.Instruction == NVPTXMemCacheHintInstruction::St;
+}
+
+static bool isL1EvictionSupported(const NVPTXSubtarget &Subtarget,
+                                  NVPTX::L1Eviction Eviction,
+                                  NVPTXMemCacheHintAccess Access) {
+  if (Eviction == NVPTX::L1Eviction::Normal)
+    return true;
+
+  return isLdOrSt(Access) && !Access.IsVolatile &&
+         Subtarget.hasL1EvictionHint();
+}
+
 static bool isL2PrefetchSupported(const NVPTXSubtarget &Subtarget,
                                   NVPTX::L2Prefetch Prefetch,
                                   NVPTXMemCacheHintAccess Access) {
@@ -1207,14 +1230,14 @@ static bool isL2PrefetchSupported(const NVPTXSubtarget &Subtarget,
   case NVPTX::L2Prefetch::None:
     return true;
   case NVPTX::L2Prefetch::Bytes64:
-    return Access.IsLoad && isGlobalOrGeneric(Access.AddrSpace) &&
-           Subtarget.hasL2Prefetch64B();
+    return Access.Instruction == NVPTXMemCacheHintInstruction::Ld &&
+           isGlobalOrGeneric(Access.AddrSpace) && Subtarget.hasL2Prefetch64B();
   case NVPTX::L2Prefetch::Bytes128:
-    return Access.IsLoad && isGlobalOrGeneric(Access.AddrSpace) &&
-           Subtarget.hasL2Prefetch128B();
+    return Access.Instruction == NVPTXMemCacheHintInstruction::Ld &&
+           isGlobalOrGeneric(Access.AddrSpace) && Subtarget.hasL2Prefetch128B();
   case NVPTX::L2Prefetch::Bytes256:
-    return Access.IsLoad && isGlobalOrGeneric(Access.AddrSpace) &&
-           Subtarget.hasL2Prefetch256B();
+    return Access.Instruction == NVPTXMemCacheHintInstruction::Ld &&
+           isGlobalOrGeneric(Access.AddrSpace) && Subtarget.hasL2Prefetch256B();
   }
   llvm_unreachable("Unexpected L2 prefetch hint");
 }
@@ -1225,22 +1248,30 @@ static bool isL2EvictionSupported(const NVPTXSubtarget &Subtarget,
   if (Eviction == NVPTX::L2Eviction::Normal)
     return true;
 
-  return Subtarget.hasL2EvictionHint() && isGlobalOrGeneric(Access.AddrSpace) &&
-         !Access.IsVolatile &&
+  return isLdOrSt(Access) && !Access.IsVolatile &&
+         Subtarget.hasL2EvictionHint() && isGlobalOrGeneric(Access.AddrSpace) &&
          ((Access.NumElts == 8 && Access.EltWidth == 32) ||
           (Access.NumElts == 4 && Access.EltWidth == 64));
 }
 
-std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
-    const MemSDNode *N, NVPTXMemCacheHintAccess Access, const SDLoc &DL) {
+static bool isCachePolicySupported(const NVPTXSubtarget &Subtarget,
+                                   NVPTXMemCacheHintAccess Access) {
+  return !Access.IsVolatile && isGlobalOrGeneric(Access.AddrSpace) &&
+         Subtarget.hasL2CacheHint();
+}
+
+NVPTXMemCacheHintOperands NVPTXDAGToDAGISel::getMemCacheHintOperands(
+    const MemSDNode *N, NVPTXMemCacheHintAccess Access, const SDLoc &DL,
+    bool EmitDiagnostics) {
   LLVMContext &Ctx = *CurDAG->getContext();
   const MDNode *Node = N->getMemCacheHint();
   SDValue PolicyReg = CurDAG->getRegister(NVPTX::NoRegister, MVT::i64);
   if (!Node)
-    return {0, PolicyReg};
+    return {getI32Imm(0, DL), PolicyReg};
   if (Node->getNumOperands() == 0) {
-    emitInvalidMemCacheHint(Ctx, "empty hint node");
-    return {0, PolicyReg};
+    if (EmitDiagnostics)
+      emitInvalidMemCacheHint(Ctx, "empty hint node");
+    return {getI32Imm(0, DL), PolicyReg};
   }
 
   NVPTX::L1Eviction L1 = NVPTX::L1Eviction::Normal;
@@ -1254,24 +1285,24 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
     const Metadata *Value = Node->getOperand(I + 1).get();
 
     if (KeyStr == "nvvm.l1_eviction") {
-      auto ParsedL1 =
-          parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL1Eviction);
-      if (ParsedL1 && !Access.IsVolatile && Subtarget->hasL1EvictionHint())
+      auto ParsedL1 = parseMemCacheHintStringValue(
+          Ctx, KeyStr, Value, parseL1Eviction, EmitDiagnostics);
+      if (ParsedL1 && isL1EvictionSupported(*Subtarget, *ParsedL1, Access))
         L1 = *ParsedL1;
       continue;
     }
 
     if (KeyStr == "nvvm.l2_eviction") {
-      auto ParsedL2 =
-          parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL2Eviction);
+      auto ParsedL2 = parseMemCacheHintStringValue(
+          Ctx, KeyStr, Value, parseL2Eviction, EmitDiagnostics);
       if (ParsedL2 && isL2EvictionSupported(*Subtarget, *ParsedL2, Access))
         L2 = *ParsedL2;
       continue;
     }
 
     if (KeyStr == "nvvm.l2_prefetch_size") {
-      auto ParsedPrefetch =
-          parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL2Prefetch);
+      auto ParsedPrefetch = parseMemCacheHintStringValue(
+          Ctx, KeyStr, Value, parseL2Prefetch, EmitDiagnostics);
       if (ParsedPrefetch &&
           isL2PrefetchSupported(*Subtarget, *ParsedPrefetch, Access))
         Prefetch = *ParsedPrefetch;
@@ -1280,16 +1311,18 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
 
     if (KeyStr == "nvvm.l2_cache_hint") {
       const auto *ValCI = mdconst::dyn_extract<ConstantInt>(Value);
-      if (!ValCI)
-        emitInvalidMemCacheHint(
-            Ctx, "'nvvm.l2_cache_hint' expects an integer value");
-      else if (isGlobalOrGeneric(Access.AddrSpace) && !Access.IsVolatile &&
-               Subtarget->hasL2CacheHint())
+      if (!ValCI) {
+        if (EmitDiagnostics)
+          emitInvalidMemCacheHint(
+              Ctx, "'nvvm.l2_cache_hint' expects an integer value");
+      } else if (isCachePolicySupported(*Subtarget, Access)) {
         CachePolicy = ValCI->getZExtValue();
+      }
       continue;
     }
 
-    emitInvalidMemCacheHint(Ctx, Twine("unknown key '") + KeyStr + "'");
+    if (EmitDiagnostics)
+      emitInvalidMemCacheHint(Ctx, Twine("unknown key '") + KeyStr + "'");
   }
 
   unsigned EvictionAndPrefetchHint =
@@ -1301,7 +1334,7 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
     Bitfield::set<NVPTX::L2CacheHintBit>(EvictionAndPrefetchHint, true);
   }
 
-  return {EvictionAndPrefetchHint, PolicyReg};
+  return {getI32Imm(EvictionAndPrefetchHint, DL), PolicyReg};
 }
 
 bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
@@ -1349,7 +1382,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
       LD,
-      {CodeAddrSpace, /*IsLoad=*/true,
+      {NVPTXMemCacheHintInstruction::Ld, CodeAddrSpace,
        /*NumElts=*/1, /*EltWidth=*/FromTypeWidth, LD->isVolatile()},
       DL);
 
@@ -1362,7 +1395,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                    getI32Imm(UsedBytesMask, DL),
                    Base,
                    Offset,
-                   getI32Imm(EvictionAndPrefetchHint, DL),
+                   EvictionAndPrefetchHint,
                    PolicyReg,
                    Chain};
 
@@ -1429,7 +1462,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   const auto [EvictionAndPrefetchHint, PolicyReg] =
       getMemCacheHintOperands(LD,
-                              {CodeAddrSpace, /*IsLoad=*/true,
+                              {NVPTXMemCacheHintInstruction::Ld, CodeAddrSpace,
                                /*NumElts=*/LD->getNumValues() - 1,
                                /*EltWidth=*/FromTypeWidth, LD->isVolatile()},
                               DL);
@@ -1442,7 +1475,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                    getI32Imm(UsedBytesMask, DL),
                    Base,
                    Offset,
-                   getI32Imm(EvictionAndPrefetchHint, DL),
+                   EvictionAndPrefetchHint,
                    PolicyReg,
                    Chain};
 
@@ -1497,18 +1530,17 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
            ExtensionType != ISD::NON_EXTLOAD));
 
   const auto [Base, Offset] = selectADDR(LD->getOperand(1), CurDAG);
-  const auto [EvictionAndPrefetchHint, PolicyReg] =
-      getMemCacheHintOperands(LD,
-                              {NVPTX::AddressSpace::Global,
-                               /*IsLoad=*/true, LD->getNumValues() - 1,
-                               FromTypeWidth, LD->isVolatile()},
-                              DL);
+  const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
+      LD,
+      {NVPTXMemCacheHintInstruction::Ld, NVPTX::AddressSpace::Global,
+       LD->getNumValues() - 1, FromTypeWidth, LD->isVolatile()},
+      DL);
   SDValue Ops[] = {getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
                    getI32Imm(UsedBytesMask, DL),
                    Base,
                    Offset,
-                   getI32Imm(EvictionAndPrefetchHint, DL),
+                   EvictionAndPrefetchHint,
                    PolicyReg,
                    LD->getChain()};
 
@@ -1622,7 +1654,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   // Extract eviction/prefetch hint and cache policy register.
   const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
       ST,
-      {CodeAddrSpace, /*IsLoad=*/false,
+      {NVPTXMemCacheHintInstruction::St, CodeAddrSpace,
        /*NumElts=*/1, /*EltWidth=*/ToTypeWidth, ST->isVolatile()},
       DL);
 
@@ -1633,7 +1665,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                    getI32Imm(ToTypeWidth, DL),
                    Base,
                    Offset,
-                   getI32Imm(EvictionAndPrefetchHint, DL),
+                   EvictionAndPrefetchHint,
                    PolicyReg,
                    Chain};
 
@@ -1683,15 +1715,14 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   // Extract eviction/prefetch hint and cache policy register.
   const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
       ST,
-      {CodeAddrSpace, /*IsLoad=*/false, /*NumElts=*/NumElts,
-       /*EltWidth=*/ToTypeWidth, ST->isVolatile()},
+      {NVPTXMemCacheHintInstruction::St, CodeAddrSpace,
+       /*NumElts=*/NumElts, /*EltWidth=*/ToTypeWidth, ST->isVolatile()},
       DL);
 
   const auto [Base, Offset] = selectADDR(Addr, CurDAG);
   Ops.append({getI32Imm(Ordering, DL), getI32Imm(Scope, DL),
               getI32Imm(CodeAddrSpace, DL), getI32Imm(ToTypeWidth, DL), Base,
-              Offset, getI32Imm(EvictionAndPrefetchHint, DL), PolicyReg,
-              Chain});
+              Offset, EvictionAndPrefetchHint, PolicyReg, Chain});
 
   const MVT::SimpleValueType EltVT =
       ST->getOperand(1).getSimpleValueType().SimpleTy;
@@ -2312,14 +2343,23 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
 
   const SDValue Chain = N->getOperand(0);
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
-  SmallVector<SDValue, 5> Ops{Base, Offset};
+  SmallVector<SDValue, 10> Ops{Base, Offset};
   Ops.append(N->op_begin() + 2, N->op_end());
-  Ops.append({
-      getI32Imm(getMemOrder(AN), dl),
-      getI32Imm(getAtomicScope(AN), dl),
-      getI32Imm(getAddrSpace(AN), dl),
-      Chain,
-  });
+  Ops.append({getI32Imm(getMemOrder(AN), dl), getI32Imm(getAtomicScope(AN), dl),
+              getI32Imm(getAddrSpace(AN), dl)});
+
+  if (N->getOpcode() == NVPTXISD::ATOMIC_SWAP_B128) {
+    unsigned EltWidth = AN->getMemoryVT().getFixedSizeInBits();
+    NVPTXMemCacheHintAccess Access{NVPTXMemCacheHintInstruction::Atom,
+                                   getAddrSpace(AN),
+                                   /*NumElts=*/1, EltWidth, AN->isVolatile()};
+    const auto [EvictionAndPrefetchHint, CachePolicyReg] =
+        getMemCacheHintOperands(AN, Access, dl);
+    Ops.push_back(EvictionAndPrefetchHint);
+    Ops.push_back(CachePolicyReg);
+  }
+
+  Ops.push_back(Chain);
 
   assert(N->getOpcode() == NVPTXISD::ATOMIC_CMP_SWAP_B128 ||
          N->getOpcode() == NVPTXISD::ATOMIC_SWAP_B128);
