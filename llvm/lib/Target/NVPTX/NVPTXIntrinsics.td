@@ -1695,6 +1695,14 @@ class F_MATH_2_RND_TY<string OpcStr, RegTyInfo t, Intrinsic IntOP, TImmLeaf rnd,
         [(set t.Ty:$dst, (IntOP t.Ty:$src0, t.Ty:$src1, rnd))]>,
         Requires<Preds>;
 
+class F_MATH_2_RNDOP_TY<string OpcStr, RegTyInfo t, Intrinsic IntOP,
+                        list<Predicate> Preds = []>
+            : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+              (ins t.RC:$src0, t.RC:$src1), (ins FPRoundingMode:$rnd),
+            OpcStr,
+        [(set t.Ty:$dst, (IntOP t.Ty:$src0, t.Ty:$src1, timm:$rnd))]>,
+        Requires<Preds>;
+
 class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
   NVPTXRegClass s0_regclass, NVPTXRegClass s1_regclass,
   NVPTXRegClass s2_regclass, Intrinsic IntOP, list<Predicate> Preds = []>
@@ -2273,45 +2281,42 @@ def fp_rnd_rz_imm : FPRndModeImm<"TowardZero">;
 def fp_rnd_rm_imm : FPRndModeImm<"TowardNegative">;
 def fp_rnd_rp_imm : FPRndModeImm<"TowardPositive">;
 
+// f16/f16x2
 foreach t = [F16RT, F16X2RT] in
   foreach ftz = ["", "ftz"] in
-    foreach sat = ["", "sat"] in {
-      defvar add_intrin =
-        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret);
-
+    foreach sat = ["", "sat"] in
       def INT_NVVM_ADD_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
-        F_MATH_2_RND_TY<StrJoin<".", ["add", "rn", ftz, sat, t.PtxType]>.ret, t,
-                        add_intrin, fp_rnd_rn_imm>;
-    }
+        F_MATH_2_RND_TY<StrJoin<".", ["add.rn", ftz, sat, t.PtxType]>.ret, t,
+                        !cast<Intrinsic>(
+                            StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret),
+                        fp_rnd_rn_imm>;
 
+// bf16/bf16x2
 foreach t = [BF16RT, BF16X2RT] in
   def INT_NVVM_ADD_RN_ # !toupper(t.PtxType) :
     F_MATH_2_RND_TY<"add.rn." # t.PtxType, t, int_nvvm_fadd, fp_rnd_rn_imm,
                     BF16ArithPreds>;
 
-foreach rnd = FPRoundingModes in {
-  defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
-
-  foreach ftz = ["", "ftz"] in {
-    foreach sat = ["", "sat"] in
-      def INT_NVVM_ADD_ # !toupper(StrJoin<"_", [rnd, ftz, sat]>.ret) # _F :
-        F_MATH_2_RND_TY<StrJoin<".", ["add", rnd, ftz, sat, "f32"]>.ret, F32RT,
+// f32/f32x2/f64
+foreach ftz = ["", "ftz"] in {
+  foreach sat = ["", "sat"] in
+    def StrJoin<"_", ["INT_NVVM_ADD", !toupper(ftz), !toupper(sat), "F"]>.ret :
+      F_MATH_2_RNDOP_TY<StrJoin<".", ["add.${rnd}", ftz, sat, "f32"]>.ret,
+                        F32RT,
                         !cast<Intrinsic>(
-                            StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret),
-                        rnd_imm>;
+                            StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret)>;
 
-    def INT_NVVM_ADD_ # !toupper(StrJoin<"_", [rnd, ftz]>.ret) # _F32X2 :
-      F_MATH_2_RND_TY<StrJoin<".", ["add", rnd, ftz, "f32x2"]>.ret, F32X2RT,
+  def StrJoin<"_", ["INT_NVVM_ADD", !toupper(ftz), "F32X2"]>.ret :
+    F_MATH_2_RNDOP_TY<StrJoin<".", ["add.${rnd}", ftz, "f32x2"]>.ret, F32X2RT,
                       !cast<Intrinsic>(
                           StrJoin<"_", ["int_nvvm_fadd", ftz]>.ret),
-                      rnd_imm, [hasF32x2Instructions]>;
-  }
-
-  def INT_NVVM_ADD_ # !toupper(rnd) # _D :
-    F_MATH_2_RND_TY<StrJoin<".", ["add", rnd, "f64"]>.ret, F64RT, int_nvvm_fadd,
-                    rnd_imm>;
+                      [hasF32x2Instructions]>;
 }
 
+def INT_NVVM_ADD_D :
+  F_MATH_2_RNDOP_TY<"add.${rnd}.f64", F64RT, int_nvvm_fadd>;
+
+// mixed precision
 foreach rnd = FPRoundingModes in {
   defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
 
@@ -2358,44 +2363,44 @@ class INT_NVVM_SUB<RegTyInfo TyInfo, list<string> variant> :
      (!cast<SDNode>(StrJoin<"_", !listconcat(["sub"], variant)>.ret)
       TyInfo.Ty:$a, TyInfo.Ty:$b))]>;
 
+// f16/f16x2
 foreach t = [F16RT, F16X2RT] in
   foreach ftz = ["", "ftz"] in
     foreach sat = ["", "sat"] in
       def INT_NVVM_SUB_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
         INT_NVVM_SUB<t, ["rn", ftz, sat]>;
 
+// bf16/bf16x2
 let Predicates = BF16ArithPreds in
   foreach t = [BF16RT, BF16X2RT] in
     def INT_NVVM_SUB_RN_ # !toupper(t.PtxType) : INT_NVVM_SUB<t, ["rn"]>;
 
+// f32x2
 let Predicates = [hasF32x2Instructions] in
   foreach rnd = FPRoundingModes in
     foreach ftz = ["", "ftz"] in
       def INT_NVVM_SUB_ # StrJoin<"_", [rnd, ftz]>.ret # _F32X2 :
         INT_NVVM_SUB<F32X2RT, [rnd, ftz]>;
 
-foreach rnd = FPRoundingModes in {
-  defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
-
-  foreach ftz = ["", "ftz"] in {
-    foreach sat = ["", "sat"] in {
-      defvar add_intrin =
-        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret);
-      def INT_NVVM_SUB_ # StrJoin<"_", [rnd, ftz, sat]>.ret # _F :
-        BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
-          StrJoin<".", ["sub", rnd, ftz, sat, "f32"]>.ret,
-          [(set f32:$dst,
-            (add_intrin f32:$a, (f32 (fneg f32:$b)), rnd_imm))]>;
-    }
+// f32/f64
+foreach ftz = ["", "ftz"] in
+  foreach sat = ["", "sat"] in {
+    defvar add_intrin =
+      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret);
+    def StrJoin<"_", ["INT_NVVM_SUB", !toupper(ftz), !toupper(sat), "F"]>.ret :
+      BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+        (ins FPRoundingMode:$rnd),
+        StrJoin<".", ["sub.${rnd}", ftz, sat, "f32"]>.ret,
+        [(set f32:$dst,
+          (add_intrin f32:$a, (f32 (fneg f32:$b)), timm:$rnd))]>;
   }
 
-  def INT_NVVM_SUB_ # rnd # _D :
-    BasicNVPTXInst<(outs B64:$dst), (ins B64:$a, B64:$b),
-      StrJoin<".", ["sub", rnd, "f64"]>.ret,
-      [(set f64:$dst,
-        (int_nvvm_fadd f64:$a, (f64 (fneg f64:$b)), rnd_imm))]>;
-}
+def INT_NVVM_SUB_D :
+  BasicFlagsNVPTXInst<(outs B64:$dst), (ins B64:$a, B64:$b),
+    (ins FPRoundingMode:$rnd), "sub.${rnd}.f64",
+    [(set f64:$dst, (int_nvvm_fadd f64:$a, (f64 (fneg f64:$b)), timm:$rnd))]>;
 
+// mixed precision
 foreach rnd = FPRoundingModes in {
   defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
 
