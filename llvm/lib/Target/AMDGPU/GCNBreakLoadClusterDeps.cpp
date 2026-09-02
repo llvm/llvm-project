@@ -187,8 +187,8 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
       std::bitset<NumVGPR32> ClobberedSubregs;
       MachineInstr *NewKiller = KillerIns ? KillerIns : nullptr;
       Register OldOldReg = OldReg;
-      for (MachineBasicBlock::iterator It =
-               std::next(DefToRename->getIterator());
+      for (MachineBasicBlock::iterator It = std::next(
+               MachineBasicBlock::iterator(DefToRename->getIterator()));
            (OldRegClobbers & ~ClobberedSubregs).any() && It != MBB.end();
            ++It) {
         auto Subregs = getUsesAndDefsFor(*It);
@@ -227,7 +227,8 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
       std::bitset<NumVGPR32> ClobberedSubregs;
       MachineInstr *NewDef = DefToRename ? DefToRename : nullptr;
       for (MachineBasicBlock::reverse_iterator RIt =
-               std::next(KillerIns->getReverseIterator());
+               std::next(MachineBasicBlock::reverse_iterator(
+                   KillerIns->getReverseIterator()));
            RIt != MBB.rend(); ++RIt) {
         if (RIt->modifiesRegister(OldReg, TRI))
           ClobberedSubregs |= getUsesAndDefsFor(*RIt).first;
@@ -259,7 +260,8 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   // don't distinguish those cases, so bail on any tied operand overlapping
   // OldReg.
   for (MachineBasicBlock::iterator It = DefToRename->getIterator(),
-                                   End = std::next(KillerIns->getIterator());
+                                   End = std::next(MachineBasicBlock::iterator(
+                                       KillerIns->getIterator()));
        It != End; ++It)
     for (const MachineOperand &Operand : It->operands())
       if (Operand.isReg() && Operand.isTied() &&
@@ -314,7 +316,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
         RedefinedRegs |= getVGPR32Components(NewDef);
       }
     for (MachineBasicBlock::iterator RenameIt =
-             std::next(DefToRename->getIterator());
+             std::next(MachineBasicBlock::iterator(DefToRename->getIterator()));
          RenameIt != KillerIns; ++RenameIt)
       for (int Op = RenameIt->getNumExplicitOperands() - 1; Op >= 0; Op--)
         if (RenameIt->getOperand(Op).isReg() &&

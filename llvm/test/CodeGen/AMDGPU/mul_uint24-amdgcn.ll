@@ -137,14 +137,14 @@ define amdgpu_kernel void @test_umul24_i16_vgpr_sext(ptr addrspace(1) %out, ptr 
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
-; VI-NEXT:    v_add_u32_e32 v2, vcc, s2, v0
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, s2, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_ushort v2, v[2:3]
-; VI-NEXT:    flat_load_ushort v0, v[0:1]
+; VI-NEXT:    v_add_u32_e32 v6, vcc, s2, v0
+; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_ushort v2, v[4:5]
+; VI-NEXT:    flat_load_ushort v0, v[6:7]
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -259,14 +259,14 @@ define amdgpu_kernel void @test_umul24_i16_vgpr(ptr addrspace(1) %out, ptr addrs
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
-; VI-NEXT:    v_add_u32_e32 v2, vcc, s2, v0
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, s2, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_ushort v2, v[2:3]
-; VI-NEXT:    flat_load_ushort v0, v[0:1]
+; VI-NEXT:    v_add_u32_e32 v6, vcc, s2, v0
+; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; VI-NEXT:    flat_load_ushort v2, v[4:5]
+; VI-NEXT:    flat_load_ushort v0, v[6:7]
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -331,13 +331,13 @@ define amdgpu_kernel void @test_umul24_i8_vgpr(ptr addrspace(1) %out, ptr addrsp
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
-; VI-NEXT:    v_add_u32_e32 v2, vcc, s2, v0
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; VI-NEXT:    v_add_u32_e32 v6, vcc, s2, v0
+; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
 ; VI-NEXT:    v_mov_b32_e32 v4, s5
-; VI-NEXT:    v_add_u32_e32 v0, vcc, s4, v1
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v4, vcc
-; VI-NEXT:    flat_load_ubyte v2, v[2:3]
-; VI-NEXT:    flat_load_ubyte v0, v[0:1]
+; VI-NEXT:    v_add_u32_e32 v8, vcc, s4, v1
+; VI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v4, vcc
+; VI-NEXT:    flat_load_ubyte v2, v[6:7]
+; VI-NEXT:    flat_load_ubyte v0, v[8:9]
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt vmcnt(0)

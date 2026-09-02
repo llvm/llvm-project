@@ -1303,10 +1303,10 @@ define double @flat_agent_atomic_fmin_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX8-LABEL: flat_agent_atomic_fmin_ret_f64__amdgpu_no_fine_grained_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB10_1: ; %atomicrmw.start
@@ -1455,10 +1455,10 @@ define void @flat_agent_atomic_fmin_noret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX8-LABEL: flat_agent_atomic_fmin_noret_f64__amdgpu_no_fine_grained_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    v_max_f64 v[6:7], v[2:3], v[2:3]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB11_1: ; %atomicrmw.start

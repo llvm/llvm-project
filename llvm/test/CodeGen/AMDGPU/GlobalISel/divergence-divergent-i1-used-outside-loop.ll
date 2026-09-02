@@ -273,10 +273,10 @@ define void @divergent_i1_xor_used_outside_loop_larger_loop_body(i32 %num.elts, 
 ; GFX10-NEXT:    s_and_b32 s11, exec_lo, exec_lo
 ; GFX10-NEXT:    s_and_b32 s12, exec_lo, exec_lo
 ; GFX10-NEXT:    s_or_b32 s11, s5, s11
-; GFX10-NEXT:    v_add_co_u32 v5, vcc_lo, v1, v5
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, v2, v6, vcc_lo
+; GFX10-NEXT:    v_add_co_u32 v7, vcc_lo, v1, v5
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v8, vcc_lo, v2, v6, vcc_lo
 ; GFX10-NEXT:    s_or_b32 s10, s10, s12
-; GFX10-NEXT:    global_load_dword v5, v[5:6], off
+; GFX10-NEXT:    global_load_dword v5, v[7:8], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v5
 ; GFX10-NEXT:    s_and_saveexec_b32 s5, vcc_lo
@@ -491,9 +491,9 @@ define amdgpu_ps void @divergent_i1_freeze_used_outside_loop(i32 %n, ptr addrspa
 ; GFX10-NEXT:    s_andn2_b32 s1, s4, exec_lo
 ; GFX10-NEXT:    v_mov_b32_e32 v5, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s7
-; GFX10-NEXT:    v_add_co_u32 v5, vcc_lo, v1, v5
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, v2, v6, vcc_lo
-; GFX10-NEXT:    global_load_dword v5, v[5:6], off
+; GFX10-NEXT:    v_add_co_u32 v7, vcc_lo, v1, v5
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v8, vcc_lo, v2, v6, vcc_lo
+; GFX10-NEXT:    global_load_dword v5, v[7:8], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX10-NEXT:    s_and_b32 s4, exec_lo, vcc_lo

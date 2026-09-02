@@ -4540,9 +4540,9 @@ define i32 @v_extract_v64i32_7(ptr addrspace(1) %ptr) {
 ; MOVREL-LABEL: v_extract_v64i32_7:
 ; MOVREL:       ; %bb.0:
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, 28, v0
-; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; MOVREL-NEXT:    flat_load_dword v0, v[0:1]
+; MOVREL-NEXT:    v_add_u32_e32 v2, vcc, 28, v0
+; MOVREL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; MOVREL-NEXT:    flat_load_dword v0, v[2:3]
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4575,9 +4575,9 @@ define i32 @v_extract_v64i32_32(ptr addrspace(1) %ptr) {
 ; MOVREL-LABEL: v_extract_v64i32_32:
 ; MOVREL:       ; %bb.0:
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, 0x80, v0
-; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; MOVREL-NEXT:    flat_load_dword v0, v[0:1]
+; MOVREL-NEXT:    v_add_u32_e32 v2, vcc, 0x80, v0
+; MOVREL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; MOVREL-NEXT:    flat_load_dword v0, v[2:3]
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4610,9 +4610,9 @@ define i32 @v_extract_v64i32_33(ptr addrspace(1) %ptr) {
 ; MOVREL-LABEL: v_extract_v64i32_33:
 ; MOVREL:       ; %bb.0:
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, 0x84, v0
-; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; MOVREL-NEXT:    flat_load_dword v0, v[0:1]
+; MOVREL-NEXT:    v_add_u32_e32 v2, vcc, 0x84, v0
+; MOVREL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; MOVREL-NEXT:    flat_load_dword v0, v[2:3]
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4645,9 +4645,9 @@ define i32 @v_extract_v64i32_37(ptr addrspace(1) %ptr) {
 ; MOVREL-LABEL: v_extract_v64i32_37:
 ; MOVREL:       ; %bb.0:
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, 0x94, v0
-; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; MOVREL-NEXT:    flat_load_dword v0, v[0:1]
+; MOVREL-NEXT:    v_add_u32_e32 v2, vcc, 0x94, v0
+; MOVREL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; MOVREL-NEXT:    flat_load_dword v0, v[2:3]
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
 ;

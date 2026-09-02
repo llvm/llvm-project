@@ -5,8 +5,8 @@
 define amdgpu_ps void @sextload_P1_i8_gfx12(ptr addrspace(1) inreg %ptra, ptr addrspace(1) %out) {
 ; GFX11-LABEL: sextload_P1_i8_gfx12:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    global_load_i8 v2, v2, s[0:1]
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    global_load_i8 v2, v3, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
@@ -62,8 +62,8 @@ define amdgpu_ps void @sextload_P1_i8_align4_gfx11(ptr addrspace(1) inreg %ptra,
 define amdgpu_ps void @sextload_P1_i16_gfx12(ptr addrspace(1) inreg %ptra, ptr addrspace(1) %out) {
 ; GFX11-LABEL: sextload_P1_i16_gfx12:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    global_load_i16 v2, v2, s[0:1]
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    global_load_i16 v2, v3, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
@@ -119,8 +119,8 @@ define amdgpu_ps void @sextload_P1_i16_align4_gfx11(ptr addrspace(1) inreg %ptra
 define amdgpu_ps void @sextload_P1_i8_to_i16(ptr addrspace(1) inreg %ptra, ptr addrspace(1) %out) {
 ; GFX11-LABEL: sextload_P1_i8_to_i16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    global_load_d16_i8 v2, v2, s[0:1]
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    global_load_d16_i8 v2, v3, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
@@ -148,8 +148,8 @@ define amdgpu_ps void @sextload_P1_i8_to_i16(ptr addrspace(1) inreg %ptra, ptr a
 define amdgpu_ps void @zextload_P1_i8_gfx12(ptr addrspace(1) inreg %ptra, ptr addrspace(1) %out) {
 ; GFX11-LABEL: zextload_P1_i8_gfx12:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    global_load_u8 v2, v2, s[0:1]
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    global_load_u8 v2, v3, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
@@ -205,8 +205,8 @@ define amdgpu_ps void @zextload_P1_i8_align4_gfx11(ptr addrspace(1) inreg %ptra,
 define amdgpu_ps void @zextload_P1_i16_gfx12(ptr addrspace(1) inreg %ptra, ptr addrspace(1) %out) {
 ; GFX11-LABEL: zextload_P1_i16_gfx12:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    global_load_u16 v2, v2, s[0:1]
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    global_load_u16 v2, v3, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
@@ -262,8 +262,8 @@ define amdgpu_ps void @zextload_P1_i16_align4_gfx11(ptr addrspace(1) inreg %ptra
 define amdgpu_ps void @zextload_P1_i8_to_i16(ptr addrspace(1) inreg %ptra, ptr addrspace(1) %out) {
 ; GFX11-LABEL: zextload_P1_i8_to_i16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    global_load_d16_u8 v2, v2, s[0:1]
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    global_load_d16_u8 v2, v3, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
@@ -291,8 +291,8 @@ define amdgpu_ps void @zextload_P1_i8_to_i16(ptr addrspace(1) inreg %ptra, ptr a
 define amdgpu_ps void @sextload_P4_i8_to_i16(ptr addrspace(4) inreg %ptra, ptr addrspace(1) %out) {
 ; GFX11-LABEL: sextload_P4_i8_to_i16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    global_load_d16_i8 v2, v2, s[0:1]
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    global_load_d16_i8 v2, v3, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0
@@ -320,8 +320,8 @@ define amdgpu_ps void @sextload_P4_i8_to_i16(ptr addrspace(4) inreg %ptra, ptr a
 define amdgpu_ps void @zextload_P4_i8_to_i16(ptr addrspace(4) inreg %ptra, ptr addrspace(1) %out) {
 ; GFX11-LABEL: zextload_P4_i8_to_i16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    global_load_d16_u8 v2, v2, s[0:1]
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    global_load_d16_u8 v2, v3, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s0

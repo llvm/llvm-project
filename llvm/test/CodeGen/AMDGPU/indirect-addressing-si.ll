@@ -1754,9 +1754,9 @@ define amdgpu_kernel void @extract_undef_offset_sgpr(ptr addrspace(1) %out, ptr 
 ; GFX9-IDXMODE-LABEL: extract_undef_offset_sgpr:
 ; GFX9-IDXMODE:       ; %bb.0: ; %entry
 ; GFX9-IDXMODE-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v0, s[2:3] glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3] glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 entry:
@@ -4711,10 +4711,10 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; GENERIC-NEXT:    s_mov_b32 s11, 0xf000
 ; GENERIC-NEXT:    s_mov_b32 s2, 0
 ; GENERIC-NEXT:    s_mov_b32 s3, s11
-; GENERIC-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
-; GENERIC-NEXT:    v_mov_b32_e32 v2, 0
+; GENERIC-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; GENERIC-NEXT:    v_mov_b32_e32 v4, 0
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
-; GENERIC-NEXT:    buffer_load_dword v1, v[1:2], s[0:3], 0 addr64 glc
+; GENERIC-NEXT:    buffer_load_dword v1, v[3:4], s[0:3], 0 addr64 glc
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GENERIC-NEXT:    s_mov_b32 s10, -1
@@ -5161,10 +5161,10 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; SI-MOVREL-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-MOVREL-NEXT:    s_mov_b32 s2, 0
 ; SI-MOVREL-NEXT:    s_mov_b32 s3, s11
-; SI-MOVREL-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v2, 0
+; SI-MOVREL-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v4, 0
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dword v1, v[1:2], s[0:3], 0 addr64 glc
+; SI-MOVREL-NEXT:    buffer_load_dword v1, v[3:4], s[0:3], 0 addr64 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; SI-MOVREL-NEXT:    s_mov_b32 s10, -1
@@ -5252,9 +5252,9 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s1
-; VI-NEXT:    v_add_u32_e32 v1, vcc, s0, v1
-; VI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
-; VI-NEXT:    flat_load_dword v2, v[1:2] glc
+; VI-NEXT:    v_add_u32_e32 v3, vcc, s0, v1
+; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
+; VI-NEXT:    flat_load_dword v2, v[3:4] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -7868,22 +7868,22 @@ define amdgpu_kernel void @extract_largest_inbounds_offset(ptr addrspace(1) %out
 ; GFX9-IDXMODE-LABEL: extract_largest_inbounds_offset:
 ; GFX9-IDXMODE:       ; %bb.0: ; %entry
 ; GFX9-IDXMODE-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, 0
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v17, 0
 ; GFX9-IDXMODE-NEXT:    s_load_dword s4, s[4:5], 0x34
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[12:15], v16, s[2:3] offset:48 glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[12:15], v17, s[2:3] offset:48 glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[8:11], v16, s[2:3] offset:32 glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[8:11], v17, s[2:3] offset:32 glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[4:7], v16, s[2:3] offset:16 glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[4:7], v17, s[2:3] offset:16 glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v16, s[2:3] glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v17, s[2:3] glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_add_i32 s4, s4, 15
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s4, gpr_idx(SRC0)
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, v0
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
-; GFX9-IDXMODE-NEXT:    global_store_dword v16, v0, s[0:1]
+; GFX9-IDXMODE-NEXT:    global_store_dword v17, v0, s[0:1]
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 entry:
   %ld = load volatile <16 x i32>, ptr addrspace(1) %in
@@ -8131,22 +8131,22 @@ define amdgpu_kernel void @extract_out_of_bounds_offset(ptr addrspace(1) %out, p
 ; GFX9-IDXMODE-LABEL: extract_out_of_bounds_offset:
 ; GFX9-IDXMODE:       ; %bb.0: ; %entry
 ; GFX9-IDXMODE-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, 0
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v17, 0
 ; GFX9-IDXMODE-NEXT:    s_load_dword s4, s[4:5], 0x34
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[12:15], v16, s[2:3] offset:48 glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[12:15], v17, s[2:3] offset:48 glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[8:11], v16, s[2:3] offset:32 glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[8:11], v17, s[2:3] offset:32 glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[4:7], v16, s[2:3] offset:16 glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[4:7], v17, s[2:3] offset:16 glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v16, s[2:3] glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v17, s[2:3] glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_add_i32 s4, s4, 16
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s4, gpr_idx(SRC0)
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, v0
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
-; GFX9-IDXMODE-NEXT:    global_store_dword v16, v0, s[0:1]
+; GFX9-IDXMODE-NEXT:    global_store_dword v17, v0, s[0:1]
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 entry:
   %ld = load volatile <16 x i32>, ptr addrspace(1) %in
@@ -8394,22 +8394,22 @@ define amdgpu_kernel void @extractelement_v16i32_or_index(ptr addrspace(1) %out,
 ; GFX9-IDXMODE-LABEL: extractelement_v16i32_or_index:
 ; GFX9-IDXMODE:       ; %bb.0: ; %entry
 ; GFX9-IDXMODE-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, 0
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v17, 0
 ; GFX9-IDXMODE-NEXT:    s_load_dword s4, s[4:5], 0x34
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[12:15], v16, s[2:3] offset:48 glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[12:15], v17, s[2:3] offset:48 glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[8:11], v16, s[2:3] offset:32 glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[8:11], v17, s[2:3] offset:32 glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[4:7], v16, s[2:3] offset:16 glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[4:7], v17, s[2:3] offset:16 glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v16, s[2:3] glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v17, s[2:3] glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_lshl_b32 s2, s4, 2
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s2, gpr_idx(SRC0)
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
-; GFX9-IDXMODE-NEXT:    global_store_dword v16, v0, s[0:1]
+; GFX9-IDXMODE-NEXT:    global_store_dword v17, v0, s[0:1]
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 entry:
   %ld = load volatile <16 x i32>, ptr addrspace(1) %in

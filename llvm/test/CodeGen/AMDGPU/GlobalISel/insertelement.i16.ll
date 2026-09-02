@@ -2898,10 +2898,10 @@ define amdgpu_ps void @insertelement_v_v16i16_s_s(ptr addrspace(1) %ptr, i16 inr
 ;
 ; GFX8-LABEL: insertelement_v_v16i16_s_s:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 16, v0
-; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 16, v0
+; GFX8-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
-; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[8:9]
 ; GFX8-NEXT:    s_and_b32 s0, s3, 1
 ; GFX8-NEXT:    s_lshr_b32 m0, s3, 1
 ; GFX8-NEXT:    s_and_b32 s1, s2, 0xffff
@@ -3732,9 +3732,9 @@ define amdgpu_ps void @insertelement_v_v16i16_s_v(ptr addrspace(1) %ptr, i16 inr
 ; GFX8-LABEL: insertelement_v_v16i16_s_v:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    flat_load_dwordx4 v[3:6], v[0:1]
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[7:10], v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v12, vcc, 16, v0
+; GFX8-NEXT:    v_addc_u32_e32 v13, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dwordx4 v[7:10], v[12:13]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 1, v2
 ; GFX8-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0xffff
@@ -3955,10 +3955,10 @@ define amdgpu_ps void @insertelement_v_v16i16_v_s(ptr addrspace(1) %ptr, i16 %va
 ;
 ; GFX8-LABEL: insertelement_v_v16i16_v_s:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 16, v0
-; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v11, vcc, 16, v0
+; GFX8-NEXT:    v_addc_u32_e32 v12, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[3:6], v[0:1]
-; GFX8-NEXT:    flat_load_dwordx4 v[7:10], v[7:8]
+; GFX8-NEXT:    flat_load_dwordx4 v[7:10], v[11:12]
 ; GFX8-NEXT:    s_and_b32 s0, s2, 1
 ; GFX8-NEXT:    s_lshl_b32 s0, s0, 4
 ; GFX8-NEXT:    s_lshr_b32 m0, s2, 1
@@ -4105,9 +4105,9 @@ define amdgpu_ps void @insertelement_v_v16i16_v_v(ptr addrspace(1) %ptr, i16 %va
 ; GFX8-LABEL: insertelement_v_v16i16_v_v:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v12, vcc, 16, v0
+; GFX8-NEXT:    v_addc_u32_e32 v13, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[12:13]
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 1, v3
 ; GFX8-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0xffff

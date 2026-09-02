@@ -281,9 +281,9 @@ define void @store_lds_v3i32_align1(ptr addrspace(3) %out, <3 x i32> %x) {
 define amdgpu_ps void @test_s_load_constant_v8i32_align1(ptr addrspace(4) inreg %ptr, ptr addrspace(1) inreg %out) {
 ; GFX9-LABEL: test_s_load_constant_v8i32_align1:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v8, 0
-; GFX9-NEXT:    global_load_dwordx4 v[0:3], v8, s[0:1]
-; GFX9-NEXT:    global_load_dwordx4 v[4:7], v8, s[0:1] offset:16
+; GFX9-NEXT:    v_mov_b32_e32 v9, 0
+; GFX9-NEXT:    global_load_dwordx4 v[0:3], v9, s[0:1]
+; GFX9-NEXT:    global_load_dwordx4 v[4:7], v9, s[0:1] offset:16
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s5, v1
@@ -302,8 +302,8 @@ define amdgpu_ps void @test_s_load_constant_v8i32_align1(ptr addrspace(4) inreg 
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s9
 ; GFX9-NEXT:    v_mov_b32_e32 v6, s10
 ; GFX9-NEXT:    v_mov_b32_e32 v7, s11
-; GFX9-NEXT:    global_store_dwordx4 v8, v[0:3], s[2:3]
-; GFX9-NEXT:    global_store_dwordx4 v8, v[4:7], s[2:3] offset:16
+; GFX9-NEXT:    global_store_dwordx4 v9, v[0:3], s[2:3]
+; GFX9-NEXT:    global_store_dwordx4 v9, v[4:7], s[2:3] offset:16
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: test_s_load_constant_v8i32_align1:
@@ -339,10 +339,10 @@ define amdgpu_ps void @test_s_load_constant_v8i32_align1(ptr addrspace(4) inreg 
 ;
 ; GFX10-LABEL: test_s_load_constant_v8i32_align1:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_mov_b32_e32 v8, 0
+; GFX10-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    global_load_dwordx4 v[0:3], v8, s[0:1]
-; GFX10-NEXT:    global_load_dwordx4 v[4:7], v8, s[0:1] offset:16
+; GFX10-NEXT:    global_load_dwordx4 v[0:3], v9, s[0:1]
+; GFX10-NEXT:    global_load_dwordx4 v[4:7], v9, s[0:1] offset:16
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
@@ -361,16 +361,16 @@ define amdgpu_ps void @test_s_load_constant_v8i32_align1(ptr addrspace(4) inreg 
 ; GFX10-NEXT:    v_mov_b32_e32 v5, s9
 ; GFX10-NEXT:    v_mov_b32_e32 v6, s10
 ; GFX10-NEXT:    v_mov_b32_e32 v7, s11
-; GFX10-NEXT:    global_store_dwordx4 v8, v[0:3], s[2:3]
-; GFX10-NEXT:    global_store_dwordx4 v8, v[4:7], s[2:3] offset:16
+; GFX10-NEXT:    global_store_dwordx4 v9, v[0:3], s[2:3]
+; GFX10-NEXT:    global_store_dwordx4 v9, v[4:7], s[2:3] offset:16
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_s_load_constant_v8i32_align1:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v8, 0
+; GFX11-NEXT:    v_mov_b32_e32 v9, 0
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_b128 v[0:3], v8, s[0:1]
-; GFX11-NEXT:    global_load_b128 v[4:7], v8, s[0:1] offset:16
+; GFX11-NEXT:    global_load_b128 v[0:3], v9, s[0:1]
+; GFX11-NEXT:    global_load_b128 v[4:7], v9, s[0:1] offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s5, v1
@@ -387,8 +387,8 @@ define amdgpu_ps void @test_s_load_constant_v8i32_align1(ptr addrspace(4) inreg 
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-NEXT:    v_dual_mov_b32 v6, s10 :: v_dual_mov_b32 v7, s11
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_store_b128 v8, v[0:3], s[2:3]
-; GFX11-NEXT:    global_store_b128 v8, v[4:7], s[2:3] offset:16
+; GFX11-NEXT:    global_store_b128 v9, v[0:3], s[2:3]
+; GFX11-NEXT:    global_store_b128 v9, v[4:7], s[2:3] offset:16
 ; GFX11-NEXT:    s_endpgm
   %load = load <8 x i32>, ptr addrspace(4) %ptr, align 1
   store <8 x i32> %load, ptr addrspace(1) %out

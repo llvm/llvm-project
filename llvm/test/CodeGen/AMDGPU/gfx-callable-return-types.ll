@@ -2259,17 +2259,11 @@ define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:160
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_load_dword v35, off, s[0:3], s32 offset:148
+; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:156
+; GFX9-NEXT:    buffer_load_dword v34, off, s[0:3], s32 offset:152
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-NEXT:    buffer_store_dword v32, v0, s[0:3], 0 offen offset:284
-; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:156
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v32, v0, s[0:3], 0 offen offset:280
-; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:152
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v32, v0, s[0:3], 0 offen offset:276
-; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:148
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v32, v0, s[0:3], 0 offen offset:272
 ; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:144
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dword v32, v0, s[0:3], 0 offen offset:268
@@ -2373,13 +2367,19 @@ define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dword v32, v0, s[0:3], 0 offen offset:136
 ; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:8
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v33, v0, s[0:3], 0 offen offset:280
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    buffer_store_dword v32, v0, s[0:3], 0 offen offset:132
 ; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v34, v0, s[0:3], 0 offen offset:276
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    buffer_store_dword v32, v0, s[0:3], 0 offen offset:128
 ; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    buffer_store_dword v35, v0, s[0:3], 0 offen offset:272
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    buffer_store_dword v32, v0, s[0:3], 0 offen offset:124
 ; GFX9-NEXT:    buffer_store_dword v31, v0, s[0:3], 0 offen offset:120
 ; GFX9-NEXT:    buffer_store_dword v30, v0, s[0:3], 0 offen offset:116

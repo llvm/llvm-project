@@ -107,16 +107,16 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-DAZ-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
 ; GCN-DAZ-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-DAZ-NEXT:    s_mov_b32 s2, 0
-; GCN-DAZ-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GCN-DAZ-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-DAZ-NEXT:    v_lshlrev_b32_e32 v10, 2, v0
+; GCN-DAZ-NEXT:    v_mov_b32_e32 v11, 0
 ; GCN-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-DAZ-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; GCN-DAZ-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; GCN-DAZ-NEXT:    buffer_load_dword v2, v[0:1], s[8:11], 0 addr64 glc
+; GCN-DAZ-NEXT:    buffer_load_dword v2, v[10:11], s[8:11], 0 addr64 glc
 ; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0)
-; GCN-DAZ-NEXT:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 offset:4 glc
+; GCN-DAZ-NEXT:    buffer_load_dword v3, v[10:11], s[8:11], 0 addr64 offset:4 glc
 ; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0)
-; GCN-DAZ-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 offset:8 glc
+; GCN-DAZ-NEXT:    buffer_load_dword v4, v[10:11], s[8:11], 0 addr64 offset:8 glc
 ; GCN-DAZ-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-DAZ-NEXT:    s_mov_b32 s0, 0xf800000
 ; GCN-DAZ-NEXT:    v_mov_b32_e32 v6, 0x260
@@ -150,7 +150,7 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-DAZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; GCN-DAZ-NEXT:    v_div_fmas_f32 v3, v3, v5, v7
 ; GCN-DAZ-NEXT:    v_div_fixup_f32 v2, v3, v2, v4
-; GCN-DAZ-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; GCN-DAZ-NEXT:    buffer_store_dword v2, v[10:11], s[0:3], 0 addr64
 ; GCN-DAZ-NEXT:    s_endpgm
 ;
 ; GCN-IEEE-LABEL: rsqrt_fmul:
@@ -158,16 +158,16 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-IEEE-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
 ; GCN-IEEE-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-IEEE-NEXT:    s_mov_b32 s2, 0
-; GCN-IEEE-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GCN-IEEE-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-IEEE-NEXT:    v_lshlrev_b32_e32 v12, 2, v0
+; GCN-IEEE-NEXT:    v_mov_b32_e32 v13, 0
 ; GCN-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-IEEE-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; GCN-IEEE-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; GCN-IEEE-NEXT:    buffer_load_dword v2, v[0:1], s[8:11], 0 addr64 glc
+; GCN-IEEE-NEXT:    buffer_load_dword v2, v[12:13], s[8:11], 0 addr64 glc
 ; GCN-IEEE-NEXT:    s_waitcnt vmcnt(0)
-; GCN-IEEE-NEXT:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 offset:4 glc
+; GCN-IEEE-NEXT:    buffer_load_dword v3, v[12:13], s[8:11], 0 addr64 offset:4 glc
 ; GCN-IEEE-NEXT:    s_waitcnt vmcnt(0)
-; GCN-IEEE-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 offset:8 glc
+; GCN-IEEE-NEXT:    buffer_load_dword v4, v[12:13], s[8:11], 0 addr64 offset:8 glc
 ; GCN-IEEE-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-IEEE-NEXT:    s_mov_b32 s0, 0xf800000
 ; GCN-IEEE-NEXT:    v_mov_b32_e32 v6, 0x260
@@ -200,7 +200,7 @@ define amdgpu_kernel void @rsqrt_fmul(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-IEEE-NEXT:    v_fma_f32 v3, -v3, v7, v6
 ; GCN-IEEE-NEXT:    v_div_fmas_f32 v3, v3, v5, v7
 ; GCN-IEEE-NEXT:    v_div_fixup_f32 v2, v3, v2, v4
-; GCN-IEEE-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; GCN-IEEE-NEXT:    buffer_store_dword v2, v[12:13], s[0:3], 0 addr64
 ; GCN-IEEE-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid

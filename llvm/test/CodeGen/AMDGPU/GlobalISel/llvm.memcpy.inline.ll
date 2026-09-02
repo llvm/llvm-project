@@ -21,9 +21,9 @@ define amdgpu_cs void @test(ptr addrspace(1) %dst, ptr addrspace(1) %src) {
 ; GCN-NEXT:    buffer_load_ubyte v4, v[2:3], s[0:3], 0 addr64 offset:2
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:2
-; GCN-NEXT:    buffer_load_ubyte v2, v[2:3], s[0:3], 0 addr64 offset:3
+; GCN-NEXT:    buffer_load_ubyte v5, v[2:3], s[0:3], 0 addr64 offset:3
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:3
+; GCN-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:3
 ; GCN-NEXT:    s_endpgm
   call void @llvm.memcpy.inline.p1.p1.i32(ptr addrspace(1) %dst, ptr addrspace(1) %src, i32 4, i1 false)
   ret void

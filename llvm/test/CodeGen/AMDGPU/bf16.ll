@@ -436,12 +436,12 @@ define <16 x bfloat> @v_load_global_v16bf16(ptr addrspace(1) %ptr) #0 {
 ; GFX8-LABEL: v_load_global_v16bf16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v0
+; GFX8-NEXT:    v_mov_b32_e32 v5, v1
+; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 16, v4
+; GFX8-NEXT:    v_addc_u32_e32 v9, vcc, 0, v5, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[4:5]
-; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 16, v4
-; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[8:9]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -541,16 +541,16 @@ define <32 x bfloat> @v_load_global_v32bf16(ptr addrspace(1) %ptr) #0 {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v12, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v13, v1
-; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 16, v12
-; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v13, vcc
-; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 32, v12
-; GFX8-NEXT:    v_addc_u32_e32 v9, vcc, 0, v13, vcc
+; GFX8-NEXT:    v_add_u32_e32 v16, vcc, 16, v12
+; GFX8-NEXT:    v_addc_u32_e32 v17, vcc, 0, v13, vcc
+; GFX8-NEXT:    v_add_u32_e32 v18, vcc, 32, v12
+; GFX8-NEXT:    v_addc_u32_e32 v19, vcc, 0, v13, vcc
+; GFX8-NEXT:    v_add_u32_e32 v20, vcc, 48, v12
+; GFX8-NEXT:    v_addc_u32_e32 v21, vcc, 0, v13, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[12:13]
-; GFX8-NEXT:    v_add_u32_e32 v12, vcc, 48, v12
-; GFX8-NEXT:    v_addc_u32_e32 v13, vcc, 0, v13, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
-; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
-; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
+; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[16:17]
+; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[18:19]
+; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[20:21]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2210,10 +2210,10 @@ define void @test_load_store_v16bf16(ptr addrspace(1) %in, ptr addrspace(1) %out
 ; GFX8-LABEL: test_load_store_v16bf16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 16, v0
-; GFX8-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v12, vcc, 16, v0
+; GFX8-NEXT:    v_addc_u32_e32 v13, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
-; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
+; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[12:13]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 16, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(1)
@@ -6143,10 +6143,10 @@ define <16 x float> @global_extload_v16bf16_to_v16f32(ptr addrspace(1) %ptr) #0 
 ; GFX8-LABEL: global_extload_v16bf16_to_v16f32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 16, v0
+; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[0:1]
+; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[2:3]
 ; GFX8-NEXT:    s_waitcnt vmcnt(1)
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v4
 ; GFX8-NEXT:    v_and_b32_e32 v1, 0xffff0000, v4
@@ -6378,14 +6378,14 @@ define <32 x float> @global_extload_v32bf16_to_v32f32(ptr addrspace(1) %ptr) #0 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 16, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v10, vcc, 48, v0
+; GFX8-NEXT:    v_addc_u32_e32 v11, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
 ; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[2:3]
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 48, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[20:23], v[2:3]
-; GFX8-NEXT:    flat_load_dwordx4 v[28:31], v[0:1]
+; GFX8-NEXT:    flat_load_dwordx4 v[20:23], v[8:9]
+; GFX8-NEXT:    flat_load_dwordx4 v[28:31], v[10:11]
 ; GFX8-NEXT:    s_waitcnt vmcnt(3)
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v4
 ; GFX8-NEXT:    v_and_b32_e32 v1, 0xffff0000, v4
@@ -7513,10 +7513,10 @@ define <16 x double> @global_extload_v16bf16_to_v16f64(ptr addrspace(1) %ptr) #0
 ; GFX8-LABEL: global_extload_v16bf16_to_v16f64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_add_u32_e32 v10, vcc, 16, v0
+; GFX8-NEXT:    v_addc_u32_e32 v11, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[2:5], v[0:1]
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[6:9], v[0:1]
+; GFX8-NEXT:    flat_load_dwordx4 v[6:9], v[10:11]
 ; GFX8-NEXT:    s_waitcnt vmcnt(1)
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX8-NEXT:    v_and_b32_e32 v2, 0xffff0000, v2

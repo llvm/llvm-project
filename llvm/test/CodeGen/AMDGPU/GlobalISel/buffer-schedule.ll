@@ -39,9 +39,9 @@ define amdgpu_cs void @test1_ptrs_reorderable(ptr addrspace(8) inreg %buf, i32 %
 ; GCN-LABEL: test1_ptrs_reorderable:
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 4, v0
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:8
-; GCN-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GCN-NEXT:    buffer_load_dword v0, v2, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm

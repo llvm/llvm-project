@@ -246,9 +246,9 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
 define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, i8, <{i32, i64}> %arg1) #0 {
 ; GCN-LABEL: packed_struct_argument_alignment:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    global_load_dword v6, v2, s[8:9] offset:13
-; GCN-NEXT:    global_load_dwordx2 v[0:1], v2, s[8:9] offset:17
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    global_load_dword v6, v3, s[8:9] offset:13
+; GCN-NEXT:    global_load_dwordx2 v[0:1], v3, s[8:9] offset:17
 ; GCN-NEXT:    s_load_dword s2, s[8:9], 0x0
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x4
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0

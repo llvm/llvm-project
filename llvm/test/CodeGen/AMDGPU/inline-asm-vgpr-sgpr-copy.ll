@@ -99,13 +99,13 @@ define amdgpu_kernel void @inlineasm_and_waterfall_same_value(ptr addrspace(1) %
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
 ; CHECK-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v4
+; CHECK-NEXT:    v_lshlrev_b32_e32 v5, 4, v4
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_add_u32 s12, s0, 100
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v0, s[10:11]
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v5, s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[2:3], exec
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:  .LBB3_1: ; =>This Inner Loop Header: Depth=1
@@ -257,9 +257,9 @@ define amdgpu_kernel void @sgpr_tuple_v2i32_constraint(ptr addrspace(1) %out, pt
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 3, v2
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 3, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3]
+; CHECK-NEXT:    global_load_dwordx2 v[0:1], v3, s[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_readfirstlane_b32 s3, v1
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v0

@@ -38,10 +38,10 @@ define amdgpu_kernel void @v_sext_in_reg_i8_i16_shuffle_vector(ptr addrspace(1) 
 ; GFX11-FAKE16-LABEL: v_sext_in_reg_i8_i16_shuffle_vector:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v10, 0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    global_load_b64 v[0:1], v0, s[2:3]
+; GFX11-FAKE16-NEXT:    global_load_b64 v[0:1], v2, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0

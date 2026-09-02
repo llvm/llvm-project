@@ -32,14 +32,14 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_v4f32_xyzw(<8 x i32> inreg %rsrc,
 ; GFX10-NEXT:    s_mov_b32 s0, s2
 ; GFX10-NEXT:    s_mov_b32 s1, s3
 ; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX10-NEXT:    v_or_b32_sdwa v1, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-NEXT:    v_or_b32_sdwa v4, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-NEXT:    v_or_b32_sdwa v5, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    s_mov_b32 s3, s5
 ; GFX10-NEXT:    s_mov_b32 s4, s6
 ; GFX10-NEXT:    s_mov_b32 s5, s7
 ; GFX10-NEXT:    s_mov_b32 s6, s8
 ; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16
+; GFX10-NEXT:    image_load v[0:3], v[4:5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -68,14 +68,14 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_v4f32_xyzw(<8 x i32> inreg %rsrc,
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s2, s4
-; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v1, v3, 16, v2
+; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v4, v1, 16, v0
+; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v5, v3, 16, v2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s3, s5
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s4, s6
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-FAKE16-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16
+; GFX11-FAKE16-NEXT:    image_load v[0:3], v[4:5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    ; return to shader part epilog
 ;
@@ -102,14 +102,14 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_v4f32_xyzw(<8 x i32> inreg %rsrc,
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s1, s3
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s2, s4
-; GFX12-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX12-FAKE16-NEXT:    v_lshl_or_b32 v1, v3, 16, v2
+; GFX12-FAKE16-NEXT:    v_lshl_or_b32 v4, v1, 16, v0
+; GFX12-FAKE16-NEXT:    v_lshl_or_b32 v5, v3, 16, v2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s3, s5
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s4, s6
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s5, s7
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s6, s8
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s7, s9
-; GFX12-FAKE16-NEXT:    image_load v[0:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY a16
+; GFX12-FAKE16-NEXT:    image_load v[0:3], [v4, v5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY a16
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    ; return to shader part epilog
   %v = call <4 x float> @llvm.amdgcn.image.load.2darraymsaa.v4f32.i16(i32 15, i16 %s, i16 %t, i16 %slice, i16 %fragid, <8 x i32> %rsrc, i32 0, i32 0)

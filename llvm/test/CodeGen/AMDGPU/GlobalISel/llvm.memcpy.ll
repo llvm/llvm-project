@@ -358,9 +358,9 @@ define amdgpu_cs void @memcpy_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src)
 ; UNROLL-NEXT:    buffer_load_ubyte v4, v[2:3], s[0:3], 0 addr64 offset:34
 ; UNROLL-NEXT:    s_waitcnt vmcnt(0)
 ; UNROLL-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64 offset:34
-; UNROLL-NEXT:    buffer_load_ubyte v2, v[2:3], s[0:3], 0 addr64 offset:35
+; UNROLL-NEXT:    buffer_load_ubyte v5, v[2:3], s[0:3], 0 addr64 offset:35
 ; UNROLL-NEXT:    s_waitcnt vmcnt(0)
-; UNROLL-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:35
+; UNROLL-NEXT:    buffer_store_byte v5, v[0:1], s[0:3], 0 addr64 offset:35
 ; UNROLL-NEXT:    s_endpgm
   call void @llvm.memcpy.p1.p1.i32(ptr addrspace(1) %dst, ptr addrspace(1) %src, i32 36, i1 false)
   ret void

@@ -10,28 +10,28 @@
 define amdgpu_ps float @load_constant32bit_vgpr_offset(i32 %arg) {
 ; GFX6-LABEL: load_constant32bit_vgpr_offset:
 ; GFX6:       ; %bb.0: ; %entry
-; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX6-NEXT:    v_mov_b32_e32 v1, 0
+; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX6-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[0:1], 0
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[2:3], s[0:3], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: load_constant32bit_vgpr_offset:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX8-NEXT:    v_mov_b32_e32 v1, 0
-; GFX8-NEXT:    flat_load_dword v0, v[0:1]
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX8-NEXT:    v_mov_b32_e32 v3, 0
+; GFX8-NEXT:    flat_load_dword v0, v[2:3]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: load_constant32bit_vgpr_offset:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-NEXT:    global_load_dword v0, v[0:1], off
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    global_load_dword v0, v[2:3], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 entry:
@@ -71,11 +71,11 @@ define amdgpu_ps <8 x float> @load_constant32bit_vgpr_v8f32(ptr addrspace(6) %ar
 ; GFX8-LABEL: load_constant32bit_vgpr_v8f32:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v0
+; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 16, v4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, 0
+; GFX8-NEXT:    v_addc_u32_e64 v9, s[0:1], 0, 0, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[4:5]
-; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 16, v4
-; GFX8-NEXT:    v_addc_u32_e64 v5, s[0:1], 0, 0, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[8:9]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
