@@ -108,12 +108,15 @@ public:
   // calculated (used in phase 1 / fixpoint, and in the preliminary location
   // detection phase).
   PointerStateVisitor(
+      clang::ASTContext *Context,
       const llvm::SmallPtrSet<const clang::VarDecl *, 32> &Vars,
       const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &Fields,
       llvm::ArrayRef<StringRef> SharedPointers,
-      llvm::ArrayRef<StringRef> UniquePointers,
-      StateMap &State, std::map<PointerLocation, std::vector<Transition>> *Sink)
-      : PtrVars(Vars), PtrFields(Fields), SharedPointers(), UniquePointers(UniquePointers), CurrentState(State), Sink(Sink) {}
+      llvm::ArrayRef<StringRef> UniquePointers, StateMap &State,
+      std::map<PointerLocation, std::vector<Transition>> *Sink)
+      : Context(Context), PtrVars(Vars), PtrFields(Fields),
+        SharedPointers(SharedPointers), UniquePointers(UniquePointers),
+        CurrentState(State), Sink(Sink) {}
 
   // int* a = nullptr; / int* a = new int; / int* b = a; ...
   void VisitDeclStmt(const clang::DeclStmt *DS) {
@@ -155,9 +158,10 @@ public:
   void VisitStmt(const clang::Stmt *S) { scanForSmartPtrWrap(S); }
 
 private:
+  clang::ASTContext *Context;
   const llvm::SmallPtrSet<const clang::VarDecl *, 32> &PtrVars;
   const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &PtrFields;
-  
+
   const llvm::ArrayRef<StringRef> SharedPointers;
   const llvm::ArrayRef<StringRef> UniquePointers;
 
@@ -211,7 +215,6 @@ private:
     return false; // arr[i].val, f().val и т.п. - not supported
   }
 
-  // TODO: it must be loaded from options
   // Checking that a type (after expansion of typedef/using) is a specialization
   // std::shared_ptr
   bool isStdSharedPtrType(clang::QualType QT) {
@@ -219,9 +222,12 @@ private:
     const clang::CXXRecordDecl *RD = QT->getAsCXXRecordDecl();
     if (!RD)
       return false;
-    if (!RD->getDeclName().isIdentifier() || RD->getName() != "shared_ptr")
+    if (!RD->getDeclName().isIdentifier())
       return false;
-    return RD->isInStdNamespace();
+
+    auto SharedPtrMatcher = cxxRecordDecl(hasAnyName(SharedPointers));
+
+    return !match(SharedPtrMatcher, *RD, *Context).empty();
   }
 
   // Checking that a type (after expansion of typedef/using) is a specialization
@@ -231,9 +237,12 @@ private:
     const clang::CXXRecordDecl *RD = QT->getAsCXXRecordDecl();
     if (!RD)
       return false;
-    if (!RD->getDeclName().isIdentifier() || RD->getName() != "unique_ptr")
+    if (!RD->getDeclName().isIdentifier())
       return false;
-    return RD->isInStdNamespace();
+
+    auto UniquePtrMatcher = cxxRecordDecl(hasAnyName(UniquePointers));
+
+    return !match(UniquePtrMatcher, *RD, *Context).empty();
   }
 
   bool isSmartPtrType(clang::QualType QT) {
@@ -404,7 +413,11 @@ class TransitionsFinder {
   }
 
 public:
-  TransitionsFinder(ASTContext *TheContext, const llvm::ArrayRef<StringRef>& SharedPointers, const llvm::ArrayRef<StringRef>& UniquePointers) : Context(TheContext), SharedPointers(SharedPointers), UniquePointers(UniquePointers) {}
+  TransitionsFinder(ASTContext *TheContext,
+                    const llvm::ArrayRef<StringRef> &SharedPointers,
+                    const llvm::ArrayRef<StringRef> &UniquePointers)
+      : Context(TheContext), SharedPointers(SharedPointers),
+        UniquePointers(UniquePointers) {}
 
   std::map<PointerLocation, std::vector<Transition>>
   find(const llvm::SmallPtrSet<const clang::VarDecl *, 32> &PtrVars,
@@ -499,7 +512,8 @@ private:
       const StateMap &In,
       std::map<PointerLocation, std::vector<Transition>> *Sink) {
     StateMap Working = In;
-    PointerStateVisitor Visitor(PtrVars, PtrFields, SharedPointers, UniquePointers, Working, Sink);
+    PointerStateVisitor Visitor(Context, PtrVars, PtrFields, SharedPointers,
+                                UniquePointers, Working, Sink);
     for (const clang::CFGElement &Elem : Block) {
       if (auto CS = Elem.getAs<clang::CFGStmt>()) {
         if (const clang::Stmt *S = CS->getStmt())
@@ -742,7 +756,8 @@ private:
 
     CollectPtrVars(Body);
 
-    TransitionsFinder Finder(Result.Context, Check.SharedPointers, Check.UniquePointers);
+    TransitionsFinder Finder(Result.Context, Check.SharedPointers,
+                             Check.UniquePointers);
     const auto transitions = Finder.find(PtrVars, PtrFields, Func, Body);
     for (const auto &[var, transList] : transitions) {
       for (const auto &t : transList) {
