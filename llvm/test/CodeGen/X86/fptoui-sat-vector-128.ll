@@ -1023,6 +1023,180 @@ define <2 x i16> @test_unsigned_v2i16_v2f64(<2 x double> %f) nounwind {
   ret <2 x i16> %x
 }
 
+define <2 x i32> @test_unsigned_v2i32_v2f32(<2 x float> %f) nounwind {
+; SSE-LABEL: test_unsigned_v2i32_v2f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    maxps %xmm0, %xmm1
+; SSE-NEXT:    cvttps2dq %xmm1, %xmm2
+; SSE-NEXT:    movaps {{.*#+}} xmm3 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
+; SSE-NEXT:    cmpleps %xmm1, %xmm3
+; SSE-NEXT:    orps %xmm2, %xmm3
+; SSE-NEXT:    psrad $31, %xmm2
+; SSE-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    orps %xmm1, %xmm3
+; SSE-NEXT:    cmpunordps %xmm0, %xmm0
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX2-LABEL: test_unsigned_v2i32_v2f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; AVX2-NEXT:    vcvttps2dq %xmm1, %xmm2
+; AVX2-NEXT:    vpsrad $31, %xmm2, %xmm3
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm4 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX2-NEXT:    vsubps %xmm4, %xmm1, %xmm4
+; AVX2-NEXT:    vcvttps2dq %xmm4, %xmm4
+; AVX2-NEXT:    vpand %xmm3, %xmm4, %xmm3
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm4 = [4.2949673E+9,4.2949673E+9,4.2949673E+9,4.2949673E+9]
+; AVX2-NEXT:    vcmpleps %xmm1, %xmm4, %xmm1
+; AVX2-NEXT:    vpor %xmm1, %xmm2, %xmm1
+; AVX2-NEXT:    vpor %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vandnps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_v2i32_v2f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; AVX512-NEXT:    vcmpgeps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1
+; AVX512-NEXT:    vcvttps2udq %xmm1, %xmm1
+; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vmovdqa32 %xmm2, %xmm1 {%k1}
+; AVX512-NEXT:    vcmpunordps %xmm0, %xmm0, %k0
+; AVX512-NEXT:    knotw %k0, %k1
+; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    retq
+  %x = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> %f)
+  ret <2 x i32> %x
+}
+declare <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float>)
+
+define <2 x i32> @test_unsigned_v2i32_v2f16(<2 x half> %f) nounwind {
+; SSE2-LABEL: test_unsigned_v2i32_v2f16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rbp
+; SSE2-NEXT:    pushq %rbx
+; SSE2-NEXT:    subq $40, %rsp
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psrld $16, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE2-NEXT:    callq __extendhfsf2@PLT
+; SSE2-NEXT:    cvttss2si %xmm0, %rax
+; SSE2-NEXT:    xorl %ebx, %ebx
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    ucomiss %xmm1, %xmm0
+; SSE2-NEXT:    cmovbl %ebx, %eax
+; SSE2-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    movl $-1, %ebp
+; SSE2-NEXT:    cmoval %ebp, %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE2-NEXT:    callq __extendhfsf2@PLT
+; SSE2-NEXT:    cvttss2si %xmm0, %rax
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    ucomiss %xmm1, %xmm0
+; SSE2-NEXT:    cmovbl %ebx, %eax
+; SSE2-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    cmoval %ebp, %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    addq $40, %rsp
+; SSE2-NEXT:    popq %rbx
+; SSE2-NEXT:    popq %rbp
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: test_unsigned_v2i32_v2f16:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pushq %rbp
+; SSE42-NEXT:    pushq %r14
+; SSE42-NEXT:    pushq %rbx
+; SSE42-NEXT:    subq $16, %rsp
+; SSE42-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; SSE42-NEXT:    psrld $16, %xmm0
+; SSE42-NEXT:    callq __extendhfsf2@PLT
+; SSE42-NEXT:    cvttss2si %xmm0, %rbx
+; SSE42-NEXT:    xorl %ebp, %ebp
+; SSE42-NEXT:    xorps %xmm1, %xmm1
+; SSE42-NEXT:    ucomiss %xmm1, %xmm0
+; SSE42-NEXT:    cmovbl %ebp, %ebx
+; SSE42-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    movl $-1, %r14d
+; SSE42-NEXT:    cmoval %r14d, %ebx
+; SSE42-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; SSE42-NEXT:    callq __extendhfsf2@PLT
+; SSE42-NEXT:    cvttss2si %xmm0, %rax
+; SSE42-NEXT:    xorps %xmm1, %xmm1
+; SSE42-NEXT:    ucomiss %xmm1, %xmm0
+; SSE42-NEXT:    cmovbl %ebp, %eax
+; SSE42-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    cmoval %r14d, %eax
+; SSE42-NEXT:    movd %eax, %xmm0
+; SSE42-NEXT:    pinsrd $1, %ebx, %xmm0
+; SSE42-NEXT:    addq $16, %rsp
+; SSE42-NEXT:    popq %rbx
+; SSE42-NEXT:    popq %r14
+; SSE42-NEXT:    popq %rbp
+; SSE42-NEXT:    retq
+;
+; AVX2-LABEL: test_unsigned_v2i32_v2f16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX2-NEXT:    vcvttss2si %xmm1, %rax
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vucomiss %xmm2, %xmm1
+; AVX2-NEXT:    cmovbl %ecx, %eax
+; AVX2-NEXT:    vmovss {{.*#+}} xmm3 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
+; AVX2-NEXT:    vucomiss %xmm3, %xmm1
+; AVX2-NEXT:    movl $-1, %edx
+; AVX2-NEXT:    cmoval %edx, %eax
+; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX2-NEXT:    vcvttss2si %xmm0, %rsi
+; AVX2-NEXT:    vucomiss %xmm2, %xmm0
+; AVX2-NEXT:    cmovbl %ecx, %esi
+; AVX2-NEXT:    vucomiss %xmm3, %xmm0
+; AVX2-NEXT:    cmoval %edx, %esi
+; AVX2-NEXT:    vmovd %esi, %xmm0
+; AVX2-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_v2i32_v2f16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
+; AVX512-NEXT:    vcvttss2usi %xmm1, %eax
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vucomiss %xmm2, %xmm1
+; AVX512-NEXT:    cmovbl %ecx, %eax
+; AVX512-NEXT:    vmovss {{.*#+}} xmm3 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-NEXT:    vucomiss %xmm3, %xmm1
+; AVX512-NEXT:    movl $-1, %edx
+; AVX512-NEXT:    cmoval %edx, %eax
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-NEXT:    vcvttss2usi %xmm0, %esi
+; AVX512-NEXT:    vucomiss %xmm2, %xmm0
+; AVX512-NEXT:    cmovbl %ecx, %esi
+; AVX512-NEXT:    vucomiss %xmm3, %xmm0
+; AVX512-NEXT:    cmoval %edx, %esi
+; AVX512-NEXT:    vmovd %esi, %xmm0
+; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %x = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f16(<2 x half> %f)
+  ret <2 x i32> %x
+}
+declare <2 x i32> @llvm.fptoui.sat.v2i32.v2f16(<2 x half>)
+
+
+
 define <2 x i32> @test_unsigned_v2i32_v2f64(<2 x double> %f) nounwind {
 ; SSE2-LABEL: test_unsigned_v2i32_v2f64:
 ; SSE2:       # %bb.0:

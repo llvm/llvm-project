@@ -22558,7 +22558,8 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   EVT DstVT = Node->getValueType(0);
   EVT SatVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
 
-  if (DstVT == MVT::v2i32 || DstVT == MVT::v4i32 || DstVT == MVT::v8i32 || DstVT == MVT::v16i32) {
+  if (DstVT == MVT::v2i32 || DstVT == MVT::v4i32 || DstVT == MVT::v8i32 ||
+      DstVT == MVT::v16i32) {
     unsigned SatWidth = SatVT.getScalarSizeInBits();
     assert(SatWidth <= 32 &&
            "Expected saturation width no wider than result element");
