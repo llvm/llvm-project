@@ -437,17 +437,6 @@ const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   }
 }
 
-unsigned SIRegisterInfo::getCSRFirstUseCost(const MachineFunction &MF) const {
-  // The cost of 27 balances multiple factors that influence CSR cost:
-  // - Saving a SGPR CSR to VGPR lanes is relatively cheap.
-  // - In cases where this is not possible, stack access is very expensive.
-  // - CSRs are also the high registers, and we want to minimize the number of
-  //   used registers as it impacts occupancy.
-  // In case the calling convention does not require any callee-save registers
-  // (e.g., kernels), there is no cost associated.
-  return *getCalleeSavedRegs(&MF) == AMDGPU::NoRegister ? 0 : 27;
-}
-
 const MCPhysReg *
 SIRegisterInfo::getCalleeSavedRegsViaCopy(const MachineFunction *MF) const {
   return nullptr;
