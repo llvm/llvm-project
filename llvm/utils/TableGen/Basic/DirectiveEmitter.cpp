@@ -937,10 +937,10 @@ static void generateGetDirectivePureSince(const DirectiveLanguage &DirLang,
       OS << "    return " << VersionType << "(" << PureSince << ");\n";
     }
     OS << "  default:\n";
-    OS << "    return " << VersionType << "(0x7FFFFFFF);\n";
+    OS << "    return " << VersionType << "(" << NeverPure << ");\n";
     OS << "  } // switch (Dir)\n";
   } else {
-    OS << "    return " << VersionType << "(0x7FFFFFFF);\n";
+    OS << "  return " << VersionType << "(" << NeverPure << ");\n";
   }
   OS << "}\n";
 }

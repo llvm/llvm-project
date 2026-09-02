@@ -191,7 +191,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr unsigned getDirectivePureSince(Directive Dir) {
-// CHECK-NEXT:    return unsigned(0x7FFFFFFF);
+// CHECK-NEXT:    return unsigned(2147483647);
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr SourceLanguage getDirectiveLanguages(Directive D) {

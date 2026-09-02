@@ -161,7 +161,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    case TDLD_dira:
 // CHECK-NEXT:      return unsigned(57066);
 // CHECK-NEXT:    default:
-// CHECK-NEXT:      return unsigned(0x7FFFFFFF);
+// CHECK-NEXT:      return unsigned(2147483647);
 // CHECK-NEXT:    } // switch (Dir)
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
