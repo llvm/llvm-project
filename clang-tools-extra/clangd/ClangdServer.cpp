@@ -211,6 +211,15 @@ ClangdServer::Options::operator TUScheduler::Options() const {
   return Opts;
 }
 
+ClangdServer::Options::operator BackgroundIndex::Options() const {
+  BackgroundIndex::Options Opts;
+  Opts.ThreadPoolSize = std::max(AsyncThreadsCount, 1u);
+  Opts.IndexingPriority = BackgroundIndexPriority;
+  Opts.ContextProvider = ContextProvider;
+  Opts.SupportContainedRefs = EnableOutgoingCalls;
+  return Opts;
+}
+
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
@@ -253,14 +262,11 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   if (Opts.StaticIndex)
     AddIndex(Opts.StaticIndex);
   if (Opts.BackgroundIndex) {
-    BackgroundIndex::Options BGOpts;
-    BGOpts.ThreadPoolSize = std::max(Opts.AsyncThreadsCount, 1u);
+    BackgroundIndex::Options BGOpts(Opts);
     BGOpts.OnProgress = [Callbacks](BackgroundQueue::Stats S) {
       if (Callbacks)
         Callbacks->onBackgroundIndexProgress(S);
     };
-    BGOpts.ContextProvider = Opts.ContextProvider;
-    BGOpts.SupportContainedRefs = Opts.EnableOutgoingCalls;
     BackgroundIdx = std::make_unique<BackgroundIndex>(
         TFS, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(

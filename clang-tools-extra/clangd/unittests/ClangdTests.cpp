@@ -1361,6 +1361,16 @@ $inactive4[[  int inactiveInt3;]]
                   Source.range("inactive3"), Source.range("inactive4"))));
 }
 
+TEST(ClangdServer, BackgroundIndexPriorityPropagatesToIndexingThreads) {
+  auto Opts = ClangdServer::optsForTest();
+  for (auto Priority :
+       {llvm::ThreadPriority::Background, llvm::ThreadPriority::Low,
+        llvm::ThreadPriority::Default}) {
+    Opts.BackgroundIndexPriority = Priority;
+    EXPECT_EQ(BackgroundIndex::Options(Opts).IndexingPriority, Priority);
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
