@@ -86,6 +86,26 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
   return maskVec;
 }
 
+static mlir::Value emitX86RoundImmediate(CIRGenBuilderTy &builder,
+                                         mlir::Location loc, mlir::Value x,
+                                         unsigned roundingControl) {
+  constexpr unsigned roundingMask = 0b11;
+  unsigned roundingMode = roundingControl & roundingMask;
+
+  switch (roundingMode) {
+  default:
+    llvm_unreachable("Invalid rounding mode");
+  case 0b00:
+    return cir::RoundEvenOp::create(builder, loc, x);
+  case 0b01:
+    return cir::FloorOp::create(builder, loc, x);
+  case 0b10:
+    return cir::CeilOp::create(builder, loc, x);
+  case 0b11:
+    return cir::TruncOp::create(builder, loc, x);
+  }
+}
+
 static mlir::Value emitX86CompressStore(CIRGenBuilderTy &builder,
                                         mlir::Location loc,
                                         ArrayRef<mlir::Value> ops) {
@@ -1152,6 +1172,77 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
 
     // Return timestamp (element 0 of the returned struct)
     return cir::ExtractMemberOp::create(builder, loc, i64Ty, result, 0);
+  }
+  case X86::BI__builtin_ia32_roundps:
+  case X86::BI__builtin_ia32_roundpd:
+  case X86::BI__builtin_ia32_roundps256:
+  case X86::BI__builtin_ia32_roundpd256: {
+    unsigned m =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+    constexpr unsigned mxcsrMask = 0b100;
+    constexpr unsigned fRoundNoExcMask = 0b1000;
+    unsigned useMXCSR = mxcsrMask & m;
+    unsigned fRoundNoExc = fRoundNoExcMask & m;
+
+    mlir::Location loc = getLoc(expr->getExprLoc());
+
+    if (useMXCSR || !fRoundNoExc) {
+      StringRef intrinsicName;
+      switch (builtinID) {
+      default:
+        llvm_unreachable("Unexpected builtin");
+      case X86::BI__builtin_ia32_roundps:
+        intrinsicName = "x86.sse41.round.ps";
+        break;
+      case X86::BI__builtin_ia32_roundpd:
+        intrinsicName = "x86.sse41.round.pd";
+        break;
+      case X86::BI__builtin_ia32_roundps256:
+        intrinsicName = "x86.avx.round.ps.256";
+        break;
+      case X86::BI__builtin_ia32_roundpd256:
+        intrinsicName = "x86.avx.round.pd.256";
+        break;
+      }
+
+      mlir::Type resTy = ops[0].getType();
+      return builder.emitIntrinsicCallOp(loc, intrinsicName, resTy, ops);
+    }
+
+    return emitX86RoundImmediate(builder, loc, ops[0], m);
+  }
+  case X86::BI__builtin_ia32_roundss:
+  case X86::BI__builtin_ia32_roundsd: {
+    unsigned m =
+        ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+    constexpr unsigned mxcsrMask = 0b100;
+    constexpr unsigned fRoundNoExcMask = 0b1000;
+    unsigned useMXCSR = mxcsrMask & m;
+    unsigned fRoundNoExc = fRoundNoExcMask & m;
+
+    mlir::Location loc = getLoc(expr->getExprLoc());
+
+    if (useMXCSR || !fRoundNoExc) {
+      StringRef intrinsicName;
+      switch (builtinID) {
+      default:
+        llvm_unreachable("Unexpected builtin");
+      case X86::BI__builtin_ia32_roundss:
+        intrinsicName = "x86.sse41.round.ss";
+        break;
+      case X86::BI__builtin_ia32_roundsd:
+        intrinsicName = "x86.sse41.round.sd";
+        break;
+      }
+
+      mlir::Type resTy = ops[0].getType();
+      return builder.emitIntrinsicCallOp(loc, intrinsicName, resTy, ops);
+    }
+
+    mlir::Value valAt0 = builder.createExtractElement(loc, ops[1], 0);
+    mlir::Value roundedAt0 = emitX86RoundImmediate(builder, loc, valAt0, m);
+
+    return builder.createInsertElement(loc, ops[0], roundedAt0, 0);
   }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
