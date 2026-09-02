@@ -6,6 +6,14 @@
 // RUN:   | FileCheck -check-prefix CHECK-NOBUILTIN %s
 // RUN: %clang_cc1 %std_cxx17- -triple=x86_64-apple-darwin10 -emit-llvm -fexceptions %s -o - | FileCheck %s
 
+// RUN: %clang_cc1 %std_cxx98-14 -triple=x86_64-apple-darwin10 -emit-llvm -fexceptions %s -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,PRE17
+// RUN: %clang_cc1 %std_cxx98-14 -triple=x86_64-apple-darwin10 -emit-llvm %s -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK-NOEXC,PRE17
+// RUN: %clang_cc1 %std_cxx98-14 -triple=x86_64-apple-darwin10 -emit-llvm -mframe-pointer=non-leaf %s -o - -fexperimental-new-constant-interpreter \
+// RUN:   | FileCheck -check-prefix CHECK-FP %s
+// RUN: %clang_cc1 %std_cxx98-14 -triple=x86_64-apple-darwin10 -emit-llvm %s -o - -fno-builtin -fexperimental-new-constant-interpreter \
+// RUN:   | FileCheck -check-prefix CHECK-NOBUILTIN %s
+// RUN: %clang_cc1 %std_cxx17- -triple=x86_64-apple-darwin10 -emit-llvm -fexceptions %s -o - -fexperimental-new-constant-interpreter | FileCheck %s
+
 struct A {
   A();
   ~A();

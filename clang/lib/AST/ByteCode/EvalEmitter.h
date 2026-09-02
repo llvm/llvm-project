@@ -36,9 +36,14 @@ public:
   using PtrCallback =
       llvm::function_ref<bool(InterpState &S, CodePtr OpPC, const Pointer &)>;
 
-  EvaluationResult interpretExpr(const Expr *E,
-                                 bool ConvertResultToRValue = false,
+  EvaluationResult interpretExpr(const Expr *E) {
+    return interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue(),
+                         /*DestroyToplevelScope=*/false);
+  }
+
+  EvaluationResult interpretExpr(const Expr *E, bool ConvertResultToRValue,
                                  bool DestroyToplevelScope = false);
+
   EvaluationResult interpretDecl(const VarDecl *VD, const Expr *Init,
                                  bool CheckFullyInitialized);
   EvaluationResult interpretDestructor(const VarDecl *VD, const APValue &Value);
@@ -60,8 +65,13 @@ public:
   /// Returns the source location of the current opcode.
   SourceInfo getSource(CodePtr PC) const override { return CurrentSource; }
 
+  bool constantFolding() const {
+    return S.EvalMode == EvaluationMode::ConstantFold;
+  }
+
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
+  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
+              ConstantExprKind ConstexprKind = ConstantExprKind::Normal);
 
   virtual ~EvalEmitter();
 
@@ -117,6 +127,7 @@ private:
   InterpState S;
   /// Location to write the result to.
   EvaluationResult EvalResult;
+  ConstantExprKind ConstexprKind = ConstantExprKind::Normal;
   /// Whether the result should be converted to an RValue.
   bool ConvertResultToRValue = false;
   /// Whether we should check if the result has been fully
