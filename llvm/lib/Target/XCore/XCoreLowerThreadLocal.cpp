@@ -141,8 +141,8 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
   // that only fails much later (and much less clearly) in instruction
   // selection.
   if (!GV->getValueType()->isSized() || isZeroLengthArray(GV->getValueType()))
-    report_fatal_error("Size of thread local object '" + GV->getName() +
-                        "' is unknown");
+    reportFatalUsageError("Size of thread local object '" + GV->getName() +
+                          "' is unknown");
 
   // Create replacement global.
   ArrayType *NewType = createLoweredType(GV->getValueType());
