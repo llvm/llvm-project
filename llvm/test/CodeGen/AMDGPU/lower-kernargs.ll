@@ -1928,10 +1928,10 @@ attributes #1 = { nounwind "amdgpu-implicitarg-num-bytes"="40" }
 ; HSA: [[META5]] = !{i64 1024}
 ; HSA: [[META6]] = !{[[META7:![0-9]+]]}
 ; HSA: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"ptr"}
-; HSA: [[META8]] = distinct !{[[META8]], i1 false, !"kern_noalias_global_ptr"}
+; HSA: [[META8]] = distinct !{[[META8]], i1 true, !"kern_noalias_global_ptr"}
 ; HSA: [[META9]] = !{[[META10:![0-9]+]], [[META12:![0-9]+]]}
 ; HSA: [[META10]] = distinct !{[[META10]], [[META11:![0-9]+]], !"ptr0"}
-; HSA: [[META11]] = distinct !{[[META11]], i1 false, !"kern_noalias_global_ptr_x2"}
+; HSA: [[META11]] = distinct !{[[META11]], i1 true, !"kern_noalias_global_ptr_x2"}
 ; HSA: [[META12]] = distinct !{[[META12]], [[META11]], !"ptr1"}
 ;.
 ; MESA: [[META0]] = !{}
@@ -1942,9 +1942,9 @@ attributes #1 = { nounwind "amdgpu-implicitarg-num-bytes"="40" }
 ; MESA: [[META5]] = !{i64 1024}
 ; MESA: [[META6]] = !{[[META7:![0-9]+]]}
 ; MESA: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"ptr"}
-; MESA: [[META8]] = distinct !{[[META8]], i1 false, !"kern_noalias_global_ptr"}
+; MESA: [[META8]] = distinct !{[[META8]], i1 true, !"kern_noalias_global_ptr"}
 ; MESA: [[META9]] = !{[[META10:![0-9]+]], [[META12:![0-9]+]]}
 ; MESA: [[META10]] = distinct !{[[META10]], [[META11:![0-9]+]], !"ptr0"}
-; MESA: [[META11]] = distinct !{[[META11]], i1 false, !"kern_noalias_global_ptr_x2"}
+; MESA: [[META11]] = distinct !{[[META11]], i1 true, !"kern_noalias_global_ptr_x2"}
 ; MESA: [[META12]] = distinct !{[[META12]], [[META11]], !"ptr1"}
 ;.
