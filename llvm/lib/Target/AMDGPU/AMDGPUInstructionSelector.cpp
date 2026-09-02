@@ -2874,7 +2874,14 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
   if (mi_match(Trunc, MRI, m_GLShr(m_Reg(LShlSrc), m_Reg(Cst)))) {
     Cst = stripCopy(Cst, MRI);
     if (mi_match(Cst, MRI, m_SpecificICst(16))) {
-      Out = stripBitCast(LShlSrc, MRI);
+      Register Result = stripBitCast(LShlSrc, MRI);
+      // V_FMA_MIX_F32 reads hi16 from a 32-bit source via op_sel. If the
+      // shift source is wider (e.g. a 64-bit D16 image sample result), we
+      // cannot fold it directly. Do not assign Out before this check since
+      // the caller may pass the same register for both In and Out.
+      if (MRI.getType(Result).getSizeInBits() != 32)
+        return false;
+      Out = Result;
       return true;
     }
   }
