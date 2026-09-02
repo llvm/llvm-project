@@ -42,7 +42,7 @@ define void @fold_512_setallones(ptr %p) nounwind {
 ; CHECK-NEXT:    vmovaps (%rdi), %zmm3
 ; CHECK-NEXT:    vmovaps (%rdi), %zmm2
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm1
-; CHECK-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295]
+; CHECK-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295]
 ; CHECK-NEXT:    vmovdqa64 %zmm0, (%rdi)
 ; CHECK-NEXT:    vmovaps %zmm31, (%rdi)
 ; CHECK-NEXT:    vmovaps %zmm30, (%rdi)
@@ -74,7 +74,7 @@ define void @fold_512_setallones(ptr %p) nounwind {
 ; CHECK-NEXT:    vmovaps %zmm4, (%rdi)
 ; CHECK-NEXT:    vmovaps %zmm3, (%rdi)
 ; CHECK-NEXT:    vmovaps %zmm2, (%rdi)
-; CHECK-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0 # [4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295]
+; CHECK-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0 # [4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295]
 ; CHECK-NEXT:    vmovdqa64 %zmm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
