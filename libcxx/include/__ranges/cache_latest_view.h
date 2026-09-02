@@ -90,16 +90,19 @@ public:
   }
 
   // TODO: Implement when P2846R6 is available.
-  // constexpr auto reserve_hint()
-  //   requires approximately_sized_range<_View>
-  // {
-  //   return ranges::reserve_hint(__base_);
-  // }
-  // constexpr auto reserve_hint() const
-  //   requires approximately_sized_range<const _View>
-  // {
-  //   return ranges::reserve_hint(__base_);
-  // }
+  // #  if _LIBCPP_STD_VER >= 26
+
+  //  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint()
+  //    requires approximately_sized_range<_View>
+  //  {
+  //    return ranges::reserve_hint(__base_);
+  //  }
+
+  //  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
+  //    requires approximately_sized_range<const _View>
+  //  {
+  //    return ranges::reserve_hint(__base_);
+  //  }
 };
 
 template <class _Range>
