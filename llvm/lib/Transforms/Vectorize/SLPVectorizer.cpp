@@ -18063,8 +18063,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // Widening this store chain can break store-to-load forwarding for a
       // nearby loop-carried load. Rather than reject the tree outright, add
       // the target's modeled STLF penalty so a chain that is still profitable
-      // after paying it can vectorize.
+      // after paying it can vectorize. The penalty is a throughput/latency
+      // hazard, so only account for it under those cost kinds.
       if (EnableSLPStoreLoadForwardCheck && E->State == TreeEntry::Vectorize &&
+          (CostKind == TTI::TCK_RecipThroughput ||
+           CostKind == TTI::TCK_Latency) &&
           findStoreLoadForwardingConflict(BaseSI, E->getVectorFactor()))
         VecStCost += TTI->getStoreLoadForwardingConflictCost(VecTy, CostKind);
       return VecStCost + CommonCost;
@@ -28925,12 +28928,9 @@ getConstantLoopStrideInBytes(Value *Ptr, ScalarEvolution &SE, const Loop *L) {
 
 bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
                                               unsigned VF) {
-  if (!BaseStore)
-    return false;
+  assert(BaseStore && "Expected a valid base store");
 
-  StoreInst *FirstStore = BaseStore;
-
-  Type *ValueTy = FirstStore->getValueOperand()->getType();
+  Type *ValueTy = BaseStore->getValueOperand()->getType();
   TypeSize StoreSize = DL->getTypeStoreSize(ValueTy);
   if (StoreSize.isScalable())
     return false;
@@ -28939,7 +28939,7 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
     return false;
 
   // Store-to-load forwarding hazards are a loop-carried concern.
-  const Loop *StoreL = LI->getLoopFor(FirstStore->getParent());
+  const Loop *StoreL = LI->getLoopFor(BaseStore->getParent());
   if (!StoreL)
     return false;
 
@@ -28951,8 +28951,8 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
   // Loop-carried byte stride of the store. A conflict is only a real hazard if
   // a future iteration's load re-reads the bytes this store wrote, which is a
   // property of the stride (see the per-load check below).
-  std::optional<int64_t> StoreStride = getConstantLoopStrideInBytes(
-      FirstStore->getPointerOperand(), *SE, StoreL);
+  std::optional<int64_t> StoreStride =
+      getConstantLoopStrideInBytes(BaseStore->getPointerOperand(), *SE, StoreL);
 
   // A store-to-load forwarding hazard can involve any load in the loop that
   // reads the widened store's base, not only loads that became SLP tree nodes:
@@ -28961,7 +28961,7 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
   // store's loop that shares the store base. The widened width below is only
   // visible for loads in the current tree; loads vectorized by other trees are
   // modeled at scalar width.
-  Value *StoreBase = getUnderlyingObject(FirstStore->getPointerOperand());
+  Value *StoreBase = getUnderlyingObject(BaseStore->getPointerOperand());
   const auto CandidateLoads = [&] {
     SmallPtrSet<LoadInst *, 8> Loads;
     for (BasicBlock *BB : StoreL->blocks())
@@ -28983,7 +28983,7 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
     if (LI->getLoopFor(LoadI->getParent()) != StoreL)
       continue;
     std::optional<int64_t> Diff =
-        getPointersDiff(ValueTy, FirstStore->getPointerOperand(),
+        getPointersDiff(ValueTy, BaseStore->getPointerOperand(),
                         LoadI->getType(), LoadI->getPointerOperand(), *DL, *SE,
                         /*StrictCheck=*/true, /*CheckType=*/false);
     if (!Diff || *Diff >= 0)
@@ -28994,9 +28994,11 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
                       << Distance << " bytes from chain base\n");
 
     // A widened (regularly vectorized) load accesses the whole vector at once,
-    // so its effective width is VectorFactor * element size, not one element.
-    // Such a wide load can straddle two wide stores even when perfectly
-    // aligned, which the misalignment-only test would miss.
+    // so its effective width is the number of emitted lanes * element size, not
+    // one element. Such a wide load can straddle two wide stores even when
+    // perfectly aligned, which the misalignment-only test would miss. Use the
+    // count of distinct scalars actually loaded from memory (not the reuse-
+    // inflated vector factor) for the emitted load width.
     TypeSize LoadTypeSize = DL->getTypeStoreSize(LoadI->getType());
     uint64_t LoadElementSize =
         LoadTypeSize.isScalable() ? 0 : LoadTypeSize.getFixedValue();
@@ -29006,7 +29008,7 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
         continue;
       if (LTE->hasState() && LTE->State == TreeEntry::Vectorize &&
           LTE->getOpcode() == Instruction::Load) {
-        LoadElementSize *= LTE->getVectorFactor();
+        LoadElementSize *= LTE->Scalars.size();
         break;
       }
     }
