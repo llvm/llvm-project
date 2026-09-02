@@ -304,7 +304,8 @@ INITIALIZE_PASS_END(AMDGPUPreLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs before legalization", false,
                     false)
 
-FunctionPass *llvm::createAMDGPUPreLegalizeCombinerLegacy(bool IsOptLevelNone) {
+FunctionPass *
+llvm::createAMDGPUPreLegalizeCombinerLegacyPass(bool IsOptLevelNone) {
   return new AMDGPUPreLegalizerCombinerLegacy(IsOptLevelNone);
 }
 

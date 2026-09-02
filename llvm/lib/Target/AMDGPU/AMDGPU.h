@@ -26,7 +26,7 @@ class TargetMachine;
 
 // GlobalISel passes
 void initializeAMDGPUPreLegalizerCombinerLegacyPass(PassRegistry &);
-FunctionPass *createAMDGPUPreLegalizeCombinerLegacy(bool IsOptLevelNone);
+FunctionPass *createAMDGPUPreLegalizeCombinerLegacyPass(bool IsOptLevelNone);
 
 class AMDGPUPreLegalizerCombinerPass
     : public RequiredPassInfoMixin<AMDGPUPreLegalizerCombinerPass> {
