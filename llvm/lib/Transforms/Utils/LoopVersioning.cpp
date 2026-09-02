@@ -32,7 +32,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
-#include <optional>
+#include <memory>
 
 using namespace llvm;
 
@@ -344,11 +344,11 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
 
   // Keep MemorySSA up to date if it is available.
   auto *MSSAAnalysis = AM.getCachedResult<MemorySSAAnalysis>(F);
-  std::optional<MemorySSAUpdater> MSSAU;
+  std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (MSSAAnalysis)
-    MSSAU.emplace(&MSSAAnalysis->getMSSA());
+    MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAAnalysis->getMSSA());
 
-  if (!runImpl(&LI, LAIs, &DT, &SE, MSSAU ? &*MSSAU : nullptr))
+  if (!runImpl(&LI, LAIs, &DT, &SE, MSSAU.get()))
     return PreservedAnalyses::all();
 
   if (MSSAAnalysis && VerifyMemorySSA)
