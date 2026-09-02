@@ -94,7 +94,7 @@ public:
 
   void getDefaultLiveOut(BitVector &Regs) const override {
     // The RISC-V psABI uses a0 (x10) and a1 (x11) to return integer and pointer
-    // values. 
+    // values.
     Regs |= getAliases(RISCV::X10);
     Regs |= getAliases(RISCV::X11);
   }

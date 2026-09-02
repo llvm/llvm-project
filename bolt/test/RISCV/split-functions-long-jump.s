@@ -6,14 +6,14 @@
 # RUN: ld.lld --emit-relocs -e _start -o %t.exe %t.o
 # RUN: llvm-bolt %t.exe -o %t.bolt -split-functions \
 # RUN:   -split-strategy=random2 -bolt-seed=1
-# RUN: llvm-objdump -d %t.bolt | FileCheck %s
-# RUN: llvm-readelf -s %t.bolt | FileCheck --check-prefix=SYMBOLS %s
+# RUN: llvm-objdump -d --show-all-symbols %t.bolt | FileCheck %s
+# RUN: llvm-readobj --symbols %t.bolt | FileCheck --check-prefix=SYMBOLS %s
 # RUN: llvm-mc -triple riscv32 -mattr=+c -filetype=obj -o %t.32.o %s
 # RUN: ld.lld --emit-relocs -e _start -o %t.32.exe %t.32.o
 # RUN: llvm-bolt %t.32.exe -o %t.32.bolt -split-functions \
 # RUN:   -split-strategy=random2 -bolt-seed=1
-# RUN: llvm-objdump -d %t.32.bolt | FileCheck %s
-# RUN: llvm-readelf -s %t.32.bolt | FileCheck --check-prefix=SYMBOLS %s
+# RUN: llvm-objdump -d --show-all-symbols %t.32.bolt | FileCheck %s
+# RUN: llvm-readobj --symbols %t.32.bolt | FileCheck --check-prefix=SYMBOLS %s
 
 # CHECK: Disassembly of section .text:
 # CHECK-LABEL: <_start>:
@@ -21,7 +21,13 @@
 # CHECK-NEXT: {{(jalr zero,|jr)}} {{.*}}([[REG]])
 # CHECK: Disassembly of section .text.cold:
 # CHECK-LABEL: <secondary>:
-# SYMBOLS: FUNC GLOBAL DEFAULT {{[0-9]+}} secondary
+# SYMBOLS:      Name: secondary
+# SYMBOLS-NEXT: Value:
+# SYMBOLS-NEXT: Size: 0
+# SYMBOLS-NEXT: Binding: Global
+# SYMBOLS-NEXT: Type: Function
+# SYMBOLS-NEXT: Other:
+# SYMBOLS-NEXT: Section: .text.cold
 
   .text
   .globl _start
