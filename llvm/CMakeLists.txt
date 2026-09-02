@@ -1584,6 +1584,18 @@ llvm_distribution_add_targets()
 process_llvm_pass_plugins(GEN_CONFIG)
 include(CoverageReport)
 
+# Guarded so that this doesn't collide with an "uninstall" target some other
+# project already defines, in builds that embed LLVM as a subdirectory.
+if(NOT TARGET uninstall)
+  configure_file(
+    "${LLVM_CMAKE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    @ONLY)
+  add_custom_target(uninstall
+    COMMAND "${CMAKE_COMMAND}" -P
+            "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+endif()
+
 # This allows us to deploy the Universal CRT DLLs by passing -DCMAKE_INSTALL_UCRT_LIBRARIES=ON to CMake
 if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_INSTALL_UCRT_LIBRARIES)
   include(InstallRequiredSystemLibraries)
