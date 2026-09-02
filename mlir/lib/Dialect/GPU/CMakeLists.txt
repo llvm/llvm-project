@@ -63,6 +63,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRAsyncDialect
   MLIRBufferizationDialect
   MLIRDataLayoutInterfaces
+  MLIRDialectUtils
   MLIRExecutionEngineUtils
   MLIRGPUDialect
   MLIRGPUUtils
@@ -70,7 +71,6 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRIndexDialect
   MLIRLLVMDialect
   MLIRMemRefDialect
-  MLIRMemRefUtils
   MLIRNVVMTarget
   MLIRPass
   MLIRROCDLDialect

@@ -18,10 +18,9 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
-#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -198,7 +197,7 @@ public:
                                          "failed to resolve subview metadata");
     }
 
-    MemRefType resultType = memref::updateTypeFromMetadata(
+    MemRefType resultType = updateTypeFromMetadata(
         subview.getType(), stridedMetadata->offset, stridedMetadata->sizes,
         stridedMetadata->strides);
     auto foldedSubview = memref::ReinterpretCastOp::create(
@@ -613,9 +612,9 @@ public:
 
     MemRefType resultType = reshape.getResultType();
     if (isa<memref::CollapseShapeOp>(reshape.getOperation()))
-      resultType = memref::updateTypeFromMetadata(
-          resultType, stridedMetadata->offset, stridedMetadata->sizes,
-          stridedMetadata->strides);
+      resultType = updateTypeFromMetadata(resultType, stridedMetadata->offset,
+                                          stridedMetadata->sizes,
+                                          stridedMetadata->strides);
     auto foldedReshape = memref::ReinterpretCastOp::create(
         rewriter, reshape.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,

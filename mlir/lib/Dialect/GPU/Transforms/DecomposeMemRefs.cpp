@@ -14,8 +14,8 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
@@ -213,8 +213,8 @@ struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
       finalStrides.push_back(strides[i]);
     }
 
-    resultType = memref::updateTypeFromMetadata(resultType, finalOffset,
-                                                finalSizes, finalStrides);
+    resultType = updateTypeFromMetadata(resultType, finalOffset, finalSizes,
+                                        finalStrides);
     auto flattenedSubview = memref::ReinterpretCastOp::create(
         rewriter, op.getLoc(), resultType, base, finalOffset, finalSizes,
         finalStrides);
