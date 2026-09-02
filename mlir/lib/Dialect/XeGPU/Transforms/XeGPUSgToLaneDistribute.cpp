@@ -1976,12 +1976,26 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // element narrower than a byte, and FragmentSizeMismatch, an invariant check
 // for a layout disagreeing with the vector type the caller derived from it.
 //
-// The index expression
-// --------------------
+// The reverse map
+// ---------------
 //
-// The index has to be computable from the lane id, so it is restricted to
+// For one position `pos` of the target fragment, the search produces a map from
+// where an element is wanted back to where it already lives:
 //
-//   index(slot) = stride * ((slot / dimStride) % dimExtent) + offset
+//   target (pos, slot)  -->  input (donor, donorIndex)
+//
+//     donor           = slot + donorDelta      which lane holds it
+//     donorIndex(slot)                         where in that lane's fragment
+//
+// Both are functions of `slot` alone, since every lane runs the same code.
+// `donorDelta` and the constants of `donorIndex` are fixed per `pos`, which is
+// why the search runs once per position and `ElementSource` holds exactly these
+// two things.
+//
+// `donor` costs one add. `donorIndex` is the half that needs a form, and it is
+// restricted to
+//
+//   donorIndex(slot) = stride * ((slot / dimStride) % dimExtent) + offset
 //
 // `(slot / dimStride) % dimExtent` is the lane's coordinate along one dimension
 // of the target lane_layout: `dimExtent` is that dimension's size and
@@ -1992,11 +2006,11 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 // The cases, `p` being the position in the target fragment:
 //
-//   case  period  index(slot)     stride  dimStride  dimExtent  offset
-//   1        4     2*slot + off      2         1          4      0,1,8,9
-//   2        8     slot              1         1          8        0
-//   3       16     slot/8 + 2*p      1         8          2       2*p
-//   4        2     p % 2             0         1          1      p % 2
+//   case  period  donorIndex(slot)  stride  dimStride  dimExtent  offset
+//   1        4     2*slot + off        2         1          4      0,1,8,9
+//   2        8     slot                1         1          8        0
+//   3       16     slot/8 + 2*p        1         8          2       2*p
+//   4        2     p % 2               0         1          1      p % 2
 //
 // Where the constants come from: the `2`s multiplying `slot` are the size of
 // the input fragment's innermost dimension, which in cases 1 and 3 is the whole
@@ -2034,21 +2048,22 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                        fragment of its donor, lane `slot + donorDelta`
 //         if that donor does not hold the element: give up on this donorDelta
 //
-//       [fitFragmentIndex]
+//       [fitDonorIndex]
 //       look for one stride/offset/dimStride/dimExtent whose index reproduces
 //       every needed[slot]; if there is none: next donorDelta
 //
-//       accept (donorDelta, index) and stop
+//       accept (donorDelta, donorIndex) and stop
 //     if no donorDelta fits: fail, the layout change is not of this form
 //
 //   [redistributeBroadcastedValue, after the loop]
-//   emit, per element source: an extract at index(slot), a `gpu.shuffle idx`
-//     from `slot + donorDelta` unless that is the lane itself, and an insert.
+//   emit, per element source: an extract at donorIndex(slot), a
+//     `gpu.shuffle idx` from the donor unless that is the reader itself, and an
+//     insert
 //
 // At runtime `lane_id` is the only input; everything the search settles is a
 // constant by then. Two values reach an op that needs one:
 //
-//   lane_id --> slot --+--> index(slot)               --> extract position
+//   lane_id --> slot --+--> donorIndex(slot)          --> extract position
 //                      +--> donor = slot + donorDelta --> shuffle source lane
 //
 // The insert needs neither, its position being the compile-time `pos`.
@@ -2226,7 +2241,7 @@ computeOwnedCoords(xegpu::DistributeLayoutAttr layout, ArrayRef<int64_t> shape,
 /// row-major, and whose target gives lane `i` row `i`, element `p` of the
 /// target fragment sits at `2 * slot + p`: `stride` 2, `offset` p, `dimStride`
 /// 1, `dimExtent` 8.
-struct FragmentIndex {
+struct DonorIndex {
   /// Distance in the fragment between consecutive coordinates along the
   /// dimension being walked, or 0 when every slot reads the same element.
   int64_t stride;
@@ -2251,10 +2266,12 @@ struct FragmentIndex {
   }
 };
 
-/// Where one element of the target fragment comes from.
+/// Where one element of the target fragment comes from: the two halves of the
+/// reverse map, `target (pos, slot) -> input (donor, donorIndex)`, for one
+/// `pos`.
 struct ElementSource {
   /// Which element of the donor's fragment to extract.
-  FragmentIndex index;
+  DonorIndex donorIndex;
   /// Lanes from the reader to the donor it reads through `gpu.shuffle idx`: the
   /// donor is lane `slot + donorDelta`. Always a multiple of the lane period,
   /// so that donor and reader agree on the index to extract.
@@ -2265,7 +2282,7 @@ struct ElementSource {
 };
 
 /// Fits `needed[slot]`, the fragment index each slot has to read, to the
-/// restricted form `FragmentIndex` can emit. A slot is a lane reduced modulo
+/// restricted form `DonorIndex` can emit. A slot is a lane reduced modulo
 /// the target's lane period, so there are `targetLanePeriod` of them. Fails
 /// when no index in that form reproduces the whole table.
 ///
@@ -2273,8 +2290,8 @@ struct ElementSource {
 /// slots share a coordinate (`dimStride` 2) and consecutive coordinates are 2
 /// elements apart (`stride` 2); the table reaches 2, one step, so the
 /// coordinate takes 2 values (`dimExtent` 2); and slot 0 reads 0 (`offset` 0).
-static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
-                                                 int64_t targetLanePeriod) {
+static FailureOr<DonorIndex> fitDonorIndex(ArrayRef<int64_t> needed,
+                                           int64_t targetLanePeriod) {
   // Slots sharing an index are adjacent, so the first change in `needed` gives
   // both how many of them there are and how far apart their elements sit.
   int64_t offset = needed[0];
@@ -2302,7 +2319,7 @@ static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
   }
 
   // Derived from the table, so verify against the table before relying on it.
-  FragmentIndex index{stride, offset, dimStride, dimExtent};
+  DonorIndex index{stride, offset, dimStride, dimExtent};
   if (!llvm::all_of(llvm::seq<int64_t>(0, targetLanePeriod), [&](int64_t slot) {
         return needed[slot] == index.at(slot);
       }))
@@ -2317,7 +2334,7 @@ static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
 /// preferred so that a lane already holding the element needs no shuffle.
 ///
 /// Fails when no `donorDelta` puts the element within reach of every slot, or
-/// when the indices it would be read at are not of `FragmentIndex`'s form.
+/// when the indices it would be read at are not of `DonorIndex`'s form.
 static FailureOr<ElementSource>
 deriveElementSource(const OwnedCoords &inputOwned,
                     const OwnedCoords &targetOwned, int64_t pos,
@@ -2350,7 +2367,7 @@ deriveElementSource(const OwnedCoords &inputOwned,
       continue;
     sawCompleteDonor = true;
 
-    FailureOr<FragmentIndex> index = fitFragmentIndex(needed, targetLanePeriod);
+    FailureOr<DonorIndex> index = fitDonorIndex(needed, targetLanePeriod);
     if (failed(index))
       continue;
 
@@ -2452,7 +2469,7 @@ static FailureOr<Value> redistributeBroadcastedValue(
   // The lane's index along the selected dimension, shared by sources over the
   // same one. Either step is skipped when it is a no-op over `slot`.
   llvm::DenseMap<std::pair<int64_t, int64_t>, Value> dimIndices;
-  auto getDimIndex = [&](const FragmentIndex &index) -> Value {
+  auto getDimIndex = [&](const DonorIndex &index) -> Value {
     Value &dimIndex = dimIndices[{index.dimStride, index.dimExtent}];
     if (dimIndex)
       return dimIndex;
@@ -2469,7 +2486,7 @@ static FailureOr<Value> redistributeBroadcastedValue(
   };
 
   // The index the lane extracts.
-  auto getFragmentIndex = [&](const FragmentIndex &index) -> OpFoldResult {
+  auto getDonorIndex = [&](const DonorIndex &index) -> OpFoldResult {
     // Every slot reads the same element; no dimension is involved.
     if (index.stride == 0)
       return rewriter.getIndexAttr(index.offset);
@@ -2494,10 +2511,10 @@ static FailureOr<Value> redistributeBroadcastedValue(
       extracted;
   for (auto [pos, source] : llvm::enumerate(sources)) {
     // Elements reading the same index of the fragment share the extract.
-    Value &value = extracted[source.index.asTuple()];
+    Value &value = extracted[source.donorIndex.asTuple()];
     if (!value)
       value = vector::ExtractOp::create(rewriter, loc, fragment,
-                                        getFragmentIndex(source.index));
+                                        getDonorIndex(source.donorIndex));
 
     Value owned = value;
     if (source.needsShuffle) {
