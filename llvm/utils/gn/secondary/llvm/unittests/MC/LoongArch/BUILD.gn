@@ -1,0 +1,14 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("LoongArchMCTests") {
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCDisassembler",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/LoongArch/Disassembler",
+    "//llvm/lib/Target/LoongArch/MCTargetDesc",
+    "//llvm/lib/Target/LoongArch/TargetInfo",
+    "//llvm/lib/TargetParser",
+  ]
+  sources = [ "LoongArchMCDisassemblerTest.cpp" ]
+}

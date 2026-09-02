@@ -1068,10 +1068,11 @@ func.func @sparse_index_constant() -> vector<4xindex> {
 // -----
 
 // A resource-backed elements attribute refers to a blob laid out for its own
-// element type, so it is kept as is instead of being retyped.
+// element type, so it is reinterpreted rather than rewritten. This works because
+// `index` is stored with the same width as the target `i64`.
 
 // CHECK-LABEL: @resource_index_constant
-//       CHECK:   llvm.mlir.constant(dense_resource<index_blob> : vector<2xindex>) : vector<2xi64>
+//       CHECK:   llvm.mlir.constant(dense_resource<index_blob> : vector<2xi64>) : vector<2xi64>
 func.func @resource_index_constant() -> vector<2xindex> {
   %0 = arith.constant dense_resource<index_blob> : vector<2xindex>
   return %0 : vector<2xindex>

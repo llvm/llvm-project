@@ -687,6 +687,32 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
   }
 }
 
+/// If R is a phi-like recipe starting a dead cycle of recipes, erase all
+/// reachable recipes of the dead cycle.
+static void tryToRemoveDeadCycle(VPRecipeBase *R) {
+  auto *PhiR = dyn_cast<VPSingleDefRecipe>(R);
+  if (!PhiR || !isa<VPPhi, VPReductionPHIRecipe>(R))
+    return;
+
+  // The transitive users of PhiR are closed under users, so the cycle is dead
+  // if every one of them can be erased.
+  for (VPUser *U : vputils::collectUsersRecursively(PhiR)) {
+    auto *R = cast<VPRecipeBase>(U);
+    // Bail out if a user must be retained, or if it is a phi-like recipe other
+    // than PhiR;
+    if (R->mayHaveSideEffects() || (R != PhiR && isa<VPPhiAccessors>(R)))
+      return;
+  }
+
+  // Break the cycle by replacing PhiR with its first incoming value, which is
+  // defined outside the cycle. That leaves the rest of the cycle dead.
+  PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+  SmallVector<VPValue *> Incoming(PhiR->operands());
+  PhiR->eraseFromParent();
+  for (VPValue *Op : Incoming)
+    vputils::recursivelyDeleteDeadRecipes(Op);
+}
+
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
       Plan.getEntry());
@@ -699,20 +725,9 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Check if R is a dead VPPhi <-> update cycle and remove it.
-      VPValue *Start, *Incoming;
-      if (!match(&R, m_VPPhi(m_VPValue(Start), m_VPValue(Incoming))))
-        continue;
-      auto *PhiR = cast<VPPhi>(&R);
-      VPUser *PhiUser = PhiR->getSingleUser();
-      if (!PhiUser)
-        continue;
-      if (PhiUser != Incoming->getDefiningRecipe() ||
-          Incoming->getNumUsers() != 1)
-        continue;
-      PhiR->replaceAllUsesWith(Start);
-      PhiR->eraseFromParent();
-      Incoming->getDefiningRecipe()->eraseFromParent();
+      // If R is a phi-like recipe starting a dead cycle of recipes, erase the
+      // whole cycle.
+      tryToRemoveDeadCycle(&R);
     }
   }
 }
@@ -1031,10 +1046,8 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
   DebugLoc DL = ExtractR->getDebugLoc();
   VPBuilder Builder(ExtractR);
   VPSCEVExpander Expander(Builder, *PSE.getSE(), DL);
-  VPValue *StartVPV = Expander.tryToExpand(Start);
-  VPValue *StepVPV = Expander.tryToExpand(Step);
-  if (!StartVPV || !StepVPV)
-    return nullptr;
+  VPValue *StartVPV = Expander.expand(Start);
+  VPValue *StepVPV = Expander.expand(Step);
 
   Type *StartTy = StartVPV->getScalarType();
   assert(StartTy->isIntOrPtrTy() && "The type must be SCEVable");
@@ -1054,7 +1067,7 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   // Compute end values for all inductions.
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *VectorPH = cast<VPBasicBlock>(VectorRegion->getSinglePredecessor());
-  VPBuilder VectorPHBuilder(VectorPH, VectorPH->begin());
+  VPBuilder VectorPHBuilder(VectorPH, VectorPH->getFirstNonPhi());
   DenseMap<VPValue *, VPValue *> EndValues;
   VPValue *ResumeTC =
       Plan.hasTailFolded() ? Plan.getTripCount() : &Plan.getVectorTripCount();
@@ -1282,6 +1295,12 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
       !isa<VPInstruction>(Def) || !Def->getUnderlyingValue();
 
   VPValue *A, *Z;
+
+  // A bitcast to the same type is a no-op.
+  if (match(Def, m_BitCast(m_VPValue(A))) &&
+      Def->getScalarType() == A->getScalarType())
+    return A;
+
   if (match(Def, m_Trunc(m_VPValue(Z, m_ZExtOrSExt(m_VPValue(A)))))) {
     Type *TruncTy = Def->getScalarType();
     Type *ATy = A->getScalarType();
@@ -1375,10 +1394,14 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
     CmpPredicate Pred;
     if (match(A, m_Cmp(Pred, m_VPValue(), m_VPValue()))) {
       auto *Cmp = cast<VPRecipeWithIRFlags>(A);
-      if (all_of(Cmp->users(),
-                 match_fn(m_CombineOr(
-                     m_Not(m_Specific(Cmp)),
-                     m_Select(m_Specific(Cmp), m_VPValue(), m_VPValue()))))) {
+      // Only fold if every user is a Not of the cmp, or a select using the cmp
+      // solely as its condition.
+      if (all_of(Cmp->users(), [Cmp](VPUser *U) {
+            return match(U, m_Not(m_Specific(Cmp))) ||
+                   (match(U, m_Select(m_Specific(Cmp), m_VPValue(),
+                                      m_VPValue())) &&
+                    U->getOperand(1) != Cmp && U->getOperand(2) != Cmp);
+          })) {
         Cmp->setPredicate(CmpInst::getInversePredicate(Pred));
         for (VPUser *U : to_vector(Cmp->users())) {
           auto *R = cast<VPSingleDefRecipe>(U);
@@ -2601,8 +2624,7 @@ void VPlanTransforms::simplifyLiveInsWithSCEV(VPlan &Plan,
 
 void VPlanTransforms::replaceSymbolicStrides(
     VPlan &Plan, PredicatedScalarEvolution &PSE,
-    const DenseMap<Value *, const SCEV *> &StridesMap,
-    const VPDominatorTree &VPDT) {
+    const SymbolicStrideMap &StridesMap, const VPDominatorTree &VPDT) {
   // Replace VPValues for known constant strides guaranteed by predicated scalar
   // evolution that are guaranteed to be guarded by the runtime checks; that is,
   // blocks dominated by the vector header.
@@ -2619,33 +2641,32 @@ void VPlanTransforms::replaceSymbolicStrides(
     return VPDT.dominates(Header, R->getParent());
   };
   ValueToSCEVMapTy RewriteMap;
-  for (const SCEV *Stride : StridesMap.values()) {
-    using namespace SCEVPatternMatch;
-    auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
+  for (const SCEVUnknown *Stride : StridesMap.values()) {
+    Value *StrideV = Stride->getValue();
     const APInt *StrideConst;
-    if (!match(PSE.getSCEV(StrideV), m_scev_APInt(StrideConst)))
+    const SCEV *StrideExpr = PSE.getSCEV(StrideV);
+    if (!match(StrideExpr, m_scev_APInt(StrideConst)))
       // Only handle constant strides for now.
       continue;
-
-    auto *CI = Plan.getConstantInt(*StrideConst);
     if (VPValue *StrideVPV = Plan.getLiveIn(StrideV))
-      StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
+      StrideVPV->replaceUsesWithIf(Plan.getConstantInt(*StrideConst),
+                                   CanUseVersionedStride);
 
-    // The versioned value may not be used in the loop directly but through a
-    // sext/zext. Add new live-ins in those cases.
+    // The versioned value may not be used in the loop directly but through an
+    // integral cast (sext/zext/trunc). Add new live-ins in those cases.
     for (Value *U : StrideV->users()) {
-      if (!isa<SExtInst, ZExtInst>(U))
+      if (!isa<SExtInst, ZExtInst, TruncInst>(U))
         continue;
       VPValue *StrideVPV = Plan.getLiveIn(U);
       if (!StrideVPV)
         continue;
       unsigned BW = U->getType()->getScalarSizeInBits();
-      APInt C =
-          isa<SExtInst>(U) ? StrideConst->sext(BW) : StrideConst->zext(BW);
-      VPValue *CI = Plan.getConstantInt(C);
-      StrideVPV->replaceUsesWithIf(CI, CanUseVersionedStride);
+      APInt C = isa<SExtInst>(U) ? StrideConst->sext(BW)
+                                 : StrideConst->zextOrTrunc(BW);
+      StrideVPV->replaceUsesWithIf(Plan.getConstantInt(C),
+                                   CanUseVersionedStride);
     }
-    RewriteMap[StrideV] = PSE.getSCEV(StrideV);
+    RewriteMap[StrideV] = StrideExpr;
   }
 
   for (VPRecipeBase &R : *Plan.getEntry()) {
@@ -4225,7 +4246,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   VPInstruction *CanIVInc = vputils::findCanonicalIVIncrement(Plan);
   Type *CanIVTy = VectorLoop->getCanonicalIVType();
   VPBasicBlock *VectorPH = Plan.getVectorPreheader();
-  VPBuilder PHBuilder(VectorPH, VectorPH->begin());
+  VPBuilder PHBuilder(VectorPH, VectorPH->getFirstNonPhi());
 
   VPValue *UF = &Plan.getUF();
   VPValue *Step;
@@ -5805,10 +5826,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // Create the base pointer of strided access.
       // TODO: reuse VPDerivedIVRecipe for base pointer computation when it
       // supports a general VPValue as the start value.
-      VPValue *StartVPV = VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc())
-                              .tryToExpand(Start);
-      if (!StartVPV)
-        StartVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Start);
+      VPValue *StartVPV =
+          VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc()).expand(Start);
       VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&

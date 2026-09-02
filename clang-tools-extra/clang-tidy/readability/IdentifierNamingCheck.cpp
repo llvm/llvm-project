@@ -94,6 +94,7 @@ namespace readability {
     m(LocalConstantPointer) \
     m(LocalPointer) \
     m(LocalVariable) \
+    m(LambdaCapture) \
     m(StaticConstexprVariable) \
     m(StaticConstant) \
     m(StaticVariable) \
@@ -1521,6 +1522,9 @@ StyleKind IdentifierNamingCheck::findStyleKindForField(
 StyleKind IdentifierNamingCheck::findStyleKindForVar(
     const VarDecl *Var, QualType Type,
     ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+  if (Var->isInitCapture() && NamingStyles[SK_LambdaCapture])
+    return SK_LambdaCapture;
+
   if (Var->isConstexpr()) {
     if (Var->isStaticDataMember() && NamingStyles[SK_ClassConstexpr])
       return SK_ClassConstexpr;

@@ -48,8 +48,7 @@ exit:
   ret void
 }
 
-; VF is scalable, as is TC. TC * MaxVScale overflows,
-; make sure that the IV increment does not have nuw.
+; VF is scalable, as is TC. TC * MaxVScale overflows in i32, but not the i64 induction.
 define void @tc_maxvscale_overflow(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc_maxvscale_overflow(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
@@ -68,13 +67,13 @@ define void @tc_maxvscale_overflow(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP_LOAD]], ptr align 4 [[TMP3]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP5]], [[INDEX]]
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP5]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -90,6 +89,53 @@ loop:
   store float %la, ptr %gep.b, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; VF is scalable, as is TC. TC * MaxVScale (8388609 * 1024) is not
+; representable in the type of the i32 induction variable.
+define void @tc_maxvscale_exceeds_iv_type(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @tc_maxvscale_exceeds_iv_type(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[VS:%.*]] = tail call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[N:%.*]] = mul nuw nsw i32 [[VS]], 8388609
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 4, i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i32 [[INDEX]]
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i32 [[INDEX]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP_LOAD]], ptr align 4 [[TMP2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i32 [[TMP0]], [[INDEX]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %vs = tail call i32 @llvm.vscale.i32()
+  %n = mul nuw nsw i32 %vs, 8388609
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds nuw float, ptr %a, i32 %iv
+  %la = load float, ptr %gep.a, align 4
+  %gep.b = getelementptr inbounds nuw float, ptr %b, i32 %iv
+  store float %la, ptr %gep.b, align 4
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %n
   br i1 %ec, label %exit, label %loop
 
 exit:

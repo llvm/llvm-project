@@ -2246,7 +2246,9 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
                     << "\n  LoadExtractCost: " << OriginalCost
                     << " vs ScalarizedCost: " << ScalarizedCost << "\n");
 
-  if (ScalarizedCost >= OriginalCost)
+  if (ScalarizedCost > OriginalCost)
+    return false;
+  if (ScalarizedCost == OriginalCost && !LI->hasOneUse())
     return false;
 
   // Ensure we add the load back to the worklist BEFORE its users so they can

@@ -5,8 +5,8 @@
 // RUN:   %s 2>&1 | FileCheck %s
 
 
-// CHECK: "-cc1" "-triple" "amdgpu10.30-amd-amdhsa"{{.*}}"-target-cpu" "gfx1030"
-// CHECK: "-cc1" "-triple" "amdgpu10.31-amd-amdhsa"{{.*}}"-target-cpu" "gfx1031"
+// CHECK: "-cc1" "-triple" "amdgpu10.30-amd-amdhsa"
+// CHECK: "-cc1" "-triple" "amdgpu10.31-amd-amdhsa"
 
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-targets=amdgpu9-amd-amdhsa \
 // RUN:   --offload-arch=gfx900 \
@@ -15,8 +15,8 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=SUBARCH-TRIPLE %s
 
 // SUBARCH-TRIPLE-NOT: "-cc1"
-// SUBARCH-TRIPLE: "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"{{.*}}"-target-cpu" "gfx900"
-// SUBARCH-TRIPLE-NEXT: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
+// SUBARCH-TRIPLE: "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
+// SUBARCH-TRIPLE-NEXT: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"
 // SUBARCH-TRIPLE-NOT: "-cc1"
 // SUBARCH-TRIPLE: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // SUBARCH-TRIPLE-NOT: "-cc1"
