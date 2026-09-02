@@ -848,12 +848,38 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
 
+static bool StmtContainsLabelDecl(const Stmt *S, const LabelDecl *Target) {
+  if (!S)
+    return false;
+  if (const auto *LS = dyn_cast<LabelStmt>(S))
+    if (LS->getDecl() == Target)
+      return true;
+  for (const Stmt *Child : S->children())
+    if (StmtContainsLabelDecl(Child, Target))
+      return true;
+  return false;
+}
+
+bool CodeGenFunction::IsLabelWithinSEHHelper(const LabelDecl *Label) const {
+  assert(IsOutlinedSEHHelper() && "Not in an outlined SEH helper");
+  return StmtContainsLabelDecl(OutlinedSEHStmt, Label);
+}
+
 void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
   // If this code is reachable then emit a stop point (if generating
   // debug info). We have to do this ourselves because we are on the
   // "simple" statement path.
   if (HaveInsertPoint())
     EmitStopPoint(&S);
+
+  // MSVC C4532: jumping out of an outlined SEH helper is UB, but jumping
+  // internally should be fine. Sema has a warn for this already.
+  // `br` should not jump out of the current function anyway, so a jump out of
+  // the outlined SEH helper will cause a compiler crash.
+  if (IsOutlinedSEHHelper() && !IsLabelWithinSEHHelper(S.getLabel())) {
+    Builder.CreateUnreachable();
+    Builder.ClearInsertionPoint();
+  }
 
   ApplyAtomGroup Grp(getDebugInfo());
   EmitBranchThroughCleanup(getJumpDestForLabel(S.getLabel()));
@@ -1627,7 +1653,7 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
   }
 
   // Returning from an outlined SEH helper is UB, and we already warn on it.
-  if (IsOutlinedSEHHelper) {
+  if (IsOutlinedSEHHelper()) {
     Builder.CreateUnreachable();
     Builder.ClearInsertionPoint();
   }
