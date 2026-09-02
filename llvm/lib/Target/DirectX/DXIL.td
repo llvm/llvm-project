@@ -1386,6 +1386,17 @@ def WavePrefixOp : DXILOp<121, wavePrefixOp> {
   let attributes = [Attributes<DXIL1_0, []>];
 }
 
+def QuadReadLaneAt : DXILOp<122, quadReadLaneAt> {
+  let Doc = "returns the value from the specified lane in the quad";
+  let intrinsics = [IntrinSelect<int_dx_quad_read_lane_at>];
+  let arguments = [OverloadTy, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<
+      DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [compute, pixel, library, amplification, mesh, node]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+}
+
 def QuadOp : DXILOp<123, quadOp> {
   let Doc = "returns the value from another lane within the quad by swapping values in a direction";
   let intrinsics = [
@@ -1408,7 +1419,7 @@ def QuadOp : DXILOp<123, quadOp> {
   let overloads = [
     Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
   ];
-  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let stages = [Stages<DXIL1_0, [compute, pixel, library, amplification, mesh, node]>];
   let attributes = [Attributes<DXIL1_0, []>];
 }
 

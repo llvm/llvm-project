@@ -330,8 +330,9 @@ private:
   bool selectWaveExclusiveScanProduct(Register ResVReg, SPIRVTypeInst ResType,
                                       MachineInstr &I) const;
 
-  bool selectQuadSwap(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
-                      unsigned Direction) const;
+  bool selectQuadShuffle(Register ResVReg, SPIRVTypeInst ResType,
+                         MachineInstr &I, unsigned Opcode,
+                         unsigned Direction) const;
 
   bool selectConst(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
@@ -4031,26 +4032,40 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScan(
   return true;
 }
 
-bool SPIRVInstructionSelector::selectQuadSwap(Register ResVReg,
-                                              SPIRVTypeInst ResType,
-                                              MachineInstr &I,
-                                              unsigned Direction) const {
-  assert(I.getNumOperands() == 3);
+/// Selects a quad shuffle operation (broadcast or swap) based on the provided
+/// opcode and direction. Direction is ignored if opcode is
+/// OpGroupNonUniformQuadBroadcast.
+bool SPIRVInstructionSelector::selectQuadShuffle(Register ResVReg,
+                                                 SPIRVTypeInst ResType,
+                                                 MachineInstr &I,
+                                                 unsigned Opcode,
+                                                 unsigned Direction) const {
+  assert(Opcode == SPIRV::OpGroupNonUniformQuadBroadcast ||
+         Opcode == SPIRV::OpGroupNonUniformQuadSwap);
   assert(I.getOperand(2).isReg());
   MachineBasicBlock &BB = *I.getParent();
   Register InputRegister = I.getOperand(2).getReg();
 
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   bool ZeroAsNull = !STI.isShader();
-  Register DirectionReg =
-      GR.getOrCreateConstInt(Direction, I, IntTy, TII, ZeroAsNull);
-  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformQuadSwap))
+  Register IndexOrDirectionReg;
+  if (Opcode == SPIRV::OpGroupNonUniformQuadBroadcast) {
+    // The quad lane index is the second intrinsic operand.
+    assert(I.getNumOperands() == 4);
+    assert(I.getOperand(3).isReg());
+    IndexOrDirectionReg = I.getOperand(3).getReg();
+  } else {
+    assert(I.getNumOperands() == 3);
+    IndexOrDirectionReg =
+        GR.getOrCreateConstInt(Direction, I, IntTy, TII, ZeroAsNull);
+  }
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
                                      ZeroAsNull))
       .addUse(InputRegister)
-      .addUse(DirectionReg)
+      .addUse(IndexOrDirectionReg)
       .constrainAllUses(TII, TRI, RBI);
   return true;
 }
@@ -5776,14 +5791,24 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveExclusiveScanSum(ResVReg, ResType, I);
   case Intrinsic::spv_wave_prefix_product:
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
+  case Intrinsic::spv_quad_read_lane_at:
+    return selectQuadShuffle(ResVReg, ResType, I,
+                             SPIRV::OpGroupNonUniformQuadBroadcast,
+                             /*Direction*/ 0);
   case Intrinsic::spv_quad_read_across_x: {
-    return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 0);
+    return selectQuadShuffle(ResVReg, ResType, I,
+                             SPIRV::OpGroupNonUniformQuadSwap,
+                             /*Direction*/ 0);
   }
   case Intrinsic::spv_quad_read_across_y: {
-    return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 1);
+    return selectQuadShuffle(ResVReg, ResType, I,
+                             SPIRV::OpGroupNonUniformQuadSwap,
+                             /*Direction*/ 1);
   }
   case Intrinsic::spv_quad_read_across_diagonal: {
-    return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 2);
+    return selectQuadShuffle(ResVReg, ResType, I,
+                             SPIRV::OpGroupNonUniformQuadSwap,
+                             /*Direction*/ 2);
   }
   case Intrinsic::spv_radians:
     return selectExtInst(ResVReg, ResType, I, CL::radians, GL::Radians);
