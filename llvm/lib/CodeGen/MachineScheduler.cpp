@@ -3739,9 +3739,17 @@ void GenericScheduler::checkAcyclicLatency() {
     return;
 
   // Scaled number of cycles per loop iteration.
-  unsigned IterCount =
-    std::max(Rem.CyclicCritPath * SchedModel->getLatencyFactor(),
-             Rem.RemIssueCount);
+  //
+  // The model above calls for the loop's resource height, so use the critical
+  // resource rather than RemIssueCount. The latter counts micro-ops against
+  // the front end, which for a region bottlenecked on one execution port
+  // underestimates how long an iteration takes - several-fold for wide vector
+  // code that can only issue to a couple of ports - and so overstates how
+  // many iterations must be in flight.
+  unsigned OtherCritIdx = 0;
+  unsigned ResourceHeight = Bot.getOtherResourceCount(OtherCritIdx);
+  unsigned IterCount = std::max(
+      Rem.CyclicCritPath * SchedModel->getLatencyFactor(), ResourceHeight);
   // Scaled acyclic critical path.
   unsigned AcyclicCount = Rem.CriticalPath * SchedModel->getLatencyFactor();
   // InFlightCount = (AcyclicPath / IterCycles) * InstrPerLoop
@@ -3750,7 +3758,20 @@ void GenericScheduler::checkAcyclicLatency() {
   unsigned BufferLimit =
     SchedModel->getMicroOpBufferSize() * SchedModel->getMicroOpFactor();
 
-  Rem.IsAcyclicLatencyLimited = InFlightCount > BufferLimit;
+  // The InFlightCount estimate above only means something once the acyclic
+  // path actually spans more than one iteration. If a single iteration takes
+  // at least as long to issue as the acyclic path takes to complete, that path
+  // is covered by the iteration's own issue time and no cross-iteration
+  // overlap is needed to hide it.
+  //
+  // Only refine the estimate where it models a real reorder buffer. For
+  // MicroOpBufferSize <= 1 the value is a sentinel for an in-order target
+  // rather than a size, BufferLimit is degenerate, and treating such loops as
+  // latency limited is the deliberate policy for those targets.
+  bool SpansIterations = !SchedModel->getMCSchedModel()->isOutOfOrder() ||
+                         AcyclicCount > IterCount;
+
+  Rem.IsAcyclicLatencyLimited = SpansIterations && InFlightCount > BufferLimit;
 
   LLVM_DEBUG(
       dbgs() << "IssueCycles="
