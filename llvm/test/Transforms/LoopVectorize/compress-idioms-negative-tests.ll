@@ -207,7 +207,7 @@ exit:
 
 ; Negative test: Matching an extended monotonic phi index is not supported yet.
 ; Note: We should be able to support this case by using the no-wrap flags on %idx.next.
-define void @test_compress_store_with_extended_index(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
+define void @test_compress_store_with_extended_index_with_nsw(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 entry:
   br label %for.body
 
@@ -228,6 +228,37 @@ if.then:
 
 for.inc:
   %idx.1 = phi i32 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; CHECK: loop not vectorized
+
+; Negative test: We can't vectorize a extended monotonic phi use without no-wrap flags on the step.
+define void @test_compress_store_with_extended_index(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i8 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load.src = load i32, ptr %src.ptr, align 4
+  %cmp = icmp slt i32 %load.src, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %dst.ptr = getelementptr i8, ptr %dst, i8 %idx
+  store i32 %load.src, ptr %dst.ptr, align 4
+  %idx.next = add i8 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i8 [ %idx.next, %if.then ], [ %idx, %for.body ]
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body
