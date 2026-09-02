@@ -31,11 +31,136 @@ extern "C" {
   };                                                                           \
   typedef struct name name
 
+DEFINE_C_API_STRUCT(MlirDynamicDialect, void);
+DEFINE_C_API_STRUCT(MlirDynamicOpDefinition, void);
 DEFINE_C_API_STRUCT(MlirDynamicOpTrait, void);
 DEFINE_C_API_STRUCT(MlirDynamicTypeDefinition, void);
 DEFINE_C_API_STRUCT(MlirDynamicAttrDefinition, void);
 
 #undef DEFINE_C_API_STRUCT
+
+//===----------------------------------------------------------------------===//
+/// Dynamic dialect creation
+//===----------------------------------------------------------------------===//
+
+/// Create a new dynamic dialect with the given name and register it with the
+/// context. If a dialect with the same name already exists, returns the
+/// existing one. The context takes ownership of the dialect. The returned
+/// handle is valid as long as the context is alive and must not be freed.
+MLIR_CAPI_EXPORTED MlirDynamicDialect
+mlirDynamicDialectCreate(MlirContext ctx, MlirStringRef name);
+
+/// Get the underlying MlirDialect from a MlirDynamicDialect.
+MLIR_CAPI_EXPORTED MlirDialect
+mlirDynamicDialectAsDialect(MlirDynamicDialect dialect);
+
+//===----------------------------------------------------------------------===//
+/// Dynamic op definition creation
+//===----------------------------------------------------------------------===//
+
+/// Callbacks for a dynamic op definition. All fields may be NULL, in which
+/// case the corresponding action is a no-op / always succeeds.
+typedef struct {
+  /// The callback function to verify the operation.
+  MlirLogicalResult (*verify)(MlirOperation op, void *userData);
+  /// The callback function to verify the operation with access to regions.
+  MlirLogicalResult (*verifyRegion)(MlirOperation op, void *userData);
+} MlirDynamicOpDefinitionCallbacks;
+
+/// Create a dynamic op definition with the given name and callbacks.
+/// The name should be the bare op name (e.g. "constant"), not the
+/// dialect-qualified name. The definition is NOT yet registered with the
+/// dialect; call mlirDynamicDialectRegisterOp to register it.
+/// \p userData is shared between all callbacks.
+/// If the definition is not registered, it must be destroyed with
+/// mlirDynamicOpDefinitionDestroy to avoid a memory leak.
+MLIR_CAPI_EXPORTED MlirDynamicOpDefinition mlirDynamicOpDefinitionCreate(
+    MlirDynamicDialect dialect, MlirStringRef name,
+    MlirDynamicOpDefinitionCallbacks callbacks, void *userData);
+
+/// Destroy a dynamic op definition that was not registered with a dialect.
+MLIR_CAPI_EXPORTED void
+mlirDynamicOpDefinitionDestroy(MlirDynamicOpDefinition opDef);
+
+/// Register a dynamic op definition with its parent dialect.
+/// This transfers ownership of the definition to the dialect.
+/// After this call, ops with this name can be created using
+/// mlirOperationCreate with the dialect-qualified name.
+MLIR_CAPI_EXPORTED void
+mlirDynamicDialectRegisterOp(MlirDynamicDialect dialect,
+                             MlirDynamicOpDefinition opDef);
+
+//===----------------------------------------------------------------------===//
+/// Dynamic type definition creation
+//===----------------------------------------------------------------------===//
+
+/// Callbacks for a dynamic type definition. All fields may be NULL, in which
+/// case the corresponding action is a no-op / always succeeds.
+typedef struct {
+  /// The callback function to verify the type's parameters.
+  MlirLogicalResult (*verify)(intptr_t nParams, MlirAttribute const *params,
+                              void *userData);
+} MlirDynamicTypeDefinitionCallbacks;
+
+/// Create a dynamic type definition with the given name and callbacks.
+/// The name should be the bare type name (e.g. "mystruct"), not the
+/// dialect-qualified name. The definition is NOT yet registered with the
+/// dialect; call mlirDynamicDialectRegisterType to register it.
+/// Note: the verifier callback does not receive diagnostic context; failures
+/// are reported without a custom error message.
+/// If the definition is not registered, it must be destroyed with
+/// mlirDynamicTypeDefinitionDestroy to avoid a memory leak.
+MLIR_CAPI_EXPORTED MlirDynamicTypeDefinition mlirDynamicTypeDefinitionCreate(
+    MlirDynamicDialect dialect, MlirStringRef name,
+    MlirDynamicTypeDefinitionCallbacks callbacks, void *userData);
+
+/// Destroy a dynamic type definition that was not registered with a dialect.
+MLIR_CAPI_EXPORTED void
+mlirDynamicTypeDefinitionDestroy(MlirDynamicTypeDefinition typeDef);
+
+/// Register a dynamic type definition with its parent dialect.
+/// This transfers ownership of the definition to the dialect.
+MLIR_CAPI_EXPORTED void
+mlirDynamicDialectRegisterType(MlirDynamicDialect dialect,
+                               MlirDynamicTypeDefinition typeDef);
+
+//===----------------------------------------------------------------------===//
+/// Dynamic attribute definition creation
+//===----------------------------------------------------------------------===//
+
+/// Callbacks for a dynamic attribute definition. All fields may be NULL, in
+/// which case the corresponding action is a no-op / always succeeds.
+typedef struct {
+  /// The callback function to verify the attribute's parameters.
+  MlirLogicalResult (*verify)(intptr_t nParams, MlirAttribute const *params,
+                              void *userData);
+} MlirDynamicAttrDefinitionCallbacks;
+
+/// Create a dynamic attribute definition with the given name and callbacks.
+/// The name should be the bare attr name, not the dialect-qualified name.
+/// The definition is NOT yet registered with the dialect; call
+/// mlirDynamicDialectRegisterAttr to register it.
+/// Note: the verifier callback does not receive diagnostic context; failures
+/// are reported without a custom error message.
+/// If the definition is not registered, it must be destroyed with
+/// mlirDynamicAttrDefinitionDestroy to avoid a memory leak.
+MLIR_CAPI_EXPORTED MlirDynamicAttrDefinition mlirDynamicAttrDefinitionCreate(
+    MlirDynamicDialect dialect, MlirStringRef name,
+    MlirDynamicAttrDefinitionCallbacks callbacks, void *userData);
+
+/// Destroy a dynamic attr definition that was not registered with a dialect.
+MLIR_CAPI_EXPORTED void
+mlirDynamicAttrDefinitionDestroy(MlirDynamicAttrDefinition attrDef);
+
+/// Register a dynamic attribute definition with its parent dialect.
+/// This transfers ownership of the definition to the dialect.
+MLIR_CAPI_EXPORTED void
+mlirDynamicDialectRegisterAttr(MlirDynamicDialect dialect,
+                               MlirDynamicAttrDefinition attrDef);
+
+//===----------------------------------------------------------------------===//
+/// Dynamic op trait APIs
+//===----------------------------------------------------------------------===//
 
 /// Attach a dynamic op trait to the given operation name.
 /// Note that the operation name must be modeled by dynamic dialect and must be

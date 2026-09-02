@@ -122,6 +122,7 @@ configure_lit_site_cfg(
   )
 
 set(MLIR_TEST_DEPENDS
+  mlir-capi-extensible-dialect-test
   mlir-capi-ir-test
   mlir-capi-irdl-test
   mlir-capi-llvm-test
