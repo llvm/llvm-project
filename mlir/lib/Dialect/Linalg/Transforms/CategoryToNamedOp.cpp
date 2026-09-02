@@ -72,22 +72,6 @@ struct ElementwiseToNamedPattern : public OpRewritePattern<ElementwiseOp> {
       return replaceWith(TanhOp{});
     case ElementwiseKind::erf:
       return replaceWith(ErfOp{});
-    case ElementwiseKind::add:
-      return replaceWith(AddOp{});
-    case ElementwiseKind::sub:
-      return replaceWith(SubOp{});
-    case ElementwiseKind::mul:
-      return replaceWith(MulOp{});
-    case ElementwiseKind::div:
-      return replaceWith(DivOp{});
-    case ElementwiseKind::div_unsigned:
-      return replaceWith(DivUnsignedOp{});
-    case ElementwiseKind::max_signed:
-      return replaceWith(MaxOp{});
-    case ElementwiseKind::min_signed:
-      return replaceWith(MinOp{});
-    case ElementwiseKind::powf:
-      return replaceWith(PowFOp{});
     case ElementwiseKind::select:
       return replaceWith(SelectOp{});
     default:

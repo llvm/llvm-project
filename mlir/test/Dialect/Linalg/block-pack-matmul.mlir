@@ -142,7 +142,7 @@ func.func @block_matmul_with_consumer(
   %0 = tensor.empty() : tensor<128x128xf32>
   %1 = linalg.matmul ins(%A, %B : tensor<128x128xf32>, tensor<128x128xf32>)
                      outs(%C : tensor<128x128xf32>) -> tensor<128x128xf32>
-  %2 = linalg.add ins(%1, %D : tensor<128x128xf32>, tensor<128x128xf32>)
+  %2 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%1, %D : tensor<128x128xf32>, tensor<128x128xf32>)
                   outs(%0 : tensor<128x128xf32>) -> tensor<128x128xf32>
   return %2 : tensor<128x128xf32>
 }
@@ -155,7 +155,7 @@ func.func @block_matmul_with_consumer(
 // CHECK: %[[RES_UNPACKED:.+]] = linalg.unpack %[[GEMM_RES_PACKED]]
 // CHECK-SAME:  inner_dims_pos = [0, 1] inner_tiles = [32, 16]
 // CHECK-SAME:  into %[[C]] : tensor<4x8x32x16xf32> -> tensor<128x128xf32>
-// CHECK: %[[ADD_RES:.+]] = linalg.add
+// CHECK: %[[ADD_RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
 // CHECK-SAME:  ins(%[[RES_UNPACKED]], %[[D]] : tensor<128x128xf32>, tensor<128x128xf32>) outs(%[[RES_DST]] : tensor<128x128xf32>)
 // CHECK: return %[[ADD_RES]] : tensor<128x128xf32>
 
