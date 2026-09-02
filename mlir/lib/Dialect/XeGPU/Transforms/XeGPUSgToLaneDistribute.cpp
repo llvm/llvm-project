@@ -1765,110 +1765,59 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Broadcast redistribution
 //===----------------------------------------------------------------------===//
 //
-// Lowers a `convert_layout` that only relocates data between lanes: the two
-// layouts agree on `lane_data`, and differ only in which lane holds which part
-// of the value. Every element already exists in some lane, so nothing is
-// recomputed. The scale operands of scaled matrix multiplication need this,
-// being produced broadcasted and consumed distributed.
+// Lowers a `convert_layout` that relocates data between lanes: the two layouts
+// must agree on `lane_data`, and differ only in which lane holds which part
+// of the value.
 //
 // Terms
 // -----
 //
-// These follow from the layouts, for a value of shape `Sh` on a subgroup of `S`
-// lanes. `#xegpu.` prefixes are dropped for width throughout.
-//
-//   distribution unit  what a lane owns as one block: `lane_data`
-//   fragment           everything one lane owns. Slicing drops dimensions from
-//                      `lane_layout`; over what is left a lane owns
-//                      `Sh[i] / lane_layout[i]` per dimension, flattened
-//                      row-major
-//   broadcast group    the lanes that hold one fragment. `product(lane_layout)`
-//                      taken *after* slicing counts the distinct fragments, so
-//                      each group is `S / that` lanes: all `S` of them when
-//                      every dimension is sliced away, and 1 -- no replication
-//                      -- when the product is already `S`
-//   lane period        the same product with the sliced dimensions still
-//                      counted, so slicing does not reduce it. Lanes this far
-//                      apart hold the same fragment. `getLanePeriod`. Both
-//                      layouts have one and they are not interchangeable: the
-//                      target's, `targetLanePeriod` below, is what the scheme
-//                      steps and groups lanes by, while the input's is never
-//                      computed -- it is already folded into the ownership
-//                      table
-//   slot               `lane % targetLanePeriod`, a lane's index within one
-//                      target period. A target-side notion: lanes sharing a
-//                      slot are assigned the same target fragment
-//   ownership table    every lane's fragment, tabulated as element coordinates,
-//                      one table per side. `computeOwnedCoords`, `inputOwned`
-//                      and `targetOwned` below
-//
-// These name the moving parts of the scheme:
-//
-//   reader             the lane a fragment is being assembled for. Everything
+//   element            scalar of some element type
+//   fragment           everything one lane owns. Consists of elements.
+//   broadcast group    the lanes that hold the same fragment.
+//   lane period        how many lanes the layout lays out,
+//                      `product(lane_layout)`. A larger subgroup repeats: lane
+//                      `l` and lane `l + period` get the same fragment
+//   reader lane        the lane a fragment is being assembled for. Everything
 //                      below depends on it only through its slot
-//   donorDelta         the one choice the scheme makes per element of the
-//                      target fragment: a lane offset from the reader's slot to
-//                      the lane supplying that element. Non-negative and a
-//                      multiple of `targetLanePeriod`, so there are
-//                      `S / targetLanePeriod` candidates and data always moves
-//                      from a higher lane id to a lower one
-//   donor              where that offset lands, `slot + donorDelta`. Derived
-//                      from `donorDelta`, not the other way round. More than
-//                      one offset may reach a lane holding the element, since
-//                      the input's own lane period replicates it; the smallest
-//                      is taken
-//   element source     where one element of the target fragment comes from: a
-//                      donor, and the index to extract from that donor's
-//                      fragment. One per element, and it needs a shuffle
-//                      exactly when the donor is not the reader itself.
-//                      `ElementSource` below
-//
-// A broadcast group and the lane period are that one product taken either side
-// of slicing, so a layout can have a lane period of `S` and still replicate:
-// the sliced dimensions raise the period without adding fragments. That is one
-// of the two ways a layout spells replication. Both, on a `vector<8x2>` over 16
-// lanes:
-//
-//   slice<layout<[8, 1, 2], order = [0, 2, 1]>, dims = [0]>    ("sliced")
-//     slicing leaves `lane_layout` [1, 2], so a fragment is 8x1, one whole
-//     column, and there are 1 * 2 = 2 of them: two groups of 8, lanes 0-7 and
-//     lanes 8-15. The lane period still counts the sliced dimension and is
-//     8 * 1 * 2 = 16, well above the group size.
-//
-//   layout<[8, 1]>                                             ("short")
-//     a `lane_layout` naming fewer lanes than the subgroup has. A fragment is
-//     1x2, one whole row, and there are 8: eight groups of 2, lane `l` paired
-//     with lane `l + 8`. Here the period is 8 as well, because the lane id is
-//     delinearized modulo each extent, so a lane's coordinates depend on
-//     `lane % 8` alone.
-//
-// The two spellings are treated alike throughout.
-//
-// The two sides are not symmetric in what they mean:
-//
-//   input   supplies the values. Any lane may be a donor, so every lane's
-//           fragment has to be known -- which it is, for any lane_layout.
-//   target  states the obligation. Only the lanes it distributes to have to end
-//           up holding the fragment it assigns them; the rest are left
-//           unspecified.
+//   slot               `reader lane % target lane period`, a lane's index
+//                      within one target period. A target-side notion: lanes
+//                      sharing a slot are assigned the same target fragment
+//   ownership table    tabulated "element of a fragment" to coordinate mapping
+//                      with respect to undistributed value. one table per input
+//                      and target
+//   donorDelta         a lane offset from the reader lane to
+//                      the lane supplying an element. Can have multiple
+//                      candidates.
+//   donor lane         supplying lane, computed as `slot + donorDelta`. First
+//                      fit is taken by enumerating through the donorDeltas.
+//   element source     for one element of the target fragment, a tuple: which
+//                      donor lane supplies it, where in that lane's fragment
+//                      it sits, and whether a shuffle is needed. One is
+//                      derived per element position, at compile time.
 //
 // What it handles
 // ---------------
 //
-// Two properties decide it, one per side. Examples stay on a `vector<8x2>` over
-// 16 lanes; the case numbers are used throughout the rest of this comment.
+// Two properties shape the outcome: the input's replication sets how many
+// elements need a cross-lane shuffle -- `gpu.shuffle idx`, as opposed to the
+// within-lane `vector.shuffle` the neighbouring patterns use -- and the
+// target's lane period sets where they may be shuffled from. Only the second
+// can decline the conversion. Examples stay on a `vector<8x2>` over 16 lanes;
+// the case numbers are used throughout the rest of this comment.
 //
-// The input's replication decides what a lane arrives with, and so what has to
-// travel:
+// The input's replication decides what each lane already holds, and so how many
+// shuffles are needed:
 //
-//   fully broadcast      every lane already holds the whole value, so nothing
-//                        travels and the result is extracts alone. Spelled by
-//                        slicing away every distributed dimension:
+//   fully broadcast      every lane already holds the whole value, so the
+//                        result is extracts alone. Spelled by slicing away
+//                        every distributed dimension:
 //                        slice<layout<[1, 1, 16]>, dims = [2]>
 //
 //   partially broadcast  each broadcast group holds part of it, so a lane has
-//                        to be given whatever its group lacks. Either spelling
-//                        of replication from Terms above.
+//                        to be given whatever its group lacks. Spelled either
+//                        by slicing a dimension away or by a `lane_layout`
+//                        shorter than the subgroup.
 //
 // The target's lane period decides where a lane may be given that from. Donors
 // sit at multiples of the period, so a period `P` over `S` lanes leaves `S / P`
@@ -1884,7 +1833,8 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 // One example per combination, and what the tests show it emitting. The target
 // is given as its `lane_layout`, the period following from it; the input as its
-// category, `sliced` and `short` being the two spellings named in Terms:
+// category, `sliced` meaning a sliced dimension and `short` a `lane_layout`
+// shorter than the subgroup:
 //
 //   case  input            target             period  emits
 //   1     fully broadcast  [4, 1]                  4  4 extracts
@@ -1893,12 +1843,12 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //   4     partial, short   [2, 1]                  2  2 extracts, 6 shuffles
 //   --    partial, short   [8, 1, 2] sliced       16  declined
 //
-// The counts follow from the target fragment. One shuffle per element that has
-// to travel, and one extract per distinct position read in the donor's
-// fragment, elements reading the same position sharing one. So case 2's 1x2
-// fragment is two elements read at the same position: one extract, and one of
-// the two travels. Case 4's 4x2 fragment is eight elements over two positions:
-// two extracts, six of the eight travelling.
+// The counts follow from the target fragment. One shuffle per element the
+// reader lane does not already hold, and one extract per distinct position read
+// in the donor lane's fragment, elements reading the same position sharing one.
+// So case 2's 1x2 fragment is two elements read at the same position: one
+// extract, and one of the two shuffled. Case 4's 4x2 fragment is eight elements
+// over two positions: two extracts, six of the eight shuffled.
 //
 // Only the target varies within a category, so the test suite carries more than
 // one of some -- @convert_layout_broadcast_all_lanes is case 1 with `[8, 1]` --
@@ -1906,12 +1856,12 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // constants are all distinct, which the index expression below is read off.
 //
 // The last row is the boundary the two properties imply: with only `donorDelta`
-// 0 available, a lane arriving with less than its target fragment cannot be
-// completed, and the match fails with NoDonorDelta. There a lane arrives with 2
+// 0 available, a lane holding less than its target fragment cannot be
+// completed, and the match fails with NoDonorDelta. There a lane holds 2
 // elements, `layout<[8, 1]>` giving it one row, and needs the sliced target's
 // 8, one whole column.
 //
-// Case 2 is the running example below: lanes 0-7 arrive holding all of column
+// Case 2 is the running example below: lanes 0-7 hold all of column
 // 0, lanes 8-15 all of column 1, and lane `i` leaves holding row `i`. Lane 3
 // wants (3, 0) and (3, 1); it holds (3, 0) already, while (3, 1) is in lane 11.
 //
@@ -1954,7 +1904,9 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // shuffle per element from a donor a whole number of lane periods away. Another
 // pattern or a more general scheme lowers any of them.
 //
-// Decided by inspecting the layouts:
+// Decided by inspecting the layouts. None of these rejects the input on its
+// own -- the input is only read, so any `lane_layout` is admissible until the
+// tables show what it actually holds:
 //
 //   they differ in `lane_data`                         LaneDataDiffers
 //
@@ -2003,10 +1955,10 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // `donor` costs one add. `donorIndex` is the half that needs a form, and it is
 // restricted to
 //
-//   donorIndex(slot) = stride * ((slot / dimStride) % dimExtent) + offset
+//   donorIndex(slot) = stride * ((slot / dimStride) % dimSize) + offset
 //
-// `(slot / dimStride) % dimExtent` is the lane's coordinate along one dimension
-// of the target lane_layout: `dimExtent` is that dimension's size and
+// `(slot / dimStride) % dimSize` is the lane's coordinate along one dimension
+// of the target lane_layout: `dimSize` is that dimension's size and
 // `dimStride` how many consecutive slots share a coordinate. `stride` and
 // `offset` place that coordinate in the donor's fragment. An arbitrary index
 // per slot would need a materialized table and a gather; this costs a couple of
@@ -2014,7 +1966,7 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 // The cases, `p` being the position in the target fragment:
 //
-//   case  period  donorIndex(slot)  stride  dimStride  dimExtent  offset
+//   case  period  donorIndex(slot)  stride  dimStride  dimSize    offset
 //   1        4     2*slot + off        2         1          4      0,1,8,9
 //   2        8     slot                1         1          8        0
 //   3       16     slot/8 + 2*p        1         8          2       2*p
@@ -2024,13 +1976,13 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // the input fragment's innermost dimension, which in cases 1 and 3 is the whole
 // 8x2 value, so stepping one row costs 2 elements. In case 2 the fragment is a
 // single column, its row stride is 1, and no `2` appears. Case 4's index does
-// not depend on the slot at all: each target row arrives whole from one donor,
+// not depend on the slot at all: each target row comes whole from one donor,
 // so `stride` is 0 and `offset` alone selects the column.
 //
 // Case 1's four offsets are where its 2x2 target fragment sits inside that
 // whole 8x2 value: lane `s` owns rows `s` and `s + 4`, columns 0 and 1, so
 // `2s+0, 2s+1, 2s+8, 2s+9`. The jump from 1 to 8 is four rows down at 2
-// elements each, the 4 being the extent of the target `lane_layout` [4, 1].
+// elements each, the 4 coming from the target `lane_layout` [4, 1].
 //
 // Read the expression off case 1, where the four quantities are 4, 2, 1 and 4.
 // On case 2's `layout<[8, 1]>` target they collide: the lane period (8), its
@@ -2042,7 +1994,7 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // ---------
 //
 // Check the two layouts agree on the block, then for each block the target
-// wants, find an equal block in some lane and have that lane's copy travel:
+// wants, find an equal block in some lane and move that lane's copy to it:
 // extract, shuffle, insert. Only the search costs anything, because the match
 // has to hold for every slot at once -- through one lane offset and one index
 // expression.
@@ -2069,7 +2021,7 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //         if that donor does not hold the element: give up on this donorDelta
 //
 //       [fitDonorIndex]
-//       look for one stride/offset/dimStride/dimExtent whose index reproduces
+//       look for one stride/offset/dimStride/dimSize whose index reproduces
 //       every needed[slot]; if there is none: next donorDelta
 //
 //       accept (donorDelta, donorIndex) and stop
@@ -2235,7 +2187,7 @@ computeOwnedCoords(xegpu::DistributeLayoutAttr layout, ArrayRef<int64_t> shape,
 /// For a `vector<8x2>` whose input layout gives every lane all 16 elements,
 /// row-major, and whose target gives lane `i` row `i`, element `p` of the
 /// target fragment sits at `2 * slot + p`: `stride` 2, `offset` p, `dimStride`
-/// 1, `dimExtent` 8.
+/// 1, `dimSize` 8.
 struct DonorIndex {
   /// Distance in the fragment between consecutive coordinates along the
   /// dimension being walked, or 0 when every slot reads the same element.
@@ -2243,21 +2195,21 @@ struct DonorIndex {
   /// Fragment index that coordinate 0 maps to, and the whole index when
   /// `stride` is 0.
   int64_t offset;
-  /// Slots apart for the coordinate to advance by one.
+  /// Slots apart for the coordinate to advance by one, or 1 when no dimension
+  /// is walked.
   int64_t dimStride;
-  /// How many values the coordinate takes before wrapping. This is the extent
-  /// of the target `lane_layout` dimension being walked, except when `stride`
-  /// is 0 and no dimension is: then it is 1, as is `dimStride`.
-  int64_t dimExtent;
+  /// How many values the coordinate takes before wrapping: the size of the
+  /// target `lane_layout` dimension being walked, or 1 when none is.
+  int64_t dimSize;
 
   /// Compile-time twin of the arithmetic the emitter builds.
   int64_t at(int64_t slot) const {
-    return stride * ((slot / dimStride) % dimExtent) + offset;
+    return stride * ((slot / dimStride) % dimSize) + offset;
   }
 
   /// Key identifying the value this extracts, for reuse across elements.
   std::tuple<int64_t, int64_t, int64_t, int64_t> asTuple() const {
-    return {stride, offset, dimStride, dimExtent};
+    return {stride, offset, dimStride, dimSize};
   }
 };
 
@@ -2284,7 +2236,7 @@ struct ElementSource {
 /// For `needed = [0, 0, 2, 2]`: the first change is at slot 2, so pairs of
 /// slots share a coordinate (`dimStride` 2) and consecutive coordinates are 2
 /// elements apart (`stride` 2); the table reaches 2, one step, so the
-/// coordinate takes 2 values (`dimExtent` 2); and slot 0 reads 0 (`offset` 0).
+/// coordinate takes 2 values (`dimSize` 2); and slot 0 reads 0 (`offset` 0).
 static FailureOr<DonorIndex> fitDonorIndex(ArrayRef<int64_t> needed,
                                            int64_t targetLanePeriod) {
   // Slots sharing an index are adjacent, so the first change in `needed` gives
@@ -2299,8 +2251,8 @@ static FailureOr<DonorIndex> fitDonorIndex(ArrayRef<int64_t> needed,
     return failure();
 
   // The index wraps once it has taken all its values, so how far `needed` gets
-  // from `offset` gives the dimExtent.
-  int64_t dimExtent = 1;
+  // from `offset` gives the dimSize.
+  int64_t dimSize = 1;
   if (stride == 0) {
     // Every slot reads `offset`; no dimension is involved.
     dimStride = 1;
@@ -2309,12 +2261,12 @@ static FailureOr<DonorIndex> fitDonorIndex(ArrayRef<int64_t> needed,
       int64_t diff = wanted - offset;
       if (diff < 0 || diff % stride != 0)
         return failure();
-      dimExtent = std::max(dimExtent, diff / stride + 1);
+      dimSize = std::max(dimSize, diff / stride + 1);
     }
   }
 
   // Derived from the table, so verify against the table before relying on it.
-  DonorIndex donorIndex{stride, offset, dimStride, dimExtent};
+  DonorIndex donorIndex{stride, offset, dimStride, dimSize};
   if (!llvm::all_of(llvm::seq<int64_t>(0, targetLanePeriod), [&](int64_t slot) {
         return needed[slot] == donorIndex.at(slot);
       }))
@@ -2413,7 +2365,7 @@ static FailureOr<Value> redistributeBroadcastedValue(
   // Require the layouts to distribute what the vector types account for. The
   // lanes past the first `targetLanePeriod` are replicas by construction: both
   // computeStaticDistributedCoords implementations delinearize the lane id
-  // modulo the lane_layout extents, whose product is `targetLanePeriod`.
+  // modulo the `lane_layout` dimensions, whose product is `targetLanePeriod`.
   for (int64_t lane = 0; lane < subgroupSize; lane++) {
     assert((*targetOwned)[lane] == (*targetOwned)[lane % targetLanePeriod] &&
            "target ownership is not periodic in the lane period");
@@ -2467,7 +2419,7 @@ static FailureOr<Value> redistributeBroadcastedValue(
   // the same one. Either step is skipped when it is a no-op over `slot`.
   llvm::DenseMap<std::pair<int64_t, int64_t>, Value> dimIndices;
   auto getDimIndex = [&](const DonorIndex &donorIndex) -> Value {
-    Value &dimIndex = dimIndices[{donorIndex.dimStride, donorIndex.dimExtent}];
+    Value &dimIndex = dimIndices[{donorIndex.dimStride, donorIndex.dimSize}];
     if (dimIndex)
       return dimIndex;
     dimIndex = slot;
@@ -2475,10 +2427,10 @@ static FailureOr<Value> redistributeBroadcastedValue(
       dimIndex = arith::DivUIOp::create(
           rewriter, loc, dimIndex,
           arith::ConstantIndexOp::create(rewriter, loc, donorIndex.dimStride));
-    if (donorIndex.dimExtent < targetLanePeriod / donorIndex.dimStride)
+    if (donorIndex.dimSize < targetLanePeriod / donorIndex.dimStride)
       dimIndex = arith::RemUIOp::create(
           rewriter, loc, dimIndex,
-          arith::ConstantIndexOp::create(rewriter, loc, donorIndex.dimExtent));
+          arith::ConstantIndexOp::create(rewriter, loc, donorIndex.dimSize));
     return dimIndex;
   };
 
@@ -2502,7 +2454,7 @@ static FailureOr<Value> redistributeBroadcastedValue(
   // Extract, shuffle and insert one element of the result at a time: one
   // extract per distinct fragment index, one shuffle per element the lane does
   // not already hold.
-  // TODO: elements sharing a donor could travel in one shuffle, `gpu.shuffle`
+  // TODO: elements sharing a donor could move in one shuffle, `gpu.shuffle`
   // moving a whole 32-bit lane word.
   llvm::DenseMap<std::tuple<int64_t, int64_t, int64_t, int64_t>, Value>
       extracted;
