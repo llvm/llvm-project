@@ -37,6 +37,18 @@ define <vscale x 8 x i16> @repeat_double_i8_to_double_sve(<8 x i8> %a) {
   ret <vscale x 8 x i16> %out.legal
 }
 
+define <vscale x 16 x i8> @repeat_one_i8(<8 x i8> %a.legal) {
+; CHECK-LABEL: repeat_one_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.b, b0
+; CHECK-NEXT:    ret
+  %a = call <1 x i8> @llvm.vector.extract.v1i8.nxv1i8(<8 x i8> %a.legal, i64 0)
+  %out = call <vscale x 1 x i8> @llvm.vector.repeat.nxv1i8.v1i8(<1 x i8> %a)
+  %out.legal = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv1i8(<vscale x 16 x i8> poison, <vscale x 1 x i8> %out, i64 0)
+  ret <vscale x 16 x i8> %out.legal
+}
+
 define <vscale x 8 x i16> @repeat_quad_i16(<8 x i16> %a) {
 ; CHECK-LABEL: repeat_quad_i16:
 ; CHECK:       // %bb.0:
@@ -77,6 +89,18 @@ define <vscale x 8 x i16> @repeat_double_i16(<4 x i16> %a) {
   ret <vscale x 8 x i16> %out
 }
 
+define <vscale x 8 x i16> @repeat_one_i16(<4 x i16> %a.legal) {
+; CHECK-LABEL: repeat_one_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    ret
+  %a = call <1 x i16> @llvm.vector.extract.v1i16.nxv1i16(<4 x i16> %a.legal, i64 0)
+  %out = call <vscale x 1 x i16> @llvm.vector.repeat.nxv1i16.v1i16(<1 x i16> %a)
+  %out.legal = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %out, i64 0)
+  ret <vscale x 8 x i16> %out.legal
+}
+
 define <vscale x 4 x i32> @repeat_double_i16_to_double_sve(<4 x i16> %a) {
 ; CHECK-LABEL: repeat_double_i16_to_double_sve:
 ; CHECK:       // %bb.0:
@@ -111,6 +135,18 @@ define <vscale x 4 x i32> @repeat_double_i32(<2 x i32> %a) {
   ret <vscale x 4 x i32> %out
 }
 
+define <vscale x 4 x i32> @repeat_one_i32(<2 x i32> %a.legal) {
+; CHECK-LABEL: repeat_one_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    ret
+  %a = call <1 x i32> @llvm.vector.extract.v1i32.nxv1i32(<2 x i32> %a.legal, i64 0)
+  %out = call <vscale x 1 x i32> @llvm.vector.repeat.nxv1i32.v1i32(<1 x i32> %a)
+  %out.legal = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> poison, <vscale x 1 x i32> %out, i64 0)
+  ret <vscale x 4 x i32> %out.legal
+}
+
 define <vscale x 2 x i64> @repeat_quad_i64(<2 x i64> %a) {
 ; CHECK-LABEL: repeat_quad_i64:
 ; CHECK:       // %bb.0:
@@ -131,6 +167,17 @@ define <vscale x 2 x i64> @repeat_double_i64(<1 x i64> %a) {
   %tmp = shufflevector <1 x i64> %a, <1 x i64> poison, <2 x i32> zeroinitializer
   %out = call <vscale x 2 x i64> @llvm.vector.repeat.nxv2i64.v2i64(<2 x i64> %tmp)
   ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 2 x i64> @repeat_one_i64(<1 x i64> %a) {
+; CHECK-LABEL: repeat_one_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    ret
+  %out = call <vscale x 1 x i64> @llvm.vector.repeat.nxv1i64.v1i64(<1 x i64> %a)
+  %out.legal = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.nxv1i64(<vscale x 2 x i64> poison, <vscale x 1 x i64> %out, i64 0)
+  ret <vscale x 2 x i64> %out.legal
 }
 
 ; vscale_range tests
@@ -206,6 +253,18 @@ define <vscale x 2 x half> @repeat_2f16_to_nxv2f16(<4 x half> %a) {
   ret <vscale x 2 x half> %out
 }
 
+define <vscale x 8 x half> @repeat_one_f16(<4 x half> %a.legal) {
+; CHECK-LABEL: repeat_one_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    ret
+  %a = call <1 x half> @llvm.vector.extract.v1f16.v4f16(<4 x half> %a.legal, i64 0)
+  %out = call <vscale x 1 x half> @llvm.vector.repeat.nxv1f16.v1f16(<1 x half> %a)
+  %out.legal = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.nxv1f16(<vscale x 8 x half> poison, <vscale x 1 x half> %out, i64 0)
+  ret <vscale x 8 x half> %out.legal
+}
+
 define <vscale x 8 x bfloat> @repeat_quad_bf16(<8 x bfloat> %a) #0 {
 ; CHECK-LABEL: repeat_quad_bf16:
 ; CHECK:       // %bb.0:
@@ -214,6 +273,18 @@ define <vscale x 8 x bfloat> @repeat_quad_bf16(<8 x bfloat> %a) #0 {
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x bfloat> @llvm.vector.repeat.nxv8bf16.v8bf16(<8 x bfloat> %a)
   ret <vscale x 8 x bfloat> %out
+}
+
+define <vscale x 8 x bfloat> @repeat_one_bf16(<4 x bfloat> %a.legal) #0 {
+; CHECK-LABEL: repeat_one_bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    ret
+  %a = call <1 x bfloat> @llvm.vector.extract.v1bf16.v4bf16(<4 x bfloat> %a.legal, i64 0)
+  %out = call <vscale x 1 x bfloat> @llvm.vector.repeat.nxv1bf16.v1bf16(<1 x bfloat> %a)
+  %out.legal = call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.nxv1bf16(<vscale x 8 x bfloat> poison, <vscale x 1 x bfloat> %out, i64 0)
+  ret <vscale x 8 x bfloat> %out.legal
 }
 
 define <vscale x 4 x float> @repeat_quad_f32(<4 x float> %a) {
@@ -238,6 +309,18 @@ define <vscale x 2 x float> @repeat_double_f32_to_nxv2f32(<2 x float> %a) {
   ret <vscale x 2 x float> %out
 }
 
+define <vscale x 4 x float> @repeat_one_f32(<2 x float> %a.legal) {
+; CHECK-LABEL: repeat_one_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    ret
+  %a = call <1 x float> @llvm.vector.extract.v1f32.v2f32(<2 x float> %a.legal, i64 0)
+  %out = call <vscale x 1 x float> @llvm.vector.repeat.nxv1f32.v1f32(<1 x float> %a)
+  %out.legal = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> poison, <vscale x 1 x float> %out, i64 0)
+  ret <vscale x 4 x float> %out.legal
+}
+
 define <vscale x 4 x bfloat> @repeat_double_bf16_to_nxv4bf16(<4 x bfloat> %a) #0 {
 ; CHECK-LABEL: repeat_double_bf16_to_nxv4bf16:
 ; CHECK:       // %bb.0:
@@ -258,6 +341,17 @@ define <vscale x 2 x double> @repeat_quad_f64(<2 x double> %a) {
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x double> @llvm.vector.repeat.nxv2f64.v2f64(<2 x double> %a)
   ret <vscale x 2 x double> %out
+}
+
+define <vscale x 2 x double> @repeat_one_f64(<1 x double> %a) {
+; CHECK-LABEL: repeat_one_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.d, d0
+; CHECK-NEXT:    ret
+  %out = call <vscale x 1 x double> @llvm.vector.repeat.nxv1f64.v1f64(<1 x double> %a)
+  %out.legal = call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.nxv1f64(<vscale x 2 x double> poison, <vscale x 1 x double> %out, i64 0)
+  ret <vscale x 2 x double> %out.legal
 }
 
 ; Predicates
