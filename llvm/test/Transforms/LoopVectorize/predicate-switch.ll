@@ -674,7 +674,7 @@ exit:
 ; IC1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; IC1: [[META6]] = !{[[META7:![0-9]+]]}
 ; IC1: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; IC1: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; IC1: [[META8]] = distinct !{[[META8]], i1 false, !"LVerDomain"}
 ; IC1: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
 ; IC1: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
 ;.
@@ -686,7 +686,7 @@ exit:
 ; IC2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; IC2: [[META6]] = !{[[META7:![0-9]+]]}
 ; IC2: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; IC2: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; IC2: [[META8]] = distinct !{[[META8]], i1 false, !"LVerDomain"}
 ; IC2: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
 ; IC2: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
 ;.

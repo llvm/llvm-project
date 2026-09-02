@@ -50,13 +50,13 @@ define void @f1() {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 3
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END_LOOPEXIT1:.*]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
-; CHECK-NEXT:    [[T2_LVER_PH:%.*]] = phi i16 [ [[T2_LVER_ORIG]], %[[FOR_BODY_LVER_ORIG]] ]
+; CHECK-NEXT:    [[T2_LCSSA_PH:%.*]] = phi i16 [ [[T2_LVER_ORIG]], %[[FOR_BODY_LVER_ORIG]] ]
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END_LOOPEXIT1]]:
-; CHECK-NEXT:    [[T2_LVER_PH2:%.*]] = phi i16 [ [[T2]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[T2_LCSSA_PH2:%.*]] = phi i16 [ [[T2]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    br label %[[FOR_END]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[T2_LVER:%.*]] = phi i16 [ [[T2_LVER_PH]], %[[FOR_END_LOOPEXIT]] ], [ [[T2_LVER_PH2]], %[[FOR_END_LOOPEXIT1]] ]
+; CHECK-NEXT:    [[T2_LVER:%.*]] = phi i16 [ [[T2_LCSSA_PH]], %[[FOR_END_LOOPEXIT]] ], [ [[T2_LCSSA_PH2]], %[[FOR_END_LOOPEXIT1]] ]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[T2_LVER]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[FOR_COND_BACKEDGE:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[FOR_COND_BACKEDGE]]:
@@ -108,7 +108,7 @@ if.then:                                          ; preds = %for.end
 ; CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; CHECK: [[META8]] = distinct !{[[META8]], i1 false, !"LVerDomain"}
 ; CHECK: [[META9]] = !{[[META10:![0-9]+]]}
 ; CHECK: [[META10]] = distinct !{[[META10]], [[META8]]}
 ;.

@@ -5,7 +5,7 @@
 
 ; Re-evaluate the slot numbers of scopes as that numbering could be changed run-by-run.
 
-; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"bax"}
+; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"bax"}
 ; MIR-DAG: ![[SCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"bax: %p"}
 ; MIR-DAG: ![[SCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"bax: %q"}
 ; MIR-DAG: ![[SET0:[0-9]+]] = !{![[SCOPE0]]}
@@ -145,7 +145,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 declare ptr @mempcpy(ptr, ptr, i64)
 
-!0 = distinct !{!0, !"bax"}
+!0 = distinct !{!0, i1 false, !"bax"}
 !1 = distinct !{!1, !0, !"bax: %p"}
 !2 = !{!1}
 !3 = distinct !{!3, !0, !"bax: %q"}

@@ -9,8 +9,11 @@ define void @test(ptr %p) {
   load i8, ptr %p, !noalias !9
   load i8, ptr %p, !noalias !11
   load i8, ptr %p, !noalias !14
-  load i8, ptr %p, !alias.scope !17
-  call void @llvm.experimental.noalias.scope.decl(metadata !20)
+  load i8, ptr %p, !noalias !17
+  load i8, ptr %p, !noalias !20
+  load i8, ptr %p, !noalias !23
+  load i8, ptr %p, !alias.scope !26
+  call void @llvm.experimental.noalias.scope.decl(metadata !29)
   ret void
 }
 
@@ -39,23 +42,37 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 !9 = !{!10}
 !10 = !{!10, !"str"}
 
-; CHECK: domain must have one or two operands
+; CHECK: domain must have two or three operands
 !11 = !{!12}
 !12 = !{!12, !13}
 !13 = !{}
 
-; CHECK: domain must have one or two operands
+; CHECK: domain must have two or three operands
 !14 = !{!15}
 !15 = !{!15, !16}
-!16 = !{!17, !18, !19}
+!16 = !{!16, i1 false, !"str", !"str"}
 
 ; CHECK: first domain operand must be self-referential or string
 !17 = !{!18}
 !18 = !{!18, !19}
-!19 = !{!20}
+!19 = !{!13, i1 false}
 
-; CHECK: second domain operand must be string (if used)
+; CHECK: second domain operand must be an i1 constant
 !20 = !{!21}
 !21 = !{!21, !22}
-!22 = !{!22, !23}
-!23 = !{}
+!22 = !{!22, i32 1}
+
+; CHECK: second domain operand must be an i1 constant
+!23 = !{!24}
+!24 = !{!24, !25}
+!25 = !{!25, !"str", !"str"}
+
+; CHECK: third domain operand must be string (if used)
+!26 = !{!27}
+!27 = !{!27, !28}
+!28 = !{!28, i1 false, !13}
+
+; CHECK: domain must have two or three operands
+!29 = !{!30}
+!30 = !{!30, !31}
+!31 = !{!31, i1 false, !"str", !"str"}

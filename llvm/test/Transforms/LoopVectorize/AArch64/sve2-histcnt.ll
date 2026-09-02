@@ -868,9 +868,9 @@ attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 !5 = !{!"llvm.loop.interleave.count", i32 1}
 !6 = !{!7}
 !7 = distinct !{!7, !8, !"scope-index"}
-!8 = distinct !{!8, !"scopes-indices"}
+!8 = distinct !{!8, i1 false, !"scopes-indices"}
 !9 = !{!10}
 !10 = distinct !{!10, !8, !"scope-bucket"}
 !11 = !{!10, !12}
 !12 = distinct !{!12, !13, !"scope-bucket-2"}
-!13 = distinct !{!13, !"scopes-buckets"}
+!13 = distinct !{!13, i1 false, !"scopes-buckets"}

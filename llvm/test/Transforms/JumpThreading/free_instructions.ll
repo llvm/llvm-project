@@ -57,4 +57,4 @@ declare ptr @llvm.launder.invariant.group.p0(ptr)
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"scope"}
-!2 = distinct !{!2, !"domain"}
+!2 = distinct !{!2, i1 false, !"domain"}

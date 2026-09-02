@@ -2482,7 +2482,7 @@ define void @test.llvm.noalias.scope.decl(ptr %P, ptr %Q) nounwind ssp {
 
 !3 = !{ !4 }
 !4 = distinct !{ !4, !5, !"test1: var" }
-!5 = distinct !{ !5, !"test1" }
+!5 = distinct !{!5, i1 false, !"test1"}
 
 
 declare void @llvm.sideeffect()

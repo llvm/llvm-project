@@ -5977,6 +5977,10 @@ bool InstCombinerImpl::run() {
 class AliasScopeTracker {
   SmallPtrSet<const MDNode *, 8> UsedAliasScopesAndLists;
   SmallPtrSet<const MDNode *, 8> UsedNoAliasScopesAndLists;
+  // The domains with disjoint scopes of which more than one scope is used by
+  // !alias.scope, along with the first such scope seen for each domain.
+  SmallDenseMap<const MDNode *, const MDNode *, 4> FirstScopeInDisjointDomain;
+  SmallPtrSet<const MDNode *, 4> UsedDisjointDomains;
 
 public:
   void analyse(Instruction *I) {
@@ -5984,17 +5988,29 @@ public:
     if (!I->hasMetadataOtherThanDebugLoc())
       return;
 
-    auto Track = [](Metadata *ScopeList, auto &Container) {
+    auto Track = [](Metadata *ScopeList, auto &Container, auto OnScope) {
       const auto *MDScopeList = dyn_cast_or_null<MDNode>(ScopeList);
       if (!MDScopeList || !Container.insert(MDScopeList).second)
         return;
       for (const auto &MDOperand : MDScopeList->operands())
-        if (auto *MDScope = dyn_cast<MDNode>(MDOperand))
+        if (auto *MDScope = dyn_cast<MDNode>(MDOperand)) {
           Container.insert(MDScope);
+          OnScope(MDScope);
+        }
     };
 
-    Track(I->getMetadata(LLVMContext::MD_alias_scope), UsedAliasScopesAndLists);
-    Track(I->getMetadata(LLVMContext::MD_noalias), UsedNoAliasScopesAndLists);
+    Track(I->getMetadata(LLVMContext::MD_alias_scope), UsedAliasScopesAndLists,
+          [this](const MDNode *MDScope) {
+            const MDNode *Domain = AliasScopeNode(MDScope).getDomain();
+            if (!Domain || !AliasScopeDomainNode(Domain).hasDisjointScopes())
+              return;
+            auto [It, Inserted] =
+                FirstScopeInDisjointDomain.try_emplace(Domain, MDScope);
+            if (!Inserted && It->second != MDScope)
+              UsedDisjointDomains.insert(Domain);
+          });
+    Track(I->getMetadata(LLVMContext::MD_noalias), UsedNoAliasScopesAndLists,
+          [](const MDNode *) {});
   }
 
   bool isNoAliasScopeDeclDead(Instruction *Inst) {
@@ -6008,9 +6024,16 @@ public:
     assert(MDSL->getNumOperands() == 1 &&
            "llvm.experimental.noalias.scope should refer to a single scope");
     auto &MDOperand = MDSL->getOperand(0);
-    if (auto *MD = dyn_cast<MDNode>(MDOperand))
-      return !UsedAliasScopesAndLists.contains(MD) ||
-             !UsedNoAliasScopesAndLists.contains(MD);
+    if (auto *MD = dyn_cast<MDNode>(MDOperand)) {
+      if (!UsedAliasScopesAndLists.contains(MD))
+        return true;
+      // A scope of a domain with disjoint scopes carries an implicit noalias
+      // set, so its declaration matters without a noalias use as long as some
+      // other scope of that domain is used as well.
+      if (UsedDisjointDomains.contains(AliasScopeNode(MD).getDomain()))
+        return false;
+      return !UsedNoAliasScopesAndLists.contains(MD);
+    }
 
     // Not an MDNode ? throw away.
     return true;

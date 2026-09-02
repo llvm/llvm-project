@@ -159,7 +159,7 @@
 
   !9 = !{!10}
   !10 = distinct !{!10, !11, !"some scope"}
-  !11 = distinct !{!11, !"some domain"}
+  !11 = distinct !{!11, i1 false, !"some domain"}
 
   define zeroext i1 @range_metadata(ptr %x) {
   entry:

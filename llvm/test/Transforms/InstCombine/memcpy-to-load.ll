@@ -89,8 +89,8 @@ define void @copy_8_bytes_noalias(ptr %d, ptr %s) {
   ret void
 }
 
-!0 = distinct !{!0, !"The domain"}
-!1 = distinct !{!1}
+!0 = distinct !{!0, i1 false, !"The domain"}
+!1 = distinct !{!1, i1 false}
 !2 = !{!2, !0}
 !3 = !{!3, !1}
 !4 = !{!2}

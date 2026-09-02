@@ -89,11 +89,11 @@ f:
 
 ; Alias-scope metadata domain.
 !1 = distinct !{!1, !2, !"scope A"}
-!2 = distinct !{!2, !"test domain"}
+!2 = distinct !{!2, i1 false, !"test domain"}
 
 !0 = !{!1}
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"scope A"}
-; CHECK: [[META2]] = distinct !{[[META2]], !"test domain"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"test domain"}
 ;.

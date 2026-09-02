@@ -57,7 +57,7 @@ attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx-len
 !2 = !{!"Simple C/C++ TBAA"}
 !3 = !{!4}
 !4 = distinct !{!4, !5}
-!5 = distinct !{!5, !"LVerDomain"}
+!5 = distinct !{!5, i1 false, !"LVerDomain"}
 !6 = !{!7}
 !7 = distinct !{!7, !5}
 !8 = !{!4, !9, !10, !11}

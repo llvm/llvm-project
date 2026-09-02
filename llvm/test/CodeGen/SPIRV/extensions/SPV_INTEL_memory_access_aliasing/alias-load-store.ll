@@ -57,10 +57,10 @@ entry:
 
 !1 = !{!2}
 !2 = distinct !{!2, !3, !"foo: %this"}
-!3 = distinct !{!3, !"foo"}
+!3 = distinct !{!3, i1 false, !"foo"}
 !4 = !{!5}
 !5 = distinct !{!5, !6, !"boo: %this"}
-!6 = distinct !{!6, !"boo"}
+!6 = distinct !{!6, i1 false, !"boo"}
 !7 = !{!8}
 !8 = distinct !{!8, !9, !"foo: %this"}
-!9 = distinct !{!9, !"foo"}
+!9 = distinct !{!9, i1 false, !"foo"}

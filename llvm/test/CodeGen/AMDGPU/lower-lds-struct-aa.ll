@@ -113,12 +113,12 @@ bb:
 ; CHECK: !0 = !{i32 0, i32 1}
 ; CHECK: !1 = !{!2}
 ; CHECK: !2 = distinct !{!2, !3}
-; CHECK: !3 = distinct !{!3}
+; CHECK: !3 = distinct !{!3, i1 false}
 ; CHECK: !4 = !{!5}
 ; CHECK: !5 = distinct !{!5, !3}
 ; CHECK: !6 = !{!7}
 ; CHECK: !7 = distinct !{!7, !8}
-; CHECK: !8 = distinct !{!8}
+; CHECK: !8 = distinct !{!8, i1 false}
 ; CHECK: !9 = !{!10, !11}
 ; CHECK: !10 = distinct !{!10, !8}
 ; CHECK: !11 = distinct !{!11, !8}

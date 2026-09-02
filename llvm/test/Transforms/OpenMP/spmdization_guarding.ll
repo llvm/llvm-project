@@ -431,7 +431,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 !7 = !{!"clang version 14.0.0"}
 !8 = !{!9}
 !9 = distinct !{!9, !10, !"__omp_outlined__: %__context"}
-!10 = distinct !{!10, !"__omp_outlined__"}
+!10 = distinct !{!10, i1 false, !"__omp_outlined__"}
 !11 = distinct !{!11, !12}
 !12 = !{!"llvm.loop.mustprogress"}
 ;.
@@ -468,7 +468,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__omp_outlined__: %__context"}
-; CHECK: [[META9]] = distinct !{[[META9]], !"__omp_outlined__"}
+; CHECK: [[META9]] = distinct !{[[META9]], i1 false, !"__omp_outlined__"}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
 ; CHECK: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.
@@ -481,7 +481,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK-DISABLED: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ; CHECK-DISABLED: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK-DISABLED: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__omp_outlined__: %__context"}
-; CHECK-DISABLED: [[META9]] = distinct !{[[META9]], !"__omp_outlined__"}
+; CHECK-DISABLED: [[META9]] = distinct !{[[META9]], i1 false, !"__omp_outlined__"}
 ; CHECK-DISABLED: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
 ; CHECK-DISABLED: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.
