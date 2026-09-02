@@ -858,6 +858,18 @@ The available directives are as follows:
         declarative assembly format will print it instead as:
         `vector.multi_reduction #vector.kind<minf>, ...`.
 
+*   `enum ( attribute )`
+
+    -   Represents the symbolic value of an enum-backed attribute without the
+        attribute's dialect prefix, mnemonic, or custom assembly format.
+    -   The argument must be an enum attribute. For example, if `$kind` has the
+        complete form `#vector.kind<minf>`, `enum($kind)` prints `minf`, `$kind`
+        prints the attribute's assembly-format body `<minf>`, and
+        `qualified($kind)` prints the complete attribute `#vector.kind<minf>`.
+    -   Bit enums must define a zero-valued case so every valid bitmask has a
+        symbolic spelling. An unquoted comma-separated bit enum cannot be
+        followed by a comma literal because the two uses would be ambiguous.
+
 #### Literals
 
 A literal is either a keyword or punctuation surrounded by \`\`.

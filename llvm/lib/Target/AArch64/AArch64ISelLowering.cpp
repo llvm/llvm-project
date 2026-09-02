@@ -15502,25 +15502,6 @@ static bool isEXTMaskWithSplat(ArrayRef<int> M, EVT VT, unsigned SplatOperand,
   return false;
 }
 
-/// isZIP_v_undef_Mask - Special case of isZIPMask for canonical form of
-/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
-/// Mask is e.g., <0, 0, 1, 1> instead of <0, 4, 1, 5>.
-static bool isZIP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned NumElts = VT.getVectorNumElements();
-  if (NumElts % 2 != 0)
-    return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  unsigned Idx = WhichResult * NumElts / 2;
-  for (unsigned i = 0; i != NumElts; i += 2) {
-    if ((M[i] >= 0 && (unsigned)M[i] != Idx) ||
-        (M[i + 1] >= 0 && (unsigned)M[i + 1] != Idx))
-      return false;
-    Idx += 1;
-  }
-
-  return true;
-}
-
 /// isUZP_v_undef_Mask - Special case of isUZPMask for canonical form of
 /// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
 /// Mask is e.g., <0, 2, 0, 2> instead of <0, 2, 4, 6>,
@@ -16269,7 +16250,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                        OperandOrder == 0 ? V2 : V1);
   }
 
-  if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+  if (isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::ZIP1 : AArch64ISD::ZIP2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V1);
   }
@@ -18062,7 +18043,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isZIPMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isTRN_v_undef_Mask(M, VT, DummyUnsigned) ||
           isUZP_v_undef_Mask(M, VT, DummyUnsigned) ||
-          isZIP_v_undef_Mask(M, VT, DummyUnsigned) ||
+          isZIP_v_undef_Mask(M, NumElts, DummyUnsigned) ||
           isINSMask(M, NumElts, DummyBool, DummyInt) ||
           isConcatMask(M, VT, VT.getSizeInBits() == 128));
 }
@@ -35595,8 +35576,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
 
   unsigned WhichResult;
   unsigned OperandOrder;
-  if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
-                OperandOrder) &&
+  unsigned NumElts = VT.getVectorNumElements();
+  if (isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder) &&
       WhichResult == 0) {
     SDValue ZIP = DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT,
                               OperandOrder == 0 ? Op1 : Op2,
@@ -35613,7 +35594,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     return convertFromScalableVector(DAG, VT, TRN);
   }
 
-  if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult) && WhichResult == 0)
+  if (isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult) && WhichResult == 0)
     return convertFromScalableVector(
         DAG, VT, DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT, Op1, Op1));
 
@@ -35650,8 +35631,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
       return convertFromScalableVector(DAG, VT, Op);
     }
 
-    if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult,
-                  OperandOrder) &&
+    unsigned NumElts = VT.getVectorNumElements();
+    if (isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder) &&
         WhichResult != 0) {
       SDValue ZIP = DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT,
                                 OperandOrder == 0 ? Op1 : Op2,
@@ -35659,13 +35640,14 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
       return convertFromScalableVector(DAG, VT, ZIP);
     }
 
-    if (isUZPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult)) {
+    if (isUZPMask(ShuffleMask, NumElts, WhichResult)) {
       unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op2));
     }
 
-    if (isZIP_v_undef_Mask(ShuffleMask, VT, WhichResult) && WhichResult != 0)
+    if (isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult) &&
+        WhichResult != 0)
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT, Op1, Op1));
 

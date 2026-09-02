@@ -353,5 +353,11 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
 
   if (MSSAAnalysis && VerifyMemorySSA)
     MSSAAnalysis->getMSSA().verifyMemorySSA();
-  return PreservedAnalyses::none();
+
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  if (MSSAAnalysis)
+    PA.preserve<MemorySSAAnalysis>();
+  return PA;
 }
