@@ -253,6 +253,12 @@ public:
       PointerWidth = PointerAlign = 32;
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+
+      assert(PointerWidth == 32);
+      assert(PointerAlign == 32);
+      assert(getTypeWidth(SizeType) == 32);
+      assert(getTypeWidth(PtrDiffType) == 32);
+      assert(getTypeWidth(IntPtrType) == 32);
     }
 
     // SPIR32 has support for atomic ops if atomic extension is enabled.
@@ -276,6 +282,11 @@ public:
       PointerWidth = PointerAlign = 64;
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+      assert(PointerWidth == 64);
+      assert(PointerAlign == 64);
+      assert(getTypeWidth(SizeType) == 64);
+      assert(getTypeWidth(PtrDiffType) == 64);
+      assert(getTypeWidth(IntPtrType) == 64);
     }
 
     // SPIR64 has support for atomic ops if atomic extension is enabled.
@@ -370,6 +381,11 @@ public:
       PointerWidth = PointerAlign = 32;
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+      assert(PointerWidth == 32);
+      assert(PointerAlign == 32);
+      assert(getTypeWidth(SizeType) == 32);
+      assert(getTypeWidth(PtrDiffType) == 32);
+      assert(getTypeWidth(IntPtrType) == 32);
     }
 
     // SPIR-V has core support for atomic ops, and Int32 is always available;
@@ -398,6 +414,11 @@ public:
       PointerWidth = PointerAlign = 64;
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+      assert(PointerWidth == 64);
+      assert(PointerAlign == 64);
+      assert(getTypeWidth(SizeType) == 64);
+      assert(getTypeWidth(PtrDiffType) == 64);
+      assert(getTypeWidth(IntPtrType) == 64);
     }
 
     // SPIR-V has core support for atomic ops, and Int64 is always available;
@@ -445,6 +466,17 @@ public:
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+
+    // With a host target the widths above are the host's until setAuxTarget()
+    // replaces them, so only what this target sets itself is asserted.
+    if (!getHostTarget()) {
+      assert(PointerWidth == 64);
+      assert(PointerAlign == 64);
+      assert(getTypeWidth(SizeType) == 64);
+      assert(getTypeWidth(PtrDiffType) == 64);
+      assert(getTypeWidth(IntPtrType) == 64);
+    }
+
     AddrSpaceMap = &SPIRDefIsGenMap;
 
     resetDataLayout();
