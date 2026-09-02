@@ -677,6 +677,23 @@ public:
     return Parent ? Parent->Directive : OMPD_unknown;
   }
 
+  /// Whether the directive being analyzed is encountered as part of a taskgraph
+  /// region.  The parent directive answers that for almost every construct,
+  /// but a target data region's structured block is executed by the
+  /// encountering task, so a construct within it is still within whatever
+  /// encloses the target data.
+  bool isInTaskgraphRegion() const {
+    for (const_iterator I = begin() + std::min<size_t>(1, getStackSize()),
+                        E = end();
+         I != E; ++I) {
+      if (I->Directive == OMPD_taskgraph)
+        return true;
+      if (I->Directive != OMPD_target_data)
+        return false;
+    }
+    return false;
+  }
+
   /// Add requires decl to internal vector
   void addRequiresDecl(OMPRequiresDecl *RD) { RequiresDecls.push_back(RD); }
 
@@ -5113,7 +5130,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_atomic);
     return true;
   }
-  if (ParentRegion == OMPD_taskgraph &&
+  if (Stack->isInTaskgraphRegion() &&
       getDirectiveCategory(CurrentRegion) == Category::Executable &&
       !isOpenMPExplicitTaskGeneratingDirective(CurrentRegion)) {
     // OpenMP 6.0 [14.3, taskgraph Construct, Restrictions]
@@ -7104,7 +7121,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     ErrorFound = checkIfClauses(SemaRef, Kind, Clauses, AllowedNameModifiers) ||
                  ErrorFound;
 
-  if (DSAStack->getParentDirective() == OMPD_taskgraph)
+  if (DSAStack->isInTaskgraphRegion())
     ErrorFound = checkTaskgraphReplayableRestrictions(SemaRef, Kind, Clauses) ||
                  ErrorFound;
 
@@ -11909,7 +11926,7 @@ SemaOpenMP::ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
     Diag(StartLoc, diag::err_omp_nowait_clause_without_depend);
     return StmtError();
   }
-  if (DSAStack->getParentDirective() == OMPD_taskgraph && !HasDependC) {
+  if (DSAStack->isInTaskgraphRegion() && !HasDependC) {
     Diag(StartLoc, diag::err_omp_taskgraph_taskwait_without_depend);
     return StmtError();
   }

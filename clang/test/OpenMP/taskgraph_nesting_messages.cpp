@@ -171,12 +171,26 @@ void below_a_generated_task(int n) {
 #pragma omp parallel
       {}
     }
+  }
+}
 
-    // The body of a target data region is that of its constituent task.
+// A target data region is not one of those: its structured block is executed by
+// the encountering task, which is what lets the constructs in it be recorded as
+// nodes of their own, so they are encountered in the taskgraph region and the
+// restrictions reach them.
+void within_a_target_data(int n) {
+#pragma omp taskgraph
+  {
 #pragma omp target data map(tofrom : n)
     {
-#pragma omp taskgroup
+#pragma omp taskgroup // expected-error {{'taskgroup' directive is not task-generating and cannot be used within '#pragma omp taskgraph'}}
       {}
+#pragma omp taskwait // expected-error {{directive '#pragma omp taskwait' within '#pragma omp taskgraph' must use 'depend' clause to be task-generating}}
+
+      // Still fine, being task-generating.
+#pragma omp task
+      {}
+#pragma omp taskwait depend(in : n)
     }
   }
 }
