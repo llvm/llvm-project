@@ -686,9 +686,9 @@ public:
   getEagerlyAssumeBifurcationTags();
 
   void handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
-                                      const StackFrame *SF, QualType T,
-                                      QualType ExTy, const CastExpr *CastE,
-                                      ExplodedNodeSet &Dst, ExplodedNode *Pred);
+                           const StackFrame *SF, QualType T, QualType ExTy,
+                           const CastExpr *CastE, ExplodedNodeSet &Dst,
+                           ExplodedNode *Pred);
 
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,

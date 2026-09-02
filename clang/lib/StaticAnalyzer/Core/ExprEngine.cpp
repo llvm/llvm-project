@@ -3575,8 +3575,7 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
   state = createTemporaryRegionIfNeeded(state, SF, BaseExpr,
                                         /*Result=*/nullptr,
                                         /*OutRegionWithAdjustments=*/&MR);
-  SVal baseExprVal =
-      MR ? loc::MemRegionVal(MR) : state->getSVal(BaseExpr, SF);
+  SVal baseExprVal = MR ? loc::MemRegionVal(MR) : state->getSVal(BaseExpr, SF);
 
   // FIXME: Copied from RegionStoreManager::bind()
   if (const auto *SR =

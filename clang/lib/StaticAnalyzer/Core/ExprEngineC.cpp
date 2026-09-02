@@ -218,11 +218,10 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
                                         ProgramPoint::PostLValueKind));
 }
 
-void
-ExprEngine::handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
-                                const StackFrame *SF, QualType T, QualType ExTy,
-                                const CastExpr *CastE, ExplodedNodeSet &Dst,
-                                ExplodedNode *Pred) {
+void ExprEngine::handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
+                                     const StackFrame *SF, QualType T,
+                                     QualType ExTy, const CastExpr *CastE,
+                                     ExplodedNodeSet &Dst, ExplodedNode *Pred) {
   if (T->isLValueReferenceType()) {
     assert(!CastE->getType()->isLValueReferenceType());
     ExTy = getContext().getLValueReferenceType(ExTy);
