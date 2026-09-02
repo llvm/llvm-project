@@ -27,6 +27,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Alignment.h"
 
+#include <cassert>
+
 namespace mlir {
 namespace abi {
 
@@ -75,6 +77,11 @@ struct ArgClassification {
   /// For Indirect: whether the callee gets ownership (byval).
   bool byVal = false;
 
+  /// For Direct with coercion: the byte offset within the original aggregate
+  /// at which the coerced value lives.  Non-zero when the low eightbyte is
+  /// NO_CLASS and the value is carried in a later eightbyte (x86-64 SysV).
+  unsigned directOffset = 0;
+
   /// Whether the value is passed as-is, so a rewriter can leave it alone.
   /// Only an uncoerced Direct qualifies.  Extend counts as needing a rewrite
   /// even though it only adds an attribute, because the attribute changes
@@ -87,13 +94,19 @@ struct ArgClassification {
     return kind == other.kind && coercedType == other.coercedType &&
            indirectAlign == other.indirectAlign &&
            signExtend == other.signExtend && canFlatten == other.canFlatten &&
-           byVal == other.byVal;
+           byVal == other.byVal && directOffset == other.directOffset;
   }
 
-  static ArgClassification getDirect(Type coerced = nullptr) {
+  static ArgClassification getDirect(Type coerced = nullptr,
+                                     unsigned offset = 0) {
+    // isPassThrough reads only coercedType, so an offset with no coerced
+    // type to read at it would be silently ignored.
+    assert((!offset || coerced) &&
+           "a direct offset needs a coerced type to read at it");
     ArgClassification c;
     c.kind = ArgKind::Direct;
     c.coercedType = coerced;
+    c.directOffset = offset;
     return c;
   }
 
