@@ -12328,6 +12328,10 @@ def err_omp_loop_bad_collapse_var : Error<
   "cannot use variable %1 in collapsed imperfectly-nested loop %select{init|condition|increment}0 statement">;
 def err_omp_loop_var_reused_in_collapsed_loop : Error<
   "loop iteration variable %0 cannot be reused in a nested loop of a collapsed loop nest">;
+def err_omp_collapse_stacked_tile : Error<
+  "cannot %select{collapse|apply a loop transformation to}0 the intra-tile loop "
+  "of a '#pragma omp tile' that is nested inside another loop-transforming "
+  "directive; OpenMP permits this construct, but it is not yet supported">;
 def err_omp_simd_region_cannot_use_stmt : Error<
   "'%0' statement cannot be used in OpenMP simd region">;
 def warn_omp_loop_64_bit_var : Warning<
