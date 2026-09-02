@@ -15,6 +15,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -370,15 +371,31 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
             loc, emitScalarExpr(s.getAllocate()), storeAddr);
         cir::YieldOp::create(builder, loc);
       });
+
+  // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
+  if (Stmt *retOnAllocFailure = s.getReturnStmtOnAllocFailure()) {
+
+    mlir::LogicalResult res = mlir::success();
+    mlir::Value isPtrNull = builder.createPtrIsNull(storeAddr);
+
+    assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+
+    cir::IfOp::create(
+        builder, openCurlyLoc, isPtrNull, /*withElseRegion=*/false,
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          res = emitStmt(retOnAllocFailure, /*useCurrentScope=*/true);
+          cir::TrapOp::create(builder, openCurlyLoc);
+        });
+
+    if (res.failed())
+      return res;
+  }
+
   curCoro.data->coroBegin = cir::CoroBeginOp::create(
       cgm.getBuilder(), openCurlyLoc,
       mlir::ValueRange{
           curCoro.data->coroId.getResult(),
           cir::LoadOp::create(builder, openCurlyLoc, allocaTy, storeAddr)});
-
-  // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
-  if (s.getReturnStmtOnAllocFailure())
-    cgm.errorNYI("handle coroutine return alloc failure");
 
   {
     assert(!cir::MissingFeatures::generateDebugInfo());
