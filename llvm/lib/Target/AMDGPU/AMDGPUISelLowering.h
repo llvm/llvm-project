@@ -299,7 +299,7 @@ public:
                                    SDValue CC, SDNodeFlags Flags,
                                    DAGCombinerInfo &DCI) const;
 
-  /// \p Flags must be the select flags, not the compare (a SELECT_CC
+  /// \p Flags must be the select flags, not the compare (SELECT_CC
   /// flags come from the fcmp and say nothing about the selected value).
   SDValue combineFMinMaxLegacy(const SDLoc &DL, EVT VT, SDValue LHS,
                                SDValue RHS, SDValue True, SDValue False,

@@ -3107,3 +3107,233 @@ define float @v_test_fmax_legacy_uge_f32_nsz_flag__nnan_srcs(float %arg0, float 
   %val = select nsz i1 %cmp, float %a, float %b
   ret float %val
 }
+
+; A nonzero constant operand rules out the signed zero tie, so the tie hazard
+; predicates fold without nsz.
+define float @v_test_fmin_legacy_ole_f32_const_rhs(float %a) {
+; GFX7-LABEL: v_test_fmin_legacy_ole_f32_const_rhs:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX7-NEXT:    v_min_f32_e32 v0, 2.0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmin_legacy_ole_f32_const_rhs:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX9-NEXT:    v_min_f32_e32 v0, 2.0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmin_legacy_ole_f32_const_rhs:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_min_num_f32_e32 v0, 2.0, v0
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmin_legacy_ole_f32_const_rhs:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_min_num_f32_e32 v0, 2.0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ole float %a, 2.0
+  %val = select i1 %cmp, float %a, float 2.0
+  ret float %val
+}
+
+define float @v_test_fmin_legacy_ole_f32_const_lhs(float %b) {
+; GFX7-LABEL: v_test_fmin_legacy_ole_f32_const_lhs:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_min_legacy_f32_e32 v0, 2.0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmin_legacy_ole_f32_const_lhs:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_nle_f32_e32 vcc, 2.0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmin_legacy_ole_f32_const_lhs:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cmp_nle_f32_e32 vcc_lo, 2.0, v0
+; GFX1170-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc_lo
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmin_legacy_ole_f32_const_lhs:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_nle_f32_e32 vcc_lo, 2.0, v0
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ole float 2.0, %b
+  %val = select i1 %cmp, float 2.0, float %b
+  ret float %val
+}
+
+define float @v_test_fmin_legacy_ult_f32_const_rhs(float %a) {
+; GFX7-LABEL: v_test_fmin_legacy_ult_f32_const_rhs:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_min_legacy_f32_e32 v0, 2.0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmin_legacy_ult_f32_const_rhs:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_nle_f32_e32 vcc, 2.0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmin_legacy_ult_f32_const_rhs:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cmp_nle_f32_e32 vcc_lo, 2.0, v0
+; GFX1170-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc_lo
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmin_legacy_ult_f32_const_rhs:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_nle_f32_e32 vcc_lo, 2.0, v0
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ult float %a, 2.0
+  %val = select i1 %cmp, float %a, float 2.0
+  ret float %val
+}
+
+define float @v_test_fmax_legacy_ogt_f32_const_rhs(float %a) {
+; GFX7-LABEL: v_test_fmax_legacy_ogt_f32_const_rhs:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX7-NEXT:    v_max_f32_e32 v0, 2.0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmax_legacy_ogt_f32_const_rhs:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX9-NEXT:    v_max_f32_e32 v0, 2.0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmax_legacy_ogt_f32_const_rhs:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_max_num_f32_e32 v0, 2.0, v0
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmax_legacy_ogt_f32_const_rhs:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_max_num_f32_e32 v0, 2.0, v0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ogt float %a, 2.0
+  %val = select i1 %cmp, float %a, float 2.0
+  ret float %val
+}
+
+define float @v_test_fmax_legacy_uge_f32_const_rhs(float %a) {
+; GFX7-LABEL: v_test_fmax_legacy_uge_f32_const_rhs:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_max_legacy_f32_e32 v0, 2.0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmax_legacy_uge_f32_const_rhs:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_ngt_f32_e32 vcc, 2.0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmax_legacy_uge_f32_const_rhs:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, 2.0, v0
+; GFX1170-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc_lo
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmax_legacy_uge_f32_const_rhs:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, 2.0, v0
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp uge float %a, 2.0
+  %val = select i1 %cmp, float %a, float 2.0
+  ret float %val
+}
+
+; A zero constant still cannot be folded without nsz.
+define float @v_test_fmin_legacy_ole_f32_zero_rhs(float %a) {
+; GFX7-LABEL: v_test_fmin_legacy_ole_f32_zero_rhs:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v0
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmin_legacy_ole_f32_zero_rhs:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmin_legacy_ole_f32_zero_rhs:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v0
+; GFX1170-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmin_legacy_ole_f32_zero_rhs:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v0
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ole float %a, 0.0
+  %val = select i1 %cmp, float %a, float 0.0
+  ret float %val
+}

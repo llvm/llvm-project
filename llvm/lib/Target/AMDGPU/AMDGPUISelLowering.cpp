@@ -1679,16 +1679,12 @@ static SDValue peekFPSignOps(SDValue Val) {
   return Val;
 }
 
-static bool isNonZeroConstantFP(SDValue V) {
-  ConstantFPSDNode *C = isConstOrConstSplatFP(V);
-  return C && !C->isZero() && !C->getValueAPF().isDenormal();
-}
-
 // SelectionDAG twin of AMDGPUCombinerHelper::canIgnoreLegacyMinMaxTies.
-static bool canIgnoreLegacyMinMaxTies(SDNodeFlags Flags, SDValue LHS,
+static bool canIgnoreLegacyMinMaxTies(const SelectionDAG &DAG,
+                                      SDNodeFlags Flags, SDValue LHS,
                                       SDValue RHS) {
-  return Flags.hasNoSignedZeros() || isNonZeroConstantFP(LHS) ||
-         isNonZeroConstantFP(RHS);
+  return Flags.hasNoSignedZeros() || DAG.isKnownNeverLogicalZero(LHS) ||
+         DAG.isKnownNeverLogicalZero(RHS);
 }
 
 SDValue AMDGPUTargetLowering::combineFMinMaxLegacyImpl(
@@ -1696,6 +1692,7 @@ SDValue AMDGPUTargetLowering::combineFMinMaxLegacyImpl(
     SDValue False, SDValue CC, SDNodeFlags Flags, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   ISD::CondCode CCOpcode = cast<CondCodeSDNode>(CC)->get();
+  assert(CCOpcode != ISD::SETCC_INVALID && "Invalid setcc condcode!");
 
   switch (CCOpcode) {
   case ISD::SETOLE:
@@ -1712,8 +1709,6 @@ SDValue AMDGPUTargetLowering::combineFMinMaxLegacyImpl(
         !DCI.isCalledByLegalizer())
       return SDValue();
     break;
-  case ISD::SETCC_INVALID:
-    llvm_unreachable("Invalid setcc condcode!");
   default:
     break;
   }
@@ -1722,60 +1717,42 @@ SDValue AMDGPUTargetLowering::combineFMinMaxLegacyImpl(
   if (LHS != True)
     CCOpcode = ISD::getSetCCInverse(CCOpcode, VT);
 
-  // TieHazard: NaN-correct order is the signed zero tie-incorrect one.
   unsigned Opc;
   bool Swap; // Emit (rhs, lhs) instead of (lhs, rhs).
-  bool TieHazard;
   switch (CCOpcode) {
   case ISD::SETOLT:
   case ISD::SETLT:
-    Opc = AMDGPUISD::FMIN_LEGACY;
-    Swap = false;
-    TieHazard = false;
-    break;
-  case ISD::SETULE:
-  case ISD::SETLE:
-    Opc = AMDGPUISD::FMIN_LEGACY;
-    Swap = true;
-    TieHazard = false;
-    break;
-  case ISD::SETOGE:
-  case ISD::SETGE:
-    Opc = AMDGPUISD::FMAX_LEGACY;
-    Swap = false;
-    TieHazard = false;
-    break;
-  case ISD::SETUGT:
-  case ISD::SETGT:
-    Opc = AMDGPUISD::FMAX_LEGACY;
-    Swap = true;
-    TieHazard = false;
-    break;
   case ISD::SETOLE:
     Opc = AMDGPUISD::FMIN_LEGACY;
     Swap = false;
-    TieHazard = true;
     break;
+  case ISD::SETULE:
+  case ISD::SETLE:
   case ISD::SETULT:
     Opc = AMDGPUISD::FMIN_LEGACY;
     Swap = true;
-    TieHazard = true;
     break;
+  case ISD::SETOGE:
+  case ISD::SETGE:
   case ISD::SETOGT:
     Opc = AMDGPUISD::FMAX_LEGACY;
     Swap = false;
-    TieHazard = true;
     break;
+  case ISD::SETUGT:
+  case ISD::SETGT:
   case ISD::SETUGE:
     Opc = AMDGPUISD::FMAX_LEGACY;
     Swap = true;
-    TieHazard = true;
     break;
   default:
     return SDValue();
   }
 
-  if (TieHazard && !canIgnoreLegacyMinMaxTies(Flags, LHS, RHS))
+  // For these predicates the NaN-correct operand order is the signed zero
+  // tie-incorrect one, so the fold needs the tie to be unobservable.
+  if ((CCOpcode == ISD::SETOLE || CCOpcode == ISD::SETULT ||
+       CCOpcode == ISD::SETOGT || CCOpcode == ISD::SETUGE) &&
+      !canIgnoreLegacyMinMaxTies(DAG, Flags, LHS, RHS))
     return SDValue();
 
   if (Swap)
@@ -5357,7 +5334,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
 
     // Swapping min<->max flips which operand a signed zero tie selects.
     if ((Opc == AMDGPUISD::FMIN_LEGACY || Opc == AMDGPUISD::FMAX_LEGACY) &&
-        !canIgnoreLegacyMinMaxTies(N0->getFlags(), LHS, RHS))
+        !canIgnoreLegacyMinMaxTies(DAG, N0->getFlags(), LHS, RHS))
       return SDValue();
 
     SDValue NegLHS = DAG.getNode(ISD::FNEG, SL, VT, LHS);

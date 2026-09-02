@@ -284,3 +284,41 @@ define amdgpu_ps float @s_test_fmax_legacy_f32(float inreg %a, float inreg %b) {
   %val = select i1 %cmp, float %a, float %b
   ret float %val
 }
+
+; A nonzero constant operand rules out the signed zero tie.
+define float @v_test_fmax_legacy_ogt_f32_const_rhs(float %a) {
+; GFX6-LABEL: v_test_fmax_legacy_ogt_f32_const_rhs:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_max_legacy_f32_e64 v0, v0, 2.0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_test_fmax_legacy_ogt_f32_const_rhs:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_lt_f32_e32 vcc, 2.0, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ogt float %a, 2.0
+  %val = select i1 %cmp, float %a, float 2.0
+  ret float %val
+}
+
+define float @v_test_fmax_legacy_ogt_f32_zero_rhs(float %a) {
+; GFX6-LABEL: v_test_fmax_legacy_ogt_f32_zero_rhs:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_test_fmax_legacy_ogt_f32_zero_rhs:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ogt float %a, 0.0
+  %val = select i1 %cmp, float %a, float 0.0
+  ret float %val
+}

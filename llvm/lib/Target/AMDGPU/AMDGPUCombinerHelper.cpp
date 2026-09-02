@@ -8,6 +8,7 @@
 
 #include "AMDGPUCombinerHelper.h"
 #include "GCNSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -172,16 +173,13 @@ static bool isConstantCostlierToNegate(MachineInstr &MI, Register Reg,
   return false;
 }
 
-static bool isNonZeroConstantFP(Register Reg, const MachineRegisterInfo &MRI) {
-  std::optional<APFloat> C = isConstantOrConstantSplatVectorFP(Reg, MRI);
-  return C && !C->isZero() && !C->isDenormal();
-}
-
 bool AMDGPUCombinerHelper::canIgnoreLegacyMinMaxTies(const MachineInstr &MI,
                                                      Register LHS,
                                                      Register RHS) const {
-  return mayIgnoreSignedZero(MI) || isNonZeroConstantFP(LHS, MRI) ||
-         isNonZeroConstantFP(RHS, MRI);
+  if (mayIgnoreSignedZero(MI))
+    return true;
+  return VT &&
+         (VT->isKnownNeverLogicalZero(LHS) || VT->isKnownNeverLogicalZero(RHS));
 }
 
 static unsigned inverseMinMax(unsigned Opc) {
@@ -229,12 +227,13 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
   switch (MatchInfo->getOpcode()) {
   case AMDGPU::G_AMDGPU_FMIN_LEGACY:
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
-    // Swapping min<->max flips which operand a signed zero tie selects.
-    if (!canIgnoreLegacyMinMaxTies(*MatchInfo,
-                                   MatchInfo->getOperand(1).getReg(),
-                                   MatchInfo->getOperand(2).getReg()))
+    if (isConstantCostlierToNegate(*MatchInfo,
+                                   MatchInfo->getOperand(2).getReg(), MRI))
       return false;
-    [[fallthrough]];
+    // Swapping min<->max flips which operand a signed zero tie selects.
+    return canIgnoreLegacyMinMaxTies(*MatchInfo,
+                                     MatchInfo->getOperand(1).getReg(),
+                                     MatchInfo->getOperand(2).getReg());
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
