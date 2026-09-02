@@ -4310,7 +4310,7 @@ bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
                    .addUse(Ext0.getReg(0))
                    .addUse(Ext1.getReg(0))
                    .setMIFlags(Flags);
-    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul), Flags);
+    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul, Flags), Flags);
   } else
     return false;
 

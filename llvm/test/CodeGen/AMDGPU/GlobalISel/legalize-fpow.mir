@@ -578,13 +578,13 @@ body: |
     ; GFX9-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = nnan nsz G_FPEXT [[FLOG2_]](f16)
     ; GFX9-NEXT: [[FPEXT1:%[0-9]+]]:_(f32) = nnan nsz G_FPEXT [[TRUNC2]](f16)
     ; GFX9-NEXT: [[INT:%[0-9]+]]:_(f32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[FPEXT]](f32), [[FPEXT1]](f32)
-    ; GFX9-NEXT: [[FPTRUNC:%[0-9]+]]:_(f16) = G_FPTRUNC [[INT]](f32)
+    ; GFX9-NEXT: [[FPTRUNC:%[0-9]+]]:_(f16) = nnan nsz G_FPTRUNC [[INT]](f32)
     ; GFX9-NEXT: [[FEXP2_:%[0-9]+]]:_(f16) = nnan nsz G_FEXP2 [[FPTRUNC]]
     ; GFX9-NEXT: [[FLOG2_1:%[0-9]+]]:_(f16) = nnan nsz G_FLOG2 [[TRUNC1]]
     ; GFX9-NEXT: [[FPEXT2:%[0-9]+]]:_(f32) = nnan nsz G_FPEXT [[FLOG2_1]](f16)
     ; GFX9-NEXT: [[FPEXT3:%[0-9]+]]:_(f32) = nnan nsz G_FPEXT [[TRUNC3]](f16)
     ; GFX9-NEXT: [[INT1:%[0-9]+]]:_(f32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[FPEXT2]](f32), [[FPEXT3]](f32)
-    ; GFX9-NEXT: [[FPTRUNC1:%[0-9]+]]:_(f16) = G_FPTRUNC [[INT1]](f32)
+    ; GFX9-NEXT: [[FPTRUNC1:%[0-9]+]]:_(f16) = nnan nsz G_FPTRUNC [[INT1]](f32)
     ; GFX9-NEXT: [[FEXP2_1:%[0-9]+]]:_(f16) = nnan nsz G_FEXP2 [[FPTRUNC1]]
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f16>) = G_BUILD_VECTOR [[FEXP2_]](f16), [[FEXP2_1]](f16)
     ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x f16>)
