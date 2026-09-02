@@ -656,23 +656,22 @@ ComplexDeinterleavingGraph::identifyNodeWithImplicitAdd(
   // A +/+ has a rotation of 0. If any of the operands are fneg, we flip the
   // rotations and use the operand.
   unsigned Negs = 0;
-  Value *Op;
-  if (match(R0, m_Neg(m_Value(Op)))) {
+  if (isNeg(R0)) {
     Negs |= 1;
-    R0 = Op;
-  } else if (match(R1, m_Neg(m_Value(Op)))) {
+    R0 = getNegOperand(R0);
+  } else if (isNeg(R1)) {
     Negs |= 1;
-    R1 = Op;
+    R1 = getNegOperand(R1);
   }
 
   if (isNeg(I0)) {
     Negs |= 2;
     Negs ^= 1;
     I0 = getNegOperand(I0);
-  } else if (match(I1, m_Neg(m_Value(Op)))) {
+  } else if (isNeg(I1)) {
     Negs |= 2;
     Negs ^= 1;
-    I1 = Op;
+    I1 = getNegOperand(I1);
   }
 
   ComplexDeinterleavingRotation Rotation = (ComplexDeinterleavingRotation)Negs;

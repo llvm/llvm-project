@@ -5,7 +5,7 @@ target triple = "wasm32-unknown-emscripten"
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
 @buf = internal global [1 x %struct.__jmp_buf_tag] zeroinitializer, align 16
 
-; When longjmpable calls are coverted into invokes in Wasm SjLj transformation
+; When longjmpable calls are converted into invokes in Wasm SjLj transformation
 ; and their unwind destination is an existing catchpad or cleanuppad due to
 ; maintain the scope structure, the new pred BBs created by invokes and the
 ; correct incoming values should be added the existing phis in those unwind

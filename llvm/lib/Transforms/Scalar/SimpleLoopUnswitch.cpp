@@ -3358,8 +3358,9 @@ static bool collectUnswitchCandidatesWithInjections(
   return Found;
 }
 
-static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
-  if (!L.isSafeToCloneConditionally())
+static bool isSafeForNoNTrivialUnswitching(const DominatorTree &DT, Loop &L,
+                                           LoopInfo &LI) {
+  if (!L.isSafeToCloneConditionally(DT))
     return false;
 
   // Check if there are irreducible CFG cycles in this loop. If so, we cannot
@@ -3706,7 +3707,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
     return false;
 
   // Perform legality checks.
-  if (!isSafeForNoNTrivialUnswitching(L, LI))
+  if (!isSafeForNoNTrivialUnswitching(DT, L, LI))
     return false;
 
   // For non-trivial unswitching, because it often creates new loops, we rely on

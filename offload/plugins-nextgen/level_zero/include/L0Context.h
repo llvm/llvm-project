@@ -211,7 +211,7 @@ public:
   const MemAllocatorTy &getHostMemAllocator() const { return HostMemAllocator; }
   MemAllocatorTy &getHostMemAllocator() { return HostMemAllocator; }
 
-  std::atomic<bool> AppendLaunchKernelSupported = true;
+  std::atomic<bool> AppendLaunchKernelWithArgsSupported = true;
 
   ZeDispatcher<zeCommandListAppendLaunchKernelWithArguments>
       LaunchKernelWithArguments;

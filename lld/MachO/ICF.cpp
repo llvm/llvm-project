@@ -196,7 +196,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     assert(isecA->kind() == isecB->kind());
     // We will compare ConcatInputSection contents in equalsVariable.
     if (isa<ConcatInputSection>(isecA))
-      return ra.addend == rb.addend;
+      return valueA + ra.addend == valueB + rb.addend;
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
     if (isa<Symbol *>(ra.referent))
