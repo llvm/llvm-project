@@ -155,6 +155,13 @@ runAsInt32Int32FunctionWrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
+void addRunAsFunctionWrappersTo(StringMap<ExecutorAddr> &M) {
+  M[rt::sps_ci::CallInt32Void::Name] =
+      ExecutorAddr::fromPtr(&runAsInt32VoidFunctionWrapper);
+  M[rt::sps_ci::CallInt32Int32::Name] =
+      ExecutorAddr::fromPtr(&runAsInt32Int32FunctionWrapper);
+}
+
 void addTo(StringMap<ExecutorAddr> &M) {
   M[rt::sps_ci::MemWriteUInt8s::Name] = ExecutorAddr::fromPtr(
       &writeUIntsWrapper<tpctypes::UInt8Write,
@@ -187,10 +194,7 @@ void addTo(StringMap<ExecutorAddr> &M) {
   M[rt::sps_ci::MemReadStrings::Name] =
       ExecutorAddr::fromPtr(&readStringsWrapper);
   M[rt::sps_ci::CallMain::Name] = ExecutorAddr::fromPtr(&runAsMainWrapper);
-  M[rt::sps_ci::CallInt32Void::Name] =
-      ExecutorAddr::fromPtr(&runAsInt32VoidFunctionWrapper);
-  M[rt::sps_ci::CallInt32Int32::Name] =
-      ExecutorAddr::fromPtr(&runAsInt32Int32FunctionWrapper);
+  addRunAsFunctionWrappersTo(M);
 }
 
 } // end namespace rt_bootstrap
