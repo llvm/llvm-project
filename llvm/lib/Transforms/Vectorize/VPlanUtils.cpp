@@ -788,6 +788,43 @@ VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
       cast<VPSingleDefRecipe>(SelR));
 }
 
+/// Returns the type whose width \p Mask occupies or nullptr if unknown.
+static Type *getMaskMaterializationType(VPValue *Mask, unsigned Depth = 0) {
+  // Give up rather than recurse further. Falling back to i1 is always safe.
+  constexpr unsigned MaxMaskDepth = 3;
+  if (Depth > MaxMaskDepth)
+    return nullptr;
+
+  VPValue *A, *B;
+  if (match(Mask, m_Cmp(m_VPValue(A), m_VPValue()))) {
+    Type *CmpTy = A->getScalarType();
+    unsigned Bits = CmpTy->getPrimitiveSizeInBits();
+    // A pointer reports no size and an i1 is the width we came here to replace.
+    if (Bits <= 1)
+      return nullptr;
+    return IntegerType::get(CmpTy->getContext(), Bits);
+  }
+
+  if (match(Mask, m_Binary<Instruction::And>(m_VPValue(A), m_VPValue(B))) ||
+      match(Mask, m_Binary<Instruction::Or>(m_VPValue(A), m_VPValue(B))) ||
+      match(Mask, m_Binary<Instruction::Xor>(m_VPValue(A), m_VPValue(B)))) {
+    Type *TyA = getMaskMaterializationType(A, Depth + 1);
+    Type *TyB = getMaskMaterializationType(B, Depth + 1);
+    return TyA == TyB ? TyA : nullptr;
+  }
+
+  return nullptr;
+}
+
+Type *vputils::getExtendSrcTypeForPartialReduction(VPValue *ExtSrc) {
+  Type *SrcTy = ExtSrc->getScalarType();
+  if (!SrcTy->isIntegerTy(1))
+    return SrcTy;
+  if (Type *MatTy = getMaskMaterializationType(ExtSrc))
+    return MatTy;
+  return SrcTy;
+}
+
 bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
   SmallPtrSet<const VPValue *, 4> Seen;
   SmallVector<const VPValue *> WorkList = {V};

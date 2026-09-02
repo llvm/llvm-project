@@ -5081,10 +5081,10 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
       // optimizeExtendsForPartialReduction.
       Op = CastSource;
     } else {
-      return ExtendedReductionOperand{
-          UpdateR,
-          /*ExtendA=*/{CastSource->getScalarType(), *OuterExtKind},
-          /*ExtendB=*/{}};
+      Type *SrcTy = vputils::getExtendSrcTypeForPartialReduction(CastSource);
+      return ExtendedReductionOperand{UpdateR,
+                                      /*ExtendA=*/{SrcTy, *OuterExtKind},
+                                      /*ExtendB=*/{}};
     }
   }
 
@@ -5202,11 +5202,16 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
     if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
       return std::nullopt;
 
-    VPPartialReductionChain Link(
-        {UpdateR, *ExtendedOp, RK,
-         PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
-         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize)),
-         Blend});
+    // A source as wide as the accumulator gives a scale factor of 1. There is
+    // nothing to scale and setVFScaleFactor() asserts against it.
+    unsigned ScaleFactor =
+        static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize));
+    if (ScaleFactor < 2)
+      return std::nullopt;
+
+    VPPartialReductionChain Link({UpdateR, *ExtendedOp, RK,
+                                  PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
+                                  ScaleFactor, Blend});
     Chain.push_back(Link);
     CurrentValue = PrevValue;
   }

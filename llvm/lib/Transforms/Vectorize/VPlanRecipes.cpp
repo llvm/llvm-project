@@ -3628,7 +3628,8 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
 
     if (RedR->isPartialReduction())
       return Ctx.TTI.getPartialReductionCost(
-          Opcode, getOperand(0)->getScalarType(), nullptr, RedTy, VF,
+          Opcode, vputils::getExtendSrcTypeForPartialReduction(getOperand(0)),
+          nullptr, RedTy, VF,
           TargetTransformInfo::getPartialReductionExtendKind(ExtR->getOpcode()),
           TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
           RedTy->isFloatingPointTy()
