@@ -1552,6 +1552,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
     }
 
+    if (Subtarget.hasStdExtZvfofp8min()) {
+      for (MVT VT : BF16VecVTs) {
+        if (!isTypeLegal(VT))
+          continue;
+        setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, VT, Custom);
+      }
+    }
+
     if (Subtarget.hasVInstructionsF32()) {
       for (MVT VT : F32VecVTs) {
         if (!isTypeLegal(VT))
@@ -1834,6 +1842,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() == MVT::bf16) {
           setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
           setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
+          if (Subtarget.hasStdExtZvfofp8min())
+            setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, VT, Custom);
           if (Subtarget.hasStdExtZfbfmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
           } else {
@@ -8252,6 +8262,9 @@ RISCVTargetLowering::lowerXAndesBfHCvtBFloat16Store(SDValue Op,
 static SDValue lowerCttzElts(SDValue Op, SelectionDAG &DAG,
                              const RISCVSubtarget &Subtarget);
 
+static SDValue lowerCONVERT_FROM_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG,
+                                              const RISCVSubtarget &Subtarget);
+
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -9724,6 +9737,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::CTTZ_ELTS:
   case ISD::CTTZ_ELTS_ZERO_POISON:
     return lowerCttzElts(Op, DAG, Subtarget);
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    return lowerCONVERT_FROM_ARBITRARY_FP(Op, DAG, Subtarget);
   }
 }
 
@@ -12142,6 +12157,45 @@ static SDValue lowerCttzElts(SDValue Op, SelectionDAG &DAG,
       DAG.getSetCC(DL, XLenVT, Res, DAG.getConstant(0, DL, XLenVT), ISD::SETLT);
   VL = DAG.getElementCount(DL, XLenVT, OpVT.getVectorElementCount());
   return DAG.getSelect(DL, XLenVT, Setcc, VL, Res);
+}
+
+static SDValue lowerCONVERT_FROM_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG,
+                                              const RISCVSubtarget &Subtarget) {
+  assert(Op.getOpcode() == ISD::CONVERT_FROM_ARBITRARY_FP);
+  const uint64_t SemEnum = Op->getConstantOperandVal(1);
+  const auto Sem = static_cast<APFloatBase::Semantics>(SemEnum);
+
+  if (Sem != APFloatBase::S_Float8E5M2)
+    return SDValue();
+
+  SDValue Src = Op.getOperand(0);
+  EVT SrcEVT = Src.getValueType();
+  if (!SrcEVT.isSimple() || SrcEVT.getVectorElementType() != MVT::i8)
+    return SDValue();
+  MVT SrcVT = SrcEVT.getSimpleVT();
+  MVT DstVT = Op.getSimpleValueType();
+  assert(DstVT.getVectorElementType() == MVT::bf16);
+  SDLoc DL(Op);
+
+  MVT SrcContainerVT = SrcVT;
+  MVT DstContainerVT = DstVT;
+  if (SrcVT.isFixedLengthVector()) {
+    SrcContainerVT = getContainerForFixedLengthVector(SrcVT, Subtarget);
+    Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
+    DstContainerVT = getContainerForFixedLengthVector(DstVT, Subtarget);
+  }
+  SDValue VL =
+      getDefaultVLOps(SrcVT, SrcContainerVT, DL, DAG, Subtarget).second;
+
+  SDValue Ops[] = {DAG.getTargetConstant(Intrinsic::riscv_vfwcvt_f_f_v_alt, DL,
+                                         Subtarget.getXLenVT()),
+                   DAG.getPOISON(DstContainerVT), // Passthru
+                   Src, VL};
+  SDValue NewVal =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, DstContainerVT, Ops);
+  if (SrcVT.isFixedLengthVector())
+    NewVal = convertFromScalableVector(DstVT, NewVal, DAG, Subtarget);
+  return NewVal;
 }
 
 static inline void promoteVCIXScalar(SDValue Op,
