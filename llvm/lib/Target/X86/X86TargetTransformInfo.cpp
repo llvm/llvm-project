@@ -6659,24 +6659,20 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(SrcVTy);
   InstructionCost::CostType SplitFactor =
       std::max(IdxsLT.first, SrcLT.first).getValue();
-  if (SplitFactor > 1) {
-    // Handle splitting of vector of pointers
-    auto *SplitSrcTy =
-        FixedVectorType::get(SrcVTy->getScalarType(), VF / SplitFactor);
-    return SplitFactor * getGSVectorCost(Opcode, CostKind, SplitSrcTy, Ptr,
-                                         Alignment, AddressSpace);
-  }
-
-  // If we didn't split, this will be a single gather/scatter instruction.
+  // A vector of pointers that does not fit one register is split into
+  // SplitFactor gather/scatter instructions, each paying the overhead.
   if (CostKind == TTI::TCK_CodeSize)
-    return 1;
+    return SplitFactor;
 
   // The gather / scatter cost is given by Intel architects. It is a rough
   // number since we are looking at one instruction in a time.
   const int GSOverhead = (Opcode == Instruction::Load) ? getGatherOverhead()
                                                        : getScatterOverhead();
-  return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                           Alignment, AddressSpace, CostKind);
+  // Charge every lane of the original vector. Descending into VF / SplitFactor
+  // dropped the remainder, so a v9 gather was costed as eight lanes.
+  return SplitFactor * GSOverhead +
+         VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(), Alignment,
+                              AddressSpace, CostKind);
 }
 
 /// Calculate the cost of Gather / Scatter operation
