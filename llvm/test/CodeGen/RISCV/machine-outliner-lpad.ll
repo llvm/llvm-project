@@ -6,7 +6,7 @@ define i16 @test1(i16 %x) #0 {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lpad 0
-; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+; CHECK-NEXT:    tail OUTLINED_FUNCTION_0, t2
 entry:
   %y = add i16 5, %x
   %z = mul i16 4, %y
@@ -17,7 +17,7 @@ define i16 @test2(i16 %x) #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lpad 0
-; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+; CHECK-NEXT:    tail OUTLINED_FUNCTION_0, t2
 entry:
   %y = add i16 5, %x
   %z = mul i16 4, %y
@@ -28,7 +28,7 @@ define i16 @test3(i16 %x) #0 {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lpad 0
-; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+; CHECK-NEXT:    tail OUTLINED_FUNCTION_0, t2
 entry:
   %y = add i16 5, %x
   %z = mul i16 4, %y
@@ -39,7 +39,7 @@ define i16 @test4(i16 %x) #0 {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lpad 0
-; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+; CHECK-NEXT:    tail OUTLINED_FUNCTION_0, t2
 entry:
   %y = add i16 5, %x
   %z = mul i16 4, %y
@@ -50,7 +50,7 @@ define i16 @main(i16 %x) #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lpad 0
-; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
+; CHECK-NEXT:    tail OUTLINED_FUNCTION_0, t2
 entry:
   %y = add i16 5, %x
   %z = mul i16 4, %y
