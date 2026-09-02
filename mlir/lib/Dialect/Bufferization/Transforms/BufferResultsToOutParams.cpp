@@ -170,24 +170,10 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
     SmallVector<SmallVector<Value>> dynamicSizes;
     // Map each returned memref to its primary out parameter.
     DenseMap<Value, BlockArgument> primaryArgs;
-    // Cache dynamic sizes by result so duplicate dynamic results can reuse
-    // their sizes when adding entries to `dynamicSizes`.
-    DenseMap<Value, SmallVector<Value>> dynamicSizesCache;
     // Delay erasure until all return operands have been inspected because an
     // allocation may be returned multiple times.
     SetVector<Operation *> toErase;
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
-      auto [it, inserted] = primaryArgs.try_emplace(orig, arg);
-      if (!inserted) {
-        if (auto dynIt = dynamicSizesCache.find(orig);
-            dynIt != dynamicSizesCache.end())
-          dynamicSizes.push_back(dynIt->second);
-        if (it->second != arg &&
-            failed(options.memCpyFn(builder, op->getLoc(), it->second, arg)))
-          return WalkResult::interrupt();
-        continue;
-      }
-
       bool hoistStaticAllocs =
           options.hoistStaticAllocs &&
           cast<MemRefType>(orig.getType()).hasStaticShape();
@@ -197,12 +183,22 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
       if ((hoistStaticAllocs || hoistDynamicAllocs) &&
           isa_and_nonnull<bufferization::AllocationOpInterface>(
               orig.getDefiningOp())) {
-        orig.replaceAllUsesWith(arg);
         if (hoistDynamicAllocs) {
           SmallVector<Value> dynamicSize = getDynamicSize(orig, func);
           dynamicSizes.push_back(dynamicSize);
-          dynamicSizesCache.try_emplace(orig, std::move(dynamicSize));
         }
+
+        auto [it, inserted] = primaryArgs.try_emplace(orig, arg);
+        // Repeated returns of the same allocation reuse the primary out
+        // parameter; copy its contents into the out parameter for this
+        // occurrence.
+        if (!inserted) {
+          if (it->second != arg &&
+              failed(options.memCpyFn(builder, op->getLoc(), it->second, arg)))
+            return WalkResult::interrupt();
+          continue;
+        }
+        orig.replaceAllUsesWith(arg);
         toErase.insert(orig.getDefiningOp());
       } else {
         if (failed(options.memCpyFn(builder, op.getLoc(), orig, arg)))
