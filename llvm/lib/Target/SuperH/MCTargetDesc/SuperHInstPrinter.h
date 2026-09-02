@@ -39,13 +39,15 @@ public:
   void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
                                unsigned OpIdx, unsigned PrintMethodIdx,
                                const MCSubtargetInfo &STI, raw_ostream &O);
-  static const char *getRegisterName(MCRegister Reg);
 
   void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &OS) override;
 
+  static const std::string getRegName(MCRegister Reg);
+
 private:
+  static const char *getRegisterName(MCRegister Reg);
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printCPInstOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
