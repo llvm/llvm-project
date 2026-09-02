@@ -1861,70 +1861,28 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // What it declines
 // ----------------
 //
-// Each of these reports a match failure naming a `RedistributionLimit`, so this
-// list and the enum are the same list. Grouped by what the limit constrains,
-// which is where the two layouts are and are not treated alike. Same notation,
-// and `vector<8x2>` over 16 lanes unless said otherwise.
+// Every failure path reports a `RedistributionLimit`, so these are all of them.
+// Grouped by what the limit constrains; (i) is an implementation limit, (f) one
+// inherent to the scheme.
 //
-// Relational -- properties of the pair, neither side alone:
+// The pair:
 //
-//  * LaneDataDiffers, `lane_data` differing between the layouts (fundamental
-//    here):
+//   LaneDataDiffers (f)       the layouts disagree on the distribution unit
+//   NoDonorDelta (f)          the element is in no reachable donor group
+//   IndexNotLaneAffine (i)    the per-slot index is not affine in the lane id
 //
-//      layout<[8, 1], [1, 1]>  ->  layout<[1, 8], [1, 2]>
+// Either layout:
 //
-//    A `lane_data`-only change is the repack pattern's job; changing it and
-//    `lane_layout` together is handled by neither.
+//   LaneDataNotUnit (i)       lane_data is not all ones
+//   FragmentSizeMismatch (f)  a layout disagrees with its vector type
 //
-//  * NoDonorDelta, no donor group holding the element for every slot
-//    (fundamental: `gpu.shuffle idx` reads one value per lane). The last row of
-//    the table above is this limit reached through the target's period.
+// The target alone:
 //
-//  * IndexNotLaneAffine, an index the restricted form cannot express
-//    (implementation: an arbitrary one needs a materialized table and a
-//    gather), as when `order` transposes it:
+//   LanePeriodNotDivisor (f)  its lane period does not divide the subgroup size
 //
-//      slice<layout<[1, 1, 16]>, dims = [2]>
-//        ->  layout<[4, 4], order = [0, 1]>        on vector<4x4>
+// The value:
 //
-//    Lane `i` would need element `(i % 4) * 4 + i / 4`.
-//
-// Per layout -- the same rule applied to each side:
-//
-//  * LaneDataNotUnit, `lane_data` equal but not all ones (implementation):
-//
-//      slice<layout<[1, 1, 16], [1, 2, 1]>, dims = [2]>
-//        ->  layout<[8, 1], [1, 2]>
-//
-//    `computeStaticDistributedCoords` yields one coordinate per distribution
-//    unit -- the block start -- while the algorithm indexes elements, and the
-//    two coincide only when a unit is a single element. Lifting it means
-//    expanding the block starts in fragment order. `expandBlockCoords` in
-//    XeGPUDialect.cpp expands them for layout comparison, but emits a whole
-//    unit before moving to the next, which matches the fragment only when
-//    lane_data is non-unit on the innermost dimension alone.
-//
-//    This also covers sub-byte elements in practice, which come with
-//    `lane_data` 2 so that a pair fills a byte.
-//
-//  * FragmentSizeMismatch, a layout not distributing what its vector type
-//    accounts for (fundamental: the caller derived one from the other).
-//
-// Target only -- the one asymmetry:
-//
-//  * LanePeriodNotDivisor, the target's lane period not dividing the subgroup
-//    size (fundamental to the donor walk, see `isSupportedLanePeriod`). The
-//    input's period is unconstrained because it is only ever indexed.
-//
-// Value only -- neither layout:
-//
-//  * SubByteElement, an element `gpu.shuffle` has no type for:
-//
-//      slice<layout<[1, 1, 16]>, dims = [2]>  ->  layout<[8, 1]>
-//        on vector<8x2xf4E2M1FN>
-//
-//    Reachable only with unit `lane_data`; otherwise LaneDataNotUnit declines
-//    first.
+//   SubByteElement (f)        no gpu.shuffle type carries the element
 //
 // Concepts
 // --------
