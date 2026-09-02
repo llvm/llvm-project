@@ -10991,19 +10991,33 @@ SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
     if (SDValue V = CTTZTableLookup(Node, DAG, dl, VT, Op, NumBitsPerElt))
       return V;
 
-  // for now, we use: { return popcount(~x & (x - 1)); }
-  // unless the target has ctlz but not ctpop, in which case we use:
+  bool UseCTLZ =
+      isOperationLegal(ISD::CTLZ, VT) && !isOperationLegal(ISD::CTPOP, VT);
+
+  // When only ctlz is available and the operand is nonzero we can use:
+  // { return nlz(x & -x) ^ 31; }
+  // which is more efficient than:
+  // { return 32 - nlz(~x & (x - 1)); }.
+  if (UseCTLZ && Node->getOpcode() == ISD::CTTZ_ZERO_POISON) {
+    SDValue LowestBit =
+        DAG.getNode(ISD::AND, dl, VT, Op, DAG.getNegative(Op, dl, VT));
+    return DAG.getNode(ISD::XOR, dl, VT,
+                       DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, VT, LowestBit),
+                       DAG.getConstant(NumBitsPerElt - 1, dl, VT));
+  }
+
+  // If ctpop is available, we use:
+  // { return popcount(~x & (x-1)); }
+  // If the target has ctlz but not ctpop, we use:
   // { return 32 - nlz(~x & (x-1)); }
   // Ref: "Hacker's Delight" by Henry Warren
   SDValue Tmp = DAG.getNode(
       ISD::AND, dl, VT, DAG.getNOT(dl, Op, VT),
       DAG.getNode(ISD::SUB, dl, VT, Op, DAG.getConstant(1, dl, VT)));
 
-  // If ISD::CTLZ is legal and CTPOP isn't, then do that instead.
-  if (isOperationLegal(ISD::CTLZ, VT) && !isOperationLegal(ISD::CTPOP, VT)) {
+  if (UseCTLZ)
     return DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(NumBitsPerElt, dl, VT),
                        DAG.getNode(ISD::CTLZ, dl, VT, Tmp));
-  }
 
   return DAG.getNode(ISD::CTPOP, dl, VT, Tmp);
 }

@@ -270,10 +270,14 @@ public:
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
-  void convertFromNewDbgValues() {
+  /// Returns true if any function's conversion modified the module.
+  bool convertFromNewDbgValues() {
+    bool Modified = false;
     for (auto &F : *this) {
-      F.convertFromNewDbgValues();
+      if (F.convertFromNewDbgValues())
+        Modified = true;
     }
+    return Modified;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -986,11 +990,6 @@ public:
   void print(raw_ostream &OS, AssemblyAnnotationWriter *AAW,
              bool ShouldPreserveUseListOrder = false,
              bool IsForDebug = false) const;
-
-  /// Renumber the IDs stored in metadata nodes into canonical assembly order.
-  /// This mutates the IDs and should only be used immediately before final
-  /// assembly output.
-  void renumberMetadataForAssembly();
 
   /// Dump the module to stderr (for debugging).
   void dump() const;

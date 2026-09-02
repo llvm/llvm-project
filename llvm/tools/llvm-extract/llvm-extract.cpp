@@ -411,10 +411,8 @@ int main(int argc, char **argv) {
   }
 
   if (OutputAssembly)
-    PM.addPass(PrintModulePass(Out.os(), "",
-                               /*ShouldPreserveUseListOrder=*/false,
-                               /*EmitSummaryIndex=*/false,
-                               /*ShouldRenumberMetadata=*/true));
+    PM.addPass(
+        PrintModulePass(Out.os(), "", /* ShouldPreserveUseListOrder */ false));
   else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
     PM.addPass(
         BitcodeWriterPass(Out.os(), /* ShouldPreserveUseListOrder */ true));
