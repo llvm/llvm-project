@@ -1342,11 +1342,9 @@ bool GIMatchTableExecutor::executeMatchTable(
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
 
       LLT Ty = ExecInfo.TypeObjects[TypeID];
+      unsigned Width = Ty.getScalarSizeInBits();
       LLVMContext &Ctx = MF->getFunction().getContext();
-      APFloat APF(static_cast<double>(static_cast<int64_t>(Imm)));
-      bool Ignored;
-      APF.convert(getFltSemanticForLLT(Ty.getScalarType()),
-                  APFloat::rmNearestTiesToEven, &Ignored);
+      APFloat APF(getFltSemanticForLLT(Ty.getScalarType()), APInt(Width, Imm));
       OutMIs[InsnID].addFPImm(ConstantFP::get(Ctx, APF));
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_AddCFPImm(OutMIs["
