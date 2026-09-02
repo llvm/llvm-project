@@ -9,9 +9,9 @@
 #include "llvm/CodeGen/MachineSchedSearch.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include <algorithm>
 #include <functional>
-#include <numeric>
 #include <queue>
 #include <vector>
 
@@ -53,8 +53,7 @@ const SUnit &MachineSchedSearchRegion::getSUnit(unsigned Node) const {
 }
 
 SmallVector<unsigned, 0> MachineSchedSearchRegion::getInitialOrder() const {
-  SmallVector<unsigned, 0> Order(size());
-  std::iota(Order.begin(), Order.end(), 0);
+  SmallVector<unsigned, 0> Order = to_vector<0>(seq<unsigned>(size()));;
   return Order;
 }
 

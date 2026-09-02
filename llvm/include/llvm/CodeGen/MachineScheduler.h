@@ -311,7 +311,7 @@ public:
 /// Founder is explicit so the same optimizer can run either before scheduling,
 /// with the incoming order as founder, or after an existing strategy has
 /// materialized a target-selected founder.
-class LLVM_ABI MachineSchedCompleteScheduleOptimizer {
+struct LLVM_ABI MachineSchedCompleteScheduleOptimizer {
 public:
   virtual ~MachineSchedCompleteScheduleOptimizer();
 
