@@ -489,10 +489,22 @@ def PromisedInterfacesOp : TEST_Op<"promised_interfaces"> {
 // Define the enum attribute.
 def TestEnumAttr : EnumAttr<Test_Dialect, TestEnum, "enum">;
 
+def TestPrettyEnumAttr
+    : EnumAttr<Test_Dialect, TestPrettyEnum, "pretty_enum"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 // Define an op that contains the enum attribute.
 def OpWithEnum : TEST_Op<"op_with_enum"> {
   let arguments = (ins TestEnumAttr:$value, OptionalAttr<AnyAttr>:$tag);
   let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+}
+
+// Define an op that prints just the symbolic value of an enum attribute whose
+// own assembly format includes angle brackets.
+def OpWithEnumDirective : TEST_Op<"op_with_enum_directive"> {
+  let arguments = (ins TestPrettyEnumAttr:$value);
+  let assemblyFormat = "enum($value) attr-dict";
 }
 
 // Define a pattern that matches and creates an enum attribute.
@@ -592,6 +604,17 @@ def OpWithBitEnumVerticalBar : TEST_Op<"op_with_bit_enum_vbar"> {
   let arguments = (ins TestBitEnumVerticalBarAttr:$value,
                    OptionalAttr<AnyAttr>:$tag);
   let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+}
+
+def OpWithBitEnumDirective : TEST_Op<"op_with_bit_enum_directive"> {
+  let arguments = (ins TestBitEnumAttr:$value);
+  let assemblyFormat = "enum($value) attr-dict";
+}
+
+def OpWithBitEnumVerticalBarDirective
+    : TEST_Op<"op_with_bit_enum_vbar_directive"> {
+  let arguments = (ins TestBitEnumVerticalBarAttr:$value);
+  let assemblyFormat = "enum($value) attr-dict";
 }
 
 // Define a pattern that matches and creates a bit enum attribute.

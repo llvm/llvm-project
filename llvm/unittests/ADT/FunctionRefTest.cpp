@@ -27,6 +27,22 @@ TEST(FunctionRefTest, Null) {
   EXPECT_FALSE(F);
 }
 
+TEST(FunctionRefTest, EmptyCopyAndEquality) {
+  function_ref<int()> Empty;
+  function_ref<int()> Null = nullptr;
+  EXPECT_EQ(Empty, Null);
+
+  function_ref<int()> Copy = Empty;
+  EXPECT_FALSE(Copy);
+  EXPECT_EQ(Empty, Copy);
+
+  auto L = [] { return 1; };
+  function_ref<int()> Assigned = L;
+  Assigned = Empty;
+  EXPECT_FALSE(Assigned);
+  EXPECT_EQ(Empty, Assigned);
+}
+
 // Ensure that copies of a function_ref copy the underlying state rather than
 // causing one function_ref to chain to the next.
 TEST(FunctionRefTest, Copy) {
