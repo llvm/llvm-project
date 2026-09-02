@@ -127,6 +127,11 @@ extern volatile int PortabilityModuleAnchorSource;
 [[maybe_unused]] static int PortabilityModuleAnchorDestination =
     PortabilityModuleAnchorSource;
 
+// This anchor is used to force the linker to link the PybindModule.
+extern volatile int PybindModuleAnchorSource;
+[[maybe_unused]] static int PybindModuleAnchorDestination =
+    PybindModuleAnchorSource;
+
 // This anchor is used to force the linker to link the ReadabilityModule.
 extern volatile int ReadabilityModuleAnchorSource;
 [[maybe_unused]] static int ReadabilityModuleAnchorDestination =

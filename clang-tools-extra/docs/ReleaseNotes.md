@@ -119,6 +119,12 @@ infrastructure are described first, followed by tool-specific sections.
   Finds uses of `#pragma comment` and, for `lib` or `linker` comments, suggests
   using the build system for improved portability.
 
+- New {doc}`pybind-call-guard-init
+  <clang-tidy/checks/pybind/call-guard-init>` check.
+
+  Finds instances where `py::call_guard<py::gil_scoped_release>()` is passed
+  alongside `py::init(...)` in pybind11 class definitions.
+
 - New {doc}`readability-redundant-zero-initializer
   <clang-tidy/checks/readability/redundant-zero-initializer>` check.
 

@@ -74,6 +74,7 @@ add_subdirectory(objc)
 add_subdirectory(openmp)
 add_subdirectory(performance)
 add_subdirectory(portability)
+add_subdirectory(pybind)
 add_subdirectory(readability)
 set(ALL_CLANG_TIDY_CHECKS
   clangTidyAndroidModule
@@ -96,6 +97,7 @@ set(ALL_CLANG_TIDY_CHECKS
   clangTidyOpenMPModule
   clangTidyPerformanceModule
   clangTidyPortabilityModule
+  clangTidyPybindModule
   clangTidyReadabilityModule
   )
 

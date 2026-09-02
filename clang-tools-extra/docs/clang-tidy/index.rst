@@ -92,6 +92,7 @@ Name prefix            Description
 ``performance-``       Checks that target performance-related issues.
 ``portability-``       Checks that target portability-related issues that
                        don't relate to any particular coding style.
+``pybind-``            Checks related to pybind11 library.
 ``readability-``       Checks that target readability-related issues that
                        don't relate to any particular coding style.
 ====================== ========================================================
