@@ -1,4 +1,5 @@
 // RUN: mlir-opt --split-input-file --arith-emulate-unsupported-floats="source-types=bf16,f8E4M3FNUZ target-type=f32" %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --arith-emulate-unsupported-floats="source-types=f8E4M3FNUZ target-type=f32" --convert-arith-to-llvm %s | FileCheck %s --check-prefix=LLVM
 
 func.func @basic_expansion(%x: bf16) -> bf16 {
 // CHECK-LABEL: @basic_expansion
@@ -60,17 +61,40 @@ func.func @memops(%a: memref<4xf8E4M3FNUZ>, %b: memref<4xf8E4M3FNUZ>) {
 
 // -----
 
+// When the result of an emulated op is only used by an extf back to the
+// target type, the pass skips the truncf/extf round-trip and uses the
+// wider emulated value directly. This avoids emitting arith.extf on the
+// unsupported type, which cannot be lowered to LLVM.
 func.func @vectors(%a: vector<4xf8E4M3FNUZ>) -> vector<4xf32> {
 // CHECK-LABEL: @vectors
 // CHECK-SAME: [[A:%.+]]: vector<4xf8E4M3FNUZ>
 // CHECK: [[A_EXP:%.+]] = arith.extf [[A]] fastmath<contract> : vector<4xf8E4M3FNUZ> to vector<4xf32>
-// CHECK: [[B_EXP:%.+]] = arith.mulf [[A_EXP]], [[A_EXP]] : vector<4xf32>
-// CHECK: [[B:%.+]] = arith.truncf [[B_EXP]] fastmath<contract> : vector<4xf32> to vector<4xf8E4M3FNUZ>
-// CHECK: [[RET:%.+]] = arith.extf [[B]] : vector<4xf8E4M3FNUZ> to vector<4xf32>
+// CHECK: [[RET:%.+]] = arith.mulf [[A_EXP]], [[A_EXP]] : vector<4xf32>
+// CHECK-NOT: arith.truncf
+// CHECK-NOT: arith.extf {{%.+}} : vector<4xf8E4M3FNUZ>
 // CHECK: return [[RET]]
+// LLVM-LABEL: @vectors
+// LLVM-NOT: llvm.fpext {{.*}} : vector<4xi8>
   %b = arith.mulf %a, %a : vector<4xf8E4M3FNUZ>
   %ret = arith.extf %b : vector<4xf8E4M3FNUZ> to vector<4xf32>
   func.return %ret : vector<4xf32>
+}
+
+// -----
+
+// When an emulated op's result has mixed users (not all are arith.extf to the
+// target type), the pass falls back to the truncf/extf round-trip.
+func.func @mixed_users(%a: bf16) -> (f32, bf16) {
+// CHECK-LABEL: @mixed_users
+// CHECK-SAME: [[A:%.+]]: bf16
+// CHECK: [[A_EXP:%.+]] = arith.extf [[A]] fastmath<contract> : bf16 to f32
+// CHECK: [[PROD:%.+]] = arith.mulf [[A_EXP]], [[A_EXP]] : f32
+// CHECK: [[TRUNC:%.+]] = arith.truncf [[PROD]] fastmath<contract> : f32 to bf16
+// CHECK: [[EXT:%.+]] = arith.extf [[TRUNC]] : bf16 to f32
+// CHECK: return [[EXT]], [[TRUNC]]
+  %b = arith.mulf %a, %a : bf16
+  %ext = arith.extf %b : bf16 to f32
+  func.return %ext, %b : f32, bf16
 }
 
 // -----
