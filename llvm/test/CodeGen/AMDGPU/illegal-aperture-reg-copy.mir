@@ -1,0 +1,14 @@
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -run-pass=postrapseudos -o /dev/null %s 2>&1 | FileCheck %s
+
+# src_shared_base has no addressable high half. copyPhysReg must not assert.
+
+# CHECK: error: {{.*}} in function illegal_aperture_reg_copy void (): Cannot decompose copy into subregister moves!
+
+---
+name: illegal_aperture_reg_copy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    renamable $vgpr0_vgpr1 = COPY $src_shared_base
+    S_ENDPGM 0, implicit $vgpr0_vgpr1
+...

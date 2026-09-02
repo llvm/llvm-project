@@ -821,6 +821,20 @@ bool MachineCopyPropagation::canUpdateSrcUsers(const MachineInstr &Copy,
   return true;
 }
 
+/// Return true if \p NewReg has a non-artificial subregister for every
+/// subregister index where \p OldReg has one.
+static bool hasMatchingSubRegs(MCRegister OldReg, MCRegister NewReg,
+                               const TargetRegisterInfo *TRI) {
+  for (MCSubRegIndexIterator SRI(OldReg, TRI); SRI.isValid(); ++SRI) {
+    if (TRI->isArtificial(SRI.getSubReg()))
+      continue;
+    MCRegister Sub = TRI->getSubReg(NewReg, SRI.getSubRegIndex());
+    if (!Sub || TRI->isArtificial(Sub))
+      return false;
+  }
+  return true;
+}
+
 /// Look for available copies whose destination register is used by \p MI and
 /// replace the use in \p MI with the copy's source register.
 void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
@@ -878,6 +892,14 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     // Don't forward COPYs of reserved regs unless they are constant.
     if (MRI->isReserved(CopySrc) && !MRI->isConstantPhysReg(CopySrc))
       continue;
+
+    // A reserved source may lack subregs the copy is later split into.
+    if (MRI->isReserved(CopySrc) && isCopyInstr(MI, *TII, UseCopyInstr) &&
+        !hasMatchingSubRegs(MOUse.getReg().asMCReg(), ForwardedReg, TRI)) {
+      LLVM_DEBUG(dbgs() << "MCP: Copy source is missing subregisters of "
+                        << printReg(MOUse.getReg(), TRI) << '\n');
+      continue;
+    }
 
     if (!isForwardableRegClassCopy(*Copy, MI, OpIdx))
       continue;
