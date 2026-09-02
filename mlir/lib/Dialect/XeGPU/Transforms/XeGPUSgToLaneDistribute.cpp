@@ -1882,10 +1882,6 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Case 2 is the running example from here on: lanes 0-7 hold all of column 0,
 // lanes 8-15 all of column 1, and lane `i` leaves holding row `i`.
 //
-// Nested slices are coalesced before anything else looks at a layout, so only
-// the lane_layout of the underlying layout and the union of the sliced dims
-// matter; @convert_layout_broadcast_nested_slice covers a two-level input.
-//
 // `gpu.shuffle idx` is not a remote read: every lane extracts one element from
 // its own fragment and contributes it, then receives whatever the lane it names
 // contributed. A donor has therefore already extracted, at its own index,
