@@ -349,3 +349,19 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: func @check_scalar_memref_operation
 //   CHECK-NOT:   scf.for
 //       CHECK:   linalg.generic
+
+// -----
+
+// Empty handles must still initialize all declared results.
+module {
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+      %tiled_op, %loops:2 = transform.test.tile_using_forall %0 [10, 20]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+    }
+  }
+}
+// CHECK: transform.test.tile_using_forall
