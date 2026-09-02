@@ -998,32 +998,18 @@ static vector::BroadcastOp getSplatBroadcast(Value flat) {
   return nullptr;
 }
 
-// Returns true if `unflatten` can reshape `flat` to `ndType`.
+// Returns true if the cast `unflatten` creates will fold away, i.e. if `flat`
+// is a flattening cast, a constant or a splat.
 static bool canUnflatten(Value flat, VectorType ndType) {
   return getFlattenCast(flat, ndType) || getDenseConstant(flat) ||
          getSplatBroadcast(flat);
 }
 
-// Reshape `flat` to `ndType` without introducing a 1-D to N-D
-// `vector.shape_cast`. Only handles the forms a frontend actually emits when
-// flattening: the flattening cast itself, a constant, and a splat.
-// `canUnflatten` must hold.
+// Reshape `flat` to `ndType`; `canUnflatten` must hold so the cast folds away.
 static Value unflatten(PatternRewriter &rewriter, Value flat,
                        VectorType ndType) {
-  assert(cast<VectorType>(flat.getType()).getRank() == 1 &&
-         "expected a 1-D vector");
-
-  if (auto shapeCast = getFlattenCast(flat, ndType))
-    return shapeCast.getSource();
-
-  if (DenseElementsAttr elements = getDenseConstant(flat))
-    return arith::ConstantOp::create(rewriter, flat.getLoc(), ndType,
-                                     elements.reshape(ndType));
-
-  auto broadcast = getSplatBroadcast(flat);
-  assert(broadcast && "expected canUnflatten to hold");
-  return vector::BroadcastOp::create(rewriter, flat.getLoc(), ndType,
-                                     broadcast.getSource());
+  assert(canUnflatten(flat, ndType) && "expected the cast to fold away");
+  return vector::ShapeCastOp::create(rewriter, flat.getLoc(), ndType, flat);
 }
 
 // Restore the N-D form of a flattened `vector.gather` / `vector.scatter`.
@@ -1054,6 +1040,9 @@ struct UnflattenGatherScatter : public OpRewritePattern<OpTy> {
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
     constexpr bool isGather = std::is_same_v<OpTy, vector::GatherOp>;
+
+    if (!isa<MemRefType>(op.getBase().getType()))
+      return rewriter.notifyMatchFailure(op, "expects a memref source");
 
     if (op.getIndexVectorType().getRank() != 1)
       return rewriter.notifyMatchFailure(op, "index vector is not 1-D");
@@ -1086,9 +1075,7 @@ struct UnflattenGatherScatter : public OpRewritePattern<OpTy> {
       auto ndGather = vector::GatherOp::create(
           rewriter, op.getLoc(), ndType, op.getBase(), op.getOffsets(),
           indexCast.getSource(), mask, passThru, op.getAlignmentAttr());
-      // Keep the uses on the flat type instead of inspecting them. Where a use
-      // already casts back to N-D, `ShapeCastOp::fold` collapses the two casts
-      // and then drops the resulting no-op, so nothing is left behind.
+      ndGather->setDiscardableAttrs(op->getDiscardableAttrDictionary());
       rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, op.getVectorType(),
                                                        ndGather);
     } else {
@@ -1114,9 +1101,11 @@ struct UnflattenGatherScatter : public OpRewritePattern<OpTy> {
 // the conversion patterns and the XeGPU layouts downstream of them see the N-D
 // shape of the accessed data.
 static LogicalResult unflattenGatherScatter(Operation *root) {
-  RewritePatternSet patterns(root->getContext());
+  MLIRContext *ctx = root->getContext();
+  RewritePatternSet patterns(ctx);
   patterns.add<UnflattenGatherScatter<vector::GatherOp>,
-               UnflattenGatherScatter<vector::ScatterOp>>(root->getContext());
+               UnflattenGatherScatter<vector::ScatterOp>>(ctx);
+  vector::ShapeCastOp::getCanonicalizationPatterns(patterns, ctx);
   return applyPatternsGreedily(root, std::move(patterns));
 }
 
