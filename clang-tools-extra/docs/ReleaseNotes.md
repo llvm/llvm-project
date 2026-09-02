@@ -90,6 +90,12 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Miscellaneous
 
+- clangd now supports the LSP `workspace/willRenameFiles` and
+  `workspace/didRenameFiles` operations. Before a file or directory move,
+  clangd updates literal `#include` and `#import` operands when their resolved
+  target or containing file moves. Edits are versioned, and the operation
+  fails atomically when a relevant file or edit cannot be validated.
+
 ### Improvements to clang-doc
 
 ### Improvements to clang-query

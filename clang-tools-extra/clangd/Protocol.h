@@ -581,6 +581,12 @@ struct ClientCapabilities {
   /// The client supports change annotations on text edits,
   bool ChangeAnnotation = false;
 
+  /// The client sends workspace/willRenameFiles requests.
+  bool WillRenameFiles = false;
+
+  /// The client sends workspace/didRenameFiles notifications.
+  bool DidRenameFiles = false;
+
   /// Whether the client supports the textDocument/inactiveRegions
   /// notification. This is a clangd extension.
   /// textDocument.inactiveRegionsCapabilities.inactiveRegions
@@ -851,6 +857,18 @@ struct DidChangeWatchedFilesParams {
 };
 bool fromJSON(const llvm::json::Value &, DidChangeWatchedFilesParams &,
               llvm::json::Path);
+
+/// A file or directory rename supplied by an LSP client.
+struct FileRename {
+  URIForFile oldUri;
+  URIForFile newUri;
+};
+bool fromJSON(const llvm::json::Value &, FileRename &, llvm::json::Path);
+
+struct RenameFilesParams {
+  std::vector<FileRename> files;
+};
+bool fromJSON(const llvm::json::Value &, RenameFilesParams &, llvm::json::Path);
 
 struct DidChangeConfigurationParams {
   ConfigurationSettings settings;

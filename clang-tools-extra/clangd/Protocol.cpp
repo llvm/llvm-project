@@ -506,6 +506,12 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
         R.ChangeAnnotation = true;
       }
     }
+    if (auto *FileOperations = Workspace->getObject("fileOperations")) {
+      if (auto WillRename = FileOperations->getBoolean("willRename"))
+        R.WillRenameFiles = *WillRename;
+      if (auto DidRename = FileOperations->getBoolean("didRename"))
+        R.DidRenameFiles = *DidRename;
+    }
   }
   if (auto *Window = O->getObject("window")) {
     if (auto WorkDoneProgress = Window->getBoolean("workDoneProgress"))
@@ -692,6 +698,18 @@ bool fromJSON(const llvm::json::Value &Params, DidChangeWatchedFilesParams &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("changes", R.changes);
+}
+
+bool fromJSON(const llvm::json::Value &Params, FileRename &R,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("oldUri", R.oldUri) && O.map("newUri", R.newUri);
+}
+
+bool fromJSON(const llvm::json::Value &Params, RenameFilesParams &R,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("files", R.files);
 }
 
 bool fromJSON(const llvm::json::Value &Params,
