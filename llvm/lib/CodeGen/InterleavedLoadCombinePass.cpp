@@ -638,26 +638,25 @@ static raw_ostream &operator<<(raw_ostream &OS, const Polynomial &S) {
 }
 #endif
 
-/// Address key of a candidate's first vector element: the block, the common
-/// base pointer, the vector type and the offset polynomial. Two candidates
+/// Address key of a candidate's first vector element: the common base pointer,
+/// the vector type and the offset polynomial. Candidates are matched one basic
+/// block at a time, so the block is implicit in the index. Two candidates
 /// belong to the same interleaved group iff their keys agree on everything but
 /// the constant offset, so consecutive elements are located by building the
 /// neighbouring keys and looking them up.
 struct OffsetKey {
-  BasicBlock *BB;
   Value *PV;
   FixedVectorType *VTy;
   Polynomial Ofs;
 
   bool operator==(const OffsetKey &O) const {
-    return BB == O.BB && PV == O.PV && VTy == O.VTy &&
-           Ofs.isProvenEqualTo(O.Ofs);
+    return PV == O.PV && VTy == O.VTy && Ofs.isProvenEqualTo(O.Ofs);
   }
 };
 
 struct OffsetKeyHash {
   size_t operator()(const OffsetKey &K) const {
-    return hash_combine(K.BB, K.PV, K.VTy, hash_value(K.Ofs));
+    return hash_combine(K.PV, K.VTy, hash_value(K.Ofs));
   }
 };
 
@@ -1247,82 +1246,86 @@ bool InterleavedLoadCombineImpl::run() {
 
   // Start with the highest factor to avoid combining and recombining.
   for (unsigned Factor = MaxFactor; Factor >= 2; Factor--) {
-    std::list<VectorInfo> Candidates;
-
+    // Matching only ever pairs candidates from the same block, so process one
+    // block at a time and keep the candidate list and offset index small.
     for (BasicBlock &BB : F) {
+      std::list<VectorInfo> Candidates;
       for (Instruction &I : BB) {
-        if (auto SVI = dyn_cast<ShuffleVectorInst>(&I)) {
-          // We don't support scalable vectors in this pass.
-          if (isa<ScalableVectorType>(SVI->getType()))
-            continue;
+        auto *SVI = dyn_cast<ShuffleVectorInst>(&I);
+        if (!SVI)
+          continue;
 
-          Candidates.emplace_back(cast<FixedVectorType>(SVI->getType()));
+        // We don't support scalable vectors in this pass.
+        if (isa<ScalableVectorType>(SVI->getType()))
+          continue;
 
-          if (!VectorInfo::computeFromSVI(SVI, Candidates.back(), DL)) {
-            Candidates.pop_back();
-            continue;
-          }
+        Candidates.emplace_back(cast<FixedVectorType>(SVI->getType()));
 
-          if (!Candidates.back().isInterleaved(Factor, DL)) {
-            Candidates.pop_back();
-          }
+        if (!VectorInfo::computeFromSVI(SVI, Candidates.back(), DL)) {
+          Candidates.pop_back();
+          continue;
         }
+
+        if (!Candidates.back().isInterleaved(Factor, DL))
+          Candidates.pop_back();
       }
-    }
 
-    // Index every candidate whose first element has a provably exact offset by
-    // its address key. Finding an interleaved group then only needs lookups of
-    // the neighbouring keys. The key embeds a Polynomial, which has no natural
-    // empty/tombstone value, so use std::unordered_map rather than DenseMap.
-    std::unordered_map<OffsetKey, SmallVector<VectorInfo *, 1>, OffsetKeyHash>
-        OffsetMap;
-    for (VectorInfo &C : Candidates) {
-      if (!C.EI[0].Ofs.isProvenExact())
-        continue;
-      OffsetMap[{C.BB, C.PV, C.VTy, C.EI[0].Ofs}].push_back(&C);
-    }
+      // Index every candidate whose first element has a provably exact offset
+      // by its address key. Finding an interleaved group then only needs
+      // lookups of the neighbouring keys. The key embeds a Polynomial, which
+      // has no natural empty/tombstone value, so use std::unordered_map rather
+      // than DenseMap.
+      std::unordered_map<OffsetKey, SmallVector<VectorInfo *, 1>, OffsetKeyHash>
+          OffsetMap;
+      for (VectorInfo &C : Candidates) {
+        if (!C.EI[0].Ofs.isProvenExact())
+          continue;
+        OffsetMap[{C.PV, C.VTy, C.EI[0].Ofs}].push_back(&C);
+      }
 
-    // Candidates already combined (a whole group) or dropped (a failed base).
-    SmallPtrSet<const VectorInfo *, 16> Consumed;
+      // Candidates already combined (a whole group) or dropped (a failed base).
+      SmallPtrSet<const VectorInfo *, 16> Consumed;
 
-    // Return the last still-available candidate registered under Key. Iterating
-    // in reverse makes a later duplicate offset win over an earlier one.
-    auto FindNeighbor = [&](const OffsetKey &Key) -> VectorInfo * {
-      auto It = OffsetMap.find(Key);
-      if (It == OffsetMap.end())
+      // Return the last still-available candidate registered under Key.
+      // Iterating in reverse makes a later duplicate offset win over an earlier
+      // one.
+      auto FindNeighbor = [&](const OffsetKey &Key) -> VectorInfo * {
+        auto It = OffsetMap.find(Key);
+        if (It == OffsetMap.end())
+          return nullptr;
+        for (VectorInfo *Cand : reverse(It->second))
+          if (!Consumed.contains(Cand))
+            return Cand;
         return nullptr;
-      for (VectorInfo *Cand : reverse(It->second))
-        if (!Consumed.contains(Cand))
-          return Cand;
-      return nullptr;
-    };
+      };
 
-    for (VectorInfo &C0 : Candidates) {
-      if (Consumed.contains(&C0) || !C0.EI[0].Ofs.isProvenExact())
-        continue;
+      for (VectorInfo &C0 : Candidates) {
+        if (Consumed.contains(&C0) || !C0.EI[0].Ofs.isProvenExact())
+          continue;
 
-      unsigned Size = DL.getTypeAllocSize(C0.VTy->getElementType());
+        unsigned Size = DL.getTypeAllocSize(C0.VTy->getElementType());
 
-      // Collect C0 and its Factor - 1 consecutive neighbours.
-      SmallVector<VectorInfo *, 4> Group;
-      Group.push_back(&C0);
-      for (unsigned i = 1; i < Factor; i++) {
-        VectorInfo *Nb =
-            FindNeighbor({C0.BB, C0.PV, C0.VTy, C0.EI[0].Ofs + i * Size});
-        if (!Nb)
-          break;
-        Group.push_back(Nb);
-      }
-      if (Group.size() != Factor)
-        continue;
+        // Collect C0 and its Factor - 1 consecutive neighbours.
+        SmallVector<VectorInfo *, 4> Group;
+        Group.push_back(&C0);
+        for (unsigned i = 1; i < Factor; i++) {
+          VectorInfo *Nb =
+              FindNeighbor({C0.PV, C0.VTy, C0.EI[0].Ofs + i * Size});
+          if (!Nb)
+            break;
+          Group.push_back(Nb);
+        }
+        if (Group.size() != Factor)
+          continue;
 
-      if (combine(Group, ORE)) {
-        // The whole group is combined and left dead.
-        Consumed.insert(Group.begin(), Group.end());
-        changed = true;
-      } else {
-        // Drop only the base and keep its neighbours available as future bases.
-        Consumed.insert(&C0);
+        if (combine(Group, ORE)) {
+          // The whole group is combined and left dead.
+          Consumed.insert(Group.begin(), Group.end());
+          changed = true;
+        } else {
+          // Drop only the base; keep its neighbours available as future bases.
+          Consumed.insert(&C0);
+        }
       }
     }
   }
