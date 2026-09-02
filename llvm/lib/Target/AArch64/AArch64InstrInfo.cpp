@@ -11778,7 +11778,6 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
                                                 DebugLoc DL) const {
   MachineBasicBlock::iterator InsertPt = MBB.getFirstTerminator();
   MachineFunction &MF = *MBB.getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   auto &AFL = *static_cast<const AArch64FrameLowering *>(
       MF.getSubtarget().getFrameLowering());
@@ -11797,18 +11796,9 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
   // try spilling them to other registers.
 
   assert(MF.getProperties().hasTracksLiveness());
-  LivePhysRegs LiveRegs(TRI);
-  LiveRegs.addLiveOuts(MBB);
-  for (auto &MI : llvm::reverse(llvm::make_range(InsertPt, MBB.end())))
-    LiveRegs.stepBackward(MI);
-
-  auto FindAvailableRegister = [&LiveRegs, &MRI]() {
-    for (Register Reg : AArch64::GPR64RegClass) {
-      if (LiveRegs.available(MRI, Reg))
-        return Reg;
-    }
-    reportFatalUsageError("Cannot insert PAUTH_EPILOGUE: ran out of registers");
-  };
+  RegScavenger RS;
+  RS.enterBasicBlockEnd(MBB);
+  RS.backward(InsertPt);
 
   // Find out which scratch registers have to be spilled to other GPRs,
   // mark the rest as unavailable to be spilled-to.
@@ -11821,18 +11811,21 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
         MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
       continue;
 
-    assert(!MRI.isReserved(ScratchReg));
+    assert(!MF.getRegInfo().isReserved(ScratchReg));
 
-    if (LiveRegs.available(MRI, ScratchReg))
-      LiveRegs.addReg(ScratchReg);
-    else
+    if (RS.isRegUsed(ScratchReg))
       Spills.emplace_back(ScratchReg, AArch64::NoRegister);
+    else
+      RS.setRegUsed(ScratchReg);
   }
 
   for (auto &[ScratchReg, SpillReg] : Spills) {
     (void)ScratchReg;
-    SpillReg = FindAvailableRegister();
-    LiveRegs.addReg(SpillReg);
+    SpillReg = RS.FindUnusedReg(&AArch64::GPR64RegClass);
+    if (!SpillReg)
+      reportFatalUsageError(
+          "Cannot insert PAUTH_EPILOGUE: ran out of registers");
+    RS.setRegUsed(SpillReg);
   }
 
   auto EmitMOV = [&](Register DstReg, Register SrcReg) {
