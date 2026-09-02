@@ -3359,7 +3359,9 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       C.getPointerType(PrivatesQTy).withConst().withRestrict(),
       ImplicitParamKind::Other);
   Args.push_back(TaskPrivatesArg);
-  llvm::SmallDenseMap<const ValueDecl *, unsigned> PrivateVarsPos;
+  llvm::SmallDenseMap<CanonicalDeclPtr<const VarDecl>, unsigned> PrivateVarsPos;
+  // Track BindingDecl positions separately since BindingDecl is not a VarDecl.
+  llvm::SmallDenseMap<const BindingDecl *, unsigned> BindingDeclPos;
   unsigned Counter = 1;
   for (const Expr *E : Data.PrivateVars) {
     Args.push_back(ImplicitParamDecl::Create(
@@ -3369,7 +3371,10 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withRestrict(),
         ImplicitParamKind::Other));
     const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
-    PrivateVarsPos[VD] = Counter;
+    if (const auto *BD = dyn_cast<BindingDecl>(VD))
+      BindingDeclPos[BD] = Counter;
+    else
+      PrivateVarsPos[cast<VarDecl>(VD)] = Counter;
     ++Counter;
   }
   for (const Expr *E : Data.FirstprivateVars) {
@@ -3380,7 +3385,10 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withRestrict(),
         ImplicitParamKind::Other));
     const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
-    PrivateVarsPos[VD] = Counter;
+    if (const auto *BD = dyn_cast<BindingDecl>(VD))
+      BindingDeclPos[BD] = Counter;
+    else
+      PrivateVarsPos[cast<VarDecl>(VD)] = Counter;
     ++Counter;
   }
   for (const Expr *E : Data.LastprivateVars) {
@@ -3391,7 +3399,10 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withRestrict(),
         ImplicitParamKind::Other));
     const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
-    PrivateVarsPos[VD] = Counter;
+    if (const auto *BD = dyn_cast<BindingDecl>(VD))
+      BindingDeclPos[BD] = Counter;
+    else
+      PrivateVarsPos[cast<VarDecl>(VD)] = Counter;
     ++Counter;
   }
   for (const VarDecl *VD : Data.PrivateLocals) {
