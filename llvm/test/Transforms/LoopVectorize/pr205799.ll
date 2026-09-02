@@ -2,12 +2,11 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=4 -S < %s | FileCheck %s
 
 
-; Loop with i8 induction using a variant step (zext of comparison).
-; InductionDescriptor classifies %iv as IK_IntInduction with step=1,
-; but the VPlan backedge step is loop-variant (zext i1 %cmp to i8).
-; Without the fix, ReplaceExtractsWithExitingIVValue replaces the iv
-; exit value with 'trunc i32 %n.vec to i8' (the vector iteration count)
-; instead of the actual last iv value, producing an off-by-one result.
+; %iv is an i8 induction incremented by 'zext i1 %cmp to i8'. The increment is 1
+; in every iteration that continues the loop, so the step is invariant for the
+; induction, but the increment of the last iteration is 0. The live-out value of
+; %iv.next must therefore be extracted from the last vector iteration; it cannot
+; be pre-computed from the vector trip count.
 define i32 @variant_step_induction(i8 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @variant_step_induction(
 ; CHECK-SAME: i8 [[A:%.*]], i32 [[B:%.*]]) {
@@ -153,11 +152,8 @@ exit:
   ret void
 }
 
-; Sub analog of variant_step_induction: %iv decrements by a loop-variant
-; amount (zext of a comparison) instead of incrementing. Without covering the
-; Sub case of the variant-step check, this would regress to the same class of
-; miscompile as the Add case above, computing the exit value as
-; 'trunc i32 %n.vec to i8' instead of extracting the true last lane.
+; Same as @variant_step_induction, but %iv decrements by a loop-variant amount,
+; so the live-out value also has to be extracted.
 define i32 @variant_step_induction_sub(i8 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @variant_step_induction_sub(
 ; CHECK-SAME: i8 [[A:%.*]], i32 [[B:%.*]]) {
