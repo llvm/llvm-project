@@ -648,6 +648,7 @@ private:
   void WritePackPragmaOptions(Sema &SemaRef);
   void WriteFloatControlPragmaOptions(Sema &SemaRef);
   void WriteDeclsWithEffectsToVerify(Sema &SemaRef);
+  void WriteOpenMPRequiresDecls(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
   void WriteRISCVIntrinsicPragmas(Sema &SemaRef);

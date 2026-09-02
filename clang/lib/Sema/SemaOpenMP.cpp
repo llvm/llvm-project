@@ -679,6 +679,10 @@ public:
   /// Add requires decl to internal vector
   void addRequiresDecl(OMPRequiresDecl *RD) { RequiresDecls.push_back(RD); }
 
+  ArrayRef<const OMPRequiresDecl *> getRequiresDecls() const {
+    return RequiresDecls;
+  }
+
   /// Checks if the defined 'requires' directive has specified type of clause.
   template <typename ClauseType> bool hasRequiresDeclWithClause() const {
     return llvm::any_of(RequiresDecls, [](const OMPRequiresDecl *D) {
@@ -2069,6 +2073,14 @@ void SemaOpenMP::InitDataSharingAttributesStack() {
 }
 
 #define DSAStack static_cast<DSAStackTy *>(VarDataSharingAttributesStack)
+
+void SemaOpenMP::addRequiresDecl(OMPRequiresDecl *D) {
+  DSAStack->addRequiresDecl(D);
+}
+
+ArrayRef<const OMPRequiresDecl *> SemaOpenMP::getRequiresDecls() const {
+  return DSAStack->getRequiresDecls();
+}
 
 void SemaOpenMP::pushOpenMPFunctionRegion() { DSAStack->pushFunction(); }
 
