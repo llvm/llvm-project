@@ -174,12 +174,13 @@ fir::tryFoldingLLVMInsertChain(mlir::Value val, mlir::OpBuilder &rewriter) {
     return cst.getValue();
   if (auto insert = val.getDefiningOp<mlir::LLVM::InsertValueOp>()) {
     LLVM_DEBUG(llvm::dbgs() << "trying to fold insert chain:" << val << "\n");
-    if (auto structTy =
-            llvm::dyn_cast<mlir::LLVM::LLVMStructType>(insert.getType())) {
+    mlir::Type aggTy = insert.getType();
+    if (llvm::isa<mlir::LLVM::LLVMStructType, mlir::LLVM::LLVMArrayType>(
+            aggTy)) {
       mlir::LLVM::InsertValueOp currentInsert = insert;
       mlir::LLVM::InsertValueOp lastInsert;
       std::deque<InsertChainBackwardFolder> folderStorage;
-      InsertChainBackwardFolder inFlightList(structTy, &folderStorage);
+      InsertChainBackwardFolder inFlightList(aggTy, &folderStorage);
       while (currentInsert) {
         mlir::Attribute attr =
             getAttrIfConstant(currentInsert.getValue(), rewriter);

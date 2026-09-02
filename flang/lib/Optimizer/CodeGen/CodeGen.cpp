@@ -3061,6 +3061,52 @@ struct InsertOnRangeOpConversion
       }
     }
 
+    // Partial range on a one-dimensional array (e.g. a large array in a COMMON
+    // block that is only partially initialized by a DATA statement). Building
+    // an llvm.insertvalue chain here would be O(N) operations that are O(N^2)
+    // to fold into a constant when generating LLVM IR. Instead, fold both the
+    // sequence being updated and the inserted value to attributes and build the
+    // resulting constant array directly.
+    if (dims.size() == 1) {
+      llvm::FailureOr<mlir::Attribute> valCst =
+          fir::tryFoldingLLVMInsertChain(adaptor.getVal(), rewriter);
+      llvm::FailureOr<mlir::Attribute> seqCst =
+          fir::tryFoldingLLVMInsertChain(adaptor.getSeq(), rewriter);
+      if (llvm::succeeded(valCst) && llvm::succeeded(seqCst)) {
+        auto seqArray = mlir::dyn_cast<mlir::ArrayAttr>(*seqCst);
+        // coor holds the inclusive [lower, upper] bound for the single dim.
+        auto bounds = range.getCoor().getValues<int64_t>();
+        int64_t lo = bounds[0];
+        int64_t hi = bounds[1];
+        if (seqArray && lo >= 0 && hi < static_cast<int64_t>(seqArray.size())) {
+          llvm::SmallVector<mlir::Attribute> elements(seqArray.begin(),
+                                                      seqArray.end());
+          for (int64_t i = lo; i <= hi; ++i)
+            elements[i] = *valCst;
+          // A constant array of scalars is represented with a
+          // DenseElementsAttr (an ArrayAttr is only valid for arrays of
+          // aggregates). This is only possible if every element is a scalar
+          // integer or floating point constant.
+          mlir::Type eleTy =
+              mlir::cast<mlir::LLVM::LLVMArrayType>(arrayType).getElementType();
+          bool allScalarCst = llvm::all_of(elements, [&](mlir::Attribute a) {
+            return llvm::isa<mlir::IntegerAttr, mlir::FloatAttr>(a) &&
+                   mlir::cast<mlir::TypedAttr>(a).getType() == eleTy;
+          });
+          if (allScalarCst) {
+            // Represent the scalar array constant with a DenseElementsAttr over
+            // a tensor shape: this is translated to an LLVM array constant
+            // (a vector shape would instead produce a vector constant).
+            auto tensorTy = mlir::RankedTensorType::get(dims[0], eleTy);
+            rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+                range, arrayType,
+                mlir::DenseElementsAttr::get(tensorTy, elements));
+            return mlir::success();
+          }
+        }
+      }
+    }
+
     // The inserted value cannot be folded to an attribute, turn the
     // insert_range into an llvm.insertvalue chain.
     llvm::SmallVector<std::int64_t> lBounds;
