@@ -684,7 +684,7 @@ public:
 
 private:
   /// Resolve a lambda-captured variable's address based on whether the
-  /// enclosing method has an implicit or explicit object paramter.
+  /// enclosing method has an implicit or explicit object parameter.
   std::optional<std::pair<SVal, QualType>>
   resolveAsLambdaCapturedVar(const Expr *Ex, const ValueDecl *VD,
                              ExplodedNode *Pred) const;
