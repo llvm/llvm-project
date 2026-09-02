@@ -99,12 +99,12 @@ public:
                     .Kind = Kind,
                     .Default = [&Val, DV = DefaultVal]() { Val = DV; },
                     .FromString = [&Val, OptName = std::string(Name)](
-                                      std::string_view S) -> orc_rt::Error {
+                                      std::string_view S) -> Error {
                       if (auto V = detail::parseValue<T>(S)) {
                         Val = *V;
-                        return orc_rt::Error::success();
+                        return Error::success();
                       }
-                      return orc_rt::make_error<orc_rt::StringError>(
+                      return make_error<StringError>(
                           std::string("Invalid value for '") + OptName +
                           "': '" + std::string(S) + "'");
                     }});
@@ -156,7 +156,7 @@ public:
   ///
   /// Iterators should be over program arguments only, and should not include
   /// the program name as the first argument.
-  template <typename I> orc_rt::Error parse(I Begin, I End) {
+  template <typename I> Error parse(I Begin, I End) {
     std::for_each(Opts.begin(), Opts.end(),
                   [](const Option &O) { O.Default(); });
     Positionals.clear();
@@ -179,8 +179,8 @@ public:
         }
         auto FoundOpt = findOpt(K);
         if (!FoundOpt)
-          return orc_rt::make_error<orc_rt::StringError>(
-              "Unknown option '" + std::string(Tok) + "'");
+          return make_error<StringError>("Unknown option '" + std::string(Tok) +
+                                         "'");
         if (auto Err = consumeValue(FoundOpt, V, HasValue, It, End))
           return Err;
       } else if (!AfterDashDash && startsWith(Tok, "-") && Tok.size() > 1) {
@@ -188,7 +188,7 @@ public:
         for (size_t i = 0; i < Group.size(); ++i) {
           auto FoundOpt = findOpt(Group[i]);
           if (!FoundOpt)
-            return orc_rt::make_error<orc_rt::StringError>(
+            return make_error<StringError>(
                 std::string("Unknown short option '-") + Group[i] + "'");
           if (FoundOpt->Kind == OptionKind::Value) {
             std::string_view V = Group.substr(i + 1);
@@ -205,12 +205,12 @@ public:
         Positionals.emplace_back(Tok);
       }
     }
-    return orc_rt::Error::success();
+    return Error::success();
   }
 
   /// Parse main-like args: argc must be >= 1, and argv[0] must contain the
   /// program name.
-  orc_rt::Error parseAsMainArgs(int argc, char **argv) {
+  Error parseAsMainArgs(int argc, char **argv) {
     if (argc == 0)
       return make_error<StringError>("no program-name argument in argv[0]");
     return parse(argv + 1, argv + argc);
@@ -225,7 +225,7 @@ private:
     std::string Desc;
     OptionKind Kind{};
     std::function<void()> Default;
-    std::function<orc_rt::Error(std::string_view)> FromString;
+    std::function<Error(std::string_view)> FromString;
   };
 
   std::vector<std::string> Positionals;
@@ -245,16 +245,16 @@ private:
   }
 
   template <typename I>
-  orc_rt::Error consumeValue(const Option *Opt, std::string_view ExplicitV,
-                             bool HasV, I &It, I End) {
+  Error consumeValue(const Option *Opt, std::string_view ExplicitV, bool HasV,
+                     I &It, I End) {
     std::string_view V = ExplicitV;
     if (Opt->Kind == OptionKind::Flag) {
       if (!HasV)
         V = "true";
     } else if (!HasV) {
       if (++It == End)
-        return orc_rt::make_error<orc_rt::StringError>(
-            "Option '--" + Opt->Name + "' requires a value");
+        return make_error<StringError>("Option '--" + Opt->Name +
+                                       "' requires a value");
       V = *It;
     }
     return Opt->FromString(V);
