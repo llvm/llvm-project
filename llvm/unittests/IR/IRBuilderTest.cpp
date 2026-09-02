@@ -606,6 +606,24 @@ TEST_F(IRBuilderTest, GetIntTy) {
   EXPECT_EQ(IntPtrTy, IntegerType::get(Ctx, IntPtrBitSize));
 }
 
+TEST_F(IRBuilderTest, CreateBitPreservingCastChainByteTypes) {
+  M->setDataLayout("e-p:64:64");
+  IRBuilder<> Builder(BB);
+  const DataLayout &DL = M->getDataLayout();
+  Type *PtrTy = PointerType::getUnqual(Ctx);
+  Type *ByteVecTy = VectorType::get(Type::getByteNTy(Ctx, 32), 2,
+                                    /*Scalable=*/false);
+  Value *ByteVec = Builder.CreateLoad(ByteVecTy, Constant::getNullValue(PtrTy));
+  Value *Ptr = Builder.CreateLoad(PtrTy, Constant::getNullValue(PtrTy));
+  Value *ToPtr = Builder.CreateBitPreservingCastChain(DL, ByteVec, PtrTy);
+  ASSERT_TRUE(isa<IntToPtrInst>(ToPtr));
+  EXPECT_TRUE(isa<BitCastInst>(cast<IntToPtrInst>(ToPtr)->getOperand(0)));
+  Value *ToByteVec = Builder.CreateBitPreservingCastChain(DL, Ptr, ByteVecTy);
+  ASSERT_EQ(ToByteVec->getType(), ByteVecTy);
+  ASSERT_TRUE(isa<BitCastInst>(ToByteVec));
+  EXPECT_TRUE(isa<PtrToIntInst>(cast<BitCastInst>(ToByteVec)->getOperand(0)));
+}
+
 TEST_F(IRBuilderTest, UnaryOperators) {
   IRBuilder<NoFolder> Builder(BB);
   Value *V = Builder.CreateLoad(GV->getValueType(), GV);
