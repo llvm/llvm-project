@@ -58,7 +58,6 @@
 
 using namespace llvm;
 
-
 static cl::opt<bool>
     EnableCondBrTuning("aarch64-enable-cond-br-tune",
                        cl::desc("Enable the conditional branch tuning pass"),
