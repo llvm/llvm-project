@@ -509,9 +509,15 @@ fir::GlobalOp Fortran::lower::defineGlobal(
   if (global && globalIsInitialized(global))
     return global;
 
-  // Follow USE association so module PARAMETERs keep their initializer.
+  // Follow USE association only for named constants so the module-file
+  // initializer is available in the using TU. Other globals keep the
+  // local symbol: copying a non-PARAMETER initializer across TUs with
+  // external linkage would be a duplicate definition.
+  const Fortran::semantics::Symbol &objSym =
+      Fortran::semantics::IsNamedConstant(sym.GetUltimate()) ? sym.GetUltimate()
+                                                             : sym;
   const auto *oeDetails =
-      sym.GetUltimate().detailsIf<Fortran::semantics::ObjectEntityDetails>();
+      objSym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
 
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports

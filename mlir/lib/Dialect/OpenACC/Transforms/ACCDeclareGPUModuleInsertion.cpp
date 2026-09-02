@@ -56,7 +56,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace mlir {
 namespace acc {
@@ -135,15 +134,16 @@ public:
         };
         if (!isEquivalent(existing, deviceGlobal)) {
           // Earlier GPU lowering can create a global in the GPU module before
-          // this pass. Normalize the pre-existing global to the form expected
-          // for an OpenACC device copy, then reuse if equivalent.
-          Operation *normalizedExisting = existing->clone();
-          if (makeUnifiedDeclaration)
+          // this pass. In unified memory, convert an equivalent pre-existing
+          // global to the declaration form expected for an OpenACC global.
+          if (makeUnifiedDeclaration) {
+            Operation *normalizedExisting = existing->clone();
             makeDeviceGlobalDeclaration(*normalizedExisting);
-          bool canReuse = isEquivalent(normalizedExisting, deviceGlobal);
-          normalizedExisting->destroy();
-          if (canReuse && makeUnifiedDeclaration)
-            makeDeviceGlobalDeclaration(*existing);
+            bool canReuse = isEquivalent(normalizedExisting, deviceGlobal);
+            normalizedExisting->destroy();
+            if (canReuse)
+              makeDeviceGlobalDeclaration(*existing);
+          }
         }
         if (!isEquivalent(existing, deviceGlobal)) {
           deviceGlobal->destroy();
