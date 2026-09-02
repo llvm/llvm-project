@@ -971,6 +971,45 @@ template <class LP> void Writer::createLoadCommands() {
                               : 0));
 }
 
+// __objc_stubs is synthetic, so the input section sorting in
+// sortSegmentsAndSections() does not reach its entries. Order each stub by the
+// priority of the earliest-laid-out section that calls it, which keeps the
+// stubs reached during startup together.
+static void orderObjCStubsByCallerPriority(
+    const DenseMap<const InputSection *, int> &priorities) {
+  if (priorities.empty() || !in.objcStubs->isNeeded())
+    return;
+
+  // ICF may make the prioritized section differ from the section whose
+  // relocations describe the original calls. Use the canonical section for
+  // priority lookup, but scan the original section's relocations.
+  DenseMap<const Symbol *, int> stubPriority;
+  for (const ConcatInputSection *isec : inputSections) {
+    if (!isCodeSection(isec))
+      continue;
+    const auto *priorityIsec = cast<ConcatInputSection>(isec->canonical());
+    if (priorityIsec->shouldOmitFromOutput())
+      continue;
+    auto prio = priorities.find(priorityIsec);
+    if (prio == priorities.end())
+      continue;
+    for (const Relocation &r : isec->relocs) {
+      if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
+        continue;
+      auto *stub = dyn_cast_if_present<Symbol *>(r.referent);
+      if (!stub || !ObjCStubsSection::isObjCStubSymbol(stub))
+        continue;
+      auto [it, inserted] = stubPriority.try_emplace(stub, prio->second);
+      if (!inserted)
+        it->second = std::min(it->second, prio->second);
+    }
+  }
+  if (stubPriority.empty())
+    return;
+
+  in.objcStubs->sortSymbols(stubPriority);
+}
+
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
@@ -980,6 +1019,8 @@ static void sortSegmentsAndSections() {
 
   DenseMap<const InputSection *, int> isecPriorities =
       priorityBuilder.buildInputSectionPriorities();
+
+  orderObjCStubsByCallerPriority(isecPriorities);
 
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
