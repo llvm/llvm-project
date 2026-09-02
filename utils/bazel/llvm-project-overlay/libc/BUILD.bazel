@@ -900,6 +900,7 @@ libc_support_library(
     name = "types_char8_t",
     hdrs = ["hdr/types/char8_t.h"],
     deps = [
+        ":hdr_uchar_overlay",
         ":llvm_libc_types_char8_t",
     ],
 )
