@@ -341,8 +341,8 @@ define <2 x float> @test_fneg(<2 x float> %a) #0 {
 ; CHECK-NOF32X2-EMPTY:
 ; CHECK-NOF32X2-NEXT:  // %bb.0:
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fneg_param_0];
-; CHECK-NOF32X2-NEXT:    neg.f32 %r3, %r2;
-; CHECK-NOF32X2-NEXT:    neg.f32 %r4, %r1;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r3, %r2, -2147483648;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r4, %r1, -2147483648;
 ; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-NOF32X2-NEXT:    ret;
 ;
@@ -354,8 +354,8 @@ define <2 x float> @test_fneg(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:  // %bb.0:
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fneg_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-F32X2-NEXT:    neg.f32 %r3, %r2;
-; CHECK-F32X2-NEXT:    neg.f32 %r4, %r1;
+; CHECK-F32X2-NEXT:    xor.b32 %r3, %r2, -2147483648;
+; CHECK-F32X2-NEXT:    xor.b32 %r4, %r1, -2147483648;
 ; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fneg <2 x float> %a
@@ -692,8 +692,8 @@ define <2 x float> @test_fneg_ftz(<2 x float> %a) #2 {
 ; CHECK-NOF32X2-EMPTY:
 ; CHECK-NOF32X2-NEXT:  // %bb.0:
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fneg_ftz_param_0];
-; CHECK-NOF32X2-NEXT:    neg.ftz.f32 %r3, %r2;
-; CHECK-NOF32X2-NEXT:    neg.ftz.f32 %r4, %r1;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r3, %r2, -2147483648;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r4, %r1, -2147483648;
 ; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-NOF32X2-NEXT:    ret;
 ;
@@ -705,8 +705,8 @@ define <2 x float> @test_fneg_ftz(<2 x float> %a) #2 {
 ; CHECK-F32X2-NEXT:  // %bb.0:
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fneg_ftz_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-F32X2-NEXT:    neg.ftz.f32 %r3, %r2;
-; CHECK-F32X2-NEXT:    neg.ftz.f32 %r4, %r1;
+; CHECK-F32X2-NEXT:    xor.b32 %r3, %r2, -2147483648;
+; CHECK-F32X2-NEXT:    xor.b32 %r4, %r1, -2147483648;
 ; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = fneg <2 x float> %a
@@ -2420,8 +2420,8 @@ define <2 x float> @test_fabs(<2 x float> %a) #0 {
 ; CHECK-NOF32X2-EMPTY:
 ; CHECK-NOF32X2-NEXT:  // %bb.0:
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_fabs_param_0];
-; CHECK-NOF32X2-NEXT:    abs.f32 %r3, %r2;
-; CHECK-NOF32X2-NEXT:    abs.f32 %r4, %r1;
+; CHECK-NOF32X2-NEXT:    and.b32 %r3, %r2, 2147483647;
+; CHECK-NOF32X2-NEXT:    and.b32 %r4, %r1, 2147483647;
 ; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-NOF32X2-NEXT:    ret;
 ;
@@ -2433,8 +2433,8 @@ define <2 x float> @test_fabs(<2 x float> %a) #0 {
 ; CHECK-F32X2-NEXT:  // %bb.0:
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_fabs_param_0];
 ; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-F32X2-NEXT:    abs.f32 %r3, %r2;
-; CHECK-F32X2-NEXT:    abs.f32 %r4, %r1;
+; CHECK-F32X2-NEXT:    and.b32 %r3, %r2, 2147483647;
+; CHECK-F32X2-NEXT:    and.b32 %r4, %r1, 2147483647;
 ; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.fabs(<2 x float> %a)
@@ -2544,14 +2544,14 @@ define <2 x float> @test_copysign_f64(<2 x float> %a, <2 x double> %b) #0 {
 ; CHECK-NOF32X2-NEXT:  // %bb.0:
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_copysign_f64_param_1];
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_copysign_f64_param_0];
-; CHECK-NOF32X2-NEXT:    abs.f32 %r3, %r2;
-; CHECK-NOF32X2-NEXT:    neg.f32 %r4, %r3;
+; CHECK-NOF32X2-NEXT:    and.b32 %r3, %r2, 2147483647;
+; CHECK-NOF32X2-NEXT:    or.b32 %r4, %r2, -2147483648;
 ; CHECK-NOF32X2-NEXT:    shr.u64 %rd3, %rd2, 63;
 ; CHECK-NOF32X2-NEXT:    and.b64 %rd4, %rd3, 1;
 ; CHECK-NOF32X2-NEXT:    setp.ne.b64 %p1, %rd4, 0;
 ; CHECK-NOF32X2-NEXT:    selp.f32 %r5, %r4, %r3, %p1;
-; CHECK-NOF32X2-NEXT:    abs.f32 %r6, %r1;
-; CHECK-NOF32X2-NEXT:    neg.f32 %r7, %r6;
+; CHECK-NOF32X2-NEXT:    and.b32 %r6, %r1, 2147483647;
+; CHECK-NOF32X2-NEXT:    or.b32 %r7, %r1, -2147483648;
 ; CHECK-NOF32X2-NEXT:    shr.u64 %rd5, %rd1, 63;
 ; CHECK-NOF32X2-NEXT:    and.b64 %rd6, %rd5, 1;
 ; CHECK-NOF32X2-NEXT:    setp.ne.b64 %p2, %rd6, 0;
@@ -2568,18 +2568,18 @@ define <2 x float> @test_copysign_f64(<2 x float> %a, <2 x double> %b) #0 {
 ; CHECK-F32X2-NEXT:  // %bb.0:
 ; CHECK-F32X2-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_copysign_f64_param_1];
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_copysign_f64_param_0];
+; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-F32X2-NEXT:    and.b32 %r3, %r2, 2147483647;
+; CHECK-F32X2-NEXT:    or.b32 %r4, %r2, -2147483648;
 ; CHECK-F32X2-NEXT:    shr.u64 %rd4, %rd3, 63;
 ; CHECK-F32X2-NEXT:    and.b64 %rd5, %rd4, 1;
 ; CHECK-F32X2-NEXT:    setp.ne.b64 %p1, %rd5, 0;
-; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-F32X2-NEXT:    abs.f32 %r3, %r2;
-; CHECK-F32X2-NEXT:    neg.f32 %r4, %r3;
 ; CHECK-F32X2-NEXT:    selp.f32 %r5, %r4, %r3, %p1;
+; CHECK-F32X2-NEXT:    and.b32 %r6, %r1, 2147483647;
+; CHECK-F32X2-NEXT:    or.b32 %r7, %r1, -2147483648;
 ; CHECK-F32X2-NEXT:    shr.u64 %rd6, %rd2, 63;
 ; CHECK-F32X2-NEXT:    and.b64 %rd7, %rd6, 1;
 ; CHECK-F32X2-NEXT:    setp.ne.b64 %p2, %rd7, 0;
-; CHECK-F32X2-NEXT:    abs.f32 %r6, %r1;
-; CHECK-F32X2-NEXT:    neg.f32 %r7, %r6;
 ; CHECK-F32X2-NEXT:    selp.f32 %r8, %r7, %r6, %p2;
 ; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r8, %r5};
 ; CHECK-F32X2-NEXT:    ret;

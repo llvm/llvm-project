@@ -153,7 +153,7 @@ define <2 x bfloat> @test_fneg(<2 x bfloat> %a) #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_fneg_param_0];
-; CHECK-NEXT:    neg.bf16x2 %r2, %r1;
+; CHECK-NEXT:    xor.b32 %r2, %r1, -2147450880;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %r = fneg <2 x bfloat> %a
@@ -478,7 +478,7 @@ define <2 x bfloat> @test_fabs(<2 x bfloat> %a) #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_fabs_param_0];
-; CHECK-NEXT:    abs.bf16x2 %r2, %r1;
+; CHECK-NEXT:    and.b32 %r2, %r1, 2147450879;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %r = call <2 x bfloat> @llvm.fabs.f16(<2 x bfloat> %a)

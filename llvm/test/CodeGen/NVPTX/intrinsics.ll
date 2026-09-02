@@ -11,7 +11,7 @@ define float @test_fabsf(float %f) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_fabsf_param_0];
-; CHECK-NEXT:    abs.f32 %r2, %r1;
+; CHECK-NEXT:    and.b32 %r2, %r1, 2147483647;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %x = call float @llvm.fabs.f32(float %f)
@@ -25,7 +25,7 @@ define double @test_fabs(double %d) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_fabs_param_0];
-; CHECK-NEXT:    abs.f64 %rd2, %rd1;
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 9223372036854775807;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %x = call double @llvm.fabs.f64(double %d)

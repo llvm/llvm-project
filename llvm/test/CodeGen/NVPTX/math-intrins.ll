@@ -552,7 +552,7 @@ define float @abs_float(float %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [abs_float_param_0];
-; CHECK-NEXT:    abs.f32 %r2, %r1;
+; CHECK-NEXT:    and.b32 %r2, %r1, 2147483647;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %b = call float @llvm.fabs.f32(float %a)
@@ -566,11 +566,28 @@ define float @abs_float_ftz(float %a) #1 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [abs_float_ftz_param_0];
-; CHECK-NEXT:    abs.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    and.b32 %r2, %r1, 2147483647;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %b = call float @llvm.fabs.f32(float %a)
   ret float %b
+}
+
+define float @abs_float_ftz_add(float %a, float %b) #1 {
+; CHECK-LABEL: abs_float_ftz_add(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [abs_float_ftz_add_param_0];
+; CHECK-NEXT:    abs.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    ld.param.b32 %r3, [abs_float_ftz_add_param_1];
+; CHECK-NEXT:    add.rn.ftz.f32 %r4, %r2, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
+  %c = call float @llvm.fabs.f32(float %a)
+  %d = fadd float %c, %b
+  ret float %d
 }
 
 define double @abs_double(double %a) {
@@ -580,7 +597,7 @@ define double @abs_double(double %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [abs_double_param_0];
-; CHECK-NEXT:    abs.f64 %rd2, %rd1;
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 9223372036854775807;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %b = call double @llvm.fabs.f64(double %a)
