@@ -14,7 +14,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
 
-
 #define DEBUG_TYPE "orc"
 
 using namespace llvm::orc::shared;
