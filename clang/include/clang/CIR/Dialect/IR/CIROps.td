@@ -121,6 +121,24 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
   LoweringBuilders customLLVMLoweringConstructorDecl = ?;
 }
 
+// Base class for structured control flow ops whose regions take no inputs and
+// yield the parent's results on the way out. Users still have to define
+// `getSuccessorRegions` themselves.
+class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = []>
+    : CIR_Op<mnemonic, !listconcat([
+        DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                  ["getSuccessorInputs"]>], traits)> {
+  let extraClassDefinition = [{
+    ValueRange $cppClass::getSuccessorInputs(
+        mlir::RegionSuccessor successor) {
+      // Regions take no inputs; returning to the parent yields its results.
+      return successor.isOperation()
+                 ? ValueRange(getOperation()->getResults())
+                 : ValueRange();
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Operation Traits
 //===----------------------------------------------------------------------===//
@@ -983,8 +1001,7 @@ def CIR_ReturnOp : CIR_Op<"return", [
 // IfOp
 //===----------------------------------------------------------------------===//
 
-def CIR_IfOp : CIR_Op<"if", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_IfOp : CIR_RegionBranchOpBase<"if", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "the if-then-else operation";
@@ -1275,8 +1292,7 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 // ScopeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ScopeOp : CIR_Op<"scope", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_ScopeOp : CIR_RegionBranchOpBase<"scope", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1373,8 +1389,7 @@ def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup"> {
   }];
 }
 
-def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1515,8 +1530,7 @@ def CIR_CaseOpKind : CIR_I32EnumAttr<"CaseOpKind", "case kind", [
   I32EnumAttrCase<"Range", 3, "range">
 ]>;
 
-def CIR_CaseOp : CIR_Op<"case", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_CaseOp : CIR_RegionBranchOpBase<"case", [
   RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
   let summary = "Case operation";
@@ -1552,9 +1566,8 @@ def CIR_CaseOp : CIR_Op<"case", [
   let hasLLVMLowering = false;
 }
 
-def CIR_SwitchOp : CIR_Op<"switch", [
+def CIR_SwitchOp : CIR_RegionBranchOpBase<"switch", [
   SameVariadicOperandSize,
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -3220,8 +3233,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 // TernaryOp
 //===----------------------------------------------------------------------===//
 
-def CIR_TernaryOp : CIR_Op<"ternary", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_TernaryOp : CIR_RegionBranchOpBase<"ternary", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
@@ -3330,8 +3342,7 @@ def CIR_TLSModelAttr: CIR_EnumAttr<CIR_TLSModel, "tls_model"> {
   }];
 }
 
-def CIR_GlobalOp : CIR_Op<"global", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
   SymbolName, SymbolVisibility,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   NoRegionArguments
@@ -4720,8 +4731,7 @@ def CIR_AwaitKind : CIR_I32EnumAttr<"AwaitKind", "await kind", [
   I32EnumAttrCase<"Final", 3, "final">
 ]>;
 
-def CIR_AwaitOp : CIR_Op<"await",[
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_AwaitOp : CIR_RegionBranchOpBase<"await", [
   RecursivelySpeculatable, NoRegionArguments
 ]> {
   let summary = "Wraps C++ co_await implicit logic";
@@ -4806,8 +4816,7 @@ def CIR_AwaitOp : CIR_Op<"await",[
 //===----------------------------------------------------------------------===//
 // CoroBody
 //===----------------------------------------------------------------------===//
-def CIR_CoroBodyOp : CIR_Op<"coro.body", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_CoroBodyOp : CIR_RegionBranchOpBase<"coro.body", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -8125,8 +8134,7 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 // TryOp
 //===----------------------------------------------------------------------===//
 
-def CIR_TryOp : CIR_Op<"try",[
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_TryOp : CIR_RegionBranchOpBase<"try", [
   RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
   let summary = "C++ try block";
