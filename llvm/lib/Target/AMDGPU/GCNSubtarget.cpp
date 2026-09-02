@@ -181,9 +181,10 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (FlatOffsetBitWidth == 0)
     FlatOffsetBitWidth = 13;
 
-  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
-  AddressableLocalMemorySize =
-      AMDGPU::IsaInfo::getAddressableLocalMemorySize(*this);
+  LocalMemorySize = AMDGPU::getLocalMemorySize(getTargetID().getGPUKind(),
+                                               AMDGPU::isFullSIMDMode(*this));
+  AddressableLocalMemorySize = AMDGPU::getAddressableLocalMemorySize(
+      getTargetID().getGPUKind(), AMDGPU::isFullSIMDMode(*this));
   // LDS Allocation Granularity calculated in bytes from dwords
   LDSAllocationGranularity =
       AMDGPU::getLdsDwGranularity(*this) * sizeof(uint32_t);
