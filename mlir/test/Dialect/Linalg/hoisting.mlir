@@ -1264,15 +1264,17 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// A dynamic subview offset yields no static footprint: hoisting is blocked.
+// A dynamic (but loop-invariant) subview offset with no other access to the
+// buffer: the pair still hoists, since nothing else can alias it.
 
-// CHECK-LABEL:   func.func @negative_hoist_dynamic_offset_subview(
-// CHECK:           scf.for {{.*}} step %{{.*}} {
-// CHECK:             vector.transfer_read
-// CHECK:             vector.transfer_write
+// CHECK-LABEL:   func.func @hoist_dynamic_offset_subview(
+// CHECK:           %[[SV:.*]] = memref.subview
+// CHECK:           %[[R:.*]] = vector.transfer_read %[[SV]]
+// CHECK:           %[[FOR:.*]] = scf.for {{.*}} iter_args({{.*}} = %[[R]]) -> (vector<2xf32>) {
 // CHECK:           }
+// CHECK:           vector.transfer_write %[[FOR]], %[[SV]]
 
-func.func @negative_hoist_dynamic_offset_subview(
+func.func @hoist_dynamic_offset_subview(
     %mem: memref<4xf32>, %off: index, %lb : index, %ub : index, %step: index) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
@@ -1297,15 +1299,18 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Subview rooted at a collapse_shape (not a genuine buffer): hoisting blocked.
+// A subview rooted at a collapse_shape that is the buffer's sole accessor: the
+// pair still hoists, since nothing else can alias it.
 
-// CHECK-LABEL:   func.func @negative_hoist_subview_of_collapse_shape(
-// CHECK:           scf.for {{.*}} step %{{.*}} {
-// CHECK:             vector.transfer_read
-// CHECK:             vector.transfer_write
+// CHECK-LABEL:   func.func @hoist_subview_of_collapse_shape(
+// CHECK:           %[[COLLAPSE:.*]] = memref.collapse_shape
+// CHECK:           %[[SV:.*]] = memref.subview %[[COLLAPSE]]
+// CHECK:           %[[R:.*]] = vector.transfer_read %[[SV]]
+// CHECK:           %[[FOR:.*]] = scf.for {{.*}} iter_args({{.*}} = %[[R]]) -> (vector<2xf32>) {
 // CHECK:           }
+// CHECK:           vector.transfer_write %[[FOR]], %[[SV]]
 
-func.func @negative_hoist_subview_of_collapse_shape(
+func.func @hoist_subview_of_collapse_shape(
     %mem: memref<2x2xf32>, %lb : index, %ub : index, %step: index) {
   %c0 = arith.constant 0 : index
   %pad = arith.constant 0.0 : f32
