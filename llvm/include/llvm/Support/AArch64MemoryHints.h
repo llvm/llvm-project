@@ -16,12 +16,12 @@ enum class AArch64MemoryHint {
   HINT_STSHH_STRM = 2,
 };
 
-template <typename Int> inline bool isValidAArch64AtomicHintValue(Int I) {
+template <typename Int> inline bool isValidAArch64MemoryHintValue(Int I) {
   return (Int)AArch64MemoryHint::HINT_STSHH_KEEP <= I &&
          I <= (Int)AArch64MemoryHint::HINT_STSHH_STRM;
 }
 
-template <typename Int> inline AArch64MemoryHint toAArch64Hint(Int I) {
+template <typename Int> inline AArch64MemoryHint toAArch64MemoryHint(Int I) {
   switch (I) {
   case 0:
     return AArch64MemoryHint::HINT_STSHH_KEEP;
