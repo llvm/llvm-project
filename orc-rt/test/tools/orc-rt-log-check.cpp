@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
                   -1, UID)
         .addFlag("help", "Print help", false, PrintHelp);
 
-    if (auto Err = P.parse(argc, argv)) {
+    if (auto Err = P.parseAsMainArgs(argc, argv)) {
       std::cerr << "error: " << orc_rt::toString(std::move(Err)) << "\n";
       std::cerr << P.formatHelp(argv[0]);
       return 1;
