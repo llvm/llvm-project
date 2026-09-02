@@ -5378,19 +5378,16 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
   case clang::Type::ObjCObjectPointer: {
     CompilerType pointee_clang_type(GetPointeeType(type));
 
-    uint32_t num_pointee_children = 0;
     if (pointee_clang_type.IsAggregateType()) {
       auto num_children_or_err =
           pointee_clang_type.GetNumChildren(omit_empty_base_classes, exe_ctx);
       if (!num_children_or_err)
         return num_children_or_err;
-      num_pointee_children = *num_children_or_err;
-    }
-    // If this type points to a simple type, then it has 1 child
-    if (num_pointee_children == 0)
+      num_children = *num_children_or_err;
+    } else {
+      // If this type points to a simple type, then it has 1 child
       num_children = 1;
-    else
-      num_children = num_pointee_children;
+    }
   } break;
 
   case clang::Type::Vector:
