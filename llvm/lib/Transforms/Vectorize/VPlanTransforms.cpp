@@ -2079,12 +2079,17 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
+  VPValue *Offset = nullptr;
   auto m_CanIVInc = m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF()));
   // Check if the branch condition compares the canonical IV increment (for main
   // loop), or the canonical IV increment plus an offset (for epilog loop).
-  if (match(Term, m_BranchOnCount(
-                      m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_LiveIn())),
-                      m_VPValue())) ||
+  bool MatchedCanIVInc =
+      match(Term,
+            m_BranchOnCount(
+                m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_VPValue(Offset))),
+                m_VPValue())) &&
+      (!Offset || Offset->isDefinedOutsideLoopRegions());
+  if (MatchedCanIVInc ||
       match(Term,
             m_BranchOnCond(m_Not(m_ExtractVectorForPart(
                 m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()),
