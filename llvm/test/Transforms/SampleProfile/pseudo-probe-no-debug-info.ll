@@ -1,8 +1,9 @@
+; REQUIRES: x86-registered-target
 ; RUN: opt < %s -passes='pseudo-probe,always-inline' -S -o %t
 ; RUN: FileCheck %s --check-prefix=IR < %t
-; RUN: llc %t -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=MIR
+; RUN: llc %t -mtriple=x86_64-unknown-linux-gnu -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=MIR
 ; RUN: opt < %t -passes='cgscc(inline)' -S -o %t.inlined
-; RUN: llc %t.inlined -filetype=asm -o - | FileCheck %s --check-prefix=ASM
+; RUN: llc %t.inlined -mtriple=x86_64-unknown-linux-gnu -filetype=asm -o - | FileCheck %s --check-prefix=ASM
 
 ; IR-LABEL: @caller(
 
