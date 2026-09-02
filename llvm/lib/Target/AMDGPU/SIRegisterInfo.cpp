@@ -3642,18 +3642,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
     // Not isImmOperandLegal: a SALU user may already have a literal.
     if (!TII->isOperandLegal(*MI, FIOperandNum, FIOp)) {
-      // SGPR0, not M0: some SGPR classes (e.g. SReg_32_XM0) reject M0
-      // specifically.
-      FIOp->ChangeToRegister(AMDGPU::VGPR0, false);
-      bool UseSGPR = !TII->isOperandLegal(*MI, FIOperandNum, FIOp);
-      if (UseSGPR) {
-        FIOp->ChangeToRegister(AMDGPU::SGPR0, false);
-        if (!TII->isOperandLegal(*MI, FIOperandNum, FIOp))
-          report_fatal_error("Cannot scavenge register in FI elimination!");
-      }
-
-      // The probe register must not be live at MI, or the scavenger skips it.
-      FIOp->ChangeToImmediate(Offset);
+      const TargetRegisterClass *OpRC =
+          TII->getRegClass(MI->getDesc(), FIOperandNum);
+      bool UseSGPR = OpRC && isSGPRClass(OpRC);
 
       const TargetRegisterClass *RC =
           UseSGPR ? &AMDGPU::SReg_32_XM0RegClass : &AMDGPU::VGPR_32RegClass;
