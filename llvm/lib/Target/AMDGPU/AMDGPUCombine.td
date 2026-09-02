@@ -255,6 +255,17 @@ def combine_or_s64_s32 : GICombineRule<
          (G_OR $or, $x_lo, $y),
          (G_MERGE_VALUES $dst, $or, $x_hi))>;
 
+// (bitcast (trunc i32:$src)) -> (trunc i32:$src) with the bitcast result type.
+// Both are scalars of the same size, so only the LLT kind differs; keeping the
+// trunc alone lets matchers that look through a trunc chain still fire.
+def bitcast_of_trunc : GICombineRule<
+  (defs root:$dst),
+  (match (G_TRUNC $trunc, $src),
+         (G_BITCAST $dst, $trunc),
+         [{ return MRI.getType(${dst}.getReg()).isScalar() &&
+                   MRI.getType(${trunc}.getReg()).isScalar(); }]),
+  (apply (G_TRUNC $dst, $src))>;
+
 // (trunc (lshr i32:$src, 16)) -> (unmerge_hi i16:$src)
 // Reads the high half in place instead of shifting it down into a fresh
 // 32-bit register; with true16 the unmerge is just a hi16 subregister.
@@ -331,7 +342,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
 
 def AMDGPURegBankCombiner : GICombiner<
   "AMDGPURegBankCombinerImpl",
-  [unmerge_merge, unmerge_cst, unmerge_undef,
+  [bitcast_of_trunc, unmerge_merge, unmerge_cst, unmerge_undef,
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
