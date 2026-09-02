@@ -58,7 +58,7 @@ define void @icmp_select_v4_uniform_cond(ptr noalias %dst, ptr noalias %lhs, ptr
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], i64 [[N:%.*]], <4 x i32> [[CONDS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i32> [[CONDS]], zeroinitializer
-; CHECK-NEXT:    [[BROADCAST:%.*]] = call <vscale x 4 x i1> @llvm.vector.broadcast.nxv4i1.v4i1(<4 x i1> [[CMP]])
+; CHECK-NEXT:    [[BROADCAST:%.*]] = call <vscale x 4 x i1> @llvm.vector.repeat.nxv4i1.v4i1(<4 x i1> [[CMP]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
