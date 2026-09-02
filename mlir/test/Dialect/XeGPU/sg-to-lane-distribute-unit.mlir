@@ -1621,7 +1621,7 @@ gpu.func @convert_layout_broadcast_to_lane_distributed() {
       input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2], lane_data = [4, 1, 1], order = [0, 2, 1]>, dims = [0]>,
       target_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>
     }> : vector<8x2xf8E8M0FNU>
-  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  "test.some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
   gpu.return
 }
 
@@ -1655,7 +1655,7 @@ gpu.func @convert_layout_broadcast_all_lanes() {
       input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>,
       target_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>
     }> : vector<8x2xf8E8M0FNU>
-  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  "test.some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
   gpu.return
 }
 
@@ -1691,7 +1691,7 @@ gpu.func @convert_layout_broadcast_to_sliced_target() {
       input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>,
       target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2], lane_data = [4, 1, 1], order = [0, 2, 1]>, dims = [0]>
     }> : vector<8x2xbf16>
-  "some_use"(%cvt) : (vector<8x2xbf16>) -> ()
+  "test.some_use"(%cvt) : (vector<8x2xbf16>) -> ()
   gpu.return
 }
 
@@ -1725,7 +1725,7 @@ gpu.func @convert_layout_broadcast_nested_slice() {
       input_layout = #xegpu.slice<#xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 1, 2], lane_data = [1, 1, 1, 1], order = [0, 3, 2, 1]>, dims = [2]>, dims = [0]>,
       target_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>
     }> : vector<8x2xf8E8M0FNU>
-  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  "test.some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
   gpu.return
 }
 }
@@ -1766,7 +1766,7 @@ gpu.func @convert_layout_broadcast_partial_input() {
       input_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>,
       target_layout = #xegpu.layout<lane_layout = [2, 1], lane_data = [1, 1]>
     }> : vector<8x2xf8E8M0FNU>
-  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  "test.some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
   gpu.return
 }
 }
@@ -1807,7 +1807,7 @@ gpu.func @convert_layout_broadcast_four_slots() {
       input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>,
       target_layout = #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>
     }> : vector<8x2xf8E8M0FNU>
-  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  "test.some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
   gpu.return
 }
 }
