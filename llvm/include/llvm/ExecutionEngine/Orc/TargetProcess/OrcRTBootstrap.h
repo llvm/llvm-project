@@ -6,26 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// OrcRTPrelinkImpl provides functions that should be linked into the executor
+// OrcRTBootstrap provides functions that should be linked into the executor
 // to bootstrap common JIT functionality (e.g. memory allocation and memory
 // access).
 //
-// Call rt_impl::addTo to add these functions to a bootstrap symbols map.
-//
-// FIXME: The functionality in this file should probably be moved to an ORC
-// runtime bootstrap library in compiler-rt.
+// Call addTo to add these functions to a bootstrap symbols map.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_EXECUTIONENGINE_ORC_TARGETPROCESS_ORCRTBOOTSTRAP_H
-#define LIB_EXECUTIONENGINE_ORC_TARGETPROCESS_ORCRTBOOTSTRAP_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_ORCRTBOOTSTRAP_H
+#define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_ORCRTBOOTSTRAP_H
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 
-namespace llvm {
-namespace orc {
-namespace rt_bootstrap {
+namespace llvm::orc::rt_bootstrap {
 
 /// Adds executor-side wrappers for the run-as function proxies.
 void addRunAsFunctionWrappersTo(StringMap<ExecutorAddr> &M);
@@ -33,8 +28,6 @@ void addRunAsFunctionWrappersTo(StringMap<ExecutorAddr> &M);
 /// Adds all default target-process bootstrap wrappers.
 void addTo(StringMap<ExecutorAddr> &M);
 
-} // namespace rt_bootstrap
-} // end namespace orc
-} // end namespace llvm
+} // namespace llvm::orc::rt_bootstrap
 
-#endif // LIB_EXECUTIONENGINE_ORC_TARGETPROCESS_ORCRTBOOTSTRAP_H
+#endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_ORCRTBOOTSTRAP_H
