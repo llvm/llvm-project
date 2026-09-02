@@ -408,13 +408,13 @@ defvar Operations = [
   WaveReduceOp<"xor", "B64", i64, SGPR_64, VSrc_u64>,
 
   WaveReduceOp<"fmin", "F32", f32, SGPR_32, VSrc_b32>,
-  WaveReduceOp<"fmin", "F64", f64, SGPR_64, VSrc_u64>,
+  WaveReduceOp<"fmin", "F64", f64, SGPR_64, VSrc_f64>,
   WaveReduceOp<"fmax", "F32", f32, SGPR_32, VSrc_b32>,
-  WaveReduceOp<"fmax", "F64", f64, SGPR_64, VSrc_u64>,
+  WaveReduceOp<"fmax", "F64", f64, SGPR_64, VSrc_f64>,
   WaveReduceOp<"fadd", "F32", f32, SGPR_32, VSrc_b32>,
-  WaveReduceOp<"fadd", "F64", f64, SGPR_64, VSrc_u64>,
+  WaveReduceOp<"fadd", "F64", f64, SGPR_64, VSrc_f64>,
   WaveReduceOp<"fsub", "F32", f32, SGPR_32, VSrc_b32>,
-  WaveReduceOp<"fsub", "F64", f64, SGPR_64, VSrc_u64>,
+  WaveReduceOp<"fsub", "F64", f64, SGPR_64, VSrc_f64>,
 ];
 
 foreach Op = Operations in {
@@ -4687,13 +4687,13 @@ def fpimm_neg_pow2_prefer_ldexp_f64 : FPImmLeaf<f64, [{
 def : GCNPat<
   (any_fmul (f64 (VOP3Mods f64:$src0, i32:$src0_mods)),
             fpimm_pos_pow2_prefer_ldexp_f64:$src1),
-  (V_LDEXP_F64_e64 i32:$src0_mods, VSrc_u64:$src0,
+  (V_LDEXP_F64_e64 i32:$src0_mods, VSrc_f64:$src0,
                    0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
 >;
 
 def : GCNPat<
   (any_fmul f64:$src0, fpimm_neg_pow2_prefer_ldexp_f64:$src1),
-  (V_LDEXP_F64_e64 SRCMODS.NEG, VSrc_u64:$src0,
+  (V_LDEXP_F64_e64 SRCMODS.NEG, VSrc_f64:$src0,
                    0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
 >;
 
@@ -4703,7 +4703,7 @@ def : GCNPat<
 // for a second operand.
 def : GCNPat<
   (any_fmul (fabs f64:$src0), fpimm_neg_pow2_prefer_ldexp_f64:$src1),
-  (V_LDEXP_F64_e64 SRCMODS.NEG_ABS, VSrc_u64:$src0,
+  (V_LDEXP_F64_e64 SRCMODS.NEG_ABS, VSrc_f64:$src0,
                    0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
 >;
 
