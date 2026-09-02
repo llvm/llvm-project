@@ -136,6 +136,9 @@ class CompilerInstance : public ModuleLoader {
   /// Back-end pass plugins.
   std::vector<std::unique_ptr<llvm::PassPlugin>> PassPlugins;
 
+  /// Whether LLVMArgs have already been parsed.
+  bool LLVMArgsParsed = false;
+
   /// The frontend timer group.
   std::unique_ptr<llvm::TimerGroup> timerGroup;
 

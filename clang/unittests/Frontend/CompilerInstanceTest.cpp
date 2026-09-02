@@ -16,6 +16,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -93,6 +94,33 @@ TEST(CompilerInstance, CreateVFSWithoutDiagnosticConsumer) {
   // dereferencing the null pointer).
   ASSERT_NO_FATAL_FAILURE(
       Instance.createVirtualFileSystem(std::move(BaseFS), /*DC=*/nullptr));
+}
+
+TEST(CompilerInstance, ExecuteActionProcessesMllvmArgsOnce) {
+  llvm::cl::opt<bool> TestOption("compiler-instance-test-mllvm",
+                                 llvm::cl::init(false));
+
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  Invocation->getPreprocessorOpts().addRemappedFile(
+      "test.cc", MemoryBuffer::getMemBuffer("").release());
+  Invocation->getFrontendOpts().Inputs.emplace_back("test.cc", Language::CXX);
+  // The driver stores the argument following `-mllvm` in LLVMArgs. Direct
+  // CompilerInstance clients populate the same field without using the driver.
+  Invocation->getFrontendOpts().LLVMArgs.emplace_back(
+      "-compiler-instance-test-mllvm");
+  Invocation->getTargetOpts().Triple = "x86_64-unknown-linux-gnu";
+
+  CompilerInstance Instance(std::move(Invocation));
+  Instance.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Instance.createDiagnostics();
+
+  SyntaxOnlyAction Action;
+  EXPECT_TRUE(Instance.ExecuteAction(Action));
+  EXPECT_TRUE(TestOption);
+  EXPECT_EQ(TestOption.getNumOccurrences(), 1);
+
+  Instance.parseLLVMArgs();
+  EXPECT_EQ(TestOption.getNumOccurrences(), 1);
 }
 
 TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {

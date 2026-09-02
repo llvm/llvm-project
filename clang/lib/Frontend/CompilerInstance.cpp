@@ -983,9 +983,11 @@ void CompilerInstance::PrepareForExecution() {
     getFrontendTimer().startTimer();
   }
 
+  parseLLVMArgs();
+
   // FIXME: Consider consolidating additional per-instance setup here:
   // - llvm::timeTraceProfilerInitialize) when TimeTracePath is set.
-  // - Plugin loading (LoadRequestedPlugins) and -mllvm argument processing.
+  // - Plugin loading (LoadRequestedPlugins).
 }
 
 bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
@@ -1136,6 +1138,10 @@ void CompilerInstance::LoadRequestedPlugins() {
 }
 
 void CompilerInstance::parseLLVMArgs() {
+  if (LLVMArgsParsed)
+    return;
+  LLVMArgsParsed = true;
+
   if (!getFrontendOpts().LLVMArgs.empty()) {
     unsigned NumArgs = getFrontendOpts().LLVMArgs.size();
     auto Args = std::make_unique<const char *[]>(NumArgs + 2);
