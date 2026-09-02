@@ -16,6 +16,14 @@ bool RecordType::isEmpty() const {
   if (hasFlexibleArrayMember())
     return false;
 
+  // We shouldn't need to check for emptiness if the record has virtual bases
+  // because it can't be passed in registers. This assertion is here to enforce
+  // that assumption.
+  assert(getNumVirtualBaseClasses() == 0 || !canPassInRegisters());
+
+  if (getNumVirtualBaseClasses() > 0)
+    return false;
+
   for (const FieldInfo &Base : getBaseClasses()) {
     const auto *BaseRT = dyn_cast<RecordType>(Base.FieldType);
     if (!BaseRT || !BaseRT->isEmpty())

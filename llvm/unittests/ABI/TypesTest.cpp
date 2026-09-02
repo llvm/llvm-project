@@ -33,8 +33,9 @@ protected:
   const RecordType *makeRecord(llvm::ArrayRef<FieldInfo> Fields,
                                uint64_t SizeBits, RecordFlags Flags,
                                llvm::ArrayRef<FieldInfo> Bases = {},
-                               llvm::ArrayRef<FieldInfo> VBases = {}) {
-    return TB.getRecordType(Fields, TypeSize::getFixed(SizeBits), Align(1),
+                               llvm::ArrayRef<FieldInfo> VBases = {},
+                               Align Alignment = Align(1)) {
+    return TB.getRecordType(Fields, TypeSize::getFixed(SizeBits), Alignment,
                             StructPacking::Default, Bases, VBases, Flags);
   }
 };
@@ -98,35 +99,29 @@ TEST_F(ABITypesTest, BitfieldsAndFlexibleArrays) {
 TEST_F(ABITypesTest, DirectVirtualBasesAndVTablePointer) {
   RecordFlags CXXFlags = static_cast<RecordFlags>(
       RecordFlags::CanPassInRegisters | RecordFlags::IsCXXRecord);
+  // Polymorphic classes have a non-trivial copy constructor, so they are not
+  // passed in registers.
+  RecordFlags PolymorphicFlags = static_cast<RecordFlags>(
+      RecordFlags::IsCXXRecord | RecordFlags::IsPolymorphic);
   const RecordType *Empty = makeRecord({}, 8, CXXFlags);
   const RecordType *IntField = makeRecord(
       {FieldInfo(TB.getIntegerType(32, Align(4), /*Signed=*/true), 0)}, 32,
-      CXXFlags);
+      CXXFlags, /*Bases=*/{}, /*VBases=*/{}, Align(4));
   const llvm::abi::Type *VPtr = TB.getPointerType(64, Align(8));
   FieldInfo VTable(VPtr, 0);
-  // Direct virtual bases appear in both the base-class list (with
-  // IsVirtualBase) and the virtual-base list, matching CXXRecordDecl::bases()
-  // and vbases().
-  FieldInfo EmptyVBase(Empty, 0, /*IsBitField=*/false, /*BitFieldWidth=*/0,
-                       /*IsUnnamedBitField=*/false,
-                       /*HasNoUniqueAddress=*/false,
-                       /*IsVirtualBase=*/true);
-  FieldInfo NonEmptyVBase(IntField, 0, /*IsBitField=*/false,
-                          /*BitFieldWidth=*/0,
-                          /*IsUnnamedBitField=*/false,
-                          /*HasNoUniqueAddress=*/false,
-                          /*IsVirtualBase=*/true);
 
-  EXPECT_FALSE(makeRecord({VTable}, 8, CXXFlags, /*Bases=*/{EmptyVBase},
-                          /*VBases=*/{EmptyVBase})
+  // Empty vbase with vtable
+  EXPECT_FALSE(makeRecord({VTable}, 64, PolymorphicFlags, /*Bases=*/{},
+                          /*VBases=*/{FieldInfo(Empty, 0)}, Align(8))
                    ->isEmpty());
-  EXPECT_FALSE(makeRecord({VTable}, 32, CXXFlags, /*Bases=*/{NonEmptyVBase},
-                          /*VBases=*/{NonEmptyVBase})
+  // Non-empty vbase with vtable
+  EXPECT_FALSE(makeRecord({VTable}, 128, PolymorphicFlags, /*Bases=*/{},
+                          /*VBases=*/{FieldInfo(IntField, 64)}, Align(8))
                    ->isEmpty());
-  EXPECT_FALSE(makeRecord({VTable}, 64,
-                          static_cast<RecordFlags>(CXXFlags |
-                                                   RecordFlags::IsPolymorphic),
-                          {FieldInfo(Empty, 0)})
+  // Empty base with vtable
+  EXPECT_FALSE(makeRecord({VTable, FieldInfo(Empty, 64)}, 128, PolymorphicFlags,
+                          /*Bases=*/{FieldInfo(Empty, 0)}, /*VBases=*/{},
+                          Align(8))
                    ->isEmpty());
 }
 
