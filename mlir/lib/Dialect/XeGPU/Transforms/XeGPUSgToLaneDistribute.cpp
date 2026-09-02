@@ -2108,21 +2108,14 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //===----------------------------------------------------------------------===//
 
 /// The lane period of `layout`: the modulus after which its assignment of
-/// elements to lanes repeats, so that lane `l` and lane `l + getLanePeriod()`
-/// hold the same *fragment* -- the set of elements one lane owns.
+/// elements to lanes repeats, so lane `l` and lane `l + getLanePeriod()` hold
+/// the same fragment. It is `product(lane_layout)` because
+/// `computeStaticDistributedCoords` delinearizes the lane id modulo each
+/// extent, so nothing a layout derives from the lane id depends on it beyond
+/// that product.
 ///
-/// It repeats because `computeStaticDistributedCoords` delinearizes the lane id
-/// into digits, one per lane_layout dimension, taking each modulo that
-/// dimension's extent. Nothing a layout derives from the lane id can therefore
-/// depend on it beyond the product of those extents, which is what this
-/// returns. A subgroup larger than the product simply repeats.
-///
-/// This is not the number of lanes holding distinct data. A sliced dimension
-/// contributes its lanes to the period even though they replicate one fragment:
-/// `slice<layout<lane_layout = [8, 1, 2]>, dims = [0]>` has period 16 and hands
-/// out 2 distinct fragments. Nothing here needs the latter count -- the
-/// ownership tables are consulted per lane -- and the period is what the lane
-/// id has to be reduced by.
+/// Sliced dimensions are counted, so this is not the number of lanes holding
+/// distinct data -- see `broadcast group` in the section header.
 static int64_t getLanePeriod(xegpu::DistributeLayoutAttr layout) {
   // flatten() coalesces nested slices, so the parent it leaves is always a
   // plain LayoutAttr carrying the lane_layout of the whole subgroup.
@@ -2176,16 +2169,10 @@ static bool haveSameDistributionUnit(xegpu::DistributeLayoutAttr inputLayout,
 
 /// Target-side rule: the target's lane period has to divide the subgroup size.
 ///
-/// A value is moved between lanes by having every lane extract one element and
-/// `gpu.shuffle idx` it from a chosen *donor* lane. All lanes run the same
-/// code, so a lane can only be served by a donor that agrees with it on which
-/// element to extract -- one whose lane id differs by a whole number of lane
-/// periods. The lowering therefore searches donors at `donorDelta = 0,
-/// targetLanePeriod, 2 * targetLanePeriod, ...` up to the subgroup size,
-/// reading lane `slot + donorDelta`, where `slot` is `lane % targetLanePeriod`
-/// and so below the period. If the period did not divide the subgroup size that
-/// sum could name a lane past the last one: with a period of 3 on 16 lanes,
-/// `donorDelta` reaches 15 and a slot reaches 2, naming lane 17.
+/// `donorDelta` steps by the period up to the subgroup size and a slot is below
+/// the period, so otherwise `slot + donorDelta` could name a lane past the last
+/// one: with a period of 3 on 16 lanes, `donorDelta` reaches 15 and a slot
+/// reaches 2, naming lane 17.
 ///
 /// The input has no counterpart: it is only ever indexed, never used to derive
 /// a donor, so its own period is unconstrained.
@@ -2248,14 +2235,8 @@ computeOwnedCoords(xegpu::DistributeLayoutAttr layout, ArrayRef<int64_t> shape,
 
 /// Which element of the donor's fragment a lane extracts -- the donor being the
 /// lane it reads from, `slot + donorDelta` -- as a function of its `slot`
-/// (`lane % targetLanePeriod`).
-///
-/// `at()` is restricted to one shape: the lane's coordinate along a single
-/// dimension of the target lane_layout, scaled and offset into the fragment.
-/// That keeps the index a couple of `arith` ops on the lane id; an arbitrary
-/// index per slot would need a materialized table and a gather. A `stride` of 0
-/// is the degenerate case where no dimension is walked at all and every slot
-/// reads `offset`.
+/// (`lane % targetLanePeriod`). `at()` is the restricted form the section
+/// header derives; the fields below are its four constants.
 ///
 /// For a `vector<8x2>` whose input layout gives every lane all 16 elements,
 /// row-major, and whose target gives lane `i` row `i`, element `p` of the
