@@ -136,7 +136,7 @@ public:
   void unmapTestOnly() {}
   bool setOption(Option O, UNUSED sptr Value) {
     if (O == Option::ReleaseInterval || O == Option::MaxCacheEntriesCount ||
-        O == Option::MaxCacheEntrySize)
+        O == Option::MaxCacheEntrySize || O == Option::MaxCacheResidentBytes)
       return false;
     // Not supported by the Secondary Cache, but not an error either.
     return true;
@@ -277,6 +277,8 @@ public:
               static_cast<sptr>(Config::getDefaultMaxEntriesCount()));
     setOption(Option::MaxCacheEntrySize,
               static_cast<sptr>(Config::getDefaultMaxEntrySize()));
+    setOption(Option::MaxCacheResidentBytes,
+              static_cast<sptr>(Config::getDefaultMaxCacheResidentBytes()));
     // The default value in the cache config has the higher priority.
     if (Config::getDefaultReleaseToOsIntervalMs() != INT32_MIN)
       ReleaseToOsInterval = Config::getDefaultReleaseToOsIntervalMs();
@@ -372,6 +374,7 @@ public:
       }
 
       insert(Entry);
+      trimResidentBytes(atomic_load_relaxed(&MaxCacheResidentBytes));
     } while (0);
 
     for (MemMapT &EvictMemMap : EvictionMemMaps)
@@ -528,6 +531,17 @@ public:
       atomic_store_relaxed(&MaxEntrySize, static_cast<uptr>(Value));
       return true;
     }
+    if (O == Option::MaxCacheResidentBytes) {
+      if (Value < 0)
+        return false;
+      const uptr NewMaxResidentBytes = static_cast<uptr>(Value);
+      atomic_store_relaxed(&MaxCacheResidentBytes, NewMaxResidentBytes);
+      if (NewMaxResidentBytes != 0) {
+        ScopedLock L(Mutex);
+        trimResidentBytes(NewMaxResidentBytes);
+      }
+      return true;
+    }
     // Not supported by the Secondary Cache, but not an error either.
     return true;
   }
@@ -615,6 +629,21 @@ private:
     AvailEntries.push_front(Entry);
   }
 
+  ALWAYS_INLINE void trimResidentBytes(uptr MaxResidentBytesLimit)
+      REQUIRES(Mutex) {
+    if (MaxResidentBytesLimit == 0)
+      return;
+    while (CurrentResidentBytes > MaxResidentBytesLimit &&
+           OldestPresentEntry != nullptr) {
+      CachedBlock *Entry = OldestPresentEntry;
+      OldestPresentEntry = LRUEntries.getPrev(Entry);
+      Entry->MemMap.releaseAndZeroPagesToOS(Entry->CommitBase,
+                                            Entry->CommitSize);
+      CurrentResidentBytes -= Entry->CommitSize;
+      Entry->Time = 0;
+    }
+  }
+
   void empty() {
     MemMapT MapInfo[Config::getEntriesArraySize()];
     uptr N = 0;
@@ -670,6 +699,7 @@ private:
   u32 QuarantinePos GUARDED_BY(Mutex) = 0;
   atomic_u32 MaxEntriesCount = {};
   atomic_uptr MaxEntrySize = {};
+  atomic_uptr MaxCacheResidentBytes = {};
   atomic_s32 ReleaseToOsIntervalMs = {};
   u32 CallsToRetrieve GUARDED_BY(Mutex) = 0;
   u32 SuccessfulRetrieves GUARDED_BY(Mutex) = 0;

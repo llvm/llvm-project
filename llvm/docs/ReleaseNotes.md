@@ -222,6 +222,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added support for emitting common symbols (.comm) using the WASM_SYMBOL_BINDING_COMMON
   flag (see https://github.com/WebAssembly/tool-conventions/pull/267)
+* Added `@llvm.wasm.memory.copy` and `@llvm.wasm.memory.fill` intrinsics for
+  the WebAssembly `memory.copy` and `memory.fill` instructions.
 
 ### Changes to the Windows Target
 
