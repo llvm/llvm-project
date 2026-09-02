@@ -92,7 +92,7 @@ struct TestGpuSubgroupReduceLoweringPass
     if (expandToShuffles) {
       if (!target.empty()) {
         FailureOr<ROCDL::TargetInfo> targetInfo =
-            ROCDL::TargetInfo::get(target, /*chip=*/"", /*features=*/"",
+            ROCDL::TargetInfo::get(target, /*waveSize=*/0,
                                    [&] { return getOperation()->emitError(); });
         if (failed(targetInfo))
           return signalPassFailure();

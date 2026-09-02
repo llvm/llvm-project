@@ -756,9 +756,8 @@ struct LowerGpuOpsToROCDLOpsPass final
                                UnitAttr::get(ctx));
     }
 
-    FailureOr<ROCDL::TargetInfo> targetInfo =
-        ROCDL::TargetInfo::get(triple, chip, features,
-                               [&] { return emitError(UnknownLoc::get(ctx)); });
+    FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
+        arch, waveSize, [&] { return emitError(UnknownLoc::get(ctx)); });
     if (failed(targetInfo)) {
       return signalPassFailure();
     }

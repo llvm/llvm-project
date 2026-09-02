@@ -131,13 +131,9 @@ def ConvertAMDGPUToROCDLPass : Pass<"convert-amdgpu-to-rocdl"> {
     "ROCDL::ROCDLDialect",
   ];
   let options = [
-    Option<"triple", "triple", "std::string",
+    Option<"arch", "arch", "std::string",
            /*default=*/"\"invalid\"",
-           "Target triple (e.g. amdgpu9.42-amd-amdhsa) or GPU name (e.g. gfx942). Defaults to an invalid target so that one must be given explicitly">,
-    Option<"chip", "chip", "std::string", /*default=*/"\"\"",
-           "Target GPU, if not given by the triple (e.g. gfx942)">,
-    Option<"features", "features", "std::string", /*default=*/"\"\"",
-           "Target features (e.g. +wavefrontsize64)">,
+           "Target architecture, as in Clang, with optional target-ID modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are preferred, and can be extended to a full target ID like amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names like gfx1250 or gfx942:xnack- are also supported. Defaults to an invalid target so that one must be given explicitly">,
   ];
 }
 
@@ -156,13 +152,9 @@ def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
   let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
 
   let options = [
-    Option<"triple", "triple", "std::string",
+    Option<"arch", "arch", "std::string",
            /*default=*/"\"invalid\"",
-           "Target triple (e.g. amdgpu9.42-amd-amdhsa) or GPU name (e.g. gfx942). Defaults to an invalid target so that one must be given explicitly">,
-    Option<"chip", "chip", "std::string", /*default=*/"\"\"",
-           "Target GPU, if not given by the triple (e.g. gfx942)">,
-    Option<"features", "features", "std::string", /*default=*/"\"\"",
-           "Target features (e.g. +wavefrontsize64)">,
+           "Target architecture, as in Clang, with optional target-ID modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are preferred, and can be extended to a full target ID like amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names like gfx1250 or gfx942:xnack- are also supported. Defaults to an invalid target so that one must be given explicitly">,
     Option<"saturateFP8Truncf", "saturate-fp8-truncf", "bool",
            /*default=*/"false",
            "Use saturating truncation for 8-bit float types">,
@@ -694,13 +686,12 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
     "memref::MemRefDialect",
   ];
   let options = [
-    Option<"triple", "triple", "std::string",
+    Option<"arch", "arch", "std::string",
            /*default=*/"\"invalid\"",
-           "Target triple (e.g. amdgpu9.42-amd-amdhsa) or GPU name (e.g. gfx942). Defaults to an invalid target so that one must be given explicitly">,
-    Option<"chip", "chip", "std::string", /*default=*/"\"\"",
-           "Target GPU, if not given by the triple (e.g. gfx942)">,
-    Option<"features", "features", "std::string", /*default=*/"\"\"",
-           "Target features (e.g. +wavefrontsize64)">,
+           "Target architecture, as in Clang, with optional target-ID modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are preferred, and can be extended to a full target ID like amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names like gfx1250 or gfx942:xnack- are also supported. Defaults to an invalid target so that one must be given explicitly">,
+    Option<"waveSize", "wavesize", "unsigned", /*default=*/"0",
+           "Wavefront size (32 or 64) for targets that run at either, or 0 to "
+           "use the architecture's default">,
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/ "0",
            "Bitwidth of the index type, 0 to use size of machine word">,
@@ -876,13 +867,10 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
     "vector::VectorDialect",
   ];
   let options = [
-    Option<"triple", "triple", "std::string", /*default=*/"\"\"",
-           "Target triple (e.g. amdgpu9.42-amd-amdhsa) or GPU name (e.g. gfx942). "
+    Option<"arch", "arch", "std::string", /*default=*/"\"\"",
+           "Target architecture, as in Clang, with optional target-ID modifiers "
+           "(e.g. amdgpu9.42-amd-amdhsa, gfx942, gfx942:xnack-). "
            "If empty, no target-dependent patterns are added">,
-    Option<"chip", "chip", "std::string", /*default=*/"\"\"",
-           "Target GPU, if not given by the triple (e.g. gfx942)">,
-    Option<"features", "features", "std::string", /*default=*/"\"\"",
-           "Target features (e.g. +wavefrontsize64)">,
   ];
 }
 

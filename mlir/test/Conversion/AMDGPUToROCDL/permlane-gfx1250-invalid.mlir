@@ -1,4 +1,4 @@
-// RUN: mlir-opt --convert-amdgpu-to-rocdl=triple=amdgpu12.50-amd-amdhsa --split-input-file --verify-diagnostics %s
+// RUN: mlir-opt --convert-amdgpu-to-rocdl=arch=amdgpu12.50-amd-amdhsa --split-input-file --verify-diagnostics %s
 
 // gfx1250 has FeaturePermlane16Swap but not FeaturePermlane32Swap; the 16-wide
 // form is covered as a positive case in permlane.mlir.

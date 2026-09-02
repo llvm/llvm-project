@@ -1,6 +1,6 @@
-// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="triple=amdgpu9.50-amd-amdhsa" | FileCheck %s
-// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="triple=amdgpu12.00-amd-amdhsa" | FileCheck %s
-  
+// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="arch=amdgpu9.50-amd-amdhsa" | FileCheck %s
+// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="arch=amdgpu12.00-amd-amdhsa" | FileCheck %s
+
 // CHECK-LABEL: func.func @scalar_ext
 // CHECK-SAME: ([[V:%.+]]: f8E5M2)
 // CHECK: [[FLOAT:%.+]] = amdgpu.ext_packed_fp8 [[V]][0] : f8E5M2 to f32

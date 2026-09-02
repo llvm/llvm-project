@@ -1,4 +1,4 @@
-// RUN: mlir-opt --convert-amdgpu-to-rocdl=triple=amdgpu12.00-amd-amdhsa --split-input-file --verify-diagnostics %s
+// RUN: mlir-opt --convert-amdgpu-to-rocdl=arch=amdgpu12.00-amd-amdhsa --split-input-file --verify-diagnostics %s
 
 // gfx1200 has neither FeaturePermlane16Swap nor FeaturePermlane32Swap, but
 // compares greater than gfx950 by ISA version, so a version-ordered check

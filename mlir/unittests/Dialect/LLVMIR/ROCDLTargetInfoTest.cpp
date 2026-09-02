@@ -15,33 +15,31 @@ namespace mlir::ROCDL {
 namespace {
 
 /// Resolves a target, collecting anything reported through emitError.
-FailureOr<TargetInfo> resolve(StringRef tripleOrChip, StringRef chip,
-                              StringRef features, std::string &error) {
+FailureOr<TargetInfo> resolve(StringRef arch, unsigned waveSize,
+                              std::string &error) {
   MLIRContext ctx;
   ScopedDiagnosticHandler handler(&ctx, [&](Diagnostic &diag) {
     error = diag.str();
     return success();
   });
-  return TargetInfo::get(tripleOrChip, chip, features,
+  return TargetInfo::get(arch, waveSize,
                          [&] { return emitError(UnknownLoc::get(&ctx)); });
 }
 
 /// Resolves a target, asserting that it succeeded.
-TargetInfo getTarget(StringRef tripleOrChip, StringRef chip = "",
-                     StringRef features = "") {
+TargetInfo getTarget(StringRef arch, unsigned waveSize = 0) {
   std::string error;
-  FailureOr<TargetInfo> target = resolve(tripleOrChip, chip, features, error);
-  EXPECT_TRUE(succeeded(target)) << "'" << tripleOrChip << "': " << error;
+  FailureOr<TargetInfo> target = resolve(arch, waveSize, error);
+  EXPECT_TRUE(succeeded(target)) << "'" << arch << "': " << error;
   return succeeded(target) ? *target : TargetInfo();
 }
 
 /// Returns the error message produced when resolving a target, or "" if it
 /// unexpectedly succeeded.
-std::string getTargetError(StringRef tripleOrChip, StringRef chip = "",
-                           StringRef features = "") {
+std::string getTargetError(StringRef arch, unsigned waveSize = 0) {
   std::string error;
-  FailureOr<TargetInfo> target = resolve(tripleOrChip, chip, features, error);
-  EXPECT_TRUE(failed(target)) << "expected '" << tripleOrChip << "' to fail";
+  FailureOr<TargetInfo> target = resolve(arch, waveSize, error);
+  EXPECT_TRUE(failed(target)) << "expected '" << arch << "' to fail";
   return error;
 }
 
@@ -70,13 +68,18 @@ TEST(TargetInfoTest, ParseTriple) {
   EXPECT_EQ(legacy.getSubArch(), llvm::Triple::NoSubArch);
   EXPECT_FALSE(legacy.has(llvm::AMDGPU::FEAT_GFX9_INSTS));
 
-  // A chip refines it, the way -mcpu does.
-  TargetInfo withChip = getTarget("amdgcn-amd-amdhsa", "gfx942");
-  EXPECT_EQ(withChip.getArchName(), "gfx942");
-  EXPECT_EQ(withChip.getSubArch(), llvm::Triple::AMDGPUSubArch942);
+  // A full target ID pins the processor down, the way -mcpu does. This is the
+  // spelling rocminfo prints for a device's ISA.
+  TargetInfo full = getTarget("amdgcn-amd-amdhsa--gfx942");
+  EXPECT_EQ(full.getArchName(), "gfx942");
+  EXPECT_EQ(full.getSubArch(), llvm::Triple::AMDGPUSubArch942);
 
-  // A family triple plus a chip narrows to the exact GPU.
-  TargetInfo family = getTarget("amdgpu9.4-amd-amdhsa", "gfx950");
+  // A named environment parses too.
+  EXPECT_EQ(getTarget("amdgcn-amd-amdhsa-unknown-gfx942").getArchName(),
+            "gfx942");
+
+  // A family triple plus a processor narrows to the exact GPU.
+  TargetInfo family = getTarget("amdgpu9.4-amd-amdhsa--gfx950");
   EXPECT_EQ(family.getArchName(), "gfx950");
   EXPECT_EQ(family.getSubArch(), llvm::Triple::AMDGPUSubArch950);
 }
@@ -110,19 +113,37 @@ TEST(TargetInfoTest, ParseInvalid) {
   EXPECT_NE(getTargetError("amdgpu9.99-amd-amdhsa"), "");
   EXPECT_NE(getTargetError("amdgputypo-amd-amdhsa"), "");
 
-  // A chip inconsistent with the triple's subarch is rejected.
-  EXPECT_NE(getTargetError("amdgpu9.42-amd-amdhsa", "gfx1030"), "");
-  EXPECT_NE(getTargetError("amdgcn-amd-amdhsa", "gfx999"), "");
+  // A processor inconsistent with the triple's subarch is rejected.
+  EXPECT_NE(getTargetError("amdgpu9.42-amd-amdhsa--gfx1030"), "");
+  EXPECT_NE(getTargetError("amdgcn-amd-amdhsa--gfx999"), "");
 }
 
-TEST(TargetInfoTest, FeatureModifiers) {
-  TargetInfo target = getTarget("gfx942", /*chip=*/"", "-mai-insts,+dpp");
-  EXPECT_FALSE(target.has(llvm::AMDGPU::FEAT_MAI_INSTS));
-  EXPECT_TRUE(target.has(llvm::AMDGPU::FEAT_DPP));
-  EXPECT_TRUE(getTarget("gfx942").has(llvm::AMDGPU::FEAT_MAI_INSTS));
+TEST(TargetInfoTest, TargetIDModifiers) {
+  using llvm::AMDGPU::TargetIDSetting;
 
-  EXPECT_NE(getTargetError("gfx942", "", "+not-a-feature"), "");
-  EXPECT_NE(getTargetError("gfx942", "", "mai-insts"), "");
+  // xnack and sramecc are the only modifiers a target ID admits, matching
+  // clang::parseTargetID. Unspecified means "either".
+  EXPECT_EQ(getTarget("gfx90a").getXnackSetting(), TargetIDSetting::Any);
+  EXPECT_EQ(getTarget("gfx90a:xnack+").getXnackSetting(), TargetIDSetting::On);
+  EXPECT_EQ(getTarget("gfx90a:xnack-").getXnackSetting(), TargetIDSetting::Off);
+  EXPECT_EQ(getTarget("gfx90a:sramecc+").getSramEccSetting(),
+            TargetIDSetting::On);
+  EXPECT_EQ(getTarget("gfx90a:sramecc-:xnack+").getSramEccSetting(),
+            TargetIDSetting::Off);
+
+  // A GPU that cannot switch them reports Unsupported and rejects a modifier.
+  EXPECT_EQ(getTarget("gfx600").getXnackSetting(),
+            TargetIDSetting::Unsupported);
+  EXPECT_NE(getTargetError("gfx600:xnack+"), "");
+
+  // The sign is mandatory, the feature must be known, and nothing else is a
+  // target-ID feature -- in particular wavefront size cannot ride on `arch`.
+  EXPECT_NE(getTargetError("gfx908:xnack"), "");
+  EXPECT_NE(getTargetError("gfx942:not-a-feature+"), "");
+  EXPECT_NE(getTargetError("gfx1030:wavefrontsize64+"), "");
+
+  // Modifiers do not disturb the feature set.
+  EXPECT_TRUE(getTarget("gfx90a:xnack+").has(llvm::AMDGPU::FEAT_MAI_INSTS));
 }
 
 TEST(TargetInfoTest, WavefrontSize) {
@@ -135,19 +156,25 @@ TEST(TargetInfoTest, WavefrontSize) {
   // This is the case a triple alone cannot express.
   for (StringRef gpu : {"gfx1030", "gfx1100", "gfx1200"}) {
     EXPECT_EQ(getTarget(gpu).getWavefrontSize(), 32u) << gpu;
-    EXPECT_EQ(getTarget(gpu, "", "+wavefrontsize64").getWavefrontSize(), 64u)
-        << gpu;
+    EXPECT_EQ(getTarget(gpu, /*waveSize=*/64).getWavefrontSize(), 64u) << gpu;
+    EXPECT_EQ(getTarget(gpu, /*waveSize=*/32).getWavefrontSize(), 32u) << gpu;
   }
 
-  // Asking a single-mode target for the other size is an error, not a silent
-  // mis-lowering.
-  EXPECT_NE(getTargetError("gfx942", "", "+wavefrontsize32"), "");
-  EXPECT_NE(getTargetError("gfx1250", "", "+wavefrontsize64"), "");
-  EXPECT_NE(getTargetError("gfx1030", "", "+wavefrontsize32,+wavefrontsize64"),
-            "");
+  // Naming the size a single-mode target already runs at is accepted.
+  EXPECT_EQ(getTarget("gfx942", /*waveSize=*/64).getWavefrontSize(), 64u);
+  EXPECT_EQ(getTarget("gfx1250", /*waveSize=*/32).getWavefrontSize(), 32u);
 
-  // An unknown target has no wavefront size.
+  // Asking it for the other size is an error, not a silent mis-lowering.
+  EXPECT_NE(getTargetError("gfx942", /*waveSize=*/32), "");
+  EXPECT_NE(getTargetError("gfx1250", /*waveSize=*/64), "");
+
+  // Only 32 and 64 are wavefront sizes.
+  EXPECT_NE(getTargetError("gfx1030", /*waveSize=*/17), "");
+  EXPECT_NE(getTargetError("gfx1030", /*waveSize=*/128), "");
+
+  // An unknown target has no wavefront size, but still rejects nonsense.
   EXPECT_EQ(getTarget("amdgcn-amd-amdhsa").getWavefrontSize(), std::nullopt);
+  EXPECT_NE(getTargetError("amdgcn-amd-amdhsa", /*waveSize=*/17), "");
 }
 
 TEST(TargetInfoTest, SupportsBothWavefrontSizes) {
@@ -159,8 +186,8 @@ TEST(TargetInfoTest, SupportsBothWavefrontSizes) {
     EXPECT_FALSE(getTarget(gpu).supportsBothWavefrontSizes()) << gpu;
 
   // Naming a size does not change what the GPU is capable of.
-  EXPECT_TRUE(getTarget("gfx1030", "", "+wavefrontsize64")
-                  .supportsBothWavefrontSizes());
+  EXPECT_TRUE(
+      getTarget("gfx1030", /*waveSize=*/64).supportsBothWavefrontSizes());
   EXPECT_FALSE(getTarget("amdgcn-amd-amdhsa").supportsBothWavefrontSizes());
 }
 
@@ -207,6 +234,48 @@ TEST(TargetInfoTest, MaxAddressableLocalMemorySize) {
 
   EXPECT_EQ(getTarget("amdgcn-amd-amdhsa").getMaxAddressableLocalMemorySize(),
             std::nullopt);
+}
+
+TEST(TargetInfoTest, RegisterAndLDSProperties) {
+  // These forward to the TargetParser, so rather than restating its tables,
+  // check that each agrees with the function it wraps and that an unresolved
+  // target reports "unknown" instead of the LLVM-side hardcoded fallback.
+  for (StringRef gpu : {"gfx900", "gfx90a", "gfx942", "gfx1030", "gfx1250"}) {
+    TargetInfo target = getTarget(gpu);
+    llvm::AMDGPU::GPUKind kind = target.getGPUKind();
+    EXPECT_EQ(target.getTotalNumSGPRs(), llvm::AMDGPU::getTotalNumSGPRs(kind))
+        << gpu;
+    EXPECT_EQ(target.getAddressableNumSGPRs(),
+              llvm::AMDGPU::getAddressableNumSGPRs(kind))
+        << gpu;
+    EXPECT_EQ(target.getSGPRAllocGranule(),
+              llvm::AMDGPU::getSGPRAllocGranule(kind))
+        << gpu;
+    EXPECT_EQ(target.getLDSBankCount(), llvm::AMDGPU::getLDSBankCount(kind))
+        << gpu;
+    EXPECT_EQ(target.getMaxWavesPerEU(), llvm::AMDGPU::getMaxWavesPerEU(kind))
+        << gpu;
+  }
+
+  // The VGPR granule depends on the wavefront size, which TargetInfo supplies
+  // from the resolved target rather than taking as an argument.
+  TargetInfo wave32 = getTarget("gfx1030", /*waveSize=*/32);
+  TargetInfo wave64 = getTarget("gfx1030", /*waveSize=*/64);
+  EXPECT_EQ(wave32.getVGPRAllocGranule(),
+            llvm::AMDGPU::getVGPRAllocGranule(wave32.getGPUKind(),
+                                              /*IsWave32=*/true));
+  EXPECT_EQ(wave64.getVGPRAllocGranule(),
+            llvm::AMDGPU::getVGPRAllocGranule(wave64.getGPUKind(),
+                                              /*IsWave32=*/false));
+
+  TargetInfo unknown = getTarget("amdgcn-amd-amdhsa");
+  EXPECT_EQ(unknown.getTotalNumSGPRs(), std::nullopt);
+  EXPECT_EQ(unknown.getAddressableNumSGPRs(), std::nullopt);
+  EXPECT_EQ(unknown.getSGPRAllocGranule(), std::nullopt);
+  EXPECT_EQ(unknown.getVGPRAllocGranule(), std::nullopt);
+  EXPECT_EQ(unknown.getLDSBankCount(), std::nullopt);
+  EXPECT_EQ(unknown.getMaxWavesPerEU(), std::nullopt);
+  EXPECT_EQ(TargetInfo().getLDSBankCount(), std::nullopt);
 }
 
 TEST(TargetInfoTest, Generation) {

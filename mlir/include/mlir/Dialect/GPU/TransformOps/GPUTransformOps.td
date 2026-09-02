@@ -62,14 +62,16 @@ def ApplyGPUToROCDLConversionPatternsOp : Op<Transform_Dialect,
     Collects patterns that convert GPU dialect ops to ROCDL dialect ops. These
     patterns require an "LLVMTypeConverter".
 
-    `triple` names the target, either as a triple ("amdgpu9.42-amd-amdhsa") or
-    as a bare GPU name ("gfx942", "gfx9-4-generic"). `chip` plays the `-mcpu`
-    role and must be compatible with the triple; `features` is a `-mattr`-style
-    comma-separated list of "+feature"/"-feature" modifiers.
+    `arch` names the target the way Clang does: a GPU name with optional
+    target-ID modifiers ("gfx942", "gfx942:xnack+", "gfx9-4-generic"), a triple
+    ("amdgpu9.42-amd-amdhsa"), or a full target ID
+    ("amdgpu9.0a-amd-amdhsa--gfx90a:sramecc+:xnack-").
+
+    `wavesize` pins the wavefront size on targets that run at either; omitting
+    it uses the architecture's own default.
   }];
-  let arguments = (ins StrAttr:$triple,
-                       OptionalAttr<StrAttr>:$chip,
-                       OptionalAttr<StrAttr>:$features);
+  let arguments = (ins StrAttr:$arch,
+                       OptionalAttr<I32Attr>:$wavesize);
   let assemblyFormat = "prop-dict attr-dict";
 }
 
@@ -334,14 +336,12 @@ def ApplyGPUPromoteShuffleToAMDGPUPatternsOp : Op<Transform_Dialect,
     Collects patterns that are tryin to promote `gpu.shuffle`s to specialized
     AMDGPU intrinsics.
 
-    `triple` names the target, either as a triple ("amdgpu9.50-amd-amdhsa") or
-    as a bare GPU name ("gfx950"). Omitting it collects only the patterns that
-    hold on every target. `chip` and `features` play the `-mcpu` and `-mattr`
-    roles and may only be given alongside a `triple`.
+    `arch` names the target the way Clang does: a GPU name with optional
+    target-ID modifiers ("gfx950", "gfx950:xnack+"), a triple
+    ("amdgpu9.50-amd-amdhsa"), or a full target ID. Omitting it collects only
+    the patterns that hold on every target.
   }];
-  let arguments = (ins OptionalAttr<StrAttr>:$triple,
-                       OptionalAttr<StrAttr>:$chip,
-                       OptionalAttr<StrAttr>:$features);
+  let arguments = (ins OptionalAttr<StrAttr>:$arch);
   let assemblyFormat = "prop-dict attr-dict";
   let hasVerifier = 1;
 }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --split-input-file --verify-diagnostics -convert-amdgpu-to-rocdl=triple=amdgpu9.50-amd-amdhsa
+// RUN: mlir-opt %s --split-input-file --verify-diagnostics -convert-amdgpu-to-rocdl=arch=amdgpu9.50-amd-amdhsa
 
 func.func @transpose_load_to_rocdl_8xf16(%idx1 : index, %idx2 : index, %wgmem : memref<128x72xf16, 3>) -> vector<8xf16> {
   // expected-error@+2 {{'amdgpu.transpose_load' op 16-bit transpose_load requires 4 elements on gfx950}}

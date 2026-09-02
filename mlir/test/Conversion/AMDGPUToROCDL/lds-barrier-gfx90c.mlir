@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.0c-amd-amdhsa | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu9.0c-amd-amdhsa | FileCheck %s
 
 // gfx90c sorts after gfx90a, so the version comparison that used to guard the
 // inline asm workaround treated it as having the hardware barrier back-off. It

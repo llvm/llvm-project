@@ -191,12 +191,19 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
     Option<"moduleMatcher", "module", "std::string",
            /*default=*/ [{""}],
            "Regex used to identify the modules to attach the target to.">,
+    Option<"arch", "arch", "std::string",
+           /*default=*/"\"\"",
+           "Target architecture, in the spelling the conversion passes take "
+           "(e.g. gfx942, gfx90a:xnack+, amdgpu9.4-amd-amdhsa, "
+           "amdgcn-amd-amdhsa--gfx90a:xnack-). "
+           "When non-empty this supersedes 'triple' and 'chip', and its "
+           "target-ID modifiers are appended to 'features'.">,
     Option<"triple", "triple", "std::string",
            /*default=*/ "\"amdgcn-amd-amdhsa\"",
-           "Target triple.">,
+           "Target triple. Ignored when 'arch' is given.">,
     Option<"chip", "chip", "std::string",
            /*default=*/"\"gfx900\"",
-           "Target chip.">,
+           "Target chip. Ignored when 'arch' is given.">,
     Option<"features", "features", "std::string",
            /*default=*/"\"\"",
            "Target features.">,
@@ -206,9 +213,10 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
            "Optimization level.">,
-    Option<"wave64Flag", "wave64", "bool",
-           /*default=*/"true",
-           "Use Wave64 mode.">,
+    Option<"waveSize", "wavesize", "unsigned",
+           /*default=*/"0",
+           "Wavefront size (32 or 64). 0 takes the size from the target when "
+           "'arch' is given, and Wave64 otherwise.">,
     Option<"fastFlag", "fast", "bool",
            /*default=*/"false",
            "Enable fast relaxed math opt.">,

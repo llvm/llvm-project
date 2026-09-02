@@ -1,4 +1,4 @@
-// RUN: mlir-opt --convert-amdgpu-to-rocdl=triple=amdgpu12.50-amd-amdhsa --canonicalize %s | FileCheck %s
+// RUN: mlir-opt --convert-amdgpu-to-rocdl=arch=amdgpu12.50-amd-amdhsa --canonicalize %s | FileCheck %s
 
 // gfx1250 has FeaturePermlane16Swap. It does not have FeaturePermlane32Swap;
 // see permlane-gfx1250-invalid.mlir.

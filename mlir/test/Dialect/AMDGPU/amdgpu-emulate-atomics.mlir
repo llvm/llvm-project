@@ -1,11 +1,11 @@
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu9.08-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX9NOF64,GFX908
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu9.0a-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX90A
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu9.0c-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX9NOF64,GFX90C
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu10.30-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX10
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu11.00-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX11
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu12.00-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX12
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu9.42-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX942
-// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=triple=amdgpu9.50-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX950
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=arch=amdgpu9.08-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX9NOF64,GFX908
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=arch=amdgpu9.0a-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX90A
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=arch=amdgpu9.0c-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX9NOF64,GFX90C
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=arch=amdgpu10.30-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX10
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=arch=amdgpu11.00-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX11
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=arch=amdgpu12.00-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX12
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=arch=amdgpu9.42-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX942
+// RUN: mlir-opt -split-input-file -amdgpu-emulate-atomics=arch=amdgpu9.50-amd-amdhsa %s | FileCheck %s --check-prefixes=CHECK,GFX9CAS,GFX950
 
 // -----
 

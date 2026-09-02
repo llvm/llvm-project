@@ -18,27 +18,21 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
   has a feature rather than inaccurately compare chipset versions.
   `TargetInfo` also represents generic targets such as `gfx9-4-generic` and, unlike
   `Chipset`, explicitly stores the wavesize for targets where it is configurable.
-- Accordingly, the `chipset` option on `convert-amdgpu-to-rocdl`,
-  `convert-gpu-to-rocdl`, `convert-arith-to-amdgpu`, `convert-math-to-rocdl` and
-  `amdgpu-emulate-atomics` is replaced by `triple`, `chip` and `features`,
-  matching `rocdl-attach-target` and `#rocdl.target`. `triple` accepts either a
-  triple (`amdgpu9.42-amd-amdhsa`) or a bare GPU name (`gfx942`), so existing
-  invocations can migrate by renaming the option alone.
-- `triple` has no usable default: it is `invalid`, so a target must be passed
-  explicitly. The old `chipset` default of `gfx000` parsed successfully into a
-  target that then failed every capability check, causing silent failures.
-- The IR-visible `chipset` attribute on
-  `transform.apply_conversion_patterns.gpu.gpu_to_rocdl` and
-  `transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu` is likewise replaced by
-  `triple`, `chip` and `features`, now spelled as a property dictionary so that
-  further target knobs don't each need their own keyword:
-
-  ```mlir
-  transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu <triple = "gfx950">
-  ```
-
-  This breaks existing transform scripts, which have to be updated by hand;
-  `triple` accepts a bare GPU name, so no target spelling has to change.
+- The `chipset` option in AMDGPU passes is renamed to an `arch` option, which uses
+  Clang target naming syntax. It accepts a GPU name with optional
+  modifiers (`gfx942`, `gfx942:xnack+`, `gfx9-4-generic`), a triple
+  (`amdgpu9.42-amd-amdhsa`), or a full target ID
+  (`amdgpu9.42-amd-amdhsa--gfx90a:sramecc+:xnack-`, which is what `rocminfo` prints
+  for a device's ISA).
+  The default arch is `invalid`, so a target must be passed
+  explicitly, removing the old "fallback" `gfx000` GPU.
+- Wavefront size is not a target-ID feature, so `convert-gpu-to-rocdl` takes it
+  as a separate `wavesize` option (32, 64, or 0 for the architecture's
+  default). The `wave64` flag on `gpu-lower-to-rocdl-pipeline` and on
+  `rocdl-attach-target` is likewise replaced by the same `wavesize` option,
+  which has the same allowed values.
+- `rocdl-attach-target` gains `arch` alongside its existing `triple`, `chip` and
+  `features`. When `arch` is given, it overrides `triple` and `chip`.
 
 ## LLVM 21
 

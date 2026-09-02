@@ -184,19 +184,12 @@ void ConvertMathToROCDLPass::runOnOperation() {
   LowerToLLVMOptions options(ctx, DataLayout(m));
   LLVMTypeConverter converter(ctx, options);
 
-  // An empty triple means "no target", in which case the target-dependent
-  // patterns are simply not added. A chip or feature list without a triple is
-  // a mistake, though.
+  // An empty architecture means "no target", in which case the
+  // target-dependent patterns are simply not added.
   std::optional<ROCDL::TargetInfo> resolved;
-  if (triple.empty()) {
-    if (!chip.empty() || !features.empty()) {
-      emitError(UnknownLoc::get(&getContext()))
-          << "'chip' and 'features' need a 'triple' to apply to";
-      return signalPassFailure();
-    }
-  } else {
+  if (!arch.empty()) {
     FailureOr<ROCDL::TargetInfo> targetInfo =
-        ROCDL::TargetInfo::get(triple, chip, features, [&] {
+        ROCDL::TargetInfo::get(arch, /*waveSize=*/0, [&] {
           return emitError(UnknownLoc::get(&getContext()));
         });
     if (failed(targetInfo))

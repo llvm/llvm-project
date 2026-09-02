@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.50-amd-amdhsa -cse | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu9.50-amd-amdhsa -cse | FileCheck %s
 func.func @mfma_to_rocdl(%arg0 : vector<8xf16>, %arg1 : vector<16xf32>,
                     %arg2 : vector<4xf32>, %arg3 : vector<8xbf16>,
                     %arg4 : vector<16xi8>, %arg5 : vector<16xi32>,

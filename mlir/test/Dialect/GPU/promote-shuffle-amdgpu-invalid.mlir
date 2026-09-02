@@ -4,8 +4,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      // expected-error@below {{'gfx999' is not an AMDGCN triple or GPU name}}
-      transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu <triple = "gfx999">
+      // expected-error@below {{'gfx999' is not a valid AMDGPU architecture}}
+      transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu <arch = "gfx999">
     } : !transform.any_op
     transform.yield
   }
@@ -13,12 +13,15 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Only xnack and sramecc are target-ID features, and only on a GPU that
+// supports switching them.
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      // expected-error@below {{'chip' and 'features' require a 'triple'}}
-      transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu <chip = "gfx950">
+      // expected-error@below {{'gfx600:xnack+' is not a valid AMDGPU architecture}}
+      transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu <arch = "gfx600:xnack+">
     } : !transform.any_op
     transform.yield
   }
@@ -26,12 +29,29 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// A modifier without a +/- sign is not a target ID.
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
-      // expected-error@below {{invalid target feature '+not-a-feature'}}
-      transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu <triple = "gfx950", features = "+not-a-feature">
+      // expected-error@below {{'gfx908:xnack' is not a valid AMDGPU architecture}}
+      transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu <arch = "gfx908:xnack">
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Wavefront size is not a target-ID feature, so it cannot ride on `arch`.
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      // expected-error@below {{'gfx1030:wavefrontsize64+' is not a valid AMDGPU architecture}}
+      transform.apply_patterns.gpu.gpu_shuffle_to_amdgpu <arch = "gfx1030:wavefrontsize64+">
     } : !transform.any_op
     transform.yield
   }

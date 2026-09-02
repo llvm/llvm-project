@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl=arch=amdgpu9.42-amd-amdhsa -split-input-file | FileCheck %s
 
 // A private device function cannot be called from outside its module, so it
 // must not be given a C interface wrapper; requesting one would only anchor

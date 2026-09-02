@@ -32,17 +32,33 @@ public:
 
   /// Resolves a target description.
   ///
-  /// \p tripleOrChip is either a triple ("amdgpu9.42-amd-amdhsa", or the legacy
-  /// subarch-less "amdgcn-amd-amdhsa") or a bare GPU name ("gfx942",
-  /// "gfx9-4-generic"). \p chip plays the role of `-mcpu`: when given alongside
-  /// a triple it names the exact GPU and must be compatible with the triple's
-  /// subarch. \p features is an `-mattr`-style "+a,-b" list applied on top of
-  /// the GPU's default features.
+  /// \p arch names the architecture the way Clang does, and accepts any of:
+  ///
+  ///   - a full target ID, "<triple>-<processor>[:<feature><+|->]*", such as
+  ///     "amdgcn-amd-amdhsa--gfx90a:sramecc+:xnack-" (what `rocminfo` prints
+  ///     for a device's ISA) or "amdgpu9.0a-amd-amdhsa--gfx90a";
+  ///   - a triple on its own, such as "amdgpu9.42-amd-amdhsa" or the legacy
+  ///     subarch-less "amdgcn-amd-amdhsa";
+  ///   - a processor on its own, with optional target-ID modifiers: "gfx942",
+  ///     "gfx942:xnack+", "gfx9-4-generic".
+  ///
+  /// Only xnack and sramecc may be given as modifiers, and only on a processor
+  /// that supports them; this is the same grammar `clang::parseTargetID`
+  /// accepts, and it is validated by `llvm::AMDGPU::TargetID`.
+  ///
+  /// \p waveSize pins the wavefront size for targets that run at either, and
+  /// must be 0 (meaning the target's own default), 32, or 64.
   ///
   /// Diagnostics are emitted via `emitError`.
   static FailureOr<TargetInfo>
-  get(StringRef tripleOrChip, StringRef chip = "", StringRef features = "",
+  get(StringRef arch, unsigned waveSize = 0,
       function_ref<InFlightDiagnostic()> emitError = nullptr);
+
+  /// Parses \p arch into a target ID, accepting the spellings `get()`
+  /// documents, or returns nullopt if it names no valid target.
+  ///
+  /// Use only if you need to get the individual components of the target ID.
+  static std::optional<::llvm::AMDGPU::TargetID> parseTargetID(StringRef arch);
 
   /// Returns whether the target has \p feature.
   bool has(Feature feature) const { return featureBits.test(feature); }
@@ -83,6 +99,41 @@ public:
   /// wavefronts.
   bool supportsBothWavefrontSizes() const { return dualWavefrontSize; }
 
+  /// Returns the total number of SGPRs, or nullopt for an unknown target.
+  std::optional<unsigned> getTotalNumSGPRs() const;
+
+  /// Returns the number of SGPRs addressable by a kernel, or nullopt for an
+  /// unknown target. This is below getTotalNumSGPRs() where some are reserved.
+  std::optional<unsigned> getAddressableNumSGPRs() const;
+
+  /// Returns the SGPR allocation granularity in registers, or nullopt for an
+  /// unknown target.
+  std::optional<unsigned> getSGPRAllocGranule() const;
+
+  /// Returns the VGPR allocation granularity in registers, or nullopt for an
+  /// unknown target. This property is wavesize-dependent.
+  std::optional<unsigned> getVGPRAllocGranule() const;
+
+  /// Returns the number of LDS banks per compute unit, or nullopt for an
+  /// unknown target.
+  std::optional<unsigned> getLDSBankCount() const;
+
+  /// Returns the maximum number of waves per execution unit, ignoring any
+  /// limits a particular kernel imposes, or nullopt for an unknown target.
+  std::optional<unsigned> getMaxWavesPerEU() const;
+
+  /// Returns whether xnack is on, off, either, or unsupported on this target.
+  /// "Any" means the target supports both and no `:xnack+/-` modifier was used.
+  ::llvm::AMDGPU::TargetIDSetting getXnackSetting() const {
+    return xnackSetting;
+  }
+
+  /// Returns whether sramecc is on, off, either, or unsupported, as for
+  /// getXnackSetting().
+  ::llvm::AMDGPU::TargetIDSetting getSramEccSetting() const {
+    return sramEccSetting;
+  }
+
   /// Returns the ISA version. For a generic target this is the floor of the
   /// family it covers (gfx9-4-generic reports 9.4.0), so it must not be used to
   /// decide whether an instruction is available.
@@ -111,6 +162,10 @@ private:
   ::llvm::Triple::SubArchType subArch = ::llvm::Triple::NoSubArch;
   ::llvm::AMDGPU::GPUKind kind = ::llvm::AMDGPU::GK_NONE;
   ::llvm::AMDGPU::AMDGPUFeatureBitset featureBits;
+  ::llvm::AMDGPU::TargetIDSetting xnackSetting =
+      ::llvm::AMDGPU::TargetIDSetting::Unsupported;
+  ::llvm::AMDGPU::TargetIDSetting sramEccSetting =
+      ::llvm::AMDGPU::TargetIDSetting::Unsupported;
   bool dualWavefrontSize = false;
 };
 
