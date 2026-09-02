@@ -615,8 +615,7 @@ features cannot lower the translation-unit ABI level;
   (#GH214128)
 
 - Fixed a crash when classifying a dependent call whose callee has already
-  been substituted to a value of non-callable type, such as a call to a
-  non-type template parameter member in a trailing return type. (#GH218323)
+  been substituted to a value of non-callable type. (#GH218323)
 
 #### Bug Fixes to AST Handling
 
