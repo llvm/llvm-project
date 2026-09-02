@@ -423,6 +423,7 @@ class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
 
 def FeatureLDSBankCount16 : SubtargetFeatureLDSBankCount<16>;
 def FeatureLDSBankCount32 : SubtargetFeatureLDSBankCount<32>;
+def FeatureLDSBankCount64 : SubtargetFeatureLDSBankCount<64>;
 
 class SubtargetFeatureMaxWavesPerEU <int Value> : SubtargetFeature <
   "max-waves-per-eu-"#Value,
@@ -1602,6 +1603,11 @@ defm NeedsAligned2addrDS : AMDGPUSubtargetFeature<"needs-aligned-2addr-lds",
   /*GenPredicate=*/1
 >;
 
+defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
+  "s_monitor_sleep should not use sleep_forever",
+  /*GenPredicate=*/1
+>;
+
 //===----------------------------------------------------------------------===//
 
 class GCNSubtargetFeatureGeneration <string Value,
@@ -2362,7 +2368,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureCuMode,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
-   FeatureLDSBankCount32,
+   FeatureLDSBankCount64,
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeaturePackedFP32SingleSGPROps,
@@ -2471,6 +2477,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureNeedsAligned2addrDS,
+   FeatureNoSleepForever,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2496,6 +2503,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureNoSleepForever,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -3234,7 +3242,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
-  FeatureAGPRAlloc
+  FeatureAGPRAlloc, Feature1536VGPRs,
   ];
 }
 
