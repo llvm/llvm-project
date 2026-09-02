@@ -3586,37 +3586,12 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
   }
 
   ASTContext &C = Reader.getContext();
-  auto IsSameEntity = [&](NamedDecl *Existing) {
-    if (!C.isSameEntity(Existing, D))
-      return false;
-
-    auto *FD = dyn_cast<FunctionDecl>(D);
-    auto *ExistingFD = dyn_cast<FunctionDecl>(Existing);
-    if (!FD || !ExistingFD || FD->getFormalLinkage() != Linkage::Internal ||
-        ExistingFD->getFormalLinkage() != Linkage::Internal)
-      return true;
-
-    Module *M = FD->getOwningModule();
-    Module *ExistingM = ExistingFD->getOwningModule();
-    if (!M || !ExistingM || !M->isGlobalModule() ||
-        !ExistingM->isGlobalModule())
-      return true;
-
-    // Keep ordinary internal-linkage names. Identical definitions can share
-    // one entity. Diagnose non-equivalent definitions through the usual
-    // function ODR path after their lazy bodies have been loaded.
-    if (FD->getODRHash() == ExistingFD->getODRHash())
-      return true;
-
-    Reader.PendingFunctionOdrMergeFailures[FD].push_back(ExistingFD);
-    return false;
-  };
   DeclContext *DC = D->getDeclContext()->getRedeclContext();
   if (TypedefNameForLinkage) {
     auto It = Reader.ImportedTypedefNamesForLinkage.find(
         std::make_pair(DC, TypedefNameForLinkage));
     if (It != Reader.ImportedTypedefNamesForLinkage.end())
-      if (IsSameEntity(It->second))
+      if (C.isSameEntity(It->second, D))
         return FindExistingResult(Reader, D, It->second, AnonymousDeclNumber,
                                   TypedefNameForLinkage);
     // Go on to check in other places in case an existing typedef name
@@ -3628,7 +3603,7 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
     // in its context by number.
     if (auto *Existing = getAnonymousDeclForMerging(
             Reader, D->getLexicalDeclContext(), AnonymousDeclNumber))
-      if (IsSameEntity(Existing))
+      if (C.isSameEntity(Existing, D))
         return FindExistingResult(Reader, D, Existing, AnonymousDeclNumber,
                                   TypedefNameForLinkage);
   } else if (DC->isTranslationUnit() &&
@@ -3662,7 +3637,7 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
       if (NamedDecl *Existing =
               getDeclForMerging(*I, TypedefNameForLinkage,
                                 /*FilteringUsingShadowDecl=*/false))
-        if (IsSameEntity(Existing))
+        if (C.isSameEntity(Existing, D))
           return FindExistingResult(Reader, D, Existing, AnonymousDeclNumber,
                                     TypedefNameForLinkage);
     }
@@ -3671,7 +3646,7 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
     for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E; ++I) {
       if (NamedDecl *Existing = getDeclForMerging(*I, TypedefNameForLinkage,
                                                   !isa<UsingShadowDecl>(D)))
-        if (IsSameEntity(Existing)) {
+        if (C.isSameEntity(Existing, D)) {
           return FindExistingResult(Reader, D, Existing, AnonymousDeclNumber,
                                     TypedefNameForLinkage);
         }

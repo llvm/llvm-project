@@ -25,20 +25,28 @@
 // RUN:   -fmodule-file=A:Part1=%t/A-Part1.pcm \
 // RUN:   -fmodule-file=A:Part2=%t/different-A-Part2.pcm \
 // RUN:   -o %t/different-A.pcm
-// RUN: not %clang_cc1 -triple %itanium_abi_triple -std=c++20 -emit-llvm -o - \
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -emit-llvm -o - \
 // RUN:   -fskip-odr-check-in-gmf %t/use.cpp -fmodule-file=%t/different-A.pcm \
 // RUN:   -fmodule-file=A:Part1=%t/A-Part1.pcm \
-// RUN:   -fmodule-file=A:Part2=%t/different-A-Part2.pcm 2>&1 \
+// RUN:   -fmodule-file=A:Part2=%t/different-A-Part2.pcm \
 // RUN:   | FileCheck %s --check-prefix=DIFFERENT
 //
-// Equivalent definitions are merged and retain the ordinary internal-linkage
-// name.
-// SAME-COUNT-2: call {{.*}} @_ZL6helperv()
-// SAME-COUNT-1: define internal {{.*}} @_ZL6helperv()
+// Internal-linkage functions from different global module fragments remain
+// distinct entities even when their definitions are equivalent. CodeGen keeps
+// the ordinary mangled name and uniquifies only the colliding IR name.
+// SAME-DAG: call {{.*}} @_ZL6helperv()
+// SAME-DAG: call {{.*}} @_ZL6helperv.[[SAME_SUFFIX:[0-9]+]]()
+// SAME-DAG: define internal {{.*}} @_ZL6helperv()
+// SAME-DAG: define internal {{.*}} @_ZL6helperv.[[SAME_SUFFIX]]()
 
-// Non-equivalent definitions remain distinct and are diagnosed through the
-// function ODR path, even when general GMF ODR checking is skipped.
-// DIFFERENT: error: 'helper' has different definitions in different modules
+// Different definitions also remain distinct and retain their respective
+// bodies, even when general GMF ODR checking is skipped.
+// DIFFERENT-DAG: call {{.*}} @_ZL6helperv()
+// DIFFERENT-DAG: call {{.*}} @_ZL6helperv.[[DIFFERENT_SUFFIX:[0-9]+]]()
+// DIFFERENT-DAG: define internal {{.*}} @_ZL6helperv()
+// DIFFERENT-DAG: define internal {{.*}} @_ZL6helperv.[[DIFFERENT_SUFFIX]]()
+// DIFFERENT-DAG: ret i32 1
+// DIFFERENT-DAG: ret i32 2
 
 //--- part1.cppm
 module;

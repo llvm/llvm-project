@@ -2474,6 +2474,18 @@ static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
          (CGM.getFunctionLinkage(GD) == llvm::GlobalValue::InternalLinkage);
 }
 
+static bool areDistinctInternalGlobalModuleEntities(GlobalDecl GD,
+                                                    GlobalDecl OtherGD) {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(GD.getDecl());
+  const auto *OtherFD = dyn_cast_or_null<FunctionDecl>(OtherGD.getDecl());
+  if (!FD || !OtherFD || FD->getFormalLinkage() != Linkage::Internal ||
+      OtherFD->getFormalLinkage() != Linkage::Internal ||
+      !FD->isFromGlobalModule() || !OtherFD->isFromGlobalModule())
+    return false;
+
+  return FD->getOwningModule() != OtherFD->getOwningModule();
+}
+
 static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
                                       const NamedDecl *ND,
                                       bool OmitMultiVersionMangling = false) {
@@ -2675,6 +2687,15 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   //        "LLVM demangler must demangle clang-generated names");
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
+  if (!Result.second &&
+      areDistinctInternalGlobalModuleEntities(GD, Result.first->second)) {
+    unsigned Discriminator = 1;
+    do {
+      std::string UniqueName =
+          (Twine(MangledName) + "." + Twine(Discriminator++)).str();
+      Result = Manglings.insert(std::make_pair(UniqueName, GD));
+    } while (!Result.second);
+  }
   return MangledDeclNames[CanonicalGD] = Result.first->first();
 }
 
