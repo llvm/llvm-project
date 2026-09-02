@@ -37,24 +37,26 @@ int f4(promise_on_alloc_failure_tag) {
 
 // CIR-LABEL: @_Z2f428promise_on_alloc_failure_tag(
 // CIR: %[[RetVal:.*]] = cir.alloca "__retval"
-// CIR: %[[SavedFrameAddr:.*]] = cir.alloca "__coro_frame_addr"
+// CIR: %[[FrameAddr:.*]] = cir.alloca "__coro_frame_addr"
+// CIR: %[[NULL_INIT:.*]] = cir.const #cir.ptr<null>
 // CIR: %[[CORO_ID:.*]] = cir.coro.intrinsic.id(
 // CIR: %[[ShouldAlloc:.*]] = cir.coro.intrinsic.alloc(%[[CORO_ID]])
+// CIR: cir.store %[[NULL_INIT]], %[[FrameAddr]]
 // CIR: cir.if %[[ShouldAlloc]] {
 // CIR:   %[[CORO_SIZE:.*]] = cir.coro.intrinsic.size()
 // CIR:   %[[STD_NOTHROW:.*]] = cir.get_global @_ZStL7nothrow
 // CIR:   %[[ALLOC_ADDR:.*]] = cir.call @_ZnwmRKSt9nothrow_t(%[[CORO_SIZE]], %[[STD_NOTHROW]])
-// CIR:   cir.store %[[ALLOC_ADDR]], %[[SavedFrameAddr]]
-// CIR: }
-// CIR: %[[NULL_PTR:.*]] = cir.const #cir.ptr<null>
-// CIR: %[[IS_NULL_PTR:.*]] = cir.cmp eq %[[SavedFrameAddr]], %[[NULL_PTR:.*]]
-// CIR: cir.if %[[IS_NULL_PTR]] {
-// CIR:   %[[FailRet:.*]] = cir.call @_ZNSt16coroutine_traitsIiJ28promise_on_alloc_failure_tagEE12promise_type39get_return_object_on_allocation_failureEv
-// CIR:   cir.store %[[FailRet]], %[[RetVal]] : !s32i
-// CIR:   %[[RET:.*]] = cir.load %[[RetVal]] : !cir.ptr<!s32i>
-// CIR:   cir.return %[[RET]] : !s32i
-// CIR: ^[[UNREACHABLE:.*]]:
-// CIR:   cir.trap
+// CIR:   cir.store %[[ALLOC_ADDR]], %[[FrameAddr]]
+// CIR:   %[[NULL_PTR:.*]] = cir.const #cir.ptr<null>
+// CIR:   %[[IS_NULL_PTR:.*]] = cir.cmp eq %[[ALLOC_ADDR]], %[[NULL_PTR]]
+// CIR:   cir.if %[[IS_NULL_PTR]] {
+// CIR:     %[[FailRet:.*]] = cir.call @_ZNSt16coroutine_traitsIiJ28promise_on_alloc_failure_tagEE12promise_type39get_return_object_on_allocation_failureEv
+// CIR:     cir.store %[[FailRet]], %[[RetVal]] : !s32i
+// CIR:     %[[RET:.*]] = cir.load %[[RetVal]] : !cir.ptr<!s32i>
+// CIR:     cir.return %[[RET]] : !s32i
+// CIR:   ^[[UNREACHABLE:.*]]:
+// CIR:     cir.unreachable
+// CIR:   }
 // CIR: }
 
 // OGCG-LABEL: @_Z2f428promise_on_alloc_failure_tag(

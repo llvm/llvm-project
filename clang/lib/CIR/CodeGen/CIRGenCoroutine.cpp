@@ -363,33 +363,29 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
 
   mlir::Value storeAddr = coroFrame.getPointer();
   builder.CIRBaseBuilderTy::createStore(openCurlyLoc, nullPtrCst, storeAddr);
+  mlir::LogicalResult res = mlir::success();
   cir::IfOp::create(
       builder, openCurlyLoc, coroAlloc.getResult(),
       /*withElseRegion=*/false,
       /*thenBuilder=*/[&](mlir::OpBuilder &b, mlir::Location loc) {
-        builder.CIRBaseBuilderTy::createStore(
-            loc, emitScalarExpr(s.getAllocate()), storeAddr);
+        mlir::Value allocatedPtr = emitScalarExpr(s.getAllocate());
+        builder.CIRBaseBuilderTy::createStore(loc, allocatedPtr, storeAddr);
+        // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
+        if (Stmt *retOnAllocFailure = s.getReturnStmtOnAllocFailure()) {
+          mlir::Value isPtrNull = builder.createPtrIsNull(allocatedPtr);
+          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+          cir::IfOp::create(builder, loc, isPtrNull, /*withElseRegion=*/false,
+                            [&](mlir::OpBuilder &b, mlir::Location loc) {
+                              res = emitStmt(retOnAllocFailure,
+                                             /*useCurrentScope=*/true);
+                              cir::UnreachableOp::create(builder, loc);
+                            });
+        }
         cir::YieldOp::create(builder, loc);
       });
 
-  // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
-  if (Stmt *retOnAllocFailure = s.getReturnStmtOnAllocFailure()) {
-
-    mlir::LogicalResult res = mlir::success();
-    mlir::Value isPtrNull = builder.createPtrIsNull(storeAddr);
-
-    assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
-
-    cir::IfOp::create(
-        builder, openCurlyLoc, isPtrNull, /*withElseRegion=*/false,
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          res = emitStmt(retOnAllocFailure, /*useCurrentScope=*/true);
-          cir::TrapOp::create(builder, openCurlyLoc);
-        });
-
-    if (res.failed())
-      return res;
-  }
+  if (res.failed())
+    return res;
 
   curCoro.data->coroBegin = cir::CoroBeginOp::create(
       cgm.getBuilder(), openCurlyLoc,
