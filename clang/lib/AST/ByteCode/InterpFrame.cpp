@@ -15,7 +15,6 @@
 #include "MemberPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
-#include "Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"

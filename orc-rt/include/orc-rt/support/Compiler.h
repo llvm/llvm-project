@@ -29,10 +29,6 @@
 // API to be hidden.
 #define ORC_RT_EXPORT ORC_RT_C_EXPORT
 
-#ifndef __has_builtin
-#define __has_builtin(x) 0
-#endif
-
 // Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
 // C mode, but the :: in __has_cpp_attribute(scoped::attribute) is invalid.
 #ifndef ORC_RT_HAS_CPP_ATTRIBUTE
@@ -43,7 +39,7 @@
 #endif
 #endif
 
-#if __has_builtin(__builtin_expect)
+#if ORC_RT_HAS_BUILTIN(__builtin_expect)
 #define ORC_RT_LIKELY(EXPR) __builtin_expect((bool)(EXPR), true)
 #define ORC_RT_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)
 #else
@@ -61,7 +57,7 @@
 
 // ORC_RT_BUILTIN_UNREACHABLE: an optimizer hint that the current location is
 // not reachable.
-#if __has_builtin(__builtin_unreachable) || defined(__GNUC__)
+#if ORC_RT_HAS_BUILTIN(__builtin_unreachable) || defined(__GNUC__)
 #define ORC_RT_BUILTIN_UNREACHABLE __builtin_unreachable()
 #elif defined(_MSC_VER)
 #define ORC_RT_BUILTIN_UNREACHABLE __assume(false)
