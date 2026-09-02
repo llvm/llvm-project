@@ -234,7 +234,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     BSWAPActions.maxScalar(0, sXLen).lower();
 
   getActionDefinitionsBuilder(G_CLMUL)
-      .legalFor(ST.hasStdExtZbc() || ST.hasStdExtZbkc(), {sXLen})
+      .legalFor(ST.hasStdExtZbkc(), {sXLen})
       .unsupported();
 
   auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
