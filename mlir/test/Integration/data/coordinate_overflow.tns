@@ -1,0 +1,4 @@
+# Extended FROSTT tensor with an overflowing coordinate.
+2 1
+4 4
+18446744073709551616 1 1.0
