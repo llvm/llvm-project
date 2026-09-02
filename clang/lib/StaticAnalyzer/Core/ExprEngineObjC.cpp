@@ -28,12 +28,6 @@ void ExprEngine::VisitLvalObjCIvarRefExpr(const ObjCIvarRefExpr *Ex,
   Dst.insert(Engine.makeNodeWithBinding(Pred, Ex, location));
 }
 
-void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
-                                             ExplodedNode *Pred,
-                                             ExplodedNodeSet &Dst) {
-  Dst.insert(Pred);
-}
-
 void ExprEngine::populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
                                                ExplodedNode *Pred,
                                                ExplodedNodeSet &Dst,

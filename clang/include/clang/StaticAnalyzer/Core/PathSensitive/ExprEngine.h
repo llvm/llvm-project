@@ -583,10 +583,6 @@ public:
   void VisitAtomicExpr(const AtomicExpr *E, ExplodedNode *Pred,
                        ExplodedNodeSet &Dst);
 
-  /// Transfer function logic for ObjCAtSynchronizedStmts.
-  void VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
-                                   ExplodedNode *Pred, ExplodedNodeSet &Dst);
-
   /// Transfer function logic for computing the lvalue of an Objective-C ivar.
   void VisitLvalObjCIvarRefExpr(const ObjCIvarRefExpr *DR, ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);

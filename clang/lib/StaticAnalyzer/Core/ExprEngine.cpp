@@ -2204,9 +2204,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
-    case Stmt::ObjCAtSynchronizedStmtClass:
-      VisitObjCAtSynchronizedStmt(cast<ObjCAtSynchronizedStmt>(S), Pred, Dst);
+    case Stmt::ObjCAtSynchronizedStmtClass: {
+      Dst.insert(Pred);
       break;
+    }
 
     case Expr::ConstantExprClass:
     case Stmt::ExprWithCleanupsClass:
