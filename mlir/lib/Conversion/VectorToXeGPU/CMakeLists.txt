@@ -10,6 +10,7 @@ add_mlir_conversion_library(MLIRVectorToXeGPU
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRMemRefDialect
+  MLIRSCFDialect
   MLIRTransforms
   MLIRVectorDialect
   MLIRVectorToGPU

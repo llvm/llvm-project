@@ -454,6 +454,86 @@ gpu.func @load_out_of_bounds_1D_vector(%source: memref<8x16x32xf32>,
 
 // -----
 gpu.module @xevm_module {
+gpu.func @load_unit_1D_vector(%source: memref<8x16x32xf32>,
+    %offset: index) -> vector<1xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
+    {in_bounds = [true]} : memref<8x16x32xf32>, vector<1xf32>
+  gpu.return %0 : vector<1xf32>
+}
+
+// A single-element transfer addresses one location, which the transfer's own
+// indices already name, so it is a scalar load - no descriptor, no gather.
+// CHECK-LABEL:  @load_unit_1D_vector(
+// CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
+// CHECK-SAME:   %[[OFFSET:.+]]: index
+// CHECK:        %[[VAL:.+]] = memref.load %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]] : memref<8x16x32xf32>
+// CHECK:        %[[RES:.+]] = vector.broadcast %[[VAL]] : f32 to vector<1xf32>
+// CHECK-NOT:    xegpu.load
+// CHECK:        return %[[RES]]
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_out_of_bounds_unit_1D_vector(%source: memref<8x16x32xf32>,
+    %offset: index) -> vector<1xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
+    {in_bounds = [false]} : memref<8x16x32xf32>, vector<1xf32>
+  gpu.return %0 : vector<1xf32>
+}
+
+// An out-of-bounds transfer must not touch memory, so the scalar load is
+// guarded and the padding is yielded on the out-of-bounds side.
+// CHECK-LABEL:  @load_out_of_bounds_unit_1D_vector(
+// CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
+// CHECK-SAME:   %[[OFFSET:.+]]: index
+// CHECK-DAG:    %[[PAD:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:    %[[C32:.+]] = arith.constant 32 : index
+// CHECK:        %[[INB:.+]] = arith.cmpi slt, %[[OFFSET]], %[[C32]] : index
+// CHECK:        %[[VAL:.+]] = scf.if %[[INB]] -> (f32) {
+// CHECK:          %[[LOAD:.+]] = memref.load %[[SRC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]] : memref<8x16x32xf32>
+// CHECK:          scf.yield %[[LOAD]] : f32
+// CHECK:        } else {
+// CHECK:          scf.yield %[[PAD]] : f32
+// CHECK:        }
+// CHECK:        %[[RES:.+]] = vector.broadcast %[[VAL]] : f32 to vector<1xf32>
+// CHECK-NOT:    xegpu.load
+// CHECK:        return %[[RES]]
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_out_of_bounds_unit_1D_vector_dynamic(
+    %source: memref<?xi32, strided<[1], offset: ?>>, %offset: index) -> i32 {
+  %pad = ub.poison : i32
+  %0 = vector.transfer_read %source[%offset], %pad
+    : memref<?xi32, strided<[1], offset: ?>>, vector<1xi32>
+  %1 = vector.extract %0[0] : i32 from vector<1xi32>
+  gpu.return %1 : i32
+}
+
+// The extract of the broadcast folds away, leaving just the guarded scalar
+// load - the form a lookup like this one had before it was vectorized.
+// CHECK-LABEL:  @load_out_of_bounds_unit_1D_vector_dynamic(
+// CHECK-SAME:   %[[SRC:.+]]: memref<?xi32, strided<[1], offset: ?>>,
+// CHECK-SAME:   %[[OFFSET:.+]]: index
+// CHECK-DAG:    %[[PAD:.+]] = ub.poison : i32
+// CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
+// CHECK:        %[[DIM:.+]] = memref.dim %[[SRC]], %[[C0]] : memref<?xi32, strided<[1], offset: ?>>
+// CHECK:        %[[INB:.+]] = arith.cmpi slt, %[[OFFSET]], %[[DIM]] : index
+// CHECK:        %[[RES:.+]] = scf.if %[[INB]] -> (i32) {
+// CHECK:          %[[LOAD:.+]] = memref.load %[[SRC]][%[[OFFSET]]] : memref<?xi32, strided<[1], offset: ?>>
+// CHECK:          scf.yield %[[LOAD]] : i32
+// CHECK:        } else {
+// CHECK:          scf.yield %[[PAD]] : i32
+// CHECK:        }
+// CHECK-NOT:    vector.broadcast
+// CHECK:        return %[[RES]]
+}
+
+// -----
+gpu.module @xevm_module {
 gpu.func @no_load_masked(%source : memref<4xf32>,
     %offset : index) -> vector<4xf32> {
   %c0 = arith.constant 0.0 : f32
