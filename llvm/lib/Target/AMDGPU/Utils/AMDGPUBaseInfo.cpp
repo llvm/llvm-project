@@ -1253,8 +1253,6 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                     getNumWorkGroupSIMDs(isFullSIMDMode(STI)));
 }
 
-unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI) { return 1; }
-
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
                               unsigned FlatWorkGroupSize) {
   return divideCeil(FlatWorkGroupSize, getWavefrontSize(STI));

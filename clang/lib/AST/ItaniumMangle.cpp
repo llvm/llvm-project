@@ -5351,7 +5351,7 @@ recurse:
       DiagnoseUnsupportedPackIndexTemplateName();
       break;
     }
-    mangleUnresolvedName(NestedNameSpecifier(), DTI->getName(),
+    mangleUnresolvedName(/*NestedNameSpecifier=*/std::nullopt, DTI->getName(),
                          DTI->template_arguments().data(),
                          DTI->getNumTemplateArgs(), Arity);
     break;
