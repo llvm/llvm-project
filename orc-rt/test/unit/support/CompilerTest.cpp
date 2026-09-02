@@ -41,3 +41,14 @@ TEST(CompilerDeathTest, UnreachableAborts) {
                "unreachable reached");
 }
 #endif
+
+// Defined in CAPICompileTest.c, which is compiled as C. The value it returns
+// is decided by the preprocessor when that file is built, so comparing it
+// against the answer here checks that ORC_RT_HAS_BUILTIN works in C and agrees
+// across the two languages.
+extern "C" int orc_rt_test_hasBuiltinExpect(void);
+
+TEST(CompilerTest, HasBuiltinAgreesBetweenCAndCxx) {
+  EXPECT_EQ(orc_rt_test_hasBuiltinExpect(),
+            ORC_RT_HAS_BUILTIN(__builtin_expect) ? 1 : 0);
+}

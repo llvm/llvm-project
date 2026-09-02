@@ -12,6 +12,7 @@
 ; RUN: llc < %t/bad-policy.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-POLICY
 ; RUN: llc < %t/bad-policy.ll -mtriple=nvptx64 -mcpu=sm_60 -mattr=+ptx50 2>&1 | FileCheck %s --check-prefix=BAD-POLICY
 ; RUN: llc < %t/bad-policy-shared.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-POLICY-SHARED
+; RUN: llc < %t/bad-policy-atomics.ll -mtriple=nvptx64 -mcpu=sm_100 -mattr=+ptx88 2>&1 | FileCheck %s --check-prefix=BAD-POLICY-ATOMICS --implicit-check-not=warning:
 
 ;--- bad-empty.ll
 
@@ -132,6 +133,35 @@ define i32 @bad_cache_policy_value(ptr addrspace(1) %p) {
 
 !0 = !{i32 0, !1}
 !1 = !{!"nvvm.l2_cache_hint", !"not_an_integer"}
+
+;--- bad-policy-atomics.ll
+
+; Invalid cache policies on each supported kind of atomic memory operation
+; should produce exactly one warning per instruction.
+; BAD-POLICY-ATOMICS-COUNT-4: warning: invalid NVPTX !mem.cache_hint metadata: 'nvvm.l2_cache_hint' expects an integer value
+define i32 @bad_atomic_load_cache_policy(ptr addrspace(1) %p) {
+  %v = load atomic i32, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !0
+  ret i32 %v
+}
+
+define void @bad_atomic_store_cache_policy(ptr addrspace(1) %p, i32 %v) {
+  store atomic i32 %v, ptr addrspace(1) %p monotonic, align 4, !mem.cache_hint !2
+  ret void
+}
+
+define i32 @bad_atomicrmw_cache_policy(ptr addrspace(1) %p, i32 %v) {
+  %old = atomicrmw add ptr addrspace(1) %p, i32 %v monotonic, align 4, !mem.cache_hint !0
+  ret i32 %old
+}
+
+define i128 @bad_atomicrmw_i128_cache_policy(ptr addrspace(1) %p, i128 %v) {
+  %old = atomicrmw xchg ptr addrspace(1) %p, i128 %v monotonic, align 16, !mem.cache_hint !0
+  ret i128 %old
+}
+
+!0 = !{i32 0, !1}
+!1 = !{!"nvvm.l2_cache_hint", !"not_an_integer"}
+!2 = !{i32 1, !1}
 
 ;--- bad-policy-shared.ll
 

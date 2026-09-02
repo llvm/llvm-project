@@ -13,6 +13,7 @@
 
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
 #include "orc-rt-internal/support/StringExtras.h"
+#include "orc-rt-internal/support/sys/Errno.h"
 #include "orc-rt/support/bit.h"
 
 #include <cassert>
@@ -74,7 +75,10 @@ std::string ExecutorProcessInfo::makeTargetTriple(
 Expected<size_t> ExecutorProcessInfo::detectPageSize() noexcept {
   long PageSize = sysconf(_SC_PAGESIZE);
   if (PageSize == -1)
-    return make_error<StringError>(strerror(errno));
+    return make_error<StringError>((StringOutputStream()
+                                    << "sysconf did not return a page size: "
+                                    << sys::strError(errno))
+                                       .str());
   if (PageSize <= 0 || !has_single_bit(static_cast<size_t>(PageSize)))
     return make_error<StringError>((StringOutputStream()
                                     << "reported page size " << PageSize

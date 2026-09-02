@@ -206,6 +206,10 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
 
+  - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
+    the new `LambdaCapture` options. Simple, non-init captures continue to follow
+    the naming style of the variable they capture.
+
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
   standard tag types (e.g. `std::in_place_t`, `std::allocator_arg_t`,
