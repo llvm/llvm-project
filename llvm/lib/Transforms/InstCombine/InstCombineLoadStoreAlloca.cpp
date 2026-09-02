@@ -1180,10 +1180,14 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
             Builder.CreateLoad(LI.getType(), LoadOp2, LI.getProperties(),
                                LoadOp2->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
-        // It is safe to copy any metadata that does not trigger UB. Copy any
-        // poison-generating metadata.
-        V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
-        V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
+        // The original load is replaced by two loads that execute
+        // unconditionally, so any metadata implying immediate UB (e.g.
+        // !noundef, !dereferenceable, !invariant.load) must not be carried
+        // over. Copy all metadata and then drop the UB-implying kinds.
+        copyMetadataForLoad(*V1, LI);
+        V1->dropUBImplyingAttrsAndMetadata();
+        copyMetadataForLoad(*V2, LI);
+        V2->dropUBImplyingAttrsAndMetadata();
         return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr,
                                   ProfcheckDisableMetadataFixes ? nullptr : SI);
       }

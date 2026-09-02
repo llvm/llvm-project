@@ -199,7 +199,9 @@ entry:
   ret i32 %c
 }
 
-; Preserve none-UB metadata on loads.
+; The two new loads execute unconditionally, so UB-implying (!noundef,
+; !dereferenceable, !invariant.load) and AA/type metadata (!tbaa,
+; !invariant.group, ...) are dropped; only poison-generating metadata is kept.
 define ptr @preserve_load_metadata_after_select_transform1(i1 %c, ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
 ; CHECK-LABEL: define ptr @preserve_load_metadata_after_select_transform1(
 ; CHECK-SAME: i1 [[C:%.*]], ptr dereferenceable(8) [[A:%.*]], ptr dereferenceable(8) [[B:%.*]]) {
@@ -211,11 +213,13 @@ define ptr @preserve_load_metadata_after_select_transform1(i1 %c, ptr dereferenc
 ;
 entry:
   %ptr.sel = select i1 %c, ptr %b, ptr %a
-  %l.sel = load ptr, ptr %ptr.sel, align 1, !tbaa !0, !llvm.access.group !7, !dereferenceable !9, !noundef !{}, !invariant.load !7, !align !9, !nonnull !{}
+  %l.sel = load ptr, ptr %ptr.sel, align 1, !tbaa !0, !llvm.access.group !7, !dereferenceable !9, !noundef !{}, !invariant.load !7, !align !9, !nonnull !{}, !nontemporal !8, !invariant.group !7
   ret ptr %l.sel
 }
 
-; Preserve none-UB metadata on loads.
+; The two new loads execute unconditionally, so UB-implying (!noundef,
+; !dereferenceable, !invariant.load) and AA/type metadata (!tbaa,
+; !invariant.group, ...) are dropped; only poison-generating metadata is kept.
 define i32 @preserve_load_metadata_after_select_transform_range(i1 %c, ptr dereferenceable(8) %a, ptr dereferenceable(8) %b) {
 ; CHECK-LABEL: define i32 @preserve_load_metadata_after_select_transform_range(
 ; CHECK-SAME: i1 [[C:%.*]], ptr dereferenceable(8) [[A:%.*]], ptr dereferenceable(8) [[B:%.*]]) {
