@@ -24,8 +24,8 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/OSUtil/linux/syscall.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/getpid.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
@@ -108,7 +108,7 @@ extern "C" void write_raw_profile() {
   }
 
   // Create a minimal filename: libc_cov_<pid>.profraw
-  pid_t pid = LIBC_NAMESPACE::linux_syscalls::getpid();
+  long pid = LIBC_NAMESPACE::syscall_impl<long>(SYS_getpid);
   if (pid <= 0)
     pid = 1;
 
