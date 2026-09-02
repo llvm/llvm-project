@@ -2006,13 +2006,9 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // values of `donorDelta` may work and all give the same value, so the smallest
 // is taken, which is what leaves a fully broadcast input shuffle-free.
 //
-// Only the first `targetLanePeriod` lanes are required to end up correct --
-// each is the one lane of its slot the target layout distributes to, and the
-// layout assigns the rest no elements. Lanes sharing a slot run the same
-// arithmetic on their own fragment: when a shuffle is emitted they all receive
-// the donor's value and are equally correct, and when it is dropped their local
-// extract can land on a different element. Dropping one therefore relies on
-// nobody reading them.
+// The target layout distributes to the first `targetLanePeriod` lanes and asks
+// nothing of the rest, so only those lanes are made correct. What the others
+// hold is undefined, and code depending on it is ill-defined.
 //
 // An index is derived from the tables and then verified against them, so a
 // layout change that is not of this form is reported as a match failure rather
