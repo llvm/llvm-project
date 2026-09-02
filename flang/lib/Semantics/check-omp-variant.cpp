@@ -748,7 +748,7 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
     // Check the variant independently only when metadirective is legal;
     // otherwise, the outer metadirective check already reports the error.
     if (GetDirectiveNest(MetadirectiveNest)) {
-      unsigned version{context_.langOptions().OpenMPVersion};
+      llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
       if (version >= llvm::omp::getDirectivePureSince(
                          llvm::omp::Directive::OMPD_metadirective)) {
         CheckDirectiveInPureProcedure(x.DirName().source, dirId, x);

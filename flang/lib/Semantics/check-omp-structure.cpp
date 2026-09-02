@@ -969,7 +969,7 @@ void OmpStructureChecker::CheckDirectivePureSince(parser::CharBlock source,
       GetErrorDirectiveArgs(spec).at !=
           parser::OmpAtClause::ActionTime::Compilation) {
     // ERROR is only "pure" when its action-time is compilation.
-    pureSince = 0x7FFFFFFF;
+    pureSince = llvm::omp::Version{0x7FFFFFFF};
   }
   if (version >= pureSince) {
     return;
@@ -1005,7 +1005,7 @@ void OmpStructureChecker::CheckDirectiveInDoConcurrent(parser::CharBlock source,
     if (!doConstruct || !(*doConstruct)->IsDoConcurrent()) {
       continue;
     }
-    unsigned version{context_.langOptions().OpenMPVersion};
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
     if (!IsDoConcurrentLegal(version)) {
       // Prior to OpenMP 6.0, no OpenMP directive, regardless of its "pure"
       // property, was allowed inside a DO CONCURRENT construct.
