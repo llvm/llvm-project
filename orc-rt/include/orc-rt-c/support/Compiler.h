@@ -74,15 +74,15 @@
 #define ORC_RT_C_NOTHROW
 #endif
 
-/* ORC_RT_C_FORMAT_PRINTF(FmtIdx, FirstArg) marks a function as taking a
+/* ORC_RT_FORMAT_PRINTF(FmtIdx, FirstArg) marks a function as taking a
    printf-style format string at argument position FmtIdx, with the variadic
    arguments beginning at FirstArg, so the compiler can check the format string
    against its arguments. Indices are 1-based. */
 #if defined(__GNUC__) || defined(__clang__)
-#define ORC_RT_C_FORMAT_PRINTF(FmtIdx, FirstArg)                               \
+#define ORC_RT_FORMAT_PRINTF(FmtIdx, FirstArg)                                 \
   __attribute__((format(printf, FmtIdx, FirstArg)))
 #else
-#define ORC_RT_C_FORMAT_PRINTF(FmtIdx, FirstArg)
+#define ORC_RT_FORMAT_PRINTF(FmtIdx, FirstArg)
 #endif
 
 #endif /* ORC_RT_C_SUPPORT_COMPILER_H */
