@@ -12148,7 +12148,11 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
   auto LoadsSubkey = [](size_t /*Key*/, LoadInst *LI) {
     return hash_value(getUnderlyingObject(LI->getPointerOperand()));
   };
-  SmallMapVector<std::pair<size_t, size_t>, SmallSetVector<Value *, 4>, 4>
+  // The key includes the value type: the opcode-based key does not always
+  // distinguish types (e.g. all extractvalue instructions share one key),
+  // while the tree requires same-typed scalars.
+  SmallMapVector<std::tuple<size_t, size_t, Type *>, SmallSetVector<Value *, 4>,
+                 4>
       Groups;
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     // Only gathers with vectorized (non-gather) users can reuse the broadcast.
@@ -12167,8 +12171,9 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
     // alias-check pairs and can push the region over the versioning limits.
     if (isTryingRuntimeAliasChecks() && I->mayReadOrWriteMemory())
       continue;
-    Groups[generateKeySubkey(I, TLI, LoadsSubkey, /*AllowAlternate=*/true)]
-        .insert(I);
+    auto [Key, SubKey] =
+        generateKeySubkey(I, TLI, LoadsSubkey, /*AllowAlternate=*/true);
+    Groups[std::make_tuple(Key, SubKey, I->getType())].insert(I);
   }
   // Values left in singleton groups cannot form a bundle on their own;
   // regroup them by the opcode-insensitive key so alternate/copyable
@@ -12178,8 +12183,8 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
   for (auto &[Key, Group] : Groups) {
     if (Group.size() >= 2)
       continue;
-    FallbackGroups[std::make_pair(Key.first, Group.front()->getType())].insert(
-        Group.front());
+    FallbackGroups[std::make_pair(std::get<0>(Key), Group.front()->getType())]
+        .insert(Group.front());
   }
   InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
   auto BuildSubtree = [&](const auto &GroupMap) {
@@ -19754,6 +19759,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   }
 
   SmallPtrSet<TreeEntry *, 4> SubtreesToDelete;
+  SmallPtrSet<TreeEntry *, 4> DroppedSplatSubtrees;
   InstructionCost LoadsExtractsCost = 0;
   using ValuesToInsertTy =
       SmallDenseMap<const TreeEntry *, SmallVector<Value *>>;
@@ -19862,20 +19868,20 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
           *TTI, ScalarTy,
           cast<VectorType>(getWidenedType(ScalarTy, TE->getVectorFactor())),
           ExtractElts, /*Insert=*/false, /*Extract=*/true, CostKind);
-      // Add the remaining cost of the subtree itself. The subtree node list
-      // covers the combined subnodes, which are not costed on their own.
-      auto GetLiveCost = [&](const TreeEntry *E) {
-        if (auto CostIt = NodesCosts.find(E); CostIt != NodesCosts.end())
-          return CostIt->second;
-        return TransformedToGatherNodes.lookup(E);
-      };
-      KeepCost += GetLiveCost(TE);
-      for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
-        if (!DeletedNodes.contains(VectorizableTree[Idx].get()))
-          KeepCost += GetLiveCost(VectorizableTree[Idx].get());
+      // Add the cost of the subtree itself, computed before any trimming:
+      // trimming of the subtree's own nodes would otherwise make it look
+      // artificially cheap.
+      KeepCost += std::get<1>(SubtreeCosts[TE->Idx]);
       InstructionCost DropCost = GetGatherInsertCost(ScalarTy, ValuesToInsert);
       if (KeepCost <= DropCost)
         continue;
+      // Dropped as unprofitable: exclude its cost from the reference cost, so
+      // the trimming of the remaining tree is not reverted because of it, and
+      // keep it deleted even if the trimming is reverted.
+      DroppedSplatSubtrees.insert(TE);
+      for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
+        DroppedSplatSubtrees.insert(VectorizableTree[Idx].get());
+      Cost -= std::get<1>(SubtreeCosts[TE->Idx]);
     }
     // Not used by the surviving gathers or not profitable to keep.
     SubtreesToDelete.insert(TE);
@@ -19932,6 +19938,10 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       (!PreferTrimmedTree && NewCost + LoadsExtractsCost == Cost)) {
     DeletedNodes.clear();
     TransformedToGatherNodes.clear();
+    // The dropped splat subtrees stay deleted: they were excluded from the
+    // reference cost and must not be resurrected by the revert.
+    DeletedNodes.insert(DroppedSplatSubtrees.begin(),
+                        DroppedSplatSubtrees.end());
     NewCost = Cost;
   } else {
     // If the remaining tree is just a buildvector - exit, it will cause
@@ -27160,9 +27170,9 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         if (ScheduleCopyableDataMapByUsers[I].empty())
           ScheduleCopyableDataMapByUsers.erase(I);
         ScheduleCopyableDataMap.erase(KV);
-        // Need to recalculate dependencies for the actual schedule data.
-        if (ScheduleData *OpSD = getScheduleData(I);
-            OpSD && OpSD->hasValidDependencies()) {
+        // Need to recalculate dependencies for the actual schedule data, even
+        // if they were already cleared by the failed bundle scheduling attempt.
+        if (ScheduleData *OpSD = getScheduleData(I)) {
           OpSD->clearDirectDependencies();
           ControlDependentMembers.push_back(OpSD);
           if (any_of(VL, [&](Value *V) { return S.isExpandedBinOp(V); })) {
