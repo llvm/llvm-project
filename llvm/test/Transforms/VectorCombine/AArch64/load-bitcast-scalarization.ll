@@ -134,3 +134,10 @@ define i32 @load_v4i8_mixed_users(ptr %x) {
   %add = add i32 %r1, %r2.ext
   ret i32 %add
 }
+
+; Make sure we don't crash on scalable vectors
+define <vscale x 4 x i32> @scalable_vec(ptr %p) {
+  %a = load <vscale x 8 x i16>, ptr %p
+  %b = bitcast <vscale x 8 x i16> %a to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %b
+}
