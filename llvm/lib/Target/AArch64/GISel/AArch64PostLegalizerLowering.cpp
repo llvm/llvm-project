@@ -205,7 +205,6 @@ bool matchTRN(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-
 /// \return true if a G_SHUFFLE_VECTOR instruction \p MI can be replaced with
 /// a G_UZP1 or G_UZP2 instruction.
 ///
