@@ -1774,8 +1774,8 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Terms
 // -----
 //
-// All of these follow from the layouts, for a value of shape `Sh` on a subgroup
-// of `S` lanes. `#xegpu.` prefixes are dropped for width throughout.
+// These follow from the layouts, for a value of shape `Sh` on a subgroup of `S`
+// lanes. `#xegpu.` prefixes are dropped for width throughout.
 //
 //   distribution unit  what a lane owns as one block: `lane_data`
 //   fragment           everything one lane owns. Slicing drops dimensions from
@@ -1787,8 +1787,23 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                      apart hold the same fragment. `getLanePeriod`,
 //                      `lanePeriod` below
 //   slot               `lane % lanePeriod`, a lane's index within one period
+//   ownership table    every lane's fragment, tabulated as element coordinates,
+//                      one table per side. `computeOwnedCoords`, `inputOwned`
+//                      and `targetOwned` below
+//
+// These name the moving parts of the scheme:
+//
 //   donor              the lane a value is read from, `slot + donorDelta`, with
 //                      `donorDelta` a multiple of `lanePeriod`
+//   donor group        the lanes one `donorDelta` names, one per slot:
+//                      `donorDelta` through `donorDelta + lanePeriod - 1`.
+//                      Candidates are tried a group at a time, since every slot
+//                      has to be served by the same `donorDelta`
+//   element source     where one element of the target fragment comes from: a
+//                      donor, and the index to extract from that donor's
+//                      fragment. One per element, and it needs a shuffle
+//                      exactly when the donor is not the lane itself.
+//                      `ElementSource` below
 //
 // Either layout may replicate -- a set of lanes all holding the same fragment
 // -- and a layout has two ways to spell that. Both of these are on a
@@ -1875,6 +1890,23 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // the lane_layout of the underlying layout and the union of the sliced dims
 // matter; @convert_layout_broadcast_nested_slice covers a two-level input.
 //
+// Why donors sit a whole period apart
+// -----------------------------------
+//
+// `gpu.shuffle idx` is the only way to move data between lanes and it exchanges
+// one value per lane, so every lane runs the same extract. A donor can
+// therefore only serve lanes of its own slot, which is why `donorDelta` is a
+// multiple of `lanePeriod`. It also means the donor extracts the right thing
+// without knowing who asked: its own slot is
+// `(slot + donorDelta) % lanePeriod`, which is `slot`, so it computes the same
+// index.
+//
+// Case 2 has two element sources, one per element of its 1x2 fragment. Slot 3
+// wants (3, 0) and (3, 1):
+//
+//   element 0 -> donorDelta = 0, donor = 3,  index = 3   already local
+//   element 1 -> donorDelta = 8, donor = 11, index = 3   shuffled
+//
 // What it declines
 // ----------------
 //
@@ -1913,40 +1945,6 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Not layout conditions: SubByteElement, `gpu.shuffle` having no type for an
 // element narrower than a byte, and FragmentSizeMismatch, an invariant check
 // for a layout disagreeing with the vector type the caller derived from it.
-//
-// Concepts
-// --------
-//
-// broadcast group
-//     Lanes holding the same fragment. A sliced lane_layout dimension forms
-//     one, since nothing is distributed over its lanes: in case 2 dim 0 is
-//     sliced and spans 8 lanes, so lanes 0-7 are one group and 8-15 another.
-//
-// donor, continued
-//     `gpu.shuffle idx` is the only way to move data between lanes and it
-//     exchanges one value per lane, so every lane runs the same extract; a
-//     donor can therefore only serve lanes of its own slot, which is why
-//     `donorDelta` is a multiple of `lanePeriod`. In case 2, slot 3 reads (3,
-//     1) from lane 3 + 8.
-//
-//     That is also why the donor extracts the right thing without knowing who
-//     asked: its own slot is `(slot + donorDelta) % lanePeriod`, which is
-//     `slot`, so it computes the same index.
-//
-// donor group
-//     The lanes one `donorDelta` names, one per slot: `donorDelta` through
-//     `donorDelta + lanePeriod - 1`. Candidate donors are considered a group at
-//     a time, since every slot has to be served by the same `donorDelta`. In
-//     case 2 there are two, lanes 0-7 and lanes 8-15.
-//
-// element source
-//     Where one element of the target fragment comes from: the donor, and the
-//     index to extract from that donor's fragment. A shuffle is needed exactly
-//     when the donor cannot be the lane itself. Case 2 has two, one per element
-//     of its 1x2 fragment. Slot 3 wants (3, 0) and (3, 1):
-//
-//       element 0 -> donorDelta = 0, donor = 3,  index = 3   already local
-//       element 1 -> donorDelta = 8, donor = 11, index = 3   shuffled
 //
 // The index expression
 // --------------------
