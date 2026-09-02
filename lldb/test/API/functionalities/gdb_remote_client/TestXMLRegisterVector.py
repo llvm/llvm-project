@@ -45,9 +45,7 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         )
         return process
 
-    def setup_register_test(
-        self, definitions, register_data, architecture="aarch64"
-    ):
+    def setup_register_test(self, definitions, register_data, architecture="aarch64"):
         return self.setup_multidoc_test(
             {
                 "target.xml": dedent(
@@ -193,9 +191,7 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
 
         self.assert_vector_info("v0", 8, 2)
         self.expect("register info v0", matching=False, substrs=["Vector elements: 4"])
-        vector = (
-            process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("v0")
-        )
+        vector = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("v0")
         self.assert_float_children(vector, [1.5, 2.5])
 
     @skipIfXmlSupportMissing
@@ -211,9 +207,7 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         )
 
         self.assert_vector_info("v0", 6, 3)
-        vector = (
-            process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("v0")
-        )
+        vector = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("v0")
         self.assertEqual(vector.GetNumChildren(), 3)
         self.assertEqual(
             [
@@ -266,9 +260,7 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
                 </feature>"""
                 ),
             },
-            "0000c03f00002040"
-            "0000c03f000020400000604000009040"
-            + "00" * 16,
+            "0000c03f00002040" "0000c03f000020400000604000009040" + "00" * 16,
         )
 
         self.assert_vector_info("first", 8, 2)
@@ -277,9 +269,7 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
 
         frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
         self.assert_float_children(frame.FindRegister("first"), [1.5, 2.5])
-        self.assert_float_children(
-            frame.FindRegister("second"), [1.5, 2.5, 3.5, 4.5]
-        )
+        self.assert_float_children(frame.FindRegister("second"), [1.5, 2.5, 3.5, 4.5])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
@@ -339,9 +329,7 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
             "0000c03f0000204000006040" + "00" * 8,
         )
 
-        vector = (
-            process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("v0")
-        )
+        vector = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("v0")
         self.assertEqual(vector.GetByteSize(), 12)
         self.assertEqual(vector.GetTypeName(), "float[3]")
         self.assert_float_children(vector, [1.5, 2.5, 3.5])
@@ -358,9 +346,7 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
             "0000c03f000020400000604000009040" + "00" * 8,
         )
 
-        vector = (
-            process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("v0")
-        )
+        vector = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("v0")
         self.assertEqual(vector.GetNumChildren(), 2)
         self.assert_float_children(vector.GetChildAtIndex(0), [1.5, 2.5])
         self.assert_float_children(vector.GetChildAtIndex(1), [3.5, 4.5])
@@ -419,6 +405,4 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         for name in ["v0", "v1"]:
             vector = frame.FindRegister(name)
             self.assert_float_children(vector, [1.5, 2.5])
-            self.assertEqual(
-                vector.Cast(ull).GetValueAsUnsigned(), 0x3FC0000040200000
-            )
+            self.assertEqual(vector.Cast(ull).GetValueAsUnsigned(), 0x3FC0000040200000)
