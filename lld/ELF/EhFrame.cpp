@@ -142,11 +142,11 @@ bool elf::hasLSDA(const EhSectionPiece &p) {
 // pc_range follows the 4-byte length, 4-byte CIE pointer, and pc_begin, and
 // uses pc_begin's encoding.
 bool elf::hasZeroPcRange(Ctx &ctx, const EhSectionPiece &p, uint8_t enc) {
-  size_t size = getAugPSize(ctx, enc);
+  size_t pSize = getAugPSize(ctx, enc);
   ArrayRef<uint8_t> d = p.data();
-  if (size == 0 || d.size() < 8 + 2 * size)
+  if (pSize == 0 || d.size() < 8 + 2 * pSize)
     return false;
-  return llvm::all_of(d.slice(8 + size, size), [](uint8_t c) { return !c; });
+  return llvm::all_of(d.slice(8 + pSize, pSize), [](uint8_t c) { return !c; });
 }
 
 StringRef EhReader::getAugmentation() {
