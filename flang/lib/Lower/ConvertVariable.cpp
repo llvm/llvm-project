@@ -1467,7 +1467,8 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
         mlir::Type byteSeqTy = fir::SequenceType::get(
             {fir::SequenceType::getUnknownExtent()}, byteTy);
         mlir::Value byteBase =
-            builder.createConvert(loc, builder.getRefType(byteSeqTy), addr);
+            builder.createConvertWithVolatileCast(
+                loc, builder.getRefType(byteSeqTy), addr);
         mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
         mlir::Value last =
             builder.createIntegerConstant(loc, idxTy, nBytes - 1);
@@ -1499,7 +1500,8 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Type i8SeqTy =
         fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
     mlir::Value byteBase =
-        builder.createConvert(loc, builder.getRefType(i8SeqTy), addr);
+        builder.createConvertWithVolatileCast(
+            loc, builder.getRefType(i8SeqTy), addr);
     mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
     mlir::Value last = builder.createIntegerConstant(
         loc, idxTy, static_cast<int64_t>(nBytes) - 1);
@@ -1649,7 +1651,8 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
               mlir::Type i8SeqTy = fir::SequenceType::get(
                   {fir::SequenceType::getUnknownExtent()}, i8Ty);
               mlir::Value byteBase =
-                  builder.createConvert(loc, builder.getRefType(i8SeqTy), addr);
+                  builder.createConvertWithVolatileCast(
+                      loc, builder.getRefType(i8SeqTy), addr);
               mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
               mlir::Value last = builder.createIntegerConstant(
                   loc, idxTy, static_cast<int64_t>(byteSize) - 1);
@@ -1718,7 +1721,8 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       mlir::Type byteSeqTy = fir::SequenceType::get(
           {fir::SequenceType::getUnknownExtent()}, byteTy);
       mlir::Value byteBase =
-          builder.createConvert(loc, builder.getRefType(byteSeqTy), base);
+          builder.createConvertWithVolatileCast(
+              loc, builder.getRefType(byteSeqTy), base);
       mlir::Value byteAddr =
           fir::CoordinateOp::create(builder, loc, builder.getRefType(byteTy),
                                     byteBase, mlir::ValueRange{iv});
