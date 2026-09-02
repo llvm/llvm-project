@@ -1758,3 +1758,44 @@ gpu.func @convert_layout_broadcast_partial_input() {
   gpu.return
 }
 }
+
+// -----
+
+// A target handing out 4 fragments rather than 8, which separates the constants
+// the index expression is built from: the lane period is 4 while the input
+// fragment's row stride is 2. Every lane arrives with all 16 elements, so
+// element `p` of the 2x2 target fragment is a local extract at `2*slot + off`
+// with `off` running 0, 1, 8, 9 over the two rows the fragment covers.
+// CHECK-LABEL: gpu.func @convert_layout_broadcast_four_slots
+// CHECK:         %[[SRC:.*]] = arith.constant dense<1.000000e+00> : vector<8x2xf8E8M0FNU>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<8x2xf8E8M0FNU> to vector<16xf8E8M0FNU>
+// CHECK:         %[[BITS:.*]] = vector.bitcast %[[FLAT]] : vector<16xf8E8M0FNU> to vector<16xi8>
+// CHECK:         %[[LANE:.*]] = gpu.lane_id
+// CHECK:         %[[C4:.*]] = arith.constant 4 : index
+// CHECK:         %[[SLOT:.*]] = arith.remui %[[LANE]], %[[C4]] : index
+// CHECK:         %[[M0:.*]] = arith.muli %[[SLOT]], %{{.*}} : index
+// CHECK:         %[[E0:.*]] = vector.extract %[[BITS]][%[[M0]]] : i8 from vector<16xi8>
+// CHECK:         vector.insert %[[E0]], %{{.*}} [0] : i8 into vector<4xi8>
+// CHECK:         %[[C1:.*]] = arith.constant 1 : index
+// CHECK:         %[[I1:.*]] = arith.addi %{{.*}}, %[[C1]] : index
+// CHECK:         vector.extract %[[BITS]][%[[I1]]] : i8 from vector<16xi8>
+// CHECK:         %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         %[[I2:.*]] = arith.addi %{{.*}}, %[[C8]] : index
+// CHECK:         vector.extract %[[BITS]][%[[I2]]] : i8 from vector<16xi8>
+// CHECK:         %[[C9:.*]] = arith.constant 9 : index
+// CHECK:         %[[I3:.*]] = arith.addi %{{.*}}, %[[C9]] : index
+// CHECK:         vector.extract %[[BITS]][%[[I3]]] : i8 from vector<16xi8>
+// CHECK:         vector.shape_cast %{{.*}} : vector<4xf8E8M0FNU> to vector<2x2xf8E8M0FNU>
+// CHECK-NOT:     gpu.shuffle
+gpu.module @xevm_module {
+gpu.func @convert_layout_broadcast_four_slots() {
+  %scale_src = arith.constant dense<1.0> : vector<8x2xf8E8M0FNU>
+  %cvt = xegpu.convert_layout %scale_src
+    <{
+      input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>,
+      target_layout = #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>
+    }> : vector<8x2xf8E8M0FNU>
+  "some_use"(%cvt) : (vector<8x2xf8E8M0FNU>) -> ()
+  gpu.return
+}
+}
