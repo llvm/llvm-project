@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define LLVM_LIBC_FUNCTION_IS_BUILTIN memcpy
+
 #include "src/string/memcpy.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"

@@ -8,7 +8,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMCPY_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMCPY_H
 
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_BUILTIN_IMPL
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
@@ -19,8 +19,10 @@
 #include <arm_sve.h>
 #endif
 namespace LIBC_NAMESPACE_DECL {
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
+[[maybe_unused]]
+LIBC_BUILTIN_IMPL(memcpy) void inline_memcpy_aarch64(Ptr __restrict dst,
+                                                     CPtr __restrict src,
+                                                     size_t count) {
   // Always avoid emit any memory operation if count == 0.
   if (count == 0)
     return;

@@ -14,7 +14,7 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ARM_INLINE_MEMCPY_H
 
 #include "src/__support/CPP/type_traits.h"     // always_false
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/attributes.h"   // LIBC_BUILTIN_IMPL
 #include "src/__support/macros/optimization.h" // LIBC_LOOP_NOUNROLL
 #include "src/string/memory_utils/arm/common.h" // LIBC_ATTR_LIKELY, LIBC_ATTR_UNLIKELY
 #include "src/string/memory_utils/utils.h" // memcpy_inline, distance_to_align
@@ -29,7 +29,8 @@ namespace {
 // semantics of `memcpy` where `src` and `dst` are `__restrict`. The compiler is
 // free to use whatever instruction is best for the size and assumed access.
 template <size_t bytes, AssumeAccess access>
-LIBC_INLINE void copy(void *dst, const void *src) {
+LIBC_BUILTIN_IMPL(memcpy)
+void copy(void *dst, const void *src) {
   if constexpr (access == AssumeAccess::kAligned) {
     constexpr size_t alignment = bytes > kWordSize ? kWordSize : bytes;
     memcpy_inline<bytes>(assume_aligned<alignment>(dst),
@@ -43,7 +44,8 @@ LIBC_INLINE void copy(void *dst, const void *src) {
 
 template <size_t bytes, BlockOp block_op = BlockOp::kFull,
           AssumeAccess access = AssumeAccess::kUnknown>
-LIBC_INLINE void copy_block_and_bump_pointers(Ptr &dst, CPtr &src) {
+LIBC_BUILTIN_IMPL(memcpy)
+void copy_block_and_bump_pointers(Ptr &dst, CPtr &src) {
   if constexpr (block_op == BlockOp::kFull) {
     copy<bytes, access>(dst, src);
   } else if constexpr (block_op == BlockOp::kByWord) {
@@ -67,15 +69,16 @@ LIBC_INLINE void copy_block_and_bump_pointers(Ptr &dst, CPtr &src) {
 }
 
 template <size_t bytes, BlockOp block_op, AssumeAccess access>
-LIBC_INLINE void consume_by_block(Ptr &dst, CPtr &src, size_t &size) {
+LIBC_BUILTIN_IMPL(memcpy)
+void consume_by_block(Ptr &dst, CPtr &src, size_t &size) {
   LIBC_LOOP_NOUNROLL
   for (size_t i = 0; i < size / bytes; ++i)
     copy_block_and_bump_pointers<bytes, block_op, access>(dst, src);
   size %= bytes;
 }
 
-[[maybe_unused]] LIBC_INLINE void
-copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(memcpy) void copy_bytes_and_bump_pointers(
+    Ptr &dst, CPtr &src, size_t size) {
   LIBC_LOOP_NOUNROLL
   for (size_t i = 0; i < size; ++i)
     *dst++ = *src++;
@@ -95,8 +98,8 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
 // - When `src` and `dst` are misaligned, we align `dst` and recompose words
 //   using multiple aligned loads. `load_aligned` takes care of endianness
 //   issues.
-[[maybe_unused]] LIBC_INLINE void inline_memcpy_arm_low_end(Ptr dst, CPtr src,
-                                                            size_t size) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(memcpy) void inline_memcpy_arm_low_end(
+    Ptr dst, CPtr src, size_t size) {
   if (size >= 8) {
     if (const size_t offset = distance_to_align_up<kWordSize>(dst))
       LIBC_ATTR_UNLIKELY {
@@ -142,8 +145,8 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
 // Implementation for Cortex-M3, M4, M7, M23, M33, M35P, M52 with hardware
 // support for unaligned loads and stores. It compiles down to 272 bytes when
 // used through `memcpy` that also needs to return the `dst` ptr.
-[[maybe_unused]] LIBC_INLINE void inline_memcpy_arm_mid_end(Ptr dst, CPtr src,
-                                                            size_t size) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(memcpy) void inline_memcpy_arm_mid_end(
+    Ptr dst, CPtr src, size_t size) {
   if (misaligned(bitwise_or(src, dst)))
     LIBC_ATTR_UNLIKELY {
       if (size < 8)
@@ -192,8 +195,9 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
     copy_block_and_bump_pointers<2>(dst, src);
 }
 
-[[maybe_unused]] LIBC_INLINE void inline_memcpy_arm(Ptr dst, CPtr src,
-                                                    size_t size) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(memcpy) void inline_memcpy_arm(Ptr dst,
+                                                                  CPtr src,
+                                                                  size_t size) {
   // The compiler performs alias analysis and is able to prove that `dst` and
   // `src` do not alias by propagating the `__restrict` keyword from the
   // `memcpy` prototype. This allows the compiler to merge consecutive

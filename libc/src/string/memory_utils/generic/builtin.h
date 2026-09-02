@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BUILTIN_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BUILTIN_H
 
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_BUILTIN_IMPL
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/string/memory_utils/utils.h" // Ptr, CPtr
 
@@ -23,8 +23,8 @@ namespace LIBC_NAMESPACE_DECL {
 #error "Builtin not defined"
 #endif
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_builtin(Ptr dst, CPtr src, size_t count, size_t offset = 0) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(memcpy) void inline_memcpy_builtin(
+    Ptr dst, CPtr src, size_t count, size_t offset = 0) {
   __builtin_memcpy(dst + offset, src + offset, count);
 }
 

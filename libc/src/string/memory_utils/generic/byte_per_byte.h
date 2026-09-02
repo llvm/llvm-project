@@ -12,7 +12,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BYTE_PER_BYTE_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BYTE_PER_BYTE_H
 
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE, LIBC_BUILTIN_IMPL
 #include "src/__support/macros/optimization.h" // LIBC_LOOP_NOUNROLL
 #include "src/string/memory_utils/utils.h"     // Ptr, CPtr
 
@@ -20,9 +20,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_byte_per_byte(Ptr dst, CPtr src, size_t count,
-                            size_t offset = 0) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(memcpy) void inline_memcpy_byte_per_byte(
+    Ptr dst, CPtr src, size_t count, size_t offset = 0) {
   LIBC_LOOP_NOUNROLL
   for (; offset < count; ++offset)
     dst[offset] = src[offset];
