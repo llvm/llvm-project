@@ -1976,6 +1976,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::nxv4bf16})
       setOperationAction(ISD::VECTOR_REPEAT, VT, Custom);
 
+    // VECTOR_REPEAT to nxv1 types is just a VECTOR_SPLAT
+    for (auto VT : {MVT::nxv1f16, MVT::nxv1f32, MVT::nxv1f64, MVT::nxv1bf16,
+                    MVT::nxv1i8, MVT::nxv1i16, MVT::nxv1i32, MVT::nxv1i64})
+      setOperationAction(ISD::VECTOR_REPEAT, VT, Custom);
+
     if (Subtarget->hasSVEB16B16() &&
         Subtarget->isNonStreamingSVEorSME2Available()) {
       // Note: Use SVE for bfloat16 operations when +sve-b16b16 is available.
@@ -32635,6 +32640,18 @@ void AArch64TargetLowering::ReplaceNodeResults(
     SDLoc DL(N);
     SDValue V = DAG.getNode(ISD::VECTOR_MATCH, DL, NewVT, N->ops());
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
+    return;
+  }
+  case ISD::VECTOR_REPEAT: {
+    EVT VT = N->getValueType(0);
+    assert(VT.getVectorElementCount() == ElementCount::getScalable(1) &&
+           "Expected an nxv1 type!");
+
+    SDLoc DL(N);
+    SDValue Elt =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT.getVectorElementType(),
+                    N->getOperand(0), DAG.getVectorIdxConstant(0, DL));
+    Results.push_back(DAG.getSplatVector(VT, DL, Elt));
     return;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
