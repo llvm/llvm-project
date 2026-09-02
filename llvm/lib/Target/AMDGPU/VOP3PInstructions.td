@@ -1640,6 +1640,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                         bit _Scale16 = 0, bit _HasMatrixReuse = 0, bit _IsF4 = 0,
                         bit _NoABMods = 0>
     : VOP3P_Profile<VOPProfile<ArgTy>> {
+  code CoExecVariant = [{ WMMAVariant::Unknown }];
   bit IsIU = _IsIU;
   bit NoABMods = !or(_IsFP8BF8, _IsF4, _NoABMods); // No IMOD support for A and B
 
@@ -1889,7 +1890,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 def WMMAInstInfoTable : GenericTable {
   let FilterClass = "WMMAInstInfo";
   let CppTypeName = "WMMAInstInfo";
-  let Fields = ["Opcode", "is_wmma_xdl", "HasMatrixScale"];
+  let Fields = ["Opcode", "is_wmma_xdl", "HasMatrixScale", "CoExecVariant"];
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getWMMAInstInfoHelper";
@@ -1899,6 +1900,7 @@ class WMMAInstInfo<VOP3PWMMA_Profile WMMAProfile> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit is_wmma_xdl = 0;
   bit HasMatrixScale = WMMAProfile.HasMatrixScale;
+  code CoExecVariant = WMMAProfile.CoExecVariant;
 }
 
 multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix, bit DiffVdstSrc2 = 0> {
@@ -1974,19 +1976,23 @@ def I32_IU4X16_WMMA_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], /*_IsS
 def F32_FP8BF8_WMMA_w64 : VOP3PWMMA_Profile<[v4f32,   i32,   i32, v4f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/1>; // 4xf8
 def I32_IU4X32_WMMA_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/1, /*_IsFP8BF8=*/0>; // 8xi4
 
+let CoExecVariant = [{ WMMAVariant::F16BF16_16x16x32 }] in {
 def F32_F16_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v8f16, v16f16, v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8=*/0>;
 def F32_BF16_SWMMAC_w32   : VOP3PWMMA_Profile<[v8f32, v8i16, v16i16, v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8=*/0>;
 def F16_F16_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f16, v8f16, v16f16, v8f16], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8=*/0>;
 def BF16_BF16_SWMMAC_w32  : VOP3PWMMA_Profile<[v8i16, v8i16, v16i16, v8i16], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8=*/0>;
+}
 def I32_IU8_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v2i32,  v4i32, v8i32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/1, /*_IsFP8BF8=*/0>; // 8xi8, 16xi8
 def I32_IU4X32_SWMMAC_w32 : VOP3PWMMA_Profile<[v8i32,   i32,  v2i32, v8i32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/1, /*_IsFP8BF8=*/0>; // 8xi4, 16xi4
 def I32_IU4X64_SWMMAC_w32 : VOP3PWMMA_Profile<[v8i32, v2i32,  v4i32, v8i32], /*_IsSWMMAC=*/1, /*_IndexType=*/0,  /*_IsIU=*/1, /*_IsFP8BF8=*/0>; // 16xi4, 32xi4 **
 def F32_FP8BF8_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f32, v2i32,  v4i32, v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8=*/1>; // 8xf8, 16xf8
 
+let CoExecVariant = [{ WMMAVariant::F16BF16_16x16x32 }] in {
 def F32_F16_SWMMAC_w64    : VOP3PWMMA_Profile<[v4f32, v4f16, v8f16, v4f32], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/0, /*_IsFP8BF8=*/0>;
 def F32_BF16_SWMMAC_w64   : VOP3PWMMA_Profile<[v4f32, v4i16, v8i16, v4f32], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/0, /*_IsFP8BF8=*/0>;
 def F16_F16_SWMMAC_w64    : VOP3PWMMA_Profile<[v4f16, v4f16, v8f16, v4f16], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/0, /*_IsFP8BF8=*/0>;
 def BF16_BF16_SWMMAC_w64  : VOP3PWMMA_Profile<[v4i16, v4i16, v8i16, v4i16], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/0, /*_IsFP8BF8=*/0>;
+}
 def I32_IU8_SWMMAC_w64    : VOP3PWMMA_Profile<[v4i32,   i32, v2i32, v4i32], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/1, /*_IsFP8BF8=*/0>; // 4xi8, 8xi8
 def I32_IU4X32_SWMMAC_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/1, /*_IsFP8BF8=*/0>; // 8xi4, 8xi4 ***
 def I32_IU4X64_SWMMAC_w64 : VOP3PWMMA_Profile<[v4i32,   i32, v2i32, v4i32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/1, /*_IsFP8BF8=*/0>; // 8xi4, 16xi4
@@ -2002,6 +2008,7 @@ def F64_F64X4_WMMA_w32           : VOP3PWMMA_Profile<[v8f64, v2f64,    v2f64,   
 def F32_F32_WMMA_w32             : VOP3PWMMA_Profile<[v8f32, v2f32,    v2f32,    v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/0,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1, /*_IsF4*/0,
                                      /*_NoABMods*/1>;
+let CoExecVariant = [{ WMMAVariant::F16BF16_16x16x32 }] in {
 def F32_BF16X32_WMMA_w32         : VOP3PWMMA_Profile<[v8f32, v16bf16,  v16bf16,  v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/0,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1, /*_IsF4*/0,
                                      /*_NoABMods*/1>;
@@ -2017,22 +2024,30 @@ def BF16_BF16X32_WMMA_w32        : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, 
 def BF16F32_BF16_WMMA_w32        : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16,  v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/0,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1, /*_IsF4*/0,
                                      /*_NoABMods*/1>;
+}
+let CoExecVariant = [{ WMMAVariant::FP8BF8_16x16x64 }] in {
 def F32_FP8BF8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8f32, v8i32,    v8i32,    v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/1,
-                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
-def F32_FP8BF8X128_WMMA_w32      : VOP3PWMMA_Profile<[v8f32, v16i32,   v16i32,   v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/1,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 def F16_FP8BF8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8f16, v8i32,    v8i32,    v8f16], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/1,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+}
+let CoExecVariant = [{ WMMAVariant::FP8BF8_16x16x128 }] in {
+def F32_FP8BF8X128_WMMA_w32      : VOP3PWMMA_Profile<[v8f32, v16i32,   v16i32,   v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/1,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 def F16_FP8BF8X128_WMMA_w32      : VOP3PWMMA_Profile<[v8f16, v16i32,   v16i32,   v8f16], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/1,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+}
+let CoExecVariant = [{ WMMAVariant::F4_32x16x128 }] in {
 def F32_32X16X128_F4_WMMA_w32    : VOP3PWMMA_Profile<[v16f32, v16i32,  v8i32,   v16f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/0,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/0, /*_IsF4=*/1>;
-def I32_IU8X64_WMMA_w32          : VOP3PWMMA_Profile<[v8i32, v8i32,    v8i32,    v8i32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/1, /*_IsFP8BF8=*/0,
-                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 def F32_32X16X128_F4_SCALE_w32   : VOP3PWMMA_Profile<[v16f32, v16i32,  v8i32,   v16f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0,  /*_IsIU=*/0, /*_IsFP8BF8=*/1,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/1, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 def F32_32X16X128_F4_SCALE16_w32 : VOP3PWMMA_Profile<[v16f32, v16i32,  v8i32,   v16f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0,  /*_IsIU=*/0, /*_IsFP8BF8=*/1,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/1, /*_Scale16=*/1, /*_HasMatrixReuse=*/1>;
+}
+let CoExecVariant = [{ WMMAVariant::IU8_16x16x64 }] in
+def I32_IU8X64_WMMA_w32          : VOP3PWMMA_Profile<[v8i32, v8i32,    v8i32,    v8i32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/1, /*_IsFP8BF8=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 def F32_F16X64_SWMMAC_w32        : VOP3PWMMA_Profile<[v8f32, v16f16,   v32f16,   v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8=*/0,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 def F32_BF16X64_SWMMAC_w32       : VOP3PWMMA_Profile<[v8f32, v16bf16,  v32bf16,  v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8=*/0,
@@ -2041,10 +2056,12 @@ def F16_F16X64_SWMMAC_w32        : VOP3PWMMA_Profile<[v8f16, v16f16,   v32f16,  
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 def BF16_BF16X64_SWMMAC_w32      : VOP3PWMMA_Profile<[v8bf16, v16bf16, v32bf16, v8bf16], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8=*/0,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+let CoExecVariant = [{ WMMAVariant::FP8BF8_16x16x128 }] in {
 def F32_FP8BF8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v8i32,    v16i32,   v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/32, /*_IsIU=*/0, /*_IsFP8BF8=*/1,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 def F16_FP8BF8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f16, v8i32,    v16i32,   v8f16], /*_IsSWMMAC=*/1, /*_IndexType=*/32, /*_IsIU=*/0, /*_IsFP8BF8=*/1,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+}
 def I32_IU8X128_SWMMAC_w32       : VOP3PWMMA_Profile<[v8i32, v8i32,    v16i32,   v8i32], /*_IsSWMMAC=*/1, /*_IndexType=*/32, /*_IsIU=*/1, /*_IsFP8BF8=*/0,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 
@@ -2081,9 +2098,11 @@ multiclass WMMA_F8F6F4_Profiles<ValueType DstEltTy, int M, int N, int K,
   }
 }
 
-defm F32_16X16X128_F8F6F4         : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0>;
-defm F32_16X16X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1>;
-defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
+let CoExecVariant = [{ WMMAVariant::F8F6F4_16x16x128 }] in {
+  defm F32_16X16X128_F8F6F4         : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/0, /*Scale16=*/0, /*HasMatrixReuse=*/0>;
+  defm F32_16X16X128_F8F6F4_SCALE   : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/0, /*HasMatrixReuse=*/1>;
+  defm F32_16X16X128_F8F6F4_SCALE16 : WMMA_F8F6F4_Profiles<f32, /*M=*/16, /*N=*/16, /*K=*/128, /*HasMatrixScale=*/1, /*Scale16=*/1, /*HasMatrixReuse=*/1>;
+}
 
 class VOP_WMMA_LD_SCALE<ValueType vt, RegisterOperand RC> : VOP3P_Profile<VOPProfile<[untyped, vt, vt, untyped]>> {
   let HasMatrixScale = 1;
