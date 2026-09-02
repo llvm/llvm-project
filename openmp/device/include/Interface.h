@@ -357,6 +357,10 @@ void __kmpc_taskloop(IdentTy *Loc, uint32_t TId,
 int32_t __kmpc_cancellationpoint(IdentTy *Loc, int32_t TId, int32_t CancelVal);
 
 int32_t __kmpc_cancel(IdentTy *Loc, int32_t TId, int32_t CancelVal);
+
+/// Report a user-directed error. \p Severity matches kmp_severity_t: 1 is a
+/// warning and execution continues, 2 is fatal and execution aborts.
+void __kmpc_error(IdentTy *Loc, int32_t Severity, const char *Message);
 ///}
 
 /// Shuffle

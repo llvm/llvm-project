@@ -77,6 +77,18 @@ int32_t __kmpc_cancellationpoint(IdentTy *, int32_t, int32_t) { return 0; }
 
 int32_t __kmpc_cancel(IdentTy *, int32_t, int32_t) { return 0; }
 
+// TODO: Report the source location from Loc->psource like the host runtime.
+void __kmpc_error(IdentTy *, int32_t Severity, const char *Message) {
+  const char *Kind = Severity == 1 ? "warning" : "error";
+  if (Message)
+    ompx::printf("OMP: Encountered user-directed %s: %s.\n", Kind, Message);
+  else
+    ompx::printf("OMP: Encountered user-directed %s.\n", Kind);
+
+  if (Severity != 1)
+    __builtin_trap();
+}
+
 double omp_get_wtick(void) {
   // The number of ticks per second for the AMDGPU clock varies by card and can
   // only be retrieved by querying the driver. We rely on the device environment
