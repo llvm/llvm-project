@@ -81,11 +81,21 @@ struct CIRRecordLowering final {
   }
 
   /// An access unit can be narrower than the types its bit-fields were
-  /// declared with, so the unit's extent does not say how far the declared
-  /// data runs.  This member carries the difference: the declared extent ends
-  /// \p excessInBits past \p offset.  It holds no storage, taking the same
-  /// zero-length-array shape as a zero-width bit-field so the record layout
-  /// walks skip it.
+  /// declared with.  In `struct { int a : 4; int b : 11; int c : 17; }` all
+  /// three share one 4-byte unit, but `c` is declared `int`, so the declared
+  /// data runs 15 bits past the unit:
+  ///
+  ///   |-a-|----b-----|-------c--------|
+  ///   |--------- 4-byte unit ---------|--- extent ---|
+  ///                  |------ c declared as int ------|
+  ///   0   4          15               32             47  bits
+  ///
+  /// This member records that excess, rounded up to 2 bytes:
+  ///
+  ///   {bitfield !u32i, bitfield !cir.array<!cir.array<!u8i x 2> x 0>}
+  ///
+  /// It takes the same shape as a zero-width bit-field, so the layout walks
+  /// skip it.
   ///
   /// \p excessInBits is measured from \p offset, not from the start of the
   /// access unit.  A zero-sized member takes the offset where the preceding

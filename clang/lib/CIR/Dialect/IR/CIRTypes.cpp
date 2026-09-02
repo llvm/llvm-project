@@ -26,6 +26,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -570,6 +571,20 @@ void UnionType::complete(ArrayRef<Type> members, bool packed,
     llvm_unreachable("failed to complete union");
 }
 
+namespace {
+struct OccupiesStorage {
+  /// A member occupying no storage cannot be a union's storage.
+  template <typename MemberT> bool operator()(const MemberT &m) const {
+    return !isZeroWidthBitField(std::get<0>(m), std::get<1>(m));
+  }
+};
+struct MemberTypeOf {
+  template <typename MemberT> mlir::Type operator()(const MemberT &m) const {
+    return std::get<0>(m);
+  }
+};
+} // namespace
+
 mlir::Type
 UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout) const {
   return getUnionStorageType(dataLayout, getMembers(), getMemberKinds());
@@ -579,20 +594,18 @@ mlir::Type
 UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout,
                                llvm::ArrayRef<mlir::Type> members,
                                llvm::ArrayRef<RecordMemberKind> kinds) {
-  // A member occupying no storage cannot be the storage.
-  mlir::Type storage;
-  for (auto [memberTy, kind] : llvm::zip_equal(members, kinds)) {
-    if (isZeroWidthBitField(memberTy, kind))
-      continue;
-    if (!storage ||
-        dataLayout.getTypeABIAlignment(storage) <
-            dataLayout.getTypeABIAlignment(memberTy) ||
-        (dataLayout.getTypeABIAlignment(storage) ==
-             dataLayout.getTypeABIAlignment(memberTy) &&
-         dataLayout.getTypeSize(storage) < dataLayout.getTypeSize(memberTy)))
-      storage = memberTy;
-  }
-  return storage;
+  auto withKinds = llvm::zip_equal(members, kinds);
+  auto candidates = llvm::map_range(
+      llvm::make_filter_range(withKinds, OccupiesStorage{}), MemberTypeOf{});
+  if (candidates.empty())
+    return {};
+  return *llvm::max_element(candidates, [&](mlir::Type lhs, mlir::Type rhs) {
+    return dataLayout.getTypeABIAlignment(lhs) <
+               dataLayout.getTypeABIAlignment(rhs) ||
+           (dataLayout.getTypeABIAlignment(lhs) ==
+                dataLayout.getTypeABIAlignment(rhs) &&
+            dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
+  });
 }
 
 bool UnionType::isLayoutIdentical(const UnionType &other) {
