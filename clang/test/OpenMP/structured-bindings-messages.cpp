@@ -461,6 +461,26 @@ void test_udr_reduction() {
   }
 }
 
+void test_linear_clause_parallel_for_simd() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{linear clause with parallel constructs on structured bindings is not yet supported}}
+#pragma omp parallel for simd linear(a : 1)
+  for (int i = 0; i < 10; ++i)
+    b += a;
+  // Note: This also fails for regular variables (pre-existing Clang bug)
+}
+
+void test_linear_clause_parallel_for() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{linear clause with parallel constructs on structured bindings is not yet supported}}
+#pragma omp parallel for linear(a : 1)
+  for (int i = 0; i < 10; ++i)
+    b += a;
+  // Note: This also fails for regular variables (pre-existing Clang bug)
+}
+
 struct Triple { int x, y, z; };
 
 void test_bindings_only_orig_not_dereferenced() {
