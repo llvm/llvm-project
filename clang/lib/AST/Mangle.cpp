@@ -289,7 +289,8 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   mangleNameIgnoringAsmLabel(GD, Out);
 }
 
-void MangleContext::mangleNameIgnoringAsmLabel(GlobalDecl GD, raw_ostream &Out) {
+void MangleContext::mangleNameIgnoringAsmLabel(GlobalDecl GD,
+                                               raw_ostream &Out) {
   const ASTContext &ASTContext = getASTContext();
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
 
