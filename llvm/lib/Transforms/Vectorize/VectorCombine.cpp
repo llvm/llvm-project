@@ -2300,6 +2300,9 @@ bool VectorCombine::scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy,
       TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
                           LI->getPointerAddressSpace(), CostKind);
 
+  if (!isa<FixedVectorType>(VecTy))
+    return false;
+
   Type *TargetScalarType = nullptr;
   unsigned VecBitWidth = DL->getTypeSizeInBits(VecTy);
 
