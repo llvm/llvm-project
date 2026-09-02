@@ -33,12 +33,12 @@ using namespace ento;
 void ExprEngine::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *MTE, ExplodedNode *Pred,
     ExplodedNodeSet &Dst) {
-  const Expr *tempExpr = MTE->getSubExpr()->IgnoreParens();
-  ProgramStateRef state = Pred->getState();
+  const Expr *TempExpr = MTE->getSubExpr()->IgnoreParens();
+  ProgramStateRef State = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
-  state = createTemporaryRegionIfNeeded(state, SF, tempExpr, MTE);
-  Dst.insert(Engine.makePostStmtNode(MTE, state, Pred));
+  State = createTemporaryRegionIfNeeded(State, SF, TempExpr, MTE);
+  Dst.insert(Engine.makePostStmtNode(MTE, State, Pred));
 }
 
 void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
