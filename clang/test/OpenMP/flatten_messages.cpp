@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=61 -fsyntax-only -Wuninitialized -verify=expected,omp61 %s
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=60 -fsyntax-only -Wuninitialized -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=61 -fsyntax-only -Wall -Wuninitialized -verify=expected,omp61 %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=60 -fsyntax-only -Wall -Wuninitialized -verify=expected %s
 
 extern "C" void body(...);
 
@@ -83,7 +83,7 @@ void func(int n) {
   // Without a depth clause, only the outermost two loops are flattened. Warn
   // when a deeper perfect nest is left partially unflattened.
   // expected-warning@+2 {{'flatten' without a 'depth' clause only combines 2 loops, but 3 or more loops are perfectly nested}}
-  // omp61-note@+1 {{add 'depth(2)' to silence this warning and make it explicit that only the two outermost loops are flattened}}
+  // omp61-note@+1 {{add 'depth(2)' to make it explicit that only the two outermost loops are flattened and to silence this warning}}
   #pragma omp flatten
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j)
@@ -104,7 +104,7 @@ void func(int n) {
   // flatten does not see a perfect nest of remaining loops.
   #pragma omp flatten
   // expected-warning@+2 {{'flatten' without a 'depth' clause only combines 2 loops, but 3 or more loops are perfectly nested}}
-  // omp61-note@+1 {{add 'depth(2)' to silence this warning and make it explicit that only the two outermost loops are flattened}}
+  // omp61-note@+1 {{add 'depth(2)' to make it explicit that only the two outermost loops are flattened and to silence this warning}}
   #pragma omp flatten
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j)
@@ -124,8 +124,6 @@ void func(int n) {
   // A compile-time-constant empty inner loop flattens to zero
   // iterations. 
   #pragma omp flatten
-  // expected-warning@+2 {{division by zero is undefined}}
-  // expected-warning@+1 {{remainder by zero is undefined}}
   for (int i = 0; i < 3; ++i)
     for (int j = 0; j < 0; ++j)
       body(i, j);
@@ -134,5 +132,12 @@ void func(int n) {
   #pragma omp flatten
   for (int i = 0; i < 0; ++i)
     for (int j = 0; j < 3; ++j)
+      body(i, j);
+
+  // Unsigned empty inner: skip the signed `N < 0` clamp (would warn under
+  // -Wall) and still do not divide by zero.
+  #pragma omp flatten
+  for (unsigned i = 0; i < 3u; ++i)
+    for (unsigned j = 0; j < 0u; ++j)
       body(i, j);
 }

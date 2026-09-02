@@ -698,6 +698,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### OpenMP Support
 
+- Added the OpenMP 6.1 `#pragma omp flatten` loop transformation and the
+  `depth` clause. Flatten combines perfectly nested canonical loops into one
+  loop. `depth(k)` selects how many outermost loops to combine (default 2).
 - Added parsing and semantic support for `dims` modifier in `num_teams`,
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper

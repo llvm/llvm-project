@@ -16626,7 +16626,7 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
 
   // Collect pre-init statements in outer-to-inner order.
   SmallVector<Stmt *> PreInits;
-  for (auto I : llvm::seq<int>(NumLoops)) {
+  for (auto I : llvm::seq<unsigned>(NumLoops)) {
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
     assert(LoopHelper.Counters.size() == 1 &&
            "Single-dimensional loop iteration space expected");
@@ -16652,6 +16652,8 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   // yields -1). Clamp each count to max(0, N) before multiplying; otherwise two
   // empty loops give a positive product and the flattened body runs.
   auto ClampNonNegative = [&](Expr *Cmp, Expr *Val) -> ExprResult {
+    if (Val->getType()->isUnsignedIntegerType())
+      return Val;
     QualType Ty = Val->getType();
     ExprResult ZeroLT = SemaRef.PerformImplicitConversion(
         SemaRef.ActOnIntegerConstant(CondLoc, 0).get(), Ty,
@@ -16731,6 +16733,28 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
         /*AllowExplicit=*/true));
   };
 
+  // Divisors in index recovery use max(1, N) so a zero trip count does not
+  // warn.
+  auto MakeDivisorInIVTy = [&](unsigned I) -> Expr * {
+    Expr *N = MakeNumIterationsInIVTy(I);
+    Expr *NCmp = MakeNumIterationsInIVTy(I);
+    auto MakeOne = [&]() -> ExprResult {
+      return SemaRef.PerformImplicitConversion(
+          SemaRef.ActOnIntegerConstant(CondLoc, 1).get(), IVTy,
+          AssignmentAction::Converting, /*AllowExplicit=*/true);
+    };
+    ExprResult OneCmp = MakeOne();
+    ExprResult OneVal = MakeOne();
+    if (!OneCmp.isUsable() || !OneVal.isUsable())
+      return N;
+    ExprResult TooSmall =
+        SemaRef.BuildBinOp(CurScope, CondLoc, BO_LT, NCmp, OneCmp.get());
+    if (!TooSmall.isUsable())
+      return N;
+    return AssertSuccess(SemaRef.ActOnConditionalOp(
+        CondLoc, CondLoc, TooSmall.get(), OneVal.get(), N));
+  };
+
   // \code{.cpp}
   //   for (auto .flatten.iv = 0; .flatten.iv < n0 * n1 * ...; ++.flatten.iv) {
   //     .flatten.iv.0 = .flatten.iv / (n1 * ...);
@@ -16792,10 +16816,10 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
 
     ExprResult Value = MakeFlattenedRef();
     if (I + 1 < NumLoops) {
-      ExprResult Divisor = MakeNumIterationsInIVTy(I + 1);
+      ExprResult Divisor = MakeDivisorInIVTy(I + 1);
       for (unsigned J = I + 2; J < NumLoops; ++J) {
         Divisor = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Mul,
-                                     Divisor.get(), MakeNumIterationsInIVTy(J));
+                                     Divisor.get(), MakeDivisorInIVTy(J));
         if (!Divisor.isUsable())
           return StmtError();
       }
@@ -16806,7 +16830,7 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
     }
     if (I > 0) {
       Value = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Rem, Value.get(),
-                                 MakeNumIterationsInIVTy(I));
+                                 MakeDivisorInIVTy(I));
       if (!Value.isUsable())
         return StmtError();
     }
