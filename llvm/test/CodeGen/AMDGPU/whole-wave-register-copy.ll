@@ -6,8 +6,9 @@
 ; by introducing a copy to AGPR register. The VGPR store to AGPR (v_accvgpr_write_b32) and later the
 ; restore from AGPR (v_accvgpr_read_b32) should be whole-wave operations and hence exec mask should be
 ; manipulated to ensure all lanes are active when these instructions are executed.
-; The profiled loop makes stack spills sufficiently expensive to select this split
-; with the default CSR cost model.
+; With the default CSR cost model, an unprofiled single call is too cold to
+; select this split. The profiled loop models repeated execution and makes the
+; stack spills sufficiently expensive.
 define void @vector_reg_liverange_split() #0 {
 ; GFX90A-LABEL: vector_reg_liverange_split:
 ; GFX90A:       ; %bb.0: ; %entry

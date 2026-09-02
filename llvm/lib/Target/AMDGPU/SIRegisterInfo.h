@@ -107,11 +107,7 @@ public:
   // lanes (not even inactive ones).
   static bool isChainScratchRegister(Register VGPR);
 
-  // Stack access is very expensive. CSRs are also the high registers, and we
-  // want to minimize the number of used registers.
-  unsigned getCSRFirstUseCost(const MachineFunction &) const override {
-    return 27;
-  }
+  unsigned getCSRFirstUseCost(const MachineFunction &MF) const override;
 
   // When building a block VGPR load, we only really transfer a subset of the
   // registers in the block, based on a mask. Liveness analysis is not aware of
