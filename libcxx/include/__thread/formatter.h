@@ -61,7 +61,8 @@ public:
     return __formatter::__format_integer(reinterpret_cast<_Cp>(__get_underlying_id(__id)), __ctx, __specs);
   }
 
-  __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__right};
+  __format_spec::__parser<_CharT> __parser_ = {
+      __format_spec::__parser_data<_CharT>{.__alignment_ = __format_spec::__alignment::__right}};
 };
 
 #  endif // _LIBCPP_HAS_THREADS

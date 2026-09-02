@@ -2,7 +2,7 @@
 
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
-!rec_S = !cir.struct<"S" {!s32i, !cir.array<!s8i x 0>}>
+!rec_S = !cir.struct<"S" {data !s32i, data !cir.array<!s8i x 0>}>
 
 // A flexible array member is declared as a zero-length array, but its
 // initializer may be a larger array of the *same element type*. The verifier

@@ -254,9 +254,22 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
   return Plugin::success();
 }
 
-LevelZeroPluginContextTy::~LevelZeroPluginContextTy() {
-  if (OwnsZeContext && ZeContext)
-    zeContextDestroy(ZeContext);
+Error LevelZeroPluginContextTy::initAsyncInfoImpl(
+    GenericDeviceTy &Device, AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  auto &L0Device = static_cast<L0DeviceTy &>(Device);
+  auto QueueOrErr = L0Device.getOrCreateQueue(AsyncInfoWrapper, this);
+  return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
+}
+
+Error LevelZeroPluginContextTy::deinit() {
+  if (auto Err = QueueCache.deinit())
+    return Err;
+  if (OwnsZeContext && ZeContext) {
+    CALL_ZE_RET_ERROR(zeContextDestroy, ZeContext);
+    ZeContext = nullptr;
+    OwnsZeContext = false;
+  }
+  return Plugin::success();
 }
 
 Expected<std::unique_ptr<PluginContextTy>>

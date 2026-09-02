@@ -1,0 +1,161 @@
+# Generated from:
+#
+#   __attribute__((always_inline)) static int inner(int x) {
+#     int y = x * 3;
+#     return y + 7;
+#   }
+#
+#   int outer(int x) { return inner(x) + 1; }
+#
+#   clang --target=x86_64-pc-linux -gdwarf-4 -O0 -c inl.cpp -o inl.o
+#   obj2yaml inl.o
+#
+# -O0 keeps the inlined body from being folded away, so the CU contains exactly
+# one DW_TAG_inlined_subroutine. Sections not needed to parse blocks (.comment,
+# .note.GNU-stack, .eh_frame, .llvm_addrsig) have been dropped by hand.
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         554889E5897DF48B45F48945FC6B45FC038945F88B45F883C00783C0015DC3
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         011101250E1305030E10171B0E110112060000022E016E0E030E3A0B3B0B4913200B0000030500030E3A0B3B0B49130000043400030E3A0B3B0B49130000052400030E3E0B0B0B0000062E011101120640186E0E030E3A0B3B0B49133F1900000705000218030E3A0B3B0B49130000081D01311311011206580B590B570B00000905000218311300000A340002183113000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         A6000000040000000000080100000000210000000000000000000000000000000000000000001F000000020000000000000000010151000000010300000000010151000000040000000001025100000000050000000005040600000000000000001F000000015600000000000000000106510000000702917400000000010651000000082A00000000000000000000000D00000001061B0902917C3A0000000A02917845000000000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         5200000004001F000000010101FB0E0D00010101010000000100000100696E6C2E637070000000000000090200000000000000001705210A74050D620507064A050A063D050C063C0524063F0514060B3C0202000101
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x6
+        Symbol:          .debug_abbrev
+        Type:            R_X86_64_32
+      - Offset:          0xC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+      - Offset:          0x12
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          102
+      - Offset:          0x16
+        Symbol:          .debug_line
+        Type:            R_X86_64_32
+      - Offset:          0x1A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          110
+      - Offset:          0x1E
+        Symbol:          .text
+        Type:            R_X86_64_64
+      - Offset:          0x2B
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          115
+      - Offset:          0x2F
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          126
+      - Offset:          0x3B
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          136
+      - Offset:          0x46
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          138
+      - Offset:          0x52
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          132
+      - Offset:          0x59
+        Symbol:          .text
+        Type:            R_X86_64_64
+      - Offset:          0x67
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          140
+      - Offset:          0x6B
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          150
+      - Offset:          0x79
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          136
+      - Offset:          0x88
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          13
+  - Name:            .rela.debug_line
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_line
+    Relocations:
+      - Offset:          0x2C
+        Symbol:          .text
+        Type:            R_X86_64_64
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .debug_abbrev
+      - Name:            .debug_info
+      - Name:            .rela.debug_info
+      - Name:            .debug_str
+      - Name:            .debug_line
+      - Name:            .rela.debug_line
+      - Name:            .symtab
+Symbols:
+  - Name:            inl.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            _Z5outeri
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x1F
+DWARF:
+  debug_str:
+    - 'clang version 21.0.0 (git@github.com:apple/llvm-project.git 93469d2c8423636a21cf023a0994c63f526b6432)'
+    - inl.cpp
+    - '/tmp'
+    - _ZL5inneri
+    - inner
+    - int
+    - x
+    - y
+    - _Z5outeri
+    - outer
+...

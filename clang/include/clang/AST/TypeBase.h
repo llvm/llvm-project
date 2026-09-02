@@ -1635,6 +1635,9 @@ public:
   /// Strip Objective-C "__kindof" types from the given type.
   QualType stripObjCKindOfType(const ASTContext &ctx) const;
 
+  /// Strip nullability attributes from the given type.
+  QualType stripNullability(const ASTContext &ctx) const;
+
   /// Remove all qualifiers including _Atomic.
   ///
   /// Like getUnqualifiedType(), the type may still be qualified if it is a
@@ -2804,6 +2807,9 @@ public:
   // User-defined HLSL records or arrays of such records in standard layout
   bool isHLSLStandardLayoutRecordOrArrayOf() const;
 
+#define SPIRV_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
+#include "clang/Basic/SPIRVTypes.def"
+
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
   /// than implicitly __strong.
@@ -2813,6 +2819,12 @@ public:
   bool isCUDADeviceBuiltinSurfaceType() const;
   /// Check if the type is the CUDA device builtin texture type.
   bool isCUDADeviceBuiltinTextureType() const;
+
+  /// Check if the type is the AMDGPU named barrier type, or an array thereof.
+  bool isAMDGPUNamedBarrierType() const;
+  /// Check if the type is the AMDGPU named barrier type/a RecordType of a named
+  /// barrier wrapper, or an array thereof.
+  bool isAMDGPUNamedBarrierTypeOrWrapper() const;
 
   /// Return the implicit lifetime for this type, which must not be dependent.
   Qualifiers::ObjCLifetime getObjCARCImplicitLifetime() const;
@@ -3253,6 +3265,9 @@ public:
 // HLSL intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/HLSLIntangibleTypes.def"
+// SPIRV types
+#define SPIRV_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/SPIRVTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -6500,7 +6515,7 @@ class UnaryTransformType : public Type, public llvm::FoldingSetNode {
 public:
   enum UTTKind {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, _) Enum,
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   };
 
 private:
@@ -6882,33 +6897,37 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsArray : 1;
 
-    LLVM_PREFERRED_TYPE(bool)
-    uint8_t IsMultiSampled : 1;
+    /// The N in Texture2DMS<T, N>; null for every resource that is not
+    /// multisampled. A multisampled resource always carries a sample count,
+    /// defaulting to 0, which means the count comes from the bound resource
+    /// at runtime rather than denoting zero samples.
+    Expr *SampleCountExpr;
 
     Attributes(llvm::dxil::ResourceClass ResourceClass,
                llvm::dxil::ResourceDimension ResourceDimension,
                bool IsROV = false, bool RawBuffer = false,
                bool IsCounter = false, bool IsArray = false,
-               bool IsMultiSampled = false)
+               Expr *SampleCountExpr = nullptr)
         : ResourceClass(ResourceClass), ResourceDimension(ResourceDimension),
           IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter),
-          IsArray(IsArray), IsMultiSampled(IsMultiSampled) {}
+          IsArray(IsArray), SampleCountExpr(SampleCountExpr) {}
 
     Attributes(llvm::dxil::ResourceClass ResourceClass)
         : Attributes(ResourceClass, llvm::dxil::ResourceDimension::Unknown) {}
 
     Attributes()
         : Attributes(llvm::dxil::ResourceClass::UAV,
-                     llvm::dxil::ResourceDimension::Unknown, false, false,
-                     false, false, false) {}
+                     llvm::dxil::ResourceDimension::Unknown) {}
+
+    bool isMultiSampled() const { return SampleCountExpr != nullptr; }
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
       return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,
                       LHS.RawBuffer, LHS.IsCounter, LHS.IsArray,
-                      LHS.IsMultiSampled) ==
+                      LHS.SampleCountExpr) ==
              std::tie(RHS.ResourceClass, RHS.ResourceDimension, RHS.IsROV,
                       RHS.RawBuffer, RHS.IsCounter, RHS.IsArray,
-                      RHS.IsMultiSampled);
+                      RHS.SampleCountExpr);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6923,16 +6942,18 @@ private:
   const Attributes Attrs;
 
   HLSLAttributedResourceType(QualType Wrapped, QualType Contained,
-                             const Attributes &Attrs)
-      : Type(HLSLAttributedResource, QualType(),
-             Contained.isNull() ? TypeDependence::None
-                                : Contained->getDependence()),
-        WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+                             const Attributes &Attrs);
+
+  /// WrappedType is always __hlsl_resource_t, so it never contributes.
+  static TypeDependence computeDependence(QualType Contained,
+                                          const Attributes &Attrs);
 
 public:
   QualType getWrappedType() const { return WrappedType; }
   QualType getContainedType() const { return ContainedType; }
   bool hasContainedType() const { return !ContainedType.isNull(); }
+  Expr *getSampleCountExpr() const { return Attrs.SampleCountExpr; }
+  bool isMultiSampled() const { return Attrs.isMultiSampled(); }
   const Attributes &getAttrs() const { return Attrs; }
   bool isRaw() const { return Attrs.RawBuffer; }
   bool isStructured() const { return !ContainedType->isChar8Type(); }
@@ -6940,22 +6961,13 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, WrappedType, ContainedType, Attrs);
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
+    Profile(ID, Ctx, WrappedType, ContainedType, Attrs);
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
-                      QualType Contained, const Attributes &Attrs) {
-    ID.AddPointer(Wrapped.getAsOpaquePtr());
-    ID.AddPointer(Contained.getAsOpaquePtr());
-    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
-    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceDimension));
-    ID.AddBoolean(Attrs.IsROV);
-    ID.AddBoolean(Attrs.RawBuffer);
-    ID.AddBoolean(Attrs.IsCounter);
-    ID.AddBoolean(Attrs.IsArray);
-    ID.AddBoolean(Attrs.IsMultiSampled);
-  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                      QualType Wrapped, QualType Contained,
+                      const Attributes &Attrs);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == HLSLAttributedResource;
@@ -7366,10 +7378,10 @@ public:
 class AutoType : public DeducedType, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
-  TemplateDecl *TypeConstraintConcept;
+  TemplateName TypeConstraintConcept;
 
   AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
-           AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
+           AutoTypeKeyword Keyword, TemplateName TypeConstraintConcept,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
 public:
@@ -7378,13 +7390,11 @@ public:
             AutoTypeBits.NumArgs};
   }
 
-  TemplateDecl *getTypeConstraintConcept() const {
+  TemplateName getTypeConstraintConcept() const {
     return TypeConstraintConcept;
   }
 
-  bool isConstrained() const {
-    return TypeConstraintConcept != nullptr;
-  }
+  bool isConstrained() const { return !TypeConstraintConcept.isNull(); }
 
   bool isDecltypeAuto() const {
     return getKeyword() == AutoTypeKeyword::DecltypeAuto;
@@ -7401,7 +7411,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       DeducedKind DK, QualType Deduced, AutoTypeKeyword Keyword,
-                      TemplateDecl *CD, ArrayRef<TemplateArgument> Arguments);
+                      TemplateName CD, ArrayRef<TemplateArgument> Arguments);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto;
@@ -7423,6 +7433,9 @@ class DeducedTemplateSpecializationType : public KeywordWrapper<DeducedType>,
       : KeywordWrapper(Keyword, DeducedTemplateSpecialization, DK,
                        DeducedAsTypeOrCanon),
         Template(Template) {
+
+    assert(!Template.isNull());
+
     auto Dep = toTypeDependence(Template.getDependence());
     // A deduced AutoType only syntactically depends on its template name.
     if (DK == DeducedKind::Deduced)
@@ -9033,6 +9046,12 @@ inline bool Type::isOpenCLSpecificType() const {
     return isSpecificBuiltinType(BuiltinType::Id);                             \
   }
 #include "clang/Basic/HLSLIntangibleTypes.def"
+
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  inline bool Type::is##Id##Type() const {                                     \
+    return isSpecificBuiltinType(BuiltinType::Id);                             \
+  }
+#include "clang/Basic/SPIRVTypes.def"
 
 inline bool Type::isHLSLBuiltinIntangibleType() const {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) is##Id##Type() ||

@@ -151,8 +151,8 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
         continue;
 
       // Emit a warning.
-      auto D = Check.diag(FileDirectives[I].Loc,
-                          "#includes are not sorted properly");
+      const auto D = Check.diag(FileDirectives[I].Loc,
+                                "#includes are not sorted properly");
 
       // Emit fix-its for all following includes in this block.
       for (; I != E; ++I) {
@@ -169,7 +169,7 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
         const SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
         const char *ToData = SM.getCharacterData(ToLoc);
         const unsigned ToLen = std::strcspn(ToData, "\n");
-        auto ToRange =
+        const auto ToRange =
             CharSourceRange::getCharRange(ToLoc, ToLoc.getLocWithOffset(ToLen));
 
         D << FixItHint::CreateReplacement(ToRange, FixedName);

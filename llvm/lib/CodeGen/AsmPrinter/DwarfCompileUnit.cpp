@@ -526,13 +526,8 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
   if (emitFuncLineTableOffsets() && LineTableSym) {
     MCSymbol *Symbol =
         Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol();
-    if (isDwoUnit()) {
-      addSectionDelta(*SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
-                      Symbol);
-    } else {
-      addSectionLabel(*SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
-                      Symbol);
-    }
+    addSectionLabel(*SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
+                    Symbol);
   }
 
   // Only include DW_AT_frame_base in full debug info
@@ -648,12 +643,7 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
     const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
     const MCSymbol *RangeSectionSym =
         TLOF.getDwarfRangesSection()->getBeginSymbol();
-    if (isDwoUnit())
-      addSectionDelta(ScopeDIE, dwarf::DW_AT_ranges, List.Label,
-                      RangeSectionSym);
-    else
-      addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.Label,
-                      RangeSectionSym);
+    addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.Label, RangeSectionSym);
   }
 }
 

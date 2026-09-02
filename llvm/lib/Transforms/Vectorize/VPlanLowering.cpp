@@ -23,7 +23,6 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -40,8 +39,8 @@ using namespace SCEVPatternMatch;
 
 void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
-    TargetTransformInfo::TargetCostKind CostKind, ElementCount VF, unsigned UF,
-    const SmallPtrSetImpl<const Value *> &ValuesToIgnore) {
+    TargetTransformInfo::TargetCostKind CostKind, ElementCount VF,
+    unsigned UF) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   if (!LoopRegion)
     return;
@@ -87,7 +86,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   // Introduce a new VPWidenIntOrFpInductionRecipe if profitable.
   auto *VecTy = VectorType::get(CanIVTy, VF);
   InstructionCost BroadcastCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, {}, CostKind);
+      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, CostKind);
   InstructionCost PHICost = TTI.getCFInstrCost(Instruction::PHI, CostKind);
   if (PHICost > BroadcastCost)
     return;
@@ -95,7 +94,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   // Bail out if the additional wide induction phi increase the expected spill
   // cost.
   VPRegisterUsage UnrolledBase =
-      calculateRegisterUsageForPlan(Plan, VF, TTI, ValuesToIgnore)[0];
+      calculateRegisterUsageForPlan(Plan, VF, TTI)[0];
   for (unsigned &NumUsers : make_second_range(UnrolledBase.MaxLocalUsers))
     NumUsers *= UF;
   unsigned RegClass = TTI.getRegisterClassForType(/*Vector=*/true, VecTy);
@@ -118,7 +117,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
 // the loop terminator with a branch-on-cond recipe with the negated
-// active-lane-mask as operand. Note that this turns the loop into an
+// wide-active-lane-mask as operand. Note that this turns the loop into an
 // uncountable one. Only the existing terminator is replaced, all other existing
 // recipes/users remain unchanged, except for poison-generating flags being
 // dropped from the canonical IV increment. Return the created
@@ -128,15 +127,18 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 //
 // vector.ph:
 //   %EntryInc = canonical-iv-increment-for-part CanonicalIVStart
-//   %EntryALM = active-lane-mask %EntryInc, TC
+//   %EntryALM = wide-active-lane-mask %EntryInc, TC
+//   %EntryALMPart = extract-vector-for-part %EntryALM, ir<0>
 //
 // vector.body:
 //   ...
-//   %P = active-lane-mask-phi [ %EntryALM, %vector.ph ], [ %ALM, %vector.body ]
+//   %P = active-lane-mask-phi [ %EntryALMPart, %vector.ph ],
+//                             [ %ALMPart, %vector.body ]
 //   ...
 //   %InLoopInc = canonical-iv-increment-for-part CanonicalIVIncrement
-//   %ALM = active-lane-mask %InLoopInc, TC
-//   %Negated = Not %ALM
+//   %ALM = wide-active-lane-mask %InLoopInc, TC
+//   %ALMPart = extract-vector-for-part %ALM, ir<0>
+//   %Negated = Not %ALMPart
 //   branch-on-cond %Negated
 //
 static VPActiveLaneMaskPHIRecipe *
@@ -148,29 +150,22 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   // TODO: Check if dropping the flags is needed.
   TopRegion->clearCanonicalIVNUW(CanonicalIVIncrement);
   DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
-  // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
-  // we have to take unrolling into account. Each part needs to start at
-  //   Part * VF
   auto *VecPreheader = Plan.getVectorPreheader();
   VPBuilder Builder(VecPreheader);
-
-  // Create the ActiveLaneMask instruction using the correct start values.
   VPValue *TC = Plan.getTripCount();
-  VPValue *VF = &Plan.getVF();
 
-  auto *EntryIncrement =
-      Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
-                                  {StartV, VF}, {}, DL, "index.part.next");
-
-  // Create the active lane mask instruction in the VPlan preheader.
+  // Create the wide active lane mask instruction in the VPlan preheader.
   VPValue *ALMMultiplier =
       Plan.getConstantInt(TopRegion->getCanonicalIVType(), 1);
-  auto *EntryALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                        {EntryIncrement, TC, ALMMultiplier}, DL,
+  auto *EntryALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
+                                        {StartV, TC, ALMMultiplier}, DL,
                                         "active.lane.mask.entry");
+  EntryALM = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                                  {EntryALM, Plan.getConstantInt(64, 0)}, DL,
+                                  "extract.entry.alm.part");
 
   // Now create the ActiveLaneMaskPhi recipe in the main loop using the
-  // preheader ActiveLaneMask instruction.
+  // preheader WideActiveLaneMask instruction.
   auto *LaneMaskPhi =
       new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc::getUnknown());
   auto *HeaderVPBB = TopRegion->getEntryBasicBlock();
@@ -180,12 +175,12 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   // original terminator.
   VPRecipeBase *OriginalTerminator = EB->getTerminator();
   Builder.setInsertPoint(OriginalTerminator);
-  auto *InLoopIncrement = Builder.createOverflowingOp(
-      VPInstruction::CanonicalIVIncrementForPart,
-      {CanonicalIVIncrement, &Plan.getVF()}, {}, DL);
-  auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                   {InLoopIncrement, TC, ALMMultiplier}, DL,
-                                   "active.lane.mask.next");
+  auto *ALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
+                                   {CanonicalIVIncrement, TC, ALMMultiplier},
+                                   DL, "active.lane.mask.next");
+  ALM = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                             {ALM, Plan.getConstantInt(64, 0)}, DL,
+                             "extract.next.alm.part");
   LaneMaskPhi->addBackedgeValue(ALM);
 
   // Replace the original terminator with BranchOnCond. We have to invert the
@@ -215,12 +210,9 @@ void VPlanTransforms::materializeHeaderMask(
       VPIRFlags::WrapFlagsTy(/*HasNUW=*/true, /*HasNSW=*/false)));
   VPValue *Mask;
   if (UseActiveLaneMask) {
-    VPValue *ALMMultiplier =
-        Plan.getConstantInt(LoopRegion->getCanonicalIVType(), 1);
-    Mask = Builder.createNaryOp(
-        VPInstruction::ActiveLaneMask,
-        {WideCanonicalIV, Plan.getTripCount(), ALMMultiplier}, nullptr,
-        "active.lane.mask");
+    Mask = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
+                                {WideCanonicalIV, Plan.getTripCount()}, nullptr,
+                                "active.lane.mask");
   } else {
     Mask = Builder.createICmp(CmpInst::ICMP_ULE, WideCanonicalIV,
                               Plan.getOrCreateBackedgeTakenCount());
@@ -740,7 +732,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
       if (User->usesScalars(VPV))
         continue;
       if (cast<VPRecipeBase>(User)->getParent() == VectorPreheader)
-        HoistPoint = HoistBlock->begin();
+        HoistPoint = HoistBlock->getFirstNonPhi();
       else
         assert(VPDT.dominates(VectorPreheader,
                               cast<VPRecipeBase>(User)->getParent()) &&
@@ -795,7 +787,7 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
   if (BTC->user_empty())
     return;
 
-  VPBuilder Builder(VectorPH, VectorPH->begin());
+  VPBuilder Builder(VectorPH, VectorPH->getFirstNonPhi());
   auto *TCTy = Plan.getTripCount()->getScalarType();
   auto *TCMO =
       Builder.createSub(Plan.getTripCount(), Plan.getConstantInt(TCTy, 1),
@@ -895,7 +887,7 @@ void VPlanTransforms::materializeVectorTripCount(
 
   VPValue *TC = Plan.getTripCount();
   Type *TCTy = TC->getScalarType();
-  VPBasicBlock::iterator InsertPt = VectorPHVPBB->begin();
+  VPBasicBlock::iterator InsertPt = VectorPHVPBB->getFirstNonPhi();
   if (auto *StepR = Step->getDefiningRecipe()) {
     assert(VPDominatorTree(Plan).dominates(StepR->getParent(), VectorPHVPBB) &&
            "Step VPBB must dominate VectorPHVPBB");
@@ -964,7 +956,7 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
     return;
   }
 
-  VPBuilder Builder(VectorPH, VectorPH->begin());
+  VPBuilder Builder(VectorPH, VectorPH->getFirstNonPhi());
   Type *TCTy = Plan.getTripCount()->getScalarType();
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
@@ -987,10 +979,8 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   }
   VF.replaceAllUsesWith(RuntimeVF);
 
-  VPValue *MulByUF = Builder.createOverflowingOp(
-      Instruction::Mul,
-      {RuntimeVF, Plan.getConstantInt(TCTy, Plan.getConcreteUF())},
-      {true, false});
+  VPValue *MulByUF =
+      Builder.createElementCount(TCTy, VFEC * Plan.getConcreteUF());
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 
@@ -1012,8 +1002,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
     // TODO: Only freeze the required pointer (not both src and sink).
     if (Check.NeedsFreeze) {
-      Src = Builder.createScalarFreeze(Src, AddrType, DebugLoc::getUnknown());
-      Sink = Builder.createScalarFreeze(Sink, AddrType, DebugLoc::getUnknown());
+      Src = Builder.createScalarFreeze(Src, DebugLoc::getUnknown());
+      Sink = Builder.createScalarFreeze(Sink, DebugLoc::getUnknown());
     }
 
     // TODO: Generate loop_dependence_raw_mask when there's a read-after-write
@@ -1098,17 +1088,13 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
                     ->getDebugLoc();
   VPSCEVExpander Expander(Builder, SE, DL);
 
-  // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander. During
-  // the transition, unsupported VPExpandSCEVRecipes are skipped and left for
-  // late expansion.
+  // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander.
   for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
     auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpSCEV || ExpSCEV->user_empty())
       continue;
     Builder.setInsertPoint(ExpSCEV);
-    VPValue *Expanded = Expander.tryToExpand(ExpSCEV->getSCEV());
-    if (!Expanded)
-      continue;
+    VPValue *Expanded = Expander.expand(ExpSCEV->getSCEV());
     ExpSCEV->replaceAllUsesWith(Expanded);
     // TripCount should not be used after expansion to VPInstructions. Reset to
     // poison to avoid dangling references.

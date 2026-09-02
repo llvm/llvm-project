@@ -66,6 +66,11 @@ target:
 # CHECK-OBJ: c.lw a0, 0x0(a1)
 .insn cl  0, 2, a0, 0(a1)
 
+# CHECK-ASM: .insn cl  0, 2, a0, 0
+# CHECK-ASM: encoding: [0x88,0x41]
+# CHECK-OBJ: c.lw a0, 0x0(a1)
+.insn cl  0, 2, a0, (a1)
+
 # CHECK-ASM: .insn cs  0, 6, a0, 13
 # CHECK-ASM: encoding: [0xa8,0xcd]
 # CHECK-OBJ: c.sw a0, 0x58(a1)

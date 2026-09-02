@@ -126,6 +126,101 @@ void transform::ApplyResolveRankedShapedTypeResultDimsPatternsOp::
 }
 
 //===----------------------------------------------------------------------===//
+// Alloc and alloca to global utilities
+//===----------------------------------------------------------------------===//
+
+/// Checks whether an allocation operation can be converted to a
+/// `memref.global`.
+template <typename AllocLikeOp>
+static DiagnosedSilenceableFailure
+checkAllocToGlobalPreconditions(AllocLikeOp allocLikeOp) {
+  MemRefType memrefType = allocLikeOp.getType();
+  if (!memrefType.hasStaticShape()) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "conversion to a global op requires statically shaped memrefs, "
+              "but got "
+           << memrefType;
+  }
+
+  if (!allocLikeOp.getSymbolOperands().empty()) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "conversion to a global op does not support symbol operands, but "
+              "got "
+           << memrefType;
+  }
+
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  if (failed(memrefType.getStridesAndOffset(strides, offset))) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "conversion to a global op requires strided layout, but got "
+           << memrefType;
+  }
+  if (!ShapedType::isStatic(offset) || !ShapedType::isStaticShape(strides)) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "conversion to a global op does not support dynamic offset or "
+              "strides, but got "
+           << memrefType;
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+/// Converts an allocation operation (`memref.alloca` or `memref.alloc`) to a
+/// `memref.global` operation in the nearest symbol table, and replaces the
+/// allocation with a `memref.get_global` operation. Any `memref.dealloc`
+/// operations referencing the allocation are erased.
+template <typename AllocLikeOp>
+static DiagnosedSilenceableFailure
+allocLikeToGlobal(transform::TransformRewriter &rewriter,
+                  AllocLikeOp allocLikeOp, StringRef globalName,
+                  memref::GlobalOp &globalOp,
+                  memref::GetGlobalOp &getGlobalOp) {
+  if (DiagnosedSilenceableFailure failure =
+          checkAllocToGlobalPreconditions(allocLikeOp);
+      !failure.succeeded())
+    return failure;
+
+  MLIRContext *ctx = rewriter.getContext();
+  Location loc = allocLikeOp->getLoc();
+
+  // Find nearest symbol table.
+  Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(allocLikeOp);
+  assert(symbolTableOp && "expected payload to be in symbol table");
+  SymbolTable symbolTable(symbolTableOp);
+
+  // Insert a `memref.global` into the symbol table.
+  Type resultType = allocLikeOp.getResult().getType();
+  OpBuilder builder(rewriter.getContext());
+  // TODO: Add a better builder for this.
+  globalOp = memref::GlobalOp::create(
+      builder, loc, StringAttr::get(ctx, globalName),
+      StringAttr::get(ctx, "private"), TypeAttr::get(resultType), Attribute{},
+      UnitAttr{}, allocLikeOp.getAlignmentAttr());
+  symbolTable.insert(globalOp);
+
+  // Remove any `memref.dealloc` operations referencing this allocation.
+  // We assume that the allocation does not escape the current container
+  // (e.g., via return or interprocedural function calls) and is not passed
+  // through control-flow or alias operations (e.g., `scf.if`, `cf.cond_br`,
+  // `select`, `memref.subview`), so any deallocation is a direct user of the
+  // allocation. Indirect deallocations are not removed and must be handled
+  // separately.
+  for (Operation *user : llvm::make_early_inc_range(allocLikeOp->getUsers())) {
+    if (auto dealloc = dyn_cast<memref::DeallocOp>(user))
+      rewriter.eraseOp(dealloc);
+  }
+
+  // Replace the allocation with a `memref.get_global` accessing the
+  // global symbol inserted above.
+  rewriter.setInsertionPoint(allocLikeOp);
+  getGlobalOp = rewriter.replaceOpWithNewOp<memref::GetGlobalOp>(
+      allocLikeOp, globalOp.getType(), globalOp.getName());
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // AllocaToGlobalOp
 //===----------------------------------------------------------------------===//
 
@@ -141,32 +236,12 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
   // Transform `memref.alloca`s.
   for (auto *op : allocaOps) {
     auto alloca = cast<memref::AllocaOp>(op);
-    MLIRContext *ctx = rewriter.getContext();
-    Location loc = alloca->getLoc();
-
     memref::GlobalOp globalOp;
-    {
-      // Find nearest symbol table.
-      Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(op);
-      assert(symbolTableOp && "expected alloca payload to be in symbol table");
-      SymbolTable symbolTable(symbolTableOp);
-
-      // Insert a `memref.global` into the symbol table.
-      Type resultType = alloca.getResult().getType();
-      OpBuilder builder(rewriter.getContext());
-      // TODO: Add a better builder for this.
-      globalOp = memref::GlobalOp::create(
-          builder, loc, StringAttr::get(ctx, "alloca"),
-          StringAttr::get(ctx, "private"), TypeAttr::get(resultType),
-          Attribute{}, UnitAttr{}, IntegerAttr{});
-      symbolTable.insert(globalOp);
-    }
-
-    // Replace the `memref.alloca` with a `memref.get_global` accessing the
-    // global symbol inserted above.
-    rewriter.setInsertionPoint(alloca);
-    auto getGlobalOp = rewriter.replaceOpWithNewOp<memref::GetGlobalOp>(
-        alloca, globalOp.getType(), globalOp.getName());
+    memref::GetGlobalOp getGlobalOp;
+    DiagnosedSilenceableFailure diag =
+        allocLikeToGlobal(rewriter, alloca, "alloca", globalOp, getGlobalOp);
+    if (!diag.succeeded())
+      return diag;
 
     globalOps.push_back(globalOp);
     getGlobalOps.push_back(getGlobalOp);
@@ -183,6 +258,47 @@ void transform::MemRefAllocaToGlobalOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   producesHandle(getOperation()->getOpResults(), effects);
   consumesHandle(getAllocaMutable(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// AllocToGlobalOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MemRefAllocToGlobalOp::apply(transform::TransformRewriter &rewriter,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
+  auto allocOps = state.getPayloadOps(getAlloc());
+
+  SmallVector<memref::GlobalOp> globalOps;
+  SmallVector<memref::GetGlobalOp> getGlobalOps;
+
+  // Transform `memref.alloc`s.
+  for (auto *op : allocOps) {
+    auto alloc = cast<memref::AllocOp>(op);
+    memref::GlobalOp globalOp;
+    memref::GetGlobalOp getGlobalOp;
+    DiagnosedSilenceableFailure diag =
+        allocLikeToGlobal(rewriter, alloc, "alloc", globalOp, getGlobalOp);
+    if (!diag.succeeded())
+      return diag;
+
+    globalOps.push_back(globalOp);
+    getGlobalOps.push_back(getGlobalOp);
+  }
+
+  // Assemble results.
+  results.set(cast<OpResult>(getGlobal()), globalOps);
+  results.set(cast<OpResult>(getGetGlobal()), getGlobalOps);
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::MemRefAllocToGlobalOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getAllocMutable(), effects);
   modifiesPayload(effects);
 }
 

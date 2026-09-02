@@ -15,7 +15,10 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def uimm2_optional : OptionalUImmLeafOp<2>;
+
 def uimm2_lsb0 : RISCVUImmLsbZeroOp<2, 1>;
+def uimm2_lsb0_optional : OptionalUImmLsbZeroOp<2, 1>;
 
 def uimm8ge32 : RISCVOp {
   let ParserMatchClass = UImmAsmOperand<8, "GE32">;
@@ -93,7 +96,7 @@ def negstackadj : RISCVOp<OtherVT> {
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CLoadB_ri<bits<6> funct6, string OpcodeStr>
     : RVInst16CLB<funct6, OPC_C0, (outs GPRC:$rd),
-                  (ins BasePtrC:$rs1, uimm2:$imm),
+                  (ins BasePtrC:$rs1, uimm2_optional:$imm),
                   OpcodeStr, "$rd, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -104,7 +107,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr,
                 DAGOperand rty = GPRC>
     : RVInst16CLH<funct6, funct1, OPC_C0, (outs rty:$rd),
-                  (ins BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (ins BasePtrC:$rs1, uimm2_lsb0_optional:$imm),
                   OpcodeStr, "$rd, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -114,7 +117,7 @@ class CLoadH_ri<bits<6> funct6, bit funct1, string OpcodeStr,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStoreB_rri<bits<6> funct6, string OpcodeStr>
     : RVInst16CSB<funct6, OPC_C0, (outs),
-                  (ins GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm),
+                  (ins GPRC:$rs2, BasePtrC:$rs1, uimm2_optional:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -125,7 +128,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStoreH_rri<bits<6> funct6, bit funct1, string OpcodeStr,
                   DAGOperand rty = GPRC>
     : RVInst16CSH<funct6, funct1, OPC_C0, (outs),
-                  (ins rty:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (ins rty:$rs2, BasePtrC:$rs1, uimm2_lsb0_optional:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})"> {
   bits<2> imm;
 
@@ -208,11 +211,11 @@ let DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp],
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let Defs = [X10, X11] in
 def CM_MVA01S : RVInst16CA<0b101011, 0b11, OPC_C2, (outs),
-                            (ins SR07:$rs1, SR07:$rs2), "cm.mva01s", "$rs1, $rs2">,
+                            (ins GPRS07:$rs1, GPRS07:$rs2), "cm.mva01s", "$rs1, $rs2">,
                 Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 
 let Uses = [X10, X11] in
-def CM_MVSA01 : RVInst16CA<0b101011, 0b01, OPC_C2, (outs SR07:$rs1, SR07:$rs2),
+def CM_MVSA01 : RVInst16CA<0b101011, 0b01, OPC_C2, (outs GPRS07:$rs1, GPRS07:$rs2),
                             (ins), "cm.mvsa01", "$rs1, $rs2">,
                 Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 } // DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp]...
@@ -325,16 +328,3 @@ def : CompressPat<(SH_INX GPRF16C:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
                   (C_SH_INX GPRF16C:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
 }
 }// Predicates = [HasStdExtZcb]
-
-
-//===----------------------------------------------------------------------===//
-// Pseudo Instructions
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZcb] in {
-def : InstAlias<"c.lbu $rd, (${rs1})",(C_LBU GPRC:$rd, GPRC:$rs1, 0), 0>;
-def : InstAlias<"c.lhu $rd, (${rs1})",(C_LHU GPRC:$rd, GPRC:$rs1, 0), 0>;
-def : InstAlias<"c.lh $rd, (${rs1})", (C_LH GPRC:$rd, GPRC:$rs1, 0), 0>;
-def : InstAlias<"c.sb $rd, (${rs1})", (C_SB GPRC:$rd, GPRC:$rs1, 0), 0>;
-def : InstAlias<"c.sh $rd, (${rs1})", (C_SH GPRC:$rd, GPRC:$rs1, 0), 0>;
-}

@@ -1291,11 +1291,9 @@ static bool isFileNotFound(std::error_code EC,
 
 RedirectingFileSystem::RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
     : ExternalFS(std::move(FS)) {
-  if (ExternalFS)
-    if (auto ExternalWorkingDirectory =
-            ExternalFS->getCurrentWorkingDirectory()) {
-      WorkingDirectory = *ExternalWorkingDirectory;
-    }
+  assert(ExternalFS && "RedirectingFileSystem requires an external FS");
+  if (auto ExternalWorkingDirectory = ExternalFS->getCurrentWorkingDirectory())
+    WorkingDirectory = *ExternalWorkingDirectory;
 }
 
 /// Directory iterator implementation for \c RedirectingFileSystem's

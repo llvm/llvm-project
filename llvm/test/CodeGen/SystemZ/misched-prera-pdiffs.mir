@@ -16,7 +16,7 @@
 
 # GR64Bit => GRX32Bit 2
 #
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun0:%bb.0
 # CHECK:      SU(0):   %0:gr64bit = LGHI 0
 # CHECK:        Pressure Diff      : GRX32Bit -2

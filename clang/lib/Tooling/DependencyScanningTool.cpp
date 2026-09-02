@@ -9,10 +9,11 @@
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/DependencyScanning/DependencyScannerImpl.h"
+#include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/iterator.h"
@@ -150,10 +151,12 @@ static bool computeDependenciesForDriverCommandLine(
   // keep the Driver alive when we use Compilation. Arguments to commands may be
   // owned by Alloc when expanded from response files.
   llvm::BumpPtrAllocator Alloc;
-  auto DiagEngineWithDiagOpts =
-      DiagnosticsEngineWithDiagOpts(CommandLine, FS, DiagConsumer);
-  const auto [Driver, Compilation] = buildCompilation(
-      CommandLine, *DiagEngineWithDiagOpts.DiagEngine, FS, Alloc);
+  auto DiagOpts = createScanningDiagOptions(CommandLine);
+  auto DiagEngine =
+      CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DiagConsumer,
+                                          /*ShouldOwnClient=*/false);
+  const auto [Driver, Compilation] =
+      buildCompilation(CommandLine, *DiagEngine, FS, Alloc);
   if (!Compilation)
     return false;
 
@@ -355,10 +358,12 @@ bool DependencyScanningTool::getByNameDependencies(
     CC1CommandLine = std::move(ModifiedCommandLine);
   } else {
     // Driver-style (or ill-formed): lower to a cc1 command line, or diagnose.
-    DiagnosticsEngineWithDiagOpts DiagEngineWithOpts(ModifiedCommandLine, FS,
-                                                     DiagConsumer);
-    auto MaybeFirstCC1 = getFirstCC1CommandLine(
-        ModifiedCommandLine, *DiagEngineWithOpts.DiagEngine, FS);
+    auto DiagOpts = createScanningDiagOptions(ModifiedCommandLine);
+    auto DiagEngine =
+        CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DiagConsumer,
+                                            /*ShouldOwnClient=*/false);
+    auto MaybeFirstCC1 =
+        getFirstCC1CommandLine(ModifiedCommandLine, *DiagEngine, FS);
     if (!MaybeFirstCC1)
       return false;
     CC1CommandLine.assign(MaybeFirstCC1->begin(), MaybeFirstCC1->end());
