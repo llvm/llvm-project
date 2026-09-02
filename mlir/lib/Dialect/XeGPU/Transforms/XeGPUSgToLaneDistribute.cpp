@@ -1789,54 +1789,67 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // What it handles
 // ---------------
 //
-// The cases below are the tests. Cases 1-3 are all on a `vector<8x2>` over 16
-// lanes. `#xegpu.` prefixes are dropped for width.
+// Two properties decide it, one per side. Examples are on a `vector<8x2>` over
+// 16 lanes, `#xegpu.` prefixes dropped for width; the case numbers are used
+// throughout the rest of this comment.
 //
-// 1. Broadcast over the whole subgroup, distributed to 8 lanes.
+// The input's replication decides what a lane arrives with, and so what has to
+// travel:
 //
-//      slice<layout<lane_layout = [1, 1, 16]>, dims = [2]>
-//        ->  layout<lane_layout = [8, 1]>
+//   fully broadcast     every lane holds the whole value, so nothing travels
+//   and
+//                       the result is extracts alone. Spelled by slicing away
+//                       every distributed dimension:
 //
-//    Every lane arrives holding all 16 elements and leaves holding one row.
-//    Emits 2 extracts and no shuffle: every lane already has what it needs.
+//                         slice<layout<[1, 1, 16]>, dims = [2]>
 //
-// 2. Broadcast over two groups of 8 lanes, distributed to 8 lanes.
+//   partially broadcast groups of lanes each hold part of it, so a lane has to
+//                       be given whatever its group lacks. Two spellings,
+//                       treated alike -- a sliced dimension,
 //
-//      slice<layout<lane_layout = [8, 1, 2], order = [0, 2, 1]>, dims = [0]>
-//        ->  layout<lane_layout = [8, 1]>
+//                         slice<layout<[8, 1, 2], order = [0, 2, 1]>, dims =
+//                         [0]>
 //
-//    Lanes 0-7 arrive holding all of column 0, lanes 8-15 all of column 1, and
-//    lane `i` leaves holding row `i`. So lane 3 wants (3, 0) and (3, 1); it
-//    holds (3, 0) already, while (3, 1) is in lane 11. Emits 1 extract and 1
-//    shuffle. This is the running example used below.
+//                       or a lane_layout naming fewer lanes than the subgroup
+//                       has, the rest repeating those:
 //
-// 3. Broadcast over the whole subgroup, distributed to two groups of 8 lanes.
+//                         layout<[8, 1]>
 //
-//      slice<layout<lane_layout = [1, 1, 16]>, dims = [2]>
-//        ->  slice<layout<lane_layout = [8, 1, 2], order = [0, 2, 1]>,
-//                  dims = [0]>
+// The target's lane period decides where a lane may be given it from. Donors
+// sit at multiples of the period, so a period `P` over `S` lanes offers `S / P`
+// donor groups:
 //
-//    Every lane arrives holding all 16 elements; lanes 0-7 leave holding column
-//    0 and lanes 8-15 column 1. Emits 8 extracts and no shuffle.
+//   period < S          several groups, so elements can cross lanes.
+//                       layout<[8, 1]> offers 2, layout<[2, 1]> offers 8.
 //
-// 4. Partial input layout, distributed to 2 lanes.
+//   period == S         one group, `donorDelta` 0, so nothing can cross a lane:
+//                       only an input already holding each lane's target
+//                       fragment works. A replicating target has this period,
+//                       slicing not reducing it:
 //
-//      layout<lane_layout = [8, 1]>  ->  layout<lane_layout = [2, 1]>
+//                         slice<layout<[8, 1, 2], order = [0, 2, 1]>, dims =
+//                         [0]>
 //
-//    The input names 8 of the 16 lanes, so lanes 8-15 repeat lanes 0-7 and lane
-//    `i` arrives holding row `i % 8`. The target hands out 2 fragments of 4
-//    rows each, so slot is `lane % 2` and the donors sit 2, 4 and 6 lanes away.
-//    Emits 2 extracts and 6 shuffles.
+// The combinations, and what the tests show them emitting:
 //
-// 5. Broadcast over the whole subgroup, distributed to 4 lanes.
+//   case  input               target      emits
+//   1     fully broadcast     period 8    2 extracts
+//   5     fully broadcast     period 4    4 extracts
+//   3     fully broadcast     period 16   8 extracts
+//   2     partial, sliced     period 8    1 extract, 1 shuffle
+//   4     partial, short      period 2    2 extracts, 6 shuffles
+//   --    partially broadcast period 16   declined, NoDonorDelta
 //
-//      slice<layout<lane_layout = [1, 1, 16]>, dims = [2]>
-//        ->  layout<lane_layout = [4, 1]>
+// Cases 1 and 5 are one category; 5 is kept because its constants are all
+// distinct, making it the clearest to read the index expression off. The last
+// row is the boundary the two properties imply: with only `donorDelta` 0
+// available, a lane arriving with less than its target fragment cannot be
+// completed. Verified for `layout<[8, 1]>` into the sliced target above, where
+// a lane arrives with 2 of the 8 elements it needs.
 //
-//    As case 1, but the target hands out 4 fragments of 2 rows instead of 8 of
-//    one. Kept because it is the one case where the quantities below take
-//    distinct values, so it is the clearest to read the index expression off.
-//    Emits 4 extracts and no shuffle.
+// Case 2 is the running example below: lanes 0-7 arrive holding all of column
+// 0, lanes 8-15 all of column 1, and lane `i` leaves holding row `i`. Lane 3
+// wants (3, 0) and (3, 1); it holds (3, 0) already, while (3, 1) is in lane 11.
 //
 // Nested slices are coalesced before anything else looks at a layout, so only
 // the lane_layout of the underlying layout and the union of the sliced dims
@@ -1860,11 +1873,10 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //              even between elements taken from the same donor; see the TODO in
 //              the emitter, `gpu.shuffle` moving a whole 32-bit lane word.
 //
-// So a fully broadcast input never shuffles: every lane holds everything, so
-// the smallest `donorDelta` that works is always 0, as in cases 1, 3 and 5.
-// Case 2 shuffles once, for the column its own group does not hold. Case 4
-// shuffles six times, for the three rows beyond its local one, both columns
-// each.
+// Against the categories above: cases 1, 3 and 5 shuffle nothing, a fully
+// broadcast input always finding `donorDelta` 0. Case 2 shuffles once, for the
+// column its own group does not hold, and case 4 six times, for the three rows
+// beyond its local one, both columns each.
 //
 // How close that is to optimal
 // ----------------------------
@@ -1908,7 +1920,8 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //    `lane_layout` together is handled by neither.
 //
 //  * NoDonorDelta, no donor group holding the element for every slot
-//    (fundamental: `gpu.shuffle idx` reads one value per lane).
+//    (fundamental: `gpu.shuffle idx` reads one value per lane). The last row of
+//    the table above is this limit reached through the target's period.
 //
 //  * IndexNotLaneAffine, an index the restricted form cannot express
 //    (implementation: an arbitrary one needs a materialized table and a
