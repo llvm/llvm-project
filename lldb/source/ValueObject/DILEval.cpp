@@ -1876,9 +1876,7 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP operand,
                             CompilerType source_type, CompilerType target_type,
                             int location) {
 
-  if (target_type.IsScalarType())
-    return VerifyArithmeticCast(source_type, target_type, location);
-
+  // Enumerations can also be a scalar value, try enum cast first.
   if (target_type.IsEnumerationType()) {
     // Cast to enum type.
     if (!source_type.IsScalarType() && !source_type.IsEnumerationType()) {
@@ -1892,6 +1890,9 @@ Interpreter::VerifyCastType(lldb::ValueObjectSP operand,
     }
     return CastKind::eEnumeration;
   }
+
+  if (target_type.IsScalarType())
+    return VerifyArithmeticCast(source_type, target_type, location);
 
   if (target_type.IsPointerType()) {
     if (!source_type.IsInteger() && !source_type.IsEnumerationType() &&
