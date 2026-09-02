@@ -26,6 +26,7 @@ $vp_inline = comdat any
 ; STATIC-SAME:  ptr @__profvp_foo
 ; DYNAMIC-SAME: ptr null
 ; LOWER-SAME:   [3 x i16] [i16 1, i16 0, i16 0]
+; LOWER-SAME:   section "__llvm_prf_data"
 
 ;; __profd_vp_inline.[[#]] is referenced by code and may be referenced by other
 ;; text sections due to inlining. It can't be local because a linker error would
@@ -33,7 +34,7 @@ $vp_inline = comdat any
 ; LOWER:      @__profd_vp_inline.[[FOO_HASH:[0-9]+]] = linkonce_odr hidden {{.*}} @__profc_vp_inline.[[FOO_HASH]]
 ; LOWER-SAME:   ptr @vp_inline
 
-; STATIC:     @__llvm_prf_vnodes = {{.*}} zeroinitializer, section "__llvm_prf_vnds"
+; STATIC:     @__llvm_prf_vnodes = {{.*}} [{{[0-9]+}} x { i64, i64, ptr }] zeroinitializer, section "__llvm_prf_vnds"
 
 ; LOWER:      @llvm.used =
 ; STATIC-SAME:  ptr @__llvm_prf_vnodes
