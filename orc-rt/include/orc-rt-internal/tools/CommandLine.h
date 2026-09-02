@@ -152,13 +152,15 @@ public:
     return std::move(OS).str();
   }
 
+  /// Parse an argument list.
+  ///
+  /// Iterators should be over program arguments only, and should not include
+  /// the program name as the first argument.
   template <typename I> orc_rt::Error parse(I Begin, I End) {
     std::for_each(Opts.begin(), Opts.end(),
                   [](const Option &O) { O.Default(); });
     Positionals.clear();
     bool AfterDashDash = false;
-    if (Begin != End)
-      Begin++;
 
     for (auto It = Begin; It != End; ++It) {
       std::string_view Tok(*It);
@@ -206,8 +208,12 @@ public:
     return orc_rt::Error::success();
   }
 
-  orc_rt::Error parse(int argc, char **argv) {
-    return parse(argv, argv + argc);
+  /// Parse main-like args: argc must be >= 1, and argv[0] must contain the
+  /// program name.
+  orc_rt::Error parseAsMainArgs(int argc, char **argv) {
+    if (argc == 0)
+      return make_error<StringError>("no program-name argument in argv[0]");
+    return parse(argv + 1, argv + argc);
   }
 
   const std::vector<std::string> &positionals() const { return Positionals; }

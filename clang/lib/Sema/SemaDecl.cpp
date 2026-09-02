@@ -2667,6 +2667,27 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
       else
         New->setTypeSourceInfo(OldTD->getTypeSourceInfo());
 
+      // An anonymous enum is recognized as a redeclaration only when its
+      // typedef name gets merged, at which point the new enum and its
+      // enumerators already have a distinct canonical type. Link the enum
+      // declarations, but also retype the new enumerators because
+      // setPreviousDecl() does not update QualTypes built before the merge;
+      // otherwise the merged typedef and its enumerators disagree on the type
+      // (GH213299).
+      //
+      // FIXME: The global module restriction only limits the impact of this
+      // change; relax it if the issue shows up in other contexts.
+      if (Module *M = OldTag->getOwningModule(); M && M->isGlobalModule()) {
+        if (auto *NewEnum = dyn_cast<EnumDecl>(NewTag)) {
+          if (auto *OldEnum = dyn_cast<EnumDecl>(OldTag)) {
+            NewEnum->setPreviousDecl(OldEnum);
+            QualType EnumType = Context.getCanonicalTagType(OldEnum);
+            for (auto *ECD : NewEnum->enumerators())
+              ECD->setType(EnumType);
+          }
+        }
+      }
+
       // Make the old tag definition visible.
       makeMergedDefinitionVisible(Hidden);
 
@@ -6385,7 +6406,6 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   // declaration. For a template-id, we perform the checks in
   // CheckTemplateSpecializationScope.
   if (!Cur->Encloses(DC) && !(TemplateId || IsMemberSpecialization)) {
-    Cur = Cur->getEnclosingNonExpansionStatementContext();
     if (Cur->isRecord())
       Diag(Loc, diag::err_member_qualification)
         << Name << SS.getRange();
@@ -7514,7 +7534,7 @@ static bool hasParsedAttr(Scope *S, const Declarator &PD,
 }
 
 bool Sema::adjustContextForLocalExternDecl(DeclContext *&DC) {
-  if (!DC->isFunctionOrMethod())
+  if (!DC->getEnclosingNonExpansionStatementContext()->isFunctionOrMethod())
     return false;
 
   // If this is a local extern function or variable declared within a function

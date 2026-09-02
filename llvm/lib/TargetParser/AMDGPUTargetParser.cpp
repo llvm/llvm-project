@@ -435,6 +435,22 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
   return 8;
 }
 
+unsigned AMDGPU::getVGPRAllocGranule(GPUKind AK, bool IsWave32) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  if (Features.test(FEAT_GFX90A_INSTS))
+    return 8;
+  if (Features.test(FEAT_1536_PHYSICAL_VGPRS))
+    return IsWave32 ? 24 : 12;
+  if (Features.test(FEAT_GFX10_3_INSTS))
+    return IsWave32 ? 16 : 8;
+  return IsWave32 ? 8 : 4;
+}
+
+unsigned AMDGPU::getVGPRAllocGranule(Triple::SubArchType SubArch,
+                                     bool IsWave32) {
+  return getVGPRAllocGranule(getGPUKindFromSubArch(SubArch), IsWave32);
+}
+
 unsigned AMDGPU::getMaxHWAddressableLocalMemorySize(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->MaxHWAddressableLocalMemorySize : 32768;

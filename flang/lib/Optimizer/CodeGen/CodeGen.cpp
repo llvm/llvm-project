@@ -2323,8 +2323,19 @@ static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal,
           mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
     return isDeviceAllocation(convertOp.getValue(), {},
                               cudaDescriptorAllocFunction);
+  // fir.declare, and the fircg.ext_declare it becomes when debug info keeps it
+  // alive until codegen, are pass-through on their memref operand. The adaptor
+  // value is forwarded too so a declared dummy argument stays recognizable.
+  if (auto declareOp =
+          mlir::dyn_cast_or_null<fir::DeclareOp>(val.getDefiningOp()))
+    return isDeviceAllocation(declareOp.getMemref(), adaptorVal,
+                              cudaDescriptorAllocFunction);
+  if (auto xDeclareOp =
+          mlir::dyn_cast_or_null<fir::cg::XDeclareOp>(val.getDefiningOp()))
+    return isDeviceAllocation(xDeclareOp.getMemref(), adaptorVal,
+                              cudaDescriptorAllocFunction);
   if (!val.getDefiningOp() && adaptorVal) {
-    if (auto blockArg = llvm::cast<mlir::BlockArgument>(adaptorVal)) {
+    if (auto blockArg = llvm::dyn_cast<mlir::BlockArgument>(adaptorVal)) {
       if (blockArg.getOwner() && blockArg.getOwner()->getParentOp() &&
           blockArg.getOwner()->isEntryBlock()) {
         if (auto func = mlir::dyn_cast_or_null<mlir::FunctionOpInterface>(
