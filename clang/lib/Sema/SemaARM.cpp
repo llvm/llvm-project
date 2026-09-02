@@ -396,14 +396,14 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
   auto HintArg =
       SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(3)).get();
   std::optional<llvm::APSInt> HintAP = HintArg->getIntegerConstantExpr(Context);
-  if (!HintAP || !HintArg->getType()->isIntegralType(Context)) {
+  if (!HintAP) {
     Diag(TheCall->getBeginLoc(), diag::err_atomic_hint_has_invalid_hint_type)
         << HintArg->getType() << HintArg->getSourceRange();
     return false;
   }
 
   unsigned Hint = HintAP->getZExtValue();
-  if (llvm::toAArch64Hint(Hint) == llvm::AArch64MemoryHint::HINT_NONE)
+  if (llvm::toAArch64MemoryHint(Hint) == llvm::AArch64MemoryHint::HINT_NONE)
     Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
         << *HintAP << HintArg->getSourceRange();
 
