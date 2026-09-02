@@ -31,6 +31,7 @@ public:
   SPARC(Ctx &, bool is64);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
+  uint32_t calcEFlags() const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
@@ -106,6 +107,45 @@ RelExpr SPARC::getRelExpr(RelType type, const Symbol &s,
              << ") against symbol " << &s;
     return R_NONE;
   }
+}
+
+uint32_t SPARC::calcEFlags() const {
+  if (is64)
+    return 0;
+
+  // EF_SPARC_32PLUS and the Sun extension bits name nested instruction sets, so
+  // GNU ld's elf32_sparc gives the output the widest one any object file asks
+  // for, whatever the link order. EF_SPARC_SUN_US3 implies EF_SPARC_SUN_US1.
+  // Only the bits of an EM_SPARC32PLUS object count, only object files count,
+  // and EF_SPARC_HAL_R1 selects nothing.
+  enum { Base, V8Plus, UltraSPARC1, UltraSPARC3 } level = Base;
+  for (InputFile *f : ctx.objectFiles) {
+    if (f->emachine != EM_SPARC32PLUS)
+      continue;
+    uint32_t eflags = cast<ObjFile<ELF32BE>>(f)->getObj().getHeader().e_flags;
+    if (!(eflags & EF_SPARC_32PLUS)) {
+      Err(ctx) << f << ": EM_SPARC32PLUS object without EF_SPARC_32PLUS";
+      continue;
+    }
+    if (eflags & EF_SPARC_SUN_US3)
+      level = std::max(level, UltraSPARC3);
+    else if (eflags & EF_SPARC_SUN_US1)
+      level = std::max(level, UltraSPARC1);
+    else
+      level = std::max(level, V8Plus);
+  }
+
+  switch (level) {
+  case Base:
+    return 0;
+  case V8Plus:
+    return EF_SPARC_32PLUS;
+  case UltraSPARC1:
+    return EF_SPARC_32PLUS | EF_SPARC_SUN_US1;
+  case UltraSPARC3:
+    return EF_SPARC_32PLUS | EF_SPARC_SUN_US1 | EF_SPARC_SUN_US3;
+  }
+  llvm_unreachable("invalid level");
 }
 
 RelType SPARC::getDynRel(RelType type) const {

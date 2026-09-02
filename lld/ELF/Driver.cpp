@@ -2360,16 +2360,19 @@ void LinkerDriver::inferMachineType() {
     if (f->ekind == ELFNoneKind)
       continue;
     if (!inferred) {
-      // EM_SPARC names the 32-bit big-endian ABI, so an object claiming it
-      // with another class or byte order is malformed. A later object is
-      // caught by the ELF kind check in isCompatible.
-      if (f->emachine == EM_SPARC && f->ekind != ELF32BEKind) {
+      // EM_SPARC and EM_SPARC32PLUS name the 32-bit big-endian ABI, so an
+      // object claiming either with another class or byte order is malformed.
+      // A later object is caught by the ELF kind check in isCompatible.
+      if ((f->emachine == EM_SPARC || f->emachine == EM_SPARC32PLUS) &&
+          f->ekind != ELF32BEKind) {
         Err(ctx) << f.get() << " is incompatible";
         return;
       }
       inferred = true;
       ctx.arg.ekind = f->ekind;
-      ctx.arg.emachine = f->emachine;
+      // EM_SPARC32PLUS is the 32-bit SPARC ABI, and is promoted back on
+      // output when an input needs it.
+      ctx.arg.emachine = f->emachine == EM_SPARC32PLUS ? EM_SPARC : f->emachine;
       ctx.arg.mipsN32Abi = ctx.arg.emachine == EM_MIPS && isMipsN32Abi(ctx, *f);
     }
     ctx.arg.osabi = f->osabi;
