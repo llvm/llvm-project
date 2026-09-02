@@ -259,18 +259,17 @@ public:
   /// object to be used to compute a new profile.
   inline void clear() { Bits.clear(); }
 
+  /// The accumulated profile, valid until this object is next modified.
+  FoldingSetNodeIDRef getRef() const { return {Bits.data(), Bits.size()}; }
+
   // Compute a strong hash value for this FoldingSetNodeID, used to lookup the
   // node in the FoldingSetBase. The hash value is not guaranteed to be
   // deterministic across processes.
-  unsigned computeHash() const {
-    return FoldingSetNodeIDRef(Bits.data(), Bits.size()).computeHash();
-  }
+  unsigned computeHash() const { return getRef().computeHash(); }
 
   // Compute a deterministic hash value across processes that is suitable for
   // on-disk serialization.
-  unsigned computeStableHash() const {
-    return FoldingSetNodeIDRef(Bits.data(), Bits.size()).computeStableHash();
-  }
+  unsigned computeStableHash() const { return getRef().computeStableHash(); }
 
   /// operator== - Used to compare two nodes to each other.
   bool operator==(const FoldingSetNodeID &RHS) const {
@@ -696,6 +695,9 @@ template <typename T> struct UniquingSetInfo {
   static unsigned getHashValue(const KeyTy &Key) {
     return DenseMapInfo<KeyTy>::getHashValue(Key);
   }
+  static bool isEqual(const KeyTy &Key, const T &N) {
+    return Key == N.getKey();
+  }
 };
 
 /// A uniquing set that compares nodes against a typed key rather than a
@@ -709,7 +711,11 @@ template <typename T> struct UniquingSetInfo {
 ///   using KeyTy = ...;
 ///   static KeyTy getKey(const T &N);
 ///   static unsigned getHashValue(const KeyTy &K);
+///   static bool isEqual(const KeyTy &K, const T &N);
 /// \endcode
+///
+/// Override isEqual when comparing a key against a node's fields is cheaper
+/// than building a key from the node, which is what the default does.
 ///
 /// Derive \p Info from UniquingSetInfo<T> to override only the hash.  The
 /// default Info needs \p T complete wherever UniquingSet<T> is instantiated;
@@ -745,7 +751,7 @@ public:
   /// token for insert().
   T *lookup(const KeyTy &Key, FoldingSetInsertToken &Token) {
     return static_cast<T *>(probe(hashKey(Key), Token, [&](Node *N) {
-      return Key == Info::getKey(*static_cast<T *>(N));
+      return Info::isEqual(Key, *static_cast<T *>(N));
     }));
   }
 
@@ -756,6 +762,17 @@ public:
     assert(makeInsertToken(hashKey(Info::getKey(*N))) == Token &&
            "N does not key as the lookup that produced Token did");
     FoldingSetBase::insert(N, Token);
+  }
+
+  /// Look \p N up by its own key, inserting it if absent, and return the node
+  /// in the set.  Out of line so that callers do not inherit the key's inline
+  /// storage; some of them recurse.
+  LLVM_ATTRIBUTE_NOINLINE T *getOrInsert(T *N) {
+    FoldingSetInsertToken Token;
+    if (T *E = lookup(Info::getKey(*N), Token))
+      return E;
+    FoldingSetBase::insert(N, Token);
+    return N;
   }
 
   /// Remove \p N, returning whether it was present.

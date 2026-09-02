@@ -444,6 +444,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.geteuid
     libc.src.unistd.gethostname
     libc.src.unistd.getpagesize
+    libc.src.unistd.getpgid
+    libc.src.unistd.getpgrp
     libc.src.unistd.getpid
     libc.src.unistd.getppid
     libc.src.unistd.getsid
@@ -464,6 +466,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
     libc.src.unistd.setgid
+    libc.src.unistd.setpgid
     libc.src.unistd.setregid
     libc.src.unistd.setreuid
     libc.src.unistd.setsid

@@ -510,6 +510,10 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
+- Fixed a false type mismatch when a typedef naming an anonymous enumeration
+  was used through a C++20 named module and its defining header was subsequently
+  included. (#GH213299)
+
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
@@ -559,6 +563,9 @@ features cannot lower the translation-unit ABI level;
 - Compute value dependence correctly for structured bindings. This mostly
   affect C++26 constexpr structured bindings and expansion statements, but
   also affects some uses of plain structured bindings. (#GH211930)
+
+- Fixed an assertion when instantiating the body of a C++26 expansion
+  statement after a fatal error had occurred. (#GH214917)
 
 - Fixed friend declarations sometimes making non-visible default arguments
   incorrectly visible to default argument redefinition checks across modules.
@@ -711,6 +718,9 @@ features cannot lower the translation-unit ABI level;
 #### NetBSD Support
 
 #### WebAssembly Support
+
+- Added `__builtin_wasm_memory_copy` and `__builtin_wasm_memory_fill` builtins
+  for the WebAssembly `memory.copy` and `memory.fill` bulk memory instructions.
 
 #### AVR Support
 
