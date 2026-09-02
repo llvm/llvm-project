@@ -968,9 +968,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       // Extern templates
       SourceLocation ExternLoc = ConsumeToken();
       SourceLocation TemplateLoc = ConsumeToken();
-      Diag(ExternLoc, getLangOpts().CPlusPlus11 ?
-             diag::warn_cxx98_compat_extern_template :
-             diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
+      DiagCompat(ExternLoc, diag_compat::extern_template)
+          << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
       return ParseExplicitInstantiation(DeclaratorContext::File, ExternLoc,
                                         TemplateLoc, DeclEnd, Attrs);

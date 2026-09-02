@@ -5528,14 +5528,12 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl,
 
     // If comma is followed by r_brace, emit appropriate warning.
     if (Tok.is(tok::r_brace) && CommaLoc.isValid()) {
-      if (!getLangOpts().C99 && !getLangOpts().CPlusPlus11)
-        Diag(CommaLoc, getLangOpts().CPlusPlus ?
-               diag::ext_enumerator_list_comma_cxx :
-               diag::ext_enumerator_list_comma_c)
-          << FixItHint::CreateRemoval(CommaLoc);
-      else if (getLangOpts().CPlusPlus11)
-        Diag(CommaLoc, diag::warn_cxx98_compat_enumerator_list_comma)
-          << FixItHint::CreateRemoval(CommaLoc);
+      if (getLangOpts().CPlusPlus)
+        DiagCompat(CommaLoc, diag_compat::cxx_enumerator_list_comma)
+            << FixItHint::CreateRemoval(CommaLoc);
+      else if (!getLangOpts().C99)
+        Diag(CommaLoc, diag::ext_enumerator_list_comma_c)
+            << FixItHint::CreateRemoval(CommaLoc);
       break;
     }
   }
