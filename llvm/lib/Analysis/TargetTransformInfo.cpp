@@ -549,9 +549,9 @@ bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
 
 unsigned TargetTransformInfo::getPreferredVFMultipleForMemoryOp(
     unsigned Opcode, Type *DataType, ElementCount VF, unsigned UF,
-    bool IsMasked) const {
+    bool IsMasked, std::optional<Instruction::CastOps> CastHint) const {
   return TTIImpl->getPreferredVFMultipleForMemoryOp(Opcode, DataType, VF, UF,
-                                                    IsMasked);
+                                                    IsMasked, CastHint);
 }
 
 bool TargetTransformInfo::isLegalInterleavedAccessType(

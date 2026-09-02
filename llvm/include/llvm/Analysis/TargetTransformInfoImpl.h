@@ -422,11 +422,9 @@ public:
     return false;
   }
 
-  virtual unsigned getPreferredVFMultipleForMemoryOp(unsigned Opcode,
-                                                     Type *DataType,
-                                                     ElementCount VF,
-                                                     unsigned UF,
-                                                     bool IsMasked) const {
+  virtual unsigned getPreferredVFMultipleForMemoryOp(
+      unsigned Opcode, Type *DataType, ElementCount VF, unsigned UF,
+      bool IsMasked, std::optional<Instruction::CastOps> CastHint) const {
     return 1;
   }
 
