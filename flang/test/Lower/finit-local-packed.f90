@@ -1,14 +1,13 @@
 ! AIX BIND(C) regression test for -finit-local= with packed derived types.
 !
 ! On AIX, ConvertType creates a packed layout for a BIND(C) record whose
-! REAL(8) component is not first.  The initialization loop must use the
+! COMPLEX(8) component is not first.  The initialization loop must use the
 ! correct packed size.
 !
 ! For {integer(4), complex(8)}: i32 store=4B, complex<f64> store=16B.
-! Packed size = 4+16 = 20B.  Loop upper bound must be 19 (trip count 20).
-!
-! Note: on AIX f64 has 4-byte ABI alignment, so the non-packed size of
-! {i32, complex<f64>} also happens to be 20B (no inter-field gap needed).
+! Ordinary (non-packed) size = 24B (inter-field and tail padding included).
+! Packed size = 4+16 = 20B (fields placed back-to-back, no padding).
+! Loop upper bound 19 (trip count 20) distinguishes the two calculations.
 ! The platform-independent test that distinguishes packed from non-packed
 ! (using x86-64 alignment where they differ) lives in
 ! flang/test/Fir/box-elesize-canonicalize.fir.

@@ -488,8 +488,8 @@ end subroutine
 ! ZERO: fir.store {{.*}} : !fir.ref<!fir.char<2,3>>
 
 ! HEX-LABEL:  func.func @_QPtest_char2_fixed
-! HEX:        arith.constant 5 : index
-! HEX:        fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+! HEX:        %[[C5:.*]] = arith.constant 5 : index
+! HEX:        fir.do_loop %{{.*}} = %{{.*}} to %[[C5]] step %{{.*}} {
 ! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 ! HEX:          arith.constant {{.*}} : i8
 ! HEX:          fir.store {{.*}} : !fir.ref<i8>
@@ -508,8 +508,8 @@ end subroutine
 ! ZERO: fir.store {{.*}} : !fir.ref<!fir.char<4,2>>
 
 ! HEX-LABEL:  func.func @_QPtest_char4_fixed
-! HEX:        arith.constant 7 : index
-! HEX:        fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+! HEX:        %[[C7:.*]] = arith.constant 7 : index
+! HEX:        fir.do_loop %{{.*}} = %{{.*}} to %[[C7]] step %{{.*}} {
 ! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 ! HEX:          arith.constant {{.*}} : i8
 ! HEX:          fir.store {{.*}} : !fir.ref<i8>
@@ -526,16 +526,16 @@ subroutine test_char2_runtime(res, n)
   res = x
 end subroutine
 ! ZERO-LABEL: func.func @_QPtest_char2_runtime
-! ZERO:       arith.constant 2 : index
-! ZERO:       arith.muli {{.*}}, %{{.*}} : index
+! ZERO:       %[[C2:.*]] = arith.constant 2 : index
+! ZERO:       arith.muli {{.*}}, %[[C2]] : index
 ! ZERO:       fir.do_loop
 ! ZERO:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 ! ZERO:         fir.zero_bits !fir.char<1>
 ! ZERO:         fir.store {{.*}} : !fir.ref<!fir.char<1>>
 
 ! HEX-LABEL:  func.func @_QPtest_char2_runtime
-! HEX:        arith.constant 2 : index
-! HEX:        arith.muli {{.*}}, %{{.*}} : index
+! HEX:        %[[C2:.*]] = arith.constant 2 : index
+! HEX:        arith.muli {{.*}}, %[[C2]] : index
 ! HEX:        fir.do_loop
 ! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 ! HEX:          arith.constant {{.*}} : i8

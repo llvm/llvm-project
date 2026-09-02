@@ -1664,16 +1664,19 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
     if (recTy.isPacked()) {
       // LLVM packed structs (<{ ... }>) place fields back-to-back with no
       // inter-field alignment padding and no tail padding.  Each component
-      // occupies exactly its store size (dl.getTypeSize(), which is what
-      // getTypeSizeAndAlignment returns as compSize).  Unlike ordinary
-      // structs, there is no per-component rounding of compSize to compAlign.
-      // The packed struct ABI alignment is always 1.
+      // still occupies its allocation size (llvm::alignTo(storeSize, ABI
+      // alignment)), because LLVM's packed StructLayout advances by
+      // getTypeAllocSize, not getTypeStoreSize.  For example, x86 f80 has
+      // store size 10 bytes but ABI alignment 16 bytes, so its allocation
+      // size is 16 bytes; a packed {f80, i8} therefore occupies 17 bytes,
+      // not 11.  The packed struct's own ABI alignment is always 1.
       for (auto component : recTy.getTypeList()) {
         auto result =
             getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
         if (!result)
           return result;
-        size += result->first; // store size only; no alignment rounding
+        auto [compSize, compAlign] = *result;
+        size += llvm::alignTo(compSize, compAlign); // allocation size per field
       }
       return std::pair{size, static_cast<unsigned short>(1)};
     }

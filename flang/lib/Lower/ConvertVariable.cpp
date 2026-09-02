@@ -1278,6 +1278,38 @@ getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
 // -finit-local= helpers
 //===----------------------------------------------------------------------===//
 
+/// Returns true if \p derived or any of its components (recursively) is a
+/// PowerPC vector type. fir::VectorType does not implement
+/// DataLayoutTypeInterface, so any record containing a vector component would
+/// crash record-size calculation. Excluding such records at eligibility time
+/// avoids the crash.
+static bool containsVectorComponent(
+    const Fortran::semantics::DerivedTypeSpec &derived) {
+  if (derived.IsVectorType())
+    return true;
+  const Fortran::semantics::Scope *scope = derived.GetScope();
+  if (!scope)
+    return false;
+  const Fortran::semantics::Symbol &typeSym = derived.typeSymbol();
+  const auto *details =
+      typeSym.detailsIf<Fortran::semantics::DerivedTypeDetails>();
+  if (!details)
+    return false;
+  for (const Fortran::semantics::SourceName &compName :
+       details->componentNames()) {
+    auto it = scope->find(compName);
+    if (it == scope->cend())
+      continue;
+    const Fortran::semantics::Symbol &comp = it->second.get();
+    if (const Fortran::semantics::DeclTypeSpec *compTy = comp.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *compDerived =
+              compTy->AsDerived())
+        if (containsVectorComponent(*compDerived))
+          return true;
+  }
+  return false;
+}
+
 /// Returns true when \p var is an automatic local variable eligible for
 /// -finit-local= initialization. Excluded: variables without a symbol,
 /// globals, dummy arguments, SAVE'd vars, ALLOCATABLE/POINTER, vars in
@@ -1311,11 +1343,14 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
     return false;
   // PowerPC vector types (vector(real(4)) etc.) lower to fir::VectorType
   // which does not implement DataLayoutTypeInterface at the HLFIR level.
-  // Exclude them here so no initialization is attempted.
+  // Without this guard, a direct vector local would silently fall back to
+  // zero initialization regardless of the requested mode, and a derived-type
+  // local whose component is a vector type would crash record-size
+  // calculation.  Exclude both cases here by walking components recursively.
   if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
     if (const Fortran::semantics::DerivedTypeSpec *derived =
             declTy->AsDerived())
-      if (derived->IsVectorType())
+      if (containsVectorComponent(*derived))
         return false;
   // CUDA storage accessibility:
   //   constant / shared / usedevice: always unreachable by a plain fir.store
@@ -1344,14 +1379,17 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
 /// and logical (raw integer, stored via bitcasted address by the caller).
 /// Character, derived-type, and sequence types are all intercepted by
 /// genInitLocalStore or initAddr before this function is called and must
-/// not reach it. fir::VectorType (PowerPC vector locals) is excluded
-/// upstream by shouldInitLocal and will never reach this function.
+/// not reach it. fir::VectorType (PowerPC vector types, direct or as a
+/// derived-type component) is excluded upstream by shouldInitLocal via
+/// containsVectorComponent and will never reach this function.
 static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Type ty,
                                     uint8_t bytePat) {
   mlir::Type eleTy = fir::unwrapSequenceType(ty);
 
-  // Build an integer constant of the given bit width from a byte splat.
+  // Build a signless integer constant from a byte splat.  arith.constant
+  // requires a signless integer type; callers that need a non-signless result
+  // (e.g. unsigned ui32) must fir.convert the returned value themselves.
   auto makeIntCst = [&](unsigned bits) -> mlir::Value {
     llvm::APInt byteVal(8, bytePat);
     llvm::APInt splat = llvm::APInt::getSplat(bits, byteVal);
@@ -1361,12 +1399,17 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   };
 
   if (auto fpTy = mlir::dyn_cast<mlir::FloatType>(eleTy)) {
-    unsigned bits = fpTy.getWidth();
-    mlir::Value intCst = makeIntCst(bits);
+    mlir::Value intCst = makeIntCst(fpTy.getWidth());
     return mlir::arith::BitcastOp::create(builder, loc, fpTy, intCst);
   }
   if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(eleTy)) {
-    return makeIntCst(intTy.getWidth());
+    mlir::Value cst = makeIntCst(intTy.getWidth());
+    // arith.constant only supports signless integers; fir.convert reinterprets
+    // the bit pattern into the declared signed or unsigned type without
+    // changing any bits, satisfying FIR verification for !fir.ref<ui32> etc.
+    if (!intTy.isSignless())
+      cst = builder.createConvert(loc, intTy, cst);
+    return cst;
   }
   // Complex: apply the byte pattern to each (real, imag) part.
   if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(eleTy)) {
@@ -1384,7 +1427,8 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   // All types that pass shouldInitLocal and reach genInitLocalStore are
   // handled explicitly above (integer, float, complex, logical) or are
   // intercepted before this call (character, record, sequence).
-  // PowerPC vector types are excluded at shouldInitLocal and never reach here.
+  // PowerPC vector types (direct or as a derived-type component) are excluded
+  // by shouldInitLocal via containsVectorComponent and never reach here.
   // A silent zero for an unhandled type would violate the hex-mode contract,
   // so assert rather than fall back silently.
   llvm_unreachable("genByteSplatInit: unhandled type in hex mode");
@@ -1514,8 +1558,9 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Arrays: all modes use a flat fir.do_loop + fir.coordinate_of over a
 /// rank-1 view to avoid both the llvm.mlir.constant crash on non-zero
 /// ArrayAttrs and the quadratic compile time of fir.insert_on_range.
-/// Derived types use a byte-fill loop. PowerPC vector locals are
-/// excluded upstream by shouldInitLocal and never reach this function.
+/// Derived types use a byte-fill loop. PowerPC vector types (direct or as a
+/// derived-type component) are excluded upstream by shouldInitLocal via
+/// containsVectorComponent and never reach this function.
 /// Scalars store directly via genInitLocalStore.
 static void genInitLocal(Fortran::lower::AbstractConverter &converter,
                          const Fortran::lower::pft::Variable &var,
