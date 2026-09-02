@@ -1884,10 +1884,11 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // its own fragment and contributes it, then receives whatever the lane it names
 // contributed. A donor has therefore already extracted, at its own index,
 // before any shuffle happens, and never learns who asked. So the index the
-// donor used has to be the one the reader wanted, and since the index is a
-// function of the slot, the two have to share one:
+// donor used has to be the one the reader wanted. Every lane runs the same
+// code, so the donor computed its index from its own slot, and the two slots
+// have to agree:
 //
-//   donorSlot = (slot + donorDelta) % targetLanePeriod = slot
+//   (slot + donorDelta) % targetLanePeriod = slot
 //
 // which holds exactly when `donorDelta` is a multiple of `targetLanePeriod`.
 //
