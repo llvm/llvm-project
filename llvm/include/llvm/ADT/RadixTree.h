@@ -14,8 +14,10 @@
 
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -154,10 +156,79 @@ private:
     }
   };
 
+  class const_lexicographic_iterator {
+    using StackEntry = std::pair<const Node *, size_t>;
+    SmallVector<StackEntry, 8> Stack;
+    const value_type *Current = nullptr;
+
+    void advance() {
+      Current = nullptr;
+      while (!Stack.empty()) {
+        auto &[CurrentNode, NextChild] = Stack.back();
+        if (NextChild == CurrentNode->Children.size()) {
+          Stack.pop_back();
+          continue;
+        }
+
+        const Node *Child = &CurrentNode->Children[NextChild++];
+        Stack.emplace_back(Child, 0);
+        if (Child->Value) {
+          Current = &**Child->Value;
+          return;
+        }
+      }
+    }
+
+    friend class RadixTree;
+    explicit const_lexicographic_iterator(const Node &Root) {
+      Stack.emplace_back(&Root, 0);
+      if (Root.Value)
+        Current = &**Root.Value;
+      else
+        advance();
+    }
+
+  public:
+    using difference_type = std::ptrdiff_t;
+    using value_type = const RadixTree::value_type;
+    using pointer = const value_type *;
+    using reference = const value_type &;
+    using iterator_category = std::forward_iterator_tag;
+
+    const_lexicographic_iterator() = default;
+    reference operator*() const { return *Current; }
+    pointer operator->() const { return Current; }
+    const_lexicographic_iterator &operator++() {
+      advance();
+      return *this;
+    }
+    bool operator==(const const_lexicographic_iterator &Other) const {
+      return Current == Other.Current;
+    }
+    bool operator!=(const const_lexicographic_iterator &Other) const {
+      return !(*this == Other);
+    }
+  };
+
   /// Root always corresponds to the empty key, which is the shortest possible
   /// prefix for everything.
   Node Root;
   ContainerType KeyValuePairs;
+
+  const Node *findNode(KeyConstIteratorRangeType Key) const {
+    const Node *Curr = &Root;
+    while (!Key.empty()) {
+      Curr = Curr->findChild(Key);
+      if (!Curr)
+        return nullptr;
+
+      auto [I1, I2] = llvm::mismatch(Key, Curr->Key);
+      if (I2 != Curr->Key.end())
+        return nullptr;
+      Key = make_range(I1, Key.end());
+    }
+    return Curr;
+  }
 
   /// Finds or creates a new tail or leaf node corresponding to the `Key`.
   Node &findOrCreate(KeyConstIteratorRangeType Key) {
@@ -200,7 +271,12 @@ private:
     // `Key` is a suffix of original `Key` unmatched by path from the `Root` to
     // the `Curr`, and we have no candidate in the children to match more.
     // Create a new one.
-    return Curr->Children.emplace_back(Key);
+    auto InsertPos = std::lower_bound(
+        Curr->Children.begin(), Curr->Children.end(), *Key.begin(),
+        [](const Node &Child, const KeyValueType &KeyFront) {
+          return Child.KeyFront < KeyFront;
+        });
+    return *Curr->Children.insert(InsertPos, Node(Key));
   }
 
   ///
@@ -275,6 +351,7 @@ public:
 
   using prefix_iterator = IteratorImpl<value_type>;
   using const_prefix_iterator = IteratorImpl<const value_type>;
+  using lexicographic_iterator = const_lexicographic_iterator;
 
   using iterator = typename ContainerType::iterator;
   using const_iterator = typename ContainerType::const_iterator;
@@ -298,6 +375,24 @@ public:
   /// Returns an iterator to the end of the tree.
   iterator end() { return KeyValuePairs.end(); }
   const_iterator end() const { return KeyValuePairs.end(); }
+
+  /// Returns an iterator to the value with an exact matching key.
+  iterator find(const key_type &Key) {
+    const Node *FoundNode = findNode(KeyConstIteratorRangeType(Key));
+    return FoundNode && FoundNode->Value ? *FoundNode->Value : end();
+  }
+  const_iterator find(const key_type &Key) const {
+    const Node *FoundNode = findNode(KeyConstIteratorRangeType(Key));
+    return FoundNode && FoundNode->Value ? *FoundNode->Value : end();
+  }
+
+  /// Returns an iterator over stored values in lexicographic key order.
+  lexicographic_iterator lexicographic_begin() const {
+    return lexicographic_iterator(Root);
+  }
+  lexicographic_iterator lexicographic_end() const {
+    return lexicographic_iterator();
+  }
 
   /// Constructs and inserts a new element into the tree.
   ///
