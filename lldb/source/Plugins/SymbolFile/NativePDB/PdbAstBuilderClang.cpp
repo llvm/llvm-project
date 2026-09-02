@@ -24,7 +24,6 @@
 #include "UdtRecordCompleter.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include <optional>
 #include <string_view>
@@ -116,7 +115,7 @@ static clang::TagTypeKind TranslateUdtKind(const TagRecord &cr) {
   case TypeRecordKind::Enum:
     return clang::TagTypeKind::Enum;
   default:
-    lldbassert(false && "Invalid tag record kind!");
+    assert(false && "Invalid tag record kind!");
     return clang::TagTypeKind::Struct;
   }
 }
@@ -527,9 +526,12 @@ bool PdbAstBuilderClang::CompleteType(CompilerType ct) {
 }
 
 bool PdbAstBuilderClang::CompleteTagDecl(clang::TagDecl &tag) {
-  // If this is not in our map, it's an error.
   auto status_iter = m_decl_to_status.find(&tag);
-  lldbassert(status_iter != m_decl_to_status.end());
+  if (status_iter == m_decl_to_status.end()) {
+    // If this is not in our map, it's an error.
+    assert(false && "completing unknown tag decl");
+    return false;
+  }
 
   // If it's already complete, just return.
   DeclStatus &status = status_iter->second;
@@ -540,7 +542,6 @@ bool PdbAstBuilderClang::CompleteTagDecl(clang::TagDecl &tag) {
   PdbIndex &index = static_cast<SymbolFileNativePDB *>(
                         m_clang.GetSymbolFile()->GetBackingSymbolFile())
                         ->GetIndex();
-  lldbassert(IsTagRecord(type_id, index.tpi()));
 
   clang::QualType tag_qt = m_clang.getASTContext().getCanonicalTagType(&tag);
   TypeSystemClang::SetHasExternalStorage(tag_qt.getAsOpaquePtr(), false);
@@ -552,7 +553,10 @@ bool PdbAstBuilderClang::CompleteTagDecl(clang::TagDecl &tag) {
 
   PdbTypeSymId best_ti = GetBestPossibleDecl(tag_ti, index.tpi());
   cvt = index.tpi().getType(best_ti.index);
-  lldbassert(IsTagRecord(cvt));
+  if (!IsTagRecord(cvt)) {
+    assert(false && "completing tag record that's not a tag record");
+    return false;
+  }
 
   if (IsForwardRefUdt(cvt)) {
     // If we can't find a full decl for this forward ref anywhere in the debug
@@ -710,8 +714,11 @@ clang::QualType PdbAstBuilderClang::CreateRecordType(PdbTypeSymId id,
   CompilerType ct = m_clang.CreateRecordType(
       context, OptionalClangModuleID(), uname, llvm::to_underlying(ttk),
       lldb::eLanguageTypeC_plus_plus, metadata);
-
-  lldbassert(ct.IsValid());
+  if (!ct.IsValid()) {
+    LLDB_LOG(GetLog(LLDBLog::Symbols), "failed to create record type for {0}",
+             id);
+    return {};
+  }
 
   TypeSystemClang::StartTagDeclarationDefinition(ct);
 
@@ -822,7 +829,10 @@ CompilerType PdbAstBuilderClang::GetOrCreateTypedefType(PdbGlobalSymId id) {
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
   PdbIndex &index = pdb->GetIndex();
   CVSymbol sym = index.ReadSymbolRecord(id);
-  lldbassert(sym.kind() == S_UDT);
+  if (sym.kind() != S_UDT) {
+    assert(false && "called on a non-udt type");
+    return {};
+  }
   llvm::Expected<UDTSym> udt = SymbolDeserializer::deserializeAs<UDTSym>(sym);
   if (!udt) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), udt.takeError(),
@@ -975,7 +985,7 @@ clang::QualType PdbAstBuilderClang::GetOrCreateClangType(PdbTypeSymId type) {
   m_uid_to_type[toOpaqueUid(type)] = qt;
   if (IsTagRecord(type, index.tpi())) {
     clang::TagDecl *tag = qt->getAsTagDecl();
-    lldbassert(m_decl_to_status.count(tag) == 0);
+    assert(m_decl_to_status.count(tag) == 0 && "type already created");
 
     DeclStatus &status = m_decl_to_status[tag];
     status.uid = uid;
@@ -1118,7 +1128,7 @@ clang::FunctionDecl *PdbAstBuilderClang::GetOrCreateInlinedFunctionDecl(
   // referring the same inline function. This avoid creating multiple same
   // inline function delcs.
   uint64_t func_uid = toOpaqueUid(func_id);
-  lldbassert(m_uid_to_decl.count(func_uid) == 0);
+  assert(m_uid_to_decl.count(func_uid) == 0 && "already created");
   m_uid_to_decl[func_uid] = function_decl;
   return function_decl;
 }
@@ -1126,7 +1136,11 @@ clang::FunctionDecl *PdbAstBuilderClang::GetOrCreateInlinedFunctionDecl(
 clang::FunctionDecl *
 PdbAstBuilderClang::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
                                              PdbCompilandSymId func_sid) {
-  lldbassert(func_tid.is_ipi);
+  if (!func_tid.is_ipi) {
+    assert(false && "called with non-ipi index");
+    return nullptr;
+  }
+
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
   PdbIndex &index = pdb->GetIndex();
@@ -1184,7 +1198,8 @@ PdbAstBuilderClang::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
     break;
   }
   default:
-    lldbassert(false && "Invalid function id type!");
+    LLDB_LOG(GetLog(LLDBLog::Symbols), "{0} is not a function type", func_tid);
+    return nullptr;
   }
   clang::QualType func_qt = GetOrCreateClangType(func_ti);
   if (func_qt.isNull() || !parent)
@@ -1255,7 +1270,7 @@ PdbAstBuilderClang::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
   if (function_decl == nullptr)
     return nullptr;
 
-  lldbassert(m_uid_to_decl.count(toOpaqueUid(func_id)) == 0);
+  assert(m_uid_to_decl.count(toOpaqueUid(func_id)) == 0 && "already created");
   m_uid_to_decl[toOpaqueUid(func_id)] = function_decl;
   DeclStatus status;
   status.resolved = true;
@@ -1383,8 +1398,9 @@ void PdbAstBuilderClang::CreateFunctionParameters(
     clang::ParmVarDecl *param = m_clang.CreateParameterDeclaration(
         &function_decl, OptionalClangModuleID(), param_name.str().c_str(),
         param_type_ct, clang::SC_None, true);
-    lldbassert(m_uid_to_decl.count(toOpaqueUid(param_uid)) == 0);
 
+    assert(m_uid_to_decl.count(toOpaqueUid(param_uid)) == 0 &&
+           "already created");
     m_uid_to_decl[toOpaqueUid(param_uid)] = param;
     params.push_back(param);
     ++i;
@@ -1619,8 +1635,11 @@ void PdbAstBuilderClang::ParseBlockChildren(PdbCompilandSymId block_id) {
       m_clang.GetSymbolFile()->GetBackingSymbolFile());
   PdbIndex &index = pdb->GetIndex();
   CVSymbol sym = index.ReadSymbolRecord(block_id);
-  lldbassert(sym.kind() == S_GPROC32 || sym.kind() == S_LPROC32 ||
-             sym.kind() == S_BLOCK32 || sym.kind() == S_INLINESITE);
+  if (sym.kind() != S_GPROC32 && sym.kind() != S_LPROC32 &&
+      sym.kind() != S_BLOCK32 && sym.kind() != S_INLINESITE) {
+    assert(false && "called on non-block");
+    return;
+  }
   CompilandIndexItem &cii =
       index.compilands().GetOrCreateCompiland(block_id.modi);
   CVSymbolArray symbols =
@@ -1649,10 +1668,16 @@ void PdbAstBuilderClang::ParseDeclsForSimpleContext(
     clang::DeclContext &context) {
 
   clang::Decl *decl = clang::Decl::castFromDeclContext(&context);
-  lldbassert(decl);
+  if (!decl) {
+    assert(false);
+    return;
+  }
 
   auto iter = m_decl_to_status.find(decl);
-  lldbassert(iter != m_decl_to_status.end());
+  if (iter == m_decl_to_status.end()) {
+    assert(false && "cannot parse unknown decl");
+    return;
+  }
 
   if (auto *tag = llvm::dyn_cast<clang::TagDecl>(&context)) {
     CompleteTagDecl(*tag);

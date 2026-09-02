@@ -265,7 +265,7 @@ define half @test_vector_reduce_fmax_v3half(<3 x half> %v) {
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
-; GFX9-SDAG-NEXT:    s_movk_i32 s0, 0x7e00
+; GFX9-SDAG-NEXT:    s_mov_b32 s0, 0xfe00
 ; GFX9-SDAG-NEXT:    v_pack_b32_f16 v1, v1, s0
 ; GFX9-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-SDAG-NEXT:    s_nop 0
@@ -288,7 +288,7 @@ define half @test_vector_reduce_fmax_v3half(<3 x half> %v) {
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX10-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX10-SDAG-NEXT:    v_pack_b32_f16 v1, v1, 0x7e00
+; GFX10-SDAG-NEXT:    v_pack_b32_f16 v1, v1, 0xfe00
 ; GFX10-SDAG-NEXT:    v_pk_max_f16 v0, v0, v1
 ; GFX10-SDAG-NEXT:    v_max_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -305,7 +305,7 @@ define half @test_vector_reduce_fmax_v3half(<3 x half> %v) {
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_fmax_v3half:
 ; GFX11-SDAG-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0x7e00
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0xfe00
 ; GFX11-SDAG-TRUE16-NEXT:    v_max_f16_e32 v1.l, v1.l, v1.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -321,7 +321,7 @@ define half @test_vector_reduce_fmax_v3half(<3 x half> %v) {
 ; GFX11-SDAG-FAKE16-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_pack_b32_f16 v1, v1, 0x7e00
+; GFX11-SDAG-FAKE16-NEXT:    v_pack_b32_f16 v1, v1, 0xfe00
 ; GFX11-SDAG-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v1
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
@@ -352,7 +352,7 @@ define half @test_vector_reduce_fmax_v3half(<3 x half> %v) {
 ; GFX1170-SDAG-TRUE16-LABEL: test_vector_reduce_fmax_v3half:
 ; GFX1170-SDAG-TRUE16:       ; %bb.0: ; %entry
 ; GFX1170-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0x7e00
+; GFX1170-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0xfe00
 ; GFX1170-SDAG-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v1.l, v1.l
 ; GFX1170-SDAG-TRUE16-NEXT:    v_pk_max_num_f16 v0, v0, v0
 ; GFX1170-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -368,7 +368,7 @@ define half @test_vector_reduce_fmax_v3half(<3 x half> %v) {
 ; GFX1170-SDAG-FAKE16-NEXT:    v_max_num_f16_e32 v1, v1, v1
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_max_num_f16 v0, v0, v0
 ; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_pack_b32_f16 v1, v1, 0x7e00
+; GFX1170-SDAG-FAKE16-NEXT:    v_pack_b32_f16 v1, v1, 0xfe00
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_max_num_f16 v0, v0, v1
 ; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
@@ -403,7 +403,7 @@ define half @test_vector_reduce_fmax_v3half(<3 x half> %v) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0x7e00
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0xfe00
 ; GFX12-SDAG-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v1.l, v1.l
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_max_num_f16 v0, v0, v0
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -423,7 +423,7 @@ define half @test_vector_reduce_fmax_v3half(<3 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    v_max_num_f16_e32 v1, v1, v1
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_max_num_f16 v0, v0, v0
 ; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_pack_b32_f16 v1, v1, 0x7e00
+; GFX12-SDAG-FAKE16-NEXT:    v_pack_b32_f16 v1, v1, 0xfe00
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_max_num_f16 v0, v0, v1
 ; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0

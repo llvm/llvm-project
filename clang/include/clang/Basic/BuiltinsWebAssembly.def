@@ -52,6 +52,10 @@ BUILTIN(__builtin_wasm_memtag_hint, "v*Iiv*v*z", "n")
 BUILTIN(__builtin_wasm_memtag_hintstore, "v*Iiv*zv*z", "n")
 BUILTIN(__builtin_wasm_memtag_hintstorez, "v*Iiv*zv*z", "n")
 
+// Bulk memory builtins
+TARGET_BUILTIN(__builtin_wasm_memory_copy, "vIiIiv*vC*z", "n", "bulk-memory")
+TARGET_BUILTIN(__builtin_wasm_memory_fill, "vIiv*iz", "n", "bulk-memory")
+
 // Thread-local storage
 TARGET_BUILTIN(__builtin_wasm_tls_size, "z", "nc", "bulk-memory")
 TARGET_BUILTIN(__builtin_wasm_tls_align, "z", "nc", "bulk-memory")

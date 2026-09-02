@@ -16,7 +16,7 @@ class NSArraySyntheticTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.m", "// Set break point at this line.")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_rdar11086338_with_run_command(self):
         """Test that NSArray reports its synthetic children properly."""
         self.build()

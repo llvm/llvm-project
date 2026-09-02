@@ -204,3 +204,42 @@ subroutine func5()
   !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
   !$omp declare target link (a5_link)
 end
+
+subroutine func6
+    common /foo/ l
+    integer :: l
+    integer :: k(l)
+    save
+    !ERROR: An automatic data object cannot appear in DECLARE TARGET, because it cannot be given the SAVE attribute
+    !$omp declare target(k)
+end subroutine
+
+subroutine func7(a)
+    integer :: a(:)
+    save
+    !ERROR: A dummy argument cannot appear in DECLARE TARGET, because it cannot be given the SAVE attribute
+    !$omp declare target(a)
+end subroutine
+
+integer function func8()
+    save
+    !$omp declare target(func8)
+end function
+
+function func8b() result(res)
+    integer :: res
+    save
+    !ERROR: A function result object cannot appear in DECLARE TARGET, because it cannot be given the SAVE attribute
+    !$omp declare target(res)
+end function
+
+integer function func9()
+    integer :: x
+    common /blk/ x
+    save
+    !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
+    !$omp declare target(x)
+
+    ! PASS
+    !$omp declare target(/blk/)
+end function

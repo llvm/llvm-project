@@ -85,6 +85,7 @@ enum class ElementType : uint32_t {
   UNormF64,
   PackedS8x32,
   PackedU8x32,
+  LastEntry = PackedU8x32,
 };
 
 /// Metadata tags for extra resource properties.

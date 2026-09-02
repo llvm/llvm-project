@@ -21,10 +21,8 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; LA64-NEXT:    andi $a7, $a5, 255
 ; LA64-NEXT:    sltu $a7, $a7, $a4
 ; LA64-NEXT:    xori $a7, $a7, 1
-; LA64-NEXT:    sub.d $t0, $a5, $a1
-; LA64-NEXT:    masknez $a5, $a5, $a7
-; LA64-NEXT:    maskeqz $a7, $t0, $a7
-; LA64-NEXT:    or $a5, $a7, $a5
+; LA64-NEXT:    maskeqz $a7, $a1, $a7
+; LA64-NEXT:    sub.d $a5, $a5, $a7
 ; LA64-NEXT:    andi $a5, $a5, 255
 ; LA64-NEXT:    sll.w $a5, $a5, $a2
 ; LA64-NEXT:    and $a7, $a6, $a3
@@ -74,10 +72,8 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; LA64-NEXT:    bstrpick.d $a7, $a5, 15, 0
 ; LA64-NEXT:    sltu $a7, $a7, $a4
 ; LA64-NEXT:    xori $a7, $a7, 1
-; LA64-NEXT:    sub.d $t0, $a5, $a1
-; LA64-NEXT:    masknez $a5, $a5, $a7
-; LA64-NEXT:    maskeqz $a7, $t0, $a7
-; LA64-NEXT:    or $a5, $a7, $a5
+; LA64-NEXT:    maskeqz $a7, $a1, $a7
+; LA64-NEXT:    sub.d $a5, $a5, $a7
 ; LA64-NEXT:    bstrpick.d $a5, $a5, 15, 0
 ; LA64-NEXT:    sll.w $a5, $a5, $a2
 ; LA64-NEXT:    and $a7, $a6, $a3
@@ -118,10 +114,8 @@ define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 ; LA64-NEXT:    move $a4, $a2
 ; LA64-NEXT:    sltu $a2, $a2, $a3
 ; LA64-NEXT:    xori $a2, $a2, 1
-; LA64-NEXT:    sub.w $a5, $a4, $a1
-; LA64-NEXT:    maskeqz $a5, $a5, $a2
-; LA64-NEXT:    masknez $a2, $a4, $a2
-; LA64-NEXT:    or $a5, $a5, $a2
+; LA64-NEXT:    maskeqz $a2, $a1, $a2
+; LA64-NEXT:    sub.w $a5, $a4, $a2
 ; LA64-NEXT:  .LBB2_3: # %atomicrmw.start
 ; LA64-NEXT:    # Parent Loop BB2_1 Depth=1
 ; LA64-NEXT:    # => This Inner Loop Header: Depth=2
@@ -157,10 +151,8 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; LA64-NEXT:    move $a3, $a2
 ; LA64-NEXT:    sltu $a2, $a2, $a1
 ; LA64-NEXT:    xori $a2, $a2, 1
-; LA64-NEXT:    sub.d $a4, $a3, $a1
-; LA64-NEXT:    maskeqz $a4, $a4, $a2
-; LA64-NEXT:    masknez $a2, $a3, $a2
-; LA64-NEXT:    or $a4, $a4, $a2
+; LA64-NEXT:    maskeqz $a2, $a1, $a2
+; LA64-NEXT:    sub.d $a4, $a3, $a2
 ; LA64-NEXT:  .LBB3_3: # %atomicrmw.start
 ; LA64-NEXT:    # Parent Loop BB3_1 Depth=1
 ; LA64-NEXT:    # => This Inner Loop Header: Depth=2

@@ -38,6 +38,8 @@ public:
 
 private:
   bool visitBarrier(IntrinsicInst &I);
+  bool visitPtrSBufferLoad(IntrinsicInst &I);
+  bool visitMonitorSleep(IntrinsicInst &I);
 };
 
 class AMDGPULowerIntrinsicsLegacy : public ModulePass {
@@ -75,6 +77,14 @@ bool AMDGPULowerIntrinsicsImpl::run() {
     case Intrinsic::amdgcn_s_barrier_wait:
     case Intrinsic::amdgcn_s_cluster_barrier:
       forEachCall(F, [&](IntrinsicInst *II) { Changed |= visitBarrier(*II); });
+      break;
+    case Intrinsic::amdgcn_ptr_s_buffer_load:
+      forEachCall(
+          F, [&](IntrinsicInst *II) { Changed |= visitPtrSBufferLoad(*II); });
+      break;
+    case Intrinsic::amdgcn_s_monitor_sleep:
+      forEachCall(
+          F, [&](IntrinsicInst *II) { Changed |= visitMonitorSleep(*II); });
       break;
     }
   }
@@ -191,6 +201,35 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
   }
 
   return false;
+}
+
+bool AMDGPULowerIntrinsicsImpl::visitPtrSBufferLoad(IntrinsicInst &I) {
+  assert(I.getIntrinsicID() == Intrinsic::amdgcn_ptr_s_buffer_load);
+
+  if (I.hasMetadata(LLVMContext::MD_invariant_load))
+    return false;
+
+  I.setMetadata(LLVMContext::MD_invariant_load,
+                MDNode::get(I.getContext(), {}));
+  return true;
+}
+
+bool AMDGPULowerIntrinsicsImpl::visitMonitorSleep(IntrinsicInst &I) {
+  assert(I.getIntrinsicID() == Intrinsic::amdgcn_s_monitor_sleep);
+
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
+  if (!ST.hasNoSleepForever())
+    return false;
+
+  int Sleep = cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
+  if (!(Sleep & 0x8000))
+    return false;
+
+  IRBuilder<> B(&I);
+  Value *NewSleep = B.getInt16(0x2000); // Maximum
+  I.setArgOperand(0, NewSleep);
+
+  return true;
 }
 
 PreservedAnalyses AMDGPULowerIntrinsicsPass::run(Module &M,

@@ -505,8 +505,10 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
   return new_thread_list.GetSize(false) > 0;
 }
 
-size_t ProcessFreeBSDKernelCore::DoReadMemory(lldb::addr_t addr, void *buf,
-                                              size_t size, Status &error) {
+size_t
+ProcessFreeBSDKernelCore::DoReadMemory(const ProcessAddress &process_addr,
+                                       void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   ssize_t rd = 0;
   rd = kvm_read2(m_kvm, addr, buf, size);
   if (rd < 0 || static_cast<size_t>(rd) != size) {

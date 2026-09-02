@@ -8,7 +8,10 @@
 
 #include "llvm/CodeGen/MachineModuleSlotTracker.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Module.h"
 
 using namespace llvm;
@@ -17,7 +20,18 @@ void MachineModuleSlotTracker::processMachineFunctionMetadata(
     AbstractSlotTrackerStorage *AST, const MachineFunction &MF) {
   // Create metadata created within the backend.
   for (const MachineBasicBlock &MBB : MF)
-    for (const MachineInstr &MI : MBB.instrs())
+    for (const MachineInstr &MI : MBB.instrs()) {
+      if (MDNode *N = MI.getHeapAllocMarker())
+        AST->createMetadataSlot(N);
+      if (MDNode *N = MI.getPCSections())
+        AST->createMetadataSlot(N);
+      if (MDNode *N = MI.getMMRAMetadata())
+        AST->createMetadataSlot(N);
+
+      for (const MachineOperand &MO : MI.operands())
+        if (MO.isMetadata())
+          AST->createMetadataSlot(MO.getMetadata());
+
       for (const MachineMemOperand *MMO : MI.memoperands()) {
         AAMDNodes AAInfo = MMO->getAAInfo();
         if (AAInfo.TBAA)
@@ -28,7 +42,19 @@ void MachineModuleSlotTracker::processMachineFunctionMetadata(
           AST->createMetadataSlot(AAInfo.Scope);
         if (AAInfo.NoAlias)
           AST->createMetadataSlot(AAInfo.NoAlias);
+        if (AAInfo.NoAliasAddrSpace)
+          AST->createMetadataSlot(AAInfo.NoAliasAddrSpace);
+        if (const MDNode *N = MMO->getRanges())
+          AST->createMetadataSlot(N);
+        if (const MDNode *N = MMO->getMemCacheHint())
+          AST->createMetadataSlot(N);
       }
+    }
+
+  for (const MachineFunction::VariableDbgInfo &DebugVar :
+       MF.getVariableDbgInfo()) {
+    AST->createMetadataSlot(DebugVar.Var);
+  }
 }
 
 void MachineModuleSlotTracker::processMachineModule(

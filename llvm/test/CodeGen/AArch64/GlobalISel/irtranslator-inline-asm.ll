@@ -270,7 +270,7 @@ define i64 @test_input_with_matching_constraint_to_physical_register() {
   ; CHECK-LABEL: name: test_input_with_matching_constraint_to_physical_register
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64arg = COPY [[C]](i64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64all = COPY [[C]](i64)
   ; CHECK-NEXT:   INLINEASM &"", attdialect, regdef, implicit-def $x2, reguse tiedto:$0, [[COPY]](tied-def 3)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x2
   ; CHECK-NEXT:   $x0 = COPY [[COPY1]](i64)

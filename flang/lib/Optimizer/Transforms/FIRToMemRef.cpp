@@ -32,6 +32,10 @@
 //    and emits `memref.reinterpret_cast` when dynamic layout is required
 //    (TODO: use memref.cast instead).
 //
+//  - Leaves volatile `fir.load` / `fir.store` alone. Memref dialect has no way
+//    to express volatility currently. These accesses are lowered straight
+//    to LLVM by the FIR code generation path.
+//
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
@@ -1329,10 +1333,12 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
 ///      `index_cast` if they need an index-typed result.
 ///
 ///   4. `arith.addi %a, %b`
-///      -> recursively canonicalize both operands, and if their result
-///      types match, build a new `arith.addi` at the same location. If
-///      the canonicalized operand types diverge, returns the original op
-///      untouched (the caller can still `index_cast` externally).
+///      -> recursively canonicalize both operands. If neither operand
+///      changed, the original op is returned as-is. Otherwise, if the
+///      canonicalized operand types match, build a new `arith.addi` at the
+///      same location, carrying over the original overflow flags.
+///      If the canonicalized operand types diverge, returns the original
+///      op untouched (the caller can still `index_cast` externally).
 ///
 /// Only these four patterns fire -- this is intentionally a narrow peephole,
 /// not a general folder. Multiplication, sub, cast chains through other ops,
@@ -1368,8 +1374,17 @@ Value FIRToMemRef::canonicalizeIndex(Value index,
   if (auto add = dyn_cast<arith::AddIOp>(op)) {
     Value lhs = canonicalizeIndex(add.getLhs(), rewriter);
     Value rhs = canonicalizeIndex(add.getRhs(), rewriter);
-    if (lhs.getType() == rhs.getType())
+    // Neither operand simplified, so a rebuilt op would be an exact duplicate.
+    // Reuse the original instead.
+    if (lhs == add.getLhs() && rhs == add.getRhs())
+      return index;
+    if (lhs.getType() == rhs.getType()) {
+      // Carry over overflow flags when width unchanged only.
+      if (lhs.getType() == add.getType())
+        return arith::AddIOp::create(rewriter, op->getLoc(), lhs, rhs,
+                                     add.getOverflowFlags());
       return arith::AddIOp::create(rewriter, op->getLoc(), lhs, rhs);
+    }
   }
   return index;
 }
@@ -1673,6 +1688,12 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value converted,
 
 void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
                                 FIRToMemRefTypeConverter &typeConverter) {
+  if (fir::isa_volatile_type(load.getMemref().getType())) {
+    LLVM_DEBUG(llvm::dbgs() << "FIRToMemRef: keeping volatile load in FIR:\n";
+               load.dump());
+    return;
+  }
+
   Value firMemref = load.getMemref();
   if (!typeConverter.convertibleType(firMemref.getType()))
     return;
@@ -1716,6 +1737,13 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
 
 void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
                                  FIRToMemRefTypeConverter &typeConverter) {
+  if (fir::isa_volatile_type(store.getMemref().getType()) ||
+      fir::isa_volatile_type(store.getValue().getType())) {
+    LLVM_DEBUG(llvm::dbgs() << "FIRToMemRef: keeping volatile store in FIR:\n";
+               store.dump());
+    return;
+  }
+
   Value firMemref = store.getMemref();
 
   if (!typeConverter.convertibleType(firMemref.getType()))

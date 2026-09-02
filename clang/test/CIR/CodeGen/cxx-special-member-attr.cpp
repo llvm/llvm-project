@@ -30,10 +30,6 @@ struct Foo {
   ~Foo();
 };
 
-// Trivial copy/move assignment operator definitions appear at module level.
-// CIR: @_ZN4FlubaSERKS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) func_info<#cir.cxx_assign<!rec_Flub, copy, trivial true>>
-// CIR: @_ZN4FlubaSEOS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) func_info<#cir.cxx_assign<!rec_Flub, move, trivial true>>
-
 void trivial_func() {
   Flub f1{};
 
@@ -48,15 +44,16 @@ void trivial_func() {
   f1 = static_cast<Flub&&>(f3);
 }
 
+// Trivial copy/move assignment operator definitions appear at module level.
+// CIR: @_ZN4FlubaSERKS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) func_info<#cir.cxx_assign<!rec_Flub, copy, trivial true>>
+// CIR: @_ZN4FlubaSEOS_(%arg0: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) func_info<#cir.cxx_assign<!rec_Flub, move, trivial true>>
+
 void non_trivial_func() {
   Foo f1{};
-  // CIR: @_ZN3FooC2Ev(%arg0: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}})) func_info<#cir.cxx_ctor<!rec_Foo, default>>
 
   Foo f2 = f1;
-  // CIR: @_ZN3FooC2ERKS_(%arg0: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}})) func_info<#cir.cxx_ctor<!rec_Foo, copy>>
 
   Foo f3 = static_cast<Foo&&>(f1);
-  // CIR: @_ZN3FooC2EOS_(%arg0: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}})) func_info<#cir.cxx_ctor<!rec_Foo, move>>
 
   f2 = f1;
   // CIR: @_ZN3FooaSERKS_(%arg0: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Foo>{{.*}}) func_info<#cir.cxx_assign<!rec_Foo, copy>>
@@ -65,3 +62,7 @@ void non_trivial_func() {
   // CIR: @_ZN3FooaSEOS_(%arg0: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}})) -> (!cir.ptr<!rec_Foo>{{.*}}) func_info<#cir.cxx_assign<!rec_Foo, move>>
   // CIR: @_ZN3FooD1Ev(!cir.ptr<!rec_Foo> {{.*}}) func_info<#cir.cxx_dtor<!rec_Foo>>
 }
+
+// CIR: @_ZN3FooC2Ev(%arg0: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}})) func_info<#cir.cxx_ctor<!rec_Foo, default>>
+// CIR: @_ZN3FooC2ERKS_(%arg0: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}})) func_info<#cir.cxx_ctor<!rec_Foo, copy>>
+// CIR: @_ZN3FooC2EOS_(%arg0: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> {{[{][^}]*[}]}} loc({{.*}})) func_info<#cir.cxx_ctor<!rec_Foo, move>>

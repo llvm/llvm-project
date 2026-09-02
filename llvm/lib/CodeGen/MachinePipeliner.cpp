@@ -1652,7 +1652,7 @@ private:
   }
 
   bool isDefinedInThisLoop(Register Reg) const {
-    return Reg.isVirtual() && MRI.getVRegDef(Reg)->getParent() == OrigMBB;
+    return Reg.isVirtual() && MRI.getDefBlock(Reg) == OrigMBB;
   }
 
   // Search for live-in variables. They are factored into the register pressure
@@ -2777,6 +2777,15 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
   });
 }
 
+/// Set the policy for this loop, allowing the target to override it.
+void SwingSchedulerDAG::initPolicy() {
+  MF.getSubtarget().overridePipelinerPolicy(Policy);
+
+  // After subtarget overrides, apply command line options.
+  if (LimitRegPressure.getNumOccurrences())
+    Policy.ShouldLimitRegPressure = LimitRegPressure;
+}
+
 /// Process the nodes in the computed order and create the pipelined schedule
 /// of the instructions, if possible. Return true if a schedule is found.
 bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
@@ -2788,7 +2797,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
 
   bool scheduleFound = false;
   std::unique_ptr<HighRegisterPressureDetector> HRPDetector;
-  if (LimitRegPressure) {
+  if (Policy.ShouldLimitRegPressure) {
     HRPDetector =
         std::make_unique<HighRegisterPressureDetector>(Loop.getHeader(), MF);
     HRPDetector->init(RegClassInfo);
@@ -2872,9 +2881,9 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
     if (scheduleFound)
       scheduleFound = Schedule.isValidSchedule(this);
 
-    // If a schedule was found and the option is enabled, check if the schedule
-    // might generate additional register spills/fills.
-    if (scheduleFound && LimitRegPressure)
+    // If a schedule was found and the detector is enabled, check if the
+    // schedule might generate additional register spills/fills.
+    if (scheduleFound && HRPDetector)
       scheduleFound =
           !HRPDetector->detect(this, Schedule, Schedule.getMaxStageCount());
   }
@@ -2912,7 +2921,7 @@ static Register findUniqueOperandDefinedInLoop(const MachineInstr &MI) {
     Register Reg = Use.getReg();
     if (!Reg.isVirtual())
       return Register();
-    if (MRI.getVRegDef(Reg)->getParent() != MI.getParent())
+    if (MRI.getDefBlock(Reg) != MI.getParent())
       continue;
     if (Result)
       return Register();

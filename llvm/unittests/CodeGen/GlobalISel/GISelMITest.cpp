@@ -58,9 +58,9 @@ body: |
   bb.1:
     liveins: $x0, $x1, $x2, $x4
 
-    %0(s64) = COPY $x0
-    %1(s64) = COPY $x1
-    %2(s64) = COPY $x2
+    %0(i64) = COPY $x0
+    %1(i64) = COPY $x1
+    %2(i64) = COPY $x2
 )MIR") +
    Twine(MIRFunc) + Twine("...\n"))
       .toNullTerminatedStringRef(S);

@@ -75,8 +75,8 @@ void RawMemoryCallOnNonTrivialTypeCheck::registerMatchers(MatchFinder *Finder) {
   };
   auto IsRecordSizeOf =
       expr(sizeOfExpr(hasArgumentOfType(equalsBoundNode("Record"))));
-  auto ArgChecker = [&](const Matcher<CXXRecordDecl> &RecordConstraint,
-                        const BindableMatcher<Stmt> &SecondArg = expr()) {
+  const auto ArgChecker = [&](const Matcher<CXXRecordDecl> &RecordConstraint,
+                              const BindableMatcher<Stmt> &SecondArg = expr()) {
     return allOf(argumentCountIs(3),
                  hasArgument(0, IsStructPointer(RecordConstraint, true)),
                  hasArgument(1, SecondArg), hasArgument(2, IsRecordSizeOf));

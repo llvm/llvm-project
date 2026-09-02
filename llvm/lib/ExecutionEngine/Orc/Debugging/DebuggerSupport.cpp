@@ -24,12 +24,6 @@ Error enableDebuggerSupport(LLJIT &J) {
     return make_error<StringError>("Cannot enable LLJIT debugger support: "
                                    "Debugger support requires JITLink",
                                    inconvertibleErrorCode());
-  auto ProcessSymsJD = J.getProcessSymbolsJITDylib();
-  if (!ProcessSymsJD)
-    return make_error<StringError>("Cannot enable LLJIT debugger support: "
-                                   "Process symbols are not available",
-                                   inconvertibleErrorCode());
-
   auto &ES = J.getExecutionSession();
   const auto &TT = J.getTargetTriple();
 
@@ -37,11 +31,12 @@ Error enableDebuggerSupport(LLJIT &J) {
   case Triple::ELF: {
     Error TargetSymErr = Error::success();
     ObjLinkingLayer->addPlugin(
-        std::make_unique<ELFDebugObjectPlugin>(ES, false, true, TargetSymErr));
+        std::make_unique<ELFDebugObjectPlugin>(ES, false, TargetSymErr));
     return TargetSymErr;
   }
   case Triple::MachO: {
-    auto DS = GDBJITDebugInfoRegistrationPlugin::Create(ES, *ProcessSymsJD, TT);
+    auto DS = GDBJITDebugInfoRegistrationPlugin::Create(
+        ES, ES.getBootstrapJITDylib());
     if (!DS)
       return DS.takeError();
     ObjLinkingLayer->addPlugin(std::move(*DS));

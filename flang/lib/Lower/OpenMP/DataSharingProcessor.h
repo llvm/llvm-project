@@ -19,8 +19,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include <variant>
 
 namespace mlir {
@@ -40,7 +38,7 @@ private:
   /// order to tell which OMP scope defined vs. references a certain Symbol.
   struct OMPConstructSymbolVisitor {
     OMPConstructSymbolVisitor(semantics::SemanticsContext &ctx)
-        : version(ctx.langOptions().OpenMPVersion) {}
+        : version(ctx.langOptions().getOpenMPVersion()) {}
     template <typename T>
     bool Pre(const T &) {
       return true;
@@ -90,7 +88,7 @@ private:
     llvm::SmallVector<ConstructPtr> constructs;
     llvm::DenseMap<semantics::Symbol *, ConstructPtr> symDefMap;
 
-    unsigned version;
+    llvm::omp::Version version;
   };
 
   mlir::OpBuilder::InsertPoint lastPrivIP;
@@ -99,6 +97,14 @@ private:
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
+  llvm::SetVector<const semantics::Symbol *> conditionalLastPrivatizedSymbols;
+  // When true, conditional-lastprivate list items get an ordinary private copy
+  // (their in-loop working value) plus a separate reduction struct as the
+  // conditional-last accumulator.  Used by worksharing loops, where a
+  // nonmonotonic schedule can execute chunks out of order.  When false the list
+  // item is bound directly to the reduction struct (used by sections, which are
+  // lexically ordered and never need the private copy).
+  bool conditionalLpUsesPrivateCopy = false;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
@@ -109,8 +115,6 @@ private:
   bool useDelayedPrivatization;
   bool forceHeapAllocationForPrivateDynamicArrays = false;
   llvm::SmallPtrSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
-  llvm::SmallPtrSet<const semantics::Symbol *, 4>
-      symbolsCoveredByReductionElements;
   lower::SymMap &symTable;
   bool isTargetPrivatization;
   OMPConstructSymbolVisitor visitor;
@@ -131,7 +135,6 @@ private:
       const omp::ObjectList &objects,
       llvm::SetVector<const semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
-  bool isCoveredByReductionElement(const semantics::Symbol *sym) const;
   void insertBarrier(mlir::omp::PrivateClauseOps *clauseOps);
   void collectDefaultSymbols();
   void collectImplicitSymbols();
@@ -150,7 +153,7 @@ private:
   void insertDeallocs();
 
   static bool isOpenMPPrivatizingConstruct(const parser::OpenMPConstruct &omp,
-                                           unsigned version);
+                                           llvm::omp::Version version);
   bool isOpenMPPrivatizingEvaluation(const pft::Evaluation &eval) const;
 
 public:
@@ -160,17 +163,13 @@ public:
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
                        bool useDelayedPrivatization, lower::SymMap &symTable,
-                       bool isTargetPrivatization = false,
-                       llvm::ArrayRef<const semantics::Symbol *>
-                           symbolsCoveredByReductionElements = {});
+                       bool isTargetPrivatization = false);
 
   DataSharingProcessor(lower::AbstractConverter &converter,
                        semantics::SemanticsContext &semaCtx,
                        lower::pft::Evaluation &eval,
                        bool useDelayedPrivatization, lower::SymMap &symTable,
-                       bool isTargetPrivatization = false,
-                       llvm::ArrayRef<const semantics::Symbol *>
-                           symbolsCoveredByReductionElements = {});
+                       bool isTargetPrivatization = false);
 
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for
@@ -207,6 +206,15 @@ public:
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
                        mlir::omp::PrivateClauseOps *clauseOps,
                        std::optional<llvm::omp::Directive> dir = std::nullopt);
+
+  const llvm::SetVector<const semantics::Symbol *> &
+  getConditionalLastprivateSymbols() const {
+    return conditionalLastPrivatizedSymbols;
+  }
+
+  void setConditionalLpUsesPrivateCopy(bool v) {
+    conditionalLpUsesPrivateCopy = v;
+  }
 };
 
 } // namespace omp

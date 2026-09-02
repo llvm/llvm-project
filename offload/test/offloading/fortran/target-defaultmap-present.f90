@@ -31,4 +31,4 @@ program map_present
     call target_data_not_present()
 end program
 
-!CHECK: omptarget message: device mapping required by 'present' map type modifier does not exist for host address{{.*}}
+!CHECK: message: device mapping required by 'present' map type modifier does not exist for host address{{.*}}

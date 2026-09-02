@@ -668,6 +668,40 @@ TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveSorting) {
                sort(UnsortedCode));
 }
 
+TEST_F(SortIncludesTest, SupportNaturalSorting) {
+  FmtStyle.SortIncludes.Natural = true;
+  verifyFormat("#include \"crypto/chacha8.h\"\n"
+               "#include \"crypto/chacha12.h\"\n"
+               "#include \"crypto/chacha20.h\"",
+               sort("#include \"crypto/chacha12.h\"\n"
+                    "#include \"crypto/chacha8.h\"\n"
+                    "#include \"crypto/chacha20.h\""));
+}
+
+TEST_F(SortIncludesTest, SupportNaturalSortingWithIgnoreCase) {
+  FmtStyle.SortIncludes.Natural = true;
+  FmtStyle.SortIncludes.IgnoreCase = true;
+
+  verifyFormat("#include \"crypto/chacha8.h\"\n"
+               "#include \"Crypto/ChaCha12.h\"\n"
+               "#include \"crypto/chacha20.h\"",
+               sort("#include \"Crypto/ChaCha12.h\"\n"
+                    "#include \"crypto/chacha8.h\"\n"
+                    "#include \"crypto/chacha20.h\""));
+}
+
+TEST_F(SortIncludesTest, SupportNaturalSortingWithIgnoreExtension) {
+  FmtStyle.SortIncludes.Natural = true;
+  FmtStyle.SortIncludes.IgnoreExtension = true;
+
+  verifyFormat("#include \"crypto/chacha8.c\"\n"
+               "#include \"crypto/chacha12.h\"\n"
+               "#include \"crypto/chacha20.h\"",
+               sort("#include \"crypto/chacha12.h\"\n"
+                    "#include \"crypto/chacha20.h\"\n"
+                    "#include \"crypto/chacha8.c\""));
+}
+
 TEST_F(SortIncludesTest, SupportCaseInsensitiveMatching) {
   // Setup an regex for main includes so we can cover those as well.
   Style.IncludeIsMainRegex = "([-_](test|unittest))?$";

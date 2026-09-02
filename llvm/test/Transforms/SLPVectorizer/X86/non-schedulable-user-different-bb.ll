@@ -11,10 +11,9 @@ define i1 @test() {
 ; CHECK:       [[IF_THEN2378]]:
 ; CHECK-NEXT:    [[MUL1877:%.*]] = mul i32 [[REM1876]], 0
 ; CHECK-NEXT:    [[MUL1920:%.*]] = mul i32 poison, 0
-; CHECK-NEXT:    [[REM1878:%.*]] = urem i32 [[MUL1877]], 0
-; CHECK-NEXT:    [[REM1921:%.*]] = urem i32 [[MUL1920]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[REM1921]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[REM1878]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[MUL1920]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[MUL1877]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = urem <2 x i32> [[TMP10]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>, <4 x i32> [[TMP2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> poison, [[TMP3]]

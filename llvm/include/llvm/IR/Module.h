@@ -270,10 +270,14 @@ public:
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
-  void convertFromNewDbgValues() {
+  /// Returns true if any function's conversion modified the module.
+  bool convertFromNewDbgValues() {
+    bool Modified = false;
     for (auto &F : *this) {
-      F.convertFromNewDbgValues();
+      if (F.convertFromNewDbgValues())
+        Modified = true;
     }
+    return Modified;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -1047,6 +1051,27 @@ public:
 
   /// Set the code model (tiny, small, kernel, medium or large)
   void setCodeModel(CodeModel::Model CL);
+  /// @}
+
+  /// @}
+  /// @name Utility functions for querying the long double format
+  /// @{
+
+  /// Returns the long double format from the "long-double-type" module flag,
+  /// or the triple default when the flag is absent.
+  LongDoubleFormat getLongDoubleFormat() const;
+
+  /// Set the long double format.
+  void setLongDoubleFormat(LongDoubleFormat Format);
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying the floating-point ABI
+  /// @{
+
+  /// Returns the floating-point ABI recorded by the "float-abi" module flag, or
+  /// the ABI implied by the target triple when the flag is absent.
+  FloatABI::ABIType getFloatABI() const;
   /// @}
 
   /// @}

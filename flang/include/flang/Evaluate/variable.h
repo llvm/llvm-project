@@ -435,6 +435,34 @@ private:
   int dimension_{0}; // zero-based
 };
 
+// Represents the extraction of a single scalar element from a rank-1
+// integer array expression used as an explicit-shape array bound (F2023).
+// The inner expression is rank-1; this node is scalar (Rank() == 0).
+// dimension_ is zero-based.
+class RankOneBoundElement {
+public:
+  using Result = SubscriptInteger;
+  CLASS_BOILERPLATE(RankOneBoundElement)
+  RankOneBoundElement(
+      common::CopyableIndirection<Expr<SubscriptInteger>> &&e, int dim)
+      : base_{std::move(e)}, dimension_{dim} {}
+  RankOneBoundElement(Expr<SubscriptInteger> &&e, int dim)
+      : base_{std::move(e)}, dimension_{dim} {}
+
+  const Expr<SubscriptInteger> &base() const { return base_.value(); }
+  Expr<SubscriptInteger> &base() { return base_.value(); }
+  int dimension() const { return dimension_; }
+
+  static constexpr int Rank() { return 0; } // always scalar
+  static constexpr int Corank() { return 0; }
+  bool operator==(const RankOneBoundElement &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+
+private:
+  common::CopyableIndirection<Expr<SubscriptInteger>> base_;
+  int dimension_{0}; // zero-based
+};
+
 #define INSTANTIATE_VARIABLE_TEMPLATES \
   FOR_EACH_SPECIFIC_TYPE(template class Designator, )
 } // namespace Fortran::evaluate

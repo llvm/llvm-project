@@ -1250,3 +1250,560 @@ uint32x4_t test_vraddhn_high_u64(uint32x2_t r, uint64x2_t a, uint64x2_t b) {
   // LLVM: ret <4 x i32> [[RES]]
   return vraddhn_high_u64(r, a, b);
 }
+
+//===------------------------------------------------------===//
+// 2.1.1.1.4. Saturating addition
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#saturating-addition
+//===------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vqadd_s8(
+// CIR-LABEL: @vqadd_s8(
+int8x8_t test_vqadd_s8(int8x8_t a, int8x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqadd.v8i8(<8 x i8> [[A]], <8 x i8> [[B]])
+// LLVM: ret <8 x i8> [[RES]]
+  return vqadd_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vqadd_s16(
+// CIR-LABEL: @vqadd_s16(
+int16x4_t test_vqadd_s16(int16x4_t a, int16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqadd.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+// LLVM: ret <4 x i16> [[RES]]
+  return vqadd_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vqadd_s32(
+// CIR-LABEL: @vqadd_s32(
+int32x2_t test_vqadd_s32(int32x2_t a, int32x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqadd.v2i32(<2 x i32> [[A]], <2 x i32> [[B]])
+// LLVM: ret <2 x i32> [[RES]]
+  return vqadd_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vqadd_s64(
+// CIR-LABEL: @vqadd_s64(
+int64x1_t test_vqadd_s64(int64x1_t a, int64x1_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <1 x i64> @llvm.aarch64.neon.sqadd.v1i64(<1 x i64> [[A]], <1 x i64> [[B]])
+// LLVM: ret <1 x i64> [[RES]]
+  return vqadd_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vqadd_u8(
+// CIR-LABEL: @vqadd_u8(
+uint8x8_t test_vqadd_u8(uint8x8_t a, uint8x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqadd.v8i8(<8 x i8> [[A]], <8 x i8> [[B]])
+// LLVM: ret <8 x i8> [[RES]]
+  return vqadd_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vqadd_u16(
+// CIR-LABEL: @vqadd_u16(
+uint16x4_t test_vqadd_u16(uint16x4_t a, uint16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqadd.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+// LLVM: ret <4 x i16> [[RES]]
+  return vqadd_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vqadd_u32(
+// CIR-LABEL: @vqadd_u32(
+uint32x2_t test_vqadd_u32(uint32x2_t a, uint32x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.uqadd.v2i32(<2 x i32> [[A]], <2 x i32> [[B]])
+// LLVM: ret <2 x i32> [[RES]]
+  return vqadd_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vqadd_u64(
+// CIR-LABEL: @vqadd_u64(
+uint64x1_t test_vqadd_u64(uint64x1_t a, uint64x1_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <1 x i64> @llvm.aarch64.neon.uqadd.v1i64(<1 x i64> [[A]], <1 x i64> [[B]])
+// LLVM: ret <1 x i64> [[RES]]
+  return vqadd_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddq_s8(
+// CIR-LABEL: @vqaddq_s8(
+int8x16_t test_vqaddq_s8(int8x16_t a, int8x16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <16 x i8> @llvm.aarch64.neon.sqadd.v16i8(<16 x i8> [[A]], <16 x i8> [[B]])
+// LLVM: ret <16 x i8> [[RES]]
+  return vqaddq_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddq_s16(
+// CIR-LABEL: @vqaddq_s16(
+int16x8_t test_vqaddq_s16(int16x8_t a, int16x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <8 x i16> @llvm.aarch64.neon.sqadd.v8i16(<8 x i16> [[A]], <8 x i16> [[B]])
+// LLVM: ret <8 x i16> [[RES]]
+  return vqaddq_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddq_s32(
+// CIR-LABEL: @vqaddq_s32(
+int32x4_t test_vqaddq_s32(int32x4_t a, int32x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqadd.v4i32(<4 x i32> [[A]], <4 x i32> [[B]])
+// LLVM: ret <4 x i32> [[RES]]
+  return vqaddq_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddq_s64(
+// CIR-LABEL: @vqaddq_s64(
+int64x2_t test_vqaddq_s64(int64x2_t a, int64x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqadd.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
+// LLVM: ret <2 x i64> [[RES]]
+  return vqaddq_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddq_u8(
+// CIR-LABEL: @vqaddq_u8(
+uint8x16_t test_vqaddq_u8(uint8x16_t a, uint8x16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <16 x i8> @llvm.aarch64.neon.uqadd.v16i8(<16 x i8> [[A]], <16 x i8> [[B]])
+// LLVM: ret <16 x i8> [[RES]]
+  return vqaddq_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddq_u16(
+// CIR-LABEL: @vqaddq_u16(
+uint16x8_t test_vqaddq_u16(uint16x8_t a, uint16x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <8 x i16> @llvm.aarch64.neon.uqadd.v8i16(<8 x i16> [[A]], <8 x i16> [[B]])
+// LLVM: ret <8 x i16> [[RES]]
+  return vqaddq_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddq_u32(
+// CIR-LABEL: @vqaddq_u32(
+uint32x4_t test_vqaddq_u32(uint32x4_t a, uint32x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i32> @llvm.aarch64.neon.uqadd.v4i32(<4 x i32> [[A]], <4 x i32> [[B]])
+// LLVM: ret <4 x i32> [[RES]]
+  return vqaddq_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddq_u64(
+// CIR-LABEL: @vqaddq_u64(
+uint64x2_t test_vqaddq_u64(uint64x2_t a, uint64x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <2 x i64> @llvm.aarch64.neon.uqadd.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
+// LLVM: ret <2 x i64> [[RES]]
+  return vqaddq_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddb_s8(
+// CIR-LABEL: @vqaddb_s8(
+int8_t test_vqaddb_s8(int8_t a, int8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: i8 {{.*}}[[A:%.*]], i8 {{.*}}[[B:%.*]])
+// LLVM: [[V0:%.*]] = insertelement <8 x i8> poison, i8 [[A]], i64 0
+// LLVM: [[V1:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+// LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqadd.v8i8(<8 x i8> [[V0]], <8 x i8> [[V1]])
+// LLVM: [[EXT:%.*]] = extractelement <8 x i8> [[RES]], i64 0
+// LLVM: ret i8 [[EXT]]
+  return vqaddb_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddh_s16(
+// CIR-LABEL: @vqaddh_s16(
+int16_t test_vqaddh_s16(int16_t a, int16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: i16 {{.*}}[[A:%.*]], i16 {{.*}}[[B:%.*]])
+// LLVM: [[V0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
+// LLVM: [[V1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+// LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqadd.v4i16(<4 x i16> [[V0]], <4 x i16> [[V1]])
+// LLVM: [[EXT:%.*]] = extractelement <4 x i16> [[RES]], i64 0
+// LLVM: ret i16 [[EXT]]
+  return vqaddh_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vqadds_s32(
+// CIR-LABEL: @vqadds_s32(
+int32_t test_vqadds_s32(int32_t a, int32_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: i32 {{.*}}[[A:%.*]], i32 {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call i32 @llvm.aarch64.neon.sqadd.i32(i32 [[A]], i32 [[B]])
+// LLVM: ret i32 [[RES]]
+  return vqadds_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddd_s64(
+// CIR-LABEL: @vqaddd_s64(
+int64_t test_vqaddd_s64(int64_t a, int64_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.sqadd"
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call i64 @llvm.aarch64.neon.sqadd.i64(i64 [[A]], i64 [[B]])
+// LLVM: ret i64 [[RES]]
+  return vqaddd_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddb_u8(
+// CIR-LABEL: @vqaddb_u8(
+uint8_t test_vqaddb_u8(uint8_t a, uint8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: i8 {{.*}}[[A:%.*]], i8 {{.*}}[[B:%.*]])
+// LLVM: [[V0:%.*]] = insertelement <8 x i8> poison, i8 [[A]], i64 0
+// LLVM: [[V1:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+// LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqadd.v8i8(<8 x i8> [[V0]], <8 x i8> [[V1]])
+// LLVM: [[EXT:%.*]] = extractelement <8 x i8> [[RES]], i64 0
+// LLVM: ret i8 [[EXT]]
+  return vqaddb_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddh_u16(
+// CIR-LABEL: @vqaddh_u16(
+uint16_t test_vqaddh_u16(uint16_t a, uint16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: i16 {{.*}}[[A:%.*]], i16 {{.*}}[[B:%.*]])
+// LLVM: [[V0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
+// LLVM: [[V1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+// LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqadd.v4i16(<4 x i16> [[V0]], <4 x i16> [[V1]])
+// LLVM: [[EXT:%.*]] = extractelement <4 x i16> [[RES]], i64 0
+// LLVM: ret i16 [[EXT]]
+  return vqaddh_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vqadds_u32(
+// CIR-LABEL: @vqadds_u32(
+uint32_t test_vqadds_u32(uint32_t a, uint32_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: i32 {{.*}}[[A:%.*]], i32 {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call i32 @llvm.aarch64.neon.uqadd.i32(i32 [[A]], i32 [[B]])
+// LLVM: ret i32 [[RES]]
+  return vqadds_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vqaddd_u64(
+// CIR-LABEL: @vqaddd_u64(
+uint64_t test_vqaddd_u64(uint64_t a, uint64_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.uqadd"
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call i64 @llvm.aarch64.neon.uqadd.i64(i64 [[A]], i64 [[B]])
+// LLVM: ret i64 [[RES]]
+  return vqaddd_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vsqadd_u8(
+// CIR-LABEL: @vsqadd_u8(
+uint8x8_t test_vsqadd_u8(uint8x8_t a, int8x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.usqadd.v8i8(<8 x i8> [[A]], <8 x i8> [[B]])
+// LLVM: ret <8 x i8> [[RES]]
+  return vsqadd_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vsqadd_u16(
+// CIR-LABEL: @vsqadd_u16(
+uint16x4_t test_vsqadd_u16(uint16x4_t a, int16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.usqadd.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+// LLVM: ret <4 x i16> [[RES]]
+  return vsqadd_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vsqadd_u32(
+// CIR-LABEL: @vsqadd_u32(
+uint32x2_t test_vsqadd_u32(uint32x2_t a, int32x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.usqadd.v2i32(<2 x i32> [[A]], <2 x i32> [[B]])
+// LLVM: ret <2 x i32> [[RES]]
+  return vsqadd_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vsqadd_u64(
+// CIR-LABEL: @vsqadd_u64(
+uint64x1_t test_vsqadd_u64(uint64x1_t a, int64x1_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <1 x i64> @llvm.aarch64.neon.usqadd.v1i64(<1 x i64> [[A]], <1 x i64> [[B]])
+// LLVM: ret <1 x i64> [[RES]]
+  return vsqadd_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vsqaddq_u8(
+// CIR-LABEL: @vsqaddq_u8(
+uint8x16_t test_vsqaddq_u8(uint8x16_t a, int8x16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <16 x i8> @llvm.aarch64.neon.usqadd.v16i8(<16 x i8> [[A]], <16 x i8> [[B]])
+// LLVM: ret <16 x i8> [[RES]]
+  return vsqaddq_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vsqaddq_u16(
+// CIR-LABEL: @vsqaddq_u16(
+uint16x8_t test_vsqaddq_u16(uint16x8_t a, int16x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <8 x i16> @llvm.aarch64.neon.usqadd.v8i16(<8 x i16> [[A]], <8 x i16> [[B]])
+// LLVM: ret <8 x i16> [[RES]]
+  return vsqaddq_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vsqaddq_u32(
+// CIR-LABEL: @vsqaddq_u32(
+uint32x4_t test_vsqaddq_u32(uint32x4_t a, int32x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i32> @llvm.aarch64.neon.usqadd.v4i32(<4 x i32> [[A]], <4 x i32> [[B]])
+// LLVM: ret <4 x i32> [[RES]]
+  return vsqaddq_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vsqaddq_u64(
+// CIR-LABEL: @vsqaddq_u64(
+uint64x2_t test_vsqaddq_u64(uint64x2_t a, int64x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <2 x i64> @llvm.aarch64.neon.usqadd.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
+// LLVM: ret <2 x i64> [[RES]]
+  return vsqaddq_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vsqaddb_u8(
+// CIR-LABEL: @vsqaddb_u8(
+uint8_t test_vsqaddb_u8(uint8_t a, int8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: i8 {{.*}}[[A:%.*]], i8 {{.*}}[[B:%.*]])
+// LLVM: [[V0:%.*]] = insertelement <8 x i8> poison, i8 [[A]], i64 0
+// LLVM: [[V1:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+// LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.usqadd.v8i8(<8 x i8> [[V0]], <8 x i8> [[V1]])
+// LLVM: [[EXT:%.*]] = extractelement <8 x i8> [[RES]], i64 0
+// LLVM: ret i8 [[EXT]]
+  return (uint8_t)vsqaddb_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vsqaddh_u16(
+// CIR-LABEL: @vsqaddh_u16(
+uint16_t test_vsqaddh_u16(uint16_t a, int16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: i16 {{.*}}[[A:%.*]], i16 {{.*}}[[B:%.*]])
+// LLVM: [[V0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
+// LLVM: [[V1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+// LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.usqadd.v4i16(<4 x i16> [[V0]], <4 x i16> [[V1]])
+// LLVM: [[EXT:%.*]] = extractelement <4 x i16> [[RES]], i64 0
+// LLVM: ret i16 [[EXT]]
+  return (uint16_t)vsqaddh_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vsqadds_u32(
+// CIR-LABEL: @vsqadds_u32(
+uint32_t test_vsqadds_u32(uint32_t a, int32_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: i32 {{.*}}[[A:%.*]], i32 {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call i32 @llvm.aarch64.neon.usqadd.i32(i32 [[A]], i32 [[B]])
+// LLVM: ret i32 [[RES]]
+  return (uint32_t)vsqadds_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vsqaddd_u64(
+// CIR-LABEL: @vsqaddd_u64(
+uint64_t test_vsqaddd_u64(uint64_t a, int64_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.usqadd"
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call i64 @llvm.aarch64.neon.usqadd.i64(i64 [[A]], i64 [[B]])
+// LLVM: ret i64 [[RES]]
+  return (uint64_t)vsqaddd_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vuqadd_s8(
+// CIR-LABEL: @vuqadd_s8(
+int8x8_t test_vuqadd_s8(int8x8_t a, uint8x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.suqadd.v8i8(<8 x i8> [[A]], <8 x i8> [[B]])
+// LLVM: ret <8 x i8> [[RES]]
+  return vuqadd_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vuqadd_s16(
+// CIR-LABEL: @vuqadd_s16(
+int16x4_t test_vuqadd_s16(int16x4_t a, uint16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.suqadd.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+// LLVM: ret <4 x i16> [[RES]]
+  return vuqadd_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vuqadd_s32(
+// CIR-LABEL: @vuqadd_s32(
+int32x2_t test_vuqadd_s32(int32x2_t a, uint32x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.suqadd.v2i32(<2 x i32> [[A]], <2 x i32> [[B]])
+// LLVM: ret <2 x i32> [[RES]]
+  return vuqadd_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vuqadd_s64(
+// CIR-LABEL: @vuqadd_s64(
+int64x1_t test_vuqadd_s64(int64x1_t a, uint64x1_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <1 x i64> @llvm.aarch64.neon.suqadd.v1i64(<1 x i64> [[A]], <1 x i64> [[B]])
+// LLVM: ret <1 x i64> [[RES]]
+  return vuqadd_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vuqaddq_s8(
+// CIR-LABEL: @vuqaddq_s8(
+int8x16_t test_vuqaddq_s8(int8x16_t a, uint8x16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <16 x i8> @llvm.aarch64.neon.suqadd.v16i8(<16 x i8> [[A]], <16 x i8> [[B]])
+// LLVM: ret <16 x i8> [[RES]]
+  return vuqaddq_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vuqaddq_s16(
+// CIR-LABEL: @vuqaddq_s16(
+int16x8_t test_vuqaddq_s16(int16x8_t a, uint16x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <8 x i16> @llvm.aarch64.neon.suqadd.v8i16(<8 x i16> [[A]], <8 x i16> [[B]])
+// LLVM: ret <8 x i16> [[RES]]
+  return vuqaddq_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vuqaddq_s32(
+// CIR-LABEL: @vuqaddq_s32(
+int32x4_t test_vuqaddq_s32(int32x4_t a, uint32x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <4 x i32> @llvm.aarch64.neon.suqadd.v4i32(<4 x i32> [[A]], <4 x i32> [[B]])
+// LLVM: ret <4 x i32> [[RES]]
+  return vuqaddq_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vuqaddq_s64(
+// CIR-LABEL: @vuqaddq_s64(
+int64x2_t test_vuqaddq_s64(int64x2_t a, uint64x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call <2 x i64> @llvm.aarch64.neon.suqadd.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
+// LLVM: ret <2 x i64> [[RES]]
+  return vuqaddq_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vuqaddb_s8(
+// CIR-LABEL: @vuqaddb_s8(
+int8_t test_vuqaddb_s8(int8_t a, uint8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: i8 {{.*}}[[A:%.*]], i8 {{.*}}[[B:%.*]])
+// LLVM: [[V0:%.*]] = insertelement <8 x i8> poison, i8 [[A]], i64 0
+// LLVM: [[V1:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+// LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.suqadd.v8i8(<8 x i8> [[V0]], <8 x i8> [[V1]])
+// LLVM: [[EXT:%.*]] = extractelement <8 x i8> [[RES]], i64 0
+// LLVM: ret i8 [[EXT]]
+  return (int8_t)vuqaddb_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vuqaddh_s16(
+// CIR-LABEL: @vuqaddh_s16(
+int16_t test_vuqaddh_s16(int16_t a, uint16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: i16 {{.*}}[[A:%.*]], i16 {{.*}}[[B:%.*]])
+// LLVM: [[V0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
+// LLVM: [[V1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+// LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.suqadd.v4i16(<4 x i16> [[V0]], <4 x i16> [[V1]])
+// LLVM: [[EXT:%.*]] = extractelement <4 x i16> [[RES]], i64 0
+// LLVM: ret i16 [[EXT]]
+  return (int16_t)vuqaddh_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vuqadds_s32(
+// CIR-LABEL: @vuqadds_s32(
+int32_t test_vuqadds_s32(int32_t a, uint32_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: i32 {{.*}}[[A:%.*]], i32 {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call i32 @llvm.aarch64.neon.suqadd.i32(i32 [[A]], i32 [[B]])
+// LLVM: ret i32 [[RES]]
+  return (int32_t)vuqadds_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vuqaddd_s64(
+// CIR-LABEL: @vuqaddd_s64(
+int64_t test_vuqaddd_s64(int64_t a, uint64_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.suqadd"
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]])
+// LLVM: [[RES:%.*]] = call i64 @llvm.aarch64.neon.suqadd.i64(i64 [[A]], i64 [[B]])
+// LLVM: ret i64 [[RES]]
+  return (int64_t)vuqaddd_s64(a, b);
+}

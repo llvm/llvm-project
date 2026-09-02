@@ -217,20 +217,20 @@ implementation (which is very often glibc).
 
 - Build and Run a specific unit test:
 ```
-  $ ninja libc.test.src.math.<func>_test.__unit__
-  $ projects/libc/test/src/math/libc.test.src.math.<func>_test.__unit__
+  $ ninja libc.test.src.math.<func>_test
+  $ projects/libc/test/src/math/libc.test.src.math.<func>_test
 ```
 
 - Build and Run shared math test:
 ```
-  $ ninja libc.test.shared.shared_math_test.__unit__
-  $ projects/libc/test/shared/libc.test.shared.shared_math_test.__unit__
+  $ ninja libc.test.shared.shared_math_test
+  $ projects/libc/test/shared/libc.test.shared.shared_math_test
 ```
 
 - Build and Run exhaustive test (might take hours to run):
 ```
-  $ ninja libc.test.src.math.exhaustive.<func>_test.__unit__
-  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test.__unit__
+  $ ninja libc.test.src.math.exhaustive.<func>_test
+  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test
 ```
 
 - Build and Run performance test:

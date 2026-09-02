@@ -400,6 +400,7 @@ enum MetadataCodes {
   METADATA_ASSIGN_ID = 47,        // [distinct, ...]
   METADATA_SUBRANGE_TYPE = 48,    // [distinct, ...]
   METADATA_FIXED_POINT_TYPE = 49, // [distinct, ...]
+  METADATA_PROPERTY = 50, // [distinct, name, file, line, type, backing_storage]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -826,6 +827,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NOOUTLINE = 107,
   ATTR_KIND_FLATTEN = 108,
   ATTR_KIND_NOIPA = 109,
+  ATTR_KIND_NOFREEOBJ = 110,
 };
 
 enum ComdatSelectionKindCodes {

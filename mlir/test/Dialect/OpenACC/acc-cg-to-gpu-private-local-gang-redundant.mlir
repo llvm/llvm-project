@@ -15,10 +15,10 @@
 func.func @gang_redundant_worker_private() {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %0 = acc.par_width %c4 {par_dim = #acc.par_dim<block_x>}
-  %1 = acc.par_width %c4 {par_dim = #acc.par_dim<thread_y>}
-  %2 = acc.par_width %c1 {par_dim = #acc.par_dim<thread_x>}
-  %3 = acc.privatize [#acc<par_dims[thread_y]>] : () -> !acc.private_type<memref<1xi32>>
+  %0 = acc.par_width %c4 par_dim(#acc.par_dim<block_x>)
+  %1 = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
+  %2 = acc.par_width %c1 par_dim(#acc.par_dim<thread_x>)
+  %3 = acc.privatize par_dims(#acc<par_dims[thread_y]>) : () -> !acc.private_type<memref<1xi32>>
   acc.kernel_environment {
     acc.compute_region launch(%arg0 = %0, %arg1 = %1, %arg2 = %2) ins(%arg10 = %3) : (!acc.private_type<memref<1xi32>>) {
       %loc = acc.private_local %arg10 : (!acc.private_type<memref<1xi32>>) -> memref<1xi32>
@@ -30,7 +30,7 @@ func.func @gang_redundant_worker_private() {
         memref.store %c42, %loc[%c0] : memref<1xi32>
       }
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

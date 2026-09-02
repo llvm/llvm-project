@@ -15,6 +15,7 @@
 #include <optional>
 #include <sstream>
 
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/SafeMachO.h"
@@ -42,6 +43,7 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/TargetParser/Triple.h"
 
 #if HAVE_LIBCOMPRESSION
 #include <compression.h>
@@ -229,6 +231,12 @@ bool GDBRemoteCommunicationClient::GetAcceleratorPluginsSupported() {
   if (m_supports_accelerator_plugins == eLazyBoolCalculate)
     GetRemoteQSupported();
   return m_supports_accelerator_plugins == eLazyBoolYes;
+}
+
+bool GDBRemoteCommunicationClient::GetWasmInstanceSupported() {
+  if (m_supports_wasm_instance == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_wasm_instance == eLazyBoolYes;
 }
 
 llvm::Expected<std::vector<AcceleratorActions>>
@@ -429,6 +437,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supports_jModulesInfo = true;
     m_supports_multi_mem_read = eLazyBoolCalculate;
     m_supports_multi_breakpoint = eLazyBoolCalculate;
+    m_supports_wasm_instance = eLazyBoolCalculate;
   }
 
   // These flags should be reset when we first connect to a GDB server and when
@@ -458,6 +467,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_multi_mem_read = eLazyBoolNo;
   m_supports_multi_breakpoint = eLazyBoolNo;
   m_supports_accelerator_plugins = eLazyBoolNo;
+  m_supports_wasm_instance = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -525,6 +535,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_multi_breakpoint = eLazyBoolYes;
       else if (x == "accelerator-plugins+")
         m_supports_accelerator_plugins = eLazyBoolYes;
+      else if (x == "qWasmInstance+")
+        m_supports_wasm_instance = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -4279,6 +4291,19 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
                   case eSymbolTypeCompiler:
                   case eSymbolTypeInstrumentation:
                   case eSymbolTypeTrampoline:
+                    if (sc.module_sp->GetArchitecture()
+                            .GetTriple()
+                            .getObjectFormat() !=
+                        llvm::Triple::ObjectFormatType::MachO) {
+                      // GDB does return symbols even when they are of unknown
+                      // type, following this behavior on non Mach-O
+                      // architectures.
+                      symbol_load_addr =
+                          sc.symbol->GetLoadAddress(&process->GetTarget());
+                      if (symbol_load_addr == LLDB_INVALID_ADDRESS) {
+                        symbol_load_addr = sc.symbol->GetRawValue();
+                      }
+                    }
                     break;
 
                   case eSymbolTypeCode:

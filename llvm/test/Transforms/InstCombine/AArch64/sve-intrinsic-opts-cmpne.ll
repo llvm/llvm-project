@@ -275,8 +275,7 @@ define <vscale x 16 x i8> @zext_cmpne_i8(<vscale x 16 x i8> %vec) #0 {
 define <vscale x 16 x i8> @zext_cmpne_zero_lhs_i8(<vscale x 16 x i8> %vec) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @zext_cmpne_zero_lhs_i8(
 ; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> [[VEC]])
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 16 x i1> [[TMP1]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[ZEXT:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> splat (i8 1))
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[ZEXT]]
 ;
   %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> %vec)

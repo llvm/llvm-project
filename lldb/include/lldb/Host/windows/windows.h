@@ -12,7 +12,9 @@
 #define NTDDI_VERSION NTDDI_VISTA
 #undef _WIN32_WINNT // undef a previous definition to avoid warning
 #define _WIN32_WINNT _WIN32_WINNT_VISTA
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #define NOGDI
 #undef NOMINMAX // undef a previous definition to avoid warning
 #define NOMINMAX
