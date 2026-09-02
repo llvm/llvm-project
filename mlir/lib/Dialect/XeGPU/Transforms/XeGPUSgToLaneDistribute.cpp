@@ -1801,15 +1801,12 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // What it handles
 // ---------------
 //
-// Two properties shape the outcome: the input's replication sets how many
-// elements need a cross-lane shuffle, and the target's lane period sets where
-// they may be shuffled from. The period alone can decline the conversion; the
-// input's replication only does so together with it. Examples stay on a
-// `vector<8x2>` over 16 lanes; the case numbers are used throughout the rest of
-// this comment.
-//
-// The input's replication decides what each lane already holds, and so how many
-// shuffles are needed.
+// Two properties shape the outcome: the input's replication decides what each
+// lane already holds and so how many elements need a cross-lane shuffle, and
+// the target's lane period sets where they may be shuffled from. The period
+// alone can decline the conversion; the input's replication only does so
+// together with it. Examples stay on a `vector<8x2>` over 16 lanes; the case
+// numbers are used throughout the rest of this comment.
 //
 // Below are the categories of input and target combination, with one example
 // each and what the pattern emits for it. The target is given as its
