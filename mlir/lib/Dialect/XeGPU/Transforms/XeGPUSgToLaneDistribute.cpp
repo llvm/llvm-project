@@ -1830,20 +1830,23 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                         slice<layout<[8, 1, 2], order = [0, 2, 1]>, dims =
 //                         [0]>
 //
-// The combinations, and what the tests show them emitting:
+// One example per combination, and what the tests show it emitting:
 //
 //   case  input               target      emits
-//   1     fully broadcast     period 8    2 extracts
-//   5     fully broadcast     period 4    4 extracts
+//   1     fully broadcast     period 4    4 extracts
 //   3     fully broadcast     period 16   8 extracts
 //   2     partial, sliced     period 8    1 extract, 1 shuffle
 //   4     partial, short      period 2    2 extracts, 6 shuffles
 //   --    partially broadcast period 16   declined, NoDonorDelta
 //
-// Cases 1 and 5 are one category; 5 is kept because its constants are all
-// distinct, making it the clearest to read the index expression off. The last
-// row is the boundary the two properties imply: with only `donorDelta` 0
-// available, a lane arriving with less than its target fragment cannot be
+// The period is the only thing that varies within a category, so the test suite
+// carries more than one of some -- @convert_layout_broadcast_all_lanes is case
+// 1 with period 8 -- but they behave alike and only one is described here. Case
+// 1 is the period whose constants are all distinct, which the index expression
+// below is read off.
+//
+// The last row is the boundary the two properties imply: with only `donorDelta`
+// 0 available, a lane arriving with less than its target fragment cannot be
 // completed. Verified for `layout<[8, 1]>` into the sliced target above, where
 // a lane arrives with 2 of the 8 elements it needs.
 //
@@ -1854,52 +1857,6 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Nested slices are coalesced before anything else looks at a layout, so only
 // the lane_layout of the underlying layout and the union of the sliced dims
 // matter; @convert_layout_broadcast_nested_slice covers a two-level input.
-//
-// What it costs
-// -------------
-//
-// There is one element source per element of the target fragment, so both
-// counts scale with how much the target gives one lane, not with the size of
-// the value. The two are not counted the same way, which is why they can differ
-// so widely:
-//
-//   extracts   one per *distinct* fragment index among the sources. Elements
-//              reading the same index share one, which is why case 4 needs only
-//              2 for its 8 elements: its index does not depend on the slot, so
-//              the two columns are the only distinct reads.
-//
-//   shuffles   one per element the reading lane does not already hold, that is
-//              per source whose `donorDelta` is not 0. These are not shared,
-//              even between elements taken from the same donor; see the TODO in
-//              the emitter, `gpu.shuffle` moving a whole 32-bit lane word.
-//
-// Against the categories above: cases 1, 3 and 5 shuffle nothing, a fully
-// broadcast input always finding `donorDelta` 0. Case 2 shuffles once, for the
-// column its own group does not hold, and case 4 six times, for the three rows
-// beyond its local one, both columns each.
-//
-// How close that is to optimal
-// ----------------------------
-//
-// Extracts are minimal: they are register reads and equal indices are shared.
-//
-// Shuffles are not. `gpu.shuffle idx` reads one donor lane and moves a whole
-// 32-bit lane word, so within this scheme -- every lane reading one donor per
-// instruction -- the floor is one shuffle per distinct nonzero `donorDelta`,
-// carrying up to 32 bits of that group's elements at once. Emitting one per
-// remote element instead costs a factor of however many elements a lane takes
-// from the same group: nothing where that is one, as in case 2, and 2x in case
-// 4, whose 6 shuffles move 3 groups of two bytes. Closing that is the TODO in
-// the emitter; `shuffleDataAsLaneLayoutChange` in this file already packs
-// elements into lane words that way.
-//
-// A lower floor exists, but only outside this scheme. If lanes forwarded data
-// in several hops, a lane needing `k` remote elements of `w` bits could receive
-// them in `ceil(k * w / 32)` shuffles however many lanes they start on -- 2
-// rather than 3 for case 4. That trades instruction count for dependent latency
-// and a routing schedule. For the scale operands this lowers, a lane's remote
-// elements come from one or two donors, so the single-hop floor is at or near
-// the absolute one and the simpler scheme costs nothing.
 //
 // What it declines
 // ----------------
@@ -2028,30 +1985,26 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // per slot would need a materialized table and a gather; this costs a couple of
 // `arith` ops on the lane id.
 //
-// The cases, `p` being the position in the target fragment. Case 5 first, being
-// the one whose numbers are all distinct:
+// The cases, `p` being the position in the target fragment:
 //
 //   case  lanePeriod  index(slot)     stride  dimStride  dimExtent  offset
-//   5         4       2*slot + off      2         1          4      0,1,8,9
-//   1         8       2*slot + p        2         1          8        p
+//   1         4       2*slot + off      2         1          4      0,1,8,9
 //   2         8       slot              1         1          8        0
 //   3        16       slot/8 + 2*p      1         8          2       2*p
 //   4         2       p % 2             0         1          1      p % 2
 //
 // Where the constants come from: the `2`s multiplying `slot` are the size of
-// the input fragment's innermost dimension, which in cases 1, 3 and 5 is the
-// whole 8x2 value, so stepping one row costs 2 elements. In case 2 the fragment
-// is a single column, its row stride is 1, and no `2` appears. Case 4's index
-// does not depend on the slot at all: each target row arrives whole from one
-// donor, so `stride` is 0 and `offset` alone selects the column, with
-// `donorDelta` stepping 0, 2, 4, 6 over the rows.
+// the input fragment's innermost dimension, which in cases 1 and 3 is the whole
+// 8x2 value, so stepping one row costs 2 elements. In case 2 the fragment is a
+// single column, its row stride is 1, and no `2` appears. Case 4's index does
+// not depend on the slot at all: each target row arrives whole from one donor,
+// so `stride` is 0 and `offset` alone selects the column.
 //
-// Read the expression off case 5, where the four quantities are 4, 2, 1 and 4.
-// On the `layout<[8, 1]>` targets of cases 1 and 2 they collide: the lane
-// period (8), case 2's `donorDelta` (8) and case 3's `dimStride` (8) all have
-// the same value while being three different things -- a lane count, a lane
-// offset and an index divisor. Those cases are kept because they are what the
-// scale operands of `dpas_mx` actually produce.
+// Read the expression off case 1, where the four quantities are 4, 2, 1 and 4.
+// On case 2's `layout<[8, 1]>` target they collide: the lane period (8), its
+// own `donorDelta` (8) and case 3's `dimStride` (8) all have the same value
+// while being three different things -- a lane count, a lane offset and an
+// index divisor.
 //
 // Algorithm
 // ---------
@@ -2503,12 +2456,11 @@ static FailureOr<Value> redistributeBroadcastedValue(
     return value;
   };
 
-  // Extract, shuffle and insert one element of the result at a time. One
+  // Extract, shuffle and insert one element of the result at a time: one
   // extract per distinct fragment index, one shuffle per element the lane does
-  // not already hold; see "What it costs" above.
-  // TODO: one shuffle per element, though `gpu.shuffle` moves a whole 32-bit
-  // lane word. Elements sharing a donor could travel in one, as
-  // shuffleDataAsLaneLayoutChange does.
+  // not already hold.
+  // TODO: elements sharing a donor could travel in one shuffle, `gpu.shuffle`
+  // moving a whole 32-bit lane word.
   llvm::DenseMap<std::tuple<int64_t, int64_t, int64_t, int64_t>, Value>
       extracted;
   for (auto [pos, source] : llvm::enumerate(sources)) {
