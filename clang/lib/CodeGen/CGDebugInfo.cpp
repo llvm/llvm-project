@@ -3762,13 +3762,14 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
     auto *IvarTy = DBuilder.createObjCIVar(FieldName, FieldDefUnit, FieldLine,
                                            FieldSize, FieldAlign, FieldOffset,
                                            Flags, FieldTy, PropertyNode);
-    FieldTy = IvarTy;
-    EltTys.push_back(FieldTy);
+    EltTys.push_back(IvarTy);
 
-    if (SynthesizedProperty)
+    if (SynthesizedProperty) {
+      assert(PUnit && "SynthesizedProperty implies PUnit");
       EltTys.push_back(DBuilder.createProperty(
           SynthesizedProperty->getName(), PUnit, PLine,
           getOrCreateType(SynthesizedProperty->getType(), PUnit), IvarTy));
+    }
   }
 
   llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);
