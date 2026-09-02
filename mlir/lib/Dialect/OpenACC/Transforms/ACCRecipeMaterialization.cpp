@@ -544,8 +544,10 @@ void ACCRecipeMaterialization::runOnOperation() {
   // again for every recipe, and recipes are generated per type, so there can be
   // many of them.
   std::optional<llvm::DenseSet<StringAttr>> usedSymbols;
+  // The module region, not the module op, is the symbol table scope: asking
+  // for the uses on the op itself would not walk into the body.
   if (std::optional<SymbolTable::UseRange> uses =
-          SymbolTable::getSymbolUses(moduleOp)) {
+          SymbolTable::getSymbolUses(&moduleOp.getBodyRegion())) {
     usedSymbols.emplace();
     for (const SymbolTable::SymbolUse &use : *uses)
       usedSymbols->insert(use.getSymbolRef().getLeafReference());
