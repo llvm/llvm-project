@@ -610,14 +610,15 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   if (!UsedOperands.all()) {
     for (unsigned i = 0; i != NumOutputs; ++i)
       if (!UsedOperands[i])
-        targetDiag(Exprs[i]->getBeginLoc(), diag::warn_unused_asm_operand) << 0;
+        targetDiag(Exprs[i]->getBeginLoc(), diag::warn_unused_asm_operand)
+            << diag::AsmOperandKind::Output;
 
     for (unsigned i = 0; i != NumInputs; ++i)
       if (!UsedOperands[NumOutputs + i] &&
           !InputConstraintInfos[i].hasTiedOperand())
         targetDiag(Exprs[NumOutputs + i]->getBeginLoc(),
                    diag::warn_unused_asm_operand)
-            << 1;
+            << diag::AsmOperandKind::Input;
   }
 
   // Validate tied input operands for type mismatches.
