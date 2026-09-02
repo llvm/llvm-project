@@ -204,3 +204,26 @@ gpu.func @scatter_into_subview(%vals: vector<8xf16>,
 // CHECK:        xegpu.store %[[VALS]], %[[BASE_I64]]{{\[}}%[[LIN]]{{\]}}, %[[MASK]] : vector<8xf16>, i64, vector<8xindex>, vector<8xi1>
 // CHECK:        gpu.return
 }
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_1D_vector_i32_indices(%vec: vector<8xf32>,
+     %source: memref<8x16x32xf32>, %off1: index, %off2: index, %off3: index,
+     %indices: vector<8xi32>, %mask: vector<8xi1>) {
+  vector.scatter %source[%off1, %off2, %off3][%indices], %mask, %vec
+    : memref<8x16x32xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>
+  gpu.return
+}
+// Indices that are not index typed are cast before the offset arithmetic.
+// CHECK-LABEL:  @store_1D_vector_i32_indices(
+// CHECK-SAME:   %[[VALS:.+]]: vector<8xf32>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
+// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
+// CHECK-SAME:   %[[INDICES:.+]]: vector<8xi32>, %[[MASK:.+]]: vector<8xi1>) {
+// CHECK:        %[[IDX:.+]] = arith.index_cast %[[INDICES]] : vector<8xi32> to vector<8xindex>
+// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
+// CHECK:        %[[LIN:.+]] = arith.addi %[[SPLAT]], %[[IDX]] : vector<8xindex>
+// CHECK:        %[[BASE_I64:.+]] = arith.index_cast {{.*}} : index to i64
+// CHECK:        xegpu.store %[[VALS]], %[[BASE_I64]]{{\[}}%[[LIN]]{{\]}}, %[[MASK]] : vector<8xf32>, i64, vector<8xindex>, vector<8xi1>
+// CHECK:        gpu.return
+}

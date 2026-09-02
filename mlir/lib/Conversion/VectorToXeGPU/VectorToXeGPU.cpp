@@ -350,6 +350,14 @@ static Value computeOffsets(PatternRewriter &rewriter, OpType gatScatOp,
   Value indices = gatScatOp.getIndices();
   VectorType vecType = cast<VectorType>(indices.getType());
 
+  // The strides and the base offset are computed in index type, while the
+  // gather/scatter indices may use any integer type. Cast them to index so
+  // that the offset arithmetic below is well typed.
+  if (!vecType.getElementType().isIndex()) {
+    vecType = VectorType::get(vecType.getShape(), rewriter.getIndexType());
+    indices = arith::IndexCastOp::create(rewriter, loc, vecType, indices);
+  }
+
   Value strideVector =
       vector::BroadcastOp::create(rewriter, loc, vecType, strides.back())
           .getResult();
