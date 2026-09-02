@@ -412,13 +412,11 @@ ParseResult Parser::parseFloatFromLiteral(std::optional<APFloat> &result,
 
     // Parse with the requested semantics directly. Going through a double
     // first would lose range and precision for wider semantics, such as f80.
+    // The lexer only forms a float literal token for a spelling that APFloat
+    // can parse, so this cannot fail.
     APFloat value(semantics);
-    llvm::Expected<APFloat::opStatus> status = value.convertFromString(
-        tok.getSpelling(), APFloat::rmNearestTiesToEven);
-    if (!status) {
-      llvm::consumeError(status.takeError());
-      return emitError(tok.getLoc()) << "invalid floating point literal";
-    }
+    llvm::cantFail(value.convertFromString(tok.getSpelling(),
+                                           APFloat::rmNearestTiesToEven));
 
     if (isNegative)
       value.changeSign();
