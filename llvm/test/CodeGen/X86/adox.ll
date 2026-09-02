@@ -334,21 +334,19 @@ nonzero:
 define i32 @adox_test_sub_not_ov_i32(i32 %a, i32 %b, i8 %c, i8 %d) {
 ; NDD-LABEL: adox_test_sub_not_ov_i32:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax
+; NDD-NEXT:    subl %esi, %edi, %eax
 ; NDD-NEXT:    cmpb %cl, %dl
-; NDD-NEXT:    setno %al
-; NDD-NEXT:    subl %esi, %edi
-; NDD-NEXT:    subl %eax, %edi, %eax
+; NDD-NEXT:    movl $-1, %ecx
+; NDD-NEXT:    adoxl %ecx, %eax
 ; NDD-NEXT:    retq
 ;
 ; ADX-LABEL: adox_test_sub_not_ov_i32:
 ; ADX:       # %bb.0:
 ; ADX-NEXT:    movl %edi, %eax
-; ADX-NEXT:    xorl %edi, %edi
-; ADX-NEXT:    cmpb %cl, %dl
-; ADX-NEXT:    setno %dil
 ; ADX-NEXT:    subl %esi, %eax
-; ADX-NEXT:    subl %edi, %eax
+; ADX-NEXT:    cmpb %cl, %dl
+; ADX-NEXT:    movl $-1, %ecx
+; ADX-NEXT:    adoxl %ecx, %eax
 ; ADX-NEXT:    retq
 ;
 ; NOADX-LABEL: adox_test_sub_not_ov_i32:
@@ -372,21 +370,19 @@ define i32 @adox_test_sub_not_ov_i32(i32 %a, i32 %b, i8 %c, i8 %d) {
 define i64 @adox_test_sub_not_ov_i64(i64 %a, i64 %b, i8 %c, i8 %d) {
 ; NDD-LABEL: adox_test_sub_not_ov_i64:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax
+; NDD-NEXT:    subq %rsi, %rdi, %rax
 ; NDD-NEXT:    cmpb %cl, %dl
-; NDD-NEXT:    setno %al
-; NDD-NEXT:    subq %rsi, %rdi
-; NDD-NEXT:    subq %rax, %rdi, %rax
+; NDD-NEXT:    movq $-1, %rcx
+; NDD-NEXT:    adoxq %rcx, %rax
 ; NDD-NEXT:    retq
 ;
 ; ADX-LABEL: adox_test_sub_not_ov_i64:
 ; ADX:       # %bb.0:
 ; ADX-NEXT:    movq %rdi, %rax
-; ADX-NEXT:    xorl %edi, %edi
-; ADX-NEXT:    cmpb %cl, %dl
-; ADX-NEXT:    setno %dil
 ; ADX-NEXT:    subq %rsi, %rax
-; ADX-NEXT:    subq %rdi, %rax
+; ADX-NEXT:    cmpb %cl, %dl
+; ADX-NEXT:    movq $-1, %rcx
+; ADX-NEXT:    adoxq %rcx, %rax
 ; ADX-NEXT:    retq
 ;
 ; NOADX-LABEL: adox_test_sub_not_ov_i64:
