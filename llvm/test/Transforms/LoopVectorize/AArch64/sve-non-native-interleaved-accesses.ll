@@ -8,48 +8,66 @@ define float @float_factor_5_deinterleave_cost(ptr %data, i64 %n) vscale_range(2
 ; CHECK-SAME: ptr [[DATA:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP0]], 16
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP2]], i64 16, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 8
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP24:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP5]], 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP5]], 20
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP6]], 20
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP3]], 20
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP4]], 20
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i8, ptr [[DATA]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i8, ptr [[DATA]], i64 [[TMP10]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <40 x float>, ptr [[TMP36]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <40 x float> [[WIDE_VEC]], <40 x float> poison, <8 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35>
-; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <40 x float>, ptr [[TMP39]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <40 x float> [[WIDE_VEC2]], <40 x float> poison, <8 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35>
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul <8 x float> zeroinitializer, [[STRIDED_VEC]]
-; CHECK-NEXT:    [[TMP16:%.*]] = fmul <8 x float> zeroinitializer, [[STRIDED_VEC3]]
-; CHECK-NEXT:    [[TMP11]] = call <8 x float> @llvm.maxnum.v8f32(<8 x float> [[VEC_PHI]], <8 x float> [[TMP15]])
-; CHECK-NEXT:    [[TMP12]] = call <8 x float> @llvm.maxnum.v8f32(<8 x float> [[VEC_PHI1]], <8 x float> [[TMP16]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP5]], 16
-; CHECK-NEXT:    [[TMP13:%.*]] = fcmp uno <8 x float> [[TMP15]], [[TMP16]]
-; CHECK-NEXT:    [[TMP14:%.*]] = freeze <8 x i1> [[TMP13]]
-; CHECK-NEXT:    [[TMP29:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP14]])
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DATA]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DATA]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP36]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = load float, ptr [[TMP39]], align 4
+; CHECK-NEXT:    [[TMP15:%.*]] = load float, ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = load float, ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP13]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul float 0.000000e+00, [[TMP14]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fmul float 0.000000e+00, [[TMP15]]
+; CHECK-NEXT:    [[TMP40:%.*]] = fmul float 0.000000e+00, [[TMP16]]
+; CHECK-NEXT:    [[TMP21]] = call float @llvm.maxnum.f32(float [[VEC_PHI]], float [[TMP17]])
+; CHECK-NEXT:    [[TMP22]] = call float @llvm.maxnum.f32(float [[VEC_PHI1]], float [[TMP18]])
+; CHECK-NEXT:    [[TMP23]] = call float @llvm.maxnum.f32(float [[VEC_PHI2]], float [[TMP19]])
+; CHECK-NEXT:    [[TMP24]] = call float @llvm.maxnum.f32(float [[VEC_PHI3]], float [[TMP40]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP25:%.*]] = fcmp uno float [[TMP17]], [[TMP18]]
+; CHECK-NEXT:    [[TMP26:%.*]] = fcmp uno float [[TMP19]], [[TMP40]]
+; CHECK-NEXT:    [[TMP27:%.*]] = freeze i1 [[TMP25]]
+; CHECK-NEXT:    [[TMP28:%.*]] = freeze i1 [[TMP26]]
+; CHECK-NEXT:    [[TMP29:%.*]] = or i1 [[TMP27]], [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = or i1 [[TMP29]], [[TMP30]]
 ; CHECK-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = select i1 [[TMP29]], <8 x float> [[VEC_PHI]], <8 x float> [[TMP11]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP29]], <8 x float> [[VEC_PHI1]], <8 x float> [[TMP12]]
+; CHECK-NEXT:    [[TMP32:%.*]] = select i1 [[TMP29]], float [[VEC_PHI]], float [[TMP21]]
+; CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[TMP29]], float [[VEC_PHI1]], float [[TMP22]]
+; CHECK-NEXT:    [[TMP34:%.*]] = select i1 [[TMP29]], float [[VEC_PHI2]], float [[TMP23]]
+; CHECK-NEXT:    [[TMP35:%.*]] = select i1 [[TMP29]], float [[VEC_PHI3]], float [[TMP24]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP29]], i64 [[TMP5]], i64 [[N_VEC]]
-; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <8 x float> @llvm.maxnum.v8f32(<8 x float> [[TMP18]], <8 x float> [[TMP19]])
-; CHECK-NEXT:    [[TMP21:%.*]] = call float @llvm.vector.reduce.fmax.v8f32(<8 x float> [[RDX_MINMAX]])
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call float @llvm.maxnum.f32(float [[TMP32]], float [[TMP33]])
+; CHECK-NEXT:    [[RDX_MINMAX4:%.*]] = call float @llvm.maxnum.f32(float [[RDX_MINMAX]], float [[TMP34]])
+; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call float @llvm.maxnum.f32(float [[RDX_MINMAX4]], float [[TMP35]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP37:%.*]] = xor i1 [[TMP29]], true
+; CHECK-NEXT:    [[TMP38:%.*]] = and i1 [[CMP_N]], [[TMP37]]
+; CHECK-NEXT:    br i1 [[TMP38]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP20]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[RDX_MINMAX5]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -61,9 +79,9 @@ define float @float_factor_5_deinterleave_cost(ptr %data, i64 %n) vscale_range(2
 ; CHECK-NEXT:    [[MAX_NEXT]] = call float @llvm.maxnum.f32(float [[MAX_REC]], float [[PRODUCT]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[DONE]], label %[[FOR_END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[MAX_NEXT_LCSSA:%.*]] = phi float [ [[MAX_NEXT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[MAX_NEXT_LCSSA:%.*]] = phi float [ [[MAX_NEXT]], %[[FOR_BODY]] ], [ [[RDX_MINMAX5]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[MAX_NEXT_LCSSA]]
 ;
 entry:
@@ -89,5 +107,5 @@ for.end:                                          ; preds = %for.body
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ;.
