@@ -4938,18 +4938,6 @@ void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
-  Value *VectorInit = State.get(getStartValue(), State.VF.isScalar());
-  Type *VecTy = VectorInit->getType();
-  BasicBlock *VectorPH =
-      State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
-  // Create a phi node for the new recurrence.
-  PHINode *Phi = PHINode::Create(VecTy, 2, "vector.recur");
-  Phi->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
-  Phi->addIncoming(VectorInit, VectorPH);
-  State.set(this, Phi);
-}
-
 InstructionCost
 VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
                                              VPCostContext &Ctx) const {

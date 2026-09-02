@@ -576,6 +576,21 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      // Expand VPFirstOrderRecurrencePHIRecipe into a concrete scalar or
+      // widened phi recipe.
+      if (auto *FORPhiR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
+        DebugLoc DL = FORPhiR->getDebugLoc();
+        StringRef Name = "vector.recur";
+        VPValue *NewPhiR;
+        if (Plan.hasScalarVFOnly())
+          NewPhiR = Builder.createScalarPhi(FORPhiR->operands(), DL, Name);
+        else
+          NewPhiR = Builder.createWidenPhi(FORPhiR->operands(), DL, Name);
+        FORPhiR->replaceAllUsesWith(NewPhiR);
+        FORPhiR->eraseFromParent();
+        continue;
+      }
+
       // Expand VPBlendRecipe into VPInstruction::Select.
       if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
         VPValue *Select = Blend->getIncomingValue(0);
