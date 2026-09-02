@@ -216,7 +216,7 @@ static DemandedVL doubleVL(DemandedVL MinimumVL) {
     return DemandedVL::vlmax();
 
   int64_t VL = MinimumVL.VL.getImm();
-  if (VL < 0 || VL > std::numeric_limits<int64_t>::max() / 2)
+  if (!isUInt<4>(VL))
     return DemandedVL::vlmax();
   return MachineOperand::CreateImm(VL * 2);
 }
@@ -928,10 +928,10 @@ static std::optional<OperandInfo> getOperandInfo(const MachineInstr &MI,
     break;
 
   // Zvzip - vzip.vv interleaves two LMUL vectors into a 2*LMUL result with
-  // the same SEW. Dest (and passthru) therefore have 2 * EMUL.
+  // the same SEW. Dest, passthru, and mask therefore have 2 * EMUL.
   case RISCV::VZIP_VV: {
     auto EMUL = getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI);
-    if (OpIdx == 0 || OpIdx == MI.getNumExplicitDefs())
+    if (OpIdx == 0 || OpIdx == MI.getNumExplicitDefs() || OpIdx == 4)
       EMUL = doubleEMUL(EMUL);
     return OperandInfo(EMUL, *Log2EEW);
   }
@@ -1116,9 +1116,8 @@ RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   unsigned RVVOpc = RISCV::getRVVMCOpcode(UserMI.getOpcode());
   bool IsVUNZIP = RVVOpc == RISCV::VUNZIPE_V || RVVOpc == RISCV::VUNZIPO_V;
-  bool IsVZIPMask = RVVOpc == RISCV::VZIP_VV && UserOp.getOperandNo() == 4;
-  if (!IsVUNZIP && !IsVZIPMask &&
-      RISCVII::readsPastVL(TII->get(RVVOpc).TSFlags)) {
+  bool IsVZIP = RVVOpc == RISCV::VZIP_VV;
+  if (!IsVUNZIP && !IsVZIP && RISCVII::readsPastVL(TII->get(RVVOpc).TSFlags)) {
     LLVM_DEBUG(dbgs() << "  Abort because used by unsafe instruction\n");
     return DemandedVL::vlmax();
   }
@@ -1154,7 +1153,8 @@ RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
   if (RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp))
     MinimumVL = DemandedVLs.lookup(&UserMI);
 
-  if ((IsVUNZIP && UserOp.getOperandNo() == 2) || IsVZIPMask)
+  if ((IsVUNZIP && UserOp.getOperandNo() == 2) ||
+      (IsVZIP && UserOp.getOperandNo() == 4))
     MinimumVL = doubleVL(MinimumVL);
 
   return MinimumVL;

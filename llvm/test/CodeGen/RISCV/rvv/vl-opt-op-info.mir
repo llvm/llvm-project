@@ -2453,10 +2453,10 @@ name:            vzip_mask_propagate
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_mask_propagate
-    ; CHECK: %mask:vmv0 = PseudoVMAND_MM_B32 $noreg, $noreg, 2 /* vl */, 0 /* e8 */
+    ; CHECK: %mask:vmv0 = PseudoVMAND_MM_B16 $noreg, $noreg, 2 /* vl */, 0 /* e8 */
     ; CHECK-NEXT: early-clobber %1:vrm2nov0 = PseudoVZIP_VV_M1_MASK $noreg, $noreg, $noreg, %mask, 1 /* vl */, 5 /* e32 */, 3 /* ta, ma */
     ; CHECK-NEXT: $v8m2 = COPY %1
-    %mask:vmv0 = PseudoVMAND_MM_B32 $noreg, $noreg, -1, 0
+    %mask:vmv0 = PseudoVMAND_MM_B16 $noreg, $noreg, -1, 0
     early-clobber %1:vrm2nov0 = PseudoVZIP_VV_M1_MASK $noreg, $noreg, $noreg, %mask, 1, 5, 3
     $v8m2 = COPY %1
 ...
@@ -2547,6 +2547,18 @@ body: |
     %src:vrm2 = PseudoVADD_VV_M2 $noreg, $noreg, $noreg, -1, 5, 0
     early-clobber %2:vr = PseudoVUNZIPE_V_M1 $noreg, %src, %vl, 5, 0
     $v8 = COPY %2
+...
+---
+name:            vunzipe_src_propagate_immediate_too_large
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vunzipe_src_propagate_immediate_too_large
+    ; CHECK: %src:vrm2 = PseudoVADD_VV_M2 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %1:vr = PseudoVUNZIPE_V_M1 $noreg, %src, 16 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %1
+    %src:vrm2 = PseudoVADD_VV_M2 $noreg, $noreg, $noreg, -1, 5, 0
+    early-clobber %1:vr = PseudoVUNZIPE_V_M1 $noreg, %src, 16, 5, 0
+    $v8 = COPY %1
 ...
 ---
 name:            vpaire_vv
