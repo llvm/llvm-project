@@ -5559,6 +5559,12 @@ bool VPCostContext::isMaskRequired(Instruction *I) const {
   return CM.isMaskRequired(I);
 }
 
+bool VPCostContext::executesAtMostOnce(const VPlan &Plan, ElementCount VF) {
+  auto *TC = dyn_cast_if_present<ConstantInt>(
+      Plan.getTripCount()->getUnderlyingValue());
+  return TC && TC->getValue().ule(VF.getKnownMinValue());
+}
+
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
@@ -5585,9 +5591,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // TODO: Remove this code after stepping away from the legacy cost model and
   // adding code to simplify VPlans before calculating their costs.
   auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-  bool IsFullyUnrolled = TC == VF && !Plan.hasTailFolded();
   SmallPtrSet<const Value *, 4> WidenedIVs;
-  if (IsFullyUnrolled) {
+  if (TC == VF && !Plan.hasTailFolded()) {
     addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                          CostCtx.SkipCostComputation);
   } else {
@@ -5602,16 +5607,11 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       }
   }
 
-  bool ChargeCanonicalIVIncrement = false;
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
     // Integer inductions are always costed via the VPlan-based cost model.
     // TODO: Also migrate FP and pointer inductions.
-    if (IndDesc.getKind() == InductionDescriptor::IK_IntInduction) {
-      // If the vector loop is executed exactly once, the increment is
-      // simplified away.
-      ChargeCanonicalIVIncrement |= !IsFullyUnrolled;
+    if (IndDesc.getKind() == InductionDescriptor::IK_IntInduction)
       continue;
-    }
     if (WidenedIVs.contains(IV))
       continue;
     Instruction *IVInc = cast<Instruction>(
@@ -5644,22 +5644,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       Cost += InductionCost;
       CostCtx.SkipCostComputation.insert(IVInst);
     }
-  }
-
-  // Add the cost for incrementing the canonical IV (or current iteration phi
-  // for EVL) explicitly, as VPInstruction::computeCost returns 0 for recipes
-  // w/o underlying value.
-  if (ChargeCanonicalIVIncrement) {
-    InstructionCost CanIVIncCost =
-        ForceTargetInstructionCost.getNumOccurrences()
-            ? InstructionCost(ForceTargetInstructionCost)
-            : CostCtx.TTI.getArithmeticInstrCost(
-                  Instruction::Add,
-                  Plan.getVectorLoopRegion()->getCanonicalIVType(),
-                  CostCtx.CostKind);
-    LLVM_DEBUG(dbgs() << "Cost of " << CanIVIncCost << " for VF " << VF
-                      << ": canonical IV increment\n");
-    Cost += CanIVIncCost;
   }
 
   // Pre-compute the costs for branches except for the backedge, as the number

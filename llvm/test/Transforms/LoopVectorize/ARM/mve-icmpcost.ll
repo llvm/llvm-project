@@ -20,7 +20,6 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %inc = add nuw nsw i32 %i.016, 1
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %exitcond.not = icmp eq i32 %inc, %n
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
-; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
@@ -34,6 +33,7 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: IR %conv1 = zext i16 %m to i32
 ; CHECK:  Cost of 0 for VF 2: IR %0 = trunc i32 %n to i16
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<for.body.lr.ph> ]
@@ -45,7 +45,6 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost for VF 2: 86 (Estimated cost per lane: 43)
-; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
@@ -59,6 +58,7 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: IR %conv1 = zext i16 %m to i32
 ; CHECK:  Cost of 0 for VF 4: IR %0 = trunc i32 %n to i16
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<for.body.lr.ph> ]
@@ -70,7 +70,6 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost for VF 4: 10 (Estimated cost per lane: 2.5)
-; CHECK:  Cost of 1 for VF 8: canonical IV increment
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%arrayidx> = getelementptr inbounds ir<%s>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP5]]> = vector-pointer inbounds i16, ir<%arrayidx>, ir<1>
@@ -84,6 +83,7 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 8: vector loop backedge
+; CHECK:  Cost of 1 for VF 8: canonical IV increment
 ; CHECK:  Cost of 0 for VF 8: IR %conv1 = zext i16 %m to i32
 ; CHECK:  Cost of 0 for VF 8: IR %0 = trunc i32 %n to i16
 ; CHECK:  Cost of 0 for VF 8: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<for.body.lr.ph> ]
@@ -159,7 +159,6 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 2: induction instruction %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK:  Cost of 0 for VF 2: induction instruction %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK:  Cost of 0 for VF 2: induction instruction %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP9:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
@@ -182,6 +181,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3:%[0-9]+]]>, middle.block ], [ ir<%blockSize>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP4:%[0-9]+]]>, middle.block ], [ ir<%pSrcA>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val>.2 = phi [ vp<[[VP5:%[0-9]+]]>, middle.block ], [ ir<%pDst>, ir-bb<while.body.preheader> ]
@@ -218,7 +218,6 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 4: induction instruction %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK:  Cost of 0 for VF 4: induction instruction %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK:  Cost of 0 for VF 4: induction instruction %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP8]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP9]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
@@ -241,6 +240,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3]]>, middle.block ], [ ir<%blockSize>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP4]]>, middle.block ], [ ir<%pSrcA>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val>.2 = phi [ vp<[[VP5]]>, middle.block ], [ ir<%pDst>, ir-bb<while.body.preheader> ]
@@ -277,7 +277,6 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 8: induction instruction %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK:  Cost of 0 for VF 8: induction instruction %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK:  Cost of 0 for VF 8: induction instruction %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK:  Cost of 1 for VF 8: canonical IV increment
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP8]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP9]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
@@ -300,6 +299,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 8: vector loop backedge
+; CHECK:  Cost of 1 for VF 8: canonical IV increment
 ; CHECK:  Cost of 0 for VF 8: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3]]>, middle.block ], [ ir<%blockSize>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 8: EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP4]]>, middle.block ], [ ir<%pSrcA>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 8: EMIT-SCALAR vp<%bc.resume.val>.2 = phi [ vp<[[VP5]]>, middle.block ], [ ir<%pDst>, ir-bb<while.body.preheader> ]
@@ -336,7 +336,6 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 16: induction instruction %pDst.addr.010 = phi ptr [ %incdec.ptr5, %while.body ], [ %pDst, %while.body.preheader ]
 ; CHECK:  Cost of 0 for VF 16: induction instruction %incdec.ptr2 = getelementptr inbounds i8, ptr %pSrcB.addr.09, i32 1
 ; CHECK:  Cost of 0 for VF 16: induction instruction %pSrcB.addr.09 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrcB, %while.body.preheader ]
-; CHECK:  Cost of 1 for VF 16: canonical IV increment
 ; CHECK:  Cost of 0 for VF 16: vp<[[VP8]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<%next.gep> = ptradd ir<%pSrcA>, vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 16: vp<[[VP9]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
@@ -359,6 +358,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 16: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 16: vector loop backedge
+; CHECK:  Cost of 1 for VF 16: canonical IV increment
 ; CHECK:  Cost of 0 for VF 16: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3]]>, middle.block ], [ ir<%blockSize>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 16: EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP4]]>, middle.block ], [ ir<%pSrcA>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 16: EMIT-SCALAR vp<%bc.resume.val>.2 = phi [ vp<[[VP5]]>, middle.block ], [ ir<%pDst>, ir-bb<while.body.preheader> ]
@@ -448,7 +448,6 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  Cost of 0 for VF 2: induction instruction %pSrc.addr.010 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrc, %while.body.preheader ]
 ; CHECK:  Cost of 0 for VF 2: induction instruction %incdec.ptr = getelementptr inbounds i32, ptr %pDst.addr.08, i32 1
 ; CHECK:  Cost of 0 for VF 2: induction instruction %pDst.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pDst, %while.body.preheader ]
-; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 1 for VF 2: vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6:%[0-9]+]]> * ir<4>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<4>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%next.gep> = ptradd ir<%pSrc>, vp<[[VP8]]>
@@ -465,6 +464,7 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3:%[0-9]+]]>, middle.block ], [ ir<%pSrc>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP4:%[0-9]+]]>, middle.block ], [ ir<%blockSize>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val>.2 = phi [ vp<[[VP5:%[0-9]+]]>, middle.block ], [ ir<%pDst>, ir-bb<while.body.preheader> ]
@@ -490,7 +490,6 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  Cost of 0 for VF 4: induction instruction %pSrc.addr.010 = phi ptr [ %incdec.ptr2, %while.body ], [ %pSrc, %while.body.preheader ]
 ; CHECK:  Cost of 0 for VF 4: induction instruction %incdec.ptr = getelementptr inbounds i32, ptr %pDst.addr.08, i32 1
 ; CHECK:  Cost of 0 for VF 4: induction instruction %pDst.addr.08 = phi ptr [ %incdec.ptr, %while.body ], [ %pDst, %while.body.preheader ]
-; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 1 for VF 4: vp<[[VP7]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * ir<4>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP8]]> = SCALAR-STEPS vp<[[VP7]]>, ir<4>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%next.gep> = ptradd ir<%pSrc>, vp<[[VP8]]>
@@ -507,6 +506,7 @@ define void @floatcmp(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %bl
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP3]]>, middle.block ], [ ir<%pSrc>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP4]]>, middle.block ], [ ir<%blockSize>, ir-bb<while.body.preheader> ]
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val>.2 = phi [ vp<[[VP5]]>, middle.block ], [ ir<%pDst>, ir-bb<while.body.preheader> ]

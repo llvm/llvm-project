@@ -7,8 +7,8 @@ target triple="aarch64--linux-gnu"
 ; vector loop gets executed exactly once with the given VF.
 define i64 @test(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: LV: Checking a loop in 'test'
-; CHECK: Cost of 1 for VF 8: canonical IV increment
 ; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 8: canonical IV increment
 ; CHECK: Cost for VF 8: 30
 ; CHECK-NOT: canonical IV increment
 ; CHECK: Cost of 0 for VF 16: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
@@ -39,8 +39,8 @@ for.body:
 ; Same as above, but in the next iteration IV has extra users, and thus, the cost is not zero.
 define i64 @test_external_iv_user(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: LV: Checking a loop in 'test_external_iv_user'
-; CHECK: Cost of 1 for VF 8: canonical IV increment
 ; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 8: canonical IV increment
 ; CHECK: Cost for VF 8: 31
 ; CHECK-NOT: canonical IV increment
 ; CHECK: Cost of 0 for VF 16: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
@@ -71,8 +71,8 @@ exit:
 ; Same as above but with two IVs without extra users. They all have zero cost when VF equals the number of iterations.
 define i64 @test_two_ivs(ptr %a, ptr %b, i64 %start) #0 {
 ; CHECK-LABEL: LV: Checking a loop in 'test_two_ivs'
-; CHECK: Cost of 1 for VF 8: canonical IV increment
 ; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 8: canonical IV increment
 ; CHECK: Cost for VF 8: 16
 ; CHECK: Cost of 1 for VF 16: EXPRESSION vp<%11> = ir<%sum> + partial.reduce.add (mul nuw nsw (ir<%1> zext to i64), (ir<%0> zext to i64))
 ; CHECK: Cost for VF 16: 4
