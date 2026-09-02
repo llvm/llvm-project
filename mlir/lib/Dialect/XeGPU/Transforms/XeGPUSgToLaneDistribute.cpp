@@ -1862,27 +1862,32 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // ----------------
 //
 // Every failure path reports a `RedistributionLimit`, so these are all of them.
-// Grouped by what the limit constrains; (i) is an implementation limit, (f) one
-// inherent to the scheme.
+// None is a limit of `convert_layout`, which is meaningful for any pair of
+// layouts and so always lowerable; each is a limit of the scheme here, one
+// shuffle per element from a donor a whole number of lane periods away. Another
+// pattern or a more general scheme lowers any of them. Grouped by what each
+// constrains.
 //
 // The pair:
 //
-//   LaneDataDiffers (f)       the layouts disagree on the distribution unit
-//   NoDonorDelta (f)          the element is in no reachable donor group
-//   IndexNotLaneAffine (i)    the per-slot index is not affine in the lane id
+//   LaneDataDiffers        the layouts disagree on the distribution unit
+//   NoDonorDelta           the element is in no reachable donor group
+//   IndexNotLaneAffine     the per-slot index is not affine in the lane id
 //
 // Either layout:
 //
-//   LaneDataNotUnit (i)       lane_data is not all ones
-//   FragmentSizeMismatch (f)  a layout disagrees with its vector type
+//   LaneDataNotUnit        lane_data is not all ones
 //
 // The target alone:
 //
-//   LanePeriodNotDivisor (f)  its lane period does not divide the subgroup size
+//   LanePeriodNotDivisor   its lane period does not divide the subgroup size
 //
 // The value:
 //
-//   SubByteElement (f)        no gpu.shuffle type carries the element
+//   SubByteElement         no gpu.shuffle type carries the element
+//
+// FragmentSizeMismatch is reported too, for a layout disagreeing with the vector
+// type the caller derived from it. That is an invariant check, not a layout pair.
 //
 // Concepts
 // --------
