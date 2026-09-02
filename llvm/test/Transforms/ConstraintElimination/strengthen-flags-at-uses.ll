@@ -6,7 +6,7 @@ define i64 @sub_hoisted_single_use(i64 %a, i64 %b) {
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF_END:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    ret i64 [[SUB]]
@@ -53,7 +53,7 @@ define i64 @sub_anchored_after_assume(i64 %a, i64 %b) {
 ; CHECK-LABEL: define i64 @sub_anchored_after_assume(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
 ; CHECK-NEXT:    br label %[[MID:.*]]
 ; CHECK:       [[MID]]:
 ; CHECK-NEXT:    call void @barrier()
@@ -126,7 +126,7 @@ define i64 @mul_hoisted_single_use(i64 %a) {
 ; CHECK-LABEL: define i64 @mul_hoisted_single_use(
 ; CHECK-SAME: i64 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[A]], 4
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[A]], 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp sge i64 [[A]], 0
 ; CHECK-NEXT:    br i1 [[C]], label %[[IF_END:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[IF_END]]:
@@ -150,7 +150,7 @@ define void @sub_15_uses_fact_at_common_dominator(i64 %a, i64 %b) {
 ; CHECK-LABEL: define void @sub_15_uses_fact_at_common_dominator(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
 ; CHECK-NEXT:    br label %[[USE_BB:.*]]
 ; CHECK:       [[USE_BB]]:
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[A]], [[B]]
@@ -259,7 +259,7 @@ define void @sub_16_uses_fact_at_def(i64 %a, i64 %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    br label %[[USE_BB:.*]]
 ; CHECK:       [[USE_BB]]:
 ; CHECK-NEXT:    call void @use(i64 [[SUB]])
@@ -313,7 +313,7 @@ define i64 @sub_single_use_in_unreachable_block(i64 %a, i64 %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 0
 ; CHECK:       [[UNREACHABLE_BB:.*:]]
 ; CHECK-NEXT:    call void @use(i64 [[SUB]])
@@ -337,7 +337,7 @@ define i64 @sub_uses_in_two_unreachable_blocks(i64 %a, i64 %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 0
 ; CHECK:       [[UNREACHABLE_BB_1:.*:]]
 ; CHECK-NEXT:    call void @use(i64 [[SUB]])
@@ -365,7 +365,7 @@ define i64 @sub_use_in_unreachable_block_ignored(i64 %a, i64 %b) {
 ; CHECK-LABEL: define i64 @sub_use_in_unreachable_block_ignored(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
 ; CHECK-NEXT:    br label %[[MID:.*]]
 ; CHECK:       [[MID]]:
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[A]], [[B]]
