@@ -3899,6 +3899,18 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
 
+  // From a vector to a scalarized vector will be an series of extract-element
+  // and extends.
+  if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
+      DstTy.getScalarSizeInBits() > 64 && SrcTy.getScalarSizeInBits() <= 64 &&
+      DstTy.isFixedLengthVector()) {
+    InstructionCost LaneCost = getVectorInstrCost(
+        Instruction::ExtractElement, Src, CostKind, -1, nullptr, nullptr);
+    InstructionCost ExtCost = getCastInstrCost(
+        Opcode, Dst->getScalarType(), Src->getScalarType(), CCH, CostKind);
+    return DstTy.getVectorNumElements() * (LaneCost + ExtCost);
+  }
+
   if (!SrcTy.isSimple() || !DstTy.isSimple())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
@@ -7218,7 +7230,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 static bool containsDecreasingPointers(Loop *TheLoop,
                                        PredicatedScalarEvolution *PSE,
                                        const DominatorTree &DT) {
-  const auto &Strides = DenseMap<Value *, const SCEV *>();
+  const auto &Strides = SymbolicStrideMap();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for addresses that are
     // consecutive and decreasing.

@@ -82,6 +82,10 @@ public:
     return nullptr;
   }
 
+  virtual mlir::Type getCUDADeviceBuiltinTextureDeviceType() const {
+    return nullptr;
+  }
+
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic
   /// convention or the non-variadic convention.
