@@ -18938,10 +18938,11 @@ InstructionCost BoUpSLP::getSpillCost() {
   };
   auto GetLoopInvariantSpillRegion = [&](BasicBlock *UseBB,
                                          BasicBlock *DefBB) -> const Loop * {
-    // If Op is loop-invariant, a call anywhere in the loop body forces a spill,
-    // even when a call-free forward path from Root back to OpParent exists on
-    // the first iteration. Find the outermost such enclosing loop and reject if
-    // its body contains a non-vec call.
+    // If DefBB is outside a loop containing UseBB, the value is live across
+    // iterations of that loop. A non-vectorized call in the loop may therefore
+    // require a spill even when the entry path from DefBB to UseBB is
+    // call-free. Return the outermost such loop containing a relevant call so
+    // its execution scale can be used to cost the spill.
     const Loop *L = LI->getLoopFor(UseBB);
     const Loop *Outermost = nullptr;
     while (L && !L->contains(DefBB)) {
@@ -19067,6 +19068,17 @@ InstructionCost BoUpSLP::getSpillCost() {
         UserTE->getOpcode() == Instruction::PHI)
       return false;
 
+    // The spill walk does not descend through gather entries; if any ancestor
+    // of the matching entry's user is a gather, the matching edge is never
+    // charged and de-duplicating would lose the spill cost entirely.
+    for (const TreeEntry *E = UserTE; E != Root;) {
+      if (!E->UserTreeIndex)
+        return false;
+      E = E->UserTreeIndex.UserTE;
+      if (E->isGather())
+        return false;
+    }
+
     Instruction *Def = EntriesToLastInstruction.lookup(SameTE);
     Instruction *Use = EntriesToLastInstruction.lookup(UserTE);
     if (!Def || !Use)
@@ -19082,6 +19094,12 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (!all_of(SameTE->Scalars, [&](Value *V) {
           return !isa<Instruction>(V) || SpillLoop->isLoopInvariant(V);
         }))
+      return false;
+
+    // A non-vec call between Def and the end of its block preempts the
+    // loop-invariant charge for the matching entry's edge with a smaller
+    // scale, so de-duplicating would drop the in-loop spill cost.
+    if (!CheckForNonVecCallsInSameBlock(Def, Def->getParent()->getTerminator()))
       return false;
 
     return GetLoopInvariantSpillRegion(Use->getParent(), Def->getParent()) ==
