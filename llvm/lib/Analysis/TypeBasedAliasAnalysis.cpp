@@ -747,6 +747,16 @@ MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
   return MD;
 }
 
+// Read a !tbaa.struct field entry (an offset or a size) into Out as a 64-bit
+// value. Returns false if it is not a constant integer that fits in 64 bits.
+static bool getTBAAStructFieldAsInt64(const MDOperand &Op, uint64_t &Out) {
+  auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
+  if (!CI || !CI->getValue().isIntN(64))
+    return false;
+  Out = CI->getZExtValue();
+  return true;
+}
+
 MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
   // Fast path if there's no offset
   if (Offset == 0)
@@ -819,17 +829,15 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
   MDNode *CommonTag = nullptr;
   uint64_t Offset = 0;
   for (size_t I = 0, E = M->getNumOperands(); I + 2 < E; I += 3) {
-    ConstantInt *FieldOffset =
-        mdconst::dyn_extract_or_null<ConstantInt>(M->getOperand(I));
-    ConstantInt *FieldSize =
-        mdconst::dyn_extract_or_null<ConstantInt>(M->getOperand(I + 1));
+    uint64_t FieldOffset, FieldSize;
     MDNode *FieldTag = dyn_cast_or_null<MDNode>(M->getOperand(I + 2));
-    if (!FieldOffset || !FieldSize || !FieldTag ||
-        FieldOffset->getZExtValue() != Offset ||
+    if (!getTBAAStructFieldAsInt64(M->getOperand(I), FieldOffset) ||
+        !getTBAAStructFieldAsInt64(M->getOperand(I + 1), FieldSize) ||
+        !FieldTag || FieldOffset != Offset ||
         (CommonTag && FieldTag != CommonTag))
       break;
     CommonTag = FieldTag;
-    Offset += FieldSize->getZExtValue();
+    Offset += FieldSize;
     if (Offset >= AccessSize)
       break;
   }
