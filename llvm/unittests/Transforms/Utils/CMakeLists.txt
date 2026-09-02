@@ -31,6 +31,7 @@ add_llvm_unittest(UtilsTests
   ScalarEvolutionExpanderTest.cpp
   SizeOptsTest.cpp
   SSAUpdaterBulkTest.cpp
+  TrackingSSAUpdaterTest.cpp
   UnrollLoopTest.cpp
   ValueMapperTest.cpp
   ProfDataUtilTest.cpp
