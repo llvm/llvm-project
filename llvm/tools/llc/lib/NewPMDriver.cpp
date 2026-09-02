@@ -137,7 +137,7 @@ int llvm::compileModuleWithNewPM(
 
   MAM.registerPass([&] {
     const TargetOptions &Options = Target->Options;
-    return RuntimeLibraryAnalysis(Options.ExceptionModel, Options.EABIVersion,
+    return RuntimeLibraryAnalysis(Options.ExceptionModel,
                                   Options.MCOptions.ABIName, Options.VecLib);
   });
 
