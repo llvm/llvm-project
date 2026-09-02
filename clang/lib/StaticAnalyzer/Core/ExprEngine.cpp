@@ -3419,8 +3419,7 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
                                         ExplodedNodeSet &Dst) {
   const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
 
-  // The constructor visitor has already handled everything, so let's skip
-  // forward to PostStmt handling.
+  // The constructor visitor has already handled everything
   if (isa<CXXConstructExpr>(Ex->getSubExpr())) {
     Dst.insert(Pred);
     return;
