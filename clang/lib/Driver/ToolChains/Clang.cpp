@@ -5414,6 +5414,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                                 << TripleStr;
   }
 
+  // Respect the last -f[no-]inline-functions-called-once option.
+  if (!Args.hasFlag(options::OPT_finline_functions_called_once,
+                    options::OPT_fno_inline_functions_called_once,
+                    /*Default=*/true)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-no-inline-functions-called-once");
+  }
+
   // Push all default warning arguments that are specific to
   // the given target.  These come before user provided warning options
   // are provided.

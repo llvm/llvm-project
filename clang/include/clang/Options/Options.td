@@ -7694,7 +7694,10 @@ defm modulo_sched : BooleanFFlag<"modulo-sched">, Group<clang_ignored_gcc_optimi
 defm modulo_sched_allow_regmoves : BooleanFFlag<"modulo-sched-allow-regmoves">,
     Group<clang_ignored_gcc_optimization_f_Group>;
 defm inline_functions_called_once : BooleanFFlag<"inline-functions-called-once">,
-    Group<clang_ignored_gcc_optimization_f_Group>;
+    Group<f_Group>,
+    Visibility<[ClangOption]>,
+    HelpText<"Control inlining of TU-local functions called exactly once "
+             "(Use -fno-inline-functions-called-once to inhibit it)">;
 def finline_limit_EQ : Joined<["-"], "finline-limit=">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm finline_limit : BooleanFFlag<"inline-limit">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm inline_small_functions : BooleanFFlag<"inline-small-functions">,
