@@ -312,9 +312,9 @@ bool CodeGenAction::beginSourceFileAction() {
   bool isOpenMPEnabled =
       ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP);
-  bool isOpenMPSimd = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   fir::OpenMPFIRPassPipelineOpts opts;
+  opts.isSimdOnly = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   using DoConcurrentMappingKind =
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
@@ -342,7 +342,7 @@ bool CodeGenAction::beginSourceFileAction() {
   // WARNING: This pipeline must be run immediately after the lowering to
   // ensure that the FIR is correct with respect to OpenMP operations/
   // attributes.
-  if (isOpenMPEnabled || isOpenMPSimd)
+  if (isOpenMPEnabled || opts.isSimdOnly)
     fir::createOpenMPFIRPassPipeline(pm, opts);
 
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -1094,9 +1094,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
             os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
       }
     } else if (action == BackendActionTy::Backend_EmitLL) {
-      mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
-                                        /*ShouldPreserveUseListOrder=*/false,
-                                        emitSummary));
+      mpm.addPass(llvm::PrintModulePass(
+          os, /*Banner=*/"", /*ShouldPreserveUseListOrder=*/false, emitSummary,
+          /*ShouldRenumberMetadata=*/true));
     }
   }
 

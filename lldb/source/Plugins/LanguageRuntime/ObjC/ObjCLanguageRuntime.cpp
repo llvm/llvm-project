@@ -27,6 +27,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DJB.h"
+#include "llvm/Support/Error.h"
 #include <optional>
 
 using namespace lldb;
@@ -280,10 +281,10 @@ ObjCLanguageRuntime::GetClassDescriptor(ValueObject &valobj) {
 
       Process *process = exe_ctx.GetProcessPtr();
       if (process) {
-        Status error;
-        ObjCISA isa = process->ReadPointerFromMemory(isa_pointer, error);
-        if (isa != LLDB_INVALID_ADDRESS)
-          objc_class_sp = GetClassDescriptorFromISA(isa);
+        std::optional<lldb::addr_t> isa = llvm::expectedToOptional(
+            process->ReadPointerFromMemory(isa_pointer));
+        if (isa)
+          objc_class_sp = GetClassDescriptorFromISA(*isa);
       }
     }
   }

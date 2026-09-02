@@ -9,6 +9,9 @@
 #include "DXILPrettyPrinter.h"
 #include "DirectX.h"
 #include "DirectXIRPasses/DXILDebugInfo.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
@@ -262,17 +265,25 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
 }
 
 namespace {
+class DXILModuleSlotTracker : public ModuleSlotTracker {
+public:
+  using ModuleSlotTracker::ModuleSlotTracker;
+  using ModuleSlotTracker::renumberMetadataForAssembly;
+};
+
 class DXILAssemblyAnnotationWriter : public llvm::AssemblyAnnotationWriter {
 private:
   ModuleSlotTracker &MST;
   AbstractSlotTrackerStorage &STS;
   const DXILDebugInfoMap &DI;
+  DenseSet<const MDNode *> &EmittedMDNodes;
 
 public:
   DXILAssemblyAnnotationWriter(ModuleSlotTracker &MST,
                                AbstractSlotTrackerStorage &STS,
-                               const DXILDebugInfoMap &DI)
-      : MST(MST), STS(STS), DI(DI) {}
+                               const DXILDebugInfoMap &DI,
+                               DenseSet<const MDNode *> &EmittedMDNodes)
+      : MST(MST), STS(STS), DI(DI), EmittedMDNodes(EmittedMDNodes) {}
 
   void emitInstructionAnnot(const Instruction *OrigI,
                             formatted_raw_ostream &os) override {
@@ -284,10 +295,11 @@ public:
   }
 
   void emitMDNodeAnnot(const MDNode *N, formatted_raw_ostream &os) override {
+    EmittedMDNodes.insert(N);
+
     if (const Metadata *NewMD = DI.MDReplace.lookup(N)) {
       if (const auto *NewN = dyn_cast<MDNode>(NewMD))
-        if (STS.getMetadataSlot(NewN) == -1)
-          STS.createMetadataSlot(NewN);
+        STS.createMetadataSlot(NewN);
 
       os << "; DXIL: ";
       N->printAsOperand(os, MST);
@@ -299,8 +311,7 @@ public:
 
     if (const Metadata *ExtraMD = DI.MDExtra.lookup(N)) {
       if (const auto *ExtraN = dyn_cast<MDNode>(ExtraMD))
-        if (STS.getMetadataSlot(ExtraN) == -1)
-          STS.createMetadataSlot(ExtraN);
+        STS.createMetadataSlot(ExtraN);
 
       os << "; DXIL: ";
       N->printAsOperand(os, MST);
@@ -313,36 +324,103 @@ public:
 };
 } // namespace
 
+static SmallVector<const MDNode *>
+collectAdditionalMetadata(Module &M, const DXILDebugInfoMap &DI) {
+  // Annotation metadata follows module metadata in the order its keys print.
+  // Follow replacement graphs to preserve that order in canonical output.
+  M.renumberMetadataForAssembly();
+
+  ModuleSlotTracker MST(&M);
+  AbstractSlotTrackerStorage *STS = nullptr;
+  MST.setProcessHook(
+      [&](AbstractSlotTrackerStorage *STS_, const Module *) { STS = STS_; });
+  MDNode::get(M.getContext(), {})->print(llvm::nulls(), MST);
+  assert(STS && "Slot tracker storage should have been initialised");
+
+  DenseSet<const Metadata *> ReplacementMetadata;
+  for (auto [_, Replacement] : DI.MDReplace)
+    ReplacementMetadata.insert(Replacement);
+
+  SmallVector<std::pair<unsigned, const MDNode *>> OriginalNodes;
+  DenseSet<const MDNode *> Queued;
+  auto AddOriginal = [&](const Metadata *MD) {
+    const auto *N = dyn_cast<MDNode>(MD);
+    if (!N || ReplacementMetadata.contains(N) || !Queued.insert(N).second)
+      return;
+    OriginalNodes.emplace_back(STS->getMetadataSlot(N), N);
+  };
+  for (auto [Original, _] : DI.MDReplace)
+    AddOriginal(Original);
+  for (auto [Original, _] : DI.MDExtra)
+    AddOriginal(Original);
+  llvm::sort(OriginalNodes);
+
+  SmallVector<const MDNode *> Worklist;
+  for (auto [_, N] : OriginalNodes)
+    Worklist.push_back(N);
+
+  SmallVector<const MDNode *> AdditionalMetadata;
+  auto AddAdditional = [&](const Metadata *MD) {
+    const auto *Root = dyn_cast_or_null<MDNode>(MD);
+    if (!Root || Queued.contains(Root))
+      return;
+
+    AdditionalMetadata.push_back(Root);
+    SmallVector<const MDNode *> Nodes = {Root};
+    while (!Nodes.empty()) {
+      const MDNode *N = Nodes.pop_back_val();
+      if (!Queued.insert(N).second)
+        continue;
+      Worklist.push_back(N);
+      for (const MDOperand &Op : llvm::reverse(N->operands()))
+        if (const auto *OpNode = dyn_cast_or_null<MDNode>(Op.get()))
+          Nodes.push_back(OpNode);
+    }
+  };
+
+  for (size_t I = 0; I != Worklist.size(); ++I) {
+    const MDNode *N = Worklist[I];
+    if (const Metadata *Replacement = DI.MDReplace.lookup(N)) {
+      AddAdditional(Replacement);
+      continue;
+    }
+    AddAdditional(DI.MDExtra.lookup(N));
+  }
+  return AdditionalMetadata;
+}
+
 static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
                         DXILResourceTypeMap &DRTM, const DXILDebugInfoMap &DI) {
   formatted_raw_ostream FOS(OS);
 
   prettyPrintResources(FOS, DRM, DRTM);
 
-  ModuleSlotTracker MST(&M);
+  SmallVector<const MDNode *> AdditionalMetadata =
+      collectAdditionalMetadata(M, DI);
+  DXILModuleSlotTracker MST(&M);
+  MST.renumberMetadataForAssembly(AdditionalMetadata);
   AbstractSlotTrackerStorage *STS = nullptr;
-  unsigned NextMetadataSlot = 0;
   MST.setProcessHook(
-      [&](AbstractSlotTrackerStorage *STS_, const Module *, bool) {
-        STS = STS_;
-        NextMetadataSlot = STS->getNextMetadataSlot();
-      });
+      [&](AbstractSlotTrackerStorage *STS_, const Module *) { STS = STS_; });
   // Force initialisation. ModuleSlotTracker does not have a dedicated function
   // for this so trigger it through a dummy print.
   MDNode::get(M.getContext(), {})->print(llvm::nulls(), MST);
   assert(STS && "Slot tracker storage should have been initialised");
 
-  DXILAssemblyAnnotationWriter DAAW(MST, *STS, DI);
+  DenseSet<const MDNode *> EmittedMDNodes;
+  DXILAssemblyAnnotationWriter DAAW(MST, *STS, DI, EmittedMDNodes);
   M.print(FOS, &DAAW);
 
   ModuleSlotTracker::MachineMDNodeListType MDNodes;
-  MST.collectMDNodes(MDNodes, NextMetadataSlot, ~0u);
+  MST.collectMDNodes(MDNodes);
   std::sort(MDNodes.begin(), MDNodes.end(),
             [](const std::pair<unsigned, const MDNode *> &A,
                const std::pair<unsigned, const MDNode *> &B) {
               return A.first < B.first;
             });
   for (auto [_, MDNode] : MDNodes) {
+    if (EmittedMDNodes.contains(MDNode))
+      continue;
     DAAW.emitMDNodeAnnot(MDNode, FOS);
     MDNode->print(FOS, MST);
     FOS << "\n";
@@ -379,11 +457,11 @@ public:
 
 char DXILPrettyPrinterLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
-                      "DXIL Pretty Printer", true, true)
+                      "DXIL Pretty Printer", true, false)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
-                    "DXIL Pretty Printer", true, true)
+                    "DXIL Pretty Printer", true, false)
 
 bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
   const DXILResourceMap &DRM =
@@ -392,7 +470,7 @@ bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
   const DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
   prettyPrint(OS, M, DRM, DRTM, DI);
-  return DI.Modified;
+  return true;
 }
 
 ModulePass *llvm::createDXILPrettyPrinterLegacyPass(raw_ostream &OS) {
