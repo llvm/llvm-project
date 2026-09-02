@@ -205,6 +205,25 @@ bool matchTRN(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
+/// isUZP_v_undef_Mask - Special case of isUZPMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 2, 0, 2> instead of <0, 2, 4, 6>,
+static bool isUZP_v_undef_Mask(ArrayRef<int> M, unsigned NumElts, unsigned &WhichResult) {
+  unsigned Half = NumElts / 2;
+  WhichResult = (M[0] == 0 ? 0 : 1);
+  for (unsigned j = 0; j != 2; ++j) {
+    unsigned Idx = WhichResult;
+    for (unsigned i = 0; i != Half; ++i) {
+      int MIdx = M[i + j * Half];
+      if (MIdx >= 0 && (unsigned)MIdx != Idx)
+        return false;
+      Idx += 2;
+    }
+  }
+
+  return true;
+}
+
 /// \return true if a G_SHUFFLE_VECTOR instruction \p MI can be replaced with
 /// a G_UZP1 or G_UZP2 instruction.
 ///
@@ -217,7 +236,7 @@ bool matchUZP(MachineInstr &MI, MachineRegisterInfo &MRI,
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isUZPMask(ShuffleMask, NumElts, WhichResult))
+  if (!isUZPMask(ShuffleMask, NumElts, WhichResult) && !isUZP_v_undef_Mask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_UZP1 : AArch64::G_UZP2;
   Register V1 = MI.getOperand(1).getReg();
