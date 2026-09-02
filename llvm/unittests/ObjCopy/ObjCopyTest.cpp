@@ -11,7 +11,10 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -216,6 +219,65 @@ TEST(CopySimpleInMemoryFile, ELF) {
 
   copySimpleInMemoryFileImpl(SimpleFileELFYAML,
                              [](const Binary &File) { return File.isELF(); });
+}
+
+TEST(CopySimpleInMemoryFile, ELFFileStreamMatchesBufferedOutput) {
+  SmallVector<char> Storage;
+  Expected<std::unique_ptr<ObjectFile>> Obj =
+      createObjectFileFromYamlDescription(
+          SimpleFileELFYAML, Storage,
+          [](const Binary &File) { return File.isELF(); });
+  ASSERT_THAT_EXPECTED(Obj, Succeeded());
+
+  ConfigManager Config;
+  Config.Common.OutputFilename = "a.out";
+  SmallVector<char> ExpectedData;
+  raw_svector_ostream ExpectedOut(ExpectedData);
+  ASSERT_THAT_ERROR(objcopy::executeObjcopyOnBinary(Config, **Obj, ExpectedOut),
+                    Succeeded());
+
+  SmallString<64> Path;
+  int FD;
+  ASSERT_FALSE(sys::fs::createTemporaryFile("objcopy", "elf", FD, Path));
+  FileRemover Cleanup(Path);
+  StringRef Prefix = "prefix";
+  {
+    raw_fd_stream Out(FD, true);
+    Out << Prefix << std::string(ExpectedData.size() + 16, '\xff');
+    Out.seek(Prefix.size());
+    ASSERT_THAT_ERROR(objcopy::executeObjcopyOnBinary(Config, **Obj, Out),
+                      Succeeded());
+  }
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Output = MemoryBuffer::getFile(Path);
+  ASSERT_TRUE(Output);
+  std::string Expected(Prefix);
+  Expected.append(ExpectedData.begin(), ExpectedData.end());
+  EXPECT_EQ((*Output)->getBuffer(), Expected);
+}
+
+TEST(CopySimpleInMemoryFile, ELFFileStreamReturnsWriteErrors) {
+  SmallVector<char> Storage;
+  Expected<std::unique_ptr<ObjectFile>> Obj =
+      createObjectFileFromYamlDescription(
+          SimpleFileELFYAML, Storage,
+          [](const Binary &File) { return File.isELF(); });
+  ASSERT_THAT_EXPECTED(Obj, Succeeded());
+
+  SmallString<64> Path;
+  int FD;
+  ASSERT_FALSE(sys::fs::createTemporaryFile("objcopy", "elf", FD, Path));
+  FileRemover Cleanup(Path);
+  {
+    raw_fd_ostream Out(FD, true);
+  }
+  ASSERT_FALSE(sys::fs::openFileForRead(Path, FD));
+
+  ConfigManager Config;
+  Config.Common.OutputFilename = "a.out";
+  raw_fd_stream Out(FD, true);
+  EXPECT_THAT_ERROR(objcopy::executeObjcopyOnBinary(Config, **Obj, Out),
+                    Failed());
 }
 
 TEST(CopySimpleInMemoryFile, MachO) {
