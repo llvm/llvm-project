@@ -35,6 +35,15 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(clv).size();
 
+// TODO: Unmute when P2846R6 is available.
+// #if TEST_STD_VER >= 26
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // clv.reserve_hint();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // std::as_const(clv).reserve_hint();
+// #endif
+
   // [range.cache.latest.iterator]
 
   auto it = clv.begin();
