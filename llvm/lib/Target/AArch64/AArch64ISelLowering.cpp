@@ -32230,9 +32230,10 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
 
     EVT NewInVT = InVT.changeVectorElementType(*DAG.getContext(), NewEltVT);
     EVT NewVT = VT.changeVectorElementType(*DAG.getContext(), NewEltVT);
-    In = DAG.getNode(ISD::ANY_EXTEND, DL, NewInVT, In);
-    In = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, In, N->getOperand(1));
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, In));
+    SDValue ExtendedIn = DAG.getNode(ISD::ANY_EXTEND, DL, NewInVT, In);
+    SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, ExtendedIn,
+                                 N->getOperand(1));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, SubVec));
     return;
   }
 
