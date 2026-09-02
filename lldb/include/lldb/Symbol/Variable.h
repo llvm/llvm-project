@@ -62,6 +62,8 @@ public:
 
   Type *GetType();
 
+  lldb::TypeSP GetEnclosingType();
+
   lldb::LanguageType GetLanguage() const;
 
   lldb::ValueType GetScope() const { return m_scope; }

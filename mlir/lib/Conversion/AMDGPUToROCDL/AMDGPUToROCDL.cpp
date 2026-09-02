@@ -305,10 +305,10 @@ struct FatRawBufferCastLowering
                                    memrefType)
             : descriptor.alignedPtr(rewriter, loc);
 
-    Value offset = adaptor.getResetOffset()
-                       ? LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                                  rewriter.getIndexAttr(0))
-                       : descriptor.offset(rewriter, loc);
+    Value offset =
+        adaptor.getResetOffset()
+            ? createIndexAttrConstant(rewriter, loc, getIndexType(), 0)
+            : descriptor.offset(rewriter, loc);
 
     bool hasSizes = memrefType.getRank() > 0;
     // No need to unpack() and pack() all the individual sizes and strides,

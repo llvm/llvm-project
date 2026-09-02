@@ -331,9 +331,10 @@ static void collectGlobalsFromDeviceRegion(Region &region,
 // Adds the declare attribute to the operation `op`.
 static void addDeclareAttr(MLIRContext *context, Operation *op,
                            acc::DataClause clause) {
-  op->setAttr(acc::getDeclareAttrName(),
-              acc::DeclareAttr::get(context,
-                                    acc::DataClauseAttr::get(context, clause)));
+  op->setDiscardableAttr(
+      acc::getDeclareAttrName(),
+      acc::DeclareAttr::get(context,
+                            acc::DataClauseAttr::get(context, clause)));
 }
 
 // This pass applies implicit declare actions for globals referenced in
@@ -381,7 +382,7 @@ public:
                                              symTab);
           })
           .Case([&](acc::GlobalVariableOpInterface globalVarOp) {
-            if (globalVarOp->getAttr(acc::getDeclareAttrName()))
+            if (globalVarOp->getDiscardableAttr(acc::getDeclareAttrName()))
               if (Region *initRegion = globalVarOp.getInitRegion())
                 collectGlobalsFromDeviceRegion(*initRegion, globalsToAccDeclare,
                                                accSupport, symTab);

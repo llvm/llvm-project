@@ -159,6 +159,9 @@ The available options are summarized below:
    :option:`GlobalVariableHungarianPrefix`
  - :option:`InlineNamespaceCase`, :option:`InlineNamespacePrefix`,
    :option:`InlineNamespaceSuffix`, :option:`InlineNamespaceIgnoredRegexp`
+ - :option:`LambdaCaptureCase`, :option:`LambdaCapturePrefix`,
+   :option:`LambdaCaptureSuffix`, :option:`LambdaCaptureIgnoredRegexp`,
+   :option:`LambdaCaptureHungarianPrefix`
  - :option:`LocalConstexprVariableCase`,
    :option:`LocalConstexprVariablePrefix`,
    :option:`LocalConstexprVariableSuffix`,
@@ -1490,6 +1493,63 @@ After:
     ...
     }
     } // namespace FOO_NS
+
+.. option:: LambdaCaptureCase
+
+    When defined, the check will ensure lambda init-capture names (e.g.
+    ``Captured`` in ``[Captured = Var]``) conform to the selected casing.
+    A simple, non-init capture (e.g. ``[Var]`` or ``[&Var]``) refers to the
+    same declaration as ``Var`` itself, so it keeps following whichever
+    naming style applies to ``Var``'s own declaration instead.
+
+.. option:: LambdaCapturePrefix
+
+    When defined, the check will ensure lambda init-capture names will add
+    the prefix with the given value (regardless of casing).
+
+.. option:: LambdaCaptureIgnoredRegexp
+
+    Identifier naming checks won't be enforced for lambda init-capture names
+    matching this regular expression.
+
+.. option:: LambdaCaptureSuffix
+
+    When defined, the check will ensure lambda init-capture names will add
+    the suffix with the given value (regardless of casing).
+
+.. option:: LambdaCaptureHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will
+    have a Hungarian notation prefix based on the declared type.
+
+For example using values of:
+
+   - LambdaCaptureCase of ``CamelCase``
+   - LambdaCapturePrefix of ``c_``
+
+Identifies and/or transforms lambda init-capture names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    void foo() {
+      int local_variable = 0;
+      auto lambda = [captured_value = local_variable]() {
+        return captured_value;
+      };
+    }
+
+After:
+
+.. code-block:: c++
+
+    void foo() {
+      int local_variable = 0;
+      auto lambda = [c_CapturedValue = local_variable]() {
+        return c_CapturedValue;
+      };
+    }
 
 .. option:: LocalConstexprVariableCase
 

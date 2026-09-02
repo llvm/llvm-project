@@ -171,10 +171,14 @@ add_libc_test(
     libc.hdr.signal_macros
     libc.hdr.time_macros
     libc.hdr.types.clockid_t
+    libc.hdr.types.struct_itimerspec
     libc.hdr.types.struct_sigevent
     libc.hdr.types.timer_t
+    libc.src.time.clock_gettime
     libc.src.time.timer_create
     libc.src.time.timer_delete
+    libc.src.time.timer_gettime
+    libc.src.time.timer_settime
     libc.src.unistd.gettid
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
@@ -309,4 +313,15 @@ add_libc_test(
     libc.src.time.clock
     libc.src.errno.errno
     libc.hdr.types.clock_t
+)
+
+add_libc_test(
+  tzset_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    tzset_test.cpp
+  DEPENDS
+    libc.src.time.tz_variables
+    libc.src.time.tzset
 )

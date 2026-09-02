@@ -580,9 +580,10 @@ public:
   }
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
-                             ArrayRef<const Value *> Operands, Type *AccessType,
-                             TTI::TargetCostKind CostKind) const override {
-    return BaseT::getGEPCost(PointeeType, Ptr, Operands, AccessType, CostKind);
+                             ArrayRef<const Value *> Operands,
+                             TTI::TargetCostKind CostKind,
+                             Type *AccessType) const override {
+    return BaseT::getGEPCost(PointeeType, Ptr, Operands, CostKind, AccessType);
   }
 
   unsigned getEstimatedNumberOfCaseClusters(
@@ -2086,6 +2087,8 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, I, 1);
@@ -2546,6 +2549,8 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
     case Intrinsic::experimental_vector_match: {

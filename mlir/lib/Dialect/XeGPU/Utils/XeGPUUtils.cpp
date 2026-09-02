@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Casting.h"
@@ -169,10 +170,20 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
     auto *parentOp = arg.getOwner()->getParentOp();
-    if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
-      OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      if (tiedInit)
+    auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp);
+    if (loop)
+      if (OpOperand *tiedInit = loop.getTiedLoopInit(arg))
         return getTemporaryLayout(*tiedInit);
+    // An scf.while "after" argument is tied to no init operand; scf.condition
+    // feeds it. Only a pass-through is supported: the forwarded value must be
+    // the matching "before" argument, whose tied init operand carries the
+    // layout.
+    if (auto whileOp = dyn_cast_if_present<scf::WhileOp>(parentOp);
+        whileOp && arg.getOwner()->getParent() == &whileOp.getAfter()) {
+      Value forwarded = whileOp.getConditionOp().getArgs()[arg.getArgNumber()];
+      if (auto beforeArg = dyn_cast<BlockArgument>(forwarded))
+        if (OpOperand *tiedInit = whileOp.getTiedLoopInit(beforeArg))
+          return getTemporaryLayout(*tiedInit);
     }
   }
 

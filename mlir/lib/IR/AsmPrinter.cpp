@@ -3858,9 +3858,7 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
     os << ')';
   }
 
-  printOptionalAttrDict(op->getPropertiesStorage()
-                            ? llvm::to_vector(op->getDiscardableAttrs())
-                            : op->getAttrs());
+  printOptionalAttrDict(op->getRawDictionaryAttrs().getValue());
 
   // Print the type signature of the operation.
   os << " : ";

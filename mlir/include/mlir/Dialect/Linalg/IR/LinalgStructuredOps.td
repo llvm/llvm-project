@@ -386,6 +386,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
   }];
 
   let hasCustomAssemblyFormat = 1;
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 

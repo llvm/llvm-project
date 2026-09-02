@@ -717,9 +717,23 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
     MachineOperand &SrcOp = MI->getOperand(1);
     if (!SrcOp.isReg())
       return false;
-    if (SrcOp.getSubReg())
-      return false;
     Register SrcReg = SrcOp.getReg();
+    if (SrcOp.getSubReg()) {
+      // If operand is defined by a LD1/2/3/4 that define a D subreg tuple
+      // then upper bits of the tuple's registers are implicitly zeroed
+      // and the FMOV is unneeded.
+      if (!SrcReg.isVirtual())
+        return false;
+
+      MachineInstr *SrcDef = MRI->getUniqueVRegDef(SrcReg);
+      if (!SrcDef || SrcDef->getOpcode() <= TargetOpcode::GENERIC_OP_END ||
+          SrcDef->getDesc().isPseudo() || !SrcDef->mayLoad())
+        return false;
+
+      const TargetRegisterClass *RC = MRI->getRegClass(SrcReg);
+      return RC == &AArch64::DDRegClass || RC == &AArch64::DDDRegClass ||
+             RC == &AArch64::DDDDRegClass;
+    }
     auto IsGPR64Like = [&]() -> bool {
       if (SrcReg.isVirtual())
         return AArch64::GPR64allRegClass.hasSubClassEq(

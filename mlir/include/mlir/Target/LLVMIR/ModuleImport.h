@@ -382,6 +382,8 @@ private:
   /// Returns the symbol reference for a global value that has a corresponding
   /// imported MLIR symbol, or a null attribute otherwise.
   FlatSymbolRefAttr getMetadataGlobalValueSymbolRef(llvm::GlobalValue *global);
+  /// Returns a symbol ref if `md` refers to an imported global value.
+  FlatSymbolRefAttr getMetadataOperandSymbolRef(const llvm::Metadata *md);
   /// Converts `md` to the matching LLVM dialect metadata attribute, or returns
   /// a null attribute if the metadata cannot be represented.
   Attribute convertMetadataToAttr(const llvm::Metadata *md);

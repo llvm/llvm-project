@@ -1015,8 +1015,9 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
       %d = xegpu.dpas %a, %b, %c <{
           layout_a = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 128]>,
           layout_b = #xegpu.layout<sg_layout = [4, 8], sg_data = [128, 16]>,
-          layout_cd = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 16]>}
-          : vector<64x128xf16>, vector<128x128xf16>, vector<64x128xf32> -> vector<64x128xf32>
+          layout_cd = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 16]>}>
+          : vector<64x128xf16>, vector<128x128xf16>, vector<64x128xf32>
+            -> vector<64x128xf32>
     ```
 
     Example 2 (Lane level, 1D):
@@ -1079,7 +1080,9 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
   }];
 
   let assemblyFormat = [{
-    $lhs `,` $rhs (`,` $acc^)? attr-dict `:` type($lhs)`,` type($rhs) (`,` type($acc)^)?  `->` type($result)
+    $lhs `,` $rhs (`,` $acc^)?
+    prop-dict attr-dict `:`
+    type($lhs)`,` type($rhs) (`,` type($acc)^)?  `->` type($result)
   }];
 
   let hasVerifier = 1;
@@ -1143,7 +1146,8 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
   let results = (outs XeGPU_ValueType:$result);
 
   let assemblyFormat = [{
-    $kind $tensorDesc `,` $mask `,` $value attr-dict `:`
+    $kind $tensorDesc `,` $mask `,` $value
+    prop-dict attr-dict `:`
     qualified(type($tensorDesc)) `,` type($mask) `,` type($value) `->` type($result)
   }];
 }
@@ -1680,7 +1684,7 @@ def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
     $a `,` $b (`,` $acc^)?
     (`scale_a` `=` $scale_a^)?
     (`scale_b` `=` $scale_b^)?
-    attr-dict `:` functional-type(operands, results)
+    prop-dict attr-dict `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
 }

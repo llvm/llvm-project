@@ -442,23 +442,6 @@ void maybeundeffunc(int __attribute__((maybe_undef))param);
   }];
 }
 
-def CarriesDependencyDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The `carries_dependency` attribute specifies dependency propagation into and
-out of functions.
-
-When specified on a function or Objective-C method, the `carries_dependency`
-attribute means that the return value carries a dependency out of the function,
-so that the implementation need not constrain ordering upon return from that
-function. Implementations of the function and its caller may choose to preserve
-dependencies instead of emitting memory ordering instructions such as fences.
-
-Note, this attribute does not change the meaning of the program, but may result
-in generation of more efficient code.
-  }];
-}
-
 def CPUSpecificCPUDispatchDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -1466,8 +1449,8 @@ Query for this feature with `__has_attribute(diagnose_if)`.
 def NoSpecializationsDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-`[[clang::no_specializations]]` can be applied to function, class, or variable
-templates which should not be explicitly specialized by users. This is primarily
+``[[clang::no_specializations]]`` can be applied to function, class, or variable
+templates for which neither an explicit specialization nor a partial specialization should be declared by users. This is primarily
 used to diagnose user specializations of standard library type traits.
   }];
 }
