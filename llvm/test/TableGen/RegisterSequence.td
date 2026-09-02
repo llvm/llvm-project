@@ -146,12 +146,41 @@ def : RegisterSequence<[R2, R5]>;
 // CHECK: "R0_64\000"
 // CHECK: "R0_128\000"
 
+// Where the registers containing them are is said for the block as a whole, so
+// no register of one lists them. Their SuperRegs fields, the third of each
+// descriptor, point at the empty list at offset 7 rather than naming registers
+// that have nothing to do with them.
+//
+// The first two pairs. The first lists its sub-registers, being the first
+// register of its block; the second does not, being described by that one and
+// the distances above.
+// CHECK:      extern const MCRegisterDesc TestTargetRegDesc[]
+// CHECK:      { {{[0-9]+}}, 20, 7, 0,
+// CHECK-NEXT: { {{[0-9]+}}, 7, 7, 0,
+
+// The series of register that the registers of a block are contained by, said
+// as where one sits with respect to the register it contains: the register it
+// begins at, how many members before that register it begins, how many members
+// apart the registers of the series are, how many of them there are, and how
+// far one is from the next.
+//
+// A quad holds two pairs: the pair beginning where the quad does, and the pair
+// beginning two members later. So the pairs of the first sequence have two
+// series, the same quads reached from two distances back, and a pair reads
+// both and takes the one that names a register for it. The quads themselves
+// are contained by nothing, and neither are the pairs of the second
+// sequence.
+// CHECK:      extern const MCSeqSuperRegSeries TestTargetSeqSuperRegSeries[]
+// CHECK-NEXT: { R_128_SEQ, 0, 4, 2, 1 },
+// CHECK-NEXT: { R_128_SEQ, 2, 4, 2, 1 },
+
 // The blocks as the register info sees them: the first register, how many
-// there are, and where the distances above start.
+// there are, how many members apart they begin, where the distances above
+// start, and which of the series above are theirs.
 // CHECK:      extern const MCSeqBlockDesc TestTargetSeqBlocks[]
-// CHECK-NEXT: { R_64_SEQ, 4, {{[0-9]+}} },
-// CHECK-NEXT: { R_128_SEQ, 2, 46 },
-// CHECK-NEXT: { T_64_SEQ, 3, {{[0-9]+}} },
+// CHECK-NEXT: { R_64_SEQ, 4, 2, {{[0-9]+}}, 0, 2 },
+// CHECK-NEXT: { R_128_SEQ, 2, 4, 46, 2, 0 },
+// CHECK-NEXT: { T_64_SEQ, 3, 2, {{[0-9]+}}, 2, 0 },
 
 // Having no enumerators of their own, registers of a block are referred to by
 // the one that reserves the block and how far into it they sit. Here, the four

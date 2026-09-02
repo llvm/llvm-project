@@ -1078,11 +1078,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       SRIs.push_back(Reg.getSubRegIndex(S));
     SubRegIdxSeqs.add(SRIs);
 
-    // Super-registers are already computed.
+    // Super-registers are already computed. A register of a block reads the
+    // series its block says instead, so only registers outside one need a list.
     const RegVec &SuperRegList = Reg.getSuperRegs();
     diffEncode(SuperRegLists[i], Reg.EnumValue, SuperRegList.begin(),
                SuperRegList.end());
-    DiffSeqs.add(SuperRegLists[i]);
+    if (!GetSeqBlockMember(Reg).first)
+      DiffSeqs.add(SuperRegLists[i]);
 
     const SparseBitVector<> &RUs = Reg.getNativeRegUnits();
     DiffSeqs.add(diffEncode(RegUnitLists[i], RUs));
@@ -1108,19 +1110,44 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     // construction, blocks being formed no further than it does.
     SetVector<const CodeGenRegister *> FirstSubRegs;
     Block.FirstReg->addSubRegsPreOrder(FirstSubRegs, RegBank);
-    for (unsigned Index = 1; Index != Block.Count; ++Index) {
+    for (unsigned Index = 0; Index != Block.Count; ++Index) {
       const CodeGenRegister &Reg = Regs[Block.FirstReg->EnumValue - 1 + Index];
       SetVector<const CodeGenRegister *> SubRegs;
       Reg.addSubRegsPreOrder(SubRegs, RegBank);
 
-      assert(SubRegs.size() == FirstSubRegs.size() &&
-             all_of(zip_equal(SubRegs, FirstSubRegs, Slopes),
-                    [&](auto Sub) {
-                      const auto &[SR, FirstSR, Slope] = Sub;
-                      return SR->EnumValue ==
-                             FirstSR->EnumValue + Index * Slope;
-                    }) &&
+      assert((!Index || (SubRegs.size() == FirstSubRegs.size() &&
+                         all_of(zip_equal(SubRegs, FirstSubRegs, Slopes),
+                                [&](auto Sub) {
+                                  const auto &[SR, FirstSR, Slope] = Sub;
+                                  return SR->EnumValue ==
+                                         FirstSR->EnumValue + Index * Slope;
+                                }))) &&
              "Sub-registers of a block register are not where the block says.");
+
+      // The same for the registers containing them, which the block says the
+      // series of rather than any of them listing. Blocks are formed no further
+      // than this holds, so it holds by construction.
+      //
+      // As a set: the series are read in the order they are laid out, which is
+      // not the order a register's own list happens to be in today, and could
+      // not be where a block holds registers of more than one alignment, the
+      // ones containing them interleaving differently for each. All the order
+      // has ever promised is that a register comes before the ones containing
+      // it, which laying the series out narrowest first keeps to.
+      SmallDenseSet<unsigned, 32> Says;
+      for (const auto &Series : Block.SuperRegSeries) {
+        if (unsigned Super = Series.of(Index * Block.Step))
+          Says.insert(Super);
+      }
+
+      const RegVec &Supers = Reg.getSuperRegs();
+      assert(Says.size() == Supers.size() &&
+             all_of(Supers,
+                    [&](const CodeGenRegister *Super) {
+                      return Says.contains(Super->EnumValue);
+                    }) &&
+             "Super-registers of a block register are not the ones the block "
+             "says contain it.");
     }
 #endif
   }
@@ -1177,10 +1204,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     unsigned SubRegs =
         DiffSeqs.get(Block && Index != 0 ? DiffVec() : SubRegLists[i]);
 
+    // Likewise the registers containing them, which their block says the series
+    // of, so that they list none of their own.
+    unsigned SuperRegs = DiffSeqs.get(Block ? DiffVec() : SuperRegLists[i]);
+
     OS << "  { " << RegStrings.get(Reg.getName().str()) << ", " << SubRegs
-       << ", " << DiffSeqs.get(SuperRegLists[i]) << ", "
-       << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
-       << (Offset << RegUnitBits | FirstRU) << ", "
+       << ", " << SuperRegs << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i])
+       << ", " << (Offset << RegUnitBits | FirstRU) << ", "
        << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant << ", "
        << Reg.Artificial << " },\n";
     ++i;
@@ -1190,12 +1220,33 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   // Emit the sequence blocks, so that the registers described by their first
   // register can be told from those described on their own.
   if (!SeqBlocks.empty()) {
+    // The series of register the registers of each block are contained by.
+    OS << "extern const MCSeqSuperRegSeries " << TargetName
+       << "SeqSuperRegSeries[] = { // What contains the registers of a block\n";
+    unsigned NumSeries = 0;
+    for (const CodeGenRegisterSequenceBlock &Block : SeqBlocks) {
+      for (const auto &[Base, Back, Stride, Count, Slope] :
+           Block.SuperRegSeries) {
+        OS << "  { " << getRegName(Regs[Base - 1].TheDef) << ", " << Back
+           << ", " << Stride << ", " << std::min(Count, 0xffffu) << ", "
+           << Slope << " },\n";
+        ++NumSeries;
+      }
+    }
+    // An empty array is not a thing, and a target may have nothing to say.
+    if (!NumSeries)
+      OS << "  { 0, 0, 1, 0, 0 },\n";
+    OS << "};\n\n";
+
     OS << "extern const MCSeqBlockDesc " << TargetName
        << "SeqBlocks[] = { // Sequence blocks\n";
+    unsigned FirstSeries = 0;
     for (const CodeGenRegisterSequenceBlock &Block : SeqBlocks) {
       DiffVec Slopes(Block.SubRegSlopes);
       OS << "  { " << getRegName(Block.FirstReg->TheDef) << ", " << Block.Count
-         << ", " << DiffSeqs.get(Slopes) << " },\n";
+         << ", " << Block.Step << ", " << DiffSeqs.get(Slopes) << ", "
+         << FirstSeries << ", " << Block.SuperRegSeries.size() << " },\n";
+      FirstSeries += Block.SuperRegSeries.size();
     }
     OS << "};\n\n";
   }
@@ -1479,7 +1530,11 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
                                            : "nullptr")
      << ", "
      << (SeqBlocks.empty() ? Twine("nullptr") : TargetName + "SeqBlocks")
-     << ", " << SeqBlocks.size() << ");\n\n";
+     << ", " << SeqBlocks.size();
+  // The rest is defaulted, so a target with no sequences says nothing of it.
+  if (!SeqBlocks.empty())
+    OS << ", " << TargetName << "SeqSuperRegSeries";
+  OS << ");\n\n";
 
   EmitRegMapping(OS, Regs, false);
 
@@ -2014,8 +2069,11 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   if (Target.getRegistersAreIntervals())
     OS << "extern const unsigned " << TargetName << "RegUnitIntervals[][2];\n";
   ArrayRef<CodeGenRegisterSequenceBlock> SeqBlocks = RegBank.getSeqBlocks();
-  if (!SeqBlocks.empty())
+  if (!SeqBlocks.empty()) {
     OS << "extern const MCSeqBlockDesc " << TargetName << "SeqBlocks[];\n";
+    OS << "extern const MCSeqSuperRegSeries " << TargetName
+       << "SeqSuperRegSeries[];\n";
+  }
 
   EmitRegMappingTables(OS, Regs, true);
 
@@ -2030,20 +2088,21 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   )",
                 ClassName, TargetName);
   printMask(OS, RegBank.CoveringLanes);
-  OS << formatv(R"(, {0}RegClassInfos, {0}VTLists, HwMode) {{
+  OS << formatv(
+      R"(, {0}RegClassInfos, {0}VTLists, HwMode) {{
   InitMCRegisterInfo({0}RegDesc, {1}, RA, PC,
     &get{0}MCRegisterClass(0), {2}, {0}RegUnitRoots, {3}, {0}RegDiffLists,
     {0}LaneMaskLists, {0}RegStrings, {0}RegClassStrings, {0}SubRegIdxLists, {4},
-    {0}RegEncodingTable, {5}, {6}, {7});
+    {0}RegEncodingTable, {5}, {6}, {7}{8});
 
 )",
-                TargetName, Regs.size() + 1, RegisterClasses.size(),
-                RegBank.getNumNativeRegUnits(), SubRegIndicesSize + 1,
-                Target.getRegistersAreIntervals()
-                    ? TargetName + "RegUnitIntervals"
-                    : Twine("nullptr"),
-                SeqBlocks.empty() ? Twine("nullptr") : TargetName + "SeqBlocks",
-                SeqBlocks.size());
+      TargetName, Regs.size() + 1, RegisterClasses.size(),
+      RegBank.getNumNativeRegUnits(), SubRegIndicesSize + 1,
+      Target.getRegistersAreIntervals() ? TargetName + "RegUnitIntervals"
+                                        : Twine("nullptr"),
+      SeqBlocks.empty() ? Twine("nullptr") : TargetName + "SeqBlocks",
+      SeqBlocks.size(),
+      SeqBlocks.empty() ? Twine("") : ", " + TargetName + "SeqSuperRegSeries");
   EmitRegMapping(OS, Regs, true);
 
   OS << "}\n\n";

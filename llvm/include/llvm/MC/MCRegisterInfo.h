@@ -238,8 +238,8 @@ struct MCRegisterDesc {
   uint32_t SubRegs;   // Sub-register set, described above
   uint32_t SuperRegs; // Super-register set, described above
 
-  // Offset into MCRI::SubRegIndices of a list of sub-register indices for each
-  // sub-register in SubRegs.
+  // Offset into MCRegisterInfo::SubRegIndices of a list of sub-register
+  // indices for each sub-register in SubRegs.
   uint32_t SubRegIndices;
 
   // Points to the list of register units. The low bits hold the first regunit
@@ -257,6 +257,55 @@ struct MCRegisterDesc {
   bool IsArtificial;
 };
 
+/// MCSeqSuperRegSeries - A series of registers that contain the registers of a
+/// sequence block, described by where it sits relative to the register it
+/// contains.
+///
+/// Registers of a block differ only in how far along the sequence they start,
+/// so the registers containing them are regular too: a register of one series
+/// starts a fixed number of members before the register it contains. For
+/// register Index of a block whose registers start every Step members, the
+/// containing register is
+///
+///     Base + (Index * Step - Back) / Stride * Slope
+///
+/// but only where that lands inside the series. Near the ends of the sequence
+/// it does not, there being nothing beyond them for a containing register to
+/// reach into, and the series then yields no register. Every register of the
+/// block consults every series and skips those that yield nothing, which is
+/// why registers at the ends have fewer containing registers.
+///
+/// A series is usually the registers of another block, which are consecutive,
+/// so Slope is one. A register belonging to no block is a series of its own
+/// with a slope of zero: the same register contains several registers of this
+/// block.
+struct MCSeqSuperRegSeries {
+  MCPhysReg Base;
+  uint16_t Back;
+  uint16_t Stride;
+  uint16_t Count;
+  int16_t Slope;
+
+  /// The register of this series containing register Index of a block whose
+  /// registers start every Step members, or no register if this series yields
+  /// none for it.
+  MCPhysReg of(unsigned Index, unsigned Step) const {
+    unsigned Member = Index * Step;
+    if (Member < Back)
+      return 0;
+
+    unsigned Along = Member - Back;
+    if (Along % Stride)
+      return 0;
+
+    unsigned Which = Along / Stride;
+    if (Which >= Count)
+      return 0;
+
+    return MCPhysReg(Base + Which * Slope);
+  }
+};
+
 /// MCSeqBlockDesc - Describes one sequence block: a run of registers that are
 /// numbered consecutively and each span the same number of consecutive members
 /// of one register sequence.
@@ -272,11 +321,21 @@ struct MCSeqBlockDesc {
   /// The number of registers in the block.
   uint16_t Count;
 
+  /// The distance, in sequence members, between the members that adjacent
+  /// registers of the block start at. Not every member starts a register:
+  /// where the step is four, only every fourth one does.
+  uint16_t Step;
+
   /// Offset into MCRegisterInfo::DiffLists of the amount by which each
   /// sub-register of the first register changes from one register of the block
   /// to the next. Runs parallel to the first register's sub-register list and
   /// is terminated by a zero in the same way.
   uint32_t SubRegSlopes;
+
+  /// Every series of register that contains the registers of the block, in
+  /// MCRegisterInfo::SeqSuperRegSeries, in the order they are to be listed in.
+  uint32_t FirstSuperRegSeries;
+  uint32_t NumSuperRegSeries;
 };
 
 /// MCRegisterInfo base class - We assume that the target defines a static
@@ -327,6 +386,9 @@ private:
   const MCSeqBlockDesc *SeqBlocks;       // Pointer to the sequence blocks,
                                          // ordered by their first register.
   unsigned NumSeqBlocks;                 // Number of sequence blocks.
+  const MCSeqSuperRegSeries *SeqSuperRegSeries; // The series of register that
+                                                // the registers of each block
+                                                // are contained by.
 
   unsigned L2DwarfRegsSize;
   unsigned EHL2DwarfRegsSize;
@@ -458,8 +520,8 @@ public:
                           const uint16_t *SubIndices, unsigned NumIndices,
                           const uint16_t *RET,
                           const unsigned (*RUI)[2] = nullptr,
-                          const MCSeqBlockDesc *SB = nullptr,
-                          unsigned NSB = 0) {
+                          const MCSeqBlockDesc *SB = nullptr, unsigned NSB = 0,
+                          const MCSeqSuperRegSeries *SSK = nullptr) {
     Desc = D;
     NumRegs = NR;
     RAReg = RA;
@@ -478,6 +540,7 @@ public:
     RegUnitIntervals = RUI;
     SeqBlocks = SB;
     NumSeqBlocks = NSB;
+    SeqSuperRegSeries = SSK;
 
     // Initialize DWARF register mapping variables
     EHL2DwarfRegs = nullptr;
@@ -803,12 +866,36 @@ public:
 
 /// MCSuperRegIterator enumerates all super-registers of Reg.
 /// If IncludeSelf is set, Reg itself is included in the list.
+///
+/// A register of a sequence block has no list of its own. Its block says every
+/// series of register the registers of the block are contained by, and the
+/// register reads those, passing over the ones that name no register for it.
+/// See MCSeqSuperRegSeries.
 class MCSuperRegIterator
     : public iterator_adaptor_base<MCSuperRegIterator,
                                    MCRegisterInfo::DiffListIterator,
                                    std::forward_iterator_tag, const MCPhysReg> {
   // Cache the current value, so that we can return a reference to it.
   MCPhysReg Val;
+
+  // For a register of a sequence block, the series of register its block says
+  // its registers are contained by, how far along the block it sits, and how
+  // far apart the registers of the block begin.
+  const MCSeqSuperRegSeries *Pos = nullptr;
+  const MCSeqSuperRegSeries *End = nullptr;
+  unsigned Index = 0;
+  unsigned Step = 0;
+
+  // Take up the next series that names a register for this one.
+  void advance() {
+    while (Pos != End) {
+      if (MCPhysReg Super = (Pos++)->of(Index, Step)) {
+        Val = Super;
+        return;
+      }
+    }
+    Val = 0;
+  }
 
 public:
   /// Constructs an end iterator.
@@ -817,9 +904,18 @@ public:
   MCSuperRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                      bool IncludeSelf = false) {
     assert(Reg.isPhysical());
-    I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SuperRegs);
+
+    if (const MCSeqBlockDesc *Block = MCRI->getSeqBlockOf(Reg)) {
+      Index = Reg.id() - Block->FirstReg;
+      Step = Block->Step;
+      Pos = MCRI->SeqSuperRegSeries + Block->FirstSuperRegSeries;
+      End = Pos + Block->NumSuperRegSeries;
+    } else {
+      I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SuperRegs);
+    }
+
     // Initially, the iterator points to Reg itself.
-    Val = MCPhysReg(*I);
+    Val = MCPhysReg(Reg.id());
     if (!IncludeSelf)
       ++*this;
   }
@@ -828,12 +924,27 @@ public:
 
   using iterator_adaptor_base::operator++;
   MCSuperRegIterator &operator++() {
-    Val = MCPhysReg(*++I);
+    // A register outside a block reads its own list; one of a block reads the
+    // series its block says instead, and has no list to read.
+    if (End) {
+      advance();
+      return *this;
+    }
+
+    ++I;
+    Val = I.isValid() ? MCPhysReg(*I) : MCPhysReg(0);
     return *this;
   }
 
   /// Returns true if this iterator is not yet at the end.
-  bool isValid() const { return I.isValid(); }
+  ///
+  /// No register contains register zero, so naming it says there is nothing
+  /// left to name, whichever way the registers were come by.
+  bool isValid() const { return Val != 0; }
+
+  bool operator==(const MCSuperRegIterator &RHS) const {
+    return Val == RHS.Val;
+  }
 };
 
 // Definition for isSuperRegister. Put it down here since it needs the

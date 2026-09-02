@@ -1430,6 +1430,167 @@ void CodeGenRegBank::computeSeqBlocks() {
   }
 
   FinishRun();
+
+  computeSeqBlockSuperRegSeries();
+}
+
+// Work out, for each block, every series of register its registers are
+// contained by, and take the block no further than those series describe it.
+// See CodeGenRegisterSequenceBlock::SuperRegSeries.
+//
+// A register of a block is contained by registers of other blocks beginning a
+// fixed number of members before it. Which numbers those are is a property of
+// the block, not of any one of its registers: a register near the ends of the
+// sequence merely has fewer of them, the ones reaching past the sequence
+// naming nothing. So collecting the numbers seen anywhere in the block
+// collects them for every register of it.
+//
+// Where that does not hold, the block ends at the register it stops holding
+// for, as it does for a register whose sub-registers are not where the block
+// says. The registers beyond keep descriptions of their own, which costs
+// nothing: it is what registers outside a block do anyway.
+//
+// This runs once the blocks are formed rather than as they are, a register
+// containing one of a block being free to belong to a block itself, and so to
+// one not yet formed. Shortening a block can leave a register that was one of
+// its own outside every block, which is another register nothing describes,
+// so it settles.
+void CodeGenRegBank::computeSeqBlockSuperRegSeries() {
+  if (SeqBlocks.empty())
+    return;
+
+  while (computeSeqBlockSuperRegSeriesOnce())
+    ;
+}
+
+// One pass of the above. Returns whether any block was shortened, in which
+// case what the blocks say has changed and they must be gone over again.
+bool CodeGenRegBank::computeSeqBlockSuperRegSeriesOnce() {
+  // Which block a register belongs to, to say what series a register that
+  // contains one of the block's registers is of.
+  DenseMap<unsigned, const CodeGenRegisterSequenceBlock *> BlockOf;
+  for (const CodeGenRegisterSequenceBlock &Block : SeqBlocks) {
+    for (unsigned Index = 0; Index != Block.Count; ++Index)
+      BlockOf[Block.FirstReg->EnumValue + Index] = &Block;
+  }
+
+  bool Shortened = false;
+  for (CodeGenRegisterSequenceBlock &Block : SeqBlocks) {
+    Block.SuperRegSeries.clear();
+    // Series already named, so that each is named once however many registers
+    // of the block have one of it.
+    DenseSet<std::pair<unsigned, unsigned>> Named;
+
+    // Where a series was named, so that a register the target wrote by hand can
+    // be given the run of the block's registers it contains: it stays put as
+    // they go by, so the first and last of them to meet it are its ends.
+    DenseMap<unsigned, unsigned> LoneRegSeries;
+
+    for (unsigned Index = 0; Index != Block.Count; ++Index) {
+      const CodeGenRegister &Reg =
+          Registers[Block.FirstReg->EnumValue - 1 + Index];
+      unsigned Member = Index * Block.Step;
+
+      for (const CodeGenRegister *Super : Reg.getSuperRegs()) {
+        auto Found = BlockOf.find(Super->EnumValue);
+        if (Found == BlockOf.end()) {
+          // A register the target wrote by hand, which no block describes. It
+          // stays put over the several registers of this block that it
+          // contains, so it is a series of its own with a slope of zero,
+          // reaching back to the first of them and holding as many as it
+          // contains.
+          auto [At, New] = LoneRegSeries.try_emplace(
+              Super->EnumValue, Block.SuperRegSeries.size());
+          if (New)
+            Block.SuperRegSeries.push_back(
+                {unsigned(Super->EnumValue), Member, Block.Step, 0, 0});
+
+          // Registers of the block are walked in order, so this one is the
+          // furthest along to meet it so far.
+          auto &Series = Block.SuperRegSeries[At->second];
+          Series.Count = (Member - Series.Back) / Series.Stride + 1;
+          continue;
+        }
+
+        // Where it begins, and so how far before this register that is. The
+        // registers of a block follow one another, so stepping one register of
+        // that block along is stepping one enumeration value along.
+        const CodeGenRegisterSequenceBlock &Other = *Found->second;
+        unsigned SuperIndex = Super->EnumValue - Other.FirstReg->EnumValue;
+        unsigned Back = Member - SuperIndex * Other.Step;
+
+        if (Named.insert({Other.FirstReg->EnumValue, Back}).second)
+          Block.SuperRegSeries.push_back({unsigned(Other.FirstReg->EnumValue),
+                                          Back, Other.Step, Other.Count, 1});
+      }
+    }
+
+    // Narrowest first, so that a register is named before the ones containing
+    // it. A register containing another holds more register units than it
+    // does, so ordering by that never puts a container first, and that is the
+    // whole of what the order of a super-register list has ever promised.
+    //
+    // The order a register's own list happens to be in today is not kept to,
+    // and could not be: where a block holds registers of more than one
+    // alignment, the ones containing them interleave differently for each, so
+    // no one order over the series gives every register of the block the order
+    // it has now.
+    sort(Block.SuperRegSeries, [&](const auto &A, const auto &B) {
+      auto Units = [&](unsigned Reg) {
+        return Registers[Reg - 1].getNativeRegUnits().count();
+      };
+      return std::tuple(Units(A.Base), A.Base, A.Back) <
+             std::tuple(Units(B.Base), B.Base, B.Back);
+    });
+
+    // Take the block as far as the series describe its registers, and no
+    // further. They describe a register when they name exactly the registers
+    // containing it, which is what reading them will be taken to mean.
+    unsigned Count = 0;
+    while (Count != Block.Count) {
+      const CodeGenRegister &Reg =
+          Registers[Block.FirstReg->EnumValue - 1 + Count];
+
+      SmallDenseSet<unsigned, 32> Says;
+      for (const auto &Series : Block.SuperRegSeries) {
+        if (unsigned Super = Series.of(Count * Block.Step))
+          Says.insert(Super);
+      }
+
+      const std::vector<const CodeGenRegister *> &Supers = Reg.getSuperRegs();
+      if (Says.size() != Supers.size() ||
+          !all_of(Supers, [&](const CodeGenRegister *Super) {
+            return Says.contains(Super->EnumValue);
+          }))
+        break;
+
+      ++Count;
+    }
+
+    if (Count != Block.Count) {
+      Shortened = true;
+      // A block of one register describes nothing that the register does not
+      // describe itself, so it is no block at all.
+      Block.Count = Count < 2 ? 0 : Count;
+    }
+  }
+
+  if (!Shortened)
+    return false;
+
+  // Registers a shortened block let go of belong to no block now, and the
+  // blocks left have to be gone over again knowing that.
+  SeqBlockMembers.clear();
+  erase_if(SeqBlocks, [](const CodeGenRegisterSequenceBlock &Block) {
+    return Block.Count < 2;
+  });
+  for (const auto &[BlockIndex, Block] : enumerate(SeqBlocks)) {
+    for (unsigned Index = 0; Index != Block.Count; ++Index)
+      SeqBlockMembers.try_emplace(
+          Registers[Block.FirstReg->EnumValue - 1 + Index].TheDef,
+          SeqBlockPos{unsigned(BlockIndex), Index});
+  }
+  return true;
 }
 
 CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,

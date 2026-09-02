@@ -344,8 +344,52 @@ struct RegisterSequencePos {
 /// A block needs no per-register names: the name of its first register and the
 /// number of registers describe them all. The same holds for their
 /// sub-registers, which are given by those of the first register plus, for
-/// each, how much it changes from one register of the block to the next.
+/// each, how much it changes from one register of the block to the next, and
+/// for their super-registers: every register containing any of them is one of
+/// a few series, and listing the series says what contains each of them.
 struct CodeGenRegisterSequenceBlock {
+  /// A series of registers that contain the registers of a block, described
+  /// by where it sits relative to the register it contains.
+  ///
+  /// Registers of a block differ only in how far along the sequence they
+  /// start, so the registers containing them are regular too: a register of
+  /// one series starts a fixed number of members before the register it
+  /// contains. For register Index of the block, which starts at member
+  /// Index * Step, the containing register is
+  ///
+  ///     Base + (Index * Step - Back) / Stride * Slope
+  ///
+  /// but only where that lands inside the series, that is, where Index * Step
+  /// is at least Back, is a whole number of Strides past it, and is not past
+  /// the Count'th of them. Near the ends of the sequence it does not, there
+  /// being nothing beyond them for a containing register to reach into, and
+  /// the series then yields no register. Listing every series that any
+  /// register of the block has, and letting each register skip the series that
+  /// yield nothing for it, describes them all.
+  ///
+  /// A series is usually the registers of another block, which are
+  /// consecutive, so Slope is one. A register belonging to no block is a
+  /// series of its own with a slope of zero: the same register contains
+  /// several registers of this block.
+  struct SuperRegSeries {
+    unsigned Base;
+    unsigned Back;
+    unsigned Stride;
+    unsigned Count;
+    int Slope;
+
+    /// The register of this series containing the register of a block that
+    /// begins at the given member, or no register where this series names none
+    /// for it. Answered the way the register info answers it, so that what is
+    /// written matches what is read.
+    unsigned of(unsigned Member) const {
+      if (Member < Back || (Member - Back) % Stride)
+        return 0;
+      unsigned Which = (Member - Back) / Stride;
+      return Which < Count ? Base + Which * Slope : 0;
+    }
+  };
+
   /// Name of the block, after its sequence and the width of its registers.
   std::string Name;
 
@@ -371,6 +415,10 @@ struct CodeGenRegisterSequenceBlock {
   /// share each of the former. One that belongs to no block changes by however
   /// many registers of its kind there are.
   SmallVector<int16_t, 4> SubRegSlopes;
+
+  /// Every series of register the registers of the block are contained by, in
+  /// the order they are to be named in.
+  std::vector<SuperRegSeries> SuperRegSeries;
 };
 
 /// Where a register sits among the registers of the block it belongs to.
@@ -746,6 +794,8 @@ class CodeGenRegBank {
 
   void computeRegSeqPositions();
   void computeSeqBlocks();
+  void computeSeqBlockSuperRegSeries();
+  bool computeSeqBlockSuperRegSeriesOnce();
 
   std::map<TopoSigId, unsigned> TopoSigs;
 
