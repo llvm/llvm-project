@@ -184,14 +184,14 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
   uint32_t RefFlags = 0;
 
   if (MO.getTargetFlags() & AArch64II::MO_GOT) {
-    const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+    const MachineFunction *MF = Printer.MF;
     RefFlags |= (MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
                      ? AArch64::S_GOT_AUTH
                      : AArch64::S_GOT);
   } else if (MO.getTargetFlags() & AArch64II::MO_TLS) {
     TLSModel::Model Model;
     if (MO.isGlobal()) {
-      const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+      const MachineFunction *MF = Printer.MF;
       if (MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()) {
         Model = TLSModel::GeneralDynamic;
       } else {
@@ -224,7 +224,7 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
       // running hasELFSignedGOT() every time, but existing flags already
       // cover all 12 bits of SubReg_TargetFlags field in MachineOperand, and
       // making the field wider breaks static assertions.
-      const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+      const MachineFunction *MF = Printer.MF;
       RefFlags |= MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
                       ? AArch64::S_TLSDESC_AUTH
                       : AArch64::S_TLSDESC;

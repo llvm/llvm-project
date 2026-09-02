@@ -252,6 +252,7 @@ add_fp_unittest(
     FAbsTest.h
   DEPENDS
     libc.src.math.fabsf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1668,6 +1669,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.copysignf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2889,6 +2891,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fmaximumf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -3234,6 +3237,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fminimumf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 

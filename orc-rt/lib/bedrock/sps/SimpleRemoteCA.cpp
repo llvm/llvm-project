@@ -15,9 +15,83 @@
 #include "orc-rt/support/Compiler.h"
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
+#include <cassert>
 #include <string>
 
 namespace orc_rt {
+
+void SimpleRemoteCA::disconnect() {
+  {
+    std::scoped_lock<std::mutex> Lock(M);
+    // Not Accepting means teardown is already under way or finished, or the
+    // connection never opened. All are no-ops: the Session tolerates a
+    // disconnect racing a controller-initiated one.
+    if (ConnState != State::Accepting)
+      return;
+    ConnState = State::TearingDown;
+  }
+
+  // The transport sends the hang-up itself, so that it lands after the queue it
+  // is about to discard rather than behind a result that raced this.
+  beginTeardown();
+}
+
+void SimpleRemoteCA::callController(OnControllerCallReturn OnComplete,
+                                    orc_rt_ControllerHandlerTag T,
+                                    WrapperFunctionBuffer ArgBytes) {
+  // Sent outside tryRegisterCall's critical section, so framing and packaging
+  // stay off it. Safe because the Session holds a shared_ptr<ControllerAccess>
+  // across this call, so a teardown racing the send cannot destroy *this.
+  if (auto SeqNo = tryRegisterCall(OnComplete))
+    return sendMessage(Opcode::Call, *SeqNo, T, std::move(ArgBytes));
+
+  // The connection is gone, so no result can arrive. The caller is still on the
+  // stack, so fail the handler there.
+  failControllerCallInline(std::move(OnComplete));
+}
+
+void SimpleRemoteCA::sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                                       uint64_t CallId) {
+  // No state check: a result has no pending call on this side, so a transport
+  // that has gone away can drop it with nothing left unsettled.
+  sendMessage(Opcode::Result, CallId, nullptr, std::move(ResultBytes));
+}
+
+void SimpleRemoteCA::beginAccepting(const BootstrapInfo &BI) {
+  {
+    std::scoped_lock<std::mutex> Lock(M);
+    // A transport that enabled delivery before calling this can have dropped
+    // out and completed teardown already. The Session has been notified, so
+    // there is nothing left to accept on and nothing to send.
+    if (ConnState == State::Disconnected)
+      return;
+    assert(ConnState == State::NotConnected && "beginAccepting called twice");
+    ConnState = State::Accepting;
+  }
+
+  // State first: a teardown landing in the window then closes an accepting
+  // connection, where sending first would leave this to reopen one teardown had
+  // just closed. A call landing there registers instead of failing spuriously.
+  // Setup may reach a transport that has already gone, which drops it.
+  sendMessage(Opcode::Setup, 0, nullptr, encodeSetupMessage(BI));
+}
+
+void SimpleRemoteCA::finishTeardown(Error Err) {
+  {
+    std::scoped_lock<std::mutex> Lock(M);
+    // Transports owe exactly one call, and both natural implementations give
+    // it: a socket reactor on its way out, and XPC on the single invalidation
+    // event it guarantees.
+    assert(ConnState != State::Disconnected &&
+           "finishTeardown called more than once");
+    ConnState = State::Disconnected;
+  }
+
+  // The drain must precede the notification, while the keepalive group is still
+  // open, or the handlers are dropped rather than dispatched.
+  failAllPendingCalls();
+  notifyDisconnected(std::move(Err));
+}
 
 const char *SimpleRemoteCA::getOpcodeName(Opcode Op) noexcept {
   switch (Op) {
@@ -109,9 +183,11 @@ SimpleRemoteCA::handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
   ORC_RT_UNREACHABLE("Unrecognized opcode");
 }
 
-uint64_t
-SimpleRemoteCA::registerPendingCall(OnControllerCallReturn OnComplete) {
+std::optional<uint64_t>
+SimpleRemoteCA::tryRegisterCall(OnControllerCallReturn &OnComplete) {
   std::scoped_lock<std::mutex> Lock(M);
+  if (ConnState != State::Accepting)
+    return std::nullopt;
   PendingCalls.try_emplace(NextSeqNo, std::move(OnComplete));
   return NextSeqNo++;
 }

@@ -11,6 +11,8 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManagerSPS.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccessSPS.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -28,11 +30,16 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
 
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
                                              ArrayRef<std::string> Args) {
-  int64_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::sps_ci::CallMain::SPSSig>(
-          RunAsMainAddr, Result, MainFnAddr, Args))
-    return std::move(Err);
-  return Result;
+  if (!CallMain)
+    if (auto Err =
+            lookupAndApply(getExecutionSession().getBootstrapJITDylib(),
+                           recordProxy<sps::CallMainProxySpec>(&CallMain)))
+      return Err;
+
+  auto Result = CallMain(getExecutionSession(), MainFnAddr, Args);
+  if (!Result)
+    return Result.takeError();
+  return *Result;
 }
 
 void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
@@ -338,10 +345,6 @@ Error SimpleRemoteEPC::setup() {
   BootstrapSymbols[rt::DispatchName] = BootstrapSymbols[DispatchFnName];
   BootstrapSymbols[rt::DispatchCtxName] =
       BootstrapSymbols[ExecutorSessionObjectName];
-
-  if (auto Err =
-          getBootstrapSymbols({{RunAsMainAddr, rt::sps_ci::CallMain::Name}}))
-    return Err;
 
   return Error::success();
 }
