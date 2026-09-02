@@ -344,6 +344,7 @@ ENUM_LANGOPT(AddressSpaceMapMangling , AddrSpaceMapMangling, 2, ASMM_Target, Not
 LANGOPT(IncludeDefaultHeader, 1, 0, NotCompatible, "Include default header file for OpenCL")
 LANGOPT(DeclareOpenCLBuiltins, 1, 0, NotCompatible, "Declare OpenCL builtin functions")
 LANGOPT(DelayedTemplateParsing , 1, 0, Benign, "delayed template parsing")
+LANGOPT(ParseFunctionsOnDemand , 1, 0, Benign, "on-demand function parsing")
 LANGOPT(BlocksRuntimeOptional , 1, 0, NotCompatible, "optional blocks runtime")
 LANGOPT(
     CompleteMemberPointers, 1, 0, NotCompatible,

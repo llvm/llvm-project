@@ -7556,6 +7556,16 @@ void Sema::PerformPendingInstantiations(bool LocalOnly, bool AtEndOfTU) {
 
     // Instantiate function definitions
     if (FunctionDecl *Function = dyn_cast<FunctionDecl>(Inst.first)) {
+      if (Function->isLateTemplateParsed() &&
+          (Function->getTemplatedKind() == FunctionDecl::TK_NonTemplate ||
+           Function->getTemplateSpecializationKind() ==
+               TSK_ExplicitSpecialization)) {
+        ParseLateFunctionDefinition(Function);
+        if (Function->isDefined())
+          Function->setInstantiationIsPending(false);
+        continue;
+      }
+
       bool DefinitionRequired = Function->getTemplateSpecializationKind() ==
                                 TSK_ExplicitInstantiationDefinition;
       if (Function->isMultiVersion()) {

@@ -3669,6 +3669,12 @@ defm delayed_template_parsing : BoolFOption<"delayed-template-parsing",
           "Parse templated function definitions at the end of the translation unit">,
   NegFlag<SetFalse, [], [], "Disable delayed template parsing">,
   BothFlags<[], [ClangOption, CLOption]>>;
+defm parse_functions_ondemand : BoolFOption<"parse-functions-ondemand",
+  LangOpts<"ParseFunctionsOnDemand">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Parse internal-linkage function definitions on demand">,
+  NegFlag<SetFalse, [], [], "Disable on-demand function parsing">,
+  BothFlags<[], [ClangOption, CLOption]>>;
 def fms_memptr_rep_EQ : Joined<["-"], "fms-memptr-rep=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   Values<"single,multiple,virtual">, NormalizedValuesScope<"LangOptions">,

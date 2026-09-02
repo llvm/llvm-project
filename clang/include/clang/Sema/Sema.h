@@ -12499,6 +12499,7 @@ public:
   void MarkAsLateParsedTemplate(FunctionDecl *FD, Decl *FnD,
                                 CachedTokens &Toks);
   void UnmarkAsLateParsedTemplate(FunctionDecl *FD);
+  bool ParseLateFunctionDefinition(FunctionDecl *FD);
   bool IsInsideALocalClassWithinATemplateFunction();
 
   /// We've found a use of a templated declaration that would trigger an
@@ -14192,27 +14193,18 @@ public:
         return;
 
       // Restore the set of pending vtables.
-      assert(S.VTableUses.empty() &&
-             "VTableUses should be empty before it is discarded.");
       S.VTableUses.swap(S.SavedVTableUses.back());
+      S.VTableUses.insert(S.VTableUses.end(), S.SavedVTableUses.back().begin(),
+                          S.SavedVTableUses.back().end());
       S.SavedVTableUses.pop_back();
 
       // Restore the set of pending implicit instantiations.
-      if ((S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) &&
-          AtEndOfTU) {
-        assert(S.PendingInstantiations.empty() &&
-               "PendingInstantiations should be empty before it is discarded.");
-        S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
-        S.SavedPendingInstantiations.pop_back();
-      } else {
-        // Template instantiations in the PCH may be delayed until the TU.
-        S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
-        S.PendingInstantiations.insert(
-            S.PendingInstantiations.end(),
-            S.SavedPendingInstantiations.back().begin(),
-            S.SavedPendingInstantiations.back().end());
-        S.SavedPendingInstantiations.pop_back();
-      }
+      S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
+      S.PendingInstantiations.insert(
+          S.PendingInstantiations.end(),
+          S.SavedPendingInstantiations.back().begin(),
+          S.SavedPendingInstantiations.back().end());
+      S.SavedPendingInstantiations.pop_back();
     }
 
     GlobalEagerInstantiationScope(const GlobalEagerInstantiationScope &) =

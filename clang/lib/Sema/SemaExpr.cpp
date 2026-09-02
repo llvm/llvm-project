@@ -19120,6 +19120,15 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   if (getLangOpts().CUDA)
     CUDA().CheckCall(Loc, Func);
 
+  if (const FunctionDecl *Definition;
+      getLangOpts().ParseFunctionsOnDemand && NeedDefinition &&
+      Func->hasBody(Definition) && !Definition->getBody() &&
+      Definition->isLateTemplateParsed()) {
+    FunctionDecl *LateParsedFD = const_cast<FunctionDecl *>(Definition);
+    LateParsedFD->setInstantiationIsPending(true);
+    PendingInstantiations.push_back(std::make_pair(LateParsedFD, Loc));
+  }
+
   // If we need a definition, try to create one.
   if (NeedDefinition && !Func->getBody()) {
     runWithSufficientStackSpace(Loc, [&] {

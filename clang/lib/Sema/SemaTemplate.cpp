@@ -11774,12 +11774,35 @@ void Sema::MarkAsLateParsedTemplate(FunctionDecl *FD, Decl *FnD,
   LateParsedTemplateMap.insert(std::make_pair(FD, std::move(LPT)));
 
   FD->setLateTemplateParsed(true);
+
+  if (getLangOpts().ParseFunctionsOnDemand && !FD->instantiationIsPending() &&
+      FD->isUsed(/*CheckUsedAttr=*/false)) {
+    // This function already has a declaration, and the declaration has been
+    // MarkFunctionReferenced
+    FD->setInstantiationIsPending(true);
+    PendingInstantiations.push_back(std::make_pair(FD, FD->getLocation()));
+  }
 }
 
 void Sema::UnmarkAsLateParsedTemplate(FunctionDecl *FD) {
   if (!FD)
     return;
   FD->setLateTemplateParsed(false);
+}
+
+bool Sema::ParseLateFunctionDefinition(FunctionDecl *FD) {
+  if (!LateTemplateParser)
+    return false;
+
+  if (FD->isFromASTFile() && ExternalSource)
+    ExternalSource->ReadLateParsedTemplates(LateParsedTemplateMap);
+
+  auto LPTIter = LateParsedTemplateMap.find(FD);
+  if (LPTIter == LateParsedTemplateMap.end())
+    return false;
+
+  LateTemplateParser(OpaqueParser, *LPTIter->second);
+  return FD->getBody() != nullptr;
 }
 
 bool Sema::IsInsideALocalClassWithinATemplateFunction() {

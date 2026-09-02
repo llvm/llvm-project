@@ -4152,6 +4152,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 #include "clang/Options/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
 
+  // delayed parsing has incompatible lookup semantics with ondemand parsing
+  if (Opts.ParseFunctionsOnDemand && Opts.DelayedTemplateParsing)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << "-fparse-functions-ondemand" << "-fdelayed-template-parsing";
+
   // "Modules semantics" (e.g. cross-translation-unit declaration merging) are
   // needed for both Clang (header) modules and C++20 modules, so enable them
   // for either.
@@ -5165,6 +5170,26 @@ bool CompilerInvocation::CreateFromArgsImpl(
                 Diags);
   if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
     LangOpts.ObjCExceptions = 1;
+
+  if (LangOpts.ParseFunctionsOnDemand) {
+    switch (Res.getFrontendOpts().ProgramAction) {
+    case frontend::GeneratePCH:
+      LangOpts.ParseFunctionsOnDemand = false;
+      Diags.Report(diag::warn_drv_parse_functions_ondemand_ignored)
+          << /*precompiled header*/ 0;
+      break;
+    case frontend::GenerateModule:
+    case frontend::GenerateModuleInterface:
+    case frontend::GenerateReducedModuleInterface:
+    case frontend::GenerateHeaderUnit:
+      LangOpts.ParseFunctionsOnDemand = false;
+      Diags.Report(diag::warn_drv_parse_functions_ondemand_ignored)
+          << /*module*/ 1;
+      break;
+    default:
+      break;
+    }
+  }
 
   for (auto Warning : Res.getDiagnosticOpts().Warnings) {
     if (Warning == "misexpect" &&
