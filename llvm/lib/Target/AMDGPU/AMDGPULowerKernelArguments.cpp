@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUAsanInstrumentation.h"
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
@@ -31,7 +30,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
-#include <string>
 
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
@@ -316,14 +314,22 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
 
     MDBuilder MDB(Ctx);
 
-    if (Arg.hasAttribute(Attribute::NoUndef))
+    if (Arg.hasAttribute(Attribute::NoUndef) && AdjustedArgTy == ArgTy)
       Load->setMetadata(LLVMContext::MD_noundef, MDNode::get(Ctx, {}));
 
-    if (Arg.hasAttribute(Attribute::Range)) {
+    if (Arg.hasAttribute(Attribute::Range) && AdjustedArgTy == ArgTy) {
       const ConstantRange &Range =
           Arg.getAttribute(Attribute::Range).getValueAsConstantRange();
       Load->setMetadata(LLVMContext::MD_range,
                         MDB.createRange(Range.getLower(), Range.getUpper()));
+    }
+
+    if (Arg.hasAttribute(Attribute::NoFPClass) && AdjustedArgTy == ArgTy) {
+      FPClassTest Mask = Arg.getNoFPClass();
+      Load->setMetadata(
+          LLVMContext::MD_nofpclass,
+          MDNode::get(Ctx, ConstantAsMetadata::get(
+                               ConstantInt::get(Type::getInt32Ty(Ctx), Mask))));
     }
 
     if (isa<PointerType>(ArgTy)) {

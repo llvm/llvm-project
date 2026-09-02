@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03, libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-fast
 
 // <streambuf>
 
@@ -44,17 +42,17 @@ void test() {
   {
     streambuf<CharT> buff;
     TEST_LIBCPP_ASSERT_FAILURE(
-        buff.setg(std::begin(arr) + 1, std::begin(arr), std::end(arr)), "[gbeg, gnext) must be a valid range");
+        buff.setg(std::begin(arr) + 1, std::begin(arr), std::end(arr)), "[begin, current) must be a valid range");
   }
   {
     streambuf<CharT> buff;
     TEST_LIBCPP_ASSERT_FAILURE(
-        buff.setg(std::begin(arr) + 1, std::begin(arr) + 1, std::begin(arr)), "[gbeg, gend) must be a valid range");
+        buff.setg(std::begin(arr) + 1, std::begin(arr) + 1, std::begin(arr)), "[begin, end) must be a valid range");
   }
   {
     streambuf<CharT> buff;
     TEST_LIBCPP_ASSERT_FAILURE(
-        buff.setg(std::begin(arr), std::begin(arr) + 3, std::begin(arr) + 2), "[gnext, gend) must be a valid range");
+        buff.setg(std::begin(arr), std::begin(arr) + 3, std::begin(arr) + 2), "[current, end) must be a valid range");
   }
 }
 

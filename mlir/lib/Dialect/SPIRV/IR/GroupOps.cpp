@@ -22,11 +22,7 @@ namespace mlir::spirv {
 
 template <typename OpTy>
 static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
-  GroupOperation operation =
-      groupOp
-          ->getAttrOfType<GroupOperationAttr>(
-              OpTy::getGroupOperationAttrName(groupOp->getName()))
-          .getValue();
+  GroupOperation operation = cast<OpTy>(groupOp).getGroupOperation();
   if (operation == GroupOperation::ClusteredReduce &&
       groupOp->getNumOperands() == 1)
     return groupOp->emitOpError("cluster size operand must be provided for "

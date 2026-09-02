@@ -1835,8 +1835,10 @@ MCDisassembler::DecodeStatus X86GenericDisassembler::getInstruction(
   Insn.operands = x86OperandSets[Insn.spec->operands];
   Insn.length = Insn.readerCursor - Insn.startLocation;
   Size = Insn.length;
-  if (Size > 15)
+  if (Size > 15) {
     LLVM_DEBUG(dbgs() << "Instruction exceeds 15-byte limit");
+    return Fail;
+  }
 
   bool Ret = translateInstruction(Instr, Insn, this);
   if (!Ret) {

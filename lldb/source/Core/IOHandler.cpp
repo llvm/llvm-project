@@ -134,9 +134,9 @@ IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
   StreamString prompt_stream;
   prompt_stream.PutCString(prompt);
   if (m_default_response)
-    prompt_stream.Printf(": [Y/n] ");
+    prompt_stream.PutCString(": [Y/n] ");
   else
-    prompt_stream.Printf(": [y/N] ");
+    prompt_stream.PutCString(": [y/N] ");
 
   SetPrompt(prompt_stream.GetString());
 }
@@ -359,7 +359,7 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
     if (prompt && prompt[0]) {
       if (m_output_sp) {
         LockedStreamFile locked_stream = m_output_sp->Lock();
-        locked_stream.Printf("%s", prompt);
+        locked_stream.PutCString(prompt);
       }
     }
   }
@@ -394,24 +394,25 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
   if (!got_line && in) {
     while (!got_line) {
       char *r = fgets(buffer, sizeof(buffer), in);
-#ifdef _WIN32
-      // ReadFile on Windows is supposed to set ERROR_OPERATION_ABORTED
-      // according to the docs on MSDN. However, this has evidently been a
-      // known bug since Windows 8. Therefore, we can't detect if a signal
-      // interrupted in the fgets. So pressing ctrl-c causes the repl to end
-      // and the process to exit. A temporary workaround is just to attempt to
-      // fgets twice until this bug is fixed.
-      if (r == nullptr)
-        r = fgets(buffer, sizeof(buffer), in);
-      // this is the equivalent of EINTR for Windows
-      if (r == nullptr && GetLastError() == ERROR_OPERATION_ABORTED)
-        continue;
-#endif
       if (r == nullptr) {
+        if (feof(in)) {
+          got_line = SplitLineEOF(m_line_buffer);
+          break;
+        }
         if (ferror(in) && errno == EINTR)
           continue;
-        if (feof(in))
-          got_line = SplitLineEOF(m_line_buffer);
+#ifdef _WIN32
+        // ReadFile on Windows is supposed to set ERROR_OPERATION_ABORTED
+        // according to the docs on MSDN. However, this has evidently been a
+        // known bug since Windows 8. Therefore, we can't detect if a signal
+        // interrupted in the fgets. So pressing ctrl-c causes the repl to end
+        // and the process to exit. A temporary workaround is just to attempt
+        // to fgets twice until this bug is fixed.
+        if (GetLastError() == ERROR_OPERATION_ABORTED) {
+          clearerr(in);
+          continue;
+        }
+#endif
         break;
       }
       m_line_buffer += buffer;

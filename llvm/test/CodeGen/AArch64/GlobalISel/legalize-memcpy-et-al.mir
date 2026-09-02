@@ -13,20 +13,20 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY2]](i32)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
-    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s32) = COPY $w2
-    %3:_(s64) = G_ZEXT %2(s32)
-    G_MEMCPY %0(p0), %1(p0), %3(s64), 0 :: (store unknown-size), (load unknown-size)
+    %2:_(i32) = COPY $w2
+    %3:_(i64) = G_ZEXT %2(i32)
+    G_MEMCPY %0(p0), %1(p0), %3(i64), 0 :: (store unknown-size), (load unknown-size)
     RET_ReallyLR
 
 ...
@@ -42,17 +42,17 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY2]](i32)
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
-    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: TCRETURNdi &memcpy, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s32) = COPY $w2
-    %3:_(s64) = G_ZEXT %2(s32)
-    G_MEMCPY %0(p0), %1(p0), %3(s64), 1 :: (store unknown-size), (load unknown-size)
+    %2:_(i32) = COPY $w2
+    %3:_(i64) = G_ZEXT %2(i32)
+    G_MEMCPY %0(p0), %1(p0), %3(i64), 1 :: (store unknown-size), (load unknown-size)
     RET_ReallyLR
 
 ...
@@ -68,20 +68,20 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY2]](i32)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
-    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: BL &memmove, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s32) = COPY $w2
-    %3:_(s64) = G_ZEXT %2(s32)
-    G_MEMMOVE %0(p0), %1(p0), %3(s64), 0 :: (store unknown-size), (load unknown-size)
+    %2:_(i32) = COPY $w2
+    %3:_(i64) = G_ZEXT %2(i32)
+    G_MEMMOVE %0(p0), %1(p0), %3(i64), 0 :: (store unknown-size), (load unknown-size)
     RET_ReallyLR
 
 ...
@@ -96,22 +96,22 @@ body:             |
     ; CHECK: liveins: $w1, $w2, $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY2]](i32)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
-    ; CHECK-NEXT: $w1 = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: $w1 = COPY [[COPY1]](i32)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: BL &memset, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
-    %1:_(s32) = COPY $w1
-    %2:_(s32) = COPY $w2
-    %3:_(s8) = G_TRUNC %1(s32)
-    %4:_(s64) = G_ZEXT %2(s32)
-    G_MEMSET %0(p0), %3(s8), %4(s64), 0 :: (store unknown-size)
+    %1:_(i32) = COPY $w1
+    %2:_(i32) = COPY $w2
+    %3:_(i8) = G_TRUNC %1(i32)
+    %4:_(i64) = G_ZEXT %2(i32)
+    G_MEMSET %0(p0), %3(i8), %4(i64), 0 :: (store unknown-size)
     RET_ReallyLR
 
 ...
@@ -127,21 +127,21 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY2]](i32)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
-    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x1
     %1:_(p0) = COPY $x0
-    %2:_(s32) = COPY $w2
-    %3:_(s64) = G_ZEXT %2(s32)
-    G_MEMCPY %0(p0), %1(p0), %3(s64), 1 :: (store unknown-size), (load unknown-size)
+    %2:_(i32) = COPY $w2
+    %3:_(i64) = G_ZEXT %2(i32)
+    G_MEMCPY %0(p0), %1(p0), %3(i64), 1 :: (store unknown-size), (load unknown-size)
     $x0 = COPY %3
     RET_ReallyLR implicit $x0
 
@@ -157,21 +157,21 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY2]](i32)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
-    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: TCRETURNdi &memset, 0, csr_aarch64_aapcs, implicit $sp
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s32) = COPY $w2
-    %4:_(s1) = G_CONSTANT i1 false
-    %3:_(s64) = G_ZEXT %2(s32)
-    G_MEMCPY %0(p0), %1(p0), %3(s64), 1 :: (store unknown-size), (load unknown-size)
+    %2:_(i32) = COPY $w2
+    %4:_(i1) = G_CONSTANT i1 false
+    %3:_(i64) = G_ZEXT %2(i32)
+    G_MEMCPY %0(p0), %1(p0), %3(i64), 1 :: (store unknown-size), (load unknown-size)
     TCRETURNdi &memset, 0, csr_aarch64_aapcs, implicit $sp
 
 ...
@@ -199,15 +199,15 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
-    ; CHECK-NEXT: $x2 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[COPY2]](i64)
     ; CHECK-NEXT: TCRETURNdi &memcpy, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = COPY $x2
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8)), (load (s8))
+    %2:_(i64) = COPY $x2
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 1 :: (store (i8)), (load (i8))
     $x0 = COPY %0(p0)
     RET_ReallyLR implicit $x0
 
@@ -236,19 +236,19 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
-    ; CHECK-NEXT: $x2 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[COPY2]](i64)
     ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x1 = COPY [[COPY]](p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = COPY $x2
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8)), (load (s8))
+    %2:_(i64) = COPY $x2
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 1 :: (store (i8)), (load (i8))
     $x1 = COPY %0(p0)
     RET_ReallyLR implicit $x0
 
@@ -277,11 +277,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
-    ; CHECK-NEXT: $x2 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[COPY2]](i64)
     ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
@@ -289,8 +289,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = COPY $x2
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8)), (load (s8))
+    %2:_(i64) = COPY $x2
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 1 :: (store (i8)), (load (i8))
     $x0 = COPY %0(p0)
     $x0 = COPY %0(p0)
     RET_ReallyLR implicit $x0
@@ -320,19 +320,19 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
-    ; CHECK-NEXT: $x2 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[COPY2]](i64)
     ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x1 = COPY [[COPY]](p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x1
     %1:_(p0) = COPY $x0
-    %2:_(s64) = COPY $x2
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8)), (load (s8))
+    %2:_(i64) = COPY $x2
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 1 :: (store (i8)), (load (i8))
     $x1 = COPY %0(p0)
     RET_ReallyLR implicit $x0
 
@@ -361,18 +361,18 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
-    ; CHECK-NEXT: $x2 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: $x2 = COPY [[COPY2]](i64)
     ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = COPY $x2
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8)), (load (s8))
+    %2:_(i64) = COPY $x2
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 1 :: (store (i8)), (load (i8))
     $x0 = COPY %0(p0)
     RET_ReallyLR

@@ -81,6 +81,40 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
 
 // -----
 
+def SPIRV_InBoundsAccessChainOp : SPIRV_Op<"InBoundsAccessChain", [Pure]> {
+  let summary = [{
+    Create a pointer into a composite object that is known to stay within the
+    base object.
+  }];
+
+  let description = [{
+    Has the same operands, result, and type rules as `spirv.AccessChain`, with
+    the additional contract that the resulting pointer points within the base
+    object.
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$base_ptr,
+    Variadic<SPIRV_Integer>:$indices
+  );
+
+  let results = (outs
+    SPIRV_AnyPtr:$component_ptr
+  );
+
+  let builders = [OpBuilder<(ins "Value":$basePtr, "ValueRange":$indices)>];
+
+  let hasCanonicalizer = 1;
+
+  let hasCustomAssemblyFormat = 0;
+
+  let assemblyFormat = [{
+    $base_ptr `[` $indices `]` attr-dict `:` type($base_ptr) `,` type($indices) `->` type(results)
+  }];
+}
+
+// -----
+
 def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = [{
     Copy from the memory pointed to by Source to the memory pointed to by

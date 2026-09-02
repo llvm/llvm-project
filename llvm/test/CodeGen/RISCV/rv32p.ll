@@ -1784,6 +1784,28 @@ define i64 @wsubu(i32 %a, i32 %b) nounwind {
   ret i64 %diff
 }
 
+define i64 @wadd(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %ext_b = sext i32 %b to i64
+  %sum = add i64 %ext_a, %ext_b
+  ret i64 %sum
+}
+
+define i64 @wsub(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsub:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsub a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %ext_b = sext i32 %b to i64
+  %diff = sub i64 %ext_a, %ext_b
+  ret i64 %diff
+}
+
 define i64 @wsub_from_neg_const(i32 %a) nounwind {
 ; CHECK-LABEL: wsub_from_neg_const:
 ; CHECK:       # %bb.0:

@@ -15,7 +15,6 @@
 #include "AMDGPUCombinerHelper.h"
 #include "AMDGPULegalizerInfo.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -122,22 +121,20 @@ bool AMDGPUPreLegalizerCombinerImpl::matchClampI64ToI16(
 
   Register Base;
 
-  auto IsApplicableForCombine = [&MatchInfo]() -> bool {
-    const auto Cmp1 = MatchInfo.Cmp1;
-    const auto Cmp2 = MatchInfo.Cmp2;
-    const auto Diff = std::abs(Cmp2 - Cmp1);
+  // Lo must not exceed Hi: with inverted bounds smin(smax(X, Lo), Hi) is
+  // constant, but the med3 built below would still clamp X to [Hi, Lo].
+  auto IsApplicableForCombine = [&MatchInfo](bool OuterIsMin) -> bool {
+    const int64_t Lo = OuterIsMin ? MatchInfo.Cmp2 : MatchInfo.Cmp1;
+    const int64_t Hi = OuterIsMin ? MatchInfo.Cmp1 : MatchInfo.Cmp2;
 
-    // If the difference between both comparison values is 0 or 1, there is no
-    // need to clamp.
-    if (Diff == 0 || Diff == 1)
-      return false;
-
+    // Range-check first so Hi - Lo below can't overflow.
     const int64_t Min = std::numeric_limits<int16_t>::min();
     const int64_t Max = std::numeric_limits<int16_t>::max();
+    if (Lo < Min || Lo > Max || Hi < Min || Hi > Max)
+      return false;
 
-    // Check if the comparison values are between SHORT_MIN and SHORT_MAX.
-    return ((Cmp2 >= Cmp1 && Cmp1 >= Min && Cmp2 <= Max) ||
-            (Cmp1 >= Cmp2 && Cmp1 <= Max && Cmp2 >= Min));
+    // Reject inverted bounds, and bounds so close there is no need to clamp.
+    return Hi - Lo > 1;
   };
 
   // Try to match a combination of min / max MIR opcodes.
@@ -145,7 +142,7 @@ bool AMDGPUPreLegalizerCombinerImpl::matchClampI64ToI16(
                m_GSMin(m_Reg(Base), m_ICst(MatchInfo.Cmp1)))) {
     if (mi_match(Base, MRI,
                  m_GSMax(m_Reg(MatchInfo.Origin), m_ICst(MatchInfo.Cmp2)))) {
-      return IsApplicableForCombine();
+      return IsApplicableForCombine(/*OuterIsMin=*/true);
     }
   }
 
@@ -153,7 +150,7 @@ bool AMDGPUPreLegalizerCombinerImpl::matchClampI64ToI16(
                m_GSMax(m_Reg(Base), m_ICst(MatchInfo.Cmp1)))) {
     if (mi_match(Base, MRI,
                  m_GSMin(m_Reg(MatchInfo.Origin), m_ICst(MatchInfo.Cmp2)))) {
-      return IsApplicableForCombine();
+      return IsApplicableForCombine(/*OuterIsMin=*/false);
     }
   }
 
@@ -172,9 +169,9 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
 
   Register Src = MatchInfo.Origin;
   assert(MI.getMF()->getRegInfo().getType(Src) == LLT::scalar(64));
-  const LLT S32 = LLT::scalar(32);
+  const LLT I32 = LLT::integer(32);
 
-  auto Unmerge = B.buildUnmerge(S32, Src);
+  auto Unmerge = B.buildUnmerge(I32, Src);
 
   assert(MI.getOpcode() != AMDGPU::G_AMDGPU_CVT_PK_I16_I32);
 
@@ -185,13 +182,13 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
 
   auto MinBoundary = std::min(MatchInfo.Cmp1, MatchInfo.Cmp2);
   auto MaxBoundary = std::max(MatchInfo.Cmp1, MatchInfo.Cmp2);
-  auto MinBoundaryDst = B.buildConstant(S32, MinBoundary);
-  auto MaxBoundaryDst = B.buildConstant(S32, MaxBoundary);
+  auto MinBoundaryDst = B.buildConstant(I32, MinBoundary);
+  auto MaxBoundaryDst = B.buildConstant(I32, MaxBoundary);
 
-  auto Bitcast = B.buildBitcast({S32}, CvtPk);
+  auto Bitcast = B.buildBitcast({I32}, CvtPk);
 
   auto Med3 = B.buildInstr(
-      AMDGPU::G_AMDGPU_SMED3, {S32},
+      AMDGPU::G_AMDGPU_SMED3, {I32},
       {MinBoundaryDst.getReg(0), Bitcast.getReg(0), MaxBoundaryDst.getReg(0)},
       MI.getFlags());
 
@@ -231,7 +228,6 @@ void AMDGPUPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
 
   AU.addRequired<GISelCSEAnalysisWrapperPass>();

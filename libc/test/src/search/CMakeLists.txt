@@ -1,5 +1,5 @@
 add_custom_target(libc_search_unittests)
-add_libc_unittest(
+add_libc_test(
   hsearch_test
   SUITE
     libc_search_unittests
@@ -15,7 +15,7 @@ add_libc_unittest(
     libc.src.errno.errno
 )
 
-add_libc_unittest(
+add_libc_test(
   insque_test
   SUITE
     libc_search_unittests
@@ -26,7 +26,7 @@ add_libc_unittest(
     libc.src.search.remque
 )
 
-add_libc_unittest(
+add_libc_test(
   lfind_test
   SUITE
     libc_search_unittests
@@ -36,7 +36,7 @@ add_libc_unittest(
     libc.src.search.lfind
 )
 
-add_libc_unittest(
+add_libc_test(
   lsearch_test
   SUITE
     libc_search_unittests
@@ -46,7 +46,7 @@ add_libc_unittest(
     libc.src.search.lsearch
 )
 
-add_libc_unittest(
+add_libc_test(
   tsearch_test
   SUITE
     libc_search_unittests

@@ -2082,6 +2082,10 @@ def SVDOT_X2_S : SInst<"svdot[_{d}_{2}]", "ddhh", "i",  MergeNone, "aarch64_sve_
 def SVDOT_X2_U : SInst<"svdot[_{d}_{2}]", "ddhh", "Ui", MergeNone, "aarch64_sve_udot_x2", [VerifyRuntimeMode], []>;
 def SVDOT_X2_F : SInst<"svdot[_{d}_{2}]", "ddhh", "f",  MergeNone, "aarch64_sve_fdot_x2", [VerifyRuntimeMode], []>;
 
+def SVDOT_N_X2_S : SInst<"svdot[_n_{d}_{2}]", "ddhR", "i",  MergeNone, "aarch64_sve_sdot_x2", [VerifyRuntimeMode], []>;
+def SVDOT_N_X2_U : SInst<"svdot[_n_{d}_{2}]", "ddhR", "Ui", MergeNone, "aarch64_sve_udot_x2", [VerifyRuntimeMode], []>;
+def SVDOT_N_X2_F : SInst<"svdot[_n_{d}_{2}]", "ddhR", "f",  MergeNone, "aarch64_sve_fdot_x2", [VerifyRuntimeMode], []>;
+
 def SVDOT_LANE_X2_S : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "i",  MergeNone, "aarch64_sve_sdot_lane_x2", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_3>]>;
 def SVDOT_LANE_X2_U : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "Ui", MergeNone, "aarch64_sve_udot_lane_x2", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_3>]>;
 def SVDOT_LANE_X2_F : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "f",  MergeNone, "aarch64_sve_fdot_lane_x2", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_3>]>;

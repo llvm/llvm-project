@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm-eabi -mattr=+neon -O0 -optimize-regalloc -regalloc=basic %s -o /dev/null
+; RUN: llc -mtriple=arm-eabi -mattr=+neon -O0 -regalloc=basic %s -o /dev/null
 
 ; This test would crash the rewriter when trying to handle a spill after one of
 ; the @llvm.arm.neon.vld3.v8i8.p0 defined three parts of a register.

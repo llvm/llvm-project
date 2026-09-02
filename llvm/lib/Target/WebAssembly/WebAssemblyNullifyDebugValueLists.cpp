@@ -15,13 +15,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-nullify-dbg-value-lists"
 
 namespace {
-class WebAssemblyNullifyDebugValueLists final : public MachineFunctionPass {
+class WebAssemblyNullifyDebugValueListsLegacy final
+    : public MachineFunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Nullify DBG_VALUE_LISTs";
   }
@@ -30,20 +34,19 @@ class WebAssemblyNullifyDebugValueLists final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyNullifyDebugValueLists() : MachineFunctionPass(ID) {}
+  WebAssemblyNullifyDebugValueListsLegacy() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyNullifyDebugValueLists::ID = 0;
-INITIALIZE_PASS(WebAssemblyNullifyDebugValueLists, DEBUG_TYPE,
+char WebAssemblyNullifyDebugValueListsLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyNullifyDebugValueListsLegacy, DEBUG_TYPE,
                 "WebAssembly Nullify DBG_VALUE_LISTs", false, false)
 
-FunctionPass *llvm::createWebAssemblyNullifyDebugValueLists() {
-  return new WebAssemblyNullifyDebugValueLists();
+FunctionPass *llvm::createWebAssemblyNullifyDebugValueListsLegacyPass() {
+  return new WebAssemblyNullifyDebugValueListsLegacy();
 }
 
-bool WebAssemblyNullifyDebugValueLists::runOnMachineFunction(
-    MachineFunction &MF) {
+static bool nullifyDebugValueLists(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Nullify DBG_VALUE_LISTs **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -60,4 +63,16 @@ bool WebAssemblyNullifyDebugValueLists::runOnMachineFunction(
     }
   }
   return Changed;
+}
+
+bool WebAssemblyNullifyDebugValueListsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return nullifyDebugValueLists(MF);
+}
+
+PreservedAnalyses WebAssemblyNullifyDebugValueListsPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  return nullifyDebugValueLists(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                          .preserveSet<CFGAnalyses>()
+                                    : PreservedAnalyses::all();
 }

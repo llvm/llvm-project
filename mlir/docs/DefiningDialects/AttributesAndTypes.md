@@ -990,6 +990,13 @@ wrapped by the `Attribute` and `Type` classes. Every Attribute or Type class has
 a corresponding storage class, that can be accessed via the protected
 `getImpl()` method.
 
+Note: While storage instances are generally immortal and live as long as the
+`MLIRContext`, the context also supports *transient scopes*
+(`MLIRContext::TransientScope` RAII guard, or `beginTransientScope`/`endTransientScope`).
+Storage instances allocated while in a transient scope are reclaimed when the
+scope ends, allowing temporary types and attributes to be discarded in $O(1)$
+without tearing down loaded dialects.
+
 In most cases the storage class is auto generated, but if necessary it can be
 manually defined by setting the `genStorageClass` field to 0. The name and
 namespace (defaults to `detail`) can additionally be controlled via the The

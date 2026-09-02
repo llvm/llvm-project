@@ -23,8 +23,8 @@ services:
       context: ../../../.. # monorepo root
       dockerfile: libcxx/utils/ci/docker/linux-builder.dockerfile
       args:
-        BASE_IMAGE_VERSION: 5a616ce490abe551ffc7a7714c28e90c483f5b39
-        GITHUB_RUNNER_VERSION: 2.335.0
+        BASE_IMAGE_VERSION: 8ece73c9f8b54fea6a98e9e4c55f9a2e6ccc9b3c
+        GITHUB_RUNNER_VERSION: 2.335.1
 
   libcxx-android-builder:
     image: ghcr.io/llvm/libcxx-android-builder:${TAG:-latest}
@@ -32,7 +32,7 @@ services:
       context: ../../../.. # monorepo root
       dockerfile: libcxx/utils/ci/docker/android-builder.dockerfile
       args:
-        BASE_IMAGE_VERSION: 5a616ce490abe551ffc7a7714c28e90c483f5b39
+        BASE_IMAGE_VERSION: 8ece73c9f8b54fea6a98e9e4c55f9a2e6ccc9b3c
         ANDROID_CLANG_VERSION: r584948b
         ANDROID_CLANG_PREBUILTS_COMMIT: 2b062008b0a7be59ad85f012cfeee60f052808f1
         ANDROID_SYSROOT_COMMIT: f8b85cc5262c6e5cbc9a92c1bab2b18b32a4c63f

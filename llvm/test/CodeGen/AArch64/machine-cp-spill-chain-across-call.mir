@@ -1,15 +1,14 @@
 # RUN: llc -mtriple=aarch64 -run-pass=machine-cp -enable-spill-copy-elim -o - %s | FileCheck %s
 
-# TODO -- remove this restriction with the follow up patch as it actually fixes it.
-# UNSUPPORTED: expensive_checks
-
-# Test to show a bug in eliminateSpillageCopies.
+# eliminateSpillageCopies must not fold a spill-reload chain that straddles a
+# call if source is a caller preserved register.
 # Here the spill copy "$x23 = COPY $x16" sits *before* the call and its
 # source $x16 (caller-saved) may be clobbered by the call, while its
 # destination $x23 is callee-saved. Because $x23 stays available in the
-# CopyTracker across the call, the chain builder paired this spill with the
-# post-call reload "$x16 = COPY $x23" and folded the whole chain, which
-# led to $x16 not being preserved across the call.
+# If not checked with regmask, the chain builder could otherwise pair this
+# spill with the post-call reload "$x16 = COPY $x23" # and fold the whole chain
+# leaving $x16 not preserved across the call.
+# Check that the chain is left untouched.
 
 --- |
   declare void @callee()
@@ -33,9 +32,14 @@ body:             |
     ; The value of $x16 must still be spilled into the callee-saved $x23 before
     ; the call (this copy is erased if the chain is wrongly folded).
     ; CHECK:      $x26 = COPY {{.*}}$x23
+    ; CHECK:      $x23 = COPY {{.*}}$x16
     ; CHECK:      BL @callee
-    ; CHECK:      $x23 = COPY {{.*}}$x20
-    ; CHECK:      $x20 = COPY {{.*}}$x23
+    ; The inner spill must stay "$x16 = COPY $x20" and must not be rewritten to
+    ; target the outermost temporary as "$x23 = COPY $x20".
+    ; CHECK:      $x16 = COPY {{.*}}$x20
+    ; CHECK:      $x20 = COPY {{.*}}$x16
+    ; And $x16 must be restored from $x23 after the inner reload.
+    ; CHECK:      $x16 = COPY {{.*}}$x23
 
     renamable $x26 = COPY killed renamable $x23
     renamable $x23 = COPY killed renamable $x16

@@ -211,7 +211,7 @@ Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
 
 Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
   const DataLayout &DL = BB->getDataLayout();
-  TypeSize ElemSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  TypeSize ElemSize = AI->getAllocationBaseSize(DL);
   Value *Size = CreateTypeSize(DestTy, ElemSize);
   if (AI->isArrayAllocation())
     Size = CreateMul(CreateZExtOrTrunc(AI->getArraySize(), DestTy), Size);
@@ -495,6 +495,14 @@ Value *IRBuilderBase::CreateFPMaximumReduce(Value *Src) {
 
 Value *IRBuilderBase::CreateFPMinimumReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fminimum, Src);
+}
+
+Value *IRBuilderBase::CreateFPMaximumNumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fmaximumnum, Src);
+}
+
+Value *IRBuilderBase::CreateFPMinimumNumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fminimumnum, Src);
 }
 
 CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr) {

@@ -46,8 +46,10 @@ void llvm::reduceFunctionsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
 
   // And finally, we can actually delete them.
   for (Constant *F : FuncsToRemove) {
-    // Replace all *still* remaining uses with the default value.
-    F->replaceAllUsesWith(getDefaultValue(F->getType()));
+    // Replace all *still* remaining non-metadata uses with the default value.
+    // Metadata uses (e.g. in !inline_history) are left for eraseFromParent()
+    // to handle, which sets them to null rather than ptr null.
+    F->replaceNonMetadataUsesWith(getDefaultValue(F->getType()));
     // And finally, fully drop it.
     cast<Function>(F)->eraseFromParent();
   }

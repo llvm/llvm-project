@@ -24,6 +24,19 @@ namespace clang {
 namespace driver {
 namespace tools {
 
+struct OffloadJobsOpt {
+  enum class Kind { Missing, Invalid, Jobserver, Fixed };
+
+  Kind K = Kind::Missing;
+  llvm::opt::Arg *A = nullptr;
+  StringRef Value;
+  unsigned NumThreads = 0;
+
+  bool isValid() const { return K == Kind::Jobserver || K == Kind::Fixed; }
+};
+
+OffloadJobsOpt parseOffloadJobs(const llvm::opt::ArgList &Args);
+
 void addPathIfExists(const Driver &D, const Twine &Path,
                      ToolChain::path_list &Paths);
 
@@ -36,6 +49,10 @@ const char *getLDMOption(const llvm::Triple &T, const llvm::opt::ArgList &Args);
 void addLinkerCompressDebugSectionsOption(const ToolChain &TC,
                                           const llvm::opt::ArgList &Args,
                                           llvm::opt::ArgStringList &CmdArgs);
+
+void renderDebugInfoCompressionArgs(const llvm::opt::ArgList &Args,
+                                    llvm::opt::ArgStringList &CmdArgs,
+                                    const Driver &D, const ToolChain &TC);
 
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
@@ -131,6 +148,12 @@ void addArchSpecificRPath(const ToolChain &TC, const llvm::opt::ArgList &Args,
 void addOpenMPRuntimeLibraryPath(const ToolChain &TC,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
+
+bool addLLVMOffloadingRuntime(const Compilation &C,
+                              llvm::opt::ArgStringList &CmdArgs,
+                              const ToolChain &TC,
+                              const llvm::opt::ArgList &Args);
+
 /// Returns true, if an OpenMP runtime has been added.
 bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
                       const ToolChain &TC, const llvm::opt::ArgList &Args,
@@ -234,12 +257,21 @@ void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
                             const llvm::Triple &Triple, bool IsLTO,
                             const StringRef PluginOptPrefix = "");
 
+void addSplitMachineFunctionsArgs(const Driver &D,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple);
+
 void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple,
                         const ToolChain &HostTC);
 
-void addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
+/// Try to link libclc, depending on the target ABI and command line
+/// arguments.
+///
+/// \return true if libclc should be linked for the compile.
+bool addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
                           const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args);
 

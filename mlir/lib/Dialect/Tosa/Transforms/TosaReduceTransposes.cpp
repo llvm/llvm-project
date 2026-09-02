@@ -233,8 +233,7 @@ TosaReduceTransposes::transposeDenseAttribute(DenseElementsAttr input,
   // perms: dim 0→2, dim 1→0, dim 2→1, giving source position
   // calculated as 1*inputStrides[2] + 1*inputStrides[0] + 2*inputStrides[1]
   // = 1*1 + 1*12 + 2*4 = 21
-
-  size_t elementSize = oldType.getElementTypeBitWidth() / 8;
+  size_t elementSize = llvm::divideCeil(oldType.getElementTypeBitWidth(), 8);
   int64_t numElements = oldType.getNumElements();
 
   SmallVector<char> outputBuffer(numElements * elementSize);
@@ -386,13 +385,13 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
   // turn "live" until the transpose being hoisted through this chain
   // is replaced with the proper value from the new chain.
 
-  return rewriter
-      .create(op->getLoc(), op->getName().getIdentifier(), operands,
-              RankedTensorType::get(
-                  applyTOSAPermutation(resultType.getShape(), hoistedPerms),
-                  resultType.getElementType()),
-              op->getAttrs())
-      ->getResult(0);
+  Type newResultType = RankedTensorType::get(
+      applyTOSAPermutation(resultType.getShape(), hoistedPerms),
+      resultType.getElementType());
+  OperationState state(op->getLoc(), op->getName(), operands, newResultType,
+                       op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
+  return rewriter.create(state)->getResult(0);
 }
 
 std::optional<Value> TosaReduceTransposes::buildMappedToValue(

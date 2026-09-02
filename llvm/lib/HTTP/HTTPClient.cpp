@@ -160,6 +160,7 @@ struct WinHTTPSession {
   HINTERNET ConnectHandle = nullptr;
   HINTERNET RequestHandle = nullptr;
   DWORD ResponseCode = 0;
+  DWORD TimeoutMs = 30000;
 
   ~WinHTTPSession() {
     if (RequestHandle)
@@ -231,15 +232,7 @@ void HTTPClient::cleanup() {
 
 void HTTPClient::setTimeout(std::chrono::milliseconds Timeout) {
   WinHTTPSession *Session = static_cast<WinHTTPSession *>(Handle);
-  if (Session && Session->SessionHandle) {
-    DWORD TimeoutMs = static_cast<DWORD>(Timeout.count());
-    WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_CONNECT_TIMEOUT,
-                     &TimeoutMs, sizeof(TimeoutMs));
-    WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_RECEIVE_TIMEOUT,
-                     &TimeoutMs, sizeof(TimeoutMs));
-    WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_SEND_TIMEOUT,
-                     &TimeoutMs, sizeof(TimeoutMs));
-  }
+  Session->TimeoutMs = static_cast<DWORD>(Timeout.count());
 }
 
 static Error VerifyTLSCertWinHTTP(HINTERNET RequestHandle,
@@ -306,6 +299,13 @@ Error HTTPClient::perform(const HTTPRequest &Request,
                   WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
   if (!Session->SessionHandle)
     return createStringError(errc::io_error, "Failed to open WinHTTP session");
+
+  // Set timeouts for all 4 phases: resolve, connect, send and receive. Resolve
+  // and connect are hard-coded since they don't vary with different payloads.
+  // Send and receive is configurable and defaults to 30000.
+  if (!WinHttpSetTimeouts(Session->SessionHandle, 5000, 10000,
+                          Session->TimeoutMs, Session->TimeoutMs))
+    return createStringError(errc::io_error, "Failed to set WinHTTP timeout");
 
   // Prevent fallback to TLS 1.0/1.1
   DWORD SecureProtocols =
@@ -386,12 +386,20 @@ Error HTTPClient::perform(const HTTPRequest &Request,
 
   // Send request
   if (!WinHttpSendRequest(Session->RequestHandle, WINHTTP_NO_ADDITIONAL_HEADERS,
-                          0, nullptr, 0, 0, 0))
-    return createStringError(errc::io_error, "Failed to send HTTP request");
+                          0, nullptr, 0, 0, 0)) {
+    bool TimedOut = GetLastError() == ERROR_WINHTTP_TIMEOUT;
+    return createStringError(errc::io_error,
+                             TimedOut ? "Timeout was reached"
+                                      : "Failed to send HTTP request");
+  }
 
   // Receive response
-  if (!WinHttpReceiveResponse(Session->RequestHandle, nullptr))
-    return createStringError(errc::io_error, "Failed to receive HTTP response");
+  if (!WinHttpReceiveResponse(Session->RequestHandle, nullptr)) {
+    bool TimedOut = GetLastError() == ERROR_WINHTTP_TIMEOUT;
+    return createStringError(errc::io_error,
+                             TimedOut ? "Timeout was reached"
+                                      : "Failed to receive HTTP response");
+  }
 
   // Verify the server certificate fingerprint if one was pinned.
   if ((SecurityFlags & SECURITY_FLAG_IGNORE_UNKNOWN_CA) != 0)

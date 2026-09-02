@@ -13,9 +13,9 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -25,9 +25,14 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-private-interfaces.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include <memory>
+#include <optional>
+#include <string>
 
 #include <cassert>
 
@@ -211,172 +216,228 @@ static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr,
   return *module_sp_or_err;
 }
 
-ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
-    Process *process, llvm::StringRef name, UUID uuid, addr_t value,
-    bool value_is_offset, bool force_symbol_search, bool notify,
-    bool set_address_in_target, bool allow_memory_image_last_resort) {
-  ModuleSP memory_module_sp;
-  ModuleSP module_sp;
-  PlatformSP platform_sp = process->GetTarget().GetPlatform();
-  Target &target = process->GetTarget();
-  Status error;
-
-  StreamString prog_str;
-  if (!name.empty()) {
-    prog_str << name.str() << " ";
+static std::string
+GetBinaryDescription(const DynamicLoader::BinarySpec &bin_spec) {
+  StreamString desc;
+  if (!bin_spec.name.empty())
+    desc << bin_spec.name << " ";
+  if (bin_spec.uuid.IsValid())
+    desc << bin_spec.uuid.GetAsString();
+  if (!bin_spec.value_is_offset && bin_spec.value != LLDB_INVALID_ADDRESS) {
+    desc << " at 0x";
+    desc.PutHex64(bin_spec.value);
   }
-  if (uuid.IsValid())
-    prog_str << uuid.GetAsString();
-  if (value_is_offset == 0 && value != LLDB_INVALID_ADDRESS) {
-    prog_str << " at 0x";
-    prog_str.PutHex64(value);
-  }
+  return desc.GetString().str();
+}
 
-  if (!uuid.IsValid() && !value_is_offset) {
-    memory_module_sp = ReadUnnamedMemoryModule(process, value, name);
-
-    if (memory_module_sp) {
-      uuid = memory_module_sp->GetUUID();
-      if (uuid.IsValid()) {
-        prog_str << " ";
-        prog_str << uuid.GetAsString();
-      }
-    }
+static std::string
+GetBinaryNotFoundMessage(const DynamicLoader::BinarySpec &bin_spec) {
+  StreamString msg;
+  msg << "Unable to find file";
+  if (!bin_spec.name.empty())
+    msg << " " << bin_spec.name;
+  if (bin_spec.uuid.IsValid())
+    msg << " with UUID " << bin_spec.uuid.GetAsString();
+  if (bin_spec.value != LLDB_INVALID_ADDRESS) {
+    if (bin_spec.value_is_offset)
+      msg.Printf(" with slide 0x%" PRIx64, bin_spec.value);
+    else
+      msg.Printf(" at address 0x%" PRIx64, bin_spec.value);
   }
+  return msg.GetString().str();
+}
+
+/// Reads the Target, so it has to be called for one binary at a time.
+///
+/// \return What to search for, or nothing when the binary is already in hand.
+static std::optional<SymbolLocator::Request>
+PrepareSearch(Target &target, DynamicLoader::BinarySpec &bin_spec) {
   ModuleSpec module_spec;
   module_spec.SetTarget(target.shared_from_this());
-  module_spec.GetUUID() = uuid;
-  FileSpec name_filespec(name);
+  module_spec.GetUUID() = bin_spec.uuid;
+  FileSpec name_filespec(bin_spec.name);
   if (FileSystem::Instance().Exists(name_filespec))
     module_spec.GetFileSpec() = name_filespec;
 
-  if (uuid.IsValid()) {
-    Progress progress("Locating binary", prog_str.GetString().str());
+  // Has lldb already seen a module with this UUID? A module whose symbols are
+  // already in hand is the answer, and searching would only find them again.
+  // Without them the search still has something to add.
+  ModuleList::GetSharedModule(module_spec, bin_spec.module_sp, nullptr, nullptr,
+                              /*invoke_locate_callback=*/true,
+                              /*invoke_symbol_locators=*/false);
+  if (bin_spec.module_sp && bin_spec.module_sp->GetSymbolFileFileSpec())
+    return std::nullopt;
 
-    // Has lldb already seen a module with this UUID?
-    // Or have external lookup enabled in DebugSymbols on macOS.
-    if (!module_sp)
-      error =
-          ModuleList::GetSharedModule(module_spec, module_sp, nullptr, nullptr);
+  SymbolLocator::Request request;
+  request.module_spec = module_spec;
+  request.platform = target.GetPlatform();
+  request.external_lookup = bin_spec.force_symbol_search;
+  request.description = GetBinaryDescription(bin_spec);
+  return request;
+}
 
-    // Can lldb's symbol/executable location schemes
-    // find an executable and symbol file.
-    if (!module_sp) {
-      FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-      StatisticsMap symbol_locator_map;
-      module_spec.GetSymbolFileSpec() =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths,
-                                                    symbol_locator_map);
-      ModuleSpec objfile_module_spec =
-          PluginManager::LocateExecutableObjectFile(module_spec,
-                                                    symbol_locator_map);
-      module_spec.GetFileSpec() = objfile_module_spec.GetFileSpec();
-      if (FileSystem::Instance().Exists(module_spec.GetFileSpec()) &&
-          FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec())) {
-        module_sp = std::make_shared<Module>(module_spec);
-      }
-
-      if (module_sp) {
-        module_sp->GetSymbolLocatorStatistics().merge(symbol_locator_map);
-      }
-    }
-
-    // If we haven't found a binary, or we don't have a SymbolFile, see
-    // if there is an external search tool that can find it.
-    if (!module_sp || !module_sp->GetSymbolFileFileSpec()) {
-      PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
-                                                 force_symbol_search);
-      if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-        module_sp = std::make_shared<Module>(module_spec);
-      } else if (force_symbol_search && error.AsCString("") &&
-                 error.AsCString("")[0] != '\0') {
-        *target.GetDebugger().GetAsyncErrorStream() << error.AsCString();
-      }
-    }
-
-    // If we only found the executable, create a Module based on that.
-    if (!module_sp && FileSystem::Instance().Exists(module_spec.GetFileSpec()))
-      module_sp = std::make_shared<Module>(module_spec);
+/// The module is not registered with the Target until LoadBinaryInTarget.
+static void FinishSearch(DynamicLoader::BinarySpec &bin_spec,
+                         llvm::Expected<SymbolLocator::Result> &&located) {
+  if (!located) {
+    // Loading a binary that was never found already reports that, so a bare
+    // not-found error would only say it a second time. Any other error says
+    // something that report cannot.
+    llvm::Error error = located.takeError();
+    if (error.isA<SymbolLocator::NotFound>())
+      llvm::consumeError(std::move(error));
+    else
+      bin_spec.error = Status::FromError(std::move(error));
+    return;
   }
+
+  if (located->symbol_error)
+    bin_spec.error = Status::FromError(std::move(*located->symbol_error));
+
+  ModuleSP located_module_sp;
+  ModuleList::GetSharedModule(located->module_spec, located_module_sp, nullptr,
+                              nullptr, /*invoke_locate_callback=*/false,
+                              /*invoke_symbol_locators=*/false);
+
+  // A located binary always yields a module, whatever ObjectFile makes of the
+  // file, because the caller has nowhere else to record what the search found.
+  if (!located_module_sp)
+    located_module_sp = std::make_shared<Module>(located->module_spec);
+
+  // Published only now, so that a search that came up empty leaves whatever the
+  // shared module list had in hand.
+  bin_spec.module_sp = std::move(located_module_sp);
+  bin_spec.module_sp->GetSymbolLocatorStatistics().merge(located->statistics);
+}
+
+static void FindBinaryUUIDInMemory(Process *process,
+                                   DynamicLoader::BinarySpec &bin_spec) {
+  bin_spec.memory_module_sp =
+      ReadUnnamedMemoryModule(process, bin_spec.value, bin_spec.name);
+  if (bin_spec.memory_module_sp)
+    bin_spec.uuid = bin_spec.memory_module_sp->GetUUID();
+}
+
+void DynamicLoader::LocateBinaries(
+    Process *process, llvm::MutableArrayRef<BinarySpec> bin_specs) {
+  Target &target = process->GetTarget();
+  const FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+
+  // Reading a binary's UUID out of memory has to happen on this thread, and
+  // before any search, so that a binary whose UUID is not known yet still joins
+  // the batch.
+  llvm::SmallVector<BinarySpec *> to_search;
+  std::vector<SymbolLocator::Request> requests;
+  for (BinarySpec &bin_spec : bin_specs) {
+    if (!bin_spec.uuid.IsValid() && !bin_spec.value_is_offset)
+      FindBinaryUUIDInMemory(process, bin_spec);
+    if (!bin_spec.uuid.IsValid())
+      continue;
+    if (std::optional<SymbolLocator::Request> request =
+            PrepareSearch(target, bin_spec)) {
+      to_search.push_back(&bin_spec);
+      requests.push_back(std::move(*request));
+    }
+  }
+
+  std::vector<llvm::Expected<SymbolLocator::Result>> located =
+      SymbolLocator::Locate(requests, search_paths,
+                            target.GetParallelModuleLoad());
+
+  for (auto [bin_spec, result] : llvm::zip_equal(to_search, located))
+    FinishSearch(*bin_spec, std::move(result));
+}
+
+llvm::Expected<ModuleSP>
+DynamicLoader::LoadBinaryInTarget(Process *process, BinarySpec &bin_spec) {
+  Target &target = process->GetTarget();
+
+  // The error belongs to this function now: every path below either reports it
+  // or folds it into the failure.
+  llvm::Error search_error = bin_spec.error.takeError();
 
   // If we couldn't find the binary anywhere else, as a last resort,
   // read it out of memory.
-  if (allow_memory_image_last_resort && !module_sp.get() &&
-      value != LLDB_INVALID_ADDRESS && !value_is_offset) {
-    if (!memory_module_sp)
-      memory_module_sp = ReadUnnamedMemoryModule(process, value, name);
-    if (memory_module_sp)
-      module_sp = memory_module_sp;
+  if (bin_spec.allow_memory_image_last_resort && !bin_spec.module_sp &&
+      bin_spec.value != LLDB_INVALID_ADDRESS && !bin_spec.value_is_offset) {
+    if (!bin_spec.memory_module_sp)
+      bin_spec.memory_module_sp =
+          ReadUnnamedMemoryModule(process, bin_spec.value, bin_spec.name);
+    if (bin_spec.memory_module_sp)
+      bin_spec.module_sp = bin_spec.memory_module_sp;
   }
 
   Log *log = GetLog(LLDBLog::DynamicLoader);
-  if (module_sp.get()) {
-    // Ensure the Target has an architecture set in case
-    // we need it while processing this binary/eh_frame/debug info.
-    if (!target.GetArchitecture().IsValid())
-      target.SetArchitecture(module_sp->GetArchitecture());
-    target.GetImages().AppendIfNeeded(module_sp, false);
-
-    bool changed = false;
-    if (set_address_in_target) {
-      if (module_sp->GetObjectFile()) {
-        if (value != LLDB_INVALID_ADDRESS) {
-          LLDB_LOGF(log,
-                    "DynamicLoader::LoadBinaryWithUUIDAndAddress Loading "
-                    "binary %s UUID %s at %s 0x%" PRIx64,
-                    name.str().c_str(), uuid.GetAsString().c_str(),
-                    value_is_offset ? "offset" : "address", value);
-          module_sp->SetLoadAddress(target, value, value_is_offset, changed);
-        } else {
-          // No address/offset/slide, load the binary at file address,
-          // offset 0.
-          LLDB_LOGF(log,
-                    "DynamicLoader::LoadBinaryWithUUIDAndAddress Loading "
-                    "binary %s UUID %s at file address",
-                    name.str().c_str(), uuid.GetAsString().c_str());
-          module_sp->SetLoadAddress(target, 0, true /* value_is_slide */,
-                                    changed);
-        }
-      } else {
-        // In-memory image, load at its true address, offset 0.
-        LLDB_LOGF(log,
-                  "DynamicLoader::LoadBinaryWithUUIDAndAddress Loading binary "
-                  "%s UUID %s from memory at address 0x%" PRIx64,
-                  name.str().c_str(), uuid.GetAsString().c_str(), value);
-        module_sp->SetLoadAddress(target, 0, true /* value_is_slide */,
-                                  changed);
-      }
-    }
-
-    if (notify) {
-      ModuleList added_module;
-      added_module.Append(module_sp, false);
-      target.ModulesDidLoad(added_module);
-    }
-  } else {
-    if (force_symbol_search) {
-      lldb::StreamUP s = target.GetDebugger().GetAsyncErrorStream();
-      s->Printf("Unable to find file");
-      if (!name.empty())
-        s->Printf(" %s", name.str().c_str());
-      if (uuid.IsValid())
-        s->Printf(" with UUID %s", uuid.GetAsString().c_str());
-      if (value != LLDB_INVALID_ADDRESS) {
-        if (value_is_offset)
-          s->Printf(" with slide 0x%" PRIx64, value);
-        else
-          s->Printf(" at address 0x%" PRIx64, value);
-      }
-      s->Printf("\n");
-    }
-    LLDB_LOGF(log,
-              "Unable to find binary %s with UUID %s and load it at "
-              "%s 0x%" PRIx64,
-              name.str().c_str(), uuid.GetAsString().c_str(),
-              value_is_offset ? "offset" : "address", value);
+  if (!bin_spec.module_sp) {
+    std::string message = GetBinaryNotFoundMessage(bin_spec);
+    LLDB_LOG(log, "{0}", message);
+    llvm::Error error = llvm::createStringError(message);
+    if (search_error)
+      return llvm::joinErrors(std::move(search_error), std::move(error));
+    return std::move(error);
   }
 
-  return module_sp;
+  // A binary was found, but a symbol server may still have had something to say
+  // about its symbols.  Name the binary: a symbol locator's error is not
+  // required to identify what it was asked to look for.
+  if (search_error)
+    *target.GetDebugger().GetAsyncErrorStream()
+        << GetBinaryDescription(bin_spec) << ": "
+        << llvm::toString(std::move(search_error)) << "\n";
+
+  // Ensure the Target has an architecture set in case
+  // we need it while processing this binary/eh_frame/debug info.
+  if (!target.GetArchitecture().IsValid())
+    target.SetArchitecture(bin_spec.module_sp->GetArchitecture());
+  target.GetImages().AppendIfNeeded(bin_spec.module_sp, false);
+
+  bool changed = false;
+  if (bin_spec.set_address_in_target) {
+    if (bin_spec.module_sp->GetObjectFile()) {
+      if (bin_spec.value != LLDB_INVALID_ADDRESS) {
+        LLDB_LOGF(log,
+                  "DynamicLoader::LoadBinaryInTarget Loading "
+                  "binary %s UUID %s at %s 0x%" PRIx64,
+                  bin_spec.name.c_str(), bin_spec.uuid.GetAsString().c_str(),
+                  bin_spec.value_is_offset ? "offset" : "address",
+                  bin_spec.value);
+        bin_spec.module_sp->SetLoadAddress(target, bin_spec.value,
+                                           bin_spec.value_is_offset, changed);
+      } else {
+        // No address/offset/slide, load the binary at file address,
+        // offset 0.
+        LLDB_LOGF(log,
+                  "DynamicLoader::LoadBinaryInTarget Loading "
+                  "binary %s UUID %s at file address",
+                  bin_spec.name.c_str(), bin_spec.uuid.GetAsString().c_str());
+        bin_spec.module_sp->SetLoadAddress(target, 0, true /* value_is_slide */,
+                                           changed);
+      }
+    } else {
+      // In-memory image, load at its true address, offset 0.
+      LLDB_LOGF(log,
+                "DynamicLoader::LoadBinaryInTarget Loading binary "
+                "%s UUID %s from memory at address 0x%" PRIx64,
+                bin_spec.name.c_str(), bin_spec.uuid.GetAsString().c_str(),
+                bin_spec.value);
+      bin_spec.module_sp->SetLoadAddress(target, 0, true /* value_is_slide */,
+                                         changed);
+    }
+  }
+
+  if (bin_spec.notify) {
+    ModuleList added_module;
+    added_module.Append(bin_spec.module_sp, false);
+    target.ModulesDidLoad(added_module);
+  }
+
+  return bin_spec.module_sp;
+}
+
+llvm::Expected<ModuleSP>
+DynamicLoader::LocateAndLoadBinary(Process *process, BinarySpec &bin_spec) {
+  LocateBinaries(process, bin_spec);
+  return LoadBinaryInTarget(process, bin_spec);
 }
 
 int64_t DynamicLoader::ReadUnsignedIntWithSizeInBytes(addr_t addr,

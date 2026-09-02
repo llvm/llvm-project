@@ -258,6 +258,21 @@ if (TARGET FortranFloat128MathILib)
 endif ()
 
 
+# When a target depends on an object library, CMake seems to try to only build
+# the object files that the target actual needs. Before having analyzed the module
+# dependencies, CMake assumes there are no module-dependencies.
+# To ensure that the module files are built, insert a custom target that is
+# opaque to CMake so the library has to be built regardless.
+# Dependees on module files must add a target-level dependency on the barrier,
+# and file-level dependencies on source files via target_link_libraries
+# on the OBJECT libray. The target-level dependency ensures that the module
+# files are built when they do not exist yet, the file-level dependency ensures
+# that dependees are rebuilt when the module file changes.
+function (add_module_barrier barriername objlib)
+  add_custom_target(${barriername})
+  add_dependencies(${barriername} ${objlib})
+endfunction ()
+
 # Build module files if requested.
 # The object files written by Flang for these are unused. In the future parts
 # of flang-rt may itself be implemented in Fortran in which case these Fortran
@@ -269,6 +284,7 @@ if (FLANG_RT_FORTRAN_MODULES)
     ${module_sources}
   )
   flang_module_target(flang-rt-mod PUBLIC)
+  add_module_barrier(flang-rt-mod.barrier flang-rt-mod)
 
   if (RUNTIMES_FORTRAN_MODULES)
     set(_mod_install_dest "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
@@ -306,6 +322,14 @@ else ()
   set(sources ${supported_sources} ${host_sources} ${f128_sources})
 endif ()
 
+# Include the Fortran OpenMP module implementation (omp_lib.o) in
+# libflang_rt.runtime when the OpenMP runtime is also being built.
+# Skip for GPU-default targets: omp_lib is a host-side Fortran module.
+if (TARGET libomp-mod AND NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx"
+    AND NOT FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+  list(APPEND sources "$<TARGET_OBJECTS:libomp-mod>")
+endif ()
+
 
 if (NOT WIN32)
   add_flangrt_library(flang_rt.runtime STATIC SHARED
@@ -316,6 +340,11 @@ if (NOT WIN32)
   )
 
   enable_cuda_compilation(flang_rt.runtime "${sources}")
+
+  if (TARGET libomp-mod AND TARGET flang_rt.runtime.shared AND TARGET omp)
+    # Resolve bind(c) references from omp_lib when building the shared runtime.
+    target_link_libraries(flang_rt.runtime.shared PUBLIC omp)
+  endif ()
 
   # Select a default runtime, which is used for unit and regression tests.
   if (TARGET flang_rt.runtime.default)

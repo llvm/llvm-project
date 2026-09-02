@@ -20,6 +20,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVAsmPrinter.cpp
   SPIRVBuiltins.cpp
   SPIRVCallLowering.cpp
+  SPIRVCodeGenPassBuilder.cpp
   SPIRVInlineAsmLowering.cpp
   SPIRVCommandLine.cpp
   SPIRVCtorDtorLowering.cpp
@@ -46,6 +47,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp
+  SPIRVFinalizeShaderLinkage.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVTargetTransformInfo.cpp
@@ -67,6 +69,7 @@ add_llvm_target(SPIRVCodeGen
   FrontendHLSL
   IPO
   MC
+  Passes
   SPIRVAnalysis
   SPIRVDesc
   SPIRVInfo

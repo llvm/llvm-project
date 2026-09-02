@@ -10,14 +10,15 @@
 // as it builds the ExplodedGraph.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/Support/raw_ostream.h"
+#include <iterator>
 
 using namespace clang;
 using namespace ento;
@@ -66,10 +67,8 @@ public:
 }
 
 void CallDumper::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
-  unsigned Indentation = 0;
-  for (const StackFrame *SF = C.getStackFrame()->getParent(); SF != nullptr;
-       SF = SF->getParent())
-    ++Indentation;
+  auto Parents = C.getStackFrame()->parents();
+  unsigned Indentation = std::distance(Parents.begin(), Parents.end());
 
   // It is mildly evil to print directly to llvm::outs() rather than emitting
   // warnings, but this ensures things do not get filtered out by the rest of
@@ -83,10 +82,8 @@ void CallDumper::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   if (!CallE)
     return;
 
-  unsigned Indentation = 0;
-  for (const StackFrame *SF = C.getStackFrame()->getParent(); SF != nullptr;
-       SF = SF->getParent())
-    ++Indentation;
+  auto Parents = C.getStackFrame()->parents();
+  unsigned Indentation = std::distance(Parents.begin(), Parents.end());
 
   // It is mildly evil to print directly to llvm::outs() rather than emitting
   // warnings, but this ensures things do not get filtered out by the rest of

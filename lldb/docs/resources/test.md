@@ -137,6 +137,35 @@ the test should be run or not.
 @skipTestIfFn(checking_function_name)
 ```
 
+### Skipped versus unsupported
+
+A test that doesn't run does so for one of two very different reasons, and the
+decorator you pick says which:
+
+* The test **can never** run in this configuration. A test for Mach-O debug
+  maps has nothing to say on Linux; a test that calls `fork()` has nothing to
+  say on Windows. Use the `require*` family. These are reported as
+  **UNSUPPORTED**.
+
+* The test **ought to** run in this configuration but doesn't work yet. Use the
+  `skipIf*` / `skipUnless*` family. These are reported as **SKIPPED**, which
+  keeps them visible as work still to be done.
+
+```python
+@requireDarwin      # inherently Darwin-only: reported UNSUPPORTED elsewhere
+@skipIfWindows      # ought to work on Windows, currently broken: reported SKIPPED
+```
+
+The `require*` decorators mirror the `skip*` ones one-for-one:
+`requireDarwin` / `requireNotDarwin`, `requireLinux` / `requireNotLinux`,
+`requireWindows` / `requireNotWindows`, plus `requirePOSIX`, `requireSignals`,
+`requireNotWasm`, `requireDarwinHost`, and the general
+`requirePlatform(oslist)` / `requireNotPlatform(oslist)`.
+
+Reach for `require*` when the test is tied to a platform-specific file format,
+API, or OS feature. If the test is merely untested or broken somewhere, keep
+`skipIf*` so nobody mistakes a bug for a design decision.
+
 In addition to providing a lot more flexibility when it comes to writing the
 test, the API test also allow for much more complex scenarios when it comes to
 building inferiors. Every test has its own `Makefile`, most of them only a
@@ -511,16 +540,15 @@ You can also add to the test runner options by setting the
 items which must be separate parts of the runner's command line.
 
 It is possible to customize the architecture of the test binaries and compiler
-used by appending `-A` and `-C` options respectively. For example, to test
+used by appending `--triple` and `-C` options respectively. For example, to test
 LLDB against 32-bit binaries built with a custom version of clang, do:
 
 ```
-$ cmake -DLLDB_TEST_USER_ARGS="-A;i386;-C;/path/to/custom/clang" -G Ninja
+$ cmake -DLLDB_TEST_USER_ARGS="--triple;i386-unknown-linux-gnu;-C;/path/to/custom/clang" -G Ninja
 $ ninja check-lldb
 ```
 
-Note that multiple `-A` and `-C` flags can be specified to
-`LLDB_TEST_USER_ARGS`.
+Note that multiple `-C` flags can be specified to `LLDB_TEST_USER_ARGS`.
 
 If you want to change the LLDB settings that tests run with then you can set
 the `--setting` option of the test runner via this same variable. For example
@@ -696,7 +724,11 @@ work with Arm or AArch64, but support for other architectures can be added easil
 
 On non-Windows platforms, you can use the `-d` option to `dotest.py` which
 will cause the script to print out the pid of the test and wait for a while
-until a debugger is attached. Then run `lldb -p <pid>` to attach.
+until a debugger is attached. Then run `lldb -p <pid>` to attach manually.
+
+Alternatively, `dotest.py` can invoke a supported debugging tool and have it
+attach to the test process automatically. Use `--debug-with=...` to select the
+debugger.
 
 To instead debug a test's python source, edit the test and insert `import pdb; pdb.set_trace()` or `breakpoint()` (Python 3 only) at the point you want to start debugging. The `breakpoint()` command can be used for any LLDB Python script, not just for API tests.
 

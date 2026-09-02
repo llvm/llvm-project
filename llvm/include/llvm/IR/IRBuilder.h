@@ -789,6 +789,16 @@ public:
   /// llvm.minimum intrinsic.
   LLVM_ABI Value *CreateFPMinimumReduce(Value *Src);
 
+  /// Create a vector float maximum reduction intrinsic of the source
+  /// vector. This variant follows the NaN and signed zero semantic of
+  /// llvm.maximumnum intrinsic.
+  LLVM_ABI Value *CreateFPMaximumNumReduce(Value *Src);
+
+  /// Create a vector float minimum reduction intrinsic of the source
+  /// vector. This variant follows the NaN and signed zero semantic of
+  /// llvm.minimumnum intrinsic.
+  LLVM_ABI Value *CreateFPMinimumNumReduce(Value *Src);
+
   /// Create a lifetime.start intrinsic.
   LLVM_ABI CallInst *CreateLifetimeStart(Value *Ptr);
 
@@ -1916,8 +1926,19 @@ public:
     return CreateAlignedLoad(Ty, Ptr, MaybeAlign(), isVolatile, Name);
   }
 
+  LoadInst *CreateLoad(Type *Ty, Value *Ptr,
+                       const LoadStoreInstProperties &Props,
+                       const Twine &Name = "") {
+    return Insert(new LoadInst(Ty, Ptr, Twine(), Props), Name);
+  }
+
   StoreInst *CreateStore(Value *Val, Value *Ptr, bool isVolatile = false) {
     return CreateAlignedStore(Val, Ptr, MaybeAlign(), isVolatile);
+  }
+
+  StoreInst *CreateStore(Value *Val, Value *Ptr,
+                         const LoadStoreInstProperties &Props) {
+    return Insert(new StoreInst(Val, Ptr, Props));
   }
 
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
@@ -2552,6 +2573,13 @@ public:
   }
 
   CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
+                       FMFSource FMFSource, const Twine &Name = "",
+                       MDNode *FPMathTag = nullptr) {
+    return CreateCall(FTy, Callee, Args, DefaultOperandBundles, FMFSource, Name,
+                      FPMathTag);
+  }
+
+  CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> OpBundles,
                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     CallInst *CI = CallInst::Create(FTy, Callee, Args, OpBundles);
@@ -2562,6 +2590,18 @@ public:
     return Insert(CI, Name);
   }
 
+  CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
+                       ArrayRef<OperandBundleDef> OpBundles,
+                       FMFSource FMFSource, const Twine &Name = "",
+                       MDNode *FPMathTag = nullptr) {
+    CallInst *CI = CallInst::Create(FTy, Callee, Args, OpBundles);
+    if (IsFPConstrained)
+      setConstrainedFPCallAttr(CI);
+    if (isa<FPMathOperator>(CI))
+      setFPAttrs(CI, FPMathTag, FMFSource.get(FMF));
+    return Insert(CI, Name);
+  }
+
   CallInst *CreateCall(FunctionCallee Callee, ArrayRef<Value *> Args = {},
                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     return CreateCall(Callee.getFunctionType(), Callee.getCallee(), Args, Name,
@@ -2569,10 +2609,25 @@ public:
   }
 
   CallInst *CreateCall(FunctionCallee Callee, ArrayRef<Value *> Args,
+                       FMFSource FMFSource, const Twine &Name = "",
+                       MDNode *FPMathTag = nullptr) {
+    return CreateCall(Callee.getFunctionType(), Callee.getCallee(), Args,
+                      FMFSource, Name, FPMathTag);
+  }
+
+  CallInst *CreateCall(FunctionCallee Callee, ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> OpBundles,
                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     return CreateCall(Callee.getFunctionType(), Callee.getCallee(), Args,
                       OpBundles, Name, FPMathTag);
+  }
+
+  CallInst *CreateCall(FunctionCallee Callee, ArrayRef<Value *> Args,
+                       ArrayRef<OperandBundleDef> OpBundles,
+                       FMFSource FMFSource, const Twine &Name = "",
+                       MDNode *FPMathTag = nullptr) {
+    return CreateCall(Callee.getFunctionType(), Callee.getCallee(), Args,
+                      OpBundles, FMFSource, Name, FPMathTag);
   }
 
   LLVM_ABI CallInst *CreateConstrainedFPCall(

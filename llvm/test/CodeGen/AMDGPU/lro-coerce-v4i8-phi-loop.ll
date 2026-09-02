@@ -1,6 +1,6 @@
 ; REQUIRES: amdgpu-registered-target
 ; RUN: opt -S -passes=amdgpu-late-codegenprepare \
-; RUN:   -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a %s | FileCheck %s
+; RUN:   -mtriple=amdgpu9.0a-amd-amdhsa %s | FileCheck %s
 
 ; Purpose:
 ;  - Input has a loop-carried PHI of type <4 x i8> and byte-wise adds in the

@@ -19,18 +19,8 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "MLIR"
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# We prefer the lit internal shell which provides a better user experience on failures
-# unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0 env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
 # Set the test format based on shell configuration
-config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -392,6 +382,9 @@ if config.run_rocm_tests:
 
 if config.arm_emulator_executable:
     config.available_features.add("arm-emulator")
+
+if config.mlir_expensive_pattern_api_checks:
+    config.available_features.add("mlir-expensive-checks")
 
 if sys.version_info >= (3, 11):
     config.available_features.add("python-ge-311")

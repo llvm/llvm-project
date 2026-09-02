@@ -55,3 +55,17 @@ namespace InvalidBase {
   constexpr size_t bos_dtor = __builtin_object_size(&(T&)(T&&)invalid_base_2(), 0); // expected-error {{must be initialized by a constant expression}} \
                                                                                     // expected-note {{non-literal type 'T'}}
 }
+
+namespace Padding {
+  typedef long double LongDouble3Vec __attribute__((ext_vector_type(3)));
+  void foo() {
+      LongDouble3Vec v1, v2;
+#if __SIZEOF_SIZE_T__ == 8
+#if __SIZEOF_LONG_DOUBLE__ == 16
+      static_assert(__builtin_object_size(&v1, 0) == 64);
+#else
+      static_assert(__builtin_object_size(&v1, 0) == 32);
+#endif
+#endif
+  }
+}

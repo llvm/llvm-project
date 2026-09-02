@@ -107,7 +107,8 @@ def Async_ExecuteOp :
 }
 
 def Async_FuncOp : Async_Op<"func",
-    [FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface]> {
+    [SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
+     OpAsmOpInterface]> {
   let summary = "async function operation";
   let description = [{
     An async function is like a normal function, but supports non-blocking
@@ -261,17 +262,20 @@ def Async_CallOp : Async_Op<"call",
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+      return getCalleeAttr();
     }
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
+      setCalleeAttr(cast<FlatSymbolRefAttr>(cast<SymbolRefAttr>(callee)));
     }
   }];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+    $callee `(` $operands `)`
+    (`arg_attrs` `=` $arg_attrs^)?
+    (`res_attrs` `=` $res_attrs^)?
+    attr-dict `:` functional-type($operands, results)
   }];
 }
 
@@ -486,7 +490,7 @@ def Async_CoroEndOp : Async_Op<"coro.end"> {
   let description = [{
     The `async.coro.end` marks the point where a coroutine needs to return
     control back to the caller if it is not an initial invocation of the
-    coroutine. It the start part of the coroutine is is no-op.
+    coroutine. In the start part of the coroutine it is no-op.
   }];
 
   let arguments = (ins Async_CoroHandleType:$handle);
@@ -705,7 +709,7 @@ def Async_RuntimeAddRefOp : Async_Op<"runtime.add_ref"> {
                        ConfinedAttr<I64Attr, [IntPositive]>:$count);
 
   let assemblyFormat = [{
-    $operand attr-dict `:` type($operand)
+    $operand `count` `=` $count attr-dict `:` type($operand)
   }];
 }
 
@@ -720,7 +724,7 @@ def Async_RuntimeDropRefOp : Async_Op<"runtime.drop_ref"> {
                        ConfinedAttr<I64Attr, [IntPositive]>:$count);
 
   let assemblyFormat = [{
-    $operand attr-dict `:` type($operand)
+    $operand `count` `=` $count attr-dict `:` type($operand)
   }];
 }
 

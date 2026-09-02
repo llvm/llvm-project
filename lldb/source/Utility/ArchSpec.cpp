@@ -54,9 +54,9 @@ struct CoreDefinition {
    8,                                                                          \
    4,                                                                          \
    16,                                                                         \
-   llvm::Triple::amdgcn,                                                       \
+   llvm::Triple::amdgpu,                                                       \
    ArchSpec::eCore_amd_gpu_gcn_##sub,                                          \
-   "amdgcn"}
+   "amdgpu"}
 // This core information can be looked using the ArchSpec::Core as the index
 static constexpr const CoreDefinition g_core_definitions[] = {
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_generic,
@@ -336,6 +336,7 @@ static constexpr const CoreDefinition g_core_definitions[] = {
     AMD_GPU_CORE_DEF_GCN(GFX1172),
     AMD_GPU_CORE_DEF_GCN(GFX1200),
     AMD_GPU_CORE_DEF_GCN(GFX1201),
+    AMD_GPU_CORE_DEF_GCN(GFX1250_STRICT),
     AMD_GPU_CORE_DEF_GCN(GFX1250),
     AMD_GPU_CORE_DEF_GCN(GFX1251),
     AMD_GPU_CORE_DEF_GCN(GFX1310),
@@ -348,8 +349,8 @@ static constexpr const CoreDefinition g_core_definitions[] = {
     AMD_GPU_CORE_DEF_GCN(GFX12_5_GENERIC),
     AMD_GPU_CORE_DEF_GCN(GFX11_7_GENERIC),
     AMD_GPU_CORE_DEF_GCN(GFX13_GENERIC),
-    {eByteOrderLittle, 8, 4, 16, llvm::Triple::amdgcn,
-     ArchSpec::eCore_amd_gpu_unknown, "amdgcn"},
+    {eByteOrderLittle, 8, 4, 16, llvm::Triple::amdgpu,
+     ArchSpec::eCore_amd_gpu_unknown, "amdgpu"},
 };
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you
@@ -588,6 +589,7 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
     AMD_GPU_ARCH_DEF_GCN(GFX1172),
     AMD_GPU_ARCH_DEF_GCN(GFX1200),
     AMD_GPU_ARCH_DEF_GCN(GFX1201),
+    AMD_GPU_ARCH_DEF_GCN(GFX1250_STRICT),
     AMD_GPU_ARCH_DEF_GCN(GFX1250),
     AMD_GPU_ARCH_DEF_GCN(GFX1251),
     AMD_GPU_ARCH_DEF_GCN(GFX1310),
@@ -1180,6 +1182,8 @@ static llvm::StringRef GetAMDGPUVariantName(uint32_t sub) {
     return "gfx1200";
   case llvm::ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201:
     return "gfx1201";
+  case llvm::ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT:
+    return "gfx1250-strict";
   case llvm::ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250:
     return "gfx1250";
   case llvm::ELF::EF_AMDGPU_MACH_AMDGCN_GFX1251:
@@ -1282,6 +1286,7 @@ static ArchSpec::Core GetAMDGPUVariantToCoreGCN(llvm::StringRef core_name) {
       .Case("gfx1172", ArchSpec::eCore_amd_gpu_gcn_GFX1172)
       .Case("gfx1200", ArchSpec::eCore_amd_gpu_gcn_GFX1200)
       .Case("gfx1201", ArchSpec::eCore_amd_gpu_gcn_GFX1201)
+      .Case("gfx1250-strict", ArchSpec::eCore_amd_gpu_gcn_GFX1250_STRICT)
       .Case("gfx1250", ArchSpec::eCore_amd_gpu_gcn_GFX1250)
       .Case("gfx1251", ArchSpec::eCore_amd_gpu_gcn_GFX1251)
       .Case("gfx1310", ArchSpec::eCore_amd_gpu_gcn_GFX1310)
@@ -1370,7 +1375,7 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           m_triple.setArch(core_def->machine);
           break;
         case llvm::Triple::r600:
-        case llvm::Triple::amdgcn: {
+        case llvm::Triple::amdgpu: {
           // AMDGPU arches are special: they append a 5th element to the triple
           // that comes after the environment and contains the sub type name.
           std::string environment("-");
@@ -1532,7 +1537,7 @@ void ArchSpec::UpdateCore() {
     // little endian
     m_byte_order = core_def->default_byte_order;
 
-    // amdgcn/r600 match their first table entry (GFX600/R600), so refine the
+    // amdgpu/r600 match their first table entry (GFX600/R600), so refine the
     // core from the model in the triple environment.
     if (m_core == eCore_amd_gpu_gcn_GFX600) {
       m_core = GetAMDGPUVariantToCoreGCN(

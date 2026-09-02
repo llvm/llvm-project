@@ -19,6 +19,7 @@
 namespace llvm {
 class HexagonTargetMachine;
 class ImmutablePass;
+class ModulePass;
 class PassRegistry;
 class FunctionPass;
 class Pass;
@@ -27,6 +28,7 @@ extern char &HexagonCopyHoistingID;
 extern char &HexagonExpandCondsetsID;
 extern char &HexagonTfrCleanupID;
 extern char &HexagonLiveVariablesID;
+void initializeHexagonAlignGlobalArraysPass(PassRegistry &);
 void initializeHexagonAsmPrinterPass(PassRegistry &);
 void initializeHexagonBitSimplifyPass(PassRegistry &);
 void initializeHexagonBranchRelaxationPass(PassRegistry &);
@@ -80,6 +82,8 @@ Pass *createHexagonVectorLoopCarriedReuseLegacyPass();
 /// Creates a Hexagon-specific Target Transformation Info pass.
 ImmutablePass *
 createHexagonTargetTransformInfoPass(const HexagonTargetMachine *TM);
+
+ModulePass *createHexagonAlignGlobalArrays(bool ReduceRodataSize);
 
 FunctionPass *createHexagonBitSimplify();
 FunctionPass *createHexagonBranchRelaxation();

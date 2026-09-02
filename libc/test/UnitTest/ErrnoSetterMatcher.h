@@ -5,6 +5,31 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+/// \file
+/// ErrnoSetterMatcher is a testing utility to assert system call/function
+/// return values and the expected libc_errno.
+///
+/// Usage:
+///
+///   1. Asserting success (return value matches and libc_errno is 0):
+///
+///      EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+///
+///   2. Asserting failure (return value is -1 and libc_errno matches expected):
+///
+///      EXPECT_THAT(LIBC_NAMESPACE::read(-1, buf, 1), Fails(EBADF));
+///
+///   3. Asserting failure with custom return value:
+///
+///      EXPECT_THAT(LIBC_NAMESPACE::mmap(nullptr, size, ...),
+///                  Fails(ENOMEM, MAP_FAILED));
+///
+///   4. Asserting failure with multiple possible errnos (e.g. QEMU vs actual
+///      hardware):
+///
+///      EXPECT_THAT(LIBC_NAMESPACE::socketpair(-1, -1, -1, sv),
+///                  Fails(any_of(EINVAL, EAFNOSUPPORT)));
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H
 #define LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H
@@ -19,6 +44,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
+
+struct ErrnoList {
+  int errs[4];
+  size_t count;
+};
 
 namespace internal {
 
@@ -59,9 +89,71 @@ template <typename T> struct Comparator {
 #endif
 };
 
+class ErrnoCheck {
+  enum class Type { EQ = 0, NE, ANY_OF } type;
+  int expected;
+  int expected_list[4];
+  size_t list_count;
+
+public:
+  ErrnoCheck() : type(Type::EQ), expected(0), list_count(0) {}
+  ErrnoCheck(int val) : type(Type::EQ), expected(val), list_count(0) {}
+  template <typename T> ErrnoCheck(Comparator<T> cmp) : list_count(0) {
+    if (cmp.cmp == CompareAction::NE) {
+      type = Type::NE;
+    } else {
+      type = Type::EQ;
+    }
+    expected = static_cast<int>(cmp.expected);
+  }
+  ErrnoCheck(const ErrnoList &list)
+      : type(Type::ANY_OF), expected(0), list_count(list.count) {
+    for (size_t i = 0; i < list.count && i < 4; ++i) {
+      expected_list[i] = list.errs[i];
+    }
+  }
+
+  bool compare(int actual) const {
+    if (type == Type::EQ) {
+      return actual == expected;
+    } else if (type == Type::NE) {
+      return actual != expected;
+    } else if (type == Type::ANY_OF) {
+      for (size_t i = 0; i < list_count; ++i) {
+        if (actual == expected_list[i])
+          return true;
+      }
+      return false;
+    }
+    return false;
+  }
+
+  void print_expected() const {
+    if (type == Type::EQ) {
+      auto expected_str = try_get_errno_name(expected);
+      tlog << "equal to " << (expected_str ? *expected_str : "<unknown>") << "("
+           << expected << ")";
+    } else if (type == Type::NE) {
+      auto expected_str = try_get_errno_name(expected);
+      tlog << "not equal to " << (expected_str ? *expected_str : "<unknown>")
+           << "(" << expected << ")";
+    } else if (type == Type::ANY_OF) {
+      tlog << "one of [";
+      for (size_t i = 0; i < list_count; ++i) {
+        auto expected_str = try_get_errno_name(expected_list[i]);
+        tlog << (expected_str ? *expected_str : "<unknown>") << "("
+             << expected_list[i] << ")";
+        if (i + 1 < list_count)
+          tlog << ", ";
+      }
+      tlog << "]";
+    }
+  }
+};
+
 template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
   Comparator<T> return_cmp;
-  Comparator<int> errno_cmp;
+  ErrnoCheck errno_cmp;
   T actual_return;
   int actual_errno;
 
@@ -78,10 +170,10 @@ template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
 
 public:
   ErrnoSetterMatcher(Comparator<T> rcmp) : return_cmp(rcmp) {}
-  ErrnoSetterMatcher(Comparator<T> rcmp, Comparator<int> ecmp)
+  ErrnoSetterMatcher(Comparator<T> rcmp, ErrnoCheck ecmp)
       : return_cmp(rcmp), errno_cmp(ecmp) {}
 
-  ErrnoSetterMatcher<T> with_errno(Comparator<int> ecmp) {
+  ErrnoSetterMatcher<T> with_errno(ErrnoCheck ecmp) {
     errno_cmp = ecmp;
     return *this;
   }
@@ -101,13 +193,11 @@ public:
 
     if constexpr (!ignore_errno()) {
       if (!errno_cmp.compare(actual_errno)) {
-        auto expected_str = try_get_errno_name(errno_cmp.expected);
         auto actual_str = try_get_errno_name(actual_errno);
-        tlog << "Expected errno to be " << errno_cmp.str() << " "
-             << (expected_str ? *expected_str : "<unknown>") << "("
-             << errno_cmp.expected << ") but got "
-             << (actual_str ? *actual_str : "<unknown>") << "(" << actual_errno
-             << ").\n";
+        tlog << "Expected errno to be ";
+        errno_cmp.print_expected();
+        tlog << " but got " << (actual_str ? *actual_str : "<unknown>") << "("
+             << actual_errno << ").\n";
       }
     }
   }
@@ -153,17 +243,27 @@ template <typename T> internal::Comparator<T> NE(T val) {
 }
 
 template <typename RetT = int>
-static internal::ErrnoSetterMatcher<RetT> Succeeds(RetT ExpectedReturn = 0,
-                                                   int ExpectedErrno = 0) {
+internal::ErrnoSetterMatcher<RetT> Succeeds(RetT ExpectedReturn = 0,
+                                            int ExpectedErrno = 0) {
   return internal::ErrnoSetterMatcher<RetT>(EQ(ExpectedReturn),
                                             EQ(ExpectedErrno));
 }
 
 template <typename RetT = int>
-static internal::ErrnoSetterMatcher<RetT> Fails(int ExpectedErrno,
-                                                RetT ExpectedReturn = -1) {
+internal::ErrnoSetterMatcher<RetT> Fails(int ExpectedErrno,
+                                         RetT ExpectedReturn = -1) {
   return internal::ErrnoSetterMatcher<RetT>(EQ(ExpectedReturn),
                                             EQ(ExpectedErrno));
+}
+
+template <typename RetT = int>
+internal::ErrnoSetterMatcher<RetT> Fails(const ErrnoList &ExpectedErrs,
+                                         RetT ExpectedReturn = -1) {
+  return internal::ErrnoSetterMatcher<RetT>(EQ(ExpectedReturn), ExpectedErrs);
+}
+
+template <typename... Args> inline ErrnoList any_of(Args... args) {
+  return ErrnoList{{static_cast<int>(args)...}, sizeof...(args)};
 }
 
 template <typename RetT = int> class ErrnoSetterMatcherBuilder {
@@ -171,7 +271,7 @@ public:
   template <typename T> using Cmp = internal::Comparator<T>;
   ErrnoSetterMatcherBuilder(Cmp<RetT> cmp) : return_cmp(cmp) {}
 
-  internal::ErrnoSetterMatcher<RetT> with_errno(Cmp<int> cmp) {
+  internal::ErrnoSetterMatcher<RetT> with_errno(internal::ErrnoCheck cmp) {
     return internal::ErrnoSetterMatcher<RetT>(return_cmp, cmp);
   }
 
@@ -180,7 +280,7 @@ private:
 };
 
 template <typename RetT>
-static ErrnoSetterMatcherBuilder<RetT> returns(internal::Comparator<RetT> cmp) {
+ErrnoSetterMatcherBuilder<RetT> returns(internal::Comparator<RetT> cmp) {
   return ErrnoSetterMatcherBuilder<RetT>(cmp);
 }
 

@@ -2,6 +2,10 @@
 // RUN:   -mcpu=gfx908xnack -nostdlib \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NOPLUS %s
 
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -march=gfx908xnack -nostdlib -### \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=NOPLUS %s
+
 // NOPLUS: error: invalid target ID 'gfx908xnack'
 
 // RUN: not %clang -target amdgcn-amd-amdpal \

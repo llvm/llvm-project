@@ -52,6 +52,10 @@ public:
                                   unsigned Idx) const override {
     return 0;
   }
+  const TargetRegisterClass *
+  getLargestRegClassForRegPressureSet(unsigned Idx) const override {
+    return nullptr;
+  }
   const int *
   getRegClassPressureSets(const TargetRegisterClass *RC) const override {
     static const int Bogus[] = {0, -1};
@@ -88,7 +92,7 @@ public:
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", "", {}, {}, nullptr,
+      : TargetSubtargetInfo(Triple(""), "", "", "", "", {}, {}, {}, nullptr,
                             nullptr, nullptr, nullptr, nullptr, nullptr,
                             nullptr),
         FL(), TL(TM, *this) {}
@@ -144,8 +148,8 @@ public:
     MRI = std::make_unique<MCRegisterInfo>();
     STI = std::make_unique<MCSubtargetInfo>(
         Triple(""), "", "", "", StringTable{""}, ArrayRef<SubtargetFeatureKV>{},
-        ArrayRef<SubtargetSubTypeKV>{}, nullptr, nullptr, nullptr, nullptr,
-        nullptr, nullptr, nullptr);
+        ArrayRef<SubtargetSubTypeKV>{}, ArrayRef<SubtargetSubTypeAliasKV>{},
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
   ~BogusTargetMachine() override = default;

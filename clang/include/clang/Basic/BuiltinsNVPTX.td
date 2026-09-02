@@ -80,7 +80,7 @@ multiclass SM_Instantiate<list<int> gpu_list> {
   }
 }
 
-defm SM : SM_Instantiate<[121, 120, 110, 103, 101, 100, 90, 89, 88, 87, 86, 80, 75, 72, 70, 62, 61, 60, 53]>;
+defm SM : SM_Instantiate<[121, 120, 110, 107, 103, 101, 100, 90, 89, 88, 87, 86, 80, 75, 72, 70, 62, 61, 60, 53]>;
 
 class PTXFeatures {
   string Features;
@@ -97,7 +97,7 @@ multiclass PTX_InstantiateLoop<list<int> ptx_list> {
   }
 }
 
-defm PTX : PTX_InstantiateLoop<[92, 91, 90, 88, 87, 86, 85, 84, 83, 82, 81, 80, 78, 77, 76, 75, 74, 73, 72, 71, 70, 65, 64, 63, 62, 61, 60, 42]>;
+defm PTX : PTX_InstantiateLoop<[94, 93, 92, 91, 90, 88, 87, 86, 85, 84, 83, 82, 81, 80, 78, 77, 76, 75, 74, 73, 72, 71, 70, 65, 64, 63, 62, 61, 60, 42]>;
 
 class NVPTXBuiltin<string prototype> : TargetBuiltin {
   let Spellings = [NAME];

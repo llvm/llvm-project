@@ -112,20 +112,6 @@ class test_env:
         os.environ.update(self.old_environ)
         os.chdir(self.old_dir)
 
-
-# General substritutions
-config.substitutions.append(
-    (
-        "%sycl_options",
-        " -lLLVMSYCL"
-        + " -isystem "
-        + config.libsycl_include
-        + " -isystem "
-        + os.path.join(config.libsycl_include, "sycl")
-        + " -L"
-        + config.libsycl_libs_dir,
-    )
-)
 config.substitutions.append(("%sycl_libs_dir", config.libsycl_libs_dir))
 config.substitutions.append(("%sycl_static_libs_dir", config.libsycl_libs_dir))
 config.substitutions.append(("%obj_ext", ".o"))

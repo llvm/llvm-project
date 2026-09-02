@@ -54,6 +54,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
+using lldb_private::plugin::dwarf::SymbolFileDWARF;
 
 namespace opts {
 static cl::SubCommand BreakpointSubcommand("breakpoints",
@@ -65,6 +66,9 @@ cl::SubCommand SymTabSubcommand("symtab",
                                 "Test symbol table functionality");
 cl::SubCommand IRMemoryMapSubcommand("ir-memory-map", "Test IRMemoryMap");
 cl::SubCommand AssertSubcommand("assert", "Test assert handling");
+cl::SubCommand DwoDiagnosticSuffixSubcommand(
+    "dwo-diagnostic-suffix",
+    "Print the configured missing DWO diagnostic suffix");
 
 cl::opt<std::string> Log("log", cl::desc("Path to a log file"), cl::init(""),
                          cl::sub(BreakpointSubcommand),
@@ -1005,7 +1009,7 @@ static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool 
     AutoIndent Indent(Printer, 2);
     Printer.formatLine("Index: {0}", I);
     Printer.formatLine("ID: {0:x}", S->GetID());
-    Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
+    Printer.formatLine("Name: {0}", S->GetName());
     Printer.formatLine("Type: {0}", S->GetTypeAsCString());
     Printer.formatLine("Permissions: {0}", GetPermissionsAsCString(S->GetPermissions()));
     Printer.formatLine("Thread specific: {0:y}", S->IsThreadSpecific());
@@ -1243,6 +1247,11 @@ int main(int argc, const char *argv[]) {
   llvm_shutdown_obj Y;
 
   cl::ParseCommandLineOptions(argc, argv, "LLDB Testing Utility\n");
+
+  if (opts::DwoDiagnosticSuffixSubcommand) {
+    outs() << SymbolFileDWARF::GetDwoDiagnosticSuffix() << '\n';
+    return 0;
+  }
 
   SystemLifetimeManager DebuggerLifetime;
   if (auto e = DebuggerLifetime.Initialize(

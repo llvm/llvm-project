@@ -41,10 +41,10 @@ STATISTIC(NumMemCmpGreaterThanMax,
           "Number of memcmp calls with size greater than max size");
 STATISTIC(NumMemCmpInlined, "Number of inlined memcmp calls");
 
-static cl::opt<unsigned> MemCmpEqZeroNumLoadsPerBlock(
+static cl::opt<unsigned> MemCmpNumLoadsPerBlock(
     "memcmp-num-loads-per-block", cl::Hidden, cl::init(1),
     cl::desc("The number of loads per basic block for inline expansion of "
-             "memcmp that is only being compared against zero."));
+             "memcmp."));
 
 static cl::opt<unsigned> MaxLoadsPerMemcmp(
     "max-loads-per-memcmp", cl::Hidden,
@@ -56,10 +56,25 @@ static cl::opt<unsigned> MaxLoadsPerMemcmpOptSize(
 
 namespace {
 
+// Return the known alignment of the pointer argument \p ArgNo of \p CI,
+// combining the alignment of the underlying pointer value with any align
+// attribute on the call site itself.
+static Align getMemCmpArgAlignment(const CallInst *CI, unsigned ArgNo,
+                                   const DataLayout &DL) {
+  Align A = CI->getArgOperand(ArgNo)->getPointerAlignment(DL);
+  if (MaybeAlign ParamAlign = CI->getParamAlign(ArgNo))
+    A = std::max(A, *ParamAlign);
+  return A;
+}
 
 // This class provides helper functions to expand a memcmp library call into an
 // inline expansion.
 class MemCmpExpansion {
+  struct LoadPair {
+    Value *Lhs = nullptr;
+    Value *Rhs = nullptr;
+  };
+
   struct ResultBlock {
     BasicBlock *BB = nullptr;
     PHINode *PhiSrc1 = nullptr;
@@ -72,13 +87,17 @@ class MemCmpExpansion {
   ResultBlock ResBlock;
   const uint64_t Size;
   unsigned MaxLoadSize = 0;
-  uint64_t NumLoadsNonOneByte = 0;
-  const uint64_t NumLoadsPerBlockForZeroCmp;
+  const uint64_t NumLoadsPerBlock;
+  const unsigned MaxBytesPerBlock;
+  unsigned MaxBlockSize = 0;
   std::vector<BasicBlock *> LoadCmpBlocks;
   BasicBlock *EndBlock = nullptr;
   PHINode *PhiRes = nullptr;
   const bool IsUsedForZeroCmp;
   const DataLayout &DL;
+  const TargetTransformInfo &TTI;
+  // The known common alignment of the two source pointers.
+  const Align CommonAlign;
   DomTreeUpdater *DTU = nullptr;
   IRBuilder<> Builder;
   // Represents the decomposition in blocks of the expansion. For example,
@@ -102,7 +121,8 @@ class MemCmpExpansion {
   void setupResultBlockPHINodes();
   void setupEndBlockPHINodes();
   Value *getCompareLoadPairs(unsigned BlockIndex, unsigned &LoadIndex);
-  void emitLoadCompareBlock(unsigned BlockIndex);
+  LoadPair getPackedLoadPair(unsigned BlockIndex, unsigned &LoadIndex);
+  void emitLoadCompareBlock(unsigned BlockIndex, unsigned &LoadIndex);
   void emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
                                          unsigned &LoadIndex);
   void emitLoadCompareByteBlock(unsigned BlockIndex, unsigned OffsetBytes);
@@ -110,42 +130,79 @@ class MemCmpExpansion {
   Value *getMemCmpExpansionZeroCase();
   Value *getMemCmpEqZeroOneBlock();
   Value *getMemCmpOneBlock();
-  struct LoadPair {
-    Value *Lhs = nullptr;
-    Value *Rhs = nullptr;
-  };
+  Value *getMemCmpOneBlockMultipleLoads();
+  Value *getMemCmpResult(const LoadPair &Loads);
   LoadPair getLoadPair(Type *LoadSizeType, Type *BSwapSizeType,
                        Type *CmpSizeType, unsigned OffsetBytes);
 
+  // Return true if a load of `LoadSize` bytes at `Offset` from the base
+  // pointers is accessible on the target: either it is naturally aligned given
+  // the known common base alignment, or the target allows a misaligned access
+  // of that width.
+  bool isAccessAllowed(unsigned LoadSize, uint64_t Offset) const;
+
   static LoadEntryVector
   computeGreedyLoadSequence(uint64_t Size, llvm::ArrayRef<unsigned> LoadSizes,
-                            unsigned MaxNumLoads, unsigned &NumLoadsNonOneByte);
-  static LoadEntryVector
-  computeOverlappingLoadSequence(uint64_t Size, unsigned MaxLoadSize,
-                                 unsigned MaxNumLoads,
-                                 unsigned &NumLoadsNonOneByte);
+                            unsigned MaxNumLoads);
+  LoadEntryVector computeOverlappingLoadSequence(uint64_t Size,
+                                                 unsigned MaxLoadSize,
+                                                 unsigned MaxNumLoads) const;
 
-  static void optimiseLoadSequence(
+  void optimiseLoadSequence(
       LoadEntryVector &LoadSequence,
       const TargetTransformInfo::MemCmpExpansionOptions &Options,
-      bool IsUsedForZeroCmp);
+      bool IsUsedForZeroCmp) const;
 
 public:
   MemCmpExpansion(CallInst *CI, uint64_t Size,
                   const TargetTransformInfo::MemCmpExpansionOptions &Options,
                   const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout,
-                  DomTreeUpdater *DTU);
+                  DomTreeUpdater *DTU, const TargetTransformInfo &TTI,
+                  Align CommonAlign, unsigned MaxBytesPerBlock);
 
   unsigned getNumBlocks();
+  unsigned getNumLoadsInBlock(unsigned LoadIndex) const;
+  unsigned getNumBytesInBlock(unsigned LoadIndex, unsigned NumLoads) const;
   uint64_t getNumLoads() const { return LoadSequence.size(); }
 
   Value *getMemCmpExpansion();
 };
 
-MemCmpExpansion::LoadEntryVector MemCmpExpansion::computeGreedyLoadSequence(
-    uint64_t Size, llvm::ArrayRef<unsigned> LoadSizes,
-    const unsigned MaxNumLoads, unsigned &NumLoadsNonOneByte) {
-  NumLoadsNonOneByte = 0;
+// Return true if a load of `LoadSize` bytes at `Offset` from the base pointers
+// is accessible on the target: either it is naturally aligned given the known
+// common base alignment, or the target allows a misaligned access of that
+// width. We query whether the access is *allowed*, not whether it is *fast*,
+// matching the historical behavior of forming unaligned loads whenever the
+// target permits them.
+static bool isAccessAllowed(const CallInst *CI, const TargetTransformInfo &TTI,
+                            Align CommonAlign, unsigned LoadSize,
+                            uint64_t Offset) {
+  // The access is naturally aligned when the known alignment is at least the
+  // load width. LoadSize is not necessarily a power of two here: some targets
+  // like RISC-V add non-power-of-two load sizes for vector memcmp, so compare
+  // against the raw width rather than constructing an Align, which would
+  // require a power of two.
+  Align AccessAlign = commonAlignment(CommonAlign, Offset);
+  if (AccessAlign.value() >= LoadSize)
+    return true;
+  unsigned AS = CI->getArgOperand(0)->getType()->getPointerAddressSpace();
+  return TTI.allowsMisalignedMemoryAccesses(CI->getContext(), LoadSize * 8, AS,
+                                            AccessAlign);
+}
+
+// Return true if a load of `LoadSize` bytes at `Offset` from the base pointers
+// is accessible on the target given the known common base alignment. This gates
+// the (power-of-two) overlapping loads; tail expansions are always legalized by
+// the backend and skip this check.
+bool MemCmpExpansion::isAccessAllowed(unsigned LoadSize,
+                                      uint64_t Offset) const {
+  return ::isAccessAllowed(CI, TTI, CommonAlign, LoadSize, Offset);
+}
+
+MemCmpExpansion::LoadEntryVector
+MemCmpExpansion::computeGreedyLoadSequence(uint64_t Size,
+                                           llvm::ArrayRef<unsigned> LoadSizes,
+                                           const unsigned MaxNumLoads) {
   LoadEntryVector LoadSequence;
   uint64_t Offset = 0;
   while (Size && !LoadSizes.empty()) {
@@ -163,8 +220,6 @@ MemCmpExpansion::LoadEntryVector MemCmpExpansion::computeGreedyLoadSequence(
         LoadSequence.push_back({LoadSize, Offset});
         Offset += LoadSize;
       }
-      if (LoadSize > 1)
-        ++NumLoadsNonOneByte;
       Size = Size % LoadSize;
     }
     LoadSizes = LoadSizes.drop_front();
@@ -173,10 +228,9 @@ MemCmpExpansion::LoadEntryVector MemCmpExpansion::computeGreedyLoadSequence(
 }
 
 MemCmpExpansion::LoadEntryVector
-MemCmpExpansion::computeOverlappingLoadSequence(uint64_t Size,
-                                                const unsigned MaxLoadSize,
-                                                const unsigned MaxNumLoads,
-                                                unsigned &NumLoadsNonOneByte) {
+MemCmpExpansion::computeOverlappingLoadSequence(
+    uint64_t Size, const unsigned MaxLoadSize,
+    const unsigned MaxNumLoads) const {
   // These are already handled by the greedy approach.
   if (Size < 2 || MaxLoadSize < 2)
     return {};
@@ -205,17 +259,21 @@ MemCmpExpansion::computeOverlappingLoadSequence(uint64_t Size,
     Offset += MaxLoadSize;
   }
 
-  // Add the last overlapping load.
+  // Add the last overlapping load. Its offset is not a multiple of the load
+  // size, so it may be misaligned; bail if the target cannot access it.
   assert(Size > 0 && Size < MaxLoadSize && "broken invariant");
-  LoadSequence.push_back({MaxLoadSize, Offset - (MaxLoadSize - Size)});
-  NumLoadsNonOneByte = 1;
+  uint64_t OverlapOffset = Offset - (MaxLoadSize - Size);
+  if (!isAccessAllowed(MaxLoadSize, OverlapOffset))
+    return {};
+
+  LoadSequence.push_back({MaxLoadSize, OverlapOffset});
   return LoadSequence;
 }
 
 void MemCmpExpansion::optimiseLoadSequence(
     LoadEntryVector &LoadSequence,
     const TargetTransformInfo::MemCmpExpansionOptions &Options,
-    bool IsUsedForZeroCmp) {
+    bool IsUsedForZeroCmp) const {
   // This part of code attempts to optimize the LoadSequence by merging allowed
   // subsequences into single loads of allowed sizes from
   // `MemCmpExpansionOptions::AllowedTailExpansions`. If it is for zero
@@ -236,10 +294,19 @@ void MemCmpExpansion::optimiseLoadSequence(
         Options.AllowedTailExpansions.end())
       break;
 
+    // A merged load wider than MaxLoadSize can only be emitted when it is the
+    // sole load (getMemCmpOneBlock); in a multi-block expansion
+    // emitLoadCompareBlock requires every load to fit in MaxLoadSize (the
+    // result-block phis are sized to it). The per-call-site alignment filter
+    // can shrink MaxLoadSize, so stop merging when the result would still be
+    // multi-block and the merged load exceeds it.
+    if (LoadSize > MaxLoadSize && LoadSequence.size() > 2)
+      break;
+
     // Remove the last two sequences and replace with the combined sequence
     LoadSequence.pop_back();
     LoadSequence.pop_back();
-    LoadSequence.emplace_back(PreLast.Offset, LoadSize);
+    LoadSequence.emplace_back(LoadSize, PreLast.Offset);
   }
 }
 
@@ -255,11 +322,14 @@ MemCmpExpansion::MemCmpExpansion(
     CallInst *const CI, uint64_t Size,
     const TargetTransformInfo::MemCmpExpansionOptions &Options,
     const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout,
-    DomTreeUpdater *DTU)
-    : CI(CI), Size(Size), NumLoadsPerBlockForZeroCmp(Options.NumLoadsPerBlock),
-      IsUsedForZeroCmp(IsUsedForZeroCmp), DL(TheDataLayout), DTU(DTU),
+    DomTreeUpdater *DTU, const TargetTransformInfo &TTI, Align CommonAlign,
+    unsigned MaxBytesPerBlock)
+    : CI(CI), Size(Size), NumLoadsPerBlock(Options.NumLoadsPerBlock),
+      MaxBytesPerBlock(MaxBytesPerBlock), IsUsedForZeroCmp(IsUsedForZeroCmp),
+      DL(TheDataLayout), TTI(TTI), CommonAlign(CommonAlign), DTU(DTU),
       Builder(CI) {
   assert(Size > 0 && "zero blocks");
+  assert(NumLoadsPerBlock > 0 && "zero loads per block");
   // Scale the max size down if the target can load more bytes than we need.
   llvm::ArrayRef<unsigned> LoadSizes(Options.LoadSizes);
   while (!LoadSizes.empty() && LoadSizes.front() > Size) {
@@ -268,34 +338,64 @@ MemCmpExpansion::MemCmpExpansion(
   assert(!LoadSizes.empty() && "cannot load Size bytes");
   MaxLoadSize = LoadSizes.front();
   // Compute the decomposition.
-  unsigned GreedyNumLoadsNonOneByte = 0;
-  LoadSequence = computeGreedyLoadSequence(Size, LoadSizes, Options.MaxNumLoads,
-                                           GreedyNumLoadsNonOneByte);
-  NumLoadsNonOneByte = GreedyNumLoadsNonOneByte;
+  LoadSequence =
+      computeGreedyLoadSequence(Size, LoadSizes, Options.MaxNumLoads);
   assert(LoadSequence.size() <= Options.MaxNumLoads && "broken invariant");
   // If we allow overlapping loads and the load sequence is not already optimal,
   // use overlapping loads.
   if (Options.AllowOverlappingLoads &&
       (LoadSequence.empty() || LoadSequence.size() > 2)) {
-    unsigned OverlappingNumLoadsNonOneByte = 0;
-    auto OverlappingLoads = computeOverlappingLoadSequence(
-        Size, MaxLoadSize, Options.MaxNumLoads, OverlappingNumLoadsNonOneByte);
+    auto OverlappingLoads =
+        computeOverlappingLoadSequence(Size, MaxLoadSize, Options.MaxNumLoads);
     if (!OverlappingLoads.empty() &&
         (LoadSequence.empty() ||
          OverlappingLoads.size() < LoadSequence.size())) {
       LoadSequence = OverlappingLoads;
-      NumLoadsNonOneByte = OverlappingNumLoadsNonOneByte;
     }
   }
   assert(LoadSequence.size() <= Options.MaxNumLoads && "broken invariant");
   optimiseLoadSequence(LoadSequence, Options, IsUsedForZeroCmp);
+
+  unsigned LoadIndex = 0;
+  while (LoadIndex < getNumLoads()) {
+    unsigned NumLoads = getNumLoadsInBlock(LoadIndex);
+    MaxBlockSize =
+        std::max(MaxBlockSize, getNumBytesInBlock(LoadIndex, NumLoads));
+    LoadIndex += NumLoads;
+  }
+  if (MaxBlockSize)
+    MaxBlockSize = PowerOf2Ceil(MaxBlockSize);
+}
+
+unsigned MemCmpExpansion::getNumLoadsInBlock(unsigned LoadIndex) const {
+  if (IsUsedForZeroCmp)
+    return std::min<uint64_t>(getNumLoads() - LoadIndex, NumLoadsPerBlock);
+
+  unsigned NumLoads = 0;
+  unsigned NumBytes = 0;
+  while (LoadIndex + NumLoads < getNumLoads() && NumLoads < NumLoadsPerBlock &&
+         NumBytes + LoadSequence[LoadIndex + NumLoads].LoadSize <=
+             MaxBytesPerBlock) {
+    NumBytes += LoadSequence[LoadIndex + NumLoads].LoadSize;
+    ++NumLoads;
+  }
+  assert(NumLoads && "at least one load must fit in a block");
+  return NumLoads;
+}
+
+unsigned MemCmpExpansion::getNumBytesInBlock(unsigned LoadIndex,
+                                             unsigned NumLoads) const {
+  unsigned NumBytes = 0;
+  for (unsigned I = 0; I != NumLoads; ++I)
+    NumBytes += LoadSequence[LoadIndex + I].LoadSize;
+  return NumBytes;
 }
 
 unsigned MemCmpExpansion::getNumBlocks() {
-  if (IsUsedForZeroCmp)
-    return getNumLoads() / NumLoadsPerBlockForZeroCmp +
-           (getNumLoads() % NumLoadsPerBlockForZeroCmp != 0 ? 1 : 0);
-  return getNumLoads();
+  unsigned NumBlocks = 0;
+  for (unsigned LoadIndex = 0; LoadIndex < getNumLoads(); ++NumBlocks)
+    LoadIndex += getNumLoadsInBlock(LoadIndex);
+  return NumBlocks;
 }
 
 void MemCmpExpansion::createLoadCmpBlocks() {
@@ -318,8 +418,8 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
   // Get the memory source at offset `OffsetBytes`.
   Value *LhsSource = CI->getArgOperand(0);
   Value *RhsSource = CI->getArgOperand(1);
-  Align LhsAlign = LhsSource->getPointerAlignment(DL);
-  Align RhsAlign = RhsSource->getPointerAlignment(DL);
+  Align LhsAlign = getMemCmpArgAlignment(CI, 0, DL);
+  Align RhsAlign = getMemCmpArgAlignment(CI, 1, DL);
   if (OffsetBytes > 0) {
     auto *ByteType = Type::getInt8Ty(CI->getContext());
     LhsSource = Builder.CreateConstGEP1_64(ByteType, LhsSource, OffsetBytes);
@@ -406,8 +506,7 @@ Value *MemCmpExpansion::getCompareLoadPairs(unsigned BlockIndex,
   std::vector<Value *> XorList, OrList;
   Value *Diff = nullptr;
 
-  const unsigned NumLoads =
-      std::min(getNumLoads() - LoadIndex, NumLoadsPerBlockForZeroCmp);
+  const unsigned NumLoads = getNumLoadsInBlock(LoadIndex);
 
   // For a single-block expansion, start inserting before the memcmp call.
   if (LoadCmpBlocks.empty())
@@ -468,6 +567,51 @@ Value *MemCmpExpansion::getCompareLoadPairs(unsigned BlockIndex,
   return Cmp;
 }
 
+MemCmpExpansion::LoadPair
+MemCmpExpansion::getPackedLoadPair(unsigned BlockIndex, unsigned &LoadIndex) {
+  assert(LoadIndex < getNumLoads() &&
+         "getPackedLoadPair() called with no remaining loads");
+  if (LoadCmpBlocks.empty())
+    Builder.SetInsertPoint(CI);
+  else
+    Builder.SetInsertPoint(LoadCmpBlocks[BlockIndex]);
+
+  const unsigned NumLoads = getNumLoadsInBlock(LoadIndex);
+  const unsigned NumBytes = getNumBytesInBlock(LoadIndex, NumLoads);
+  // Pack the loads so that the byte at the lowest address occupies the most
+  // significant bits. An unsigned comparison of the packed values therefore
+  // has the same lexicographic ordering as memcmp.
+  auto *BlockType = IntegerType::get(CI->getContext(), MaxBlockSize * 8);
+  Value *PackedLhs = ConstantInt::get(BlockType, 0);
+  Value *PackedRhs = ConstantInt::get(BlockType, 0);
+  unsigned RemainingBytes = NumBytes;
+
+  for (unsigned I = 0; I != NumLoads; ++I, ++LoadIndex) {
+    const LoadEntry &Entry = LoadSequence[LoadIndex];
+    auto *LoadType = IntegerType::get(CI->getContext(), Entry.LoadSize * 8);
+    auto *BSwapType = DL.isLittleEndian() && Entry.LoadSize != 1
+                          ? IntegerType::get(CI->getContext(),
+                                             PowerOf2Ceil(Entry.LoadSize * 8))
+                          : nullptr;
+    LoadPair Loads = getLoadPair(LoadType, BSwapType, BlockType, Entry.Offset);
+
+    if (BSwapType && BSwapType->getIntegerBitWidth() != Entry.LoadSize * 8) {
+      unsigned Padding = BSwapType->getIntegerBitWidth() - Entry.LoadSize * 8;
+      Loads.Lhs = Builder.CreateLShr(Loads.Lhs, Padding);
+      Loads.Rhs = Builder.CreateLShr(Loads.Rhs, Padding);
+    }
+
+    RemainingBytes -= Entry.LoadSize;
+    unsigned Shift = RemainingBytes * 8;
+    PackedLhs =
+        Builder.CreateOr(PackedLhs, Builder.CreateShl(Loads.Lhs, Shift));
+    PackedRhs =
+        Builder.CreateOr(PackedRhs, Builder.CreateShl(Loads.Rhs, Shift));
+  }
+
+  return {PackedLhs, PackedRhs};
+}
+
 void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
                                                         unsigned &LoadIndex) {
   Value *Cmp = getCompareLoadPairs(BlockIndex, LoadIndex);
@@ -503,31 +647,30 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
 // the EndBlock if this is the last LoadCmpBlock. Loading 1 byte is handled with
 // a special case through emitLoadCompareByteBlock. The special handling can
 // simply subtract the loaded values and add it to the result phi node.
-void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex) {
-  // There is one load per block in this case, BlockIndex == LoadIndex.
-  const LoadEntry &CurLoadEntry = LoadSequence[BlockIndex];
-
-  if (CurLoadEntry.LoadSize == 1) {
-    MemCmpExpansion::emitLoadCompareByteBlock(BlockIndex, CurLoadEntry.Offset);
+void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex,
+                                           unsigned &LoadIndex) {
+  const unsigned NumLoads = getNumLoadsInBlock(LoadIndex);
+  if (NumLoads == 1 && LoadSequence[LoadIndex].LoadSize == 1) {
+    MemCmpExpansion::emitLoadCompareByteBlock(BlockIndex,
+                                              LoadSequence[LoadIndex].Offset);
+    ++LoadIndex;
     return;
   }
 
-  Type *LoadSizeType =
-      IntegerType::get(CI->getContext(), CurLoadEntry.LoadSize * 8);
-  Type *BSwapSizeType =
-      DL.isLittleEndian()
-          ? IntegerType::get(CI->getContext(),
-                             PowerOf2Ceil(CurLoadEntry.LoadSize * 8))
-          : nullptr;
-  Type *MaxLoadType = IntegerType::get(
-      CI->getContext(),
-      std::max(MaxLoadSize, (unsigned)PowerOf2Ceil(CurLoadEntry.LoadSize)) * 8);
-  assert(CurLoadEntry.LoadSize <= MaxLoadSize && "Unexpected load type");
-
-  Builder.SetInsertPoint(LoadCmpBlocks[BlockIndex]);
-
-  const LoadPair Loads = getLoadPair(LoadSizeType, BSwapSizeType, MaxLoadType,
-                                     CurLoadEntry.Offset);
+  LoadPair Loads;
+  if (NumLoads == 1) {
+    const LoadEntry &Entry = LoadSequence[LoadIndex++];
+    auto *LoadType = IntegerType::get(CI->getContext(), Entry.LoadSize * 8);
+    auto *BSwapType = DL.isLittleEndian()
+                          ? IntegerType::get(CI->getContext(),
+                                             PowerOf2Ceil(Entry.LoadSize * 8))
+                          : nullptr;
+    auto *CmpType = IntegerType::get(CI->getContext(), MaxBlockSize * 8);
+    Builder.SetInsertPoint(LoadCmpBlocks[BlockIndex]);
+    Loads = getLoadPair(LoadType, BSwapType, CmpType, Entry.Offset);
+  } else {
+    Loads = getPackedLoadPair(BlockIndex, LoadIndex);
+  }
 
   // Add the loaded values to the phi nodes for calculating memcmp result only
   // if result is not used in a zero equality.
@@ -594,13 +737,10 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
 }
 
 void MemCmpExpansion::setupResultBlockPHINodes() {
-  Type *MaxLoadType = IntegerType::get(CI->getContext(), MaxLoadSize * 8);
+  Type *MaxLoadType = IntegerType::get(CI->getContext(), MaxBlockSize * 8);
   Builder.SetInsertPoint(ResBlock.BB);
-  // Note: this assumes one load per block.
-  ResBlock.PhiSrc1 =
-      Builder.CreatePHI(MaxLoadType, NumLoadsNonOneByte, "phi.src1");
-  ResBlock.PhiSrc2 =
-      Builder.CreatePHI(MaxLoadType, NumLoadsNonOneByte, "phi.src2");
+  ResBlock.PhiSrc1 = Builder.CreatePHI(MaxLoadType, getNumBlocks(), "phi.src1");
+  ResBlock.PhiSrc2 = Builder.CreatePHI(MaxLoadType, getNumBlocks(), "phi.src2");
 }
 
 void MemCmpExpansion::setupEndBlockPHINodes() {
@@ -656,6 +796,17 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
   const LoadPair Loads = getLoadPair(LoadSizeType, BSwapSizeType, MaxLoadType,
                                      /*Offset*/ 0);
 
+  return getMemCmpResult(Loads);
+}
+
+Value *MemCmpExpansion::getMemCmpOneBlockMultipleLoads() {
+  unsigned LoadIndex = 0;
+  LoadPair Loads = getPackedLoadPair(/*BlockIndex=*/0, LoadIndex);
+  assert(LoadIndex == getNumLoads() && "some entries were not consumed");
+  return getMemCmpResult(Loads);
+}
+
+Value *MemCmpExpansion::getMemCmpResult(const LoadPair &Loads) {
   // If a user of memcmp cares only about two outcomes, for example:
   //    bool result = memcmp(a, b, NBYTES) > 0;
   // We can generate more optimal code with a smaller number of operations
@@ -737,10 +888,12 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
                                : getMemCmpExpansionZeroCase();
 
   if (getNumBlocks() == 1)
-    return getMemCmpOneBlock();
+    return getNumLoads() == 1 ? getMemCmpOneBlock()
+                              : getMemCmpOneBlockMultipleLoads();
 
+  unsigned LoadIndex = 0;
   for (unsigned I = 0; I < getNumBlocks(); ++I) {
-    emitLoadCompareBlock(I);
+    emitLoadCompareBlock(I, LoadIndex);
   }
 
   emitMemCmpResultBlock();
@@ -850,8 +1003,8 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
                                             IsUsedForZeroCmp);
   if (!Options) return false;
 
-  if (MemCmpEqZeroNumLoadsPerBlock.getNumOccurrences())
-    Options.NumLoadsPerBlock = MemCmpEqZeroNumLoadsPerBlock;
+  if (MemCmpNumLoadsPerBlock.getNumOccurrences())
+    Options.NumLoadsPerBlock = MemCmpNumLoadsPerBlock;
 
   if (OptForSize &&
       MaxLoadsPerMemcmpOptSize.getNumOccurrences())
@@ -860,7 +1013,33 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   if (!OptForSize && MaxLoadsPerMemcmp.getNumOccurrences())
     Options.MaxNumLoads = MaxLoadsPerMemcmp;
 
-  MemCmpExpansion Expansion(CI, SizeVal, Options, IsUsedForZeroCmp, *DL, DTU);
+  // Keep only the load sizes the target can access at the base alignment:
+  // either the access is naturally aligned, or the target allows a misaligned
+  // access of that width. This lets strict-alignment targets expand compares
+  // whose pointers happen to be sufficiently aligned, while still falling back
+  // to the libcall when no load size fits. Because the greedy load sequence
+  // only places a load of size S at an offset that is a multiple of S, a size
+  // kept here is always accessible in that sequence; overlapping loads and
+  // merged tail expansions are checked separately against their actual offsets
+  // in MemCmpExpansion.
+  const Align CommonAlign = std::min(getMemCmpArgAlignment(CI, 0, *DL),
+                                     getMemCmpArgAlignment(CI, 1, *DL));
+  // Remember the target's preferred load width before filtering inaccessible
+  // sizes. It is also the maximum width of the value formed by packing the
+  // surviving loads in one ordering-compare block.
+  const unsigned MaxBytesPerBlock = Options.LoadSizes.front();
+  llvm::erase_if(Options.LoadSizes, [&](unsigned LoadSize) {
+    return !isAccessAllowed(CI, *TTI, CommonAlign, LoadSize, /*Offset=*/0);
+  });
+  // If the filter removed every load size, bail out to the libcall: the
+  // MemCmpExpansion constructor asserts that at least one load size remains.
+  // In practice all in-tree targets include a byte load size, which is
+  // accessible at any alignment and therefore always survives the filter.
+  if (Options.LoadSizes.empty())
+    return false;
+
+  MemCmpExpansion Expansion(CI, SizeVal, Options, IsUsedForZeroCmp, *DL, DTU,
+                            *TTI, CommonAlign, MaxBytesPerBlock);
 
   // Don't expand if this will require more loads than desired by the target.
   if (Expansion.getNumLoads() == 0) {
@@ -891,9 +1070,8 @@ static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
   SmallVector<std::pair<CallInst *, LibFunc>, 8> MemCmpCalls;
   for (Instruction &I : instructions(F)) {
     if (auto *CI = dyn_cast<CallInst>(&I)) {
-      LibFunc Func;
-      if (TLI->getLibFunc(*CI, Func) &&
-          (Func == LibFunc_memcmp || Func == LibFunc_bcmp))
+      LibFunc Func = TLI->getLibFunc(*CI);
+      if (Func == LibFunc_memcmp || Func == LibFunc_bcmp)
         MemCmpCalls.push_back({CI, Func});
     }
   }

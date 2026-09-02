@@ -54,7 +54,7 @@
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
+; CHECK-O-NEXT: Running analysis: CycleAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass on foo
 ; CHECK-O-NEXT: Running pass: PGOForceFunctionAttrsPass
@@ -93,8 +93,11 @@
 ; CHECK-O23-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
+; CHECK-O-NEXT: Running analysis: UniformityInfoAnalysis
 ; CHECK-O23-NEXT: Running pass: ConstraintEliminationPass
+; CHECK-O23-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O23-NEXT: Running analysis: ScalarEvolutionAnalysis
+; CHECK-O1-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O-NEXT: Running pass: LCSSAPass
 ; CHECK-O1-NEXT: Running analysis: ScalarEvolutionAnalysis
@@ -131,7 +134,6 @@
 ; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O23-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O23-NEXT: Running pass: DSEPass
-; CHECK-O23-NEXT: Running analysis: CycleAnalysis
 ; CHECK-O23-NEXT: Running pass: MoveAutoInitPass on foo
 ; CHECK-O23-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23-NEXT: Running pass: LCSSAPass
@@ -152,6 +154,7 @@
 ; CHECK-O-NEXT: Running pass: LowerCommentStringPass
 ; CHECK-O-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
+; CHECK-O-NEXT: Running pass: AssignGUIDPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.

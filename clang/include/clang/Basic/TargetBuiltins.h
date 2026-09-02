@@ -51,8 +51,9 @@ namespace clang {
 #undef GET_CDE_BUILTIN_ENUMERATORS
     FirstARMBuiltin,
     LastCDEBuiltin = FirstARMBuiltin - 1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsARM.def"
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_ENUMERATORS
     LastTSBuiltin
   };
   }
@@ -457,13 +458,18 @@ namespace clang {
 
   /// SystemZ builtins
   namespace SystemZ {
-    enum {
-        LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
 #define GET_BUILTIN_ENUMERATORS
 #include "clang/Basic/BuiltinsSystemZ.inc"
 #undef GET_BUILTIN_ENUMERATORS
-        LastTSBuiltin
-    };
+    FirstZOSBuiltin,
+    LastSystemZBuiltin = FirstZOSBuiltin - 1,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsZOS.inc"
+#undef GET_BUILTIN_ENUMERATORS
+    LastTSBuiltin
+  };
   }
 
   /// WebAssembly builtins

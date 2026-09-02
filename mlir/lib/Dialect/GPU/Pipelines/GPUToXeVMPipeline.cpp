@@ -44,7 +44,6 @@ void buildPreGPUCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   // builtin.module scope passes.
   pm.addPass(createCSEPass());
-  pm.addPass(createConvertVectorToSCFPass());
   {
     GpuXeVMAttachTargetOptions xevmTargetOptions;
     xevmTargetOptions.moduleMatcher = options.xevmModuleMatcher;
@@ -67,6 +66,8 @@ void buildGPUPassPipeline(OpPassManager &pm,
   laneLayoutOptions.indexBitWidth = options.use64bitIndex ? 64 : 32;
   laneLayoutOptions.layoutKind = "lane";
   pm.addNestedPass<ModuleOp>(createCSEPass());
+  if (options.enableVectorToXeGPU)
+    pm.addNestedPass<gpu::GPUModuleOp>(createConvertVectorToXeGPU());
   if (options.xegpuOpLevel == "workgroup") {
     xegpu::XeGPUPropagateLayoutOptions sgLayoutOptions;
     sgLayoutOptions.layoutKind = "subgroup";
@@ -154,6 +155,7 @@ void buildGPUPassPipeline(OpPassManager &pm,
 void buildPostGPUCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   // builtin.module scope passes.
+  pm.addPass(createConvertVectorToSCFPass());
   pm.addPass(createSCFToControlFlowPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   {

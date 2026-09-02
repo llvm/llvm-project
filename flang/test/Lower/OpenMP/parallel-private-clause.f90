@@ -33,11 +33,11 @@
 
 !FIRDialect:     omp.parallel private(@{{.*}} %[[ALPHA_DECL]]#0 -> %[[ALPHA_PVT:.*]], @{{.*}} %{{.*}} -> %[[ALPHA_ARRAY_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[BETA_PVT:.*]], @{{.*}} %{{.*}} -> %[[BETA_ARRAY_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[ARG1_PVT:.*]], @{{.*}} %{{.*}} -> %[[ARG2_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[ARG3_PVT:.*]], @{{.*}} %{{.*}} -> %[[ARG4_PVT:.*]] : {{.*}}) {
 !FIRDialect-DAG:  %[[ALPHA_PVT_DECL:.*]]:2 = hlfir.declare %[[ALPHA_PVT]] {uniq_name = "{{.*}}alpha"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!FIRDialect-DAG:  %[[ALPHA_ARRAY_PVT_DECL:.*]]:2 = hlfir.declare %[[ALPHA_ARRAY_PVT]] {uniq_name = "{{.*}}alpha_array"} :
+!FIRDialect-DAG:  %[[ALPHA_ARRAY_PVT_DECL:.*]]:2 = hlfir.declare %[[ALPHA_ARRAY_PVT]](%{{.*}}) {uniq_name = "{{.*}}alpha_array"} :
 !FIRDialect-DAG:  %[[BETA_PVT_DECL:.*]]:2 = hlfir.declare %[[BETA_PVT]] typeparams {{.*}} {uniq_name = "{{.*}}beta"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 !FIRDialect-DAG:  %[[BETA_ARRAY_PVT_DECL:.*]]:2 = hlfir.declare %[[BETA_ARRAY_PVT]] {uniq_name = "{{.*}}beta_array"} :
 !FIRDialect-DAG:  %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] {uniq_name = "{{.*}}arg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!FIRDialect-DAG:  %[[ARG2_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG2_PVT]] {uniq_name = "{{.*}}arg2"} :
+!FIRDialect-DAG:  %[[ARG2_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG2_PVT]](%{{.*}}) {uniq_name = "{{.*}}arg2"} :
 !FIRDialect-DAG:  %[[ARG3_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG3_PVT]] typeparams {{.*}} {uniq_name = "{{.*}}arg3"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 !FIRDialect-DAG:  %[[ARG4_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG4_PVT]] {uniq_name = "{{.*}}arg4"} :
 !FIRDialect:     omp.terminator
@@ -349,7 +349,7 @@ subroutine simd_loop_1
   ! FIRDialect:     %[[UB:.*]] = arith.constant 9 : i32
   ! FIRDialect:     %[[STEP:.*]] = arith.constant 1 : i32
 
-  ! FIRDialect: omp.simd linear({{.*}} : !fir.ref<i32> = %[[STEP]] : i32) private({{.*}}) {
+  ! FIRDialect: omp.simd linear({{.*}} : !fir.ref<i32> = %[[STEP]] : i32) linear_var_types([i32]) private({{.*}}) {
   ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   !$OMP SIMD PRIVATE(r)
   do i=1, 9

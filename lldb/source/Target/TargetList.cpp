@@ -205,7 +205,7 @@ Status TargetList::CreateTargetInternal(
             error_strm.PutCString(platform_name);
             platform_set.insert(platform_name);
           }
-          error_strm.Printf("), specify an architecture to disambiguate");
+          error_strm.PutCString("), specify an architecture to disambiguate");
           error = Status(error_strm.GetString().str());
           return error;
         }

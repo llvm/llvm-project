@@ -88,6 +88,16 @@ public:
   LLVM_ABI static CRCTable genSarwateTable(const APInt &GenPoly,
                                            bool IsBigEndian);
 
+  /// Auxilary entry point after analysis to generate constants for a GF(2)
+  /// Barrett Reduction.
+  /// Returns a pair of Mu of bitwidth TC+1 and FullGenPoly of bitwidth BW+1.
+  /// Mu is used in the first clmul operation. Mu = floor(x^(BW+TC) / P(x)).
+  /// FullGenPoly is used in the second clmul operation, and is Info.RHS with
+  /// the implied BW'th bit.
+  /// Endianness is accounted for using Info.IsBigEndian.
+  LLVM_ABI static std::pair<APInt, APInt>
+  genBarrettConstants(const PolynomialInfo &Info);
+
   LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

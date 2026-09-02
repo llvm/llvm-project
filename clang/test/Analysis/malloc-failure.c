@@ -71,6 +71,6 @@ void test_strdup() {
 
 void test_ifnameindex() {
   struct if_nameindex *p = if_nameindex();
-  p->x = 1; //FIXME: if_nameindex is not recognized by the checker
+  p->x = 1; //expected-warning{{dereference of a null pointer}}
   if_freenameindex(p);
 }

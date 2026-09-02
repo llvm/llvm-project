@@ -9,7 +9,7 @@
 
 // The device struct is emitted by the InstrProfiling pass (not clang codegen),
 // so run the pass to observe it.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -fprofile-instrument=clang -emit-llvm -o - -x hip %s \
 // RUN:   | opt -passes=instrprof -S \
 // RUN:   | FileCheck -check-prefix=DEV %s
@@ -23,19 +23,19 @@
 // RUN:   | FileCheck -check-prefix=HOST-RDC %s
 
 // Guard: no PGO -> no emission.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefix=NONE %s
 
 // Guard: no CUID -> no emission.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:   -fprofile-instrument=clang -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefix=NONE %s
 
 // Guard: PGO on but no instrumented device functions (all device code is
 // constexpr/host-only) -> the pass must not emit the sections struct, so its
 // section references don't dangle at the device link.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -fprofile-instrument=clang -emit-llvm -o - -x hip \
 // RUN:   -DEMPTY_DEVICE %s \
 // RUN:   | opt -passes=instrprof -S \

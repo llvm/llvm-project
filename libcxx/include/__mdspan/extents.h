@@ -466,15 +466,9 @@ using dims = dextents<_IndexType, _Rank>;
 #  endif
 
 // Deduction guide for extents
-#  if _LIBCPP_STD_VER >= 26
 template <class... _IndexTypes>
   requires(is_convertible_v<_IndexTypes, size_t> && ...)
 explicit extents(_IndexTypes...) -> extents<size_t, __maybe_static_ext<_IndexTypes>...>;
-#  else
-template <class... _IndexTypes>
-  requires(is_convertible_v<_IndexTypes, size_t> && ...)
-explicit extents(_IndexTypes...) -> extents<size_t, size_t(((void)sizeof(_IndexTypes), dynamic_extent))...>;
-#  endif
 
 namespace __mdspan_detail {
 

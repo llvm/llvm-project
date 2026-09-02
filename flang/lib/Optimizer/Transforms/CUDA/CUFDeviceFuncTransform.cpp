@@ -11,20 +11,16 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/Index/IR/IndexDialect.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
 
@@ -151,8 +147,10 @@ class CUFDeviceFuncTransform
       auto maxntid =
           builder.getDenseI32ArrayAttr({static_cast<int32_t>(maxTPB), 1, 1});
       deviceFuncOp->setAttr(NVVM::NVVMDialect::getMaxntidAttrName(), maxntid);
-      deviceFuncOp->setAttr(NVVM::NVVMDialect::getMinctasmAttrName(),
-                            launchBoundsAttr.getMinBPM());
+      // The minimum-blocks-per-multiprocessor operand is optional.
+      if (launchBoundsAttr.getMinBPM())
+        deviceFuncOp->setAttr(NVVM::NVVMDialect::getMinctasmAttrName(),
+                              launchBoundsAttr.getMinBPM());
       if (computeCap >= 90 && launchBoundsAttr.getUpperBoundClusterSize())
         deviceFuncOp->setAttr(NVVM::NVVMDialect::getClusterMaxBlocksAttrName(),
                               launchBoundsAttr.getUpperBoundClusterSize());
@@ -164,6 +162,11 @@ class CUFDeviceFuncTransform
   static void createHostStub(mlir::func::FuncOp funcOp,
                              mlir::SymbolTable &symTab, mlir::ModuleOp mod) {
     mlir::Location loc = funcOp.getLoc();
+    // Host stub's line table needs to span the procedure body.
+    mlir::Location endLoc = loc;
+    if (!funcOp.getBody().empty())
+      if (mlir::Operation *terminator = funcOp.getBody().back().getTerminator())
+        endLoc = terminator->getLoc();
     mlir::OpBuilder modBuilder(mod.getBodyRegion());
     modBuilder.setInsertionPointToEnd(mod.getBody());
     auto emptyStub = func::FuncOp::create(modBuilder, loc, funcOp.getName(),
@@ -172,7 +175,9 @@ class CUFDeviceFuncTransform
     emptyStub->setAttrs(funcOp->getAttrs());
     auto entryBlock = emptyStub.addEntryBlock();
     modBuilder.setInsertionPointToEnd(entryBlock);
-    func::ReturnOp::create(modBuilder, loc);
+    // Add a return operation at the end of the stub with the location of the
+    // original procedure's terminator.
+    func::ReturnOp::create(modBuilder, endLoc);
 
     symTab.erase(funcOp);
     symTab.insert(emptyStub);
@@ -219,6 +224,10 @@ class CUFDeviceFuncTransform
       if (op.getCallee()) {
         auto func = symbolTable.lookup<mlir::func::FuncOp>(
             op.getCallee()->getLeafReference());
+        // ACCRoutineToGPUFunc moves the materialized specialized routine into
+        // the GPU module later in the pipeline.
+        if (mlir::acc::isAccRoutine(func))
+          return;
         if (deviceFuncs.count(func) == 0)
           funcsToClone.insert(func);
       }
@@ -256,6 +265,25 @@ class CUFDeviceFuncTransform
              "type-bound procedure call with dynamic dispatch in cuf kernel");
       });
     });
+
+    // Optionally report an error when device code calls the runtime function
+    // _FortranAioOutputDescriptor, which is not supported on the device.
+    if (checkioOutputDescriptor) {
+      constexpr llvm::StringRef aioOutputDescriptor =
+          "_FortranAioOutputDescriptor";
+      auto checkForAioOutputDescriptor = [&](fir::CallOp op) {
+        if (op.getCallee() && op.getCallee()->getLeafReference().getValue() ==
+                                  aioOutputDescriptor) {
+          op.emitError("descriptor I/O is not supported in device code");
+          signalPassFailure();
+        }
+      };
+      for (auto funcOp : deviceFuncs)
+        funcOp.walk(checkForAioOutputDescriptor);
+      mod.walk([&](cuf::KernelOp kernelOp) {
+        kernelOp.walk(checkForAioOutputDescriptor);
+      });
+    }
 
     for (auto funcOp : funcsToClone)
       gpuModSymTab.insert(funcOp->clone());

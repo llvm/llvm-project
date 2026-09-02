@@ -40,18 +40,35 @@ using namespace llvm;
 void llvm::verifyAMDGPUModuleFlag(VerifierSupport &VS, const MDString *ID,
                                   Module::ModFlagBehavior MFB,
                                   const MDNode *Op) {
-  if (ID->getString() != "amdgpu.buffer.oob.mode" &&
-      ID->getString() != "amdgpu.tbuffer.oob.mode")
+  StringRef FlagName = ID->getString();
+  if (!FlagName.consume_front("amdgpu."))
     return;
 
-  Check(MFB == Module::Max,
-        "'" + ID->getString() + "' module flag must use 'max' merge behaviour");
-  ConstantInt *Value =
-      mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
-  Check(Value, "'" + ID->getString() +
-                   "' module flag must have a constant integer value");
-  Check(Value->getZExtValue() <= 2,
-        "'" + ID->getString() + "' module flag must be 0, 1, or 2");
+  if (FlagName == "buffer.oob.mode" || FlagName == "tbuffer.oob.mode") {
+    Check(MFB == Module::Max,
+          "'" + ID->getString() +
+              "' module flag must use 'max' merge behaviour");
+    ConstantInt *Value =
+        mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
+    Check(Value->getZExtValue() <= 2,
+          "'" + ID->getString() + "' module flag must be 0, 1, or 2");
+    return;
+  }
+
+  if (FlagName == "xnack" || FlagName == "sramecc") {
+    Check(MFB == Module::Error,
+          "'" + ID->getString() +
+              "' module flag must use 'error' merge behaviour");
+    ConstantInt *Value =
+        mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
+    Check(Value->getZExtValue() <= 1,
+          "'" + ID->getString() + "' module flag must be 0 or 1");
+    return;
+  }
 }
 
 // Verify that when a function has !reqd_work_group_size metadata, it also has
@@ -144,9 +161,13 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
     if (auto *CBI = dyn_cast<CallBrInst>(&Call)) {
       Check(CBI->getNumIndirectDests() == 1,
             "callbr amdgcn_kill only supports one indirect dest");
-      bool Unreachable = isa<UnreachableInst>(CBI->getIndirectDest(0)->begin());
-      CallInst *CI = dyn_cast<CallInst>(CBI->getIndirectDest(0)->begin());
-      Check(Unreachable ||
+      // We assume that amdgcn_unreachable is only introduced by
+      // AMDGPUUnifyDivergentExitNodes, which replaces the block's original
+      // unreachable terminator by a call to amdgcn_unreachable + a return.
+      const Instruction *Term = CBI->getIndirectDest(0)->getTerminator();
+      const CallInst *CI =
+          Term ? dyn_cast_if_present<CallInst>(Term->getPrevNode()) : nullptr;
+      Check(isa_and_nonnull<UnreachableInst>(Term) ||
                 (CI && CI->getIntrinsicID() == Intrinsic::amdgcn_unreachable),
             "callbr amdgcn_kill indirect dest needs to be unreachable");
     }

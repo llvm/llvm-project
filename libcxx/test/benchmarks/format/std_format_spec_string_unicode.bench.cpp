@@ -255,27 +255,27 @@ void BM_text(benchmark::State& state, std::basic_string_view<CharT> input) {
 }
 
 template <class CharT>
-void BM_ascii_text(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_ascii_text(benchmark::State& state) {
   BM_text(state, ascii_text<CharT>());
 }
 
 template <class CharT>
-void BM_unicode_text(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_unicode_text(benchmark::State& state) {
   BM_text(state, unicode_text<CharT>());
 }
 
 template <class CharT>
-void BM_cyrillic_text(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_cyrillic_text(benchmark::State& state) {
   BM_text(state, cyrillic_text<CharT>());
 }
 
 template <class CharT>
-void BM_japanese_text(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_japanese_text(benchmark::State& state) {
   BM_text(state, japanese_text<CharT>());
 }
 
 template <class CharT>
-void BM_emoji_text(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_emoji_text(benchmark::State& state) {
   BM_text(state, emoji_text<CharT>());
 }
 

@@ -7,7 +7,7 @@ declare void @foo(i64 noundef)
 define void @pr59633(ptr noundef %ptr) {
 ; CHECK-LABEL: @pr59633(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[PTR1:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[PTR1]] to i4
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[TMP0]] to i64
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
@@ -20,7 +20,7 @@ entry:
 
 while.body:                                       ; preds = %entry, %while.body
   %ptr.addr.0 = phi ptr [ %ptr, %entry ], [ %add.ptr, %while.body ]
-  %0 = ptrtoint ptr %ptr.addr.0 to i64
+  %0 = ptrtoaddr ptr %ptr.addr.0 to i64
   %and = and i64 %0, 15                           ; loop invariant
   tail call void @foo(i64 noundef %and)
   %add.ptr = getelementptr inbounds i8, ptr %ptr.addr.0, i64 16

@@ -25,7 +25,7 @@
 // RUN: llvm-readelf -S %t/test.bolt | awk '$3==".text"{print $6, $7}' \
 // RUN:   > %t/txt-loc
 // RUN: bash -c "read O S < %t/txt-loc; \
-// RUN:   od -A x -t x1 -N 0x20 -j \$((0x\$O + 0x\$S)) %t/test.bolt" \
+// RUN:   od -A x -t x1 -N 32 -j \$((0x\$O + 0x\$S)) %t/test.bolt" \
 // RUN:   | FileCheck %s --check-prefix=PADDING
 
 // PADDING: {{[0-9a-f]+}} 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00

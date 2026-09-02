@@ -615,7 +615,7 @@ TEST(InProcessEPCTest, JITDispatchUnknownHandler) {
       });
 
   auto SentCallId =
-      IPCA.callJITDispatch(reinterpret_cast<void *>(0xdeadbeef),
+      IPCA.callJITDispatch(ExecutorAddr(0xdeadbeef).toPtr<void *>(),
                            shared::WrapperFunctionBuffer::copyFrom("x", 1));
   ASSERT_TRUE(SentCallId);
 
@@ -640,7 +640,7 @@ TEST(InProcessEPCTest, JITDispatchAfterDisconnectIsDropped) {
   cantFail(Fix.EPCPtr->disconnect());
 
   auto SentCallId =
-      IPCA.callJITDispatch(reinterpret_cast<void *>(0xdeadbeef),
+      IPCA.callJITDispatch(ExecutorAddr(0xdeadbeef).toPtr<void *>(),
                            shared::WrapperFunctionBuffer::copyFrom("x", 1));
 
   EXPECT_FALSE(SentCallId)

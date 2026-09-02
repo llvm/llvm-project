@@ -92,7 +92,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
   MemberCallInfo CallInfo = commonEmitCXXMemberOrOperatorCall(
       *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args, RtlArgs);
   auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
-      Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize);
+      Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize,
+      getCurrentFunctionDecl());
   return EmitCall(FnInfo, Callee, ReturnValue, Args, CallOrInvoke,
                   CE && CE == MustTailCall,
                   CE ? CE->getExprLoc() : SourceLocation());
@@ -494,7 +495,8 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   // And the rest of the call args
   EmitCallArgs(Args, FPT, E->arguments());
   return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
-                                                      /*PrefixSize=*/0),
+                                                      /*PrefixSize=*/0,
+                                                      getCurrentFunctionDecl()),
                   Callee, ReturnValue, Args, CallOrInvoke, E == MustTailCall,
                   E->getExprLoc());
 }
@@ -1348,13 +1350,16 @@ static void EmitNewInitializer(CodeGenFunction &CGF, const CXXNewExpr *E,
 static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
                                 const FunctionDecl *CalleeDecl,
                                 const FunctionProtoType *CalleeType,
-                                const CallArgList &Args) {
+                                const CallArgList &Args,
+                                llvm::Constant *CalleeOverride = nullptr) {
   llvm::CallBase *CallOrInvoke;
-  llvm::Constant *CalleePtr = CGF.CGM.GetAddrOfFunction(CalleeDecl);
+  llvm::Constant *CalleePtr =
+      CalleeOverride ? CalleeOverride : CGF.CGM.GetAddrOfFunction(CalleeDecl);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(CalleeDecl));
-  RValue RV = CGF.EmitCall(CGF.CGM.getTypes().arrangeFreeFunctionCall(
-                               Args, CalleeType, /*ChainCall=*/false),
-                           Callee, ReturnValueSlot(), Args, &CallOrInvoke);
+  RValue RV = CGF.EmitCall(
+      CGF.CGM.getTypes().arrangeFreeFunctionCall(
+          Args, CalleeType, /*ChainCall=*/false, CGF.getCurrentFunctionDecl()),
+      Callee, ReturnValueSlot(), Args, &CallOrInvoke);
 
   /// C++1y [expr.new]p10:
   ///   [In a new-expression,] an implementation is allowed to omit a call
@@ -1811,7 +1816,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
 void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
                                      llvm::Value *DeletePtr, QualType DeleteTy,
                                      llvm::Value *NumElements,
-                                     CharUnits CookieSize) {
+                                     CharUnits CookieSize,
+                                     llvm::Constant *CalleeOverride) {
   assert((!NumElements && CookieSize.isZero()) ||
          DeleteFD->getOverloadedOperator() == OO_Array_Delete);
 
@@ -1879,7 +1885,7 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
          "unknown parameter to usual delete function");
 
   // Emit the call to delete.
-  EmitNewDeleteCall(*this, DeleteFD, DeleteFTy, DeleteArgs);
+  EmitNewDeleteCall(*this, DeleteFD, DeleteFTy, DeleteArgs, CalleeOverride);
 
   // If call argument lowering didn't use a generated tag argument alloca we
   // remove them
@@ -2092,6 +2098,35 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   const Expr *Arg = E->getArgument();
   Address Ptr = EmitPointerWithAlignment(Arg);
 
+  // If this is a ::delete expression (explicit global scope) on a class type
+  // with a non-trivial destructor, note it so we emit __global_delete
+  // forwarding bodies. This matches MSVC which only engages the __global_delete
+  // machinery when a deleting destructor is involved:
+  //   - a plain `delete`/`delete[]` (no `::`) never triggers it, even when it
+  //     resolves to a global operator delete;
+  //   - `::delete` on a non-class type (e.g. `::delete intPtr`) or on a class
+  //     with a trivial destructor is lowered as a plain direct operator delete
+  //     and does not trigger it;
+  //   - the destructor's virtualness and the presence of a class-level
+  //     operator delete are both irrelevant to the trigger.
+  if (E->isGlobalDelete() && CGM.getTarget().getCXXABI().isMicrosoft()) {
+    const CXXRecordDecl *RD = E->getDestroyedType()->getAsCXXRecordDecl();
+    if (RD && RD->hasDefinition() && !RD->hasTrivialDestructor()) {
+      CGM.noteDirectGlobalDelete();
+      // Ensure a __global_delete wrapper (and thus a strong forwarding body)
+      // is emitted in THIS TU for the resolved global ::operator delete, even
+      // when no vector deleting destructor here references it. Without this, a
+      // TU that only does ::delete (with the deleting destructor defined in
+      // another TU) would emit no forwarder, leaving the wrapper bound to the
+      // trapping empty fallback and crashing at runtime.
+      const FunctionDecl *OD = E->getOperatorDelete();
+      assert(!isa<CXXMethodDecl>(OD) &&
+             "global ::delete should resolve to a namespace-scope "
+             "operator delete");
+      CGM.getOrCreateMSVCGlobalDeleteWrapper(OD);
+    }
+  }
+
   // Null check the pointer.
   //
   // We could avoid this null check if we can determine that the object
@@ -2173,9 +2208,8 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   }
 }
 
-static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
-                                         llvm::Type *StdTypeInfoPtrTy,
-                                         bool HasNullCheck) {
+static Address EmitTypeidOperand(CodeGenFunction &CGF, const Expr *E,
+                                 bool HasNullCheck) {
   // Get the vtable pointer.
   Address ThisPtr = CGF.EmitLValue(E).getAddress();
 
@@ -2205,8 +2239,7 @@ static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
     CGF.EmitBlock(EndBlock);
   }
 
-  return CGF.CGM.getCXXABI().EmitTypeid(CGF, SrcRecordTy, ThisPtr,
-                                        StdTypeInfoPtrTy);
+  return ThisPtr;
 }
 
 llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
@@ -2230,17 +2263,21 @@ llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
     return MaybeASCast(TypeInfo);
   }
 
+  const Expr *Operand = E->getExprOperand();
+  QualType OperandTy = Operand->getType();
+
   // C++ [expr.typeid]p2:
   //   When typeid is applied to a glvalue expression whose type is a
   //   polymorphic class type, the result refers to a std::type_info object
   //   representing the type of the most derived object (that is, the dynamic
   //   type) to which the glvalue refers.
-  // If the operand is already most derived object, no need to look up vtable.
-  if (E->isPotentiallyEvaluated() && !E->isMostDerived(getContext()))
-    return EmitTypeidFromVTable(*this, E->getExprOperand(), PtrTy,
-                                E->hasNullCheck());
+  if (E->isPotentiallyEvaluated()) {
+    Address ThisPtr = EmitTypeidOperand(*this, Operand, E->hasNullCheck());
+    if (!E->isMostDerived(getContext()))
+      return CGM.getCXXABI().EmitTypeid(*this, OperandTy, ThisPtr, PtrTy);
+    // If the operand is already most derived object, no need to look up vtable.
+  }
 
-  QualType OperandTy = E->getExprOperand()->getType();
   return MaybeASCast(CGM.GetAddrOfRTTIDescriptor(OperandTy));
 }
 

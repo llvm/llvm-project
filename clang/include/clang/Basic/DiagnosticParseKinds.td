@@ -12,6 +12,9 @@
 
 let Component = "Parse" in {
 let CategoryName = "Parse Issue" in {
+// C2y compatibility with C89.
+defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are">;
+
 // C++11 compatibility with C++98.
 defm enum_fixed_underlying_type : CXX11Compat<
   "enumeration types with a fixed underlying type are",
@@ -220,6 +223,9 @@ def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
 def err_c2y_labeled_break_continue : Error<
   "named %select{'break'|'continue'}0 is only supported in C2y">;
+def err_c2y_first_condition_clause_is_not_declaration : Error<
+  "first clause in condition must be a declaration">;
+def err_c2y_multiple_declarations : Error<"multiple declarations are not allowed">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -421,9 +427,10 @@ def warn_cxx98_compat_for_range : Warning<
   "range-based for loop is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_for_range_identifier : Error<
-  "range-based for loop requires type for loop variable">;
+  "%select{range-based for loop|expansion statement}0 requires "
+  "type for %select{loop|expansion}0 variable">;
 def err_for_range_expected_decl : Error<
-  "for range declaration must declare a variable">;
+  "%select{for range|expansion statement}0 declaration must declare a variable">;
 def err_argument_required_after_attribute : Error<
   "argument required after attribute">;
 def err_missing_param : Error<"expected parameter declarator">;
@@ -450,6 +457,18 @@ def err_unspecified_size_with_static : Error<
   "'static' may not be used without an array size">;
 def err_expected_parentheses_around_typename : Error<
   "expected parentheses around type name in %0 expression">;
+def err_expansion_stmt_requires_range : Error<
+  "expansion statement must use the syntax of a range-based for loop">;
+def err_expansion_stmt_requires_cxx2c : Error<
+  "expansion statements are only supported in C++2c">;
+def err_for_template : Error<
+  "'for template' is invalid; use 'template for' instead">;
+def ext_expansion_stmt_body_not_compound_stmt : Extension<
+  "ISO C++ requires the body of an expansion statement to be a compound statement">,
+  InGroup<ExpansionStmtBody>;
+def ext_expansion_stmt_body_attr : Extension<
+  "ISO C++ forbids attributes before the compound statement of an expansion statement">,
+  InGroup<ExpansionStmtBody>;
 
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;
@@ -1703,6 +1722,8 @@ def err_omp_expected_fr_or_attr_selector : Error<
   "expected 'fr' or 'attr' selector in 'prefer_type'">;
 def err_omp_expected_pref_spec : Error<
   "expected preference-specification in 'prefer_type'">;
+def err_omp_append_args_prefer_type_60 : Error<
+  "'prefer_type' in 'append_args' requires OpenMP version 6.0 or later">;
 def err_expected_sequence_or_directive : Error<
   "expected an OpenMP 'directive' or 'sequence' attribute argument">;
 def ext_omp_attributes : ExtWarn<
@@ -1731,6 +1752,8 @@ def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' c
   "%0 is ignored">, InGroup<OpenMPExtensions>;
 def err_omp_duplicate_modifier : Error<"duplicate modifier '%0' in '%1' clause">;
 def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
+def err_omp_incompatible_modifiers
+    : Error<"'%0' modifier cannot be specified with '%1' modifier in '%2' clause">;
 def err_omp_unknown_need_device_ptr_kind
     : Error<
         "invalid argument for 'need_device_ptr' kind in 'adjust_args' clause; "
@@ -1796,6 +1819,9 @@ def ext_bit_int : Extension<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
+def err_unexpected_tok_after_module_name : Error<
+  "unexpected '%0' after module name, only ';' and '[' (start of attribute "
+  "specifier sequence) are allowed">;
 def err_unexpected_module_or_import_decl : Error<
   "%select{module|import}0 declaration can only appear at the top level">;
 def err_attribute_not_module_attr : Error<

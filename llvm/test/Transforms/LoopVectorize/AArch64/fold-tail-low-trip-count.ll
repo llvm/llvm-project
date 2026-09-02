@@ -7,7 +7,7 @@ define void @low_trip_count_small(i32 %x, ptr %dst) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 1)
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 4)
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -16,10 +16,10 @@ define void @low_trip_count_small(i32 %x, ptr %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[DST]], i64 2
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -79,7 +79,7 @@ define ptr @low_trip_count_small_with_live_out(i32 %x, ptr %dst) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 1)
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 4)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -89,10 +89,10 @@ define ptr @low_trip_count_small_with_live_out(i32 %x, ptr %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[DST]], i64 2
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 3
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:

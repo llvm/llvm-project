@@ -17,7 +17,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -26,8 +25,11 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
 
 #define GET_GICOMBINER_DEPS
 #include "WebAssemblyGenPostLegalizeGICombiner.inc"
@@ -86,11 +88,11 @@ WebAssemblyPostLegalizerCombinerImpl::WebAssemblyPostLegalizerCombinerImpl(
 {
 }
 
-class WebAssemblyPostLegalizerCombiner : public MachineFunctionPass {
+class WebAssemblyPostLegalizerCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  WebAssemblyPostLegalizerCombiner();
+  WebAssemblyPostLegalizerCombinerLegacy();
 
   StringRef getPassName() const override {
     return "WebAssemblyPostLegalizerCombiner";
@@ -98,13 +100,10 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-private:
-  WebAssemblyPostLegalizerCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
 
-void WebAssemblyPostLegalizerCombiner::getAnalysisUsage(
+void WebAssemblyPostLegalizerCombinerLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
@@ -112,41 +111,37 @@ void WebAssemblyPostLegalizerCombiner::getAnalysisUsage(
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-WebAssemblyPostLegalizerCombiner::WebAssemblyPostLegalizerCombiner()
-    : MachineFunctionPass(ID) {
-  if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
-}
+WebAssemblyPostLegalizerCombinerLegacy::WebAssemblyPostLegalizerCombinerLegacy()
+    : MachineFunctionPass(ID) {}
 
-bool WebAssemblyPostLegalizerCombiner::runOnMachineFunction(
-    MachineFunction &MF) {
+static bool
+runCombinerOnMachineFunction(MachineFunction &MF,
+                             function_ref<bool()> ShouldSkip,
+                             function_ref<GISelValueTracking *()> GetVT,
+                             function_ref<MachineDominatorTree *()> GetMDT,
+                             function_ref<GISelCSEInfo *()> GetCSEInfo) {
   if (MF.getProperties().hasFailedISel())
     return false;
   assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
-  auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !ShouldSkip;
+
+  WebAssemblyPostLegalizerCombinerImplRuleConfig RuleConfig;
+  if (!RuleConfig.parseCommandLineOption())
+    reportFatalUsageError("Invalid rule identifier");
 
   const WebAssemblySubtarget &ST = MF.getSubtarget<WebAssemblySubtarget>();
   const auto *LI = ST.getLegalizerInfo();
 
-  GISelValueTracking *VT =
-      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
-  MachineDominatorTree *MDT = nullptr;
-  GISelCSEInfo *CSEInfo = nullptr;
-
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  CSEInfo = &Wrapper.get(TPC->getCSEConfig());
+  GISelValueTracking *VT = GetVT();
+  MachineDominatorTree *MDT = GetMDT();
+  GISelCSEInfo *CSEInfo = GetCSEInfo();
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
@@ -161,16 +156,46 @@ bool WebAssemblyPostLegalizerCombiner::runOnMachineFunction(
   return Impl.combineMachineInstrs();
 }
 
-char WebAssemblyPostLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(WebAssemblyPostLegalizerCombiner, DEBUG_TYPE,
+char WebAssemblyPostLegalizerCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(WebAssemblyPostLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine WebAssembly MachineInstrs after legalization",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
-INITIALIZE_PASS_END(WebAssemblyPostLegalizerCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(WebAssemblyPostLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine WebAssembly MachineInstrs after legalization",
                     false, false)
 
-FunctionPass *llvm::createWebAssemblyPostLegalizerCombiner() {
-  return new WebAssemblyPostLegalizerCombiner();
+FunctionPass *llvm::createWebAssemblyPostLegalizerCombinerLegacyPass() {
+  return new WebAssemblyPostLegalizerCombinerLegacy();
+}
+
+bool WebAssemblyPostLegalizerCombinerLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return runCombinerOnMachineFunction(
+      MF, [&]() { return skipFunction(MF.getFunction()); },
+      [&]() {
+        return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+      },
+      [&]() {
+        return &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+      },
+      [&]() {
+        TargetPassConfig *TPC = &getAnalysis<TargetPassConfig>();
+        GISelCSEAnalysisWrapper &Wrapper =
+            getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+        return &Wrapper.get(TPC->getCSEConfig());
+      });
+}
+
+PreservedAnalyses WebAssemblyPostLegalizerCombinerPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runCombinerOnMachineFunction(
+      MF, [&]() { return MF.getFunction().hasOptNone(); },
+      [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
+      [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); },
+      [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); });
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
 }

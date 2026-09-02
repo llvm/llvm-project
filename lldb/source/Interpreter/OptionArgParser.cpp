@@ -8,6 +8,7 @@
 
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -231,8 +232,18 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
       valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
           valobj_sp->GetDynamicValueType(), true);
     // Get the address to watch.
-    if (valobj_sp)
-      addr = valobj_sp->GetValueAsUnsigned(0, &success);
+    if (valobj_sp) {
+      // In C an array decays to a pointer to its first element, whose value is
+      // the address of the array object itself. An aggregate has no scalar
+      // value, so GetValueAsUnsigned() would fail here; use the array's own
+      // load address instead.
+      if (valobj_sp->GetCompilerType().IsArrayType()) {
+        addr = valobj_sp->GetAddressOf(/*scalar_is_load_address=*/true).address;
+        success = addr != LLDB_INVALID_ADDRESS;
+      } else {
+        addr = valobj_sp->GetValueAsUnsigned(0, &success);
+      }
+    }
     if (success) {
       if (error_ptr)
         error_ptr->Clear();

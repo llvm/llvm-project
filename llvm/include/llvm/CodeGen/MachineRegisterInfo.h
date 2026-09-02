@@ -636,12 +636,19 @@ public:
   /// getVRegDef - Return the machine instr that defines the specified virtual
   /// register or null if none is found.  This assumes that the code is in SSA
   /// form, so there should only be one definition.
-  LLVM_ABI MachineInstr *getVRegDef(Register Reg) const;
+  LLVM_ABI LLVM_READONLY MachineInstr *getVRegDef(Register Reg) const;
 
   /// getUniqueVRegDef - Return the unique machine instr that defines the
   /// specified virtual register or null if none is found.  If there are
   /// multiple definitions or no definition, return null.
-  LLVM_ABI MachineInstr *getUniqueVRegDef(Register Reg) const;
+  LLVM_ABI LLVM_READONLY MachineInstr *getUniqueVRegDef(Register Reg) const;
+
+  /// Return the machine basic block in which the specified virtual register is
+  /// defined, or null if it has no definition. This assumes SSA form.
+  MachineBasicBlock *getDefBlock(Register Reg) const {
+    MachineInstr *DefMI = getVRegDef(Reg);
+    return DefMI ? DefMI->getParent() : nullptr;
+  }
 
   /// clearKillFlags - Iterate over all the uses of the given register and
   /// clear the kill flag from the MachineOperand. This function is used by
@@ -906,31 +913,8 @@ public:
 
   /// updateDbgUsersToReg - Update a collection of debug instructions
   /// to refer to the designated register.
-  void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
-                           ArrayRef<MachineInstr *> Users) const {
-    // If this operand is a register, check whether it overlaps with OldReg.
-    // If it does, replace with NewReg.
-    auto UpdateOp = [this, &NewReg, &OldReg](MachineOperand &Op) {
-      if (Op.isReg() &&
-          getTargetRegisterInfo()->regsOverlap(Op.getReg(), OldReg))
-        Op.setReg(NewReg);
-    };
-
-    // Iterate through (possibly several) operands to DBG_VALUEs and update
-    // each. For DBG_PHIs, only one operand will be present.
-    for (MachineInstr *MI : Users) {
-      if (MI->isDebugValue()) {
-        for (auto &Op : MI->debug_operands())
-          UpdateOp(Op);
-        assert(MI->hasDebugOperandForReg(NewReg) &&
-               "Expected debug value to have some overlap with OldReg");
-      } else if (MI->isDebugPHI()) {
-        UpdateOp(MI->getOperand(0));
-      } else {
-        llvm_unreachable("Non-DBG_VALUE, Non-DBG_PHI debug instr updated");
-      }
-    }
-  }
+  LLVM_ABI void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
+                                    ArrayRef<MachineInstr *> Users) const;
 
   /// Return true if the specified register is modified in this function.
   /// This checks that no defining machine operands exist for the register or

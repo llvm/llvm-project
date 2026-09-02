@@ -947,16 +947,14 @@ define <2 x i1> @vec_setcc1(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    bl __letf2
-; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
-; CHECK-SD-NEXT:    cset w8, le
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    csetm x8, le
 ; CHECK-SD-NEXT:    fmov d8, x8
 ; CHECK-SD-NEXT:    bl __letf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #40] // 8-byte Reload
-; CHECK-SD-NEXT:    cset w8, le
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SD-NEXT:    csetm x8, le
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v8.2s
 ; CHECK-SD-NEXT:    ldr d8, [sp, #32] // 8-byte Reload
@@ -1002,16 +1000,14 @@ define <2 x i1> @vec_setcc2(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    bl __letf2
-; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
-; CHECK-SD-NEXT:    cset w8, gt
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    csetm x8, gt
 ; CHECK-SD-NEXT:    fmov d8, x8
 ; CHECK-SD-NEXT:    bl __letf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr x30, [sp, #40] // 8-byte Reload
-; CHECK-SD-NEXT:    cset w8, gt
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SD-NEXT:    csetm x8, gt
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v8.2s
 ; CHECK-SD-NEXT:    ldr d8, [sp, #32] // 8-byte Reload
@@ -1065,8 +1061,7 @@ define <2 x i1> @vec_setcc3(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp, #32] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    ccmp w19, #0, #4, eq
-; CHECK-SD-NEXT:    cset w8, eq
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SD-NEXT:    csetm x8, eq
 ; CHECK-SD-NEXT:    fmov d8, x8
 ; CHECK-SD-NEXT:    bl __eqtf2
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp, #32] // 32-byte Folded Reload
@@ -1075,8 +1070,7 @@ define <2 x i1> @vec_setcc3(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ccmp w19, #0, #4, eq
 ; CHECK-SD-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    cset w8, eq
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SD-NEXT:    csetm x8, eq
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v8.2s
 ; CHECK-SD-NEXT:    ldr d8, [sp, #64] // 8-byte Reload

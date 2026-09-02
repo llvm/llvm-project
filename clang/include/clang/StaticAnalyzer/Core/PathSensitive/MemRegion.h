@@ -213,11 +213,18 @@ public:
   /// the variable/field declaration retrieved from the memory region.
   /// Regions that point to an element of an array are returned as: "arr[0]".
   /// Regions that point to a struct are returned as: "st.var".
+  /// Returns an empty string for regions that don't have a clear descriptive
+  /// name (e.g. a heap are allocated by 'malloc').
   //
   /// \param UseQuotes Set if the name should be quoted.
   ///
+  /// \param AllowFallback When true, always retursn a non-empty string, using
+  /// vague descriptions like "the heap area", "the string literal" (or "the
+  /// region" as a catch-all) when there is nothing better.
+  ///
   /// \returns variable name for memory region
-  std::string getDescriptiveName(bool UseQuotes = true) const;
+  std::string getDescriptiveName(bool UseQuotes = true,
+                                 bool AllowFallback = false) const;
 
   /// Retrieve source range from memory region. The range retrieval
   /// is based on the decl obtained from the memory region.

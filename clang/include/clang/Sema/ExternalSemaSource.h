@@ -141,7 +141,7 @@ public:
   /// be invoked multiple times; the external source should take care not to
   /// introduce the same declarations repeatedly.
   virtual void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) {}
+      llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) {}
 
   /// Read the set of referenced selectors known to the
   /// external Sema source.
@@ -240,11 +240,6 @@ public:
     return false;
   }
 
-  /// Notify the external source that a lambda was assigned a mangling number.
-  /// This enables the external source to track the correspondence between
-  /// lambdas and mangling numbers if necessary.
-  virtual void AssignedLambdaNumbering(CXXRecordDecl *Lambda) {}
-
   /// LLVM-style RTTI.
   /// \{
   bool isA(const void *ClassID) const override {
@@ -252,6 +247,85 @@ public:
   }
   static bool classof(const ExternalASTSource *S) { return S->isA(&ID); }
   /// \}
+};
+
+/// Represents a lazily-loaded vector of data.
+///
+/// The lazily-loaded vector of data contains data that is partially loaded
+/// from an external source and partially added by local translation. The
+/// items loaded from the external source are loaded lazily, when needed for
+/// iteration over the complete vector.
+template <typename T, void (ExternalSemaSource::*Loader)(SmallVectorImpl<T> &),
+          unsigned LoadedStorage = 2, unsigned LocalStorage = 4>
+class LazyVector {
+  SmallVector<T, LoadedStorage> Loaded;
+  SmallVector<T, LocalStorage> Local;
+
+public:
+  /// Iteration over the elements in the vector.
+  ///
+  /// In a complete iteration, the iterator walks the range [-M, N),
+  /// where negative values are used to indicate elements
+  /// loaded from the external source while non-negative values are used to
+  /// indicate elements added via \c push_back().
+  /// However, to provide iteration in source order (for, e.g., chained
+  /// precompiled headers), dereferencing the iterator flips the negative
+  /// values (corresponding to loaded entities), so that position -M
+  /// corresponds to element 0 in the loaded entities vector, position -M+1
+  /// corresponds to element 1 in the loaded entities vector, etc. This
+  /// gives us a reasonably efficient, source-order walk.
+  ///
+  /// We define this as a wrapping iterator around an int. The
+  /// iterator_adaptor_base class forwards the iterator methods to basic integer
+  /// arithmetic.
+  class iterator
+      : public llvm::iterator_adaptor_base<
+            iterator, int, std::random_access_iterator_tag, T, int, T *, T &> {
+    friend class LazyVector;
+
+    LazyVector *Self;
+
+    iterator(LazyVector *Self, int Position)
+        : iterator::iterator_adaptor_base(Position), Self(Self) {}
+
+    bool isLoaded() const { return this->I < 0; }
+
+  public:
+    iterator() : iterator(nullptr, 0) {}
+
+    typename iterator::reference operator*() const {
+      if (isLoaded())
+        return Self->Loaded.end()[this->I];
+      return Self->Local.begin()[this->I];
+    }
+  };
+
+  iterator begin(ExternalSemaSource *source, bool LocalOnly = false) {
+    if (LocalOnly)
+      return iterator(this, 0);
+
+    if (source)
+      (source->*Loader)(Loaded);
+    return iterator(this, -(int)Loaded.size());
+  }
+
+  iterator end() { return iterator(this, Local.size()); }
+
+  void push_back(const T &LocalValue) { Local.push_back(LocalValue); }
+
+  void erase(iterator From, iterator To) {
+    if (From.isLoaded() && To.isLoaded()) {
+      Loaded.erase(&*From, &*To);
+      return;
+    }
+
+    if (From.isLoaded()) {
+      Loaded.erase(&*From, Loaded.end());
+      From = begin(nullptr, true);
+    }
+
+    Local.erase(&*From, &*To);
+  }
 };
 
 } // end namespace clang

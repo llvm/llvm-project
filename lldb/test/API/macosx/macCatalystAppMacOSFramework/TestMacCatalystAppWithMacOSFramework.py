@@ -7,7 +7,7 @@ import os
 
 class TestMacCatalystAppWithMacOSFramework(TestBase):
     @skipIf(macos_version=["<", "10.15"])
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfDarwinEmbedded
     # There is a Clang driver change missing on llvm.org.
     @expectedFailureAll(bugnumber="rdar://problem/54986190>")

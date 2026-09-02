@@ -189,7 +189,7 @@ define void @gather_sequence_crash(<2 x float> %arg, ptr %arg1, float %arg2, ptr
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[ARG1:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[ARG:%.*]], <2 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> <float poison, float poison, float poison, float 0.000000e+00>, <4 x i32> <i32 poison, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> poison, float [[ARG2:%.*]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> poison, float [[ARG2:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP6]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP8]], align 4

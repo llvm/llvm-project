@@ -409,36 +409,26 @@ const Expr *OMPOrderedClause::getLoopCounter(unsigned NumLoop) const {
   return getTrailingObjects()[NumberOfLoops + NumLoop];
 }
 
-OMPUpdateClause *OMPUpdateClause::Create(const ASTContext &C,
-                                         SourceLocation StartLoc,
-                                         SourceLocation EndLoc) {
-  return new (C) OMPUpdateClause(StartLoc, EndLoc, /*IsExtended=*/false);
-}
-
-OMPUpdateClause *
-OMPUpdateClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                        SourceLocation LParenLoc, SourceLocation ArgumentLoc,
-                        OpenMPDependClauseKind DK, SourceLocation EndLoc) {
+OMPUpdateDependObjectsClause *OMPUpdateDependObjectsClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation ArgumentLoc, OpenMPDependClauseKind DK,
+    SourceLocation EndLoc) {
   void *Mem =
       C.Allocate(totalSizeToAlloc<SourceLocation, OpenMPDependClauseKind>(2, 1),
-                 alignof(OMPUpdateClause));
-  auto *Clause =
-      new (Mem) OMPUpdateClause(StartLoc, EndLoc, /*IsExtended=*/true);
+                 alignof(OMPUpdateDependObjectsClause));
+  auto *Clause = new (Mem) OMPUpdateDependObjectsClause(StartLoc, EndLoc);
   Clause->setLParenLoc(LParenLoc);
   Clause->setArgumentLoc(ArgumentLoc);
   Clause->setDependencyKind(DK);
   return Clause;
 }
 
-OMPUpdateClause *OMPUpdateClause::CreateEmpty(const ASTContext &C,
-                                              bool IsExtended) {
-  if (!IsExtended)
-    return new (C) OMPUpdateClause(/*IsExtended=*/false);
+OMPUpdateDependObjectsClause *
+OMPUpdateDependObjectsClause::CreateEmpty(const ASTContext &C) {
   void *Mem =
       C.Allocate(totalSizeToAlloc<SourceLocation, OpenMPDependClauseKind>(2, 1),
-                 alignof(OMPUpdateClause));
-  auto *Clause = new (Mem) OMPUpdateClause(/*IsExtended=*/true);
-  Clause->IsExtended = true;
+                 alignof(OMPUpdateDependObjectsClause));
+  auto *Clause = new (Mem) OMPUpdateDependObjectsClause();
   return Clause;
 }
 
@@ -1978,19 +1968,54 @@ OMPNumTeamsClause *OMPNumTeamsClause::CreateEmpty(const ASTContext &C,
 OMPThreadLimitClause *OMPThreadLimitClause::Create(
     const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
-    ArrayRef<Expr *> VL, Stmt *PreInit) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+    ArrayRef<Expr *> VL, OpenMPThreadLimitClauseModifier Modifier,
+    Expr *ModifierExpr, SourceLocation ModifierLoc, Stmt *PreInit) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
   OMPThreadLimitClause *Clause =
       new (Mem) OMPThreadLimitClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
+  Clause->setModifier(Modifier);
+  Clause->setModifierExpr(ModifierExpr);
+  Clause->setModifierLoc(ModifierLoc);
   Clause->setPreInitStmt(PreInit, CaptureRegion);
   return Clause;
 }
 
 OMPThreadLimitClause *OMPThreadLimitClause::CreateEmpty(const ASTContext &C,
                                                         unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
   return new (Mem) OMPThreadLimitClause(N);
+}
+
+OMPNumThreadsClause *OMPNumThreadsClause::Create(
+    const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
+    ArrayRef<Expr *> VL,
+    OpenMPNumThreadsClauseModifier PrescriptivenessModifier,
+    OpenMPNumThreadsClauseModifier DimsModifier,
+    SourceLocation PrescriptivenessModifierLoc, SourceLocation DimsModifierLoc,
+    Expr *DimsModifierExpr, Stmt *PreInit) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
+  OMPNumThreadsClause *Clause =
+      new (Mem) OMPNumThreadsClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
+  Clause->setVarRefs(VL);
+  Clause->setPrescriptivenessModifier(PrescriptivenessModifier);
+  Clause->setPrescriptivenessModifierLoc(PrescriptivenessModifierLoc);
+  Clause->setDimsModifier(DimsModifier);
+  Clause->setDimsModifierExpr(DimsModifierExpr);
+  Clause->setDimsModifierLoc(DimsModifierLoc);
+  Clause->setPreInitStmt(PreInit, CaptureRegion);
+  return Clause;
+}
+
+OMPNumThreadsClause *OMPNumThreadsClause::CreateEmpty(const ASTContext &C,
+                                                      unsigned N) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
+  return new (Mem) OMPNumThreadsClause(N);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2012,14 +2037,30 @@ void OMPClausePrinter::VisitOMPFinalClause(OMPFinalClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPNumThreadsClause(OMPNumThreadsClause *Node) {
-  OS << "num_threads(";
-  OpenMPNumThreadsClauseModifier Modifier = Node->getModifier();
-  if (Modifier != OMPC_NUMTHREADS_unknown) {
-    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(), Modifier)
-       << ": ";
+  if (!Node->varlist_empty()) {
+    OS << "num_threads";
+    bool HasPrescriptiveness =
+        Node->getPrescriptivenessModifier() != OMPC_NUMTHREADS_unknown;
+    bool HasDims = Node->getDimsModifier() != OMPC_NUMTHREADS_unknown;
+    if (HasPrescriptiveness || HasDims) {
+      OS << "(";
+      if (HasPrescriptiveness)
+        OS << getOpenMPSimpleClauseTypeName(
+            Node->getClauseKind(), Node->getPrescriptivenessModifier());
+      if (HasPrescriptiveness && HasDims)
+        OS << ",";
+      if (HasDims) {
+        OS << "dims(";
+        Node->getDimsModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+        OS << ")";
+      }
+      OS << ":";
+      VisitOMPClauseList(Node, ' ');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
+    OS << ")";
   }
-  Node->getNumThreads()->printPretty(OS, nullptr, Policy, 0);
-  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPAlignClause(OMPAlignClause *Node) {
@@ -2255,14 +2296,16 @@ void OMPClausePrinter::VisitOMPReadClause(OMPReadClause *) { OS << "read"; }
 
 void OMPClausePrinter::VisitOMPWriteClause(OMPWriteClause *) { OS << "write"; }
 
-void OMPClausePrinter::VisitOMPUpdateClause(OMPUpdateClause *Node) {
+void OMPClausePrinter::VisitOMPUpdateClause(OMPUpdateClause *) {
   OS << "update";
-  if (Node->isExtended()) {
-    OS << "(";
-    OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
-                                        Node->getDependencyKind());
-    OS << ")";
-  }
+}
+
+void OMPClausePrinter::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *Node) {
+  OS << "update(";
+  OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
+                                      Node->getDependencyKind());
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPCaptureClause(OMPCaptureClause *) {
@@ -2373,9 +2416,13 @@ void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
 void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "num_teams";
-    if (const Expr *LowerBound = Node->getModifierExpr()) {
+    if (Node->getModifier() != OMPC_NUMTEAMS_unknown) {
       OS << "(";
-      LowerBound->printPretty(OS, nullptr, Policy, 0);
+      if (Node->getModifier() == OMPC_NUMTEAMS_dims)
+        OS << "dims(";
+      Node->getModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+      if (Node->getModifier() == OMPC_NUMTEAMS_dims)
+        OS << ")";
       VisitOMPClauseList(Node, ':');
     } else {
       VisitOMPClauseList(Node, '(');
@@ -2387,7 +2434,14 @@ void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
 void OMPClausePrinter::VisitOMPThreadLimitClause(OMPThreadLimitClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "thread_limit";
-    VisitOMPClauseList(Node, '(');
+    if (Node->getModifier() == OMPC_THREADLIMIT_dims) {
+      OS << "(dims(";
+      Node->getModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+      OS << ")";
+      VisitOMPClauseList(Node, ':');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
     OS << ")";
   }
 }

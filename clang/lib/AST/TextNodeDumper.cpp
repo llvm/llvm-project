@@ -19,10 +19,10 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 
@@ -372,7 +372,10 @@ void TextNodeDumper::Visit(const OMPClause *C) {
   }
   {
     ColorScope Color(OS, ShowColors, ASTDumpColor::Attr);
-    StringRef ClauseName(llvm::omp::getOpenMPClauseName(C->getClauseKind()));
+    OpenMPClauseKind CKind = C->getClauseKind();
+    StringRef ClauseName(CKind == llvm::omp::Clause::OMPC_update_depend_objects
+                             ? StringRef("UpdateDependObjects")
+                             : llvm::omp::getOpenMPClauseName(CKind));
     OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
        << ClauseName.drop_front() << "Clause";
   }
@@ -552,7 +555,7 @@ void TextNodeDumper::Visit(const ConceptReference *R) {
   dumpPointer(R);
   dumpSourceRange(R->getSourceRange());
   OS << ' ';
-  dumpBareDeclRef(R->getNamedConcept());
+  dumpBareConcept(R->getNamedConcept());
 }
 
 void TextNodeDumper::Visit(const concepts::Requirement *R) {
@@ -756,6 +759,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     }
     OS << ", Null=" << Value.isNullPointer()
        << ", Offset=" << Value.getLValueOffset().getQuantity()
+       << ", OnePastTheEnd=" << Value.isLValueOnePastTheEnd()
        << ", HasPath=" << Value.hasLValuePath();
     if (Value.hasLValuePath()) {
       OS << ", PathLength=" << Value.getLValuePath().size();
@@ -811,6 +815,12 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
         },
         Value.getStructNumFields(), "field", "fields");
 
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getStructVirtualBase(Index);
+        },
+        Value.getStructNumVirtualBases(), "vbase", "vbases");
     return;
   }
   case APValue::Matrix: {
@@ -945,6 +955,21 @@ void TextNodeDumper::dumpBareType(QualType T, bool Desugar) {
 void TextNodeDumper::dumpType(QualType T) {
   OS << ' ';
   dumpBareType(T);
+}
+
+void TextNodeDumper::dumpBareConcept(TemplateName TN) {
+  {
+    ColorScope Color(OS, ShowColors, ASTDumpColor::DeclKindName);
+    OS << "Concept";
+  }
+
+  const TemplateDecl *TD = TN.getAsTemplateDecl();
+  dumpPointer(TD);
+
+  ColorScope Color(OS, ShowColors, ASTDumpColor::DeclName);
+  OS << " '";
+  TN.print(OS, PrintPolicy, TemplateName::Qualified::None);
+  OS << '\'';
 }
 
 void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
@@ -1366,6 +1391,19 @@ void TextNodeDumper::dumpBareTemplateName(TemplateName TN) {
     });
     return;
   }
+  case TemplateName::PackIndexingTemplate: {
+    OS << " pack_indexing";
+    const PackIndexingTemplateStorage *PI = TN.getAsPackIndexingTemplate();
+    if (PI->isFullySubstituted())
+      OS << " fully_substituted";
+    if (UnsignedOrNone Index = PI->getSelectedIndex())
+      OS << " index " << *Index;
+    dumpTemplateName(PI->getPattern(), "pattern");
+    AddChild("index", [=] { Visit(PI->getIndexExpr()); });
+    for (TemplateName Expansion : PI->getExpansions())
+      dumpTemplateName(Expansion, "expansion");
+    return;
+  }
   // FIXME: Implement these.
   case TemplateName::OverloadedTemplate:
     OS << " overloaded";
@@ -1431,7 +1469,7 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
   OS << ')';
 }
 
-void TextNodeDumper::dumpFormalLinkage(const NamedDecl *ND) {
+void TextNodeDumper::dumpLinkageAndVisibility(const NamedDecl *ND) {
   switch (ND->getFormalLinkage()) {
   case Linkage::None:
     // A lot of declarations have no linkage, so we only dump linkage if there
@@ -1451,6 +1489,19 @@ void TextNodeDumper::dumpFormalLinkage(const NamedDecl *ND) {
   case Linkage::UniqueExternal:
   case Linkage::VisibleNone:
     llvm_unreachable("Not a formal linkage!");
+  }
+
+  switch (ND->getVisibility()) {
+  case Visibility::DefaultVisibility:
+    // A lot of declarations have default visibility, so we only dump other
+    // kinds of visibility.
+    break;
+  case Visibility::HiddenVisibility:
+    OS << " hidden-visibility";
+    break;
+  case Visibility::ProtectedVisibility:
+    OS << " protected-visibility";
+    break;
   }
 }
 
@@ -1537,6 +1588,32 @@ void clang::TextNodeDumper::VisitCoreturnStmt(const CoreturnStmt *Node) {
     OS << " implicit";
 }
 
+void TextNodeDumper::VisitCXXExpansionStmtPattern(
+    const CXXExpansionStmtPattern *Node) {
+  switch (Node->getKind()) {
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating:
+    OS << " enumerating";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Iterating:
+    OS << " iterating";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Destructuring:
+    OS << " destructuring";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Dependent:
+    OS << " dependent";
+    return;
+  }
+
+  llvm_unreachable("invalid expansion statement kind");
+}
+
+void TextNodeDumper::VisitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation *Node) {
+  if (Node->shouldApplyLifetimeExtensionToPreamble())
+    OS << " applies_lifetime_extension";
+}
+
 void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
   if (Node->hasAPValueResult())
     AddChild("value",
@@ -1604,6 +1681,12 @@ void clang::TextNodeDumper::VisitDependentScopeDeclRefExpr(
     const DependentScopeDeclRefExpr *Node) {
 
   dumpNestedNameSpecifier(Node->getQualifier());
+}
+
+void clang::TextNodeDumper::VisitDependentTemplateIdExpr(
+    const DependentTemplateIdExpr *Node) {
+  OS << (Node->isConceptReference() ? " concept" : " variable template");
+  dumpTemplateName(Node->getTemplateName(), "name");
 }
 
 void TextNodeDumper::VisitUnresolvedLookupExpr(
@@ -2212,7 +2295,7 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     OS << " " #Trait;                                                          \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
@@ -2274,7 +2357,7 @@ void TextNodeDumper::VisitAutoType(const AutoType *T) {
   // Not necessary to dump the keyword since it's spelled plainly in the printed
   // type anyway.
   if (T->isConstrained())
-    dumpDeclRef(T->getTypeConstraintConcept());
+    AddChild([=] { dumpBareConcept(T->getTypeConstraintConcept()); });
 }
 
 void TextNodeDumper::VisitDeducedTemplateSpecializationType(
@@ -2324,7 +2407,7 @@ void TextNodeDumper::VisitTypedefDecl(const TypedefDecl *D) {
 
   const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
   if (TD && TD->getTypedefNameForAnonDecl()) {
-    dumpFormalLinkage(D);
+    dumpLinkageAndVisibility(D);
   }
 }
 
@@ -2346,7 +2429,7 @@ void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
     dumpPointer(Instance);
   }
 
-  dumpFormalLinkage(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
@@ -2358,7 +2441,7 @@ void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
     OS << " definition";
 
   if (!D->isImplicit() && !D->getDescribedTemplate()) {
-    dumpFormalLinkage(D);
+    dumpLinkageAndVisibility(D);
   }
 }
 
@@ -2459,7 +2542,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   }
 
   if (!isa<CXXDeductionGuideDecl>(D) && !D->getDescribedTemplate()) {
-    dumpFormalLinkage(D);
+    dumpLinkageAndVisibility(D);
   }
 }
 
@@ -2563,7 +2646,7 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
   }
 
   if (!D->getDescribedVarTemplate()) {
-    dumpFormalLinkage(D);
+    dumpLinkageAndVisibility(D);
   }
 }
 
@@ -2682,7 +2765,7 @@ void TextNodeDumper::VisitNamespaceDecl(const NamespaceDecl *D) {
   if (!D->isFirstDecl())
     dumpDeclRef(D->getFirstDecl(), "original");
 
-  dumpFormalLinkage(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
@@ -2701,14 +2784,14 @@ void TextNodeDumper::VisitTypeAliasDecl(const TypeAliasDecl *D) {
 
   const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
   if (TD && TD->getTypedefNameForAnonDecl()) {
-    dumpFormalLinkage(D);
+    dumpLinkageAndVisibility(D);
   }
 }
 
 void TextNodeDumper::VisitTypeAliasTemplateDecl(
     const TypeAliasTemplateDecl *D) {
   dumpName(D);
-  dumpFormalLinkage(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
@@ -2869,17 +2952,17 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
 void TextNodeDumper::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
   dumpName(D);
-  dumpFormalLinkage(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
   dumpName(D);
-  dumpFormalLinkage(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {
   dumpName(D);
-  dumpFormalLinkage(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D) {
@@ -2888,11 +2971,12 @@ void TextNodeDumper::VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D) {
 
 void TextNodeDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
   if (const auto *TC = D->getTypeConstraint()) {
-    OS << " ";
-    dumpBareDeclRef(TC->getNamedConcept());
-    if (TC->getNamedConcept() != TC->getFoundDecl()) {
+    OS << ' ';
+    dumpBareConcept(TC->getNamedConcept());
+    if (const auto *USD =
+            dyn_cast_if_present<UsingShadowDecl>(TC->getFoundDecl())) {
       OS << " (";
-      dumpBareDeclRef(TC->getFoundDecl());
+      dumpBareDeclRef(USD);
       OS << ")";
     }
   } else if (D->wasDeclaredWithTypename())
@@ -3011,6 +3095,18 @@ void TextNodeDumper::VisitExplicitInstantiationDecl(
 void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
   if (TypeSourceInfo *T = D->getFriendType())
     dumpType(T->getType());
+  if (D->isPackExpansion())
+    OS << "...";
+}
+
+void TextNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+  if (D->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
+    VisitFriendDecl(D);
+    return;
+  }
+
+  dumpBareTemplateName(D->getFriendTemplateName());
   if (D->isPackExpansion())
     OS << "...";
 }
@@ -3177,7 +3273,7 @@ void TextNodeDumper::VisitBlockDecl(const BlockDecl *D) {
 
 void TextNodeDumper::VisitConceptDecl(const ConceptDecl *D) {
   dumpName(D);
-  dumpFormalLinkage(D);
+  dumpLinkageAndVisibility(D);
 }
 
 void TextNodeDumper::VisitCompoundStmt(const CompoundStmt *S) {

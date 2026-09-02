@@ -376,8 +376,7 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
         "Symbol file generation only supported on SDK 23+");
 
   // If we already have symtab then we don't have to try and generate one
-  if (module_sp->GetSectionList()->FindSectionByName(ConstString(".symtab")) !=
-      nullptr)
+  if (module_sp->GetSectionList()->FindSectionByName(".symtab") != nullptr)
     return Status::FromErrorString("Symtab already available in the module");
 
   Status error;

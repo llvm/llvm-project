@@ -447,6 +447,9 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
         // use the stored value.
         if (StoredValue) {
           replaceLoadWithValue(L, StoredValue);
+          // Avoid assertions in unreachable code.
+          if (StoredValue == L)
+            StoredValue = PoisonValue::get(L->getType());
           L->replaceAllUsesWith(StoredValue);
           ReplacedLoads[L] = StoredValue;
         } else {

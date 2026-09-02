@@ -57,16 +57,17 @@ static GlobalDecl getGlobalDeclAsDeclContext(const DeclContext *DC) {
 
 struct msvc_hashing_ostream : public llvm::raw_svector_ostream {
   raw_ostream &OS;
+  size_t Threshold;
   llvm::SmallString<64> Buffer;
 
-  msvc_hashing_ostream(raw_ostream &OS)
-      : llvm::raw_svector_ostream(Buffer), OS(OS) {}
+  msvc_hashing_ostream(raw_ostream &OS, size_t Threshold = 4096)
+      : llvm::raw_svector_ostream(Buffer), OS(OS), Threshold(Threshold) {}
   ~msvc_hashing_ostream() override {
     StringRef MangledName = str();
     bool StartsWithEscape = MangledName.starts_with("\01");
     if (StartsWithEscape)
       MangledName = MangledName.drop_front(1);
-    if (MangledName.size() < 4096) {
+    if (MangledName.size() < Threshold) {
       OS << str();
       return;
     }
@@ -1018,6 +1019,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_Float8E3M4:
   case APFloat::S_FloatTF32:
   case APFloat::S_Float8E8M0FNU:
+  case APFloat::S_Float8E5M3FNU:
   case APFloat::S_Float6E3M2FN:
   case APFloat::S_Float6E2M3FN:
   case APFloat::S_Float4E2M1FN:
@@ -3026,6 +3028,11 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TagTypeKind::Struct, "__SVCount_t", {"__clang"});
     break;
 
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+    Error(Range.getBegin(), "SPIR-V built-in type") << Range;
+    break;
+
   // Issue an error for any type not explicitly handled.
   default:
     Error(Range.getBegin(), "built-in type: ",
@@ -4193,8 +4200,13 @@ void MicrosoftMangleContextImpl::mangleCXXRTTI(QualType T, raw_ostream &Out) {
 
 void MicrosoftMangleContextImpl::mangleCXXRTTIName(
     QualType T, raw_ostream &Out, bool NormalizeIntegers = false) {
-  MicrosoftCXXNameMangler Mangler(*this, Out);
-  Mangler.getStream() << '.';
+  Out << '.';
+  // MSVC caps the length of the TypeDescriptor's name string the same way it
+  // caps decorated names, substituting "??@<md5>@" for over-long names. The
+  // leading '.' counts toward the 4096-character limit but is not part of
+  // the hashed input, so the threshold is one lower than for symbols.
+  msvc_hashing_ostream MHO(Out, /*Threshold=*/4095);
+  MicrosoftCXXNameMangler Mangler(*this, MHO);
   Mangler.mangleType(T, SourceRange(), MicrosoftCXXNameMangler::QMM_Result);
 }
 

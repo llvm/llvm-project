@@ -1,15 +1,15 @@
 ; RUN: split-file %s %t
 
-; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/invalid-first-arg-addrspace.ll | FileCheck %t/invalid-first-arg-addrspace.ll
-; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/invalid-first-arg-type.ll | FileCheck %t/invalid-first-arg-type.ll
-; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/invalid-return.ll | FileCheck %t/invalid-return.ll
-; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/non-variadic.ll | FileCheck %t/non-variadic.ll
-; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %t/too-many-args.ll | FileCheck %t/too-many-args.ll
+; RUN: opt -mtriple=amdgpu8.03-- -passes=amdgpu-printf-runtime-binding -S < %t/invalid-first-arg-addrspace.ll | FileCheck %t/invalid-first-arg-addrspace.ll
+; RUN: opt -mtriple=amdgpu8.03-- -passes=amdgpu-printf-runtime-binding -S < %t/invalid-first-arg-type.ll | FileCheck %t/invalid-first-arg-type.ll
+; RUN: opt -mtriple=amdgpu8.03-- -passes=amdgpu-printf-runtime-binding -S < %t/invalid-return.ll | FileCheck %t/invalid-return.ll
+; RUN: opt -mtriple=amdgpu8.03-- -passes=amdgpu-printf-runtime-binding -S < %t/non-variadic.ll | FileCheck %t/non-variadic.ll
+; RUN: opt -mtriple=amdgpu8.03-- -passes=amdgpu-printf-runtime-binding -S < %t/too-many-args.ll | FileCheck %t/too-many-args.ll
 
 ;--- invalid-first-arg-addrspace.ll
 define amdgpu_kernel void @test_kernel(i32 %n) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEM:%.*]] = alloca i32, align 4, addrspace(5)
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
@@ -27,7 +27,7 @@ entry:
 
 define i32 @test_func(i32 %n) {
 ; CHECK-LABEL: define i32 @test_func(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(5), ...) @printf(ptr addrspace(5) [[STR]], ptr addrspace(5) [[STR]], i32 [[N]])
@@ -41,7 +41,7 @@ entry:
 
 define i32 @test_null_argument(i32 %n) {
 ; CHECK-LABEL: define i32 @test_null_argument(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(5), ...) @printf(ptr addrspace(5) null, ptr addrspace(5) [[STR]], i32 [[N]])
 ; CHECK-NEXT:    ret i32 [[CALL1]]
@@ -56,7 +56,7 @@ declare i32 @printf(ptr addrspace(5), ...)
 ;--- invalid-first-arg-type.ll
 define amdgpu_kernel void @test_kernel(i32 %n) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEM:%.*]] = alloca float, align 4, addrspace(5)
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
@@ -74,7 +74,7 @@ entry:
 
 define float @test_func(i32 %n) {
 ; CHECK-LABEL: define float @test_func(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call float (i32, ...) @printf(i32 [[N]], ptr addrspace(5) [[STR]], i32 [[N]])
@@ -93,7 +93,7 @@ declare float @printf(i32, ...)
 
 define amdgpu_kernel void @test_kernel(i32 %n) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEM:%.*]] = alloca float, align 4, addrspace(5)
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
@@ -111,7 +111,7 @@ entry:
 
 define float @test_func(i32 %n) {
 ; CHECK-LABEL: define float @test_func(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call float (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(5) [[STR]], i32 [[N]])
@@ -125,7 +125,7 @@ entry:
 
 define float @test_null_argument(i32 %n) {
 ; CHECK-LABEL: define float @test_null_argument(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call float (ptr addrspace(4), ...) @printf(ptr addrspace(4) null, ptr addrspace(5) [[STR]], i32 [[N]])
 ; CHECK-NEXT:    ret float [[CALL1]]
@@ -142,7 +142,7 @@ declare float @printf(ptr addrspace(4), ...)
 
 define amdgpu_kernel void @test_kernel(i32 %n) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEM:%.*]] = alloca i32, align 4, addrspace(5)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @printf(ptr addrspace(4) @.str, i32 [[N]])
@@ -158,7 +158,7 @@ entry:
 
 define i32 @test_func(i32 %n) {
 ; CHECK-LABEL: define i32 @test_func(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @printf(ptr addrspace(4) @.str, i32 [[N]])
 ; CHECK-NEXT:    ret i32 [[CALL1]]
@@ -170,7 +170,7 @@ entry:
 
 define i32 @test_null_argument(i32 %n) {
 ; CHECK-LABEL: define i32 @test_null_argument(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @printf(ptr addrspace(4) null, i32 [[N]])
 ; CHECK-NEXT:    ret i32 [[CALL1]]
 ;
@@ -185,7 +185,7 @@ declare i32 @printf(ptr addrspace(4), i32)
 
 define amdgpu_kernel void @test_kernel(i32 %n) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MEM:%.*]] = alloca float, align 4, addrspace(5)
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
@@ -203,7 +203,7 @@ entry:
 
 define float @test_func(i32 %n) {
 ; CHECK-LABEL: define float @test_func(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call float (ptr addrspace(4), i32, ...) @printf(ptr addrspace(4) @.str, i32 [[N]], ptr addrspace(5) [[STR]], i32 [[N]])
@@ -217,7 +217,7 @@ entry:
 
 define float @test_null_argument(i32 %n) {
 ; CHECK-LABEL: define float @test_null_argument(
-; CHECK-SAME: i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call float (ptr addrspace(4), i32, ...) @printf(ptr addrspace(4) null, i32 [[N]], ptr addrspace(5) [[STR]], i32 [[N]])
 ; CHECK-NEXT:    ret float [[CALL1]]

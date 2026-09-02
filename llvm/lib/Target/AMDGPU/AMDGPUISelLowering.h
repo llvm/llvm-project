@@ -182,7 +182,7 @@ protected:
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerUDIVREM(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool sign) const;
+  SDValue LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG, bool sign) const;
   void LowerUDIVREM64(SDValue Op, SelectionDAG &DAG,
                                     SmallVectorImpl<SDValue> &Results) const;
 
@@ -193,8 +193,6 @@ protected:
 public:
   AMDGPUTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI,
                        const AMDGPUSubtarget &AMDGPUSTI);
-
-  bool mayIgnoreSignedZero(SDValue Op) const;
 
   static inline SDValue stripBitcast(SDValue Val) {
     return Val.getOpcode() == ISD::BITCAST ? Val.getOperand(0) : Val;

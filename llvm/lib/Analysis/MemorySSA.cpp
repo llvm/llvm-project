@@ -25,6 +25,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Config/llvm-config.h"
@@ -364,10 +365,10 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysisType &AA,
                                                    const Instruction *I) {
   // If the memory can't be changed, then loads of the memory can't be
   // clobbered.
-  if (auto *LI = dyn_cast<LoadInst>(I)) {
-    return I->hasMetadata(LLVMContext::MD_invariant_load) ||
-           !isModSet(AA.getModRefInfoMask(MemoryLocation::get(LI)));
-  }
+  if (I->hasMetadata(LLVMContext::MD_invariant_load))
+    return true;
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return !isModSet(AA.getModRefInfoMask(MemoryLocation::get(LI)));
   return false;
 }
 

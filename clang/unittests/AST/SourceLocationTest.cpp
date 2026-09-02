@@ -15,17 +15,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/SourceLocation.h"
 #include "MatchVerifier.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTFwd.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/ASTMatchers/ASTMatchersInternal.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gtest/gtest.h"
+#include <string>
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -177,7 +183,7 @@ TEST(MemberExpr, ImplicitMemberRange) {
 class MemberExprArrowLocVerifier : public RangeVerifier<MemberExpr> {
 protected:
   SourceRange getRange(const MemberExpr &Node) override {
-     return Node.getOperatorLoc();
+    return Node.getOperatorLoc();
   }
 };
 
@@ -209,8 +215,7 @@ TEST(MemberExpr, ImplicitArrowRange) {
 TEST(VarDecl, VMTypeFixedVarDeclRange) {
   RangeVerifier<VarDecl> Verifier;
   Verifier.expectRange(1, 1, 1, 23);
-  EXPECT_TRUE(Verifier.match("int a[(int)(void*)1234];",
-                             varDecl(), Lang_C89));
+  EXPECT_TRUE(Verifier.match("int a[(int)(void*)1234];", varDecl(), Lang_C89));
 }
 
 TEST(TypeLoc, IntRange) {
@@ -353,22 +358,23 @@ TEST(CXXConstructorDecl, NoRetFunTypeLocRange) {
 
 TEST(CXXConstructorDecl, DefaultedCtorLocRange) {
   RangeVerifier<CXXConstructorDecl> Verifier;
-  Verifier.expectRange(1, 11, 1, 23);
+  Verifier.expectRange(1, 11, 1, 17);
   EXPECT_TRUE(Verifier.match("class C { C() = default; };", functionDecl()));
 }
 
 TEST(CXXConstructorDecl, DeletedCtorLocRange) {
   RangeVerifier<CXXConstructorDecl> Verifier;
-  Verifier.expectRange(1, 11, 1, 22);
+  Verifier.expectRange(1, 11, 1, 17);
   EXPECT_TRUE(Verifier.match("class C { C() = delete; };", functionDecl()));
 }
 
 TEST(CompoundLiteralExpr, CompoundVectorLiteralRange) {
   RangeVerifier<CompoundLiteralExpr> Verifier;
   Verifier.expectRange(2, 11, 2, 22);
-  EXPECT_TRUE(Verifier.match(
-                  "typedef int int2 __attribute__((ext_vector_type(2)));\n"
-                  "int2 i2 = (int2){1, 2};", compoundLiteralExpr()));
+  EXPECT_TRUE(
+      Verifier.match("typedef int int2 __attribute__((ext_vector_type(2)));\n"
+                     "int2 i2 = (int2){1, 2};",
+                     compoundLiteralExpr()));
 }
 
 TEST(CompoundLiteralExpr, ParensCompoundVectorLiteralRange) {
@@ -383,17 +389,19 @@ TEST(CompoundLiteralExpr, ParensCompoundVectorLiteralRange) {
 TEST(InitListExpr, VectorLiteralListBraceRange) {
   RangeVerifier<InitListExpr> Verifier;
   Verifier.expectRange(2, 17, 2, 22);
-  EXPECT_TRUE(Verifier.match(
-                  "typedef int int2 __attribute__((ext_vector_type(2)));\n"
-                  "int2 i2 = (int2){1, 2};", initListExpr()));
+  EXPECT_TRUE(
+      Verifier.match("typedef int int2 __attribute__((ext_vector_type(2)));\n"
+                     "int2 i2 = (int2){1, 2};",
+                     initListExpr()));
 }
 
 TEST(InitListExpr, VectorLiteralInitListParens) {
   RangeVerifier<InitListExpr> Verifier;
   Verifier.expectRange(2, 26, 2, 31);
-  EXPECT_TRUE(Verifier.match(
-                  "typedef int int2 __attribute__((ext_vector_type(2)));\n"
-                  "constant int2 i2 = (int2)(1, 2);", initListExpr(), Lang_OpenCL));
+  EXPECT_TRUE(
+      Verifier.match("typedef int int2 __attribute__((ext_vector_type(2)));\n"
+                     "constant int2 i2 = (int2)(1, 2);",
+                     initListExpr(), Lang_OpenCL));
 }
 
 class TemplateAngleBracketLocRangeVerifier : public RangeVerifier<TypeLoc> {
@@ -409,10 +417,10 @@ protected:
 TEST(TemplateSpecializationTypeLoc, AngleBracketLocations) {
   TemplateAngleBracketLocRangeVerifier Verifier;
   Verifier.expectRange(2, 8, 2, 10);
-  EXPECT_TRUE(Verifier.match(
-      "template<typename T> struct A {}; struct B{}; void f(\n"
-      "const A<B>&);",
-      loc(templateSpecializationType())));
+  EXPECT_TRUE(
+      Verifier.match("template<typename T> struct A {}; struct B{}; void f(\n"
+                     "const A<B>&);",
+                     loc(templateSpecializationType())));
 }
 
 TEST(CXXNewExpr, TypeParenRange) {
@@ -434,12 +442,11 @@ protected:
 TEST(UnaryTransformTypeLoc, ParensRange) {
   UnaryTransformTypeLocParensRangeVerifier Verifier;
   Verifier.expectRange(3, 26, 3, 28);
-  EXPECT_TRUE(Verifier.match(
-      "template <typename T>\n"
-      "struct S {\n"
-      "typedef __underlying_type(T) type;\n"
-      "};",
-      loc(unaryTransformType())));
+  EXPECT_TRUE(Verifier.match("template <typename T>\n"
+                             "struct S {\n"
+                             "typedef __underlying_type(T) type;\n"
+                             "};",
+                             loc(unaryTransformType())));
 }
 
 TEST(PointerTypeLoc, StarLoc) {
@@ -451,11 +458,11 @@ TEST(PointerTypeLoc, StarLoc) {
   SourceManager &SM = AST->getSourceManager();
   auto &Ctx = AST->getASTContext();
 
-  auto *VD = selectFirst<VarDecl>("vd", match(varDecl(hasName("var")).bind("vd"), Ctx));
+  auto *VD = selectFirst<VarDecl>(
+      "vd", match(varDecl(hasName("var")).bind("vd"), Ctx));
   ASSERT_NE(VD, nullptr);
 
-  auto TL =
-      VD->getTypeSourceInfo()->getTypeLoc().castAs<PointerTypeLoc>();
+  auto TL = VD->getTypeSourceInfo()->getTypeLoc().castAs<PointerTypeLoc>();
   ASSERT_EQ(SM.getFileOffset(TL.getStarLoc()), Example.point("star"));
 }
 
@@ -469,47 +476,49 @@ TEST(PointerTypeLoc, StarLocBehindSugar) {
   SourceManager &SM = AST->getSourceManager();
   auto &Ctx = AST->getASTContext();
 
-  auto *VD = selectFirst<VarDecl>("vd", match(varDecl(hasName("var")).bind("vd"), Ctx));
+  auto *VD = selectFirst<VarDecl>(
+      "vd", match(varDecl(hasName("var")).bind("vd"), Ctx));
   ASSERT_NE(VD, nullptr);
 
   auto TL = VD->getTypeSourceInfo()->getTypeLoc().castAs<PointerTypeLoc>();
   EXPECT_EQ(SM.getFileOffset(TL.getStarLoc()), Example.point("2nd"));
 
   // Cast intermediate TypeLoc to make sure the structure matches expectations.
-  auto InnerPtrTL = TL.getPointeeLoc().castAs<AttributedTypeLoc>()
-    .getNextTypeLoc().castAs<MacroQualifiedTypeLoc>()
-    .getNextTypeLoc().castAs<AttributedTypeLoc>()
-    .getNextTypeLoc().castAs<PointerTypeLoc>();
+  auto InnerPtrTL = TL.getPointeeLoc()
+                        .castAs<AttributedTypeLoc>()
+                        .getNextTypeLoc()
+                        .castAs<MacroQualifiedTypeLoc>()
+                        .getNextTypeLoc()
+                        .castAs<AttributedTypeLoc>()
+                        .getNextTypeLoc()
+                        .castAs<PointerTypeLoc>();
   EXPECT_EQ(SM.getFileOffset(InnerPtrTL.getStarLoc()), Example.point("1st"));
 }
 
 TEST(CXXFunctionalCastExpr, SourceRange) {
   RangeVerifier<CXXFunctionalCastExpr> Verifier;
   Verifier.expectRange(2, 10, 2, 14);
-  EXPECT_TRUE(Verifier.match(
-      "int foo() {\n"
-      "  return int{};\n"
-      "}",
-      cxxFunctionalCastExpr(), Lang_CXX11));
+  EXPECT_TRUE(Verifier.match("int foo() {\n"
+                             "  return int{};\n"
+                             "}",
+                             cxxFunctionalCastExpr(), Lang_CXX11));
 }
 
 TEST(CXXConstructExpr, SourceRange) {
   RangeVerifier<CXXConstructExpr> Verifier;
   Verifier.expectRange(3, 14, 3, 19);
-  EXPECT_TRUE(Verifier.match(
-      "struct A { A(int, int); };\n"
-      "void f(A a);\n"
-      "void g() { f({0, 0}); }",
-      cxxConstructExpr(), Lang_CXX11));
+  EXPECT_TRUE(Verifier.match("struct A { A(int, int); };\n"
+                             "void f(A a);\n"
+                             "void g() { f({0, 0}); }",
+                             cxxConstructExpr(), Lang_CXX11));
 }
 
 TEST(CXXTemporaryObjectExpr, SourceRange) {
   RangeVerifier<CXXTemporaryObjectExpr> Verifier;
   Verifier.expectRange(2, 6, 2, 12);
-  EXPECT_TRUE(Verifier.match(
-      "struct A { A(int, int); };\n"
-      "A a( A{0, 0} );",
-      cxxTemporaryObjectExpr(), Lang_CXX11));
+  EXPECT_TRUE(Verifier.match("struct A { A(int, int); };\n"
+                             "A a( A{0, 0} );",
+                             cxxTemporaryObjectExpr(), Lang_CXX11));
 }
 
 TEST(CXXUnresolvedConstructExpr, SourceRange) {
@@ -517,32 +526,29 @@ TEST(CXXUnresolvedConstructExpr, SourceRange) {
   Verifier.expectRange(3, 10, 3, 12);
   std::vector<std::string> Args;
   Args.push_back("-fno-delayed-template-parsing");
-  EXPECT_TRUE(Verifier.match(
-      "template <typename U>\n"
-      "U foo() {\n"
-      "  return U{};\n"
-      "}",
-      cxxUnresolvedConstructExpr(), Args, Lang_CXX11));
+  EXPECT_TRUE(Verifier.match("template <typename U>\n"
+                             "U foo() {\n"
+                             "  return U{};\n"
+                             "}",
+                             cxxUnresolvedConstructExpr(), Args, Lang_CXX11));
 }
 
 TEST(UsingDecl, SourceRange) {
   RangeVerifier<UsingDecl> Verifier;
   Verifier.expectRange(2, 22, 2, 25);
-  EXPECT_TRUE(Verifier.match(
-      "class B { protected: int i; };\n"
-      "class D : public B { B::i; };",
-      usingDecl()));
+  EXPECT_TRUE(Verifier.match("class B { protected: int i; };\n"
+                             "class D : public B { B::i; };",
+                             usingDecl()));
 }
 
 TEST(UnresolvedUsingValueDecl, SourceRange) {
   RangeVerifier<UnresolvedUsingValueDecl> Verifier;
   Verifier.expectRange(3, 3, 3, 6);
-  EXPECT_TRUE(Verifier.match(
-      "template <typename B>\n"
-      "class D : public B {\n"
-      "  B::i;\n"
-      "};",
-      unresolvedUsingValueDecl()));
+  EXPECT_TRUE(Verifier.match("template <typename B>\n"
+                             "class D : public B {\n"
+                             "  B::i;\n"
+                             "};",
+                             unresolvedUsingValueDecl()));
 }
 
 TEST(FriendDecl, FriendNonMemberFunctionLocation) {
@@ -782,9 +788,7 @@ TEST(ObjCMessageExpr, ParenExprRange) {
 TEST(FunctionDecl, FunctionDeclWithThrowSpecification) {
   RangeVerifier<FunctionDecl> Verifier;
   Verifier.expectRange(1, 1, 1, 16);
-  EXPECT_TRUE(Verifier.match(
-      "void f() throw();\n",
-      functionDecl()));
+  EXPECT_TRUE(Verifier.match("void f() throw();\n", functionDecl()));
 }
 
 TEST(FunctionDecl, FunctionDeclWithNoExceptSpecification) {
@@ -903,11 +907,10 @@ TEST(FunctionDeclParameters, FunctionDeclWithParamAttribute) {
 TEST(CXXMethodDecl, CXXMethodDeclWithThrowSpecification) {
   RangeVerifier<FunctionDecl> Verifier;
   Verifier.expectRange(2, 1, 2, 16);
-  EXPECT_TRUE(Verifier.match(
-      "class A {\n"
-      "void f() throw();\n"
-      "};\n",
-      functionDecl()));
+  EXPECT_TRUE(Verifier.match("class A {\n"
+                             "void f() throw();\n"
+                             "};\n",
+                             functionDecl()));
 }
 
 TEST(CXXMethodDecl, CXXMethodDeclWithNoExceptSpecification) {
@@ -922,8 +925,7 @@ TEST(CXXMethodDecl, CXXMethodDeclWithNoExceptSpecification) {
 class ExceptionSpecRangeVerifier : public RangeVerifier<TypeLoc> {
 protected:
   SourceRange getRange(const TypeLoc &Node) override {
-    auto T =
-      Node.getUnqualifiedLoc().castAs<FunctionProtoTypeLoc>();
+    auto T = Node.getUnqualifiedLoc().castAs<FunctionProtoTypeLoc>();
     assert(!T.isNull());
     return T.getExceptionSpecRange();
   }
@@ -1127,6 +1129,113 @@ template <int X> requires NS::CCC<X> int z = X;
 )cpp";
   Verifier.expectRange(4, 27, 4, 36);
   EXPECT_TRUE(Verifier.match(Code2, varTemplateDecl(hasName("z")), Lang_CXX20));
+}
+
+class ObjCSelectorLocationVerifier : public MatchVerifier<ObjCSelectorExpr> {
+  unsigned ExpectAtLine = 0, ExpectAtColumn = 0;
+  unsigned ExpectNameLine = 0, ExpectNameColumn = 0;
+  unsigned ExpectRParenLine = 0, ExpectRParenColumn = 0;
+
+public:
+  void expectLocations(unsigned AtLine, unsigned AtColumn, unsigned NameLine,
+                       unsigned NameColumn, unsigned RParenLine,
+                       unsigned RParenColumn) {
+    ExpectAtLine = AtLine;
+    ExpectAtColumn = AtColumn;
+    ExpectNameLine = NameLine;
+    ExpectNameColumn = NameColumn;
+    ExpectRParenLine = RParenLine;
+    ExpectRParenColumn = RParenColumn;
+  }
+
+protected:
+  void verify(const MatchFinder::MatchResult &Result,
+              const ObjCSelectorExpr &Node) override {
+    SourceLocation AtLoc = Node.getAtLoc();
+    SourceLocation NameLoc = Node.getSelectorNameLoc();
+    SourceLocation RParenLoc = Node.getRParenLoc();
+
+    unsigned AtLine = Result.SourceManager->getSpellingLineNumber(AtLoc);
+    unsigned AtColumn = Result.SourceManager->getSpellingColumnNumber(AtLoc);
+    unsigned NameLine = Result.SourceManager->getSpellingLineNumber(NameLoc);
+    unsigned NameColumn =
+        Result.SourceManager->getSpellingColumnNumber(NameLoc);
+    unsigned RParenLine =
+        Result.SourceManager->getSpellingLineNumber(RParenLoc);
+    unsigned RParenColumn =
+        Result.SourceManager->getSpellingColumnNumber(RParenLoc);
+
+    if (AtLine != ExpectAtLine || AtColumn != ExpectAtColumn ||
+        NameLine != ExpectNameLine || NameColumn != ExpectNameColumn ||
+        RParenLine != ExpectRParenLine || RParenColumn != ExpectRParenColumn) {
+      std::string MsgStr;
+      llvm::raw_string_ostream Msg(MsgStr);
+      Msg << "Expected At Location <" << ExpectAtLine << ":" << ExpectAtColumn
+          << ">, found <";
+      AtLoc.print(Msg, *Result.SourceManager);
+      Msg << ">\n";
+
+      Msg << "Expected Name Location <" << ExpectNameLine << ":"
+          << ExpectNameColumn << ">, found <";
+      NameLoc.print(Msg, *Result.SourceManager);
+      Msg << ">\n";
+
+      Msg << "Expected RParen Location <" << ExpectRParenLine << ":"
+          << ExpectRParenColumn << ">, found <";
+      RParenLoc.print(Msg, *Result.SourceManager);
+      Msg << ">";
+
+      this->setFailure(MsgStr);
+    }
+  }
+};
+
+const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCSelectorExpr>
+    objcSelectorExpr;
+
+TEST(ObjCSelectorExpr, LocationsValidation) {
+  ObjCSelectorLocationVerifier Verifier;
+
+  Verifier.expectLocations(
+      /*At:*/ 2, 11,
+      /*Name:*/ 2, 21,
+      /*RParen:*/ 2, 28);
+
+  EXPECT_TRUE(Verifier.match("void foo() {\n"
+                             "  SEL s = @selector(foobar:);\n"
+                             "}\n",
+                             traverse(TK_AsIs, objcSelectorExpr()), Lang_OBJC));
+}
+
+TEST(ObjCSelectorExpr, LocationsValidationSpaces) {
+  ObjCSelectorLocationVerifier Verifier;
+
+  Verifier.expectLocations(
+      /*At:*/ 2, 13,
+      /*Name:*/ 2, 27,
+      /*RParen:*/ 2, 36);
+
+  EXPECT_TRUE(Verifier.match("void foo() {\n"
+                             "  SEL s =   @  selector(  foobar   );\n"
+                             "}\n",
+                             traverse(TK_AsIs, objcSelectorExpr()), Lang_OBJC));
+}
+
+TEST(ObjCSelectorExpr, LocationsValidationBrokenLines) {
+  ObjCSelectorLocationVerifier Verifier;
+
+  Verifier.expectLocations(
+      /*At:*/ 3, 5,
+      /*Name:*/ 4, 7,
+      /*RParen:*/ 5, 5);
+
+  EXPECT_TRUE(Verifier.match("void foo() {\n"
+                             "  SEL s =\n"
+                             "    @selector(\n"
+                             "      foobar\n"
+                             "    );\n"
+                             "}\n",
+                             traverse(TK_AsIs, objcSelectorExpr()), Lang_OBJC));
 }
 
 } // end namespace

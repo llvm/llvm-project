@@ -502,12 +502,14 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     if (CheckCoroCall ||
         CanonCallee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
       VisitLifetimeBoundArg(CanonCallee->getParamDecl(I), Arg);
-    else if (const auto *CaptureAttr =
-                 CanonCallee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
-             CaptureAttr && isa<CXXConstructorDecl>(CanonCallee) &&
-             llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
-               return ArgIdx == LifetimeCaptureByAttr::This;
-             }))
+    else if (isa<CXXConstructorDecl>(CanonCallee) &&
+             llvm::any_of(CanonCallee->getParamDecl(I)
+                              ->specific_attrs<LifetimeCaptureByAttr>(),
+                          [](const LifetimeCaptureByAttr *CaptureAttr) {
+                            return llvm::is_contained(
+                                CaptureAttr->params(),
+                                LifetimeCaptureByAttr::This);
+                          }))
       // `lifetime_capture_by(this)` in a class constructor has the same
       // semantics as `lifetimebound`:
       //

@@ -19,7 +19,7 @@
 #include <text_encoding>
 #include <type_traits>
 
-#include "../test_text_encoding.h"
+#include "test_text_encoding.h"
 
 using id = std::text_encoding::id;
 
