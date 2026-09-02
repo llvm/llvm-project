@@ -1377,6 +1377,11 @@ public:
   /// Test whether the target triple is for a GPU.
   bool isGPU() const { return isSPIROrSPIRV() || isNVPTX() || isAMDGPU(); }
 
+  /// Returns true if a pointer known to be dereferenceable in address space
+  /// \p SrcAS is guaranteed to remain dereferenceable after an
+  /// `addrspacecast` to address space \p DstAS on this target.
+  LLVM_ABI bool isValidAddrSpaceCast(unsigned SrcAS, unsigned DstAS) const;
+
   /// Merge target triples.
   LLVM_ABI std::string merge(const Triple &Other) const;
 
