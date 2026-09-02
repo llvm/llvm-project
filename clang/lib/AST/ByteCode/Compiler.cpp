@@ -640,7 +640,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     if (E->getType()->isVectorType())
       return this->emitVectorConversion(E->getSubExpr(), E);
     if (!SubExpr->getType()->isRealFloatingType() ||
-        !E->getType()->isBooleanType())
+        !E->getType()->hasBooleanRepresentation())
       return false;
     if (const auto *FL = dyn_cast<FloatingLiteral>(SubExpr))
       return this->emitConstBool(FL->getValue().isNonZero(), E);
