@@ -308,9 +308,9 @@ public:
 
 /// Interface for transforming one complete legal schedule into another.
 ///
-/// Founder is explicit so the same optimizer can run either before scheduling,
-/// with the incoming order as founder, or after an existing strategy has
-/// materialized a target-selected founder.
+/// The incoming complete schedule is denoted as Founder. It can be either
+/// the initial serialized nodenum schedule before scheduler runs or the
+/// completed schedule after scheduler ran.
 struct LLVM_ABI MachineSchedCompleteScheduleOptimizer {
 public:
   virtual ~MachineSchedCompleteScheduleOptimizer();
