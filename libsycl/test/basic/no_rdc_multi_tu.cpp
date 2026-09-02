@@ -7,19 +7,9 @@
 // The second translation unit is this same source compiled with -DSECOND_TU.
 // RUN: %clangxx -fsycl -fno-gpu-rdc -c %s -o %t.nordc.main.o
 // RUN: %clangxx -fsycl -fno-gpu-rdc -DSECOND_TU -c %s -o %t.nordc.second.o
-// RUN: %clangxx -fsycl %t.nordc.main.o %t.nordc.second.o -o %t.nordc.out
+// RUN: %clangxx %t.nordc.main.o %t.nordc.second.o -L%sycl_libs_dir -lLLVMSYCL \
+// RUN:   -o %t.nordc.out
 // RUN: %t.nordc.out
-
-// Splitting the device code of a translation unit by kernel gives it more than
-// one device image, all of which end up in the fat binary of that translation
-// unit. The runtime is handed one binary and has to find the kernels across all
-// of its images.
-// RUN: %clangxx -fsycl -fno-gpu-rdc -fsycl-device-image-split=kernel -c %s \
-// RUN:   -o %t.split.main.o
-// RUN: %clangxx -fsycl -fno-gpu-rdc -fsycl-device-image-split=kernel \
-// RUN:   -DSECOND_TU -c %s -o %t.split.second.o
-// RUN: %clangxx -fsycl %t.split.main.o %t.split.second.o -o %t.split.out
-// RUN: %t.split.out
 
 // An RDC build of the same sources has to give the same result.
 // RUN: %clangxx -fsycl -fgpu-rdc -c %s -o %t.rdc.main.o

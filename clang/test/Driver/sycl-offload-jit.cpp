@@ -82,11 +82,19 @@
 // CHK-PHASES-NORDC-ARCHS-NEXT: 13: llvm-offload-binary, {7, 12}, image, (device-sycl)
 // CHK-PHASES-NORDC-ARCHS-NEXT: 14: clang-linker-wrapper, {13}, sycl-fatbin, (device-sycl)
 
-/// Multiple device triples are not supported today.
+/// Multiple device triples are not supported today in non-RDC mode.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-gpu-rdc \
 // RUN:   --offload-targets=spirv64-unknown-unknown,spirv32-unknown-unknown -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-NORDC-MULTI-TRIPLE %s
 // CHK-NORDC-MULTI-TRIPLE: error: '-fno-gpu-rdc' is not supported with multiple SYCL offloading targets
+
+/// Multiple device triples are supported in RDC mode.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fgpu-rdc \
+// RUN:   --offload-targets=spirv64-unknown-unknown,spirv32-unknown-unknown -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-RDC-MULTI-TRIPLE %s
+// CHK-RDC-MULTI-TRIPLE-NOT: error:
+// CHK-RDC-MULTI-TRIPLE: "-cc1" "-triple" "spirv32-unknown-unknown"{{.*}} "-fsycl-is-device"
+// CHK-RDC-MULTI-TRIPLE: "-cc1" "-triple" "spirv64-unknown-unknown"{{.*}} "-fsycl-is-device"
 
 /// A single target repeated is one target.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-gpu-rdc \
@@ -94,14 +102,6 @@
 // RUN:   | FileCheck -check-prefix=CHK-NORDC-DUP-TRIPLE %s
 // CHK-NORDC-DUP-TRIPLE-NOT: error:
 // CHK-NORDC-DUP-TRIPLE: clang-linker-wrapper{{.*}} "--emit-fatbin-only"
-
-/// The same two targets in RDC mode are supported.
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fgpu-rdc \
-// RUN:   --offload-targets=spirv64-unknown-unknown,spirv32-unknown-unknown -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-RDC-MULTI-TRIPLE %s
-// CHK-RDC-MULTI-TRIPLE-NOT: error:
-// CHK-RDC-MULTI-TRIPLE: "-cc1" "-triple" "spirv32-unknown-unknown"{{.*}} "-fsycl-is-device"
-// CHK-RDC-MULTI-TRIPLE: "-cc1" "-triple" "spirv64-unknown-unknown"{{.*}} "-fsycl-is-device"
 
 /// Check that in non-RDC mode clang-linker-wrapper finalizes the packaged
 /// device images into a fat binary rather than a host object, and that the
