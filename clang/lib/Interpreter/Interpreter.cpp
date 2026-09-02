@@ -351,6 +351,9 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
 
+  // Honor -mllvm options
+  CI->parseLLVMArgs();
+
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
                                                std::move(Consumer));
