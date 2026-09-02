@@ -1118,6 +1118,55 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// A reduction written as `acc + (-x)` is canonicalized into the subtracting
+// accumulation `acc - x` before any tiling happens, giving the same result as
+// reduction_tile_negated_sum_f32_for above.
+
+func.func @reduction_tile_negated_sum_f32_canonicalized_for(%arg0: tensor<?x?xf32>, %out: tensor<?xf32>) -> tensor<?xf32> {
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+   iterator_types = ["parallel", "reduction"]}
+   ins(%arg0 : tensor<?x?xf32>)
+   outs(%out : tensor<?xf32>) {
+    ^bb0(%in: f32, %acc: f32):
+      %neg = arith.negf %in : f32
+      %add = arith.addf %acc, %neg : f32
+      linalg.yield %add : f32
+    } -> tensor<?xf32>
+  return %red : tensor<?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.canonicalization
+    } : !transform.any_op
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %2, %3, %loop = transform.structured.tile_reduction_using_for %0
+      by tile_sizes = [0, 5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}
+
+// CHECK-LABEL: func @reduction_tile_negated_sum_f32_canonicalized_for
+//   CHECK-DAG:   %[[I:.*]] = arith.constant 0.000000e+00 : f32
+//       CHECK:   %[[F:.*]] = linalg.fill ins(%[[I]] : f32) outs(%{{.*}} : tensor<?x5xf32>) -> tensor<?x5xf32>
+//       CHECK:   %[[L:.*]] = scf.for {{.*}} iter_args(%[[ITER:.+]] = %[[F]]) -> (tensor<?x5xf32>) {
+//       CHECK:     %[[TILE:.+]] = linalg.generic
+//       CHECK:     ^bb0(%[[IN:.+]]: f32, %[[ACC:.+]]: f32):
+//       CHECK:       %[[SUB:.+]] = arith.subf %[[ACC]], %[[IN]] : f32
+//       CHECK:       linalg.yield %[[SUB]] : f32
+//       CHECK:     %[[INSERTED:.+]] = tensor.insert_slice %[[TILE]] into %[[ITER]]
+//       CHECK:     scf.yield %[[INSERTED]] : tensor<?x5xf32>
+//       CHECK:   linalg.reduce ins(%[[L]] : tensor<?x5xf32>) outs(%{{.*}} : tensor<?xf32>) dimensions = [1]
+//       CHECK:     (%[[PARTIAL:.+]]: f32, %[[INIT:.+]]: f32) {
+//       CHECK:       %[[ADD:.+]] = arith.addf %[[PARTIAL]], %[[INIT]] : f32
+//       CHECK:       linalg.yield %[[ADD]] : f32
+//       CHECK:   return
+
+// -----
+
 // `x - acc` is not a splittable reduction: the accumulator has to be the
 // left-hand side of the subtraction, so no neutral element applies.
 
