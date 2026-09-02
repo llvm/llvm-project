@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.08-amd-amdhsa --split-input-file --verify-diagnostics
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.0a-amd-amdhsa --split-input-file --verify-diagnostics
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu9.08-amd-amdhsa --split-input-file --verify-diagnostics
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu9.0a-amd-amdhsa --split-input-file --verify-diagnostics
 
 // gfx908 and gfx90a have FeatureMAIInsts but no fp8 conversions at all, so the
 // fp8 MFMAs -- which first appear on gfx942 -- must not be selected for them.

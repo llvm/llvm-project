@@ -27,13 +27,9 @@ def AmdgpuEmulateAtomicsPass : Pass<"amdgpu-emulate-atomics"> {
     "vector::VectorDialect"
   ];
   let options = [
-    Option<"triple", "triple", "std::string",
+    Option<"arch", "arch", "std::string",
            /*default=*/"\"invalid\"",
-           "Target triple (e.g. amdgpu9.42-amd-amdhsa) or GPU name (e.g. gfx942). Defaults to an invalid target so that one must be given explicitly">,
-    Option<"chip", "chip", "std::string", /*default=*/"\"\"",
-           "Target GPU, if not given by the triple (e.g. gfx942)">,
-    Option<"features", "features", "std::string", /*default=*/"\"\"",
-           "Target features (e.g. +wavefrontsize64)">,
+           "Target architecture, as in Clang, with optional target-ID modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are preferred, and can be extended to a full target ID like amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names like gfx1250 or gfx942:xnack- are also supported. Defaults to an invalid target so that one must be given explicitly">,
   ];
 }
 

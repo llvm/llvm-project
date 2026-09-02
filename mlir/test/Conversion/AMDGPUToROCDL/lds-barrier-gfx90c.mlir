@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.0c-amd-amdhsa | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu9.0c-amd-amdhsa | FileCheck %s
 
 // gfx90c needs the inline assembly workaround, just like gfx908.
 

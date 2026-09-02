@@ -724,7 +724,7 @@ void ArithToAMDGPUConversionPass::runOnOperation() {
   MLIRContext *ctx = &getContext();
   RewritePatternSet patterns(op->getContext());
   FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
-      triple, chip, features, [&] { return emitError(UnknownLoc::get(ctx)); });
+      arch, /*waveSize=*/0, [&] { return emitError(UnknownLoc::get(ctx)); });
   if (failed(targetInfo)) {
     return signalPassFailure();
   }

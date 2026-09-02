@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.50-amd-amdhsa | FileCheck %s
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu12.00-amd-amdhsa | FileCheck %s
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu11.70-amd-amdhsa | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu9.50-amd-amdhsa | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu12.00-amd-amdhsa | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu11.70-amd-amdhsa | FileCheck %s
 
 // CHECK-LABEL: func @ext_scalar
 // CHECK: [[V:%.+]] = builtin.unrealized_conversion_cast %{{.+}} : f8E5M2 to i8

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=triple=amdgpu9.50-amd-amdhsa --split-input-file --verify-diagnostics
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu9.50-amd-amdhsa --split-input-file --verify-diagnostics
 
 // The xf32 MFMAs come from FeatureXF32Insts, which only gfx942 has. gfx950
 // compares greater than gfx942 by ISA version, so a version-ordered check let

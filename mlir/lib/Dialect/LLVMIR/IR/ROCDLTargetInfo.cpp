@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 
@@ -25,89 +26,85 @@ static LogicalResult fail(function_ref<InFlightDiagnostic()> emitError,
   return failure();
 }
 
-/// Resolves the wavefront size in \p bits, mirroring the policy LLVM applies in
+std::optional<AMDGPU::TargetID> TargetInfo::parseTargetID(StringRef arch) {
+  // If we see a five-component triple, that's maximally authoritative.
+  SmallVector<StringRef, 5> parts;
+  arch.split(parts, '-', /*MaxSplit=*/4);
+  if (parts.size() == 5)
+    return AMDGPU::TargetID::parseTargetIDString(arch);
+
+  // Otherwise, handle bare triples.
+  Triple triple(Triple::normalize(arch));
+  if (triple.isAMDGCN())
+    return AMDGPU::TargetID::parse(triple, "");
+
+  // Otherwise, take the implicit amdgcn-amd-amdhsa legacy triple and pair it
+  // with an arch name.
+  return AMDGPU::TargetID::parse(Triple("amdgcn-amd-amdhsa"), arch);
+}
+
+/// Pins the wavefront size in \p bits, mirroring the policy LLVM applies in
 /// fillAMDGCNFeatureMap: a target that only runs at one size rejects a request
-/// for the other, and a target that supports both defaults to wave32.
+/// for the other, and a target that runs at either defaults to wave32.
 static LogicalResult
-resolveWavefrontSize(AMDGPU::AMDGPUFeatureBitset &bits, bool targetWave32,
-                     bool targetWave64,
+resolveWavefrontSize(AMDGPU::AMDGPUFeatureBitset &bits, unsigned waveSize,
                      function_ref<InFlightDiagnostic()> emitError) {
-  bool wave32 = bits.test(AMDGPU::FEAT_WAVEFRONTSIZE32);
-  bool wave64 = bits.test(AMDGPU::FEAT_WAVEFRONTSIZE64);
+  bool targetWave32 = bits.test(AMDGPU::FEAT_WAVEFRONTSIZE32);
+  bool targetWave64 = bits.test(AMDGPU::FEAT_WAVEFRONTSIZE64);
 
-  if (wave32 && wave64)
-    return fail(emitError,
-                "'+wavefrontsize32' and '+wavefrontsize64' are mutually "
-                "exclusive");
-  if (targetWave64 && !wave64)
-    return fail(emitError, "target only supports wavefrontsize64");
-  if (targetWave32 && !wave32)
-    return fail(emitError, "target only supports wavefrontsize32");
-
-  // A target that supports both sizes and was not asked for one runs wave32.
-  if (!wave32 && !wave64)
+  switch (waveSize) {
+  case 0:
+    // A target that runs at either size and was not asked for one runs wave32.
+    if (!targetWave32 && !targetWave64)
+      bits.set(AMDGPU::FEAT_WAVEFRONTSIZE32);
+    return success();
+  case 32:
+    if (targetWave64)
+      return fail(emitError, "target only supports a wavefront size of 64");
     bits.set(AMDGPU::FEAT_WAVEFRONTSIZE32);
-  return success();
+    return success();
+  case 64:
+    if (targetWave32)
+      return fail(emitError, "target only supports a wavefront size of 32");
+    bits.set(AMDGPU::FEAT_WAVEFRONTSIZE64);
+    return success();
+  default:
+    return fail(emitError,
+                "wavefront size must be 32 or 64, got " + Twine(waveSize));
+  }
 }
 
 FailureOr<TargetInfo>
-TargetInfo::get(StringRef tripleOrChip, StringRef chip, StringRef features,
+TargetInfo::get(StringRef arch, unsigned waveSize,
                 function_ref<InFlightDiagnostic()> emitError) {
-  if (tripleOrChip.empty())
-    return fail(emitError, "target triple cannot be empty");
+  if (arch.empty())
+    return fail(emitError, "target architecture cannot be empty");
+
+  std::optional<AMDGPU::TargetID> id = parseTargetID(arch);
+  if (!id)
+    return fail(emitError, "'" + arch +
+                               "' is not a valid AMDGPU architecture: expected "
+                               "a GPU name, a triple, or a target ID");
 
   TargetInfo info;
-
-  // A bare GPU name is accepted in place of a triple, so that "gfx942" keeps
-  // working where a chipset used to be given.
-  if (AMDGPU::GPUKind named = AMDGPU::parseArchAMDGCN(tripleOrChip)) {
-    if (!chip.empty() && chip != tripleOrChip)
-      return fail(emitError,
-                  "conflicting GPUs '" + tripleOrChip + "' and '" + chip + "'");
-    info.kind = named;
-    info.subArch = AMDGPU::getSubArch(named);
-  } else {
-    Triple triple(Triple::normalize(tripleOrChip));
-    if (!triple.isAMDGCN())
-      return fail(emitError,
-                  "'" + tripleOrChip + "' is not an AMDGCN triple or GPU name");
-
-    info.subArch = triple.getSubArch();
-    // Triple parsing maps any unrecognized "amdgpu..." arch to NoSubArch
-    // without complaining, so a typo would otherwise be silently accepted as a
-    // target with no features. Only the bare "amdgcn"/"amdgpu" spellings
-    // legitimately carry no subarch.
-    if (info.subArch == Triple::NoSubArch && triple.getArchName().size() != 6)
-      return fail(emitError, "unknown AMDGPU subarchitecture in triple '" +
-                                 tripleOrChip + "'");
-
-    if (!chip.empty()) {
-      if (!AMDGPU::isCPUValidForSubArch(info.subArch, chip))
-        return fail(emitError, "GPU '" + chip + "' is not valid for triple '" +
-                                   tripleOrChip + "'");
-      info.kind = AMDGPU::parseArchAMDGCN(chip);
-      // The chip pins down the exact GPU, which may be more specific than the
-      // triple's family subarch.
-      info.subArch = AMDGPU::getSubArch(info.kind);
-    } else {
-      info.kind = AMDGPU::getGPUKindFromSubArch(info.subArch);
-    }
-  }
-
+  info.kind = id->getGPUKind();
+  info.subArch = AMDGPU::getSubArch(info.kind);
   info.featureBits = AMDGPU::getFeatureBitset(info.kind);
+  info.xnackSetting = id->getXnackSetting();
+  info.sramEccSetting = id->getSramEccSetting();
 
-  bool targetWave32 = info.featureBits.test(AMDGPU::FEAT_WAVEFRONTSIZE32);
-  bool targetWave64 = info.featureBits.test(AMDGPU::FEAT_WAVEFRONTSIZE64);
-  // Recorded before the modifiers and the default below pin a size.
-  info.dualWavefrontSize = !info.isUnknown() && !targetWave32 && !targetWave64;
+  // Recorded before we record the user's choice since that lives in the same
+  // bitmap.
+  info.dualWavefrontSize =
+      !info.isUnknown() &&
+      !info.featureBits.test(AMDGPU::FEAT_WAVEFRONTSIZE32) &&
+      !info.featureBits.test(AMDGPU::FEAT_WAVEFRONTSIZE64);
 
-  if (std::optional<StringRef> bad =
-          AMDGPU::applyFeatureModifiers(features, info.featureBits))
-    return fail(emitError, "invalid target feature '" + *bad + "'");
-
+  if (info.isUnknown() && waveSize != 0 && waveSize != 32 && waveSize != 64)
+    return fail(emitError,
+                "wavefront size must be 32 or 64, got " + Twine(waveSize));
   if (!info.isUnknown() &&
-      failed(resolveWavefrontSize(info.featureBits, targetWave32, targetWave64,
-                                  emitError)))
+      failed(resolveWavefrontSize(info.featureBits, waveSize, emitError)))
     return failure();
 
   return info;
@@ -155,6 +152,44 @@ std::optional<unsigned> TargetInfo::getMaxAddressableLocalMemorySize() const {
   if (isUnknown())
     return std::nullopt;
   return AMDGPU::getMaxHWAddressableLocalMemorySize(kind);
+}
+
+std::optional<unsigned> TargetInfo::getTotalNumSGPRs() const {
+  if (isUnknown())
+    return std::nullopt;
+  return AMDGPU::getTotalNumSGPRs(kind);
+}
+
+std::optional<unsigned> TargetInfo::getAddressableNumSGPRs() const {
+  if (isUnknown())
+    return std::nullopt;
+  return AMDGPU::getAddressableNumSGPRs(kind);
+}
+
+std::optional<unsigned> TargetInfo::getSGPRAllocGranule() const {
+  if (isUnknown())
+    return std::nullopt;
+  return AMDGPU::getSGPRAllocGranule(kind);
+}
+
+std::optional<unsigned> TargetInfo::getVGPRAllocGranule() const {
+  // The granule depends on the wavefront size, which get() has already pinned.
+  std::optional<unsigned> waveSize = getWavefrontSize();
+  if (isUnknown() || !waveSize)
+    return std::nullopt;
+  return AMDGPU::getVGPRAllocGranule(kind, /*IsWave32=*/*waveSize == 32);
+}
+
+std::optional<unsigned> TargetInfo::getLDSBankCount() const {
+  if (isUnknown())
+    return std::nullopt;
+  return AMDGPU::getLDSBankCount(kind);
+}
+
+std::optional<unsigned> TargetInfo::getMaxWavesPerEU() const {
+  if (isUnknown())
+    return std::nullopt;
+  return AMDGPU::getMaxWavesPerEU(kind);
 }
 
 std::optional<unsigned> TargetInfo::getWavefrontSize() const {

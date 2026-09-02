@@ -108,8 +108,8 @@ void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
   amdgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
   // The verifier has already rejected anything unparseable.
-  FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
-      getTriple(), getChip().value_or(""), getFeatures().value_or(""));
+  FailureOr<ROCDL::TargetInfo> targetInfo =
+      ROCDL::TargetInfo::get(getArch(), getWavesize().value_or(0));
   assert(llvm::succeeded(targetInfo) && "verifier accepted this target");
   populateGpuToROCDLConversionPatterns(
       llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *targetInfo);
@@ -118,8 +118,7 @@ void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
 LogicalResult
 transform::ApplyGPUToROCDLConversionPatternsOp::verifyTypeConverter(
     transform::TypeConverterBuilderOpInterface builder) {
-  if (failed(ROCDL::TargetInfo::get(getTriple(), getChip().value_or(""),
-                                    getFeatures().value_or(""),
+  if (failed(ROCDL::TargetInfo::get(getArch(), getWavesize().value_or(0),
                                     [&] { return emitOpError(); })))
     return failure();
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
@@ -137,12 +136,11 @@ void ApplyGPURewritePatternsOp::populatePatterns(RewritePatternSet &patterns) {
 
 void transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  std::optional<StringRef> tripleName = getTriple();
+  std::optional<StringRef> archName = getArch();
   std::optional<ROCDL::TargetInfo> targetInfo;
-  if (tripleName) {
+  if (archName) {
     // The verifier has already rejected anything unparseable.
-    FailureOr<ROCDL::TargetInfo> parsed = ROCDL::TargetInfo::get(
-        *tripleName, getChip().value_or(""), getFeatures().value_or(""));
+    FailureOr<ROCDL::TargetInfo> parsed = ROCDL::TargetInfo::get(*archName);
     assert(llvm::succeeded(parsed) && "verifier accepted this target");
     targetInfo = *parsed;
   }
@@ -151,17 +149,11 @@ void transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::populatePatterns(
 }
 
 LogicalResult transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::verify() {
-  std::optional<StringRef> tripleName = getTriple();
-  if (!tripleName) {
-    // Without a target there is nothing for these to modify, and silently
-    // ignoring them would hide a typo'd or half-migrated script.
-    if (getChip() || getFeatures())
-      return emitOpError("'chip' and 'features' require a 'triple'");
+  std::optional<StringRef> archName = getArch();
+  if (!archName)
     return success();
-  }
 
-  if (failed(ROCDL::TargetInfo::get(*tripleName, getChip().value_or(""),
-                                    getFeatures().value_or(""),
+  if (failed(ROCDL::TargetInfo::get(*archName, /*waveSize=*/0,
                                     [&] { return emitOpError(); })))
     return failure();
   return success();

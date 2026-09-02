@@ -476,6 +476,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 static FailureOr<unsigned> encodeWaitcnt(const ROCDL::TargetInfo &target,
                                          unsigned vmcnt, unsigned expcnt,
                                          unsigned lgkmcnt) {
+  if (target.isUnknown())
+    return failure();
   if (!target.has(llvm::AMDGPU::FEAT_GFX9_INSTS)) {
     vmcnt = std::min(15u, vmcnt);
     expcnt = std::min(7u, expcnt);
@@ -4532,9 +4534,8 @@ struct ConvertAMDGPUToROCDLPass
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
-    FailureOr<ROCDL::TargetInfo> targetInfo =
-        ROCDL::TargetInfo::get(triple, chip, features,
-                               [&] { return emitError(UnknownLoc::get(ctx)); });
+    FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
+        arch, /*waveSize=*/0, [&] { return emitError(UnknownLoc::get(ctx)); });
     if (failed(targetInfo))
       return signalPassFailure();
 
