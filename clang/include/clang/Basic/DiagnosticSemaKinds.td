@@ -10181,6 +10181,9 @@ let CategoryName = "Inline Assembly Issue" in {
     "value size does not match register size specified by the constraint "
     "and modifier">,
     InGroup<ASMOperandWidths>;
+  def warn_unused_asm_operand : Warning<
+    "unused asm %select{output|input}0 operand">,
+    InGroup<ASMUnusedOperand>, DefaultIgnore;
 
   def note_asm_missing_constraint_modifier : Note<
     "use constraint modifier \"%0\"">;
