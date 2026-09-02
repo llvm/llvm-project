@@ -1772,6 +1772,9 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Terms
 // -----
 //
+// Defined here for this comment; `lane_layout`, `lane_data` and distribution
+// unit keep the meanings the dialect gives them.
+//
 //   element            scalar of some element type
 //   fragment           everything one lane owns. Consists of elements.
 //   broadcast group    the lanes that hold the same fragment.
