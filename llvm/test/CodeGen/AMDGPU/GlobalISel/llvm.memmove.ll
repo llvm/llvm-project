@@ -84,7 +84,7 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; UNROLL-NEXT:    buffer_load_ubyte v4, v[2:3], s[0:3], 0 addr64
 ; UNROLL-NEXT:    buffer_load_ubyte v5, v[2:3], s[0:3], 0 addr64 offset:1
 ; UNROLL-NEXT:    buffer_load_ubyte v6, v[2:3], s[0:3], 0 addr64 offset:2
-; UNROLL-NEXT:    buffer_load_ubyte v2, v[2:3], s[0:3], 0 addr64 offset:3
+; UNROLL-NEXT:    buffer_load_ubyte v7, v[2:3], s[0:3], 0 addr64 offset:3
 ; UNROLL-NEXT:    s_waitcnt vmcnt(3)
 ; UNROLL-NEXT:    buffer_store_byte v4, v[0:1], s[0:3], 0 addr64
 ; UNROLL-NEXT:    s_waitcnt vmcnt(3)
@@ -92,7 +92,7 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; UNROLL-NEXT:    s_waitcnt vmcnt(3)
 ; UNROLL-NEXT:    buffer_store_byte v6, v[0:1], s[0:3], 0 addr64 offset:2
 ; UNROLL-NEXT:    s_waitcnt vmcnt(3)
-; UNROLL-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:3
+; UNROLL-NEXT:    buffer_store_byte v7, v[0:1], s[0:3], 0 addr64 offset:3
 ; UNROLL-NEXT:    s_endpgm
   call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) %dst, ptr addrspace(1) %src, i32 4, i1 false)
   ret void

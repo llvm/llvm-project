@@ -10,9 +10,10 @@ define amdgpu_kernel void @v_atomicrmw_fadd_bf16(ptr addrspace(1) %out, i1 %in, 
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_b32 v0, v0, s[0:1] offset:4
+; GFX11-TRUE16-NEXT:    global_load_b32 v0, v1, s[0:1] offset:4
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s2, -4
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_and_b32 s2, s2, 3
@@ -64,9 +65,10 @@ define amdgpu_kernel void @v_atomicrmw_fadd_bf16(ptr addrspace(1) %out, i1 %in, 
 ; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34
 ; GFX11-FAKE16-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    global_load_b32 v0, v0, s[0:1] offset:4
+; GFX11-FAKE16-NEXT:    global_load_b32 v0, v1, s[0:1] offset:4
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s2, -4
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-FAKE16-NEXT:    s_and_b32 s2, s2, 3

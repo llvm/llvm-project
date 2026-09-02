@@ -17,8 +17,8 @@ define amdgpu_ps void @readanylane_to_virtual_vgpr(ptr addrspace(1) inreg %ptr0,
 define amdgpu_ps float @readanylane_to_physical_vgpr(ptr addrspace(1) inreg %ptr) {
 ; CHECK-LABEL: readanylane_to_physical_vgpr:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    global_load_dword v0, v0, s[0:1] glc dlc
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    global_load_dword v0, v1, s[0:1] glc dlc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %load = load volatile float, ptr addrspace(1) %ptr
@@ -42,8 +42,8 @@ define amdgpu_ps void @readanylane_to_bitcast_to_virtual_vgpr(ptr addrspace(1) i
 define amdgpu_ps float @readanylane_to_bitcast_to_physical_vgpr(ptr addrspace(1) inreg %ptr0, ptr addrspace(1) inreg %ptr1) {
 ; CHECK-LABEL: readanylane_to_bitcast_to_physical_vgpr:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    global_load_dword v0, v0, s[0:1] glc dlc
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    global_load_dword v0, v1, s[0:1] glc dlc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %load = load volatile <2 x i16>, ptr addrspace(1) %ptr0
@@ -106,8 +106,8 @@ define amdgpu_ps void @unmerge_readanylane_merge_extract_to_virtual_vgpr(ptr add
 define amdgpu_ps float @unmerge_readanylane_merge_extract_to_physical_vgpr(ptr addrspace(1) inreg %ptr0, ptr addrspace(1) inreg %ptr1) {
 ; CHECK-LABEL: unmerge_readanylane_merge_extract_to_physical_vgpr:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1] glc dlc
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1] glc dlc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v1
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -134,8 +134,8 @@ define amdgpu_ps void @unmerge_readanylane_merge_extract_bitcast_to_virtual_vgpr
 define amdgpu_ps float @unmerge_readanylane_merge_extract_bitcast_to_physical_vgpr(ptr addrspace(1) inreg %ptr0, ptr addrspace(1) inreg %ptr1) {
 ; CHECK-LABEL: unmerge_readanylane_merge_extract_bitcast_to_physical_vgpr:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1] glc dlc
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1] glc dlc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
   %load = load volatile <4 x i16>, ptr addrspace(1) %ptr0

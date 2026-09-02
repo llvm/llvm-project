@@ -98,22 +98,22 @@ main_body:
 define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_13bit(ptr addrspace(8) inreg) {
 ; PREGFX10-LABEL: tbuffer_load_voffset_large_13bit:
 ; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
+; PREGFX10-NEXT:    v_mov_b32_e32 v4, 0x1000
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: tbuffer_load_voffset_large_13bit:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x1000
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: tbuffer_load_voffset_large_13bit:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0x1000
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0x1000
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
@@ -124,22 +124,22 @@ main_body:
 define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_16bit(ptr addrspace(8) inreg) {
 ; PREGFX10-LABEL: tbuffer_load_voffset_large_16bit:
 ; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0xf000
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
+; PREGFX10-NEXT:    v_mov_b32_e32 v4, 0xf000
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: tbuffer_load_voffset_large_16bit:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xf000
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0xf000
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: tbuffer_load_voffset_large_16bit:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0xf000
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0xf000
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
@@ -150,22 +150,22 @@ main_body:
 define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_23bit(ptr addrspace(8) inreg) {
 ; PREGFX10-LABEL: tbuffer_load_voffset_large_23bit:
 ; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0x7ff000
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
+; PREGFX10-NEXT:    v_mov_b32_e32 v4, 0x7ff000
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: tbuffer_load_voffset_large_23bit:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0x7ff000
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x7ff000
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: tbuffer_load_voffset_large_23bit:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0x7ff000
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0x7ff000
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
@@ -176,22 +176,22 @@ main_body:
 define amdgpu_ps <4 x float> @tbuffer_load_voffset_large_24bit(ptr addrspace(8) inreg) {
 ; PREGFX10-LABEL: tbuffer_load_voffset_large_24bit:
 ; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0xfff000
-; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
+; PREGFX10-NEXT:    v_mov_b32_e32 v4, 0xfff000
+; PREGFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] offen offset:4092
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: tbuffer_load_voffset_large_24bit:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xfff000
-; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0xfff000
+; GFX10-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: tbuffer_load_voffset_large_24bit:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0xfff000
-; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0xfff000
+; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_FMT_32_32_32_32_FLOAT] offen offset:4092
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:

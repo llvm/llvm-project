@@ -357,14 +357,14 @@ define amdgpu_ps <4 x float> @sample_nortn_mix_4(<8 x i32> inreg %rsrc, <4 x i32
 ; GFX10_11-SDAG:       ; %bb.0: ; %main_body
 ; GFX10_11-SDAG-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10_11-SDAG-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10_11-SDAG-NEXT:    image_sample v4, v0, s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D
+; GFX10_11-SDAG-NEXT:    image_sample v5, v0, s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX10_11-SDAG-NEXT:    image_sample off, v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10_11-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX10_11-SDAG-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX10_11-SDAG-NEXT:    image_sample v[0:3], v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10_11-SDAG-NEXT:    image_sample off, v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10_11-SDAG-NEXT:    image_sample v[0:3], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10_11-SDAG-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10_11-SDAG-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX10_11-SDAG-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10_11-SDAG-NEXT:    image_sample off, v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10_11-SDAG-NEXT:    image_sample off, v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10_11-SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; GFX10_11-SDAG-NEXT:    image_sample off, v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10_11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -374,14 +374,14 @@ define amdgpu_ps <4 x float> @sample_nortn_mix_4(<8 x i32> inreg %rsrc, <4 x i32
 ; GFX10_11-GISEL:       ; %bb.0: ; %main_body
 ; GFX10_11-GISEL-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX10_11-GISEL-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX10_11-GISEL-NEXT:    image_sample v[4:7], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10_11-GISEL-NEXT:    image_sample v[6:9], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10_11-GISEL-NEXT:    image_sample off, v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10_11-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX10_11-GISEL-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX10_11-GISEL-NEXT:    image_sample v[0:3], v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10_11-GISEL-NEXT:    image_sample off, v6, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10_11-GISEL-NEXT:    image_sample v[0:3], v6, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10_11-GISEL-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX10_11-GISEL-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX10_11-GISEL-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10_11-GISEL-NEXT:    image_sample off, v6, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10_11-GISEL-NEXT:    image_sample off, v6, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10_11-GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GFX10_11-GISEL-NEXT:    image_sample off, v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10_11-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -391,14 +391,14 @@ define amdgpu_ps <4 x float> @sample_nortn_mix_4(<8 x i32> inreg %rsrc, <4 x i32
 ; GFX12PLUS-SDAG:       ; %bb.0: ; %main_body
 ; GFX12PLUS-SDAG-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX12PLUS-SDAG-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX12PLUS-SDAG-NEXT:    image_sample v4, v0, s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D
+; GFX12PLUS-SDAG-NEXT:    image_sample v5, v0, s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX12PLUS-SDAG-NEXT:    image_sample off, v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12PLUS-SDAG-NEXT:    s_wait_samplecnt 0x1
-; GFX12PLUS-SDAG-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX12PLUS-SDAG-NEXT:    image_sample v[0:3], v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12PLUS-SDAG-NEXT:    image_sample off, v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12PLUS-SDAG-NEXT:    image_sample v[0:3], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12PLUS-SDAG-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX12PLUS-SDAG-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX12PLUS-SDAG-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12PLUS-SDAG-NEXT:    image_sample off, v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12PLUS-SDAG-NEXT:    image_sample off, v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12PLUS-SDAG-NEXT:    s_wait_samplecnt 0x2
 ; GFX12PLUS-SDAG-NEXT:    image_sample off, v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12PLUS-SDAG-NEXT:    s_wait_samplecnt 0x0
@@ -408,14 +408,14 @@ define amdgpu_ps <4 x float> @sample_nortn_mix_4(<8 x i32> inreg %rsrc, <4 x i32
 ; GFX12PLUS-GISEL:       ; %bb.0: ; %main_body
 ; GFX12PLUS-GISEL-NEXT:    s_mov_b32 s12, exec_lo
 ; GFX12PLUS-GISEL-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX12PLUS-GISEL-NEXT:    image_sample v[4:7], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12PLUS-GISEL-NEXT:    image_sample v[6:9], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12PLUS-GISEL-NEXT:    image_sample off, v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12PLUS-GISEL-NEXT:    s_wait_samplecnt 0x1
-; GFX12PLUS-GISEL-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX12PLUS-GISEL-NEXT:    image_sample v[0:3], v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12PLUS-GISEL-NEXT:    image_sample off, v6, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12PLUS-GISEL-NEXT:    image_sample v[0:3], v6, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12PLUS-GISEL-NEXT:    s_and_b32 exec_lo, exec_lo, s12
-; GFX12PLUS-GISEL-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX12PLUS-GISEL-NEXT:    image_sample off, v4, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12PLUS-GISEL-NEXT:    image_sample off, v6, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12PLUS-GISEL-NEXT:    image_sample off, v6, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12PLUS-GISEL-NEXT:    s_wait_samplecnt 0x2
 ; GFX12PLUS-GISEL-NEXT:    image_sample off, v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX12PLUS-GISEL-NEXT:    s_wait_samplecnt 0x0
