@@ -813,28 +813,15 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
       if (VerifyOnly)
         return;
 
-      ExprResult DIE;
-      {
-        // Enter a default initializer rebuild context, then we can support
-        // lifetime extension of temporary created by aggregate initialization
-        // using a default member initializer.
-        // CWG1815 (https://wg21.link/CWG1815).
-        EnterExpressionEvaluationContext RebuildDefaultInit(
-            SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-        SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
-            true;
-        SemaRef.currentEvaluationContext().DelayedDefaultInitializationContext =
-            SemaRef.parentEvaluationContext()
-                .DelayedDefaultInitializationContext;
-        SemaRef.currentEvaluationContext().InLifetimeExtendingContext =
-            SemaRef.parentEvaluationContext().InLifetimeExtendingContext;
-        DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
-      }
+      // A default member initializer used in aggregate initialization is part
+      // of the full-expression containing the aggregate initialization. Do not
+      // create or finish a separate expression evaluation context here.
+      ExprResult DIE =
+          SemaRef.BuildCXXAggregateDefaultInitExpr(Loc, Field, MemberEntity);
       if (DIE.isInvalid()) {
         hadError = true;
         return;
       }
-      SemaRef.checkInitializerLifetime(MemberEntity, DIE.get());
       if (Init < NumInits)
         ILE->setInit(Init, DIE.get());
       else {
@@ -6152,11 +6139,10 @@ static void TryOrBuildParenListInitialization(
             // C++ [dcl.init]p16.6.2.2
             //   The remaining elements are initialized with their default
             //   member initializers, if any
-            ExprResult DIE = S.BuildCXXDefaultInitExpr(
-                Kind.getParenOrBraceRange().getEnd(), FD);
+            ExprResult DIE = S.BuildCXXAggregateDefaultInitExpr(
+                Kind.getParenOrBraceRange().getEnd(), FD, SubEntity);
             if (DIE.isInvalid())
               return;
-            S.checkInitializerLifetime(SubEntity, DIE.get());
             InitExprs.push_back(DIE.get());
           }
         } else {
