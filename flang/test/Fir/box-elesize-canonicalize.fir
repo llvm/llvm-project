@@ -106,8 +106,9 @@ module attributes { dlti.dl_spec = #dlti.dl_spec< i1 = dense<8> : vector<2xi64>,
   // Fold: packed derived type -- fir.type<tp<{i:i32,d:f64}>>.
   // This is the exact example from MattPD's review: on x86-64
   // (f64 ABI align=8B) the non-packed size is 16B and the packed
-  // size is 12B (i32 store=4B + f64 store=8B, no inter-field gap,
-  // no tail padding).  The element distance must be 12, not 16.
+  // size is 12B (i32 allocSize=4B + f64 allocSize=alignTo(8,8)=8B,
+  // no inter-field gap, no tail padding).
+  // The element distance must be 12, not 16.
   func.func @fold_packed_record(%arg0: !fir.box<!fir.type<tp<{i:i32,d:f64}>>>) -> index {
     %0 = fir.box_elesize %arg0 : (!fir.box<!fir.type<tp<{i:i32,d:f64}>>>) -> index
     return %0 : index
@@ -128,6 +129,21 @@ module attributes { dlti.dl_spec = #dlti.dl_spec< i1 = dense<8> : vector<2xi64>,
   }
   // CHECK-LABEL: func.func @fold_packed_record2(
   // CHECK:         %[[C:.*]] = arith.constant 20 : index
+  // CHECK:         return %[[C]]
+  // CHECK-NOT:     fir.box_elesize
+
+  // Fold: packed derived type with f80 component.
+  // f80 on x86-64: store size = 10B, ABI alignment = 16B,
+  //   allocation size = alignTo(10, 16) = 16B.
+  // i8:  store size = 1B, ABI alignment = 1B, allocation size = 1B.
+  // Packed size = 16 + 1 = 17B (not 10 + 1 = 11B).
+  // This case distinguishes allocation-size from store-size in the packed path.
+  func.func @fold_packed_f80_i8(%arg0: !fir.box<!fir.type<tp3<{x:f80,b:i8}>>>) -> index {
+    %0 = fir.box_elesize %arg0 : (!fir.box<!fir.type<tp3<{x:f80,b:i8}>>>) -> index
+    return %0 : index
+  }
+  // CHECK-LABEL: func.func @fold_packed_f80_i8(
+  // CHECK:         %[[C:.*]] = arith.constant 17 : index
   // CHECK:         return %[[C]]
   // CHECK-NOT:     fir.box_elesize
 }
