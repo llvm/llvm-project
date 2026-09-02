@@ -121,9 +121,8 @@ float4 test_level(COORD_TYPE loc : LOC, float lod : LOD) : SV_Target {
 // CHECK: %[[SAMPLER_H1:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP1]]
 // CHECK: %[[COORD_VAL1:.*]] = load <[[COORD_DIM]] x float>, ptr %[[COORD_ADDR1]]
 // CHECK: %[[LOD_VAL1:.*]] = load float, ptr %[[LOD_ADDR1]]
-// CHECK: %[[LOD_CAST1:.*]] = fptrunc {{.*}} double {{.*}} to float
-// DXIL: call reassoc nnan ninf nsz arcp afn                         <4 x float> @llvm.dx.resource.samplelevel.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE1]], target("dx.Sampler", 0) %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[LOD_CAST1]], <[[DIM]] x i32> zeroinitializer)
-// SPIRV: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplelevel.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE1]], target("spirv.Sampler") %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[LOD_CAST1]], <[[DIM]] x i32> zeroinitializer)
+// DXIL: call reassoc nnan ninf nsz arcp afn                         <4 x float> @llvm.dx.resource.samplelevel.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE1]], target("dx.Sampler", 0) %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[LOD_VAL1]], <[[DIM]] x i32> zeroinitializer)
+// SPIRV: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplelevel.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE1]], target("spirv.Sampler") %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[LOD_VAL1]], <[[DIM]] x i32> zeroinitializer)
 
 // CHECK-OFFSET: @test_offset(float vector[[[COORD_DIM]]], float)
 // CHECK-OFFSET: %[[CALL_OFFSET:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleLevel(hlsl::SamplerState, float vector[[[COORD_DIM]]], float, int vector[[[DIM]]])(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}}, <[[COORD_DIM]] x float> {{.*}} %{{.*}}, float {{.*}} 0.000000e+00, <[[DIM]] x i32> noundef [[OFFSET_CONST]])
@@ -152,7 +151,6 @@ float4 test_offset(COORD_TYPE loc : LOC, float lod : LOD) : SV_Target {
 // CHECK-OFFSET: %[[SAMPLER_H2:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP2]]
 // CHECK-OFFSET: %[[COORD_VAL2:.*]] = load <[[COORD_DIM]] x float>, ptr %[[COORD_ADDR2]]
 // CHECK-OFFSET: %[[LOD_VAL2:.*]] = load float, ptr %[[LOD_ADDR2]]
-// CHECK-OFFSET: %[[LOD_CAST2:.*]] = fptrunc {{.*}} double {{.*}} to float
 // CHECK-OFFSET: %[[OFFSET_VAL2:.*]] = load <[[DIM]] x i32>, ptr %[[OFFSET_ADDR2]]
-// DXIL-OFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplelevel.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE2]], target("dx.Sampler", 0) %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[LOD_CAST2]], <[[DIM]] x i32> %[[OFFSET_VAL2]])
-// SPIRV-OFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplelevel.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE2]], target("spirv.Sampler") %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[LOD_CAST2]], <[[DIM]] x i32> %[[OFFSET_VAL2]])
+// DXIL-OFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplelevel.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE2]], target("dx.Sampler", 0) %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[LOD_VAL2]], <[[DIM]] x i32> %[[OFFSET_VAL2]])
+// SPIRV-OFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplelevel.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE2]], target("spirv.Sampler") %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[LOD_VAL2]], <[[DIM]] x i32> %[[OFFSET_VAL2]])

@@ -266,8 +266,6 @@ float4 test_cmp(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK: %[[SAMPLER_H:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP]]
 // CHECK: %[[COORD_VAL:.*]] = load <[[COORD_DIM]] x float>, ptr %[[COORD_ADDR]]
 // CHECK: %[[CMP_VAL:.*]] = load float, ptr %[[CMP_ADDR]]
-// CHECK: %[[CONV:.*]] = fpext {{.*}} float %[[CMP_VAL]] to double
-// CHECK: %[[TRUNC:.*]] = fptrunc {{.*}} double %[[CONV]] to float
-// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.gather.cmp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], <[[COORD_DIM]] x float> %[[COORD_VAL]], float %[[TRUNC]], i32 0, <[[DIM]] x i32> zeroinitializer)
-// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.gather.cmp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], <[[COORD_DIM]] x float> %[[COORD_VAL]], float %[[TRUNC]], <[[DIM]] x i32> zeroinitializer)
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.gather.cmp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], <[[COORD_DIM]] x float> %[[COORD_VAL]], float %[[CMP_VAL]], i32 0, <[[DIM]] x i32> zeroinitializer)
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.gather.cmp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], <[[COORD_DIM]] x float> %[[COORD_VAL]], float %[[CMP_VAL]], <[[DIM]] x i32> zeroinitializer)
 // CHECK: ret <4 x float> %[[RES]]
