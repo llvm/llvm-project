@@ -220,8 +220,6 @@ public:
   void Enter(const parser::OmpClause::Device &x);
   void Enter(const parser::OmpClause::Doacross &x);
   void Enter(const parser::OmpClause::DynamicAllocators &x);
-  void Enter(const parser::OmpClause::DynGroupprivate &x);
-  void Enter(const parser::OmpClause::Enter &x);
   void Enter(const parser::OmpClause::Firstprivate &x);
   void Enter(const parser::OmpClause::From &x);
   void Enter(const parser::OmpClause::HasDeviceAddr &x);
