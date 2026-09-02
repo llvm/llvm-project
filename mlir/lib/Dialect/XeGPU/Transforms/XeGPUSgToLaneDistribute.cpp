@@ -1782,8 +1782,13 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                      `lane_layout`; over what is left a lane owns
 //                      `Sh[i] / lane_layout[i]` per dimension, flattened
 //                      row-major
-//   lane period        `product(lane_layout)` counting the dimensions slicing
-//                      dropped, so slicing does not reduce it. Lanes this far
+//   broadcast group    the lanes that hold one fragment. `product(lane_layout)`
+//                      taken *after* slicing counts the distinct fragments, so
+//                      each group is `S / that` lanes: all `S` of them when
+//                      every dimension is sliced away, and 1 -- no replication
+//                      -- when the product is already `S`
+//   lane period        the same product with the sliced dimensions still
+//                      counted, so slicing does not reduce it. Lanes this far
 //                      apart hold the same fragment. `getLanePeriod`,
 //                      `lanePeriod` below
 //   slot               `lane % lanePeriod`, a lane's index within one period
@@ -1803,21 +1808,24 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                      exactly when the donor is not the lane itself.
 //                      `ElementSource` below
 //
-// Either layout may replicate -- a set of lanes all holding the same fragment
-// -- and a layout has two ways to spell that. Both of these are on a
-// `vector<8x2>` over 16 lanes:
+// A broadcast group and the lane period are that one product taken either side
+// of slicing, so a layout can have a lane period of `S` and still replicate:
+// the sliced dimensions raise the period without adding fragments. That is one
+// of the two ways a layout spells replication. Both, on a `vector<8x2>` over 16
+// lanes:
 //
 //   slice<layout<[8, 1, 2], order = [0, 2, 1]>, dims = [0]>    ("sliced")
 //     slicing leaves `lane_layout` [1, 2], so a fragment is 8x1, one whole
-//     column, while the lane period still counts the sliced dimension and is
-//     8 * 1 * 2 = 16. Sixteen lanes hold two distinct columns between them,
-//     eight lanes to a column.
+//     column, and there are 1 * 2 = 2 of them: two groups of 8, lanes 0-7 and
+//     lanes 8-15. The lane period still counts the sliced dimension and is
+//     8 * 1 * 2 = 16, well above the group size.
 //
 //   layout<[8, 1]>                                             ("short")
 //     a `lane_layout` naming fewer lanes than the subgroup has. A fragment is
-//     1x2, one whole row, and the lane period is 8: the lane id is delinearized
-//     modulo each extent, so a lane's coordinates depend on `lane % 8` alone
-//     and lanes 8-15 repeat lanes 0-7.
+//     1x2, one whole row, and there are 8: eight groups of 2, lane `l` paired
+//     with lane `l + 8`. Here the period is 8 as well, because the lane id is
+//     delinearized modulo each extent, so a lane's coordinates depend on
+//     `lane % 8` alone.
 //
 // The two spellings are treated alike throughout.
 //
