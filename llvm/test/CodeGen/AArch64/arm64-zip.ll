@@ -422,7 +422,7 @@ define <4 x float> @shuffle_zip1(<4 x float> %arg) {
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    mov.b v1[0], v0[0]
 ; CHECK-GI-NEXT:    mov.b v1[1], v0[1]
-; CHECK-GI-NEXT:    zip1.8b v0, v0, v1
+; CHECK-GI-NEXT:    zip1.8b v0, v1, v1
 ; CHECK-GI-NEXT:    umov.b w8, v0[0]
 ; CHECK-GI-NEXT:    umov.b w9, v0[1]
 ; CHECK-GI-NEXT:    fmov s1, w8
@@ -474,7 +474,7 @@ define <4 x i32> @shuffle_zip2(<4 x i32> %arg) {
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    mov.b v1[0], v0[0]
 ; CHECK-GI-NEXT:    mov.b v1[1], v0[1]
-; CHECK-GI-NEXT:    zip1.8b v0, v0, v1
+; CHECK-GI-NEXT:    zip1.8b v0, v1, v1
 ; CHECK-GI-NEXT:    umov.b w8, v0[0]
 ; CHECK-GI-NEXT:    umov.b w9, v0[1]
 ; CHECK-GI-NEXT:    fmov s1, w8
@@ -525,7 +525,7 @@ define <4 x i32> @shuffle_zip3(<4 x i32> %arg) {
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-GI-NEXT:    mov.b v1[0], v0[0]
 ; CHECK-GI-NEXT:    mov.b v1[1], v0[1]
-; CHECK-GI-NEXT:    zip1.8b v0, v0, v1
+; CHECK-GI-NEXT:    zip1.8b v0, v1, v1
 ; CHECK-GI-NEXT:    umov.b w8, v0[0]
 ; CHECK-GI-NEXT:    umov.b w9, v0[1]
 ; CHECK-GI-NEXT:    fmov s1, w8
