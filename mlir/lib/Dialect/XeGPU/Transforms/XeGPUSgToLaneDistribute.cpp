@@ -1630,7 +1630,7 @@ shuffleDataAsLaneLayoutChange(ConversionPatternRewriter &rewriter, Location loc,
   // -- create a temp 1D vector of i32 initialized to zero
   // -- for each i32 element:
   // ---- extract it from the source bundle
-  // ---- gpu.shuffle to gather the value from the donor lane
+  // ---- gpu.shuffle to gather the value from the partner lane
   // ---- insert it into the temp bundle
   // -- cast the temp back to the source vector type
   // -- vector.shuffle the source and temp to concatenate along the outer dim
@@ -1766,80 +1766,96 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //===----------------------------------------------------------------------===//
 //
 // Lowers a `convert_layout` that only relocates data between lanes: the two
-// layouts hand the lanes the same distribution unit, and differ only in which
-// lane holds which part of the value. Every element already exists in some
-// lane, so nothing is recomputed. The scale operands of scaled matrix
-// multiplication need this, being produced broadcasted and consumed
-// distributed.
+// layouts agree on `lane_data`, and differ only in which lane holds which part
+// of the value. Every element already exists in some lane, so nothing is
+// recomputed. The scale operands of scaled matrix multiplication need this,
+// being produced broadcasted and consumed distributed.
 //
-// Either layout may replicate. A layout replicates over a set of lanes when a
-// `lane_layout` dimension is sliced away, and equally when its `lane_layout`
-// lays out fewer lanes than the subgroup has: the lane id is delinearized
-// modulo each `lane_layout` extent, so the lanes past their product repeat the
-// ones before it. The two spellings are treated alike, and case 4 below is the
-// second one.
+// Terms
+// -----
 //
-// The two sides are not symmetric in what they mean, though:
+// All of these follow from the layouts, for a value of shape `Sh` on a subgroup
+// of `S` lanes. `#xegpu.` prefixes are dropped for width throughout.
 //
-//   input   supplies the values. Every lane is a potential donor, so what each
-//           one holds has to be known -- which it is, for any lane_layout.
+//   distribution unit  what a lane owns as one block: `lane_data`
+//   fragment           everything one lane owns. Slicing drops dimensions from
+//                      `lane_layout`; over what is left a lane owns
+//                      `Sh[i] / lane_layout[i]` per dimension, flattened
+//                      row-major
+//   lane period        `product(lane_layout)` counting the dimensions slicing
+//                      dropped, so slicing does not reduce it. Lanes this far
+//                      apart hold the same fragment. `getLanePeriod`,
+//                      `lanePeriod` below
+//   slot               `lane % lanePeriod`, a lane's index within one period
+//   donor              the lane a value is read from, `slot + donorDelta`, with
+//                      `donorDelta` a multiple of `lanePeriod`
+//
+// Either layout may replicate -- a set of lanes all holding the same fragment
+// -- and a layout has two ways to spell that. Both of these are on a
+// `vector<8x2>` over 16 lanes:
+//
+//   slice<layout<[8, 1, 2], order = [0, 2, 1]>, dims = [0]>    ("sliced")
+//     slicing leaves `lane_layout` [1, 2], so a fragment is 8x1, one whole
+//     column, while the lane period still counts the sliced dimension and is
+//     8 * 1 * 2 = 16. Sixteen lanes hold two distinct columns between them,
+//     eight lanes to a column.
+//
+//   layout<[8, 1]>                                             ("short")
+//     a `lane_layout` naming fewer lanes than the subgroup has. A fragment is
+//     1x2, one whole row, and the lane period is 8: the lane id is delinearized
+//     modulo each extent, so a lane's coordinates depend on `lane % 8` alone
+//     and lanes 8-15 repeat lanes 0-7.
+//
+// The two spellings are treated alike throughout.
+//
+// The two sides are not symmetric in what they mean:
+//
+//   input   supplies the values. Any lane may be a donor, so every lane's
+//           fragment has to be known -- which it is, for any lane_layout.
 //   target  states the obligation. Only the lanes it distributes to have to end
-//           up holding what it assigns them; the rest are left unspecified.
+//           up holding the fragment it assigns them; the rest are left
+//           unspecified.
 //
 // What it handles
 // ---------------
 //
-// Two properties decide it, one per side. Examples are on a `vector<8x2>` over
-// 16 lanes, `#xegpu.` prefixes dropped for width; the case numbers are used
-// throughout the rest of this comment.
+// Two properties decide it, one per side. Examples stay on a `vector<8x2>` over
+// 16 lanes; the case numbers are used throughout the rest of this comment.
 //
 // The input's replication decides what a lane arrives with, and so what has to
 // travel:
 //
-//   fully broadcast     every lane holds the whole value, so nothing travels
-//   and
-//                       the result is extracts alone. Spelled by slicing away
-//                       every distributed dimension:
+//   fully broadcast      every lane already holds the whole value, so nothing
+//                        travels and the result is extracts alone. Spelled by
+//                        slicing away every distributed dimension:
+//                        slice<layout<[1, 1, 16]>, dims = [2]>
 //
-//                         slice<layout<[1, 1, 16]>, dims = [2]>
+//   partially broadcast  groups of lanes each hold part of it, so a lane has to
+//                        be given whatever its group lacks. Either spelling of
+//                        replication from Terms above.
 //
-//   partially broadcast groups of lanes each hold part of it, so a lane has to
-//                       be given whatever its group lacks. Two spellings,
-//                       treated alike -- a sliced dimension,
+// The target's lane period decides where a lane may be given that from. Donors
+// sit at multiples of the period, so a period `P` over `S` lanes offers `S / P`
+// donor groups:
 //
-//                         slice<layout<[8, 1, 2], order = [0, 2, 1]>, dims =
-//                         [0]>
+//   period < S   several groups, so elements can cross lanes. `layout<[8, 1]>`
+//                offers 2, `layout<[2, 1]>` offers 8.
 //
-//                       or a lane_layout naming fewer lanes than the subgroup
-//                       has, the rest repeating those:
+//   period == S  one group, `donorDelta` 0, so nothing can cross a lane: only
+//                an input already holding each lane's target fragment works.
+//                A replicating target can have this period, slicing not
+//                reducing it.
 //
-//                         layout<[8, 1]>
+// One example per combination, and what the tests show it emitting. The target
+// is given as its `lane_layout`, the period following from it; the input as its
+// category, `sliced` and `short` being the two spellings named in Terms:
 //
-// The target's lane period decides where a lane may be given it from. The period
-// is the product of its `lane_layout`, which slicing does not reduce, and donors
-// sit at multiples of it, so a period `P` over `S` lanes offers `S / P` donor
-// groups:
-//
-//   period < S          several groups, so elements can cross lanes.
-//                       layout<[8, 1]> offers 2, layout<[2, 1]> offers 8.
-//
-//   period == S         one group, `donorDelta` 0, so nothing can cross a lane:
-//                       only an input already holding each lane's target
-//                       fragment works. A replicating target has this period,
-//                       slicing not reducing it:
-//
-//                         slice<layout<[8, 1, 2], order = [0, 2, 1]>, dims =
-//                         [0]>
-//
-// One example per combination, and what the tests show it emitting. The target is
-// given as its `lane_layout`, the period following from it:
-//
-//   case  input               target lane_layout  period  emits
-//   1     fully broadcast     [4, 1]                   4  4 extracts
-//   3     fully broadcast     [8, 1, 2] sliced        16  8 extracts
-//   2     partial, sliced     [8, 1]                   8  1 extract, 1 shuffle
-//   4     partial, short      [2, 1]                   2  2 extracts, 6 shuffles
-//   --    partially broadcast [8, 1, 2] sliced        16  declined, NoDonorDelta
+//   case  input            target             period  emits
+//   1     fully broadcast  [4, 1]                  4  4 extracts
+//   3     fully broadcast  [8, 1, 2] sliced       16  8 extracts
+//   2     partial, sliced  [8, 1]                  8  1 extract, 1 shuffle
+//   4     partial, short   [2, 1]                  2  2 extracts, 6 shuffles
+//   --    partial, short   [8, 1, 2] sliced       16  declined
 //
 // Only the target varies within a category, so the test suite carries more than
 // one of some -- @convert_layout_broadcast_all_lanes is case 1 with `[8, 1]` --
@@ -1848,8 +1864,8 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 // The last row is the boundary the two properties imply: with only `donorDelta`
 // 0 available, a lane arriving with less than its target fragment cannot be
-// completed. Verified for `layout<[8, 1]>` into the sliced target above, where
-// a lane arrives with 2 of the 8 elements it needs.
+// completed, and the match fails with NoDonorDelta. There a lane arrives with 2
+// of the 8 elements it needs.
 //
 // Case 2 is the running example below: lanes 0-7 arrive holding all of column
 // 0, lanes 8-15 all of column 1, and lane `i` leaves holding row `i`. Lane 3
@@ -1870,27 +1886,26 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 // Decided by inspecting the layouts:
 //
-//   they differ in `lane_data`                            LaneDataDiffers
+//   they differ in `lane_data`                         LaneDataDiffers
 //
 //      layout<[8, 1], [1, 1]>  ->  layout<[1, 8], [1, 2]>
 //
 //    A `lane_data`-only change is the repack pattern's; both changing is
 //    neither's.
 //
-//   their common `lane_data` is not all ones               LaneDataNotUnit
-//   the product of the target's `lane_layout` does not      LanePeriodNotDivisor
-//   divide the subgroup size
+//   their common `lane_data` is not all ones           LaneDataNotUnit
 //
-// Decided by building the ownership tables, so these are shapes known to fail
-// rather than a characterisation -- other combinations fail the same way:
+//   the target's lane period does not divide `S`       LanePeriodNotDivisor
 //
-//   a partially broadcast input into a target of period S  NoDonorDelta
+// Decided by building the ownership tables, so these name layout combinations
+// known to fail rather than a full characterisation -- others fail the same
+// way:
 //
-//    The last row of the table above: only `donorDelta` 0 is available, so a
-//    lane arriving with less than its target fragment cannot be completed.
+//   a partially broadcast input into a target of       NoDonorDelta
+//   period `S`, the last row of the table above
 //
-//   a target whose distributed dimension the index cannot   IndexNotLaneAffine
-//   walk, `order` having transposed it
+//   a target whose distributed dimension the index     IndexNotLaneAffine
+//   cannot walk, `order` having transposed it
 //
 //      slice<layout<[1, 1, 16]>, dims = [2]>
 //        ->  layout<[4, 4], order = [0, 1]>        on vector<4x4>
@@ -1902,28 +1917,17 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Concepts
 // --------
 //
-// fragment
-//     What a lane holds under a layout: 8x1 under case 2's input layout, 1x2
-//     under its target.
-//
 // broadcast group
 //     Lanes holding the same fragment. A sliced lane_layout dimension forms
 //     one, since nothing is distributed over its lanes: in case 2 dim 0 is
 //     sliced and spans 8 lanes, so lanes 0-7 are one group and 8-15 another.
 //
-// slot
-//     A lane's index within the target's lane period, `lane % lanePeriod`. In
-//     case 2 `lanePeriod` is 8, so the lanes pair up: lane 11 has slot 3 like
-//     lane 3, and runs the same arithmetic on its own fragment. How many
-//     elements a lane holds is a separate matter -- it can own several, which
-//     show up as several positions in its fragment, not as several slots.
-//
-// donor
-//     The lane a value is read from, `slot + donorDelta`. `gpu.shuffle idx` is
-//     the only way to move data between lanes and it exchanges one value per
-//     lane, so every lane runs the same extract; a donor can therefore only
-//     serve lanes of its own slot, which makes `donorDelta` a multiple of
-//     `lanePeriod`. In case 2, slot 3 reads (3, 1) from lane 3 + 8.
+// donor, continued
+//     `gpu.shuffle idx` is the only way to move data between lanes and it
+//     exchanges one value per lane, so every lane runs the same extract; a
+//     donor can therefore only serve lanes of its own slot, which is why
+//     `donorDelta` is a multiple of `lanePeriod`. In case 2, slot 3 reads (3,
+//     1) from lane 3 + 8.
 //
 //     That is also why the donor extracts the right thing without knowing who
 //     asked: its own slot is `(slot + donorDelta) % lanePeriod`, which is
