@@ -1603,6 +1603,11 @@ defm NeedsAligned2addrDS : AMDGPUSubtargetFeature<"needs-aligned-2addr-lds",
   /*GenPredicate=*/1
 >;
 
+defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
+  "s_monitor_sleep should not use sleep_forever",
+  /*GenPredicate=*/1
+>;
+
 //===----------------------------------------------------------------------===//
 
 class GCNSubtargetFeatureGeneration <string Value,
@@ -2472,6 +2477,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureNeedsAligned2addrDS,
+   FeatureNoSleepForever,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2497,6 +2503,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureNoSleepForever,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<

@@ -12322,6 +12322,7 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
           if (It != ValueToGatherNodes.end())
             It->second.remove(NewRoot);
         }
+        LoadEntriesToVectorize.remove(PrevSize);
         VectorizableTree.pop_back();
         continue;
       }
