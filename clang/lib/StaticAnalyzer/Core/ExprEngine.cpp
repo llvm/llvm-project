@@ -1100,10 +1100,12 @@ const ProgramPointTag *ExprEngine::cleanupNodeTag() {
   return &cleanupTag;
 }
 
+namespace {
 enum VisitKind {
   PreVisitKind,
   PostVisitKind,
 };
+}
 
 static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
 
