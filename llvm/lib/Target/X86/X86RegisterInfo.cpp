@@ -1024,8 +1024,20 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
       BuildMI(MBB, II, DL, TII->get(X86::MOV64ri), ScratchReg).addImm(Offset);
 
-      MI.getOperand(FIOperandNum + 3).setImm(0);
-      MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+      if (MI.getOperand(FIOperandNum + 2).getReg() == 0 &&
+          MI.getOperand(FIOperandNum + 1).getImm() == 1) {
+        MI.getOperand(FIOperandNum + 3).setImm(0);
+        MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+      } else {
+        BuildMI(MBB, II, DL, TII->get(X86::LEA64r), ScratchReg)
+            .addReg(MachineBasePtr)
+            .addImm(1)
+            .addReg(ScratchReg)
+            .addImm(0)
+            .addReg(0);
+        MI.getOperand(FIOperandNum).setReg(ScratchReg);
+        MI.getOperand(FIOperandNum + 3).setImm(0);
+      }
 
       return false;
     }
