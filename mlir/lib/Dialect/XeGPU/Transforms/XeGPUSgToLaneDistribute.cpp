@@ -1842,28 +1842,20 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Why donors sit a whole period apart
 // -----------------------------------
 //
-// `gpu.shuffle idx` is the only way to move data between lanes, and it is not a
-// remote read: every lane extracts one element from its own fragment and
-// contributes it, then each lane receives whatever the lane it names
+// `gpu.shuffle idx` is not a remote read: every lane extracts one element from
+// its own fragment and contributes it, then receives whatever the lane it names
 // contributed. A donor has therefore already extracted, at its own index,
-// before any shuffle happens, and never learns who asked.
-//
-// That works only if the index the donor used is the one the reader wanted. The
-// index is a function of the slot, so the two have to share one:
+// before any shuffle happens, and never learns who asked. So the index the
+// donor used has to be the one the reader wanted, and since the index is a
+// function of the slot, the two have to share one:
 //
 //   donorSlot = (slot + donorDelta) % targetLanePeriod = slot
 //
-// which holds exactly because `donorDelta` is a multiple of
-// `targetLanePeriod`. That is where the constraint comes from.
+// which holds exactly when `donorDelta` is a multiple of `targetLanePeriod`.
 //
-// Case 2 has two element sources, one per element of its 1x2 fragment. Reader
-// slot 3 wants (3, 0) and (3, 1):
-//
-//   element 0 -> donorDelta = 0, donor = 3,  index = 3   already local
-//   element 1 -> donorDelta = 8, donor = 11, index = 3   shuffled
-//
-// Both lanes extract at index 3, from different fragments: the input gives lane
-// 3 column 0 and lane 11 column 1, so one index yields the two elements wanted.
+// In case 2, reader slot 3 gets (3, 0) from donorDelta 0 and (3, 1) from
+// donorDelta 8, lane 11 -- and both lanes extract at index 3, the input giving
+// lane 3 column 0 and lane 11 column 1.
 //
 // What it declines
 // ----------------
