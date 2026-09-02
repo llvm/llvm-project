@@ -286,18 +286,26 @@ struct LeafWithClauses {
   llvm::SmallVector<llvm::omp::Clause> synthesized;
 };
 
-inline llvm::SmallVector<LeafWithClauses>
-decompose(unsigned openmpVersion, const OMPExecutableDirective &s) {
+using ConstructQueue = llvm::SmallVector<LeafWithClauses>;
+
+/// Given a potentially compound directive with a list of clauses that apply to
+/// it, break it up into individual leaf constructs each with the subset of
+/// applicable clauses (plus implicit clauses, if any). From that create a work
+/// queue, ordered outermost to innermost, where each work item corresponds to
+/// the leaf construct with its clauses. Implicit clauses are synthesized by the
+/// decomposition and have no Clang AST node, so they are listed separately.
+inline ConstructQueue buildConstructQueue(unsigned openmpVersion,
+                                          const OMPExecutableDirective &s) {
   llvm::SmallVector<Clause> input;
   for (const OMPClause *c : s.clauses())
     input.push_back(convertClause(*c));
 
   DecompositionHelper helper;
   tomp::ConstructDecompositionT<Clause, DecompositionHelper> decomp(
-      openmpVersion, helper, s.getDirectiveKind(),
+      llvm::omp::Version(openmpVersion), helper, s.getDirectiveKind(),
       llvm::ArrayRef<Clause>(input));
 
-  llvm::SmallVector<LeafWithClauses> result;
+  ConstructQueue result;
   for (const tomp::DirectiveWithClauses<Clause> &dwc : decomp.output) {
     LeafWithClauses leaf;
     leaf.id = dwc.id;
@@ -310,6 +318,11 @@ decompose(unsigned openmpVersion, const OMPExecutableDirective &s) {
     result.push_back(std::move(leaf));
   }
   return result;
+}
+
+inline bool isLastItemInQueue(ConstructQueue::const_iterator item,
+                              const ConstructQueue &queue) {
+  return std::next(item) == queue.end();
 }
 
 } // namespace clang::CIRGen::omp
