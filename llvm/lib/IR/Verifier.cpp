@@ -4168,6 +4168,9 @@ void Verifier::visitCallBase(CallBase &Call) {
        FoundAttachedCallBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
+    for (const Value *Input : BU.Inputs)
+      Check(!Input->getType()->isLabelTy(),
+            "Operand bundle operands cannot be labels", Call);
     uint32_t Tag = BU.getTagID();
     if (Tag == LLVMContext::OB_deopt) {
       Check(!FoundDeoptBundle, "Multiple deopt operand bundles", Call);

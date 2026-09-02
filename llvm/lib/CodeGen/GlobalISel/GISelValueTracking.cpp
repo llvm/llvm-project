@@ -2713,6 +2713,21 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    Register EltNo = Extract.getIndexReg();
+    LLT VecVT = MRI.getType(InVec);
+    if (VecVT.isScalableVector())
+      return computeNumSignBits(InVec, APInt(1, 1), Depth + 1);
+    unsigned NumSrcElts = VecVT.getNumElements();
+    std::optional<APInt> ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+    APInt DemandedSrcElts =
+        ConstEltNo && ConstEltNo->ult(NumSrcElts)
+            ? APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue())
+            : APInt::getAllOnes(NumSrcElts);
+    return computeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
+  }
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
     // Offset the demanded elts by the subvector index.
     Register SrcReg = MI.getOperand(1).getReg();
