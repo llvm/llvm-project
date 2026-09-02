@@ -165,7 +165,7 @@ public:
 #  if _LIBCPP_STD_VER >= 29
 
   template <random_access_range _RARange = _Derived>
-    requires sized_range<_RARange> // freestanding-deleted
+    requires sized_range<_RARange>
   [[nodiscard]] constexpr decltype(auto) at(range_difference_t<_RARange> __index) {
     if (__index < 0 || __index >= ranges::distance(__derived())) {
       std::__throw_out_of_range("The index passed to `view_interface::at()` is out of bounds.");
@@ -174,7 +174,7 @@ public:
   }
 
   template <random_access_range _RARange = const _Derived>
-    requires sized_range<_RARange> // freestanding-deleted
+    requires sized_range<_RARange>
   [[nodiscard]] constexpr decltype(auto) at(range_difference_t<_RARange> __index) const {
     if (__index < 0 || __index >= ranges::distance(__derived())) {
       std::__throw_out_of_range("The index passed to `view_interface::at()` is out of bounds.");
