@@ -62,9 +62,8 @@ ExprResult SemaCUDA::ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
   case CUDAFunctionTarget::HostDevice:
     if (getLangOpts().CUDAIsDevice) {
       IsDeviceKernelCall = true;
-      if (FunctionDecl *Caller =
-              SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
-          Caller && isImplicitHostDeviceFunction(Caller)) {
+      FunctionDecl *Caller = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+      if (Caller && isImplicitHostDeviceFunction(Caller)) {
         // Under the device compilation, config call under an HD function should
         // be treated as a device kernel call. But, for implicit HD ones (such
         // as lambdas), need to check whether RDC is enabled or not.
@@ -74,6 +73,9 @@ ExprResult SemaCUDA::ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
         // the host-side kernel call.
         if (getLangOpts().HIP)
           IsDeviceKernelCall = false;
+      } else if (getLangOpts().HIP && getLangOpts().IncrementalExtensions &&
+                 isa<TopLevelStmtDecl>(SemaRef.getCurLexicalContext())) {
+        IsDeviceKernelCall = false;
       }
     }
     break;
