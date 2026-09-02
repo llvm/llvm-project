@@ -141,4 +141,69 @@ InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
                                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
 }
 
+InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
+                               FixedVectorType *SrcTy, Type *ResultTy,
+                               const BitPackInfo &Info, bool FreeByteTrunc,
+                               TTI::TargetCostKind CostKind,
+                               const TargetLibraryInfo *TLI,
+                               const Instruction *CxtI, unsigned &ShiftWidth) {
+  unsigned BitWidth = SrcTy->getScalarSizeInBits();
+  unsigned NumElts = SrcTy->getNumElements();
+  uint64_t MaxAmt = *max_element(Info.LShrAmts);
+  // The shift amounts form a constant vector.
+  TTI::OperandValueInfo ShiftAmtInfo = {
+      all_of(Info.LShrAmts,
+             [&](uint64_t A) { return A == Info.LShrAmts.front(); })
+          ? TTI::OK_UniformConstantValue
+          : TTI::OK_NonUniformConstantValue,
+      all_of(Info.LShrAmts, isPowerOf2_64) ? TTI::OP_PowerOf2 : TTI::OP_None};
+  // After the shift the field content of each lane sits in the low bits of
+  // the lane, so the packing is a single byte shuffle of the shifted lanes.
+  // Pick the cheapest shift width: the narrowest type still holding the field
+  // content is not always the cheapest (e.g. missing narrow variable shifts).
+  Type *Int8Ty = IntegerType::get(SrcTy->getContext(), 8);
+  unsigned OutBytes = BitWidth / 8;
+  auto *PackTy = FixedVectorType::get(Int8Ty, OutBytes);
+  unsigned MinShiftWidth = 8;
+  while (MinShiftWidth < MaxAmt + Info.FieldWidth)
+    MinShiftWidth *= 2;
+  InstructionCost NewCost = InstructionCost::getInvalid();
+  ShiftWidth = 0;
+  for (unsigned W2 = MinShiftWidth; W2 <= BitWidth; W2 *= 2) {
+    auto *ShiftTy = FixedVectorType::get(
+        IntegerType::get(SrcTy->getContext(), W2), NumElts);
+    unsigned BytesPerLane = W2 / 8;
+    unsigned InBytes = NumElts * BytesPerLane;
+    SmallVector<int> Mask =
+        getBitPackMask(Info, OutBytes, NumElts, BytesPerLane);
+    InstructionCost C =
+        TTI.getCastInstrCost(Instruction::BitCast, ResultTy, PackTy,
+                             TTI::CastContextHint::None, CostKind);
+    // A plain byte reversal of the shifted lanes is a bswap, no shuffle.
+    if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
+      IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy, {ResultTy});
+      C += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+    } else if (!ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
+      C += TTI.getShuffleCost(
+          is_contained(Info.LaneOfField, BitPackInfo::NoLane)
+              ? TargetTransformInfo::SK_PermuteTwoSrc
+              : TargetTransformInfo::SK_PermuteSingleSrc,
+          PackTy, FixedVectorType::get(Int8Ty, InBytes), CostKind, Mask,
+          /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CxtI);
+    }
+    if (W2 != BitWidth && !(W2 == 8 && FreeByteTrunc))
+      C += TTI.getCastInstrCost(Instruction::Trunc, ShiftTy, SrcTy,
+                                TTI::CastContextHint::None, CostKind);
+    if (Info.needsShift())
+      C += TTI.getArithmeticInstrCost(Instruction::LShr, ShiftTy, CostKind,
+                                      /*Opd1Info=*/{}, ShiftAmtInfo,
+                                      /*Args=*/{}, CxtI, TLI);
+    if (C.isValid() && (!NewCost.isValid() || C < NewCost)) {
+      NewCost = C;
+      ShiftWidth = W2;
+    }
+  }
+  return NewCost;
+}
+
 } // namespace llvm::slpvectorizer
