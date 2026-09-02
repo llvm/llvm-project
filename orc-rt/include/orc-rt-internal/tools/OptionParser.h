@@ -1,4 +1,4 @@
-//===- CommandLine.h ------------------------------------------------------===//
+//===- OptionParser.h -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,12 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_INTERNAL_TOOLS_COMMANDLINE_H
-#define ORC_RT_INTERNAL_TOOLS_COMMANDLINE_H
+#ifndef ORC_RT_INTERNAL_TOOLS_OPTIONPARSER_H
+#define ORC_RT_INTERNAL_TOOLS_OPTIONPARSER_H
 
 #include <algorithm>
 #include <charconv>
-#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -24,6 +23,7 @@
 
 #include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/support/Error.h"
+#include "orc-rt/support/move_only_function.h"
 
 namespace orc_rt {
 namespace detail {
@@ -75,23 +75,23 @@ template <> inline std::optional<bool> parseValue<bool>(std::string_view Str) {
 }
 } // namespace detail
 
-class CommandLineParser {
+class OptionParser {
 public:
   enum class OptionKind { Flag, Value };
-  CommandLineParser() = default;
+  OptionParser() = default;
 
-  CommandLineParser &addFlag(std::string_view Name, std::string_view Desc,
-                             bool DefaultVal, bool &Val,
-                             std::optional<char> ShortName = std::nullopt) {
+  OptionParser &addFlag(std::string_view Name, std::string_view Desc,
+                        bool DefaultVal, bool &Val,
+                        std::optional<char> ShortName = std::nullopt) {
     return addValue(Name, Desc, DefaultVal, Val, OptionKind::Flag,
                     std::move(ShortName));
   }
 
   template <typename T>
-  CommandLineParser &addValue(std::string_view Name, std::string_view Desc,
-                              T DefaultVal, T &Val,
-                              OptionKind Kind = OptionKind::Value,
-                              std::optional<char> ShortName = std::nullopt) {
+  OptionParser &addValue(std::string_view Name, std::string_view Desc,
+                         T DefaultVal, T &Val,
+                         OptionKind Kind = OptionKind::Value,
+                         std::optional<char> ShortName = std::nullopt) {
     Val = DefaultVal;
     Opts.push_back({.Name = std::string(Name),
                     .ShortName = std::move(ShortName),
@@ -99,12 +99,12 @@ public:
                     .Kind = Kind,
                     .Default = [&Val, DV = DefaultVal]() { Val = DV; },
                     .FromString = [&Val, OptName = std::string(Name)](
-                                      std::string_view S) -> orc_rt::Error {
+                                      std::string_view S) -> Error {
                       if (auto V = detail::parseValue<T>(S)) {
                         Val = *V;
-                        return orc_rt::Error::success();
+                        return Error::success();
                       }
-                      return orc_rt::make_error<orc_rt::StringError>(
+                      return make_error<StringError>(
                           std::string("Invalid value for '") + OptName +
                           "': '" + std::string(S) + "'");
                     }});
@@ -152,13 +152,15 @@ public:
     return std::move(OS).str();
   }
 
-  template <typename I> orc_rt::Error parse(I Begin, I End) {
+  /// Parse an argument list.
+  ///
+  /// Iterators should be over program arguments only, and should not include
+  /// the program name as the first argument.
+  template <typename I> Error parse(I Begin, I End) {
     std::for_each(Opts.begin(), Opts.end(),
                   [](const Option &O) { O.Default(); });
     Positionals.clear();
     bool AfterDashDash = false;
-    if (Begin != End)
-      Begin++;
 
     for (auto It = Begin; It != End; ++It) {
       std::string_view Tok(*It);
@@ -177,8 +179,8 @@ public:
         }
         auto FoundOpt = findOpt(K);
         if (!FoundOpt)
-          return orc_rt::make_error<orc_rt::StringError>(
-              "Unknown option '" + std::string(Tok) + "'");
+          return make_error<StringError>("Unknown option '" + std::string(Tok) +
+                                         "'");
         if (auto Err = consumeValue(FoundOpt, V, HasValue, It, End))
           return Err;
       } else if (!AfterDashDash && startsWith(Tok, "-") && Tok.size() > 1) {
@@ -186,7 +188,7 @@ public:
         for (size_t i = 0; i < Group.size(); ++i) {
           auto FoundOpt = findOpt(Group[i]);
           if (!FoundOpt)
-            return orc_rt::make_error<orc_rt::StringError>(
+            return make_error<StringError>(
                 std::string("Unknown short option '-") + Group[i] + "'");
           if (FoundOpt->Kind == OptionKind::Value) {
             std::string_view V = Group.substr(i + 1);
@@ -203,11 +205,15 @@ public:
         Positionals.emplace_back(Tok);
       }
     }
-    return orc_rt::Error::success();
+    return Error::success();
   }
 
-  orc_rt::Error parse(int argc, char **argv) {
-    return parse(argv, argv + argc);
+  /// Parse main-like args: argc must be >= 1, and argv[0] must contain the
+  /// program name.
+  Error parseAsMainArgs(int argc, char **argv) {
+    if (argc == 0)
+      return make_error<StringError>("no program-name argument in argv[0]");
+    return parse(argv + 1, argv + argc);
   }
 
   const std::vector<std::string> &positionals() const { return Positionals; }
@@ -218,8 +224,8 @@ private:
     std::optional<char> ShortName;
     std::string Desc;
     OptionKind Kind{};
-    std::function<void()> Default;
-    std::function<orc_rt::Error(std::string_view)> FromString;
+    move_only_function<void() const> Default;
+    move_only_function<Error(std::string_view) const> FromString;
   };
 
   std::vector<std::string> Positionals;
@@ -239,16 +245,16 @@ private:
   }
 
   template <typename I>
-  orc_rt::Error consumeValue(const Option *Opt, std::string_view ExplicitV,
-                             bool HasV, I &It, I End) {
+  Error consumeValue(const Option *Opt, std::string_view ExplicitV, bool HasV,
+                     I &It, I End) {
     std::string_view V = ExplicitV;
     if (Opt->Kind == OptionKind::Flag) {
       if (!HasV)
         V = "true";
     } else if (!HasV) {
       if (++It == End)
-        return orc_rt::make_error<orc_rt::StringError>(
-            "Option '--" + Opt->Name + "' requires a value");
+        return make_error<StringError>("Option '--" + Opt->Name +
+                                       "' requires a value");
       V = *It;
     }
     return Opt->FromString(V);
@@ -261,4 +267,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_INTERNAL_TOOLS_COMMANDLINE_H
+#endif // ORC_RT_INTERNAL_TOOLS_OPTIONPARSER_H

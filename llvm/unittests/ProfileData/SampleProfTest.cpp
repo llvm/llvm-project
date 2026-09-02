@@ -784,9 +784,13 @@ TEST(SampleProfCanonicalNameTest, CoroFnName) {
             FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.destroy"));
   EXPECT_EQ("_Zfoo",
             FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.resume"));
-  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.cleanupper"));
-  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.destroyer"));
-  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.resumed"));
+  // Suffixes without trailing dot require an exact match.
+  EXPECT_EQ("foo.cleanupper",
+            FunctionSamples::getCanonicalCoroFnName("foo.cleanupper"));
+  EXPECT_EQ("foo.destroyer",
+            FunctionSamples::getCanonicalCoroFnName("foo.destroyer"));
+  EXPECT_EQ("foo.resumed",
+            FunctionSamples::getCanonicalCoroFnName("foo.resumed"));
   EXPECT_EQ("foo.other", FunctionSamples::getCanonicalCoroFnName("foo.other"));
 
   // Policy "none".
@@ -813,13 +817,14 @@ TEST(SampleProfCanonicalNameTest, CustomSuffixes) {
   EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.custom.123.cfi",
                                                        OrderedSuffixes));
 
-  // Suffix without trailing dot matches prefix of the component if no dot
-  // follows.
-  EXPECT_EQ("foo",
+  // Suffix without trailing dot requires an exact match; it does not match
+  // as a prefix of a component.
+  EXPECT_EQ("foo.cfiUnrelated",
             FunctionSamples::getCanonicalFnName("foo.cfiUnrelated", Suffixes));
   EXPECT_EQ("foo.cfiSomething.123", FunctionSamples::getCanonicalFnName(
                                         "foo.cfiSomething.123", Suffixes));
-  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.cfi_jt", Suffixes));
+  EXPECT_EQ("foo.cfi_jt",
+            FunctionSamples::getCanonicalFnName("foo.cfi_jt", Suffixes));
   // Suffix not in the list is preserved.
   EXPECT_EQ("foo.llvm.123",
             FunctionSamples::getCanonicalFnName("foo.llvm.123", Suffixes));
