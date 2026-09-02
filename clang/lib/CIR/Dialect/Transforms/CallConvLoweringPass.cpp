@@ -79,7 +79,7 @@ namespace {
 // of two.  Other vectors, a record holding an empty-for-ABI member that
 // occupies bytes or a zero-sized one off its own alignment, a union no member
 // of which spans its declared size, and a union with a bit-field access unit
-// no spanning member of which supplies data or records a declared reach are
+// no spanning member of which supplies data or records a declared extent are
 // reported NYI by classifyX86_64Function so an unsupported signature fails
 // the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
@@ -223,9 +223,9 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         if (recordBits > 128)
           return false;
       } else {
-        // A member recording a bit-field's declared reach occupies no storage
+        // A member recording a bit-field's declared extent occupies no storage
         // of its own, so its element type is what covers the union's bytes.
-        // That reach can outrun the union, which a real member never does,
+        // That extent can outrun the union, which a real member never does,
         // hence the comparison is not an equality.
         llvm::ArrayRef<cir::RecordMemberKind> kinds = recTy.getMemberKinds();
         auto spansRecord = [&](mlir::Type m, cir::RecordMemberKind k) {
@@ -242,7 +242,7 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         // A bit-field access unit's width may not match the bits it actually
         // stores, so some member (the unit itself or another one) must match
         // the union's size and either hold data or record how far the
-        // declared types in it reach.
+        // declared types in it extend.
         if (llvm::any_of(kinds, cir::isBitFieldAccessUnit) &&
             !llvm::any_of(llvm::zip_equal(members, kinds),
                           [&](const auto &pair) {
@@ -408,7 +408,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // and a member's presence alone cannot say both.
         auto addMember = [&](mlir::Type fieldTy, cir::RecordMemberKind kind,
                              uint64_t offsetBits) {
-          // A zero-width bit-field and a declared reach occupy nothing, so
+          // A zero-width bit-field and a declared extent occupy nothing, so
           // what the ABI counts is the element type they carry.
           mlir::Type countedTy = fieldTy;
           bool isUnnamedUnit = kind == cir::RecordMemberKind::Empty;
@@ -438,7 +438,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // it to.
         if (recTy.isUnion()) {
           // Classify only the members that hold data for the ABI, plus one
-          // recording a declared reach.  A member that does neither, such as
+          // recording a declared extent.  A member that does neither, such as
           // an unnamed bit-field's storage, is skipped so it does not appear
           // as a spurious argument.  A union's members all sit at offset zero.
           for (auto [fieldTy, kind] :

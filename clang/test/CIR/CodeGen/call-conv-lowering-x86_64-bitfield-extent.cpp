@@ -105,7 +105,7 @@ union UWideBits {
   char pad[4];
 };
 
-// A unit narrower than the type declared in it carries the declared reach as a
+// A unit narrower than the type declared in it carries the declared extent as a
 // zero-length member, which is what widens the coercion from the unit's own i8
 // to the eightbyte the declaration covers.
 // CIR-DAG: !rec_Bits = !cir.struct<"Bits" {bitfield !u8i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>, pad !cir.array<!u8i x 3>}>
@@ -115,15 +115,17 @@ union UWideBits {
 // CIR-DAG: !rec_WideUnit = !cir.struct<"WideUnit" {bitfield !u32i, bitfield !cir.array<!cir.array<!u8i x 4> x 0>, pad !cir.array<!u8i x 12>}>
 // CIR-DAG: !rec_PackedBits = !cir.struct<"PackedBits" packed {bitfield !u8i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>, data !s32i, pad !cir.array<!u8i x 3>}>
 
-// A reach and a zero-width bit-field sit in one record without conflating.
+// A declared extent and a zero-width bit-field sit in one record without
+// conflating.
 // CIR-DAG: !rec_NamedZeroWidth = !cir.struct<"NamedZeroWidth" {bitfield !u8i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>, pad !cir.array<!u8i x 3>, bitfield !cir.array<!u32i x 0>, data !s32i}>
 
-// A reach naming bytes past the record that holds it.  Nested in Wrap those
+// A declared extent naming bytes past the record that holds it.  Nested in Wrap
+// those
 // bytes fall in the second eightbyte, which stays padding all the same.
 // CIR-DAG: !rec_Nested = !cir.struct<"Nested" {bitfield !u32i, bitfield !cir.array<!cir.array<!u8i x 2> x 0>}>
 // CIR-DAG: !rec_WideInner = !cir.struct<"WideInner" {bitfield !u8i, bitfield !cir.array<!cir.array<!u8i x 7> x 0>, pad !cir.array<!u8i x 7>}>
 
-// A unit whose declarations stop at its own end carries no reach member.  An
+// A unit whose declarations stop at its own end carries no extent member.  An
 // unnamed bit-field records one all the same, since the bytes its declared
 // type covers hold user data even though it supplies no eightbyte class.
 // CIR-DAG: !rec_UnnamedPastUnit = !cir.struct<"UnnamedPastUnit" {bitfield !u32i, bitfield !cir.array<!u8i x 0>, pad !cir.array<!u8i x 4>}>
@@ -133,7 +135,7 @@ union UWideBits {
 // CIR-DAG: !rec_UnnamedOnly = !cir.struct<"UnnamedOnly" {empty !u8i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>}>
 // CIR-DAG: !rec_UUnnamedOnly = !cir.union<"UUnnamedOnly" {empty !u8i, bitfield !cir.array<!cir.array<!u8i x 4> x 0>}>
 
-// A union of plain bytes has no declaration to reach past its storage, so it
+// A union of plain bytes has no declaration extending past its storage, so it
 // keeps the narrow coercion.
 // CIR-DAG: !rec_UBytes = !cir.union<"UBytes" {data !u8i, data !u8i}>
 
@@ -157,14 +159,15 @@ void take_holder(Holder v) {}
 // CIR: cir.func {{.*}}@_Z11take_holder6Holder(%arg0: !s64i{{.*}}, %arg1: !u32i
 // LLVM: define {{.*}}void @_Z11take_holder6Holder(i64 %{{.+}}, i32 %{{.+}})
 
-// The reach also travels through an array element.  The element's unit is one
-// byte, so without the reach the eightbyte would narrow to i8.
+// The declared extent also travels through an array element.  The element's unit
+// is one byte, so without it the eightbyte would narrow to i8.
 void take_arr_nest(ArrNest v) {}
 
 // CIR: cir.func {{.*}}@_Z13take_arr_nest7ArrNest(%arg0: !u64i
 // LLVM: define {{.*}}void @_Z13take_arr_nest7ArrNest(i64 %{{.+}})
 
-// A reach may run past the end of the record that records it.  The bytes it
+// A declared extent may run past the end of the record that records it.  The
+// bytes it
 // names there belong to the enclosing record, and the classifier stops at the
 // inner record's own size, so the eightbyte holding them stays padding.
 void take_wrap(Wrap v) {}
@@ -173,7 +176,7 @@ void take_wrap(Wrap v) {}
 // LLVM: define {{.*}}void @_Z9take_wrap4Wrap(i64 %{{.+}})
 
 // An unnamed bit-field supplies no eightbyte class, but the bytes its declared
-// type covers are user data, so its reach counts.  Leaving it out would narrow
+// type covers are user data, so its extent counts.  Leaving it out would narrow
 // these two to i32 and i8.
 void take_unnamed_past_unit(UnnamedPastUnit v) {}
 void take_unnamed_wide(UnnamedWide v) {}
@@ -185,7 +188,7 @@ void take_unnamed_wide(UnnamedWide v) {}
 // LLVM: define {{.*}}void @_Z17take_unnamed_wide11UnnamedWide(i64 %{{.+}})
 
 // These two records differ only in the type their bit-field is declared with,
-// so the reach is what widens the second coercion to the eightbyte it covers.
+// so the extent is what widens the second coercion to the eightbyte it covers.
 void take_narrow_unit(NarrowUnit v) {}
 void take_wide_unit(WideUnit v) {}
 
@@ -195,21 +198,21 @@ void take_wide_unit(WideUnit v) {}
 // CIR: cir.func {{.*}}@_Z14take_wide_unit8WideUnit(%arg0: !u64i
 // LLVM: define {{.*}}void @_Z14take_wide_unit8WideUnit(i64 %{{.+}})
 
-// A reach and a zero-width bit-field in one record, which share a shape.
+// A declared extent and a zero-width bit-field in one record, sharing a shape.
 void take_named_zero_width(NamedZeroWidth v) {}
 
 // CIR: cir.func {{.*}}@_Z21take_named_zero_width14NamedZeroWidth(%arg0: !u64i
 // LLVM: define {{.*}}void @_Z21take_named_zero_width14NamedZeroWidth(i64 %{{.+}})
 
 // The int here sits at an offset its own alignment does not divide, which
-// sends the record to memory whatever the unit before it reaches.
+// sends the record to memory whatever the unit before it declares.
 void take_packed_bits(PackedBits v) {}
 
 // CIR: cir.func {{.*}}@_Z16take_packed_bits10PackedBits(%arg0: !cir.ptr<!rec_PackedBits>
 // LLVM-CIR: define {{.*}}void @_Z16take_packed_bits10PackedBits(ptr noalias noundef byval(%struct.PackedBits) align 8 %{{.+}})
 // LLVM-OGCG: define {{.*}}void @_Z16take_packed_bits10PackedBits(ptr noundef byval(%struct.PackedBits) align 8 %{{.+}})
 
-// The reach is measured from where the member sits, which is the unit's end.
+// The extent is measured from where the member sits, which is the unit's end.
 // Measuring it from the unit's start instead would claim a further eightbyte
 // of user data and widen the second half to i64.
 void take_spills_past_unit(SpillsPastUnit v) {}
@@ -217,7 +220,7 @@ void take_spills_past_unit(SpillsPastUnit v) {}
 // CIR: cir.func {{.*}}@_Z21take_spills_past_unit14SpillsPastUnit(%arg0: !u64i{{.*}}, %arg1: !s32i
 // LLVM: define {{.*}}void @_Z21take_spills_past_unit14SpillsPastUnit(i64 %{{.+}}, i32 %{{.+}})
 
-// A unit of unnamed bit-fields records a reach without supplying data, which
+// A unit of unnamed bit-fields records an extent without supplying data, which
 // leaves the record empty for the ABI and drops the argument.
 void take_unnamed_only(UnnamedOnly v) {}
 void take_uunnamed_only(UUnnamedOnly v) {}
@@ -239,7 +242,7 @@ void take_ubytes(UBytes v) {}
 // LLVM: define {{.*}}void @_Z11take_ubytes6UBytes(i8 %{{.+}})
 
 // A union holding both a data member and a bit-field whose declared type
-// outruns it, so the reach rather than the widest member sizes the coercion.
+// outruns it, so the extent rather than the widest member sizes the coercion.
 void take_uwide_bits(UWideBits v) {}
 UWideBits ret_uwide_bits(void) { UWideBits u; u.w = 1; return u; }
 

@@ -127,7 +127,7 @@ struct NamedClippedTail { NamedClippedTail(const NamedClippedTail &); int i; int
 
 struct DerivedClipped : Clipped { char c; };
 // CIR-DAG: !rec_DerivedClipped = !cir.struct<"DerivedClipped" {data !rec_Clipped2Ebase, data !s8i}>
-// A declared reach lowers to a zero-length member with no classic counterpart.
+// A declared extent lowers to a zero-length member with no classic counterpart.
 // LLVMCIR-DAG: %struct.Clipped.base = type <{ i32, [3 x i8], [0 x i8] }>
 // OGCG-DAG: %struct.Clipped.base = type <{ i32, [3 x i8] }>
 // LLVM-DAG: %struct.DerivedClipped = type { %struct.Clipped.base, i8 }

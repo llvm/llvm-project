@@ -135,7 +135,7 @@ FiveShort ret_five_short(short x) { FiveShort v = {0, x, 0}; return v; }
 // LLVM: define dso_local i40 @ret_five_short(i16 noundef signext %{{.+}})
 
 // The char bit-field here is declared no wider than the byte its unit
-// occupies, so the unit records no reach and every byte of the record holds
+// occupies, so the unit records no extent and every byte of the record holds
 // data.
 int take_ninebf(NineBF v) { return v.b; }
 
