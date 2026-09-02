@@ -27,8 +27,11 @@
 using namespace llvm;
 using namespace offload;
 
-// Weak so another runtime object can override the default stream mode.
-__attribute__((weak)) uint32_t PerThreadQueue = 0;
+// Weak fallback used unless the driver links the strong per-thread default
+// stream mode object for -fgpu-default-stream=per-thread.
+extern "C" {
+__attribute__((weak)) uint32_t __LLVMOffloadingPerThreadDefaultStream = 0;
+}
 
 // Process-wide singleton and thread-state registry.
 static std::mutex &getStateLock() {
@@ -135,7 +138,7 @@ StreamTy *ThreadStateTy::getDefaultStream() {
   if (!Device)
     return nullptr;
 
-  if (!PerThreadQueue) [[likely]]
+  if (!__LLVMOffloadingPerThreadDefaultStream) [[likely]]
     return StateTy::get().getOrCreateDefaultStream(Device);
 
   return getOrCreateDefaultStream(Device);

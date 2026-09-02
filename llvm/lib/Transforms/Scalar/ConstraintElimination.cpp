@@ -1109,13 +1109,12 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (&BB == Latch && !IncStep)
     return;
 
-  BasicBlock *InLoopSucc = nullptr;
-  if (Pred == CmpInst::ICMP_NE)
-    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(0);
-  else if (Pred == CmpInst::ICMP_EQ)
-    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(1);
-  else
-    return;
+  bool ContinueOnTrue =
+      Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
+  CmpInst::Predicate ContinuePred =
+      ContinueOnTrue ? Pred.dropSameSign() : CmpInst::getInversePredicate(Pred);
+  BasicBlock *InLoopSucc = cast<CondBrInst>(BB.getTerminator())
+                               ->getSuccessor(ContinueOnTrue ? 0 : 1);
 
   if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
     return;
@@ -1125,6 +1124,23 @@ void State::addInfoForInductions(BasicBlock &BB) {
     return;
 
   auto [StartValue, Backedge] = getStartAndBackedgeValue(*PN, LoopPred);
+  DomTreeNode *DTN = DT.getNode(InLoopSucc);
+
+  if (ICmpInst::isRelational(ContinuePred)) {
+    if (A != Backedge)
+      return;
+
+    // The latch condition ensures ContinuePred holds in the header on each
+    // iteration other than the first. Together with a precondition on the start
+    // value (StartValue ContinuePred B), we can add B as bound of PN.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
+
+    // A relational latch steps past B rather than landing on it, so none of the
+    // reasoning below applies.
+    return;
+  }
+
   const APInt *StepOffset = nullptr;
   const SCEV *StartSCEV = nullptr;
   if (match(Backedge, m_c_Add(m_Specific(PN), m_APInt(StepOffset)))) {
@@ -1137,8 +1153,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
                                    m_SpecificLoop(L))))
       return;
   }
-
-  DomTreeNode *DTN = DT.getNode(InLoopSucc);
 
   // If we looked through `PN + C`, only derive facts when that add is
   // really the induction's post-increment or post-decrement.
@@ -1235,8 +1249,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // blocks. When exiting either with EQ or NE, we know that the induction value
   // must be u<= B, as other exits may only exit earlier.
   assert(!StepOffset->isNegative() && "induction must be increasing");
-  assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
-         "unsupported predicate");
+  assert(ContinuePred == CmpInst::ICMP_NE && "unsupported predicate");
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
@@ -1294,15 +1307,55 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
 /// Returns true if \p I is a candidate whose poison-generating flags may be
 /// strengthened using the constraint systems.
 static bool canStrengthenFlags(Instruction *I) {
-  switch (I->getOpcode()) {
+  auto *BO = dyn_cast<BinaryOperator>(I);
+  if (!BO || !BO->getType()->isIntegerTy())
+    return false;
+
+  switch (BO->getOpcode()) {
   case Instruction::Sub:
     // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
     // canonicalized to Add.
-    return I->getType()->isIntegerTy() && !I->hasNoUnsignedWrap() &&
-           !isa<Constant>(I->getOperand(1));
+    return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+  case Instruction::Mul:
+  case Instruction::Shl:
+    if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
+      return false;
+    // With a constant second operand, we can use bounds on the first operand to
+    // refine no-wrap flags. Independently, nuw can be added for nsw if the
+    // operands are non-negative.
+    return isa<ConstantInt>(BO->getOperand(1)) || BO->hasNoSignedWrap();
   default:
     return false;
   }
+}
+
+/// Returns true if \p Info implies that \p Op is in \p R, interpreting \p R as
+/// a signed range if \p Signed is set and as an unsigned range otherwise.
+static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
+                            const ConstantRange &R, bool Signed) {
+  if (R.isEmptySet() || (Signed ? R.isSignWrappedSet() : R.isWrappedSet()))
+    return false;
+
+  if (R.isFullSet())
+    return true;
+
+  unsigned BitWidth = R.getBitWidth();
+  APInt Min = Signed ? R.getSignedMin() : R.getUnsignedMin();
+  APInt Max = Signed ? R.getSignedMax() : R.getUnsignedMax();
+  APInt MinVal = Signed ? APInt::getSignedMinValue(BitWidth)
+                        : APInt::getMinValue(BitWidth);
+  APInt MaxVal = Signed ? APInt::getSignedMaxValue(BitWidth)
+                        : APInt::getMaxValue(BitWidth);
+  Type *Ty = Op->getType();
+  if (Min != MinVal &&
+      !Info.doesHold(Signed ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE, Op,
+                     ConstantInt::get(Ty, Min)))
+    return false;
+  if (Max != MaxVal &&
+      !Info.doesHold(Signed ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE, Op,
+                     ConstantInt::get(Ty, Max)))
+    return false;
+  return true;
 }
 
 /// Try to strengthen \p I's poison generating flags using \p Info. Returns
@@ -1311,14 +1364,52 @@ static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
                                  SmallVectorImpl<Instruction *> &ToRemove) {
   assert(canStrengthenFlags(I) && "not a candidate for flag strengthening");
 
+  using OBO = OverflowingBinaryOperator;
+  Value *Op0 = I->getOperand(0), *Op1 = I->getOperand(1);
   switch (I->getOpcode()) {
   case Instruction::Sub: {
     // Op0 - Op1 does not wrap unsigned, if Op0 >=u Op1.
-    if (!Info.doesHold(CmpInst::ICMP_UGE, I->getOperand(0), I->getOperand(1)))
+    if (!Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1))
       return false;
     LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
     I->setHasNoUnsignedWrap();
     return true;
+  }
+  case Instruction::Mul:
+  case Instruction::Shl: {
+    auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
+    bool Changed = false;
+    // For a constant Op1, the ranges of Op0 for which the operation does not
+    // wrap are known exactly; check if the systems imply one of them.
+    if (auto *C = dyn_cast<ConstantInt>(Op1)) {
+      ConstantRange Other(C->getValue());
+      if (!I->hasNoUnsignedWrap() &&
+          doesHoldInRange(Info, Op0,
+                          ConstantRange::makeGuaranteedNoWrapRegion(
+                              Opcode, Other, OBO::NoUnsignedWrap),
+                          /*Signed=*/false)) {
+        LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+        I->setHasNoUnsignedWrap();
+        Changed = true;
+      }
+      if (!I->hasNoSignedWrap() &&
+          doesHoldInRange(Info, Op0,
+                          ConstantRange::makeGuaranteedNoWrapRegion(
+                              Opcode, Other, OBO::NoSignedWrap),
+                          /*Signed=*/true)) {
+        LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
+        I->setHasNoSignedWrap();
+        Changed = true;
+      }
+    }
+    if (!I->hasNoUnsignedWrap() && I->hasNoSignedWrap() &&
+        Info.isKnownNonNegative(Op0) &&
+        (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1))) {
+      LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+      I->setHasNoUnsignedWrap();
+      Changed = true;
+    }
+    return Changed;
   }
   default:
     return false;

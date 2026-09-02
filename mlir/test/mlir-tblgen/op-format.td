@@ -109,6 +109,11 @@ def CustomStringLiteralD : TestFormat_Op<[{
   custom<Foo>(prop-dict) attr-dict
 }]>;
 
+// A directive keyword can still name a custom directive.
+def CustomEnumKeyword : TestFormat_Op<[{
+  custom<enum>($attr) attr-dict
+}]>, Arguments<(ins I64Attr:$attr)>;
+
 //===----------------------------------------------------------------------===//
 // EnumAttr formatting
 //===----------------------------------------------------------------------===//
@@ -124,6 +129,21 @@ def TestEnum : I32Enum<"TestEnum", "a test enum", [TestEnumCase0, TestEnumCase1]
 }
 
 def TestEnumAttr : EnumAttr<TestDialect, TestEnum, "enum">;
+
+def TestPrettyEnumAttr : EnumAttr<TestDialect, TestEnum, "pretty_enum"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def TestNonKeywordEnumCase : I32EnumCase<"NonKeyword", 0, "non-keyword">;
+def TestNonKeywordEnum
+    : I32Enum<"TestNonKeywordEnum", "a non-keyword enum",
+              [TestNonKeywordEnumCase]> {
+  let cppNamespace = "::test";
+}
+def TestNonKeywordEnumAttr
+    : EnumAttr<TestDialect, TestNonKeywordEnum, "non_keyword_enum"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 
 // Default-valued optional attributes have a non-optional getter.
 
@@ -164,6 +184,40 @@ def TestBitEnumAttr : EnumAttr<TestDialect, TestBitEnum, "bit_enum">;
 def EnumAttrUnquotedBitOp : TestFormat_Op<"$attr attr-dict">,
     Arguments<(ins TestBitEnumAttr:$attr)>;
 
+// Non-keyword enum values use the quoted-string fallback.
+
+// CHECK-LABEL: EnumDirectiveNonKeywordOp::parse
+// CHECK: parser.parseOptionalKeyword(&attrStr, {})
+// CHECK: parser.parseOptionalAttribute
+// CHECK-LABEL: EnumDirectiveNonKeywordOp::print
+// CHECK: _odsPrinter << '"' << caseValueStr << '"'
+def EnumDirectiveNonKeywordOp : TestFormat_Op<"enum($attr) attr-dict">,
+    Arguments<(ins TestNonKeywordEnumAttr:$attr)>;
+
+// The enum directive formats the symbolic enum value independently of the
+// attribute's custom assembly format.
+
+// CHECK-LABEL: EnumDirectiveOp::parse
+// CHECK: symbolizeTestEnum
+// CHECK-NOT: parseCustomAttributeWithFallback
+// CHECK-LABEL: EnumDirectiveOp::print
+// CHECK: stringifyTestEnum
+// CHECK-NOT: printStrippedAttrOrType
+def EnumDirectiveOp : TestFormat_Op<"enum($attr) attr-dict">,
+    Arguments<(ins TestPrettyEnumAttr:$attr)>;
+
+// The enum directive preserves the separator-aware parser and unquoted printer
+// for an unquoted bit enum.
+
+// CHECK-LABEL: EnumDirectiveUnquotedBitOp::parse
+// CHECK: symbolizeTestBitEnum
+// CHECK: parseOptionalVerticalBar
+// CHECK-LABEL: EnumDirectiveUnquotedBitOp::print
+// CHECK: stringifyTestBitEnum
+// CHECK: _odsPrinter << caseValueStr
+def EnumDirectiveUnquotedBitOp : TestFormat_Op<"enum($attr) attr-dict">,
+    Arguments<(ins TestBitEnumAttr:$attr)>;
+
 // Test that legacy EnumAttrInfo-based attributes (I32EnumAttr) also use the
 // enum-keyword format path.
 
@@ -181,6 +235,31 @@ def LegacyTestEnum : I32EnumAttr<"LegacyTestEnum", "a legacy test enum",
 // CHECK: stringifyLegacyTestEnum
 def LegacyEnumAttrOp : TestFormat_Op<"$attr attr-dict">,
     Arguments<(ins LegacyTestEnum:$attr)>;
+
+// Explicit enum formatting must not change the existing parser and printer
+// selected for legacy EnumAttrInfo attributes written as plain variables.
+
+def TestLegacyBitEnumNone : I32BitEnumAttrCaseNone<"None", "none">;
+def TestLegacyBitEnumBit0 : I32BitEnumAttrCaseBit<"Bit0", 0, "bit0">;
+def TestLegacyBitEnumBit1 : I32BitEnumAttrCaseBit<"Bit1", 1, "bit1">;
+def TestLegacyUnquotedBitEnum
+    : I32BitEnumAttr<"TestLegacyUnquotedBitEnum", "a legacy bit enum",
+                     [TestLegacyBitEnumNone, TestLegacyBitEnumBit0,
+                      TestLegacyBitEnumBit1]> {
+  let cppNamespace = "::test";
+  let printBitEnumQuoted = 0;
+}
+
+// CHECK-LABEL: LegacyUnquotedBitEnumOp::parse
+// CHECK: parser.parseOptionalKeyword
+// CHECK-NOT: parseOptionalVerticalBar
+// CHECK-NOT: parseOptionalComma
+// CHECK-LABEL: LegacyUnquotedBitEnumOp::print
+// CHECK: switch (caseValue)
+// CHECK: default:
+// CHECK-NEXT: _odsPrinter << '"' << caseValueStr << '"'
+def LegacyUnquotedBitEnumOp : TestFormat_Op<"$attr attr-dict">,
+    Arguments<(ins TestLegacyUnquotedBitEnum:$attr)>;
 
 //===----------------------------------------------------------------------===//
 // Optional Groups

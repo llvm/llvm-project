@@ -173,23 +173,29 @@
 ! CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_0]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init", uniq_name = ""}
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if {{.*}} -> (!fir.heap<!fir.array<?xi32>>) {
+! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init", uniq_name = ""}
+! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:           } else {
+! CHECK:             %[[NULL_ALLOC:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK:             fir.result %[[NULL_ALLOC]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:           }
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_1]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_2]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_1]]#0, %[[BOX_DIMS_2]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_SHIFT_0]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[PRIVATE_ALLOC]](%[[SHAPE_SHIFT_0]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           acc.yield %[[ALLOCA_0]], %[[PRIVATE_ALLOC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.heap<!fir.array<?xi32>>
 
 ! CHECK-LABEL:   } destroy {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>):
-! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:           fir.freemem %[[CONVERT_0]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, %[[PRIVATE_ALLOC:.*]]: !fir.heap<!fir.array<?xi32>>):
+! CHECK-NOT:       fir.box_addr
+! CHECK:           fir.if {{.*}} {
+! CHECK:             fir.freemem %[[PRIVATE_ALLOC]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
 

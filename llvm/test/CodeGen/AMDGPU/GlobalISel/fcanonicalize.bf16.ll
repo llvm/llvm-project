@@ -26,7 +26,7 @@ define amdgpu_ps bfloat @fcanonicalize_bf16_v(bfloat %src) {
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
 ; GFX12-NEXT:    v_add3_u32 v1, v1, v0, 0x7fff
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc_lo
-; GFX12-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: fcanonicalize_bf16_v:
@@ -42,7 +42,7 @@ define amdgpu_ps bfloat @fcanonicalize_bf16_v(bfloat %src) {
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
 ; GFX1250-NEXT:    v_add3_u32 v1, v1, v0, 0x7fff
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc_lo
-; GFX1250-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call bfloat @llvm.canonicalize.bf16(bfloat %src)
   ret bfloat %result
@@ -133,23 +133,21 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_v(<2 x bfloat> %src) {
 ; GFX12-LABEL: fcanonicalize_v2bf16_v:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX12-NEXT:    v_max_num_f32_e32 v1, v1, v1
-; GFX12-NEXT:    v_bfe_u32 v3, v0, 16, 1
-; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v0
-; GFX12-NEXT:    v_bfe_u32 v2, v1, 16, 1
-; GFX12-NEXT:    v_or_b32_e32 v4, 0x400000, v1
-; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
-; GFX12-NEXT:    v_add3_u32 v3, v3, v0, 0x7fff
-; GFX12-NEXT:    v_add3_u32 v2, v2, v1, 0x7fff
-; GFX12-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc_lo
+; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX12-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_lshlrev_b32 v0, 16, v0
+; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
+; GFX12-NEXT:    v_bfe_u32 v3, v1, 16, 1
+; GFX12-NEXT:    v_bfe_u32 v2, v0, 16, 1
+; GFX12-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX12-NEXT:    v_or_b32_e32 v5, 0x400000, v1
+; GFX12-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
+; GFX12-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
+; GFX12-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
+; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo
-; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX12-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX12-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, v2.h
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: fcanonicalize_v2bf16_v:
@@ -161,18 +159,17 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_v(<2 x bfloat> %src) {
 ; GFX1250-NEXT:    v_mov_b16_e32 v1.l, v0.h
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
 ; GFX1250-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; GFX1250-NEXT:    v_bfe_u32 v3, v0, 16, 1
-; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v0
-; GFX1250-NEXT:    v_bfe_u32 v2, v1, 16, 1
-; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v1
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
-; GFX1250-NEXT:    v_add3_u32 v3, v3, v0, 0x7fff
-; GFX1250-NEXT:    v_add3_u32 v2, v2, v1, 0x7fff
-; GFX1250-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc_lo
+; GFX1250-NEXT:    v_bfe_u32 v2, v0, 16, 1
+; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
+; GFX1250-NEXT:    v_bfe_u32 v3, v1, 16, 1
+; GFX1250-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
+; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
+; GFX1250-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
+; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
+; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v1, 16, v1 :: v_dual_lshrrev_b32 v0, 16, v0
-; GFX1250-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v2.h
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %src)
   ret <2 x bfloat> %result
