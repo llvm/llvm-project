@@ -1861,33 +1861,32 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // What it declines
 // ----------------
 //
-// Every failure path reports a `RedistributionLimit`, so these are all of them.
-// None is a limit of `convert_layout`, which is meaningful for any pair of
-// layouts and so always lowerable; each is a limit of the scheme here, one
-// shuffle per element from a donor a whole number of lane periods away. Another
-// pattern or a more general scheme lowers any of them. Grouped by what each
-// constrains.
+// Three things have to hold. None is a limit of `convert_layout`, which is
+// meaningful for any pair of layouts and so always lowerable; each is a limit
+// of the scheme here, one shuffle per element from a donor a whole number of
+// lane periods away. Another pattern or a more general scheme lowers any of
+// them. The `RedistributionLimit` a match failure names is the point within one
+// of these that gave way.
 //
-// The pair:
+// 1. The change is a relocation of single elements. Both layouts have to hand
+//    the lanes the same unit, and that unit has to be one element.
 //
-//   LaneDataDiffers        the layouts disagree on the distribution unit
-//   NoDonorDelta           the element is in no reachable donor group
-//   IndexNotLaneAffine     the per-slot index is not affine in the lane id
+//      LaneDataDiffers, LaneDataNotUnit
 //
-// Either layout:
+// 2. The data can be reached. Every element a lane needs has to sit in a lane
+// it
+//    may read from, and the donor walk has to stay inside the subgroup.
 //
-//   LaneDataNotUnit        lane_data is not all ones
+//      NoDonorDelta, LanePeriodNotDivisor
 //
-// The target alone:
+// 3. The read can be emitted. Its index has to follow from the lane id in a
+//    couple of `arith` ops, and a `gpu.shuffle` type has to carry the element.
 //
-//   LanePeriodNotDivisor   its lane period does not divide the subgroup size
+//      IndexNotLaneAffine, SubByteElement
 //
-// The value:
-//
-//   SubByteElement         no gpu.shuffle type carries the element
-//
-// FragmentSizeMismatch is reported too, for a layout disagreeing with the vector
-// type the caller derived from it. That is an invariant check, not a layout pair.
+// FragmentSizeMismatch is reported too, for a layout disagreeing with the
+// vector type the caller derived from it. That is an invariant check, not a
+// layout pair.
 //
 // Concepts
 // --------
