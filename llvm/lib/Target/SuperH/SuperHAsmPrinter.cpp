@@ -70,8 +70,8 @@ public:
   void emitConstantPool() override { }
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
 
-  static const char *getRegisterName(MCRegister Reg) {
-    return SuperHInstPrinter::getRegisterName(Reg);
+  static std::string getRegisterName(MCRegister Reg) {
+    return SuperHInstPrinter::getRegName(Reg);
   }
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -118,7 +118,7 @@ void SuperHAsmPrinter::printOperand(const MachineInstr *MI, int OpNo, raw_ostrea
 
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
-    O << StringRef(getRegisterName(MO.getReg())).lower();
+    O << getRegisterName(MO.getReg());
     break;
   case MachineOperand::MO_Immediate:
     O << MO.getImm();
@@ -177,6 +177,8 @@ bool SuperHAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned Op
 void SuperHAsmPrinter::emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
   const DataLayout &DL = getDataLayout();
   int Size = DL.getTypeAllocSize(MCPV->getType());
+  if (Size < 4)
+    Size = 4;
 
   MCSymbol *MCSym;
   SuperHConstantPoolValue *SCPV = static_cast<SuperHConstantPoolValue*>(MCPV);
