@@ -1,6 +1,7 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-smart-ptr-initialization %t
 
 #include <memory>
+#include <string>
 
 struct A {
   int x;
@@ -182,6 +183,8 @@ void test_new_expression_crossed_fail() {
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
 }
 
+// TODO: template and macro test
+
 bool can_take(std::shared_ptr<A> a);
 void take(std::shared_ptr<A> a);
 
@@ -189,4 +192,13 @@ void test_discowered_in_wild(std::shared_ptr<A> a, std::unique_ptr<A> b) {
   if (can_take(a)) {
     take(a);
   }
+}
+
+void test_new_expression_not_only_smartpointers() {
+  char* first = new char();
+  char* second = new char();
+  std::shared_ptr<char> a(first);
+  std::string a2(first);
+  std::unique_ptr<char> b(second);
+  std::string b2(second);
 }
