@@ -1791,9 +1791,12 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                      candidates.
 //   donor lane         supplying lane, computed as `slot + donorDelta`. First
 //                      fit is taken by enumerating through the donorDeltas.
+//   donor index        where in the donor lane's fragment the element sits. A
+//                      function of the slot, so every lane computes it with its
+//                      own
 //   element source     for one element of the target fragment, a tuple: which
-//                      donor lane supplies it, where in that lane's fragment
-//                      it sits, and whether a shuffle is needed. One is
+//                      donor lane supplies it, the donor index within that
+//                      lane's fragment, and whether a shuffle is needed. One is
 //                      derived per element position, at compile time.
 //
 // What it handles
@@ -2102,7 +2105,7 @@ static StringRef describe(RedistributionLimit limit) {
   case RedistributionLimit::NoDonorDelta:
     return "no donor lane holds the element for every slot";
   case RedistributionLimit::IndexNotLaneAffine:
-    return "the fragment index is not an affine function of the lane id";
+    return "the donor index is not an affine function of the lane id";
   }
   llvm_unreachable("unhandled RedistributionLimit");
 }
@@ -2192,7 +2195,7 @@ struct DonorIndex {
   /// Distance in the fragment between consecutive coordinates along the
   /// dimension being walked, or 0 when every slot reads the same element.
   int64_t stride;
-  /// Fragment index that coordinate 0 maps to, and the whole index when
+  /// Donor index that coordinate 0 maps to, and the whole index when
   /// `stride` is 0.
   int64_t offset;
   /// Slots apart for the coordinate to advance by one, or 1 when no dimension
@@ -2228,7 +2231,7 @@ struct ElementSource {
   bool needsShuffle;
 };
 
-/// Fits `needed[slot]`, the fragment index each slot has to read, to the
+/// Fits `needed[slot]`, the donor index each slot has to read, to the
 /// restricted form `DonorIndex` can emit. A slot is a lane reduced modulo
 /// the target's lane period, so there are `targetLanePeriod` of them. Fails
 /// when no index in that form reproduces the whole table.
@@ -2400,7 +2403,7 @@ static FailureOr<Value> redistributeBroadcastedValue(
     fragment = vector::BitCastOp::create(
         rewriter, loc, VectorType::get({srcNumElems}, shuffleTy), fragment);
 
-  // The lane's slot, which every fragment index is a function of.
+  // The lane's slot, which every donor index is a function of.
   Value slot = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
                                      /*upperBound=*/mlir::IntegerAttr());
   if (targetLanePeriod != subgroupSize)
@@ -2452,7 +2455,7 @@ static FailureOr<Value> redistributeBroadcastedValue(
   };
 
   // Extract, shuffle and insert one element of the result at a time: one
-  // extract per distinct fragment index, one shuffle per element the lane does
+  // extract per distinct donor index, one shuffle per element the lane does
   // not already hold.
   // TODO: elements sharing a donor could move in one shuffle, `gpu.shuffle`
   // moving a whole 32-bit lane word.
