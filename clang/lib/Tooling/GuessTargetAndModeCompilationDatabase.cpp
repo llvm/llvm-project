@@ -34,6 +34,8 @@ public:
     return addTargetAndMode(Base->getCompileCommands(FilePath));
   }
 
+  const ModuleManager *getModuleManager() const override { return nullptr; }
+
 private:
   std::vector<CompileCommand>
   addTargetAndMode(std::vector<CompileCommand> Cmds) const {

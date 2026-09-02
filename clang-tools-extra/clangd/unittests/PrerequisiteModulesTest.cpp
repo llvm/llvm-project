@@ -144,6 +144,10 @@ private:
 
     std::vector<std::string> getAllFiles() const override { return CDB.Files; }
 
+    tooling::ModuleManager *getModuleManager() const override {
+      return nullptr;
+    }
+
   private:
     const PerFileModulesCompilationDatabase &CDB;
   };
@@ -207,6 +211,10 @@ private:
     std::vector<std::string> getAllFiles() const override { return Files; }
 
     void AddFile(StringRef File) { Files.push_back(File.str()); }
+
+    const tooling::ModuleManager *getModuleManager() const override {
+      return nullptr;
+    }
 
   private:
     MockDirectoryCompilationDatabase &MCDB;

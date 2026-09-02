@@ -92,9 +92,7 @@ public:
          const char *Overview = nullptr);
 
   /// Returns a reference to the loaded compilations database.
-  CompilationDatabase &getCompilations() {
-    return *Compilations;
-  }
+  CompilationDatabase &getCompilations() { return *Compilations; }
 
   /// Returns a list of source file paths to process.
   const std::vector<std::string> &getSourcePathList() const {
@@ -135,6 +133,8 @@ public:
 
   std::vector<CompileCommand> getAllCompileCommands() const override;
 
+  const ModuleManager *getModuleManager() const override { return nullptr; }
+
 private:
   std::unique_ptr<CompilationDatabase> Compilations;
   std::vector<ArgumentsAdjuster> Adjusters;
@@ -143,7 +143,7 @@ private:
   adjustCommands(std::vector<CompileCommand> Commands) const;
 };
 
-}  // namespace tooling
-}  // namespace clang
+} // namespace tooling
+} // namespace clang
 
 #endif // LLVM_CLANG_TOOLING_COMMONOPTIONSPARSER_H

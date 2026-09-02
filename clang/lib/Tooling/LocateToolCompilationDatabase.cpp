@@ -36,6 +36,8 @@ public:
     return addLocation(Base->getCompileCommands(FilePath));
   }
 
+  const ModuleManager *getModuleManager() const override { return nullptr; }
+
 private:
   std::vector<CompileCommand>
   addLocation(std::vector<CompileCommand> Cmds) const {
