@@ -7772,9 +7772,9 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
               ResumeV, ConstantInt::get(ResumeV->getType(), Offset));
           InstsToMove.push_back(cast<Instruction>(ResumeV));
         } else {
-          ResumeV = ConstantInt::get(
-              ResumeV->getType(),
-              cast<ConstantInt>(ResumeV)->getValue() + Offset);
+          ResumeV =
+              ConstantInt::get(ResumeV->getType(),
+                               cast<ConstantInt>(ResumeV)->getValue() + Offset);
         }
       }
     }
