@@ -282,6 +282,8 @@ __device__ void test_fcmp_f32(unsigned long* out, float a, float b) {
 // LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 __device__ void test_fcmp_f64(unsigned long* out, double a, double b) {
   *out = __builtin_amdgcn_fcmp(a, b, 3 + 3);
+}
+
 // CIR-LABEL: @_Z19test_trig_preop_f32Pffi
 // CIR: cir.call_llvm_intrinsic "amdgcn.trig.preop" {{.*}} : (!cir.float, !s32i) -> !cir.float
 // LLVM: define{{.*}} void @_Z19test_trig_preop_f32Pffi
