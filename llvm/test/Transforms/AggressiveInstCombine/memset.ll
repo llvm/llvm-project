@@ -13,7 +13,7 @@ define void @range_0_1(ptr %dst, i8 %value, i64 %n) {
 ; AIC-NEXT:    [[MEMSET_NOTZERO:%.*]] = icmp ne i64 [[LEN]], 0
 ; AIC-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[DO_MEMSET:.*]], label %[[END:.*]]
 ; AIC:       [[DO_MEMSET]]:
-; AIC-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 1, i1 false)
+; AIC-NEXT:    store i8 [[VALUE]], ptr [[DST]], align 1
 ; AIC-NEXT:    br label %[[END]]
 ; AIC:       [[END]]:
 ; AIC-NEXT:    ret void
@@ -45,7 +45,7 @@ define void @range_0_1_zext(ptr %dst, i8 %value, i32 %n) {
 ; AIC-NEXT:    [[MEMSET_NOTZERO:%.*]] = icmp ne i64 [[LEN]], 0
 ; AIC-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[DO_MEMSET:.*]], label %[[END:.*]]
 ; AIC:       [[DO_MEMSET]]:
-; AIC-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 1, i1 false)
+; AIC-NEXT:    store i8 [[VALUE]], ptr [[DST]], align 1
 ; AIC-NEXT:    br label %[[END]]
 ; AIC:       [[END]]:
 ; AIC-NEXT:    ret void
@@ -78,7 +78,7 @@ define void @range_0_1_assume(ptr %dst, i8 %value, i64 %n) {
 ; AIC-NEXT:    [[MEMSET_NOTZERO:%.*]] = icmp ne i64 [[N]], 0
 ; AIC-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[DO_MEMSET:.*]], label %[[END:.*]]
 ; AIC:       [[DO_MEMSET]]:
-; AIC-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 1, i1 false)
+; AIC-NEXT:    store i8 [[VALUE]], ptr [[DST]], align 1
 ; AIC-NEXT:    br label %[[END]]
 ; AIC:       [[END]]:
 ; AIC-NEXT:    ret void
@@ -111,7 +111,7 @@ define void @range_0_1_volatile(ptr %dst, i8 %value, i64 %n) {
 ; AIC-NEXT:    [[MEMSET_NOTZERO:%.*]] = icmp ne i64 [[LEN]], 0
 ; AIC-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[DO_MEMSET:.*]], label %[[END:.*]]
 ; AIC:       [[DO_MEMSET]]:
-; AIC-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 1, i1 true)
+; AIC-NEXT:    store volatile i8 [[VALUE]], ptr [[DST]], align 1
 ; AIC-NEXT:    br label %[[END]]
 ; AIC:       [[END]]:
 ; AIC-NEXT:    ret void
@@ -123,7 +123,7 @@ define void @range_0_1_volatile(ptr %dst, i8 %value, i64 %n) {
 ; COMBINED-NEXT:    [[MEMSET_NOTZERO_NOT:%.*]] = icmp eq i64 [[LEN]], 0
 ; COMBINED-NEXT:    br i1 [[MEMSET_NOTZERO_NOT]], label %[[BB1:.*]], label %[[BB0:.*]]
 ; COMBINED:       [[BB0]]:
-; COMBINED-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 1, i1 true)
+; COMBINED-NEXT:    store volatile i8 [[VALUE]], ptr [[DST]], align 1
 ; COMBINED-NEXT:    br label %[[BB1]]
 ; COMBINED:       [[BB1]]:
 ; COMBINED-NEXT:    ret void
@@ -152,5 +152,23 @@ define void @range_0_2(ptr %dst, i8 %value, i64 %n) {
 entry:
   %len = urem i64 %n, 3
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 %len, i1 false)
+  ret void
+}
+
+define void @undef_length(ptr %dst, i8 %value) {
+; AIC-LABEL: define void @undef_length(
+; AIC-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]]) {
+; AIC-NEXT:  [[ENTRY:.*:]]
+; AIC-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 undef, i1 false)
+; AIC-NEXT:    ret void
+;
+; COMBINED-LABEL: define void @undef_length(
+; COMBINED-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]]) {
+; COMBINED-NEXT:  [[ENTRY:.*:]]
+; COMBINED-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 undef, i1 false)
+; COMBINED-NEXT:    ret void
+;
+entry:
+  call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 undef, i1 false)
   ret void
 }
