@@ -44,6 +44,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   MLIRTransformUtils
   MLIRValueBoundsOpInterface
   MLIRVectorDialect
+  MLIRVectorHoisting
   MLIRVectorUtils
   )
 

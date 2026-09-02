@@ -22,7 +22,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -1686,6 +1686,13 @@ vectorizeLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ success vectorizing pattern");
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorization result:\n"
                     << *state.opVectorReplacement[rootLoop]);
+
+  // Hoist vector.transfer_read/write accumulator pairs out of non-vectorized
+  // inner loops (e.g., the k-reduction loop in matmul). After vectorization,
+  // C's read/write sit inside the k-loop with loop-invariant indices; hoisting
+  // them and adding an iter_arg keeps the C tile in a NEON register across
+  // k-iterations instead of reloading from memory every iteration.
+  vector::hoistRedundantVectorTransfers(state.opVectorReplacement[rootLoop]);
 
   // Finish this vectorization pattern.
   state.finishVectorizationPattern(rootLoop);

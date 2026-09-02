@@ -1171,3 +1171,103 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// Test that vector.transfer_read / vector.transfer_write pairs whose base is a
+/// memref.subview (a ViewLikeOpInterface op) are correctly hoisted when the
+/// subview's source memref has no other accesses inside the loop.
+///
+/// This exercises the relaxed check 2 in hoistRedundantVectorTransfers: rather
+/// than bailing unconditionally when the base is a view-like op, the function
+/// now looks through one level of view to verify the parent memref is not
+/// otherwise accessed inside the loop.
+///----------------------------------------------------------------------------------------
+
+// CHECK-LABEL:   func.func @hoist_xfer_pair_subview_base(
+// CHECK-SAME:      %[[MEM:[a-zA-Z0-9_]+]]: memref<?x?xf32>,
+// CHECK-SAME:      %[[OI:[a-zA-Z0-9_]+]]: index, %[[OJ:[a-zA-Z0-9_]+]]: index,
+// CHECK-SAME:      %[[LB:[a-zA-Z0-9_]+]]: index, %[[UB:[a-zA-Z0-9_]+]]: index,
+// CHECK-SAME:      %[[STEP:[a-zA-Z0-9_]+]]: index) {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][%[[OI]], %[[OJ]]]
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SV]][%[[C0]], %[[C0]]], %[[PAD]]
+// CHECK:           %[[LOOP:.*]] = scf.for %{{.*}} = %[[LB]] to %[[UB]] step %[[STEP]]
+// CHECK-SAME:          iter_args(%[[ACC:.*]] = %[[READ]]) -> (vector<4x4xf32>) {
+// CHECK:             %[[USE:.*]] = "val_use"(%[[ACC]]) : (vector<4x4xf32>) -> vector<4x4xf32>
+// CHECK:             scf.yield %[[USE]] : vector<4x4xf32>
+// CHECK:           }
+// CHECK:           vector.transfer_write %[[LOOP]], %[[SV]][%[[C0]], %[[C0]]]
+func.func @hoist_xfer_pair_subview_base(
+    %mem: memref<?x?xf32>, %offset_i: index, %offset_j: index,
+    %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %sv = memref.subview %mem[%offset_i, %offset_j][4, 4][1, 1]
+          : memref<?x?xf32> to memref<4x4xf32, strided<[?, 1], offset: ?>>
+  scf.for %i = %lb to %ub step %step {
+    %r0 = vector.transfer_read %sv[%c0, %c0], %pad
+            : memref<4x4xf32, strided<[?, 1], offset: ?>>, vector<4x4xf32>
+    %u0 = "val_use"(%r0) : (vector<4x4xf32>) -> vector<4x4xf32>
+    vector.transfer_write %u0, %sv[%c0, %c0]
+            : vector<4x4xf32>, memref<4x4xf32, strided<[?, 1], offset: ?>>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Same as @hoist_xfer_pair_subview_base but the surrounding loop is an
+// affine.for, verifying that the ViewLike fix applies to both scf.for and
+// affine.for (both implement LoopLikeOpInterface).
+
+// CHECK-LABEL:   func.func @hoist_xfer_pair_subview_base_affine(
+// CHECK-SAME:      %[[MEM:[a-zA-Z0-9_]+]]: memref<?x?xf32>,
+// CHECK-SAME:      %[[OI:[a-zA-Z0-9_]+]]: index, %[[OJ:[a-zA-Z0-9_]+]]: index) {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][%[[OI]], %[[OJ]]]
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SV]][%[[C0]], %[[C0]]], %[[PAD]]
+// CHECK:           %[[LOOP:.*]] = affine.for %{{.*}} = 0 to 16
+// CHECK-SAME:          iter_args(%[[ACC:.*]] = %[[READ]]) -> (vector<4x4xf32>) {
+// CHECK:             %[[USE:.*]] = "val_use"(%[[ACC]]) : (vector<4x4xf32>) -> vector<4x4xf32>
+// CHECK:             affine.yield %[[USE]] : vector<4x4xf32>
+// CHECK:           }
+// CHECK:           vector.transfer_write %[[LOOP]], %[[SV]][%[[C0]], %[[C0]]]
+func.func @hoist_xfer_pair_subview_base_affine(
+    %mem: memref<?x?xf32>, %offset_i: index, %offset_j: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %sv = memref.subview %mem[%offset_i, %offset_j][4, 4][1, 1]
+          : memref<?x?xf32> to memref<4x4xf32, strided<[?, 1], offset: ?>>
+  affine.for %i = 0 to 16 {
+    %r0 = vector.transfer_read %sv[%c0, %c0], %pad
+            : memref<4x4xf32, strided<[?, 1], offset: ?>>, vector<4x4xf32>
+    %u0 = "val_use"(%r0) : (vector<4x4xf32>) -> vector<4x4xf32>
+    vector.transfer_write %u0, %sv[%c0, %c0]
+            : vector<4x4xf32>, memref<4x4xf32, strided<[?, 1], offset: ?>>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
