@@ -16,7 +16,7 @@ define void @sum_of_induction_and_guard(i8 %n, i8 %j) mustprogress {
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[IV_NEXT2:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[BODY]] ], [ 11, %[[ENTRY]] ]
 ; CHECK-NEXT:    tail call void @use(i32 1)
-; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV_NEXT2]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV_NEXT2]], 1
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[C_NOT]], label %[[EXIT]], label %[[BODY]]
 ; CHECK:       [[EXIT]]:

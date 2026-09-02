@@ -17,7 +17,7 @@ load(
     "libc_math_function",
     "libc_support_library",
 )
-load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
+load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_RISCV64", "PLATFORM_CPU_X86_64")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -733,6 +733,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_struct_itimerspec",
+    hdrs = ["hdr/types/struct_itimerspec.h"],
+)
+
+libc_support_library(
     name = "types_time_t",
     hdrs = ["hdr/types/time_t.h"],
 )
@@ -895,6 +900,7 @@ libc_support_library(
     name = "types_char8_t",
     hdrs = ["hdr/types/char8_t.h"],
     deps = [
+        ":hdr_uchar_overlay",
         ":llvm_libc_types_char8_t",
     ],
 )
@@ -2558,6 +2564,7 @@ sqrt_hdrs = selects.with_or({
     "//conditions:default": sqrt_common_hdrs,
     PLATFORM_CPU_X86_64: sqrt_common_hdrs + ["src/__support/FPUtil/x86_64/sqrt.h"],
     PLATFORM_CPU_ARM64: sqrt_common_hdrs + ["src/__support/FPUtil/aarch64/sqrt.h"],
+    PLATFORM_CPU_RISCV64: sqrt_common_hdrs + ["src/__support/FPUtil/riscv/sqrt.h"],
 })
 
 libc_support_library(
@@ -2768,6 +2775,7 @@ libc_support_library(
             "src/__support/OSUtil/linux/syscall.h",
             "src/__support/OSUtil/linux/aarch64/syscall.h",
             "src/__support/OSUtil/linux/x86_64/syscall.h",
+            "src/__support/OSUtil/linux/riscv/syscall.h",
         ],
         "@platforms//os:macos": [
             "src/__support/OSUtil/darwin/syscall.h",
@@ -8315,6 +8323,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_gamma_util",
+    hdrs = ["src/__support/math/gamma_util.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_getpayload",
     hdrs = ["src/__support/math/getpayload.h"],
     deps = [
@@ -8729,10 +8749,29 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_lgammaf",
+    hdrs = ["src/__support/math/lgammaf.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_fputil_polyeval",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_gamma_util",
+        ":__support_math_log",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_lgammaf16",
     hdrs = ["src/__support/math/lgammaf16.h"],
     deps = [
-        ":__support_cpp_bit",
         ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
@@ -8742,6 +8781,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_types",
+        ":__support_math_gamma_util",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -12522,6 +12562,11 @@ libc_math_function(
     additional_deps = [
         ":__support_math_ldexpf16",
     ],
+)
+
+libc_math_function(
+    name = "lgammaf",
+    additional_deps = [":__support_math_lgammaf"],
 )
 
 libc_math_function(

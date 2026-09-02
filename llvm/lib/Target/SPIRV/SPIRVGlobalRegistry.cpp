@@ -340,7 +340,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorImpl(
             IsLongVectorEXT ? SPIRV::OpTypeVectorIdEXT : SPIRV::OpTypeVector;
         Register VTy = createTypeVReg(MIRBuilder);
         Register Ty = getSPIRVTypeID(ElemType);
-        auto &MIB = MIRBuilder.buildInstr(Op).addDef(VTy).addUse(Ty);
+        auto MIB = MIRBuilder.buildInstr(Op).addDef(VTy).addUse(Ty);
         if (!IsLongVectorEXT)
           return MIB.addImm(NumElems);
 

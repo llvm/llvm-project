@@ -308,6 +308,7 @@ set(files
   __compare/strong_order.h
   __compare/synth_three_way.h
   __compare/three_way_comparable.h
+  __compare/type_order.h
   __compare/weak_order.h
   __concepts/arithmetic.h
   __concepts/assignable.h

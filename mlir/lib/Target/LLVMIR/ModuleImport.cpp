@@ -173,6 +173,20 @@ ModuleImport::getMetadataGlobalValueSymbolRef(llvm::GlobalValue *global) {
   return FlatSymbolRefAttr::get(context, global->getName());
 }
 
+FlatSymbolRefAttr
+ModuleImport::getMetadataOperandSymbolRef(const llvm::Metadata *md) {
+  auto *valueAsMD = dyn_cast_or_null<llvm::ValueAsMetadata>(md);
+  if (!valueAsMD)
+    return {};
+  llvm::Value *value = valueAsMD->getValue();
+  llvm::GlobalValue *gv = dyn_cast<llvm::GlobalValue>(value);
+  if (!gv)
+    gv = dyn_cast<llvm::GlobalValue>(value->stripPointerCastsAndAliases());
+  if (!gv)
+    return {};
+  return getMetadataGlobalValueSymbolRef(gv);
+}
+
 /// Depth-first conversion of the metadata node `md` to the matching LLVM
 /// dialect metadata attribute. Returns a null attribute for shapes that the
 /// dialect's metadata-attribute hierarchy does not currently model. `path`
@@ -1686,6 +1700,42 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
 
   if (globalVar->hasComdat())
     globalOp.setComdatAttr(comdatMapping.lookup(globalVar->getComdat()));
+
+  if (llvm::MDNode *associatedMD =
+          globalVar->getMetadata(llvm::LLVMContext::MD_associated)) {
+    FlatSymbolRefAttr symbolRef;
+    if (associatedMD->getNumOperands() == 1)
+      symbolRef =
+          getMetadataOperandSymbolRef(associatedMD->getOperand(0).get());
+    if (!symbolRef) {
+      emitWarning(globalOp.getLoc()) << "unhandled associated metadata: "
+                                     << diagMD(associatedMD, llvmModule.get())
+                                     << " on " << diag(*globalVar);
+    } else {
+      globalOp.setAssociatedAttr(symbolRef);
+    }
+  }
+
+  if (llvm::MDNode *absSymMD =
+          globalVar->getMetadata(llvm::LLVMContext::MD_absolute_symbol)) {
+    unsigned numOps = absSymMD->getNumOperands();
+    if (numOps >= 2 && numOps % 2 == 0) {
+      SmallVector<Attribute> rangeAttrs;
+      rangeAttrs.reserve(numOps);
+
+      for (const llvm::MDOperand &op : absSymMD->operands()) {
+        auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(op);
+        if (!constInt)
+          break;
+
+        auto intType = IntegerType::get(context, constInt->getBitWidth());
+        rangeAttrs.push_back(IntegerAttr::get(intType, constInt->getValue()));
+      }
+
+      if (rangeAttrs.size() == numOps)
+        globalOp.setAbsoluteSymbolAttr(ArrayAttr::get(context, rangeAttrs));
+    }
+  }
 
   processTargetSpecificAttrs(globalVar, globalOp);
 

@@ -1,0 +1,52 @@
+// Regression test: UnsafeBufferReachableAnalysis used to hang on
+//
+//   void f(char **a, char ***b, int i, int j) {
+//     a[i][j] = 0;      // 'a' is unsafe at levels 1 and 2
+//     a = *b;           // (a, 1) -> (b, 2)
+//     b = (char ***)*a; // (b, 1) -> (a, 2)
+//   }
+//
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: split-file %s %t
+
+// RUN: %clang_cc1 -fsyntax-only %t/src.cpp \
+// RUN:   --ssaf-extract-summaries=PointerFlow,UnsafeBufferUsage,TypeConstrainedPointers \
+// RUN:   --ssaf-compilation-unit-id="tu-1" \
+// RUN:   --ssaf-tu-summary-file=%t/src.summary.json
+
+// RUN: clang-ssaf-linker %t/src.summary.json -o %t/lu.json
+
+// RUN: clang-ssaf-analyzer %t/lu.json -o %t/wpa.json \
+// RUN:   -a UnsafeBufferReachableAnalysisResult
+
+// The CHECK lines below use readable tokens instead of inline FileCheck regex.
+// Expand the tokens into regex, then run FileCheck on the expanded copy:
+//   $NS - skip the "namespace" array, up to its closing ']'.
+//   $WS - whitespace, possibly spanning newlines.
+//   $PTR_Ln - a reachable-set entry closing as "}, n ]", i.e. pointer level n.
+// RUN: sed -e 's|$NS|{{([^]]\|[[:space:]])+\\],}}|g' \
+// RUN:     -e 's|$WS|{{[[:space:]]+}}|g' \
+// RUN:     -e 's|$PTR_L1|{{[[:space:]]+\\},[[:space:]]+1[[:space:]]+\\]}}|g' \
+// RUN:     -e 's|$PTR_L2|{{[[:space:]]+\\},[[:space:]]+2[[:space:]]+\\]}}|g' \
+// RUN:     -e 's|$PTR_L3|{{[[:space:]]+\\},[[:space:]]+3[[:space:]]+\\]}}|g' \
+// RUN:     %s | FileCheck - --input-file=%t/wpa.json
+
+//--- src.cpp
+void f(char **a, char ***b, int i, int j) {
+  a[i][j] = 0;      // 'a' is unsafe at levels 1 and 2
+  a = *b;           // (a, 1) -> (b, 2)
+  b = (char ***)*a; // (b, 1) -> (a, 2)
+}
+
+// Capture the entity ids for parameters 'a' (suffix "1") and 'b' (suffix "2").
+// CHECK-DAG: "id": [[a_ID:[0-9]+]],$NS$WS"suffix": "1",$WS"usr": "c:@F@f#**C#*S0_#I#I#"
+// CHECK-DAG: "id": [[b_ID:[0-9]+]],$NS$WS"suffix": "2",$WS"usr": "c:@F@f#**C#*S0_#I#I#"
+
+// The reachable set is exactly {(a, 1), (a, 2), (b, 2), (b, 3)}
+// CHECK: "analysis_name": "UnsafeBufferReachableAnalysisResult"
+// CHECK: "@": [[a_ID]]$PTR_L1
+// CHECK: "@": [[a_ID]]$PTR_L2
+// CHECK: "@": [[b_ID]]$PTR_L2
+// CHECK: "@": [[b_ID]]$PTR_L3
+// CHECK-NOT: "@":
+// CHECK: "analysis_name":

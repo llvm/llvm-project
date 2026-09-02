@@ -157,7 +157,6 @@ void CodeMetrics::analyzeBasicBlock(
         // for that case.
         if (F == BB->getParent())
           isRecursive = true;
-
       } else if (!Call->isInlineAsm()) {
         // When preparing for LTO, consider indirect calls as potential inline
         // candidates since they may be resolved during post-link LTO
