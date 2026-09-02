@@ -22,8 +22,8 @@ LLVM_LIBC_FUNCTION(int, strfromd,
 
   printf_core::FormatSection section =
       internal::parse_format_string(format, fp);
-  printf_core::DropOverflowBuffer wb(s, (n > 0 ? n - 1 : 0));
-  printf_core::Writer writer(wb);
+  printf_core::Writer writer =
+      printf_core::make_drop_overflow_writer(s, (n > 0 ? n - 1 : 0));
 
   int result = 0;
   if (section.has_conv)
@@ -34,8 +34,10 @@ LLVM_LIBC_FUNCTION(int, strfromd,
   if (result < 0)
     return result;
 
-  if (n > 0)
+  if (n > 0) {
+    printf_core::WriteBuffer<char> &wb = writer.get_write_buffer();
     wb.buff[wb.buff_cur] = '\0';
+  }
 
   if (writer.get_chars_written() >
       static_cast<size_t>(cpp::numeric_limits<int>::max())) {

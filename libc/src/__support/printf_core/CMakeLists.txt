@@ -119,6 +119,30 @@ add_header_library(
 )
 
 add_header_library(
+  make_resizing_writer
+  HDRS
+    make_resizing_writer.h
+  DEPENDS
+    .writer
+    libc.hdr.func.malloc
+    libc.hdr.func.free
+    libc.hdr.func.realloc
+    libc.src.__support.CPP.string_view
+    libc.src.__support.printf_core.writer
+)
+
+add_header_library(
+  make_stderr_writer
+  HDRS
+    make_stderr_writer.h
+  DEPENDS
+    .writer
+    libc.src.__support.CPP.string_view
+    libc.src.__support.OSUtil.io
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   converter
   HDRS
     converter.h
@@ -179,12 +203,10 @@ add_header_library(
     vasprintf_internal.h
   DEPENDS
     libc.hdr.func.malloc
-    libc.hdr.func.free
-    libc.hdr.func.realloc
     libc.src.__support.arg_list
     libc.src.__support.error_or
+    libc.src.__support.printf_core.make_resizing_writer
     libc.src.__support.printf_core.printf_main
-    libc.src.__support.printf_core.writer
 )
 
 add_header_library(
@@ -203,14 +225,27 @@ if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
 endif()
 
 add_header_library(
+  make_file_writer
+  HDRS
+    make_file_writer.h
+  DEPENDS
+    .writer
+    libc.src.__support.CPP.string_view
+    libc.src.__support.File.file
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    ${use_system_file}
+)
+
+add_header_library(
   vfprintf_internal
   HDRS
     vfprintf_internal.h
   DEPENDS
+    .make_file_writer
+    .printf_main
     libc.src.__support.File.file
     libc.src.__support.error_or
     libc.src.__support.arg_list
-    libc.src.__support.printf_core.printf_main
-    libc.src.__support.printf_core.writer
     ${use_system_file}
 )

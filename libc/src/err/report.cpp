@@ -20,8 +20,8 @@
 #include "src/__support/arg_list.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/printf_core/make_stderr_writer.h"
 #include "src/__support/printf_core/printf_main.h"
-#include "src/__support/printf_core/writer.h"
 
 #ifdef LIBC_FULL_BUILD
 #include "src/errno/program_invocation_short_name.h"
@@ -41,14 +41,9 @@ void report(bool show_err, int err_num, const char *fmt,
   if (!progname)
     progname = "";
   char buffer[1024];
-  printf_core::FlushingBuffer wb(
-      buffer, sizeof(buffer),
-      [](cpp::string_view str, [[maybe_unused]] void *raw_stream) -> int {
-        write_to_stderr(str);
-        return static_cast<int>(str.size());
-      },
-      nullptr);
-  printf_core::Writer writer(wb);
+  printf_core::Writer writer =
+      printf_core::make_stderr_writer(buffer, sizeof(buffer));
+  printf_core::WriteBuffer<char> &wb = writer.get_write_buffer();
 
   writer.write(progname);
   if (fmt != nullptr || show_err)
@@ -56,7 +51,7 @@ void report(bool show_err, int err_num, const char *fmt,
 
   if (fmt != nullptr) {
     if (!printf_core::printf_main(&writer, fmt, args)) {
-      wb.flush_to_stream();
+      printf_core::flush_to_stderr(wb);
       return;
     }
     if (show_err)
@@ -67,7 +62,7 @@ void report(bool show_err, int err_num, const char *fmt,
     writer.write(get_error_string(err_num));
 
   writer.write("\n");
-  wb.flush_to_stream();
+  printf_core::flush_to_stderr(wb);
 }
 
 } // namespace err_reporting
