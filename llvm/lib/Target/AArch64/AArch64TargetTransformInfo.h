@@ -335,17 +335,37 @@ public:
 
   bool isElementTypeLegalForCompressStore(Type *Ty) const {
     assert(Ty->isIntegerTy() || Ty->isFloatingPointTy());
-    return is_contained({8u, 16u, 32u, 64u}, Ty->getScalarSizeInBits());
+    // 32-bit and 64-bit element types are legal if we have SVE.
+    if (is_contained({32u, 64u}, Ty->getScalarSizeInBits()))
+      return true;
+
+    // 8-bit and 16-bit types require +sve2p2 or +sme2p2.
+    if (is_contained({8u, 16u}, Ty->getScalarSizeInBits()))
+      return ST->hasSVE2p2() || ST->hasSME2p2();
+
+    return false;
   }
 
   bool isLegalMaskedCompressStore(Type *DataType,
                                   Align Alignment) const override {
-    if (!(ST->isSVEAvailable() || ST->isSVEorStreamingSVEAvailable()))
+    if (!(ST->isSVEAvailable() ||
+          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
       return false;
 
     if (isa<FixedVectorType>(DataType) &&
         DataType->getPrimitiveSizeInBits() < 128)
       return false;
+
+    // For types where Promotion is possible to i32/i64 types and SME2p2/SVE2p2
+    // is not available, ensure the promoted scalar type is legal.
+    if (is_contained({8u, 16u}, DataType->getScalarSizeInBits()) &&
+        !(ST->hasSVE2p2() && ST->hasSME2p2()) &&
+        DataType->getPrimitiveSizeInBits().getKnownMinValue() < 128) {
+      auto LT = getTypeLegalizationCost(DataType);
+      if (!LT.first.isValid())
+        return false;
+      DataType = EVT(LT.second).getTypeForEVT(DataType->getContext());
+    }
 
     return isElementTypeLegalForCompressStore(DataType->getScalarType());
   }
