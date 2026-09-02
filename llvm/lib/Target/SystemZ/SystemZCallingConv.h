@@ -85,20 +85,6 @@ inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT,
   return true;
 }
 
-// Extends CCState to track whether we are lowering formal arguments or
-// outgoing call operands.  CC_XPLINK_Promote_i32 uses this to decide
-// whether to use AExt (formal args — callee cannot rely on caller extension)
-// or to preserve the SExt/ZExt flags (call operands — caller must extend).
-class SystemZCCState : public CCState {
-  bool IsFormalArgLowering = false;
-
-public:
-  using CCState::CCState;
-
-  bool isFormalArgLowering() const { return IsFormalArgLowering; }
-  void setIsFormalArgLowering() { IsFormalArgLowering = true; }
-};
-
 // A pointer in 64bit mode is always passed as 64bit.
 inline bool CC_XPLINK64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                 CCValAssign::LocInfo &LocInfo,
@@ -114,18 +100,12 @@ inline bool CC_XPLINK_Promote_i32(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                   CCValAssign::LocInfo &LocInfo,
                                   ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   LocVT = MVT::i64;
-  if (static_cast<SystemZCCState &>(State).isFormalArgLowering()) {
-    // Formal arguments: the callee cannot rely on the caller having extended
-    // the value, so treat the incoming register as any-extended (upper bits
-    // undefined).  The callee will re-extend from the natural width if needed.
-    LocInfo = CCValAssign::AExt;
-  } else if (ArgFlags.isSExt()) {
+  if (ArgFlags.isSExt())
     LocInfo = CCValAssign::SExt;
-  } else if (ArgFlags.isZExt()) {
+  else if (ArgFlags.isZExt())
     LocInfo = CCValAssign::ZExt;
-  } else {
+  else
     LocInfo = CCValAssign::AExt;
-  }
   return false;
 }
 

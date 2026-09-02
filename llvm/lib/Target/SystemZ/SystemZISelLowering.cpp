@@ -2047,8 +2047,7 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  SystemZCCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
-  CCInfo.setIsFormalArgLowering();
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_SystemZ);
   FuncInfo->setSizeOfFnParams(CCInfo.getStackSize());
 
@@ -2153,29 +2152,20 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
           assert(PartOffset && "Offset should be non-zero.");
         }
       }
-    } else {
-      // For XPLINK64, the ABI does not require the caller to have extended
-      // sub-i32 integer arguments (i8/i16).  When the original argument type
-      // is narrower than both the CC ValVT and LocVT, bypass
-      // convertLocVTToValVT and truncate ArgValue directly to the original
-      // type.  This produces a single TRUNCATE node (e.g. i64->i8) so the
-      // subsequent sign/zero-extend to i64 selects the correct narrow
-      // instruction (LGBR/LGHR/LLGCR/LLGHR for register args,
-      // LGB/LGH/LLGC/LLGH for stack args), matching XL compiler output.
-      // The ValVT guard is essential: it excludes cases like 32-bit pointers
-      // (OrigVT==ValVT==i32, LocVT==i64) that need convertLocVTToValVT to
-      // emit AssertZext so the zero-extend is optimised away.
-      SDValue Val;
-      if (Subtarget.isTargetXPLINK64() && Ins[I].ArgVT.isSimple()) {
-        MVT OrigVT = Ins[I].ArgVT.getSimpleVT();
-        if (OrigVT.isScalarInteger() &&
-            OrigVT.getSizeInBits() < VA.getValVT().getSizeInBits())
-          Val = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, ArgValue);
-      }
-      if (!Val)
-        Val = convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue);
-      InVals.push_back(Val);
-    }
+    } else if (Subtarget.isTargetXPLINK64() &&
+               (VA.getLocInfo() == CCValAssign::SExt ||
+                VA.getLocInfo() == CCValAssign::ZExt) &&
+               Ins[I].ArgVT.isSimple() &&
+               Ins[I].ArgVT.getSimpleVT().isScalarInteger() &&
+               !Ins[I].Flags.isPointer()) {
+      // Some prior z/OS compilers do not always perform the extension of
+      // short integer arguments.  To accommodate those, do not rely on
+      // that extension by avoiding any AssertSext/AssertZext nodes by
+      // directly truncating ArgValue to the original argument type.
+      MVT OrigVT = Ins[I].ArgVT.getSimpleVT();
+      InVals.push_back(DAG.getNode(ISD::TRUNCATE, DL, OrigVT, ArgValue));
+    } else
+      InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
   }
 
   if (IsVarArg && Subtarget.isTargetXPLINK64()) {
@@ -2382,10 +2372,8 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   verifyNarrowIntegerArgs_Call(Outs, &MF.getFunction(), Callee);
 
   // Analyze the operands of the call, assigning locations to each operand.
-  // Use SystemZCCState so CC_XPLINK_Promote_i32 can safely cast State to
-  // SystemZCCState& (isFormalArgLowering() returns false by default).
   SmallVector<CCValAssign, 16> ArgLocs;
-  SystemZCCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
+  CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, Ctx);
   ArgCCInfo.AnalyzeCallOperands(Outs, CC_SystemZ);
 
   // We don't support GuaranteedTailCallOpt, only automatically-detected
