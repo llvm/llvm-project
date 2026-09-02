@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -349,6 +350,121 @@ bool hasNegativeStaticStride(MemRefType memRefTy) {
   return llvm::any_of(strides, [](int64_t stride) {
     return ShapedType::isStatic(stride) && stride < 0;
   });
+}
+
+namespace {
+/// Static footprint of a memref value resolved through a chain of
+/// rank-preserving, unit-stride `memref.subview` ops: the underlying root
+/// memref and, per root dimension, the `[offset, offset + size)` interval it
+/// covers.
+struct SubviewFootprint {
+  Value root;
+  SmallVector<int64_t> offsets;
+  SmallVector<int64_t> sizes;
+};
+} // namespace
+
+/// Resolve `base` through a `memref.subview` chain to its static footprint, or
+/// `std::nullopt` if it cannot be modelled statically.
+static std::optional<SubviewFootprint> resolveSubviewFootprint(Value base) {
+  SmallVector<SubViewOp> chain;
+  Value source = base;
+  while (auto sv = source.getDefiningOp<SubViewOp>()) {
+    chain.push_back(sv);
+    source = sv.getSource();
+  }
+  // The resolved root must be a genuine buffer, not another kind of view.
+  if (isa_and_nonnull<ViewLikeOpInterface>(source.getDefiningOp()))
+    return std::nullopt;
+
+  auto rootTy = dyn_cast<MemRefType>(source.getType());
+  if (!rootTy || !rootTy.hasStaticShape())
+    return std::nullopt;
+  SubviewFootprint fp;
+  fp.root = source;
+  // Seed with the whole-root footprint (offset 0, full extent per dimension).
+  // Each subview in the chain narrows it below.
+  fp.offsets.assign(rootTy.getRank(), 0);
+  fp.sizes.assign(rootTy.getShape().begin(), rootTy.getShape().end());
+  // Compose from the outermost subview (closest to the root) inward.
+  for (SubViewOp sv : llvm::reverse(chain)) {
+    // Rank-reducing subviews would misalign the per-dimension bookkeeping.
+    if (sv.getSourceType().getRank() != sv.getType().getRank())
+      return std::nullopt;
+    ArrayRef<int64_t> offs = sv.getStaticOffsets();
+    ArrayRef<int64_t> szs = sv.getStaticSizes();
+    ArrayRef<int64_t> strides = sv.getStaticStrides();
+    if (llvm::any_of(offs, ShapedType::isDynamic) ||
+        llvm::any_of(szs, ShapedType::isDynamic) ||
+        llvm::any_of(strides, [](int64_t s) { return s != 1; }))
+      return std::nullopt;
+    for (unsigned d = 0, e = offs.size(); d < e; ++d) {
+      fp.offsets[d] += offs[d];
+      fp.sizes[d] = szs[d];
+    }
+  }
+  return fp;
+}
+
+/// True if two footprints provably cover disjoint memory: they must share the
+/// same root and be separated along at least one dimension.
+static bool footprintsDisjoint(const SubviewFootprint &a,
+                               const SubviewFootprint &b) {
+  if (a.root != b.root)
+    return false;
+  for (unsigned d = 0, e = a.offsets.size(); d < e; ++d) {
+    int64_t aHi = a.offsets[d] + a.sizes[d];
+    int64_t bHi = b.offsets[d] + b.sizes[d];
+    if (aHi <= b.offsets[d] || bHi <= a.offsets[d])
+      return true;
+  }
+  return false;
+}
+
+bool hasNoAliasingAccessInScope(
+    Value base, Operation *scope,
+    function_ref<Value(Operation *)> getAccessedMemref,
+    ArrayRef<Operation *> excludedOps, bool readsAreSafe) {
+  auto baseMemref = dyn_cast<MemrefValue>(base);
+  if (!baseMemref)
+    return false;
+  Value buffer = skipViewLikeOps(baseMemref);
+  // Static footprint of `base`, if modellable; enables the disjointness escape.
+  std::optional<SubviewFootprint> baseFp = resolveSubviewFootprint(base);
+
+  // Visit the transitive users of the buffer, following views.
+  SmallVector<Operation *> worklist(buffer.getUsers().begin(),
+                                    buffer.getUsers().end());
+  SmallPtrSet<Operation *, 8> processed;
+  while (!worklist.empty()) {
+    Operation *user = worklist.pop_back_val();
+    if (!processed.insert(user).second)
+      continue;
+    // Views do not access memory; follow them to their own users.
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
+      Value viewDest = viewLike.getViewDest();
+      worklist.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
+      continue;
+    }
+    if (isMemoryEffectFree(user) || llvm::is_contained(excludedOps, user))
+      continue;
+    if (!scope->isAncestor(user))
+      continue;
+    // In-`scope`, memory-effecting access to the buffer: it conflicts unless it
+    // is a provably-disjoint slice or (when allowed) a read.
+    Value accessed = getAccessedMemref(user);
+    if (baseFp && accessed) {
+      std::optional<SubviewFootprint> userFp =
+          resolveSubviewFootprint(accessed);
+      if (userFp && footprintsDisjoint(*baseFp, *userFp))
+        continue;
+    }
+    if (readsAreSafe && accessed &&
+        !hasEffect<MemoryEffects::Write>(user, accessed))
+      continue;
+    return false;
+  }
+  return true;
 }
 
 } // namespace memref

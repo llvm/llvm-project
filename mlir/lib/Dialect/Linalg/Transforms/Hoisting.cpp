@@ -24,7 +24,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/Support/Debug.h"
 
@@ -164,148 +163,11 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
   }
 }
 
-static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
-                                LoopLikeOpInterface loop) {
-  Value source = transferRead.getBase();
-
-  // Skip view-like Ops and retrive the actual soruce Operation
-  while (auto viewLike = source.getDefiningOp<ViewLikeOpInterface>()) {
-    if (viewLike.getViewDest() != source) {
-      break;
-    }
-    source = viewLike.getViewSource();
-  }
-
-  llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
-                                           source.getUsers().end());
-  llvm::SmallDenseSet<Operation *, 32> processed;
-  while (!users.empty()) {
-    Operation *user = users.pop_back_val();
-    // If the user has already been processed skip.
-    if (!processed.insert(user).second)
-      continue;
-    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
-      Value viewDest = viewLike.getViewDest();
-      users.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
-      continue;
-    }
-    if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
-      continue;
-    if (!loop->isAncestor(user))
-      continue;
-    return false;
-  }
-  return true;
-}
-
-namespace {
-/// Static footprint of a memref value resolved through a chain of
-/// rank-preserving, unit-stride `memref.subview` ops: the underlying root
-/// memref and, per root dimension, the `[offset, offset + size)` interval it
-/// covers.
-struct SubviewFootprint {
-  Value root;
-  SmallVector<int64_t> offsets;
-  SmallVector<int64_t> sizes;
-};
-} // namespace
-
-/// Resolve `base` through a `memref.subview` chain to its static footprint, or
-/// `std::nullopt` if it cannot be modelled statically.
-static std::optional<SubviewFootprint> resolveSubviewFootprint(Value base) {
-  SmallVector<memref::SubViewOp> chain;
-  Value source = base;
-  while (auto sv = source.getDefiningOp<memref::SubViewOp>()) {
-    chain.push_back(sv);
-    source = sv.getSource();
-  }
-  // The resolved root must be a genuine buffer, not another kind of view.
-  if (isa_and_nonnull<ViewLikeOpInterface>(source.getDefiningOp()))
-    return std::nullopt;
-
-  auto rootTy = dyn_cast<MemRefType>(source.getType());
-  if (!rootTy || !rootTy.hasStaticShape())
-    return std::nullopt;
-  SubviewFootprint fp;
-  fp.root = source;
-  // Seed with the whole-root footprint (offset 0, full extent per dimension):
-  // this is the result for a bare buffer, and each subview in the chain narrows
-  // it below.
-  fp.offsets.assign(rootTy.getRank(), 0);
-  fp.sizes.assign(rootTy.getShape().begin(), rootTy.getShape().end());
-  // Compose from the outermost subview (closest to the root) inward.
-  for (memref::SubViewOp sv : llvm::reverse(chain)) {
-    // Rank-reducing subviews would misalign the per-dimension bookkeeping.
-    if (sv.getSourceType().getRank() != sv.getType().getRank())
-      return std::nullopt;
-    ArrayRef<int64_t> offs = sv.getStaticOffsets();
-    ArrayRef<int64_t> szs = sv.getStaticSizes();
-    ArrayRef<int64_t> strides = sv.getStaticStrides();
-    if (llvm::any_of(offs, ShapedType::isDynamic) ||
-        llvm::any_of(szs, ShapedType::isDynamic) ||
-        llvm::any_of(strides, [](int64_t s) { return s != 1; }))
-      return std::nullopt;
-    for (unsigned d = 0, e = offs.size(); d < e; ++d) {
-      fp.offsets[d] += offs[d];
-      fp.sizes[d] = szs[d];
-    }
-  }
-  return fp;
-}
-
-/// True if two footprints provably cover disjoint memory: they must share the
-/// same root and be separated along at least one dimension.
-static bool footprintsDisjoint(const SubviewFootprint &a,
-                               const SubviewFootprint &b) {
-  if (a.root != b.root)
-    return false;
-  for (unsigned d = 0, e = a.offsets.size(); d < e; ++d) {
-    int64_t aHi = a.offsets[d] + a.sizes[d];
-    int64_t bHi = b.offsets[d] + b.sizes[d];
-    if (aHi <= b.offsets[d] || bHi <= a.offsets[d])
-      return true;
-  }
-  return false;
-}
-
-/// Subview-aware safety check for hoisting `read`/`write` out of `loop`.
-static bool footprintAliasingIsSafe(LoopLikeOpInterface loop,
-                                    vector::TransferReadOp read,
-                                    vector::TransferWriteOp write) {
-  std::optional<SubviewFootprint> ourFp =
-      resolveSubviewFootprint(read.getBase());
-  if (!ourFp)
-    return false;
-  // `resolveSubviewFootprint` guarantees the root is a genuine buffer.
-  Value ourBuffer = ourFp->root;
-  auto reachesOurBuffer = [&](Value operand) {
-    auto memrefOperand = dyn_cast<MemrefValue>(operand);
-    return memrefOperand && memref::skipViewLikeOps(memrefOperand) == ourBuffer;
-  };
-  WalkResult res = loop->walk([&](Operation *op) {
-    if (op == read.getOperation() || op == write.getOperation())
-      return WalkResult::advance();
-    if (auto xfer = dyn_cast<VectorTransferOpInterface>(op)) {
-      Value otherBase = xfer.getBase();
-      // A tensor transfer or a different underlying buffer cannot alias ours.
-      if (!reachesOurBuffer(otherBase))
-        return WalkResult::advance();
-      // Same buffer: only safe if we can prove the accessed slices are
-      // statically disjoint.
-      std::optional<SubviewFootprint> otherFp =
-          resolveSubviewFootprint(otherBase);
-      if (otherFp && footprintsDisjoint(*ourFp, *otherFp))
-        return WalkResult::advance();
-      return WalkResult::interrupt();
-    }
-    // Any other op that may touch memory aliases ours if one of its memref
-    // operands reaches our buffer.
-    if (!isMemoryEffectFree(op) &&
-        llvm::any_of(op->getOperands(), reachesOurBuffer))
-      return WalkResult::interrupt();
-    return WalkResult::advance();
-  });
-  return !res.wasInterrupted();
+/// The memref a vector transfer accesses (a null `Value` for any other op).
+static Value vectorTransferBase(Operation *op) {
+  if (auto xfer = dyn_cast<VectorTransferOpInterface>(op))
+    return xfer.getBase();
+  return {};
 }
 
 void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
@@ -399,9 +261,12 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       // Only hoist transfer_read / transfer_write pairs and singleton
       // transfer_reads for now.
       if (!transferWrite) {
-        // Make sure there are no other accesses to the memref before
-        // hoisting transfer_read.
-        if (noAliasingUseInLoop(transferRead, loop))
+        // Hoisting a lone read is safe as long as no aliasing write remains in
+        // the loop; other reads never conflict.
+        if (memref::hasNoAliasingAccessInScope(transferRead.getBase(), loop,
+                                               vectorTransferBase,
+                                               /*excludedOps=*/{},
+                                               /*readsAreSafe=*/true))
           loop.moveOutOfLoop(transferRead);
         return WalkResult::advance();
       }
@@ -431,9 +296,11 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       // cached since it is only consulted when a view is present.
       std::optional<bool> viewAliasingIsSafeCache;
       auto viewAliasingIsSafe = [&]() {
-        if (!viewAliasingIsSafeCache)
-          viewAliasingIsSafeCache =
-              footprintAliasingIsSafe(loop, transferRead, transferWrite);
+        if (!viewAliasingIsSafeCache) {
+          Operation *hoistedPair[] = {transferRead, transferWrite};
+          viewAliasingIsSafeCache = memref::hasNoAliasingAccessInScope(
+              base, loop, vectorTransferBase, hoistedPair);
+        }
         return *viewAliasingIsSafeCache;
       };
       auto *source = base.getDefiningOp();
