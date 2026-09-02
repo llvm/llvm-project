@@ -124,31 +124,10 @@ static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
 
-// RPFilter targets one pathological shape: a block holding many distinct
-// bases. Each basis contributes one extended live range no matter how many
-// candidates are rewritten against it, so it is the number of distinct bases,
-// not the number of candidates, that tracks how many new concurrent live
-// ranges SLSR would create. Below this count no block in the function can
-// exhibit the pathology, and the liveness and pressure analyses are skipped.
-static constexpr unsigned MinDistinctBasesToFilter = 16;
-
 static cl::opt<bool> EnableRPFilter(
     "slsr-rp-filter", cl::init(true), cl::Hidden,
     cl::desc("SLSR: skip rewrites in blocks where they would push register "
              "pressure past the target's register budget"));
-
-static cl::opt<unsigned> SLSRRegBudget(
-    "slsr-reg-budget", cl::init(0), cl::Hidden,
-    cl::desc("SLSR: override the register budget reported by TTI"));
-
-static cl::opt<double> SLSRRPSafeFraction(
-    "slsr-rp-safe-fraction", cl::init(0.9), cl::Hidden,
-    cl::desc("SLSR: fraction of the register budget treated as safe"));
-
-static cl::opt<unsigned> SLSRRPAbsDelta(
-    "slsr-rp-abs-delta", cl::init(4), cl::Hidden,
-    cl::desc("SLSR: pressure increase tolerated in a block that is already "
-             "over the register budget"));
 
 STATISTIC(NumSCEVCandidateBasisDifferences,
           "Number of candidate-basis SCEV differences computed by SLSR");
@@ -1404,10 +1383,15 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
 
 namespace {
 
-// TODO: Currently, I am considering (Basis, Cand) pair that are both in the
-// same BB.
-//       The restriction may not be needed.
 class RPFilter {
+  // RPFilter targets one pathological shape: a block holding many distinct
+  // bases. Each basis contributes one extended live range no matter how many
+  // candidates are rewritten against it, so it is the number of distinct bases,
+  // not the number of candidates, that tracks how many new concurrent live
+  // ranges SLSR would create. Below this count no block in the function can
+  // exhibit the pathology, and the liveness and pressure analyses are skipped.
+  static constexpr unsigned MinDistinctBasesToFilter = 16;
+
 public:
   using Candidate = StraightLineStrengthReduce::Candidate;
 
@@ -1492,8 +1476,6 @@ private:
   }
 
   std::optional<unsigned> getRegisterBudget() const {
-    if (SLSRRegBudget > 0)
-      return SLSRRegBudget.getValue();
     std::optional<unsigned> Budget = TTI->getRegisterBudget(*F);
     if (Budget && *Budget == 0)
       return std::nullopt;
@@ -1507,6 +1489,7 @@ private:
                                   unsigned Budget) const {
     // Leave the allocator some slack: it also has to satisfy register class
     // and ABI constraints that this estimate knows nothing about.
+    constexpr double SLSRRPSafeFraction = 0.9;
     unsigned SafeBudget = static_cast<unsigned>(Budget * SLSRRPSafeFraction);
 
     // There is headroom, so however much the rewrite adds is irrelevant.
@@ -1519,6 +1502,7 @@ private:
 
     // Already over budget. SLSR can still lower pressure here, so only refuse
     // rewrites that make it meaningfully worse.
+    constexpr unsigned SLSRRPAbsDelta = 4;
     return After > Before && After - Before > SLSRRPAbsDelta;
   }
 
@@ -1658,10 +1642,6 @@ private:
     });
   }
 
-  bool isDebugBlock(const BasicBlock &BB) const {
-    return BB.getName() == "for.cond.cleanup";
-  }
-
   // Return true if I is a candidate and its basis is in the same bb, false
   // otherwise.
   bool insertBasisIfCand(const Instruction *I, ValueSet &LiveSetWithSLSR,
@@ -1671,6 +1651,11 @@ private:
       return false;
 
     // I is a Candidate
+    // We consider here only the case both Cand and Basis are in the same BB.
+    // Therefore, if an original operand of Cand is a liveout, it means it was
+    // used outside the BB, and will stay so. Likewise, if a Basis is a liveout,
+    // it means it was used outside the BB, and will stay so. SLSR does not
+    // delete existing defs or create new defs.
     const Instruction *Basis = It->second->Basis->Ins;
     if (Basis->getParent() == I->getParent()) {
       LiveSetWithSLSR.insert(Basis);
@@ -1703,12 +1688,6 @@ private:
     // to
     // Basis = ..
     // Cand = f(Basis, Delta, // possibly some of the original operands ..)
-    //
-    // We consider here only the case both Cand and Basis are in the same BB.
-    // Therefore, if an original operand of Cand is a liveout, it means it was
-    // used outside the BB, and will stay so. Likewise, if a Basis is a liveout,
-    // it means it was used outside the BB, and will stay so. SLSR does not
-    // delete existing defs or create new defs.
     ValueSet LiveSetWithSLSR = LiveOut;
     unsigned MaxWWithSLSR = MaxW;
 
