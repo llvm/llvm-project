@@ -1662,7 +1662,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       for (MVT VT : {MVT::nxv16i1, MVT::nxv8i1})
         setOperationAction(ISD::VECTOR_MATCH, VT, Custom);
 
-      for (MVT VT : {MVT::v16i1, MVT::v8i1, MVT::v16i8, MVT::v8i8})
+      for (MVT VT :
+           {MVT::v16i1, MVT::v8i1, MVT::v16i8, MVT::v8i8, MVT::v3i8, MVT::v4i8})
         setOperationAction(ISD::VECTOR_MATCH, VT, Custom);
     }
 
@@ -6526,6 +6527,31 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
   EVT Op1VT = Op1.getValueType();
   EVT Op2VT = Op2.getValueType();
   EVT ResVT = Op.getValueType();
+
+  if ((Op2VT == MVT::v3i8 || Op2VT == MVT::v4i8)) {
+    SDValue Needle = Op2;
+    EVT NeedleVT = Op2VT;
+
+    if (NeedleVT == MVT::v3i8) {
+      // Pad a v3i8 needle to v4i8.
+      SDValue Pad = DAG.getExtractVectorElt(DL, MVT::i8, Needle, 0);
+      Needle = DAG.getInsertSubvector(DL, DAG.getPOISON(MVT::v4i8), Needle, 0);
+      Needle = DAG.getInsertVectorElt(DL, Needle, Pad, 3);
+    }
+
+    // Extend the v4i8 needle to v16i8.
+    Needle = DAG.getBitcast(MVT::v1i32, Needle);
+    Needle = DAG.getExtractVectorElt(DL, MVT::i32, Needle, 0);
+    Needle = DAG.getSplatVector(MVT::v4i32, DL, Needle);
+    Needle = DAG.getBitcast(MVT::v16i8, Needle);
+
+    return DAG.getNode(ISD::VECTOR_MATCH, DL, Op.getValueType(), Op1, Needle,
+                       Mask);
+  }
+
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(ResVT) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(Op1VT))
+    return SDValue();
 
   assert((Op1VT.getVectorElementType() == MVT::i8 ||
           Op1VT.getVectorElementType() == MVT::i16) &&
@@ -30898,7 +30924,11 @@ static SDValue performBSPExpandForSVE(SDNode *N, SelectionDAG &DAG,
 static SDValue performDupLane128Combine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
 
-  SDValue Insert = N->getOperand(0);
+  SDValue Op = N->getOperand(0);
+  if (Op.getOpcode() == ISD::SPLAT_VECTOR && Op.getValueType() == VT)
+    return Op;
+
+  SDValue Insert = Op;
   if (Insert.getOpcode() != ISD::INSERT_SUBVECTOR)
     return SDValue();
 
