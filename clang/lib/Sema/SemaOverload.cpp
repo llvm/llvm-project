@@ -63,9 +63,12 @@ static bool functionHasPassObjectSizeParams(const FunctionDecl *FD) {
 
 /// A convenience routine for creating a decayed reference to a function.
 static ExprResult CreateFunctionRefExpr(
-    Sema &S, FunctionDecl *Fn, NamedDecl *FoundDecl, const Expr *Base,
-    bool HadMultipleCandidates, SourceLocation Loc = SourceLocation(),
-    const DeclarationNameLoc &LocInfo = DeclarationNameLoc()) {
+    Sema &S, NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
+    FunctionDecl *Fn, NamedDecl *FoundDecl, const Expr *Base,
+    bool HadMultipleCandidates, const DeclarationNameInfo &NameInfo,
+    const TemplateArgumentListInfo *TemplateArgs) {
+  SourceLocation Loc = NameInfo.getLoc();
+
   if (S.DiagnoseUseOfDecl(FoundDecl, Loc))
     return ExprError();
   // If FoundDecl is different from Fn (such as if one is a template
@@ -76,8 +79,10 @@ static ExprResult CreateFunctionRefExpr(
   // being used.
   if (FoundDecl != Fn && S.DiagnoseUseOfDecl(Fn, Loc))
     return ExprError();
-  DeclRefExpr *DRE = new (S.Context)
-      DeclRefExpr(S.Context, Fn, false, Fn->getType(), VK_LValue, Loc, LocInfo);
+  auto *DRE = DeclRefExpr::Create(S.Context, QualifierLoc, TemplateKWLoc, Fn,
+                                  /*RefersToEnclosingVariableOrCapture=*/false,
+                                  NameInfo, Fn->getType(), VK_LValue, FoundDecl,
+                                  TemplateArgs);
   if (HadMultipleCandidates)
     DRE->setHadMultipleCandidates(true);
 
@@ -90,6 +95,23 @@ static ExprResult CreateFunctionRefExpr(
   }
   return S.ImpCastExprToType(DRE, S.Context.getPointerType(DRE->getType()),
                              CK_FunctionToPointerDecay);
+}
+
+static ExprResult CreateFunctionRefExpr(Sema &S, FunctionDecl *Fn,
+                                        NamedDecl *FoundDecl, const Expr *Base,
+                                        bool HadMultipleCandidates,
+                                        const DeclarationNameInfo &NameInfo) {
+  return CreateFunctionRefExpr(S, /*QualifierLoc=*/{}, /*TemplateKWLoc=*/{}, Fn,
+                               FoundDecl, Base, HadMultipleCandidates, NameInfo,
+                               /*TemplateArgs=*/nullptr);
+}
+
+static ExprResult CreateFunctionRefExpr(Sema &S, FunctionDecl *Fn,
+                                        NamedDecl *FoundDecl, const Expr *Base,
+                                        bool HadMultipleCandidates,
+                                        SourceLocation Loc) {
+  return CreateFunctionRefExpr(S, Fn, FoundDecl, Base, HadMultipleCandidates,
+                               DeclarationNameInfo(Fn->getDeclName(), Loc));
 }
 
 static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
@@ -16225,9 +16247,9 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         // Build the actual expression node.
         DeclarationNameInfo OpLocInfo(OpName, LLoc);
         OpLocInfo.setCXXOperatorNameRange(SourceRange(LLoc, RLoc));
-        ExprResult FnExpr = CreateFunctionRefExpr(
-            *this, FnDecl, Best->FoundDecl, Base, HadMultipleCandidates,
-            OpLocInfo.getLoc(), OpLocInfo.getInfo());
+        ExprResult FnExpr =
+            CreateFunctionRefExpr(*this, FnDecl, Best->FoundDecl, Base,
+                                  HadMultipleCandidates, OpLocInfo);
         if (FnExpr.isInvalid())
           return ExprError();
 
@@ -16561,10 +16583,18 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
                                       NewArgs))
       return ExprError();
 
+    // FIXME: avoid copy.
+    TemplateArgumentListInfo TemplateArgsBuffer, *TemplateArgs = nullptr;
+    if (MemExpr->hasExplicitTemplateArgs()) {
+      MemExpr->copyTemplateArgumentsInto(TemplateArgsBuffer);
+      TemplateArgs = &TemplateArgsBuffer;
+    }
+
     // Build the actual expression node.
-    ExprResult FnExpr =
-        CreateFunctionRefExpr(*this, Method, FoundDecl, MemExpr,
-                              HadMultipleCandidates, MemExpr->getExprLoc());
+    ExprResult FnExpr = CreateFunctionRefExpr(
+        *this, MemExpr->getQualifierLoc(), MemExpr->getTemplateKeywordLoc(),
+        Method, FoundDecl, MemExpr, HadMultipleCandidates,
+        MemExpr->getMemberNameInfo(), TemplateArgs);
     if (FnExpr.isInvalid())
       return ExprError();
 
@@ -16853,10 +16883,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   DeclarationNameInfo OpLocInfo(
                Context.DeclarationNames.getCXXOperatorName(OO_Call), LParenLoc);
   OpLocInfo.setCXXOperatorNameRange(SourceRange(LParenLoc, RParenLoc));
-  ExprResult NewFn = CreateFunctionRefExpr(*this, Method, Best->FoundDecl,
-                                           Obj, HadMultipleCandidates,
-                                           OpLocInfo.getLoc(),
-                                           OpLocInfo.getInfo());
+  ExprResult NewFn = CreateFunctionRefExpr(*this, Method, Best->FoundDecl, Obj,
+                                           HadMultipleCandidates, OpLocInfo);
   if (NewFn.isInvalid())
     return true;
 
@@ -17085,10 +17113,8 @@ ExprResult Sema::BuildLiteralOperatorCall(LookupResult &R,
   }
 
   FunctionDecl *FD = Best->Function;
-  ExprResult Fn = CreateFunctionRefExpr(*this, FD, Best->FoundDecl,
-                                        nullptr, HadMultipleCandidates,
-                                        SuffixInfo.getLoc(),
-                                        SuffixInfo.getInfo());
+  ExprResult Fn = CreateFunctionRefExpr(*this, FD, Best->FoundDecl, nullptr,
+                                        HadMultipleCandidates, SuffixInfo);
   if (Fn.isInvalid())
     return true;
 
