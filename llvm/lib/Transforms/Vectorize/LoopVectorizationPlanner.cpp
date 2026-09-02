@@ -789,6 +789,20 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   auto RTCostA = GetCostForTC(EstimatedWidthA, CostA, A.ScalarCost);
   auto RTCostB = GetCostForTC(EstimatedWidthB, CostB, B.ScalarCost);
   bool LowerCostWithTC = CmpFn(RTCostA, RTCostB);
+  LLVM_DEBUG(dbgs() << "LV: Comparing VF " << A.Width << " with cost " << CostA
+                    << ", scalar cost " << A.ScalarCost
+                    << ", and estimated width " << EstimatedWidthA
+                    << " against VF " << B.Width << " with cost " << CostB
+                    << ", scalar cost " << B.ScalarCost
+                    << ", and estimated width " << EstimatedWidthB
+                    << " for maximum trip count " << MaxTripCount
+                    << " with tail " << HasTail << ": normalized costs are "
+                    << CostA * EstimatedWidthB << " and "
+                    << CostB * EstimatedWidthA
+                    << ", trip-count-adjusted costs are " << RTCostA << " and "
+                    << RTCostB << ", lower cost without trip count is "
+                    << LowerCostWithoutTC << ", and lower cost with trip count is "
+                    << LowerCostWithTC << ".\n");
   LLVM_DEBUG(if (LowerCostWithTC != LowerCostWithoutTC) {
     dbgs() << "LV: VF " << (LowerCostWithTC ? A.Width : B.Width)
            << " has lower cost than VF "
