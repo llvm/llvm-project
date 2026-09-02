@@ -6,8 +6,8 @@
 !
 ! REQUIRES: x86-registered-target
 !
-! RUN: %flang_fc1 -emit-llvm -finit-local=0xAA %s -o - | FileCheck --check-prefix=HEX %s
-! RUN: %flang_fc1 -emit-llvm -finit-local=zero %s -o - | FileCheck --check-prefix=ZERO %s
+! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm -finit-local=0xAA %s -o - | FileCheck --check-prefix=HEX %s
+! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm -finit-local=zero %s -o - | FileCheck --check-prefix=ZERO %s
 
 ! ---------------------------------------------------------------------------
 ! REAL(10) -- x86_fp80: store=10 bytes, alloc=16 bytes on x86-64.
