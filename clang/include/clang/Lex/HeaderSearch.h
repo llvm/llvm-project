@@ -22,6 +22,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -319,6 +320,12 @@ class HeaderSearch {
   };
   llvm::StringMap<LookupFileCacheInfo, llvm::BumpPtrAllocator> LookupFileCache;
 
+  /// The files that were already considered for the \c -Wshadow-header
+  /// diagnostic, keyed by the spelling of the include that resolved to them.
+  /// Since the set of shadowing candidates depends on the spelling, the same
+  /// file has to be considered once per spelling it was found under.
+  llvm::StringMap<llvm::SmallPtrSet<const FileEntry *, 1>> ShadowCheckedHeaders;
+
   /// Collection mapping a framework or subframework
   /// name like "Carbon" to the Carbon.framework directory.
   llvm::StringMap<FrameworkCacheEntry, llvm::BumpPtrAllocator> FrameworkMap;
@@ -515,8 +522,8 @@ public:
   }
 
   void diagnoseHeaderShadowing(
-      StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
-      SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
+      StringRef Filename, FileEntryRef FE, SourceLocation IncludeLoc,
+      ConstSearchDirIterator FromDir,
       ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
       bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt);
 

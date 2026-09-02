@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu6.00-- -verify -S -o - %s
 
 void test_ci_builtins()
 {

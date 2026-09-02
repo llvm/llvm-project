@@ -89,6 +89,8 @@ public:
     std::vector<std::string> RPaths;
     /// List of LC_BUILD_VERSIONs.
     std::vector<BuildVersionOpts> BuildVersions;
+    /// Optional LC_TARGET_TRIPLE.
+    std::optional<std::string> TargetTriple;
 
     /// Optional UUID. If set, this will be used to add an LC_UUID command.
     std::optional<std::array<uint8_t, 16>> UUID;

@@ -47,10 +47,10 @@ define float @fun(i64 %0, float %1, ptr noalias  %a, ptr noalias %b, i64 %len) #
 ; CHECK-NEXT:    [[TMP72:%.*]] = load float, ptr [[TMP45]], align 4
 ; CHECK-NEXT:    [[TMP73:%.*]] = load float, ptr [[TMP46]], align 4
 ; CHECK-NEXT:    [[TMP74:%.*]] = load float, ptr [[TMP47]], align 4
-; CHECK-NEXT:    [[TMP75:%.*]] = insertelement <4 x float> poison, float [[TMP71]], i32 0
-; CHECK-NEXT:    [[TMP76:%.*]] = insertelement <4 x float> [[TMP75]], float [[TMP72]], i32 1
-; CHECK-NEXT:    [[TMP77:%.*]] = insertelement <4 x float> [[TMP76]], float [[TMP73]], i32 2
-; CHECK-NEXT:    [[TMP78:%.*]] = insertelement <4 x float> [[TMP77]], float [[TMP74]], i32 3
+; CHECK-NEXT:    [[TMP75:%.*]] = insertelement <4 x float> poison, float [[TMP71]], i64 0
+; CHECK-NEXT:    [[TMP76:%.*]] = insertelement <4 x float> [[TMP75]], float [[TMP72]], i64 1
+; CHECK-NEXT:    [[TMP77:%.*]] = insertelement <4 x float> [[TMP76]], float [[TMP73]], i64 2
+; CHECK-NEXT:    [[TMP78:%.*]] = insertelement <4 x float> [[TMP77]], float [[TMP74]], i64 3
 ; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr [4 x i8], ptr [[VLA]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x float> [[TMP78]], ptr [[TMP61]], align 4
 ; CHECK-NEXT:    [[TMP63:%.*]] = getelementptr [4 x i8], ptr [[TMP4]], i64 [[INDEX]]

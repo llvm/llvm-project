@@ -7,7 +7,7 @@ from lldbsuite.test import lldbutil
 class SharedCacheHostMemoryTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfRemote
     def test_host_lldb_memory(self):
         """Stop in a shared cache binary loaded from lldb's own memory and

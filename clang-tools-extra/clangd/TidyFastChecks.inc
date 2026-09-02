@@ -466,7 +466,5 @@ FAST(readability-uppercase-literal-suffix, 1.0)
 FAST(readability-use-anyofallof, 1.0)
 FAST(readability-use-concise-preprocessor-directives, 1.0)
 FAST(readability-use-std-min-max, 1.0)
-FAST(zircon-temporary-objects, 1.0)
-
 #undef FAST
 #undef SLOW

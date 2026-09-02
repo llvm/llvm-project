@@ -447,11 +447,15 @@ def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
 
 def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
                                     "Apple M4",
+                                    !listconcat(
                                     !listremove(TuneAppleA17.Implies,
-                                    [FeatureStorePairSuppress])>;
+                                    [FeatureStorePairSuppress]),
+                                    [FeatureFuseAppleSMECompute])>;
 
 def TuneAppleM5 : SubtargetFeature<"apple-m5", "ARMProcFamily", "AppleM5",
-                                    "Apple M5", TuneAppleM4.Implies>;
+                                    "Apple M5",
+                                    !listconcat(TuneAppleM4.Implies,
+                                    [FeatureFuseFMinFMax])>;
 
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
@@ -1274,12 +1278,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> Generic = [FeatureFPARMv8, FeatureNEON, FeatureETE];
 }
 
-// Define an alternative name for a given Processor.
-class ProcessorAlias<string n, string alias> {
-  string Name = n;
-  string Alias = alias;
-}
-
 // A note on scheduling models - we do not have exact models for each core and
 // attempt to use the "best equivalent" that we have for those that are
 // missing. -mcpu=generic uses a cortex-a510 model to get good scheduling
@@ -1423,8 +1421,7 @@ def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
 // HiSilicon Processors.
 def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
                      [TuneTSV110]>;
-// TODO: Support hip12 model.
-def : ProcessorModel<"hip12", NeoverseV2Model, ProcessorFeatures.HIP12,
+def : ProcessorModel<"hip12", HIP12Model, ProcessorFeatures.HIP12,
                      [TuneHIP12]>;
 
 // Apple CPUs

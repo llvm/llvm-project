@@ -33,6 +33,18 @@
 // RUN: %clang --target=aarch64 -### -o /dev/null -mbranch-protection=standard /dev/null 2>&1 | \
 // RUN: FileCheck --allow-empty %s --check-prefix=LINKER-DRIVER
 
+// Check that Android enables PAC and BTI by default on AArch64.
+// RUN: %clang --target=aarch64-linux-android -### -c %s 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=GCS-OFF --check-prefix=WARN
+
+// Check that the Android default can be overridden.
+// RUN: %clang --target=aarch64-linux-android -mbranch-protection=none -### -c %s 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-OFF --check-prefix=KEY --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
+
+// Check that Android enables BTI by default when -msign-return-address is passed.
+// RUN: %clang --target=aarch64-linux-android -msign-return-address=non-leaf -### -c %s 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=GCS-OFF --check-prefix=WARN
+
 // WARN-NOT: warning: ignoring '-mbranch-protection=' option because the 'aarch64' architecture does not support it [-Wbranch-protection]
 
 // RA-OFF: "-msign-return-address=none"

@@ -59,3 +59,30 @@ the `Error` type; `orc_rt_log_formatCheck` is the `formatCheck` function in the
 C++ code follows the LLVM Coding Standards directly: symbols live in real
 namespaces (e.g. `orc_rt`), types/values/variables are `PascalCase`, functions
 are `camelBack`, and macros are `UPPER_CASE`.
+
+## Parameter ordering for asynchronous APIs
+
+Many ORC-RT entry points are asynchronous: they take a completion callback that
+is invoked, possibly on another thread, when the operation finishes. Because C
+has no closures, such a callback is paired with an opaque context (a `void *`
+supplied by the caller, or a framework-issued token such as a call id) that is
+threaded back to it. To keep these APIs learnable as a family, order their
+parameters consistently:
+
+1. The primary handle or receiver (e.g. `orc_rt_SessionRef`) comes first.
+2. The call inputs follow (e.g. a target/tag, an argument buffer).
+3. The completion callback comes next, immediately followed by its context.
+4. The context/token is always **last** -- in both the call and the callback
+   signature.
+
+For example, `orc_rt_WrapperFunction` is
+`(S, ArgBytes, Return, CallId)` and its return callback
+`orc_rt_WrapperFunctionReturn` is `(S, ResultBytes, CallId)`: the `CallId`
+token that the framework threads from the call to its completion is last in
+both. C++ helpers that mirror these signatures (e.g. `WrapperFunction::handle`)
+follow the same order, appending any implementation-only parameters (such as a
+serializer or handler) after the token.
+
+This ordering is a convention, not a hard rule; where an existing API or an
+external interface being wrapped dictates otherwise, match that instead.
+

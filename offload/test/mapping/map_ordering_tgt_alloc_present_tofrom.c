@@ -10,11 +10,11 @@ int main() {
   fprintf(stderr, "addr=%p, size=%ld\n", &x, sizeof(x));
 
   // clang-format off
-  // CHECK: omptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
-  // CHECK: omptarget error: Pointer 0x{{0*}}[[#HOST_ADDR]] was not present on the device upon entry to the region.
-  // CHECK: omptarget error: Call to targetDataBegin failed, abort target.
-  // CHECK: omptarget error: Failed to process data before launching the kernel.
-  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
+  // CHECK: error: Pointer 0x{{0*}}[[#HOST_ADDR]] was not present on the device upon entry to the region.
+  // CHECK: error: Call to targetDataBegin failed, abort target.
+  // CHECK: error: Failed to process data before launching the kernel.
+  // CHECK: fatal error 1: failure of target construct while offloading is mandatory
   // clang-format on
 #pragma omp target map(alloc : x) map(present, alloc : x) map(tofrom : x)
   {

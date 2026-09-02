@@ -368,9 +368,6 @@ private:
   const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *E) {
     return GenSE.getPtrToAddrExpr(visit(E->getOperand()));
   }
-  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
-    return GenSE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
-  }
   const SCEV *visitTruncateExpr(const SCEVTruncateExpr *E) {
     return GenSE.getTruncateExpr(visit(E->getOperand()), E->getType());
   }

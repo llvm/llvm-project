@@ -70,6 +70,16 @@ TEST(PolicyTest, PublicStateRunningExpression) {
   EXPECT_TRUE(p.capabilities.can_run_frame_recognizers);
 }
 
+TEST(PolicyTest, ScriptedExtensionCall) {
+  Policy p = Policy::CreateScriptedExtensionCall();
+  EXPECT_TRUE(p.capabilities.can_bypass_target_api_mutex);
+
+  PolicyStack::Guard guard = PolicyStack::Get().PushPrivateState();
+  Policy nested = Policy::CreateScriptedExtensionCall();
+  EXPECT_EQ(nested.view, Policy::View::Private);
+  EXPECT_TRUE(nested.capabilities.can_bypass_target_api_mutex);
+}
+
 TEST(PolicyTest, StackDefaultIsPublicState) {
   Policy current = PolicyStack::Get().Current();
   EXPECT_EQ(current.view, Policy::View::Public);
@@ -145,7 +155,8 @@ TEST(PolicyTest, DumpPublicState) {
   EXPECT_EQ(s.GetString(),
             "policy: view=public, capabilities={"
             "eval_expr=true run_all=true try_all=true "
-            "bp_actions=true frame_providers=true frame_recognizers=true}");
+            "bp_actions=true frame_providers=true frame_recognizers=true "
+            "bypass_api_mutex=false}");
 }
 
 TEST(PolicyTest, DumpPrivateState) {
@@ -154,7 +165,8 @@ TEST(PolicyTest, DumpPrivateState) {
   EXPECT_EQ(s.GetString(),
             "policy: view=private, capabilities={"
             "eval_expr=true run_all=true try_all=true "
-            "bp_actions=true frame_providers=true frame_recognizers=true}");
+            "bp_actions=true frame_providers=true frame_recognizers=true "
+            "bypass_api_mutex=false}");
 }
 
 TEST(PolicyTest, DumpStack) {

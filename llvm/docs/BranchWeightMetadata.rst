@@ -2,8 +2,6 @@
 LLVM Branch Weight Metadata
 ===========================
 
-.. contents::
-   :local:
 
 Introduction
 ============

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -196,14 +197,21 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
 }
 
 //===----------------------------------------------------------------------===//
+// XeGPU_CreateMemDescOp
+//===----------------------------------------------------------------------===//
+LogicalResult CreateMemDescOp::verify() {
+  auto srcTy = getSource().getType();
+  if (!memref::isStaticShapeAndContiguousRowMajor(srcTy))
+    return emitOpError("source memref must be contiguous.");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source) {
-  [[maybe_unused]] auto ty = source.getType();
-  assert(ty.hasStaticShape() && "expecting a memref with static shape");
-
   build(builder, state, tdesc, source, ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
         DenseI64ArrayAttr({}) /* empty const shape*/,
@@ -249,8 +257,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult CreateNdDescOp::verify() {
-  size_t rank = getMixedSizes().size();
-  bool invalidRank = rank != getMixedStrides().size();
+  auto srcMemrefTy = dyn_cast<MemRefType>(getSourceType());
+  size_t rank = srcMemrefTy ? srcMemrefTy.getRank() : getMixedSizes().size();
   bool invalidElemTy = false;
 
   // Memory space of created TensorDesc should match with the source.
@@ -269,17 +277,22 @@ LogicalResult CreateNdDescOp::verify() {
   if (auto memrefTy = dyn_cast<MemRefType>(getSourceType()))
     invalidElemTy |= memrefTy.getElementType() != getElementType();
 
+  bool hasExplicitShapeStrides =
+      !getShape().empty() || !getStrides().empty() ||
+      (getConstShapeAttr() && !getConstShapeAttr().empty()) ||
+      (getConstStridesAttr() && !getConstStridesAttr().empty());
+
   if (llvm::isa<IntegerType>(getSourceType())) {
     // strides and shape must present for integer source.
     if (getMixedStrides().empty() || getMixedSizes().empty())
       return emitOpError("expecting strides and shape to be present for "
                          "integer source.");
+    if (getMixedSizes().size() != getMixedStrides().size())
+      return emitOpError("Expecting the rank of shape and strides to match.");
+  } else if (srcMemrefTy && hasExplicitShapeStrides) {
+    return emitOpError("shape and strides should not be specified for a memref "
+                       "source; they are inferred from the memref.");
   }
-
-  if (invalidRank)
-    return emitOpError(
-        "Expecting the rank of shape, strides, and source (if source "
-        "is a memref) should match with each other.");
 
   // check result TensorDesc rank
   if (getType().getRank() > (int64_t)rank)
@@ -843,12 +856,10 @@ LogicalResult DpasOp::verify() {
 // XeGPU_ConvertLayoutOp
 //===----------------------------------------------------------------------===//
 LogicalResult ConvertLayoutOp::verify() {
-  auto srcLayout = getInputLayout();
   auto resLayout = getTargetLayout();
-  if (!srcLayout)
-    return emitOpError("expected input layout.");
   if (!resLayout)
     return emitOpError("expected target layout.");
+  auto srcLayout = getEffectiveInputLayout();
 
   // both input and target layouts should be WgLayout or SgLayout at the same
   // time.
@@ -935,6 +946,29 @@ LogicalResult TruncfOp::verify() {
     return emitOpError("input type must be wider than result type.");
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_LaneShuffleOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult LaneShuffleOp::verify() {
+  // With a single element per lane there is nothing to re-distribute, so the
+  // operation would be a no-op.
+  if (getSourceType().getNumElements() < 2)
+    return emitOpError("requires a source vector with at least 2 elements.");
+
+  return success();
+}
+
+OpFoldResult LaneShuffleOp::fold(FoldAdaptor adaptor) {
+  // The two modes are exact inverses, so a pack feeding an unpack (or vice
+  // versa) restores the original fragments.
+  auto producer = getSource().getDefiningOp<LaneShuffleOp>();
+  if (producer && producer.getMode() != getMode())
+    return producer.getSource();
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

@@ -20,11 +20,42 @@ TEST_P(olCreateProgramTest, Success) {
   ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
 
   ol_program_handle_t Program;
-  ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+  ASSERT_SUCCESS(olCreateProgram(Context, Device, DeviceBin->getBufferStart(),
                                  DeviceBin->getBufferSize(), &Program));
   ASSERT_NE(Program, nullptr);
 
   ASSERT_SUCCESS(olDestroyProgram(Program));
+}
+
+TEST_P(olCreateProgramTest, JITSuccess) {
+
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo_jit", Device, DeviceBin));
+  ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+
+  ol_program_handle_t Program;
+  ASSERT_SUCCESS(olCreateProgram(Context, Device, DeviceBin->getBufferStart(),
+                                 DeviceBin->getBufferSize(), &Program));
+  ASSERT_NE(Program, nullptr);
+
+  ol_symbol_handle_t Symbol;
+  ASSERT_SUCCESS(olGetSymbol(Program, "foo", OL_SYMBOL_KIND_KERNEL, &Symbol));
+
+  ASSERT_NE(Symbol, nullptr);
+
+  ASSERT_SUCCESS(olDestroyProgram(Program));
+}
+
+TEST_P(olCreateProgramTest, NullContextHandle) {
+
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
+  ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+
+  ol_program_handle_t Program;
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
+               olCreateProgram(nullptr, Device, DeviceBin->getBufferStart(),
+                               DeviceBin->getBufferSize(), &Program));
 }
 
 TEST_P(olCreateProgramTest, NullDeviceHandle) {
@@ -35,7 +66,7 @@ TEST_P(olCreateProgramTest, NullDeviceHandle) {
 
   ol_program_handle_t Program;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
-               olCreateProgram(nullptr, DeviceBin->getBufferStart(),
+               olCreateProgram(Context, nullptr, DeviceBin->getBufferStart(),
                                DeviceBin->getBufferSize(), &Program));
 }
 
@@ -46,9 +77,9 @@ TEST_P(olCreateProgramTest, NullProgData) {
   ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
 
   ol_program_handle_t Program;
-  ASSERT_ERROR(
-      OL_ERRC_INVALID_NULL_POINTER,
-      olCreateProgram(Device, nullptr, DeviceBin->getBufferSize(), &Program));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+               olCreateProgram(Context, Device, nullptr,
+                               DeviceBin->getBufferSize(), &Program));
 }
 
 TEST_P(olCreateProgramTest, NullOutputProgram) {
@@ -58,7 +89,7 @@ TEST_P(olCreateProgramTest, NullOutputProgram) {
   ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
 
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
-               olCreateProgram(Device, DeviceBin->getBufferStart(),
+               olCreateProgram(Context, Device, DeviceBin->getBufferStart(),
                                DeviceBin->getBufferSize(), nullptr));
 }
 
@@ -69,9 +100,9 @@ TEST_P(olCreateProgramTest, ZeroSizeBinary) {
 
   ol_program_handle_t Program = nullptr;
 
-  ASSERT_ERROR(
-      OL_ERRC_INVALID_BINARY,
-      olCreateProgram(Device, DeviceBin->getBufferStart(), 0, &Program));
+  ASSERT_ERROR(OL_ERRC_INVALID_BINARY,
+               olCreateProgram(Context, Device, DeviceBin->getBufferStart(), 0,
+                               &Program));
   ASSERT_EQ(Program, nullptr);
 }
 
@@ -80,8 +111,8 @@ TEST_P(olCreateProgramTest, InvalidBinary) {
 
   ol_program_handle_t Program = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_BINARY,
-               olCreateProgram(Device, InvalidBinary, sizeof(InvalidBinary) - 1,
-                               &Program));
+               olCreateProgram(Context, Device, InvalidBinary,
+                               sizeof(InvalidBinary) - 1, &Program));
   ASSERT_EQ(Program, nullptr);
 }
 
@@ -101,7 +132,19 @@ TEST_P(olCreateProgramTest, WrongArchitecture) {
 
   ol_program_handle_t Program = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_BINARY,
-               olCreateProgram(Device, ForeignBin->getBufferStart(),
+               olCreateProgram(Context, Device, ForeignBin->getBufferStart(),
                                ForeignBin->getBufferSize(), &Program));
+  ASSERT_EQ(Program, nullptr);
+}
+
+TEST_P(olCreateProgramTest, InvalidDeviceNotInContext) {
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
+  ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+
+  ol_program_handle_t Program = nullptr;
+  ASSERT_ERROR(OL_ERRC_INVALID_DEVICE,
+               olCreateProgram(Context, Host, DeviceBin->getBufferStart(),
+                               DeviceBin->getBufferSize(), &Program));
   ASSERT_EQ(Program, nullptr);
 }

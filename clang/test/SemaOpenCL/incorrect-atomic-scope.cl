@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1250 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 -triple amdgpu12.50-unknown-unknown -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AMDGCN %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK %s
 
 // Both atomics produce the wrong scope in LLVM IR because a HIP scope was

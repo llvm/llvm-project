@@ -11,6 +11,9 @@
 
 #include "InstrProfilingPort.h"
 #include <stddef.h>
+#if defined(__FreeBSD__) && defined(_KERNEL)
+#include <sys/types.h>
+#endif
 #ifndef COMPILER_RT_PROFILE_BAREMETAL
 #include <stdio.h>
 #endif

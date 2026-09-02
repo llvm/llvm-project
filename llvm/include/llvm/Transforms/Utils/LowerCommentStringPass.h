@@ -12,11 +12,10 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-class LowerCommentStringPass : public PassInfoMixin<LowerCommentStringPass> {
+class LowerCommentStringPass
+    : public RequiredPassInfoMixin<LowerCommentStringPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

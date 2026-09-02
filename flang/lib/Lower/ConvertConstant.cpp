@@ -627,16 +627,7 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
   mlir::Value array = fir::UndefOp::create(builder, loc, arrayTy);
   if (Fortran::evaluate::GetSize(con.shape()) == 0)
     return array;
-  if constexpr (T::category == Fortran::common::TypeCategory::Character) {
-    do {
-      mlir::Value elementVal =
-          genScalarLit<T::kind>(builder, loc, con.At(subscripts), con.LEN(),
-                                /*outlineInReadOnlyMemory=*/false);
-      array =
-          fir::InsertValueOp::create(builder, loc, arrayTy, array, elementVal,
-                                     builder.getArrayAttr(createIdx()));
-    } while (con.IncrementSubscripts(subscripts));
-  } else if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
+  if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
     do {
       mlir::Type eleTy =
           mlir::cast<fir::SequenceType>(arrayTy).getElementType();
@@ -647,15 +638,31 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
           fir::InsertValueOp::create(builder, loc, arrayTy, array, elementVal,
                                      builder.getArrayAttr(createIdx()));
     } while (con.IncrementSubscripts(subscripts));
+  } else if constexpr (T::category ==
+                           Fortran::common::TypeCategory::Character &&
+                       T::kind != 1) {
+    do {
+      mlir::Value elementVal =
+          genScalarLit<T::kind>(builder, loc, con.At(subscripts), con.LEN(),
+                                /*outlineInReadOnlyMemory=*/false);
+      array =
+          fir::InsertValueOp::create(builder, loc, arrayTy, array, elementVal,
+                                     builder.getArrayAttr(createIdx()));
+    } while (con.IncrementSubscripts(subscripts));
   } else {
     llvm::SmallVector<mlir::Attribute> rangeStartIdx;
     uint64_t rangeSize = 0;
     mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getElementType();
     do {
       auto getElementVal = [&]() {
-        return builder.createConvert(loc, eleTy,
-                                     genScalarLit<T::category, T::kind>(
-                                         builder, loc, con.At(subscripts)));
+        if constexpr (T::category == Fortran::common::TypeCategory::Character)
+          return genScalarLit<T::kind>(builder, loc, con.At(subscripts),
+                                       con.LEN(),
+                                       /*outlineInReadOnlyMemory=*/false);
+        else
+          return builder.createConvert(loc, eleTy,
+                                       genScalarLit<T::category, T::kind>(
+                                           builder, loc, con.At(subscripts)));
       };
       Fortran::evaluate::ConstantSubscripts nextSubscripts = subscripts;
       bool nextIsSame = con.IncrementSubscripts(nextSubscripts) &&

@@ -13,14 +13,18 @@
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "bolt/Passes/BranchLivenessUtils.h"
+#include "bolt/Passes/RegAnalysis.h"
 #include "bolt/Passes/ReorderAlgorithm.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
 #include <cmath>
 #include <mutex>
 #include <numeric>
+#include <optional>
 #include <vector>
 
 #define DEBUG_TYPE "bolt-opts"
@@ -257,6 +261,7 @@ bool BinaryFunctionPass::shouldPrint(const BinaryFunction &BF) const {
 }
 
 void NormalizeCFG::runOnFunction(BinaryFunction &BF) {
+  const BinaryContext &BC = BF.getBinaryContext();
   uint64_t NumRemoved = 0;
   uint64_t NumDuplicateEdges = 0;
   uint64_t NeedsFixBranches = 0;
@@ -286,7 +291,14 @@ void NormalizeCFG::runOnFunction(BinaryFunction &BF) {
     // Redirect all predecessors to the successor block.
     while (!BB.pred_empty()) {
       BinaryBasicBlock *Predecessor = *BB.pred_begin();
-      if (Predecessor->hasJumpTable())
+      // Do not redirect a predecessor that reaches this block via an indirect
+      // branch. This covers both a regular jump table and an unresolved
+      // "unknown control flow" indirect jump (in --strict mode), where the
+      // instruction has no jump table annotation but the jump table data still
+      // references this block. Removing this block would leave a dangling
+      // reference in .rodata, an undefined jump table entry at emission time.
+      const MCInst *LastInst = Predecessor->getLastNonPseudoInstr();
+      if (LastInst && BC.MIB->isIndirectBranch(*LastInst))
         break;
 
       if (Predecessor == Successor)
@@ -545,21 +557,38 @@ bool ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
 }
 
 Error FixupBranches::runOnFunctions(BinaryContext &BC) {
+  const bool ShouldRunRegisterAnalysis =
+      opts::FixBranchesWithLiveness &&
+      llvm::any_of(BC.getBinaryFunctions(), [&](auto &It) {
+        BinaryFunction &BF = It.second;
+        return BC.shouldEmit(BF) && BF.isSimple() && needsBranchLiveness(BF);
+      });
+
+  std::optional<RegAnalysis> RA;
+  if (ShouldRunRegisterAnalysis)
+    RA.emplace(BC, nullptr, nullptr);
+
   for (auto &It : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = It.second;
-    if (!BC.shouldEmit(Function) || !Function.isSimple())
+    BinaryFunction &BF = It.second;
+    if (!BC.shouldEmit(BF) || !BF.isSimple())
       continue;
 
-    Function.fixBranches();
+    if (!RA || !needsBranchLiveness(BF)) {
+      BF.fixBranches();
+      continue;
+    }
+
+    BranchLivenessInfo BLI = computeBranchLiveness(BF, *RA);
+    BF.fixBranches(&BLI);
   }
   return Error::success();
 }
 
 Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
-  BinaryFunctionListType &OutputFunctions = BC.getOutputBinaryFunctions();
+  assert(BC.getOutputBinaryFunctions().empty() &&
+         "Output function list already initialized");
 
-  assert(OutputFunctions.empty() && "Output function list already initialized");
-
+  BinaryFunctionListType OutputFunctions;
   OutputFunctions.reserve(BC.getBinaryFunctions().size() +
                           BC.getInjectedBinaryFunctions().size());
   llvm::transform(llvm::make_second_range(BC.getBinaryFunctions()),
@@ -574,6 +603,17 @@ Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
   llvm::copy(BC.getInjectedBinaryFunctions(),
              std::back_inserter(OutputFunctions));
 
+  if (opts::HotFunctionsAtEnd) {
+    // Injected functions have no profile and precede other cold functions in
+    // the reverse layout.
+    std::stable_partition(
+        OutputFunctions.begin(), OutputFunctions.end(),
+        [](const BinaryFunction *A) { return A->isInjected(); });
+    std::stable_partition(
+        OutputFunctions.begin(), OutputFunctions.end(),
+        [](const BinaryFunction *A) { return !A->hasValidIndex(); });
+  }
+
   // Place hot text movers in front.
   if (opts::HotText) {
     std::stable_partition(
@@ -581,12 +621,7 @@ Error PopulateOutputFunctions::runOnFunctions(BinaryContext &BC) {
         [](const BinaryFunction *A) { return opts::isHotTextMover(*A); });
   }
 
-  if (opts::HotFunctionsAtEnd) {
-    std::stable_partition(
-        OutputFunctions.begin(), OutputFunctions.end(),
-        [](const BinaryFunction *A) { return !A->hasValidIndex(); });
-  }
-
+  BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
   return Error::success();
 }
 
@@ -961,7 +996,11 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
       uint64_t Count = 0;
       if (CondSucc != BB) {
         // Patch the new target address into the conditional branch.
-        MIB->reverseBranchCondition(*CondBranch, CalleeSymbol, Ctx);
+        InstructionListType Code =
+            MIB->reverseBranchCondition(*CondBranch, CalleeSymbol, Ctx);
+        auto II = PredBB->replaceInstruction(
+            PredBB->findInstruction(CondBranch), Code);
+        CondBranch = &*(II + Code.size() - 1);
         // Since we reversed the condition on the branch we need to change
         // the target for the unconditional branch or add a unconditional
         // branch to the old target.  This has to be done manually since

@@ -460,6 +460,15 @@ static void generateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
 
   directive::VersionRange All;
 
+  // When a given spelling maps to more than one enum kind, this function
+  // will return one of them, but it's unspecified which one.
+  // This can happen whem a directive/clause uses the same spelling as
+  // another directive/clause, e.g. when it varies depending on the version:
+  //    OMPC_foo : {"foo", v1.0}, {"bar", v2.0}
+  //    OMPC_bar : {"bar", v1.0}, {"baz", v2.0}
+  // or when the same spelling can be used to mean different things:
+  //    OMPC_do_one_thing : {"doit"}
+  //    OMPC_do_something_else : {"doit"}
   for (const Record *R : Records) {
     BaseRecord Rec(R);
     std::string Ident = ImplicitAsUnknown && R->getValueAsBit("isImplicit")
@@ -890,6 +899,30 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
   OS << "}\n";
 }
 
+static void generateGetDirectivePureSince(const DirectiveLanguage &DirLang,
+                                          raw_ostream &OS) {
+  // Must match the sentinel in DirectiveBase.td and in
+  // OmpStructureChecker::CheckDirectiveInPureProcedure.
+  constexpr int NeverPure = 0x7FFFFFFF;
+  OS << "constexpr unsigned getDirectivePureSince(Directive Dir) {\n";
+  OS << "  switch (Dir) {\n";
+
+  StringRef Prefix = DirLang.getDirectivePrefix();
+
+  for (const Record *R : DirLang.getDirectives()) {
+    Directive D(R);
+    int PureSince = D.getPureSince();
+    if (PureSince == NeverPure)
+      continue;
+    OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
+    OS << "    return " << PureSince << ";\n";
+  }
+  OS << "  default:\n";
+  OS << "    return 0x7FFFFFFF;\n";
+  OS << "  } // switch (Dir)\n";
+  OS << "}\n";
+}
+
 static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
                                           raw_ostream &OS) {
   OS << "constexpr SourceLanguage getDirectiveLanguages(Directive D) {\n";
@@ -1240,7 +1273,7 @@ static void generateFlangClausesParser(const DirectiveLanguage &DirLang,
       OS << "nonemptyList(";
 
     if (!C.getPrefix().empty())
-      OS << "\"" << C.getPrefix() << ":\" >> ";
+      OS << "\"" << C.getPrefix() << " :\" >> ";
 
     // The common Flang parser are used directly. Their name is identical to
     // the Flang class with first letter as lowercase. If the Flang class is
@@ -1373,6 +1406,8 @@ static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
   generateGetDirectiveAssociation(DirLang, OS);
   OS << "\n";
   generateGetDirectiveCategory(DirLang, OS);
+  OS << "\n";
+  generateGetDirectivePureSince(DirLang, OS);
   OS << "\n";
   generateGetDirectiveLanguages(DirLang, OS);
 }

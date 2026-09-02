@@ -147,6 +147,10 @@ public:
 
   void emitNullInitializationToLValue(mlir::Location loc, LValue lv);
 
+  void emitComparisonResult(const Expr *e, mlir::Location loc,
+                            const ComparisonCategoryInfo &cmpInfo,
+                            mlir::Value resultValue);
+
   void Visit(Expr *e) { StmtVisitor<AggExprEmitter>::Visit(e); }
 
   void VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
@@ -423,18 +427,22 @@ public:
       }
     }
 
-    // Create the return value in the destination slot.
-    ensureDest(loc, e->getType());
-    LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+    emitComparisonResult(e, loc, cmpInfo, resultScalar);
+  }
 
-    // Emit the address of the first (and only) field in the comparison category
-    // type, and initialize it from the constant integer value produced above.
-    const FieldDecl *resultField = *cmpInfo.Record->field_begin();
-    LValue fieldLVal = cgf.emitLValueForFieldInitialization(
-        destLVal, resultField, resultField->getName());
-    cgf.emitStoreThroughLValue(RValue::get(resultScalar), fieldLVal);
+  void VisitTypeTraitExpr(const TypeTraitExpr *e) {
+    assert(e->isStoredAsComparisonResult() &&
+           "expected a strong_ordering type trait with a stored value");
 
-    // All done! The result is in the dest slot.
+    const ComparisonCategoryInfo &cmpInfo =
+        cgf.getContext().CompCategories.getInfoForType(e->getType());
+    const auto result =
+        ComparisonCategoryResult(e->getAPValue().getInt().getZExtValue());
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    mlir::Value resultValue = cgf.getBuilder().getConstInt(
+        loc, cmpInfo.getValueInfo(result)->getIntValue());
+
+    emitComparisonResult(e, loc, cmpInfo, resultValue);
   }
 
   void VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *e) {
@@ -997,6 +1005,21 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
   // memsets; that would be easy for arrays, but relatively
   // difficult for structures with the current code.
   cgf.emitNullInitialization(loc, lv.getAddress(), lv.getType());
+}
+
+void AggExprEmitter::emitComparisonResult(const Expr *e, mlir::Location loc,
+                                          const ComparisonCategoryInfo &cmpInfo,
+                                          mlir::Value resultValue) {
+  // Create the return value in the destination slot.
+  ensureDest(loc, e->getType());
+  LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+
+  // Emit the address of the first (and only) field in the comparison category
+  // type, and initialize it from the constant integer value produced above.
+  const FieldDecl *resultField = *cmpInfo.Record->field_begin();
+  LValue fieldLVal = cgf.emitLValueForFieldInitialization(
+      destLVal, resultField, resultField->getName());
+  cgf.emitStoreThroughLValue(RValue::get(resultValue), fieldLVal);
 }
 
 void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {

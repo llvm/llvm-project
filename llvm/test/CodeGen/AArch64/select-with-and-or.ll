@@ -119,8 +119,7 @@ define <4 x i1> @or_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) 
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    cmgt v2.4s, v2.4s, v3.4s
 ; CHECK-SD-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_vec:
@@ -161,10 +160,10 @@ define <4 x i1> @and_not_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32>
 define <4 x i1> @or_not_vec(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) {
 ; CHECK-SD-LABEL: or_not_vec:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmgt v2.4s, v2.4s, v3.4s
 ; CHECK-SD-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    orn v0.16b, v2.16b, v0.16b
-; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    cmgt v2.4s, v2.4s, v3.4s
+; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_not_vec:
@@ -207,8 +206,7 @@ define <4 x i1> @or_vec_undef(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    cmgt v2.4s, v2.4s, v3.4s
 ; CHECK-SD-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_vec_undef:
@@ -249,10 +247,10 @@ define <4 x i1> @and_not_vec_undef(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 
 define <4 x i1> @or_not_vec_undef(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) {
 ; CHECK-SD-LABEL: or_not_vec_undef:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmgt v2.4s, v2.4s, v3.4s
 ; CHECK-SD-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    orn v0.16b, v2.16b, v0.16b
-; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    cmgt v2.4s, v2.4s, v3.4s
+; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_not_vec_undef:

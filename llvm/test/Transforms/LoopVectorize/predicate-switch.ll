@@ -6,13 +6,13 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC1-LABEL: define void @switch4_default_common_dest_with_case(
 ; IC1-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) {
 ; IC1-NEXT:  [[ENTRY:.*]]:
-; IC1-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; IC1-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; IC1-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; IC1-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; IC1-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC1:       [[VECTOR_PH]]:
-; IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; IC1-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC]]
 ; IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -98,13 +98,13 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC2-LABEL: define void @switch4_default_common_dest_with_case(
 ; IC2-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) {
 ; IC2-NEXT:  [[ENTRY:.*]]:
-; IC2-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; IC2-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; IC2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; IC2-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; IC2-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC2:       [[VECTOR_PH]]:
-; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; IC2-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC]]
 ; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]

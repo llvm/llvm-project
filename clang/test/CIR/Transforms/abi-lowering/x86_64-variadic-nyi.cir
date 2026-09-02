@@ -1,0 +1,211 @@
+// RUN: not cir-opt %s -cir-call-conv-lowering=target=x86_64 -split-input-file 2>&1 \
+// RUN:   | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A two-eightbyte record at the ellipsis coerces to a register pair the
+  // pointee's signature cannot describe, so the call is rejected.
+  cir.func @indirect_record(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                            %arg1: !cir.ptr<!s8i>, %arg2: !rec_Pair) {
+    %0 = cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Pair) -> !s32i
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op variadic arguments to an indirect call not yet implemented in CallConvLowering
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A memory-class record needs a byval slot at the ellipsis, which the
+  // pointee's signature cannot describe either.
+  cir.func @indirect_big(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                         %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) {
+    %0 = cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Big) -> !s32i
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op variadic arguments to an indirect call not yet implemented in CallConvLowering
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A void return is its own wire form and so never needs a rewrite on its
+  // own, but it does not excuse an argument that still needs a byval slot.
+  cir.func @indirect_big_void(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>,
+                              %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) {
+    cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, !cir.ptr<!s8i>, !rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op variadic arguments to an indirect call not yet implemented in CallConvLowering
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func no_proto private @kandr(!cir.ptr<!s8i>) -> !s32i
+
+  // A callee declared without a prototype also takes more operands than it
+  // declares, but those extra arguments are named rather than passed through
+  // an ellipsis, so the variadic accounting does not apply to them.
+  cir.func @extra_args_no_proto(%arg0: !cir.ptr<!s8i>, %arg1: !s32i) {
+    %0 = cir.call @kandr(%arg0, %arg1) : (!cir.ptr<!s8i>, !s32i) -> !s32i
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op extra arguments to a callee without a prototype not yet implemented in CallConvLowering
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!void = !cir.void
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A cir.try_call reaches the same ellipsis accounting as cir.call, so a
+  // record needing a byval slot past the ellipsis is rejected there too.
+  cir.func @indirect_try_call(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                              %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) {
+    %0 = cir.try_call %arg0(%arg1, %arg2) ^bb1, ^bb2
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Big) -> !s32i
+  ^bb1:
+    cir.br ^bb4
+  ^bb2:
+    %1 = cir.eh.initiate : !cir.eh_token
+    cir.eh.dispatch %1 : !cir.eh_token [
+      catch_all : ^bb3
+    ]
+  ^bb3(%tok : !cir.eh_token):
+    %ct, %exn = cir.begin_catch %tok : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+    cir.end_catch %ct : !cir.catch_token
+    cir.br ^bb4
+  ^bb4:
+    cir.return
+  }
+
+  // CHECK: error: 'cir.try_call' op variadic arguments to an indirect call not yet implemented in CallConvLowering
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A variadic pointee is classified even when no argument is passed through
+  // the ellipsis, so the declared parameter's coercion is what needs the
+  // rewrite here, and rebuilding a cir.try_call is unimplemented.
+  cir.func @variadic_try_call_no_ellipsis(
+      %arg0: !cir.ptr<!cir.func<(!rec_Pair, ...) -> !s32i>>, %arg1: !rec_Pair) {
+    %0 = cir.try_call %arg0(%arg1) ^bb1, ^bb2
+        : (!cir.ptr<!cir.func<(!rec_Pair, ...) -> !s32i>>, !rec_Pair) -> !s32i
+  ^bb1:
+    cir.br ^bb4
+  ^bb2:
+    %1 = cir.eh.initiate : !cir.eh_token
+    cir.eh.dispatch %1 : !cir.eh_token [
+      catch_all : ^bb3
+    ]
+  ^bb3(%tok : !cir.eh_token):
+    %ct, %exn = cir.begin_catch %tok : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+    cir.end_catch %ct : !cir.catch_token
+    cir.br ^bb4
+  ^bb4:
+    cir.return
+  }
+
+  // CHECK: error: 'cir.try_call' op TryCallOp not yet implemented in CallConvLowering
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func no_proto private @kandr_two(!rec_Pair, !rec_Pair) -> !s32i
+
+  // no_proto turns off the verifier's argument-count check in both directions,
+  // so a call can also pass fewer arguments than the callee declares.  The
+  // classification has an entry per declared parameter with no operand to
+  // pair it with.
+  cir.func @too_few_no_proto(%arg0: !rec_Pair) {
+    %0 = cir.call @kandr_two(%arg0) : (!rec_Pair) -> !s32i
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op call passes fewer arguments than the callee declares, which is not yet implemented in CallConvLowering
+}

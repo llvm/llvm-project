@@ -9,7 +9,7 @@
 # RUN: llvm-objdump --objc-meta-data --macho cat_swift.dylib | FileCheck %s --check-prefixes=CHECK-MERGE
 
 ; CHECK-MERGE:      Contents of (__DATA_CONST,__objc_classlist) section
-; CHECK-MERGE-NEXT: _$s11SimpleClassAACN
+; CHECK-MERGE-NEXT: {{[0-9a-f]+ 0x[0-9a-f]+}}
 ; CHECK-MERGE-NEXT:            isa {{.+}} _OBJC_METACLASS_$__TtC11SimpleClass11SimpleClass
 ; CHECK-MERGE-NEXT:     superclass 0x0
 ; CHECK-MERGE-NEXT:          cache 0x0
@@ -372,7 +372,7 @@ ___swift_reflection_version:
 	.section	__DATA,__objc_classlist,regular,no_dead_strip
 	.p2align	3, 0x0
 _objc_classes_$s11SimpleClassAACN:
-	.quad	_$s11SimpleClassAACN
+	.quad	_$s11SimpleClassAACMf+24
 
 	.section	__DATA,__objc_catlist,regular,no_dead_strip
 	.p2align	3, 0x0
@@ -395,10 +395,6 @@ L_OBJC_IMAGE_INFO:
 	.private_extern	_$s11SimpleClassAAC04baseB14InstanceMethods5Int32VyFTq
 	.alt_entry	_$s11SimpleClassAAC04baseB14InstanceMethods5Int32VyFTq
 .set _$s11SimpleClassAAC04baseB14InstanceMethods5Int32VyFTq, _$s11SimpleClassAACMn+52
-	.globl	_$s11SimpleClassAACN
-	.private_extern	_$s11SimpleClassAACN
-	.alt_entry	_$s11SimpleClassAACN
-.set _$s11SimpleClassAACN, _$s11SimpleClassAACMf+24
 	.globl	_OBJC_CLASS_$__TtC11SimpleClass11SimpleClass
 	.private_extern	_OBJC_CLASS_$__TtC11SimpleClass11SimpleClass
 .subsections_via_symbols

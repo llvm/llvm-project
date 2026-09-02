@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu tahiti -O0 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -O0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu6.00-amd-amdhsa -O0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu6.00-- -O0 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O0 -emit-llvm -verify -Wno-deprecated-declarations -o - %s | FileCheck -check-prefix=X86 %s
 
 __attribute__((amdgpu_flat_work_group_size(0, 0))) // expected-no-diagnostics

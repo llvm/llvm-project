@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -mmlir --wrap-unstructured-constructs-in-execute-region -o - %s | FileCheck %s
 
 ! Test while loop inside do loop.
 ! With the wrap-unstructured-constructs-in-execute-region pass, the inner

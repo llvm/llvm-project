@@ -1796,32 +1796,18 @@ define void @void_func_v2i24(<2 x i24> %arg0) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: void_func_v2i24:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
-; GFX11-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX11-TRUE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
-; GFX11-TRUE16-NEXT:    buffer_store_b8 v1, off, s[0:3], 0
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: void_func_v2i24:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
-; GFX11-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX11-FAKE16-NEXT:    s_mov_b32 s2, -1
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-FAKE16-NEXT:    s_clause 0x1
-; GFX11-FAKE16-NEXT:    buffer_store_b8 v1, off, s[0:3], 0
-; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: void_func_v2i24:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-NEXT:    s_mov_b32 s2, -1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    buffer_store_b8 v1, off, s[0:3], 0
+; GFX11-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %elt0 = extractelement <2 x i24> %arg0, i32 0
   %elt1 = extractelement <2 x i24> %arg0, i32 1
   %add = add i24 %elt0, %elt1
@@ -4442,6 +4428,40 @@ define void @void_func_v16bf16(<16 x bfloat> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store <16 x bfloat> %arg0, ptr addrspace(1) poison
+  ret void
+}
+
+@g = external addrspace(1) global i32
+
+; A zero-sized argument produces no InputArg, so later args must still lower correctly.
+define void @void_func_empty_struct_i32({} %arg0, i32 %arg1) #0 {
+; CIGFX89-LABEL: void_func_empty_struct_i32:
+; CIGFX89:       ; %bb.0:
+; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CIGFX89-NEXT:    s_getpc_b64 s[4:5]
+; CIGFX89-NEXT:    s_add_u32 s4, s4, g@gotpcrel32@lo+4
+; CIGFX89-NEXT:    s_addc_u32 s5, s5, g@gotpcrel32@hi+12
+; CIGFX89-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; CIGFX89-NEXT:    s_mov_b32 s7, 0xf000
+; CIGFX89-NEXT:    s_mov_b32 s6, -1
+; CIGFX89-NEXT:    s_waitcnt lgkmcnt(0)
+; CIGFX89-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; CIGFX89-NEXT:    s_waitcnt vmcnt(0)
+; CIGFX89-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: void_func_empty_struct_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_getpc_b64 s[0:1]
+; GFX11-NEXT:    s_add_u32 s0, s0, g@gotpcrel32@lo+4
+; GFX11-NEXT:    s_addc_u32 s1, s1, g@gotpcrel32@hi+12
+; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-NEXT:    s_mov_b32 s2, -1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  store i32 %arg1, ptr addrspace(1) @g
   ret void
 }
 

@@ -83,6 +83,9 @@ int3 test_abs_int3(int3 p0) { return abs(p0); }
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z13test_abs_int4
 // CHECK: call <4 x i32> @llvm.abs.v4i32(
 int4 test_abs_int4(int4 p0) { return abs(p0); }
+// CHECK-LABEL: define hidden noundef <5 x i32> @_Z13test_abs_int5
+// CHECK: call <5 x i32> @llvm.abs.v5i32(
+vector<int, 5> test_abs_int5(vector<int, 5> p0) { return abs(p0); }
 
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float @_Z14test_abs_float
 // CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.fabs.f32(

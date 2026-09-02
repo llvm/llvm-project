@@ -86,6 +86,10 @@ effects on it can alias pointer-based memory; non-addressable resources (e.g.
 runtime state) do not alias with any value-based memory location. The
 canonical definition and API live in `mlir/Interfaces/SideEffectInterfaces.h`.
 
+Resources can attach arbitrary attributes to their effect instances. These
+attributes provide additional metadata about memory effects and can be used,
+for example, to distinguish how a resource is accessed.
+
 **Scope and limitations.** This mechanism is deliberately *not* intended for
 fine-grained regions with specific addresses or sizes, or for alias classes /
 offset-based disambiguation. Those concerns are out of scope for the resource

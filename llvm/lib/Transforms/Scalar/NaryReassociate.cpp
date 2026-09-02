@@ -133,7 +133,6 @@ public:
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<ScalarEvolutionWrapperPass>();
     AU.addPreserved<TargetLibraryInfoWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
@@ -301,8 +300,10 @@ Instruction *NaryReassociatePass::tryReassociate(Instruction *I,
 static bool isGEPFoldable(GetElementPtrInst *GEP,
                           const TargetTransformInfo *TTI) {
   SmallVector<const Value *, 4> Indices(GEP->indices());
-  return TTI->getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
-                         Indices) == TargetTransformInfo::TCC_Free;
+  return TTI->getGEPCost(
+             GEP->getSourceElementType(), GEP->getPointerOperand(), Indices,
+             /*CostKind*/ TTI::TargetCostKind::TCK_SizeAndLatency) ==
+         TargetTransformInfo::TCC_Free;
 }
 
 Instruction *NaryReassociatePass::tryReassociateGEP(GetElementPtrInst *GEP) {

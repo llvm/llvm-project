@@ -134,7 +134,7 @@ ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ROTR, MVT::i32, Legal);
 
   setOperationAction(ISD::Constant, MVT::i32, Legal);
-  setOperationAction(ISD::UNDEF, MVT::i32, Legal);
+  setOperationAction({ISD::UNDEF, ISD::POISON}, MVT::i32, Legal);
 
   // Need multiplier
   setOperationAction(ISD::MUL, MVT::i32, Legal);

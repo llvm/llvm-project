@@ -309,11 +309,6 @@ public:
   applyCombineBuildVectorOfBitcast(MachineInstr &MI,
                                    SmallVector<Register> &Ops) const;
 
-  /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
-  /// Returns true if MI changed.
-  ///
-  /// \pre MI.getOpcode() == G_SHUFFLE_VECTOR.
-  LLVM_ABI bool tryCombineShuffleVector(MachineInstr &MI) const;
   /// Check if the G_SHUFFLE_VECTOR \p MI can be replaced by a
   /// concat_vectors.
   /// \p Ops will contain the operands needed to produce the flattened

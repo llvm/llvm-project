@@ -2728,7 +2728,8 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
     GetHomeInitFile(init_file);
 
   if (!m_skip_app_init_files) {
-    llvm::StringRef program_name = HostInfo::GetProgramFileSpec().GetFilename();
+    FileSpec program_file_spec = HostInfo::GetProgramFileSpec();
+    llvm::StringRef program_name = program_file_spec.GetFilename();
     FileSpec program_init_file;
     GetHomeInitFile(program_init_file, program_name);
     if (FileSystem::Instance().Exists(program_init_file))

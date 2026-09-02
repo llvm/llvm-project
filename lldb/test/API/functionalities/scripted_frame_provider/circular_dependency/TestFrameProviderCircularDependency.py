@@ -164,6 +164,7 @@ class FrameProviderCircularDependencyTestCase(TestBase):
             )
 
     @expectedFailureWindowsAndNoLLDBServer(bugnumber="llvm.org/pr24778")
+    @skipIf(bugnumber="https://github.com/llvm/llvm-project/pull/208992")
     def test_circular_dependency_evaluate_expression_in_get_frame(self):
         """
         Test that calling EvaluateExpression in get_frame_at_index doesn't

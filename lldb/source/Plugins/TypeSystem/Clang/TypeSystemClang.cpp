@@ -313,6 +313,8 @@ static bool GetVBaseBitOffset(VTableContextBase &vtable_ctx,
   if (base_offset == INT64_MAX)
     return false;
 
+  if (vtable_ctx.isMicrosoft())
+    base_offset += record_layout.getVBPtrOffset().getQuantity();
   bit_offset = base_offset * 8;
 
   return true;
@@ -695,7 +697,7 @@ void TypeSystemClang::CreateASTContext() {
             m_target_triple)
             .str();
 
-    LLDB_LOG(GetLog(LLDBLog::Expressions), err.c_str());
+    LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", err);
 
     static std::once_flag s_uninitialized_target_warning;
     Debugger::ReportWarning(std::move(err), /*debugger_id=*/std::nullopt,
@@ -1450,7 +1452,7 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
       func_decl->getASTContext(), infos.GetArgs());
 
   func_decl->setFunctionTemplateSpecialization(func_tmpl_decl,
-                                               template_args_ptr, nullptr);
+                                               template_args_ptr, {});
 }
 
 /// Returns true if the given template parameter can represent the given value.
@@ -1673,11 +1675,11 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   class_template_specialization_decl->setInstantiationOf(class_template_decl);
   class_template_specialization_decl->setTemplateArgs(
       TemplateArgumentList::CreateCopy(ast, args));
-  void *insert_pos = nullptr;
-  if (class_template_decl->findSpecialization(args, insert_pos))
+  llvm::FoldingSetInsertToken insert_token;
+  if (class_template_decl->findSpecialization(args, insert_token))
     return nullptr;
   class_template_decl->AddSpecialization(class_template_specialization_decl,
-                                         insert_pos);
+                                         insert_token);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
 
@@ -2412,6 +2414,14 @@ CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
   if (is_signed)
     return GetType(getASTContext().getPointerDiffType());
   return GetType(getASTContext().getUnsignedPointerDiffType());
+}
+
+CompilerType TypeSystemClang::GetSizeType() {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  return GetType(getASTContext().getSizeType());
 }
 
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
@@ -4099,6 +4109,9 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
   case clang::Type::FunctionNoProto:
@@ -4803,6 +4816,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
 
   case clang::Type::UnaryTransform:
     break;
@@ -5004,6 +5020,11 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
       break;
+
+      // SPIR-V builtin types.
+#define SPIRV_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+      break;
     }
     break;
   // All pointer types are represented as unsigned integer encodings. We may
@@ -5105,6 +5126,9 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
 

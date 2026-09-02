@@ -19,10 +19,10 @@ func.func @char_section(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
 // Only test the computation of the base address offset computation accounting for the substring
 
 // CHECK:         %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[VAL_30:.*]] = llvm.mlir.constant(0 : i64) : i64
 
 // CHECK:         %[[VAL_37:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<{{.*}}>
 // CHECK:         %[[VAL_38:.*]] = llvm.load %[[VAL_37]] : !llvm.ptr -> !llvm.ptr
-// CHECK:         %[[VAL_30:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[VAL_40:.*]] = llvm.getelementptr %[[VAL_38]]{{\[}}%[[VAL_30]], %[[VAL_4]]] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.array<20 x i8>
 
 // More offset computation with descriptor strides and triplets that is not character specific ...
