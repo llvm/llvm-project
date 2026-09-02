@@ -15,7 +15,9 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StorageUniquerSupport.h"
-#include "llvm/ADT/StringExtras.h"
+
+#include <limits>
+#include <optional>
 
 namespace mlir {
 
@@ -62,16 +64,28 @@ struct NVVMCheckSMVersion {
 
   // Parses an SM version string and returns an equivalent full SM version
   // integer.
-  static unsigned getTargetFullSmVersionFromStr(StringRef smVersionString) {
-    bool isAA = smVersionString.back() == kArchAcceleratedSuffix;
-    bool isFS = smVersionString.back() == kFamilySpecificSuffix;
+  static std::optional<unsigned>
+  getTargetFullSmVersionFromStr(StringRef smVersionString) {
+    if (!smVersionString.consume_front("sm_"))
+      return std::nullopt;
+
+    unsigned suffix = 0;
+    if (!smVersionString.empty()) {
+      if (smVersionString.back() == kArchAcceleratedSuffix)
+        suffix = 3;
+      else if (smVersionString.back() == kFamilySpecificSuffix)
+        suffix = 2;
+      if (suffix)
+        smVersionString = smVersionString.drop_back();
+    }
 
     unsigned smVersion;
-    smVersionString.drop_front(3)
-        .take_while([](char c) { return llvm::isDigit(c); })
-        .getAsInteger(10, smVersion);
+    if (smVersionString.empty() ||
+        smVersionString.getAsInteger(10, smVersion) ||
+        smVersion > (std::numeric_limits<unsigned>::max() - suffix) / 10)
+      return std::nullopt;
 
-    return smVersion * 10 + (isAA ? 3 : 0) + (isFS ? 2 : 0);
+    return smVersion * 10 + suffix;
   }
 
   static bool isMinimumSMVersion(unsigned fullSmVersion) {

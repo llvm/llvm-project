@@ -7151,9 +7151,14 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "NVVM target attribute must be attached to a GPU module");
   }
 
-  const unsigned targetFullSmVersion =
+  std::optional<unsigned> targetFullSmVersion =
       NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
-  if (!NVVMCheckSMVersion::isMinimumSMVersion(targetFullSmVersion)) {
+  if (!targetFullSmVersion)
+    return emitError(gpuModule->getLoc())
+           << "invalid NVVM target chip \"" << getChip()
+           << "\", expected sm_<version>[a|f]";
+
+  if (!NVVMCheckSMVersion::isMinimumSMVersion(*targetFullSmVersion)) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
   }
@@ -7163,7 +7168,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
             if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
               const NVVMCheckSMVersion requirement =
                   reqOp.getRequiredMinSMVersion();
-              if (!requirement.isCompatibleWith(targetFullSmVersion)) {
+              if (!requirement.isCompatibleWith(*targetFullSmVersion)) {
                 op->emitOpError() << "is not supported on " << getChip();
                 return WalkResult::interrupt();
               }
