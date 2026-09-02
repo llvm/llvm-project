@@ -39,7 +39,7 @@ CompilerInstance::CompilerInstance(
       allSources(new Fortran::parser::AllSources()),
       allCookedSources(new Fortran::parser::AllCookedSources(*allSources)),
       parsing(new Fortran::parser::Parsing(*allCookedSources)) {
-  assert(invocation && "Invocation must not be null.");
+  assert(this->invocation && "Invocation must not be null.");
   // TODO: This is a good default during development, but ultimately we should
   // give the user the opportunity to specify this.
   allSources->set_encoding(Fortran::parser::Encoding::UTF_8);
