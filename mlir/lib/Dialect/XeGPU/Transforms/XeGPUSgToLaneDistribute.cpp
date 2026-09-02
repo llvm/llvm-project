@@ -2028,10 +2028,16 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Algorithm
 // ---------
 //
-// Also the map into the code: a `[name]` tag gives the function carrying out
-// the step under it. `redistributeBroadcastedValue` is the enclosing one -- it
-// owns both tables and emits the result -- and `SgToLaneConvertLayout` reaches
-// it only after the two narrower `convert_layout` paths decline.
+// Check the two layouts agree on the block, then for each block the target
+// wants, find an equal block in some lane and have that lane's copy travel:
+// extract, shuffle, insert. Only the search costs anything, because the match
+// has to hold for every slot at once -- through one lane offset and one index
+// expression.
+//
+// A `[name]` tag below gives the function carrying out the step under it.
+// `redistributeBroadcastedValue` is the enclosing one -- it owns both tables
+// and emits the result -- and `SgToLaneConvertLayout` reaches it only after the
+// two narrower `convert_layout` paths decline.
 //
 //   [isBroadcastRedistribution]
 //   gate the layout pair: `lane_data` equal, target period divides `S`
@@ -2041,8 +2047,9 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 //   [deriveElementSource]  once per element of the target fragment
 //   for each element `pos` of the target fragment:
+//     // candidate lane offsets, smallest first
 //     for donorDelta = 0, targetLanePeriod, 2 * targetLanePeriod, ...
-//                                                          // smallest first
+//       // one offset, and below one expression, has to serve every slot
 //       for each slot:
 //         needed[slot] = index of the element targetOwned[slot][pos] in the
 //                        fragment of its donor, lane `slot + donorDelta`
