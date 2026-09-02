@@ -1091,7 +1091,10 @@ print *, [(j,j=1,10)]
   appears when the reference *is* executed.  The endpoints of array sections
   get the same treatment.  Cosubscripts do not: their requirement is F'2023
   9.6 paragraph 2 and a cosubscript list determines an image index, so an
-  out-of-cobounds constant cosubscript remains an error.
+  out-of-cobounds constant cosubscript remains an error.  Neither do an
+  out-of-range subscript in a reference to a named constant array, an
+  out-of-range `DATA` statement designator, or an out-of-range substring;
+  those remain errors as well.
   Use `-fno-out-of-bounds-subscripts` to make these references errors again,
   or `-Wno-out-of-bounds-subscripts` to silence the warning entirely.
   Note that a module file compiled with the warning may produce errors in a

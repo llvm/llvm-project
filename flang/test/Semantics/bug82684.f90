@@ -14,6 +14,7 @@ module m
   end type
   real :: a(5)
   integer :: c(3)[2:4,*]
+  integer, parameter :: k(2) = [1, 2]
  contains
   ! This subprogram is never called, so it never renders the program
   ! nonconforming, but that can't be proven here.
@@ -45,5 +46,20 @@ module m
     !CHECK-ERROR: error: cosubscript 1 is less than lower cobound 2 for codimension 1 of array
     !CHECK-SILENT: error: cosubscript 1 is less than lower cobound 2 for codimension 1 of array
     c(1)[1,1] = 0
+  end subroutine
+  ! Nor is a reference to a named constant array, a DATA statement
+  ! designator, or a substring; those stay errors in every mode too.
+  subroutine still_errors()
+    real :: d(10)
+    character(4) :: s
+    data d(0)/0./
+    !CHECK-WARNING: error: Subscript value (0) is out of range on dimension 1 in reference to a constant array value
+    !CHECK-ERROR: error: Subscript value (0) is out of range on dimension 1 in reference to a constant array value
+    !CHECK-SILENT: error: Subscript value (0) is out of range on dimension 1 in reference to a constant array value
+    print *, k(0)
+    !CHECK-WARNING: error: Substring must end at 4 or earlier, not 9
+    !CHECK-ERROR: error: Substring must end at 4 or earlier, not 9
+    !CHECK-SILENT: error: Substring must end at 4 or earlier, not 9
+    print *, s(2:9)
   end subroutine
 end module
