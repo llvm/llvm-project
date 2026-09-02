@@ -463,11 +463,11 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           // declared type stays on the field, since that is what the coerce
           // type counts as user data.
           uint64_t abiWidthBits = isAccessUnit && !isZeroWidth ? widthBits : 0;
-          fields.push_back(llvm::abi::FieldInfo(
-              mapCIRType(countedTy, typeMapper, dl, modOp),
-              recTy.getElementOffset(dl, idx) * 8,
-              /*IsBitField=*/isAccessUnit, abiWidthBits,
-              /*IsUnnamedBitField=*/isUnnamedUnit));
+          fields.push_back(
+              llvm::abi::FieldInfo(mapCIRType(countedTy, typeMapper, dl, modOp),
+                                   recTy.getElementOffset(dl, idx) * 8,
+                                   /*IsBitField=*/isAccessUnit, abiWidthBits,
+                                   /*IsUnnamedBitField=*/isUnnamedUnit));
         }
 
         return tb.getRecordType(
