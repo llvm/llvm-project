@@ -506,6 +506,7 @@ if(WIN32 AND NOT UNIX)
     # Make the LLVM installation available for all users.  CPack only gained
     # CPACK_WIX_INSTALL_SCOPE in CMake 3.29, so inject the equivalent ALLUSERS
     # property when packaging with an older CMake supported by LLVM.
+    # TODO: remove after transition to CMake 3.31.
     if(CMAKE_VERSION VERSION_LESS "3.29")
       list(APPEND CPACK_WIX_PATCH_FILE
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/WiXPerMachinePatch.xml")
