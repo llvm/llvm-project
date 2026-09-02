@@ -2320,9 +2320,10 @@ static FailureOr<Value> redistributeBroadcastedValue(
   if (failed(inputOwned) || failed(targetOwned))
     return failure();
   // Require the layouts to distribute what the vector types account for. The
-  // lanes past the first `targetLanePeriod` are replicas by construction: both
-  // computeStaticDistributedCoords implementations delinearize the lane id
-  // modulo the `lane_layout` dimensions, whose product is `targetLanePeriod`.
+  // layout leaves the lanes past the first `targetLanePeriod` undefined, and
+  // replication is what computeStaticDistributedCoords picks for them: both
+  // implementations delinearize the lane id modulo the `lane_layout`
+  // dimensions, whose product is `targetLanePeriod`.
   for (int64_t lane = 0; lane < subgroupSize; lane++) {
     assert((*targetOwned)[lane] == (*targetOwned)[lane % targetLanePeriod] &&
            "target ownership is not periodic in the lane period");
