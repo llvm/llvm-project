@@ -2091,6 +2091,14 @@ TEST(TripleTest, Normalization) {
             Triple::normalize("i386-mingw32")); // i386-pc-mingw32
   EXPECT_EQ("x86_64-unknown-linux-gnu",
             Triple::normalize("x86_64-linux-gnu")); // x86_64-pc-linux-gnu
+  EXPECT_EQ("x86_64-unknown-hurd-gnu",
+            Triple::normalize("x86_64-unknown-gnu"));
+  EXPECT_EQ("i686-unknown-hurd-gnu",
+            Triple::normalize("i686-unknown-gnu"));
+  EXPECT_EQ("i686-pc-hurd-gnu",
+            Triple::normalize("i686-pc-gnu"));
+  EXPECT_EQ("x86_64-unknown-hurd-gnu0.9",
+            Triple::normalize("x86_64-unknown-gnu0.9"));
   EXPECT_EQ("i486-unknown-linux-gnu",
             Triple::normalize("i486-linux-gnu")); // i486-pc-linux-gnu
   EXPECT_EQ("i386-redhat-linux",
