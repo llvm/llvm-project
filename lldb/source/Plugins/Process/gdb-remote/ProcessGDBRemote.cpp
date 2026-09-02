@@ -2366,8 +2366,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                   const size_t bytes_copied =
                       bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
                   if (bytes_copied == byte_size)
-                    m_memory_cache.AddL1CacheData(mem_cache_addr,
-                                                  data_buffer_sp);
+                    m_memory_cache.AddCacheData(mem_cache_addr, data_buffer_sp);
                 }
               }
             }
@@ -2557,7 +2556,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
             const size_t bytes_copied =
                 bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
             if (bytes_copied == byte_size)
-              m_memory_cache.AddL1CacheData(mem_cache_addr, data_buffer_sp);
+              m_memory_cache.AddCacheData(mem_cache_addr, data_buffer_sp);
           }
         }
       } else if (key.compare("watch") == 0 || key.compare("rwatch") == 0 ||

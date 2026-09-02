@@ -46,16 +46,16 @@ public:
 
   bool RemoveInvalidRange(lldb::addr_t base_addr, lldb::addr_t byte_size);
 
-  // Allow external sources to populate data into the L1 memory cache
-  void AddL1CacheData(lldb::addr_t addr, const void *src, size_t src_len);
+  /// Allow external sources to populate data into the memory cache.
+  void AddCacheData(lldb::addr_t addr, const void *src, size_t src_len);
 
-  void AddL1CacheData(lldb::addr_t addr, llvm::ArrayRef<uint8_t> src) {
+  void AddCacheData(lldb::addr_t addr, llvm::ArrayRef<uint8_t> src) {
     if (!src.empty())
-      AddL1CacheData(addr, src.data(), src.size());
+      AddCacheData(addr, src.data(), src.size());
   }
 
-  void AddL1CacheData(lldb::addr_t addr,
-                      const lldb::DataBufferSP &data_buffer_sp);
+  void AddCacheData(lldb::addr_t addr,
+                    const lldb::DataBufferSP &data_buffer_sp);
 
 protected:
   typedef std::map<lldb::addr_t, lldb::DataBufferSP> BlockMap;

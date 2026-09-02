@@ -194,7 +194,7 @@ private:
 
 void AddCacheChunk(TestMemoryCache &cache, lldb::addr_t addr, size_t size,
                    uint8_t fill) {
-  cache.AddL1CacheData(addr, std::make_shared<DataBufferHeap>(size, fill));
+  cache.AddCacheData(addr, std::make_shared<DataBufferHeap>(size, fill));
 }
 
 bool AllBytesAre(llvm::ArrayRef<uint8_t> bytes, uint8_t fill) {
@@ -666,7 +666,7 @@ TEST_F(MemoryTest, TestCacheCopiesRawBytes) {
   Status error;
   TestMemoryCache cache(*process);
   std::vector<uint8_t> raw(16, 0xAA);
-  cache.AddL1CacheData(0x5000, raw.data(), raw.size());
+  cache.AddCacheData(0x5000, raw.data(), raw.size());
   ASSERT_EQ(cache.GetL1Cache().count(0x5000), 1u);
   EXPECT_NE(cache.GetL1Cache().at(0x5000)->GetBytes(), raw.data());
 
@@ -1039,7 +1039,7 @@ TEST_F(MemoryDeathTest, TestReadRangesWithShortBufferAndCacheHit) {
 
   DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
   TestMemoryCache cache(*process);
-  cache.AddL1CacheData(0x1000, std::make_shared<DataBufferHeap>(16, 0xAA));
+  cache.AddCacheData(0x1000, std::make_shared<DataBufferHeap>(16, 0xAA));
   ASSERT_EQ(cache.GetL1Cache().count(0x1000), 1u);
 
   llvm::SmallVector<uint8_t, 0> short_buffer(8, 0);
@@ -1183,7 +1183,7 @@ TEST_F(MemoryDeathTest, TestVerifyMemoryReads) {
   // DummyReaderProcess returns the low byte of each address, so a run of
   // zeroes cannot be what it would read.
   process_sp->GetMemoryCache().Clear();
-  process_sp->GetMemoryCache().AddL1CacheData(
+  process_sp->GetMemoryCache().AddCacheData(
       0x2000, std::make_shared<DataBufferHeap>(16, 0));
   std::vector<uint8_t> bad(16, 0);
   ASSERT_DEATH(

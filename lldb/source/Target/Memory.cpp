@@ -40,13 +40,13 @@ void MemoryCache::Clear(bool clear_invalid_ranges) {
   m_L2_cache_line_byte_size = m_process.GetMemoryCacheLineSize();
 }
 
-void MemoryCache::AddL1CacheData(lldb::addr_t addr, const void *src,
-                                 size_t src_len) {
-  AddL1CacheData(addr, std::make_shared<DataBufferHeap>(src, src_len));
+void MemoryCache::AddCacheData(lldb::addr_t addr, const void *src,
+                               size_t src_len) {
+  AddCacheData(addr, std::make_shared<DataBufferHeap>(src, src_len));
 }
 
-void MemoryCache::AddL1CacheData(lldb::addr_t addr,
-                                 const DataBufferSP &data_buffer_sp) {
+void MemoryCache::AddCacheData(lldb::addr_t addr,
+                               const DataBufferSP &data_buffer_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_L1_cache[addr] = data_buffer_sp;
 }
@@ -221,7 +221,7 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
     size_t bytes_read =
         m_process.ReadMemoryFromInferior(addr, dst, dst_len, error);
     if (bytes_read > 0)
-      AddL1CacheData(addr, dst, bytes_read);
+      AddCacheData(addr, dst, bytes_read);
     return bytes_read;
   }
 
@@ -343,7 +343,7 @@ MemoryCache::ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   auto fetched_buffers = llvm::ArrayRef(fetched_buffers_vec);
 
   for (auto [missed_range, fetched] : llvm::zip(missed_ranges, fetched_buffers))
-    AddL1CacheData(missed_range.GetRangeBase(), fetched);
+    AddCacheData(missed_range.GetRangeBase(), fetched);
 
   // Use the just-fetched memory to fill in the gaps left by the cache.
   for (auto &result : results)
