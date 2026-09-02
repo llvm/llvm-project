@@ -27,4 +27,10 @@ void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP TARGET 'private' clause}}
 #pragma omp target private(i)
   {}
+
+  // Decomposition can also synthesize a clause that the user did not write and
+  // that has no Clang AST node to drive its emitter.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP synthesized 'firstprivate' clause from construct decomposition}}
+#pragma omp target
+  { i = 1; }
 }
