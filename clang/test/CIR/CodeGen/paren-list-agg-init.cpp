@@ -355,8 +355,11 @@ D foo8() {
 // CIR: %[[FP_2:.*]] = cir.const #cir.fp<2
 // CIR: cir.store align(8) %[[FP_2]], %[[GET_J]] : !cir.double, !cir.ptr<!cir.double>
 // CIR: %[[GET_C:.*]] = cir.get_member %[[D_ALLOCA]][3] {name = "c"} : !cir.ptr<![[STRUCT_D]]> -> !cir.ptr<![[STRUCT_A]]>
-// CIR: %[[ZERO:.*]] = cir.const #cir.zero : ![[STRUCT_A]]
-// CIR: cir.store align(8) %[[ZERO]], %[[GET_C]] : ![[STRUCT_A]], !cir.ptr<![[STRUCT_A]]>
+// CIR: %[[GET_C_PTR_S8I:.*]] = cir.cast bitcast %12 : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!s8i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR: %[[CONST_16:.*]] = cir.const #cir.int<16> : !u64i
+// CIR: %[[GET_C_VOID_PTR:.*]] = cir.cast bitcast %[[GET_C_PTR_S8I]] : !cir.ptr<!s8i> -> !cir.ptr<!void> 
+// CIR: cir.libc.memset %[[CONST_16]] bytes at %[[GET_C_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 void foo9() {
   D d(A(1, 1));
 }
