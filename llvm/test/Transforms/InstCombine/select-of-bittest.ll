@@ -568,11 +568,10 @@ define i32 @n_var1_oneuse(i32 %arg, i32 %arg1) {
 define i32 @lshr_oneuse_and_multiuse(i32 %arg) {
 ; CHECK-LABEL: @lshr_oneuse_and_multiuse(
 ; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 5
+; CHECK-NEXT:    [[T3:%.*]] = icmp eq i32 [[T]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[ARG]], 1
 ; CHECK-NEXT:    [[DOTLOBIT:%.*]] = and i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[ARG]], 7
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-NEXT:    [[T_LOBIT:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[T_LOBIT:%.*]] = select i1 [[T3]], i32 [[DOTLOBIT]], i32 1
 ; CHECK-NEXT:    call void @use32(i32 [[T]])
 ; CHECK-NEXT:    call void @use32(i32 [[DOTLOBIT]])
 ; CHECK-NEXT:    ret i32 [[T_LOBIT]]

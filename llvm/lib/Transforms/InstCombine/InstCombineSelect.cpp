@@ -791,7 +791,8 @@ static Instruction *foldSelectICmpAndAnd(Type *SelType, const Value *Cond,
   }
 
   bool HasShift = A != X;
-  NumReplaced += TVal->hasOneUse() + (HasShift && A->hasOneUse());
+  if (TVal->hasOneUse())
+    NumReplaced += 1 + (HasShift && A->hasOneUse());
 
   if (NumReplaced < (4u - isa<Constant>(Y)))
     return nullptr;
