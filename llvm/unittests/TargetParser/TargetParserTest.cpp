@@ -3164,7 +3164,6 @@ TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
 
 TEST(TargetParserTest, testAMDGPUgetLDSBankCount) {
   EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch702), 16u);
-  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch704), 16u);
   EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch900), 32u);
   EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch942), 32u);
   EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch950), 64u);

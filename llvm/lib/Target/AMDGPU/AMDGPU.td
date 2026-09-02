@@ -1870,11 +1870,11 @@ def FeatureISAVersion7_0_3 : FeatureSet<
 
 def FeatureISAVersion7_0_4 : FeatureSet<
   [FeatureSeaIslands,
-   FeatureLDSBankCount16]>;
+   FeatureLDSBankCount32]>;
 
 def FeatureISAVersion7_0_5 : FeatureSet<
   [FeatureSeaIslands,
-   FeatureLDSBankCount32]>;
+   FeatureLDSBankCount16]>;
 
 def FeatureISAVersion8_0_Common : FeatureSet<
   [FeatureVolcanicIslands,
