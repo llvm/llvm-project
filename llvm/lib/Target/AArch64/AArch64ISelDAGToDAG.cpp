@@ -12,7 +12,6 @@
 
 #include "AArch64.h"
 #include "AArch64ExpandImm.h"
-#include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -4631,7 +4630,7 @@ AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
     }
   }
 
-  return toAArch64Hint(MemoryHint);
+  return toAArch64MemoryHint(MemoryHint);
 }
 
 bool AArch64DAGToDAGISel::isAtomicSTSHH_KEEP(SDNode *N) const {
