@@ -17,7 +17,7 @@ load(
     "libc_math_function",
     "libc_support_library",
 )
-load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
+load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_RISCV64", "PLATFORM_CPU_X86_64")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -900,6 +900,7 @@ libc_support_library(
     name = "types_char8_t",
     hdrs = ["hdr/types/char8_t.h"],
     deps = [
+        ":hdr_uchar_overlay",
         ":llvm_libc_types_char8_t",
     ],
 )
@@ -2563,6 +2564,7 @@ sqrt_hdrs = selects.with_or({
     "//conditions:default": sqrt_common_hdrs,
     PLATFORM_CPU_X86_64: sqrt_common_hdrs + ["src/__support/FPUtil/x86_64/sqrt.h"],
     PLATFORM_CPU_ARM64: sqrt_common_hdrs + ["src/__support/FPUtil/aarch64/sqrt.h"],
+    PLATFORM_CPU_RISCV64: sqrt_common_hdrs + ["src/__support/FPUtil/riscv/sqrt.h"],
 })
 
 libc_support_library(
@@ -2773,6 +2775,7 @@ libc_support_library(
             "src/__support/OSUtil/linux/syscall.h",
             "src/__support/OSUtil/linux/aarch64/syscall.h",
             "src/__support/OSUtil/linux/x86_64/syscall.h",
+            "src/__support/OSUtil/linux/riscv/syscall.h",
         ],
         "@platforms//os:macos": [
             "src/__support/OSUtil/darwin/syscall.h",

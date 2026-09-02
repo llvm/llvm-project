@@ -424,7 +424,8 @@ enum CvtMode {
   FTZ_FLAG = 0x10,
   SAT_FLAG = 0x20,
   RELU_FLAG = 0x40,
-  SATFINITE_FLAG = 0x80
+  SATFINITE_FLAG = 0x80,
+  PZO_FLAG = 0x100
 };
 }
 
