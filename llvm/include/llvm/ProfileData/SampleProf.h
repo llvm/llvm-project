@@ -1324,11 +1324,15 @@ public:
         // suffix for names in the IR.
         if (Suffix == UniqSuffix && FunctionSamples::HasUniqSuffix)
           continue;
+        if (!Suffix.ends_with(".")) {
+          Cand.consume_back(Suffix);
+          continue;
+        }
         auto It = Cand.rfind(Suffix);
         if (It == StringRef::npos)
           continue;
         auto Dit = Cand.rfind('.');
-        if (Dit == It || Dit == It + Suffix.size() - 1)
+        if (Dit == It + Suffix.size() - 1)
           Cand = Cand.substr(0, It);
       }
       return Cand;
