@@ -2,6 +2,7 @@
 // RUN:   -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK %s
 // CHECK:      "-cc1"
+// CHECK-SAME: "-fno-use-init-array"
 // CHECK-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/i686-pc-cygwin/10/../../../../include/c++/10"
