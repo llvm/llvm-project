@@ -1294,5 +1294,91 @@ func.func @unknown_memref_def_op() {
 }
 func.func private @bar() -> memref<10xf32>
 
+// -----
+
+// CHECK-LABEL: func @no_double_reduction_cyclic_src_non_removable
+// Test that a cyclic source loop (reduction) is not fused as a separate copy
+// into a consumer when the fusion cannot remove the source. Without this check,
+// the reduction would run twice, producing incorrect results.
+// The reinterpret_cast makes %acc an "escaping" memref, which forces an
+// isMaximal check. The slice is non-maximal (consumer only covers a subset of
+// the producer's iteration space), making the source non-removable.
+// The fix ensures fusion is skipped in that case, allowing the loops to be
+// correctly combined later when the source can be fully removed.
+//
+// CHECK:         affine.for
+// CHECK-NOT:     affine.for
+// CHECK:           affine.for
+// CHECK-NOT:         affine.for
+// CHECK:               affine.for
+// CHECK-NOT:             affine.for
+// CHECK:                   affine.for
+// CHECK-NOT:                 affine.for
+// CHECK:                   }
+// CHECK-NOT:             affine.for
+// CHECK:               }
+// CHECK-NOT:         affine.for
+// CHECK:             }
+// CHECK-NOT:       affine.for
+// CHECK:           }
+// CHECK-NOT:     affine.for
+// CHECK:         }
+// CHECK-NOT: affine.for
+func.func private @printMemrefF32(memref<*xf32>)
+func.func @no_double_reduction_cyclic_src_non_removable() {
+  %cst = arith.constant 5.000000e-01 : f32
+  %cst_0 = arith.constant 1.000000e+00 : f32
+  %cst_1 = arith.constant 0.000000e+00 : f32
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<3x1x7x5xf32>
+  // Init loop (producer)
+  affine.for %arg0 = 0 to 3 {
+    affine.for %arg1 = 0 to 1 {
+      affine.for %arg2 = 0 to 7 {
+        affine.for %arg3 = 0 to 5 {
+          affine.store %cst, %alloc[%arg0, %arg1, %arg2, %arg3] : memref<3x1x7x5xf32>
+        }
+      }
+    }
+  }
+  // Accumulator via reinterpret_cast (makes it "escaping", triggers isMaximal check)
+  %alloc_2 = memref.alloc() {alignment = 64 : i64} : memref<7x5xf32>
+  %reinterpret_cast = memref.reinterpret_cast %alloc_2 to offset: [0], sizes: [1, 7, 5], strides: [35, 5, 1] : memref<7x5xf32> to memref<1x7x5xf32>
+  // Zero-init accumulator
+  affine.for %arg0 = 0 to 1 {
+    affine.for %arg1 = 0 to 7 {
+      affine.for %arg2 = 0 to 5 {
+        affine.store %cst_1, %reinterpret_cast[%arg0, %arg1, %arg2] : memref<1x7x5xf32>
+      }
+    }
+  }
+  // Cyclic reduction loop: reads and writes %reinterpret_cast
+  affine.for %arg0 = 0 to 3 {
+    affine.for %arg1 = 0 to 1 {
+      affine.for %arg2 = 0 to 7 {
+        affine.for %arg3 = 0 to 5 {
+          %0 = affine.load %alloc[%arg0, %arg1, %arg2, %arg3] : memref<3x1x7x5xf32>
+          %1 = affine.load %reinterpret_cast[%arg1, %arg2, %arg3] : memref<1x7x5xf32>
+          %2 = arith.addf %0, %1 : f32
+          affine.store %2, %reinterpret_cast[%arg1, %arg2, %arg3] : memref<1x7x5xf32>
+        }
+      }
+    }
+  }
+  // Consumer loop (sigmoid)
+  %alloc_3 = memref.alloc() {alignment = 64 : i64} : memref<1x7x5xf32>
+  affine.for %arg0 = 0 to 1 {
+    affine.for %arg1 = 0 to 7 {
+      affine.for %arg2 = 0 to 5 {
+        %0 = affine.load %reinterpret_cast[%arg0, %arg1, %arg2] : memref<1x7x5xf32>
+        %1 = arith.negf %0 : f32
+        %2 = math.exp %1 : f32
+        %3 = arith.addf %2, %cst_0 : f32
+        %4 = arith.divf %cst_0, %3 : f32
+        affine.store %4, %alloc_3[%arg0, %arg1, %arg2] : memref<1x7x5xf32>
+      }
+    }
+  }
+  return
+}
 
 // Add further tests in mlir/test/Transforms/loop-fusion-4.mlir
