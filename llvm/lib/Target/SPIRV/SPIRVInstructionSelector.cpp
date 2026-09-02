@@ -1787,16 +1787,19 @@ bool SPIRVInstructionSelector::selectPopCount16(Register ResVReg,
                                                 MachineInstr &I,
                                                 unsigned ExtOpcode,
                                                 unsigned Opcode) const {
-  Register OpReg = I.getOperand(1).getReg();
-  unsigned NumElems = GR.getScalarOrVectorComponentCount(OpReg);
-
   MachineIRBuilder MIRBuilder(I);
-  SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
-  SPIRVTypeInst I32VectorType =
-      GR.getOrCreateSPIRVVectorType(I32Type, NumElems, MIRBuilder, false);
 
-  bool IsVector = NumElems > 1;
-  SPIRVTypeInst ExtType = IsVector ? I32VectorType : I32Type;
+  Register OpReg = I.getOperand(1).getReg();
+  SPIRVTypeInst SrcType = GR.getSPIRVTypeForVReg(OpReg);
+  unsigned ComponentCount = GR.getScalarOrVectorComponentCount(SrcType);
+  bool IsScalar = !isVectorType(SrcType);
+  SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
+
+  SPIRVTypeInst ExtType =
+      IsScalar ? I32Type
+               : GR.getOrCreateSPIRVVectorType(I32Type, ComponentCount,
+                                               MIRBuilder, /*IsSigned=*/false);
+
   Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(ExtType));
   // Always use OpUConvert to always use a 0 extend
   if (!selectOpWithSrcs(ExtReg, ExtType, I, {OpReg}, SPIRV::OpUConvert))
@@ -1826,41 +1829,47 @@ bool SPIRVInstructionSelector::selectPopCount64(Register ResVReg,
 
   SPIRVTypeInst SrcType = GR.getSPIRVTypeForVReg(SrcReg);
   unsigned ComponentCount = GR.getScalarOrVectorComponentCount(SrcType);
+  bool IsScalar = !isVectorType(SrcType);
   SPIRVTypeInst I32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
-  SPIRVTypeInst VecI32Type = GR.getOrCreateSPIRVVectorType(
-      I32Type, ComponentCount, MIRBuilder, /*IsSigned=*/false);
+
+  // We need to work with a type matching the shape of the input but using 32
+  // bit int instead of 64.
+  SPIRVTypeInst WorkingType =
+      IsScalar ? I32Type
+               : GR.getOrCreateSPIRVVectorType(I32Type, ComponentCount,
+                                               MIRBuilder, /*IsSigned=*/false);
 
   // Truncate and count the low bits.
-  Register Trunc = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
-  if (!selectOpWithSrcs(Trunc, VecI32Type, I, {SrcReg}, SPIRV::OpUConvert))
+  Register Trunc = MRI->createVirtualRegister(GR.getRegClass(WorkingType));
+  if (!selectOpWithSrcs(Trunc, WorkingType, I, {SrcReg}, SPIRV::OpUConvert))
     return false;
 
-  Register LowCount = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
-  if (!selectOpWithSrcs(LowCount, VecI32Type, I, {Trunc}, SPIRV::OpBitCount))
+  Register LowCount = MRI->createVirtualRegister(GR.getRegClass(WorkingType));
+  if (!selectOpWithSrcs(LowCount, WorkingType, I, {Trunc}, SPIRV::OpBitCount))
     return false;
 
   // Shift the high bits over and count them too.
-  Register ShiftAmount = ComponentCount == 1
+  Register ShiftAmount = IsScalar
                              ? GR.getOrCreateConstInt(32, I, SrcType, TII)
                              : GR.getOrCreateConstVector(32, I, SrcType, TII);
-  unsigned ShiftOp = ComponentCount == 1 ? SPIRV::OpShiftRightLogicalS
-                                         : SPIRV::OpShiftRightLogicalV;
+  unsigned ShiftOp =
+      IsScalar ? SPIRV::OpShiftRightLogicalS : SPIRV::OpShiftRightLogicalV;
   Register Shift = MRI->createVirtualRegister(GR.getRegClass(SrcType));
   if (!selectOpWithSrcs(Shift, SrcType, I, {SrcReg, ShiftAmount}, ShiftOp))
     return false;
 
-  Trunc = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
-  if (!selectOpWithSrcs(Trunc, VecI32Type, I, {Shift}, SPIRV::OpUConvert))
+  Trunc = MRI->createVirtualRegister(GR.getRegClass(WorkingType));
+  if (!selectOpWithSrcs(Trunc, WorkingType, I, {Shift}, SPIRV::OpUConvert))
     return false;
 
-  Register HighCount = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
-  if (!selectOpWithSrcs(HighCount, VecI32Type, I, {Trunc}, SPIRV::OpBitCount))
+  Register HighCount = MRI->createVirtualRegister(GR.getRegClass(WorkingType));
+  if (!selectOpWithSrcs(HighCount, WorkingType, I, {Trunc}, SPIRV::OpBitCount))
     return false;
 
   // Add them up and zext or sext back to 64 bit values.
-  Register Sum = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
-  if (!selectOpWithSrcs(Sum, VecI32Type, I, {HighCount, LowCount},
-                        ComponentCount == 1 ? SPIRV::OpIAddS : SPIRV::OpIAddV))
+  Register Sum = MRI->createVirtualRegister(GR.getRegClass(WorkingType));
+  if (!selectOpWithSrcs(Sum, WorkingType, I, {HighCount, LowCount},
+                        IsScalar ? SPIRV::OpIAddS : SPIRV::OpIAddV))
     return false;
 
   bool IsSigned = GR.isScalarOrVectorSigned(ResType);
