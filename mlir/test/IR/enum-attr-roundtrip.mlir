@@ -2,12 +2,12 @@
 
 // CHECK-LABEL: @test_enum_attr_roundtrip
 func.func @test_enum_attr_roundtrip() -> () {
-  // CHECK: value = #test<enum first>
-  "test.op"() {value = #test<enum first>} : () -> ()
-  // CHECK: value = #test<enum second>
-  "test.op"() {value = #test<enum second>} : () -> ()
-  // CHECK: value = #test<enum third>
-  "test.op"() {value = #test<enum third>} : () -> ()
+  // CHECK: value = #test.enum<first>
+  "test.op"() {value = #test.enum<first>} : () -> ()
+  // CHECK: value = #test.enum<second>
+  "test.op"() {value = #test.enum<second>} : () -> ()
+  // CHECK: value = #test.enum<third>
+  "test.op"() {value = #test.enum<third>} : () -> ()
   return
 }
 
@@ -69,12 +69,12 @@ func.func @test_enum_prop() -> () {
   // CHECK: test.op_with_enum_prop_attr_form <value = first>
   test.op_with_enum_prop_attr_form <{value = 0 : i32}>
   // CHECK: test.op_with_enum_prop_attr_form <value = second>
-  test.op_with_enum_prop_attr_form <{value = #test<enum second>}>
+  test.op_with_enum_prop_attr_form <{value = #test.enum<second>}>
 
   // CHECK: test.op_with_enum_prop_attr_form_always <value = first>
-  test.op_with_enum_prop_attr_form_always <{value = #test<enum first>}>
+  test.op_with_enum_prop_attr_form_always <{value = #test.enum<first>}>
   // CHECK: test.op_with_enum_prop_attr_form_always <value = second>
-  test.op_with_enum_prop_attr_form_always <{value = #test<enum second>}>
+  test.op_with_enum_prop_attr_form_always <{value = #test.enum<second>}>
 
   return
 }
