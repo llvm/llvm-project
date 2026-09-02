@@ -41,18 +41,21 @@ using namespace llvm;
 using namespace llvm::AMDGPU;
 using namespace llvm::PatternMatch;
 
-/// \p UI never analyzed the values this pass creates and reports them
-/// divergent.
-/// \p UniformUses lists the uses it proved uniform before rewriting them.
-static bool isDivergentUse(const Use &U, const UniformityInfo &UI,
-                           const SmallPtrSetImpl<const Use *> &UniformUses) {
-  return !UniformUses.contains(&U) && UI.isDivergentAtUse(U);
+/// Wrapper for querying uniformity info that first checks locally tracked
+/// instructions.
+static bool
+isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
+                      const ValueMap<const Value *, bool> &Tracker) {
+  Value *V = U.get();
+  if (auto It = Tracker.find(V); It != Tracker.end())
+    return !It->second; // divergent if marked false
+  return UI.isDivergentAtUse(U);
 }
 
 /// Optimizes uniform intrinsics calls if their operand can be proven uniform.
-static bool
-optimizeUniformIntrinsic(IntrinsicInst &II, const UniformityInfo &UI,
-                         SmallPtrSetImpl<const Use *> &UniformUses) {
+static bool optimizeUniformIntrinsic(IntrinsicInst &II,
+                                     const UniformityInfo &UI,
+                                     ValueMap<const Value *, bool> &Tracker) {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
   /// We deliberately do not simplify readfirstlane with a uniform argument, so
   /// that frontends can use it to force a copy to SGPR and thereby prevent the
@@ -61,7 +64,7 @@ optimizeUniformIntrinsic(IntrinsicInst &II, const UniformityInfo &UI,
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
-    if (isDivergentUse(II.getOperandUse(0), UI, UniformUses))
+    if (isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker))
       return false;
     LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << '\n');
     II.replaceAllUsesWith(Src);
@@ -70,7 +73,7 @@ optimizeUniformIntrinsic(IntrinsicInst &II, const UniformityInfo &UI,
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Src = II.getArgOperand(0);
-    if (isDivergentUse(II.getOperandUse(0), UI, UniformUses))
+    if (isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker))
       return false;
     LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << '\n');
 
@@ -86,9 +89,10 @@ optimizeUniformIntrinsic(IntrinsicInst &II, const UniformityInfo &UI,
           // Case: (icmp eq %ballot, 0) -> xor %ballot_arg, 1
           Instruction *NotOp =
               BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
-          for (const Use &ICmpUse : ICmp->uses())
-            if (UI.isUniformAtUse(ICmpUse))
-              UniformUses.insert(&ICmpUse);
+          // NOT preserves uniformity, but only where UI already proved the
+          // icmp uniform: a use outside the loop can be temporally divergent.
+          Tracker[NotOp] = all_of(
+              ICmp->uses(), [&](const Use &U) { return UI.isUniformAtUse(U); });
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << '\n');
           ICmp->replaceAllUsesWith(NotOp);
           Changed = true;
@@ -111,14 +115,14 @@ optimizeUniformIntrinsic(IntrinsicInst &II, const UniformityInfo &UI,
     Use &Idx = II.getOperandUse(1);
 
     // Like with readlane, if Value is uniform then just propagate it
-    if (!isDivergentUse(Val, UI, UniformUses)) {
+    if (!isDivergentUseWithNew(Val, UI, Tracker)) {
       II.replaceAllUsesWith(Val);
       II.eraseFromParent();
       return true;
     }
 
     // Otherwise, when Index is uniform, this is just a readlane operation
-    if (isDivergentUse(Idx, UI, UniformUses))
+    if (isDivergentUseWithNew(Idx, UI, Tracker))
       return false;
 
     // The readlane intrinsic we want to call has the exact same function
@@ -137,13 +141,13 @@ optimizeUniformIntrinsic(IntrinsicInst &II, const UniformityInfo &UI,
 /// Iterates over intrinsic calls in the Function to optimize.
 static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
   bool IsChanged = false;
-  SmallPtrSet<const Use *, 8> UniformUses;
+  ValueMap<const Value *, bool> Tracker;
 
   for (Instruction &I : make_early_inc_range(instructions(F))) {
     auto *II = dyn_cast<IntrinsicInst>(&I);
     if (!II)
       continue;
-    IsChanged |= optimizeUniformIntrinsic(*II, UI, UniformUses);
+    IsChanged |= optimizeUniformIntrinsic(*II, UI, Tracker);
   }
   return IsChanged;
 }
