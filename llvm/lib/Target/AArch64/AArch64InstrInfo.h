@@ -231,8 +231,6 @@ public:
   /// Return true if the given load or store is a strided memory access.
   static bool isStridedAccess(const MachineInstr &MI);
 
-  static AArch64MemoryHint decodeMemoryFlags(MachineMemOperand &MMO);
-
   /// Return true if it has an unscaled load/store offset.
   static bool hasUnscaledLdStOffset(unsigned Opc);
   static bool hasUnscaledLdStOffset(MachineInstr &MI) {
