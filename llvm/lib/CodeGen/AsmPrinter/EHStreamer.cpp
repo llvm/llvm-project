@@ -349,6 +349,22 @@ void EHStreamer::computeCallSiteTable(
         CallSites.push_back(Site);
         SawPotentiallyThrowing = false;
       }
+      // In basic-block-sections mode, we emit one call-site table for each
+      // section of the function. However, they all share the same action
+      // table. Unfortunately, this implies that each of the call-site tables
+      // (except the last) has an invalid "length" field, because the length is
+      // also used as the offset to the (shared) action table. In order to
+      // ensure that the personality function won't iterate off the end of the
+      // callsite table into other data, we need to ensure that there's one
+      // final "marker" entry which covers the end of the basic-block-section
+      // address range.
+      if (&MBB != &Asm->MF->back() &&
+          (CallSites.empty() || CallSites.back().EndLabel !=
+                                    CallSiteRanges.back().FragmentEndLabel)) {
+        CallSites.push_back({CallSiteRanges.back().FragmentEndLabel,
+                             CallSiteRanges.back().FragmentEndLabel, nullptr,
+                             0});
+      }
       CallSiteRanges.back().CallSiteEndIdx = CallSites.size();
     }
   }
