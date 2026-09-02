@@ -1,4 +1,4 @@
-//===------ NVPTXIRPeephole.cpp - NVPTX IR Peephole --------------===//
+//===------ NVPTXCodeGenPrepare.cpp - NVPTX CodeGen Prepare ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements IR-level peephole optimizations. These transformations
-// run late in the NVPTX IR pass pipeline just before the instruction selection.
+// This file implements IR-level optimizations. These transformations run late
+// in the NVPTX IR pass pipeline just before the instruction selection.
 //
 // Currently, it implements the following transformation(s):
 // 1. FMA folding (float/double types):
@@ -20,6 +20,12 @@
 //    - fsub(a, fmul(b, c)) => fma(fneg(b), c, a)
 //    - fsub(fmul(a, b), fmul(c, d)) => fma(a, b, fneg(fmul(c, d)))
 //
+// 2. Sink casts for mul.wide:
+//    If all uses of a {s|z}ext casts are multiplication and output type is
+//    twice input size, then NVPTX backend can emit mul.wide operation instead
+//    of mul.lo. To facilitate this at ISel we need to sink the casts to the
+//    user basic blocks.
+//
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXUtilities.h"
@@ -27,8 +33,9 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Transforms/Utils/Local.h"
 
-#define DEBUG_TYPE "nvptx-ir-peephole"
+#define DEBUG_TYPE "nvptx-codegen-prepare"
 
 using namespace llvm;
 
@@ -136,29 +143,130 @@ static bool foldFMA(Function &F) {
   return Changed;
 }
 
+static bool trySinkCastForWideMul(Instruction *I) {
+  assert((isa<ZExtInst>(I) || isa<SExtInst>(I)) &&
+         "Expected only zext/sext instructions here.");
+
+  // For *ext casts, if the output size (O) is twice the input size (I), all
+  // users are multiplications, and all inputs to these multiplications are
+  // demotable to size I (either *ext or a constant), then PTX can generate=
+  // a wide multiplication of I * I = O. Sink the *ext instruction to each
+  // multiplication block as ISel cannot currently optimize cross-block.
+  auto IsDoubleIntegerExtend = [](const Instruction *I) {
+    // Require integers, disallow vectors.
+    Type *SrcTy = I->getOperand(0)->getType();
+    Type *DstTy = I->getType();
+    if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
+      return false;
+
+    // Only support 2x extensions for i16 and i32 types.
+    unsigned SrcSize = SrcTy->getScalarSizeInBits();
+    unsigned DstSize = DstTy->getScalarSizeInBits();
+    return (SrcSize * 2 == DstSize && (SrcSize == 16 || SrcSize == 32));
+  };
+
+  auto IsUserMulWideCandidate = [&](const User *U) {
+    auto *UI = cast<Instruction>(U);
+
+    // For multiplications, require that the other operand be demotabale.
+    if (UI->getOpcode() == Instruction::Mul) {
+      const Value *OtherV = UI->getOperand(UI->getOperand(0) == I);
+      unsigned OptSize = I->getOperand(0)->getType()->getScalarSizeInBits();
+      bool Signed = isa<SExtInst>(I);
+
+      if (auto *OtherI = dyn_cast<Instruction>(OtherV)) {
+        if (OtherI->getOpcode() != Instruction::ZExt &&
+            OtherI->getOpcode() != Instruction::SExt)
+          return false;
+        if (!IsDoubleIntegerExtend(OtherI))
+          return false;
+
+        // Require that the sign matches for both input extensions.
+        return Signed == (OtherI->getOpcode() == Instruction::SExt);
+      }
+
+      if (auto *OtherCI = dyn_cast<ConstantInt>(OtherV)) {
+        const APInt &Val = OtherCI->getValue();
+        if (Signed)
+          return Val.isSignedIntN(OptSize);
+        return Val.isIntN(OptSize);
+      }
+      return false;
+    }
+
+    // GEP gets lowered as shl in NVPTX.
+    if (UI->getOpcode() == Instruction::GetElementPtr)
+      return true;
+
+    // For left shifts, require that the shift amount is a constant >= 0
+    // and less than the bit width.
+    if (UI->getOpcode() == Instruction::Shl) {
+      if (I != UI->getOperand(0))
+        return false;
+
+      if (auto *C = dyn_cast<ConstantInt>(UI->getOperand(1))) {
+        APInt ShiftAmt = C->getValue();
+        unsigned BitWidth = I->getType()->getScalarSizeInBits();
+        if (ShiftAmt.sge(0) && ShiftAmt.slt(BitWidth))
+          return true;
+      }
+    }
+    return false;
+  };
+
+  if (IsDoubleIntegerExtend(I) && all_of(I->users(), IsUserMulWideCandidate))
+    return sinkCastToUsers(cast<CastInst>(I));
+
+  return false;
+}
+
+static bool sinkCastsForWideMul(Function &F) {
+  bool Changed = false;
+
+  for (auto &I : make_early_inc_range(instructions(F))) {
+    if (I.getOpcode() != Instruction::ZExt &&
+        I.getOpcode() != Instruction::SExt)
+      continue;
+
+    Changed |= trySinkCastForWideMul(&I);
+  }
+
+  return Changed;
+}
+
 namespace {
 
-struct NVPTXIRPeephole : public FunctionPass {
+struct NVPTXCodeGenPrepare : public FunctionPass {
   static char ID;
-  NVPTXIRPeephole() : FunctionPass(ID) {}
+  NVPTXCodeGenPrepare() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
 };
 
 } // namespace
 
-char NVPTXIRPeephole::ID = 0;
-INITIALIZE_PASS(NVPTXIRPeephole, "nvptx-ir-peephole", "NVPTX IR Peephole",
-                false, false)
+char NVPTXCodeGenPrepare::ID = 0;
+INITIALIZE_PASS(NVPTXCodeGenPrepare, "nvptx-codegen-prepare",
+                "NVPTX CodeGen Prepare", false, false)
 
-bool NVPTXIRPeephole::runOnFunction(Function &F) { return foldFMA(F); }
+bool NVPTXCodeGenPrepare::runOnFunction(Function &F) {
+  bool Changed = foldFMA(F);
+  Changed |= sinkCastsForWideMul(F);
 
-FunctionPass *llvm::createNVPTXIRPeepholePass() {
-  return new NVPTXIRPeephole();
+  return Changed;
 }
 
-PreservedAnalyses NVPTXIRPeepholePass::run(Function &F,
-                                           FunctionAnalysisManager &) {
-  if (!foldFMA(F))
+FunctionPass *llvm::createNVPTXCodeGenPreparePass() {
+  return new NVPTXCodeGenPrepare();
+}
+
+PreservedAnalyses NVPTXCodeGenPreparePass::run(Function &F,
+                                               FunctionAnalysisManager &) {
+  bool Changed = false;
+
+  Changed |= foldFMA(F);
+  Changed |= sinkCastsForWideMul(F);
+
+  if (!Changed)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;

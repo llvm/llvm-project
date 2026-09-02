@@ -20,11 +20,11 @@ set(NVPTXCodeGen_sources
   NVPTXAtomicLower.cpp
   NVPTXCodeGenPassBuilder.cpp
   NVPTXCtorDtorLowering.cpp
+  NVPTXCodeGenPrepare.cpp
   NVPTXDwarfDebug.cpp
   NVPTXForwardParams.cpp
   NVPTXFrameLowering.cpp
   NVPTXGenericToNVVM.cpp
-  NVPTXIRPeephole.cpp
   NVPTXISelDAGToDAG.cpp
   NVPTXISelLowering.cpp
   NVPTXImageOptimizer.cpp

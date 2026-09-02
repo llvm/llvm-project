@@ -117,8 +117,6 @@ STATISTIC(NumPHIsElim, "Number of trivial PHIs eliminated");
 STATISTIC(NumGEPsElim, "Number of GEPs converted to casts");
 STATISTIC(NumCmpUses, "Number of uses of Cmp expressions replaced with uses of "
                       "sunken Cmps");
-STATISTIC(NumCastUses, "Number of uses of Cast expressions replaced with uses "
-                       "of sunken Casts");
 STATISTIC(NumMemoryInsts, "Number of memory instructions whose address "
                           "computations were sunk");
 STATISTIC(NumMemoryInstsPhiCreated,
@@ -1428,70 +1426,6 @@ bool CodeGenPrepare::simplifyOffsetableRelocate(GCStatepointInst &I) {
   return MadeChange;
 }
 
-/// Sink the specified cast instruction into its user blocks.
-static bool SinkCast(CastInst *CI) {
-  BasicBlock *DefBB = CI->getParent();
-
-  /// InsertedCasts - Only insert a cast in each block once.
-  DenseMap<BasicBlock *, CastInst *> InsertedCasts;
-
-  bool MadeChange = false;
-  for (Instruction::user_iterator UI = CI->user_begin(), E = CI->user_end();
-       UI != E;) {
-    Use &TheUse = UI.getUse();
-    Instruction *User = cast<Instruction>(*UI);
-
-    // Figure out which BB this cast is used in.  For PHI's this is the
-    // appropriate predecessor block.
-    BasicBlock *UserBB = User->getParent();
-    if (PHINode *PN = dyn_cast<PHINode>(User)) {
-      UserBB = PN->getIncomingBlock(TheUse);
-    }
-
-    // Preincrement use iterator so we don't invalidate it.
-    ++UI;
-
-    // The first insertion point of a block containing an EH pad is after the
-    // pad.  If the pad is the user, we cannot sink the cast past the pad.
-    if (User->isEHPad())
-      continue;
-
-    // If the block selected to receive the cast is an EH pad that does not
-    // allow non-PHI instructions before the terminator, we can't sink the
-    // cast.
-    if (UserBB->getTerminator()->isEHPad())
-      continue;
-
-    // If this user is in the same block as the cast, don't change the cast.
-    if (UserBB == DefBB)
-      continue;
-
-    // If we have already inserted a cast into this block, use it.
-    CastInst *&InsertedCast = InsertedCasts[UserBB];
-
-    if (!InsertedCast) {
-      BasicBlock::iterator InsertPt = UserBB->getFirstInsertionPt();
-      assert(InsertPt != UserBB->end());
-      InsertedCast = cast<CastInst>(CI->clone());
-      InsertedCast->insertBefore(*UserBB, InsertPt);
-    }
-
-    // Replace a use of the cast with a use of the new cast.
-    TheUse = InsertedCast;
-    MadeChange = true;
-    ++NumCastUses;
-  }
-
-  // If we removed all uses, nuke the cast.
-  if (CI->use_empty()) {
-    salvageDebugInfo(*CI);
-    CI->eraseFromParent();
-    MadeChange = true;
-  }
-
-  return MadeChange;
-}
-
 /// Hoists bitcasts to the source block to reduce register pressure
 static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
                             const DataLayout &DL) {
@@ -1577,7 +1511,7 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   if (SrcVT != DstVT)
     return false;
 
-  return SinkCast(CI);
+  return sinkCastToUsers(CI);
 }
 
 // Match a simple increment by constant operation.  Note that if a sub is
@@ -9002,7 +8936,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
       if (TLI->getTypeAction(CI->getContext(),
                              TLI->getValueType(*DL, CI->getType())) ==
           TargetLowering::TypeExpandInteger) {
-        return SinkCast(CI);
+        return sinkCastToUsers(CI);
       } else {
         if (TLI->optimizeExtendOrTruncateConversion(
                 I, LI->getLoopFor(I->getParent()), *TTI))
