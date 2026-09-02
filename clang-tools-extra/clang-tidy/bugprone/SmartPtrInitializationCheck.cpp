@@ -667,7 +667,7 @@ public:
             hasDeclaration(cxxConstructorDecl(ofClass(IsSmartPtrRecord))),
             hasArgument(0, anyOf(ignoringParenCasts(cxxThisExpr()),
                                  ignoringParenCasts(SmartPtrGetCallMatcher))))
-            .bind("ctor-with-this-expr");
+            .bind("dangerous-ctor");
 
     // Search for `sp.reset(this);` or `sp.reset(other_sp.get())`
     auto ResetCallWithThisMatcher =
@@ -677,7 +677,7 @@ public:
             callee(cxxMethodDecl(ofClass(IsSmartPtrRecord), hasName("reset"))),
             hasArgument(0, anyOf(ignoringParenCasts(cxxThisExpr()),
                                  ignoringParenCasts(SmartPtrGetCallMatcher))))
-            .bind("reset-with-this-expr");
+            .bind("dangerous-reset");
 
     // Search a functions to perform data flow sensitive analysis.
     const auto PotentiallyDangerousFunction =
@@ -694,11 +694,10 @@ public:
   }
 
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override {
-    // TODO: rename to "dangerous-ctor" and "dangerous-reset"
     const auto *CtorWithThisExpr =
-        Result.Nodes.getNodeAs<CXXConstructExpr>("ctor-with-this-expr");
+        Result.Nodes.getNodeAs<CXXConstructExpr>("dangerous-ctor");
     const auto *ResetWithThisExpr =
-        Result.Nodes.getNodeAs<CXXMemberCallExpr>("reset-with-this-expr");
+        Result.Nodes.getNodeAs<CXXMemberCallExpr>("dangerous-reset");
     if (CtorWithThisExpr)
       Check.emitDiagnostic(*Result.Context, CtorWithThisExpr);
     else if (ResetWithThisExpr)
