@@ -268,7 +268,8 @@ class CommandObjectWatchpointEnable : public CommandObjectParsed {
 public:
   CommandObjectWatchpointEnable(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "enable",
-                            "Enable the specified disabled watchpoint(s). If "
+                            "Enable the specified disabled watchpoint(s).\n"
+                            "If "
                             "no watchpoints are specified, enable all of them.",
                             nullptr, eCommandRequiresTarget) {
     CommandObject::AddIDsArgumentData(eWatchpointArgs);
@@ -338,7 +339,7 @@ public:
   CommandObjectWatchpointDisable(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "watchpoint disable",
                             "Disable the specified watchpoint(s) without "
-                            "removing it/them.  If no watchpoints are "
+                            "removing it/them.\nIf no watchpoints are "
                             "specified, disable them all.",
                             nullptr, eCommandRequiresTarget) {
     CommandObject::AddIDsArgumentData(eWatchpointArgs);
@@ -413,7 +414,7 @@ class CommandObjectWatchpointDelete : public CommandObjectParsed {
 public:
   CommandObjectWatchpointDelete(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "watchpoint delete",
-                            "Delete the specified watchpoint(s).  If no "
+                            "Delete the specified watchpoint(s).\nIf no "
                             "watchpoints are specified, delete them all.",
                             nullptr, eCommandRequiresTarget) {
     CommandObject::AddIDsArgumentData(eWatchpointArgs);
@@ -530,7 +531,7 @@ class CommandObjectWatchpointIgnore : public CommandObjectParsed {
 public:
   CommandObjectWatchpointIgnore(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "watchpoint ignore",
-                            "Set ignore count on the specified watchpoint(s).  "
+                            "Set ignore count on the specified watchpoint(s).\n"
                             "If no watchpoints are specified, set them all.",
                             nullptr, eCommandRequiresTarget) {
     CommandObject::AddIDsArgumentData(eWatchpointArgs);
@@ -647,7 +648,7 @@ public:
       : CommandObjectParsed(
             interpreter, "watchpoint modify",
             "Modify the options on a watchpoint or set of watchpoints in the "
-            "executable.  "
+            "executable.\n"
             "If no watchpoint is specified, act on the last created "
             "watchpoint.  "
             "Passing an empty argument clears the modification.",
@@ -763,7 +764,7 @@ public:
   CommandObjectWatchpointSetVariable(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "watchpoint set variable",
-            "Set a watchpoint on a variable. "
+            "Set a watchpoint on a variable.\n"
             "Use the '-w' option to specify the type of watchpoint and "
             "the '-s' option to specify the byte size to watch for. "
             "If no '-w' option is specified, it defaults to modify. "
@@ -950,7 +951,7 @@ public:
   CommandObjectWatchpointSetExpression(CommandInterpreter &interpreter)
       : CommandObjectRaw(
             interpreter, "watchpoint set expression",
-            "Set a watchpoint on an address by supplying an expression. "
+            "Set a watchpoint on an address by supplying an expression.\n"
             "Use the '-l' option to specify the language of the expression. "
             "Use the '-w' option to specify the type of watchpoint and "
             "the '-s' option to specify the byte size to watch for. "

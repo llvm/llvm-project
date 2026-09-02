@@ -118,7 +118,8 @@ public:
   CommandObjectProcessLaunch(CommandInterpreter &interpreter)
       : CommandObjectProcessLaunchOrAttach(
             interpreter, "process launch",
-            "Launch the executable in the debugger. If no run-args are "
+            "Launch the executable in the debugger.\n"
+            "If no run-args are "
             "specified, the arguments from target.run-args are used.",
             nullptr, eCommandRequiresTarget, "restart"),
 
@@ -1587,7 +1588,8 @@ public:
   CommandObjectProcessHandle(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "process handle",
                             "Manage LLDB handling of OS signals for the "
-                            "current target process.  Defaults to showing "
+                            "current target process.\n"
+                            "Defaults to showing "
                             "current policy.",
                             nullptr, eCommandAllowsDummyTarget) {
     SetHelpLong("\nIf no signals are specified but one or more actions are, "
@@ -1857,7 +1859,8 @@ class CommandObjectProcessTraceStop : public CommandObjectParsed {
 public:
   CommandObjectProcessTraceStop(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "process trace stop",
-                            "Stop tracing this process. This does not affect "
+                            "Stop tracing this process.\n"
+                            "This does not affect "
                             "traces started with the "
                             "\"thread trace start\" command.",
                             "process trace stop",

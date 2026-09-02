@@ -34,7 +34,7 @@ public:
   CommandObjectWatchpointCommandAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "add",
                             "Add a set of LLDB commands to a watchpoint, to be "
-                            "executed whenever the watchpoint is hit.  "
+                            "executed whenever the watchpoint is hit.\n"
                             "The commands added to the watchpoint replace any "
                             "commands previously added to it.",
                             nullptr, eCommandRequiresTarget),

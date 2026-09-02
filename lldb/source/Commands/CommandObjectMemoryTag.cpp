@@ -26,8 +26,8 @@ class CommandObjectMemoryTagRead : public CommandObjectParsed {
 public:
   CommandObjectMemoryTagRead(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "tag",
-                            "Read memory tags for the given range of memory."
-                            " Mismatched tags will be marked.",
+                            "Read memory tags for the given range of memory.\n"
+                            "Mismatched tags will be marked.",
                             nullptr,
                             eCommandRequiresTarget | eCommandRequiresProcess |
                                 eCommandProcessMustBePaused) {

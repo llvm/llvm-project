@@ -235,7 +235,7 @@ CommandObjectDisassemble::CommandObjectDisassemble(
     CommandInterpreter &interpreter)
     : CommandObjectParsed(
           interpreter, "disassemble",
-          "Disassemble specified instructions in the current target.  "
+          "Disassemble specified instructions in the current target.\n"
           "Defaults to the current function for the current thread and "
           "stack frame.",
           "disassemble [<cmd-options>]", eCommandRequiresTarget) {}

@@ -4886,7 +4886,7 @@ public:
 
   CommandObjectTargetStopHookAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target stop-hook add",
-                            "Add a hook to be executed when the target stops."
+                            "Add a hook to be executed when the target stops.\n"
                             "The hook can either be a list of commands or an "
                             "appropriately defined Python class.  You can also "
                             "add filters so the hook only runs a certain stop "
@@ -6054,7 +6054,8 @@ public:
   CommandObjectTargetDumpTypesystem(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "target dump typesystem",
-            "Dump the state of the target's internal type system. Intended to "
+            "Dump the state of the target's internal type system.\n"
+            "Intended to "
             "be used for debugging LLDB itself.",
             nullptr, eCommandRequiresTarget) {}
 
@@ -6080,7 +6081,7 @@ public:
   CommandObjectTargetDumpSectionLoadList(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "target dump section-load-list",
-            "Dump the state of the target's internal section load list. "
+            "Dump the state of the target's internal section load list.\n"
             "Intended to be used for debugging LLDB itself.",
             nullptr, eCommandRequiresTarget) {}
 

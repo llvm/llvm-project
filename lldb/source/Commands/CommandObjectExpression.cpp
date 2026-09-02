@@ -258,7 +258,7 @@ CommandObjectExpression::CommandObjectExpression(
     CommandInterpreter &interpreter)
     : CommandObjectRaw(interpreter, "expression",
                        "Evaluate an expression on the current "
-                       "thread.  Displays any returned value "
+                       "thread.\nDisplays any returned value "
                        "with LLDB's default formatting.",
                        "",
                        eCommandProcessMustBePaused | eCommandTryTargetAPILock |

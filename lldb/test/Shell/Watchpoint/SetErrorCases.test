@@ -12,7 +12,7 @@ run
 watchpoint set
 # CHECK: Commands for setting a watchpoint.
 # CHECK: The following subcommands are supported:
-# CHECK: Set a watchpoint on an address by supplying an expression.
+# CHECK: Set a watchpoint on an address by supplying an
 # CHECK: Set a watchpoint on a variable.
 
 watchpoint set variable -w read_write

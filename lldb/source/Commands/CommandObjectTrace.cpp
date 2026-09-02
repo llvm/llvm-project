@@ -76,7 +76,7 @@ public:
       : CommandObjectParsed(
             interpreter, "trace save",
             "Save the trace of the current target in the specified directory, "
-            "which will be created if needed. "
+            "which will be created if needed.\n"
             "This directory will contain a trace bundle, with all the "
             "necessary files the reconstruct the trace session even on a "
             "different computer. "

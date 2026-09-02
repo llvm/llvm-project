@@ -536,7 +536,8 @@ public:
   CommandObjectBreakpointAddException(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "breakpoint add exception",
-            "Add breakpoints on language exceptions.  If no language is "
+            "Add breakpoints on language exceptions.\n"
+            "If no language is "
             "specified, break on exceptions for all supported languages",
             nullptr, eCommandAllowsDummyTarget) {
     // Define the first (and only) variant of this arg.
@@ -2041,7 +2042,7 @@ public:
   CommandObjectBreakpointModify(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "breakpoint modify",
                             "Modify the options on a breakpoint or set of "
-                            "breakpoints in the executable.  "
+                            "breakpoints in the executable.\n"
                             "If no breakpoint is specified, acts on the last "
                             "created breakpoint.  "
                             "With the exception of -e, -d and -i, passing an "
@@ -2116,7 +2117,8 @@ class CommandObjectBreakpointEnable : public CommandObjectParsed {
 public:
   CommandObjectBreakpointEnable(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "enable",
-                            "Enable the specified disabled breakpoint(s). If "
+                            "Enable the specified disabled breakpoint(s).\n"
+                            "If "
                             "no breakpoints are specified, enable all of them.",
                             nullptr, eCommandAllowsDummyTarget) {
     CommandObject::AddIDsArgumentData(eBreakpointArgs);
@@ -2203,7 +2205,7 @@ public:
       : CommandObjectParsed(
             interpreter, "breakpoint disable",
             "Disable the specified breakpoint(s) without deleting "
-            "them.  If none are specified, disable all "
+            "them.\nIf none are specified, disable all "
             "breakpoints.",
             nullptr, eCommandAllowsDummyTarget) {
     SetHelpLong(
@@ -2584,7 +2586,7 @@ class CommandObjectBreakpointDelete : public CommandObjectParsed {
 public:
   CommandObjectBreakpointDelete(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "breakpoint delete",
-                            "Delete the specified breakpoint(s).  If no "
+                            "Delete the specified breakpoint(s).\nIf no "
                             "breakpoints are specified, delete them all.",
                             nullptr, eCommandAllowsDummyTarget) {
     CommandObject::AddIDsArgumentData(eBreakpointArgs);
@@ -2890,7 +2892,7 @@ public:
       : CommandObjectParsed(
             interpreter, "configure",
             "Configure the options for the breakpoint"
-            " name provided.  "
+            " name provided.\n"
             "If you provide a breakpoint id, the options will be copied from "
             "the breakpoint, otherwise only the options specified will be set "
             "on the name.",
@@ -3130,7 +3132,7 @@ public:
   CommandObjectBreakpointNameList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "list",
                             "List either the names for a breakpoint or info "
-                            "about a given name.  With no arguments, lists all "
+                            "about a given name.\nWith no arguments, lists all "
                             "names",
                             "breakpoint name list <command-options>",
                             eCommandAllowsDummyTarget) {
@@ -3507,7 +3509,7 @@ public:
   CommandObjectBreakpointWrite(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "breakpoint write",
                             "Write the breakpoints listed to a file that can "
-                            "be read in with \"breakpoint read\".  "
+                            "be read in with \"breakpoint read\".\n"
                             "If given no arguments, writes all breakpoints.",
                             nullptr, eCommandAllowsDummyTarget) {
     CommandObject::AddIDsArgumentData(eBreakpointArgs);

@@ -32,7 +32,7 @@ public:
   CommandObjectBreakpointCommandAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "add",
                             "Add LLDB commands to a breakpoint, to be executed "
-                            "whenever the breakpoint is hit.  "
+                            "whenever the breakpoint is hit.\n"
                             "The commands added to the breakpoint replace any "
                             "commands previously added to it."
                             "  If no breakpoint is specified, adds the "
