@@ -14,6 +14,7 @@ endfunction()
 add_orc_rt_unittest(CoreTests
   support/AllocActionTest.cpp
   support/BitmaskEnumTest.cpp
+  support/CAPICompileTest.c
   support/CCallbackTest.cpp
   support/CallableTraitsHelperTest.cpp
   support/CompilerTest.cpp
