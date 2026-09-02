@@ -1788,8 +1788,7 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                      and target
 //   donorDelta         a lane offset from the slot to the lane supplying an
 //                      element. Can have multiple candidates.
-//   donor lane         supplying lane, computed as `slot + donorDelta`. First
-//                      fit is taken by enumerating through the donorDeltas.
+//   donor lane         supplying lane, computed as `slot + donorDelta`.
 //   donor index        where in the donor lane's fragment the element sits. A
 //                      function of the slot, so every lane computes it from its
 //                      own slot
@@ -1941,11 +1940,9 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // `2s+0, 2s+1, 2s+8, 2s+9`. The jump from 1 to 8 is four rows down at 2
 // elements each, the 4 coming from the target `lane_layout` [4, 1].
 //
-// Read the expression off case 1, where the four quantities are 4, 2, 1 and 4.
-// On case 2's `layout<[8, 1]>` target they collide: the lane period (8), its
-// own `donorDelta` (8) and case 3's `dimStride` (8) all have the same value
-// while being three different things -- a lane count, a lane offset and an
-// index divisor.
+// The same value can stand for different things: on case 2's `layout<[8, 1]>`
+// target, 8 is the lane period, its own `donorDelta`, and case 3's `dimStride`
+// -- a lane count, a lane offset and an index divisor.
 //
 // Algorithm
 // ---------
