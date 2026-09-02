@@ -2107,12 +2107,9 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 //===----------------------------------------------------------------------===//
 
-/// The lane period of `layout`: the modulus after which its assignment of
-/// elements to lanes repeats, so lane `l` and lane `l + getLanePeriod()` hold
-/// the same fragment. It is `product(lane_layout)` because
-/// `computeStaticDistributedCoords` delinearizes the lane id modulo each
-/// extent, so nothing a layout derives from the lane id depends on it beyond
-/// that product.
+/// The lane period of `layout`: `product(lane_layout)`, the modulus after which
+/// its assignment of elements to lanes repeats, so lane `l` and lane
+/// `l + getLanePeriod()` hold the same fragment.
 ///
 /// Sliced dimensions are counted, so this is not the number of lanes holding
 /// distinct data -- see `broadcast group` in the section header.
@@ -2159,8 +2156,7 @@ static StringRef describe(RedistributionLimit limit) {
 }
 
 /// Relational rule: both layouts have to hand the lanes the same distribution
-/// unit -- the `lane_data`-sized block of elements a lane owns as a whole -- so
-/// that only the assignment of those blocks to lanes changes.
+/// unit, so that only the assignment of those blocks to lanes changes.
 static bool haveSameDistributionUnit(xegpu::DistributeLayoutAttr inputLayout,
                                      xegpu::DistributeLayoutAttr targetLayout) {
   return inputLayout.getEffectiveLaneDataAsInt() ==
@@ -2184,12 +2180,10 @@ static bool isSupportedLanePeriod(xegpu::DistributeLayoutAttr targetLayout,
 
 /// Matches the layout change `redistributeBroadcastedValue` implements.
 ///
-/// Neither layout has to lay out the whole subgroup. A layout whose lane_layout
-/// covers fewer lanes replicates its fragments over the rest, because
-/// `computeStaticDistributedCoords` delinearizes the lane id modulo each
-/// lane_layout extent; the fragment of every lane is therefore defined either
-/// way. `redistributeBroadcastedValue` verifies the assignment element-wise, so
-/// this only has to be permissive enough not to reject what it can lower.
+/// Neither layout has to lay out the whole subgroup: a short `lane_layout` is
+/// already a replicating one, so every lane's fragment is defined either way.
+/// `redistributeBroadcastedValue` verifies the assignment element-wise, so this
+/// only has to be permissive enough not to reject what it can lower.
 ///
 /// That the layouts differ is not checked: they are already known to be
 /// incompatible here, and the difference may equally be in `order`.
