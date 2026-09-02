@@ -2,6 +2,9 @@
 ; RUN: opt -S -passes=loop-vectorize -vectorize-vector-loops \
 ; RUN:     -force-vector-interleave=1 -force-vector-width="vscale x 1" \
 ; RUN:     < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -vectorize-vector-loops \
+; RUN:     -force-vector-interleave=1 -force-vector-width="vscale x 2" \
+; RUN:     < %s | FileCheck %s --check-prefix=VF2
 
 define void @select_livein_v4(ptr noalias %dst, ptr noalias %src, <4 x i32> %threshold, i64 %n) {
 ; CHECK-LABEL: define void @select_livein_v4(
@@ -13,7 +16,7 @@ define void @select_livein_v4(ptr noalias %dst, ptr noalias %src, <4 x i32> %thr
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP0]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST:%.*]] = call <vscale x 4 x i32> @llvm.vector.broadcast.nxv4i32.v4i32(<4 x i32> [[THRESHOLD]])
+; CHECK-NEXT:    [[BROADCAST:%.*]] = call <vscale x 4 x i32> @llvm.vector.repeat.nxv4i32.v4i32(<4 x i32> [[THRESHOLD]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -30,6 +33,35 @@ define void @select_livein_v4(ptr noalias %dst, ptr noalias %src, <4 x i32> %thr
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
+;
+; VF2-LABEL: define void @select_livein_v4(
+; VF2-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], <4 x i32> [[THRESHOLD:%.*]], i64 [[N:%.*]]) {
+; VF2-NEXT:  [[ENTRY:.*:]]
+; VF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; VF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; VF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
+; VF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2:       [[VECTOR_PH]]:
+; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
+; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; VF2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[THRESHOLD]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; VF2-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i32> @llvm.vector.repeat.nxv8i32.v8i32(<8 x i32> [[TMP2]])
+; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2:       [[VECTOR_BODY]]:
+; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[INDEX]]
+; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[INDEX]]
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i32>, ptr [[TMP4]], align 16
+; VF2-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 8 x i32> [[WIDE_LOAD]], [[TMP3]]
+; VF2-NEXT:    [[TMP7:%.*]] = select <vscale x 8 x i1> [[TMP6]], <vscale x 8 x i32> [[WIDE_LOAD]], <vscale x 8 x i32> [[TMP3]]
+; VF2-NEXT:    store <vscale x 8 x i32> [[TMP7]], ptr [[TMP5]], align 16
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; VF2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VF2-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; VF2:       [[MIDDLE_BLOCK]]:
+; VF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; VF2-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF2:       [[SCALAR_PH]]:
 ;
 entry:
   br label %loop

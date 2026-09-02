@@ -353,8 +353,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     if (VF.isScalar())
       return V;
     // Broadcast the value into all locations in the vector.
-    Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
-    return Shuf;
+    return broadcastOrRepeatValue(Builder, V, VF);
   };
 
   Value *ScalarValue = get(Def, VPLane(0));
