@@ -1861,32 +1861,41 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // What it declines
 // ----------------
 //
-// Three things have to hold. None is a limit of `convert_layout`, which is
-// meaningful for any pair of layouts and so always lowerable; each is a limit
-// of the scheme here, one shuffle per element from a donor a whole number of
-// lane periods away. Another pattern or a more general scheme lowers any of
-// them. The `RedistributionLimit` a match failure names is the point within one
-// of these that gave way.
+// The layout combinations, in the terms above, with the `RedistributionLimit` a
+// match failure names. None is a limit of `convert_layout`, which is meaningful
+// for any pair and so always lowerable; each is a limit of the scheme here, one
+// shuffle per element from a donor a whole number of lane periods away. Another
+// pattern or a more general scheme lowers any of them.
 //
-// 1. The change is a relocation of single elements. Both layouts have to hand
-//    the lanes the same unit, and that unit has to be one element.
+// Decided by inspecting the layouts:
 //
-//      LaneDataDiffers, LaneDataNotUnit
+//   they differ in `lane_data`                            LaneDataDiffers
 //
-// 2. The data can be reached. Every element a lane needs has to sit in a lane
-// it
-//    may read from, and the donor walk has to stay inside the subgroup.
+//      layout<[8, 1], [1, 1]>  ->  layout<[1, 8], [1, 2]>
 //
-//      NoDonorDelta, LanePeriodNotDivisor
+//    A `lane_data`-only change is the repack pattern's; both changing is
+//    neither's.
 //
-// 3. The read can be emitted. Its index has to follow from the lane id in a
-//    couple of `arith` ops, and a `gpu.shuffle` type has to carry the element.
+//   their common `lane_data` is not all ones               LaneDataNotUnit
+//   the target's lane period does not divide the subgroup  LanePeriodNotDivisor
 //
-//      IndexNotLaneAffine, SubByteElement
+// Decided by building the ownership tables, so these are shapes known to fail
+// rather than a characterisation -- other combinations fail the same way:
 //
-// FragmentSizeMismatch is reported too, for a layout disagreeing with the
-// vector type the caller derived from it. That is an invariant check, not a
-// layout pair.
+//   a partially broadcast input into a target of period S  NoDonorDelta
+//
+//    The last row of the table above: only `donorDelta` 0 is available, so a
+//    lane arriving with less than its target fragment cannot be completed.
+//
+//   a target whose distributed dimension the index cannot   IndexNotLaneAffine
+//   walk, `order` having transposed it
+//
+//      slice<layout<[1, 1, 16]>, dims = [2]>
+//        ->  layout<[4, 4], order = [0, 1]>        on vector<4x4>
+//
+// Not layout conditions: SubByteElement, `gpu.shuffle` having no type for an
+// element narrower than a byte, and FragmentSizeMismatch, an invariant check
+// for a layout disagreeing with the vector type the caller derived from it.
 //
 // Concepts
 // --------
