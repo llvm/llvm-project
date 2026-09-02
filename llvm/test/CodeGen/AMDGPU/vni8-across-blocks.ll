@@ -348,15 +348,15 @@ define amdgpu_kernel void @repeat_successor(i32 %in, ptr addrspace(1) %src1, ptr
 ; GFX942-NEXT:    s_cmp_gt_i32 s8, 0
 ; GFX942-NEXT:    s_cbranch_scc0 .LBB7_6
 ; GFX942-NEXT:  ; %bb.2:
-; GFX942-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX942-NEXT:    global_load_dword v0, v0, s[0:1]
+; GFX942-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; GFX942-NEXT:    global_load_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_branch .LBB7_5
 ; GFX942-NEXT:  .LBB7_3: ; %LeafBlock5
 ; GFX942-NEXT:    s_cmp_eq_u32 s8, 3
 ; GFX942-NEXT:    s_cbranch_scc0 .LBB7_6
 ; GFX942-NEXT:  ; %bb.4: ; %sw.bb5
-; GFX942-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX942-NEXT:    global_load_dword v0, v0, s[2:3]
+; GFX942-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; GFX942-NEXT:    global_load_dword v0, v1, s[2:3]
 ; GFX942-NEXT:  .LBB7_5: ; %return.sink.split
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -663,11 +663,11 @@ define amdgpu_kernel void @v32i8_loop_carried(ptr addrspace(1) %src1, ptr addrsp
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX942-NEXT:    v_lshlrev_b32_e32 v0, 5, v1
+; GFX942-NEXT:    v_lshlrev_b32_e32 v2, 5, v1
 ; GFX942-NEXT:    v_cmp_lt_u32_e32 vcc, 14, v1
 ; GFX942-NEXT:    s_mov_b32 s2, 0x2000604
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dword v0, v0, s[0:1]
+; GFX942-NEXT:    global_load_dword v0, v2, s[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v1, v0
@@ -710,11 +710,11 @@ define amdgpu_kernel void @v8i8_multiuse_multiblock(ptr addrspace(1) %src1, ptr 
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
 ; GFX942-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
-; GFX942-NEXT:    v_lshlrev_b32_e32 v0, 3, v2
+; GFX942-NEXT:    v_lshlrev_b32_e32 v3, 3, v2
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x44
 ; GFX942-NEXT:    v_cmp_lt_u32_e64 s[2:3], 14, v2
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dwordx2 v[0:1], v0, s[8:9]
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v3, s[8:9]
 ; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v2
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v1, 16, v0

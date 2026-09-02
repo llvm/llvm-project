@@ -88,14 +88,14 @@ define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s3
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, s2, v0
-; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, s2, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_ushort v2, v[2:3]
-; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, s4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_ushort v2, v[4:5]
+; GFX8-NEXT:    flat_load_ushort v0, v[6:7]
 ; GFX8-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s2, -1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)

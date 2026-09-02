@@ -9,8 +9,27 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 define amdgpu_kernel void @v_mov_b64_pseudo_globaladdr_hsa(ptr addrspace(1) %out) {
 ; HSA-LABEL: v_mov_b64_pseudo_globaladdr_hsa:
-; HSA:       s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, gv@gotpcrel32@lo+4
-; HSA:       s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, gv@gotpcrel32@hi+12
+; HSA:       ; %bb.0: ; %entry
+; HSA-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v2, 1, v0
+; HSA-NEXT:    v_mov_b32_e32 v0, 0
+; HSA-NEXT:    s_mov_b32 s0, exec_lo
+; HSA-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; HSA-NEXT:    v_cmpx_eq_u32_e32 1, v2
+; HSA-NEXT:    s_cbranch_execz .LBB0_2
+; HSA-NEXT:  ; %bb.1: ; %other
+; HSA-NEXT:    s_getpc_b64 s[2:3]
+; HSA-NEXT:    s_add_u32 s2, s2, gv@gotpcrel32@lo+4
+; HSA-NEXT:    s_addc_u32 s3, s3, gv@gotpcrel32@hi+12
+; HSA-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
+; HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; HSA-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; HSA-NEXT:  .LBB0_2: ; %join
+; HSA-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; HSA-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; HSA-NEXT:    v_mov_b32_e32 v2, 0
+; HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; HSA-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; HSA-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %masked = and i32 %tid, 1
@@ -28,10 +47,26 @@ join:
 }
 
 define amdgpu_kernel void @s_mov_b64_imm_pseudo_globaladdr_hsa(
-    ptr addrspace(1) %out, i1 inreg %cond) {
 ; HSA-LABEL: s_mov_b64_imm_pseudo_globaladdr_hsa:
-; HSA:       s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, gv@gotpcrel32@lo+4
-; HSA:       s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, gv@gotpcrel32@hi+12
+; HSA:       ; %bb.0: ; %entry
+; HSA-NEXT:    s_load_b32 s0, s[4:5], 0x8
+; HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; HSA-NEXT:    s_bitcmp0_b32 s0, 0
+; HSA-NEXT:    s_mov_b64 s[0:1], 0
+; HSA-NEXT:    s_cbranch_scc1 .LBB1_2
+; HSA-NEXT:  ; %bb.1: ; %other
+; HSA-NEXT:    s_getpc_b64 s[0:1]
+; HSA-NEXT:    s_add_u32 s0, s0, gv@gotpcrel32@lo+4
+; HSA-NEXT:    s_addc_u32 s1, s1, gv@gotpcrel32@hi+12
+; HSA-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; HSA-NEXT:  .LBB1_2: ; %join
+; HSA-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; HSA-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s1
+; HSA-NEXT:    v_mov_b32_e32 v0, s0
+; HSA-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; HSA-NEXT:    s_endpgm
+    ptr addrspace(1) %out, i1 inreg %cond) {
 entry:
   br i1 %cond, label %other, label %join
 

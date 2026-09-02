@@ -38,18 +38,31 @@ entry:
 }
 
 define amdgpu_ps float @flat_load_b32_idxprom_wrong_stride(ptr align 4 inreg %p, i32 %idx) {
-; GCN-LABEL: flat_load_b32_idxprom_wrong_stride:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GCN-NEXT:    s_mov_b64 s[64:65], 0
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 3, s[0:1]
-; GCN-NEXT:    flat_load_b32 v0, v[0:1]
-; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    ; return to shader part epilog
+; SDAG-LABEL: flat_load_b32_idxprom_wrong_stride:
+; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG-NEXT:    v_nop
+; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 3, s[0:1]
+; SDAG-NEXT:    flat_load_b32 v0, v[0:1]
+; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-NEXT:    ; return to shader part epilog
+;
+; GISEL-LABEL: flat_load_b32_idxprom_wrong_stride:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    s_mov_b64 s[64:65], 0
+; GISEL-NEXT:    v_nop
+; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GISEL-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 3, s[0:1]
+; GISEL-NEXT:    flat_load_b32 v0, v[2:3]
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds <2 x float>, ptr %p, i64 %idxprom
@@ -441,8 +454,8 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-NEXT:    s_branch .LBB21_5
 ; SDAG-NEXT:  .LBB21_3: ; %atomicrmw.global
-; SDAG-NEXT:    v_mov_b64_e32 v[0:1], 1
-; SDAG-NEXT:    flat_atomic_add_u64 v[0:1], v[2:3], v[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; SDAG-NEXT:    v_mov_b64_e32 v[4:5], 1
+; SDAG-NEXT:    flat_atomic_add_u64 v[0:1], v[2:3], v[4:5] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; SDAG-NEXT:    s_wait_xcnt 0x0
 ; SDAG-NEXT:    s_and_not1_saveexec_b32 s0, s0
@@ -488,9 +501,9 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-NEXT:    s_branch .LBB21_5
 ; GISEL-NEXT:  .LBB21_3: ; %atomicrmw.global
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], 1
+; GISEL-NEXT:    v_mov_b64_e32 v[4:5], 1
+; GISEL-NEXT:    flat_atomic_add_u64 v[0:1], v2, v[4:5], s[0:1] scale_offset th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GISEL-NEXT:    flat_atomic_add_u64 v[0:1], v2, v[0:1], s[0:1] scale_offset th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    s_and_not1_saveexec_b32 s0, s2
 ; GISEL-NEXT:    s_cbranch_execz .LBB21_2

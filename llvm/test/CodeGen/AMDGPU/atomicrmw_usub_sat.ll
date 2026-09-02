@@ -149,10 +149,10 @@ define i32 @global_atomic_usub_sat_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-GISEL-LABEL: global_atomic_usub_sat_offset:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX10-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, 0x1000, v0
+; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX10-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-GISEL-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
+; GFX10-GISEL-NEXT:    global_atomic_csub v0, v[4:5], v2, off glc
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-NEXT:    buffer_gl1_inv
 ; GFX10-GISEL-NEXT:    buffer_gl0_inv
@@ -161,11 +161,11 @@ define i32 @global_atomic_usub_sat_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX11-GISEL-LABEL: global_atomic_usub_sat_offset:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
+; GFX11-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, 0x1000, v0
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
+; GFX11-GISEL-NEXT:    global_atomic_csub_u32 v0, v[4:5], v2, off glc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    buffer_gl1_inv
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
@@ -213,10 +213,10 @@ define i32 @global_atomic_usub_sat_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX10-SDAG-LABEL: global_atomic_usub_sat_offset:
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX10-SDAG-NEXT:    v_add_co_u32 v4, vcc_lo, 0x1000, v0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX10-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-SDAG-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
+; GFX10-SDAG-NEXT:    global_atomic_csub v0, v[4:5], v2, off glc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    buffer_gl1_inv
 ; GFX10-SDAG-NEXT:    buffer_gl0_inv
@@ -225,11 +225,11 @@ define i32 @global_atomic_usub_sat_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX11-SDAG-LABEL: global_atomic_usub_sat_offset:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
+; GFX11-SDAG-NEXT:    v_add_co_u32 v4, vcc_lo, 0x1000, v0
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
+; GFX11-SDAG-NEXT:    global_atomic_csub_u32 v0, v[4:5], v2, off glc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    buffer_gl1_inv
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
@@ -391,10 +391,10 @@ define void @global_atomic_usub_sat_offset_nortn(ptr addrspace(1) %ptr, i32 %dat
 ; GFX10-GISEL-LABEL: global_atomic_usub_sat_offset_nortn:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX10-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, 0x1000, v0
+; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX10-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-GISEL-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
+; GFX10-GISEL-NEXT:    global_atomic_csub v0, v[4:5], v2, off glc
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-NEXT:    buffer_gl1_inv
 ; GFX10-GISEL-NEXT:    buffer_gl0_inv
@@ -403,11 +403,11 @@ define void @global_atomic_usub_sat_offset_nortn(ptr addrspace(1) %ptr, i32 %dat
 ; GFX11-GISEL-LABEL: global_atomic_usub_sat_offset_nortn:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
+; GFX11-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, 0x1000, v0
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-GISEL-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
+; GFX11-GISEL-NEXT:    global_atomic_csub_u32 v0, v[4:5], v2, off glc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    buffer_gl1_inv
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
@@ -455,10 +455,10 @@ define void @global_atomic_usub_sat_offset_nortn(ptr addrspace(1) %ptr, i32 %dat
 ; GFX10-SDAG-LABEL: global_atomic_usub_sat_offset_nortn:
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX10-SDAG-NEXT:    v_add_co_u32 v4, vcc_lo, 0x1000, v0
+; GFX10-SDAG-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX10-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-SDAG-NEXT:    global_atomic_csub v0, v[0:1], v2, off glc
+; GFX10-SDAG-NEXT:    global_atomic_csub v0, v[4:5], v2, off glc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    buffer_gl1_inv
 ; GFX10-SDAG-NEXT:    buffer_gl0_inv
@@ -467,11 +467,11 @@ define void @global_atomic_usub_sat_offset_nortn(ptr addrspace(1) %ptr, i32 %dat
 ; GFX11-SDAG-LABEL: global_atomic_usub_sat_offset_nortn:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
+; GFX11-SDAG-NEXT:    v_add_co_u32 v4, vcc_lo, 0x1000, v0
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-SDAG-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
+; GFX11-SDAG-NEXT:    global_atomic_csub_u32 v0, v[4:5], v2, off glc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    buffer_gl1_inv
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
@@ -607,10 +607,10 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset(ptr addrspace
 ; GFX10-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x8
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x10
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX10-SDAG-NEXT:    v_mov_b32_e32 v2, 0x1000
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v1, s4
-; GFX10-SDAG-NEXT:    global_atomic_csub v0, v0, v1, s[0:1] glc
+; GFX10-SDAG-NEXT:    global_atomic_csub v0, v2, v1, s[0:1] glc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    buffer_gl1_inv
 ; GFX10-SDAG-NEXT:    buffer_gl0_inv
@@ -625,8 +625,8 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset(ptr addrspace
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-SDAG-NEXT:    s_load_b64 s[2:3], s[4:5], 0x10
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0x1000 :: v_dual_mov_b32 v1, s6
-; GFX11-SDAG-NEXT:    global_atomic_csub_u32 v0, v0, v1, s[0:1] glc
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v2, 0x1000 :: v_dual_mov_b32 v1, s6
+; GFX11-SDAG-NEXT:    global_atomic_csub_u32 v0, v2, v1, s[0:1] glc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    buffer_gl1_inv
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
@@ -745,10 +745,10 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn(ptr add
 ; GFX10-SDAG-NEXT:    s_clause 0x1
 ; GFX10-SDAG-NEXT:    s_load_dword s2, s[8:9], 0x8
 ; GFX10-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX10-SDAG-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX10-SDAG-NEXT:    v_mov_b32_e32 v2, 0x1000
 ; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX10-SDAG-NEXT:    global_atomic_csub v0, v0, v1, s[0:1] glc
+; GFX10-SDAG-NEXT:    global_atomic_csub v0, v2, v1, s[0:1] glc
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    buffer_gl1_inv
 ; GFX10-SDAG-NEXT:    buffer_gl0_inv
@@ -760,8 +760,8 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn(ptr add
 ; GFX11-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0x1000 :: v_dual_mov_b32 v1, s2
-; GFX11-SDAG-NEXT:    global_atomic_csub_u32 v0, v0, v1, s[0:1] glc
+; GFX11-SDAG-NEXT:    v_dual_mov_b32 v2, 0x1000 :: v_dual_mov_b32 v1, s2
+; GFX11-SDAG-NEXT:    global_atomic_csub_u32 v0, v2, v1, s[0:1] glc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    buffer_gl1_inv
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
@@ -771,8 +771,8 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn(ptr add
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX12-SDAG-NEXT:    global_atomic_sub_clamp_u32 v0, v0, v1, s[0:1] offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s2
+; GFX12-SDAG-NEXT:    global_atomic_sub_clamp_u32 v0, v2, v1, s[0:1] offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_endpgm

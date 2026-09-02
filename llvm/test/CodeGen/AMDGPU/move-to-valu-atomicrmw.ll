@@ -16,11 +16,11 @@ define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b32 s11, 0xf000
 ; GCN-NEXT:    s_mov_b32 s10, 0
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; GCN-NEXT:    buffer_load_dwordx2 v[1:2], v[1:2], s[8:11], 0 addr64 glc
+; GCN-NEXT:    buffer_load_dwordx2 v[1:2], v[3:4], s[8:11], 0 addr64 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[2:3], vcc
@@ -61,10 +61,10 @@ define amdgpu_kernel void @atomic_max_i32_noret(ptr addrspace(1) %out, ptr addrs
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, 0
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    buffer_load_dwordx2 v[1:2], v[1:2], s[0:3], 0 addr64 glc
+; GCN-NEXT:    buffer_load_dwordx2 v[1:2], v[3:4], s[0:3], 0 addr64 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc

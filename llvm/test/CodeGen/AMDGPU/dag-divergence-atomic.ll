@@ -330,11 +330,11 @@ define protected amdgpu_kernel void @cmpxchg(ptr addrspace(1) %p, ptr addrspace(
 ; CHECK-LABEL: cmpxchg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_atomic_cmpswap v2, v2, v[0:1], s[0:1] glc
+; CHECK-NEXT:    global_atomic_cmpswap v2, v3, v[0:1], s[0:1] glc
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

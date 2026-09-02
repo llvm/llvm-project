@@ -542,22 +542,22 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX900-LABEL: vload2_private:
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX900-NEXT:    s_add_u32 s0, s0, s17
 ; GFX900-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5]
+; GFX900-NEXT:    global_load_ushort v0, v5, s[4:5]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5] offset:2
+; GFX900-NEXT:    global_load_ushort v4, v5, s[4:5] offset:2
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:2
+; GFX900-NEXT:    buffer_store_short v4, off, s[0:3], 0 offset:2
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5] offset:4
+; GFX900-NEXT:    global_load_ushort v6, v5, s[4:5] offset:4
 ; GFX900-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:4
+; GFX900-NEXT:    buffer_store_short v6, off, s[0:3], 0 offset:4
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:2
 ; GFX900-NEXT:    buffer_load_ushort v3, off, s[0:3], 0
@@ -567,56 +567,56 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX900-NEXT:    s_waitcnt vmcnt(1)
 ; GFX900-NEXT:    v_perm_b32 v0, v0, v3, s4
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
+; GFX900-NEXT:    global_store_dwordx2 v5, v[0:1], s[6:7]
 ; GFX900-NEXT:    s_endpgm
 ;
 ; FLATSCR-LABEL: vload2_private:
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
+; FLATSCR-NEXT:    v_mov_b32_e32 v4, 0
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    s_mov_b32 s4, 0
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
-; FLATSCR-NEXT:    global_load_ushort v0, v2, s[0:1]
+; FLATSCR-NEXT:    global_load_ushort v0, v4, s[0:1]
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_short off, v0, s4
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    global_load_ushort v0, v2, s[0:1] offset:2
+; FLATSCR-NEXT:    global_load_ushort v3, v4, s[0:1] offset:2
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_short off, v0, s4 offset:2
+; FLATSCR-NEXT:    scratch_store_short off, v3, s4 offset:2
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    global_load_ushort v0, v2, s[0:1] offset:4
+; FLATSCR-NEXT:    global_load_ushort v5, v4, s[0:1] offset:4
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_short off, v0, s0 offset:4
+; FLATSCR-NEXT:    scratch_store_short off, v5, s0 offset:4
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; FLATSCR-NEXT:    scratch_load_short_d16_hi v1, off, s0 offset:4
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
+; FLATSCR-NEXT:    global_store_dwordx2 v4, v[0:1], s[2:3]
 ; FLATSCR-NEXT:    s_endpgm
 ;
 ; GFX10_DEFAULT-LABEL: vload2_private:
 ; GFX10_DEFAULT:       ; %bb.0: ; %entry
 ; GFX10_DEFAULT-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0
-; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX10_DEFAULT-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10_DEFAULT-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10_DEFAULT-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10_DEFAULT-NEXT:    global_load_ushort v0, v2, s[4:5]
+; GFX10_DEFAULT-NEXT:    global_load_ushort v0, v5, s[4:5]
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_DEFAULT-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX10_DEFAULT-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10_DEFAULT-NEXT:    global_load_ushort v0, v2, s[4:5] offset:2
+; GFX10_DEFAULT-NEXT:    global_load_ushort v4, v5, s[4:5] offset:2
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10_DEFAULT-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:2
+; GFX10_DEFAULT-NEXT:    buffer_store_short v4, off, s[0:3], 0 offset:2
 ; GFX10_DEFAULT-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10_DEFAULT-NEXT:    global_load_ushort v0, v2, s[4:5] offset:4
+; GFX10_DEFAULT-NEXT:    global_load_ushort v6, v5, s[4:5] offset:4
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10_DEFAULT-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:4
+; GFX10_DEFAULT-NEXT:    buffer_store_short v6, off, s[0:3], 0 offset:4
 ; GFX10_DEFAULT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10_DEFAULT-NEXT:    s_clause 0x1
 ; GFX10_DEFAULT-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:2
@@ -627,7 +627,7 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX10_DEFAULT-NEXT:    v_perm_b32 v0, v0, v3, 0x5040100
 ; GFX10_DEFAULT-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:4
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10_DEFAULT-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
+; GFX10_DEFAULT-NEXT:    global_store_dwordx2 v5, v[0:1], s[6:7]
 ; GFX10_DEFAULT-NEXT:    s_endpgm
 ;
 ; FLATSCR_GFX10-LABEL: vload2_private:
@@ -637,79 +637,79 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; FLATSCR_GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
 ; FLATSCR_GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
 ; FLATSCR_GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; FLATSCR_GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; FLATSCR_GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; FLATSCR_GFX10-NEXT:    s_mov_b32 s4, 0
 ; FLATSCR_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; FLATSCR_GFX10-NEXT:    global_load_ushort v0, v2, s[0:1]
+; FLATSCR_GFX10-NEXT:    global_load_ushort v0, v4, s[0:1]
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s4
 ; FLATSCR_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; FLATSCR_GFX10-NEXT:    global_load_ushort v0, v2, s[0:1] offset:2
+; FLATSCR_GFX10-NEXT:    global_load_ushort v3, v4, s[0:1] offset:2
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s4 offset:2
+; FLATSCR_GFX10-NEXT:    scratch_store_short off, v3, s4 offset:2
 ; FLATSCR_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; FLATSCR_GFX10-NEXT:    global_load_ushort v0, v2, s[0:1] offset:4
+; FLATSCR_GFX10-NEXT:    global_load_ushort v5, v4, s[0:1] offset:4
 ; FLATSCR_GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; FLATSCR_GFX10-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s0 offset:4
+; FLATSCR_GFX10-NEXT:    scratch_store_short off, v5, s0 offset:4
 ; FLATSCR_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLATSCR_GFX10-NEXT:    scratch_load_dword v0, off, s0
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR_GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; FLATSCR_GFX10-NEXT:    scratch_load_short_d16_hi v1, off, s0 offset:4
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR_GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
+; FLATSCR_GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[2:3]
 ; FLATSCR_GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-TRUE16-LABEL: vload2_private:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[0:1]
+; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v4, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    scratch_store_b16 off, v0, off dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[0:1] offset:2
+; GFX11-TRUE16-NEXT:    global_load_d16_b16 v3, v4, s[0:1] offset:2
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    scratch_store_b16 off, v0, off offset:2 dlc
+; GFX11-TRUE16-NEXT:    scratch_store_b16 off, v3, off offset:2 dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[0:1] offset:4
+; GFX11-TRUE16-NEXT:    global_load_d16_b16 v5, v4, s[0:1] offset:4
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    scratch_store_b16 off, v0, off offset:4 dlc
+; GFX11-TRUE16-NEXT:    scratch_store_b16 off, v5, off offset:4 dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-TRUE16-NEXT:    scratch_load_b32 v0, off, off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-TRUE16-NEXT:    scratch_load_d16_hi_b16 v1, off, off offset:4
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX11-TRUE16-NEXT:    global_store_b64 v4, v[0:1], s[2:3]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: vload2_private:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
 ; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    global_load_u16 v0, v2, s[0:1]
+; GFX11-FAKE16-NEXT:    global_load_u16 v0, v4, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    scratch_store_b16 off, v0, off dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_load_u16 v0, v2, s[0:1] offset:2
+; GFX11-FAKE16-NEXT:    global_load_u16 v3, v4, s[0:1] offset:2
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    scratch_store_b16 off, v0, off offset:2 dlc
+; GFX11-FAKE16-NEXT:    scratch_store_b16 off, v3, off offset:2 dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    global_load_u16 v0, v2, s[0:1] offset:4
+; GFX11-FAKE16-NEXT:    global_load_u16 v5, v4, s[0:1] offset:4
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    scratch_store_b16 off, v0, off offset:4 dlc
+; GFX11-FAKE16-NEXT:    scratch_store_b16 off, v5, off offset:4 dlc
 ; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FAKE16-NEXT:    scratch_load_b32 v0, off, off
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-FAKE16-NEXT:    scratch_load_d16_hi_b16 v1, off, off offset:4
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX11-FAKE16-NEXT:    global_store_b64 v4, v[0:1], s[2:3]
 ; GFX11-FAKE16-NEXT:    s_endpgm
 entry:
   %loc = alloca [3 x i16], align 2, addrspace(5)
@@ -1012,9 +1012,9 @@ define <2 x i16> @chain_hi_to_lo_flat_other_dep(ptr addrspace(0) %ptr) {
 ; GFX10-LABEL: chain_hi_to_lo_flat_other_dep:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 2
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v1, vcc_lo
-; GFX10-NEXT:    flat_load_ushort v2, v[2:3] glc dlc
+; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, v0, 2
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    flat_load_ushort v2, v[4:5] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_load_short_d16_hi v0, v[0:1] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

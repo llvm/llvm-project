@@ -456,15 +456,15 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-SDAG-NEXT:    v_nop
 ; GCN-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
-; GCN-SDAG-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GCN-SDAG-NEXT:    v_and_b32_e32 v9, 0x3ff, v0
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GCN-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10 nv
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[10:11], 8
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[12:13], 0
 ; GCN-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GCN-SDAG-NEXT:    s_clause 0x1
-; GCN-SDAG-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
-; GCN-SDAG-NEXT:    global_load_b128 v[4:7], v8, s[2:3] scale_offset
+; GCN-SDAG-NEXT:    global_load_b128 v[0:3], v9, s[0:1] scale_offset
+; GCN-SDAG-NEXT:    global_load_b128 v[4:7], v9, s[2:3] scale_offset
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[8:9], 12
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -487,7 +487,7 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-GISEL-NEXT:    v_nop
 ; GCN-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
-; GCN-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GCN-GISEL-NEXT:    v_and_b32_e32 v9, 0x3ff, v0
 ; GCN-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GCN-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10 nv
 ; GCN-GISEL-NEXT:    v_mov_b64_e32 v[10:11], 2
@@ -498,8 +498,8 @@ define amdgpu_kernel void @test_v7i16_load_store_kernel(ptr addrspace(1) %ptr1, 
 ; GCN-GISEL-NEXT:    v_mov_b64_e32 v[20:21], 12
 ; GCN-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GCN-GISEL-NEXT:    s_clause 0x1
-; GCN-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
-; GCN-GISEL-NEXT:    global_load_b128 v[4:7], v8, s[2:3] scale_offset
+; GCN-GISEL-NEXT:    global_load_b128 v[0:3], v9, s[0:1] scale_offset
+; GCN-GISEL-NEXT:    global_load_b128 v[4:7], v9, s[2:3] scale_offset
 ; GCN-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GCN-GISEL-NEXT:    v_mov_b64_e32 v[8:9], 0
 ; GCN-GISEL-NEXT:    s_wait_loadcnt 0x0

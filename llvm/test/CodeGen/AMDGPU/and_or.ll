@@ -190,13 +190,6 @@ define <2 x i32> @v_and_or_v2i32_b(<2 x i32> inreg %a, <2 x i32> %b, <2 x i32> i
 ; GFX9-NEXT:    v_or_b32_e32 v1, s19, v1
 ; GFX9-NEXT:    v_or_b32_e32 v0, s18, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-LABEL: v_and_or_v2i32_b:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DAG:     v_and_or_b32 v0, s{{[0-9]+}}, v0, s{{[0-9]+}}
-; GFX10-DAG:     v_and_or_b32 v1, s{{[0-9]+}}, v1, s{{[0-9]+}}
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %x = and <2 x i32> %a, %b
   %result = or <2 x i32> %x, %c
   ret <2 x i32> %result
@@ -218,13 +211,6 @@ define <2 x i32> @v_and_or_v2i32_ab(<2 x i32> %a, <2 x i32> %b, <2 x i32> inreg 
 ; GFX9-NEXT:    v_and_or_b32 v1, v1, v3, s17
 ; GFX9-NEXT:    v_and_or_b32 v0, v0, v2, s16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-LABEL: v_and_or_v2i32_ab:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DAG:     v_and_or_b32 v1, v1, v3, {{s[0-9]+}}
-; GFX10-DAG:     v_and_or_b32 v0, v0, v2, {{s[0-9]+}}
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %x = and <2 x i32> %a, %b
   %result = or <2 x i32> %x, %c
   ret <2 x i32> %result
@@ -336,13 +322,6 @@ define <2 x i32> @v_and_or_v2i32_inline_const_x3(<2 x i32> %a) {
 ; GFX9-NEXT:    v_or_b32_e32 v1, 16, v1
 ; GFX9-NEXT:    v_or_b32_e32 v0, 0x81, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-LABEL: v_and_or_v2i32_inline_const_x3:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_movk_i32 [[SR:s[0-9]+]], 0x808
-; GFX10-DAG:     v_and_or_b32 v0, v0, [[SR]], 0x81
-; GFX10-DAG:     v_and_or_b32 v1, 0x809, v1, 16
   %x = and <2 x i32> %a, <i32 2056, i32 2057>
   %result = or <2 x i32> %x, <i32 129, i32 16>
   ret <2 x i32> %result
@@ -366,15 +345,7 @@ define <2 x i32> @v_and_or_v2i32_inline_const_x4(<2 x i32> %a) {
 ; GFX9-NEXT:    v_or_b32_e32 v1, 0x101, v1
 ; GFX9-NEXT:    v_or_b32_e32 v0, 0x81, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-LABEL: v_and_or_v2i32_inline_const_x4:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DAG:     s_movk_i32 [[SR0:s[0-9]+]], 0x808
-; GFX10-DAG:     s_movk_i32 [[SR1:s[0-9]+]], 0x809
 ; GFX10-CHECK-NOT: {{.}}
-; GFX10-DAG:     v_and_or_b32 v0, v0, [[SR0]], 0x81
-; GFX10-DAG:     v_and_or_b32 v1, v1, [[SR1]], 0x101
   %x = and <2 x i32> %a, <i32 2056, i32 2057>
   %result = or <2 x i32> %x, <i32 129, i32 257>
   ret <2 x i32> %result

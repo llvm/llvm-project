@@ -47,14 +47,12 @@
   ; GCN-NEXT:    buffer_inv sc0 sc1
   ; GCN-NEXT:    ; implicit-def: $vgpr0
   ; GCN-NEXT:    ; implicit-def: $vgpr1
-  ; GCN-NEXT:    ; implicit-def: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; GCN-NEXT:    ; implicit-def: $sgpr6
-  ; GCN-NEXT:    v_add_u32_e32 v0, v0, v50
-  ; GCN-NEXT:    v_add_u32_e32 v1, v1, v50
-  ; GCN-NEXT:    buffer_load_dwordx2 v[72:73], v0, s[16:19], 0 offen sc0 sc1
+  ; GCN-NEXT:    v_add_u32_e32 v5, v0, v50
+  ; GCN-NEXT:    v_add_u32_e32 v6, v1, v50
+  ; GCN-NEXT:    buffer_load_dwordx2 v[72:73], v5, s[16:19], 0 offen sc0 sc1
   ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
-  ; GCN-NEXT:    buffer_load_dwordx2 v[74:75], v1, s[16:19], 0 offen sc0 sc1
+  ; GCN-NEXT:    buffer_load_dwordx2 v[74:75], v6, s[16:19], 0 offen sc0 sc1
   ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
   ; GCN-NEXT:    ;;#ASMSTART
@@ -67,8 +65,10 @@
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[16:31], v[36:37], v[40:41], 0
-  ; GCN-NEXT:    ; kill: killed $vgpr1
-  ; GCN-NEXT:    ; kill: killed $vgpr0
+  ; GCN-NEXT:    ; kill: killed $vgpr6
+  ; GCN-NEXT:    ; kill: killed $vgpr5
+  ; GCN-NEXT:    ; implicit-def: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+  ; GCN-NEXT:    ; implicit-def: $sgpr6
   ; GCN-NEXT:    v_mul_lo_u32 v76, v76, s6
   ; GCN-NEXT:    v_add_lshl_u32 v76, v77, v76, 1
   ; GCN-NEXT:    v_lshl_add_u32 v77, v78, 1, v76

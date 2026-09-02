@@ -51,9 +51,9 @@ define amdgpu_kernel void @bfe_combine8(ptr addrspace(1) nocapture %arg, i32 %x)
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, s2, v0
 ; CI-NEXT:    v_lshrrev_b32_e32 v0, 6, v0
 ; CI-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; CI-NEXT:    v_and_b32_e32 v0, 0x3fc, v0
-; CI-NEXT:    v_mov_b32_e32 v1, 0
-; CI-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
+; CI-NEXT:    v_and_b32_e32 v2, 0x3fc, v0
+; CI-NEXT:    v_mov_b32_e32 v3, 0
+; CI-NEXT:    buffer_load_dword v0, v[2:3], s[4:7], 0 addr64
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0

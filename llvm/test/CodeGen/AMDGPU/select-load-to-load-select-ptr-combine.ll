@@ -112,9 +112,9 @@ define i32 @select_load_i32_p1_offset(i1 %cond, ptr addrspace(1) %a, ptr addrspa
 ; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v2, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v5, v3, vcc
-; CHECK-NEXT:    global_load_dword v0, v[0:1], off
+; CHECK-NEXT:    v_cndmask_b32_e32 v7, v1, v4, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v6, v5, v3, vcc
+; CHECK-NEXT:    global_load_dword v0, v[6:7], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %gep.a = getelementptr i8, ptr addrspace(1) %a, i64 256

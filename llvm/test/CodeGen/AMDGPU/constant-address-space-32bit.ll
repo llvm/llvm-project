@@ -743,10 +743,10 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX6-NEXT:    s_nop 2
 ; GFX6-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x0
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0xc
-; GFX6-NEXT:    v_mov_b32_e32 v0, 0
+; GFX6-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX6-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
+; GFX6-NEXT:    image_sample v[0:3], v4, s[8:15], s[0:3] dmask:0xf
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -762,10 +762,10 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX7-NEXT:    s_mov_b32 s1, 0
 ; GFX7-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x0
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0xc
-; GFX7-NEXT:    v_mov_b32_e32 v0, 0
+; GFX7-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
+; GFX7-NEXT:    image_sample v[0:3], v4, s[8:15], s[0:3] dmask:0xf
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
@@ -781,10 +781,10 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX8-NEXT:    s_mov_b32 s1, 0
 ; GFX8-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x0
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x30
-; GFX8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX8-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
+; GFX8-NEXT:    image_sample v[0:3], v4, s[8:15], s[0:3] dmask:0xf
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -799,10 +799,10 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX9-NEXT:    v_readfirstlane_b32 s16, v0
 ; GFX9-NEXT:    s_load_dwordx8 s[8:15], s[16:17], 0x0
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[16:17], 0x30
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
+; GFX9-NEXT:    image_sample v[0:3], v4, s[8:15], s[0:3] dmask:0xf
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 main_body:
@@ -844,10 +844,10 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX6-NEXT:    s_nop 2
 ; GFX6-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x0
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0xc
-; GFX6-NEXT:    v_mov_b32_e32 v0, 0
+; GFX6-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX6-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
+; GFX6-NEXT:    image_sample v[0:3], v4, s[8:15], s[0:3] dmask:0xf
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -863,10 +863,10 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX7-NEXT:    s_mov_b32 s1, 0
 ; GFX7-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x0
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0xc
-; GFX7-NEXT:    v_mov_b32_e32 v0, 0
+; GFX7-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
+; GFX7-NEXT:    image_sample v[0:3], v4, s[8:15], s[0:3] dmask:0xf
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
@@ -882,10 +882,10 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX8-NEXT:    s_mov_b32 s1, 0
 ; GFX8-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x0
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x30
-; GFX8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX8-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
+; GFX8-NEXT:    image_sample v[0:3], v4, s[8:15], s[0:3] dmask:0xf
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -900,10 +900,10 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GFX9-NEXT:    v_readfirstlane_b32 s16, v0
 ; GFX9-NEXT:    s_load_dwordx8 s[8:15], s[16:17], 0x0
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[16:17], 0x30
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_and_b64 exec, exec, s[6:7]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    image_sample v[0:3], v0, s[8:15], s[0:3] dmask:0xf
+; GFX9-NEXT:    image_sample v[0:3], v4, s[8:15], s[0:3] dmask:0xf
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 main_body:

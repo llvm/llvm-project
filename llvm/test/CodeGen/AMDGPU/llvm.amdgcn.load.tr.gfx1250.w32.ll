@@ -27,8 +27,8 @@ define amdgpu_ps void @global_load_tr4_b64_saddr(ptr addrspace(1) inreg %addr, p
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    global_load_tr4_b64 v[2:3], v2, s[0:1] offset:32
+; GFX1250-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1250-NEXT:    global_load_tr4_b64 v[2:3], v4, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1250-NEXT:    s_endpgm
@@ -64,8 +64,8 @@ define amdgpu_ps void @global_load_tr8_b64_saddr(ptr addrspace(1) inreg %addr, p
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    global_load_tr8_b64 v[2:3], v2, s[0:1] offset:32
+; GFX1250-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1250-NEXT:    global_load_tr8_b64 v[2:3], v4, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1250-NEXT:    s_endpgm
@@ -101,8 +101,8 @@ define amdgpu_ps void @global_load_tr6_b96_saddr(ptr addrspace(1) inreg %addr, p
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    global_load_tr6_b96 v[2:4], v2, s[0:1] offset:32
+; GFX1250-NEXT:    v_mov_b32_e32 v5, 0
+; GFX1250-NEXT:    global_load_tr6_b96 v[2:4], v5, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b96 v[0:1], v[2:4], off
 ; GFX1250-NEXT:    s_endpgm
@@ -138,8 +138,8 @@ define amdgpu_ps void @global_load_tr16_b128_v8i16_saddr(ptr addrspace(1) inreg 
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    global_load_tr16_b128 v[2:5], v2, s[0:1] offset:32
+; GFX1250-NEXT:    v_mov_b32_e32 v6, 0
+; GFX1250-NEXT:    global_load_tr16_b128 v[2:5], v6, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-NEXT:    s_endpgm
@@ -175,8 +175,8 @@ define amdgpu_ps void @global_load_tr16_b128_v8f16_saddr(ptr addrspace(1) inreg 
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    global_load_tr16_b128 v[2:5], v2, s[0:1] offset:32
+; GFX1250-NEXT:    v_mov_b32_e32 v6, 0
+; GFX1250-NEXT:    global_load_tr16_b128 v[2:5], v6, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-NEXT:    s_endpgm
@@ -212,8 +212,8 @@ define amdgpu_ps void @global_load_tr16_b128_v8bf16_saddr(ptr addrspace(1) inreg
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1250-NEXT:    global_load_tr16_b128 v[2:5], v2, s[0:1] offset:32
+; GFX1250-NEXT:    v_mov_b32_e32 v6, 0
+; GFX1250-NEXT:    global_load_tr16_b128 v[2:5], v6, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-NEXT:    s_endpgm
