@@ -252,7 +252,10 @@ bool isValidForAccDeclare(Operation *globalOp) {
 /// mean the recipe is attached to a compute construct).
 static std::optional<llvm::DenseSet<StringAttr>>
 collectUsedSymbolsExcludingRecipeSelfUses(ModuleOp mod) {
-  std::optional<SymbolTable::UseRange> uses = SymbolTable::getSymbolUses(mod);
+  // The module region, not the module op, is the symbol table scope: asking
+  // for the uses on the op itself would not walk into the body.
+  std::optional<SymbolTable::UseRange> uses =
+      SymbolTable::getSymbolUses(&mod.getBodyRegion());
   if (!uses)
     return std::nullopt;
 
