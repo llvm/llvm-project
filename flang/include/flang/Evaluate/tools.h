@@ -1462,46 +1462,10 @@ inline int GetNbOfCUDAManagedOrUnifiedSymbols(const A &expr) {
   return symbols.size();
 }
 
-// Get the number of distinct symbols with the CUDA managed attribute in the
-// expression.
-template <typename A> inline int GetNbOfCUDAManagedSymbols(const A &expr) {
-  semantics::UnorderedSymbolSet symbols;
-  for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (IsCUDAManagedSymbol(sym)) {
-      symbols.insert(sym);
-    }
-  }
-  return symbols.size();
-}
-
-// Get the number of distinct symbols with a CUDA device attribute other than
-// unified in the expression.
-template <typename A> inline int GetNbOfCUDANonUnifiedSymbols(const A &expr) {
-  semantics::UnorderedSymbolSet symbols;
-  for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (IsCUDADeviceSymbol(sym) && !IsCUDAUnifiedSymbol(sym)) {
-      symbols.insert(sym);
-    }
-  }
-  return symbols.size();
-}
-
 // Check if any of the symbols part of the expression has a CUDA device
 // attribute.
 template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
-}
-
-// Check if any of the symbols part of the expression has the CUDA managed
-// attribute.
-template <typename A> inline bool HasCUDAManagedSymbols(const A &expr) {
-  return GetNbOfCUDAManagedSymbols(expr) > 0;
-}
-
-// Check if any of the symbols part of the expression has a CUDA device
-// attribute other than unified.
-template <typename A> inline bool HasCUDANonUnifiedSymbols(const A &expr) {
-  return GetNbOfCUDANonUnifiedSymbols(expr) > 0;
 }
 
 // True for a whole reference to a managed array: a whole array variable, or a
