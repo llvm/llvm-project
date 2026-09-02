@@ -19,7 +19,7 @@ define i64 @fn2() {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[CONV:%.*]] = sext i32 undef to i64
 ; CGSCC-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
-; CGSCC-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[CALL2:%.*]] = call range(i64 -8, 9) i64 @fn1(i64 [[DIV]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i64 [[CALL2]]
 ;
 entry:
@@ -45,7 +45,7 @@ define i64 @fn2b(i32 %arg) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
 ; CGSCC-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
-; CGSCC-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) #[[ATTR2]]
+; CGSCC-NEXT:    [[CALL2:%.*]] = call range(i64 -8, 9) i64 @fn1(i64 [[DIV]]) #[[ATTR2]]
 ; CGSCC-NEXT:    ret i64 [[CALL2]]
 ;
 entry:

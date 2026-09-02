@@ -515,19 +515,14 @@ PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
   return DividendPWAC;
 }
 
-PWACtx SCEVAffinator::visitSDivInstruction(Instruction *SDiv) {
-  assert(SDiv->getOpcode() == Instruction::SDiv && "Assumed SDiv instruction!");
-
-  auto *Scope = getScope();
-  auto *Divisor = SDiv->getOperand(1);
-  const SCEV *DivisorSCEV = SE.getSCEVAtScope(Divisor, Scope);
-  auto DivisorPWAC = visit(DivisorSCEV);
-  assert(isa<SCEVConstant>(DivisorSCEV) &&
+PWACtx SCEVAffinator::visitSDivExpr(const SCEVSDivExpr *Expr) {
+  const SCEV *Dividend = Expr->getLHS();
+  const SCEV *Divisor = Expr->getRHS();
+  assert(isa<SCEVConstant>(Divisor) &&
          "SDiv is no parameter but has a non-constant RHS.");
 
-  auto *Dividend = SDiv->getOperand(0);
-  const SCEV *DividendSCEV = SE.getSCEVAtScope(Dividend, Scope);
-  auto DividendPWAC = visit(DividendSCEV);
+  auto DivisorPWAC = visit(Divisor);
+  auto DividendPWAC = visit(Dividend);
   DividendPWAC = combine(DividendPWAC, DivisorPWAC, isl_pw_aff_tdiv_q);
   return DividendPWAC;
 }
@@ -554,8 +549,6 @@ PWACtx SCEVAffinator::visitUnknown(const SCEVUnknown *Expr) {
     switch (I->getOpcode()) {
     case Instruction::IntToPtr:
       return visit(SE.getSCEVAtScope(I->getOperand(0), getScope()));
-    case Instruction::SDiv:
-      return visitSDivInstruction(I);
     case Instruction::SRem:
       return visitSRemInstruction(I);
     default:

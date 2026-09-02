@@ -230,12 +230,12 @@ void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
 /// reference to the ScalarEvolution they belong to, so a mixup does not
 /// immediately cause a crash but certainly is a violation of its interface.
 ///
-/// The SCEVExpander will __not__ generate any code for an existing SDiv/SRem
+/// The SCEVExpander will __not__ generate any code for an existing SRem
 /// instruction but just use it, if it is referenced as a SCEVUnknown. We want
 /// however to generate new code if the instruction is in the analyzed region
 /// and we generate code outside/in front of that region. Hence, we generate the
-/// code for the SDiv/SRem operands in front of the analyzed region and then
-/// create a new SDiv/SRem operation there too.
+/// code for the SRem operands in front of the analyzed region and then
+/// create a new SRem operation there too.
 struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
   friend struct SCEVVisitor<ScopExpander, const SCEV *>;
 
@@ -341,8 +341,7 @@ private:
     else
       IP = RTCBB->getParent()->getEntryBlock().getTerminator()->getIterator();
 
-    if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
-                  Inst->getOpcode() != Instruction::SDiv))
+    if (!Inst || (Inst->getOpcode() != Instruction::SRem))
       return visitGenericInst(E, Inst, IP);
 
     const SCEV *LHSScev = GenSE.getSCEV(Inst->getOperand(0));
@@ -379,9 +378,19 @@ private:
   }
   const SCEV *visitUDivExpr(const SCEVUDivExpr *E) {
     auto *RHSScev = visit(E->getRHS());
-    if (!GenSE.isKnownNonZero(RHSScev))
+    if (E->mayTriggerUB(GenSE))
       RHSScev = GenSE.getUMaxExpr(RHSScev, GenSE.getConstant(E->getType(), 1));
     return GenSE.getUDivExpr(visit(E->getLHS()), RHSScev);
+  }
+  const SCEV *visitSDivExpr(const SCEVSDivExpr *E) {
+    auto *LHSScev = visit(E->getRHS());
+    auto *RHSScev = visit(E->getRHS());
+    // We would need to freeze LHS and RHS, but there are no corresponding SCEV
+    // expressions for freeze. Hence, we reject all sdiv expressions that may
+    // trigger UB.
+    assert(!E->mayTriggerUB(GenSE) &&
+           "SDiv that triggers UB should be invalid");
+    return GenSE.getSDivExpr(LHSScev, RHSScev);
   }
   const SCEV *visitAddExpr(const SCEVAddExpr *E) {
     SmallVector<SCEVUse, 4> NewOps;

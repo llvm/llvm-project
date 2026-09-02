@@ -46,6 +46,7 @@ enum SCEVTypes : unsigned short {
   scAddExpr,
   scMulExpr,
   scUDivExpr,
+  scSDivExpr,
   scAddRecExpr,
   scUMaxExpr,
   scSMaxExpr,
@@ -293,32 +294,84 @@ public:
   static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
-/// This class represents a binary unsigned division operation.
-class SCEVUDivExpr : public SCEV {
+/// This abstract class holds the code common to binary signed and unsigned
+/// divisions.
+class SCEVDivExpr : public SCEV {
   friend class ScalarEvolution;
+  friend class SCEVUDivExpr;
+  friend class SCEVSDivExpr;
 
   std::array<SCEVUse, 2> Operands;
 
-  SCEVUDivExpr(const FoldingSetNodeIDRef ID, SCEVUse lhs, SCEVUse rhs)
-      : SCEV(ID, scUDivExpr, computeExpressionSize({lhs, rhs}),
-             lhs->getType()) {
-    Operands[0] = lhs;
-    Operands[1] = rhs;
+  SCEVDivExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T, SCEVUse LHS,
+              SCEVUse RHS)
+      : SCEV(ID, T, computeExpressionSize({LHS, RHS}), LHS->getType()) {
+    Operands[0] = LHS;
+    Operands[1] = RHS;
   }
+
+  virtual ~SCEVDivExpr() = default;
 
 public:
   SCEVUse getLHS() const { return Operands[0]; }
   SCEVUse getRHS() const { return Operands[1]; }
   size_t getNumOperands() const { return 2; }
-  SCEVUse getOperand(unsigned i) const {
-    assert((i == 0 || i == 1) && "Operand index out of range!");
-    return i == 0 ? getLHS() : getRHS();
+  SCEVUse getOperand(unsigned I) const {
+    assert(I < getNumOperands() && "Operand index out of range!");
+    return Operands[I];
   }
 
   ArrayRef<SCEVUse> operands() const { return Operands; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const SCEV *S) {
+    return is_contained({scUDivExpr, scSDivExpr}, S->getSCEVType());
+  }
+  virtual bool mayTriggerUB(ScalarEvolution &SE) const = 0;
+};
+
+/// This class represents a binary unsigned division operation.
+class SCEVUDivExpr : public SCEVDivExpr {
+  friend class ScalarEvolution;
+
+  SCEVUDivExpr(const FoldingSetNodeIDRef ID, SCEVUse LHS, SCEVUse RHS)
+      : SCEVDivExpr(ID, scUDivExpr, LHS, RHS) {}
+
+  virtual ~SCEVUDivExpr() = default;
+
+public:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scUDivExpr; }
+
+  virtual bool mayTriggerUB(ScalarEvolution &SE) const override {
+    return !SE.isKnownNonZero(getRHS()) ||
+           !ScalarEvolution::isGuaranteedNotToBePoison(getRHS());
+  }
+};
+
+/// This class represents a binary signed division operation.
+class SCEVSDivExpr : public SCEVDivExpr {
+  friend class ScalarEvolution;
+
+  SCEVSDivExpr(const FoldingSetNodeIDRef ID, SCEVUse LHS, SCEVUse RHS)
+      : SCEVDivExpr(ID, scSDivExpr, LHS, RHS) {}
+
+  virtual ~SCEVSDivExpr() = default;
+
+public:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const SCEV *S) { return S->getSCEVType() == scSDivExpr; }
+
+  /// Return true for degenerate cases of this expression.
+  virtual bool mayTriggerUB(ScalarEvolution &SE) const override {
+    return !SE.isKnownNonZero(getRHS()) ||
+           (SE.getSignedRangeMin(getLHS()).isMinSignedValue() &&
+            !SE.isKnownPredicate(
+                CmpInst::ICMP_NE, getRHS(),
+                SE.getConstant(getType(), -1, /*isSigned=*/true))) ||
+           !ScalarEvolution::isGuaranteedNotToBePoison(getLHS()) ||
+           !ScalarEvolution::isGuaranteedNotToBePoison(getRHS());
+  }
 };
 
 /// This node represents a polynomial recurrence on the trip count
@@ -609,6 +662,8 @@ template <typename SC, typename RetVal = void> struct SCEVVisitor {
       return ((SC *)this)->visitMulExpr((const SCEVMulExpr *)S);
     case scUDivExpr:
       return ((SC *)this)->visitUDivExpr((const SCEVUDivExpr *)S);
+    case scSDivExpr:
+      return ((SC *)this)->visitSDivExpr((const SCEVSDivExpr *)S);
     case scAddRecExpr:
       return ((SC *)this)->visitAddRecExpr((const SCEVAddRecExpr *)S);
     case scSMaxExpr:
@@ -663,6 +718,9 @@ template <typename SC, typename RetVal = void> struct SCEVUseVisitor {
     case scUDivExpr:
       return ((SC *)this)
           ->visitUDivExpr(cast<SCEVUseT<const SCEVUDivExpr *>>(S));
+    case scSDivExpr:
+      return ((SC *)this)
+          ->visitSDivExpr(cast<SCEVUseT<const SCEVSDivExpr *>>(S));
     case scAddRecExpr:
       return ((SC *)this)
           ->visitAddRecExpr(cast<SCEVUseT<const SCEVAddRecExpr *>>(S));
@@ -734,6 +792,7 @@ public:
       case scAddExpr:
       case scMulExpr:
       case scUDivExpr:
+      case scSDivExpr:
       case scSMaxExpr:
       case scUMaxExpr:
       case scSMinExpr:
@@ -867,6 +926,13 @@ public:
     auto *RHS = ((SC *)this)->visit(Expr->getRHS());
     bool Changed = LHS != Expr->getLHS() || RHS != Expr->getRHS();
     return !Changed ? Expr : SE.getUDivExpr(LHS, RHS);
+  }
+
+  const SCEV *visitSDivExpr(const SCEVSDivExpr *Expr) {
+    auto *LHS = ((SC *)this)->visit(Expr->getLHS());
+    auto *RHS = ((SC *)this)->visit(Expr->getRHS());
+    bool Changed = LHS != Expr->getLHS() || RHS != Expr->getRHS();
+    return !Changed ? Expr : SE.getSDivExpr(LHS, RHS);
   }
 
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {

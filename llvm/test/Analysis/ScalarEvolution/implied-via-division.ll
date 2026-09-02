@@ -6,9 +6,9 @@ define void @implied1(i32 %n) {
 ; Prove that (n s> 1) ===> (n / 2 s> 0).
 ; CHECK-LABEL: 'implied1'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied1
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -31,9 +31,9 @@ define void @implied1_samesign(i32 %n) {
 ; Prove that (n > 1) ===> (n / 2 s> 0).
 ; CHECK-LABEL: 'implied1_samesign'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied1_samesign
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -56,9 +56,9 @@ define void @implied1_neg(i32 %n) {
 ; Prove that (n s> 0) =\=> (n / 2 s> 0).
 ; CHECK-LABEL: 'implied1_neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied1_neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (%n /s 2)))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax (%n /s 2)))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -81,9 +81,9 @@ define void @implied2(i32 %n) {
 ; Prove that (n s>= 2) ===> (n / 2 s> 0).
 ; CHECK-LABEL: 'implied2'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied2
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -106,9 +106,9 @@ define void @implied2_samesign(i32 %n) {
 ; Prove that (n >= 2) ===> (n / 2 s> 0).
 ; CHECK-LABEL: 'implied2_samesign'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied2_samesign
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (%n /s 2)))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax (%n /s 2)))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -131,9 +131,9 @@ define void @implied2_neg(i32 %n) {
 ; Prove that (n s>= 1) =\=> (n / 2 s> 0).
 ; CHECK-LABEL: 'implied2_neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied2_neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (%n /s 2)))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741822
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax %n.div.2))<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax (%n /s 2)))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -156,9 +156,9 @@ define void @implied3(i32 %n) {
 ; Prove that (n s> -2) ===> (n / 2 s>= 0).
 ; CHECK-LABEL: 'implied3'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied3
-; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -181,10 +181,10 @@ define void @implied3_samesign(i32 %n) {
 ; Prove that (n > -2) ===> (n / 2 s>= 0).
 ; CHECK-LABEL: 'implied3_samesign'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied3_samesign
-; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nsw>
-; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nsw>
-; CHECK-NEXT:  Loop %header: Trip multiple is 1
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (%n /s 2))<nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (%n /s 2))<nsw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 2
 ;
 entry:
   %cmp1 = icmp samesign ugt i32 %n, -2
@@ -206,9 +206,9 @@ define void @implied3_neg(i32 %n) {
 ; Prove that (n > -3) =\=> (n / 2 >= 0).
 ; CHECK-LABEL: 'implied3_neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied3_neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (0 smax (1 + %n.div.2)<nsw>)
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (0 smax (1 + %n.div.2)<nsw>)
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -231,9 +231,9 @@ define void @implied4(i32 %n) {
 ; Prove that (n s>= -1) ===> (n / 2 s>= 0).
 ; CHECK-LABEL: 'implied4'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied4
-; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -256,10 +256,10 @@ define void @implied4_samesign(i32 %n) {
 ; Prove that (n >= -1) ===> (n / 2 s>= 0).
 ; CHECK-LABEL: 'implied4_samesign'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied4_samesign
-; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nsw>
-; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nsw>
-; CHECK-NEXT:  Loop %header: Trip multiple is 1
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (%n /s 2))<nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (%n /s 2))<nsw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 2
 ;
 entry:
   %cmp1 = icmp samesign uge i32 %n, -1
@@ -281,9 +281,9 @@ define void @implied4_neg(i32 %n) {
 ; Prove that (n s>= -2) =\=> (n / 2 s>= 0).
 ; CHECK-LABEL: 'implied4_neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied4_neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (0 smax (1 + %n.div.2)<nsw>)
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (0 smax (1 + %n.div.2)<nsw>)
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -306,9 +306,9 @@ define void @test_ext_01(i32 %n) nounwind {
 ; Prove that (n > 1) ===> (n / 2 > 0).
 ; CHECK-LABEL: 'test_ext_01'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ext_01
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (sext i32 %n.div.2 to i64))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 1073741822
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (sext i32 %n.div.2 to i64))<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -332,9 +332,9 @@ define void @test_ext_01neg(i32 %n) nounwind {
 ; Prove that (n > 0) =\=> (n / 2 > 0).
 ; CHECK-LABEL: 'test_ext_01neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ext_01neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (sext i32 %n.div.2 to i64)))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (sext i32 (%n /s 2) to i64)))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 1073741822
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax (sext i32 %n.div.2 to i64)))<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax (sext i32 (%n /s 2) to i64)))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -358,9 +358,9 @@ define void @test_ext_02(i32 %n) nounwind {
 ; Prove that (n >= 2) ===> (n / 2 > 0).
 ; CHECK-LABEL: 'test_ext_02'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ext_02
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (sext i32 %n.div.2 to i64))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 1073741822
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (sext i32 %n.div.2 to i64))<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -384,9 +384,9 @@ define void @test_ext_02neg(i32 %n) nounwind {
 ; Prove that (n >= 1) =\=> (n / 2 > 0).
 ; CHECK-LABEL: 'test_ext_02neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ext_02neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (sext i32 %n.div.2 to i64)))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (sext i32 (%n /s 2) to i64)))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 1073741822
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax (sext i32 %n.div.2 to i64)))<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax (sext i32 (%n /s 2) to i64)))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -410,9 +410,9 @@ define void @test_ext_03(i32 %n) nounwind {
 ; Prove that (n > -2) ===> (n / 2 >= 0).
 ; CHECK-LABEL: 'test_ext_03'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ext_03
-; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (sext i32 %n.div.2 to i64))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (sext i32 %n.div.2 to i64))<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -436,9 +436,9 @@ define void @test_ext_03neg(i32 %n) nounwind {
 ; Prove that (n > -3) =\=> (n / 2 >= 0).
 ; CHECK-LABEL: 'test_ext_03neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ext_03neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (0 smax (1 + (sext i32 %n.div.2 to i64))<nsw>)
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (0 smax (1 + (sext i32 %n.div.2 to i64))<nsw>)
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -462,9 +462,9 @@ define void @test_ext_04(i32 %n) nounwind {
 ; Prove that (n >= -1) ===> (n / 2 >= 0).
 ; CHECK-LABEL: 'test_ext_04'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ext_04
-; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (sext i32 %n.div.2 to i64))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (sext i32 %n.div.2 to i64))<nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -488,9 +488,9 @@ define void @test_ext_04neg(i32 %n) nounwind {
 ; Prove that (n >= -2) =\=> (n / 2 >= 0).
 ; CHECK-LABEL: 'test_ext_04neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_ext_04neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (0 smax (1 + (sext i32 %n.div.2 to i64))<nsw>)
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (0 smax (1 + (sext i32 %n.div.2 to i64))<nsw>)
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (sext i32 (%n /s 2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -514,9 +514,9 @@ define void @swapped_predicate(i32 %n) {
 ; Prove that (n s>= 1) ===> (0 s>= -n / 2).
 ; CHECK-LABEL: 'swapped_predicate'
 ; CHECK-NEXT:  Determining loop execution counts for: @swapped_predicate
-; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 1073741824
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + %n.div.2)<nuw><nsw>
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (1 + (%n /s 2))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:

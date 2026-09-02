@@ -970,6 +970,44 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
                                 VPIRFlags::getDefaultFlags(Instruction::UDiv),
                                 DL);
   }
+  case scSDivExpr: {
+    auto *SDiv = cast<SCEVSDivExpr>(S);
+    VPlan &Plan = Builder.getPlan();
+    const SCEV *LHSExpr = SDiv->getLHS();
+    VPValue *LHS = expand(LHSExpr);
+    const SCEV *RHSExpr = SDiv->getRHS();
+    VPValue *RHS = expand(RHSExpr);
+    // Make sure the SDiv doesn't hit zero divisor, or smin/-1, or poison, to
+    // avoid UB.
+    if (!ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr))
+      RHS = Builder.createScalarFreeze(RHS, DL);
+    if (!ScalarEvolution::isGuaranteedNotToBePoison(LHSExpr))
+      LHS = Builder.createScalarFreeze(LHS, DL);
+    if (!ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr) ||
+        !SE.isKnownNonZero(RHSExpr)) {
+      VPValue *Zero = Plan.getZero(LHS->getScalarType());
+      VPValue *One = Plan.getConstantInt(RHS->getScalarType(), 1);
+      RHS = Builder.createSelect(
+          Builder.createICmp(CmpInst::ICMP_EQ, RHS, Zero), One, RHS);
+    }
+    if (!ScalarEvolution::isGuaranteedNotToBePoison(LHSExpr) ||
+        (SE.getSignedRangeMin(LHSExpr).isMinSignedValue() &&
+         !SE.isKnownPredicate(
+             CmpInst::ICMP_NE, RHSExpr,
+             SE.getConstant(S->getType(), -1, /*isSigned=*/true)))) {
+      VPValue *SMin = Plan.getConstantInt(
+          APInt::getSignedMinValue(LHS->getScalarType()->getIntegerBitWidth()));
+      VPValue *AllOnes = Plan.getAllOnesValue(RHS->getScalarType());
+      VPValue *Zero = Plan.getZero(LHS->getScalarType());
+      VPValue *SMinCond = Builder.createLogicalAnd(
+          Builder.createICmp(CmpInst::ICMP_EQ, LHS, SMin),
+          Builder.createICmp(CmpInst::ICMP_EQ, RHS, AllOnes));
+      LHS = Builder.createSelect(SMinCond, Zero, LHS);
+    }
+    return Builder.createNaryOp(Instruction::SDiv, {LHS, RHS},
+                                VPIRFlags::getDefaultFlags(Instruction::SDiv),
+                                DL);
+  }
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:

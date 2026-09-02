@@ -375,27 +375,24 @@ public:
   }
 
   ValidatorResult visitDivision(const SCEV *Dividend, const SCEV *Divisor,
-                                const SCEV *DivExpr,
-                                Instruction *SDiv = nullptr) {
-
+                                const SCEVDivExpr *DivExpr) {
     // First check if we might be able to model the division, thus if the
     // divisor is constant. If so, check the dividend, otherwise check if
     // the whole division can be seen as a parameter.
     if (isa<SCEVConstant>(Divisor) && !Divisor->isZero())
       return visit(Dividend);
 
-    // For signed divisions use the SDiv instruction to check for a parameter
-    // division, for unsigned divisions check the operands.
-    if (SDiv)
-      return visitGenericInst(SDiv, DivExpr);
+    if (isa<SCEVSDivExpr>(DivExpr) && DivExpr->mayTriggerUB(SE)) {
+      POLLY_DEBUG(dbgs() << "INVALID: signed division may trigger UB");
+      return ValidatorResult(SCEVType::INVALID);
+    }
 
     ValidatorResult LHS = visit(Dividend);
     ValidatorResult RHS = visit(Divisor);
     if (LHS.isConstant() && RHS.isConstant())
       return ValidatorResult(SCEVType::PARAM, DivExpr);
 
-    POLLY_DEBUG(
-        dbgs() << "INVALID: unsigned division of non-constant expressions");
+    POLLY_DEBUG(dbgs() << "INVALID: division of non-constant expressions");
     return ValidatorResult(SCEVType::INVALID);
   }
 
@@ -408,13 +405,10 @@ public:
     return visitDivision(Dividend, Divisor, Expr);
   }
 
-  ValidatorResult visitSDivInstruction(Instruction *SDiv, const SCEV *Expr) {
-    assert(SDiv->getOpcode() == Instruction::SDiv &&
-           "Assumed SDiv instruction!");
-
-    const SCEV *Dividend = SE.getSCEV(SDiv->getOperand(0));
-    const SCEV *Divisor = SE.getSCEV(SDiv->getOperand(1));
-    return visitDivision(Dividend, Divisor, Expr, SDiv);
+  ValidatorResult visitSDivExpr(const SCEVSDivExpr *Expr) {
+    const SCEV *Dividend = Expr->getLHS();
+    const SCEV *Divisor = Expr->getRHS();
+    return visitDivision(Dividend, Divisor, Expr);
   }
 
   ValidatorResult visitSRemInstruction(Instruction *SRem, const SCEV *S) {
@@ -451,8 +445,6 @@ public:
         return visit(SE.getSCEVAtScope(I->getOperand(0), Scope));
       case Instruction::Load:
         return visitLoadInstruction(I, Expr);
-      case Instruction::SDiv:
-        return visitSDivInstruction(I, Expr);
       case Instruction::SRem:
         return visitSRemInstruction(I, Expr);
       default:
@@ -562,8 +554,7 @@ public:
 
     Values.insert(Unknown->getValue());
     Instruction *Inst = dyn_cast<Instruction>(Unknown->getValue());
-    if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
-                  Inst->getOpcode() != Instruction::SDiv))
+    if (!Inst || Inst->getOpcode() != Instruction::SRem)
       return false;
 
     const SCEV *Dividend = SE.getSCEV(Inst->getOperand(1));
