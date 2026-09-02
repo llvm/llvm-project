@@ -137,6 +137,12 @@ static cl::opt<unsigned> StoreMergeDependenceLimit(
     cl::desc("Limit the number of times for the same StoreNode and RootNode "
              "to bail out in store merging dependence check"));
 
+// A foldable overlapping load has few chain siblings, so a small cap suffices.
+static cl::opt<unsigned> LoadForwardMaxChainUsers(
+    "combiner-load-forward-max-chain-users", cl::Hidden, cl::init(16),
+    cl::desc("Limit the number of chain users scanned when forwarding a narrow "
+             "load from an overlapping wider load on the same chain"));
+
 static cl::opt<bool> EnableReduceLoadOpStoreWidth(
     "combiner-reduce-load-op-store-width", cl::Hidden, cl::init(true),
     cl::desc("DAG combiner enable reducing the width of load/op/store "
@@ -384,6 +390,7 @@ namespace {
     StoreSDNode *getUniqueStoreFeeding(LoadSDNode *LD, int64_t &Offset);
     // Scalars have size 0 to distinguish from singleton vectors.
     SDValue ForwardStoreValueToDirectLoad(LoadSDNode *LD);
+    SDValue ForwardLoadValueToDirectLoad(LoadSDNode *LD);
     bool getTruncatedStoreValue(StoreSDNode *ST, SDValue &Val);
     bool extendLoadedValueToExtension(LoadSDNode *LD, SDValue &Val);
 
@@ -21994,6 +22001,136 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   return SDValue();
 }
 
+/// Returns true if \p LD is a plain non-extending load of a whole fixed-width
+/// scalar integer.
+static bool isForwardableIntegerLoad(LoadSDNode *LD) {
+  if (!LD->isSimple() || LD->isIndexed())
+    return false;
+  EVT MemVT = LD->getMemoryVT();
+  return MemVT.isInteger() && !MemVT.isVector() && !MemVT.isScalableVT();
+}
+
+/// Returns true if \p LD may act as the wider load: it must be non-extending,
+/// so its value is exactly the bytes it reads.
+static bool isForwardableWideLoad(LoadSDNode *LD) {
+  return isForwardableIntegerLoad(LD) &&
+         LD->getExtensionType() == ISD::NON_EXTLOAD &&
+         LD->getValueType(0) == LD->getMemoryVT();
+}
+
+/// Maps a load extension type to the node used to re-apply it to a forwarded
+/// value.
+static unsigned getExtendOpcodeForLoad(ISD::LoadExtType ExtType) {
+  switch (ExtType) {
+  case ISD::ZEXTLOAD:
+    return ISD::ZERO_EXTEND;
+  case ISD::SEXTLOAD:
+    return ISD::SIGN_EXTEND;
+  case ISD::EXTLOAD:
+    return ISD::ANY_EXTEND;
+  case ISD::NON_EXTLOAD:
+    break;
+  }
+  llvm_unreachable("not an extending load");
+}
+
+/// If LD reads bytes contained in a wider load from an overlapping address on
+/// the same chain, forward it from that load instead of re-reading memory.
+/// Catches differently-typed overlapping loads that DAG CSE cannot merge.
+SDValue DAGCombiner::ForwardLoadValueToDirectLoad(LoadSDNode *LD) {
+  // Little-endian only, so that byte offset N is bit offset N * 8.
+  if (OptLevel == CodeGenOptLevel::None || DAG.getDataLayout().isBigEndian())
+    return SDValue();
+  if (!isForwardableIntegerLoad(LD) || LD->getBasePtr().isUndef())
+    return SDValue();
+
+  // LDVT is the value LD produces; LDMemVT is the bytes it actually reads.
+  // They differ when LD is an extending load.
+  EVT LDVT = LD->getValueType(0);
+  EVT LDMemVT = LD->getMemoryVT();
+  uint64_t LDMemBits = LDMemVT.getFixedSizeInBits();
+  SDValue Chain = LD->getChain();
+  BaseIndexOffset LDPtr = BaseIndexOffset::match(LD, DAG);
+
+  // Many loads can share one chain token (e.g. the entry token), so bound the
+  // scan to keep this from going quadratic.
+  unsigned Scanned = 0;
+  for (SDNode *U : Chain.getNode()->users()) {
+    if (++Scanned > LoadForwardMaxChainUsers)
+      break;
+
+    auto *Wide = dyn_cast<LoadSDNode>(U);
+    if (!Wide || Wide == LD || Wide->getChain() != Chain ||
+        Wide->getAddressSpace() != LD->getAddressSpace() ||
+        !isForwardableWideLoad(Wide))
+      continue;
+
+    // Wide must already be needed elsewhere, or this just trades one load for
+    // another and fights ReduceLoadWidth, which narrows the truncate back.
+    if (SDValue(Wide, 0).use_empty())
+      continue;
+
+    EVT WideVT = Wide->getValueType(0);
+    uint64_t WideBits = WideVT.getFixedSizeInBits();
+    if (WideBits <= LDMemBits)
+      continue;
+
+    // Off = Wide's address - LD's address, so LD sits -Off bytes into Wide.
+    // Bounding Off to (-WideBytes, 0] keeps the bit math below in range.
+    //
+    // Matching here is also what makes the rewrite acyclic. Forwarding makes
+    // LD's users depend on Wide, so Wide must not depend on LD. Its chain
+    // operand is LD's chain rather than LD itself, and equalBaseIndex only
+    // succeeds when Wide's base and index are the same nodes as LD's, which
+    // LD's own address cannot reference. So Wide's address cannot reference
+    // LD either.
+    int64_t Off;
+    BaseIndexOffset WidePtr = BaseIndexOffset::match(Wide, DAG);
+    int64_t WideBytes = WideVT.getStoreSize().getFixedValue();
+    if (!LDPtr.equalBaseIndex(WidePtr, DAG, Off) || Off > 0 ||
+        Off <= -WideBytes)
+      continue;
+
+    // LD's access must be fully contained, not just start inside Wide.
+    uint64_t ShiftBits = static_cast<uint64_t>(-Off) * 8;
+    if (ShiftBits + LDMemBits > WideBits)
+      continue;
+
+    // Narrowing must be free: a truncate, plus a shift for a high field, can
+    // cost more than re-reading memory (e.g. RISC-V, where only i64->i32 is
+    // free).
+    if (!TLI.isTruncateFree(WideVT, LDMemVT))
+      continue;
+    if (ShiftBits && !TLI.isOperationLegalOrCustom(ISD::SRL, WideVT))
+      continue;
+
+    // An extending load also needs its extension re-applied to the forwarded
+    // value.
+    ISD::LoadExtType ExtType = LD->getExtensionType();
+    unsigned ExtOpc = 0;
+    if (ExtType != ISD::NON_EXTLOAD) {
+      ExtOpc = getExtendOpcodeForLoad(ExtType);
+      if (LegalOperations && !TLI.isOperationLegalOrCustom(ExtOpc, LDVT))
+        continue;
+    }
+
+    // LD reads bits [ShiftBits, ShiftBits + LDMemBits) of Wide.
+    SDLoc DL(LD);
+    SDValue Val(Wide, 0);
+    if (ShiftBits)
+      Val = DAG.getNode(ISD::SRL, DL, WideVT, Val,
+                        DAG.getShiftAmountConstant(ShiftBits, WideVT, DL));
+    Val = DAG.getNode(ISD::TRUNCATE, DL, LDMemVT, Val);
+    if (ExtOpc)
+      Val = DAG.getNode(ExtOpc, DL, LDVT, Val);
+
+    // LD performs no write, so its chain successors can use LD's input chain.
+    return CombineTo(LD, Val, Chain);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitLOAD(SDNode *N) {
   LoadSDNode *LD  = cast<LoadSDNode>(N);
   SDValue Chain = LD->getChain();
@@ -22060,6 +22197,10 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
   // If this load is directly stored, replace the load value with the stored
   // value.
   if (auto V = ForwardStoreValueToDirectLoad(LD))
+    return V;
+
+  // If this load overlaps a wider load, forward it from that load.
+  if (SDValue V = ForwardLoadValueToDirectLoad(LD))
     return V;
 
   // Try to infer better alignment information than the load already has.
