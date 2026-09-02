@@ -122,11 +122,6 @@ static bool rewriteNonInstructionUses(GlobalVariable *GV, Pass *P) {
   return true;
 }
 
-static bool isZeroLengthArray(Type *Ty) {
-  ArrayType *AT = dyn_cast<ArrayType>(Ty);
-  return AT && (AT->getNumElements() == 0);
-}
-
 bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
   Module *M = GV->getParent();
   if (!GV->isThreadLocal())
@@ -140,7 +135,8 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
   // one now, with a clear diagnostic, rather than emitting a malformed GEP
   // that only fails much later (and much less clearly) in instruction
   // selection.
-  if (!GV->getValueType()->isSized() || isZeroLengthArray(GV->getValueType()))
+  if (!GV->getValueType()->isSized() ||
+      GV->getGlobalSize(M->getDataLayout()) == 0)
     reportFatalUsageError("Size of thread local object '" + GV->getName() +
                           "' is unknown");
 
