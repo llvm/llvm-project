@@ -2156,7 +2156,6 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
                (VA.getLocInfo() == CCValAssign::SExt ||
                 VA.getLocInfo() == CCValAssign::ZExt) &&
                Ins[I].ArgVT.isSimple() &&
-               Ins[I].ArgVT.getSimpleVT().isScalarInteger() &&
                !Ins[I].Flags.isPointer()) {
       // Some prior z/OS compilers do not always perform the extension of
       // short integer arguments.  To accommodate those, do not rely on
