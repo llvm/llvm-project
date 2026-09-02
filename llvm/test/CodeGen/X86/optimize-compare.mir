@@ -747,8 +747,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: opt_shift_cmp_zero_lea_count_one_use
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
-    ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 3, implicit-def dead $eflags
-    ; CHECK-NEXT: TEST64rr [[SHL64ri]], [[SHL64ri]], implicit-def $eflags
+    ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 3, implicit-def $eflags
     ; CHECK-NEXT: $al = SETCCr 4, implicit $eflags
     %0:gr64 = COPY $rsi
     ; %0 has no other use, so the shift will never become an LEA and can
@@ -763,8 +762,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: opt_shift_cmp_zero_shl_one_one_use
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
-    ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 1, implicit-def dead $eflags
-    ; CHECK-NEXT: TEST64rr [[SHL64ri]], [[SHL64ri]], implicit-def $eflags
+    ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 1, implicit-def $eflags
     ; CHECK-NEXT: $al = SETCCr 4, implicit $eflags
     %0:gr64 = COPY $rsi
     ; %0 has no other use, so the shift will never become an LEA and can
