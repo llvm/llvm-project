@@ -84,6 +84,8 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/CodeLayout.h"
 #include <optional>
+#include <queue>
+#include <unordered_set>
 
 using namespace llvm;
 
@@ -101,6 +103,17 @@ static cl::opt<bool> BBSectionsDetectSourceDrift(
     cl::desc("This checks if there is a fdo instr. profile hash "
              "mismatch for this function"),
     cl::init(true), cl::Hidden);
+
+static cl::opt<bool> BBSectionsDetectCFGDrift(
+    "bbsections-detect-cfg-drift",
+    cl::desc("This checks if function's cfg hash mismatch "
+             "with cfg hash recorded in profile"),
+    cl::init(false), cl::Hidden);
+
+static cl::opt<bool>
+    FirstMBBContainCFGHash("first-mbb-contain-cfg-hash",
+                           cl::desc("Use cfg hash as first mbb base id"),
+                           cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -368,9 +381,44 @@ bool llvm::hasInstrProfHashMismatch(MachineFunction &MF) {
   return false;
 }
 
+static uint64_t getCFGMD5(MachineFunction &MF) {
+  std::unordered_set<MachineBasicBlock *> Visited;
+  MD5 Hash;
+  std::queue<MachineBasicBlock *> Q;
+  if (!MF.empty()) {
+    Q.push(&*MF.begin());
+    Visited.insert(&*MF.begin());
+  }
+  while (!Q.empty()) {
+    MachineBasicBlock *Now = Q.front();
+    Q.pop();
+    using namespace llvm::support;
+    uint64_t Value = endian::byte_swap<uint32_t, llvm::endianness::little>(
+        Now->getBBID()->BaseID);
+    Hash.update(llvm::ArrayRef((uint8_t *)&Value, sizeof(Value)));
+    for (auto Iter = Now->succ_begin(); Iter != Now->succ_end(); Iter++) {
+      if (Visited.count(&**Iter)) {
+        continue;
+      }
+      Q.push(&**Iter);
+      Visited.insert(&**Iter);
+    }
+  }
+  llvm::MD5::MD5Result Result;
+  Hash.final(Result);
+  return Result.low();
+}
+
 // Identify, arrange, and modify basic blocks which need separate sections
 // according to the specification provided by the -fbasic-block-sections flag.
 bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
+  unsigned CFGHash = 0;
+  if (BBSectionsDetectCFGDrift) {
+    CFGHash = static_cast<unsigned>(getCFGMD5(MF));
+    if (FirstMBBContainCFGHash)
+      MF.begin()->setBBID({CFGHash, 0});
+  }
+
   auto BBSectionsType = MF.getTarget().getBBSectionsType();
   if (BBSectionsType == BasicBlockSection::None)
     return false;
@@ -396,6 +444,11 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
     }
     if (ClusterInfo.empty())
       return false;
+    // Check for cfg drift.
+    if (BBSectionsDetectCFGDrift &&
+        ClusterInfo.begin()->BBID.BaseID != CFGHash) {
+      return false;
+    }
     for (auto &BBClusterInfo : ClusterInfo) {
       FuncClusterInfo.try_emplace(BBClusterInfo.BBID, BBClusterInfo);
     }
