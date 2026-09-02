@@ -197,3 +197,7 @@ def AMDGPU_AllVectorRegs : RegMask<
 def AMDGPU_AllAllocatableSRegs : RegMask<
   (add (sequence "SGPR%u", 0, 105), VCC_LO, VCC_HI)
 >;
+
+def AMDGPU_AllGPRs : RegMask<
+  (add AMDGPU_AllVGPRs, AMDGPU_AllAllocatableSRegs)
+>;
