@@ -24,9 +24,9 @@ body:             |
 
 # CHECK-LABEL: *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x1 = ADDXrr $x0, $x0
-# CHECK-NEXT: SU(1) [TopReadyCycle = 0, BottomReadyCycle = 1]:   $x2 = ADDXrr $x1, $x1
-# CHECK-NEXT: SU(2) [TopReadyCycle = 1, BottomReadyCycle = 0]:   $x3 = ADDXrr $x2, $x2
-# CHECK-NEXT: SU(3) [TopReadyCycle = 1, BottomReadyCycle = 0]:   $x4 = ADDXrr $x2, $x2
+# CHECK-NEXT: SU(1) [TopReadyCycle = 1, BottomReadyCycle = 1]:   $x2 = ADDXrr $x1, $x1
+# CHECK-NEXT: SU(2) [TopReadyCycle = 2, BottomReadyCycle = 0]:   $x3 = ADDXrr $x2, $x2
+# CHECK-NEXT: SU(3) [TopReadyCycle = 2, BottomReadyCycle = 0]:   $x4 = ADDXrr $x2, $x2
 
 # NOCYCLES-LABEL: *** Final schedule for %bb.0 ***
 # NOCYCLES-NEXT: SU(0):   $x1 = ADDXrr $x0, $x0
