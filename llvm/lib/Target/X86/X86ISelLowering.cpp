@@ -186,6 +186,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   for (MVT VT : MVT::integer_valuetypes())
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
 
+  // Allow folding extensions into atomic loads. This is legal as the memory
+  // access keeps the original width and ordering. Deliberately leave out
+  // the 16 bit result to avoid writing a partial register.
+  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i32,
+                         {MVT::i8, MVT::i16}, Legal);
+  if (Subtarget.is64Bit())
+    setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i64,
+                           {MVT::i8, MVT::i16, MVT::i32}, Legal);
+
   // We don't accept any truncstore of integer registers.
   setTruncStoreAction(MVT::i64, MVT::i32, Expand);
   setTruncStoreAction(MVT::i64, MVT::i16, Expand);

@@ -1216,6 +1216,28 @@ def : Pat<(i16 (atomic_load_nonext_16 addr:$src)), (MOV16rm addr:$src)>;
 def : Pat<(i32 (atomic_load_nonext_32 addr:$src)), (MOV32rm addr:$src)>;
 def : Pat<(i64 (atomic_load_nonext_64 addr:$src)), (MOV64rm addr:$src)>;
 
+// The extending moves load the same number of bytes as the plain move, so
+// they can be used for an atomic load that zero or sign extends its result.
+def : Pat<(i32 (atomic_load_azext_8 addr:$src)),  (MOVZX32rm8 addr:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 addr:$src)), (MOVZX32rm16 addr:$src)>;
+def : Pat<(i32 (atomic_load_asext_8 addr:$src)),  (MOVSX32rm8 addr:$src)>;
+def : Pat<(i32 (atomic_load_asext_16 addr:$src)), (MOVSX32rm16 addr:$src)>;
+
+let Predicates = [In64BitMode] in {
+  def : Pat<(i64 (atomic_load_azext_8 addr:$src)),
+            (SUBREG_TO_REG (MOVZX32rm8 addr:$src), sub_32bit)>;
+  def : Pat<(i64 (atomic_load_azext_16 addr:$src)),
+            (SUBREG_TO_REG (MOVZX32rm16 addr:$src), sub_32bit)>;
+  def : Pat<(i64 (atomic_load_azext_32 addr:$src)),
+            (SUBREG_TO_REG (MOV32rm addr:$src), sub_32bit)>;
+  def : Pat<(i64 (atomic_load_asext_8 addr:$src)),
+            (MOVSX64rm8 addr:$src)>;
+  def : Pat<(i64 (atomic_load_asext_16 addr:$src)),
+            (MOVSX64rm16 addr:$src)>;
+  def : Pat<(i64 (atomic_load_asext_32 addr:$src)),
+            (MOVSX64rm32 addr:$src)>;
+}
+
 // load atomic <2 x i16>
 def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
   (MOVDI2PDIrm addr:$src)>, Requires<[UseSSE2]>;
