@@ -467,7 +467,7 @@ public:
   // Functions for external checking of whether we have unfinished work.
   bool wasBlocksExhausted() const { return Engine.wasBlocksExhausted(); }
   bool hasEmptyWorkList() const { return !Engine.getWorkList()->hasWork(); }
-  bool hasExploredAllPaths() const { return Engine.hasExploredAllPaths(); }
+  bool hasNotExploredAllPaths() const { return Engine.hasNotExploredAllPaths(); }
 
   const CoreEngine &getCoreEngine() const { return Engine; }
 
