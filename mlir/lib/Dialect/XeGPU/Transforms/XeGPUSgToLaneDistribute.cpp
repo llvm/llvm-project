@@ -1893,6 +1893,13 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //   4     partial, short   [2, 1]                  2  2 extracts, 6 shuffles
 //   --    partial, short   [8, 1, 2] sliced       16  declined
 //
+// The counts follow from the target fragment. One shuffle per element that has
+// to travel, and one extract per distinct position read in the donor's
+// fragment, elements reading the same position sharing one. So case 2's 1x2
+// fragment is two elements read at the same position: one extract, and one of
+// the two travels. Case 4's 4x2 fragment is eight elements over two positions:
+// two extracts, six of the eight travelling.
+//
 // Only the target varies within a category, so the test suite carries more than
 // one of some -- @convert_layout_broadcast_all_lanes is case 1 with `[8, 1]` --
 // but they behave alike and only one is described here. Case 1 is the one whose
@@ -1901,7 +1908,8 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // The last row is the boundary the two properties imply: with only `donorDelta`
 // 0 available, a lane arriving with less than its target fragment cannot be
 // completed, and the match fails with NoDonorDelta. There a lane arrives with 2
-// of the 8 elements it needs.
+// elements, `layout<[8, 1]>` giving it one row, and needs the sliced target's
+// 8, one whole column.
 //
 // Case 2 is the running example below: lanes 0-7 arrive holding all of column
 // 0, lanes 8-15 all of column 1, and lane `i` leaves holding row `i`. Lane 3
@@ -2018,6 +2026,11 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // single column, its row stride is 1, and no `2` appears. Case 4's index does
 // not depend on the slot at all: each target row arrives whole from one donor,
 // so `stride` is 0 and `offset` alone selects the column.
+//
+// Case 1's four offsets are where its 2x2 target fragment sits inside that
+// whole 8x2 value: lane `s` owns rows `s` and `s + 4`, columns 0 and 1, so
+// `2s+0, 2s+1, 2s+8, 2s+9`. The jump from 1 to 8 is four rows down at 2
+// elements each, the 4 being the extent of the target `lane_layout` [4, 1].
 //
 // Read the expression off case 1, where the four quantities are 4, 2, 1 and 4.
 // On case 2's `layout<[8, 1]>` target they collide: the lane period (8), its
