@@ -625,13 +625,10 @@ struct EpilogueLoopVectorizationInfo {
   BasicBlock *MainLoopIterationCountCheck = nullptr;
   BasicBlock *EpilogueIterationCountCheck = nullptr;
   Value *VectorTripCount = nullptr;
-  VPlan &EpiloguePlan;
 
   EpilogueLoopVectorizationInfo(ElementCount MVF, unsigned MUF,
-                                ElementCount EVF, unsigned EUF,
-                                VPlan &EpiloguePlan)
-      : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF), EpilogueUF(EUF),
-        EpiloguePlan(EpiloguePlan) {
+                                ElementCount EVF, unsigned EUF)
+      : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF), EpilogueUF(EUF) {
     assert(EUF == 1 &&
            "A high UF for the epilogue loop is likely not beneficial.");
   }
@@ -6445,6 +6442,15 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                        VPI->getOpcode()) &&
          "Should have been handled prior to this!");
 
+  // We can only replicate an extractvalue if its operand generates per lane in
+  // the same block, otherwise we would need to extract a lane from its struct
+  // operand which is invalid.
+  if (VPI->getOpcode() == Instruction::ExtractValue)
+    if (VPRecipeBase *OpR = VPI->getOperand(0)->getDefiningRecipe())
+      if (!vputils::doesGeneratePerAllLanes(OpR) ||
+          OpR->getParent() != VPI->getParent())
+        return tryToWiden(VPI);
+
   if (!shouldWiden(Instr, Range))
     return nullptr;
 
@@ -8293,7 +8299,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     BestEpiPlan.getVectorPreheader()->setName("vec.epilog.ph");
     SmallVector<VPInstruction *> ResumeValues =
         preparePlanForMainVectorLoop(BestMainPlan, BestEpiPlan);
-    EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF, 1, BestEpiPlan);
+    EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF, 1);
 
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.

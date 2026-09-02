@@ -390,7 +390,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Defang and deprecate <code>memory_order::consume</code></td>
   <td><a href="https://wg21.link/P3475">P3475R2</a></td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 24</td>
  </tr>
  <tr>
   <td>Concept and variable-template template-parameters</td>
@@ -1941,8 +1941,8 @@ option. Clang's C++11 mode can be used with
 </table>
 
 <p>
-<span id="n2761">(1): The <code>[[carries_dependency]]</code> attribute
-has no effect.</span><br>
+<span id="n2761">(1): The <code>[[carries_dependency]]</code> attribute is not
+supported.</span><br>
 <span id="n2670">(2): No compiler changes are required for an implementation
 such as Clang that does not provide garbage collection.</span><br>
 <span id="n2748">(3): All compare-exchange operations are emitted as
