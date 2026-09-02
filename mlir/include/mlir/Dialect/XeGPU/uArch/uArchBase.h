@@ -208,17 +208,21 @@ struct ScatterIoInstructionInterface : public Instruction {
     return B->getInstructionKind() == Kind;
   }
 
-  virtual int32_t getMaxLaneAccessSizeBytes() const = 0;
+  virtual int32_t getMaxLaneAccessSizeElements(int32_t elemBitwidth) const = 0;
   virtual ~ScatterIoInstructionInterface() = default;
 };
 struct LoadGatherInstruction
     : public ScatterIoInstructionInterface<InstructionKind::LoadGather> {
-  int32_t getMaxLaneAccessSizeBytes() const override { return 16; }
+  int32_t getMaxLaneAccessSizeElements(int32_t elemBitwidth) const override {
+    return 16 / (elemBitwidth / 8);
+  }
 };
 
 struct StoreScatterInstruction
     : public ScatterIoInstructionInterface<InstructionKind::StoreScatter> {
-  int32_t getMaxLaneAccessSizeBytes() const override { return 16; }
+  int32_t getMaxLaneAccessSizeElements(int32_t elemBitwidth) const override {
+    return 16 / (elemBitwidth / 8);
+  }
 };
 
 //===----------------------------------------------------------------------===//
