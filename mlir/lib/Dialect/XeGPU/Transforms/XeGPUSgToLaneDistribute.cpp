@@ -1950,11 +1950,10 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Algorithm
 // ---------
 //
-// Check the two layouts agree on the block, then for each block the target
-// wants, find an equal block in some lane and move that lane's copy to it:
-// extract, shuffle, insert. Only the search costs anything, because the match
-// has to hold for every slot at once -- through one lane offset and one index
-// expression.
+// Check the two layouts agree on `lane_data`, then for each element the target
+// wants, find a lane already holding it and move its copy over: extract,
+// shuffle, insert. The search is the only hard part, because one lane offset
+// and one index expression have to serve every slot at once.
 //
 // A `[name]` tag below gives the function carrying out the step under it.
 // `redistributeBroadcastedValue` is the enclosing one -- it owns both tables
@@ -2061,7 +2060,7 @@ static StringRef describe(RedistributionLimit limit) {
 }
 
 /// Relational rule: both layouts have to hand the lanes the same distribution
-/// unit, so that only the assignment of those blocks to lanes changes.
+/// unit, so that only the assignment of those units to lanes changes.
 static bool haveSameDistributionUnit(xegpu::DistributeLayoutAttr inputLayout,
                                      xegpu::DistributeLayoutAttr targetLayout) {
   return inputLayout.getEffectiveLaneDataAsInt() ==
