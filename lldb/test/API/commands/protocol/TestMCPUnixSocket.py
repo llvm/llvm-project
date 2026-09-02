@@ -12,6 +12,7 @@ MAX_SOCKET_PATH_LENGTH = 104
 
 class MCPUnixSocketCommandTestCase(TestBase):
     @requirePOSIX
+    @requireSocketPermission
     @skipIfRemote
     @no_debug_info_test
     def test_unix_socket(self):

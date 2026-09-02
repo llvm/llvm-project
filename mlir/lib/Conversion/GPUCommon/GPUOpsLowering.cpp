@@ -601,7 +601,7 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
   Type structType =
       LLVM::LLVMStructType::getLiteral(gpuPrintfOp.getContext(), types);
   Value one = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(),
-                                       rewriter.getIndexAttr(1));
+                                       rewriter.getI64IntegerAttr(1));
   Value tempAlloc =
       LLVM::AllocaOp::create(rewriter, loc, ptrType, structType, one,
                              /*alignment=*/0);

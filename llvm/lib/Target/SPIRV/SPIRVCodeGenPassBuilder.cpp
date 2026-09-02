@@ -8,6 +8,7 @@
 
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
+#include "SPIRVAsmPrinter.h"
 #include "SPIRVTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
@@ -70,6 +71,10 @@ public:
   Error addFastRegAlloc(PassManagerWrapper &PMW) override;
 
   Error addOptimizedRegAlloc(PassManagerWrapper &PMW) override;
+
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
+  void addAsmPrinter(PassManagerWrapper &PMW) override;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
 void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
@@ -151,14 +156,13 @@ Error SPIRVCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
 }
 
 void SPIRVCodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SPIRVPreLegalizerCombiner when it has been
-  // ported.
-  // TODO(boomanaiden154): Add SPIRVPreLegalizerPass when it has been ported.
+  addMachineFunctionPass(SPIRVPreLegalizerCombinerPass(), PMW);
+  addMachineFunctionPass(SPIRVPreLegalizerPass(), PMW);
 }
 
 Error SPIRVCodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
   addMachineFunctionPass(LegalizerPass(), PMW);
-  // TODO(boomanaiden154): Add SPIRVPostLegalizerPass when it has been ported.
+  addMachineFunctionPass(SPIRVPostLegalizerPass(), PMW);
   return Error::success();
 }
 
@@ -180,6 +184,18 @@ Error SPIRVCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
 
 Error SPIRVCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   return Error::success();
+}
+
+void SPIRVCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
+  addModulePass(SPIRVAsmPrinterBeginPass(), PMW);
+}
+
+void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(SPIRVAsmPrinterPass(), PMW);
+}
+
+void SPIRVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
+  addModulePass(SPIRVAsmPrinterEndPass(), PMW);
 }
 
 } // namespace

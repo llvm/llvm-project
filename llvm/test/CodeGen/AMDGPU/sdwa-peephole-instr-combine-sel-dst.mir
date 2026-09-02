@@ -15,12 +15,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 5, 0, 0, 0, implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 6, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  16, %2,  implicit $exec /* Select WORD_1 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -37,12 +35,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 5, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 16, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 5, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  16, %2,  implicit $exec /* Select WORD_1 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -59,12 +55,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 4, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 16, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 4, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  16, %2,  implicit $exec /* Select WORD_1 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -81,12 +75,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 3, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 16, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 3, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  16, %2,  implicit $exec /* Select WORD_1 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -103,12 +95,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 16, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  16, %2,  implicit $exec /* Select WORD_1 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -125,12 +115,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 1, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 16, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 1, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  16, %2,  implicit $exec /* Select WORD_1 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -147,12 +135,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 0, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 16, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 0, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  16, %2,  implicit $exec /* Select WORD_1 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -168,12 +154,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 3, 0, 0, 0, implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 6, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  24, %2,  implicit $exec /* Select BYTE_3 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -190,12 +174,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 5, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 24, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 5, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  24, %2,  implicit $exec /* Select BYTE_3 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -212,12 +194,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 4, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 24, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 4, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  24, %2,  implicit $exec /* Select BYTE_3 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -234,12 +214,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 3, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 24, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 3, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  24, %2,  implicit $exec /* Select BYTE_3 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -256,12 +234,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 24, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  24, %2,  implicit $exec /* Select BYTE_3 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -278,12 +254,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 1, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 24, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 1, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  24, %2,  implicit $exec /* Select BYTE_3 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...
@@ -300,12 +274,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 0, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[V_LSHLREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 24, [[V_LSHRREV_B32_sdwa]], implicit $exec
-    ; CHECK-NEXT: [[V_LSHRREV_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_sdwa 0, [[COPY]], 0, [[COPY]], 0, 2, 0, 6, 6, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = COPY $vgpr0
     %2:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 0, 0, 0, 0, implicit $exec
     %3:vgpr_32 = V_LSHLREV_B32_e32  24, %2,  implicit $exec /* Select BYTE_3 */
-    %4:vgpr_32 = V_LSHRREV_B32_sdwa 0, %1, 0, %1, 0, 2, 0, 6, 6, implicit $exec
 
     S_ENDPGM 0
 ...

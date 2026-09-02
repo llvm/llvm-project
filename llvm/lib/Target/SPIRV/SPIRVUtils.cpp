@@ -1000,6 +1000,11 @@ Register createVirtualRegister(
       MIRBuilder);
 }
 
+bool isVectorType(SPIRVTypeInst SPVTy) {
+  return SPVTy->getOpcode() == SPIRV::OpTypeVector ||
+         SPVTy->getOpcode() == SPIRV::OpTypeVectorIdEXT;
+}
+
 CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
                           Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
                           IRBuilder<> &B) {

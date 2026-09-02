@@ -424,7 +424,10 @@ static void printNamedStructuredOpResults(OpAsmPrinter &p,
 static void printNamedStructuredOp(OpAsmPrinter &p, Operation *op,
                                    ValueRange inputs, ValueRange outputs,
                                    ArrayRef<StringRef> elidedAttrs = {}) {
-  p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
+  NamedAttrList attrs(op->getDiscardableAttrDictionary());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+  p.printOptionalAttrDict(attrs, elidedAttrs);
 
   // Printing is shared with generic ops, except for the region and
   // attributes.
@@ -1224,7 +1227,11 @@ void GenericOp::print(OpAsmPrinter &p) {
   llvm::StringSet<> genericAttrNamesSet;
   genericAttrNamesSet.insert_range(genericAttrNames);
   SmallVector<NamedAttribute, 8> genericAttrs;
-  for (auto attr : (*this)->getAttrs()) {
+  for (StringRef attrName : genericAttrNames) {
+    std::optional<Attribute> value = (*this)->getInherentAttr(attrName);
+    if (!value || !*value)
+      continue;
+    NamedAttribute attr{StringAttr::get(getContext(), attrName), *value};
     if (attr.getName() == getIteratorTypesAttrName()) {
       auto iteratorTypes =
           llvm::cast<ArrayAttr>(attr.getValue())
@@ -1257,13 +1264,13 @@ void GenericOp::print(OpAsmPrinter &p) {
   genericAttrNamesSet.insert(genericAttrNames.back());
 
   bool hasExtraAttrs = false;
-  for (NamedAttribute n : (*this)->getAttrs()) {
+  for (NamedAttribute n : (*this)->getDiscardableAttrDictionary()) {
     if ((hasExtraAttrs = !genericAttrNamesSet.contains(n.getName().strref())))
       break;
   }
   if (hasExtraAttrs) {
     p << " attrs = ";
-    p.printOptionalAttrDict((*this)->getAttrs(),
+    p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
                             /*elidedAttrs=*/genericAttrNames);
   }
 
@@ -1673,8 +1680,12 @@ static bool canUseShortForm(Block *body, bool initFirst = false,
 static void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
   SmallVector<StringRef> elidedAttrs;
   std::string attrToElide;
+  NamedAttrList attrs(payloadOp->getDiscardableAttrDictionary());
+  payloadOp->getName().walkInherentAttrs(
+      payloadOp,
+      [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
   p << " { " << payloadOp->getName().getStringRef();
-  for (const auto &attr : payloadOp->getAttrs()) {
+  for (const auto &attr : attrs) {
     auto fastAttr =
         llvm::dyn_cast<mlir::arith::FastMathFlagsAttr>(attr.getValue());
     if (fastAttr && fastAttr.getValue() == mlir::arith::FastMathFlags::none) {
@@ -1683,7 +1694,7 @@ static void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
       break;
     }
   }
-  p.printOptionalAttrDict(payloadOp->getAttrs(), elidedAttrs);
+  p.printOptionalAttrDict(attrs, elidedAttrs);
   p << " }";
 }
 
@@ -1696,7 +1707,7 @@ void MapOp::print(OpAsmPrinter &p) {
   }
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
 
   if (!useShortForm) {
     // Print region if the payload op was not detected.
@@ -1906,7 +1917,8 @@ void ReduceOp::print(OpAsmPrinter &p) {
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
-  p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
+                          {getDimensionsAttrName()});
   if (!useShortForm) {
     // Print region if the payload op was not detected.
     p.increaseIndent();
@@ -2022,6 +2034,147 @@ LogicalResult ReduceOp::verify() {
   return success();
 }
 
+namespace {
+
+/// Reduction kinds supported by the reduce-of-broadcast fold.
+/// Only the simplest reduce op are supported now.
+/// TODO: We can extend the list in the future.
+enum class BroadcastReduceKind {
+  MaxSI,
+  MaxUI,
+  MinSI,
+  MinUI,
+};
+
+/// Match a supported max/min reduction body and return its reduction kind.
+static std::optional<BroadcastReduceKind>
+matchBroadcastReduceBody(ReduceOp reduceOp) {
+  if (reduceOp.getNumDpsInputs() != 1 || reduceOp.getNumDpsInits() != 1 ||
+      !reduceOp.getBody())
+    return std::nullopt;
+
+  // Match the simplest linalg.reduce body. e.g.,
+  //
+  //  ^bb0(%in: i32, %acc: i32):
+  //    %max = arith.maxsi %in, %acc : i32
+  //    linalg.yield %max : i32
+  Block &block = *reduceOp.getBody();
+  if (block.getNumArguments() != 2 ||
+      !llvm::hasSingleElement(block.without_terminator()))
+    return std::nullopt;
+
+  auto yieldOp = cast<YieldOp>(block.getTerminator());
+
+  Operation *combineOp = yieldOp.getOperand(0).getDefiningOp();
+  if (!combineOp || combineOp->getNumOperands() != 2)
+    return std::nullopt;
+
+  // Checks that the combine op **only** used the block arguments and
+  // we allow the block arguments to exchange their orders.
+  if (!((combineOp->getOperand(0) == block.getArgument(0) &&
+         combineOp->getOperand(1) == block.getArgument(1)) ||
+        (combineOp->getOperand(0) == block.getArgument(1) &&
+         combineOp->getOperand(1) == block.getArgument(0))))
+    return std::nullopt;
+
+  // TODO: We can extend the list here.
+  return TypeSwitch<Operation *, std::optional<BroadcastReduceKind>>(combineOp)
+      .Case<arith::MaxSIOp>(
+          [](arith::MaxSIOp) { return BroadcastReduceKind::MaxSI; })
+      .Case<arith::MaxUIOp>(
+          [](arith::MaxUIOp) { return BroadcastReduceKind::MaxUI; })
+      .Case<arith::MinSIOp>(
+          [](arith::MinSIOp) { return BroadcastReduceKind::MinSI; })
+      .Case<arith::MinUIOp>(
+          [](arith::MinUIOp) { return BroadcastReduceKind::MinUI; })
+      .Default([](Operation *) -> std::optional<BroadcastReduceKind> {
+        return std::nullopt;
+      });
+}
+
+/// Return whether `init` is the identity value for `kind`.
+static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
+  auto initAttr = getScalarConstantAttrFromDenseSplat(init);
+  if (!initAttr)
+    return false;
+
+  auto integerAttr = dyn_cast<IntegerAttr>(*initAttr);
+  if (!integerAttr)
+    return false;
+
+  const APInt &value = integerAttr.getValue();
+  switch (kind) {
+  case BroadcastReduceKind::MaxSI:
+    return value.isMinSignedValue();
+  case BroadcastReduceKind::MaxUI:
+    return value.isZero();
+  case BroadcastReduceKind::MinSI:
+    return value.isMaxSignedValue();
+  case BroadcastReduceKind::MinUI:
+    return value.isAllOnes();
+  }
+  llvm_unreachable("unknown broadcast reduction kind");
+}
+
+/// Fold cases like:
+///
+///  maxsi(broadcast(x)) -> x
+///  minsi(broadcast(y)) -> y
+///
+// TODO: We can add other op. e.g., add, mul, and, or, xor.
+struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
+  using OpRewritePattern<linalg::ReduceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::ReduceOp reduceOp,
+                                PatternRewriter &rewriter) const override {
+    if (reduceOp.getNumResults() != 1 || !reduceOp.hasPureTensorSemantics())
+      return failure();
+
+    assert(reduceOp.getInputs().size() == 1 &&
+           "expected one input for a single-result tensor reduce");
+
+    auto broadcastOp =
+        reduceOp.getInputs().front().getDefiningOp<linalg::BroadcastOp>();
+    if (!broadcastOp || !broadcastOp.hasPureTensorSemantics())
+      return failure();
+
+    auto sourceType = cast<RankedTensorType>(broadcastOp.getInput().getType());
+    auto broadcastType =
+        cast<RankedTensorType>(broadcastOp.getResult().front().getType());
+    auto resultType = cast<RankedTensorType>(reduceOp.getResult(0).getType());
+    if (!sourceType.hasStaticShape() || !broadcastType.hasStaticShape() ||
+        !resultType.hasStaticShape() || sourceType != resultType)
+      return failure();
+
+    ArrayRef<int64_t> broadcastDims = broadcastOp.getDimensions();
+    ArrayRef<int64_t> reduceDims = reduceOp.getDimensions();
+    if (broadcastDims != reduceDims)
+      return failure();
+
+    // Reducing an empty broadcast dimension yields the init value, not the
+    // broadcast input.
+    for (int64_t dimension : broadcastDims)
+      if (broadcastType.getDimSize(dimension) == 0)
+        return failure();
+
+    std::optional<BroadcastReduceKind> kind =
+        matchBroadcastReduceBody(reduceOp);
+    if (!kind ||
+        !hasBroadcastReduceIdentity(reduceOp.getInits().front(), *kind))
+      return failure();
+
+    rewriter.replaceOp(reduceOp, broadcastOp.getInput());
+    return success();
+  }
+};
+
+} // namespace
+
+void ReduceOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<FoldReduceBroadcast>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
@@ -2085,7 +2238,8 @@ void TransposeOp::getAsmResultNames(
 void TransposeOp::print(OpAsmPrinter &p) {
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getPermutationAttrName(), getPermutation());
-  p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
+                          {getPermutationAttrName()});
 }
 
 LogicalResult TransposeOp::verify() {
@@ -2333,7 +2487,8 @@ void BroadcastOp::getAsmResultNames(
 void BroadcastOp::print(OpAsmPrinter &p) {
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
-  p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
+                          {getDimensionsAttrName()});
 }
 
 LogicalResult BroadcastOp::verify() {
@@ -2481,7 +2636,7 @@ void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void linalg::YieldOp::print(OpAsmPrinter &p) {
   if (getNumOperands() > 0)
     p << ' ' << getOperands();
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
   if (getNumOperands() > 0)
     p << " : " << getOperandTypes();
 }
@@ -2642,13 +2797,13 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
   assert(isa<LinalgOp>(op));
   std::string name(op->getName().getStringRef().str());
   std::string fun = "";
-  for (NamedAttribute kv : op->getAttrs()) {
-    if (UnaryFnAttr ufa = llvm::dyn_cast<UnaryFnAttr>(kv.getValue())) {
+  op->getName().walkInherentAttrs(op, [&](StringRef, Attribute &attr) {
+    if (UnaryFnAttr ufa = llvm::dyn_cast<UnaryFnAttr>(attr)) {
       fun = stringifyEnum(ufa.getValue()).str() + "_";
-    } else if (BinaryFnAttr bfa = llvm::dyn_cast<BinaryFnAttr>(kv.getValue())) {
+    } else if (BinaryFnAttr bfa = llvm::dyn_cast<BinaryFnAttr>(attr)) {
       fun = stringifyEnum(bfa.getValue()).str() + "_";
     }
-  }
+  });
   name.reserve(128);
   llvm::replace(name, '.', '_');
   llvm::raw_string_ostream ss(name);
@@ -4217,9 +4372,9 @@ MatmulTransposeAOp::create(OpBuilder &builder, Location location,
 }
 
 bool MatmulTransposeAOp::classof(Operation *op) {
-  return dyn_cast_or_null<linalg::MatmulOp>(op) &&
-         MatmulTransposeAOp::isDefaultIndexingMaps(
-             op->getAttr("indexing_maps"));
+  auto matmulOp = dyn_cast_or_null<linalg::MatmulOp>(op);
+  return matmulOp && MatmulTransposeAOp::isDefaultIndexingMaps(
+                         matmulOp.getIndexingMapsAttr());
 }
 
 SmallVector<AffineMap>
@@ -4311,9 +4466,9 @@ MatmulTransposeBOp::create(OpBuilder &builder, Location location,
 }
 
 bool MatmulTransposeBOp::classof(Operation *op) {
-  return dyn_cast_or_null<linalg::MatmulOp>(op) &&
-         MatmulTransposeBOp::isDefaultIndexingMaps(
-             op->getAttr("indexing_maps"));
+  auto matmulOp = dyn_cast_or_null<linalg::MatmulOp>(op);
+  return matmulOp && MatmulTransposeBOp::isDefaultIndexingMaps(
+                         matmulOp.getIndexingMapsAttr());
 }
 
 SmallVector<AffineMap>
@@ -4404,9 +4559,9 @@ BatchMatmulTransposeAOp::create(OpBuilder &builder, Location location,
 }
 
 bool BatchMatmulTransposeAOp::classof(Operation *op) {
-  return dyn_cast_or_null<linalg::BatchMatmulOp>(op) &&
-         BatchMatmulTransposeAOp::isDefaultIndexingMaps(
-             op->getAttr("indexing_maps"));
+  auto matmulOp = dyn_cast_or_null<linalg::BatchMatmulOp>(op);
+  return matmulOp && BatchMatmulTransposeAOp::isDefaultIndexingMaps(
+                         matmulOp.getIndexingMapsAttr());
 }
 
 SmallVector<AffineMap>
@@ -4497,9 +4652,9 @@ BatchMatmulTransposeBOp::create(OpBuilder &builder, Location location,
 }
 
 bool BatchMatmulTransposeBOp::classof(Operation *op) {
-  return dyn_cast_or_null<linalg::BatchMatmulOp>(op) &&
-         BatchMatmulTransposeBOp::isDefaultIndexingMaps(
-             op->getAttr("indexing_maps"));
+  auto matmulOp = dyn_cast_or_null<linalg::BatchMatmulOp>(op);
+  return matmulOp && BatchMatmulTransposeBOp::isDefaultIndexingMaps(
+                         matmulOp.getIndexingMapsAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5553,7 +5708,7 @@ void PackOp::print(OpAsmPrinter &p) {
 
   p << " into " << getDest();
 
-  p.printOptionalAttrDict((*this)->getAttrs(),
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
                           {"static_inner_tiles", "inner_dims_pos",
                            "outer_dims_perm", "operandSegmentSizes"});
 
@@ -6302,7 +6457,7 @@ void UnPackOp::print(OpAsmPrinter &p) {
 
   p << " into " << getDest();
 
-  p.printOptionalAttrDict((*this)->getAttrs(),
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
                           {"static_inner_tiles", "inner_dims_pos",
                            "outer_dims_perm", "operandSegmentSizes"});
 
