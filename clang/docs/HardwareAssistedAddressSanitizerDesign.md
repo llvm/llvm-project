@@ -1,7 +1,7 @@
 # Hardware-assisted AddressSanitizer Design Documentation
 
 This page is a design document for
-**hardware-assisted AddressSanitizer** (or **HWASAN**)
+**hardware-assisted AddressSanitizer** (or **HWASan**)
 a tool similar to {doc}`AddressSanitizer`,
 but based on partial hardware assistance.
 

@@ -1,0 +1,10 @@
+executable("clang-ssaf-src-edit-merge") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Tooling/Core",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "SrcEditMerge.cpp" ]
+}

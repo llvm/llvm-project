@@ -1060,13 +1060,40 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     return Result;
   }
   case scAddRecExpr: {
+    auto *AR = cast<SCEVAddRecExpr>(S);
+    VPlan &Plan = Builder.getPlan();
     [[maybe_unused]] BasicBlock *PH =
-        cast<VPIRBasicBlock>(Builder.getPlan().getEntry())->getIRBasicBlock();
-    assert(
-        SE.DT.dominates(cast<SCEVAddRecExpr>(S)->getLoop()->getHeader(), PH) &&
-        "can only expand AddRecs for loops outside VPlan's scope");
-    // AddRecs outside VPlan's scope must be expanded via VPExpandSCEV.
-    return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S);
+        cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
+    assert(SE.DT.dominates(AR->getLoop()->getHeader(), PH) &&
+           "can only expand AddRecs for loops outside VPlan's scope");
+
+    // Try to expand AR by re-using an existing canonical IV in the Plan's
+    // entry. A canonical IV must be affine and integer typed.
+    if (!AR->isAffine() || !AR->getType()->isIntegerTy())
+      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
+    auto FoundCanIV =
+        find_if(Plan.getEntry()->phis(), [&](const VPRecipeBase &R) {
+          if (!SE.isSCEVable(cast<VPIRPhi>(R).getIRPhi().getType()))
+            return false;
+          const SCEV *Candidate = SE.getSCEV(&cast<VPIRPhi>(R).getIRPhi());
+          return match(Candidate,
+                       m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(),
+                                           m_SpecificLoop(AR->getLoop()))) &&
+                 Candidate->getType() == AR->getType();
+        });
+    if (FoundCanIV == Plan.getEntry()->phis().end())
+      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
+
+    // {Start, +, Step} --> Start + IV * Step, since the AddRec is affine.
+    // Compute Offset = IV * Step.
+    VPValue *Start = expand(AR->getStart());
+    Value *CanonicalIV = &cast<VPIRPhi>(FoundCanIV)->getIRPhi();
+    VPValue *Offset = expand(
+        SE.getMulExpr(SE.getUnknown(CanonicalIV), AR->getStepRecurrence(SE)));
+
+    // Compute Start + Offset with nuw from the AddRec.
+    return Builder.createAdd(Start, Offset, DL, "",
+                             {AR->hasNoUnsignedWrap(), false});
   }
   case scCouldNotCompute:
     llvm_unreachable("Attempt to expand a SCEVCouldNotCompute");

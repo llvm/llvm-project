@@ -116,7 +116,7 @@ public:
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {
-    if (!Idx)
+    if (!Idx || ExplicitlyDestroyed)
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
     removeStoredOpaqueValues();
@@ -130,6 +130,7 @@ public:
     // calls to destroyLocals().
     bool Success = this->emitDestructors(E);
     this->Ctx->emitDestroy(*Idx, E);
+    ExplicitlyDestroyed = true;
     return Success;
   }
 
@@ -212,6 +213,7 @@ public:
 
   /// Index of the scope in the chain.
   UnsignedOrNone Idx = std::nullopt;
+  bool ExplicitlyDestroyed = false;
 };
 
 template <class Emitter> class ArrayIndexScope final {
