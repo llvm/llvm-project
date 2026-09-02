@@ -1168,7 +1168,7 @@ struct AvailableValueInBlock {
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
 /// this particular pass here.
-class llvm::GVNPassImpl {
+class GVNPassImpl {
 public:
   friend class GVNValueTable;
   friend class GVNLegacyPass;
@@ -1201,10 +1201,7 @@ private:
   SmallVector<std::pair<Instruction *, unsigned>, 4> ToSplit;
 
 public:
-  GVNPassImpl(GVNOptions Options = {}) : Options(Options) {}
-
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  GVNPassImpl(GVNOptions Options) : Options(Options) {}
 
   bool isScalarPREEnabled() const;
   bool isLoadPREEnabled() const;
@@ -3945,24 +3942,6 @@ bool GVNPassImpl::performPRE(Function &F) {
   return Changed;
 }
 
-void GVNPassImpl::printPipeline(
-    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
-
-  OS << '<';
-  if (Options.AllowScalarPRE != std::nullopt)
-    OS << (*Options.AllowScalarPRE ? "" : "no-") << "scalar-pre;";
-  if (Options.AllowLoadPRE != std::nullopt)
-    OS << (*Options.AllowLoadPRE ? "" : "no-") << "load-pre;";
-  if (Options.AllowLoadPRESplitBackedge != std::nullopt)
-    OS << (*Options.AllowLoadPRESplitBackedge ? "" : "no-")
-       << "split-backedge-load-pre;";
-  if (Options.AllowMemDep != std::nullopt)
-    OS << (*Options.AllowMemDep ? "" : "no-") << "memdep;";
-  if (Options.AllowMemorySSA != std::nullopt)
-    OS << (*Options.AllowMemorySSA ? "" : "no-") << "memoryssa";
-  OS << '>';
-}
-
 /// runOnFunction - This is the main transformation entry point for a function.
 bool GVNPassImpl::run(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                       const TargetLibraryInfo &RunTLI, AAResults &RunAA,
@@ -4233,16 +4212,8 @@ void GVNPassImpl::assignBlockRPONumber(Function &F) {
   InvalidBlockRPONumbers = false;
 }
 
-GVNPass::GVNPass(GVNOptions Options)
-    : Impl(std::make_unique<GVNPassImpl>(Options)) {}
-
-GVNPass::~GVNPass() = default;
-
-GVNPass::GVNPass(GVNPass &&) = default;
-
-GVNPass &GVNPass::operator=(GVNPass &&) = default;
-
 PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
+  GVNPassImpl Impl(Options);
   // FIXME: The order of evaluation of these 'getResult' calls is very
   // significant! Re-ordering these variables will cause GVN when run alone to
   // be less effective! We should fix memdep and basic-aa to not exhibit this
@@ -4251,19 +4222,20 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
-  auto *MemDep = Impl->isMemDepEnabled()
+  auto *MemDep = Impl.isMemDepEnabled()
                      ? &AM.getResult<MemoryDependenceAnalysis>(F)
                      : nullptr;
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F);
-  if (Impl->isMemorySSAEnabled() && !MSSA) {
+  if (Impl.isMemorySSAEnabled() && !MSSA) {
     assert(!MemDep &&
            "On-demand computation of MemSSA implies that MemDep is disabled!");
     MSSA = &AM.getResult<MemorySSAAnalysis>(F);
   }
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = Impl->run(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
-                           MSSA ? &MSSA->getMSSA() : nullptr);
+
+  bool Changed = Impl.run(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
+                          MSSA ? &MSSA->getMSSA() : nullptr);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -4280,7 +4252,19 @@ void GVNPass::printPipeline(
   static_cast<PassInfoMixin<GVNPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
 
-  Impl->printPipeline(OS, MapClassName2PassName);
+  OS << '<';
+  if (Options.AllowScalarPRE != std::nullopt)
+    OS << (*Options.AllowScalarPRE ? "" : "no-") << "scalar-pre;";
+  if (Options.AllowLoadPRE != std::nullopt)
+    OS << (*Options.AllowLoadPRE ? "" : "no-") << "load-pre;";
+  if (Options.AllowLoadPRESplitBackedge != std::nullopt)
+    OS << (*Options.AllowLoadPRESplitBackedge ? "" : "no-")
+       << "split-backedge-load-pre;";
+  if (Options.AllowMemDep != std::nullopt)
+    OS << (*Options.AllowMemDep ? "" : "no-") << "memdep;";
+  if (Options.AllowMemorySSA != std::nullopt)
+    OS << (*Options.AllowMemorySSA ? "" : "no-") << "memoryssa";
+  OS << '>';
 }
 
 class llvm::GVNLegacyPass : public FunctionPass {
