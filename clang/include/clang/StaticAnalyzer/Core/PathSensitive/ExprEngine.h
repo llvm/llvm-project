@@ -677,14 +677,17 @@ public:
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
   getEagerlyAssumeBifurcationTags();
 
-  std::optional<std::pair<SVal, QualType>>
-  resolveAsLambdaCapturedVar(const Expr *Ex, const ValueDecl *VD,
-                             ExplodedNode *Pred) const;
-
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const StackFrame *SF, QualType T,
                                       QualType ExTy, const CastExpr *CastE,
                                       ExplodedNodeSet &Dst, ExplodedNode *Pred);
+
+private:
+  /// Resolve a lambda-captured variable's address based on whether the
+  /// enclosing method has an implicit or explicit object paramter.
+  std::optional<std::pair<SVal, QualType>>
+  resolveAsLambdaCapturedVar(const Expr *Ex, const ValueDecl *VD,
+                             ExplodedNode *Pred) const;
 
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,
