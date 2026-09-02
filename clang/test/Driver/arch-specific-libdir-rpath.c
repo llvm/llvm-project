@@ -16,20 +16,11 @@
 // RUN:     -fno-rtlib-add-rpath 2>&1 \
 // RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,NO-RPATH-X86_64 %s
 //
-// Test that -rpath is added only under the right circumstance even if
-// -frtlib-add-rpath is specified.
-//
-// Add LIBPATH but no RPATH for -fsanitizer=address w/o -shared-libasan
+// Add RPATH if requested.
 // RUN: %clang %s -### --target=x86_64-linux -fsanitize=undefined \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -frtlib-add-rpath 2>&1 \
-// RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,NO-RPATH-X86_64 %s
-//
-// Add LIBPATH but no RPATH for -fsanitizer=address w/o -shared-libasan
-// RUN: %clang %s -### --target=x86_64-linux -fsanitize=undefined \
-// RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
-// RUN:     -frtlib-add-rpath 2>&1 \
-// RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,NO-RPATH-X86_64 %s
+// RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,RPATH-X86_64 %s
 //
 // Add LIBPATH, RPATH for -fsanitize=address -shared-libasan
 // RUN: %clang %s -### --target=x86_64-linux \
@@ -57,23 +48,30 @@
 // RUN:     -frtlib-add-rpath 2>&1 \
 // RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,RPATH-X86_64 %s
 //
-// Add LIBPATH but no RPATH for ubsan (or any other sanitizer)
+// Add LIBPATH, RPATH for ubsan (or any other sanitizer)
 // RUN: %clang %s -### -fsanitize=undefined --target=x86_64-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -frtlib-add-rpath 2>&1 \
-// RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,NO-RPATH-X86_64 %s
+// RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,RPATH-X86_64 %s
 //
-// Add LIBPATH but no RPATH if no sanitizer or runtime is specified
+// Add LIBPATH, RPATH if no sanitizer or runtime is specified
 // RUN: %clang %s -### --target=x86_64-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:     -frtlib-add-rpath 2>&1 \
-// RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,NO-RPATH-X86_64 %s
+// RUN:   | FileCheck --check-prefixes=RESDIR,LIBPATH-X86_64,RPATH-X86_64 %s
 //
-// Do not add LIBPATH or RPATH if arch-specific subdir doesn't exist
+// Same for a link-only job, which has no input language.
+// RUN: %clang -c %s -o %t.o
+// RUN: %clang %t.o -### --target=x86_64-linux \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+// RUN:     -frtlib-add-rpath 2>&1 \
+// RUN:   | FileCheck --check-prefixes=LINKONLY-X86_64 %s
+//
+// Old-layout lib/linux/<arch> is not used when that subdirectory does not exist.
 // RUN: %clang %s -### --target=x86_64-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     -frtlib-add-rpath 2>&1 \
-// RUN:   | FileCheck --check-prefixes=RESDIR,NO-LIBPATH,NO-RPATH %s
+// RUN:   | FileCheck --check-prefixes=RESDIR,NO-LIBPATH-X86_64,NO-RPATH-X86_64 %s
 
 // Test that the driver adds an per-target arch-specific subdirectory in
 // {RESOURCE_DIR}/lib/{triple} to the linker search path and to '-rpath'
@@ -95,8 +93,8 @@
 // LIBPATH-AARCH64: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)aarch64}}
 // RPATH-AARCH64:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)aarch64}}"
 //
-// NO-LIBPATH-NOT: "-L{{[^"]*Inputs(/|\\\\)resource_dir}}"
-// NO-RPATH-NOT:   "-rpath" {{.*(/|\\\\)Inputs(/|\\\\)resource_dir}}
+// LINKONLY-X86_64: -L{{[^"]*}}resource_dir_with_arch_subdir{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}
+// LINKONLY-X86_64: "-rpath" "{{[^"]*}}resource_dir_with_arch_subdir{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
 
 // PERTARGET: "-resource-dir" "[[PTRESDIR:[^"]*]]"
 // PERTARGET: -L[[PTRESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux-gnu}}
