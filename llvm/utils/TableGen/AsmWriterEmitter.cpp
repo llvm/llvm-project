@@ -81,6 +81,15 @@ private:
                                  std::vector<std::vector<unsigned>> &InstIdxs,
                                  std::vector<unsigned> &InstOpsUsed,
                                  bool PassSubtarget) const;
+
+  // Groups of overflow-switch instructions keyed by TSFlags / mnemonic prefix.
+  // Used to split large printInstruction() overflow switches into per-category
+  // [this]-capturing lambdas, keeping individual function bodies small.
+  using OpcodeGroupList =
+      SmallVector<std::pair<std::string, std::vector<AsmWriterInst>>, 16>;
+  OpcodeGroupList EmitOpcodeGroupTable(raw_ostream &O);
+  void EmitOpcodeGroupDispatch(raw_ostream &O, OpcodeGroupList &Groups,
+                               bool PassSubtarget);
 };
 
 } // end anonymous namespace
@@ -490,6 +499,15 @@ void AsmWriterEmitter::EmitPrintInstruction(
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
 
+  // For targets with large instruction sets, split the overflow switch into
+  // per-category lambdas to avoid compiler ICE on function-body size limits.
+  // The dispatch table is emitted here (before printInstruction() opens) since
+  // it is plain static data; the lambda bodies are emitted inside
+  // printInstruction() so member-method calls resolve via the captured this.
+  OpcodeGroupList OpcodeGroups;
+  if (Target.getName() == "NVPTX")
+    OpcodeGroups = EmitOpcodeGroupTable(O);
+
   // This function has some huge switch statements that causing excessive
   // compile time in LLVM profile instrumenation build. This print function
   // usually is not frequently called in compilation. Here we disable the
@@ -524,6 +542,66 @@ void AsmWriterEmitter::EmitPrintInstruction(
     // ceil(log2(numentries)).
     unsigned NumBits = Log2_32_Ceil(Commands.size());
     assert(NumBits <= BitsLeft && "consistency error");
+
+    // For NVPTX (large instruction set), wrap each TableDrivenOperandPrinters
+    // fragment in an immediately-invoked lambda. The compiler treats each
+    // lambda body as a separate internal function, keeping printInstruction()
+    // itself small enough to avoid MSVC ICE on aarch64 and RISCV JAL
+    // relocation overflow on size-constrained targets.
+    // FIXME: generalize to any target exceeding a function-size threshold.
+    if (Target.getName() == "NVPTX") {
+      // Rewrite embedded `return;` as `return false;`: early exit from the
+      // lambda means "this instruction is fully handled, stop processing".
+      auto processCmd = [](std::string S) -> std::pair<std::string, bool> {
+        size_t P = S.find("return;");
+        if (P == std::string::npos)
+          return {S, false};
+        S.replace(P, 7, "return false;\n");
+        return {S.substr(0, P + 14), true};
+      };
+
+      uint64_t Mask = (1ULL << NumBits) - 1;
+      O << "\n  // Fragment " << i
+        << ": IIFE to reduce printInstruction() size.\n";
+      O << "  if (![&](const MCInst *MI, uint64_t Address, "
+        << (PassSubtarget ? "const MCSubtargetInfo &STI, " : "")
+        << "raw_ostream &O, uint64_t Bits) -> bool {\n";
+
+      if (Commands.size() == 1) {
+        auto [Body, HasRet] = processCmd(Commands[0]);
+        O << Body;
+        if (!HasRet)
+          O << "    return true;\n";
+      } else if (Commands.size() == 2) {
+        auto [B0, R0] = processCmd(Commands[0]);
+        auto [B1, R1] = processCmd(Commands[1]);
+        O << "    if ((Bits >> " << (OpcodeInfoBits - BitsLeft) << ") & "
+          << Mask << ") {\n"
+          << B1;
+        if (!R1)
+          O << "      return true;\n";
+        O << "    } else {\n" << B0;
+        if (!R0)
+          O << "      return true;\n";
+        O << "    }\n";
+      } else {
+        O << "    switch ((Bits >> " << (OpcodeInfoBits - BitsLeft) << ") & "
+          << Mask << ") {\n"
+          << "    default: llvm_unreachable(\"Invalid command number.\");\n";
+        for (unsigned j = 0; j < Commands.size(); ++j) {
+          auto [Body, HasRet] = processCmd(Commands[j]);
+          O << "    case " << j << ":\n" << Body;
+          if (!HasRet)
+            O << "      return true;\n";
+        }
+        O << "    }\n";
+      }
+
+      O << "  }(MI, Address, " << (PassSubtarget ? "STI, " : "")
+        << "O, Bits))\n    return;\n\n";
+      BitsLeft -= NumBits;
+      continue;
+    }
 
     // Emit code to extract this field from Bits.
     O << "\n  // Fragment " << i << " encoded into " << NumBits << " bits for "
@@ -566,8 +644,9 @@ void AsmWriterEmitter::EmitPrintInstruction(
   // information for those instructions that are left.  This is a less dense
   // encoding, but we expect the main 64-bit table to handle the majority of
   // instructions.
-  if (!Instructions.empty()) {
-    // Find the opcode # of inline asm.
+  if (!OpcodeGroups.empty()) {
+    EmitOpcodeGroupDispatch(O, OpcodeGroups, PassSubtarget);
+  } else if (!Instructions.empty()) {
     O << "  switch (MI->getOpcode()) {\n";
     O << "  default: llvm_unreachable(\"Unexpected opcode.\");\n";
     while (!Instructions.empty())
@@ -577,6 +656,105 @@ void AsmWriterEmitter::EmitPrintInstruction(
   }
 
   O << "}\n";
+}
+
+AsmWriterEmitter::OpcodeGroupList
+AsmWriterEmitter::EmitOpcodeGroupTable(raw_ostream &O) {
+  OpcodeGroupList Groups;
+
+  // Pre-filter: same predicate as the erase_if in EmitPrintInstruction.
+  std::vector<AsmWriterInst> OpcodeInsts;
+  for (const AsmWriterInst &AWI : Instructions)
+    if (!AWI.Operands.empty())
+      OpcodeInsts.push_back(AWI);
+
+  if (OpcodeInsts.empty())
+    return Groups;
+
+  // Assign each instruction to a group: TSFlags take priority, then the
+  // AsmString mnemonic prefix is used as a fine-grained fallback.
+  auto getGroupKey = [](const AsmWriterInst &AWI) -> std::string {
+    const Record *Def = AWI.CGI->TheDef;
+    if (Def->getValueAsBit("IsLoad"))
+      return "loads";
+    if (Def->getValueAsBit("IsStore"))
+      return "stores";
+    auto isSuldSet = [](const BitsInit *B) {
+      for (unsigned i = 0; i < B->getNumBits(); ++i)
+        if (auto *Bit = dyn_cast<BitInit>(B->getBit(i)); Bit && Bit->getValue())
+          return true;
+      return false;
+    };
+    if (Def->getValueAsBit("IsTex") || Def->getValueAsBit("IsSust") ||
+        Def->getValueAsBit("IsSurfTexQuery") ||
+        isSuldSet(Def->getValueAsBitsInit("IsSuld")))
+      return "texture";
+    StringRef S = Def->getValueAsString("AsmString").ltrim(" \t");
+    if (S.empty() || S[0] == '$' || S[0] == '{' || S[0] == '@')
+      return "misc";
+    size_t End = S.find_first_of(".${ \t\\");
+    std::string Key =
+        S.substr(0, End == StringRef::npos ? S.size() : End).str();
+    return Key.empty() ? "misc" : Key;
+  };
+
+  for (const AsmWriterInst &AWI : OpcodeInsts) {
+    std::string Key = getGroupKey(AWI);
+    auto It = llvm::find_if(Groups, [&](auto &G) { return G.first == Key; });
+    if (It == Groups.end()) {
+      Groups.push_back({Key, {}});
+      It = Groups.end() - 1;
+    }
+    It->second.push_back(AWI);
+  }
+
+  // Dispatch table: 0 = not in overflow set, 1..N = group index.
+  // uint8_t caps at 254 non-zero groups; assert before silent truncation.
+  assert(Groups.size() < 255 &&
+         "Too many opcode groups for uint8_t dispatch table");
+  std::vector<uint8_t> Table(NumberedInstructions.size(), 0);
+  for (unsigned GIdx = 0; GIdx < Groups.size(); ++GIdx)
+    for (const AsmWriterInst &AWI : Groups[GIdx].second)
+      Table[AWI.CGIIndex] = GIdx + 1;
+
+  O << "static const uint8_t NVPTXOpcodeGroup[] = {\n";
+  for (unsigned i = 0; i < NumberedInstructions.size(); ++i)
+    O << "  " << unsigned(Table[i]) << ",\t// "
+      << NumberedInstructions[i]->getName() << "\n";
+  O << "};\n\n";
+
+  return Groups;
+}
+
+void AsmWriterEmitter::EmitOpcodeGroupDispatch(raw_ostream &O,
+                                               OpcodeGroupList &Groups,
+                                               bool PassSubtarget) {
+  // Two-level dispatch: table lookup then IIFE per arm. Emitting each group
+  // body as an immediately-invoked lambda means:
+  //  - The lambda body compiles as a separate internal function, so
+  //    printInstruction() itself stays small (no function-size regression).
+  //  - The lambda captures [this], so getCode()-generated member calls
+  //    (e.g. printOperand) resolve correctly without a receiver parameter.
+  //  - Each lambda is only instantiated in the arm actually taken.
+  O << "  uint8_t OpcGroup = NVPTXOpcodeGroup[MI->getOpcode()];\n"
+    << "  if (OpcGroup != 0) {\n"
+    << "    switch (OpcGroup) {\n";
+  unsigned GIdx = 0;
+  for (auto &[Key, Insts] : Groups) {
+    O << "    case " << (++GIdx) << ": [&](const MCInst *MI, uint64_t Address, "
+      << (PassSubtarget ? "const MCSubtargetInfo &STI, " : "")
+      << "raw_ostream &O) {\n"
+      << "      switch (MI->getOpcode()) {\n"
+      << "      default: break;\n";
+    std::vector<AsmWriterInst> GroupInsts = Insts;
+    std::reverse(GroupInsts.begin(), GroupInsts.end());
+    while (!GroupInsts.empty())
+      EmitInstructions(GroupInsts, O, PassSubtarget);
+    O << "      }\n    }(MI, Address, " << (PassSubtarget ? "STI, " : "")
+      << "O); break;\n";
+  }
+  O << "    default: llvm_unreachable(\"Unexpected opcode group.\");\n"
+    << "    }\n  }\n";
 }
 
 static void
