@@ -12,6 +12,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/attr.h"
@@ -716,18 +717,29 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     }
   }
   if (const auto *component{
-          std::get_if<parser::StructureComponent>(&allocateObject_.u)};
-      component && GetCUDADataAttr(ultimate_) == common::CUDADataAttr::Pinned) {
-    // A PINNED allocatable is allocated in host page-locked memory, so its
-    // descriptor must be host accessible.  The descriptors of a DEVICE object
-    // live in device global memory.
+          std::get_if<parser::StructureComponent>(&allocateObject_.u)}) {
+    // The descriptors of a DEVICE object live in device global memory, so a
+    // component of one can only be allocated where they are addressable.
+    const auto *details{ultimate_->detailsIf<ObjectEntityDetails>()};
+    std::optional<common::CUDADataAttr> attr{
+        details ? details->cudaDataAttr() : std::nullopt};
     const parser::Name &base{parser::GetFirstName(*component)};
-    if (base.symbol &&
-        GetCUDADataAttr(&base.symbol->GetUltimate()) ==
-            common::CUDADataAttr::Device) {
-      context.Say(name_.source,
-          "PINNED allocatable component '%s' must not be allocated in DEVICE object '%s'"_err_en_US,
-          name_.source, base.source);
+    if (attr && base.symbol && IsCUDADevice(*base.symbol)) {
+      if (*attr == common::CUDADataAttr::Pinned ||
+          *attr == common::CUDADataAttr::Managed ||
+          *attr == common::CUDADataAttr::Unified) {
+        // These allocatables are placed in host-accessible memory, so their
+        // descriptors have to be host accessible too.
+        context.Say(name_.source,
+            "%s allocatable component '%s' must not be allocated in DEVICE object '%s'"_err_en_US,
+            parser::ToUpperCaseLetters(common::EnumToString(*attr)),
+            name_.source, base.source);
+      } else if (*attr == common::CUDADataAttr::Device &&
+          !FindCUDADeviceContext(&context.FindScope(name_.source))) {
+        context.Say(name_.source,
+            "DEVICE allocatable component '%s' of DEVICE object '%s' may only be allocated in a device subprogram"_err_en_US,
+            name_.source, base.source);
+      }
     }
   }
 
