@@ -19049,7 +19049,9 @@ InstructionCost BoUpSLP::getSpillCost() {
   };
   auto IsCoveredByMatchingVectorEntry = [&](const TreeEntry *Gather,
                                             const Loop *SpillLoop) -> bool {
-    assert(Gather->isGather() && Gather->hasState());
+    assert(Gather->isGather());
+    if (!Gather->hasState())
+      return false;
 
     // Find the real vector entry reused by this perfect-diamond gather.
     const TreeEntry *SameTE = getSameValuesTreeEntry(
