@@ -7297,5 +7297,5 @@ v4i64 insert_128_hi(v4i64 _1, v2i64 _2) { return __lasx_insert_128_hi(_1, _2); }
 // CHECK: [[CHAR_TBAA6]] = !{[[META4]], [[META4]], i64 0}
 // CHECK: [[META7]] = !{[[META8:![0-9]+]]}
 // CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__lasx_xvldx: %agg.result"}
-// CHECK: [[META9]] = distinct !{[[META9]], i1 false, !"__lasx_xvldx"}
+// CHECK: [[META9]] = distinct !{[[META9]], i1 true, !"__lasx_xvldx"}
 //.

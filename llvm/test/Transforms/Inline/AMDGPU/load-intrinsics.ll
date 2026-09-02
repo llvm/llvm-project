@@ -11,8 +11,8 @@ define void @caller(ptr addrspace(3) %addr_f, ptr addrspace(1) %use_f) {
 ; OPT-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
 ; OPT-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
 ; OPT-NEXT:    [[GEP_I:%.*]] = getelementptr i64, ptr addrspace(3) [[ADDR_F]], i32 4
-; OPT-NEXT:    [[VAL_I:%.*]] = call <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3) [[GEP_I]]), !alias.scope [[META0]], !noalias [[META3]]
-; OPT-NEXT:    store <2 x i32> [[VAL_I]], ptr addrspace(1) [[USE_F]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; OPT-NEXT:    [[VAL_I:%.*]] = call <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3) [[GEP_I]]), !alias.scope [[META0]]
+; OPT-NEXT:    store <2 x i32> [[VAL_I]], ptr addrspace(1) [[USE_F]], align 8, !alias.scope [[META3]]
 ; OPT-NEXT:    ret void
 ;
 entry:
@@ -43,7 +43,7 @@ declare <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3))
 ;.
 ; OPT: [[META0]] = !{[[META1:![0-9]+]]}
 ; OPT: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"callee: %addr"}
-; OPT: [[META2]] = distinct !{[[META2]], i1 false, !"callee"}
+; OPT: [[META2]] = distinct !{[[META2]], i1 true, !"callee"}
 ; OPT: [[META3]] = !{[[META4:![0-9]+]]}
 ; OPT: [[META4]] = distinct !{[[META4]], [[META2]], !"callee: %use"}
 ;.

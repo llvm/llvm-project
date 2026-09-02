@@ -31,9 +31,9 @@ define void @caller_equals_callee(ptr noalias %p0, ptr noalias %p1, i32 %cnt) {
 ; CHECK-NEXT:    [[ADD_PTR1_I:%.*]] = getelementptr inbounds i32, ptr [[ADD_PTR3]], i64 2
 ; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META10:![0-9]+]])
 ; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META13:![0-9]+]])
-; CHECK-NEXT:    store i32 10, ptr [[ADD_PTR_I]], align 4, !alias.scope [[META15:![0-9]+]], !noalias [[META16:![0-9]+]]
-; CHECK-NEXT:    store i32 20, ptr [[ADD_PTR1_I]], align 4, !alias.scope [[META16]], !noalias [[META15]]
-; CHECK-NEXT:    store i32 11, ptr [[ADD_PTR2]], align 4, !alias.scope [[META5]], !noalias [[META8]]
+; CHECK-NEXT:    store i32 10, ptr [[ADD_PTR_I]], align 4, !alias.scope [[META15:![0-9]+]], !noalias [[META13]]
+; CHECK-NEXT:    store i32 20, ptr [[ADD_PTR1_I]], align 4, !alias.scope [[META16:![0-9]+]], !noalias [[META10]]
+; CHECK-NEXT:    store i32 11, ptr [[ADD_PTR2]], align 4, !alias.scope [[META5]]
 ; CHECK-NEXT:    store i32 12, ptr [[P1]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
@@ -77,12 +77,12 @@ define void @test01(ptr noalias %p0, ptr noalias %p1, i32 %cnt) {
 ; CHECK-NEXT:    [[ADD_PTR1_I:%.*]] = getelementptr inbounds i32, ptr [[ADD_PTR1]], i64 2
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META22:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META25:![0-9]+]])
-; CHECK-NEXT:    store i32 10, ptr [[ADD_PTR_I]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META28:![0-9]+]]
-; CHECK-NEXT:    store i32 20, ptr [[ADD_PTR1_I]], align 4, !alias.scope [[META28]], !noalias [[META27]]
+; CHECK-NEXT:    store i32 10, ptr [[ADD_PTR_I]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META25]]
+; CHECK-NEXT:    store i32 20, ptr [[ADD_PTR1_I]], align 4, !alias.scope [[META28:![0-9]+]], !noalias [[META22]]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[CNT]], 0
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[IF_THEN_I:%.*]], label [[IF_ELSE_I:%.*]]
 ; CHECK:       if.then.i:
-; CHECK-NEXT:    store i32 11, ptr [[ADD_PTR]], align 4, !alias.scope [[META17]], !noalias [[META20]]
+; CHECK-NEXT:    store i32 11, ptr [[ADD_PTR]], align 4, !alias.scope [[META17]]
 ; CHECK-NEXT:    br label [[CALLER_EQUALS_CALLEE_EXIT:%.*]]
 ; CHECK:       if.else.i:
 ; CHECK-NEXT:    [[ADD_PTR2_I:%.*]] = getelementptr inbounds i32, ptr [[ADD_PTR1]], i64 1
@@ -93,10 +93,10 @@ define void @test01(ptr noalias %p0, ptr noalias %p1, i32 %cnt) {
 ; CHECK-NEXT:    [[ADD_PTR1_I_I:%.*]] = getelementptr inbounds i32, ptr [[ADD_PTR3_I]], i64 2
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META34:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META37:![0-9]+]])
-; CHECK-NEXT:    store i32 10, ptr [[ADD_PTR_I_I]], align 4, !alias.scope [[META39:![0-9]+]], !noalias [[META40:![0-9]+]]
-; CHECK-NEXT:    store i32 20, ptr [[ADD_PTR1_I_I]], align 4, !alias.scope [[META40]], !noalias [[META39]]
-; CHECK-NEXT:    store i32 11, ptr [[ADD_PTR2_I]], align 4, !alias.scope [[META41:![0-9]+]], !noalias [[META42:![0-9]+]]
-; CHECK-NEXT:    store i32 12, ptr [[ADD_PTR1]], align 4, !alias.scope [[META20]], !noalias [[META17]]
+; CHECK-NEXT:    store i32 10, ptr [[ADD_PTR_I_I]], align 4, !alias.scope [[META39:![0-9]+]], !noalias [[META37]]
+; CHECK-NEXT:    store i32 20, ptr [[ADD_PTR1_I_I]], align 4, !alias.scope [[META40:![0-9]+]], !noalias [[META34]]
+; CHECK-NEXT:    store i32 11, ptr [[ADD_PTR2_I]], align 4, !alias.scope [[META41:![0-9]+]]
+; CHECK-NEXT:    store i32 12, ptr [[ADD_PTR1]], align 4, !alias.scope [[META20]]
 ; CHECK-NEXT:    br label [[CALLER_EQUALS_CALLEE_EXIT]]
 ; CHECK:       caller_equals_callee.exit:
 ; CHECK-NEXT:    ret void
@@ -124,7 +124,7 @@ attributes #0 = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; CHECK: !4 = distinct !{!4, !2, !"do_store: %p1"}
 ; CHECK: !5 = !{!6}
 ; CHECK: !6 = distinct !{!6, !7, !"caller_equals_callee: %p0"}
-; CHECK: !7 = distinct !{!7, i1 false, !"caller_equals_callee"}
+; CHECK: !7 = distinct !{!7, i1 true, !"caller_equals_callee"}
 ; CHECK: !8 = !{!9}
 ; CHECK: !9 = distinct !{!9, !7, !"caller_equals_callee: %p1"}
 ; CHECK: !10 = !{!11}
@@ -136,7 +136,7 @@ attributes #0 = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; CHECK: !16 = !{!14, !9}
 ; CHECK: !17 = !{!18}
 ; CHECK: !18 = distinct !{!18, !19, !"caller_equals_callee: %p0"}
-; CHECK: !19 = distinct !{!19, i1 false, !"caller_equals_callee"}
+; CHECK: !19 = distinct !{!19, i1 true, !"caller_equals_callee"}
 ; CHECK: !20 = !{!21}
 ; CHECK: !21 = distinct !{!21, !19, !"caller_equals_callee: %p1"}
 ; CHECK: !22 = !{!23}
@@ -148,7 +148,7 @@ attributes #0 = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; CHECK: !28 = !{!26, !21}
 ; CHECK: !29 = !{!30}
 ; CHECK: !30 = distinct !{!30, !31, !"caller_equals_callee: %p0"}
-; CHECK: !31 = distinct !{!31, i1 false, !"caller_equals_callee"}
+; CHECK: !31 = distinct !{!31, i1 true, !"caller_equals_callee"}
 ; CHECK: !32 = !{!33}
 ; CHECK: !33 = distinct !{!33, !31, !"caller_equals_callee: %p1"}
 ; CHECK: !34 = !{!35}
@@ -159,4 +159,3 @@ attributes #0 = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; CHECK: !39 = !{!35, !30, !21}
 ; CHECK: !40 = !{!38, !33, !18}
 ; CHECK: !41 = !{!30, !21}
-; CHECK: !42 = !{!33, !18}
