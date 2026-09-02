@@ -263,21 +263,23 @@ static uint32_t getLit64Encoding(const MCInstrDesc &Desc, uint64_t Val,
 
   // The rest part needs to align with AMDGPUInstPrinter::printLiteral64.
 
-  auto Needs64BitLiteral = [&]() {
-    if (!STI.hasFeature(AMDGPU::Feature64BitLiterals) ||
-        SIInstrFlags::isVOP3Like(Desc))
-      return false;
-    if (IsFP)
-      return Lo_32(Val) != 0;
+  if (!STI.hasFeature(AMDGPU::Feature64BitLiterals) ||
+      SIInstrFlags::isVOP3Like(Desc))
+    return 255;
+
+  bool Needs64BitLiteral;
+  if (IsFP) {
+    Needs64BitLiteral = Lo_32(Val) != 0;
+  } else if (IsSigned.has_value()) {
     // For signed operands, check if value fits in signed 32-bit range.
     // For unsigned operands, check if value fits in unsigned 32-bit range.
+    Needs64BitLiteral = *IsSigned ? !isInt<32>(Val) : !isUInt<32>(Val);
+  } else {
     // If signedness is unknown, conservatively require both.
-    if (IsSigned.has_value())
-      return *IsSigned ? !isInt<32>(Val) : !isUInt<32>(Val);
-    return !isInt<32>(Val) && !isUInt<32>(Val);
-  };
+    Needs64BitLiteral = !isInt<32>(Val) && !isUInt<32>(Val);
+  }
 
-  return Needs64BitLiteral() ? 254 : 255;
+  return Needs64BitLiteral ? 254 : 255;
 }
 
 std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
