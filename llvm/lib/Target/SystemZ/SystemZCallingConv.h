@@ -96,19 +96,6 @@ inline bool CC_XPLINK64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
-inline bool CC_XPLINK_Promote_i32(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
-                                  CCValAssign::LocInfo &LocInfo,
-                                  ISD::ArgFlagsTy &ArgFlags, CCState &State) {
-  LocVT = MVT::i64;
-  if (ArgFlags.isSExt())
-    LocInfo = CCValAssign::SExt;
-  else if (ArgFlags.isZExt())
-    LocInfo = CCValAssign::ZExt;
-  else
-    LocInfo = CCValAssign::AExt;
-  return false;
-}
-
 inline bool CC_XPLINK64_Shadow_Reg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                    CCValAssign::LocInfo &LocInfo,
                                    ISD::ArgFlagsTy &ArgFlags, CCState &State) {

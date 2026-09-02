@@ -6,8 +6,8 @@
 ; of a GPR for named (non-variadic) integer arguments.  The callee therefore
 ; must perform its own extension when it needs the full 64-bit value.
 ;
-; Integer formals (CCIfExtend -> CC_XPLINK_Promote_i32 with isFormalArgLowering=true):
-;   For i8/i16 formals, CC_XPLINK_Promote_i32 keeps LocVT=i32 (GR32 live-in).
+; Integer formals (CCIfExtend -> CCPromoteToType<i64> with isFormalArgLowering=true):
+;   For i8/i16 formals, CCPromoteToType<i64> keeps LocVT=i32 (GR32 live-in).
 ;   LowerFormalArguments truncates the GR32 to the true i8/i16 type, so the
 ;   subsequent sign/zero-extend to i64 selects the narrow register-extend
 ;   instructions (LGBR/LGHR/LLGCR/LLGHR) matching XL compiler output.
