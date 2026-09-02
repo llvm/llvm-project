@@ -20,11 +20,11 @@ define void @pos_stride_guard(i32 %n, i32 %s, i32 %bound, ptr %p) {
 ; CHECK-NEXT:    --> {%s,+,%s}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @pos_stride_guard
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for loop: ((((-1 * (1 umin (0 smax (1 + (sext i32 %bound to i64))<nsw>)))<nuw><nsw> + (0 smax (1 + (sext i32 %bound to i64))<nsw>)) /u (sext i32 %s to i64)) + (1 umin (0 smax (1 + (sext i32 %bound to i64))<nsw>)))
+; CHECK-NEXT:    exit count for loop: ((-1 + (sext i32 %s to i64) + (0 smax (1 + (sext i32 %bound to i64))<nsw>)) /u (sext i32 %s to i64))
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2147483648
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin (0 smax (1 + (sext i32 %bound to i64))<nsw>)))<nuw><nsw> + (0 smax (1 + (sext i32 %bound to i64))<nsw>)) /u (sext i32 %s to i64)) + (1 umin (0 smax (1 + (sext i32 %bound to i64))<nsw>)))
-; CHECK-NEXT:    symbolic max exit count for loop: ((((-1 * (1 umin (0 smax (1 + (sext i32 %bound to i64))<nsw>)))<nuw><nsw> + (0 smax (1 + (sext i32 %bound to i64))<nsw>)) /u (sext i32 %s to i64)) + (1 umin (0 smax (1 + (sext i32 %bound to i64))<nsw>)))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + (sext i32 %s to i64) + (0 smax (1 + (sext i32 %bound to i64))<nsw>)) /u (sext i32 %s to i64))
+; CHECK-NEXT:    symbolic max exit count for loop: ((-1 + (sext i32 %s to i64) + (0 smax (1 + (sext i32 %bound to i64))<nsw>)) /u (sext i32 %s to i64))
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
 ;
 entry:
