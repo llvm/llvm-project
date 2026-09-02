@@ -46,6 +46,7 @@ define void @stencil_wide_index_huge_coeff(ptr %a, ptr %out, i64 %n, i128 %cdj) 
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i64 [0, %entry], [%iv.next, %loop]
   %ivx = zext i64 %iv to i128
@@ -73,6 +74,7 @@ loop:
   %iv.next = add i64 %iv, 1
   %c = icmp slt i64 %iv.next, %n
   br i1 %c, label %loop, label %exit
+
 exit:
   ret void
 }
