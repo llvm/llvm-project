@@ -124,6 +124,107 @@ static bool canRemoveSrcNodeAfterFusion(
   return true;
 }
 
+/// Returns true if `node`'s loads of `memref` may observe the memory state
+/// of `memref` from before the node's execution. This doesn't hold when
+/// every load of `memref` is dominated by a store to the same location
+/// within the same iteration (e.g., an initialize-then-reuse pattern): all
+/// such loads only read values produced by the node itself.
+static bool mayReadIncomingMemState(const MemRefDependenceGraph::Node &node,
+                                    Value memref,
+                                    const DominanceInfo &domInfo) {
+  for (Operation *loadOp : node.loads) {
+    if (cast<AffineReadOpInterface>(loadOp).getMemRef() != memref)
+      continue;
+    MemRefAccess loadAccess(loadOp);
+    bool coveredByStore = llvm::any_of(node.stores, [&](Operation *storeOp) {
+      return cast<AffineWriteOpInterface>(storeOp).getMemRef() == memref &&
+             domInfo.properlyDominates(storeOp, loadOp) &&
+             MemRefAccess(storeOp) == loadAccess;
+    });
+    if (!coveredByStore)
+      return true;
+  }
+  return false;
+}
+
+/// Returns true if the fused loop nest can be placed just before the source
+/// nest `srcId` while preserving all dependences. This placement is needed
+/// when the source nest is retained after fusion and updates the memrefs in
+/// `inPlaceUpdatedMemrefs` in place (loads from and stores to them): the
+/// fused nest recomputes the source's values reading from these memrefs,
+/// which is only sound while they still hold their original values, i.e.,
+/// before the retained source nest overwrites them. See
+/// https://github.com/llvm/llvm-project/issues/210490.
+static bool
+canPlaceFusedNestBeforeSrcNode(const MemRefDependenceGraph &mdg, unsigned srcId,
+                               unsigned dstId,
+                               ArrayRef<Value> inPlaceUpdatedMemrefs,
+                               const DenseSet<Value> &privateMemrefs) {
+  const MemRefDependenceGraph::Node *srcNode = mdg.getNode(srcId);
+  const MemRefDependenceGraph::Node *dstNode = mdg.getNode(dstId);
+  Operation *srcOp = srcNode->op;
+  Operation *dstOp = dstNode->op;
+
+  // The recomputed stores to an in-place updated memref must be redirected to
+  // a private memref; otherwise they would clobber values the retained source
+  // nest still has to read. Private memref creation happens only after
+  // fusion, so check its requirements here.
+  for (Value memref : inPlaceUpdatedMemrefs) {
+    // The memref must have been selected for privatization.
+    if (!privateMemrefs.contains(memref))
+      return false;
+    // Stores to the memref in the destination nest would in general prevent
+    // private memref creation as they don't share the source stores' access
+    // function.
+    if (dstNode->getStoreOpCount(memref) > 0)
+      return false;
+    // Private memref creation requires all stores to have the same access
+    // function.
+    SmallVector<Operation *, 4> storeOps;
+    srcNode->getStoreOpsForMemref(memref, &storeOps);
+    if (storeOps.size() > 1 &&
+        !std::equal(std::next(storeOps.begin()), storeOps.end(),
+                    storeOps.begin(), [](Operation *a, Operation *b) {
+                      return MemRefAccess(cast<AffineWriteOpInterface>(a)) ==
+                             MemRefAccess(cast<AffineWriteOpInterface>(b));
+                    }))
+      return false;
+  }
+
+  // All dependences from the source nest to the destination nest must be
+  // satisfied by the privatized recomputation; any other dependence would be
+  // violated by the new placement.
+  for (const auto &edge : mdg.outEdges.lookup(srcId))
+    if (edge.id == dstId && !privateMemrefs.contains(edge.value))
+      return false;
+
+  // The new placement makes the fused nest cross all graph nodes between the
+  // source and the destination nest; conservatively require that there are
+  // none.
+  for (const auto &idAndNode : mdg.nodes) {
+    Operation *op = idAndNode.second.op;
+    if (op->getBlock() == srcOp->getBlock() && srcOp->isBeforeInBlock(op) &&
+        op->isBeforeInBlock(dstOp))
+      return false;
+  }
+
+  // All SSA values used in the destination nest must dominate the source nest
+  // for the destination nest to be placed before it.
+  DominanceInfo domInfo;
+  WalkResult walkResult = dstOp->walk([&](Operation *op) {
+    for (Value operand : op->getOperands()) {
+      Operation *defOp = operand.getDefiningOp();
+      // Block arguments and values defined within the destination nest remain
+      // available; any other value must dominate the source nest.
+      if (defOp && !dstOp->isAncestor(defOp) &&
+          !domInfo.properlyDominates(defOp, srcOp))
+        return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return !walkResult.wasInterrupted();
+}
+
 /// Returns in 'srcIdCandidates' the producer fusion candidates for consumer
 /// 'dstId'. Candidates are sorted by node id order. This order corresponds to
 /// the program order when the 'mdg' is created. However, program order is not
@@ -1086,6 +1187,38 @@ public:
           }
         }
 
+        // Collect memrefs the source nest updates in place: memrefs it
+        // stores to while also reading their incoming values. If the source
+        // nest is retained after fusion, the fused nest has to be placed
+        // before it: the fused nest recomputes the source's values reading
+        // from these memrefs, which is only sound while they still hold
+        // their original values, i.e., before the retained source nest
+        // overwrites them (https://github.com/llvm/llvm-project/issues/210490).
+        // Bail out on this candidate if no legal such placement exists.
+        SmallVector<Value, 2> inPlaceUpdatedMemrefs;
+        if (!removeSrcNode) {
+          DominanceInfo domInfo;
+          for (Operation *store : srcNode->stores) {
+            Value memref = cast<AffineWriteOpInterface>(store).getMemRef();
+            if (srcNode->getLoadOpCount(memref) > 0 &&
+                !llvm::is_contained(inPlaceUpdatedMemrefs, memref) &&
+                mayReadIncomingMemState(*srcNode, memref, domInfo))
+              inPlaceUpdatedMemrefs.push_back(memref);
+          }
+        }
+        if (!inPlaceUpdatedMemrefs.empty()) {
+          if (!canPlaceFusedNestBeforeSrcNode(
+                  *mdg, srcId, dstId, inPlaceUpdatedMemrefs, privateMemrefs)) {
+            LDBG() << "Can't fuse: the source nest updates memref(s) in "
+                      "place, is retained after fusion, and the fused nest "
+                      "can't be placed before it";
+            continue;
+          }
+          // Place the fused nest right before the retained source nest so
+          // that it reads the in-place updated memrefs' original values.
+          fusedLoopInsPoint = srcNode->op;
+        }
+
         // Fuse computation slice of 'srcLoopNest' into 'dstLoopNest'.
         fuseLoops(srcAffineForOp, dstAffineForOp, bestSlice);
         dstNodeChanged = true;
@@ -1101,6 +1234,13 @@ public:
         // Update edges between 'srcNode' and 'dstNode'.
         mdg->updateEdges(srcNode->id, dstNode->id, privateMemrefs,
                          removeSrcNode);
+
+        // If the fused nest was placed before the retained source nest, it
+        // reads the original values of the memrefs the source nest updates
+        // in place: record these anti-dependences to preserve the placement
+        // in subsequent fusion decisions.
+        for (Value memref : inPlaceUpdatedMemrefs)
+          mdg->addEdge(dstId, srcId, memref);
 
         // Create private memrefs.
         if (!privateMemrefs.empty()) {
