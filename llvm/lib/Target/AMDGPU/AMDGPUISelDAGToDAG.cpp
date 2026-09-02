@@ -2015,8 +2015,8 @@ static SDValue matchExtFromI32orI32(SDValue Op, bool IsSigned,
 
   if (Op.getOpcode() != (IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND) &&
       Op.getOpcode() != ISD::ANY_EXTEND &&
-      !(DAG->SignBitIsZero(Op) &&
-        Op.getOpcode() == (IsSigned ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND)))
+      !(Op.getOpcode() == (IsSigned ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND) &&
+        DAG->SignBitIsZero(Op.getOperand(0))))
     return SDValue();
 
   SDValue ExtSrc = Op.getOperand(0);

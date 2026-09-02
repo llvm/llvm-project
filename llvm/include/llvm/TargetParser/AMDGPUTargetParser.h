@@ -207,6 +207,14 @@ LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
+/// \returns VGPR allocation granularity for \p AK, in registers. \p IsWave32
+/// selects the wavefront size, which is a per-kernel mode rather than a
+/// property of the GPU. This does not account for dynamic VGPR mode, where the
+/// block size chosen by the caller is the granule.
+LLVM_ABI unsigned getVGPRAllocGranule(GPUKind AK, bool IsWave32);
+LLVM_ABI unsigned getVGPRAllocGranule(Triple::SubArchType SubArch,
+                                      bool IsWave32);
+
 /// \returns Maximum LDS in bytes a single work-group can address. This is a
 /// fixed hardware cap and does not depend on how many SIMDs a work-group runs
 /// on.
