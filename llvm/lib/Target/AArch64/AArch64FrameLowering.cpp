@@ -2831,7 +2831,7 @@ static void orderZPRCalleeSavesForPairs(MachineFunction &MF,
   SmallVector<CalleeSavedInfo> Singles;
   for (size_t i = 0; i < ZPRSaves.size();) {
     if (i + 1 < ZPRSaves.size() &&
-        ZPRSaves[i + 1].getReg() == ZPRSaves[i].getReg() + 1 &&
+        (ZPRSaves[i].getReg() + 1 == ZPRSaves[i + 1].getReg()) &&
         (ZPRSaves[i].getReg() - AArch64::Z0) % 2 == 0) {
       Pairs.emplace_back(ZPRSaves[i], ZPRSaves[i + 1]);
       i += 2;
