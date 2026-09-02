@@ -1216,6 +1216,17 @@ void CompileUnit::cloneDieAttrExpression(
 
   uint64_t OpOffset = 0;
   for (auto &Op : InputExpression) {
+    if (Op.isError()) {
+      // The operation could not be decoded, so neither it nor anything after
+      // it can be located. Its end offset is the offset it started at, so the
+      // slice copied below would be empty and the rest of the expression
+      // would be silently dropped. Preserve the remaining bytes instead.
+      warn("cannot decode a DW_OP, copying the rest of the expression "
+           "unmodified.");
+      StringRef Bytes = InputExpression.getData().substr(OpOffset);
+      OutputExpression.append(Bytes.begin(), Bytes.end());
+      return;
+    }
     auto Desc = Op.getDescription();
     // DW_OP_const_type is variable-length and has 3
     // operands. Thus far we only support 2.

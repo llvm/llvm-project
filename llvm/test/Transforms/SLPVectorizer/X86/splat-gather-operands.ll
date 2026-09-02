@@ -334,3 +334,94 @@ entry:
   store i32 %r3, ptr %s3, align 4
   ret void
 }
+
+; Splat gathers of cast instructions: the unique scalars form a vectorizable
+; cast subtree, the gathers are emitted as its broadcasts.
+
+define void @splat_cast_scalars(ptr %p, ptr %r) {
+; CHECK-LABEL: @splat_cast_scalars(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = load i16, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr i16, ptr [[P]], i64 1
+; CHECK-NEXT:    [[B:%.*]] = load i16, ptr [[G1]], align 2
+; CHECK-NEXT:    [[X:%.*]] = zext i16 [[A]] to i32
+; CHECK-NEXT:    [[Y:%.*]] = zext i16 [[B]] to i32
+; CHECK-NEXT:    [[R0:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R1:%.*]] = sub i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R2:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[R3:%.*]] = sub i32 [[X]], [[Y]]
+; CHECK-NEXT:    store i32 [[R0]], ptr [[R:%.*]], align 4
+; CHECK-NEXT:    [[S1:%.*]] = getelementptr i32, ptr [[R]], i64 1
+; CHECK-NEXT:    store i32 [[R1]], ptr [[S1]], align 4
+; CHECK-NEXT:    [[S2:%.*]] = getelementptr i32, ptr [[R]], i64 2
+; CHECK-NEXT:    store i32 [[R2]], ptr [[S2]], align 4
+; CHECK-NEXT:    [[S3:%.*]] = getelementptr i32, ptr [[R]], i64 3
+; CHECK-NEXT:    store i32 [[R3]], ptr [[S3]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = load i16, ptr %p, align 2
+  %g1 = getelementptr i16, ptr %p, i64 1
+  %b = load i16, ptr %g1, align 2
+  %x = zext i16 %a to i32
+  %y = zext i16 %b to i32
+  %r0 = add i32 %x, %y
+  %r1 = sub i32 %x, %y
+  %r2 = add i32 %x, %y
+  %r3 = sub i32 %x, %y
+  store i32 %r0, ptr %r, align 4
+  %s1 = getelementptr i32, ptr %r, i64 1
+  store i32 %r1, ptr %s1, align 4
+  %s2 = getelementptr i32, ptr %r, i64 2
+  store i32 %r2, ptr %s2, align 4
+  %s3 = getelementptr i32, ptr %r, i64 3
+  store i32 %r3, ptr %s3, align 4
+  ret void
+}
+
+; Splat gathers of compare instructions with per-lane constants.
+
+define void @splat_cmp_scalars(ptr %p, ptr %r) {
+; CHECK-LABEL: @splat_cmp_scalars(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[G1]], align 4
+; CHECK-NEXT:    [[X:%.*]] = icmp ugt i32 [[A]], 10
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i32 [[B]], 20
+; CHECK-NEXT:    [[XA:%.*]] = zext i1 [[X]] to i32
+; CHECK-NEXT:    [[YA:%.*]] = zext i1 [[Y]] to i32
+; CHECK-NEXT:    [[R0:%.*]] = add i32 [[XA]], [[YA]]
+; CHECK-NEXT:    [[R1:%.*]] = sub i32 [[XA]], [[YA]]
+; CHECK-NEXT:    [[R2:%.*]] = add i32 [[XA]], [[YA]]
+; CHECK-NEXT:    [[R3:%.*]] = sub i32 [[XA]], [[YA]]
+; CHECK-NEXT:    store i32 [[R0]], ptr [[R:%.*]], align 4
+; CHECK-NEXT:    [[S1:%.*]] = getelementptr i32, ptr [[R]], i64 1
+; CHECK-NEXT:    store i32 [[R1]], ptr [[S1]], align 4
+; CHECK-NEXT:    [[S2:%.*]] = getelementptr i32, ptr [[R]], i64 2
+; CHECK-NEXT:    store i32 [[R2]], ptr [[S2]], align 4
+; CHECK-NEXT:    [[S3:%.*]] = getelementptr i32, ptr [[R]], i64 3
+; CHECK-NEXT:    store i32 [[R3]], ptr [[S3]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = load i32, ptr %p, align 4
+  %g1 = getelementptr i32, ptr %p, i64 1
+  %b = load i32, ptr %g1, align 4
+  %x = icmp ugt i32 %a, 10
+  %y = icmp ugt i32 %b, 20
+  %xa = zext i1 %x to i32
+  %ya = zext i1 %y to i32
+  %r0 = add i32 %xa, %ya
+  %r1 = sub i32 %xa, %ya
+  %r2 = add i32 %xa, %ya
+  %r3 = sub i32 %xa, %ya
+  store i32 %r0, ptr %r, align 4
+  %s1 = getelementptr i32, ptr %r, i64 1
+  store i32 %r1, ptr %s1, align 4
+  %s2 = getelementptr i32, ptr %r, i64 2
+  store i32 %r2, ptr %s2, align 4
+  %s3 = getelementptr i32, ptr %r, i64 3
+  store i32 %r3, ptr %s3, align 4
+  ret void
+}

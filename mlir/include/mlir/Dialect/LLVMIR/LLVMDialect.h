@@ -216,6 +216,13 @@ bool satisfiesLLVMModule(Operation *op);
 /// Lookup parent Module satisfying LLVM conditions on the Module Operation.
 Operation *parentLLVMModule(Operation *op);
 
+/// Determines the element type of `type` the way the `llvm.mlir.constant`
+/// verifier does, i.e. by looking through LLVM array types and then through a
+/// `VectorType` or `TensorType`. Everything else is treated as a scalar. Use
+/// this when building a constant so that the attribute and the result type are
+/// compared consistently with the verifier.
+Type getConstantElementType(Type type);
+
 /// Convert an array of integer attributes to a vector of integers that can be
 /// used as indices in LLVM operations.
 template <typename IntT = int64_t>

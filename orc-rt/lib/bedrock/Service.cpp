@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/Service.h header.
+// Contains the implementation of APIs in the orc-rt/bedrock/Service.h header.
 //
 //===----------------------------------------------------------------------===//
 

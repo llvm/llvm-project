@@ -197,7 +197,7 @@ public:
     // attribute string identifying the field
     FieldOp reflectionMapField = FieldOp::create(
         rewriter, classOp.getLoc(), rewriter.getStringAttr("reflectionMap"),
-        TypeAttr::get(mapType),
+        /*sym_visibility=*/nullptr, TypeAttr::get(mapType),
         emitc::OpaqueAttr::get(context, reflectionMapContents));
 
     // Create getBufferForName method
