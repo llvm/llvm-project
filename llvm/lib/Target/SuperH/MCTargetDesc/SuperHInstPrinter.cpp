@@ -37,8 +37,12 @@ namespace llvm {
 SuperHInstPrinter::SuperHInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                     const MCRegisterInfo &MRI) : MCInstPrinter(MAI, MII, MRI) {}
 
+const std::string SuperHInstPrinter::getRegName(MCRegister Reg) {
+  return StringRef(getRegisterName(Reg)).lower();
+}
+
 void SuperHInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
-  OS << StringRef(getRegisterName(Reg)).lower();
+  OS << getRegName(Reg);
 }
 
 void SuperHInstPrinter::printDisp(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
@@ -53,17 +57,17 @@ void SuperHInstPrinter::printImm(const MCInst *MI, unsigned OpNo, raw_ostream &O
 
 void SuperHInstPrinter::printIReg(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
-  OS << "@" << StringRef(getRegisterName(Op.getReg())).lower();
+  OS << "@" << getRegName(Op.getReg());
 }
 
 void SuperHInstPrinter::printIRegInc(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
-  OS << "@" << StringRef(getRegisterName(Op.getReg())).lower() << "+";
+  OS << "@" << getRegName(Op.getReg()) << "+";
 }
 
 void SuperHInstPrinter::printIRegDec(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
-  OS << "@-" << StringRef(getRegisterName(Op.getReg())).lower();
+  OS << "@-" << getRegName(Op.getReg());
 }
 
 void SuperHInstPrinter::printPCRelImm(const MCInst *MI, uint64_t Address, 
