@@ -8407,15 +8407,13 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
     case Intrinsic::amdgcn_s_buffer_load: {
-      // lowerSBuffer already handles every illegal result type.
+      // The i8 lowering that used to live here duplicated lowerSBuffer, which
+      // now covers the illegal result types marked Custom above.
       SDValue Op = SDValue(N, 0);
-      SDValue Rsrc = Op.getOperand(1);
-      SDValue Offset = Op.getOperand(2);
-      SDValue CachePolicy = Op.getOperand(3);
       EVT VT = Op.getValueType();
-      SDLoc DL(Op);
-      Results.push_back(lowerSBuffer(VT, VT, DL, DAG.getEntryNode(), Rsrc,
-                                     Offset, CachePolicy, DAG));
+      Results.push_back(lowerSBuffer(VT, VT, SDLoc(Op), DAG.getEntryNode(),
+                                     Op.getOperand(1), Op.getOperand(2),
+                                     Op.getOperand(3), DAG));
       return;
     }
     case Intrinsic::amdgcn_dead: {
@@ -10829,31 +10827,19 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL,
   // No SBUFFER_LOAD pattern exists for these widths; a broader
   // "!isTypeLegal(VT)" check would also swallow i8/i16 and 32-bit-element
   // vec3 types, which have their own faster lowerings below.
-  auto NeedsCarrierLoad = [](EVT VT) {
-    return VT == MVT::i1 || VT == MVT::i4 || VT == MVT::v2i1 ||
-           VT == MVT::v3i16 || VT == MVT::v6i8 || VT == MVT::i128;
-  };
-  if (NeedsCarrierLoad(VT) && MemVT == VT) {
+  if (MemVT == VT && (VT == MVT::i1 || VT == MVT::i4 || VT == MVT::v2i1 ||
+                      VT == MVT::v3i16 || VT == MVT::v6i8 || VT == MVT::i128)) {
     unsigned Bits = VT.getSizeInBits();
     EVT CarrierVT = Bits <= 32 ? EVT(MVT::i32)
                                : EVT::getVectorVT(*DAG.getContext(), MVT::i32,
                                                   divideCeil(Bits, 32));
-    Align CarrierAlign = DAG.getDataLayout().getABITypeAlign(
-        CarrierVT.getTypeForEVT(*DAG.getContext()));
     MachineMemOperand *CarrierMMO =
-        MF.getMachineMemOperand(MMO->getPointerInfo(), MMO->getFlags(),
-                                CarrierVT.getStoreSize(), CarrierAlign);
+        MF.getMachineMemOperand(MMO, 0, CarrierVT.getStoreSize());
     SDValue CarrierLoad = lowerSBuffer(CarrierVT, CarrierVT, DL, Chain, Rsrc,
                                        Offset, CachePolicy, DAG, CarrierMMO);
-    EVT CarrierIntVT =
-        EVT::getIntegerVT(*DAG.getContext(), CarrierVT.getSizeInBits());
-    SDValue AsInt = DAG.getNode(ISD::BITCAST, DL, CarrierIntVT, CarrierLoad);
     EVT NarrowIntVT = EVT::getIntegerVT(*DAG.getContext(), Bits);
-    SDValue Narrow = NarrowIntVT == CarrierIntVT
-                         ? AsInt
-                         : DAG.getNode(ISD::TRUNCATE, DL, NarrowIntVT, AsInt);
-    SDValue Result =
-        VT == NarrowIntVT ? Narrow : DAG.getNode(ISD::BITCAST, DL, VT, Narrow);
+    SDValue Result = DAG.getBitcast(
+        VT, DAG.getBitcastedAnyExtOrTrunc(CarrierLoad, DL, NarrowIntVT));
     if (HasChainResult)
       return DAG.getMergeValues({Result, CarrierLoad.getValue(1)}, DL);
     return Result;

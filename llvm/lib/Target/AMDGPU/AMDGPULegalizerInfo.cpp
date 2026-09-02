@@ -7659,6 +7659,51 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   unsigned Size = Ty.getSizeInBits();
   MachineFunction &MF = B.getMF();
   bool HasMMO = !MI.memoperands_empty();
+
+  // No S_BUFFER_LOAD exists for these widths. Load a legal i32 carrier and
+  // narrow it down, mirroring SITargetLowering::lowerSBuffer.
+  const LLT NarrowTys[] = {LLT::integer(1), LLT::integer(4),
+                           LLT::fixed_vector(2, LLT::integer(1)),
+                           LLT::fixed_vector(3, LLT::integer(16)),
+                           LLT::fixed_vector(6, LLT::integer(8))};
+  if (is_contained(NarrowTys, Ty)) {
+    LLT CarrierTy = LLT::scalarOrVector(
+        ElementCount::getFixed(divideCeil(Size, 32)), LLT::integer(32));
+    Register Carrier = B.getMRI()->createGenericVirtualRegister(CarrierTy);
+
+    Observer.changingInstr(MI);
+    MI.setDesc(B.getTII().get(AMDGPU::G_AMDGPU_S_BUFFER_LOAD));
+    MI.getOperand(0).setReg(Carrier);
+    MI.removeOperand(1);
+    castBufferRsrcArgToV4I32(MI, B, 1);
+    MachinePointerInfo PtrInfo =
+        HasMMO ? (*MI.memoperands_begin())->getPointerInfo()
+               : MachinePointerInfo();
+    MI.setMemRefs(
+        MF, MF.getMachineMemOperand(PtrInfo,
+                                    MachineMemOperand::MOLoad |
+                                        MachineMemOperand::MODereferenceable |
+                                        MachineMemOperand::MOInvariant,
+                                    CarrierTy.getSizeInBytes(),
+                                    Align(CarrierTy.getSizeInBytes())));
+    Observer.changedInstr(MI);
+
+    B.setInsertPt(B.getMBB(), ++B.getInsertPt());
+    if (CarrierTy.isVector()) {
+      // Truncating through a non-dword scalar produces illegal G_UNMERGE_VALUES
+      // later, so reinterpret the carrier as a wider vector of the requested
+      // element type and drop the trailing elements instead.
+      LLT EltTy = Ty.getElementType();
+      LLT WideTy = LLT::fixed_vector(
+          CarrierTy.getSizeInBits() / EltTy.getSizeInBits(), EltTy);
+      B.buildDeleteTrailingVectorElements(OrigDst,
+                                          B.buildBitcast(WideTy, Carrier));
+    } else {
+      B.buildCast(OrigDst, B.buildTrunc(LLT::integer(Size), Carrier));
+    }
+    return true;
+  }
+
   unsigned Opc = 0;
   if (Size < 32 && ST.hasScalarSubwordLoads()) {
     assert(Size == 8 || Size == 16);
