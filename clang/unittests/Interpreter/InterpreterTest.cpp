@@ -586,6 +586,8 @@ TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
 
   llvm::cantFail(
       Interp->ParseAndExecute("try { throw 1; } catch (...) { 0; }"));
+  llvm::cantFail(
+      Interp->ParseAndExecute("try { throw 2; } catch (...) { 0; }"));
 }
 
 } // end anonymous namespace
