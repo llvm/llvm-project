@@ -1383,11 +1383,35 @@ define half @fmul_4xf16(ptr %p) {
 }
 
 define i64 @red_ld_64xi64(ptr %ptr) {
-; CHECK-LABEL: @red_ld_64xi64(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <128 x i64>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v128i64(<128 x i64> [[TMP0]])
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; ZVFHMIN-LABEL: @red_ld_64xi64(
+; ZVFHMIN-NEXT:  entry:
+; ZVFHMIN-NEXT:    [[TMP0:%.*]] = load <64 x i64>, ptr [[PTR:%.*]], align 8
+; ZVFHMIN-NEXT:    [[GEP_63:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 64
+; ZVFHMIN-NEXT:    [[TMP1:%.*]] = load <64 x i64>, ptr [[GEP_63]], align 8
+; ZVFHMIN-NEXT:    [[RDX_OP:%.*]] = add <64 x i64> [[TMP0]], [[TMP1]]
+; ZVFHMIN-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.v64i64(<64 x i64> [[RDX_OP]])
+; ZVFHMIN-NEXT:    ret i64 [[TMP2]]
+;
+; ZVFHDEFAULT-LABEL: @red_ld_64xi64(
+; ZVFHDEFAULT-NEXT:  entry:
+; ZVFHDEFAULT-NEXT:    [[TMP0:%.*]] = load <64 x i64>, ptr [[PTR:%.*]], align 8
+; ZVFHDEFAULT-NEXT:    [[GEP_63:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 64
+; ZVFHDEFAULT-NEXT:    [[TMP1:%.*]] = load <64 x i64>, ptr [[GEP_63]], align 8
+; ZVFHDEFAULT-NEXT:    [[RDX_OP:%.*]] = add <64 x i64> [[TMP0]], [[TMP1]]
+; ZVFHDEFAULT-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.v64i64(<64 x i64> [[RDX_OP]])
+; ZVFHDEFAULT-NEXT:    ret i64 [[TMP2]]
+;
+; ZVFH256-LABEL: @red_ld_64xi64(
+; ZVFH256-NEXT:  entry:
+; ZVFH256-NEXT:    [[TMP0:%.*]] = load <128 x i64>, ptr [[PTR:%.*]], align 8
+; ZVFH256-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v128i64(<128 x i64> [[TMP0]])
+; ZVFH256-NEXT:    ret i64 [[TMP1]]
+;
+; ZVFH512-LABEL: @red_ld_64xi64(
+; ZVFH512-NEXT:  entry:
+; ZVFH512-NEXT:    [[TMP0:%.*]] = load <128 x i64>, ptr [[PTR:%.*]], align 8
+; ZVFH512-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.add.v128i64(<128 x i64> [[TMP0]])
+; ZVFH512-NEXT:    ret i64 [[TMP1]]
 ;
 entry:
   %ld0 = load i64, ptr %ptr
