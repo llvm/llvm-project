@@ -327,7 +327,7 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIStringTypeAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute name, uint64_t sizeInBits,
     uint32_t alignInBits, MlirAttribute stringLength,
     MlirAttribute stringLengthExp, MlirAttribute stringLocationExp,
-    MlirLLVMTypeEncoding encoding);
+    MlirLLVMTypeEncoding encoding, MlirAttribute charType);
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDIStringTypeAttrGetName(void);
 

@@ -2062,6 +2062,7 @@ void ModuleBitcodeWriter::writeDIStringType(const DIStringType *N,
   Record.push_back(VE.getMetadataOrNullID(N->getRawSizeInBits()));
   Record.push_back(N->getAlignInBits());
   Record.push_back(N->getEncoding());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawCharType()));
 
   Stream.EmitRecord(bitc::METADATA_STRING_TYPE, Record, Abbrev);
   Record.clear();

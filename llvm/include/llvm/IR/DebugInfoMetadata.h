@@ -1176,37 +1176,37 @@ class DIStringType : public DIType {
                                StringRef Name, Metadata *StringLength,
                                Metadata *StrLenExp, Metadata *StrLocationExp,
                                uint64_t SizeInBits, uint32_t AlignInBits,
-                               unsigned Encoding, StorageType Storage,
-                               bool ShouldCreate = true) {
+                               unsigned Encoding, Metadata *CharType,
+                               StorageType Storage, bool ShouldCreate = true) {
     auto *SizeInBitsNode = ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt64Ty(Context), SizeInBits));
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
                    StringLength, StrLenExp, StrLocationExp, SizeInBitsNode,
-                   AlignInBits, Encoding, Storage, ShouldCreate);
+                   AlignInBits, Encoding, CharType, Storage, ShouldCreate);
   }
   static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
                                MDString *Name, Metadata *StringLength,
                                Metadata *StrLenExp, Metadata *StrLocationExp,
                                uint64_t SizeInBits, uint32_t AlignInBits,
-                               unsigned Encoding, StorageType Storage,
-                               bool ShouldCreate = true) {
+                               unsigned Encoding, Metadata *CharType,
+                               StorageType Storage, bool ShouldCreate = true) {
     auto *SizeInBitsNode = ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt64Ty(Context), SizeInBits));
     return getImpl(Context, Tag, Name, StringLength, StrLenExp, StrLocationExp,
-                   SizeInBitsNode, AlignInBits, Encoding, Storage,
+                   SizeInBitsNode, AlignInBits, Encoding, CharType, Storage,
                    ShouldCreate);
   }
   LLVM_ABI static DIStringType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
           Metadata *StringLength, Metadata *StrLenExp, Metadata *StrLocationExp,
           Metadata *SizeInBits, uint32_t AlignInBits, unsigned Encoding,
-          StorageType Storage, bool ShouldCreate = true);
+          Metadata *CharType, StorageType Storage, bool ShouldCreate = true);
 
   TempDIStringType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getRawName(),
                         getRawStringLength(), getRawStringLengthExp(),
                         getRawStringLocationExp(), getRawSizeInBits(),
-                        getAlignInBits(), getEncoding());
+                        getAlignInBits(), getEncoding(), getRawCharType());
   }
 
 public:
@@ -1214,28 +1214,31 @@ public:
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits),
                     (Tag, Name, nullptr, nullptr, nullptr, SizeInBits,
-                     AlignInBits, 0))
+                     AlignInBits, 0, nullptr))
   DEFINE_MDNODE_GET(DIStringType,
                     (unsigned Tag, MDString *Name, Metadata *StringLength,
                      Metadata *StringLengthExp, Metadata *StringLocationExp,
                      uint64_t SizeInBits, uint32_t AlignInBits,
-                     unsigned Encoding),
+                     unsigned Encoding, Metadata *CharType = nullptr),
                     (Tag, Name, StringLength, StringLengthExp,
-                     StringLocationExp, SizeInBits, AlignInBits, Encoding))
+                     StringLocationExp, SizeInBits, AlignInBits, Encoding,
+                     CharType))
   DEFINE_MDNODE_GET(DIStringType,
                     (unsigned Tag, StringRef Name, Metadata *StringLength,
                      Metadata *StringLengthExp, Metadata *StringLocationExp,
                      uint64_t SizeInBits, uint32_t AlignInBits,
-                     unsigned Encoding),
+                     unsigned Encoding, Metadata *CharType = nullptr),
                     (Tag, Name, StringLength, StringLengthExp,
-                     StringLocationExp, SizeInBits, AlignInBits, Encoding))
+                     StringLocationExp, SizeInBits, AlignInBits, Encoding,
+                     CharType))
   DEFINE_MDNODE_GET(DIStringType,
                     (unsigned Tag, MDString *Name, Metadata *StringLength,
                      Metadata *StringLengthExp, Metadata *StringLocationExp,
                      Metadata *SizeInBits, uint32_t AlignInBits,
-                     unsigned Encoding),
+                     unsigned Encoding, Metadata *CharType = nullptr),
                     (Tag, Name, StringLength, StringLengthExp,
-                     StringLocationExp, SizeInBits, AlignInBits, Encoding))
+                     StringLocationExp, SizeInBits, AlignInBits, Encoding,
+                     CharType))
 
   TempDIStringType clone() const { return cloneImpl(); }
 
@@ -1257,6 +1260,8 @@ public:
 
   unsigned getEncoding() const { return Encoding; }
 
+  DIType *getCharType() const { return cast_or_null<DIType>(getRawCharType()); }
+
   Metadata *getRawStringLength() const { return getOperand(MY_FIRST_OPERAND); }
 
   Metadata *getRawStringLengthExp() const {
@@ -1266,6 +1271,8 @@ public:
   Metadata *getRawStringLocationExp() const {
     return getOperand(MY_FIRST_OPERAND + 2);
   }
+
+  Metadata *getRawCharType() const { return getOperand(MY_FIRST_OPERAND + 3); }
 };
 
 /// Derived types.

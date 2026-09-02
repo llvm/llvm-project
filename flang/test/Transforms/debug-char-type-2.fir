@@ -13,7 +13,7 @@ module {
 #loc1 = loc("string.f90":16:1)
 #loc2 = loc("string.f90":15:1)
 
-// CHECK: #[[STR:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, encoding = DW_ATE_ASCII>
+// CHECK: #[[STR:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, encoding = DW_ATE_ASCII, charType = #{{.*}}>
 // CHECK: #[[ARR:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, {{.*}}baseType = #[[STR]]
 // CHECK-SAME: dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>
 // CHECK: #llvm.di_local_variable<{{.*}}name = "akeys"{{.*}}type = #[[ARR]]>
