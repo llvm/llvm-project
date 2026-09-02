@@ -70,6 +70,7 @@ private:
   };
 
   bool isSGPR(Register Reg) const;
+  bool isVGPR(Register Reg) const;
 
   bool isInstrUniform(const MachineInstr &MI) const;
   bool isVCC(Register Reg, const MachineRegisterInfo &MRI) const;

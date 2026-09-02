@@ -261,8 +261,9 @@ body: |
     ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; GFX11-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX11-TRUE16-NEXT: [[FNEG:%[0-9]+]]:vgpr_16(s16) = G_FNEG [[TRUNC]]
-    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FNEG]](s16)
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
+    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32(s32) = REG_SEQUENCE [[FNEG]](s16), %subreg.lo16, [[DEF]], %subreg.hi16
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]](s32)
     ;
     ; GFX11-FAKE16-LABEL: name: fneg_s16_vv
     ; GFX11-FAKE16: liveins: $vgpr0
@@ -331,8 +332,9 @@ body: |
     ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX11-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX11-TRUE16-NEXT: [[FNEG:%[0-9]+]]:vgpr_16(s16) = G_FNEG [[TRUNC]]
-    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY [[FNEG]](s16)
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
+    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32(s32) = REG_SEQUENCE [[FNEG]](s16), %subreg.lo16, [[DEF]], %subreg.hi16
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]](s32)
     ;
     ; GFX11-FAKE16-LABEL: name: fneg_s16_vs
     ; GFX11-FAKE16: liveins: $sgpr0
@@ -942,8 +944,9 @@ body: |
     ; GFX11-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX11-TRUE16-NEXT: [[FABS:%[0-9]+]]:vgpr(s16) = G_FABS [[TRUNC]]
     ; GFX11-TRUE16-NEXT: [[FNEG:%[0-9]+]]:vgpr_16(s16) = G_FNEG [[FABS]]
-    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:sreg_32(s32) = COPY [[FNEG]](s16)
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
+    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_32(s32) = REG_SEQUENCE [[FNEG]](s16), %subreg.lo16, [[DEF]], %subreg.hi16
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]](s32)
     ;
     ; GFX11-FAKE16-LABEL: name: fneg_fabs_s16_vv
     ; GFX11-FAKE16: liveins: $vgpr0
@@ -1019,8 +1022,9 @@ body: |
     ; GFX11-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX11-TRUE16-NEXT: [[FNEG:%[0-9]+]]:sgpr(s16) = G_FNEG [[TRUNC]]
     ; GFX11-TRUE16-NEXT: [[FNEG1:%[0-9]+]]:vgpr_16(s16) = G_FNEG [[FNEG]]
-    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:sreg_32(s32) = COPY [[FNEG1]](s16)
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]](s32)
+    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_32(s32) = REG_SEQUENCE [[FNEG1]](s16), %subreg.lo16, [[DEF]], %subreg.hi16
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]](s32)
     ;
     ; GFX11-FAKE16-LABEL: name: fneg_fabs_s16_vs
     ; GFX11-FAKE16: liveins: $sgpr0

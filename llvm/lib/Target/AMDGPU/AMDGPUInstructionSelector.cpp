@@ -216,6 +216,47 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
       continue;
     RBI.constrainGenericRegister(MO.getReg(), *RC, *MRI);
   }
+
+  // Crossbank s16 copy between sgpr and vgpr
+  // sgpr(s16) = COPY vgpr(s16)
+  // =>
+  // vgpr32 = REG_SEQUENCE vgpr16
+  // sreg32 = readfirstlane vgpr32
+  //
+  // vgpr(s16) = COPY sgpr(s16)
+  // =>
+  // vgpr32 = COPY sreg32
+  // vgpr16 = COPY vgpr32.lo16
+
+  LLT DstTy = MRI->getType(DstReg);
+  bool IsS16Copy = DstTy == LLT::scalar(16);
+  if (Subtarget->useRealTrue16Insts() && IsS16Copy && !SrcReg.isPhysical() &&
+      !DstReg.isPhysical()) {
+    if (isSGPR(DstReg) && isVGPR(SrcReg)) {
+      Register Reg16 = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+      Register Reg32 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::IMPLICIT_DEF), Reg16);
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), Reg32)
+          .addReg(SrcReg)
+          .addImm(AMDGPU::lo16)
+          .addReg(Reg16)
+          .addImm(AMDGPU::hi16);
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+          .addReg(Reg32);
+      I.eraseFromParent();
+      return true;
+    }
+
+    if (isSGPR(SrcReg) && isVGPR(DstReg)) {
+      Register Reg32 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), Reg32).addReg(SrcReg);
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg)
+          .addReg(Reg32, {}, AMDGPU::lo16);
+      I.eraseFromParent();
+      return true;
+    }
+  }
+
   return true;
 }
 
@@ -2708,14 +2749,28 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
 
   // FIXME: This should probably be illegal and split earlier.
   if (I.getOpcode() == AMDGPU::G_ANYEXT) {
-    if (DstSize <= 32)
-      return selectCOPY(I);
-
     const TargetRegisterClass *SrcRC =
         TRI.getRegClassForTypeOnBank(SrcTy, *SrcBank);
     const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
     const TargetRegisterClass *DstRC =
         TRI.getRegClassForSizeOnBank(DstSize, *DstBank);
+
+    if (DstSize <= 32) {
+      if (STI.useRealTrue16Insts() && DstSize == 32 &&
+          SrcBank->getID() == AMDGPU::VGPRRegBankID) {
+        Register UndefReg = MRI->createVirtualRegister(SrcRC);
+        BuildMI(MBB, I, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);
+        BuildMI(MBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
+            .addReg(SrcReg)
+            .addImm(AMDGPU::lo16)
+            .addReg(UndefReg)
+            .addImm(AMDGPU::hi16);
+        I.eraseFromParent();
+        return RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) &&
+               RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI);
+      } else
+        return selectCOPY(I);
+    }
 
     Register UndefReg = MRI->createVirtualRegister(SrcRC);
     BuildMI(MBB, I, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);
@@ -3061,6 +3116,10 @@ void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
 
 bool AMDGPUInstructionSelector::isSGPR(Register Reg) const {
   return RBI.getRegBank(Reg, *MRI, TRI)->getID() == AMDGPU::SGPRRegBankID;
+}
+
+bool AMDGPUInstructionSelector::isVGPR(Register Reg) const {
+  return RBI.getRegBank(Reg, *MRI, TRI)->getID() == AMDGPU::VGPRRegBankID;
 }
 
 bool AMDGPUInstructionSelector::isInstrUniform(const MachineInstr &MI) const {

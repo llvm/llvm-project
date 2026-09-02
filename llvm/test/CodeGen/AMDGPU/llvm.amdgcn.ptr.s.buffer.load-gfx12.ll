@@ -95,7 +95,7 @@ define amdgpu_kernel void @ptr_s_buffer_load_i16(ptr addrspace(1) %out, ptr addr
 ; GFX1200-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1200-GISEL-NEXT:    s_buffer_load_u16 s0, s[0:3], s6 offset:0x0
 ; GFX1200-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-GISEL-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX1200-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1200-GISEL-NEXT:    global_store_b16 v1, v0, s[4:5]
 ; GFX1200-GISEL-NEXT:    s_endpgm
 ;
@@ -128,7 +128,7 @@ define amdgpu_kernel void @ptr_s_buffer_load_i16(ptr addrspace(1) %out, ptr addr
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_buffer_load_u16 s0, s[0:3], s8 offset:0x0 nv
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-GISEL-NEXT:    global_store_b16 v1, v0, s[6:7]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %load = call i16 @llvm.amdgcn.ptr.s.buffer.load.i16(ptr addrspace(8) %rsrc, i32 %offset, i32 0), !invariant.load !0

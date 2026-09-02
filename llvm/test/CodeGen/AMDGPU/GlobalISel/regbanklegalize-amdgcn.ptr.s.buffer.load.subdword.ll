@@ -41,11 +41,10 @@ define amdgpu_ps void @ptr_s_buffer_load_i16_sgpr_rsrc_sgpr_offset(ptr addrspace
 ; GFX12-LABEL: ptr_s_buffer_load_i16_sgpr_rsrc_sgpr_offset:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_buffer_load_u16 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_mov_b32 s8, s5
 ; GFX12-NEXT:    s_mov_b32 s9, s6
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s0
 ; GFX12-NEXT:    global_store_b16 v1, v0, s[8:9]
 ; GFX12-NEXT:    s_endpgm
   %val = call i16 @llvm.amdgcn.ptr.s.buffer.load.i16(ptr addrspace(8) %rsrc, i32 %soffset, i32 0), !invariant.load !0
@@ -58,11 +57,10 @@ define amdgpu_ps void @ptr_s_buffer_load_u16_sgpr_rsrc_sgpr_offset(ptr addrspace
 ; GFX12-LABEL: ptr_s_buffer_load_u16_sgpr_rsrc_sgpr_offset:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_buffer_load_u16 s0, s[0:3], s4 offset:0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_mov_b32 s8, s5
 ; GFX12-NEXT:    s_mov_b32 s9, s6
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s0
 ; GFX12-NEXT:    global_store_b16 v1, v0, s[8:9]
 ; GFX12-NEXT:    s_endpgm
   %val = call i16 @llvm.amdgcn.ptr.s.buffer.load.u16(ptr addrspace(8) %rsrc, i32 %soffset, i32 0), !invariant.load !0

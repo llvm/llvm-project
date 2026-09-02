@@ -1069,7 +1069,7 @@ define amdgpu_kernel void @fp_to_uint_f32_to_i16(ptr addrspace(1) %out, float %i
 ; GFX11-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, s2
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX11-GISEL-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
