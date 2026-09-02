@@ -960,7 +960,11 @@ lldb::addr_t SBProcess::ReadPointerFromMemory(addr_t addr,
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
       TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
       std::lock_guard<TargetAPIMutex> guard(api_lock);
-      ptr = process_sp->ReadPointerFromMemory(addr, sb_error.ref());
+      if (llvm::Expected<lldb::addr_t> ptr_or_err =
+              process_sp->ReadPointerFromMemory(addr))
+        ptr = *ptr_or_err;
+      else
+        sb_error = Status::FromError(ptr_or_err.takeError());
     } else {
       sb_error = Status::FromErrorString("process is running");
     }

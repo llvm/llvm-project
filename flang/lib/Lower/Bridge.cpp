@@ -626,6 +626,15 @@ public:
             bridge.getLoweringOptions().getFPExceptionTraps());
       });
 
+    // Marking of OpenMP declare target functions and globals imported
+    // from a module file needs to happen after the primary
+    // translation pass has run, because that is where the ops that
+    // need marking are created.
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      Fortran::lower::markOpenMPImportedDeclareTargets(
+          *this, bridge.getSemanticsContext());
+    });
+
     finalizeOpenMPLowering(globalOmpRequiresSymbols);
   }
 

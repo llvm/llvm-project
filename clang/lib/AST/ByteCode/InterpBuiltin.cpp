@@ -2340,218 +2340,9 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static std::optional<unsigned> computeFullDescSize(const ASTContext &ASTCtx,
-                                                   const Descriptor *Desc) {
-  if (Desc->isPrimitive() || Desc->isArray())
-    return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
-
-  if (Desc->isRecord()) {
-    // Can't use Descriptor::getType() as that may return a pointer type. Look
-    // at the decl directly.
-    return ASTCtx
-        .getTypeSizeInChars(
-            ASTCtx.getCanonicalTagType(Desc->ElemRecord->getDecl()))
-        .getQuantity();
-  }
-
-  return std::nullopt;
-}
-
-/// Compute the byte offset of \p Ptr in the full declaration.
-static unsigned computePointerOffset(const ASTContext &ASTCtx,
-                                     const Pointer &Ptr) {
-  unsigned Result = 0;
-
-  Pointer P = Ptr;
-  while (P.isField() || P.isArrayElement()) {
-    P = P.expand();
-    const Descriptor *D = P.getFieldDesc();
-
-    if (P.isArrayElement()) {
-      unsigned ElemSize =
-          ASTCtx.getTypeSizeInChars(D->getElemQualType()).getQuantity();
-      if (P.isOnePastEnd())
-        Result += ElemSize * P.getNumElems();
-      else
-        Result += ElemSize * P.getIndex();
-      P = P.expand().getArray();
-    } else if (P.isBaseClass()) {
-      const auto *RD = cast<CXXRecordDecl>(D->asDecl());
-      bool IsVirtual = Ptr.isVirtualBaseClass();
-      P = P.getBase();
-      const Record *BaseRecord = P.getRecord();
-
-      const ASTRecordLayout &Layout =
-          ASTCtx.getASTRecordLayout(cast<CXXRecordDecl>(BaseRecord->getDecl()));
-      if (IsVirtual)
-        Result += Layout.getVBaseClassOffset(RD).getQuantity();
-      else
-        Result += Layout.getBaseClassOffset(RD).getQuantity();
-    } else if (P.isField()) {
-      const FieldDecl *FD = P.getField();
-      const ASTRecordLayout &Layout =
-          ASTCtx.getASTRecordLayout(FD->getParent());
-      unsigned FieldIndex = FD->getFieldIndex();
-      uint64_t FieldOffset =
-          ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
-              .getQuantity();
-      Result += FieldOffset;
-      P = P.getBase();
-    } else
-      llvm_unreachable("Unhandled descriptor type");
-  }
-
-  return Result;
-}
-
-/// Does Ptr point to the last subobject?
-static bool pointsToLastObject(const Pointer &Ptr) {
-  Pointer P = Ptr;
-  while (!P.isRoot()) {
-
-    if (P.isArrayElement()) {
-      P = P.expand().getArray();
-      continue;
-    }
-    if (P.isBaseClass()) {
-      if (P.getRecord()->getNumFields() > 0)
-        return false;
-      P = P.getBase();
-      continue;
-    }
-
-    Pointer Base = P.getBase();
-    if (const Record *R = Base.getRecord()) {
-      assert(P.getField());
-      if (P.getField()->getFieldIndex() != R->getNumFields() - 1)
-        return false;
-    }
-    P = Base;
-  }
-
-  return true;
-}
-
-/// Does Ptr point to the last object AND to a flexible array member?
-static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const Pointer &Ptr,
-                                   bool InvalidBase) {
-  auto isFlexibleArrayMember = [&](const Descriptor *FieldDesc) {
-    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
-    FAMKind StrictFlexArraysLevel =
-        Ctx.getLangOpts().getStrictFlexArraysLevel();
-
-    if (StrictFlexArraysLevel == FAMKind::Default)
-      return true;
-
-    unsigned NumElems = FieldDesc->getNumElems();
-    if (NumElems == 0 && StrictFlexArraysLevel != FAMKind::IncompleteOnly)
-      return true;
-
-    if (NumElems == 1 && StrictFlexArraysLevel == FAMKind::OneZeroOrIncomplete)
-      return true;
-    return false;
-  };
-
-  const Descriptor *FieldDesc = Ptr.getFieldDesc();
-  if (!FieldDesc->isArray())
-    return false;
-
-  return InvalidBase && pointsToLastObject(Ptr) &&
-         isFlexibleArrayMember(FieldDesc);
-}
-
-UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
-                                         unsigned Kind, Pointer &Ptr) {
-  if (Ptr.isZero() || !Ptr.isBlockPointer())
-    return std::nullopt;
-
-  if (Ptr.isDummy() && Ptr.getType()->isPointerType())
-    return std::nullopt;
-
-  bool InvalidBase = false;
-
-  if (Ptr.isDummy()) {
-    if (const VarDecl *VD = Ptr.getDeclDesc()->asVarDecl();
-        VD && VD->getType()->isPointerType())
-      InvalidBase = true;
-  }
-
-  // According to the GCC documentation, we want the size of the subobject
-  // denoted by the pointer. But that's not quite right -- what we actually
-  // want is the size of the immediately-enclosing array, if there is one.
-  if (Ptr.isArrayElement())
-    Ptr = Ptr.expand();
-
-  bool DetermineForCompleteObject = Ptr.getFieldDesc() == Ptr.getDeclDesc();
-  const Descriptor *DeclDesc = Ptr.getDeclDesc();
-  assert(DeclDesc);
-
-  bool UseFieldDesc = (Kind & 1u);
-  bool ReportMinimum = (Kind & 2u);
-  if (!UseFieldDesc || DetermineForCompleteObject) {
-    // Can't read beyond the pointer decl desc.
-    if (!ReportMinimum && DeclDesc->getType()->isPointerType())
-      return std::nullopt;
-
-    if (InvalidBase)
-      return std::nullopt;
-  } else {
-    if (isUserWritingOffTheEnd(ASTCtx, Ptr, InvalidBase)) {
-      // If we cannot determine the size of the initial allocation, then we
-      // can't given an accurate upper-bound. However, we are still able to give
-      // conservative lower-bounds for Type=3.
-      if (Kind == 1)
-        return std::nullopt;
-    }
-    // For Type=1, defer to the runtime path on a true incomplete-array
-    // flexible array member (e.g. 'char fam[]') even when the base is a
-    // concrete local/global. Without this, the bytecode interpreter would
-    // happily fold &af.fam to 'NumElems * elemSize = 0' below; the default
-    // const-evaluator avoids the same trap, and CGBuiltin emits
-    // @llvm.objectsize for the correct layout-derived answer (matching
-    // GCC's __bos/__bdos on '&af.fam').
-    if (Kind == 1 && pointsToLastObject(Ptr) && Ptr.getFieldDesc()->isArray() &&
-        Ptr.getFieldDesc()->getType()->isIncompleteArrayType())
-      return std::nullopt;
-  }
-
-  // The "closest surrounding subobject" is NOT a base class,
-  // so strip the base class casts.
-  if (UseFieldDesc && Ptr.isBaseClass())
-    Ptr = Ptr.stripBaseCasts();
-
-  const Descriptor *Desc = UseFieldDesc ? Ptr.getFieldDesc() : DeclDesc;
-  assert(Desc);
-
-  std::optional<unsigned> FullSize = computeFullDescSize(ASTCtx, Desc);
-  if (!FullSize)
-    return std::nullopt;
-
-  unsigned ByteOffset;
-  if (UseFieldDesc) {
-    if (Ptr.isBaseClass()) {
-      assert(computePointerOffset(ASTCtx, Ptr.getBase()) <=
-             computePointerOffset(ASTCtx, Ptr));
-      ByteOffset = computePointerOffset(ASTCtx, Ptr.getBase()) -
-                   computePointerOffset(ASTCtx, Ptr);
-    } else {
-      if (Ptr.inArray())
-        ByteOffset =
-            computePointerOffset(ASTCtx, Ptr) -
-            computePointerOffset(ASTCtx, Ptr.expand().atIndex(0).narrow());
-      else
-        ByteOffset = 0;
-    }
-  } else
-    ByteOffset = computePointerOffset(ASTCtx, Ptr);
-
-  assert(ByteOffset <= *FullSize);
-  return *FullSize - ByteOffset;
-}
-
 static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
                                         const InterpFrame *Frame,
-                                        const CallExpr *Call) {
+                                        const CallExpr *Call, bool IsDynamic) {
   const ASTContext &ASTCtx = S.getASTContext();
   // From the GCC docs:
   // Kind is an integer constant from 0 to 3. If the least significant bit is
@@ -2564,17 +2355,31 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   assert(Kind <= 3 && "unexpected kind");
   Pointer Ptr = S.Stk.pop<Pointer>();
 
-  if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
-    // "If there are any side effects in them, it returns (size_t) -1
-    // for type 0 or 1 and (size_t) 0 for type 2 or 3."
-    pushInteger(S, Kind <= 1 ? -1 : 0, Call->getType());
-    return true;
-  }
-
-  if (auto Result = evaluateBuiltinObjectSize(ASTCtx, Kind, Ptr)) {
+  if (auto Result = evaluateBuiltinObjectSize(ASTCtx, Kind, Ptr,
+                                              Call->getArg(0), IsDynamic)) {
     pushInteger(S, *Result, Call->getType());
     return true;
   }
+
+  if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
+    // "If there are any side effects in them, it returns (size_t) -1
+    // for type 0 or 1 and (size_t) 0 for type 2 or 3."
+    pushInteger(S, Kind <= 1 ? (size_t)-1 : (size_t)0, Call->getType());
+    return true;
+  }
+
+  switch (S.EvalMode) {
+  case EvaluationMode::ConstantExpression:
+  case EvaluationMode::ConstantFold:
+  case EvaluationMode::IgnoreSideEffects:
+    // Leave it to IR generation.
+    return Invalid(S, OpPC);
+  case EvaluationMode::ConstantExpressionUnevaluated:
+    // Reduce it to a constant now.
+    pushInteger(S, ((Kind & 2u) ? (size_t)0 : (size_t)-1), Call->getType());
+    return true;
+  }
+
   return false;
 }
 
@@ -5552,8 +5357,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_memchr(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_object_size:
+    return interp__builtin_object_size(S, OpPC, Frame, Call,
+                                       /*IsDynamic=*/false);
   case Builtin::BI__builtin_dynamic_object_size:
-    return interp__builtin_object_size(S, OpPC, Frame, Call);
+    return interp__builtin_object_size(S, OpPC, Frame, Call,
+                                       /*IsDynamic=*/true);
 
   case Builtin::BI__builtin_is_within_lifetime:
     return interp__builtin_is_within_lifetime(S, OpPC, Call);

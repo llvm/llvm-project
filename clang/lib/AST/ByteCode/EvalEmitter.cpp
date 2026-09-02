@@ -260,6 +260,8 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   // Function pointers are always returned as lvalues.
   if (Ptr.isFunctionPointer()) {
+    if (ConvertResultToRValue && Ptr.asFunctionPointer().Func->getDecl())
+      return false;
     EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
     return true;
   }

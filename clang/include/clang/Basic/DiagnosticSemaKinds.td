@@ -11094,6 +11094,10 @@ def warn_lifetime_safety_dangling_global_moved
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
       DefaultIgnore;
+def warn_lifetime_safety_dangling_global_in_main
+    : Warning<"stack memory associated with %0 escapes to the %1 which will dangle after main returns">,
+      InGroup<LifetimeSafetyDanglingGlobalInMain>,
+      DefaultIgnore;
 
 def warn_lifetime_safety_lifetimebound_violation
     : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'|the implicit this parameter}0">,
@@ -11471,14 +11475,6 @@ def err_noreturn_has_return_expr : Error<
 def warn_noreturn_coroutine : Warning<
   "coroutine %0 cannot be declared 'noreturn' as it always returns a coroutine handle">,
   InGroup<InvalidNoreturn>;
-def err_carries_dependency_missing_on_first_decl : Error<
-  "%select{function|parameter}0 declared '[[carries_dependency]]' "
-  "after its first declaration">;
-def note_carries_dependency_missing_first_decl : Note<
-  "declaration missing '[[carries_dependency]]' attribute is here">;
-def err_carries_dependency_param_not_function_decl : Error<
-  "'[[carries_dependency]]' attribute only allowed on parameter in a function "
-  "declaration or lambda">;
 def err_block_not_allowed_on : Error<
   "'__block' is not allowed on %enum_select<NotAllowedBlockVarReason>{"
   "%NonlocalVariable{a nonlocal variable}|"
@@ -12332,6 +12328,10 @@ def err_omp_loop_bad_collapse_var : Error<
   "cannot use variable %1 in collapsed imperfectly-nested loop %select{init|condition|increment}0 statement">;
 def err_omp_loop_var_reused_in_collapsed_loop : Error<
   "loop iteration variable %0 cannot be reused in a nested loop of a collapsed loop nest">;
+def err_omp_collapse_stacked_tile : Error<
+  "cannot %select{collapse|apply a loop transformation to}0 the intra-tile loop "
+  "of a '#pragma omp tile' that is nested inside another loop-transforming "
+  "directive; OpenMP permits this construct, but it is not yet supported">;
 def err_omp_simd_region_cannot_use_stmt : Error<
   "'%0' statement cannot be used in OpenMP simd region">;
 def warn_omp_loop_64_bit_var : Warning<
