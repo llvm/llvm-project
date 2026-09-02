@@ -681,7 +681,7 @@ define void @latch_postdec_negative_step_folds() {
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i8 [[IV]], -1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 2
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
@@ -946,7 +946,7 @@ define void @latch_postdec_redundant_header_guard(i32 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[N]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[EXIT]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
 ; CHECK-NEXT:    call void @launch(i32 [[IV_NEXT]])
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LAST:.*]], label %[[LOOP]]

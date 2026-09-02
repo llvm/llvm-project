@@ -318,6 +318,10 @@ public:
   /// signed system implies it or because ValueTracking can prove it.
   bool isKnownNonNegative(Value *V) const;
 
+  /// Returns true if \p V is known to be non-positive, either because the
+  /// signed system implies it or because ValueTracking can prove it.
+  bool isKnownNonPositive(Value *V) const;
+
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
 
@@ -913,6 +917,12 @@ bool ConstraintInfo::isKnownNonNegative(Value *V) const {
          ::isKnownNonNegative(V, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1);
 }
 
+bool ConstraintInfo::isKnownNonPositive(Value *V) const {
+  return doesHold(CmpInst::ICMP_SLE, V, ConstantInt::get(V->getType(), 0)) ||
+         computeKnownBits(V, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1)
+             .isNonPositive();
+}
+
 void ConstraintInfo::transferToOtherSystem(
     CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
     unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack) {
@@ -1297,6 +1307,10 @@ static bool canStrengthenFlags(Instruction *I) {
     // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
     // canonicalized to Add.
     return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+  case Instruction::Add:
+    // A + B does not wrap signed, if one operand is non-negative and the
+    // other is non-positive.
+    return !BO->hasNoSignedWrap();
   case Instruction::Mul:
   case Instruction::Shl:
     if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
@@ -1354,6 +1368,21 @@ static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
       return false;
     LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
     I->setHasNoUnsignedWrap();
+    return true;
+  }
+  case Instruction::Add: {
+    // Op0 + Op1 does not wrap signed, if one operand is non-negative and the
+    // other is non-positive.
+    auto IsNonNegativeAndNonPositive = [&Info](Value *NonNegOp,
+                                               Value *NonPosOp) {
+      return Info.isKnownNonNegative(NonNegOp) &&
+             Info.isKnownNonPositive(NonPosOp);
+    };
+    if (!IsNonNegativeAndNonPositive(Op0, Op1) &&
+        !IsNonNegativeAndNonPositive(Op1, Op0))
+      return false;
+    LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
+    I->setHasNoSignedWrap();
     return true;
   }
   case Instruction::Mul:
