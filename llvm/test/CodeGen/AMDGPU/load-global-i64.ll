@@ -38,7 +38,7 @@ entry:
 ; GCN-HSA-DAG: flat_load_dwordx4
 ; GCN-HSA-DAG: flat_load_dwordx2
 
-; EG: VTX_READ_128
+; EG: VTX_READ_64
 ; EG: VTX_READ_128
 define amdgpu_kernel void @global_load_v3i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:

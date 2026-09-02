@@ -910,9 +910,9 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; FLATSCR-NEXT:    scratch_load_dwordx4 v[0:3], off, s0 offset:704 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0x4000
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[10:11], off, s0 offset:16 glc
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dwordx4 v[4:7], off, s0 glc
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[10:11], off, s0 offset:16 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v12, 0
