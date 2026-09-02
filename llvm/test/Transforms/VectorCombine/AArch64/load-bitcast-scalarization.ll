@@ -137,6 +137,12 @@ define i32 @load_v4i8_mixed_users(ptr %x) {
 
 ; Make sure we don't crash on scalable vectors
 define <vscale x 4 x i32> @scalable_vec(ptr %p) {
+; CHECK-LABEL: define <vscale x 4 x i32> @scalable_vec(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load <vscale x 8 x i16>, ptr [[P]], align 16
+; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 8 x i16> [[A]] to <vscale x 4 x i32>
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[B]]
+;
   %a = load <vscale x 8 x i16>, ptr %p
   %b = bitcast <vscale x 8 x i16> %a to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %b
