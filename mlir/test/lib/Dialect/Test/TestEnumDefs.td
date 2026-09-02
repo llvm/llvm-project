@@ -56,6 +56,16 @@ def TestOtherEnum
   let cppNamespace = "test";
 }
 
+def TestPrettyEnum
+    : I32Enum<"TestPrettyEnum", "an enum with bracketed attribute syntax", [
+        I32EnumCase<"First", 0, "first">,
+        I32EnumCase<"Second", 1, "second">,
+        I32EnumCase<"Third", 2, "third">,
+        I32EnumCase<"NonKeyword", 3, "non-keyword">,
+      ]> {
+  let cppNamespace = "test";
+}
+
 def TestSimpleEnum : I32Enum<"SimpleEnum", "", [
     I32EnumCase<"a", 0>,
     I32EnumCase<"b", 1>,
@@ -91,8 +101,10 @@ def TestSimpleEnum64 : I64Enum<"SimpleEnum64", "", [
 //===----------------------------------------------------------------------===//
 
 // Define the C++ enum.
+def TestBitEnumNone : I32BitEnumCaseNone<"None", "none">;
 def TestBitEnum
     : I32BitEnum<"TestBitEnum", "a test bit enum", [
+        TestBitEnumNone,
         I32BitEnumCaseBit<"Read", 0, "read">,
         I32BitEnumCaseBit<"Write", 1, "write">,
         I32BitEnumCaseBit<"Execute", 2, "execute">,
@@ -104,6 +116,7 @@ def TestBitEnum
 // Define an enum with a different separator
 def TestBitEnumVerticalBar
     : I32BitEnum<"TestBitEnumVerticalBar", "another test bit enum", [
+        TestBitEnumNone,
         I32BitEnumCaseBit<"User", 0, "user">,
         I32BitEnumCaseBit<"Group", 1, "group">,
         I32BitEnumCaseBit<"Other", 2, "other">,
