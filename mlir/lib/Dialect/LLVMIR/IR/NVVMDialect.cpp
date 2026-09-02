@@ -3018,8 +3018,7 @@ static LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
       return success();
     break;
   case NVVM::WGMMATypes::bf16:
-    if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
-        typeB == NVVM::WGMMATypes::bf16)
+    if (typeD == NVVM::WGMMATypes::f32 && typeB == NVVM::WGMMATypes::bf16)
       return success();
     break;
   case NVVM::WGMMATypes::e4m3:
