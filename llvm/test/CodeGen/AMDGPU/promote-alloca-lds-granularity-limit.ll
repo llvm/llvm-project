@@ -1,7 +1,6 @@
 ; RUN: opt -S -mtriple=amdgpu9.50-amd-amdhsa -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck %s
 
 @lds_12800 = internal addrspace(3) global [12800 x i8] poison, align 16
-attributes #0 = { "amdgpu-flat-work-group-size"="64,64" }
 
 ; This is a regression test for a bug in getMaxLocalMemSizeWithWaveCount
 ; which did not round to the LDS allocation block size, leading
@@ -23,7 +22,7 @@ attributes #0 = { "amdgpu-flat-work-group-size"="64,64" }
 ; CHECK-LABEL: @test(
 ; CHECK: %stack = alloca [10 x i8], align 1, addrspace(5)
 
-define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %idx) #0 {
+define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %idx) "amdgpu-flat-work-group-size"="64,64" {
 
   %stack = alloca [10 x i8], align 1, addrspace(5)
   %lds.ptr = getelementptr inbounds [12800 x i8], ptr addrspace(3) @lds_12800, i32 0, i32 0

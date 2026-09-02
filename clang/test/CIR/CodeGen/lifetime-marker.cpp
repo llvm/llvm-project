@@ -4,10 +4,10 @@
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t-o0.cir
 // RUN: FileCheck --input-file=%t-o0.cir %s --implicit-check-not "cir.lifetime"
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t-eh.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t-eh.cir
 // RUN: FileCheck --input-file=%t-eh.cir %s --check-prefix=CIR-EH
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -fcxx-exceptions -fexceptions -fclangir -emit-llvm -disable-llvm-passes %s -o %t-eh.ll
-// RUN: FileCheck --input-file=%t-eh.ll %s --check-prefix=LLVM-EH
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fcxx-exceptions -fexceptions -fclangir -emit-llvm -disable-llvm-passes %s -o %t-eh.ll
+// RUN: FileCheck --input-file=%t-eh.ll %s --check-prefixes=LLVM-EH
 
 void use(int);
 
@@ -279,3 +279,66 @@ void while_record_condvar() {
 // LLVM-EH-NEXT:      cleanup
 // LLVM-EH:         call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[C]])
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+
+#ifdef __EXCEPTIONS
+
+struct Ex {};
+
+void catch_by_ref() {
+  try {
+    may_throw();
+  } catch (const Ex &e) {
+  }
+}
+
+// CIR-EH-LABEL: cir.func{{.*}} @_Z12catch_by_refv
+// CIR-EH:         %[[E:.*]] = cir.alloca "e" {{.*}} : !cir.ptr<!cir.ptr<!rec_Ex>>
+// CIR-EH:         } catch [type #cir.global_view<@_ZTI2Ex>{{.*}}] (%[[TOK:[^:]*]]:
+// CIR-EH-NEXT:      cir.lifetime.start %[[E]] : !cir.ptr<!cir.ptr<!rec_Ex>>
+// CIR-EH-NEXT:      cir.cleanup.scope {
+// CIR-EH-NEXT:        %[[CATCH_TOK:.*]], %{{.*}} = cir.begin_catch %[[TOK]]
+// CIR-EH:             } cleanup all {
+// CIR-EH:               cir.end_catch %[[CATCH_TOK]]
+// CIR-EH:             }
+// CIR-EH:           } cleanup all {
+// CIR-EH-NEXT:        cir.lifetime.end %[[E]] : !cir.ptr<!cir.ptr<!rec_Ex>>
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z12catch_by_refv()
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[E:.*]])
+// LLVM-EH:         call ptr @__cxa_begin_catch
+// LLVM-EH:         call void @__cxa_end_catch()
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[E]])
+
+struct Copy {
+  Copy(const Copy &);
+  ~Copy();
+};
+
+void catch_by_value() {
+  try {
+    may_throw();
+  } catch (Copy c) {
+  }
+}
+
+// CIR-EH-LABEL: cir.func{{.*}} @_Z14catch_by_valuev
+// CIR-EH:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_Copy>
+// CIR-EH:         } catch [type #cir.global_view<@_ZTI4Copy>{{.*}}] (%[[TOK:[^:]*]]:
+// CIR-EH-NEXT:      cir.lifetime.start %[[C]] : !cir.ptr<!rec_Copy>
+// CIR-EH-NEXT:      cir.cleanup.scope {
+// CIR-EH-NEXT:        cir.construct_catch_param non_trivial_copy %[[TOK]] to %[[C]]
+// CIR-EH-NEXT:        %[[CATCH_TOK:.*]], %{{.*}} = cir.begin_catch %[[TOK]]
+// CIR-EH:                 cir.call @_ZN4CopyD1Ev(%[[C]])
+// CIR-EH:               cir.end_catch %[[CATCH_TOK]]
+// CIR-EH:           } cleanup all {
+// CIR-EH-NEXT:        cir.lifetime.end %[[C]] : !cir.ptr<!rec_Copy>
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z14catch_by_valuev()
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
+// LLVM-EH:         call ptr @__cxa_get_exception_ptr
+// LLVM-EH:         call ptr @__cxa_begin_catch
+// LLVM-EH:         call void @_ZN4CopyD1Ev(ptr {{.*}} %[[C]])
+// LLVM-EH:         call void @__cxa_end_catch()
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+
+#endif // __EXCEPTIONS

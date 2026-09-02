@@ -1806,7 +1806,7 @@ struct LLVM_ABI_FOR_TEST VPIRPhi : public VPIRInstruction,
     return R && classof(R);
   }
 
-  PHINode &getIRPhi() { return cast<PHINode>(getInstruction()); }
+  PHINode &getIRPhi() const { return cast<PHINode>(getInstruction()); }
 
   void execute(VPTransformState &State) override;
 

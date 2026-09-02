@@ -13,7 +13,7 @@
 
 #include "orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
 #include "orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h"
-#include "orc-rt/support/SPSAllocAction.h"
+#include "orc-rt/support/sps/SPSAllocAction.h"
 
 namespace orc_rt::sps_ci {
 
