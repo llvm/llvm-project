@@ -123,18 +123,11 @@ struct GVNOptions {
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
 /// this particular pass here.
-class GVNPassImpl;
 class GVNPass : public OptionalPassInfoMixin<GVNPass> {
-  std::unique_ptr<GVNPassImpl> Impl;
+  GVNOptions Options;
 
 public:
-  GVNPass(GVNOptions Options = {});
-  ~GVNPass();
-
-  GVNPass(const GVNPass &) = delete;
-  GVNPass(GVNPass &&);
-  GVNPass &operator=(const GVNPass &) = delete;
-  GVNPass &operator=(GVNPass &&);
+  GVNPass(GVNOptions Options = {}) : Options(Options) {}
 
   /// Run the pass over the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
