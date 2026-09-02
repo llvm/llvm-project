@@ -5833,8 +5833,7 @@ LoopVectorizationPlanner::computeBestVF() {
     // For loops where the Trip Count is below the TailFoldingThreshold, only
     // consider the largest VF to result in at most one vector iteration, and at
     // most one scalar iteration.
-    // FIXME: Encode this decision directly in LVPlanner rather than as part of
-    // the LoopVectorizer.
+    // FIXME: Encode this decision directly in LVPlanner.
     if (!ForceVectorization && P->hasScalarTail() && ExactTC.isFixed() &&
         ExactTC.getFixedValue() > 0 &&
         ExactTC.getFixedValue() <= TTI.getMinTripCountTailFoldingThreshold()) {
