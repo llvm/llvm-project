@@ -141,6 +141,8 @@ define <8 x i16> @vuzpQi16_undef012(<8 x i16> %A, <8 x i16> %B) nounwind {
   ret <8 x i16> %tmp5
 }
 
+; For valid masks, VUZP should be generated for shuffles with poisons:
+
 define <8 x i8> @vuzpDi8_poison(<8 x i8> %A) {
 ; CHECK-LABEL: vuzpDi8_poison:
 ; CHECK:       // %bb.0:
