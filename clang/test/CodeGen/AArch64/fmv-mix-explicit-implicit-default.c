@@ -31,14 +31,14 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK: @implicit_default_def_first = weak_odr ifunc i32 (), ptr @implicit_default_def_first.resolver
 // CHECK: @explicit_default_decl_first = weak_odr ifunc i32 (), ptr @explicit_default_decl_first.resolver
 //.
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@implicit_default_decl_first.default
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@caller1
 // CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -46,14 +46,14 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@explicit_default_def_first.default
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@caller2
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -61,14 +61,14 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@implicit_default_def_first.default
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@caller3
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -76,14 +76,14 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@explicit_default_decl_first.default
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 4
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@caller4
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -91,7 +91,7 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@caller5
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -99,7 +99,7 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@caller6
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -135,7 +135,7 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NEXT:    ret ptr @explicit_default_decl_first.default
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@caller1
 // CHECK-NOFMV-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NOFMV-NEXT:  entry:
@@ -143,14 +143,14 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NOFMV-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@implicit_default_decl_first
 // CHECK-NOFMV-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 1
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@caller2
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
@@ -158,21 +158,21 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NOFMV-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@explicit_default_def_first
 // CHECK-NOFMV-SAME: () #[[ATTR1]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 2
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@implicit_default_def_first
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 3
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@caller3
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
@@ -180,7 +180,7 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NOFMV-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@caller4
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
@@ -188,14 +188,14 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NOFMV-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@explicit_default_decl_first
 // CHECK-NOFMV-SAME: () #[[ATTR1]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 4
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@caller5
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
@@ -203,7 +203,7 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NOFMV-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@caller6
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
@@ -211,7 +211,19 @@ int caller6(void) { return no_def_explicit_default_first(); }
 // CHECK-NOFMV-NEXT:    ret i32 [[CALL]]
 //
 //.
-// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
-// CHECK-NOFMV: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK-NOFMV: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK-NOFMV: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK-NOFMV: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK-NOFMV: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK-NOFMV: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK-NOFMV: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK-NOFMV: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

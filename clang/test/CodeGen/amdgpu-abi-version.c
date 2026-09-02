@@ -49,10 +49,10 @@
 //
 int foo() { return __builtin_amdgcn_workgroup_size_x(); }
 //.
-// LLVM: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// LLVM: attributes #[[ATTR0]] = { convergent noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // LLVM: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 //.
-// LLVMENV: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// LLVMENV: attributes #[[ATTR0]] = { convergent noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // LLVMENV: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 //.
 // LLVM: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

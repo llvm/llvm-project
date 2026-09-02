@@ -13,7 +13,7 @@ int main() {
 
 // CHECK:     @_system_configuration = external global { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i32, i32, i32, i32, i64, i64, i64, i64, i32, i32, i32, i32, i32, i32, i64, i32, i8, i8, i8, i8, i32, i32, i16, i16, [3 x i32], i32 }
 // CHECK-EMPTY: 
-// CHECK-NEXT: ; Function Attrs: noinline nounwind optnone
+// CHECK-NEXT: ; Function Attrs: noipa noinline nounwind optnone
 // CHECK-NEXT: define i32 @main() #0 {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %retval = alloca i32, align 4

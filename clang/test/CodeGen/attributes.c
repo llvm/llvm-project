@@ -113,8 +113,8 @@ void t24(f_t f1) {
   (*p)();
 }
 
-// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
-// CHECK: attributes [[NR]] = { noinline noreturn nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noipa noinline nounwind{{.*}} }
+// CHECK: attributes [[NR]] = { noipa noinline noreturn nounwind{{.*}} }
 // CHECK: attributes [[COLDDEF]] = { cold {{.*}}}
 // CHECK: attributes [[COLDDECL]] = { cold {{.*}}}
 // CHECK: attributes [[HOTDEF]] = { hot {{.*}}}

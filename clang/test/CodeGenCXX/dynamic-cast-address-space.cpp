@@ -101,13 +101,13 @@ const B& f(A *a) {
 
 
 //.
-// CHECK: attributes #[[ATTR0]] = { convergent mustprogress noinline optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR0]] = { convergent mustprogress noipa noinline optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind willreturn memory(read) }
 // CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR3]] = { nounwind }
 // CHECK: attributes #[[ATTR4]] = { noreturn }
 //.
-// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR0]] = { mustprogress noinline optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR0]] = { mustprogress noipa noinline optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR1:[0-9]+]] = { nounwind willreturn memory(read) }
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR2:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR3]] = { nounwind }

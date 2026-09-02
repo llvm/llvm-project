@@ -97,7 +97,7 @@ S A;
 //
 //.
 // CHECK: attributes #[[ATTR0]] = { convergent noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR1]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR1]] = { convergent mustprogress noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR3]] = { convergent }
 // CHECK: attributes #[[ATTR4]] = { convergent nounwind }

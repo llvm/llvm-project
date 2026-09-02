@@ -14,7 +14,7 @@
 int __One(void) { return 1; }
 int One(void) __attribute__ ((weak, alias("__One")));
 //.
-// CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR0]] = { noipa noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 51}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

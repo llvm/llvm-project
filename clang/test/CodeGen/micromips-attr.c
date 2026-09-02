@@ -8,5 +8,5 @@ void __attribute__((nomicromips)) nofoo (void) {}
 
 // CHECK: define{{.*}} void @nofoo() [[NOMICROMIPS:#[0-9]+]]
 
-// CHECK: attributes [[MICROMIPS]] = { noinline nounwind {{.*}} "micromips" {{.*}} }
-// CHECK: attributes [[NOMICROMIPS]]  = { noinline nounwind {{.*}} "nomicromips" {{.*}} }
+// CHECK: attributes [[MICROMIPS]] = { noipa noinline nounwind {{.*}} "micromips" {{.*}} }
+// CHECK: attributes [[NOMICROMIPS]]  = { noipa noinline nounwind {{.*}} "nomicromips" {{.*}} }

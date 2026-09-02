@@ -75,8 +75,8 @@ int exported_optnone_func(int a) {
 // CHECK: declare dllimport {{.*}} @_Z21imported_optnone_funci({{.*}}) [[DLLIMPORT:#[0-9]+]]
 
 
-// CHECK: attributes [[OPTNONE]] = { mustprogress noinline {{.*}} optnone
-// CHECK: attributes [[NORETURN]] = { mustprogress noinline noreturn {{.*}} optnone
+// CHECK: attributes [[OPTNONE]] = { mustprogress noipa noinline {{.*}} optnone
+// CHECK: attributes [[NORETURN]] = { mustprogress noipa noinline noreturn {{.*}} optnone
 
 // CHECK: attributes [[DLLIMPORT]] =
 // CHECK-NOT: optnone

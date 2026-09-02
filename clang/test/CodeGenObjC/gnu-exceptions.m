@@ -32,4 +32,4 @@ void test0(void) {
   log(1);
 }
 
-// CHECK: attributes [[TF]] = { noinline optnone "{{.*}} }
+// CHECK: attributes [[TF]] = { noipa noinline optnone "{{.*}} }

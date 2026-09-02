@@ -26,9 +26,9 @@ void foo() {
         return __builtin_trap();
 }
 //.
-// AMDGPU900: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// AMDGPU900: attributes #[[ATTR0]] = { convergent noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
-// AMDGPU1010: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// AMDGPU1010: attributes #[[ATTR0]] = { convergent noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // AMDGPU1010: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 // AMDGPU1010: attributes #[[ATTR2]] = { noreturn nounwind }
 //.

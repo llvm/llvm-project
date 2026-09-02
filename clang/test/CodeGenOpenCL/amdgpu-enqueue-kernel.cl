@@ -77,7 +77,7 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900: @__test_target_features_kernel_block_invoke_kernel.runtime.handle = internal addrspace(1) externally_initialized constant %block.runtime.handle.t.3 zeroinitializer, section ".amdgpu.kernel.runtime.handle"
 // GFX900: @llvm.used = appending addrspace(1) global [10 x ptr] [ptr @__test_block_invoke_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_kernel.runtime.handle to ptr), ptr @__test_block_invoke_2_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_2_kernel.runtime.handle to ptr), ptr @__test_block_invoke_3_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_3_kernel.runtime.handle to ptr), ptr @__test_block_invoke_4_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_4_kernel.runtime.handle to ptr), ptr @__test_target_features_kernel_block_invoke_kernel, ptr addrspacecast (ptr addrspace(1) @__test_target_features_kernel_block_invoke_kernel.runtime.handle to ptr)], section "llvm.metadata"
 //.
-// NOCPU: Function Attrs: convergent noinline norecurse nounwind optnone denormal_fpenv(float: preservesign)
+// NOCPU: Function Attrs: convergent noipa noinline norecurse nounwind optnone denormal_fpenv(float: preservesign)
 // NOCPU-LABEL: define dso_local void @callee(
 // NOCPU-SAME: i64 noundef [[ID:%.*]], ptr addrspace(1) noundef [[OUT:%.*]]) #[[ATTR1:[0-9]+]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
@@ -93,7 +93,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    ret void
 //
 //
-// NOCPU: Function Attrs: convergent noinline norecurse nounwind optnone denormal_fpenv(float: preservesign)
+// NOCPU: Function Attrs: convergent noipa noinline norecurse nounwind optnone denormal_fpenv(float: preservesign)
 // NOCPU-LABEL: define dso_local amdgpu_kernel void @test(
 // NOCPU-SAME: ptr addrspace(1) noundef align 1 [[A:%.*]], i8 noundef [[B:%.*]], ptr addrspace(1) noundef align 8 [[C:%.*]], i64 noundef [[D:%.*]]) #[[ATTR2:[0-9]+]] !kernel_arg_addr_space [[META2:![0-9]+]] !kernel_arg_access_qual [[META3:![0-9]+]] !kernel_arg_type [[META4:![0-9]+]] !kernel_arg_base_type [[META4]] !kernel_arg_type_qual [[META5:![0-9]+]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
@@ -113,7 +113,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    ret void
 //
 //
-// NOCPU: Function Attrs: convergent noinline norecurse nounwind optnone denormal_fpenv(float: preservesign)
+// NOCPU: Function Attrs: convergent noipa noinline norecurse nounwind optnone denormal_fpenv(float: preservesign)
 // NOCPU-LABEL: define dso_local void @__clang_ocl_kern_imp_test(
 // NOCPU-SAME: ptr addrspace(1) noundef align 1 [[A:%.*]], i8 noundef signext [[B:%.*]], ptr addrspace(1) noundef align 8 [[C:%.*]], i64 noundef [[D:%.*]]) #[[ATTR2]] !kernel_arg_addr_space [[META2]] !kernel_arg_access_qual [[META3]] !kernel_arg_type [[META4]] !kernel_arg_base_type [[META4]] !kernel_arg_type_qual [[META5]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
@@ -226,7 +226,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    ret void
 //
 //
-// NOCPU: Function Attrs: convergent noinline norecurse nounwind optnone denormal_fpenv(float: preservesign)
+// NOCPU: Function Attrs: convergent noipa noinline norecurse nounwind optnone denormal_fpenv(float: preservesign)
 // NOCPU-LABEL: define dso_local amdgpu_kernel void @test_target_features_kernel(
 // NOCPU-SAME: ptr addrspace(1) noundef align 4 [[I:%.*]]) #[[ATTR3:[0-9]+]] !kernel_arg_addr_space [[META6:![0-9]+]] !kernel_arg_access_qual [[META7:![0-9]+]] !kernel_arg_type [[META8:![0-9]+]] !kernel_arg_base_type [[META8]] !kernel_arg_type_qual [[META9:![0-9]+]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
@@ -237,7 +237,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    ret void
 //
 //
-// NOCPU: Function Attrs: convergent noinline norecurse nounwind optnone denormal_fpenv(float: preservesign)
+// NOCPU: Function Attrs: convergent noipa noinline norecurse nounwind optnone denormal_fpenv(float: preservesign)
 // NOCPU-LABEL: define dso_local void @__clang_ocl_kern_imp_test_target_features_kernel(
 // NOCPU-SAME: ptr addrspace(1) noundef align 4 [[I:%.*]]) #[[ATTR3]] !kernel_arg_addr_space [[META6]] !kernel_arg_access_qual [[META7]] !kernel_arg_type [[META8]] !kernel_arg_base_type [[META8]] !kernel_arg_type_qual [[META9]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
@@ -256,7 +256,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    ret void
 //
 //
-// NOCPU: Function Attrs: convergent noinline nounwind optnone denormal_fpenv(float: preservesign)
+// NOCPU: Function Attrs: convergent noipa noinline nounwind optnone denormal_fpenv(float: preservesign)
 // NOCPU-LABEL: define internal void @__test_block_invoke(
 // NOCPU-SAME: ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR5:[0-9]+]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
@@ -285,7 +285,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    ret void
 //
 //
-// NOCPU: Function Attrs: convergent noinline nounwind optnone denormal_fpenv(float: preservesign)
+// NOCPU: Function Attrs: convergent noipa noinline nounwind optnone denormal_fpenv(float: preservesign)
 // NOCPU-LABEL: define internal void @__test_block_invoke_2(
 // NOCPU-SAME: ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR5]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
@@ -320,7 +320,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    ret void
 //
 //
-// NOCPU: Function Attrs: convergent noinline nounwind optnone denormal_fpenv(float: preservesign)
+// NOCPU: Function Attrs: convergent noipa noinline nounwind optnone denormal_fpenv(float: preservesign)
 // NOCPU-LABEL: define internal void @__test_block_invoke_3(
 // NOCPU-SAME: ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]], ptr addrspace(3) noundef [[LP:%.*]]) #[[ATTR5]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
@@ -360,7 +360,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    ret void
 //
 //
-// NOCPU: Function Attrs: convergent noinline nounwind optnone denormal_fpenv(float: preservesign)
+// NOCPU: Function Attrs: convergent noipa noinline nounwind optnone denormal_fpenv(float: preservesign)
 // NOCPU-LABEL: define internal void @__test_block_invoke_4(
 // NOCPU-SAME: ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR5]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
@@ -388,7 +388,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    ret void
 //
 //
-// NOCPU: Function Attrs: convergent noinline nounwind optnone denormal_fpenv(float: preservesign)
+// NOCPU: Function Attrs: convergent noipa noinline nounwind optnone denormal_fpenv(float: preservesign)
 // NOCPU-LABEL: define internal void @__test_target_features_kernel_block_invoke(
 // NOCPU-SAME: ptr noundef [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR5]] {
 // NOCPU-NEXT:  [[ENTRY:.*:]]
@@ -764,11 +764,11 @@ kernel void test_target_features_kernel(global int *i) {
 //
 //.
 // NOCPU: attributes #[[ATTR0:[0-9]+]] = { "objc_arc_inert" }
-// NOCPU: attributes #[[ATTR1]] = { convergent noinline norecurse nounwind optnone denormal_fpenv(float: preservesign) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// NOCPU: attributes #[[ATTR2]] = { convergent noinline norecurse nounwind optnone denormal_fpenv(float: preservesign) "amdgpu-flat-work-group-size"="1,256" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// NOCPU: attributes #[[ATTR3]] = { convergent noinline norecurse nounwind optnone denormal_fpenv(float: preservesign) "amdgpu-flat-work-group-size"="1,256" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+s-memtime-inst" }
+// NOCPU: attributes #[[ATTR1]] = { convergent noipa noinline norecurse nounwind optnone denormal_fpenv(float: preservesign) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// NOCPU: attributes #[[ATTR2]] = { convergent noipa noinline norecurse nounwind optnone denormal_fpenv(float: preservesign) "amdgpu-flat-work-group-size"="1,256" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// NOCPU: attributes #[[ATTR3]] = { convergent noipa noinline norecurse nounwind optnone denormal_fpenv(float: preservesign) "amdgpu-flat-work-group-size"="1,256" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+s-memtime-inst" }
 // NOCPU: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-// NOCPU: attributes #[[ATTR5]] = { convergent noinline nounwind optnone denormal_fpenv(float: preservesign) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// NOCPU: attributes #[[ATTR5]] = { convergent noipa noinline nounwind optnone denormal_fpenv(float: preservesign) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // NOCPU: attributes #[[ATTR6]] = { convergent nounwind denormal_fpenv(float: preservesign) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // NOCPU: attributes #[[ATTR7:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
 // NOCPU: attributes #[[ATTR8]] = { convergent nounwind }

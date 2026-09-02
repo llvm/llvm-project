@@ -383,7 +383,7 @@ int main() {
 // single_purpose_kernel_task with single_purpose_kernel_name as the SYCL kernel
 // name type.
 //
-// CHECK-AMDGCN:      Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-AMDGCN:      Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-AMDGCN-NEXT: define dso_local amdgpu_kernel void @_ZTS26single_purpose_kernel_name
 // CHECK-AMDGCN-SAME:   (ptr addrspace(4) noundef byref(%struct.single_purpose_kernel) align 1 %0) #[[AMDGCN_ATTR0:[0-9]+]] {
 // CHECK-AMDGCN-NEXT: entry:
@@ -396,7 +396,7 @@ int main() {
 // CHECK-AMDGCN-NEXT: }
 // CHECK-AMDGCN:      define linkonce_odr void @_ZNK21single_purpose_kernelclEv
 //
-// CHECK-NVPTX:       Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-NVPTX:       Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-NVPTX-NEXT:  define dso_local ptx_kernel void @_ZTS26single_purpose_kernel_name
 // CHECK-NVPTX-SAME:    (ptr noundef byval(%struct.single_purpose_kernel) align 1 %kernelFunc) #[[NVPTX_ATTR0:[0-9]+]] {
 // CHECK-NVPTX-NEXT:  entry:
@@ -406,7 +406,7 @@ int main() {
 // CHECK-NVPTX-NEXT:  }
 // CHECK-NVPTX:       define linkonce_odr void @_ZNK21single_purpose_kernelclEv
 //
-// CHECK-SPIR:        Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-SPIR:        Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-SPIR-NEXT:   define {{[a-z_ ]*}}spir_kernel void @_ZTS26single_purpose_kernel_name
 // CHECK-SPIR-SAME:     (ptr noundef byval(%struct.single_purpose_kernel) align 1 %kernelFunc) #[[SPIR_ATTR0:[0-9]+]] {
 // CHECK-SPIR-NEXT:   entry:
@@ -420,7 +420,7 @@ int main() {
 // IR for the SYCL kernel caller function generated for kernel_single_task with
 // lambda_kernel_name as the SYCL kernel name type.
 //
-// CHECK-AMDGCN:      Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-AMDGCN:      Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-AMDGCN-NEXT: define dso_local amdgpu_kernel void @_ZTSZ4mainEUlT_E_
 // CHECK-AMDGCN-SAME:   (i32 %kernelFunc.coerce) #[[AMDGCN_ATTR0]] {
 // CHECK-AMDGCN-NEXT: entry:
@@ -434,7 +434,7 @@ int main() {
 // CHECK-AMDGCN-NEXT: }
 // CHECK-AMDGCN:      define internal void @_ZZ4mainENKUlT_E_clIiEEDaS_
 //
-// CHECK-NVPTX:       Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-NVPTX:       Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-NVPTX-NEXT:  define dso_local ptx_kernel void @_ZTSZ4mainEUlT_E_
 // CHECK-NVPTX-SAME:    (ptr noundef byval(%class.anon) align 4 %kernelFunc) #[[NVPTX_ATTR0]] {
 // CHECK-NVPTX-NEXT:  entry:
@@ -444,7 +444,7 @@ int main() {
 // CHECK-NVPTX-NEXT:  }
 // CHECK-NVPTX:       define internal void @_ZZ4mainENKUlT_E_clIiEEDaS_
 //
-// CHECK-SPIR:        Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-SPIR:        Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-SPIR-NEXT:   define {{[a-z_ ]*}}spir_kernel void @_ZTSZ4mainEUlT_E_
 // CHECK-SPIR-SAME:     (ptr noundef byval(%class.anon) align 4 %kernelFunc) #[[SPIR_ATTR0]] {
 // CHECK-SPIR-NEXT:   entry:
@@ -458,7 +458,7 @@ int main() {
 // IR for the SYCL kernel caller function generated for kernel_single_task with
 // the Delta Tau Chi type as the SYCL kernel name type.
 //
-// CHECK-AMDGCN:      Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-AMDGCN:      Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-AMDGCN-NEXT: define dso_local amdgpu_kernel void @"_ZTS6\CE\B4\CF\84\CF\87"
 // CHECK-AMDGCN-SAME:   (ptr addrspace(4) noundef byref(%class.anon.0) align 1 %0) #[[AMDGCN_ATTR0]] {
 // CHECK-AMDGCN-NEXT: entry:
@@ -471,7 +471,7 @@ int main() {
 // CHECK-AMDGCN-NEXT: }
 // CHECK-AMDGCN:      define internal void @_ZZ4mainENKUliE_clEi
 //
-// CHECK-NVPTX:       Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-NVPTX:       Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-NVPTX-NEXT:  define dso_local ptx_kernel void @"_ZTS6\CE\B4\CF\84\CF\87"
 // CHECK-NVPTX-SAME:    (ptr noundef byval(%class.anon.0) align 1 %kernelFunc) #[[NVPTX_ATTR0:[0-9]+]] {
 // CHECK-NVPTX-NEXT:  entry:
@@ -481,7 +481,7 @@ int main() {
 // CHECK-NVPTX-NEXT:  }
 // CHECK-NVPTX:       define internal void @_ZZ4mainENKUliE_clEi
 //
-// CHECK-SPIR:        Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-SPIR:        Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-SPIR-NEXT:   define {{[a-z_ ]*}}spir_kernel void @"_ZTS6\CE\B4\CF\84\CF\87"
 // CHECK-SPIR-SAME:     (ptr noundef byval(%class.anon.0) align 1 %kernelFunc) #[[SPIR_ATTR0:[0-9]+]] {
 // CHECK-SPIR-NEXT:   entry:
@@ -495,7 +495,7 @@ int main() {
 // IR for the SYCL kernel caller function generated for
 // handler::kernel_entry_point with main::KN as the SYCL kernel name type.
 //
-// CHECK-AMDGCN:      Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-AMDGCN:      Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-AMDGCN-NEXT: define dso_local amdgpu_kernel void @_ZTSZ4mainE2KN
 // CHECK-AMDGCN-SAME:   (i32 %k.coerce, i32 noundef %a, i32 noundef %b) #[[AMDGCN_ATTR0]] {
 // CHECK-AMDGCN-NEXT: entry:
@@ -517,7 +517,7 @@ int main() {
 // CHECK-AMDGCN-NEXT:   ret void
 // CHECK-AMDGCN-NEXT: }
 //
-// CHECK-NVPTX:       Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-NVPTX:       Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-NVPTX-NEXT:  define dso_local ptx_kernel void @_ZTSZ4mainE2KN
 // CHECK-NVPTX-SAME:    (ptr noundef byval(%class.anon.1) align 4 %k, i32 noundef %a, i32 noundef %b) #[[NVPTX_ATTR0:[0-9]+]] {
 // CHECK-NVPTX-NEXT:  entry:
@@ -532,7 +532,7 @@ int main() {
 // CHECK-NVPTX-NEXT:    ret void
 // CHECK-NVPTX-NEXT:  }
 //
-// CHECK-SPIRNV:      Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-SPIRNV:      Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-SPIRNV-NEXT: define dso_local spir_kernel void @_ZTSZ4mainE2KN
 // CHECK-SPIRNV-SAME:   (ptr nofreeobj noundef align 4 dereferenceable(4) %k, i32 noundef %a, i32 noundef %b) #[[SPIR_ATTR0:[0-9]+]] {
 // CHECK-SPIRNV-NEXT: entry:
@@ -552,7 +552,7 @@ int main() {
 // CHECK-SPIRNV-NEXT:   ret void
 // CHECK-SPIRNV-NEXT: }
 //
-// CHECK-SPIRV:       Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// CHECK-SPIRV:       Function Attrs: convergent mustprogress noipa noinline norecurse nounwind optnone
 // CHECK-SPIRV-NEXT:  define spir_kernel void @_ZTSZ4mainE2KN
 // CHECK-SPIRV-SAME:    (ptr noundef byval(%class.anon.1) align 4 %k, i32 noundef %a, i32 noundef %b) #[[SPIR_ATTR0:[0-9]+]] {
 // CHECK-SPIRV-NEXT:  entry:
@@ -702,11 +702,11 @@ int main() {
 // CHECK-SPIR-NEXT:     ret void
 // CHECK-SPIR-NEXT:   }
 
-// CHECK-AMDGCN: #[[AMDGCN_ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "sycl-module-id"=
+// CHECK-AMDGCN: #[[AMDGCN_ATTR0]] = { convergent mustprogress noipa noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "sycl-module-id"=
 // CHECK-AMDGCN: #[[AMDGCN_ATTR1]] = { convergent nounwind }
 //
-// CHECK-NVPTX: #[[NVPTX_ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "sycl-module-id"=
+// CHECK-NVPTX: #[[NVPTX_ATTR0]] = { convergent mustprogress noipa noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "sycl-module-id"=
 // CHECK-NVPTX: #[[NVPTX_ATTR1]] = { convergent nounwind }
 //
-// CHECK-SPIR: #[[SPIR_ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "sycl-module-id"=
+// CHECK-SPIR: #[[SPIR_ATTR0]] = { convergent mustprogress noipa noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "sycl-module-id"=
 // CHECK-SPIR: #[[SPIR_ATTR1]] = { convergent nounwind }

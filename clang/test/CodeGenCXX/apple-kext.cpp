@@ -39,4 +39,4 @@ namespace test0 {
 // CHECK-NEXT: ret void
 
 // CHECK: attributes #[[ATTR0]] = { alwaysinline mustprogress nounwind {{.*}} }
-// CHECK: attributes #[[ATTR1]] = { mustprogress noinline nounwind {{.*}} }
+// CHECK: attributes #[[ATTR1]] = { mustprogress noipa noinline nounwind {{.*}} }

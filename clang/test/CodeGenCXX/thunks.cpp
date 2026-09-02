@@ -542,5 +542,5 @@ C c;
 // WIN64-LABEL: define linkonce_odr dso_local void @"?foo@C@Test10@@UEAAXXZ"(
 // WIN64-LABEL: define linkonce_odr dso_local void @"?foo@C@Test10@@W7EAAXXZ"(
 
-// CHECK-NONOPT: attributes [[NUW]] = { noinline nounwind optnone uwtable{{.*}} }
+// CHECK-NONOPT: attributes [[NUW]] = { noipa noinline nounwind optnone uwtable{{.*}} }
 // CHECK-OPT: attributes [[NUW]] = { nounwind uwtable{{.*}} }

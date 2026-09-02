@@ -35,7 +35,7 @@ int f2(void) { return 43; }
 #else
 
 // CHECK-NO-BC-LABEL: define{{.*}} i32 @g
-// CHECK-NO-BC: ret i32 42
+// CHECK-NO-BC: call i32 @f
 int g(void) {
   return f();
 }

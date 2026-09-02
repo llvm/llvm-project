@@ -12,56 +12,56 @@ __attribute__((target_clones("sme;priority=3", "bti;priority=2", "mops;priority=
 // CHECK: @foo = weak_odr ifunc i32 (), ptr @foo.resolver
 // CHECK: @bar = weak_odr ifunc i32 (), ptr @bar.resolver
 //.
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@foo._Mlse
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@foo._Maes
 // CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK: Function Attrs: noipa noinline nounwind optnone vscale_range(1,16)
 // CHECK-LABEL: define {{[^@]+}}@foo._Msve
 // CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@foo.default
 // CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@bar._Msme
 // CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@bar._Mbti
 // CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@bar._Mmops
 // CHECK-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@bar.default
 // CHECK-SAME: () #[[ATTR3]] {
 // CHECK-NEXT:  entry:
@@ -132,14 +132,20 @@ __attribute__((target_clones("sme;priority=3", "bti;priority=2", "mops;priority=
 // CHECK-NEXT:    ret ptr @bar.default
 //
 //.
-// CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "fmv-features"="P1,P2,P3,P4,lse" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse" }
-// CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "fmv-features"="P2,P4,aes" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+aes,+fp-armv8,+neon" }
-// CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone vscale_range(1,16) "fmv-features"="P1,P3,sve" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
-// CHECK: attributes #[[ATTR3]] = { noinline nounwind optnone "fmv-features" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR4]] = { noinline nounwind optnone "fmv-features"="P0,P1,sme" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme" }
-// CHECK: attributes #[[ATTR5]] = { noinline nounwind optnone "fmv-features"="P1,bti" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bti" }
-// CHECK: attributes #[[ATTR6]] = { noinline nounwind optnone "fmv-features"="P0,mops" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+mops" }
+// CHECK: attributes #[[ATTR0]] = { noipa noinline nounwind optnone "fmv-features"="P1,P2,P3,P4,lse" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse" }
+// CHECK: attributes #[[ATTR1]] = { noipa noinline nounwind optnone "fmv-features"="P2,P4,aes" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+aes,+fp-armv8,+neon" }
+// CHECK: attributes #[[ATTR2]] = { noipa noinline nounwind optnone vscale_range(1,16) "fmv-features"="P1,P3,sve" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
+// CHECK: attributes #[[ATTR3]] = { noipa noinline nounwind optnone "fmv-features" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR4]] = { noipa noinline nounwind optnone "fmv-features"="P0,P1,sme" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+sme" }
+// CHECK: attributes #[[ATTR5]] = { noipa noinline nounwind optnone "fmv-features"="P1,bti" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bti" }
+// CHECK: attributes #[[ATTR6]] = { noipa noinline nounwind optnone "fmv-features"="P0,mops" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+mops" }
 // CHECK: attributes #[[ATTR7]] = { disable_sanitizer_instrumentation }
 //.
-// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

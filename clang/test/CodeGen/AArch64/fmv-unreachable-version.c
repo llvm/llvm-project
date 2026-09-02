@@ -13,14 +13,14 @@ __attribute__((target_clones("sve2;priority=4", "aes+sve2;priority=3", "lse;prio
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
 // CHECK: @unreachable_versions = weak_odr ifunc i32 (), ptr @unreachable_versions.resolver
 //.
-// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK: Function Attrs: noipa noinline nounwind optnone vscale_range(1,16)
 // CHECK-LABEL: define {{[^@]+}}@unreachable_versions._Msve
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 5
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@foo
 // CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -28,14 +28,14 @@ __attribute__((target_clones("sve2;priority=4", "aes+sve2;priority=3", "lse;prio
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK: Function Attrs: noipa noinline nounwind optnone vscale_range(1,16)
 // CHECK-LABEL: define {{[^@]+}}@unreachable_versions._Mlse
 // CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK: Function Attrs: noipa noinline nounwind optnone vscale_range(1,16)
 // CHECK-LABEL: define {{[^@]+}}@unreachable_versions.default
 // CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -78,10 +78,10 @@ __attribute__((target_clones("sve2;priority=4", "aes+sve2;priority=3", "lse;prio
 // CHECK-NEXT:    ret ptr @unreachable_versions.default
 //
 //.
-// CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone vscale_range(1,16) "fmv-features"="P0,P2,sve" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
-// CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone vscale_range(1,16) "fmv-features"="P1,lse" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse" }
-// CHECK: attributes #[[ATTR3]] = { noinline nounwind optnone vscale_range(1,16) "fmv-features" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR0]] = { noipa noinline nounwind optnone vscale_range(1,16) "fmv-features"="P0,P2,sve" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
+// CHECK: attributes #[[ATTR1]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR2]] = { noipa noinline nounwind optnone vscale_range(1,16) "fmv-features"="P1,lse" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse" }
+// CHECK: attributes #[[ATTR3]] = { noipa noinline nounwind optnone vscale_range(1,16) "fmv-features" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR4]] = { disable_sanitizer_instrumentation }
 //.
 // CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

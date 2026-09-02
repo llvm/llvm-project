@@ -374,14 +374,14 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7();
 // CHECK-NEXT:    ret i32 [[ADD11]]
 //
 //.
-// CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+d,+f,+i,+v,+zicsr,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" }
+// CHECK: attributes #[[ATTR0]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+d,+f,+i,+v,+zicsr,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" }
 // CHECK: attributes #[[ATTR1]] = { disable_sanitizer_instrumentation }
-// CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i" }
-// CHECK: attributes #[[ATTR3]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+zbb" }
-// CHECK: attributes #[[ATTR4]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+m,+zmmul" }
-// CHECK: attributes #[[ATTR5]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+c,+i,+zbb,+zca" }
-// CHECK: attributes #[[ATTR6]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+zba" }
-// CHECK: attributes #[[ATTR7]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+zba,+zbb" }
+// CHECK: attributes #[[ATTR2]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i" }
+// CHECK: attributes #[[ATTR3]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+zbb" }
+// CHECK: attributes #[[ATTR4]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+m,+zmmul" }
+// CHECK: attributes #[[ATTR5]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+c,+i,+zbb,+zca" }
+// CHECK: attributes #[[ATTR6]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+zba" }
+// CHECK: attributes #[[ATTR7]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+zba,+zbb" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"target-abi", !"lp64"}
 // CHECK: [[META1:![0-9]+]] = !{i32 6, !"riscv-isa", [[META2:![0-9]+]]}

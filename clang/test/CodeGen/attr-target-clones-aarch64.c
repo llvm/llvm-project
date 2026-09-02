@@ -42,98 +42,98 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI: @ftc_inline2 = weak_odr ifunc i32 (), ptr @ftc_inline2.resolver
 // CHECK-MTE-BTI: @ftc_inline3 = weak_odr ifunc i32 (), ptr @ftc_inline3.resolver
 //.
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc._MaesMlse
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc._Msve2
 // CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_def._Msha2
 // CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_def._MmemtagMsha2
 // CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_def.default
 // CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_dup1._Msha2
 // CHECK-SAME: () #[[ATTR2]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_dup1.default
 // CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_dup2._Mfp
 // CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_dup2._McrcMdotprod
 // CHECK-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_dup2.default
 // CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_dup3._Mmemtag
 // CHECK-SAME: () #[[ATTR7:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 4
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_dup3._Mbti
 // CHECK-SAME: () #[[ATTR8:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 4
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_dup3.default
 // CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 4
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@foo
 // CHECK-SAME: () #[[ATTR9:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -149,14 +149,14 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 [[ADD7]]
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_direct
 // CHECK-SAME: () #[[ATTR9]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 4
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@main
 // CHECK-SAME: () #[[ATTR9]] {
 // CHECK-NEXT:  entry:
@@ -260,21 +260,21 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_dup3.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline2._Mfp16
 // CHECK-SAME: () #[[ATTR13:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline2._MfcmaMsve2-bitperm
 // CHECK-SAME: () #[[ATTR14:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline2.default
 // CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
@@ -305,42 +305,42 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_inline2.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline1._MrngMsimd
 // CHECK-SAME: () #[[ATTR15:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline1._Mrcpc
 // CHECK-SAME: () #[[ATTR16:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline1._Msve2-aesMwfxt
 // CHECK-SAME: () #[[ATTR17:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline3._Mbti
 // CHECK-SAME: () #[[ATTR8]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline3._MsbMsve
 // CHECK-SAME: () #[[ATTR18:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline3.default
 // CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
@@ -371,42 +371,42 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_inline3.default
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@ftc
 // CHECK-NOFMV-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 0
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@ftc_def
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 1
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@ftc_dup1
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 2
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@ftc_dup2
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 3
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@ftc_dup3
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 4
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@foo
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
@@ -422,14 +422,14 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NOFMV-NEXT:    ret i32 [[ADD7]]
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@ftc_direct
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 4
 //
 //
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV: Function Attrs: noipa noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@main
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
@@ -445,98 +445,98 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NOFMV-NEXT:    ret i32 [[ADD5]]
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc._MaesMlse
 // CHECK-MTE-BTI-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 0
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc._Msve2
 // CHECK-MTE-BTI-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 0
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def._Msha2
 // CHECK-MTE-BTI-SAME: () #[[ATTR2:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def._MmemtagMsha2
 // CHECK-MTE-BTI-SAME: () #[[ATTR3:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def.default
 // CHECK-MTE-BTI-SAME: () #[[ATTR4:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup1._Msha2
 // CHECK-MTE-BTI-SAME: () #[[ATTR2]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup1.default
 // CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2._Mfp
 // CHECK-MTE-BTI-SAME: () #[[ATTR5:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2._McrcMdotprod
 // CHECK-MTE-BTI-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2.default
 // CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3._Mmemtag
 // CHECK-MTE-BTI-SAME: () #[[ATTR7:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 4
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3._Mbti
 // CHECK-MTE-BTI-SAME: () #[[ATTR8:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 4
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3.default
 // CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 4
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@foo
 // CHECK-MTE-BTI-SAME: () #[[ATTR9:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
@@ -552,14 +552,14 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret i32 [[ADD7]]
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_direct
 // CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 4
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@main
 // CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
 // CHECK-MTE-BTI-NEXT:  entry:
@@ -663,21 +663,21 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup3.default
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2._Mfp16
 // CHECK-MTE-BTI-SAME: () #[[ATTR13:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2._MfcmaMsve2-bitperm
 // CHECK-MTE-BTI-SAME: () #[[ATTR14:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2.default
 // CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
 // CHECK-MTE-BTI-NEXT:  entry:
@@ -708,42 +708,42 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline2.default
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._MrngMsimd
 // CHECK-MTE-BTI-SAME: () #[[ATTR15:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._Mrcpc
 // CHECK-MTE-BTI-SAME: () #[[ATTR16:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._Msve2-aesMwfxt
 // CHECK-MTE-BTI-SAME: () #[[ATTR17:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3._Mbti
 // CHECK-MTE-BTI-SAME: () #[[ATTR8]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3._MsbMsve
 // CHECK-MTE-BTI-SAME: () #[[ATTR18:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI: Function Attrs: noipa noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3.default
 // CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
 // CHECK-MTE-BTI-NEXT:  entry:
@@ -774,9 +774,27 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3.default
 //
 //.
-// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
-// CHECK-NOFMV: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK-NOFMV: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK-NOFMV: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK-NOFMV: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK-NOFMV: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK-NOFMV: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK-NOFMV: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK-NOFMV: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
-// CHECK-MTE-BTI: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK-MTE-BTI: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK-MTE-BTI: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK-MTE-BTI: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK-MTE-BTI: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK-MTE-BTI: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK-MTE-BTI: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK-MTE-BTI: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

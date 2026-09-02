@@ -11,4 +11,4 @@ void f() throw (int) {
   // CHECK: ret void
 }
 
-// CHECK: attributes [[NUW]] = { mustprogress noinline nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { mustprogress noipa noinline nounwind{{.*}} }

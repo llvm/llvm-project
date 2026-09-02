@@ -31,8 +31,8 @@ int callable(int x) {
   return x + 1;
 }
 
-// DEFAULT: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
-// NOIEEE: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "amdgpu-ieee"="false" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// DEFAULT: attributes #0 = { convergent mustprogress noipa noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// NOIEEE: attributes #0 = { convergent mustprogress noipa noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "amdgpu-ieee"="false" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 
-// DEFAULT: attributes #2 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// NOIEEE: attributes #2 = { convergent mustprogress noinline nounwind optnone "amdgpu-ieee"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// DEFAULT: attributes #2 = { convergent mustprogress noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// NOIEEE: attributes #2 = { convergent mustprogress noipa noinline nounwind optnone "amdgpu-ieee"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
