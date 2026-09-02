@@ -180,7 +180,7 @@ namespace WcsCmp {
 
 /// Copied from constant-expression-cxx11.cpp
 namespace strlen {
-constexpr const char *a = "foo\0quux";
+  constexpr const char *a = "foo\0quux";
   constexpr char b[] = "foo\0quux";
   constexpr int f() { return 'u'; }
   constexpr char c[] = { 'f', 'o', 'o', 0, 'q', f(), 'u', 'x', 0 };

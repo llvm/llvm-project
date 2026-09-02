@@ -626,6 +626,15 @@ public:
             bridge.getLoweringOptions().getFPExceptionTraps());
       });
 
+    // Marking of OpenMP declare target functions and globals imported
+    // from a module file needs to happen after the primary
+    // translation pass has run, because that is where the ops that
+    // need marking are created.
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      Fortran::lower::markOpenMPImportedDeclareTargets(
+          *this, bridge.getSemanticsContext());
+    });
+
     finalizeOpenMPLowering(globalOmpRequiresSymbols);
   }
 
@@ -2239,6 +2248,8 @@ private:
     // Relax the requirement that the GOTO variable must have a value in the
     // label list when a list is present, and allow a branch to any non-format
     // target that has an ASSIGN statement for the variable.
+    //
+    // (Both PFT builder and MLIR lowering bridge apply the same relaxation)
     mlir::Location loc = toLocation();
     Fortran::lower::pft::Evaluation &eval = getEval();
     Fortran::lower::pft::FunctionLikeUnit &owningProc =

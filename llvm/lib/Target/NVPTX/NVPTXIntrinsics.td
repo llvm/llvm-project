@@ -617,27 +617,35 @@ multiclass CP_ASYNC_BULK_PREFETCH_INTR<bit has_ch> {
 defm CP_ASYNC_BULK_PREFETCH    : CP_ASYNC_BULK_PREFETCH_INTR<has_ch = 0>;
 defm CP_ASYNC_BULK_PREFETCH_CH : CP_ASYNC_BULK_PREFETCH_INTR<has_ch = 1>;
 
+def PrefetchEvictPolicy : TImmLeaf<i32, [{ return Imm == 0 || Imm == 1; }]>;
+def EvictPolicyOp : Operand<i32> { let PrintMethod = "printEvictPolicy"; }
+
+def CP_ASYNC_BULK_PREFETCH_EVICT_PRIORITY
+  : NVPTXInst<(outs),
+      (ins ADDR:$src, B32:$size, EvictPolicyOp:$policy),
+      "cp.async.bulk.prefetch.L2.global${policy} [$src], $size;",
+      [(int_nvvm_cp_async_bulk_prefetch_evict_priority
+          addr:$src, i32:$size, PrefetchEvictPolicy:$policy)]>,
+      Requires<[hasRubinFamilySupport]>;
+
+def APPLYPRIORITY_ASYNC_BULK_GLOBAL_EVICT_PRIORITY
+  : NVPTXInst<(outs),
+      (ins ADDR:$addr, B32:$size),
+      "applypriority.async.bulk.global.bulk_group.L2::evict_normal [$addr], $size;",
+      [(int_nvvm_applypriority_async_bulk_evict_priority
+          addr:$addr, i32:$size, 0)]>,
+      Requires<[hasRubinFamilySupport]>;
+
 //-------------------------------------
 // TMA Async Bulk Tensor Copy Functions
 //-------------------------------------
 
-class TMA_DIMS_UTIL<int dim, string mode = ""> {
+class TMA_DIMS_DAG_UTIL<int dim> {
   // For example, when 'dim' is 3, this generates:
   // an ins_dag:    B32:$d0, B32:$d1, B32:$d2
   // with base_str: $d0, $d1, $d2
   dag ins_dag = !dag(ins, !listsplat(B32, dim), !foreach(i, !range(dim), "d" # i));
   string base_str = !interleave(!foreach(i, !range(dim), "$d" # i), ", ");
-
-  // Tile::Gather4/scatter4 actually operate on a 2D tensor,
-  // though they take 5 co-ordinates.
-  //
-  // The scatter-gather happens over 4 rows with a fixed
-  // column-index. The first co-ordinate represents the
-  // col-index followed by four row-indices.
-  int num_dims = !cond(
-                   !eq(mode, "tile_scatter4") : 2,
-                   !eq(mode, "tile_gather4")  : 2,
-                   true : dim); // for all other modes
 }
 
 class TMA_IM2COL_UTIL<int dim, string mode> {
@@ -671,8 +679,8 @@ def tma_cta_group_imm_any : TImmLeaf<i32, [{return Imm >= 0;}]>;
 
 multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred,
                                TImmLeaf cta_group_type = tma_cta_group_imm_any> {
-  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
-  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
+  defvar dims_dag = TMA_DIMS_DAG_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_DAG_UTIL<dim>.base_str;
   defvar asm_str_base = "$cg [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
 
   defvar im2col_dag = TMA_IM2COL_UTIL<dim, mode>.ins_dag;
@@ -748,8 +756,8 @@ defm TMA_G2S_TILE_GATHER4_2D : TMA_TENSOR_G2S_INTR<5, "tile_gather4",
                                [hasTMABlackwellSupport]>;
 
 multiclass TMA_TENSOR_G2S_CTA_INTR<int dim, string mode, list<Predicate> pred = []> {
-  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
-  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
+  defvar dims_dag = TMA_DIMS_DAG_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_DAG_UTIL<dim>.base_str;
   defvar asm_str_base = " [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
 
   defvar im2col_dag = TMA_IM2COL_UTIL<dim, mode>.ins_dag;
@@ -811,8 +819,8 @@ defm TMA_G2S_CTA_TILE_GATHER4_2D : TMA_TENSOR_G2S_CTA_INTR<5, "tile_gather4",
 
 multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
                                list<Predicate> pred = [PTX80, SM90]> {
-  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
-  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
+  defvar dims_dag = TMA_DIMS_DAG_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_DAG_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
 
   defvar dim_val = TMA_DIMS_UTIL<dim, mode>.num_dims;
@@ -862,10 +870,9 @@ defm TMA_S2G_TILE_SCATTER4_2D : TMA_TENSOR_S2G_INTR<5, "tile_scatter4",
 // Base class for TMA tensor override intrinsics
 class TMA_TENSOR_OVERRIDE_BASE<int dim, string mode, string override> {
   // Dimension handling.
-  defvar dims_util = TMA_DIMS_UTIL<dim>;
+  defvar dims_util = TMA_DIMS_DAG_UTIL<dim>;
   dag dims_dag = dims_util.ins_dag;
   string dims_str = dims_util.base_str;
-  bit has_multi_dim = !ge(dim, 2);
 
   // Im2col handling (im2col / im2col_w / im2col_w_128).
   defvar im2col_util = TMA_IM2COL_UTIL<dim, mode>;
@@ -874,35 +881,45 @@ class TMA_TENSOR_OVERRIDE_BASE<int dim, string mode, string override> {
   string im2col_str = im2col_util.base_str;
   string im2col_component = !if(num_im2col, ", {{" # im2col_str # "}}", "");
 
-  // Tensor size handling
+  // Override-kind recognition. Three kinds are supported:
+  //   override_addr            -> global address only (no tensor size or strides)
+  //   override_addr_dim        -> global address + tensor size
+  //   override_addr_dim_stride -> global address + tensor size + strides
+  bit is_override_addr = !eq(override, "override_addr");
+  bit is_addr_dim = !eq(override, "override_addr_dim");
   bit is_addr_dim_stride = !eq(override, "override_addr_dim_stride");
-  dag tensor_size_dag = !if(is_addr_dim_stride,
+  bit has_dim_overrides = !or(is_addr_dim, is_addr_dim_stride);
+
+  assert !or(is_override_addr, is_addr_dim, is_addr_dim_stride),
+         "unknown TMA override kind: " # override;
+
+  // Tensor size handling (emitted for both dimension-override variants).
+  dag tensor_size_dag = !if(has_dim_overrides,
                           !dag(ins, !listsplat(B16, dim), !foreach(i, !range(dim), "ts" # i)),
                           (ins));
   string tensor_size_str = !interleave(!foreach(i, !range(dim), "$ts" # i), ", ");
 
-  // Stride handling for multi-dimensional tensors
-  bit need_strides = !and(is_addr_dim_stride, has_multi_dim);
-  dag lower_stride_dag = !if(need_strides,
+  // Stride handling for override_addr_dim_stride.
+  dag lower_stride_dag = !if(is_addr_dim_stride,
                            !dag(ins, !listsplat(B32, !sub(dim, 1)),
                                 !foreach(i, !range(!sub(dim, 1)), "stride" # i)),
                            (ins));
   string lower_stride_str = !interleave(!foreach(i, !range(!sub(dim, 1)), "$stride" # i), ", ");
-  dag upper_stride_dag = !if(need_strides, (ins B16:$upper_stride), (ins));
+  dag upper_stride_dag =
+      !if(is_addr_dim_stride, (ins B16:$upper_stride), (ins));
 
   // Compose assembly string components
-  string stride_component = !if(has_multi_dim,
+  string stride_component = !if(is_addr_dim_stride,
                               "{{" # lower_stride_str # "}}, $upper_stride, ",
                               "");
-  string tensor_size_component = !if(is_addr_dim_stride,
+  string tensor_size_component = !if(has_dim_overrides,
                                   "{{" # tensor_size_str # "}}, " # stride_component,
                                   "");
 
   // Common suffix components
-  string dim_suffix = !if(has_multi_dim,
-                         ".override::global_dim_stride",
-                         ".override::global_dim");
-  string override_suffix = ".override::global_address" # !if(is_addr_dim_stride, dim_suffix, "");
+  string dim_suffix = !if(is_addr_dim_stride, ".override::global_dim_stride",
+                          !if(is_addr_dim, ".override::global_dim", ""));
+  string override_suffix = ".override::global_address" # dim_suffix;
 }
 
 // TMA Copy from Shared to Global memory (with Override Global Address)
@@ -917,11 +934,8 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<int dim, string mode,
   defvar asm_operands = " [$tmap, $override_addr, " # base.tensor_size_component #
                         "{{" # base.dims_str # "}}], [$src]";
 
-  defvar is_override_dim_stride_1d =
-      !and(base.is_addr_dim_stride, !eq(dim, 1));
-  defvar intr = !cast<Intrinsic>(
-      "int_nvvm_cp_async_bulk_tensor_s2g_" # mode # "_" #
-      !if(is_override_dim_stride_1d, "override_addr_dim", override) # "_" #
+  defvar intr =
+      !cast<Intrinsic>("int_nvvm_cp_async_bulk_tensor_s2g_" # mode # "_" # override # "_" #
       !if(is_scatter4, 2, dim) # "d");
 
   defvar ins_dag_base =
@@ -970,12 +984,8 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<int dim, string mode,
   defvar asm_operands = " [$tmap, $override_addr, " # base.tensor_size_component #
                         "{{" # base.dims_str # "}}], [$src]";
 
-  defvar is_override_dim_stride_1d =
-      !and(base.is_addr_dim_stride, !eq(dim, 1));
-
-  defvar intr = !cast<Intrinsic>(
-      "int_nvvm_cp_async_bulk_tensor_reduce_" # mode # "_" #
-      !if(is_override_dim_stride_1d, "override_addr_dim", override) # "_" #
+  defvar intr =
+      !cast<Intrinsic>("int_nvvm_cp_async_bulk_tensor_reduce_" # mode # "_" # override # "_" #
       dim # "d");
 
   defvar ins_dag_base =
@@ -1011,11 +1021,8 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<int dim, string mode,
 }
 
 foreach dim = 1...5 in {
-  foreach mode = !if(
-      !ge(dim, 3), ["tile", "im2col", "im2col_w"], ["tile"]) in {
-    foreach override = !if(!eq(mode, "tile"),
-                            ["override_addr", "override_addr_dim_stride"],
-                            ["override_addr"]) in {
+  foreach mode = TMA_MODES_UTIL<dim>.modes in {
+    foreach override = TMAOverrideHandler<dim, mode>.applicable_overrides in {
       defvar suffix = dim # "D_" # !toupper(mode # "_" # override);
       defm S2G_ # suffix
           : NVPTX_CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<dim, mode, override>;
@@ -1031,8 +1038,8 @@ defm S2G_2D_TILE_SCATTER4_OVERRIDE_ADDR
 // TMA Copy from Shared to Global memory with Reduction
 multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode,
                                             list<Predicate> pred = [PTX80, SM90]> {
-  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
-  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
+  defvar dims_dag = TMA_DIMS_DAG_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_DAG_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
 
   defvar mode_asm_str = TMA_S2G_MODE_ASM_UTIL<mode>.ret;
@@ -1089,8 +1096,8 @@ foreach dim = 3...5 in {
 // TMA Prefetch from Global memory to L2 cache
 multiclass TMA_TENSOR_PREFETCH_INTR<int dim, string mode,
                                     list<Predicate> pred = [PTX80, SM90]> {
-  defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
-  defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
+  defvar dims_dag = TMA_DIMS_DAG_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_DAG_UTIL<dim>.base_str;
   defvar asm_str_base = " [$tmap, {{" # dims_str # "}}]";
 
   defvar im2col_dag = TMA_IM2COL_UTIL<dim, mode>.ins_dag;
@@ -1105,8 +1112,9 @@ multiclass TMA_TENSOR_PREFETCH_INTR<int dim, string mode,
                      # "." # "L2.global"
                      # "." # !subst("_", "::", mode);
 
+  defvar intr_suffix = mode # "_" # dim_val # "d";
   defvar intr = !cast<Intrinsic>(
-                  "int_nvvm_cp_async_bulk_tensor_prefetch_" # mode # "_" # dim_val # "d");
+                  "int_nvvm_cp_async_bulk_tensor_prefetch_" # intr_suffix);
 
   defvar ins_dag  = !con((ins  B64:$tmap),
                          dims_dag,
@@ -1129,6 +1137,20 @@ multiclass TMA_TENSOR_PREFETCH_INTR<int dim, string mode,
               inst_name # ".L2::cache_hint" # asm_str # ", $ch;",
               [intr_dag_with_ch]>,
               Requires<pred>;
+
+  defvar intr_evict =
+      !cast<Intrinsic>("int_nvvm_cp_async_bulk_tensor_prefetch_evict_priority_" #
+      intr_suffix);
+  defvar ins_dag_evict = !con((ins B64:$tmap), dims_dag, im2col_dag,
+                              (ins EvictPolicyOp:$policy));
+  defvar intr_dag_evict = !con((intr_evict B64:$tmap),
+                               !setdagop(dims_dag, intr_evict),
+                               !setdagop(im2col_dag, intr_evict),
+                               (intr_evict PrefetchEvictPolicy:$policy));
+  def _EV : NVPTXInst<(outs), ins_dag_evict,
+              inst_name # "${policy}" # asm_str # ";",
+              [intr_dag_evict]>,
+              Requires<[hasRubinFamilySupport]>;
 }
 foreach dim = 1...5 in {
   foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
@@ -1145,6 +1167,177 @@ foreach dim = 3...5 in {
 }
 defm TMA_TENSOR_PF_TILE_GATHER4_2D : TMA_TENSOR_PREFETCH_INTR<5, "tile_gather4",
                                      [hasTMABlackwellSupport]>;
+
+// TMA Tensor Prefetch from Global memory with Override Global Address
+// (with cache hint and eviction priority forms).
+multiclass NVPTX_TMA_TENSOR_PREFETCH_OVERRIDE_INTR<int dim, string mode,
+                                                   string override> {
+  defvar base = TMA_TENSOR_OVERRIDE_BASE<dim, mode, override>;
+  defvar num_dims = TMA_DIMS_UTIL<dim, mode>.num_dims;
+
+  defvar prefix = "cp.async.bulk.prefetch.tensor." # num_dims # "d.L2.global";
+  defvar suffix = "." # !subst("_", "::", mode) # base.override_suffix;
+  defvar asm_str = " [$tmap, $override_addr, " # base.tensor_size_component #
+                   "{{" # base.dims_str # "}}]" # base.im2col_component;
+
+  defvar intr_suffix = mode # "_" # override # "_" # num_dims # "d";
+  defvar intr =
+      !cast<Intrinsic>("int_nvvm_cp_async_bulk_tensor_prefetch_" # intr_suffix);
+  defvar intr_evict =
+      !cast<Intrinsic>("int_nvvm_cp_async_bulk_tensor_prefetch_evict_priority_" #
+      intr_suffix);
+
+  defvar ins_dag_base =
+      !con((ins B64:$tmap, B64:$override_addr),
+           base.tensor_size_dag, base.lower_stride_dag,
+           base.upper_stride_dag, base.dims_dag,
+           base.im2col_dag);
+
+  defvar ins_dag = ins_dag_base;
+  defvar ins_dag_with_ch = !con(ins_dag_base, (ins B64:$ch));
+  defvar ins_dag_evict = !con(ins_dag_base, (ins EvictPolicyOp:$policy));
+
+  defvar intr_dag_base =
+      !con((intr B64:$tmap, B64:$override_addr),
+           !setdagop(base.tensor_size_dag, intr),
+           !setdagop(base.lower_stride_dag, intr),
+           !setdagop(base.upper_stride_dag, intr),
+           !setdagop(base.dims_dag, intr),
+           !setdagop(base.im2col_dag, intr));
+
+  defvar intr_dag_evict_base =
+      !con((intr_evict B64:$tmap, B64:$override_addr),
+           !setdagop(base.tensor_size_dag, intr_evict),
+           !setdagop(base.lower_stride_dag, intr_evict),
+           !setdagop(base.upper_stride_dag, intr_evict),
+           !setdagop(base.dims_dag, intr_evict),
+           !setdagop(base.im2col_dag, intr_evict));
+
+  defvar intr_dag = !con(intr_dag_base, (intr (i64 srcvalue), 0));
+  defvar intr_dag_with_ch = !con(intr_dag_base, (intr B64:$ch, -1));
+  defvar intr_dag_evict = !con(intr_dag_evict_base,
+                               (intr_evict PrefetchEvictPolicy:$policy));
+
+  let Predicates = [hasRubinFamilySupport] in {
+    def "" : NVPTXInst<(outs), ins_dag,
+               prefix # suffix # asm_str # ";",
+               [intr_dag]>;
+    def _CH : NVPTXInst<(outs), ins_dag_with_ch,
+               prefix # suffix # ".L2::cache_hint" # asm_str # ", $ch;",
+               [intr_dag_with_ch]>;
+    def _EV : NVPTXInst<(outs), ins_dag_evict,
+               prefix # suffix # "${policy}" # asm_str # ";",
+               [intr_dag_evict]>;
+  }
+}
+
+foreach dim = 1...5 in {
+  foreach mode = TMA_MODES_UTIL<dim, /*includeW128=*/1>.modes in {
+    foreach override = TMAOverrideHandler<dim, mode>.applicable_overrides in {
+      defvar suffix = !toupper(mode # "_" # override) # "_" # dim # "D";
+      defm TMA_TENSOR_PFO_ # suffix
+          : NVPTX_TMA_TENSOR_PREFETCH_OVERRIDE_INTR<dim, mode, override>;
+    }
+  }
+}
+defm TMA_TENSOR_PFO_TILE_GATHER4_OVERRIDE_ADDR
+    : NVPTX_TMA_TENSOR_PREFETCH_OVERRIDE_INTR<5, "tile_gather4", "override_addr">;
+
+// TMA applypriority variants.
+multiclass NVPTX_APPLYPRIORITY_BULK_TENSOR_INTR<int dim, string mode> {
+  defvar dims_dag = TMA_DIMS_DAG_UTIL<dim>.ins_dag;
+  defvar dims_str = TMA_DIMS_DAG_UTIL<dim>.base_str;
+  defvar asm_str_base = " [$tmap, {{" # dims_str # "}}]";
+
+  defvar im2col_dag = TMA_IM2COL_UTIL<dim, mode>.ins_dag;
+  defvar im2col_str = TMA_IM2COL_UTIL<dim, mode>.base_str;
+  defvar asm_str = !if(!empty(im2col_str),
+                       asm_str_base,
+                       asm_str_base # ", {{" # im2col_str # "}}");
+
+  defvar dim_val = TMA_DIMS_UTIL<dim, mode>.num_dims;
+  defvar inst_name = "applypriority.async.bulk.tensor" # "." # dim_val # "d"
+                     # ".global.bulk_group.L2::evict_normal"
+                     # "." # !subst("_", "::", mode);
+
+  defvar intr =
+      !cast<Intrinsic>("int_nvvm_applypriority_async_bulk_tensor_evict_priority_" #
+      mode # "_" # dim_val # "d");
+
+  defvar ins_dag = !con((ins B64:$tmap),
+                        dims_dag,
+                        im2col_dag);
+  defvar intr_dag = !con((intr B64:$tmap),
+                         !setdagop(dims_dag, intr),
+                         !setdagop(im2col_dag, intr),
+                         (intr 0));
+
+  def "" : NVPTXInst<(outs), ins_dag,
+             inst_name # asm_str # ";",
+             [intr_dag]>,
+             Requires<[hasRubinFamilySupport]>;
+}
+
+foreach dim = 1...5 in {
+  foreach mode = TMA_MODES_UTIL<dim, /*includeW128=*/1>.modes in {
+    defvar suffix = !toupper(mode) # "_" # dim # "D";
+    defm NVPTX_APPLYPRIORITY_BULK_TENSOR_ # suffix
+        : NVPTX_APPLYPRIORITY_BULK_TENSOR_INTR<dim, mode>;
+  }
+}
+defm NVPTX_APPLYPRIORITY_BULK_TENSOR_TILE_GATHER4_2D
+    : NVPTX_APPLYPRIORITY_BULK_TENSOR_INTR<5, "tile_gather4">;
+
+// TMA applypriority variants with override global address.
+multiclass NVPTX_APPLYPRIORITY_BULK_TENSOR_OVERRIDE_INTR<int dim, string mode,
+                                                         string override> {
+  defvar base = TMA_TENSOR_OVERRIDE_BASE<dim, mode, override>;
+  defvar num_dims = TMA_DIMS_UTIL<dim, mode>.num_dims;
+
+  defvar prefix = "applypriority.async.bulk.tensor" # "." # num_dims # "d"
+                  # ".global.bulk_group.L2::evict_normal";
+  defvar suffix = "." # !subst("_", "::", mode) # base.override_suffix;
+  defvar asm_str = " [$tmap, $override_addr, " # base.tensor_size_component #
+                   "{{" # base.dims_str # "}}]" # base.im2col_component;
+
+  defvar intr =
+      !cast<Intrinsic>("int_nvvm_applypriority_async_bulk_tensor_evict_priority_" #
+      mode # "_" # override # "_" # num_dims # "d");
+
+  defvar ins_dag =
+      !con((ins B64:$tmap, B64:$override_addr),
+           base.tensor_size_dag, base.lower_stride_dag,
+           base.upper_stride_dag, base.dims_dag,
+           base.im2col_dag);
+
+  defvar intr_dag =
+      !con((intr B64:$tmap, B64:$override_addr),
+           !setdagop(base.tensor_size_dag, intr),
+           !setdagop(base.lower_stride_dag, intr),
+           !setdagop(base.upper_stride_dag, intr),
+           !setdagop(base.dims_dag, intr),
+           !setdagop(base.im2col_dag, intr),
+           (intr 0));
+
+  def "" : NVPTXInst<(outs), ins_dag,
+             prefix # suffix # asm_str # ";",
+             [intr_dag]>,
+             Requires<[hasRubinFamilySupport]>;
+}
+
+foreach dim = 1...5 in {
+  foreach mode = TMA_MODES_UTIL<dim, /*includeW128=*/1>.modes in {
+    foreach override = TMAOverrideHandler<dim, mode>.applicable_overrides in {
+      defvar suffix = !toupper(mode # "_" # override) # "_" # dim # "D";
+      defm NVPTX_APPLYPRIORITY_BULK_TENSOR_OVERRIDE_ # suffix
+          : NVPTX_APPLYPRIORITY_BULK_TENSOR_OVERRIDE_INTR<dim, mode, override>;
+    }
+  }
+}
+defm NVPTX_APPLYPRIORITY_BULK_TENSOR_OVERRIDE_TILE_GATHER4_OVERRIDE_ADDR
+    : NVPTX_APPLYPRIORITY_BULK_TENSOR_OVERRIDE_INTR<5, "tile_gather4", "override_addr">;
+
+
 
 //Prefetchu and Prefetch
 
@@ -2280,68 +2473,74 @@ def : Pat<(int_nvvm_ui2f_rz i32:$a), (CVT_f32_u32 $a, CvtRZ)>;
 def : Pat<(int_nvvm_ui2f_rm i32:$a), (CVT_f32_u32 $a, CvtRM)>;
 def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
-def : Pat<(int_nvvm_ff2bf16x2_rn f32:$a, f32:$b),      (CVT_bf16x2_f32 $a, $b, CvtRN)>;
-def : Pat<(int_nvvm_ff2bf16x2_rn_relu f32:$a, f32:$b), (CVT_bf16x2_f32 $a, $b, CvtRN_RELU)>;
-def : Pat<(int_nvvm_ff2bf16x2_rz f32:$a, f32:$b),      (CVT_bf16x2_f32 $a, $b, CvtRZ)>;
-def : Pat<(int_nvvm_ff2bf16x2_rz_relu f32:$a, f32:$b), (CVT_bf16x2_f32 $a, $b, CvtRZ_RELU)>;
-let Predicates = [PTX81, SM80] in {
-  def : Pat<(int_nvvm_ff2bf16x2_rn_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff2bf16x2_rn_relu_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRN_RELU)>;
-  def : Pat<(int_nvvm_ff2bf16x2_rz_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRZ)>;
-  def : Pat<(int_nvvm_ff2bf16x2_rz_relu_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRZ_RELU)>;
-}
-let Predicates = [hasConvertWithStochasticRounding] in {
-def : Pat<(int_nvvm_ff2bf16x2_rs f32:$a, f32:$b, i32:$c),
-          (CVT_bf16x2_f32_rs $a, $b, $c, CvtRS)>;
-def : Pat<(int_nvvm_ff2bf16x2_rs_relu f32:$a, f32:$b, i32:$c),
-          (CVT_bf16x2_f32_rs $a, $b, $c, CvtRS_RELU)>;
-def : Pat<(int_nvvm_ff2bf16x2_rs_satfinite f32:$a, f32:$b, i32:$c), 
-          (CVT_bf16x2_f32_rs_sf $a, $b, $c, CvtRS)>;
-def : Pat<(int_nvvm_ff2bf16x2_rs_relu_satfinite f32:$a, f32:$b, i32:$c),  
-          (CVT_bf16x2_f32_rs_sf $a, $b, $c, CvtRS_RELU)>;
+// Utility to look up base and satfinite variants of a conversion intrinsic
+class ToCvtIntrinsics<string suffix> {
+  Intrinsic base = !cast<Intrinsic>("int_nvvm_" # suffix);
+  Intrinsic sf = !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite");
 }
 
-def : Pat<(int_nvvm_ff2f16x2_rn f32:$a, f32:$b),      (CVT_f16x2_f32 $a, $b, CvtRN)>;
-def : Pat<(int_nvvm_ff2f16x2_rn_relu f32:$a, f32:$b), (CVT_f16x2_f32 $a, $b, CvtRN_RELU)>;
-def : Pat<(int_nvvm_ff2f16x2_rz f32:$a, f32:$b),      (CVT_f16x2_f32 $a, $b, CvtRZ)>;
-def : Pat<(int_nvvm_ff2f16x2_rz_relu f32:$a, f32:$b), (CVT_f16x2_f32 $a, $b, CvtRZ_RELU)>;
-let Predicates = [PTX81, SM80] in {
-  def : Pat<(int_nvvm_ff2f16x2_rn_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff2f16x2_rn_relu_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRN_RELU)>;
-  def : Pat<(int_nvvm_ff2f16x2_rz_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRZ)>;
-  def : Pat<(int_nvvm_ff2f16x2_rz_relu_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRZ_RELU)>;
+foreach rnd = ["rn", "rz"] in {
+  foreach relu = ["", "_relu"] in {
+    defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # relu));
+
+    foreach pzo = [0, 1] in {
+      // An i1 immediate of one is matched as the sign-extended value -1.
+      defvar PZO = !if(pzo, -1, 0);
+      defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
+      defvar PZOPreds =
+          !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>);
+      defvar SFPreds = !if(pzo, [hasConvertWithPZOSupport]<Predicate>,
+                                [PTX81, SM80]<Predicate>);
+
+      defvar FF2BF16X2 = ToCvtIntrinsics<"ff2bf16x2_" # rnd # relu>;
+      defvar FF2F16X2 = ToCvtIntrinsics<"ff2f16x2_" # rnd # relu>;
+      defvar F2BF16 = ToCvtIntrinsics<"f2bf16_" # rnd # relu>;
+      defvar F2F16 = ToCvtIntrinsics<"f2f16_" # rnd # relu>;
+
+      def : Pat<(FF2BF16X2.base f32:$a, f32:$b, PZO),
+                (CVT_bf16x2_f32 $a, $b, Mode)>, Requires<PZOPreds>;
+      def : Pat<(FF2F16X2.base f32:$a, f32:$b, PZO),
+                (CVT_f16x2_f32 $a, $b, Mode)>, Requires<PZOPreds>;
+      def : Pat<(F2BF16.base f32:$a, PZO), (CVT_bf16_f32 $a, Mode)>,
+            Requires<PZOPreds>;
+      def : Pat<(F2F16.base f32:$a, PZO), (CVT_f16_f32 $a, Mode)>,
+            Requires<PZOPreds>;
+
+      def : Pat<(FF2BF16X2.sf f32:$a, f32:$b, PZO),
+                (CVT_bf16x2_f32_sf $a, $b, Mode)>, Requires<SFPreds>;
+      def : Pat<(FF2F16X2.sf f32:$a, f32:$b, PZO),
+                (CVT_f16x2_f32_sf $a, $b, Mode)>, Requires<SFPreds>;
+      def : Pat<(F2BF16.sf f32:$a, PZO), (CVT_bf16_f32_sf $a, Mode)>,
+            Requires<SFPreds>;
+      def : Pat<(F2F16.sf f32:$a, PZO), (CVT_f16_f32_sf $a, Mode)>,
+            Requires<SFPreds>;
+    }
+  }
 }
 
-let Predicates = [hasConvertWithStochasticRounding] in {
-def : Pat<(int_nvvm_ff2f16x2_rs f32:$a, f32:$b, i32:$c),
-          (CVT_f16x2_f32_rs $a, $b, $c, CvtRS)>;
-def : Pat<(int_nvvm_ff2f16x2_rs_relu f32:$a, f32:$b, i32:$c),
-          (CVT_f16x2_f32_rs $a, $b, $c, CvtRS_RELU)>;
-def : Pat<(int_nvvm_ff2f16x2_rs_satfinite f32:$a, f32:$b, i32:$c), 
-          (CVT_f16x2_f32_rs_sf $a, $b, $c, CvtRS)>;
-def : Pat<(int_nvvm_ff2f16x2_rs_relu_satfinite f32:$a, f32:$b, i32:$c), 
-          (CVT_f16x2_f32_rs_sf $a, $b, $c, CvtRS_RELU)>;
-}
-def : Pat<(int_nvvm_f2bf16_rn f32:$a),      (CVT_bf16_f32 $a, CvtRN)>;
-def : Pat<(int_nvvm_f2bf16_rn_relu f32:$a), (CVT_bf16_f32 $a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_f2bf16_rz f32:$a),      (CVT_bf16_f32 $a, CvtRZ)>;
-def : Pat<(int_nvvm_f2bf16_rz_relu f32:$a), (CVT_bf16_f32 $a, CvtRZ_RELU)>;
-let Predicates = [PTX81, SM80] in {
-  def : Pat<(int_nvvm_f2bf16_rz_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRZ)>;
-  def : Pat<(int_nvvm_f2bf16_rz_relu_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRZ_RELU)>;
-  def : Pat<(int_nvvm_f2bf16_rn_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRN)>;
-  def : Pat<(int_nvvm_f2bf16_rn_relu_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRN_RELU)>;
-}
+foreach relu = ["", "_relu"] in {
+  defvar BaseMode = !cast<PatLeaf>("CvtRS" # !toupper(relu));
 
-def : Pat<(int_nvvm_f2f16_rn f32:$a),      (CVT_f16_f32 $a, CvtRN)>;
-def : Pat<(int_nvvm_f2f16_rn_relu f32:$a), (CVT_f16_f32 $a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_f2f16_rz f32:$a),      (CVT_f16_f32 $a, CvtRZ)>;
-def : Pat<(int_nvvm_f2f16_rz_relu f32:$a), (CVT_f16_f32 $a, CvtRZ_RELU)>;
-let Predicates = [PTX81, SM80] in {
-  def : Pat<(int_nvvm_f2f16_rz_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRZ)>;
-  def : Pat<(int_nvvm_f2f16_rz_relu_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRZ_RELU)>;
-  def : Pat<(int_nvvm_f2f16_rn_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRN)>;
-  def : Pat<(int_nvvm_f2f16_rn_relu_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRN_RELU)>;
+  foreach pzo = [0, 1] in {
+    defvar PZO = !if(pzo, -1, 0);
+    defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
+    defvar Preds =
+      !listconcat(
+        [hasConvertWithStochasticRounding]<Predicate>, 
+        !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>));
+
+    defvar BF16X2 = ToCvtIntrinsics<"ff2bf16x2_rs" # relu>;
+    defvar F16X2 = ToCvtIntrinsics<"ff2f16x2_rs" # relu>;
+
+    def : Pat<(BF16X2.base f32:$a, f32:$b, i32:$c, PZO),
+              (CVT_bf16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
+    def : Pat<(BF16X2.sf f32:$a, f32:$b, i32:$c, PZO),
+              (CVT_bf16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
+    def : Pat<(F16X2.base f32:$a, f32:$b, i32:$c, PZO),
+              (CVT_f16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
+    def : Pat<(F16X2.sf f32:$a, f32:$b, i32:$c, PZO),
+              (CVT_f16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
+  }
 }
 
 def : Pat<(int_nvvm_lohi_i2d i32:$a, i32:$b), (V2I32toI64 $a, $b)>;
@@ -2588,8 +2787,8 @@ let Predicates = [hasNarrowFPConversionSupport] in {
             (CVT_bf16x2_ue8m0x2 $a)>;
 }
 
-// ue5m3x2 to f16x2 / bf16x2 conversions.
-let Predicates = [hasUE5M3TypeSupport] in {
+// ue5m3x2 conversions.
+let Predicates = [hasRubinFamilySupport] in {
   def : Pat<(int_nvvm_ue5m3x2_to_f16x2_rn i16:$a),
             (CVT_f16x2_ue5m3x2 $a, CvtRN)>;
   
@@ -2602,7 +2801,42 @@ let Predicates = [hasUE5M3TypeSupport] in {
             (CVT_bf16x2_ue5m3x2_scale_n2 $a, $b, CvtRN)>;
   def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0 i16:$a, i16:$b),
             (CVT_bf16x2_ue5m3x2_scale_n2 $a, $b, CvtRN_SATFINITE)>;
-} // let Predicates = [hasUE5M3TypeSupport]
+
+  foreach satfinite = ["", "satfinite"] in {
+    defvar sat = !if(!empty(satfinite), "", "_" # satfinite);
+    foreach rnd = ["rn", "rz"] in {
+      defvar mode = !cast<PatLeaf>("Cvt" # !toupper(rnd) # !toupper(sat));
+
+      defvar ff_intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_" # rnd # sat);
+      def : Pat<(ff_intrin f32:$a, f32:$b), (CVT_ue5m3x2_f32 $a, $b, mode)>;
+
+      defvar ff_scale_intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_" # rnd # sat # "_scale_n1_ue8m0");
+      def : Pat<(ff_scale_intrin f32:$a, f32:$b, i16:$c),
+                (CVT_ue5m3x2_f32_scale_n1 $a, $b, $c, mode)>;
+
+      foreach type = ["f16x2", "bf16x2"] in {
+        defvar intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_" # rnd # sat);
+        def : Pat<(intrin B32:$a),
+                  (!cast<NVPTXInst>("CVT_ue5m3x2_" # type) $a, mode)>;
+
+        defvar scale_intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_" # rnd # sat # "_scale_n1_ue8m0");
+        def : Pat<(scale_intrin B32:$a, i16:$b),
+                  (!cast<NVPTXInst>("CVT_ue5m3x2_" # type # "_scale_n1") $a, $b, mode)>;
+      }
+    }
+
+    defvar rp_mode = !cast<PatLeaf>("CvtRP" # !toupper(sat));
+
+    defvar ff_rp_intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_rp" # sat);
+    def : Pat<(ff_rp_intrin f32:$a, f32:$b), (CVT_ue5m3x2_f32 $a, $b, rp_mode)>;
+
+    foreach type = ["f16x2", "bf16x2"] in {
+      defvar rp_intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_rp" # sat);
+      def : Pat<(rp_intrin B32:$a),
+                (!cast<NVPTXInst>("CVT_ue5m3x2_" # type) $a, rp_mode)>;
+    }
+  }
+} // let Predicates = [hasRubinFamilySupport]
 
 def SDT_CVT_F32X4_TO_FPX4_RS_VEC :
   SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 
@@ -2693,32 +2927,68 @@ class AtomicSDNodeXForm<SDNode atomic> {
   SDNodeXForm GetAddSp = SDNodeXForm<atomic, [{
     return getI32Imm(getAddrSpace(cast<MemSDNode>(N)), SDLoc(N));
   }]>;
+
+  SDNodeXForm GetEvictionAndPrefetchHint = SDNodeXForm<atomic, [{
+    auto *MN = cast<MemSDNode>(N);
+    unsigned EltWidth = MN->getMemoryVT().getFixedSizeInBits();
+    NVPTXMemCacheHintAccess Access{
+        NVPTXMemCacheHintInstruction::Atom, getAddrSpace(MN),
+        /*NumElts=*/1, EltWidth, MN->isVolatile()};
+    return getMemCacheHintOperands(MN, Access, SDLoc(N),
+                                   /*EmitDiagnostics=*/true)
+        .EvictionAndPrefetchHint;
+  }]>;
+
+  SDNodeXForm GetCachePolicy = SDNodeXForm<atomic, [{
+    auto *MN = cast<MemSDNode>(N);
+    unsigned EltWidth = MN->getMemoryVT().getFixedSizeInBits();
+    NVPTXMemCacheHintAccess Access{
+        NVPTXMemCacheHintInstruction::Atom, getAddrSpace(MN),
+        /*NumElts=*/1, EltWidth, MN->isVolatile()};
+    return getMemCacheHintOperands(MN, Access, SDLoc(N),
+                                   /*EmitDiagnostics=*/false)
+        .CachePolicyReg;
+  }]>;
 }
 
-multiclass F_ATOMIC_2<RegTyInfo t, SDPatternOperator op, string op_str, SDNode atomic, list<Predicate> preds = []> {
-  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}" # "." # op_str;
+multiclass F_ATOMIC_2<RegTyInfo t, SDPatternOperator op, string op_str,
+                      string type_str, SDNode atomic,
+                      list<Predicate> preds = []> {
+  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}." # op_str #
+                   "${evictionAndPrefetchHint:l2}." # type_str #
+                   " \t$dst, [$addr], $b${policy};";
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
-    def _r : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.RC:$b),
-      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-      asm_str>,
+    def _r : NVPTXInst<
+      (outs t.RC:$dst),
+      (ins ADDR:$addr, t.RC:$b, AtomicCode:$sem, AtomicCode:$scope,
+           AtomicCode:$addsp,
+           EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+           CachePolicy:$policy), asm_str>,
       Requires<preds>;
     if t.SupportsImm then
-      def _i : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-        (ins ADDR:$addr, t.Imm:$b),
-        (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-        asm_str>,
+      def _i : NVPTXInst<
+        (outs t.RC:$dst),
+        (ins ADDR:$addr, t.Imm:$b, AtomicCode:$sem, AtomicCode:$scope,
+             AtomicCode:$addsp,
+             EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+             CachePolicy:$policy), asm_str>,
         Requires<preds>;
   }
 
   defvar XForm = AtomicSDNodeXForm<atomic>;
 
   def : Pat<(op:$this addr:$addr, t.Ty:$b),
-  (!cast<Instruction>(NAME # _r) ADDR:$addr, t.Ty:$b, (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this))>;
+  (!cast<Instruction>(NAME # _r) ADDR:$addr, t.Ty:$b, (XForm.GetSem $this),
+    (XForm.GetScope $this), (XForm.GetAddSp $this),
+    (XForm.GetEvictionAndPrefetchHint $this),
+    (XForm.GetCachePolicy $this))>;
 
   if t.SupportsImm then
     def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b)),
-      (!cast<Instruction>(NAME # _i) ADDR:$addr, (t.Ty t.ImmNode:$b), (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this))>;
+      (!cast<Instruction>(NAME # _i) ADDR:$addr, (t.Ty t.ImmNode:$b),
+        (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this),
+        (XForm.GetEvictionAndPrefetchHint $this),
+        (XForm.GetCachePolicy $this))>;
 }
 
 multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode atomic> {
@@ -2764,29 +3034,29 @@ multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode a
 defm atomic_load_fadd  : binary_atomic_op_fp<atomic_load_fadd>;
 
 // atom_add
-defm INT_PTX_ATOM_ADD_32 : F_ATOMIC_2<I32RT, atomic_load_add_i32, "add.u32", atomic_load_add>;
-defm INT_PTX_ATOM_ADD_64 : F_ATOMIC_2<I64RT, atomic_load_add_i64, "add.u64", atomic_load_add>;
+defm INT_PTX_ATOM_ADD_32 : F_ATOMIC_2<I32RT, atomic_load_add_i32, "add", "u32", atomic_load_add>;
+defm INT_PTX_ATOM_ADD_64 : F_ATOMIC_2<I64RT, atomic_load_add_i64, "add", "u64", atomic_load_add>;
 
-defm INT_PTX_ATOM_ADD_F16  : F_ATOMIC_2<F16RT, atomic_load_fadd, "add.noftz.f16", atomic_load_fadd, [SM70, PTX63]>;
-defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, "add.noftz.bf16", atomic_load_fadd, [SM90]>;
-defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2<F32RT, atomic_load_fadd, "add.f32", atomic_load_fadd>;
-defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2<F64RT, atomic_load_fadd, "add.f64", atomic_load_fadd, [hasAtomAddF64]>;
+defm INT_PTX_ATOM_ADD_F16  : F_ATOMIC_2<F16RT, atomic_load_fadd, "add.noftz", "f16", atomic_load_fadd, [SM70, PTX63]>;
+defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, "add.noftz", "bf16", atomic_load_fadd, [SM90]>;
+defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2<F32RT, atomic_load_fadd, "add", "f32", atomic_load_fadd>;
+defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2<F64RT, atomic_load_fadd, "add", "f64", atomic_load_fadd, [hasAtomAddF64]>;
 
 // atom_swap
-defm INT_PTX_ATOM_SWAP_32 : F_ATOMIC_2<I32RT, atomic_swap_i32, "exch.b32", atomic_swap>;
-defm INT_PTX_ATOM_SWAP_64 : F_ATOMIC_2<I64RT, atomic_swap_i64, "exch.b64", atomic_swap>;
+defm INT_PTX_ATOM_SWAP_32 : F_ATOMIC_2<I32RT, atomic_swap_i32, "exch", "b32", atomic_swap>;
+defm INT_PTX_ATOM_SWAP_64 : F_ATOMIC_2<I64RT, atomic_swap_i64, "exch", "b64", atomic_swap>;
 
 // atom_max
-defm INT_PTX_ATOMIC_MAX_32 : F_ATOMIC_2<I32RT, atomic_load_max_i32, "max.s32", atomic_load_max>;
-defm INT_PTX_ATOMIC_MAX_64 : F_ATOMIC_2<I64RT, atomic_load_max_i64, "max.s64", atomic_load_max, [SM32]>;
-defm INT_PTX_ATOMIC_UMAX_32 : F_ATOMIC_2<I32RT, atomic_load_umax_i32, "max.u32", atomic_load_umax>;
-defm INT_PTX_ATOMIC_UMAX_64 : F_ATOMIC_2<I64RT, atomic_load_umax_i64, "max.u64", atomic_load_umax, [SM32]>;
+defm INT_PTX_ATOMIC_MAX_32 : F_ATOMIC_2<I32RT, atomic_load_max_i32, "max", "s32", atomic_load_max>;
+defm INT_PTX_ATOMIC_MAX_64 : F_ATOMIC_2<I64RT, atomic_load_max_i64, "max", "s64", atomic_load_max, [SM32]>;
+defm INT_PTX_ATOMIC_UMAX_32 : F_ATOMIC_2<I32RT, atomic_load_umax_i32, "max", "u32", atomic_load_umax>;
+defm INT_PTX_ATOMIC_UMAX_64 : F_ATOMIC_2<I64RT, atomic_load_umax_i64, "max", "u64", atomic_load_umax, [SM32]>;
 
 // atom_min
-defm INT_PTX_ATOMIC_MIN_32 : F_ATOMIC_2<I32RT, atomic_load_min_i32, "min.s32", atomic_load_min>;
-defm INT_PTX_ATOMIC_MIN_64 : F_ATOMIC_2<I64RT, atomic_load_min_i64, "min.s64", atomic_load_min, [SM32]>;
-defm INT_PTX_ATOMIC_UMIN_32 : F_ATOMIC_2<I32RT, atomic_load_umin_i32, "min.u32", atomic_load_umin>;
-defm INT_PTX_ATOMIC_UMIN_64 : F_ATOMIC_2<I64RT, atomic_load_umin_i64, "min.u64", atomic_load_umin, [SM32]>;
+defm INT_PTX_ATOMIC_MIN_32 : F_ATOMIC_2<I32RT, atomic_load_min_i32, "min", "s32", atomic_load_min>;
+defm INT_PTX_ATOMIC_MIN_64 : F_ATOMIC_2<I64RT, atomic_load_min_i64, "min", "s64", atomic_load_min, [SM32]>;
+defm INT_PTX_ATOMIC_UMIN_32 : F_ATOMIC_2<I32RT, atomic_load_umin_i32, "min", "u32", atomic_load_umin>;
+defm INT_PTX_ATOMIC_UMIN_64 : F_ATOMIC_2<I64RT, atomic_load_umin_i64, "min", "u64", atomic_load_umin, [SM32]>;
 
 // NOTE: The semantics for atomicrmw fmin (and fmax) upholds LangRef
 // requirements.  The LangRef requires the semantics of fmin/fmax to follow
@@ -2799,20 +3069,20 @@ defm INT_PTX_ATOMIC_UMIN_64 : F_ATOMIC_2<I64RT, atomic_load_umin_i64, "min.u64",
 // [3] https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#half-precision-floating-point-instructions-min
 
 // atom_inc  atom_dec
-defm INT_PTX_ATOM_INC_32 : F_ATOMIC_2<I32RT, atomic_load_uinc_wrap_i32, "inc.u32", atomic_load_uinc_wrap>;
-defm INT_PTX_ATOM_DEC_32 : F_ATOMIC_2<I32RT, atomic_load_udec_wrap_i32, "dec.u32", atomic_load_udec_wrap>;
+defm INT_PTX_ATOM_INC_32 : F_ATOMIC_2<I32RT, atomic_load_uinc_wrap_i32, "inc", "u32", atomic_load_uinc_wrap>;
+defm INT_PTX_ATOM_DEC_32 : F_ATOMIC_2<I32RT, atomic_load_udec_wrap_i32, "dec", "u32", atomic_load_udec_wrap>;
 
 // atom_and
-defm INT_PTX_ATOM_AND_32 : F_ATOMIC_2<I32RT, atomic_load_and_i32, "and.b32", atomic_load_and>;
-defm INT_PTX_ATOM_AND_64 : F_ATOMIC_2<I64RT, atomic_load_and_i64, "and.b64", atomic_load_and, [SM32]>;
+defm INT_PTX_ATOM_AND_32 : F_ATOMIC_2<I32RT, atomic_load_and_i32, "and", "b32", atomic_load_and>;
+defm INT_PTX_ATOM_AND_64 : F_ATOMIC_2<I64RT, atomic_load_and_i64, "and", "b64", atomic_load_and, [SM32]>;
 
 // atom_or
-defm INT_PTX_ATOM_OR_32 : F_ATOMIC_2<I32RT, atomic_load_or_i32, "or.b32", atomic_load_or>;
-defm INT_PTX_ATOM_OR_64 : F_ATOMIC_2<I64RT, atomic_load_or_i64, "or.b64", atomic_load_or, [SM32]>;
+defm INT_PTX_ATOM_OR_32 : F_ATOMIC_2<I32RT, atomic_load_or_i32, "or", "b32", atomic_load_or>;
+defm INT_PTX_ATOM_OR_64 : F_ATOMIC_2<I64RT, atomic_load_or_i64, "or", "b64", atomic_load_or, [SM32]>;
 
 // atom_xor
-defm INT_PTX_ATOM_XOR_32 : F_ATOMIC_2<I32RT, atomic_load_xor_i32, "xor.b32", atomic_load_xor>;
-defm INT_PTX_ATOM_XOR_64 : F_ATOMIC_2<I64RT, atomic_load_xor_i64, "xor.b64", atomic_load_xor, [SM32]>;
+defm INT_PTX_ATOM_XOR_32 : F_ATOMIC_2<I32RT, atomic_load_xor_i32, "xor", "b32", atomic_load_xor>;
+defm INT_PTX_ATOM_XOR_64 : F_ATOMIC_2<I64RT, atomic_load_xor_i64, "xor", "b64", atomic_load_xor, [SM32]>;
 
 // Define atom.cas for all combinations of size x addrspace x memory order
 // supported in PTX *and* on the hardware.
@@ -2843,11 +3113,13 @@ let mayLoad = true, mayStore = true, hasSideEffects = true,
     NVPTXInst<
         (outs B64:$dst0, B64:$dst1),
         (ins ADDR:$addr, B64:$amt0, B64:$amt1,
-             AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+             AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+             EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+             CachePolicy:$policy),
         "{{\n\t"
         ".reg .b128 amt, dst;\n\t"
         "mov.b128 amt, {$amt0, $amt1};\n\t"
-        "atom${sem:sem}${scope:scope}${addsp:addsp}.exch.b128 dst, [$addr], amt;\n\t"
+        "atom${sem:sem}${scope:scope}${addsp:addsp}.exch${evictionAndPrefetchHint:l2}.b128 dst, [$addr], amt${policy};\n\t"
         "mov.b128 {$dst0, $dst1}, dst;\n\t"
         "}}">;
 }
