@@ -565,6 +565,28 @@ define i32 @n_var1_oneuse(i32 %arg, i32 %arg1) {
   ret i32 %t4
 }
 
+define i32 @lshr_oneuse_and_multiuse(i32 %arg) {
+; CHECK-LABEL: @lshr_oneuse_and_multiuse(
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[ARG]], 1
+; CHECK-NEXT:    [[DOTLOBIT:%.*]] = and i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[ARG]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    [[T_LOBIT:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[T]])
+; CHECK-NEXT:    call void @use32(i32 [[DOTLOBIT]])
+; CHECK-NEXT:    ret i32 [[T_LOBIT]]
+;
+  %t = and i32 %arg, 5
+  %t3 = icmp eq i32 %t, 0
+  %t4 = lshr i32 %arg, 1
+  %t5 = and i32 %t4, 1
+  %t6 = select i1 %t3, i32 %t5, i32 1
+  call void @use32(i32 %t)
+  call void @use32(i32 %t5)
+  ret i32 %t6
+}
+
 ; Different variables are used
 
 define i32 @n0(i32 %arg, i32 %arg1) {
