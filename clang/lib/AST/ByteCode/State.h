@@ -92,7 +92,10 @@ public:
   ASTContext &getASTContext() const { return Ctx; }
   const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
-  bool shouldRelaxDiag(const SourceLocation &Loc, diag::kind DiagId);
+  /// If \c DiagId should be relaxed as per the current evaluation settings,
+  /// emit it as a warning instead of an error. Returns \c true if a relaxed
+  /// diagnostic was emitted, \c false otherwise.
+  bool emitRelaxedDiag(SourceLocation Loc, diag::kind DiagId);
 
   /// Note that we have had a side-effect, and determine whether we should
   /// keep evaluating.

@@ -44,6 +44,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/ObjCARC.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace llvm::objcarc;
@@ -645,6 +646,10 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
         // Increment UI now, because we may unlink its element.
         Use &U = *UI++;
         unsigned OperandNo = U.getOperandNo();
+
+        if (!canReplaceOperandWithVariable(cast<Instruction>(U.getUser()),
+                                           OperandNo))
+          continue;
 
         // If the call's return value dominates a use of the call's argument
         // value, rewrite the use to use the return value. We check for

@@ -278,7 +278,7 @@ define <8 x double> @sitofp_v8i64_v8f64(<8 x i64> %x) #0 {
 ; NODQ-32-NEXT:    vextractf32x4 $3, %zmm0, %xmm1
 ; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
 ; NODQ-32-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
+; NODQ-32-NEXT:    vmovlps %xmm1, (%esp)
 ; NODQ-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; NODQ-32-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; NODQ-32-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
@@ -292,8 +292,8 @@ define <8 x double> @sitofp_v8i64_v8f64(<8 x i64> %x) #0 {
 ; NODQ-32-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; NODQ-32-NEXT:    fstpl {{[0-9]+}}(%esp)
-; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
-; NODQ-32-NEXT:    fstpl (%esp)
+; NODQ-32-NEXT:    fildll (%esp)
+; NODQ-32-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; NODQ-32-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; NODQ-32-NEXT:    fildll {{[0-9]+}}(%esp)

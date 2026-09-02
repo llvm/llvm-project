@@ -71,6 +71,12 @@ struct FIRToLLVMPassOptions {
   // Conversion pass of the MLIR complex dialect.
   Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =
       Fortran::frontend::CodeGenOptions::ComplexRangeKind::CX_Full;
+
+  // Suffix appended to the libc allocator name (malloc, free, aligned_alloc,
+  // posix_memalign) for allocations marked with a heap allocation mode, e.g.
+  // malloc -> malloc_unified. Lets a runtime name its entry points otherwise.
+  std::string unifiedHeapAllocSuffix = "_unified";
+  std::string managedHeapAllocSuffix = "_managed";
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.

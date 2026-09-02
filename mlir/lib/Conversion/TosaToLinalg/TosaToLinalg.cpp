@@ -291,7 +291,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   // tosa::ArithmeticRightShiftOp
   if (isa<tosa::ArithmeticRightShiftOp>(op) && isa<IntegerType>(elementTy)) {
     auto result = arith::ShRSIOp::create(rewriter, loc, resultTypes, args);
-    auto round = cast<BoolAttr>(op->getAttr("round")).getValue();
+    bool round = cast<tosa::ArithmeticRightShiftOp>(op).getRound();
     if (!round) {
       return result;
     }
@@ -451,8 +451,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   // tosa::ClampOp
   if (isa<tosa::ClampOp>(op) && isa<FloatType>(elementTy)) {
     bool losesInfo = false;
-    APFloat minApf = cast<FloatAttr>(op->getAttr("min_val")).getValue();
-    APFloat maxApf = cast<FloatAttr>(op->getAttr("max_val")).getValue();
+    auto clampOp = cast<tosa::ClampOp>(op);
+    APFloat minApf = cast<FloatAttr>(clampOp.getMinValAttr()).getValue();
+    APFloat maxApf = cast<FloatAttr>(clampOp.getMaxValAttr()).getValue();
     minApf.convert(cast<FloatType>(elementTy).getFloatSemantics(),
                    APFloat::rmNearestTiesToEven, &losesInfo);
     maxApf.convert(cast<FloatType>(elementTy).getFloatSemantics(),
@@ -463,7 +464,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         rewriter, loc, elementTy, rewriter.getFloatAttr(elementTy, maxApf));
     auto result = clampFloatHelper(loc, args[0], min, max, rewriter);
 
-    auto clampOp = llvm::cast<tosa::ClampOp>(op);
     const auto nanMode = clampOp.getNanMode();
 
     // NaN propagation has no meaning for non floating point types.
@@ -495,10 +495,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   if (isa<tosa::ClampOp>(op) && isa<IntegerType>(elementTy)) {
     auto intTy = cast<IntegerType>(elementTy);
+    auto clampOp = cast<tosa::ClampOp>(op);
     int64_t min =
-        cast<IntegerAttr>(op->getAttr("min_val")).getValue().getSExtValue();
+        cast<IntegerAttr>(clampOp.getMinValAttr()).getValue().getSExtValue();
     int64_t max =
-        cast<IntegerAttr>(op->getAttr("max_val")).getValue().getSExtValue();
+        cast<IntegerAttr>(clampOp.getMaxValAttr()).getValue().getSExtValue();
 
     int64_t minRepresentable = std::numeric_limits<int64_t>::min();
     int64_t maxRepresentable = std::numeric_limits<int64_t>::max();

@@ -868,9 +868,7 @@ static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
   // Look through all global variables in the given `body` block and check if
   // there is a spirv.GlobalVariable that has the same `builtin` attribute.
   for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
-    if (auto builtinAttr = varOp->getAttrOfType<StringAttr>(
-            spirv::SPIRVDialect::getAttributeName(
-                spirv::Decoration::BuiltIn))) {
+    if (StringAttr builtinAttr = varOp.getBuiltInAttr()) {
       auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());
       if (varBuiltIn == builtin) {
         return varOp;
@@ -1023,12 +1021,16 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
                                  resultType ? TypeRange(resultType)
                                             : TypeRange()));
 
-    // Copy over all attributes other than the function name and type.
-    for (NamedAttribute namedAttr : funcOp->getAttrs()) {
-      if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
-          namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
-    }
+    newFuncOp.setArgAttrsAttr(funcOp.getArgAttrsAttr());
+    newFuncOp.setResAttrsAttr(funcOp.getResAttrsAttr());
+    cast<SymbolOpInterface>(newFuncOp.getOperation())
+        .setVisibility(
+            cast<SymbolOpInterface>(funcOp.getOperation()).getVisibility());
+
+    // Copy over the discardable attributes.
+    for (NamedAttribute namedAttr :
+         funcOp->getDiscardableAttrDictionary().getValue())
+      newFuncOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
 
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
@@ -1289,11 +1291,13 @@ static void addNoWrapDecorations(Operation *op,
                                  spirv::LinearizedIndexNoWrapFlags flags,
                                  OpBuilder &builder) {
   if (flags.noSignedWrap)
-    op->setAttr(spirv::getDecorationString(spirv::Decoration::NoSignedWrap),
-                builder.getUnitAttr());
+    op->setDiscardableAttr(
+        spirv::getDecorationString(spirv::Decoration::NoSignedWrap),
+        builder.getUnitAttr());
   if (flags.noUnsignedWrap)
-    op->setAttr(spirv::getDecorationString(spirv::Decoration::NoUnsignedWrap),
-                builder.getUnitAttr());
+    op->setDiscardableAttr(
+        spirv::getDecorationString(spirv::Decoration::NoUnsignedWrap),
+        builder.getUnitAttr());
 }
 
 static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
@@ -1314,6 +1318,52 @@ static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
     maxLinearIndex = *nextMaxLinearIndex;
   }
   return maxLinearIndex;
+}
+
+static spirv::ArrayType getStorageBufferArrayType(Value basePtr) {
+  auto pointerType = dyn_cast<spirv::PointerType>(basePtr.getType());
+  if (!pointerType ||
+      pointerType.getStorageClass() != spirv::StorageClass::StorageBuffer)
+    return {};
+
+  Type pointeeType = pointerType.getPointeeType();
+  if (auto structType = dyn_cast<spirv::StructType>(pointeeType)) {
+    if (structType.getNumElements() != 1)
+      return {};
+    pointeeType = structType.getElementType(0);
+  }
+  return dyn_cast<spirv::ArrayType>(pointeeType);
+}
+
+static bool shouldEmitInBoundsAccessChain(MemRefType baseType, Value basePtr,
+                                          ArrayRef<int64_t> strides,
+                                          int64_t offset,
+                                          uint64_t accessElementCount) {
+  std::optional<uint64_t> maxSourceElementIndex =
+      getMaxLinearizedIndex(baseType.getShape(), strides, offset);
+  spirv::ArrayType storageArrayType = getStorageBufferArrayType(basePtr);
+  if (!maxSourceElementIndex || !storageArrayType)
+    return false;
+
+  // Source indices and storage element counts use the same units only when
+  // each source element maps to one SPIR-V array element. An i16 or a narrower
+  // memref source may be stored using a wider SPIR-V array element than that
+  // of the source. Keep a plain access chain so later bitwidth emulation can
+  // adjust the final index in storage-element units.
+  if (baseType.getElementType() != storageArrayType.getElementType())
+    return false;
+
+  uint64_t storageElementCount = storageArrayType.getNumElements();
+  if (accessElementCount == 0 || accessElementCount > storageElementCount)
+    return false;
+
+  // `InBoundsAccessChain` requires the computed pointer to stay within the
+  // SPIR-V base object. Dynamic index validity is assumed from the source
+  // operation/caller contract; for vector accesses, `accessElementCount` only
+  // rejects widths that cannot fit in the fixed StorageBuffer object at all.
+  // The static proof here is that the memref layout's linear index space maps
+  // into that same object.
+  return *maxSourceElementIndex < storageElementCount;
 }
 
 } // namespace
@@ -1431,7 +1481,8 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
 Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
-                                       OpBuilder &builder) {
+                                       OpBuilder &builder,
+                                       uint64_t accessElementCount) {
   // Get base and offset of the MemRefType and verify they are static.
 
   int64_t offset;
@@ -1462,7 +1513,19 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
   // Interface memrefs are wrapped in a struct: index to its first elem.
   if (isa<spirv::StructType>(pointeeType))
     linearizedIndices.insert(linearizedIndices.begin(), zero);
+  if (shouldEmitInBoundsAccessChain(baseType, basePtr, strides, offset,
+                                    accessElementCount))
+    return spirv::InBoundsAccessChainOp::create(builder, loc, basePtr,
+                                                linearizedIndices);
   return spirv::AccessChainOp::create(builder, loc, basePtr, linearizedIndices);
+}
+
+Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
+                                       MemRefType baseType, Value basePtr,
+                                       ValueRange indices, Location loc,
+                                       OpBuilder &builder) {
+  return getVulkanElementPtr(typeConverter, baseType, basePtr, indices, loc,
+                             builder, /*accessElementCount=*/1);
 }
 
 Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
@@ -1506,7 +1569,8 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
 Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
                                  MemRefType baseType, Value basePtr,
                                  ValueRange indices, Location loc,
-                                 OpBuilder &builder) {
+                                 OpBuilder &builder,
+                                 uint64_t accessElementCount) {
 
   if (typeConverter.allows(spirv::Capability::Kernel)) {
     return getOpenCLElementPtr(typeConverter, baseType, basePtr, indices, loc,
@@ -1514,7 +1578,15 @@ Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
   }
 
   return getVulkanElementPtr(typeConverter, baseType, basePtr, indices, loc,
-                             builder);
+                             builder, accessElementCount);
+}
+
+Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
+                                 MemRefType baseType, Value basePtr,
+                                 ValueRange indices, Location loc,
+                                 OpBuilder &builder) {
+  return getElementPtr(typeConverter, baseType, basePtr, indices, loc, builder,
+                       /*accessElementCount=*/1);
 }
 
 //===----------------------------------------------------------------------===//

@@ -96,11 +96,19 @@ MVT SPIRVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   // This code avoids CallLowering fail inside getVectorTypeBreakdown
   // on v3i1 arguments. Maybe we need to return i32 for all types.
   // TODO: remove it once this case is supported by the default implementation.
-  if (VT.isVector() && VT.getVectorNumElements() == 3) {
-    if (VT.getVectorElementType() == MVT::i1)
-      return MVT::v4i1;
-    else if (VT.getVectorElementType() == MVT::i8)
-      return MVT::v4i8;
+  if (VT.isVector()) {
+    if (VT.getVectorNumElements() == 3) {
+      if (VT.getVectorElementType() == MVT::i1)
+        return MVT::v4i1;
+      else if (VT.getVectorElementType() == MVT::i8)
+        return MVT::v4i8;
+    } else if (!isPowerOf2_32(VT.getVectorNumElements()) &&
+               STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)) {
+      // Non POT element counts are not yet supported by GISEL.
+      return MVT::getVectorVT(
+          VT.getVectorElementType().getSimpleVT(),
+          ElementCount::getFixed(VT.getVectorNumElements()));
+    }
   }
   return getRegisterType(Context, VT);
 }
@@ -325,7 +333,7 @@ static void validatePtrUnwrapStructField(const SPIRVSubtarget &STI,
   if (!MemberType)
     return;
   unsigned MemberTypeOp = MemberType->getOpcode();
-  if (MemberTypeOp != SPIRV::OpTypeVector && MemberTypeOp != SPIRV::OpTypeInt &&
+  if (!isVectorType(MemberType) && MemberTypeOp != SPIRV::OpTypeInt &&
       MemberTypeOp != SPIRV::OpTypeFloat && MemberTypeOp != SPIRV::OpTypeBool)
     return;
   // It's a structure-wrapper around a valid type. Insert a bitcast before the
@@ -424,6 +432,94 @@ void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
   }
 }
 
+static void validateVec1Ops(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
+                            SPIRVGlobalRegistry &GR, MachineInstr &MI) {
+  // IRTranslator does not believe that rank-1 vectors exist, unlike upstream
+  // LLVM which happily creates <1 x T> vectors. This leads to operations over
+  // <1 x T> vectors getting translated as their scalar counterparts, which is
+  // wrong if we used SPV_EXT_long_vector to preserve the actual vector-ness.
+  switch (MI.getOpcode()) {
+  case SPIRV::OpBitwiseAndS:
+  case SPIRV::OpBitwiseOrS:
+  case SPIRV::OpBitwiseXorS:
+  case SPIRV::OpFAddS:
+  case SPIRV::OpFDivS:
+  case SPIRV::OpFMulS:
+  case SPIRV::OpFNegate:
+  case SPIRV::OpFRemS:
+  case SPIRV::OpFSubS:
+  case SPIRV::OpIAddCarryS:
+  case SPIRV::OpIAddS:
+  case SPIRV::OpIMulS:
+  case SPIRV::OpISubBorrowS:
+  case SPIRV::OpISubS:
+  case SPIRV::OpSDivS:
+  case SPIRV::OpSRemS:
+  case SPIRV::OpShiftLeftLogicalS:
+  case SPIRV::OpShiftRightArithmeticS:
+  case SPIRV::OpShiftRightLogicalS:
+  case SPIRV::OpStrictFAddS:
+  case SPIRV::OpStrictFDivS:
+  case SPIRV::OpStrictFMulS:
+  case SPIRV::OpStrictFRemS:
+  case SPIRV::OpStrictFSubS:
+  case SPIRV::OpUDivS:
+  case SPIRV::OpUModS: {
+    SPIRVTypeInst ResTy = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+
+    if (!isVectorType(ResTy))
+      return;
+
+    // Restore original Vec1 type.
+    Register NewResultReg = createVirtualRegister(ResTy, &GR, MRI, *MI.getMF());
+    MRI->replaceRegWith(MI.getOperand(0).getReg(), NewResultReg);
+    // Vector opcodes are always next after scalar (if this ceases to hold we
+    // will have to adapt).
+    MI.setDesc(STI.getInstrInfo()->get(MI.getOpcode() + 1));
+    // IRTranslator would've inserted COPYs from the vector into a scalar, which
+    // are spurious and have to be walked through.
+    for (unsigned I = 2; I != MI.getNumOperands(); ++I) {
+      MachineOperand &Op = MI.getOperand(I);
+      if (!Op.isReg())
+        continue;
+
+      SPIRVTypeInst OpTy = GR.getSPIRVTypeForVReg(Op.getReg());
+      if (OpTy == ResTy)
+        continue;
+
+      MachineInstr *OpDef = getDef(Op, MRI);
+      assert(OpDef &&
+             GR.getSPIRVTypeForVReg(OpDef->getOperand(0).getReg()) == ResTy &&
+             "Expected to find Result Type (Vec1)!");
+      MI.substituteRegister(Op.getReg(), OpDef->getOperand(0).getReg(), 0,
+                            *STI.getRegisterInfo());
+    }
+    break;
+  }
+  case TargetOpcode::COPY: {
+    Register ResVReg = MI.getOperand(0).getReg();
+    SPIRVTypeInst SrcTy = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+    SPIRVTypeInst DstTy = GR.getSPIRVTypeForVReg(ResVReg);
+
+    if (!SrcTy || !DstTy || isVectorType(DstTy) || !isVectorType(SrcTy))
+      return;
+
+    Register ExtractReg = createVirtualRegister(DstTy, &GR, MRI, *MI.getMF());
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+            STI.getInstrInfo()->get(SPIRV::OpCompositeExtract))
+        .addDef(ExtractReg)
+        .addUse(GR.getSPIRVTypeID(DstTy))
+        .addUse(MI.getOperand(1).getReg())
+        .addImm(0);
+    for (auto &&U : MRI->use_instructions(ResVReg))
+      U.substituteRegister(ResVReg, ExtractReg, 0, *STI.getRegisterInfo());
+    break;
+  }
+  default:
+    break;
+  }
+}
+
 // TODO: the logic of inserting additional bitcast's is to be moved
 // to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
@@ -440,6 +536,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
     for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI++;
+      validateVec1Ops(STI, MRI, GR, MI);
       switch (MI.getOpcode()) {
       case SPIRV::OpAtomicLoad:
       case SPIRV::OpAtomicExchange:
@@ -580,7 +677,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
           assert(RetType && "Expected return type");
           validatePtrTypes(
               STI, MRI, GR, MI, MI.getNumOperands() - 1,
-              RetType->getOpcode() != SPIRV::OpTypeVector
+              (!isVectorType(RetType))
                   ? Int32Type
                   : GR.getOrCreateSPIRVVectorType(
                         Int32Type, GR.getScalarOrVectorComponentCount(RetType),

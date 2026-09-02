@@ -10,9 +10,9 @@
 #define MLIR_ANALYSIS_FLATLINEARVALUECONSTRAINTS_H
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include <optional>
 
 namespace mlir {
@@ -20,7 +20,6 @@ namespace mlir {
 class AffineMap;
 class IntegerSet;
 class MLIRContext;
-class Value;
 class MemRefType;
 struct MutableAffineMap;
 
@@ -158,10 +157,15 @@ public:
   ///
   /// By default the returned lower bounds are closed and upper bounds are open.
   /// If `closedUb` is true, the upper bound is closed.
+  ///
+  /// An upper bound built from more than one inequality is the min of them.
+  /// Only a caller that can consume such a bound should ask for it, via
+  /// `allowMultiResultUb`; the rest are given the constant upper bound
+  /// instead, which is weaker but always a single result.
   void getSliceBounds(unsigned offset, unsigned num, MLIRContext *context,
                       SmallVectorImpl<AffineMap> *lbMaps,
-                      SmallVectorImpl<AffineMap> *ubMaps,
-                      bool closedUB = false);
+                      SmallVectorImpl<AffineMap> *ubMaps, bool closedUB = false,
+                      bool allowMultiResultUB = false);
 
   /// Composes an affine map whose dimensions and symbols match one to one with
   /// the dimensions and symbols of this FlatLinearConstraints. The results of

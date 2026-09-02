@@ -93,6 +93,17 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     /// Returns a maximum bitwidth of cir::IntType.
     /// Matches llvm::IntegerType::MAX_INT_BITS (1 << 23).
     static unsigned maxBitwidth() { return (1 << 23); }
+
+    /// The bit-width of this integer type when stored via LLVM-IR. This
+    /// is just sizeof(ty)*CHAR_BIT for all but _BitInt, which is represented as
+    /// widened for layout.
+    unsigned getStorageTypeWidth(const mlir::DataLayout &dataLayout) const;
+
+    /// Like getStorageTypeWidth, this gets the alignment of the type when
+    /// lowered to LLVM-IR for the purposes of ensuring we get layout correct
+    /// for record types (particularly around _BitInt, which has a different
+    /// alignment in LLVM-IR vs the FE).
+    uint64_t getStorageTypeAlignment(const mlir::DataLayout &dataLayout) const;
   }];
   let genVerifyDecl = 1;
 }
@@ -391,6 +402,20 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
 }
 
 //===----------------------------------------------------------------------===//
+// CUDADeviceTextureType
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDADeviceTextureType :
+    CIR_Type<"CUDADeviceTexture", "cuda_texture"> {
+  let summary = "CUDA device texture reference type";
+  let description = [{
+    `!cir.cuda_texture` represents a CUDA built-in texture reference in CIR.
+    The type preserves texture semantics at the CIR level and is lowered to
+    the target device representation during lowering to LLVM IR.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BoolType
 //===----------------------------------------------------------------------===//
 
@@ -624,29 +649,45 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 //===----------------------------------------------------------------------===//
 // RecordMemberKind
 //
-// What a record member holds, for members that do not hold source data.
+// What a record member holds, and whether its extent is a declared one.
 //===----------------------------------------------------------------------===//
 
 def CIR_RecordMemberKind : CIR_I32EnumAttr<
     "RecordMemberKind", "what a record member holds", [
   I32EnumAttrCase<"Data", 0, "data">,
   I32EnumAttrCase<"Pad", 1, "pad">,
-  I32EnumAttrCase<"Empty", 2, "empty">
+  I32EnumAttrCase<"Empty", 2, "empty">,
+  I32EnumAttrCase<"BitField", 3, "bitfield">
 ]> {
   let description = [{
-    Distinguishes a record member that holds source data from one that does
-    not.  `pad` is storage the compiler inserted to place a later member at its
+    `pad` is storage the compiler inserted to place a later member at its
     required offset, and is reusable tail padding when it trails the record.
-    `empty` is storage the source declared that carries no data for argument
-    passing: an unnamed bit-field unit, or a field of a record that is empty for
-    the ABI.  Everything else, including a vtable pointer, a base subobject, and
-    a bit-field unit with a named occupant, is `data`.
 
-    A record is empty for the ABI when no member is `data`, which is vacuously
-    true for a record with no members.  The distinction between `pad` and
-    `empty` is load-bearing beyond that: only `pad` is reusable, so a record
-    whose trailing member is an unnamed bit-field unit keeps that unit in its
-    data size.
+    `data` and `empty` both span something whose extent the source fixed: a
+    field, a vtable pointer, or a base subobject.  They differ only on whether
+    it holds data for argument passing.
+
+    `bitfield` is a bit-field access unit holding at least one named
+    bit-field.  A unit can be narrower than the declared type of the bit-fields
+    it holds, so its extent does not answer what the source declared.  Without
+    it, a unit holding a 32-bit bit-field of `long long` would be
+    indistinguishable from an `unsigned` field, and clang's x86-64 lowering
+    coerces two records that differ only in that to `i64` and `i32`.
+
+    An access unit holding only unnamed bit-fields is `empty`, since it carries
+    no data for argument passing.  A consumer that has to recognize one can:
+    among `empty` members only an access unit occupies bytes, everything else
+    the source declared as empty for the ABI occupies none.
+
+    A union's base subobject is the one exception to all of this: a single
+    member stands in for every variant, and it takes a unit mark as soon as any
+    variant is one, whatever its own storage type came from.
+
+    A record is empty for the ABI when no member is `data` or `bitfield`, which
+    is vacuously true for a record with no members.  The distinction between
+    `pad` and the rest is load-bearing beyond that: only `pad` is reusable, so a
+    record whose trailing member is an unnamed bit-field unit keeps that unit in
+    its data size.
   }];
 
   let genSpecializedAttr = 0;
@@ -700,6 +741,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
         !rec_packed   = !cir.struct<"p1" packed {data !u8i, data !u8i}>
         !rec_pad      = !cir.struct<"p3" {data !u8i, pad !cir.array<!u8i x 3>}>
         !rec_empty    = !cir.struct<"e" {empty !u8i}>
+        !rec_bits     = !cir.struct<"b" {bitfield !u8i, empty !u8i}>
         !recursive    = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
     ```
   }];
@@ -805,8 +847,8 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     bool isSized() const { return isComplete(); }
 
     /// Returns the data size for this struct type.  Tail padding is the
-    /// trailing run of pad members, so interior padding and a trailing empty
-    /// member stay inside the data size.
+    /// trailing run of pad members, so interior padding and a trailing member
+    /// of any other kind stay inside the data size.
     unsigned computeStructDataSize(const mlir::DataLayout &dataLayout) const;
 
   private:
@@ -855,6 +897,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
         !u_anonymous  = !cir.union<{data !s32i, data !u8i}>
         !u_padded     = !cir.union<"U" {data !s32i, data !u8i}, padding = {!u8i}>
         !u_empty      = !cir.union<"U" {empty !u8i}>
+        !u_bits       = !cir.union<"U" {bitfield !u8i, empty !u8i}>
     ```
   }];
 
@@ -1019,7 +1062,8 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
   CIR_UnionType,
-  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType,
+  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceTextureType,
+  CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;
 
