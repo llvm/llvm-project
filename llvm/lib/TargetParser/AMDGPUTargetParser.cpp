@@ -43,6 +43,7 @@ struct GPUInfo {
   StringTable::Offset BaseName; // The canonical device name for a variant.
   uint8_t MaxWavesPerEU;
   uint32_t MaxHWAddressableLocalMemorySize;
+  uint8_t LDSBankCount;
 };
 
 // Per-GPU data for the R600 GPUKinds.
@@ -168,6 +169,10 @@ StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
 Triple::SubArchType llvm::AMDGPU::getSubArch(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->SubArch : Triple::SubArchType::NoSubArch;
+}
+
+Triple::SubArchType llvm::AMDGPU::getSubArchFromGPUName(StringRef CPU) {
+  return getSubArch(parseArchAMDGCN(CPU));
 }
 
 StringRef llvm::AMDGPU::getBaseArchNameAMDGCN(GPUKind AK) {
@@ -430,6 +435,22 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
   return 8;
 }
 
+unsigned AMDGPU::getVGPRAllocGranule(GPUKind AK, bool IsWave32) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  if (Features.test(FEAT_GFX90A_INSTS))
+    return 8;
+  if (Features.test(FEAT_1536_PHYSICAL_VGPRS))
+    return IsWave32 ? 24 : 12;
+  if (Features.test(FEAT_GFX10_3_INSTS))
+    return IsWave32 ? 16 : 8;
+  return IsWave32 ? 8 : 4;
+}
+
+unsigned AMDGPU::getVGPRAllocGranule(Triple::SubArchType SubArch,
+                                     bool IsWave32) {
+  return getVGPRAllocGranule(getGPUKindFromSubArch(SubArch), IsWave32);
+}
+
 unsigned AMDGPU::getMaxHWAddressableLocalMemorySize(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->MaxHWAddressableLocalMemorySize : 32768;
@@ -438,6 +459,15 @@ unsigned AMDGPU::getMaxHWAddressableLocalMemorySize(GPUKind AK) {
 unsigned
 AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch) {
   return getMaxHWAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch));
+}
+
+unsigned AMDGPU::getLDSBankCount(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->LDSBankCount : 32;
+}
+
+unsigned AMDGPU::getLDSBankCount(Triple::SubArchType SubArch) {
+  return getLDSBankCount(getGPUKindFromSubArch(SubArch));
 }
 
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
