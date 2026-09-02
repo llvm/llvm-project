@@ -16,7 +16,8 @@ important so that stores in earlier blocks are not dead.
 
 The generated module contains one scalar-memory function, @test, plus a
 small lli-compatible harness. The RUN lines exercise the unoptimized input,
-mem2reg, and loop-vectorize pipelines. The vectorized RUN line checks that
+mem2reg, the mem2reg vectorizer pipeline, and the test-only fake-privatize
+input-preparation vectorizer pipeline. The vectorized RUN lines check that
 @test contains a vector loop.
 """
 
@@ -280,6 +281,10 @@ def emit_header(
             "; RUN: opt -S -p=mem2reg,loop-vectorize "
             "-force-vector-width=4 -force-vector-interleave=1 %s | FileCheck %s",
             "; RUN: opt -p=mem2reg,loop-vectorize "
+            "-force-vector-width=4 -force-vector-interleave=1 %s | lli -",
+            "; RUN: opt -S -p=fake-privatize,loop-vectorize "
+            "-force-vector-width=4 -force-vector-interleave=1 %s | FileCheck %s",
+            "; RUN: opt -p=fake-privatize,loop-vectorize "
             "-force-vector-width=4 -force-vector-interleave=1 %s | lli -",
             "; CHECK-LABEL: define void @test(",
             "; CHECK: vector.body:",
