@@ -2,10 +2,10 @@
 Test lldb-dap variables/stackTrace request for optimized code
 """
 
-from lldbsuite.test.decorators import skipIfAsan, skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
 class TestDAP_optimized(DAPTestCaseBase):
@@ -32,6 +32,7 @@ class TestDAP_optimized(DAPTestCaseBase):
 
     @skipIfAsan  # On ASAN builds this test intermittently fails https://github.com/llvm/llvm-project/issues/111061
     @skipIfWindows
+    @skipIfWasm  # an optimized out variable keeps a reused local, so reading it succeeds
     def test_optimized_variable(self):
         """Test optimized variable value contains error."""
         program = self.getBuildArtifact("a.out")

@@ -707,8 +707,8 @@ protected:
         new_plan_sp = thread->QueueThreadPlanForStepInRange(
             abort_other_plans, range,
             frame->GetSymbolContext(eSymbolContextEverything),
-            m_options.m_step_in_target.c_str(), stop_other_threads,
-            new_plan_status, m_options.m_step_in_avoid_no_debug,
+            m_options.m_step_in_target, stop_other_threads, new_plan_status,
+            m_options.m_step_in_avoid_no_debug,
             m_options.m_step_out_avoid_no_debug);
 
         if (new_plan_sp && !m_options.m_avoid_regexp.empty()) {

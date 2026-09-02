@@ -637,6 +637,69 @@ def testExtDialectWithRegion():
             print(e)
 
 
+# CHECK: TEST: testIsIsolatedFromAboveTrait
+@run
+def testIsIsolatedFromAboveTrait():
+    class TestIsolated(Dialect, name="ext_isolated"):
+        pass
+
+    class UseOp(TestIsolated.Operation, name="use"):
+        value: Operand[Any]
+
+    class NotIsolatedOp(
+        TestIsolated.Operation, name="not_isolated", traits=[NoTerminatorTrait]
+    ):
+        body: Region
+
+    class IsolatedOp(
+        TestIsolated.Operation,
+        name="isolated",
+        traits=[NoTerminatorTrait, IsIsolatedFromAboveTrait],
+    ):
+        body: Region
+
+    with Context(), Location.unknown():
+        TestIsolated.load()
+
+        # CHECK: not isolated has trait: False
+        print(
+            "not isolated has trait:",
+            NotIsolatedOp.has_trait(IsIsolatedFromAboveTrait),
+        )
+        # CHECK: isolated has trait: True
+        print("isolated has trait:", IsolatedOp.has_trait(IsIsolatedFromAboveTrait))
+
+        not_isolated_module = Module.create()
+        with InsertionPoint(not_isolated_module.body):
+            i32 = IntegerType.get_signless(32)
+            value = arith.constant(i32, 0)
+            not_isolated = NotIsolatedOp()
+            not_isolated.body.blocks.append()
+            with InsertionPoint(not_isolated.body.blocks[0]):
+                UseOp(value)
+
+        assert not_isolated_module.operation.verify()
+        # CHECK: not isolated: verification succeeded
+        print("not isolated: verification succeeded")
+
+        isolated_module = Module.create()
+        with InsertionPoint(isolated_module.body):
+            value = arith.constant(i32, 0)
+            isolated = IsolatedOp()
+            isolated.body.blocks.append()
+            with InsertionPoint(isolated.body.blocks[0]):
+                UseOp(value)
+
+        try:
+            isolated_module.operation.verify()
+        except MLIRError as e:
+            # CHECK: isolated: Verification failed:
+            # CHECK: using value defined outside the region
+            print("isolated:", e)
+        else:
+            raise AssertionError("expected IsIsolatedFromAbove verification to fail")
+
+
 # CHECK: TEST: testExtDialectWithType
 @run
 def testExtDialectWithType():
@@ -924,8 +987,8 @@ def testExtDialectWithInterfaces():
 
     class NoMemoryEffectModel(ir.MemoryEffectsOpInterface):
         @staticmethod
-        def get_effects(op, effects):
-            pass
+        def get_effects(op):
+            return []
 
     class AlwaysSpeculatableModel(ir.ConditionallySpeculatable):
         @staticmethod
@@ -972,6 +1035,67 @@ def testExtDialectWithInterfaces():
             print("static spec query error:", e)
 
 
+# CHECK: TEST: testExtDialectWithPublicInterfaces
+@run
+def testExtDialectWithPublicInterfaces():
+    class TestPublicIface(Dialect, name="ext_public_iface"):
+        pass
+
+    class NoEffectOp(
+        TestPublicIface.Operation, name="no_effect", traits=[NoMemoryEffect]
+    ):
+        pass
+
+    class AlwaysSpeculatableOp(
+        TestPublicIface.Operation,
+        name="always_speculatable",
+        traits=[AlwaysSpeculatable],
+    ):
+        pass
+
+    class RecursivelySpeculatableOp(
+        TestPublicIface.Operation,
+        name="recursively_speculatable",
+        traits=[NoTerminatorTrait, RecursivelySpeculatable],
+    ):
+        body: Region
+
+    with Context(), Location.unknown():
+        TestPublicIface.load()
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            no_effect = NoEffectOp()
+            always_speculatable = AlwaysSpeculatableOp()
+            recursively_speculatable = RecursivelySpeculatableOp()
+            recursively_speculatable.body.blocks.append()
+            with InsertionPoint(recursively_speculatable.body.blocks[0]):
+                AlwaysSpeculatableOp()
+
+        assert module.operation.verify()
+
+        no_effect_iface = ir.MemoryEffectsOpInterface(no_effect)
+        always_speculatable_iface = ir.ConditionallySpeculatable(always_speculatable)
+        recursively_speculatable_iface = ir.ConditionallySpeculatable(
+            recursively_speculatable
+        )
+
+        # CHECK: public no memory effects: 0
+        print("public no memory effects:", len(no_effect_iface.get_effects()))
+        # CHECK: public always speculatable: True
+        print(
+            "public always speculatable:",
+            always_speculatable_iface.getSpeculatability()
+            == ir.Speculatability.Speculatable,
+        )
+        # CHECK: public recursively speculatable: True
+        print(
+            "public recursively speculatable:",
+            recursively_speculatable_iface.getSpeculatability()
+            == ir.Speculatability.RecursivelySpeculatable,
+        )
+
+
 # CHECK: TEST: testExtDialectWithPure
 @run
 def testExtDialectWithPure():
@@ -1015,6 +1139,16 @@ def testExtDialectWithPure():
         # CHECK:   %[[NP:.*]] = "ext_pure.no_pure"(%[[P0]], %[[P1]]) : (i32, i32) -> i32
         # CHECK: }
         print(module)
+
+        pure_memory_iface = ir.MemoryEffectsOpInterface(p1)
+        pure_spec_iface = ir.ConditionallySpeculatable(p1)
+        # CHECK: pure memory effects: 0
+        print("pure memory effects:", len(pure_memory_iface.get_effects()))
+        # CHECK: pure speculatable: True
+        print(
+            "pure speculatable:",
+            pure_spec_iface.getSpeculatability() == ir.Speculatability.Speculatable,
+        )
 
         patterns = RewritePatternSet()
         apply_patterns_and_fold_greedily(module, patterns.freeze())

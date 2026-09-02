@@ -208,9 +208,9 @@ void check_dowhile1() {
 // CHECK-NEXT:   Succs (2): B4 B1
 
 // CHECK:       [B3]
-// CHECK-NEXT:   1: j
-// CHECK-NEXT:   2: 2
-// CHECK-NEXT:   3: [B3.1] += [B3.2]
+// CHECK-NEXT:   1: 2
+// CHECK-NEXT:   2: j
+// CHECK-NEXT:   3: [B3.2] += [B3.1]
 // CHECK-NEXT:   Preds (2): B4 B5
 // CHECK-NEXT:   Succs (1): B2
 

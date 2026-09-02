@@ -896,8 +896,8 @@ class GroupBuiltin<string name, Op operation> {
 def GroupBuiltins : GenericTable {
   let FilterClass = "GroupBuiltin";
   let Fields = ["Name", "Opcode", "GroupOperation", "IsElect", "IsAllOrAny",
-                "IsAllEqual", "IsBallot", "IsInverseBallot", "IsBallotBitExtract",
-                "IsBallotFindBit", "IsLogical", "NoGroupOperation", "HasBoolArg"];
+                "IsAllEqual", "IsInverseBallot", "IsBallotBitExtract",
+                "IsLogical", "NoGroupOperation", "HasBoolArg"];
 }
 
 // Function to lookup group builtins by their name and set.
@@ -1764,7 +1764,7 @@ foreach i = ["", "2", "3", "4", "8", "16"] in {
   }
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload", i), 2, 2, 171>;
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vstore", i), 3, 3, 172>;
-  defm : DemangledVectorLoadStoreBuiltin<!strconcat("vloada_half", i), 2, 2, 174>;
+  defm : DemangledVectorLoadStoreBuiltin<!strconcat("vloada_half", i), 2, 2, 179>;
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vstorea_half", i), 3, 3, 180>;
 
   // Also create records for each rounding mode.

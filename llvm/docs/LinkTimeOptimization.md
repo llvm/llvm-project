@@ -1,8 +1,5 @@
 # LLVM Link Time Optimization: Design and Implementation
 
-```{contents}
-:local:
-```
 
 ## Description
 

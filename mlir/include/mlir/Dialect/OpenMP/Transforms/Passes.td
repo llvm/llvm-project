@@ -11,6 +11,12 @@
 
 include "mlir/Pass/PassBase.td"
 
+def FunctionFilteringPass : Pass<"omp-function-filter"> {
+  let summary = "Filters out functions intended for the host when compiling "
+                "for an OpenMP target device.";
+  let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
 def HostOpFilteringPass : Pass<"omp-host-op-filter"> {
   let summary = "Removes all non target-related ops from host functions.";
   let description = [{
@@ -42,8 +48,10 @@ def MarkDeclareTargetPass : Pass<"omp-mark-declare-target", "ModuleOp"> {
     Marks functions contained within the module as declare target if they are
     called from within an explicitly marked declare target function or a target
     region (omp.target).
+
+    Also, mark transitively reached functions through recipe ops (e.g.
+    omp.private) and other function calls.
     }];
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
 def PrepareForOMPOffloadPrivatizationPass : Pass<"omp-offload-privatization-prepare", "ModuleOp"> {

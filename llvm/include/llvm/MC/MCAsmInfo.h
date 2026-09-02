@@ -27,6 +27,7 @@
 
 namespace llvm {
 
+template <typename, unsigned> class EnumStrings;
 class MCAssembler;
 class MCContext;
 class MCCFIInstruction;
@@ -73,12 +74,8 @@ public:
                             /// quote, e.g., `'A`.
   };
 
-  // This describes a @ style relocation specifier (expr@specifier) supported by
-  // AsmParser::parsePrimaryExpr.
-  struct AtSpecifier {
-    uint32_t Kind;
-    StringRef Name;
-  };
+  /// Type for at specifiers. Currently, 16 bits is enough.
+  using AtSpecifierKind = uint16_t;
 
 protected:
   //===------------------------------------------------------------------===//
@@ -431,9 +428,11 @@ protected:
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
 
-  llvm::DenseMap<uint32_t, StringRef> AtSpecifierToName;
-  llvm::StringMap<uint32_t> NameToAtSpecifier;
-  void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
+  // This describes a @ style relocation specifier (expr@specifier) supported by
+  // AsmParser::parsePrimaryExpr.
+  llvm::DenseMap<AtSpecifierKind, StringRef> AtSpecifierToName;
+  llvm::StringMap<AtSpecifierKind> NameToAtSpecifier;
+  void initializeAtSpecifiers(EnumStrings<AtSpecifierKind, 1>);
 
   // Lowercase identifiers (e.g. register names, dialect keywords) that must be
   // quoted when used as a symbol name.

@@ -52,7 +52,6 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
   mutable unsigned Emitted : 1;
 
   friend class MCContext;
-  friend class MCAsmInfoGOFF;
   friend class MCSymbolGOFF;
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
@@ -124,6 +123,9 @@ public:
   }
 
   bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
+
+  bool isEmitted() const { return Emitted; }
+  void setEmitted() const { Emitted = true; }
 
   void setName(StringRef SectionName) { Name = SectionName; }
 

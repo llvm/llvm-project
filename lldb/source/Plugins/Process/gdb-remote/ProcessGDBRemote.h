@@ -11,6 +11,7 @@
 
 #include <atomic>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -28,6 +29,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/GDBRemote.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractor.h"
@@ -39,7 +41,6 @@
 #include "GDBRemoteRegisterContext.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -137,8 +138,8 @@ public:
   void WillPublicStop() override;
 
   // Process Memory
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      Status &error) override;
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override;
 
   /// Override of DoReadMemoryRanges that uses MultiMemRead to perform this
   /// operation in a single packet.
@@ -559,19 +560,9 @@ private:
   void ParseExpeditedRegisters(ExpeditedRegisterMap &expedited_register_map,
                                lldb::ThreadSP thread_sp);
 
-  // Lists of register fields generated from the remote's target XML.
-  // Pointers to these RegisterFlags will be set in the register info passed
-  // back to the upper levels of lldb. Doing so is safe because this class will
-  // live at least as long as the debug session. We therefore do not store the
-  // data directly in the map because the map may reallocate it's storage as new
-  // entries are added. Which would invalidate any pointers set in the register
-  // info up to that point.
-  llvm::StringMap<std::unique_ptr<RegisterFlags>> m_registers_flags_types;
-
-  // Enum types are referenced by register fields. This does not store the data
-  // directly because the map may reallocate. Pointers to these are contained
-  // within instances of RegisterFlags.
-  llvm::StringMap<std::unique_ptr<FieldEnum>> m_registers_enum_types;
+  // RegisterInfo and nested register types contain non-owning pointers to these
+  // objects. Keep every parsed type alive for the lifetime of this process.
+  std::vector<std::unique_ptr<RegisterType>> m_register_types;
 };
 
 } // namespace process_gdb_remote

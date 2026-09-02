@@ -919,6 +919,10 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     OS << "OPC_CheckImmAllZerosV,\n";
     return 1;
 
+  case Matcher::CheckUndef:
+    OS << "OPC_CheckUndef,\n";
+    return 1;
+
   case Matcher::EmitInteger: {
     const auto *IM = cast<EmitIntegerMatcher>(N);
     int64_t Val = IM->getValue();
@@ -1557,6 +1561,8 @@ static StringRef getOpcodeString(Matcher::KindTy Kind) {
     return "OPC_CheckImmAllOnesV";
   case Matcher::CheckImmAllZerosV:
     return "OPC_CheckImmAllZerosV";
+  case Matcher::CheckUndef:
+    return "OPC_CheckUndef";
   case Matcher::EmitInteger:
     return "OPC_EmitInteger";
   case Matcher::EmitRegister:

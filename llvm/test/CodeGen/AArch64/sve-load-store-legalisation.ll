@@ -2755,3 +2755,135 @@ define <vscale x 4 x i64> @sve_zextload_nxv4i32(ptr %a, ptr %b) {
   %c.zext = sext <vscale x 4 x i32> %c to <vscale x 4 x i64>
   ret <vscale x 4 x i64> %c.zext
 }
+
+define void @sve_masked_load_store_nxv48i8(<vscale x 16 x i1> %mask, ptr %a, ptr %b) {
+; CHECK-LABEL: sve_masked_load_store_nxv48i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    st3b { z0.b - z2.b }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z1, [sp]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    cmpne p2.b, p0/z, z1.b, #0
+; CHECK-NEXT:    cmpne p3.b, p0/z, z2.b, #0
+; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z1.b }, p2/z, [x0]
+; CHECK-NEXT:    ld1b { z2.b }, p3/z, [x0, #2, mul vl]
+; CHECK-NEXT:    st1b { z0.b }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1b { z1.b }, p2, [x1]
+; CHECK-NEXT:    st1b { z2.b }, p3, [x1, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 48 x i1> @llvm.vector.interleave3.nxv48i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  %value = call <vscale x 48 x i8> @llvm.masked.load.nxv48i8(ptr %a, i32 1, <vscale x 48 x i1> %interleaved.mask, <vscale x 48 x i8> poison)
+  call void @llvm.masked.store.nxv48i8.p0(<vscale x 48 x i8> %value, ptr %b, i32 1, <vscale x 48 x i1> %interleaved.mask)
+  ret void
+}
+
+define void @sve_masked_load_store_nxv24i16(<vscale x 8 x i1> %mask, ptr %a, ptr %b) {
+; CHECK-LABEL: sve_masked_load_store_nxv24i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    st3h { z0.h - z2.h }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z1, [sp]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    cmpne p2.h, p0/z, z1.h, #0
+; CHECK-NEXT:    cmpne p3.h, p0/z, z2.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1h { z1.h }, p2/z, [x0]
+; CHECK-NEXT:    ld1h { z2.h }, p3/z, [x0, #2, mul vl]
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1h { z1.h }, p2, [x1]
+; CHECK-NEXT:    st1h { z2.h }, p3, [x1, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 24 x i1> @llvm.vector.interleave3.nxv24i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
+  %value = call <vscale x 24 x i16> @llvm.masked.load.nxv24i16(ptr %a, i32 2, <vscale x 24 x i1> %interleaved.mask, <vscale x 24 x i16> poison)
+  call void @llvm.masked.store.nxv24i16.p0(<vscale x 24 x i16> %value, ptr %b, i32 2, <vscale x 24 x i1> %interleaved.mask)
+  ret void
+}
+
+define void @sve_masked_load_store_nxv12i32(<vscale x 4 x i1> %mask, ptr %a, ptr %b) {
+; CHECK-LABEL: sve_masked_load_store_nxv12i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    st3w { z0.s - z2.s }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z1, [sp]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    cmpne p2.s, p0/z, z1.s, #0
+; CHECK-NEXT:    cmpne p3.s, p0/z, z2.s, #0
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x0]
+; CHECK-NEXT:    ld1w { z2.s }, p3/z, [x0, #2, mul vl]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1w { z1.s }, p2, [x1]
+; CHECK-NEXT:    st1w { z2.s }, p3, [x1, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 12 x i1> @llvm.vector.interleave3.nxv12i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
+  %value = call <vscale x 12 x i32> @llvm.masked.load.nxv12i32(ptr %a, i32 4, <vscale x 12 x i1> %interleaved.mask, <vscale x 12 x i32> poison)
+  call void @llvm.masked.store.nxv12i32.p0(<vscale x 12 x i32> %value, ptr %b, i32 4, <vscale x 12 x i1> %interleaved.mask)
+  ret void
+}
+
+define void @sve_masked_load_store_nxv6i64(<vscale x 2 x i1> %mask, ptr %a, ptr %b) {
+; CHECK-LABEL: sve_masked_load_store_nxv6i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z1, [sp]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    cmpne p2.d, p0/z, z1.d, #0
+; CHECK-NEXT:    cmpne p3.d, p0/z, z2.d, #0
+; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1d { z1.d }, p2/z, [x0]
+; CHECK-NEXT:    ld1d { z2.d }, p3/z, [x0, #2, mul vl]
+; CHECK-NEXT:    st1d { z0.d }, p1, [x1, #1, mul vl]
+; CHECK-NEXT:    st1d { z1.d }, p2, [x1]
+; CHECK-NEXT:    st1d { z2.d }, p3, [x1, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 6 x i1> @llvm.vector.interleave3.nxv6i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
+  %value = call <vscale x 6 x i64> @llvm.masked.load.nxv6i64(ptr %a, i32 8, <vscale x 6 x i1> %interleaved.mask, <vscale x 6 x i64> poison)
+  call void @llvm.masked.store.nxv6i64.p0(<vscale x 6 x i64> %value, ptr %b, i32 8, <vscale x 6 x i1> %interleaved.mask)
+  ret void
+}

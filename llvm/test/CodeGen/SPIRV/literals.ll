@@ -12,6 +12,12 @@
 ; CHECK-DAG: OpConstant %[[#F32]] 0x1p+128{{$}}
 ; CHECK-DAG: OpConstant %[[#F32]] -0x1p+128{{$}}
 ; CHECK-DAG: OpConstant %[[#F32]] 0x1.8p+128{{$}}
+; CHECK-DAG: OpConstant %[[#F32]] -0x1.8p+128{{$}}
+; CHECK-DAG: OpConstant %[[#F32]] 0x1.4p+128{{$}}
+; CHECK-DAG: OpConstant %[[#F64]] 0x1p+1024{{$}}
+; CHECK-DAG: OpConstant %[[#F64]] -0x1p+1024{{$}}
+; CHECK-DAG: OpConstant %[[#F64]] 0x1.8p+1024{{$}}
+; CHECK-DAG: OpConstant %[[#F64]] 0x1.0000000000001p+1024{{$}}
 
 define void @main() {
 entry:
@@ -27,5 +33,17 @@ entry:
   store float 0xFFF0000000000000, ptr %ninf, align 4
   %nan = alloca float, align 4
   store float 0x7FF8000000000000, ptr %nan, align 4
+  %nnan = alloca float, align 4
+  store float 0xFFF8000000000000, ptr %nnan, align 4
+  %snan = alloca float, align 4
+  store float 0x7FF4000000000000, ptr %snan, align 4
+  %dinf = alloca double, align 8
+  store double 0x7FF0000000000000, ptr %dinf, align 8
+  %dninf = alloca double, align 8
+  store double 0xFFF0000000000000, ptr %dninf, align 8
+  %dnan = alloca double, align 8
+  store double 0x7FF8000000000000, ptr %dnan, align 8
+  %dsnan = alloca double, align 8
+  store double 0x7FF0000000000001, ptr %dsnan, align 8
   ret void
 }

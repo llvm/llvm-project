@@ -1,22 +1,22 @@
 #include "../CodeGenCUDA/Inputs/cuda.h"
 
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip -fclangir \
+// RUN: %clang_cc1 -triple=amdgpu-amd-amdhsa -x hip -fclangir \
 // RUN:            -Wno-deprecated-declarations \
 // RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR %s --input-file=%t.cir
 
-// RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip -fclangir \
+// RUN: %clang_cc1 -triple=amdgpu-amd-amdhsa -x hip -fclangir \
 // RUN:            -Wno-deprecated-declarations \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM %s --input-file=%t.ll
 
-// RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip \
+// RUN: %clang_cc1 -triple=amdgpu-amd-amdhsa -x hip \
 // RUN:            -Wno-deprecated-declarations \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ogcg.ll
 // RUN: FileCheck --check-prefix=LLVM %s --input-file=%t.ogcg.ll
 
-// RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip -fclangir \
+// RUN: %clang_cc1 -triple=amdgpu-amd-amdhsa -x hip -fclangir \
 // RUN:            -Wno-deprecated-declarations \
 // RUN:            -fcuda-is-device -mamdgpu-expand-waitcnt-profiling \
 // RUN:            -emit-cir %s -o %t.prof.cir

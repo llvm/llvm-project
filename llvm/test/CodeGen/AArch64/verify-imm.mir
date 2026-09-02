@@ -22,6 +22,8 @@
 # CHECK: - instruction: $x0 = DECB_XPiI $x0(tied-def 0), 31, 0
 # CHECK: *** Bad machine code: OPERAND_IMM_UINT4plus1 should be in the range 1 to 16 ***
 # CHECK: - instruction: $x0 = INCW_XPiI $x0(tied-def 0), 31, 17
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT1 should be 0 or 1 ***
+# CHECK: - instruction: $z0 = FADD_ZPZI_S_UNDEF $p0, $z0, 2
 
 ---
 name:            verifyImm
@@ -42,5 +44,6 @@ body:             |
     $p0 = PTRUES_H -1, implicit-def $nzcv, implicit $vg
     $x0 = DECB_XPiI $x0, 31, 0
     $x0 = INCW_XPiI $x0, 31, 17
+    $z0 = FADD_ZPZI_S_UNDEF $p0, $z0, 2
     RET undef $lr, implicit $x0
 ...

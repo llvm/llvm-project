@@ -7,19 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMCAsmInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCValue.h"
 
 using namespace llvm;
 
-const MCAsmInfo::AtSpecifier atSpecifiers[] = {
-    {SystemZ::S_DTPOFF, "DTPOFF"}, {SystemZ::S_GOT, "GOT"},
-    {SystemZ::S_GOTENT, "GOTENT"}, {SystemZ::S_INDNTPOFF, "INDNTPOFF"},
-    {SystemZ::S_NTPOFF, "NTPOFF"}, {SystemZ::S_PLT, "PLT"},
-    {SystemZ::S_TLSGD, "TLSGD"},   {SystemZ::S_TLSLD, "TLSLD"},
-    {SystemZ::S_TLSLDM, "TLSLDM"},
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"DTPOFF"}, SystemZ::S_DTPOFF}, {{"GOT"}, SystemZ::S_GOT},
+    {{"GOTENT"}, SystemZ::S_GOTENT}, {{"INDNTPOFF"}, SystemZ::S_INDNTPOFF},
+    {{"NTPOFF"}, SystemZ::S_NTPOFF}, {{"PLT"}, SystemZ::S_PLT},
+    {{"TLSGD"}, SystemZ::S_TLSGD},   {{"TLSLD"}, SystemZ::S_TLSLD},
+    {{"TLSLDM"}, SystemZ::S_TLSLDM},
 };
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
                                          const MCTargetOptions &Options)

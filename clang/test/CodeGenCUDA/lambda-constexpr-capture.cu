@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -x hip %s -o - -triple x86_64-linux-gnu \
 // RUN:   | FileCheck -check-prefixes=CHECK,HOST %s
-// RUN: %clang_cc1 -emit-llvm -x hip %s -o - -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -emit-llvm -x hip %s -o - -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:   | FileCheck -check-prefixes=CHECK,DEV %s
 
 #include "Inputs/cuda.h"

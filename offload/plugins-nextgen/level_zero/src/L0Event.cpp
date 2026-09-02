@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "L0Event.h"
-#include "L0Device.h"
 #include "L0Trace.h"
 
 namespace llvm::omp::target::plugin {

@@ -84,14 +84,6 @@ LLVM_ABI bool
 wouldInstructionBeTriviallyDead(const Instruction *I,
                                 const TargetLibraryInfo *TLI = nullptr);
 
-/// Return true if the result produced by the instruction has no side effects on
-/// any paths other than where it is used. This is less conservative than
-/// wouldInstructionBeTriviallyDead which is based on the assumption
-/// that the use count will be 0. An example usage of this API is for
-/// identifying instructions that can be sunk down to use(s).
-LLVM_ABI bool wouldInstructionBeTriviallyDeadOnUnusedPaths(
-    Instruction *I, const TargetLibraryInfo *TLI = nullptr);
-
 /// If the specified value is a trivially dead instruction, delete it.
 /// If that makes any of its operands trivially dead, delete them too,
 /// recursively. Return true if any instructions were deleted.
@@ -143,12 +135,6 @@ LLVM_ABI bool RecursivelyDeleteDeadPHINode(
 LLVM_ABI bool
 SimplifyInstructionsInBlock(BasicBlock *BB,
                             const TargetLibraryInfo *TLI = nullptr);
-
-/// Replace all the uses of an SSA value in @llvm.dbg intrinsics with
-/// undef. This is useful for signaling that a variable, e.g. has been
-/// found dead and hence it's unavailable at a given program point.
-/// Returns true if the dbg values have been changed.
-LLVM_ABI bool replaceDbgUsesWithUndef(Instruction *I);
 
 //===----------------------------------------------------------------------===//
 //  Control Flow Graph Restructuring.
@@ -317,17 +303,24 @@ LLVM_ABI bool replaceDbgDeclare(Value *Address, Value *NewAddress,
 LLVM_ABI void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                        DIBuilder &Builder, int Offset = 0);
 
-/// Assuming the instruction \p I is going to be deleted, attempt to salvage
-/// debug users of \p I by writing the effect of \p I in a DIExpression. If it
-/// cannot be salvaged changes its debug uses to undef.
+/// Salvage debug records that use \p I before the instruction is deleted.
+/// Rewrite those uses in terms of its operands where we can, and encode the
+/// instruction's effect in the record's DIExpression. Deleting the instruction
+/// replaces any remaining debug-record uses with poison.
 LLVM_ABI void salvageDebugInfo(Instruction &I);
 
-/// Implementation of salvageDebugInfo, applying only to instructions in
-/// \p Insns, rather than all debug users from findDbgUsers( \p I).
-/// Mark undef if salvaging cannot be completed.
+/// Salvage only the records in \p DbgRecords instead of finding every debug
+/// user of \p I. Every record must be a debug user of the instruction.
+///
+/// Process records in order. For a dbg.assign, salvage a matching address
+/// before its variable location since replacing a variable-location operand
+/// can also replace the address. Stop when a checked variable location cannot
+/// be salvaged. A matching address counts as processed even if salvage leaves
+/// it unchanged. If nothing was processed, call setKillLocation() on every
+/// supplied record.
 LLVM_ABI void
 salvageDebugInfoForDbgValues(Instruction &I,
-                             ArrayRef<DbgVariableRecord *> DPInsns);
+                             ArrayRef<DbgVariableRecord *> DbgRecords);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on
 /// it, append the effects of \p I to the DIExpression operand list
@@ -411,11 +404,14 @@ LLVM_ABI Instruction *removeUnwindEdge(BasicBlock *BB,
                                        DomTreeUpdater *DTU = nullptr);
 
 /// Remove all blocks that can not be reached from the function's entry.
+/// When \p FoldInstsToUnreachable is true, it will also convert obviously
+/// unreachable instructions into unreachable (e.g, store to null).
 ///
-/// Returns true if any basic block was removed.
+/// Returns true if any basic block was removed or any instruction was folded.
 LLVM_ABI bool removeUnreachableBlocks(Function &F,
                                       DomTreeUpdater *DTU = nullptr,
-                                      MemorySSAUpdater *MSSAU = nullptr);
+                                      MemorySSAUpdater *MSSAU = nullptr,
+                                      bool FoldInstsToUnreachable = true);
 
 /// Combine the metadata of two instructions so that K can replace J. This
 /// specifically handles the case of CSE-like transformations. Some

@@ -2,21 +2,21 @@
 // by host code. Variables only used in device code retain internal linkage.
 
 // Non-RDC mode
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -emit-llvm -o - | FileCheck -check-prefix=DEV %s
 
 // RDC mode
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -fgpu-rdc -emit-llvm -o - | FileCheck -check-prefix=RDC %s
 
 // With -fvisibility=hidden
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -fvisibility=hidden -fapply-global-visibility-to-externs \
 // RUN:   -emit-llvm -o - | FileCheck -check-prefix=HIDDEN %s
 
 // Negative test: const device vars NOT referenced by host should not be
 // externalized.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -std=c++17 -emit-llvm -o - | FileCheck -check-prefix=NEG %s
 
 #include "Inputs/cuda.h"

@@ -2,8 +2,6 @@
 TableGen BackEnds
 =================
 
-.. contents::
-   :local:
 
 Introduction
 ============
@@ -446,7 +444,7 @@ Generate ARM NEON tests for clang.
 AttrDocs
 --------
 
-**Purpose**: Creates ``AttributeReference.rst`` from ``AttrDocs.td``, and is
+**Purpose**: Creates ``AttributeReference.md`` from ``AttrDocs.td``, and is
 used for documenting user-facing attributes.
 
 General BackEnds

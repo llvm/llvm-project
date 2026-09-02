@@ -36,7 +36,7 @@ namespace mlir {
 /// class provides accessors to the loop analysis.
 class CFGLoop : public llvm::LoopBase<mlir::Block, mlir::CFGLoop> {
 private:
-  explicit CFGLoop(mlir::Block *block);
+  CFGLoop() = default;
 
   friend class llvm::LoopBase<mlir::Block, CFGLoop>;
   friend class llvm::LoopInfoBase<mlir::Block, CFGLoop>;

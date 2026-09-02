@@ -109,11 +109,6 @@ APInt::APInt(unsigned numBits, ArrayRef<uint64_t> bigVal) : BitWidth(numBits) {
   initFromArray(bigVal);
 }
 
-APInt::APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[])
-    : BitWidth(numBits) {
-  initFromArray(ArrayRef(bigVal, numWords));
-}
-
 APInt::APInt(unsigned numbits, StringRef Str, uint8_t radix)
     : BitWidth(numbits) {
   fromString(numbits, Str, radix);
@@ -827,7 +822,13 @@ APInt APInt::reverseBits() const {
   return Result;
 }
 
-APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
+APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B, bool IsSigned) {
+  // Take absolute value if IsSigned.
+  if (IsSigned) {
+    A = A.abs();
+    B = B.abs();
+  }
+
   // Fast-path a common case.
   if (A == B) return A;
 

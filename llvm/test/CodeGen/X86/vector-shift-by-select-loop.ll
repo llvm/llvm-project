@@ -242,7 +242,6 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; AVX1-NEXT:    cmpl %r9d, %edx
 ; AVX1-NEXT:    jne .LBB0_6
 ; AVX1-NEXT:  .LBB0_9: # %for.cond.cleanup
-; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB0_8: # %for.body

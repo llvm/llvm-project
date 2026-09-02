@@ -11,38 +11,40 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCAsmInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
-const MCAsmInfo::AtSpecifier atSpecifiers[] = {
-    {ARM::S_GOT_PREL, "GOT_PREL"},
-    {ARM::S_ARM_NONE, "none"},
-    {ARM::S_PREL31, "prel31"},
-    {ARM::S_SBREL, "sbrel"},
-    {ARM::S_TARGET1, "target1"},
-    {ARM::S_TARGET2, "target2"},
-    {ARM::S_TLSLDO, "TLSLDO"},
-    {MCSymbolRefExpr::VK_COFF_IMGREL32, "imgrel"},
-    {ARM::S_FUNCDESC, "FUNCDESC"},
-    {ARM::S_GOT, "GOT"},
-    {ARM::S_GOTFUNCDESC, "GOTFUNCDESC"},
-    {ARM::S_GOTOFF, "GOTOFF"},
-    {ARM::S_GOTOFFFUNCDESC, "GOTOFFFUNCDESC"},
-    {ARM::S_GOTTPOFF, "GOTTPOFF"},
-    {ARM::S_GOTTPOFF_FDPIC, "gottpoff_fdpic"},
-    {ARM::S_PLT, "PLT"},
-    {ARM::S_COFF_SECREL, "SECREL32"},
-    {ARM::S_TLSCALL, "tlscall"},
-    {ARM::S_TLSDESC, "tlsdesc"},
-    {ARM::S_TLSGD, "TLSGD"},
-    {ARM::S_TLSGD_FDPIC, "tlsgd_fdpic"},
-    {ARM::S_TLSLDM, "TLSLDM"},
-    {ARM::S_TLSLDM_FDPIC, "tlsldm_fdpic"},
-    {ARM::S_TPOFF, "TPOFF"},
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"GOT_PREL"}, ARM::S_GOT_PREL},
+    {{"none"}, ARM::S_ARM_NONE},
+    {{"prel31"}, ARM::S_PREL31},
+    {{"sbrel"}, ARM::S_SBREL},
+    {{"target1"}, ARM::S_TARGET1},
+    {{"target2"}, ARM::S_TARGET2},
+    {{"TLSLDO"}, ARM::S_TLSLDO},
+    {{"imgrel"}, MCSymbolRefExpr::VK_COFF_IMGREL32},
+    {{"FUNCDESC"}, ARM::S_FUNCDESC},
+    {{"GOT"}, ARM::S_GOT},
+    {{"GOTFUNCDESC"}, ARM::S_GOTFUNCDESC},
+    {{"GOTOFF"}, ARM::S_GOTOFF},
+    {{"GOTOFFFUNCDESC"}, ARM::S_GOTOFFFUNCDESC},
+    {{"GOTTPOFF"}, ARM::S_GOTTPOFF},
+    {{"gottpoff_fdpic"}, ARM::S_GOTTPOFF_FDPIC},
+    {{"PLT"}, ARM::S_PLT},
+    {{"SECREL32"}, ARM::S_COFF_SECREL},
+    {{"tlscall"}, ARM::S_TLSCALL},
+    {{"tlsdesc"}, ARM::S_TLSDESC},
+    {{"TLSGD"}, ARM::S_TLSGD},
+    {{"tlsgd_fdpic"}, ARM::S_TLSGD_FDPIC},
+    {{"TLSLDM"}, ARM::S_TLSLDM},
+    {{"tlsldm_fdpic"}, ARM::S_TLSLDM_FDPIC},
+    {{"TPOFF"}, ARM::S_TPOFF},
 };
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 void ARMMCAsmInfoDarwin::anchor() { }
 

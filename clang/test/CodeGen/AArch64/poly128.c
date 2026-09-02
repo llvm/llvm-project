@@ -14,19 +14,8 @@
 
 #include <arm_neon.h>
 
-// CHECK-LABEL: define {{[^@]+}}@test_vstrq_p128
-// CHECK-SAME: (ptr noundef [[PTR:%.*]], i128 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    store i128 [[VAL]], ptr [[PTR]], align 16
-// CHECK-NEXT:    ret void
-//
-void test_vstrq_p128(poly128_t * ptr, poly128_t val) {
-  vstrq_p128(ptr, val);
-
-}
-
 // CHECK-LABEL: define {{[^@]+}}@test_vldrq_p128
-// CHECK-SAME: (ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (ptr noundef [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr [[PTR]], align 16
 // CHECK-NEXT:    ret i128 [[TMP0]]
