@@ -8,47 +8,183 @@
 
 #include "lldb/Target/Memory.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/State.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/MathExtras.h"
 
+#include <algorithm>
 #include <cinttypes>
 #include <memory>
+#include <utility>
 
 using namespace lldb;
 using namespace lldb_private;
 
+llvm::ArrayRef<uint8_t> LineCache::Lookup(addr_t addr) const {
+  const auto pos = m_lines.find(IndexOf(addr));
+  if (pos == m_lines.end())
+    return {};
+  const addr_t line_offset = addr % m_line_byte_size;
+  return llvm::ArrayRef(pos->second.get(), m_line_byte_size)
+      .drop_front(line_offset);
+}
+
+void LineCache::Insert(addr_t addr, llvm::ArrayRef<uint8_t> src) {
+  assert((addr % m_line_byte_size) == 0 &&
+         "whole line inserted at an unaligned address!");
+  assert(src.size() == m_line_byte_size &&
+         "whole line inserted with a partial buffer!");
+  auto line = std::make_unique<uint8_t[]>(m_line_byte_size);
+  std::copy(src.begin(), src.end(), line.get());
+  m_lines[IndexOf(addr)] = std::move(line);
+}
+
+void LineCache::EraseRange(addr_t addr, addr_t size) {
+  if (size == 0)
+    return;
+  // Clamp a range running past the end of the address space to it.
+  const addr_t end_addr = llvm::SaturatingAdd(addr, size - 1);
+  const uint64_t first_idx = IndexOf(addr);
+  const uint64_t last_idx = IndexOf(end_addr);
+  m_lines.remove_if([first_idx, last_idx](const auto &entry) {
+    return entry.getFirst() >= first_idx && entry.getFirst() <= last_idx;
+  });
+}
+
+ChunkCache::Collection::const_iterator
+ChunkCache::FindChunkContaining(addr_t addr) const {
+  if (m_chunks.empty())
+    return m_chunks.end();
+  Collection::const_iterator pos = m_chunks.upper_bound(addr);
+  if (pos == m_chunks.begin())
+    return m_chunks.end();
+  --pos;
+  // Sum pos->first + size wraps at the top of the address space.
+  return addr - pos->first < pos->second.size() ? pos : m_chunks.end();
+}
+
+llvm::ArrayRef<uint8_t> ChunkCache::Lookup(addr_t addr) const {
+  const Collection::const_iterator pos = FindChunkContaining(addr);
+  if (pos == m_chunks.end())
+    return {};
+  return llvm::ArrayRef(pos->second).drop_front(addr - pos->first);
+}
+
+void ChunkCache::InsertMissing(addr_t addr, llvm::ArrayRef<uint8_t> src) {
+  if (src.empty())
+    return;
+  // The last addressable byte of the range, clamped if it runs past the end of
+  // the address space.
+  const addr_t last_addr = llvm::SaturatingAdd<addr_t>(addr, src.size() - 1);
+  const uint64_t len = last_addr - addr + 1;
+
+  for (uint64_t offset = 0; offset < len;) {
+    const addr_t curr_addr = addr + offset;
+    if (const llvm::ArrayRef<uint8_t> held = Lookup(curr_addr); !held.empty()) {
+      offset += std::min<uint64_t>(held.size(), len - offset);
+      continue;
+    }
+    // Nothing holds curr_addr, so the gap runs to the next chunk or to the end.
+    const Collection::const_iterator next = m_chunks.lower_bound(curr_addr);
+    const uint64_t gap_len =
+        next == m_chunks.end()
+            ? len - offset
+            : std::min<uint64_t>(next->first - curr_addr, len - offset);
+    const llvm::ArrayRef<uint8_t> gap_bytes = src.slice(offset, gap_len);
+    m_chunks[curr_addr].assign(gap_bytes.begin(), gap_bytes.end());
+    offset += gap_len;
+  }
+}
+
+void ChunkCache::EraseRange(addr_t addr, addr_t size) {
+  if (size == 0)
+    return;
+  // Clamp a range running past the end of the address space to it.
+  const addr_t end_addr = llvm::SaturatingAdd(addr, size - 1);
+
+  Collection::iterator pos = m_chunks.lower_bound(addr);
+  // A chunk starting below addr can still reach into the range.
+  if (pos != m_chunks.begin()) {
+    const Collection::iterator prev = std::prev(pos);
+    if (addr - prev->first < prev->second.size())
+      m_chunks.erase(prev);
+  }
+  while (pos != m_chunks.end() && pos->first <= end_addr)
+    pos = m_chunks.erase(pos);
+}
+
 // MemoryCache constructor
 MemoryCache::MemoryCache(Process &process)
-    : m_mutex(), m_L1_cache(), m_L2_cache(), m_invalid_ranges(),
-      m_process(process),
-      m_L2_cache_line_byte_size(process.GetMemoryCacheLineSize()) {}
+    : m_mutex(), m_L1_cache(), m_L2_cache(process.GetMemoryCacheLineSize()),
+      m_invalid_ranges(), m_process(process) {}
 
 // Destructor
 MemoryCache::~MemoryCache() = default;
 
 void MemoryCache::Clear(bool clear_invalid_ranges) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  m_L1_cache.clear();
-  m_L2_cache.clear();
+  m_L1_cache.Clear();
+  m_L2_cache.Clear(m_process.GetMemoryCacheLineSize());
   if (clear_invalid_ranges)
     m_invalid_ranges.Clear();
-  m_L2_cache_line_byte_size = m_process.GetMemoryCacheLineSize();
 }
 
 void MemoryCache::AddCacheData(lldb::addr_t addr, const void *src,
                                size_t src_len) {
-  AddCacheData(addr, std::make_shared<DataBufferHeap>(src, src_len));
+  InsertData(addr, {static_cast<const uint8_t *>(src), src_len});
+}
+
+void MemoryCache::InsertWholeLine(addr_t line_base_addr,
+                                  llvm::ArrayRef<uint8_t> src) {
+  m_L2_cache.Insert(line_base_addr, src);
+  // The new line holds every byte the L1 entries inside it held.
+  m_L1_cache.EraseRange(line_base_addr, src.size());
+}
+
+void MemoryCache::InsertPartialLine(addr_t addr, llvm::ArrayRef<uint8_t> src) {
+  const uint32_t line_size = m_L2_cache.GetLineByteSize();
+  assert(src.size() <= line_size &&
+         addr / line_size == (addr + src.size() - 1) / line_size &&
+         "a partial-line insert must not cross a cache line boundary");
+  // L2 holds only whole lines, so a range inside a resident line is held
+  // already.
+  if (m_L2_cache.Holds(addr))
+    return;
+  m_L1_cache.InsertMissing(addr, src);
+}
+
+void MemoryCache::InsertData(lldb::addr_t addr, llvm::ArrayRef<uint8_t> src) {
+  if (src.empty())
+    return;
+
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  // The last addressable byte of the range, clamped if it runs past the end of
+  // the address space, so no offset added to addr can wrap to 0.
+  const addr_t last_addr = llvm::SaturatingAdd<addr_t>(addr, src.size() - 1);
+  const uint64_t len = last_addr - addr + 1;
+  const uint32_t line_size = m_L2_cache.GetLineByteSize();
+
+  for (uint64_t offset = 0; offset < len;) {
+    const addr_t curr_addr = addr + offset;
+    const uint64_t line_offset = curr_addr % line_size;
+    const uint64_t piece_len =
+        std::min<uint64_t>(line_size - line_offset, len - offset);
+    const llvm::ArrayRef<uint8_t> piece_bytes = src.slice(offset, piece_len);
+    if (line_offset == 0 && piece_len == line_size)
+      InsertWholeLine(curr_addr, piece_bytes);
+    else
+      InsertPartialLine(curr_addr, piece_bytes);
+    offset += piece_len;
+  }
 }
 
 void MemoryCache::AddCacheData(lldb::addr_t addr,
                                const DataBufferSP &data_buffer_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  m_L1_cache[addr] = data_buffer_sp;
+  InsertData(addr, {data_buffer_sp->GetBytes(), data_buffer_sp->GetByteSize()});
 }
 
 void MemoryCache::Flush(addr_t addr, size_t size) {
@@ -57,46 +193,8 @@ void MemoryCache::Flush(addr_t addr, size_t size) {
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  // L1 chunks can overlap, and a chunk starting below addr can still reach
-  // into the flushed range, so scan the whole L1 cache and erase every chunk
-  // that intersects it.
-  if (!m_L1_cache.empty()) {
-    AddrRange flush_range(addr, size);
-    BlockMap::iterator pos = m_L1_cache.begin();
-    while (pos != m_L1_cache.end()) {
-      AddrRange chunk_range(pos->first, pos->second->GetByteSize());
-      if (chunk_range.DoesIntersect(flush_range))
-        pos = m_L1_cache.erase(pos);
-      else
-        ++pos;
-    }
-  }
-
-  if (!m_L2_cache.empty()) {
-    const uint32_t cache_line_byte_size = m_L2_cache_line_byte_size;
-    const addr_t end_addr = (addr + size - 1);
-    const addr_t first_cache_line_addr = addr - (addr % cache_line_byte_size);
-    const addr_t last_cache_line_addr =
-        end_addr - (end_addr % cache_line_byte_size);
-    // Watch for overflow where size will cause us to go off the end of the
-    // 64 bit address space
-    uint32_t num_cache_lines;
-    if (last_cache_line_addr >= first_cache_line_addr)
-      num_cache_lines = ((last_cache_line_addr - first_cache_line_addr) /
-                         cache_line_byte_size) +
-                        1;
-    else
-      num_cache_lines =
-          (UINT64_MAX - first_cache_line_addr + 1) / cache_line_byte_size;
-
-    uint32_t cache_idx = 0;
-    for (addr_t curr_addr = first_cache_line_addr; cache_idx < num_cache_lines;
-         curr_addr += cache_line_byte_size, ++cache_idx) {
-      BlockMap::iterator pos = m_L2_cache.find(curr_addr);
-      if (pos != m_L2_cache.end())
-        m_L2_cache.erase(pos);
-    }
-  }
+  m_L1_cache.EraseRange(addr, size);
+  m_L2_cache.EraseRange(addr, size);
 }
 
 void MemoryCache::AddInvalidRange(lldb::addr_t base_addr,
@@ -124,67 +222,69 @@ bool MemoryCache::RemoveInvalidRange(lldb::addr_t base_addr,
   return false;
 }
 
-const uint8_t *MemoryCache::FindL1CacheEntry(lldb::addr_t addr,
-                                             size_t len) const {
-  if (m_L1_cache.empty())
-    return nullptr;
-  AddrRange read_range(addr, len);
-  BlockMap::const_iterator pos = m_L1_cache.upper_bound(addr);
-  if (pos != m_L1_cache.begin())
-    --pos;
-  AddrRange chunk_range(pos->first, pos->second->GetByteSize());
-  if (!chunk_range.Contains(read_range))
-    return nullptr;
-  return pos->second->GetBytes() + (addr - chunk_range.GetRangeBase());
+size_t MemoryCache::ReadFromCaches(lldb::addr_t addr, void *dst,
+                                   size_t len) const {
+  size_t bytes_filled = 0;
+  // Bytes from addr to the last addressable byte.  The walk must not pass
+  // it, or curr_addr wraps to 0.
+  const uint64_t space_to_top = UINT64_MAX - addr;
+  while (bytes_filled < len) {
+    if (bytes_filled > space_to_top)
+      break;
+    const addr_t curr_addr = addr + bytes_filled;
+
+    // At most one of the caches can hold curr_addr.
+    llvm::ArrayRef<uint8_t> cached = m_L2_cache.Lookup(curr_addr);
+    if (cached.empty())
+      cached = m_L1_cache.Lookup(curr_addr);
+    if (cached.empty())
+      break;
+
+    const size_t to_copy = std::min(cached.size(), len - bytes_filled);
+    memcpy(static_cast<uint8_t *>(dst) + bytes_filled, cached.data(), to_copy);
+    bytes_filled += to_copy;
+  }
+  return bytes_filled;
 }
 
-const uint8_t *MemoryCache::FindL2CacheEntry(lldb::addr_t addr,
-                                             size_t len) const {
-  if (m_L2_cache.empty())
-    return nullptr;
-  const lldb::addr_t line_offset = addr % m_L2_cache_line_byte_size;
-  BlockMap::const_iterator pos = m_L2_cache.find(addr - line_offset);
-  if (pos == m_L2_cache.end())
-    return nullptr;
-  if (line_offset + len > pos->second->GetByteSize())
-    return nullptr;
-  return pos->second->GetBytes() + line_offset;
-}
+MemoryCache::AddrRange MemoryCache::GrowReadRange(addr_t read_addr,
+                                                  addr_t caller_end,
+                                                  size_t bytes_filled) const {
+  const uint64_t line_size = m_L2_cache.GetLineByteSize();
+  const addr_t line_base_addr = llvm::alignDown(read_addr, line_size);
+  // Caps read-ahead at this many whole cache lines.
+  static constexpr uint32_t kMaxCacheLinesPerRead = 2;
+  const uint64_t grow_span = kMaxCacheLinesPerRead * line_size;
 
-const uint8_t *MemoryCache::FindCacheEntry(lldb::addr_t addr,
-                                           size_t len) const {
-  const uint8_t *cached = FindL1CacheEntry(addr, len);
-  if (!cached)
-    cached = FindL2CacheEntry(addr, len);
-  return cached;
-}
+  // A request already past the cap spans a line, and one whose growth would
+  // wrap cannot be grown, so both are asked for as they stand.
+  if (line_base_addr > UINT64_MAX - grow_span ||
+      caller_end > line_base_addr + grow_span)
+    return AddrRange(read_addr, caller_end - read_addr);
 
-lldb::DataBufferSP MemoryCache::GetL2CacheLine(lldb::addr_t line_base_addr,
-                                               Status &error) {
-  // This function assumes that the address given is aligned correctly.
-  assert((line_base_addr % m_L2_cache_line_byte_size) == 0);
+  // Grow down to the line base so the fetch lands in L2 as a whole line rather
+  // than an unaligned L1 fragment.
+  if (!m_invalid_ranges.FindEntryThatIntersects(
+          InvalidRanges::Entry(line_base_addr, read_addr - line_base_addr)) &&
+      (caller_end <= line_base_addr + line_size || bytes_filled == 0))
+    read_addr = line_base_addr;
 
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  auto pos = m_L2_cache.find(line_base_addr);
-  if (pos != m_L2_cache.end())
-    return pos->second;
+  // Read up to the last line the request touches, skipping that line when L2
+  // holds it.
+  addr_t last_line_addr = llvm::alignDown(caller_end - 1, line_size);
+  if (last_line_addr > line_base_addr && m_L2_cache.Holds(last_line_addr))
+    last_line_addr -= line_size;
+  const addr_t grow_target = last_line_addr + line_size;
 
-  auto data_buffer_heap_sp =
-      std::make_shared<DataBufferHeap>(m_L2_cache_line_byte_size, 0);
-  size_t process_bytes_read = m_process.ReadMemoryFromInferior(
-      line_base_addr, data_buffer_heap_sp->GetBytes(),
-      data_buffer_heap_sp->GetByteSize(), error);
-
-  // If we failed a read, not much we can do.
-  if (process_bytes_read == 0)
-    return lldb::DataBufferSP();
-
-  // If we didn't get a complete read, we can still cache what we did get.
-  if (process_bytes_read < m_L2_cache_line_byte_size)
-    data_buffer_heap_sp->SetByteSize(process_bytes_read);
-
-  m_L2_cache[line_base_addr] = data_buffer_heap_sp;
-  return data_buffer_heap_sp;
+  // Growth stops at the first invalid range among the bytes it adds.
+  addr_t read_end = grow_target;
+  if (grow_target > caller_end) {
+    if (const InvalidRanges::Entry *invalid =
+            m_invalid_ranges.FindEntryThatIntersects(
+                InvalidRanges::Entry(caller_end, grow_target - caller_end)))
+      read_end = invalid->GetRangeBase();
+  }
+  return AddrRange(read_addr, read_end - read_addr);
 }
 
 size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
@@ -193,11 +293,11 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
     return 0;
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-
+  addr_t invalid_addr = LLDB_INVALID_ADDRESS;
   if (const InvalidRanges::Entry *invalid =
           m_invalid_ranges.FindEntryThatIntersects(
               InvalidRanges::Entry(addr, dst_len))) {
-    const addr_t invalid_addr = invalid->GetRangeBase();
+    invalid_addr = invalid->GetRangeBase();
     error = Status::FromErrorStringWithFormat(
         "memory read failed for 0x%" PRIx64, invalid_addr);
     if (invalid_addr <= addr)
@@ -205,91 +305,33 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
     dst_len = invalid_addr - addr;
   }
 
-  // Check the L1 cache for a range that contains the entire memory read.
-  // L1 cache contains chunks of memory that are not required to be the size of
-  // an L2 cache line. We avoid trying to do partial reads from the L1 cache to
-  // simplify the implementation.
-  if (const uint8_t *l1_data = FindL1CacheEntry(addr, dst_len)) {
-    memcpy(dst, l1_data, dst_len);
+  size_t bytes_from_cache = ReadFromCaches(addr, dst, dst_len);
+  if (bytes_from_cache == dst_len)
     return dst_len;
+
+  addr_t read_addr = addr + bytes_from_cache;
+  addr_t read_end = addr + dst_len;
+  // A request hits the invalid range above, don't grow.
+  if (invalid_addr == LLDB_INVALID_ADDRESS) {
+    const AddrRange grown =
+        GrowReadRange(read_addr, read_end, bytes_from_cache);
+    read_addr = grown.GetRangeBase();
+    read_end = grown.GetRangeEnd();
   }
 
-  // If the size of the read is greater than the size of an L2 cache line, we'll
-  // just read from the inferior. If that read is successful, we'll cache what
-  // we read in the L1 cache for future use.
-  if (dst_len > m_L2_cache_line_byte_size) {
-    size_t bytes_read =
-        m_process.ReadMemoryFromInferior(addr, dst, dst_len, error);
-    if (bytes_read > 0)
-      AddCacheData(addr, dst, bytes_read);
-    return bytes_read;
-  }
+  std::vector<uint8_t> read_buf(read_end - read_addr);
+  const size_t bytes_from_inferior = m_process.ReadMemoryFromInferior(
+      read_addr, read_buf.data(), read_buf.size(), error);
+  if (bytes_from_inferior == 0)
+    return bytes_from_cache;
 
-  // If the size of the read fits inside one L2 cache line, we'll try reading
-  // from the L2 cache. Note that if the range of memory we're reading sits
-  // between two contiguous cache lines, we'll touch two cache lines instead of
-  // just one.
+  AddCacheData(read_addr, read_buf.data(), bytes_from_inferior);
 
-  // We're going to have all of our loads and reads be cache line aligned.
-  addr_t cache_line_offset = addr % m_L2_cache_line_byte_size;
-  addr_t cache_line_base_addr = addr - cache_line_offset;
-  DataBufferSP first_cache_line = GetL2CacheLine(cache_line_base_addr, error);
-  // If we get nothing, then the read to the inferior likely failed. Nothing to
-  // do here.
-  if (!first_cache_line)
-    return 0;
-
-  // If the cache line was not filled out completely and the offset is greater
-  // than what we have available, we can't do anything further here.
-  if (cache_line_offset >= first_cache_line->GetByteSize())
-    return 0;
-
-  uint8_t *dst_buf = (uint8_t *)dst;
-  size_t bytes_left = dst_len;
-  size_t read_size = first_cache_line->GetByteSize() - cache_line_offset;
-  if (read_size > bytes_left)
-    read_size = bytes_left;
-
-  memcpy(dst_buf + dst_len - bytes_left,
-         first_cache_line->GetBytes() + cache_line_offset, read_size);
-  bytes_left -= read_size;
-
-  // If the cache line was not filled out completely and we still have data to
-  // read, we can't do anything further.
-  if (first_cache_line->GetByteSize() < m_L2_cache_line_byte_size &&
-      bytes_left > 0)
-    return dst_len - bytes_left;
-
-  // We'll hit this scenario if our read straddles two cache lines.
-  if (bytes_left > 0) {
-    cache_line_base_addr += m_L2_cache_line_byte_size;
-
-    // FIXME: Until we are able to more thoroughly check for invalid ranges, we
-    // will have to check the second line to see if it is in an invalid range as
-    // well. See the check near the beginning of the function for more details.
-    if (m_invalid_ranges.FindEntryThatContains(cache_line_base_addr)) {
-      error = Status::FromErrorStringWithFormat(
-          "memory read failed for 0x%" PRIx64, cache_line_base_addr);
-      return dst_len - bytes_left;
-    }
-
-    DataBufferSP second_cache_line =
-        GetL2CacheLine(cache_line_base_addr, error);
-    if (!second_cache_line)
-      return dst_len - bytes_left;
-
-    read_size = bytes_left;
-    if (read_size > second_cache_line->GetByteSize())
-      read_size = second_cache_line->GetByteSize();
-
-    memcpy(dst_buf + dst_len - bytes_left, second_cache_line->GetBytes(),
-           read_size);
-    bytes_left -= read_size;
-
-    return dst_len - bytes_left;
-  }
-
-  return dst_len;
+  // The grown or clipped fetch may not align with what the caller asked for,
+  // so pull back only the portion contiguous with what dst already holds.
+  uint8_t *dst_tail = static_cast<uint8_t *>(dst) + bytes_from_cache;
+  return bytes_from_cache + ReadFromCaches(addr + bytes_from_cache, dst_tail,
+                                           dst_len - bytes_from_cache);
 }
 
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
@@ -322,11 +364,9 @@ MemoryCache::ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
       continue;
     }
 
-    const uint8_t *cached = FindCacheEntry(addr, len);
-    if (cached) {
+    if (ReadFromCaches(addr, buffer.data(), len) == len) {
       results.push_back(buffer.take_front(len));
       buffer = buffer.drop_front(len);
-      memcpy(results.back().data(), cached, len);
       continue;
     }
 
