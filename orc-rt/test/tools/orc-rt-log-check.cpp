@@ -25,7 +25,7 @@
 
 #include "orc-rt-c/support/Logging.h"
 
-#include "orc-rt-internal/tools/CommandLine.h"
+#include "orc-rt-internal/tools/OptionParser.h"
 
 #include <iostream>
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   int UID = -1;
 
   {
-    orc_rt::CommandLineParser P;
+    orc_rt::OptionParser P;
     P.addFlag("print-backend", "Print log backend", false, PrintBackend)
         .addFlag("print-enabled-levels", "Print enabled log levels", false,
                  PrintEnabledLevels)

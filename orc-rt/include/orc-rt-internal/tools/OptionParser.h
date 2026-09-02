@@ -1,4 +1,4 @@
-//===- CommandLine.h ------------------------------------------------------===//
+//===- OptionParser.h -------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_INTERNAL_TOOLS_COMMANDLINE_H
-#define ORC_RT_INTERNAL_TOOLS_COMMANDLINE_H
+#ifndef ORC_RT_INTERNAL_TOOLS_OPTIONPARSER_H
+#define ORC_RT_INTERNAL_TOOLS_OPTIONPARSER_H
 
 #include <algorithm>
 #include <charconv>
@@ -75,23 +75,23 @@ template <> inline std::optional<bool> parseValue<bool>(std::string_view Str) {
 }
 } // namespace detail
 
-class CommandLineParser {
+class OptionParser {
 public:
   enum class OptionKind { Flag, Value };
-  CommandLineParser() = default;
+  OptionParser() = default;
 
-  CommandLineParser &addFlag(std::string_view Name, std::string_view Desc,
-                             bool DefaultVal, bool &Val,
-                             std::optional<char> ShortName = std::nullopt) {
+  OptionParser &addFlag(std::string_view Name, std::string_view Desc,
+                        bool DefaultVal, bool &Val,
+                        std::optional<char> ShortName = std::nullopt) {
     return addValue(Name, Desc, DefaultVal, Val, OptionKind::Flag,
                     std::move(ShortName));
   }
 
   template <typename T>
-  CommandLineParser &addValue(std::string_view Name, std::string_view Desc,
-                              T DefaultVal, T &Val,
-                              OptionKind Kind = OptionKind::Value,
-                              std::optional<char> ShortName = std::nullopt) {
+  OptionParser &addValue(std::string_view Name, std::string_view Desc,
+                         T DefaultVal, T &Val,
+                         OptionKind Kind = OptionKind::Value,
+                         std::optional<char> ShortName = std::nullopt) {
     Val = DefaultVal;
     Opts.push_back({.Name = std::string(Name),
                     .ShortName = std::move(ShortName),
@@ -267,4 +267,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_INTERNAL_TOOLS_COMMANDLINE_H
+#endif // ORC_RT_INTERNAL_TOOLS_OPTIONPARSER_H
