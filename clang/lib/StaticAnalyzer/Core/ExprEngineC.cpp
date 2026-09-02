@@ -218,7 +218,7 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
                                         ProgramPoint::PostLValueKind));
 }
 
-ProgramStateRef
+void
 ExprEngine::handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                 const StackFrame *SF, QualType T, QualType ExTy,
                                 const CastExpr *CastE, ExplodedNodeSet &Dst,
@@ -243,8 +243,6 @@ ExprEngine::handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
     state = escapeValues(state, OrigV, PSK_EscapeOther);
   }
   Dst.insert(Engine.makePostStmtNode(CastE, state, Pred));
-
-  return state;
 }
 
 void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
@@ -334,7 +332,7 @@ void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
       return;
     }
     // Explicitly proceed with default handler for this case cascade.
-    State = handleLValueBitCast(State, Ex, SF, T, ExTy, CastE, Dst, Pred);
+    handleLValueBitCast(State, Ex, SF, T, ExTy, CastE, Dst, Pred);
     return;
   }
   case CK_Dependent:
@@ -350,7 +348,7 @@ void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
       return;
     }
     // Explicitly proceed with default handler for this case cascade.
-    State = handleLValueBitCast(State, Ex, SF, T, ExTy, CastE, Dst, Pred);
+    handleLValueBitCast(State, Ex, SF, T, ExTy, CastE, Dst, Pred);
     return;
   }
   case CK_IntegralToBoolean:
@@ -381,7 +379,7 @@ void ExprEngine::VisitCastExpr(const CastExpr *CastE, ExplodedNode *Pred,
   case CK_FixedPointToBoolean:
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint: {
-    State = handleLValueBitCast(State, Ex, SF, T, ExTy, CastE, Dst, Pred);
+    handleLValueBitCast(State, Ex, SF, T, ExTy, CastE, Dst, Pred);
     return;
   }
   case CK_IntegralCast: {

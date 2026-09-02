@@ -689,7 +689,7 @@ public:
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
   getEagerlyAssumeBifurcationTags();
 
-  ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
+  void handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const StackFrame *SF, QualType T,
                                       QualType ExTy, const CastExpr *CastE,
                                       ExplodedNodeSet &Dst, ExplodedNode *Pred);
