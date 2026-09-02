@@ -16,93 +16,92 @@
 
 using namespace llvm;
 
-void MachineModuleSlotTracker::collectMachineFunctionMetadata(
-    SmallVectorImpl<const MDNode *> &Metadata, const MachineFunction &MF,
-    SmallVectorImpl<const MDNode *> *DebugLocations) const {
+void MachineModuleSlotTracker::processMachineFunctionMetadata(
+    AbstractSlotTrackerStorage *AST, const MachineFunction &MF) {
+  // Create metadata created within the backend.
   for (const MachineBasicBlock &MBB : MF)
     for (const MachineInstr &MI : MBB.instrs()) {
-      if (DebugLocations)
-        if (DebugLoc DL = MI.getDebugLoc())
-          DebugLocations->push_back(DL.getAsMDNode());
-
       if (MDNode *N = MI.getHeapAllocMarker())
-        Metadata.push_back(N);
+        AST->createMetadataSlot(N);
       if (MDNode *N = MI.getPCSections())
-        Metadata.push_back(N);
+        AST->createMetadataSlot(N);
       if (MDNode *N = MI.getMMRAMetadata())
-        Metadata.push_back(N);
+        AST->createMetadataSlot(N);
 
       for (const MachineOperand &MO : MI.operands())
         if (MO.isMetadata())
-          Metadata.push_back(MO.getMetadata());
+          AST->createMetadataSlot(MO.getMetadata());
 
       for (const MachineMemOperand *MMO : MI.memoperands()) {
         AAMDNodes AAInfo = MMO->getAAInfo();
         if (AAInfo.TBAA)
-          Metadata.push_back(AAInfo.TBAA);
+          AST->createMetadataSlot(AAInfo.TBAA);
         if (AAInfo.TBAAStruct)
-          Metadata.push_back(AAInfo.TBAAStruct);
+          AST->createMetadataSlot(AAInfo.TBAAStruct);
         if (AAInfo.Scope)
-          Metadata.push_back(AAInfo.Scope);
+          AST->createMetadataSlot(AAInfo.Scope);
         if (AAInfo.NoAlias)
-          Metadata.push_back(AAInfo.NoAlias);
+          AST->createMetadataSlot(AAInfo.NoAlias);
         if (AAInfo.NoAliasAddrSpace)
-          Metadata.push_back(AAInfo.NoAliasAddrSpace);
+          AST->createMetadataSlot(AAInfo.NoAliasAddrSpace);
         if (const MDNode *N = MMO->getRanges())
-          Metadata.push_back(N);
+          AST->createMetadataSlot(N);
         if (const MDNode *N = MMO->getMemCacheHint())
-          Metadata.push_back(N);
+          AST->createMetadataSlot(N);
       }
     }
 
   for (const MachineFunction::VariableDbgInfo &DebugVar :
        MF.getVariableDbgInfo()) {
-    Metadata.push_back(DebugVar.Var);
-    if (DebugLocations)
-      DebugLocations->push_back(DebugVar.Loc);
+    AST->createMetadataSlot(DebugVar.Var);
+  }
+}
+
+void MachineModuleSlotTracker::processMachineModule(
+    AbstractSlotTrackerStorage *AST, const Module *M,
+    bool ShouldInitializeAllMetadata) {
+  if (ShouldInitializeAllMetadata) {
+    for (const Function &F : *M) {
+      if (&F != &TheFunction)
+        continue;
+      MDNStartSlot = AST->getNextMetadataSlot();
+      if (TheMF)
+        processMachineFunctionMetadata(AST, *TheMF);
+      MDNEndSlot = AST->getNextMetadataSlot();
+      break;
+    }
+  }
+}
+
+void MachineModuleSlotTracker::processMachineFunction(
+    AbstractSlotTrackerStorage *AST, const Function *F,
+    bool ShouldInitializeAllMetadata) {
+  if (!ShouldInitializeAllMetadata && F == &TheFunction) {
+    MDNStartSlot = AST->getNextMetadataSlot();
+    if (TheMF)
+      processMachineFunctionMetadata(AST, *TheMF);
+    MDNEndSlot = AST->getNextMetadataSlot();
   }
 }
 
 void MachineModuleSlotTracker::collectMachineMDNodes(
     MachineMDNodeListType &L) const {
-  L.insert(L.end(), MachineMDNodes.begin(), MachineMDNodes.end());
+  collectMDNodes(L, MDNStartSlot, MDNEndSlot);
 }
 
-void MachineModuleSlotTracker::renumberMetadataForAssembly() {
-  if (!TheMF)
-    return;
-
-  SmallVector<const MDNode *, 16> Metadata;
-  collectMachineFunctionMetadata(Metadata, *TheMF);
-  MachineMDNodes.clear();
-  ModuleSlotTracker::renumberMetadataForAssembly(Metadata, &MachineMDNodes);
-}
-
-MachineModuleSlotTracker::MachineModuleSlotTracker(MFGetterFnT Fn,
-                                                   const MachineFunction *MF)
-    : ModuleSlotTracker(MF->getFunction().getParent()),
-      TheMF(Fn(MF->getFunction())) {
-  if (!TheMF)
-    return;
-
-  SmallVector<const MDNode *, 16> Metadata;
-  SmallVector<const MDNode *, 16> DebugLocations;
-  collectMachineFunctionMetadata(Metadata, *TheMF, &DebugLocations);
-  collectAdditionalMetadata(Metadata, MachineMDNodes);
-
-  if (DebugLocations.empty())
-    return;
-
-  MachineMDNodeListType DebugMetadataNodes;
-  collectAdditionalMetadata(DebugLocations, DebugMetadataNodes);
-  SmallPtrSet<const MDNode *, 16> MachineMetadata;
-  for (const auto &Entry : MachineMDNodes)
-    MachineMetadata.insert(Entry.second);
-
-  for (const auto &Entry : DebugMetadataNodes)
-    if (isa<DILocation>(Entry.second) &&
-        !MachineMetadata.contains(Entry.second))
-      InlineDebugLocations.insert(cast<DILocation>(Entry.second));
+MachineModuleSlotTracker::MachineModuleSlotTracker(
+    MFGetterFnT Fn, const MachineFunction *MF, bool ShouldInitializeAllMetadata)
+    : ModuleSlotTracker(MF->getFunction().getParent(),
+                        ShouldInitializeAllMetadata),
+      TheFunction(MF->getFunction()), TheMF(Fn(MF->getFunction())) {
+  setProcessHook([this](AbstractSlotTrackerStorage *AST, const Module *M,
+                        bool ShouldInitializeAllMetadata) {
+    this->processMachineModule(AST, M, ShouldInitializeAllMetadata);
+  });
+  setProcessHook([this](AbstractSlotTrackerStorage *AST, const Function *F,
+                        bool ShouldInitializeAllMetadata) {
+    this->processMachineFunction(AST, F, ShouldInitializeAllMetadata);
+  });
 }
 
 MachineModuleSlotTracker::~MachineModuleSlotTracker() = default;
