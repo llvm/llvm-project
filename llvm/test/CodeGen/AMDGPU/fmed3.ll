@@ -9390,7 +9390,8 @@ define float @med3_fmin_legacy_nnan(float %a, float %b) #3 {
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_min_legacy_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-SDAG-NEXT:    v_max_legacy_f32_e32 v0, 2.0, v0
+; SI-SDAG-NEXT:    v_min_legacy_f32_e64 v0, v0, 4.0
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-GISEL-LABEL: med3_fmin_legacy_nnan:

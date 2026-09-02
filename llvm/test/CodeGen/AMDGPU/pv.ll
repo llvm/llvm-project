@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=r600 < %s | FileCheck %s
 
 ; CHECK: DOT4 * T{{[0-9]\.W}} (MASKED)
-; CHECK: MAX T{{[0-9].[XYZW]}}, 0.0, PV.X
+; CHECK: SETGT * T{{[0-9]\.W}}, 0.0, PV.X
 define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3, <4 x float> inreg %reg4, <4 x float> inreg %reg5, <4 x float> inreg %reg6, <4 x float> inreg %reg7) {
 main_body:
   %tmp = extractelement <4 x float> %reg1, i32 0

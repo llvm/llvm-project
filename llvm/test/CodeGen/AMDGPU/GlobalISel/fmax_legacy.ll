@@ -7,7 +7,8 @@ define float @v_test_fmax_legacy_ogt_f32(float %a, float %b) {
 ; GFX6-LABEL: v_test_fmax_legacy_ogt_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_max_legacy_f32_e32 v0, v0, v1
+; GFX6-NEXT:    v_cmp_gt_f32_e32 vcc, v0, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmax_legacy_ogt_f32:
@@ -43,7 +44,8 @@ define float @v_test_fmax_legacy_uge_f32(float %a, float %b) {
 ; GFX6-LABEL: v_test_fmax_legacy_uge_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_max_legacy_f32_e32 v0, v1, v0
+; GFX6-NEXT:    v_cmp_nlt_f32_e32 vcc, v0, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmax_legacy_uge_f32:
@@ -97,7 +99,8 @@ define float @v_test_fmax_legacy_olt_f32(float %a, float %b) {
 ; GFX6-LABEL: v_test_fmax_legacy_olt_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_max_legacy_f32_e32 v0, v1, v0
+; GFX6-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmax_legacy_olt_f32:
@@ -115,7 +118,8 @@ define float @v_test_fmax_legacy_ule_f32(float %a, float %b) {
 ; GFX6-LABEL: v_test_fmax_legacy_ule_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_max_legacy_f32_e32 v0, v0, v1
+; GFX6-NEXT:    v_cmp_ngt_f32_e32 vcc, v0, v1
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmax_legacy_ule_f32:
@@ -239,8 +243,10 @@ define <2 x float> @v_test_fmax_legacy_ogt_v2f32(<2 x float> %a, <2 x float> %b)
 ; GFX6-LABEL: v_test_fmax_legacy_ogt_v2f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_max_legacy_f32_e32 v0, v0, v2
-; GFX6-NEXT:    v_max_legacy_f32_e32 v1, v1, v3
+; GFX6-NEXT:    v_cmp_gt_f32_e32 vcc, v0, v2
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX6-NEXT:    v_cmp_gt_f32_e32 vcc, v1, v3
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_test_fmax_legacy_ogt_v2f32:
@@ -260,7 +266,10 @@ define amdgpu_ps float @s_test_fmax_legacy_f32(float inreg %a, float inreg %b) {
 ; GFX6-LABEL: s_test_fmax_legacy_f32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s3
-; GFX6-NEXT:    v_max_legacy_f32_e32 v0, s2, v0
+; GFX6-NEXT:    v_cmp_gt_f32_e32 vcc, s2, v0
+; GFX6-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GFX6-NEXT:    s_cselect_b32 s0, s2, s3
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_test_fmax_legacy_f32:

@@ -142,7 +142,7 @@ static bool allUsesHaveSourceMods(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-static bool mayIgnoreSignedZero(MachineInstr &MI) {
+static bool mayIgnoreSignedZero(const MachineInstr &MI) {
   return MI.getFlag(MachineInstr::MIFlag::FmNsz);
 }
 
@@ -170,6 +170,18 @@ static bool isConstantCostlierToNegate(MachineInstr &MI, Register Reg,
       return true;
   }
   return false;
+}
+
+static bool isNonZeroConstantFP(Register Reg, const MachineRegisterInfo &MRI) {
+  std::optional<APFloat> C = isConstantOrConstantSplatVectorFP(Reg, MRI);
+  return C && !C->isZero() && !C->isDenormal();
+}
+
+bool AMDGPUCombinerHelper::canIgnoreLegacyMinMaxTies(const MachineInstr &MI,
+                                                     Register LHS,
+                                                     Register RHS) const {
+  return mayIgnoreSignedZero(MI) || isNonZeroConstantFP(LHS, MRI) ||
+         isNonZeroConstantFP(RHS, MRI);
 }
 
 static unsigned inverseMinMax(unsigned Opc) {
@@ -215,14 +227,20 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
   }
 
   switch (MatchInfo->getOpcode()) {
+  case AMDGPU::G_AMDGPU_FMIN_LEGACY:
+  case AMDGPU::G_AMDGPU_FMAX_LEGACY:
+    // Swapping min<->max flips which operand a signed zero tie selects.
+    if (!canIgnoreLegacyMinMaxTies(*MatchInfo,
+                                   MatchInfo->getOperand(1).getReg(),
+                                   MatchInfo->getOperand(2).getReg()))
+      return false;
+    [[fallthrough]];
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FMINIMUM:
   case AMDGPU::G_FMAXIMUM:
-  case AMDGPU::G_AMDGPU_FMIN_LEGACY:
-  case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     // 0 doesn't have a negated inline immediate.
     return !isConstantCostlierToNegate(*MatchInfo,
                                        MatchInfo->getOperand(2).getReg(), MRI);

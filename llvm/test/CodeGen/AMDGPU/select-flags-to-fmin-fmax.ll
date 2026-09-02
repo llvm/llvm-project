@@ -159,7 +159,8 @@ define float @v_test_fmax_legacy_uge_f32_safe(float %a, float %b) {
 ; GFX7-LABEL: v_test_fmax_legacy_uge_f32_safe:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_max_legacy_f32_e32 v0, v1, v0
+; GFX7-NEXT:    v_cmp_nlt_f32_e32 vcc, v0, v1
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_fmax_legacy_uge_f32_safe:
@@ -196,7 +197,8 @@ define float @v_test_fmax_legacy_uge_f32_nnan_flag(float %a, float %b) {
 ; GFX7-LABEL: v_test_fmax_legacy_uge_f32_nnan_flag:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_max_legacy_f32_e32 v0, v1, v0
+; GFX7-NEXT:    v_cmp_nlt_f32_e32 vcc, v0, v1
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_fmax_legacy_uge_f32_nnan_flag:
@@ -296,6 +298,231 @@ define float @v_test_fmax_legacy_uge_f32_nnan_nsz_flag(float %a, float %b) {
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp uge float %a, %b
   %val = select nnan nsz i1 %cmp, float %a, float %b
+  ret float %val
+}
+
+define float @v_test_fmin_legacy_ole_f32_safe(float %a, float %b) {
+; GFX7-LABEL: v_test_fmin_legacy_ole_f32_safe:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cmp_le_f32_e32 vcc, v0, v1
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmin_legacy_ole_f32_safe:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_le_f32_e32 vcc, v0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmin_legacy_ole_f32_safe:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v1
+; GFX1170-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmin_legacy_ole_f32_safe:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ole float %a, %b
+  %val = select i1 %cmp, float %a, float %b
+  ret float %val
+}
+
+define float @v_test_fmin_legacy_ole_f32_nsz_flag(float %a, float %b) {
+; GFX7-LABEL: v_test_fmin_legacy_ole_f32_nsz_flag:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_min_legacy_f32_e32 v0, v0, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmin_legacy_ole_f32_nsz_flag:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_le_f32_e32 vcc, v0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmin_legacy_ole_f32_nsz_flag:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v1
+; GFX1170-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmin_legacy_ole_f32_nsz_flag:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ole float %a, %b
+  %val = select nsz i1 %cmp, float %a, float %b
+  ret float %val
+}
+
+define float @v_test_fmin_legacy_ult_f32_safe(float %a, float %b) {
+; GFX7-LABEL: v_test_fmin_legacy_ult_f32_safe:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cmp_nge_f32_e32 vcc, v0, v1
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmin_legacy_ult_f32_safe:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_nge_f32_e32 vcc, v0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmin_legacy_ult_f32_safe:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v0, v1
+; GFX1170-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmin_legacy_ult_f32_safe:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ult float %a, %b
+  %val = select i1 %cmp, float %a, float %b
+  ret float %val
+}
+
+define float @v_test_fmin_legacy_ult_f32_nsz_flag(float %a, float %b) {
+; GFX7-LABEL: v_test_fmin_legacy_ult_f32_nsz_flag:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_min_legacy_f32_e32 v0, v1, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmin_legacy_ult_f32_nsz_flag:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_nge_f32_e32 vcc, v0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmin_legacy_ult_f32_nsz_flag:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v0, v1
+; GFX1170-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmin_legacy_ult_f32_nsz_flag:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ult float %a, %b
+  %val = select nsz i1 %cmp, float %a, float %b
+  ret float %val
+}
+
+define float @v_test_fmax_legacy_ogt_f32_safe(float %a, float %b) {
+; GFX7-LABEL: v_test_fmax_legacy_ogt_f32_safe:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cmp_gt_f32_e32 vcc, v0, v1
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmax_legacy_ogt_f32_safe:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, v0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmax_legacy_ogt_f32_safe:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v0, v1
+; GFX1170-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmax_legacy_ogt_f32_safe:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ogt float %a, %b
+  %val = select i1 %cmp, float %a, float %b
+  ret float %val
+}
+
+define float @v_test_fmax_legacy_ogt_f32_nsz_flag(float %a, float %b) {
+; GFX7-LABEL: v_test_fmax_legacy_ogt_f32_nsz_flag:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_max_legacy_f32_e32 v0, v0, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmax_legacy_ogt_f32_nsz_flag:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, v0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1170-LABEL: v_test_fmax_legacy_ogt_f32_nsz_flag:
+; GFX1170:       ; %bb.0:
+; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1170-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v0, v1
+; GFX1170-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX1170-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_fmax_legacy_ogt_f32_nsz_flag:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp ogt float %a, %b
+  %val = select nsz i1 %cmp, float %a, float %b
   ret float %val
 }
 
@@ -473,8 +700,10 @@ define <2 x float> @v_test_fmax_legacy_uge_v2f32_safe(<2 x float> %a, <2 x float
 ; GFX7-LABEL: v_test_fmax_legacy_uge_v2f32_safe:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_max_legacy_f32_e32 v0, v2, v0
-; GFX7-NEXT:    v_max_legacy_f32_e32 v1, v3, v1
+; GFX7-NEXT:    v_cmp_nlt_f32_e32 vcc, v0, v2
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX7-NEXT:    v_cmp_nlt_f32_e32 vcc, v1, v3
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_fmax_legacy_uge_v2f32_safe:
@@ -518,8 +747,10 @@ define <2 x float> @v_test_fmax_legacy_uge_v2f32_nnan_flag(<2 x float> %a, <2 x 
 ; GFX7-LABEL: v_test_fmax_legacy_uge_v2f32_nnan_flag:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_max_legacy_f32_e32 v0, v2, v0
-; GFX7-NEXT:    v_max_legacy_f32_e32 v1, v3, v1
+; GFX7-NEXT:    v_cmp_nlt_f32_e32 vcc, v0, v2
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX7-NEXT:    v_cmp_nlt_f32_e32 vcc, v1, v3
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_fmax_legacy_uge_v2f32_nnan_flag:
