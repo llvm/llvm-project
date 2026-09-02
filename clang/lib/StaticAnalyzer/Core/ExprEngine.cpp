@@ -1101,9 +1101,9 @@ const ProgramPointTag *ExprEngine::cleanupNodeTag() {
 }
 
 namespace {
-enum VisitKind {
-  PreVisitKind,
-  PostVisitKind,
+enum class VisitKind {
+  Pre,
+  Post,
 };
 }
 
@@ -1295,7 +1295,7 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
 
   // FIXME: Does not call PostVisit checkers
   case Stmt::ObjCAtSynchronizedStmtClass:
-    return K == PreVisitKind;
+    return K == VisitKind::Pre;
 
   // FIXME: They do not call checkers
   case Expr::ConstantExprClass:
@@ -1316,7 +1316,7 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
 
   // FIXME: Does not call PreVisit checkers
   case Stmt::BlockExprClass:
-    return K == PostVisitKind;
+    return K == VisitKind::Post;
 
   // FIXME: Does not call PreVisit checkers
   // Currently the engine does not call PostVisit checkers when
@@ -1391,11 +1391,11 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
 
   // FIXME: Does not call PreVisit checkers
   case Stmt::ObjCIvarRefExprClass:
-    return K == PostVisitKind;
+    return K == VisitKind::Post;
 
   // FIXME: Does not call PreVisit checkers
   case Stmt::ObjCForCollectionStmtClass:
-    return K == PostVisitKind;
+    return K == VisitKind::Post;
 
   // FIXME: Does not call checkers
   case Stmt::ObjCMessageExprClass:
@@ -1408,7 +1408,7 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
 
   // FIXME: Does not call PostVisit checkers
   case Stmt::ReturnStmtClass:
-    return K == PreVisitKind;
+    return K == VisitKind::Pre;
 
   // FIXME: Does not call checkers
   case Stmt::StmtExprClass:
@@ -1444,7 +1444,7 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
     CleanedStates.insert(Pred);
 
   ExplodedNodeSet PreVisited;
-  if (shouldJustCallCheckers(currStmt, PreVisitKind)) {
+  if (shouldJustCallCheckers(currStmt, VisitKind::Pre)) {
     getCheckerManager().runCheckersForPreStmt(PreVisited, CleanedStates,
                                               currStmt, *this);
   } else
@@ -1458,7 +1458,7 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   }
 
   ExplodedNodeSet PostVisited;
-  if (shouldJustCallCheckers(currStmt, PostVisitKind)) {
+  if (shouldJustCallCheckers(currStmt, VisitKind::Post)) {
     getCheckerManager().runCheckersForPostStmt(PostVisited, Visited, currStmt,
                                                *this);
   } else
