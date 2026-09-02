@@ -1549,9 +1549,10 @@ public:
     return false;
   }
 
-  /// Determine if this TargetInfo supports the given branch protection
-  /// specification
-  virtual bool validateBranchProtection(StringRef Spec, StringRef Arch,
+  /// Determines whether this TargetInfo supports the given branch protection
+  /// specification. BPI is modified based on the input arguments. Returns
+  /// whether the specification is valid.
+  virtual bool validateBranchProtection(const ParsedTargetAttr &Attr,
                                         BranchProtectionInfo &BPI,
                                         const LangOptions &LO,
                                         StringRef &Err) const {

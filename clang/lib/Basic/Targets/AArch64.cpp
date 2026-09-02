@@ -249,13 +249,13 @@ bool AArch64TargetInfo::validateGlobalRegisterVariable(
          getTargetOpts().FeatureMap.lookup(("reserve-x" + RegNum).str());
 }
 
-bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
+bool AArch64TargetInfo::validateBranchProtection(const ParsedTargetAttr &Attr,
                                                  BranchProtectionInfo &BPI,
                                                  const LangOptions &LO,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple(),
-                                        HasPAuthLR))
+  if (!llvm::ARM::parseBranchProtection(Attr.BranchProtection, PBP, Err,
+                                        getTriple(), HasPAuthLR))
     return false;
 
   // GCS is currently untested with ptrauth-returns, but enabling this could be
@@ -275,6 +275,13 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
     BPI.SignKey = LangOptions::SignReturnAddressKeyKind::AKey;
   else
     BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
+
+  if (Attr.SignReturnAddrHardening.empty())
+    BPI.SignReturnAddressHardening =
+        LangOptions::SignReturnAddressHardeningKind::None;
+  else if (auto Hardening =
+               parseSignReturnAddressHardening(Attr.SignReturnAddrHardening))
+    BPI.SignReturnAddressHardening = *Hardening;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
   BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
