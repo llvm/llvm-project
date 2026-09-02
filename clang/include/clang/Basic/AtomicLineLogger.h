@@ -65,7 +65,8 @@ class AtomicLineLogger {
   std::string LogPath;
   std::atomic<uint64_t> DroppedLines{0};
   std::mutex EnableMtx;
-  bool WarnedConflict = false;
+  bool EnabledAtConstruction = false;
+  bool CommittedByFlag = false;
 
   void initialize(StringRef LogFilePath);
 
@@ -81,8 +82,12 @@ public:
   ~AtomicLineLogger();
 
   // Enables the logger if it is not already enabled. Thread safe.
-  // If the logger is already enabled, call to enable is a no-op.
-  void enable(StringRef LogFilePath);
+  // Returns false only when the requested path conflicts with the
+  // already-committed path. In other words, returns false if
+  // the logger is not enabled consistently during its lifetime.
+  bool enable(StringRef RequestedLogPath);
+
+  StringRef getLogPath() const { return LogPath; }
 
   LogLine log();
 };

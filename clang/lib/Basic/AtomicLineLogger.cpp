@@ -106,10 +106,10 @@ LogLine::~LogLine() {
 }
 
 void AtomicLineLogger::initialize(StringRef LogFilePath) {
+  LogPath = LogFilePath.str();
   int NewFD = openLogFile(LogFilePath);
   if (NewFD == -1)
     return;
-  LogPath = LogFilePath.str();
   FD.store(NewFD, std::memory_order_relaxed);
   log() << "logging_start";
 }
@@ -118,22 +118,21 @@ AtomicLineLogger::AtomicLineLogger(StringRef LogFilePath) {
   if (LogFilePath.empty())
     return;
   initialize(LogFilePath);
+  EnabledAtConstruction = true;
 }
 
-void AtomicLineLogger::enable(StringRef LogFilePath) {
-  if (LogFilePath.empty())
-    return;
+bool AtomicLineLogger::enable(StringRef RequestedLogPath) {
   std::lock_guard<std::mutex> Lock(EnableMtx);
-  if (FD.load(std::memory_order_relaxed) != -1) {
-    if (LogFilePath != LogPath && !WarnedConflict) {
-      llvm::errs() << "warning: dependency scanning log path '" << LogFilePath
-                   << "' ignored; already logging to '" << LogPath << "'\n";
-      WarnedConflict = true;
-    }
-    return;
-  }
+  if (EnabledAtConstruction)
+    return RequestedLogPath.empty() || RequestedLogPath == LogPath;
 
-  initialize(LogFilePath);
+  if (!CommittedByFlag) {
+    CommittedByFlag = true;
+    if (!RequestedLogPath.empty())
+      initialize(RequestedLogPath);
+    return true;
+  }
+  return RequestedLogPath == LogPath;
 }
 
 LogLine AtomicLineLogger::log() {

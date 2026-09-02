@@ -1656,8 +1656,15 @@ void driver::modules::runModulesDriver(
   auto MaybeCWD = C.getDriver().getVFS().getCurrentWorkingDirectory();
   const auto CWD = MaybeCWD ? std::move(*MaybeCWD) : ".";
 
+  const llvm::opt::Arg *LogPathArg =
+      C.getArgs().getLastArg(options::OPT_fdepscan_log_path);
   StringRef DepScanLogPath =
-      C.getArgs().getLastArgValue(options::OPT_fdepscan_log_path);
+      LogPathArg ? StringRef(LogPathArg->getValue()).trim() : StringRef();
+  if (LogPathArg && DepScanLogPath.empty()) {
+    Diags.Report(diag::err_drv_depscan_log_path_empty);
+    return;
+  }
+
   auto MaybeScanResults =
       scanDependencies(Jobs, ManifestEntryBySource, *MaybeModuleCachePath, CWD,
                        DepScanLogPath, Diags);

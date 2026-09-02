@@ -127,8 +127,23 @@ buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
     return std::make_pair(nullptr, nullptr);
   }
 
-  Logger.enable(
-      Compilation->getArgs().getLastArgValue(options::OPT_fdepscan_log_path));
+  const llvm::opt::Arg *LogPathArg =
+      Compilation->getArgs().getLastArg(options::OPT_fdepscan_log_path);
+  StringRef LogPath =
+      LogPathArg ? StringRef(LogPathArg->getValue()).trim() : StringRef();
+
+  // Forbid -fdepscan-log-path="".
+  if (LogPathArg && LogPath.empty()) {
+    Diags.Report(diag::err_drv_depscan_log_path_empty);
+    return std::make_pair(nullptr, nullptr);
+  }
+
+  if (!Logger.enable(LogPath)) {
+    Diags.Report(diag::err_drv_depscan_log_path_inconsistent)
+        << unsigned(!LogPath.empty()) << LogPath
+        << unsigned(!Logger.getLogPath().empty()) << Logger.getLogPath();
+    return std::make_pair(nullptr, nullptr);
+  }
 
   return std::make_pair(std::move(Driver), std::move(Compilation));
 }

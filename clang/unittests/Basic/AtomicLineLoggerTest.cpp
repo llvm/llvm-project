@@ -171,48 +171,6 @@ TEST(AtomicLineLoggerTest, SingleLineWrittenToFile) {
   EXPECT_EQ(logBody(Body.front()), "pcm_write: module.pcm");
 }
 
-TEST(AtomicLineLoggerTest, EnableWithConflictingPathIsIgnoredAndWarnsOnce) {
-  llvm::unittest::TempDir Dir("atomic-logger-test", /*Unique=*/true);
-  SmallString<128> PathA(Dir.path());
-  llvm::sys::path::append(PathA, "a.log");
-  SmallString<128> PathB(Dir.path());
-  llvm::sys::path::append(PathB, "b.log");
-
-  std::string Err;
-  {
-    AtomicLineLogger Logger;
-    Logger.enable(PathA);
-
-    testing::internal::CaptureStderr();
-    // Enable PathB twice to check if only one warning shows up.
-    Logger.enable(PathB);
-    Logger.enable(PathB);
-    // Enabling the path already in effect is a no-op.
-    Logger.enable(PathA);
-    Err = testing::internal::GetCapturedStderr();
-
-    StringRef ErrRef(Err);
-    EXPECT_EQ(ErrRef.count("already logging to"), 1u);
-    EXPECT_TRUE(ErrRef.contains(PathB));
-    EXPECT_TRUE(ErrRef.contains(PathA));
-
-    Logger.log() << "still_on_a";
-  }
-  // Logger destroyed here. Log file is written to disk.
-
-  EXPECT_EQ(Err,
-            ("warning: dependency scanning log path '" + Twine(PathB.str()) +
-             "' ignored; already logging to '" + Twine(PathA.str()) + "'\n")
-                .str());
-
-  auto ABuf = llvm::MemoryBuffer::getFile(PathA);
-  ASSERT_TRUE(ABuf) << "Failed to read log file A";
-  EXPECT_TRUE((*ABuf)->getBuffer().contains("still_on_a"));
-
-  EXPECT_FALSE(llvm::sys::fs::exists(PathB))
-      << "Conflicting path B should never have been opened";
-}
-
 TEST(AtomicLineLoggerTest, ConcurrentWritesProduceCompleteLines) {
   llvm::unittest::TempDir Dir("atomic-logger-concurrent", /*Unique=*/true);
   SmallString<128> LogPath(Dir.path());
