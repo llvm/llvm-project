@@ -98,8 +98,7 @@
 
 - `--cu-processing-batch-size=<uint>`
 
-  Specifies the size of batches for processing CUs. Higher number has better
-  performance, but more memory usage. Default value is 1.
+  Deprecated, has no effect.
 
 - `--data=<string>`
 
