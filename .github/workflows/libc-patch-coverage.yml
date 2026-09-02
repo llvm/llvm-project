@@ -200,7 +200,7 @@ jobs:
         echo "[LOG] Executing Ninja targets: $TARGETS"
 
         if [ -n "$TARGETS" ]; then
-          export LLVM_PROFILE_FILE="%clibc_cov_%p.profraw"
+          export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
           ninja -C build-cov $TARGETS
           echo "TARGETS=$TARGETS" >> $GITHUB_ENV
         else

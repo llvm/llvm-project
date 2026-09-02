@@ -86,7 +86,7 @@ jobs:
           echo "=== [STAGE 2/4] Running Full Unit Test Suite at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
           START_TIME=$(date +%s)
 
-          export LLVM_PROFILE_FILE="%clibc_cov_%p.profraw"
+          export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
           ninja -k 0 -C build-cov libc-unit-tests || true
 
           END_TIME=$(date +%s)
