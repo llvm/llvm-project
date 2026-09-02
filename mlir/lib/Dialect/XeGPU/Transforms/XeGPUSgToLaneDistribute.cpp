@@ -1926,11 +1926,16 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //      slice<layout<[1, 1, 16], [1, 2, 1]>, dims = [2]>
 //        ->  layout<[8, 1], [1, 2]>
 //
-//    The ownership tables hold one coordinate per distribution unit while the
-//    algorithm indexes elements; the two coincide only when a unit is a single
-//    element. See `computeOwnedCoords` for what lifting it needs. This also
-//    covers sub-byte elements in practice, which come with `lane_data` 2 so
-//    that a pair fills a byte.
+//    `computeStaticDistributedCoords` yields one coordinate per distribution
+//    unit -- the block start -- while the algorithm indexes elements, and the
+//    two coincide only when a unit is a single element. Lifting it means
+//    expanding the block starts in fragment order. `expandBlockCoords` in
+//    XeGPUDialect.cpp expands them for layout comparison, but emits a whole
+//    unit before moving to the next, which matches the fragment only when
+//    lane_data is non-unit on the innermost dimension alone.
+//
+//    This also covers sub-byte elements in practice, which come with
+//    `lane_data` 2 so that a pair fills a byte.
 //
 //  * FragmentSizeMismatch, a layout not distributing what its vector type
 //    accounts for (fundamental: the caller derived one from the other).
@@ -2046,38 +2051,29 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                        fragment of its donor, lane `slot + donorDelta`
 //         if that donor does not hold the element: give up on this donorDelta
 //       look for one stride/offset/dimStride/dimExtent whose index reproduces
-//         every needed[slot]; if there is none: next donorDelta
+//       every needed[slot]; if there is none: next donorDelta
 //       accept (donorDelta, index) and stop
 //     if no donorDelta fits: fail, the layout change is not of this form
-//   for each element source:
-//     %idx   = index(slot)                           // arith on gpu.lane_id
-//     %val   = vector.extract %fragment[%idx]
-//     %donor = slot + donorDelta
-//     %val   = gpu.shuffle idx %val, %donor          // unless %donor is %lane
-//     %res   = vector.insert %val, %res[pos]
+//   emit, per element source: an extract at index(slot), a `gpu.shuffle idx`
+//     from `slot + donorDelta` unless that is the lane itself, and an insert.
 //
-// `%donor` is the lane itself when `donorDelta` is 0 and the extract already
-// lands on an element the lane owns, and that is the only case where the
-// shuffle is dropped. Replication makes it a choice: several donor groups may
-// hold the element and all give the same value, so the smallest `donorDelta` is
-// taken, which is what leaves a fully broadcast input shuffle-free.
+// The shuffle is dropped exactly when `donorDelta` is 0, since the extract then
+// lands on an element the lane owns. Replication makes that a choice: several
+// donor groups may hold the element and all give the same value, so the
+// smallest `donorDelta` is taken, which is what leaves a fully broadcast input
+// shuffle-free.
 //
-// Only lanes 0 to `lanePeriod` - 1 are required to end up holding the elements
-// the target layout assigns their slot; each is the one lane of its slot the
-// layout distributes to. Lanes sharing a slot run the same arithmetic on their
-// own fragment, so when a shuffle is emitted they all receive the donor's value
-// and are equally correct, and when it is dropped they keep whatever that index
-// holds in their own fragment. The target layout assigns those lanes no
-// elements, so what they hold is unspecified.
+// Only the first `lanePeriod` lanes are required to end up correct -- each is
+// the one lane of its slot the target layout distributes to, and the layout
+// assigns the rest no elements. Lanes sharing a slot run the same arithmetic on
+// their own fragment: when a shuffle is emitted they all receive the donor's
+// value and are equally correct, and when it is dropped their local extract can
+// land on a different element. Dropping one therefore relies on nobody reading
+// them.
 //
 // An index is derived from the tables and then verified against them, so a
 // layout change that is not of this form is reported as a match failure rather
 // than lowered incorrectly.
-//
-// One caveat: after the rewrite only the first `lanePeriod` lanes are
-// guaranteed to hold what the target layout assigns them. The others are
-// replicas whose local extract can land on a different element, so dropping a
-// shuffle relies on nobody reading them.
 //
 //===----------------------------------------------------------------------===//
 
@@ -2158,7 +2154,8 @@ static bool haveSameDistributionUnit(xegpu::DistributeLayoutAttr inputLayout,
 /// lanePeriod, 2 * lanePeriod, ...` up to the subgroup size, reading lane `slot
 /// + donorDelta`, where `slot` is `lane % lanePeriod` and so below the period.
 /// If the period did not divide the subgroup size that sum could name a lane
-/// past the last one.
+/// past the last one: with a period of 3 on 16 lanes, `donorDelta` reaches 15
+/// and a slot reaches 2, naming lane 17.
 ///
 /// The input has no counterpart: it is only ever indexed, never used to derive
 /// a donor, so its own period is unconstrained.
@@ -2203,13 +2200,7 @@ using OwnedCoords = SmallVector<SmallVector<SmallVector<int64_t>>>;
 /// `layout`: `owned[lane][i]` is the coordinate of element `i` of that
 /// fragment, numbered as the flattened fragment `vector.extract` indexes.
 ///
-/// Fails for non-unit lane_data. `computeStaticDistributedCoords` yields one
-/// coordinate per distribution unit -- the block start -- and those coincide
-/// with the elements only when a unit is a single element. Lifting this needs
-/// the block starts expanded in fragment order; `expandBlockCoords` in
-/// XeGPUDialect.cpp does such an expansion for layout comparison, but emits a
-/// whole unit before moving to the next, which matches the fragment only when
-/// lane_data is non-unit on the innermost dimension alone.
+/// Fails for non-unit lane_data, `LaneDataNotUnit` above.
 static FailureOr<OwnedCoords>
 computeOwnedCoords(xegpu::DistributeLayoutAttr layout, ArrayRef<int64_t> shape,
                    int64_t subgroupSize,
@@ -2282,6 +2273,11 @@ struct ElementSource {
 /// restricted form `FragmentIndex` can emit. A slot is a lane reduced modulo
 /// the lane period, so there are `lanePeriod` of them. Fails when no index in
 /// that form reproduces the whole table.
+///
+/// For `needed = [0, 0, 2, 2]`: the first change is at slot 2, so pairs of
+/// slots share a coordinate (`dimStride` 2) and consecutive coordinates are 2
+/// elements apart (`stride` 2); the table reaches 2, one step, so the
+/// coordinate takes 2 values (`dimExtent` 2); and slot 0 reads 0 (`offset` 0).
 static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
                                                  int64_t lanePeriod) {
   // Slots sharing an index are adjacent, so the first change in `needed` gives
