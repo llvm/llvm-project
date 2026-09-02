@@ -47,6 +47,7 @@ Thread &ThreadPlan::GetThread() {
 
   ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(m_tid);
   m_thread = thread_sp.get();
+  assert(m_thread);
   return *m_thread;
 }
 
