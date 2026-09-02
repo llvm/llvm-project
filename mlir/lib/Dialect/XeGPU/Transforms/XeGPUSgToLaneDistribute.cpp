@@ -1789,23 +1789,38 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                      -- when the product is already `S`
 //   lane period        the same product with the sliced dimensions still
 //                      counted, so slicing does not reduce it. Lanes this far
-//                      apart hold the same fragment. `getLanePeriod`,
-//                      `lanePeriod` below
-//   slot               `lane % lanePeriod`, a lane's index within one period
+//                      apart hold the same fragment. `getLanePeriod`. Both
+//                      layouts have one and they are not interchangeable: the
+//                      target's, `targetLanePeriod` below, is what the scheme
+//                      steps and groups lanes by, while the input's is never
+//                      computed -- it is already folded into the ownership
+//                      table
+//   slot               `lane % targetLanePeriod`, a lane's index within one
+//                      target period. A target-side notion: lanes sharing a
+//                      slot are assigned the same target fragment
 //   ownership table    every lane's fragment, tabulated as element coordinates,
 //                      one table per side. `computeOwnedCoords`, `inputOwned`
 //                      and `targetOwned` below
 //
 // These name the moving parts of the scheme:
 //
-//   donor              the lane a value is read from, `slot + donorDelta`.
-//                      `donorDelta` is one multiple of `lanePeriod`, shared by
-//                      every slot, so it is the single choice the scheme makes
-//                      per element
+//   reader             the lane a fragment is being assembled for. Everything
+//                      below depends on it only through its slot
+//   donorDelta         the one choice the scheme makes per element of the
+//                      target fragment: a lane offset from the reader's slot to
+//                      the lane supplying that element. Non-negative and a
+//                      multiple of `targetLanePeriod`, so there are
+//                      `S / targetLanePeriod` candidates and data always moves
+//                      from a higher lane id to a lower one
+//   donor              where that offset lands, `slot + donorDelta`. Derived
+//                      from `donorDelta`, not the other way round. More than
+//                      one offset may reach a lane holding the element, since
+//                      the input's own lane period replicates it; the smallest
+//                      is taken
 //   element source     where one element of the target fragment comes from: a
 //                      donor, and the index to extract from that donor's
 //                      fragment. One per element, and it needs a shuffle
-//                      exactly when the donor is not the lane itself.
+//                      exactly when the donor is not the reader itself.
 //                      `ElementSource` below
 //
 // A broadcast group and the lane period are that one product taken either side
@@ -1899,19 +1914,28 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Why donors sit a whole period apart
 // -----------------------------------
 //
-// `gpu.shuffle idx` is the only way to move data between lanes and it exchanges
-// one value per lane, so every lane runs the same extract. A donor can
-// therefore only serve lanes of its own slot, which is why `donorDelta` is a
-// multiple of `lanePeriod`. It also means the donor extracts the right thing
-// without knowing who asked: its own slot is
-// `(slot + donorDelta) % lanePeriod`, which is `slot`, so it computes the same
-// index.
+// `gpu.shuffle idx` is the only way to move data between lanes, and it is not a
+// remote read: every lane extracts one element from its own fragment and
+// contributes it, then each lane receives whatever the lane it names
+// contributed. A donor has therefore already extracted, at its own index,
+// before any shuffle happens, and never learns who asked.
 //
-// Case 2 has two element sources, one per element of its 1x2 fragment. Slot 3
-// wants (3, 0) and (3, 1):
+// That works only if the index the donor used is the one the reader wanted. The
+// index is a function of the slot, so the two have to share one:
+//
+//   donorSlot = (slot + donorDelta) % targetLanePeriod = slot
+//
+// which holds exactly because `donorDelta` is a multiple of
+// `targetLanePeriod`. That is where the constraint comes from.
+//
+// Case 2 has two element sources, one per element of its 1x2 fragment. Reader
+// slot 3 wants (3, 0) and (3, 1):
 //
 //   element 0 -> donorDelta = 0, donor = 3,  index = 3   already local
 //   element 1 -> donorDelta = 8, donor = 11, index = 3   shuffled
+//
+// Both lanes extract at index 3, from different fragments: the input gives lane
+// 3 column 0 and lane 11 column 1, so one index yields the two elements wanted.
 //
 // What it declines
 // ----------------
@@ -1968,11 +1992,11 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 // The cases, `p` being the position in the target fragment:
 //
-//   case  lanePeriod  index(slot)     stride  dimStride  dimExtent  offset
-//   1         4       2*slot + off      2         1          4      0,1,8,9
-//   2         8       slot              1         1          8        0
-//   3        16       slot/8 + 2*p      1         8          2       2*p
-//   4         2       p % 2             0         1          1      p % 2
+//   case  period  index(slot)     stride  dimStride  dimExtent  offset
+//   1        4     2*slot + off      2         1          4      0,1,8,9
+//   2        8     slot              1         1          8        0
+//   3       16     slot/8 + 2*p      1         8          2       2*p
+//   4        2     p % 2             0         1          1      p % 2
 //
 // Where the constants come from: the `2`s multiplying `slot` are the size of
 // the input fragment's innermost dimension, which in cases 1 and 3 is the whole
@@ -1992,7 +2016,8 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 //   tabulate inputOwned[lane] and targetOwned[lane]  // element coordinates
 //   for each element `pos` of the target fragment:
-//     for donorDelta = 0, lanePeriod, 2 * lanePeriod, ...  // smallest first
+//     for donorDelta = 0, targetLanePeriod, 2 * targetLanePeriod, ...
+//                                                          // smallest first
 //       for each slot:
 //         needed[slot] = index of the element targetOwned[slot][pos] in the
 //                        fragment of its donor, lane `slot + donorDelta`
@@ -2009,13 +2034,13 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // values of `donorDelta` may work and all give the same value, so the smallest
 // is taken, which is what leaves a fully broadcast input shuffle-free.
 //
-// Only the first `lanePeriod` lanes are required to end up correct -- each is
-// the one lane of its slot the target layout distributes to, and the layout
-// assigns the rest no elements. Lanes sharing a slot run the same arithmetic on
-// their own fragment: when a shuffle is emitted they all receive the donor's
-// value and are equally correct, and when it is dropped their local extract can
-// land on a different element. Dropping one therefore relies on nobody reading
-// them.
+// Only the first `targetLanePeriod` lanes are required to end up correct --
+// each is the one lane of its slot the target layout distributes to, and the
+// layout assigns the rest no elements. Lanes sharing a slot run the same
+// arithmetic on their own fragment: when a shuffle is emitted they all receive
+// the donor's value and are equally correct, and when it is dropped their local
+// extract can land on a different element. Dropping one therefore relies on
+// nobody reading them.
 //
 // An index is derived from the tables and then verified against them, so a
 // layout change that is not of this form is reported as a match failure rather
@@ -2097,18 +2122,18 @@ static bool haveSameDistributionUnit(xegpu::DistributeLayoutAttr inputLayout,
 /// code, so a lane can only be served by a donor that agrees with it on which
 /// element to extract -- one whose lane id differs by a whole number of lane
 /// periods. The lowering therefore searches donors at `donorDelta = 0,
-/// lanePeriod, 2 * lanePeriod, ...` up to the subgroup size, reading lane `slot
-/// + donorDelta`, where `slot` is `lane % lanePeriod` and so below the period.
-/// If the period did not divide the subgroup size that sum could name a lane
-/// past the last one: with a period of 3 on 16 lanes, `donorDelta` reaches 15
-/// and a slot reaches 2, naming lane 17.
+/// targetLanePeriod, 2 * targetLanePeriod, ...` up to the subgroup size,
+/// reading lane `slot + donorDelta`, where `slot` is `lane % targetLanePeriod`
+/// and so below the period. If the period did not divide the subgroup size that
+/// sum could name a lane past the last one: with a period of 3 on 16 lanes,
+/// `donorDelta` reaches 15 and a slot reaches 2, naming lane 17.
 ///
 /// The input has no counterpart: it is only ever indexed, never used to derive
 /// a donor, so its own period is unconstrained.
 static bool isSupportedLanePeriod(xegpu::DistributeLayoutAttr targetLayout,
                                   int64_t subgroupSize) {
-  int64_t lanePeriod = getLanePeriod(targetLayout);
-  return lanePeriod > 0 && subgroupSize % lanePeriod == 0;
+  int64_t targetLanePeriod = getLanePeriod(targetLayout);
+  return targetLanePeriod > 0 && subgroupSize % targetLanePeriod == 0;
 }
 
 /// Matches the layout change `redistributeBroadcastedValue` implements.
@@ -2164,7 +2189,7 @@ computeOwnedCoords(xegpu::DistributeLayoutAttr layout, ArrayRef<int64_t> shape,
 
 /// Which element of the donor's fragment a lane extracts -- the donor being the
 /// lane it reads from, `slot + donorDelta` -- as a function of its `slot`
-/// (`lane % lanePeriod`).
+/// (`lane % targetLanePeriod`).
 ///
 /// `at()` is restricted to one shape: the lane's coordinate along a single
 /// dimension of the target lane_layout, scaled and offset into the fragment.
@@ -2217,23 +2242,24 @@ struct ElementSource {
 
 /// Fits `needed[slot]`, the fragment index each slot has to read, to the
 /// restricted form `FragmentIndex` can emit. A slot is a lane reduced modulo
-/// the lane period, so there are `lanePeriod` of them. Fails when no index in
-/// that form reproduces the whole table.
+/// the target's lane period, so there are `targetLanePeriod` of them. Fails
+/// when no index in that form reproduces the whole table.
 ///
 /// For `needed = [0, 0, 2, 2]`: the first change is at slot 2, so pairs of
 /// slots share a coordinate (`dimStride` 2) and consecutive coordinates are 2
 /// elements apart (`stride` 2); the table reaches 2, one step, so the
 /// coordinate takes 2 values (`dimExtent` 2); and slot 0 reads 0 (`offset` 0).
 static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
-                                                 int64_t lanePeriod) {
+                                                 int64_t targetLanePeriod) {
   // Slots sharing an index are adjacent, so the first change in `needed` gives
   // both how many of them there are and how far apart their elements sit.
   int64_t offset = needed[0];
   int64_t dimStride = 1;
-  while (dimStride < lanePeriod && needed[dimStride] == offset)
+  while (dimStride < targetLanePeriod && needed[dimStride] == offset)
     dimStride++;
-  int64_t stride = dimStride < lanePeriod ? needed[dimStride] - offset : 0;
-  if (stride < 0 || lanePeriod % dimStride != 0)
+  int64_t stride =
+      dimStride < targetLanePeriod ? needed[dimStride] - offset : 0;
+  if (stride < 0 || targetLanePeriod % dimStride != 0)
     return failure();
 
   // The index wraps once it has taken all its values, so how far `needed` gets
@@ -2253,7 +2279,7 @@ static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
 
   // Derived from the table, so verify against the table before relying on it.
   FragmentIndex index{stride, offset, dimStride, dimExtent};
-  if (!llvm::all_of(llvm::seq<int64_t>(0, lanePeriod), [&](int64_t slot) {
+  if (!llvm::all_of(llvm::seq<int64_t>(0, targetLanePeriod), [&](int64_t slot) {
         return needed[slot] == index.at(slot);
       }))
     return failure();
@@ -2271,7 +2297,7 @@ static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
 static FailureOr<ElementSource>
 deriveElementSource(const OwnedCoords &inputOwned,
                     const OwnedCoords &targetOwned, int64_t pos,
-                    int64_t subgroupSize, int64_t lanePeriod,
+                    int64_t subgroupSize, int64_t targetLanePeriod,
                     std::optional<RedistributionLimit> &limit) {
   // Index of the element with coordinate `coord` in the fragment `lane` holds,
   // or -1 if it holds none.
@@ -2287,20 +2313,20 @@ deriveElementSource(const OwnedCoords &inputOwned,
   // this fails.
   bool sawCompleteDonor = false;
   for (int64_t donorDelta = 0; donorDelta < subgroupSize;
-       donorDelta += lanePeriod) {
+       donorDelta += targetLanePeriod) {
     // Where in its fragment each slot's donor keeps the element it needs.
     SmallVector<int64_t> needed;
-    for (int64_t slot = 0; slot < lanePeriod; slot++) {
+    for (int64_t slot = 0; slot < targetLanePeriod; slot++) {
       int64_t index = findInFragment(slot + donorDelta, targetOwned[slot][pos]);
       if (index < 0)
         break;
       needed.push_back(index);
     }
-    if (static_cast<int64_t>(needed.size()) != lanePeriod)
+    if (static_cast<int64_t>(needed.size()) != targetLanePeriod)
       continue;
     sawCompleteDonor = true;
 
-    FailureOr<FragmentIndex> index = fitFragmentIndex(needed, lanePeriod);
+    FailureOr<FragmentIndex> index = fitFragmentIndex(needed, targetLanePeriod);
     if (failed(index))
       continue;
 
@@ -2327,7 +2353,7 @@ static FailureOr<Value> redistributeBroadcastedValue(
     return failure();
   int64_t srcNumElems = srcTy.getNumElements();
   int64_t resNumElems = resTy.getNumElements();
-  int64_t lanePeriod = getLanePeriod(targetLayout);
+  int64_t targetLanePeriod = getLanePeriod(targetLayout);
   if (!isSupportedLanePeriod(targetLayout, subgroupSize)) {
     limit = RedistributionLimit::LanePeriodNotDivisor;
     return failure();
@@ -2347,11 +2373,11 @@ static FailureOr<Value> redistributeBroadcastedValue(
   if (failed(inputOwned) || failed(targetOwned))
     return failure();
   // Require the layouts to distribute what the vector types account for. The
-  // lanes past the first `lanePeriod` are replicas by construction: both
+  // lanes past the first `targetLanePeriod` are replicas by construction: both
   // computeStaticDistributedCoords implementations delinearize the lane id
-  // modulo the lane_layout extents, whose product is `lanePeriod`.
+  // modulo the lane_layout extents, whose product is `targetLanePeriod`.
   for (int64_t lane = 0; lane < subgroupSize; lane++) {
-    assert((*targetOwned)[lane] == (*targetOwned)[lane % lanePeriod] &&
+    assert((*targetOwned)[lane] == (*targetOwned)[lane % targetLanePeriod] &&
            "target ownership is not periodic in the lane period");
     if (static_cast<int64_t>((*inputOwned)[lane].size()) != srcNumElems ||
         static_cast<int64_t>((*targetOwned)[lane].size()) != resNumElems) {
@@ -2365,7 +2391,7 @@ static FailureOr<Value> redistributeBroadcastedValue(
   SmallVector<ElementSource> sources;
   for (int64_t pos = 0; pos < resNumElems; pos++) {
     FailureOr<ElementSource> source = deriveElementSource(
-        *inputOwned, *targetOwned, pos, subgroupSize, lanePeriod, limit);
+        *inputOwned, *targetOwned, pos, subgroupSize, targetLanePeriod, limit);
     if (failed(source))
       return failure();
     sources.push_back(*source);
@@ -2387,10 +2413,10 @@ static FailureOr<Value> redistributeBroadcastedValue(
   // The lane's slot, which every fragment index is a function of.
   Value slot = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
                                      /*upperBound=*/mlir::IntegerAttr());
-  if (lanePeriod != subgroupSize)
+  if (targetLanePeriod != subgroupSize)
     slot = arith::RemUIOp::create(
         rewriter, loc, slot,
-        arith::ConstantIndexOp::create(rewriter, loc, lanePeriod));
+        arith::ConstantIndexOp::create(rewriter, loc, targetLanePeriod));
 
   Type i32Ty = rewriter.getI32Type();
   auto flatResTy = VectorType::get({resNumElems}, shuffleTy);
@@ -2411,7 +2437,7 @@ static FailureOr<Value> redistributeBroadcastedValue(
       dimIndex = arith::DivUIOp::create(
           rewriter, loc, dimIndex,
           arith::ConstantIndexOp::create(rewriter, loc, index.dimStride));
-    if (index.dimExtent < lanePeriod / index.dimStride)
+    if (index.dimExtent < targetLanePeriod / index.dimStride)
       dimIndex = arith::RemUIOp::create(
           rewriter, loc, dimIndex,
           arith::ConstantIndexOp::create(rewriter, loc, index.dimExtent));
