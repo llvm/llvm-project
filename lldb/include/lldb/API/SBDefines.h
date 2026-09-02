@@ -32,7 +32,7 @@
 // Don't add the deprecated attribute when generating the bindings or when
 // building for anything older than C++14 which is the first version that
 // supports the attribute.
-#if defined(SWIG) || _cplusplus < 201402L
+#if defined(SWIG) || __cplusplus < 201402L
 #undef LLDB_DEPRECATED
 #undef LLDB_DEPRECATED_FIXME
 #define LLDB_DEPRECATED(MSG)
