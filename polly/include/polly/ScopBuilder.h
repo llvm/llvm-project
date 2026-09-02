@@ -243,6 +243,10 @@ class ScopBuilder final {
   bool addLoopBoundsToHeaderDomain(
       Loop *L, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
 
+  /// Ensure escaping scalars whose defining statement has an empty domain
+  /// retain a Value ScopArrayInfo before that statement is pruned.
+  void ensureEscapingValuesOfEmptyDomainStmts();
+
   /// Compute the isl representation for the SCEV @p E in this BB.
   ///
   /// @param BB               The BB for which isl representation is to be
