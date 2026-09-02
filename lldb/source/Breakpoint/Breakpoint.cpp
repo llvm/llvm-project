@@ -934,9 +934,8 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
   const bool dim_breakpoint_description =
       !IsEnabled() && s->AsRawOstream().colors_enabled();
   if (dim_breakpoint_description)
-    s->Printf("%s", ansi::FormatAnsiTerminalCodes(
-                        GetTarget().GetDebugger().GetDisabledAnsiPrefix())
-                        .c_str());
+    s->PutCString(ansi::FormatAnsiTerminalCodes(
+        GetTarget().GetDebugger().GetDisabledColor().GetPrefix()));
 
   if (!m_kind_description.empty()) {
     if (level == eDescriptionLevelBrief) {
@@ -960,9 +959,8 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
   }
   // Reset the colors back to normal if they were previously greyed out.
   if (dim_breakpoint_description)
-    s->Printf("%s", ansi::FormatAnsiTerminalCodes(
-                        GetTarget().GetDebugger().GetDisabledAnsiSuffix())
-                        .c_str());
+    s->PutCString(ansi::FormatAnsiTerminalCodes(
+        GetTarget().GetDebugger().GetDisabledColor().GetSuffix()));
 }
 
 void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,

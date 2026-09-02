@@ -84,13 +84,11 @@ void Stream::PutCStringColorHighlighted(
                                                      : llvm::Regex::NoFlags);
   llvm::SmallVector<llvm::StringRef, 1> matches;
   llvm::StringRef remaining = text;
-  std::string format_str = lldb_private::ansi::FormatAnsiTerminalCodes(
-      pattern_info->prefix.str() + "%.*s" + pattern_info->suffix.str());
   while (reg_pattern.match(remaining, &matches)) {
     llvm::StringRef match = matches[0];
     size_t match_start_pos = match.data() - remaining.data();
     PutCString(remaining.take_front(match_start_pos));
-    Printf(format_str.c_str(), match.size(), match.data());
+    pattern_info->color.render(*this, match);
     remaining = remaining.drop_front(match_start_pos + match.size());
   }
   if (remaining.size())

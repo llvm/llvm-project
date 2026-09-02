@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_STREAM_H
 #define LLDB_UTILITY_STREAM_H
 
+#include "lldb/Utility/ColorSetting.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -36,13 +37,11 @@ public:
   /// Struct to store information for color highlighting in the stream.
   struct HighlightSettings {
     llvm::StringRef pattern; ///< Regex pattern for highlighting.
-    llvm::StringRef prefix;  ///< ANSI color code to start colorization.
-    llvm::StringRef suffix;  ///< ANSI color code to end colorization.
+    ColorSetting color;      ///< ANSI color codes wrapping each match.
     bool ignore_case = false; ///< Whether to match case-insensitively.
 
-    HighlightSettings(llvm::StringRef p, llvm::StringRef pre,
-                      llvm::StringRef suf, bool ic = false)
-        : pattern(p), prefix(pre), suffix(suf), ignore_case(ic) {}
+    HighlightSettings(llvm::StringRef p, ColorSetting color, bool ic = false)
+        : pattern(p), color(color), ignore_case(ic) {}
   };
 
   /// Utility class for counting the bytes that were written to a stream in a

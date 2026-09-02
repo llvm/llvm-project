@@ -270,10 +270,11 @@ IOHandlerEditline::IOHandlerEditline(
       m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
         return this->SuggestionCallback(line);
       });
-      m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
-          debugger.GetAutosuggestionAnsiPrefix()));
-      m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
-          debugger.GetAutosuggestionAnsiSuffix()));
+      ColorSetting color = debugger.GetAutosuggestionColor();
+      m_editline_up->SetSuggestionAnsiPrefix(
+          ansi::FormatAnsiTerminalCodes(color.GetPrefix()));
+      m_editline_up->SetSuggestionAnsiSuffix(
+          ansi::FormatAnsiTerminalCodes(color.GetSuffix()));
     }
     // See if the delegate supports fixing indentation
     const char *indent_chars = delegate.IOHandlerGetFixIndentationCharacters();
@@ -488,10 +489,11 @@ bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
 #if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {
     m_editline_up->SetPrompt(m_prompt.empty() ? nullptr : m_prompt.c_str());
+    ColorSetting color = m_debugger.GetPromptColor();
     m_editline_up->SetPromptAnsiPrefix(
-        ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiPrefix()));
+        ansi::FormatAnsiTerminalCodes(color.GetPrefix()));
     m_editline_up->SetPromptAnsiSuffix(
-        ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiSuffix()));
+        ansi::FormatAnsiTerminalCodes(color.GetSuffix()));
   }
 #endif
   return true;
@@ -503,10 +505,11 @@ bool IOHandlerEditline::SetUseColor(bool use_color) {
 #if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {
     m_editline_up->UseColor(use_color);
-    m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
-        m_debugger.GetAutosuggestionAnsiPrefix()));
-    m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
-        m_debugger.GetAutosuggestionAnsiSuffix()));
+    ColorSetting color = m_debugger.GetAutosuggestionColor();
+    m_editline_up->SetSuggestionAnsiPrefix(
+        ansi::FormatAnsiTerminalCodes(color.GetPrefix()));
+    m_editline_up->SetSuggestionAnsiSuffix(
+        ansi::FormatAnsiTerminalCodes(color.GetSuffix()));
   }
 #endif
   return true;
