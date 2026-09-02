@@ -18,12 +18,15 @@ int4 vec_ternary(int4 c, int4 a, int4 b) {
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: cir.store %{{.*}}, %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: cir.store %{{.*}}, %[[B_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[TMP_C:.*]] = cir.load {{.*}} %[[C_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[TMP_C_2:.*]] = cir.load {{.*}} %[[C_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[C_CAST:.*]] = cir.cast address_space %[[C_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: cir.store %{{.*}}, %[[C_CAST]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[A_CAST:.*]] = cir.cast address_space %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: cir.store %{{.*}}, %[[A_CAST]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[B_CAST:.*]] = cir.cast address_space %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: cir.store %{{.*}}, %[[B_CAST]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_C:.*]] = cir.load {{.*}} %[[C_CAST]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_CAST]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_C_2:.*]] = cir.load {{.*}} %[[C_CAST]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[CONST_0_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !s32i>
 // CIR: %[[C_CMP:.*]] = cir.vec.cmp(lt, %[[TMP_C]], %[[CONST_0_VEC]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
 // CIR: %[[C_CMP_NOT:.*]] = cir.not %[[C_CMP]] : !cir.vector<4 x !s32i>
@@ -48,12 +51,15 @@ float4 vec_ternary_f4(int4 c, float4 a, float4 b) {
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
-// CIR: cir.store %{{.*}}, %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
-// CIR: cir.store %{{.*}}, %[[B_ADDR]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
-// CIR: %[[TMP_C:.*]] = cir.load {{.*}} %[[C_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
-// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+// CIR: %[[C_CAST:.*]] = cir.cast address_space %[[C_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: cir.store %{{.*}}, %[[C_CAST]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[A_CAST:.*]] = cir.cast address_space %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>> -> !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: cir.store %{{.*}}, %[[A_CAST]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[B_CAST:.*]] = cir.cast address_space %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>> -> !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: cir.store %{{.*}}, %[[B_CAST]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[TMP_C:.*]] = cir.load {{.*}} %[[C_CAST]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_CAST]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_CAST]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 // CIR: %[[CONST_0_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !s32i>
 // CIR: %[[C_CMP:.*]] = cir.vec.cmp(lt, %[[TMP_C]], %[[CONST_0_VEC]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
 // CIR: %[[C_CMP_NOT:.*]] = cir.not %[[C_CMP]] : !cir.vector<4 x !s32i>
@@ -78,11 +84,12 @@ int4 vec_unary_inc(int4 a) {
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[A_CAST:.*]] = cir.cast address_space %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: cir.store %{{.*}}, %[[A_CAST]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_CAST]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[VEC_INC:.*]] = cir.inc %[[TMP_A]] : !cir.vector<4 x !s32i>
-// CIR: cir.store {{.*}} %[[VEC_INC]], %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[RESULT:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.store {{.*}} %[[VEC_INC]], %[[A_CAST]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[RESULT:.*]] = cir.load {{.*}} %[[A_CAST]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // LLVM: %[[VEC_INC:.*]] = add <4 x i32> %[[A:.*]], splat (i32 1)
@@ -95,11 +102,12 @@ int4 vec_unary_dec(int4 a) {
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[A_CAST:.*]] = cir.cast address_space %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: cir.store %{{.*}}, %[[A_CAST]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_CAST]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[VEC_DEC:.*]] = cir.dec %[[TMP_A]] : !cir.vector<4 x !s32i>
-// CIR: cir.store {{.*}} %[[VEC_DEC]], %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[RESULT:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.store {{.*}} %[[VEC_DEC]], %[[A_CAST]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[RESULT:.*]] = cir.load {{.*}} %[[A_CAST]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // LLVM: %[[VEC_DEC:.*]] = add <4 x i32> %[[A:.*]], splat (i32 -1)
