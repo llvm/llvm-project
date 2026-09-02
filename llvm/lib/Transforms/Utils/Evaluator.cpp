@@ -296,7 +296,13 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           DL, Offset, /* AllowNonInbounds */ true));
       Offset = Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()));
       auto *GV = dyn_cast<GlobalVariable>(Ptr);
-      if (!GV || !GV->hasUniqueInitializer()) {
+      if (!GV || !GV->hasUniqueInitializer() || GV->hasSection()) {
+        // hasUniqueInitializer() ensures that if we modify the initializer,
+        // the modified initializer will be used.
+        //
+        // We can't modify global variables with an explicit section because
+        // it might not be legal to emit the resulting initializer (for
+        // example, emitting a non-zero value into a BSS section).
         LLVM_DEBUG(dbgs() << "Store is not to global with unique initializer: "
                           << *Ptr << "\n");
         return false;
