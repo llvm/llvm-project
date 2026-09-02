@@ -6,12 +6,10 @@
 define float @pos_scalar(float %x, float %fallback) {
 ; CHECK-LABEL: define float @pos_scalar(
 ; CHECK-SAME: float [[X:%.*]], float [[FALLBACK:%.*]]) {
-; CHECK-NEXT:    [[BELOW_LO_OR_NAN:%.*]] = fcmp nsz ult float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[BELOW_HI:%.*]] = fcmp nsz olt float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[UPPER:%.*]] = select nsz i1 [[BELOW_HI]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[ORDERED:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[LOWER_OR_FALLBACK:%.*]] = select nsz i1 [[ORDERED]], float 0.000000e+00, float [[FALLBACK]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select nsz i1 [[BELOW_LO_OR_NAN]], float [[LOWER_OR_FALLBACK]], float [[UPPER]]
+; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minnum.f32(float [[X]], float 1.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[TMP1]], float 0.000000e+00)
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ISNAN]], float [[FALLBACK]], float [[TMP2]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %below_lo_or_nan = fcmp nsz ult float %x, 0.0
@@ -27,12 +25,10 @@ define float @pos_scalar(float %x, float %fallback) {
 define <8 x float> @pos_vector(<8 x float> %x, <8 x float> %fallback) {
 ; CHECK-LABEL: define <8 x float> @pos_vector(
 ; CHECK-SAME: <8 x float> [[X:%.*]], <8 x float> [[FALLBACK:%.*]]) {
-; CHECK-NEXT:    [[BELOW_LO_OR_NAN:%.*]] = fcmp nsz ult <8 x float> [[X]], zeroinitializer
-; CHECK-NEXT:    [[BELOW_HI:%.*]] = fcmp nsz olt <8 x float> [[X]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[UPPER:%.*]] = select nsz <8 x i1> [[BELOW_HI]], <8 x float> [[X]], <8 x float> splat (float 1.000000e+00)
-; CHECK-NEXT:    [[ORDERED:%.*]] = fcmp ord <8 x float> [[X]], zeroinitializer
-; CHECK-NEXT:    [[LOWER_OR_FALLBACK:%.*]] = select nsz <8 x i1> [[ORDERED]], <8 x float> zeroinitializer, <8 x float> [[FALLBACK]]
-; CHECK-NEXT:    [[CLAMP_OR_FALLBACK:%.*]] = select nsz <8 x i1> [[BELOW_LO_OR_NAN]], <8 x float> [[LOWER_OR_FALLBACK]], <8 x float> [[UPPER]]
+; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno <8 x float> [[X]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.minnum.v8f32(<8 x float> [[X]], <8 x float> splat (float 1.000000e+00))
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.maxnum.v8f32(<8 x float> [[TMP1]], <8 x float> zeroinitializer)
+; CHECK-NEXT:    [[CLAMP_OR_FALLBACK:%.*]] = select <8 x i1> [[ISNAN]], <8 x float> [[FALLBACK]], <8 x float> [[TMP2]]
 ; CHECK-NEXT:    ret <8 x float> [[CLAMP_OR_FALLBACK]]
 ;
   %below_lo_or_nan = fcmp nsz ult <8 x float> %x, splat (float 0.0)
@@ -48,12 +44,10 @@ define <8 x float> @pos_vector(<8 x float> %x, <8 x float> %fallback) {
 define float @pos_no_fcmp_nsz(float %x, float %fallback) {
 ; CHECK-LABEL: define float @pos_no_fcmp_nsz(
 ; CHECK-SAME: float [[X:%.*]], float [[FALLBACK:%.*]]) {
-; CHECK-NEXT:    [[BELOW_LO_OR_NAN:%.*]] = fcmp ult float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[BELOW_HI:%.*]] = fcmp olt float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[UPPER:%.*]] = select nsz i1 [[BELOW_HI]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[ORDERED:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[LOWER_OR_FALLBACK:%.*]] = select nsz i1 [[ORDERED]], float 0.000000e+00, float [[FALLBACK]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select nsz i1 [[BELOW_LO_OR_NAN]], float [[LOWER_OR_FALLBACK]], float [[UPPER]]
+; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minnum.f32(float [[X]], float 1.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[TMP1]], float 0.000000e+00)
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ISNAN]], float [[FALLBACK]], float [[TMP2]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %below_lo_or_nan = fcmp ult float %x, 0.0
@@ -69,12 +63,10 @@ define float @pos_no_fcmp_nsz(float %x, float %fallback) {
 define float @pos_outer_no_nsz(float %x, float %fallback) {
 ; CHECK-LABEL: define float @pos_outer_no_nsz(
 ; CHECK-SAME: float [[X:%.*]], float [[FALLBACK:%.*]]) {
-; CHECK-NEXT:    [[BELOW_LO_OR_NAN:%.*]] = fcmp nsz ult float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[BELOW_HI:%.*]] = fcmp nsz olt float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[UPPER:%.*]] = select nsz i1 [[BELOW_HI]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[ORDERED:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[LOWER_OR_FALLBACK:%.*]] = select nsz i1 [[ORDERED]], float 0.000000e+00, float [[FALLBACK]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[BELOW_LO_OR_NAN]], float [[LOWER_OR_FALLBACK]], float [[UPPER]]
+; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minnum.f32(float [[X]], float 1.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[TMP1]], float 0.000000e+00)
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ISNAN]], float [[FALLBACK]], float [[TMP2]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %below_lo_or_nan = fcmp nsz ult float %x, 0.0
@@ -255,12 +247,10 @@ define float @n9_lo_gt_hi(float %x, float %fallback) {
 define float @pos_lower_no_nsz(float %x, float %fallback) {
 ; CHECK-LABEL: define float @pos_lower_no_nsz(
 ; CHECK-SAME: float [[X:%.*]], float [[FALLBACK:%.*]]) {
-; CHECK-NEXT:    [[BELOW_LO_OR_NAN:%.*]] = fcmp nsz ult float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[BELOW_HI:%.*]] = fcmp nsz olt float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[UPPER:%.*]] = select nsz i1 [[BELOW_HI]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[ORDERED:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[LOWER_OR_FALLBACK:%.*]] = select i1 [[ORDERED]], float 0.000000e+00, float [[FALLBACK]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select nsz i1 [[BELOW_LO_OR_NAN]], float [[LOWER_OR_FALLBACK]], float [[UPPER]]
+; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minnum.f32(float [[X]], float 1.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[TMP1]], float 0.000000e+00)
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ISNAN]], float [[FALLBACK]], float [[TMP2]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %below_lo_or_nan = fcmp nsz ult float %x, 0.0
@@ -309,12 +299,10 @@ define float @n12_ord_maybe_nan(float %x, float %y, float %fallback) {
 define float @pos_ord_x_x(float %x, float %fallback) {
 ; CHECK-LABEL: define float @pos_ord_x_x(
 ; CHECK-SAME: float [[X:%.*]], float [[FALLBACK:%.*]]) {
-; CHECK-NEXT:    [[BELOW_LO_OR_NAN:%.*]] = fcmp ult float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[BELOW_HI:%.*]] = fcmp olt float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[UPPER:%.*]] = select nsz i1 [[BELOW_HI]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[ORDERED:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[LOWER_OR_FALLBACK:%.*]] = select nsz i1 [[ORDERED]], float 0.000000e+00, float [[FALLBACK]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select nsz i1 [[BELOW_LO_OR_NAN]], float [[LOWER_OR_FALLBACK]], float [[UPPER]]
+; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minnum.f32(float [[X]], float 1.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[TMP1]], float 0.000000e+00)
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ISNAN]], float [[FALLBACK]], float [[TMP2]]
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %below_lo_or_nan = fcmp ult float %x, 0.0
@@ -330,12 +318,10 @@ define float @pos_ord_x_x(float %x, float %fallback) {
 define <vscale x 4 x float> @pos_scalable(<vscale x 4 x float> %x, <vscale x 4 x float> %fallback) {
 ; CHECK-LABEL: define <vscale x 4 x float> @pos_scalable(
 ; CHECK-SAME: <vscale x 4 x float> [[X:%.*]], <vscale x 4 x float> [[FALLBACK:%.*]]) {
-; CHECK-NEXT:    [[BELOW_LO_OR_NAN:%.*]] = fcmp ult <vscale x 4 x float> [[X]], zeroinitializer
-; CHECK-NEXT:    [[BELOW_HI:%.*]] = fcmp olt <vscale x 4 x float> [[X]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[UPPER:%.*]] = select nsz <vscale x 4 x i1> [[BELOW_HI]], <vscale x 4 x float> [[X]], <vscale x 4 x float> splat (float 1.000000e+00)
-; CHECK-NEXT:    [[ORDERED:%.*]] = fcmp ord <vscale x 4 x float> [[X]], zeroinitializer
-; CHECK-NEXT:    [[LOWER_OR_FALLBACK:%.*]] = select nsz <vscale x 4 x i1> [[ORDERED]], <vscale x 4 x float> zeroinitializer, <vscale x 4 x float> [[FALLBACK]]
-; CHECK-NEXT:    [[RESULT:%.*]] = select nsz <vscale x 4 x i1> [[BELOW_LO_OR_NAN]], <vscale x 4 x float> [[LOWER_OR_FALLBACK]], <vscale x 4 x float> [[UPPER]]
+; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno <vscale x 4 x float> [[X]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float> [[X]], <vscale x 4 x float> splat (float 1.000000e+00))
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float> [[TMP1]], <vscale x 4 x float> zeroinitializer)
+; CHECK-NEXT:    [[RESULT:%.*]] = select <vscale x 4 x i1> [[ISNAN]], <vscale x 4 x float> [[FALLBACK]], <vscale x 4 x float> [[TMP2]]
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RESULT]]
 ;
   %below_lo_or_nan = fcmp ult <vscale x 4 x float> %x, zeroinitializer
