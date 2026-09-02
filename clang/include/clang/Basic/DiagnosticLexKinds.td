@@ -21,7 +21,7 @@ defm cxx23_pp_directive : CXX23Compat<
 
 // C++26 compatibility with C++23 and earlier.
 defm raw_string_literal_character_set : CXX26Compat<
-  " '%0' in a raw string literal delimiter is", /*ext_warn*/false>;
+  "'%0' in a raw string literal delimiter is", /*ext_warn*/false>;
 
 def null_in_char_or_string : Warning<
   "null character(s) preserved in %select{char|string}0 literal">,
