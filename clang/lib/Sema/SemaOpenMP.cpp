@@ -23,6 +23,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
@@ -24377,6 +24378,62 @@ VarDecl *SemaOpenMP::ActOnOpenMPDeclareReductionInitializerStart(Scope *S,
 void SemaOpenMP::ActOnOpenMPDeclareReductionInitializerEnd(
     Decl *D, Expr *Initializer, VarDecl *OmpPrivParm) {
   auto *DRD = cast<OMPDeclareReductionDecl>(D);
+
+  // For non-trivial types with user initializers, build an AST that
+  // includes default construction first to initialize members before user
+  // initializer. This must be done BEFORE popping contexts.
+  if (Initializer) {
+    QualType ReductionType = DRD->getType();
+    if (ReductionType.isDestructedType() != QualType::DK_none) {
+      if (const auto *RD = ReductionType->getAsCXXRecordDecl()) {
+        CXXConstructorDecl *DefaultCtor =
+            SemaRef.LookupDefaultConstructor(const_cast<CXXRecordDecl *>(RD));
+
+        if (DefaultCtor && !DefaultCtor->isDeleted()) {
+          // Build default arguments for constructor parameters.
+          SmallVector<Expr *, 4> CtorArgs;
+          for (unsigned I : llvm::seq(DefaultCtor->getNumParams())) {
+            const ParmVarDecl *Param = DefaultCtor->getParamDecl(I);
+            if (Param->hasDefaultArg()) {
+              ExprResult DefArg = SemaRef.BuildCXXDefaultArgExpr(
+                  D->getLocation(), DefaultCtor,
+                  const_cast<ParmVarDecl *>(Param));
+              if (DefArg.isUsable())
+                CtorArgs.push_back(DefArg.get());
+            }
+          }
+
+          // Build constructor expression targeting omp_priv.
+          ExprResult CtorCall = SemaRef.BuildCXXConstructExpr(
+              D->getLocation(), ReductionType, DefaultCtor,
+              /*Elidable=*/false, CtorArgs,
+              /*HadMultipleCandidates=*/false,
+              /*IsListInitialization=*/false,
+              /*IsStdInitListInitialization=*/false,
+              /*RequiresZeroInit=*/false, CXXConstructionKind::Complete,
+              SourceRange());
+
+          if (CtorCall.isUsable()) {
+            // Wrap constructor and user initializer in StmtExpr.
+            // Create CompoundStmt directly since we don't have an active
+            // scope.
+            SmallVector<Stmt *, 2> Stmts;
+            Stmts.push_back(CtorCall.get());
+            Stmts.push_back(Initializer);
+
+            CompoundStmt *CS = CompoundStmt::Create(
+                SemaRef.Context, Stmts, FPOptionsOverride(), D->getLocation(),
+                D->getLocation());
+
+            Initializer = new (SemaRef.Context)
+                StmtExpr(CS, ReductionType, D->getLocation(), D->getLocation(),
+                         /*TemplateDepth=*/0);
+          }
+        }
+      }
+    }
+  }
+
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
 

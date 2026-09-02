@@ -3719,6 +3719,20 @@ int main() {
 // CHECK3-NEXT:    ret void
 //
 //
+// CHECK3-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
+// CHECK3-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK3-NEXT:  entry:
+// CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK3-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
+// CHECK3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK3-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[THIS1]], i64 4
+// CHECK3-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 2
+// CHECK3-NEXT:    [[TMP1:%.*]] = load volatile double, ptr @g, align 8
+// CHECK3-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP1]] to float
+// CHECK3-NEXT:    store float [[CONV]], ptr [[F]], align 4
+// CHECK3-NEXT:    ret void
+//
+//
 // CHECK3-LABEL: define {{[^@]+}}@_ZN1SIiEC2Ev
 // CHECK3-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
 // CHECK3-NEXT:  entry:
@@ -3739,20 +3753,6 @@ int main() {
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK3-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK3-NEXT:    ret void
-//
-//
-// CHECK3-LABEL: define {{[^@]+}}@_ZN1SIfEC2Ev
-// CHECK3-SAME: (ptr noundef nonnull align 4 dereferenceable(12) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK3-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
-// CHECK3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[THIS1]], i64 4
-// CHECK3-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 2
-// CHECK3-NEXT:    [[TMP1:%.*]] = load volatile double, ptr @g, align 8
-// CHECK3-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP1]] to float
-// CHECK3-NEXT:    store float [[CONV]], ptr [[F]], align 4
 // CHECK3-NEXT:    ret void
 //
 //
