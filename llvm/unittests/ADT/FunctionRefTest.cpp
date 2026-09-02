@@ -32,6 +32,9 @@ TEST(FunctionRefTest, DefaultConstructedCopy) {
   function_ref<int()> Copy = Empty;
   EXPECT_FALSE(Empty);
   EXPECT_FALSE(Copy);
+#if LLVM_MEMORY_SANITIZER_BUILD
+  __msan_check_mem_is_initialized(&Copy, sizeof(Copy));
+#endif
 
   function_ref<int()> Null = nullptr;
   EXPECT_FALSE(Null);
