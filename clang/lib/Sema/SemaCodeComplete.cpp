@@ -6036,6 +6036,115 @@ Expr *unwrapParenList(Expr *Base) {
 
 } // namespace
 
+static void AddHLSLVectorSwizzleCompletions(Sema &SemaRef,
+                                            ResultBuilder &Results,
+                                            const ExtVectorType *VT) {
+
+  unsigned NumElts = VT->getNumElements();
+  if (NumElts > 4)
+    NumElts = 4;
+
+  StringRef Filter = SemaRef.PP.getCodeCompletionFilter();
+
+  bool UseXYZW = true;
+  bool UseRGBA = true;
+  if (!Filter.empty()) {
+    bool HasXYZW = Filter.find_first_of("xyzw") != StringRef::npos;
+    bool HasRGBA = Filter.find_first_of("rgba") != StringRef::npos;
+    if (HasXYZW && !HasRGBA)
+      UseRGBA = false;
+    if (HasRGBA && !HasXYZW)
+      UseXYZW = false;
+    if (HasXYZW && HasRGBA)
+      return;
+    if (Filter.size() >= 4)
+      return;
+  }
+
+  static const char *const XYZWNames[] = {"x", "y", "z", "w"};
+  static const char *const RGBANames[] = {"r", "g", "b", "a"};
+
+  for (unsigned I = 0; I < NumElts; ++I) {
+    if (UseRGBA) {
+      CodeCompletionBuilder CCB(Results.getAllocator(),
+                                Results.getCodeCompletionTUInfo());
+      if (!Filter.empty()) {
+        llvm::SmallString<8> FullText(Filter);
+        FullText += RGBANames[I];
+        CCB.AddTypedTextChunk(Results.getAllocator().CopyString(FullText));
+      } else {
+        CCB.AddTypedTextChunk(RGBANames[I]);
+      }
+      Results.AddResult(
+          CodeCompletionResult(CCB.TakeString(), CCP_MemberDeclaration));
+    }
+    if (UseXYZW) {
+      CodeCompletionBuilder CCB(Results.getAllocator(),
+                                Results.getCodeCompletionTUInfo());
+      if (!Filter.empty()) {
+        llvm::SmallString<8> FullText(Filter);
+        FullText += XYZWNames[I];
+        CCB.AddTypedTextChunk(Results.getAllocator().CopyString(FullText));
+      } else {
+        CCB.AddTypedTextChunk(XYZWNames[I]);
+      }
+      Results.AddResult(
+          CodeCompletionResult(CCB.TakeString(), CCP_MemberDeclaration));
+    }
+  }
+}
+
+static void AddHLSLMatrixSwizzleCompletions(Sema &SemaRef,
+                                            ResultBuilder &Results,
+                                            const ConstantMatrixType *MT) {
+  unsigned Rows = MT->getNumRows();
+  unsigned Cols = MT->getNumColumns();
+
+  StringRef Filter = SemaRef.PP.getCodeCompletionFilter();
+
+  bool UseMNotation = true;
+  bool UseOneNotation = true;
+
+  if (!Filter.empty()) {
+    if (Filter.starts_with("_m")) {
+      UseOneNotation = false;
+      if (Filter.size() % 4 != 0 || Filter.size() >= 16)
+        return;
+    } else if (Filter.starts_with("_")) {
+      UseMNotation = false;
+      if (Filter.size() % 3 != 0 || Filter.size() >= 12)
+        return;
+    } else {
+      return;
+    };
+  }
+
+  for (unsigned R = 0; R < Rows; ++R) {
+    for (unsigned C = 0; C < Cols; ++C) {
+      if (UseMNotation) {
+        llvm::SmallString<16> Name(Filter);
+        llvm::raw_svector_ostream OS(Name);
+        OS << "_m" << R << C;
+        CodeCompletionBuilder CCB(Results.getAllocator(),
+                                  Results.getCodeCompletionTUInfo());
+        CCB.AddTypedTextChunk(Results.getAllocator().CopyString(Name));
+        Results.AddResult(
+            CodeCompletionResult(CCB.TakeString(), CCP_MemberDeclaration));
+      }
+      if (UseOneNotation) {
+        llvm::SmallString<16> Name(Filter);
+        llvm::raw_svector_ostream OS(Name);
+        OS << "_" << (R + 1) << (C + 1);
+        CodeCompletionBuilder CCB(Results.getAllocator(),
+                                  Results.getCodeCompletionTUInfo());
+        CCB.AddTypedTextChunk(Results.getAllocator().CopyString(Name));
+        Results.AddResult(
+            CodeCompletionResult(CCB.TakeString(), CCP_MemberDeclaration));
+      }
+    }
+  }
+}
+
 void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
     Scope *S, Expr *Base, Expr *OtherOpBase, SourceLocation OpLoc, bool IsArrow,
     bool IsBaseExprStatement, QualType PreferredType) {
@@ -6109,6 +6218,13 @@ void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
     if (RecordDecl *RD = getAsRecordDecl(BaseType, Resolver)) {
       AddRecordMembersCompletionResults(SemaRef, Results, S, BaseType, BaseKind,
                                         RD, std::move(AccessOpFixIt));
+    } else if (getLangOpts().HLSL && !IsArrow &&
+               SemaRef.CodeCompletion()
+                   .CodeCompleter->includeHLSLSwizzleCompletions()) {
+      if (const auto *VT = BaseType->getAs<ExtVectorType>())
+        AddHLSLVectorSwizzleCompletions(SemaRef, Results, VT);
+      else if (const auto *MT = BaseType->getAs<ConstantMatrixType>())
+        AddHLSLMatrixSwizzleCompletions(SemaRef, Results, MT);
     } else if (const auto *TTPT =
                    dyn_cast<TemplateTypeParmType>(BaseType.getTypePtr())) {
       auto Operator =
