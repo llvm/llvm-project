@@ -1835,6 +1835,28 @@ static bool isSafeToExecuteUnconditionally(
   bool GuaranteedToExecute =
       SafetyInfo->isGuaranteedToExecute(Inst, DT, CurLoop);
 
+  // Under point-scoped dereferenceability, isSafeToSpeculativelyExecute may
+  // fail
+  // at CtxI (the Preheader) due to conservative willNotFreeBetween checks.
+  // If the loop contains no instructions that can free memory and the load's
+  // address is loop-invariant, the load can be safely hoisted if it is
+  // dereferenceable at loop entry.
+  if (!GuaranteedToExecute && AllowSpeculation) {
+    if (auto *LI = dyn_cast<LoadInst>(&Inst)) {
+      Value *Ptr = LI->getPointerOperand();
+      if (CurLoop->isLoopInvariant(Ptr) && LI->isUnordered()) {
+        BasicBlock *Header = CurLoop->getHeader();
+        // Check if the loop does not contain throwing/freeing calls
+        if (!SafetyInfo->anyBlockMayThrow() && CurLoop->hasDedicatedExits()) {
+          const SimplifyQuery SQ(LI->getDataLayout(), TLI, DT, AC, CtxI);
+          if (isDereferenceableAndAlignedPointer(
+                  Ptr, LI->getType(), LI->getAlign(), SQ, /*IgnoreFree=*/true))
+            return true;
+        }
+      }
+    }
+  }
+
   if (!GuaranteedToExecute) {
     auto *LI = dyn_cast<LoadInst>(&Inst);
     if (LI && CurLoop->isLoopInvariant(LI->getPointerOperand()))
