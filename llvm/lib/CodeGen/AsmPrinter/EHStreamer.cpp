@@ -267,6 +267,11 @@ void EHStreamer::computeCallSiteTable(
       if (!MI.isEHLabel()) {
         if (MI.isCall())
           SawPotentiallyThrowing |= !callToNoUnwindFunction(&MI);
+        else if (MI.isInlineAsm()) {
+          // An inline asm call may unwind iff it contains the `unwind` keyword.
+          unsigned ExtraInfo = MI.getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+          SawPotentiallyThrowing |= ExtraInfo & InlineAsm::Extra_MayUnwind;
+        }
         continue;
       }
 
