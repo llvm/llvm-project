@@ -1476,6 +1476,49 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
 #endif // !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
+static bool isSafePHIToSpeculate(PHINode &PN);
+
+/// Find the common load type used through a pointer PHI that SROA can
+/// speculate.
+static Type *findCommonTypeThroughPHI(PHINode &PN) {
+  if (!isSafePHIToSpeculate(PN))
+    return nullptr;
+  return cast<LoadInst>(PN.user_back())->getType();
+}
+
+/// Find a common load/store type used through a pointer select.
+///
+/// A select is an immediate user of each pointer operand, so looking only at
+/// the select itself loses the types of the memory operations that actually
+/// access the pointers. Look through a select when all of its users are loads
+/// or stores of one common type. This mirrors the uses that SROA can later
+/// rewrite when speculating the select.
+static Type *findCommonTypeThroughSelect(SelectInst &SI) {
+  Type *Ty = nullptr;
+
+  for (User *U : SI.users()) {
+    Value *Ptr = &SI;
+    if (auto *BC = dyn_cast<BitCastInst>(U); BC && BC->hasOneUse()) {
+      Ptr = BC;
+      U = *BC->user_begin();
+    }
+
+    Type *UserTy = nullptr;
+    if (auto *LI = dyn_cast<LoadInst>(U);
+        LI && LI->getPointerOperand() == Ptr) {
+      UserTy = LI->getType();
+    } else if (auto *Store = dyn_cast<StoreInst>(U);
+               Store && Store->getPointerOperand() == Ptr) {
+      UserTy = Store->getValueOperand()->getType();
+    }
+
+    if (!UserTy || (Ty && Ty != UserTy))
+      return nullptr;
+    Ty = UserTy;
+  }
+  return Ty;
+}
+
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.
 static std::pair<Type *, IntegerType *>
@@ -1499,6 +1542,10 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
       UserTy = LI->getType();
     } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
       UserTy = SI->getValueOperand()->getType();
+    } else if (auto *SI = dyn_cast<SelectInst>(U->getUser())) {
+      UserTy = findCommonTypeThroughSelect(*SI);
+    } else if (auto *PN = dyn_cast<PHINode>(U->getUser())) {
+      UserTy = findCommonTypeThroughPHI(*PN);
     }
 
     if (IntegerType *UserITy = dyn_cast_or_null<IntegerType>(UserTy)) {
@@ -2324,12 +2371,9 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
                                             uint64_t AllocBeginOffset,
                                             Type *AllocaTy,
                                             const DataLayout &DL,
-                                            bool &WholeAllocaOp) {
+                                            bool &WholeAllocaOp,
+                                            bool AllowMemTransferWidening) {
   uint64_t Size = DL.getTypeStoreSize(AllocaTy).getFixedValue();
-
-  uint64_t RelBegin = S.beginOffset() - AllocBeginOffset;
-  uint64_t RelEnd = S.endOffset() - AllocBeginOffset;
-
   Use *U = S.getUse();
 
   // Lifetime intrinsics operate over the whole alloca whose sizes are usually
@@ -2340,6 +2384,21 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
     if (II->isLifetimeStartOrEnd() || II->isDroppable())
       return true;
   }
+
+  if (AllowMemTransferWidening) {
+    if (auto *MI = dyn_cast<MemIntrinsic>(U->getUser())) {
+      if (MI->isVolatile() || !isa<Constant>(MI->getLength()) ||
+          !S.isSplittable())
+        return false;
+      if (isa<MemTransferInst>(MI) && S.beginOffset() <= AllocBeginOffset &&
+          S.endOffset() >= AllocBeginOffset + Size)
+        WholeAllocaOp = true;
+      return true;
+    }
+  }
+
+  uint64_t RelBegin = S.beginOffset() - AllocBeginOffset;
+  uint64_t RelEnd = S.endOffset() - AllocBeginOffset;
 
   // We can't reasonably handle cases where the load or store extends past
   // the end of the alloca's type and into its padding.
@@ -2416,7 +2475,8 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
 /// stores to a particular alloca into wider loads and stores and be able to
 /// promote the resulting alloca.
 static bool isIntegerWideningViable(Partition &P, Type *AllocaTy,
-                                    const DataLayout &DL) {
+                                    const DataLayout &DL,
+                                    bool AllowMemTransferWidening = false) {
   uint64_t SizeInBits = DL.getTypeSizeInBits(AllocaTy).getFixedValue();
   // Don't create integer types larger than the maximum bitwidth.
   if (SizeInBits > IntegerType::MAX_INT_BITS)
@@ -2445,12 +2505,14 @@ static bool isIntegerWideningViable(Partition &P, Type *AllocaTy,
 
   for (const Slice &S : P)
     if (!isIntegerWideningViableForSlice(S, P.beginOffset(), AllocaTy, DL,
-                                         WholeAllocaOp))
+                                         WholeAllocaOp,
+                                         AllowMemTransferWidening))
       return false;
 
   for (const Slice *S : P.splitSliceTails())
     if (!isIntegerWideningViableForSlice(*S, P.beginOffset(), AllocaTy, DL,
-                                         WholeAllocaOp))
+                                         WholeAllocaOp,
+                                         AllowMemTransferWidening))
       return false;
 
   return WholeAllocaOp;
@@ -4805,6 +4867,56 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
   return SubTy;
 }
 
+static bool containsNonIntegralPointer(Type *Ty, const DataLayout &DL) {
+  if (auto *PtrTy = dyn_cast<PointerType>(Ty))
+    return DL.isNonIntegralPointerType(PtrTy);
+  return llvm::any_of(Ty->subtypes(), [&](Type *SubTy) {
+    return containsNonIntegralPointer(SubTy, DL);
+  });
+}
+
+/// Return true if every non-ignorable use covers the whole partition and can
+/// be rewritten as a direct access to NewTy.
+static bool areAllUsesWholePartitionPromotable(Partition &P, Type *NewTy,
+                                                const DataLayout &DL) {
+  auto IsPromotable = [&](const Slice &S) {
+    if (S.isDead() || !S.getUse())
+      return true;
+
+    User *Usr = S.getUse()->getUser();
+    if (auto *II = dyn_cast<IntrinsicInst>(Usr);
+        II && (II->isLifetimeStartOrEnd() || II->isDroppable()))
+      return true;
+
+    if (S.beginOffset() > P.beginOffset() ||
+        S.endOffset() < P.endOffset())
+      return false;
+
+    bool IsExactPartition = S.beginOffset() == P.beginOffset() &&
+                            S.endOffset() == P.endOffset();
+    if (auto *LI = dyn_cast<LoadInst>(Usr)) {
+      if (LI->isVolatile())
+        return false;
+      return IsExactPartition ? canConvertValue(DL, NewTy, LI->getType())
+                              : S.isSplittable();
+    }
+    if (auto *SI = dyn_cast<StoreInst>(Usr)) {
+      if (SI->isVolatile())
+        return false;
+      return IsExactPartition
+                 ? canConvertValue(DL, SI->getValueOperand()->getType(), NewTy)
+                 : S.isSplittable();
+    }
+    if (auto *MI = dyn_cast<MemIntrinsic>(Usr))
+      return !MI->isVolatile() && S.isSplittable();
+    return false;
+  };
+
+  return llvm::all_of(P, IsPromotable) &&
+         llvm::all_of(P.splitSliceTails(),
+                      [&](const Slice *S) { return IsPromotable(*S); });
+}
+
 /// Pre-split loads and stores to simplify rewriting.
 ///
 /// We want to break up the splittable load+store pairs as much as
@@ -5459,13 +5571,22 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // type?
   if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                P.beginOffset(), P.size())) {
-    // If the partition is an integer array that can be spanned by a legal
-    // integer type, prefer to represent it as a legal integer type because
-    // it's more likely to be promotable.
+    // Canonicalize arrays to a legal integer only when this is guaranteed to
+    // produce a promotable partition.
     if (TypePartitionTy->isArrayTy() &&
-        TypePartitionTy->getArrayElementType()->isIntegerTy() &&
-        DL.isLegalInteger(P.size() * 8))
-      TypePartitionTy = Type::getIntNTy(C, P.size() * 8);
+        !containsNonIntegralPointer(TypePartitionTy, DL) &&
+        DL.isLegalInteger(P.size() * 8)) {
+      Type *IntTy = Type::getIntNTy(C, P.size() * 8);
+      if (isIntegerWideningViable(P, IntTy, DL,
+                                  /*AllowMemTransferWidening=*/true)) {
+        LogSelection("array-int-widen", IntTy, nullptr, true);
+        return {IntTy, true, nullptr};
+      }
+      if (areAllUsesWholePartitionPromotable(P, IntTy, DL)) {
+        LogSelection("array-int-whole", IntTy, nullptr, false);
+        return {IntTy, false, nullptr};
+      }
+    }
     // There was no common type used, so we prefer integer widening promotion.
     if (isIntegerWideningViable(P, TypePartitionTy, DL)) {
       LogSelection("type-partition-int-widen", TypePartitionTy, nullptr, true);
