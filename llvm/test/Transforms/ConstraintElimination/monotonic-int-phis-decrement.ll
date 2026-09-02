@@ -15,7 +15,7 @@ define void @add_rec_decreasing_cond_true_constant(i8 noundef %len) {
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
+; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -50,7 +50,7 @@ define void @add_rec_decreasing_cond_not_true_constant(i8 noundef %len) {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i8 [[K_0]], 4
 ; CHECK-NEXT:    call void @use(i1 [[CMP_NOT_I]])
-; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
+; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -79,7 +79,7 @@ define void @add_rec_decreasing_cond_true_start_signed_positive(i8 noundef %star
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sge i8 [[START]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
-; CHECK-NEXT:    [[START_1:%.*]] = add i8 [[START]], -1
+; CHECK-NEXT:    [[START_1:%.*]] = add nsw i8 [[START]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[K_0:%.*]] = phi i8 [ [[START_1]], [[ENTRY:%.*]] ], [ [[K_DEC:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -87,7 +87,7 @@ define void @add_rec_decreasing_cond_true_start_signed_positive(i8 noundef %star
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
+; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -127,7 +127,7 @@ define void @add_rec_decreasing_cond_not_true_start_signed_positive(i8 noundef %
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i8 [[K_0]], [[START]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP_NOT_I]])
-; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
+; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -471,7 +471,7 @@ define void @add_rec_decreasing_nsw_from_scev(i8 %b) {
 ; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[K_0]], 0
 ; CHECK-NEXT:    br i1 [[POSITIVE]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
+; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

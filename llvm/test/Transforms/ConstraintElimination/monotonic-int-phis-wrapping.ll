@@ -20,7 +20,7 @@ define void @test_iv_wraps_1(i8 %len.n, i8 %a) {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[IV]], -1
 ; CHECK-NEXT:    call void @use.i1(i1 [[T_1]])
-; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -85,7 +85,7 @@ exit:
 define void @test_iv_nuw_nsw_2_uge_start(i8 %len.n, i8 %a) {
 ; CHECK-LABEL: @test_iv_nuw_nsw_2_uge_start(
 ; CHECK-NEXT:  loop.ph:
-; CHECK-NEXT:    [[START:%.*]] = add i8 -2, 1
+; CHECK-NEXT:    [[START:%.*]] = add nsw i8 -2, 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], [[LOOP_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]

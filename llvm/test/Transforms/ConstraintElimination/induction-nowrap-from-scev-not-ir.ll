@@ -74,7 +74,7 @@ define void @zero_step_constant_start(i32 %n) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 0
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 0
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

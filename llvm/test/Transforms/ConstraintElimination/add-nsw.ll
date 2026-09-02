@@ -906,9 +906,8 @@ define i1 @add_neg_1_slt(i64 %x, i64 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_NEG]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], -1
-; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 [[X]], -1
+; CHECK-NEXT:    ret i1 true
 ;
   %x.non.neg = icmp sge i64 %x, 0
   call void @llvm.assume(i1 %x.non.neg)
@@ -925,9 +924,8 @@ define i1 @add_neg_20_slt(i64 %x, i64 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_NEG]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], -20
-; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 [[X]], -20
+; CHECK-NEXT:    ret i1 true
 ;
   %x.non.neg = icmp sge i64 %x, 0
   call void @llvm.assume(i1 %x.non.neg)
@@ -944,9 +942,8 @@ define i1 @add_neg_1_nonneg_from_ult(i64 %x, i64 %c) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NON_NEG]])
 ; CHECK-NEXT:    [[B:%.*]] = icmp ult i64 [[X:%.*]], [[C]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], -1
-; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[C]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 [[X]], -1
+; CHECK-NEXT:    ret i1 true
 ;
   %x.non.neg = icmp sge i64 %c, 0
   call void @llvm.assume(i1 %x.non.neg)
@@ -980,9 +977,8 @@ define i1 @add_non_positive_slt(i64 %x, i64 %y, i64 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NON_POS]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x.non.neg = icmp sge i64 %x, 0
   call void @llvm.assume(i1 %x.non.neg)
@@ -1003,9 +999,8 @@ define i1 @add_non_positive_slt_commuted(i64 %x, i64 %y, i64 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NON_POS]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[Y]], [[X]]
-; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[SUB]], [[B]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 [[Y]], [[X]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x.non.neg = icmp sge i64 %x, 0
   call void @llvm.assume(i1 %x.non.neg)
