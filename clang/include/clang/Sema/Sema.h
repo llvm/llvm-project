@@ -13359,9 +13359,9 @@ public:
       /// template or variable template named 'sycl_kernel_launch'.
       SYCLKernelLaunchOverloadResolution,
 
-      /// We are synthesizing a call to a callable object returned by implicit
-      /// call to 'sycl_kernel_launch' intended for SYCL kernel special
-      /// kernel arguments handling. This happens in host code.
+      /// We are synthesizing a call to the callable object returned by the
+      /// implicit call to 'sycl_kernel_launch'. This call is synthesized
+      /// in host compilation to handle SYCL special kernel parameters.
       SYCLKernelHostSpecialParametersHandlerCall,
 
       /// We are instantiating an expansion statement.

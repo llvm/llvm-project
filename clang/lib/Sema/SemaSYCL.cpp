@@ -493,13 +493,13 @@ ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
   return IdExpr;
 }
 
-static bool isSyclSpecialType(QualType Ty) {
+namespace {
+
+bool isSyclSpecialType(QualType Ty) {
   if (const auto *RT = Ty->getAsRecordDecl())
     return RT->getMostRecentDecl()->hasAttr<SYCLSpecialKernelParameterAttr>();
   return false;
 }
-
-namespace {
 
 class KernelSpecialParamsCreator
     : public SubobjectVisitor<KernelSpecialParamsCreator> {
@@ -600,10 +600,9 @@ public:
   }
 };
 
-static void createArgumentsForSpecialTypes(SmallVectorImpl<Expr *> &Args,
-                                           ValueDecl *KernelArgObj,
-                                           SourceLocation Loc,
-                                           SemaSYCL &SemaSYCLRef) {
+void createArgumentsForSpecialTypes(SmallVectorImpl<Expr *> &Args,
+                                    ValueDecl *KernelArgObj, SourceLocation Loc,
+                                    SemaSYCL &SemaSYCLRef) {
   KernelSpecialParamsCreator KSPC(SemaSYCLRef, Loc, Args);
   KSPC.checkParameter(KernelArgObj);
 }
@@ -612,10 +611,10 @@ static void createArgumentsForSpecialTypes(SmallVectorImpl<Expr *> &Args,
 // The first argument is a string literal that contains the SYCL kernel
 // name. The remaining arguments are the parameters of 'FD' passed as
 // move-elligible xvalues. Returns true on error and false otherwise.
-static bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
-                                          const SYCLKernelInfo *SKI,
-                                          SmallVectorImpl<Expr *> &Args,
-                                          SourceLocation Loc) {
+bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
+                                   const SYCLKernelInfo *SKI,
+                                   SmallVectorImpl<Expr *> &Args,
+                                   SourceLocation Loc) {
   // The current context must be the function definition context to ensure
   // that parameter references occur within the correct scope.
   assert(SemaRef.CurContext == FD && "The current declaration context does not "

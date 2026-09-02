@@ -13571,12 +13571,12 @@ def err_sycl_entry_point_deduced_return_type : Error<
 def note_sycl_runtime_defect : Note<
   "this indicates a problem with the SYCL runtime header files; please consider"
   " reporting this to your SYCL runtime provider">;
-def note_sycl_kernel_implicit_lookup_here : Note<
-  "in implicit call to '%0' with template argument %1 required"
+def note_sycl_kernel_launch_lookup_here : Note<
+  "in implicit call to 'sycl_kernel_launch' with template argument %0 required"
   " here">;
-def note_sycl_kernel_implicit_overload_resolution_here : Note<
-  "in implicit call to '%0' with template argument %1 and"
-  " function arguments %2 required here">;
+def note_sycl_kernel_launch_overload_resolution_here : Note<
+  "in implicit call to 'sycl_kernel_launch' with template argument %0 and"
+  " function arguments %1 required here">;
 def note_sycl_kernel_implicit_call_here : Note<
   "in implicit call to %0 with arguments %1 required here">;
 def err_sycl_kernel_launch_not_void : Error<
