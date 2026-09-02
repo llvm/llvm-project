@@ -72,6 +72,16 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     -frtlib-add-rpath 2>&1 \
 // RUN:   | FileCheck --check-prefixes=RESDIR,NO-LIBPATH-X86_64,NO-RPATH-X86_64 %s
+//
+// Do not pass -rpath to unsupported linkers.
+// RUN: %clang %s -### --target=x86_64-pc-windows-msvc \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+// RUN:     -frtlib-add-rpath 2>&1 \
+// RUN:   | FileCheck --check-prefixes=RESDIR,NO-RPATH-UNSUPPORTED %s
+// RUN: %clang %s -### --target=wasm32-unknown-unknown \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+// RUN:     -frtlib-add-rpath 2>&1 \
+// RUN:   | FileCheck --check-prefixes=RESDIR,NO-RPATH-UNSUPPORTED %s
 
 // Test that the driver adds an per-target arch-specific subdirectory in
 // {RESOURCE_DIR}/lib/{triple} to the linker search path and to '-rpath'
@@ -95,6 +105,8 @@
 //
 // LINKONLY-X86_64: -L{{[^"]*}}resource_dir_with_arch_subdir{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}
 // LINKONLY-X86_64: "-rpath" "{{[^"]*}}resource_dir_with_arch_subdir{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
+//
+// NO-RPATH-UNSUPPORTED-NOT: "-rpath"
 
 // PERTARGET: "-resource-dir" "[[PTRESDIR:[^"]*]]"
 // PERTARGET: -L[[PTRESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux-gnu}}
