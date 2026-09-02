@@ -21,6 +21,8 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -80,6 +82,51 @@ static bool isInnermostTwoDimsTransposed(AffineMap map) {
   return map.getResult(numResults - 2) ==
              getAffineDimExpr(numInputs - 1, ctx) &&
          map.getResult(numResults - 1) == getAffineDimExpr(numInputs - 2, ctx);
+}
+
+// Return true if `uArch` can transfer a `shape`-shaped tile of `elemTy`
+// elements with the subgroup 2D block instruction `instKind`.
+//
+// A 2D block instruction accesses the two innermost dimensions of the tile;
+// leading dimensions are unrolled into a sequence of 2D accesses. The
+// innermost 2D tile does not have to match a hardware block exactly, because
+// the later XeGPU passes (layout propagation and blocking) split it into
+// hardware-sized blocks - but that split only exists when each of the two
+// innermost extents is a multiple of a supported block extent. Transfers
+// without such a split cannot be expressed with block instructions at all and
+// must use a different lowering.
+static bool isSupportedBlockShape(const xegpu::uArch::uArch *uArch,
+                                  xegpu::uArch::InstructionKind instKind,
+                                  ArrayRef<int64_t> shape, Type elemTy,
+                                  bool hasTranspose = false) {
+  if (shape.size() < 2)
+    return false;
+  if (!uArch || !uArch->isSupportedInstruction(instKind))
+    return false;
+
+  const xegpu::uArch::Instruction *inst = uArch->getInstruction(instKind);
+  const xegpu::uArch::BlockIOInstructionInterface *blockInst = nullptr;
+  if (const auto *load =
+          dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(inst))
+    blockInst = load;
+  else if (const auto *store =
+               dyn_cast<xegpu::uArch::Subgroup2DBlockStoreInstruction>(inst))
+    blockInst = store;
+  if (!blockInst)
+    return false;
+
+  // A missing entry means the element type itself is not supported.
+  std::optional<xegpu::uArch::BlockIOInstructionInterface::BlockShapes>
+      blockShapes = blockInst->getBlockWidthHeightCount(
+          elemTy, /*hasTransform=*/false, hasTranspose);
+  if (!blockShapes)
+    return false;
+
+  auto [widths, heights, counts] = *blockShapes;
+  int width = static_cast<int>(shape.back());
+  int height = static_cast<int>(shape[shape.size() - 2]);
+  return xegpu::getLargestDivisor(width, widths) != -1 &&
+         xegpu::getLargestDivisor(height, heights) != -1;
 }
 
 static LogicalResult transferPreconditions(PatternRewriter &rewriter,
@@ -553,10 +600,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return success();
     }
 
-    // TODO: This check needs to be replaced with proper uArch capability check.
-    auto chip = xegpu::getChipStr(readOp);
-    bool hasBlockLoadSupport =
-        (chip == "pvc" || chip == "bmg" || chip == "cri");
+    const xegpu::uArch::uArch *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(readOp).value_or(""));
 
     // An nd block load can realize a minor-identity map directly, or an
     // innermost-two-dims transpose via a trailing vector.transpose. Any other
@@ -565,29 +610,36 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     AffineMap readMap = readOp.getPermutationMap();
     bool isTransposeLoad = isInnermostTwoDimsTransposed(readMap);
 
-    // Prefer an nd block load. It requires HW block-load support, a vector of
-    // rank >= 2 backed by a scalar-element memref, and a map the block load can
-    // realize. 1D vectors use the scattered xegpu.load path instead, which has
-    // a richer interface (e.g. layout capabilities). Out-of-bounds reads are
-    // allowed as long as the padding matches load_nd's implicit zero padding.
+    // A block load transfers the tile as it is laid out in memory, so a
+    // transposing read describes a tile whose innermost two dims are swapped.
+    Type elementType = loadedVecTy.getElementType();
+    SmallVector<int64_t> descShape(loadedVecTy.getShape());
+    if (isTransposeLoad) {
+      size_t rank = descShape.size();
+      assert(rank >= 2 && "Transpose requires at least 2 dimensions");
+      std::swap(descShape[rank - 1], descShape[rank - 2]);
+    }
+
+    // Prefer an nd block load. It requires a vector of rank >= 2 backed by a
+    // scalar-element memref, a map the block load can realize, and a tile shape
+    // the target's 2D block load can access. 1D vectors use the scattered
+    // xegpu.load path instead, which has a richer interface (e.g. layout
+    // capabilities). Out-of-bounds reads are allowed as long as the padding
+    // matches load_nd's implicit zero padding.
     bool canLowerToLoadNd =
-        hasBlockLoadSupport && loadedVecTy.getRank() > 1 &&
+        loadedVecTy.getRank() > 1 &&
         (readMap.isMinorIdentity() || isTransposeLoad) &&
         readMemTy.getElementType().isIntOrFloat() &&
-        (!isOutOfBounds || isZeroOrPoisonPadding(readOp.getPadding()));
+        (!isOutOfBounds || isZeroOrPoisonPadding(readOp.getPadding())) &&
+        isSupportedBlockShape(
+            uArch, xegpu::uArch::InstructionKind::Subgroup2DBlockLoad,
+            descShape, elementType, /*hasTranspose=*/isTransposeLoad);
 
     if (canLowerToLoadNd) {
-      auto elementType = loadedVecTy.getElementType();
-
-      SmallVector<int64_t> descShape(loadedVecTy.getShape());
-      if (isTransposeLoad) {
-        // If load is transposed, simply swap the last two dimensions of the
-        // loaded vector type to get the descriptor shape.
-        size_t rank = descShape.size();
-        assert(rank >= 2 && "Transpose requires at least 2 dimensions");
-        std::swap(descShape[rank - 1], descShape[rank - 2]);
+      // The load produces the memory-ordered tile; the transpose below restores
+      // the shape the transfer_read asked for.
+      if (isTransposeLoad)
         loadedVecTy = VectorType::get(descShape, elementType);
-      }
       auto descType = xegpu::TensorDescType::get(
           descShape, elementType, /*array_length=*/1,
           /*boundary_check=*/isOutOfBounds, xegpu::MemorySpace::Global);
@@ -672,20 +724,22 @@ struct TransferWriteLowering
       return success();
     }
 
-    // TODO: This check needs to be replaced with proper uArch capability check.
-    auto chip = xegpu::getChipStr(writeOp);
-    bool hasBlockStoreSupport =
-        (chip == "pvc" || chip == "bmg" || chip == "cri");
+    const xegpu::uArch::uArch *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(writeOp).value_or(""));
 
-    // Prefer an nd block store. It requires HW block-store support, a vector of
-    // rank >= 2 backed by a scalar-element memref, and a minor-identity map
-    // (block stores have no transpose support). 1D vectors use the scattered
-    // xegpu.store path instead, which has a richer interface. Out-of-bounds
-    // writes are handled by the descriptor's boundary check.
+    // Prefer an nd block store. It requires a vector of rank >= 2 backed by a
+    // scalar-element memref, a minor-identity map (block stores have no
+    // transpose support), and a tile shape the target's 2D block store can
+    // access. 1D vectors use the scattered xegpu.store path instead, which has
+    // a richer interface. Out-of-bounds writes are handled by the descriptor's
+    // boundary check.
     AffineMap map = writeOp.getPermutationMap();
-    bool canLowerToStoreNd = hasBlockStoreSupport && vecTy.getRank() > 1 &&
-                             map.isMinorIdentity() &&
-                             writeMemTy.getElementType().isIntOrFloat();
+    bool canLowerToStoreNd =
+        vecTy.getRank() > 1 && map.isMinorIdentity() &&
+        writeMemTy.getElementType().isIntOrFloat() &&
+        isSupportedBlockShape(
+            uArch, xegpu::uArch::InstructionKind::Subgroup2DBlockStore,
+            vecTy.getShape(), vecTy.getElementType());
 
     if (canLowerToStoreNd) {
       auto [src, indices] = convertMemrefAndOffsetsToTargetRank(
