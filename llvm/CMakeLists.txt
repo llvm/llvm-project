@@ -513,9 +513,10 @@ if(WIN32 AND NOT UNIX)
     else()
       set(CPACK_WIX_INSTALL_SCOPE "perMachine")
     endif()
-    # Identifies the LLVM product line accross all versions. Must not be changed.
-    # Ensures previous installations are uninstalled and do not live side by
-    # side.
+    # Permanent WiX UpgradeCode for official LLVM MSI packages. Windows Installer
+    # uses this value to recognize related releases and remove an older LLVM
+    # installation during an upgrade. It must remain identical across all future
+    # releases and release branches. DO NOT regenerate or change this GUID.
     set(CPACK_WIX_UPGRADE_GUID "B08613CD-8BD0-4FB6-8937-621936604DE3")
   endif()
 endif()
