@@ -76,7 +76,6 @@ define <1 x i32> @atomic_vec1_i8_zext(ptr %x) {
 ; CHECK-O3-LABEL: atomic_vec1_i8_zext:
 ; CHECK-O3:       # %bb.0:
 ; CHECK-O3-NEXT:    movzbl (%rdi), %eax
-; CHECK-O3-NEXT:    movzbl %al, %eax
 ; CHECK-O3-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: atomic_vec1_i8_zext:

@@ -1343,7 +1343,7 @@ define <2 x i64> @load_sext_2i1_to_2i64(ptr%ptr) {
 ; SSE-LABEL: load_sext_2i1_to_2i64:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movzbl (%rdi), %eax
-; SSE-NEXT:    movzbl %al, %ecx
+; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    shrb %al
 ; SSE-NEXT:    movzbl %al, %eax
 ; SSE-NEXT:    negq %rax
@@ -1357,7 +1357,7 @@ define <2 x i64> @load_sext_2i1_to_2i64(ptr%ptr) {
 ; AVX1-LABEL: load_sext_2i1_to_2i64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movzbl (%rdi), %eax
-; AVX1-NEXT:    movzbl %al, %ecx
+; AVX1-NEXT:    movl %eax, %ecx
 ; AVX1-NEXT:    shrb %al
 ; AVX1-NEXT:    movzbl %al, %eax
 ; AVX1-NEXT:    negq %rax
@@ -1371,7 +1371,7 @@ define <2 x i64> @load_sext_2i1_to_2i64(ptr%ptr) {
 ; AVX2-LABEL: load_sext_2i1_to_2i64:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    movzbl (%rdi), %eax
-; AVX2-NEXT:    movzbl %al, %ecx
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    shrb %al
 ; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    negq %rax
@@ -1404,7 +1404,7 @@ define <2 x i64> @load_sext_2i1_to_2i64(ptr%ptr) {
 ; X86-SSE2:       # %bb.0: # %entry
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzbl (%eax), %eax
-; X86-SSE2-NEXT:    movzbl %al, %ecx
+; X86-SSE2-NEXT:    movl %eax, %ecx
 ; X86-SSE2-NEXT:    shrb %al
 ; X86-SSE2-NEXT:    movzbl %al, %eax
 ; X86-SSE2-NEXT:    negl %eax
@@ -1421,7 +1421,7 @@ define <2 x i64> @load_sext_2i1_to_2i64(ptr%ptr) {
 ; X86-SSE41:       # %bb.0: # %entry
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movzbl (%eax), %eax
-; X86-SSE41-NEXT:    movzbl %al, %ecx
+; X86-SSE41-NEXT:    movl %eax, %ecx
 ; X86-SSE41-NEXT:    andl $1, %ecx
 ; X86-SSE41-NEXT:    negl %ecx
 ; X86-SSE41-NEXT:    movd %ecx, %xmm0
@@ -1506,7 +1506,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(ptr%ptr) {
 ; SSE2-NEXT:    movzbl %cl, %ecx
 ; SSE2-NEXT:    negl %ecx
 ; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    movzbl %al, %ecx
+; SSE2-NEXT:    movl %eax, %ecx
 ; SSE2-NEXT:    shrb $2, %al
 ; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    andl $1, %eax
@@ -1534,7 +1534,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(ptr%ptr) {
 ; SSSE3-NEXT:    movzbl %cl, %ecx
 ; SSSE3-NEXT:    negl %ecx
 ; SSSE3-NEXT:    movd %ecx, %xmm0
-; SSSE3-NEXT:    movzbl %al, %ecx
+; SSSE3-NEXT:    movl %eax, %ecx
 ; SSSE3-NEXT:    shrb $2, %al
 ; SSSE3-NEXT:    movzbl %al, %eax
 ; SSSE3-NEXT:    andl $1, %eax
@@ -1557,7 +1557,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(ptr%ptr) {
 ; SSE41-LABEL: load_sext_4i1_to_4i32:
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movzbl (%rdi), %eax
-; SSE41-NEXT:    movzbl %al, %ecx
+; SSE41-NEXT:    movl %eax, %ecx
 ; SSE41-NEXT:    shrb %al
 ; SSE41-NEXT:    movzbl %al, %eax
 ; SSE41-NEXT:    andl $1, %eax
@@ -1582,7 +1582,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(ptr%ptr) {
 ; AVX1-LABEL: load_sext_4i1_to_4i32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movzbl (%rdi), %eax
-; AVX1-NEXT:    movzbl %al, %ecx
+; AVX1-NEXT:    movl %eax, %ecx
 ; AVX1-NEXT:    shrb %al
 ; AVX1-NEXT:    movzbl %al, %eax
 ; AVX1-NEXT:    andl $1, %eax
@@ -1607,7 +1607,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(ptr%ptr) {
 ; AVX2-LABEL: load_sext_4i1_to_4i32:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    movzbl (%rdi), %eax
-; AVX2-NEXT:    movzbl %al, %ecx
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    shrb %al
 ; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    andl $1, %eax
@@ -1663,7 +1663,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(ptr%ptr) {
 ; X86-SSE2-NEXT:    negl %ecx
 ; X86-SSE2-NEXT:    movd %ecx, %xmm1
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-SSE2-NEXT:    movzbl %al, %ecx
+; X86-SSE2-NEXT:    movl %eax, %ecx
 ; X86-SSE2-NEXT:    andl $1, %ecx
 ; X86-SSE2-NEXT:    negl %ecx
 ; X86-SSE2-NEXT:    movd %ecx, %xmm0
@@ -1685,7 +1685,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(ptr%ptr) {
 ; X86-SSE41-NEXT:    movzbl %cl, %ecx
 ; X86-SSE41-NEXT:    andl $1, %ecx
 ; X86-SSE41-NEXT:    negl %ecx
-; X86-SSE41-NEXT:    movzbl %al, %edx
+; X86-SSE41-NEXT:    movl %eax, %edx
 ; X86-SSE41-NEXT:    andl $1, %edx
 ; X86-SSE41-NEXT:    negl %edx
 ; X86-SSE41-NEXT:    movd %edx, %xmm0
@@ -1842,7 +1842,7 @@ define <4 x i64> @load_sext_4i1_to_4i64(ptr%ptr) {
 ; AVX1-LABEL: load_sext_4i1_to_4i64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movzbl (%rdi), %eax
-; AVX1-NEXT:    movzbl %al, %ecx
+; AVX1-NEXT:    movl %eax, %ecx
 ; AVX1-NEXT:    shrb %al
 ; AVX1-NEXT:    movzbl %al, %eax
 ; AVX1-NEXT:    andl $1, %eax
@@ -1875,7 +1875,7 @@ define <4 x i64> @load_sext_4i1_to_4i64(ptr%ptr) {
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    negq %rcx
 ; AVX2-NEXT:    vmovq %rcx, %xmm0
-; AVX2-NEXT:    movzbl %al, %ecx
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    shrb $2, %al
 ; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    andl $1, %eax
