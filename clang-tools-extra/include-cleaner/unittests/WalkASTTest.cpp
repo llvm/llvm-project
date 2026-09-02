@@ -1165,6 +1165,25 @@ TEST(WalkAST, ObjCIvarRefExpr) {
            {"-x", "objective-c"});
 }
 
+TEST(WalkAST, ObjCIvarRefExprClassExtension) {
+  testWalk(R"objc(
+    @interface MyClass
+    @end
+    @interface $implicit^MyClass () {
+      int foo;
+    }
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)test {
+      int x = ^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
 TEST(WalkAST, ObjCSelectorExpr) {
   testWalk(R"objc(
     @interface MyClass
