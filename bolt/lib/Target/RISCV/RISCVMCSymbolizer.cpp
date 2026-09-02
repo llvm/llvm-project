@@ -23,13 +23,26 @@ namespace bolt {
 
 namespace {
 
+bool isValidControlTransferAUIPC(const MCInst &Inst) {
+  if (Inst.getOpcode() != RISCV::AUIPC ||
+      MCPlus::getNumPrimeOperands(Inst) != 2)
+    return false;
+
+  const MCOperand &Base = Inst.getOperand(0);
+  return Base.isReg() && Base.getReg() != RISCV::X0 &&
+         Inst.getOperand(1).isImm();
+}
+
+bool isValidControlTransferJALR(const MCInst &Inst) {
+  if (Inst.getOpcode() != RISCV::JALR || MCPlus::getNumPrimeOperands(Inst) != 3)
+    return false;
+
+  return Inst.getOperand(0).isReg() && Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isImm();
+}
+
 bool isLinkerResolvedControlTransfer(const MCInst &AUIPC, const MCInst &JALR) {
-  if (AUIPC.getOpcode() != RISCV::AUIPC ||
-      MCPlus::getNumPrimeOperands(AUIPC) != 2 || !AUIPC.getOperand(0).isReg() ||
-      AUIPC.getOperand(0).getReg() == RISCV::X0 ||
-      !AUIPC.getOperand(1).isImm() || JALR.getOpcode() != RISCV::JALR ||
-      MCPlus::getNumPrimeOperands(JALR) != 3 || !JALR.getOperand(0).isReg() ||
-      !JALR.getOperand(1).isReg() || !JALR.getOperand(2).isImm())
+  if (!isValidControlTransferAUIPC(AUIPC) || !isValidControlTransferJALR(JALR))
     return false;
 
   const MCRegister Base = AUIPC.getOperand(0).getReg();
