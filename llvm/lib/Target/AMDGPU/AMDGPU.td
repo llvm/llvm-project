@@ -2017,7 +2017,6 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureGFX940Insts,
    FeatureRequiresAlignedVGPRs,
    FeatureFmaMixInsts,
-   FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeatureDot1Insts,
@@ -2059,6 +2058,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
 def FeatureISAVersion9_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
   [FeatureAddressableLocalMemorySize163840,
+   FeatureLDSBankCount64,
    FeatureFP8Insts,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8SDWASrcSel,
@@ -2080,6 +2080,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
       FeatureAddressableLocalMemorySize65536,
+      FeatureLDSBankCount32,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
       FeatureCvtFP8SDWASrcSel,
@@ -2090,6 +2091,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
 def FeatureISAVersion9_4_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [FeatureAddressableLocalMemorySize65536,
+     FeatureLDSBankCount32,
      FeatureRequiresCOV6])>;
 
 def FeatureISAVersion9_5_0 : FeatureSet<FeatureISAVersion9_5_Common.Features>;

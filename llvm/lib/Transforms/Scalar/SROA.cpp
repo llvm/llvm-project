@@ -1476,6 +1476,32 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
 #endif // !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
+/// Find a common load/store type used through a pointer PHI or select.
+///
+/// Look through a PHI or select to see if all of its users are loads or stores
+/// of one common type. Whether those accesses can be speculated does not affect
+/// the type they use and is checked separately when attempting promotion.
+static Type *findCommonTypeThroughPHIOrSelect(Instruction &I) {
+  assert((isa<PHINode, SelectInst>(I)) && "expected a PHI or select");
+  Type *Ty = nullptr;
+
+  for (User *U : I.users()) {
+    Type *UserTy = nullptr;
+    if (auto *LI = dyn_cast<LoadInst>(U))
+      UserTy = LI->getType();
+    else if (auto *Store = dyn_cast<StoreInst>(U))
+      // Slice building rejects stores of the PHI-or-select-derived pointer, so
+      // it must be the store's pointer operand here.
+      UserTy = Store->getValueOperand()->getType();
+
+    if (!UserTy || (Ty && Ty != UserTy))
+      return nullptr;
+    Ty = UserTy;
+  }
+
+  return Ty;
+}
+
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.
 static std::pair<Type *, IntegerType *>
@@ -1499,6 +1525,9 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
       UserTy = LI->getType();
     } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
       UserTy = SI->getValueOperand()->getType();
+    } else if (isa<PHINode, SelectInst>(U->getUser())) {
+      UserTy =
+          findCommonTypeThroughPHIOrSelect(*cast<Instruction>(U->getUser()));
     }
 
     if (IntegerType *UserITy = dyn_cast_or_null<IntegerType>(UserTy)) {

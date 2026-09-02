@@ -631,6 +631,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
+    libc.src.math.copysignf128
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
@@ -655,6 +656,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fabsf128
     libc.src.math.fabsl
     libc.src.math.fadd
     libc.src.math.faddl
@@ -687,6 +689,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_numf
     libc.src.math.fmaximum_numl
     libc.src.math.fmaximumf
+    libc.src.math.fmaximumf128
     libc.src.math.fmaximuml
     libc.src.math.fmaxl
     libc.src.math.fmin
@@ -703,6 +706,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_numf
     libc.src.math.fminimum_numl
     libc.src.math.fminimumf
+    libc.src.math.fminimumf128
     libc.src.math.fminimuml
     libc.src.math.fminl
     libc.src.math.fmod
@@ -1016,14 +1020,12 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2l
     libc.src.math.canonicalizef128
-    libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128
     libc.src.math.dmulf128
     libc.src.math.dsqrtf128
     libc.src.math.dsubf128
-    libc.src.math.fabsf128
     libc.src.math.faddf128
     libc.src.math.fdimf128
     libc.src.math.fdivf128
@@ -1031,11 +1033,9 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fmaximum_mag_numf128
     libc.src.math.fmaximum_magf128
     libc.src.math.fmaximum_numf128
-    libc.src.math.fmaximumf128
     libc.src.math.fminimum_mag_numf128
     libc.src.math.fminimum_magf128
     libc.src.math.fminimum_numf128
-    libc.src.math.fminimumf128
     libc.src.math.fmodf128
     libc.src.math.fmulf128
     libc.src.math.frexpf128

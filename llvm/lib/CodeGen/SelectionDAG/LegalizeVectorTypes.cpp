@@ -5534,6 +5534,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
       Res = WidenVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
   }
+  case ISD::PARTIAL_REDUCE_FMLA:
+    Res = WidenVecRes_PARTIAL_REDUCE_MLA(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -7592,6 +7595,16 @@ SDValue DAGTypeLegalizer::WidenVecRes_STRICT_FSETCC(SDNode *N) {
   ReplaceValueWith(SDValue(N, 1), NewChain);
 
   return DAG.getBuildVector(WidenVT, dl, Scalars);
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // Expand, then widen the result.
+  SDValue Expanded = TLI.expandPartialReduceMLA(N, DAG);
+  EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  return DAG.getInsertSubvector(DL, DAG.getPOISON(WideVT), Expanded, 0);
 }
 
 //===----------------------------------------------------------------------===//

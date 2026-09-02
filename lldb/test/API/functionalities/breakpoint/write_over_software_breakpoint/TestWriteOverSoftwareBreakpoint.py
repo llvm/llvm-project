@@ -15,8 +15,6 @@ class WriteOverSoftwareBreakpoint(TestBase):
 
     # Could not find a way to make place_break_here visible to lldb on Windows.
     @skipIfWindows
-    # Fails with a sanitized build of debugserver.
-    @llgs_test
     def test_write_over_breakpoint(self):
         TestBase.setUp(self)
         self.line = line_number("main.c", "// break here")

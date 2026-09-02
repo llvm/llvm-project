@@ -30,10 +30,6 @@ StringAttr OverriddenSymbolVisibilityOp::getNameAttr() {
   return getSymNameAttr();
 }
 
-void OverriddenSymbolVisibilityOp::setName(StringAttr name) {
-  setSymNameAttr(name);
-}
-
 static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   switch (visibility) {
   case SymbolTable::Visibility::Private:

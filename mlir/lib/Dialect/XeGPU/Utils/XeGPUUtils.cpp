@@ -161,9 +161,10 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     }
 
     std::string layoutName = getTemporaryLayoutName(result);
-    if (defOp->hasAttr(layoutName)) {
+    if (defOp->hasDiscardableAttr(layoutName)) {
       auto layout =
-          defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+          defOp->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(
+              layoutName);
       return layout;
     }
   }
@@ -265,8 +266,9 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);
-  if (op->hasAttr(layoutName)) {
-    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  if (op->hasDiscardableAttr(layoutName)) {
+    auto layout =
+        op->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
   }
 
@@ -323,11 +325,11 @@ void xegpu::setDistributeLayoutAttr(
   }
 
   std::string name = xegpu::getTemporaryLayoutName(result);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -371,11 +373,11 @@ void xegpu::setDistributeLayoutAttr(const OpOperand &operand,
   }
 
   std::string name = xegpu::getTemporaryLayoutName(operand);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
@@ -385,8 +387,9 @@ xegpu::getTemporaryLayout(const T &operandOrResult) {
   Operation *op = operandOrResult.getOwner();
 
   std::string layoutName = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (op->hasAttr(layoutName)) {
-    auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+  if (op->hasDiscardableAttr(layoutName)) {
+    auto layout =
+        op->getDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
     return layout;
   }
 
@@ -403,11 +406,11 @@ void xegpu::setTemporaryLayout(const T &operandOrResult,
                                const xegpu::DistributeLayoutAttr layout) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
+  if (owner->hasDiscardableAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
     return;
   }
   if (layout) {
-    owner->setAttr(name, layout);
+    owner->setDiscardableAttr(name, layout);
   }
 }
 
