@@ -2821,6 +2821,9 @@ TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
 
   EXPECT_TRUE(HasFeature("gfx1250", "smem-prefetch-insts"));
   EXPECT_TRUE(HasFeature("gfx950", "bf16-cvt-insts"));
+
+  // A capability feature is queried through the bitset only.
+  EXPECT_FALSE(HasFeature("gfx1030", "half-addressable-physical-local-memory"));
 }
 
 TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
@@ -2854,6 +2857,21 @@ TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
   SmallVector<StringRef, 0> Empty;
   AMDGPU::getFeatureNames(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE), Empty);
   EXPECT_TRUE(Empty.empty());
+}
+
+TEST(TargetParserTest, testAMDGPUHalfAddressableLDSFeature) {
+  auto Has = [](AMDGPU::GPUKind AK) {
+    return AMDGPU::getFeatureBitset(AK).test(
+        AMDGPU::FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY);
+  };
+
+  // Only gfx10/11/12 address half of the physical LDS block.
+  EXPECT_FALSE(Has(AMDGPU::GK_GFX900));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX1030));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX1100));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX1200));
+  EXPECT_FALSE(Has(AMDGPU::GK_GFX1250));
+  EXPECT_FALSE(Has(AMDGPU::GK_GFX1310));
 }
 
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
