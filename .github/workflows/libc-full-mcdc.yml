@@ -86,7 +86,7 @@ jobs:
           echo "=== [STAGE 2/4] Running Full Unit Test Suite at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
           START_TIME=$(date +%s)
 
-          export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
+          export LLVM_PROFILE_FILE="%clibc_cov_%p.profraw"
           ninja -k 0 -C build-cov libc-unit-tests || true
 
           END_TIME=$(date +%s)
@@ -131,7 +131,7 @@ jobs:
           touch coverage_mcdc_html/.nojekyll
 
           # 3. Run Codebase Coverage Analyzer
-          python3 libc/utils/coverage/codebase_coverage.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" >> $GITHUB_STEP_SUMMARY
+          PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/codebase_coverage.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" >> $GITHUB_STEP_SUMMARY
           echo "[LOG] Post-commit summary report written to GITHUB_STEP_SUMMARY."
 
       - name: Deploy MC/DC Coverage Report to GitHub Pages

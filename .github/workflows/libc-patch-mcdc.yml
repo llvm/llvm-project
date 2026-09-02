@@ -210,7 +210,7 @@ jobs:
         echo "[LOG] Executing Ninja targets: $TARGETS"
 
         if [ -n "$TARGETS" ]; then
-          export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
+          export LLVM_PROFILE_FILE="%clibc_cov_%p.profraw"
           ninja -C build-cov $TARGETS
           echo "TARGETS=$TARGETS" >> $GITHUB_ENV
         else
@@ -277,7 +277,7 @@ jobs:
         git diff "$DIFF_BASE" HEAD -- libc/src/ > patch.diff
 
         # 3. Run Diff Coverage Python Script using persisted commit metadata
-        python3 libc/utils/coverage/diff_coverage.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
+        PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/diff_coverage.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
         cat coverage_report.md >> $GITHUB_STEP_SUMMARY
         echo "[LOG] Coverage report successfully written to GITHUB_STEP_SUMMARY."
 
