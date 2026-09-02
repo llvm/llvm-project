@@ -392,17 +392,25 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
 
   CoerceBuilder CB(VMContext, getDataLayout());
   CB.addStruct(0, StrTy);
-  // All structs, even empty ones, should take up a register argument slot,
-  // so pin the minimum struct size to one bit.
-  CB.pad(llvm::alignTo(
-      std::max(CB.DL.getTypeSizeInBits(StrTy).getKnownMinValue(), uint64_t(1)),
-      64));
+
+  // All structs, even empty ones, should take up a register argument slot, so
+  // pin the minimum struct size to one bit. However, empty structs don't take
+  // up any stack slot, so only do it on register arguments (i.e. the first
+  // six).
+  bool IsStackArgument = RegOffset > 5;
+  uint64_t ActualSize = CB.DL.getTypeSizeInBits(StrTy).getKnownMinValue();
+  uint64_t ExpandedSize = std::max(ActualSize, uint64_t(1));
+  if (IsStackArgument)
+    ExpandedSize = ActualSize;
+
+  CB.pad(llvm::alignTo(ExpandedSize, 64));
   RegOffset += PaddingSlots + CB.Size / 64;
 
   // Try to use the original type for coercion.
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();
 
-  ABIArgInfo AAI = ABIArgInfo::getDirect(CoerceTy, 0, Padding);
+  ABIArgInfo AAI = ABIArgInfo::getDirect(CoerceTy, 0, Padding,
+                                         !IsStackArgument && ExpandedSize == 0);
   AAI.setInReg(CB.InReg);
   return AAI;
 }
