@@ -4265,7 +4265,7 @@ public:
                                  BD->getType()->isScalarType();
         if (!BD ||
             (isOpenMPTargetExecutionDirective(DKind) && !InTargetAndScalar) ||
-             (!InTargetAndScalar && !isImplicitOrExplicitTaskingRegion(DKind) &&
+            (!InTargetAndScalar && !isImplicitOrExplicitTaskingRegion(DKind) &&
              !isOpenMPParallelDirective(DKind) &&
              !isOpenMPWorksharingDirective(DKind) &&
              !isOpenMPTeamsDirective(DKind)))
@@ -22333,6 +22333,15 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
     ValueDecl *D = Res.first;
     if (!D)
       continue;
+
+    // Linear on bindings only works for simple simd, not parallel constructs.
+    if (isa<BindingDecl>(D)) {
+      OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+      if (isOpenMPParallelDirective(DKind)) {
+        Diag(ELoc, diag::err_omp_unsupported_on_binding) << 2;
+        continue;
+      }
+    }
 
     QualType Type = D->getType();
     auto *VD = dyn_cast<VarDecl>(D);

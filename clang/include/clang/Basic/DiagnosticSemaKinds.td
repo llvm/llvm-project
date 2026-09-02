@@ -12421,8 +12421,8 @@ def err_omp_parent_cancel_region_ordered : Error<
 def err_omp_reduction_wrong_type : Error<"reduction type cannot be %select{qualified with 'const', 'volatile' or 'restrict'|a function|a reference|an array}0 type">;
 def err_omp_wrong_var_in_declare_reduction : Error<"only %select{'omp_priv' or 'omp_orig'|'omp_in' or 'omp_out'}0 variables are allowed in %select{initializer|combiner}0 expression">;
 def err_omp_unsupported_on_binding : Error<
-  "%select{reductions|conditional lastprivate}0 on structured bindings "
-  "%plural{1:is|:are}0 not yet supported">;
+  "%select{reductions|conditional lastprivate|linear clause with parallel constructs}0 on structured bindings "
+  "%plural{0:are|:is}0 not yet supported">;
 def err_omp_declare_reduction_redefinition : Error<"redefinition of user-defined reduction for type %0">;
 def err_omp_mapper_wrong_type : Error<
   "mapper type must be of struct, union or class type">;

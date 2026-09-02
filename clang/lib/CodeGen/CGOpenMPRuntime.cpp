@@ -3074,9 +3074,14 @@ createPrivatesRecordDecl(CodeGenModule &CGM, ArrayRef<PrivateDataTy> Privates) {
       const VarDecl *PrivateCopy = Pair.second.PrivateCopy;
       // For BindingDecls, use PrivateCopy type (binding's actual type).
       // For regular variables, use Original type to preserve qualifiers.
-      QualType Type = isa<BindingDecl>(VD)
-                          ? PrivateCopy->getType().getNonReferenceType()
-                          : VD->getType().getNonReferenceType();
+      // Check OriginalRef to detect BindingDecls since Original may be the
+      // DecompositionDecl.
+      bool IsBinding =
+          Pair.second.OriginalRef &&
+          isa<BindingDecl>(
+              cast<DeclRefExpr>(Pair.second.OriginalRef)->getDecl());
+      QualType Type = IsBinding ? PrivateCopy->getType().getNonReferenceType()
+                                : VD->getType().getNonReferenceType();
 
       // If the private variable is a local variable with lvalue ref type,
       // allocate the pointer instead of the pointee type.
@@ -3599,15 +3604,16 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
         CGF.EmitExprAsInit(Init, VD, PrivateLValue, /*capturedByInit=*/false);
       }
     } else if (const VarDecl *OriginalVD = Pair.second.Original) {
-      // Handle array bindings without initializers
-      // Check if OriginalRef is a BindingDecl with array type
+      // Handle array bindings without initializers (firstprivate only).
+      // For private clause (PrivateElemInit is nullptr), skip initialization.
+      // Check if OriginalRef is a BindingDecl with array type.
       const BindingDecl *BD = nullptr;
       if (Pair.second.OriginalRef) {
         if (const auto *DRE = dyn_cast<DeclRefExpr>(Pair.second.OriginalRef)) {
           BD = dyn_cast<BindingDecl>(DRE->getDecl());
         }
       }
-      if (BD && BD->getType()->isArrayType()) {
+      if (BD && BD->getType()->isArrayType() && Pair.second.PrivateElemInit) {
         LValue PrivateLValue = CGF.EmitLValueForField(PrivatesBase, *FI);
         QualType Type = PrivateLValue.getType();
         const FieldDecl *SharedField = CapturesInfo.lookup(OriginalVD);
@@ -3915,7 +3921,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Aggregate privates and sort them by the alignment.
   const auto *I = Data.PrivateCopies.begin();
   for (const Expr *E : Data.PrivateVars) {
-    const auto *VD = getVarDeclForPrivate(cast<DeclRefExpr>(E)->getDecl());
+    const auto *Decl = cast<DeclRefExpr>(E)->getDecl();
+    const auto *VD = getOriginalVarDecl(Decl);
     const auto *CopyVD = cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl());
     Privates.emplace_back(C.getDeclAlign(VD),
                           PrivateHelpersTy(E, VD, CopyVD,
