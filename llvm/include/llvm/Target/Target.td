@@ -1905,6 +1905,12 @@ class AsmParser {
   // Match_Invalid<name> entry is generated for each such token; targets can
   // map these codes to more accurate error messages than Match_InvalidOperand.
   bit EmitTokenDiagnosticTypes = false;
+
+  // Set to true to make the assembler matcher emitter produce a fatal error
+  // for any pair of matchables that are indistinguishable to the asm parser.
+  // The check relies on mutually exclusive assembler predicates declared using
+  // MutuallyExclusiveAssemblerPredicates.
+  bit ErrorOnAmbiguousMatchables = false;
 }
 def DefaultAsmParser : AsmParser;
 
@@ -1957,6 +1963,17 @@ class AssemblerPredicate<dag cond, string name = ""> {
   dag AssemblerCondDag = cond;
   // See: Predicate.PredicateName
   string PredicateName = name;
+}
+
+/// MutuallyExclusiveAssemblerPredicates - Declares that predicate A is
+/// mutually exclusive with every predicate in list B, meaning no target
+/// configuration can satisfy A and any predicate from B simultaneously.
+/// The assembler matcher emitter uses this information to disambiguate
+/// differently predicated but otherwise identical instructions.
+class MutuallyExclusiveAssemblerPredicates<AssemblerPredicate A,
+                                           list<AssemblerPredicate> B> {
+  AssemblerPredicate PredicateA = A;
+  list<AssemblerPredicate> PredicatesB = B;
 }
 
 /// TokenAlias - This class allows targets to define assembler token

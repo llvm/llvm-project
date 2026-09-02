@@ -2937,12 +2937,15 @@ let AssemblerPredicate = isGFX8GFX9NotGFX940 in {
   defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Real_Atomics_vi <0x04e, 0>;
 }
 
-defm FLAT_ATOMIC_ADD_F64   : FLAT_Real_Atomics_vi<0x4f, 0>;
-defm FLAT_ATOMIC_MIN_F64   : FLAT_Real_Atomics_vi<0x50, 0>;
-defm FLAT_ATOMIC_MAX_F64   : FLAT_Real_Atomics_vi<0x51, 0>;
-defm GLOBAL_ATOMIC_ADD_F64 : FLAT_Global_Real_Atomics_vi<0x4f, 0>;
-defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Real_Atomics_vi<0x50, 0>;
-defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Real_Atomics_vi<0x51, 0>;
+// These instructions are encoded differently on gfx90* and gfx94*.
+let AssemblerPredicate = isGFX8GFX9NotGFX940 in {
+  defm FLAT_ATOMIC_ADD_F64   : FLAT_Real_Atomics_vi<0x4f, 0>;
+  defm FLAT_ATOMIC_MIN_F64   : FLAT_Real_Atomics_vi<0x50, 0>;
+  defm FLAT_ATOMIC_MAX_F64   : FLAT_Real_Atomics_vi<0x51, 0>;
+  defm GLOBAL_ATOMIC_ADD_F64 : FLAT_Global_Real_Atomics_vi<0x4f, 0>;
+  defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Real_Atomics_vi<0x50, 0>;
+  defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Real_Atomics_vi<0x51, 0>;
+}
 
 multiclass FLAT_Real_AllAddr_gfx940<bits<7> op> {
   def _gfx940       : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME)>;

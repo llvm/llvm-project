@@ -2859,7 +2859,10 @@ defm V_WMMA_I32_16X16X16_IU4   : VOP3P_Real_WMMA <0x045>;
 multiclass VOP3P_Real_vi<bits<7> op> {
   def _vi : VOP3P_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
             VOP3Pe_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
-    let AssemblerPredicate = HasVOP3PInsts;
+    // VOP3P instructions use the VI encoding, which is GFX9-only; GFX8 does
+    // not support VOP3P. Use isGFX9Only so the assembler predicate also
+    // distinguishes this variant from the GFX10+ real instructions.
+    let AssemblerPredicate = isGFX9Only;
     let DecoderNamespace = "GFX8";
     let VOP3P = 1;
   }

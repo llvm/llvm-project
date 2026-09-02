@@ -1472,6 +1472,15 @@ multiclass DS_Real_gfx12_with_name<bits<8> op, string name> {
 multiclass DS_Real_gfx12_gfx13<bits<8> op, DS_Pseudo ps = !cast<DS_Pseudo>(NAME), string name = !tolower(NAME)> :
   DS_Real_gfx12<op, ps, name>, DS_Real_gfx13<op, ps, name>;
 
+multiclass DS_Real_gfx125x_gfx13<bits<8> op, DS_Pseudo ps = !cast<DS_Pseudo>(NAME)> {
+  let AssemblerPredicate = isGFX125xOnly, DecoderNamespace = "GFX1250" in
+    def _gfx12 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
+                   SIEncodingFamily.GFX12, !tolower(NAME), /*hasGDS=*/false>;
+  let AssemblerPredicate = isGFX13Only, DecoderNamespace = "GFX13" in
+    def _gfx13 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
+                   SIEncodingFamily.GFX13, !tolower(NAME), /*hasGDS=*/false>;
+}
+
 multiclass DS_Real_gfx12_gfx13_with_name<bits<8> op, string name> {
   defm "" : DS_Real_gfx12_gfx13<op, !cast<DS_Pseudo>(NAME#"_gfx9"), name>;
 }
@@ -1507,10 +1516,8 @@ defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 defm DS_ADD_F64     : DS_Real_gfx12_gfx13<0x054>;
 defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
 
-let AssemblerPredicate = HasLdsBarrierArriveAtomic in {
-defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12_gfx13<0x056>;
-defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12_gfx13<0x075>;
-}
+defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx125x_gfx13<0x056>;
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx125x_gfx13<0x075>;
 
 // New aliases added in GFX12 without renaming the instructions.
 let AssemblerPredicate = isGFX12Plus in {
@@ -1894,10 +1901,17 @@ class DS_Real_Base_vi <bits<8> op, DS_Pseudo ps> :
 
 
 multiclass DS_Real_vi <bits<8> op, DS_Pseudo base_pseudo, bit need_gfx9_suffix = true> {
-  def "" : DS_Real_Base_vi<op, base_pseudo>;
-
+  // When a GFX9 variant exists, restrict the base variant to GFX8 only to
+  // avoid assembler ambiguity.
+  if !not(need_gfx9_suffix) then {
+    def "" : DS_Real_Base_vi<op, base_pseudo>;
+  }
   if need_gfx9_suffix then {
+    def "" : DS_Real_Base_vi<op, base_pseudo> {
+      let AssemblerPredicate = isGFX8Only;
+    }
     def _gfx9 : DS_Real_Base_vi<op, !cast<DS_Pseudo>(!cast<string>(base_pseudo)#"_gfx9")> {
+      let AssemblerPredicate = isGFX9Only;
       let DecoderNamespace = "GFX9";
     }
   }

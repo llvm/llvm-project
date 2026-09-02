@@ -691,8 +691,10 @@ struct MatchableInfo {
   /// couldMatchAmbiguouslyWith - Check whether this matchable could
   /// ambiguously match the same set of operands as \p RHS (without being a
   /// strictly superior match).
-  bool couldMatchAmbiguouslyWith(const MatchableInfo &RHS,
-                                 bool PreferSmallerInstructions) const {
+  bool couldMatchAmbiguouslyWith(
+      const MatchableInfo &RHS, bool PreferSmallerInstructions,
+      const DenseSet<std::pair<const Record *, const Record *>> &ExclusivePreds)
+      const {
     // The primary comparator is the instruction mnemonic.
     if (Mnemonic != RHS.Mnemonic)
       return false;
@@ -702,11 +704,32 @@ struct MatchableInfo {
       return false;
 
     // The size of instruction is unambiguous.
+    // TODO: We should consult shouldBeMatchedBefore() here instead of
+    // checking PreferSmallerInstructions directly.
     if (PreferSmallerInstructions && ResInstSize != RHS.ResInstSize)
       return false;
 
-    // The number of operands is unambiguous.
-    if (AsmOperands.size() != RHS.AsmOperands.size())
+    for (const SubtargetFeatureInfo *FA : RequiredFeatures) {
+      for (const SubtargetFeatureInfo *FB : RHS.RequiredFeatures) {
+        if (ExclusivePreds.count(std::minmax(FA->TheDef, FB->TheDef)))
+          return false;
+      }
+    }
+
+    // Ignore optional operands as they can't be used to disasmbiguate
+    // otherwise identical matchables.
+    SmallVector<const AsmOperand *, 8> LHSOps, RHSOps;
+    for (const AsmOperand &Op : AsmOperands) {
+      if (!Op.Class->IsOptional)
+        LHSOps.push_back(&Op);
+    }
+    for (const AsmOperand &Op : RHS.AsmOperands) {
+      if (!Op.Class->IsOptional)
+        RHSOps.push_back(&Op);
+    }
+
+    // The number of required operands is unambiguous.
+    if (LHSOps.size() != RHSOps.size())
       return false;
 
     // Otherwise, make sure the ordering of the two instructions is unambiguous
@@ -715,27 +738,29 @@ struct MatchableInfo {
 
     // Tokens and operand kinds are unambiguous (assuming a correct target
     // specific parser).
-    for (const auto &[LHSOp, RHSOp] : zip_equal(AsmOperands, RHS.AsmOperands)) {
-      if (LHSOp.Class->Kind != RHSOp.Class->Kind ||
-          LHSOp.Class->Kind == ClassInfo::Token)
-        if (*LHSOp.Class < *RHSOp.Class || *RHSOp.Class < *LHSOp.Class)
+    for (const auto &[LHSOp, RHSOp] : zip_equal(LHSOps, RHSOps)) {
+      if (LHSOp->Class->Kind != RHSOp->Class->Kind ||
+          LHSOp->Class->Kind == ClassInfo::Token) {
+        if (*LHSOp->Class < *RHSOp->Class || *RHSOp->Class < *LHSOp->Class)
           return false;
+      }
     }
 
     // Otherwise, this operand could commute if all operands are equivalent, or
     // there is a pair of operands that compare less than and a pair that
     // compare greater than.
     bool HasLT = false, HasGT = false;
-    for (const auto &[LHSOp, RHSOp] : zip_equal(AsmOperands, RHS.AsmOperands)) {
-      if (*LHSOp.Class < *RHSOp.Class)
+    for (const auto &[LHSOp, RHSOp] : zip_equal(LHSOps, RHSOps)) {
+      if (*LHSOp->Class < *RHSOp->Class)
         HasLT = true;
-      if (*RHSOp.Class < *LHSOp.Class)
+      if (*RHSOp->Class < *LHSOp->Class)
         HasGT = true;
     }
 
     return HasLT == HasGT;
   }
 
+  void print(raw_ostream &OS) const;
   void dump() const;
 
 private:
@@ -849,18 +874,22 @@ public:
 
 } // end anonymous namespace
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MatchableInfo::dump() const {
-  errs() << TheDef->getName() << " -- "
-         << "flattened:\"" << AsmString << "\"\n";
+void MatchableInfo::print(raw_ostream &OS) const {
+  OS << TheDef->getName() << " -- " << "flattened:\"" << AsmString << "\"\n";
 
-  errs() << "  variant: " << AsmVariantID << "\n";
+  OS << "  variant: " << AsmVariantID << "\n";
+
+  for (const SubtargetFeatureInfo *F : RequiredFeatures)
+    OS << "  feature: " << F->TheDef->getName() << "\n";
 
   for (const auto &[Idx, Op] : enumerate(AsmOperands)) {
-    errs() << "  op[" << Idx << "] = " << Op.Class->ClassName << " - ";
-    errs() << '\"' << Op.Token << "\"\n";
+    OS << "  op[" << Idx << "] = " << Op.Class->ClassName << " - ";
+    OS << '\"' << Op.Token << "\"\n";
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void MatchableInfo::dump() const { print(errs()); }
 #endif
 
 static std::pair<StringRef, StringRef>
@@ -3494,7 +3523,32 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   });
 
   // Check for ambiguous matchables.
-  DEBUG_WITH_TYPE("ambiguous_instrs", {
+  bool ErrorOnAmbiguousMatchables =
+      AsmParser->getValueAsBit("ErrorOnAmbiguousMatchables");
+  bool CheckAmbiguousMatchables = ErrorOnAmbiguousMatchables;
+  DEBUG_WITH_TYPE("ambiguous_instrs", CheckAmbiguousMatchables = true);
+
+  ArrayRef<const Record *> ExclusivePredDecls =
+      Records.getAllDerivedDefinitions("MutuallyExclusiveAssemblerPredicates");
+  for (const Record *R : ExclusivePredDecls) {
+    const Record *PA = R->getValueAsDef("PredicateA");
+    for (const Record *PB : R->getValueAsListOfDefs("PredicatesB"))
+      if (PA == PB)
+        PrintFatalError(R->getLoc(),
+                        "predicate '" + PA->getName() +
+                            "' declared mutually exclusive with itself");
+  }
+
+  if (CheckAmbiguousMatchables) {
+    // Build a flat set of mutually exclusive assembler predicate pairs from
+    // MutuallyExclusiveAssemblerPredicates declarations. Pairs are normalized
+    // (smaller pointer first) for cheap symmetric lookup.
+    DenseSet<std::pair<const Record *, const Record *>> ExclusivePreds;
+    for (const Record *R : ExclusivePredDecls) {
+      const Record *PA = R->getValueAsDef("PredicateA");
+      for (const Record *PB : R->getValueAsListOfDefs("PredicatesB"))
+        ExclusivePreds.insert(std::minmax(PA, PB));
+    }
     unsigned NumAmbiguous = 0;
     for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
          ++I) {
@@ -3502,19 +3556,28 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
         const MatchableInfo &A = **I;
         const MatchableInfo &B = **J;
 
-        if (A.couldMatchAmbiguouslyWith(B, PreferSmallerInstructions)) {
-          errs() << "warning: ambiguous matchables:\n";
-          A.dump();
-          errs() << "\nis incomparable with:\n";
-          B.dump();
-          errs() << "\n\n";
+        if (A.couldMatchAmbiguouslyWith(B, PreferSmallerInstructions,
+                                        ExclusivePreds)) {
+          StringLiteral Msg = "matchable is indistinguishable to the parser";
+          if (ErrorOnAmbiguousMatchables)
+            PrintError(A.TheDef->getLoc(), Msg);
+          else
+            PrintWarning(A.TheDef->getLoc(), Msg);
+          A.print(errs());
+          PrintNote(B.TheDef->getLoc(), "from this matchable");
+          B.print(errs());
           ++NumAmbiguous;
         }
       }
     }
-    if (NumAmbiguous)
-      errs() << "warning: " << NumAmbiguous << " ambiguous matchables!\n";
-  });
+    if (NumAmbiguous) {
+      Twine Msg = Twine(NumAmbiguous) + " ambiguous matchables found";
+      if (ErrorOnAmbiguousMatchables)
+        PrintFatalError(Msg);
+      else
+        PrintWarning(Msg);
+    }
+  }
 
   // Compute the information on the custom operand parsing.
   Info.buildOperandMatchInfo();

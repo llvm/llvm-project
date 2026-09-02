@@ -309,6 +309,15 @@ multiclass VOP2bInst <string opName,
     }
 }
 
+class VOP2bInstNoVCCSubstAlias <VOP2_Pseudo ps, Instruction inst, string OpName> :
+  InstAlias <OpName#" "#ps.Pfl.Asm32,
+             (inst ps.Pfl.DstRC:$vdst, ps.Pfl.Src0RC32:$src0,
+                   ps.Pfl.Src1RC32:$src1),
+             1, inst.AsmVariantName>,
+  PredicateControl {
+}
+
+// Alias class that substitutes vcc with opnd in Asm32 (e.g. vcc_lo on Wave32).
 class VOP2bInstAlias <VOP2_Pseudo ps, Instruction inst,
                       string OpName, string opnd> :
   InstAlias <OpName#" "#!subst("vcc", opnd, ps.Pfl.Asm32),
@@ -2834,12 +2843,11 @@ defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_vi>;
 
 let SubtargetPredicate = isGFX9Only in {
 
-defm : VOP2bInstAliases<V_ADD_U32_e32,     V_ADD_CO_U32_e32_gfx9,     "v_add_co_u32">;
-defm : VOP2bInstAliases<V_ADDC_U32_e32,    V_ADDC_CO_U32_e32_gfx9,    "v_addc_co_u32">;
-defm : VOP2bInstAliases<V_SUB_U32_e32,     V_SUB_CO_U32_e32_gfx9,     "v_sub_co_u32">;
-defm : VOP2bInstAliases<V_SUBB_U32_e32,    V_SUBB_CO_U32_e32_gfx9,    "v_subb_co_u32">;
-defm : VOP2bInstAliases<V_SUBREV_U32_e32,  V_SUBREV_CO_U32_e32_gfx9,  "v_subrev_co_u32">;
-defm : VOP2bInstAliases<V_SUBBREV_U32_e32, V_SUBBREV_CO_U32_e32_gfx9, "v_subbrev_co_u32">;
+// These pseudos have no vcc in Asm32, so VOP2bInstAliases would produce two
+// identical aliases.
+def : VOP2bInstNoVCCSubstAlias<V_ADD_U32_e32,    V_ADD_CO_U32_e32_gfx9,    "v_add_co_u32">;
+def : VOP2bInstNoVCCSubstAlias<V_SUB_U32_e32,    V_SUB_CO_U32_e32_gfx9,    "v_sub_co_u32">;
+def : VOP2bInstNoVCCSubstAlias<V_SUBREV_U32_e32, V_SUBREV_CO_U32_e32_gfx9, "v_subrev_co_u32">;
 
 } // End SubtargetPredicate = isGFX9Only
 
@@ -2883,7 +2891,7 @@ let SubtargetPredicate = HasFmacF64Inst, OtherPredicates = [isGFX9Only] in {
   defm V_FMAC_F64       : VOP2_Real_e32e64_gfx90a <0x4>;
 } // End SubtargetPredicate = HasFmacF64Inst
 
-let IsSingle = 1 in {
+let AssemblerPredicate = isGFX90APlus, DecoderNamespace = "GFX90A", IsSingle = 1 in {
   defm V_MUL_LEGACY_F32 : VOP2_Real_e64_gfx90a <0x2a1>;
 }
 
@@ -2927,9 +2935,9 @@ let OtherPredicates = [HasDot3Insts] in {
   defm V_DOT8C_I32_I4  : VOP2_Real_DOT_ACC_gfx9<0x3a>;
 }
 
-let SubtargetPredicate = HasPkFmacF16Inst in {
+let SubtargetPredicate = HasPkFmacF16Inst, AssemblerPredicate = isGFX8Only in {
 defm V_PK_FMAC_F16 : VOP2_Real_e32_vi<0x3c>;
-} // End SubtargetPredicate = HasPkFmacF16Inst
+} // End SubtargetPredicate = HasPkFmacF16Inst, AssemblerPredicate = isGFX8Only
 
 let SubtargetPredicate = HasDot3Insts in {
   // NB: Opcode conflicts with V_DOT2C_F32_F16

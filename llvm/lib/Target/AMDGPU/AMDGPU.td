@@ -2645,6 +2645,8 @@ def AMDGPUAsmParser : AsmParser {
   // Call the custom operand parser for all operands.
   let OperandParserMethod = "parseCustomOperand";
   let CallCustomParserForAllOperands = true;
+
+  let ErrorOnAmbiguousMatchables = true;
 }
 
 def AMDGPUAsmWriter : AsmWriter {
@@ -3174,6 +3176,102 @@ def isWave32Strict : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize32)>;
 def isWave64Strict : Predicate<"Subtarget->isWave64()">,
   AssemblerPredicate <(all_of FeatureWavefrontSize64)>;
+
+def : MutuallyExclusiveAssemblerPredicates<isGFX8GFX9NotGFX90A,
+                                           [isGFX6GFX7]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX8GFX9,
+                                           [isGFX6GFX7, isGFX7Only]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX8Only,
+                                           [isGFX6GFX7, isGFX7Only]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX8GFX9NotGFX940,
+                                           [isGFX6GFX7, isGFX7Only]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX9Only,
+                                           [isGFX6GFX7, isGFX7Only, isGFX8Only]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX90AOnly,
+                                           [isGFX6GFX7, isGFX8GFX9NotGFX90A]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX940Plus,
+                                           [isGFX6GFX7, isGFX8GFX9NotGFX90A,
+                                            isGFX8GFX9NotGFX940, isGFX90AOnly]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX90APlus,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX8GFX9NotGFX90A, isGCN3ExcludingGFX90A]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX10Only,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX7Only, isGFX8Only, isGFX9Only,
+                                            isGFX8GFX9, isGFX8GFX9NotGFX90A, isGFX8GFX9NotGFX940,
+                                            isGFX90AOnly, isGFX940Plus, isGFX90APlus]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX11Only,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX7Only, isGFX8Only, isGFX9Only,
+                                            isGFX8GFX9, isGFX8GFX9NotGFX90A, isGFX8GFX9NotGFX940,
+                                            isGFX90AOnly, isGFX940Plus, isGFX90APlus,
+                                            isGFX10Only]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX11Plus,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX7Only, isGFX8Only, isGFX9Only,
+                                            isGFX8GFX9, isGFX8GFX9NotGFX90A, isGFX8GFX9NotGFX940,
+                                            isGFX90AOnly, isGFX940Plus, isGFX90APlus,
+                                            isGFX10Only]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX11Not11_70,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX7Only, isGFX8Only, isGFX9Only,
+                                            isGFX8GFX9, isGFX8GFX9NotGFX90A, isGFX8GFX9NotGFX940,
+                                            isGFX90AOnly, isGFX940Plus, isGFX90APlus,
+                                            isGFX10Only, isGFX1170Only]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX1170Only,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX7Only, isGFX8Only, isGFX9Only,
+                                            isGFX8GFX9, isGFX8GFX9NotGFX90A, isGFX8GFX9NotGFX940,
+                                            isGFX90AOnly, isGFX940Plus, isGFX90APlus,
+                                            isGFX10Only, isGFX11Not11_70]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX12Only,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX7Only, isGFX8Only, isGFX9Only,
+                                            isGFX8GFX9, isGFX8GFX9NotGFX90A, isGFX8GFX9NotGFX940,
+                                            isGFX90AOnly, isGFX940Plus, isGFX90APlus,
+                                            isGFX10Only, isGFX11Only,
+                                            isGFX11Not11_70, isGFX1170Only]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX12Not12_50,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX7Only, isGFX8Only, isGFX9Only,
+                                            isGFX8GFX9, isGFX8GFX9NotGFX90A, isGFX8GFX9NotGFX940,
+                                            isGFX90AOnly, isGFX940Plus, isGFX90APlus,
+                                            isGFX10Only, isGFX11Only,
+                                            isGFX11Not11_70, isGFX1170Only, isGFX125xOnly]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX125xOnly,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX7Only, isGFX8Only, isGFX9Only,
+                                            isGFX8GFX9, isGFX8GFX9NotGFX90A, isGFX8GFX9NotGFX940,
+                                            isGFX90AOnly, isGFX940Plus, isGFX90APlus,
+                                            isGFX10Only, isGFX11Only,
+                                            isGFX11Not11_70, isGFX1170Only, isGFX12Not12_50]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX13Only,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX7Only, isGFX8Only, isGFX9Only,
+                                            isGFX8GFX9, isGFX8GFX9NotGFX90A, isGFX8GFX9NotGFX940,
+                                            isGFX90AOnly, isGFX940Plus, isGFX90APlus,
+                                            isGFX10Only, isGFX11Only,
+                                            isGFX11Not11_70, isGFX1170Only, isGFX12Only,
+                                            isGFX12Not12_50, isGFX125xOnly]>;
+def : MutuallyExclusiveAssemblerPredicates<isGFX13Plus,
+                                           [isGFX6GFX7, isGFX6GFX7GFX8GFX9NotGFX90A,
+                                            isGFX7Only, isGFX8Only, isGFX9Only,
+                                            isGFX8GFX9, isGFX8GFX9NotGFX90A, isGFX8GFX9NotGFX940,
+                                            isGFX90AOnly, isGFX940Plus, isGFX90APlus,
+                                            isGFX10Only, isGFX11Only,
+                                            isGFX11Not11_70, isGFX1170Only, isGFX12Only,
+                                            isGFX12Not12_50, isGFX125xOnly]>;
+
+def : MutuallyExclusiveAssemblerPredicates<HasSDWA9,
+                                           [isGFX10Only, isGFX11Only,
+                                            isGFX11Not11_70, isGFX1170Only, isGFX12Only,
+                                            isGFX12Not12_50, isGFX125xOnly, isGFX13Only]>;
+def : MutuallyExclusiveAssemblerPredicates<HasPackedD16VMem, [HasUnpackedD16VMem]>;
+def : MutuallyExclusiveAssemblerPredicates<HasDPP,
+                                           [isGFX10Only, isGFX11Only, isGFX11Plus,
+                                            isGFX11Not11_70, isGFX1170Only, isGFX12Only,
+                                            isGFX12Not12_50, isGFX125xOnly, isGFX13Only,
+                                            isGFX13Plus]>;
 
 //===----------------------------------------------------------------------===//
 // HwModes
