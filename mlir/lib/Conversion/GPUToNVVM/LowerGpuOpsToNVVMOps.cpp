@@ -96,6 +96,14 @@ convertToNVVMReductionKind(gpu::AllReduceOperation mode) {
   return std::nullopt;
 }
 
+static bool canLowerSubgroupReduceToNVVMRedux(gpu::SubgroupReduceOp op) {
+  if (op.getClusterSize() || !op.getUniform())
+    return false;
+  if (!op.getValue().getType().isInteger(32))
+    return false;
+  return convertToNVVMReductionKind(op.getOp()).has_value();
+}
+
 static constexpr llvm::StringLiteral kNVVMNamedBarrierIdPrefix =
     "__named_barrier_id";
 static constexpr int32_t kNVVMFirstNamedBarrierId = 1;
@@ -529,6 +537,33 @@ struct LowerGpuOpsToNVVMOpsPass final
     // ops which need to be lowered further, which is not supported by a
     // single conversion pass.
     {
+      // Lower subgroup reductions that cannot use nvvm.redux to shuffles
+      // before conversion. Keep redux-compatible cases untouched so the
+      // dedicated conversion pattern still applies.
+      SmallVector<Operation *> subgroupReduceOpsToLower;
+      m.walk([&](gpu::SubgroupReduceOp op) {
+        if (!op.getUniform())
+          return;
+        if (!this->hasRedux || !canLowerSubgroupReduceToNVVMRedux(op))
+          subgroupReduceOpsToLower.push_back(op.getOperation());
+      });
+      if (!subgroupReduceOpsToLower.empty()) {
+        RewritePatternSet subgroupReducePatterns(m.getContext());
+        populateGpuBreakDownSubgroupReducePatterns(
+            subgroupReducePatterns, /*maxShuffleBitwidth=*/kNVVMWarpSize);
+        populateGpuLowerSubgroupReduceToShufflePatterns(
+            subgroupReducePatterns,
+            /*subgroupSize=*/kNVVMWarpSize,
+            /*shuffleBitwidth=*/kNVVMWarpSize);
+        populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
+            subgroupReducePatterns,
+            /*subgroupSize=*/kNVVMWarpSize,
+            /*shuffleBitwidth=*/kNVVMWarpSize);
+        if (failed(applyOpPatternsGreedily(subgroupReduceOpsToLower,
+                                           std::move(subgroupReducePatterns))))
+          return signalPassFailure();
+      }
+
       RewritePatternSet patterns(m.getContext());
       populateGpuRewritePatterns(patterns);
       // Transform N-D vector.from_elements to 1-D vector.from_elements before
