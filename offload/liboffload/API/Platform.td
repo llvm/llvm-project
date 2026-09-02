@@ -59,6 +59,29 @@ def olGetPlatformInfo : Function {
   ];
 }
 
+def ol_platform_iterate_cb_t : FptrTypedef {
+  let desc = "User-provided function to be used with `olIteratePlatforms`";
+  let params = [
+    Param<"ol_platform_handle_t", "Platform", "the platform handle of the current iteration", PARAM_IN>,
+    Param<"void*", "UserData", "optional user data", PARAM_IN_OPTIONAL>
+  ];
+  let return = "bool";
+}
+
+def olIteratePlatforms : Function {
+  let desc = "Iterates over all available platforms, calling the callback for each platform.";
+  let details = [
+    "If the user-provided callback returns `false`, the iteration is stopped."
+  ];
+  let params = [
+    Param<"ol_platform_iterate_cb_t", "Callback", "User-provided function called for each available platform", PARAM_IN>,
+    Param<"void*", "UserData", "Optional user data to pass to the callback", PARAM_IN_OPTIONAL>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_PLATFORM">
+  ];
+}
+
 def olGetPlatformInfoSize : Function {
   let desc = "Returns the storage size of the given platform query.";
   let details = [];
@@ -96,4 +119,23 @@ def olPlatformRegisterRPCCallback : Function {
                 Param<"ol_platform_rpc_cb_t", "Callback",
                       "RPC callback function pointer", PARAM_IN>];
   let returns = [Return<"OL_ERRC_INVALID_PLATFORM">, Return<"OL_ERRC_SUCCESS">];
+}
+
+def olPlatformInitDevice : Function {
+  let desc = "Initializes the device at the given index on the platform and returns a handle to it.";
+  let details = [
+    "If the device at `DeviceIndex` has already been initialized, this returns the existing handle."
+  ];
+  let params = [
+    Param<"ol_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,
+    Param<"size_t", "DeviceIndex", "index of the device on the platform to initialize", PARAM_IN>,
+    Param<"ol_device_handle_t*", "Device", "output pointer for the initialized device", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_PLATFORM">,
+    Return<"OL_ERRC_INVALID_DEVICE", [
+      "If `DeviceIndex` is not a valid device index on the platform.",
+      "If the device could not be initialized."
+    ]>
+  ];
 }

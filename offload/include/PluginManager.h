@@ -13,6 +13,7 @@
 #ifndef OMPTARGET_PLUGIN_MANAGER_H
 #define OMPTARGET_PLUGIN_MANAGER_H
 
+#include "OffloadAPI.h"
 #include "PluginInterface.h"
 
 #include "DeviceImage.h"
@@ -156,6 +157,7 @@ private:
 
   // List of all plugins, in use or not.
   llvm::SmallVector<GenericPluginTy *> Plugins;
+  llvm::DenseMap<GenericPluginTy *, ol_platform_handle_t> PluginToPlatform;
 
   // Mapping of plugins to the OpenMP device identifier.
   llvm::DenseMap<std::pair<const GenericPluginTy *, int32_t>, int32_t>

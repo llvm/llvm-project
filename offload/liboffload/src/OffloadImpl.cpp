@@ -56,6 +56,9 @@ struct ol_platform_impl_t {
   /// Initialize the associated plugin and devices.
   llvm::Error init();
 
+  /// Initialize the device at \p DeviceIndex and return a handle to it.
+  llvm::Expected<ol_device_handle_t> initDevice(size_t DeviceIndex);
+
   /// Direct access to the plugin, may be uninitialized if accessed here.
   std::unique_ptr<GenericPluginTy> Plugin;
 
@@ -137,6 +140,22 @@ llvm::Error ol_platform_impl_t::destroy() {
   return Result;
 }
 
+llvm::Expected<ol_device_handle_t>
+ol_platform_impl_t::initDevice(size_t DeviceIndex) {
+  if (llvm::Error Err = Plugin->initDevice(DeviceIndex))
+    return llvm::make_error<llvm::StringError>("Failed to initialize device",
+                                               llvm::inconvertibleErrorCode());
+
+  GenericDeviceTy *Device = &Plugin->getDevice(DeviceIndex);
+  llvm::Expected<InfoTreeNode> Info = Device->obtainInfo();
+  if (llvm::Error Err = Info.takeError())
+    return Err;
+  Devices.emplace_back(std::make_unique<ol_device_impl_t>(
+      DeviceIndex, Device, *this, std::move(*Info)));
+
+  return Devices.back().get();
+}
+
 llvm::Error ol_platform_impl_t::init() {
   if (!Plugin)
     return llvm::Error::success();
@@ -145,15 +164,9 @@ llvm::Error ol_platform_impl_t::init() {
     return Err;
 
   for (auto Id = 0, End = Plugin->getNumDevices(); Id != End; Id++) {
-    if (llvm::Error Err = Plugin->initDevice(Id))
-      return Err;
-
-    GenericDeviceTy *Device = &Plugin->getDevice(Id);
-    llvm::Expected<InfoTreeNode> Info = Device->obtainInfo();
-    if (llvm::Error Err = Info.takeError())
-      return Err;
-    Devices.emplace_back(std::make_unique<ol_device_impl_t>(Id, Device, *this,
-                                                            std::move(*Info)));
+    auto DeviceOrErr = initDevice(Id);
+    if (!DeviceOrErr)
+      return DeviceOrErr.takeError();
   }
 
   return llvm::Error::success();
@@ -268,18 +281,14 @@ bool isTracingEnabled() {
 bool isValidationEnabled() { return OffloadContext::get().ValidationEnabled; }
 bool isOffloadInitialized() { return OffloadContextVal != nullptr; }
 
-// Temporary helpers to be able to transitions from the liboffload API to the
-// plugin API. Only to be used to assist in the libomptarget transition. These
+// Temporary helper to be able to transition from the liboffload API to the
+// plugin API. Only to be used to assist in the libomptarget transition. This
 // will be removed once the transition is complete.
-extern "C" size_t olGetInitializedPluginCount() {
-  if (!isOffloadInitialized())
-    return 0;
-  return OffloadContext::get().Platforms.size();
+extern "C" GenericPluginTy *
+olGetPluginFromPlatform(ol_platform_handle_t Platform) {
+  return Platform->Plugin.get();
 }
-extern "C" GenericPluginTy *olGetInitializedPlugin(size_t Index) {
-  return OffloadContext::get().Platforms[Index]->Plugin.get();
-}
-// End of temporary helpers
+// End of temporary helper
 
 template <typename HandleT> Error olDestroy(HandleT Handle) {
   delete Handle;
@@ -434,6 +443,30 @@ Error olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
 Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
                                          ol_platform_rpc_cb_t Callback) {
   Platform->Plugin->getRPCServer().registerCallback(Callback);
+  return Error::success();
+}
+
+Error olIteratePlatforms_impl(ol_platform_iterate_cb_t Callback,
+                              void *UserData) {
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Callback(Platform.get(), UserData)) {
+      return Error::success();
+    }
+  }
+
+  return Error::success();
+}
+
+Error olPlatformInitDevice_impl(ol_platform_handle_t Platform,
+                                size_t DeviceIndex,
+                                ol_device_handle_t *Device) {
+  auto DeviceOrErr = Platform->initDevice(DeviceIndex);
+  if (!DeviceOrErr)
+    return createOffloadError(ErrorCode::INVALID_DEVICE,
+                              DeviceOrErr.takeError(),
+                              "failed to initialize device");
+
+  *Device = *DeviceOrErr;
   return Error::success();
 }
 
