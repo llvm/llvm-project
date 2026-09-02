@@ -1,0 +1,4 @@
+// RUN: cir-opt %s -verify-diagnostics
+
+// expected-error @below {{duplicate sanitize kind address}}
+module attributes {cir.sanitize = #cir.sanitize<[address, address]>} {}

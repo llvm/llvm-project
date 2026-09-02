@@ -2444,6 +2444,22 @@ cir::AnnotationAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// SanitizeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::SanitizeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                          llvm::ArrayRef<cir::SanitizeKind> kinds) {
+  llvm::DenseSet<cir::SanitizeKind> uniqueKinds;
+  for (cir::SanitizeKind kind : kinds) {
+    if (uniqueKinds.contains(kind))
+      return emitError() << "duplicate sanitize kind " << kind;
+    uniqueKinds.insert(kind);
+  }
+  return success();
+}
+
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
@@ -2457,6 +2473,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
   mlir::StringAttr funcInfoNameAttr = getFuncInfoAttrName(state.name);
+  mlir::StringAttr sanitizeNameAttr = getSanitizeAttrName(state.name);
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
@@ -2661,6 +2678,17 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     state.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
   }
 
+  if (parser.parseOptionalKeyword("sanitize").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+
+    cir::SanitizeAttr sanitizeAttr;
+    if (parser.parseAttribute(sanitizeAttr).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+    state.addAttribute(sanitizeNameAttr, sanitizeAttr);
+  }
+
   // Parse optional annotations attribute (an ArrayAttr of AnnotationAttr).
   mlir::StringAttr annotationsNameAttr = getAnnotationsAttrName(state.name);
   mlir::ArrayAttr annotationsAttr;
@@ -2849,6 +2877,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
       sideEffect && *sideEffect != cir::SideEffect::All) {
     p << " side_effect(";
     p << stringifySideEffect(*sideEffect);
+    p << ")";
+  }
+
+  if (cir::SanitizeAttr sanitizeAttr = getSanitizeAttr()) {
+    p << " sanitize(";
+    p.printAttribute(sanitizeAttr);
     p << ")";
   }
 
