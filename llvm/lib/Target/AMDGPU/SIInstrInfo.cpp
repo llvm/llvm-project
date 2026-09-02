@@ -4520,7 +4520,11 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
     const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
+    // Try to replace a source with an immediate
     for (const MachineOperand **SrcX : {&Src2, &Src1, &Src0}) {
+      if (Src0Literal && *SrcX != Src0)
+        continue;
+
       unsigned NewOpc =
           (*SrcX == Src2) ? getNewFMAAKInst(ST, Opc) : getNewFMAMKInst(ST, Opc);
       if (pseudoToMCOpcode(NewOpc) == -1)
@@ -4531,21 +4535,16 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
           getImmOrMaterializedImm(MRI, **SrcX, &DefMI);
       if (!ImmOpt)
         continue;
-
       MachineOperand ImmOp = MachineOperand::CreateImm(*ImmOpt);
-      if (*SrcX == Src0) {
+      *SrcX = &ImmOp;
+      if (Src0 == &ImmOp) {
         // Src0 has an immediate value, but an immediate cannot be in position
         // src0. Swap Src0 and Src1's positions.
         if (!isOperandLegal(
                 MI, AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src0),
                 Src1))
           continue;
-        Src0 = Src1;
-        Src1 = &ImmOp;
-      } else {
-        if (Src0Literal)
-          continue;
-        *SrcX = &ImmOp;
+        std::swap(Src0, Src1);
       }
 
       MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
