@@ -1551,6 +1551,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+
+      // Wider reductions are built from a ladder of the rungs above.
+      setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v4i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
     }
 
     if (Subtarget->hasDotProd()) {
@@ -2218,17 +2226,32 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT :
          {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
+                    MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
+                    MVT::nxv4i32, MVT::nxv4f32}) {
+      // Use a custom lowering for masked stores that could be a supported
+      // compressing store. Note: These types still use the normal (Legal)
+      // lowering for non-compressing masked stores.
+      setOperationAction(ISD::MSTORE, VT, Custom);
+    }
 
     // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
     // bits of the SVE register.
     for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
-                    MVT::v2f64})
+                    MVT::v2f64}) {
+      setOperationAction(ISD::MSTORE, VT, Custom);
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    }
 
     if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
       // With +sve2p2/+sme2p2 the full range of vector types are supported.
-      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16})
+      for (auto VT :
+           {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16}) {
+        // Use custom lowering for MSTORE so we can handle compressstore (using
+        // VECTOR_COMPRESS).
+        setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      }
 
       for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v4f16,
                       MVT::v8f16, MVT::v4bf16, MVT::v8bf16})
@@ -2274,15 +2297,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::nxv4f32, MVT::nxv2f64, MVT::v4f16, MVT::v8f16,
                     MVT::v2f32, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
-
-    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
-                    MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
-                    MVT::nxv4i32, MVT::nxv4f32}) {
-      // Use a custom lowering for masked stores that could be a supported
-      // compressing store. Note: These types still use the normal (Legal)
-      // lowering for non-compressing masked stores.
-      setOperationAction(ISD::MSTORE, VT, Custom);
-    }
 
     // Histcnt is SVE2 only
     if (Subtarget->hasSVE2()) {
@@ -35158,6 +35172,12 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                     DAG.getConstant(0, DL, ResultVT), SignFlipMask, RHS);
     return DAG.getNode(ISD::SUB, DL, ResultVT, BiasedDot, BiasCorrection);
   }
+
+  // The wider Neon shapes left here have no single instruction, so leave them
+  // to the generic expansion, which chains the two-way reductions above.
+  if (!Subtarget->isSVEorStreamingSVEAvailable() &&
+      OpVT.getVectorNumElements() > 2 * ResultVT.getVectorNumElements())
+    return SDValue();
 
   bool ConvertToScalable = ResultVT.isFixedLengthVector() &&
                            Subtarget->isSVEorStreamingSVEAvailable();

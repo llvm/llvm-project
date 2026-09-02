@@ -927,3 +927,80 @@ func.func @shift_invalid_shift_axis(
     : tensor<4xi8> -> tensor<4xi8>
   return %0 : tensor<4xi8>
 }
+
+// -----
+
+shard.grid @grid0(shape = 2x2x4)
+
+func.func @scatter_invalid_scatter_dim(
+    %arg0 : tensor<3x4xf32>) -> tensor<3x4xf32> {
+  // expected-error@+1 {{scatter_dim 5 is out of bounds [0, 2).}}
+  %0 = shard.scatter %arg0 on @grid0 grid_axes = [2]
+    scatter_dim = 5 root = [1]
+    : (tensor<3x4xf32>) -> tensor<3x4xf32>
+  return %0 : tensor<3x4xf32>
+}
+
+// -----
+
+shard.grid @grid0(shape = 2x2x4)
+
+func.func @scatter_invalid_negative_scatter_dim(
+    %arg0 : tensor<3x4xf32>) -> tensor<3x4xf32> {
+  // expected-error@+1 {{scatter_dim -1 is out of bounds [0, 2).}}
+  %0 = shard.scatter %arg0 on @grid0 grid_axes = [2]
+    scatter_dim = -1 root = [1]
+    : (tensor<3x4xf32>) -> tensor<3x4xf32>
+  return %0 : tensor<3x4xf32>
+}
+
+// -----
+
+shard.grid @grid0(shape = 2x2x4)
+
+func.func @all_slice_invalid_slice_axis(
+    %arg0 : tensor<3x4xf32>) -> tensor<3x4xf32> {
+  // expected-error@+1 {{slice_axis 5 is out of bounds [0, 2).}}
+  %0 = shard.all_slice %arg0 on @grid0 grid_axes = [2] slice_axis = 5
+    : tensor<3x4xf32> -> tensor<3x4xf32>
+  return %0 : tensor<3x4xf32>
+}
+
+// -----
+
+shard.grid @grid0(shape = 2x2x4)
+
+func.func @reduce_scatter_invalid_scatter_dim(
+    %arg0 : tensor<3x4xf32>) -> tensor<3x4xf64> {
+  // expected-error@+1 {{scatter_dim 5 is out of bounds [0, 2).}}
+  %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [2]
+    reduction = max scatter_dim = 5
+    : tensor<3x4xf32> -> tensor<3x4xf64>
+  return %0 : tensor<3x4xf64>
+}
+
+// -----
+
+shard.grid @grid4(shape = 3)
+
+func.func @all_to_all_invalid_split_axis(
+    %arg0 : tensor<3x6xi8>) -> tensor<3x6xi8> {
+  // expected-error@+1 {{split_axis 5 is out of bounds [0, 2).}}
+  %0 = shard.all_to_all %arg0 on @grid4
+    split_axis = 5 concat_axis = 0
+    : tensor<3x6xi8> -> tensor<3x6xi8>
+  return %0 : tensor<3x6xi8>
+}
+
+// -----
+
+shard.grid @grid4(shape = 3)
+
+func.func @all_to_all_invalid_concat_axis(
+    %arg0 : tensor<3x6xi8>) -> tensor<3x6xi8> {
+  // expected-error@+1 {{concat_axis 5 is out of bounds [0, 2).}}
+  %0 = shard.all_to_all %arg0 on @grid4
+    split_axis = 0 concat_axis = 5
+    : tensor<3x6xi8> -> tensor<3x6xi8>
+  return %0 : tensor<3x6xi8>
+}

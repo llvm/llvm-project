@@ -88,6 +88,7 @@ source_set("sources") {
     "sanitizer_mac_libcdep.cpp",
     "sanitizer_mutex.cpp",
     "sanitizer_mutex.h",
+    "sanitizer_new_handler.h",
     "sanitizer_netbsd.cpp",
     "sanitizer_placement_new.h",
     "sanitizer_platform.h",
