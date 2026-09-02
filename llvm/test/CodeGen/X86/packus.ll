@@ -511,6 +511,25 @@ define <32 x i8> @packuswb_icmp_zero_trunc_256(<16 x i16> %a0) {
   ret <32 x i8> %4
 }
 
+define <8 x i8> @_mm_packs_pu16_manual(<4 x i16> %a, <4 x i16> %b) nounwind {
+; SSE-LABEL: _mm_packs_pu16_manual:
+; SSE:       # %bb.0:
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
+;
+; AVX-LABEL: _mm_packs_pu16_manual:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+  %sh  = shufflevector <4 x i16> %a, <4 x i16> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %minv = tail call <8 x i16> @llvm.smax.v8i16(<8 x i16> %sh, <8 x i16> splat (i16 0))
+  %sat = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> %minv, <8 x i16> splat (i16 255))
+  %tr  = trunc nuw <8 x i16> %sat to <8 x i8>
+  ret <8 x i8> %tr
+}
+
 define <16 x i8> @_mm_packus_epi16_manual(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE-LABEL: _mm_packus_epi16_manual:
 ; SSE:       # %bb.0:
@@ -649,16 +668,7 @@ define <64 x i8> @_mm512_packus_epi16_manual(<32 x i16> %a, <32 x i16> %b) nounw
 ;
 ; AVX512-LABEL: _mm512_packus_epi16_manual:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,1,8,9,2,3,10,11]
-; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [4,5,12,13,6,7,14,15]
-; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
-; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpmaxsw %zmm0, %zmm3, %zmm1
-; AVX512-NEXT:    vpmaxsw %zmm0, %zmm2, %zmm0
-; AVX512-NEXT:    vpmovuswb %zmm0, %ymm0
-; AVX512-NEXT:    vpmovuswb %zmm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    ret{{[l|q]}}
   %sh  = shufflevector <32 x i16> %a, <32 x i16> %b, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
   %minv = tail call <64 x i16> @llvm.smax.v64i16(<64 x i16> %sh, <64 x i16> splat (i16 0))
@@ -1169,16 +1179,7 @@ define <32 x i16> @_mm512_packus_epi32_manual(<16 x i32> %a, <16 x i32> %b) noun
 ;
 ; AVX512-LABEL: _mm512_packus_epi32_manual:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,1,8,9,2,3,10,11]
-; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [4,5,12,13,6,7,14,15]
-; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
-; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpmaxsd %zmm0, %zmm3, %zmm1
-; AVX512-NEXT:    vpmaxsd %zmm0, %zmm2, %zmm0
-; AVX512-NEXT:    vpmovusdw %zmm0, %ymm0
-; AVX512-NEXT:    vpmovusdw %zmm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpackusdw %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    ret{{[l|q]}}
   %sh  = shufflevector <16 x i32> %a, <16 x i32> %b, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 24, i32 25, i32 26, i32 27, i32 12, i32 13, i32 14, i32 15, i32 28, i32 29, i32 30, i32 31>
   %minv = tail call <32 x i32> @llvm.smax.v32i32(<32 x i32> %sh, <32 x i32> splat (i32 0))

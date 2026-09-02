@@ -14,7 +14,7 @@
 namespace llvm {
 
 class SIPreAllocateWWMRegsPass
-    : public PassInfoMixin<SIPreAllocateWWMRegsPass> {
+    : public RequiredPassInfoMixin<SIPreAllocateWWMRegsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

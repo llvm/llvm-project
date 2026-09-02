@@ -517,12 +517,14 @@ struct CommOpPattern : public OpConversionPattern<CommOp> {
     return MemRefType::get(tensorType.getShape(), tensorType.getElementType());
   }
 
-  Value getAsMemref(Value input, ImplicitLocOpBuilder &iBuilder) const {
+  Value getAsMemref(Value input, ImplicitLocOpBuilder &iBuilder,
+                    bool readOnly) const {
     auto itype = input.getType();
-    // If the source is a memref, cast it to a tensor.
+    // If the source is a tensor, materialize a memref for it.
     if (isa<RankedTensorType>(itype)) {
       auto memrefType = getMemrefType(cast<ShapedType>(itype));
-      input = bufferization::ToBufferOp::create(iBuilder, memrefType, input);
+      input = bufferization::ToBufferOp::create(iBuilder, memrefType, input,
+                                                readOnly);
     } else {
       assert(isa<MemRefType>(itype) &&
              "expected input to be of MemRefType or TensorType");
@@ -589,7 +591,7 @@ struct ConvertAllReduceOp : public CommOpPattern<AllReduceOp> {
     if (failed(gridOp))
       return failure();
     ImplicitLocOpBuilder iBuilder(op.getLoc(), rewriter);
-    Value input = getAsMemref(adaptor.getInput(), iBuilder);
+    Value input = getAsMemref(adaptor.getInput(), iBuilder, true);
     MemRefType inType = cast<MemRefType>(input.getType());
     if (!memref::isStaticShapeAndContiguousRowMajor(inType))
       return op.emitError(
@@ -683,7 +685,7 @@ struct ConvertReduceScatterOp : public CommOpPattern<ReduceScatterOp> {
     if (scatterDim == 0) {
       // scatter_dim == 0 maps directly to MPI_Reduce_scatter_block.
       // Input must be contiguous for MPI.
-      Value input = getAsMemref(rawInput, ib);
+      Value input = getAsMemref(rawInput, ib, true);
       MemRefType inType = cast<MemRefType>(input.getType());
       if (!memref::isStaticShapeAndContiguousRowMajor(inType))
         return op.emitError("Input must be a statically shaped memref in "
@@ -743,7 +745,7 @@ struct ConvertReduceScatterOp : public CommOpPattern<ReduceScatterOp> {
       //    freshly allocated buffer.
       auto mpiInType = MemRefType::get(transposedShape, elemType);
       Value transposedBuf =
-          bufferization::ToBufferOp::create(ib, mpiInType, tensorInput);
+          bufferization::ToBufferOp::create(ib, mpiInType, tensorInput, true);
       mpiInput = memref::AllocOp::create(ib, mpiInType);
       linalg::CopyOp::create(ib, transposedBuf, mpiInput);
     }
@@ -755,14 +757,15 @@ struct ConvertReduceScatterOp : public CommOpPattern<ReduceScatterOp> {
         ib, TypeRange(), mpiInput, output,
         getMPIReductionOp(adaptor.getReductionAttr()), comm);
 
-    // Deallocate the temporary input buffer if we allocated one.
-    if (scatterDim != 0)
-      memref::DeallocOp::create(ib, mpiInput);
-
     // If the destination is a tensor, cast it to a tensor.
     if (isa<RankedTensorType>(op.getType()))
       output =
           bufferization::ToTensorOp::create(ib, op.getType(), output, true);
+    else if (scatterDim != 0) // Deallocate the temporary input buffer
+      memref::DeallocOp::create(ib, mpiInput);
+    // Notice: If this is called from tensor-world, then we assume an extra pass
+    // will take care of deallocating the intermediate buffers.
+
     rewriter.replaceOp(op, output);
     return success();
   }
@@ -786,7 +789,7 @@ struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
       return failure();
 
     ImplicitLocOpBuilder ib(op.getLoc(), rewriter);
-    Value input = getAsMemref(adaptor.getInput(), ib);
+    Value input = getAsMemref(adaptor.getInput(), ib, true);
     MemRefType inType = cast<MemRefType>(input.getType());
     MemRefType outType = getMemrefType(cast<ShapedType>(op.getType()));
     auto inputShape = inType.getShape();
@@ -899,7 +902,7 @@ struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
       // 4. Cast back to memref if needed.
       if (isa<MemRefType>(op.getType()))
         finalOutput =
-            bufferization::ToBufferOp::create(ib, outType, finalOutput);
+            bufferization::ToBufferOp::create(ib, outType, finalOutput, false);
     }
 
     rewriter.replaceOp(op, finalOutput);

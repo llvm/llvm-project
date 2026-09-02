@@ -80,22 +80,21 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
                                    Function *TLIVecFunc) {
   IRBuilder<> IRBuilder(II);
   SmallVector<Value *> Args(II->args());
-  if (auto OptMaskpos = Info.getParamIndexForOptionalMask()) {
+  if (Info.isMasked()) {
     auto *MaskTy =
         VectorType::get(Type::getInt1Ty(II->getContext()), Info.Shape.VF);
-    Args.insert(Args.begin() + OptMaskpos.value(),
-                Constant::getAllOnesValue(MaskTy));
+    Args.push_back(Constant::getAllOnesValue(MaskTy));
   }
 
   // Preserve the operand bundles.
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
 
-  auto *Replacement = IRBuilder.CreateCall(TLIVecFunc, Args, OpBundles);
+  // Preserve fast math flags for FP math (getFastMathFlagsOrNone keeps this
+  // safe for non-FP intrinsics, whose flags are simply empty).
+  auto *Replacement = IRBuilder.CreateCall(
+      TLIVecFunc, Args, OpBundles, /*FMFSource=*/II->getFastMathFlagsOrNone());
   II->replaceAllUsesWith(Replacement);
-  // Preserve fast math flags for FP math.
-  if (isa<FPMathOperator>(Replacement))
-    Replacement->copyFastMathFlags(II);
   Replacement->setCallingConv(TLIVecFunc->getCallingConv());
 }
 

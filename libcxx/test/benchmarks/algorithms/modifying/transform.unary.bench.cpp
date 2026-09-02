@@ -35,10 +35,7 @@ int main(int argc, char** argv) {
 
             std::vector<ValueType> out(size);
 
-            auto f = [](auto element) {
-              benchmark::DoNotOptimize(element);
-              return element;
-            };
+            auto f = [](auto element) { return element; };
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);

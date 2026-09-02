@@ -79,6 +79,9 @@ bool ConstraintSystem::eliminateUsingFM() {
       unsigned IdxLower = 0;
       auto &LowerRow = RemainingRows[LowerR];
       auto &UpperRow = RemainingRows[UpperR];
+      // Combine the two rows to eliminate the variable. If any coefficient
+      // computation overflows, skip them.
+      bool Overflow = false;
       // Update constant and coefficients of both constraints.
       // Stops until every coefficient is updated or overflows.
       while (true) {
@@ -101,15 +104,19 @@ bool ConstraintSystem::eliminateUsingFM() {
           IdxUpper++;
         }
 
-        if (MulOverflow(UpperV, -1 * LowerLast, M1))
-          return false;
+        if (MulOverflow(UpperV, -1 * LowerLast, M1)) {
+          Overflow = true;
+          break;
+        }
         if (IdxLower < LowerRow.size() && LowerRow[IdxLower].Id == CurrentId) {
           LowerV = LowerRow[IdxLower].Coefficient;
           IdxLower++;
         }
 
-        if (MulOverflow(LowerV, UpperLast, M2))
-          return false;
+        if (MulOverflow(LowerV, UpperLast, M2)) {
+          Overflow = true;
+          break;
+        }
         // This algorithm is a variant of sparse Gaussian elimination.
         //
         // The new coefficient for CurrentId is
@@ -124,14 +131,16 @@ bool ConstraintSystem::eliminateUsingFM() {
         //
         // Eliminates y after addition:
         // N: { 6, 7, 0 } => 6 >= 7 * x
-        if (AddOverflow(M1, M2, N))
-          return false;
+        if (AddOverflow(M1, M2, N)) {
+          Overflow = true;
+          break;
+        }
         // Skip variable that is completely eliminated.
         if (N == 0)
           continue;
         NR.emplace_back(N, CurrentId);
       }
-      if (NR.empty())
+      if (Overflow || NR.empty())
         continue;
       Constraints.push_back(std::move(NR));
       // Give up if the new system gets too big.

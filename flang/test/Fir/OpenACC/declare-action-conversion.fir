@@ -97,3 +97,77 @@ module {
 // CHECK: fir.store
 // CHECK: fir.call @_QMmmFsubEarr_acc_declare_update_desc_post_alloc(%[[DECLARE]])
 }
+
+// -----
+
+// Test declare_action on additional runtime calls supported by the pass.
+module {
+  func.func private @_QFdeclareAp_acc_declare_post_alloc_source(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFdeclareAp_acc_declare_post_dealloc_poly(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFdeclareAa_acc_declare_post_alloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFdeclareAa_acc_declare_post_alloc_source(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFdeclareAa_acc_declare_post_dealloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFdeclareAa_acc_declare_post_dealloc_poly(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+
+  func.func @_QPsupported_runtime_calls() {
+    %pbox = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {uniq_name = "_QFdeclareEap"}
+    %pdecl = fir.declare %pbox {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFdeclareEap"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+    %pcvt = fir.convert %pdecl : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+
+    %abox = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {uniq_name = "_QFdeclareEaa"}
+    %adecl = fir.declare %abox {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFdeclareEaa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %acvt = fir.convert %adecl : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+
+    %f = arith.constant false
+    %absent = fir.absent !fir.box<none>
+    %s_i8 = fir.zero_bits !fir.ref<i8>
+    %none_ref = fir.zero_bits !fir.ref<none>
+    %c4_i32 = arith.constant 4 : i32
+
+    fir.call @_FortranAPointerAllocateSource(%pcvt, %absent, %f, %absent, %s_i8, %c4_i32) {acc.declare_action = #acc.declare_action<postAlloc = @_QFdeclareAp_acc_declare_post_alloc_source>} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+    fir.call @_FortranAPointerDeallocatePolymorphic(%pcvt, %none_ref, %f, %absent, %s_i8, %c4_i32) {acc.declare_action = #acc.declare_action<postDealloc = @_QFdeclareAp_acc_declare_post_dealloc_poly>} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
+    fir.call @_FortranAAllocatableAllocate(%acvt, %none_ref, %f, %absent, %s_i8, %c4_i32, %none_ref) {acc.declare_action = #acc.declare_action<postAlloc = @_QFdeclareAa_acc_declare_post_alloc>} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32, !fir.ref<none>) -> i32
+    fir.call @_FortranAAllocatableAllocateSource(%acvt, %absent, %f, %absent, %s_i8, %c4_i32) {acc.declare_action = #acc.declare_action<postAlloc = @_QFdeclareAa_acc_declare_post_alloc_source>} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+    fir.call @_FortranAAllocatableDeallocate(%acvt, %f, %absent, %s_i8, %c4_i32) {acc.declare_action = #acc.declare_action<postDealloc = @_QFdeclareAa_acc_declare_post_dealloc>} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+    fir.call @_FortranAAllocatableDeallocatePolymorphic(%acvt, %none_ref, %f, %absent, %s_i8, %c4_i32) {acc.declare_action = #acc.declare_action<postDealloc = @_QFdeclareAa_acc_declare_post_dealloc_poly>} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+    return
+  }
+
+// CHECK-LABEL: func.func @_QPsupported_runtime_calls
+// CHECK: %[[PDECL:.*]] = fir.declare %{{.*}} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+// CHECK: %[[PCVT:.*]] = fir.convert %[[PDECL]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: %[[ADECL:.*]] = fir.declare %{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK: %[[ACVT:.*]] = fir.convert %[[ADECL]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: fir.call @_FortranAPointerAllocateSource(%[[PCVT]],
+// CHECK-NEXT: fir.call @_QFdeclareAp_acc_declare_post_alloc_source(%[[PDECL]])
+// CHECK: fir.call @_FortranAPointerDeallocatePolymorphic(%[[PCVT]],
+// CHECK-NEXT: fir.call @_QFdeclareAp_acc_declare_post_dealloc_poly(%[[PDECL]])
+// CHECK: fir.call @_FortranAAllocatableAllocate(%[[ACVT]],
+// CHECK-NEXT: fir.call @_QFdeclareAa_acc_declare_post_alloc(%[[ADECL]])
+// CHECK: fir.call @_FortranAAllocatableAllocateSource(%[[ACVT]],
+// CHECK-NEXT: fir.call @_QFdeclareAa_acc_declare_post_alloc_source(%[[ADECL]])
+// CHECK: fir.call @_FortranAAllocatableDeallocate(%[[ACVT]],
+// CHECK-NEXT: fir.call @_QFdeclareAa_acc_declare_post_dealloc(%[[ADECL]])
+// CHECK: fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[ACVT]],
+// CHECK-NEXT: fir.call @_QFdeclareAa_acc_declare_post_dealloc_poly(%[[ADECL]])
+
+  func.func private @_FortranAPointerAllocateSource(!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+  func.func private @_FortranAPointerDeallocatePolymorphic(!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+  func.func private @_FortranAAllocatableAllocate(!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32, !fir.ref<none>) -> i32
+  func.func private @_FortranAAllocatableAllocateSource(!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+  func.func private @_FortranAAllocatableDeallocate(!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+  func.func private @_FortranAAllocatableDeallocatePolymorphic(!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+}

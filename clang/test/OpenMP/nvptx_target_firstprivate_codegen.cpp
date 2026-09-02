@@ -32,9 +32,9 @@ int foo(int n, double *ptr) {
     b[a] += e.X;
   }
 
-  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr addrspace(1) noalias noundef [[B_IN:%.+]], i{{[0-9]+}} noundef [[A_IN:%.+]], ptr noalias noundef [[E_IN:%.+]])
-  // TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr
+  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}(ptr addrspace(1) noalias noundef [[B_IN:%.+]],  i{{[0-9]+}} noundef [[A_IN:%.+]],  ptr noalias noundef [[E_IN:%.+]], ptr {{[^,]+}})
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
+  // TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr
   // TCHECK-NOT: alloca [[TTII]],
   // TCHECK: alloca i{{[0-9]+}},
   // TCHECK:  store i{{[0-9]+}} [[A_IN]], ptr [[A_ADDR]],
@@ -51,12 +51,12 @@ int foo(int n, double *ptr) {
 
   // make sure that firstprivate variables are generated in all cases and that we use those instances for operations inside the
   // target region
-  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, i{{[0-9]+}}{{.*}} [[A2_IN:%.+]], ptr{{.*}} [[B_IN:%.+]], ptr{{.*}} [[C_IN:%.+]], ptr{{.*}} [[D_IN:%.+]])
-  // TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr
+  // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}(i{{[0-9]+}}{{.*}} [[A2_IN:%.+]],  ptr{{.*}} [[B_IN:%.+]],  ptr{{.*}} [[C_IN:%.+]],  ptr{{.*}} [[D_IN:%.+]], ptr {{[^,]+}})
   // TCHECK:  [[A2_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[B_ADDR:%.+]] = alloca ptr,
   // TCHECK:  [[C_ADDR:%.+]] = alloca ptr,
   // TCHECK:  [[D_ADDR:%.+]] = alloca ptr,
+  // TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr
   // TCHECK-NOT: alloca i{{[0-9]+}},
   // TCHECK:  [[B_PRIV:%.+]] = alloca [10 x float],
   // TCHECK:  [[C_PRIV:%.+]] = alloca [5 x [10 x double]],
@@ -90,9 +90,9 @@ int foo(int n, double *ptr) {
     ptr[0]++;
   }
 
-  // TCHECK:  define weak_odr protected ptx_kernel void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr noundef [[PTR_IN:%.+]])
-  // TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr,
+  // TCHECK:  define weak_odr protected ptx_kernel void @__omp_offloading_{{.+}}(ptr noundef [[PTR_IN:%.+]], ptr {{[^,]+}})
   // TCHECK:  [[PTR_ADDR:%.+]] = alloca ptr,
+  // TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr,
   // TCHECK-NOT: alloca ptr,
   // TCHECK:  store ptr [[PTR_IN]], ptr [[PTR_ADDR]],
   // TCHECK:  [[PTR_IN_REF:%.+]] = load ptr, ptr [[PTR_ADDR]],
@@ -136,11 +136,11 @@ void fconst(const tx t) {
   { }
 }
 
-// TCHECK: define {{.*}}void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, i{{[0-9]+}}{{.*}} [[A_IN:%.+]], i{{[0-9]+}}{{.*}} [[A3_IN:%.+]], ptr {{.+}} [[B_IN:%.+]])
-// TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr
+// TCHECK: define {{.*}}void @__omp_offloading_{{.+}}(i{{[0-9]+}}{{.*}} [[A_IN:%.+]],  i{{[0-9]+}}{{.*}} [[A3_IN:%.+]],  ptr {{.+}} [[B_IN:%.+]], ptr {{[^,]+}})
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[A3_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[B_ADDR:%.+]] = alloca ptr,
+// TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr
 // TCHECK-NOT:  alloca i{{[0-9]+}},
 // TCHECK:  [[B_PRIV:%.+]] = alloca [10 x i{{[0-9]+}}],
 // TCHECK:  store i{{[0-9]+}} [[A_IN]], ptr [[A_ADDR]],
@@ -173,10 +173,10 @@ struct S1 {
     return (int)b;
   }
 
-  // TCHECK: define internal void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr noundef [[TH:%.+]], i{{[0-9]+}} noundef [[B_IN:%.+]])
-  // TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr
+  // TCHECK: define internal void @__omp_offloading_{{.+}}(ptr noundef [[TH:%.+]],  i{{[0-9]+}} noundef [[B_IN:%.+]], ptr {{[^,]+}})
   // TCHECK:  [[TH_ADDR:%.+]] = alloca ptr,
   // TCHECK:  [[B_ADDR:%.+]] = alloca i{{[0-9]+}},
+  // TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr
   // TCHECK-NOT: alloca i{{[0-9]+}},
 
   // TCHECK:  store ptr [[TH]], ptr [[TH_ADDR]],
@@ -205,10 +205,10 @@ int bar(int n, double *ptr) {
 
 // template
 
-// TCHECK: define internal void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, i{{[0-9]+}} noundef [[A_IN:%.+]], ptr{{.+}} noundef [[B_IN:%.+]])
-// TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr
+// TCHECK: define internal void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[A_IN:%.+]],  ptr{{.+}} noundef [[B_IN:%.+]], ptr {{[^,]+}})
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[B_ADDR:%.+]] = alloca ptr,
+// TCHECK:  [[DYN_PTR_ADDR:%.+]] = alloca ptr
 // TCHECK-NOT: alloca i{{[0-9]+}},
 // TCHECK:  [[B_PRIV:%.+]] = alloca [10 x i{{[0-9]+}}],
 // TCHECK:  store i{{[0-9]+}} [[A_IN]], ptr [[A_ADDR]],

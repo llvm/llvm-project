@@ -209,4 +209,162 @@ if.else:
   ret i1 false
 }
 
+define void @test_trunc_nuw(i1 %c, i8 %x) {
+; CHECK-LABEL: define void @test_trunc_nuw(
+; CHECK-SAME: i1 [[C:%.*]], i8 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_1:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    br i1 [[C_1]], label %[[BB1:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[T_3:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[T_6:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    call void @use(i1 [[T_6]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c.1 = trunc nuw i8 %x to i1
+  br i1 %c.1, label %if.then, label %if.else
+
+if.then:
+  %t.1 = icmp eq i8 %x, 0
+  call void @use(i1 %t.1)
+  %t.2 = icmp ne i8 %x, 0
+  call void @use(i1 %t.2)
+  %t.3 = trunc nuw i8 %x to i1
+  call void @use(i1 %t.3)
+  ret void
+
+if.else:
+  %t.4 = icmp eq i8 %x, 0
+  call void @use(i1 %t.4)
+  %t.5 = icmp ne i8 %x, 0
+  call void @use(i1 %t.5)
+  %t.6 = trunc nuw i8 %x to i1
+  call void @use(i1 %t.6)
+  ret void
+}
+
+define void @assume_trunc_nuw(i8 %x) {
+; CHECK-LABEL: define void @assume_trunc_nuw(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[C_1:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[T_3:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    ret void
+;
+  %c.1 = trunc nuw i8 %x to i1
+  call void @llvm.assume(i1 %c.1)
+  %t.1 = icmp eq i8 %x, 0
+  call void @use(i1 %t.1)
+  %t.2 = icmp ne i8 %x, 0
+  call void @use(i1 %t.2)
+  %t.3 = trunc nuw i8 %x to i1
+  call void @use(i1 %t.3)
+  ret void
+}
+
+define void @test_or_trunc_nuw(i1 %c, i8 %x) {
+; CHECK-LABEL: define void @test_or_trunc_nuw(
+; CHECK-SAME: i1 [[C:%.*]], i8 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_1:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C]], [[C_1]]
+; CHECK-NEXT:    br i1 [[OR]], label %[[BB1:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[T_3:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[T_6:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    call void @use(i1 [[T_6]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c.1 = trunc nuw i8 %x to i1
+  %or = or i1 %c, %c.1
+  br i1 %or, label %if.then, label %if.else
+
+if.then:
+  %t.1 = icmp eq i8 %x, 0
+  call void @use(i1 %t.1)
+  %t.2 = icmp ne i8 %x, 0
+  call void @use(i1 %t.2)
+  %t.3 = trunc nuw i8 %x to i1
+  call void @use(i1 %t.3)
+  ret void
+
+if.else:
+  %t.4 = icmp eq i8 %x, 0
+  call void @use(i1 %t.4)
+  %t.5 = icmp ne i8 %x, 0
+  call void @use(i1 %t.5)
+  %t.6 = trunc nuw i8 %x to i1
+  call void @use(i1 %t.6)
+  ret void
+}
+
+define void @test_and_trunc_nuw(i1 %c, i8 %x) {
+; CHECK-LABEL: define void @test_and_trunc_nuw(
+; CHECK-SAME: i1 [[C:%.*]], i8 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C_1:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C]], [[C_1]]
+; CHECK-NEXT:    br i1 [[AND]], label %[[BB1:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[T_3:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[T_4:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    call void @use(i1 [[T_4]])
+; CHECK-NEXT:    [[T_5:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    call void @use(i1 [[T_5]])
+; CHECK-NEXT:    [[T_6:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    call void @use(i1 [[T_6]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c.1 = trunc nuw i8 %x to i1
+  %and = and i1 %c, %c.1
+  br i1 %and, label %if.then, label %if.else
+
+if.then:
+  %t.1 = icmp eq i8 %x, 0
+  call void @use(i1 %t.1)
+  %t.2 = icmp ne i8 %x, 0
+  call void @use(i1 %t.2)
+  %t.3 = trunc nuw i8 %x to i1
+  call void @use(i1 %t.3)
+  ret void
+
+if.else:
+  %t.4 = icmp eq i8 %x, 0
+  call void @use(i1 %t.4)
+  %t.5 = icmp ne i8 %x, 0
+  call void @use(i1 %t.5)
+  %t.6 = trunc nuw i8 %x to i1
+  call void @use(i1 %t.6)
+  ret void
+}
+
+declare void @use(i1)
+
 declare void @cond()

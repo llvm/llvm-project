@@ -2,11 +2,12 @@
 Test lldb-dap moduleSymbols request
 """
 
-import lldbdap_testcase
-from lldbsuite.test.decorators import *
+from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs, ModuleSymbolsArgs
+from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
 
 
-class TestDAP_moduleSymbols(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_moduleSymbols(DAPTestCaseBase):
     # On windows LLDB doesn't recognize symbols in a.out.
     @skipIfWindows
     def test_moduleSymbols(self):
@@ -14,27 +15,24 @@ class TestDAP_moduleSymbols(lldbdap_testcase.DAPTestCaseBase):
         Test that the moduleSymbols request returns correct symbols from the module.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        session = self.build_and_create_session()
+        session.launch(LaunchArgs(program=program))
 
-        symbol_names = []
-        i = 0
+        symbol_names = set()
+        start = 0
+        page_size = 100
         while True:
-            next_symbol = self.dap_server.request_moduleSymbols(
-                moduleName="a.out", startIndex=i, count=1
+            module_sym_args = ModuleSymbolsArgs(
+                moduleName="a.out", startIndex=start, count=page_size
             )
-            self.assertIn("symbols", next_symbol["body"])
-            result_symbols = next_symbol["body"]["symbols"]
-            self.assertLessEqual(len(result_symbols), 1)
-            if len(result_symbols) == 0:
-                break
+            response = session.send_request(module_sym_args).result()
+            symbols = response.body.symbols
+            symbol_names.update(sym.name for sym in symbols)
 
-            self.assertIn("name", result_symbols[0])
-            symbol_names.append(result_symbols[0]["name"])
-            i += 1
-            if i >= 1000:
+            if len(symbols) < page_size:
                 break
+            start += page_size
 
-        self.assertGreater(len(symbol_names), 0)
         self.assertIn("main", symbol_names)
         self.assertIn("func1", symbol_names)
         self.assertIn("func2", symbol_names)

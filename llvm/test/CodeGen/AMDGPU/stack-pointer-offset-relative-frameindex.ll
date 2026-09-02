@@ -16,19 +16,20 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF-NEXT:    s_mov_b32 s38, -1
 ; MUBUF-NEXT:    s_mov_b32 s39, 0x31c16000
 ; MUBUF-NEXT:    s_add_u32 s36, s36, s11
-; MUBUF-NEXT:    s_addc_u32 s37, s37, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v4, 0x400000
+; MUBUF-NEXT:    s_addc_u32 s37, s37, 0
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, svm_eval_nodes@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, svm_eval_nodes@rel32@hi+12
+; MUBUF-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; MUBUF-NEXT:    s_mov_b32 s32, 0xc0000
+; MUBUF-NEXT:    ; implicit-def: $sgpr15
 ; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, s0
 ; MUBUF-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; MUBUF-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; MUBUF-NEXT:    s_and_saveexec_b32 s0, vcc_lo
@@ -61,6 +62,7 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+12
+; FLATSCR-NEXT:    ; implicit-def: $sgpr15
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, s2
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -89,6 +91,7 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF11-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+4
 ; MUBUF11-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+12
 ; MUBUF11-NEXT:    s_movk_i32 s32, 0x6000
+; MUBUF11-NEXT:    ; implicit-def: $sgpr15
 ; MUBUF11-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF11-NEXT:    v_mov_b32_e32 v0, s2
 ; MUBUF11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -116,6 +119,7 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; FLATSCR11-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+4
 ; FLATSCR11-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+12
 ; FLATSCR11-NEXT:    s_movk_i32 s32, 0x6000
+; FLATSCR11-NEXT:    ; implicit-def: $sgpr15
 ; FLATSCR11-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR11-NEXT:    v_mov_b32_e32 v0, s2
 ; FLATSCR11-NEXT:    s_swappc_b64 s[30:31], s[0:1]

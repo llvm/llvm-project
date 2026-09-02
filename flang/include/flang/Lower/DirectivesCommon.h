@@ -18,7 +18,6 @@
 #ifndef FORTRAN_LOWER_DIRECTIVES_COMMON_H
 #define FORTRAN_LOWER_DIRECTIVES_COMMON_H
 
-#include "flang/Common/idioms.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
@@ -33,11 +32,7 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Value.h"
 #include <list>
 #include <type_traits>
@@ -182,6 +177,25 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
       mlir::Value stride = one;
       bool strideInBytes = false;
 
+      auto genSourceExtent = [&]() -> mlir::Value {
+        if (info.isPresent && mlir::isa<fir::BaseBoxType>(
+                                  fir::unwrapRefType(info.addr.getType()))) {
+          return builder
+              .genIfOp(loc, idxTy, info.isPresent, /*withElseRegion=*/true)
+              .genThen([&]() {
+                mlir::Value ext =
+                    fir::factory::readExtent(builder, loc, dataExv, dimension);
+                fir::ResultOp::create(builder, loc, ext);
+              })
+              .genElse([&] {
+                mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+                fir::ResultOp::create(builder, loc, zero);
+              })
+              .getResults()[0];
+        }
+        return fir::factory::readExtent(builder, loc, dataExv, dimension);
+      };
+
       if (mlir::isa<fir::BaseBoxType>(
               fir::unwrapRefType(info.addr.getType()))) {
         if (info.isPresent) {
@@ -302,25 +316,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           }
         }
 
-        if (info.isPresent && mlir::isa<fir::BaseBoxType>(
-                                  fir::unwrapRefType(info.addr.getType()))) {
-          extent =
-              builder
-                  .genIfOp(loc, idxTy, info.isPresent, /*withElseRegion=*/true)
-                  .genThen([&]() {
-                    mlir::Value ext = fir::factory::readExtent(
-                        builder, loc, dataExv, dimension);
-                    fir::ResultOp::create(builder, loc, ext);
-                  })
-                  .genElse([&] {
-                    mlir::Value zero =
-                        builder.createIntegerConstant(loc, idxTy, 0);
-                    fir::ResultOp::create(builder, loc, zero);
-                  })
-                  .getResults()[0];
-        } else {
-          extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
-        }
+        extent = genSourceExtent();
 
         if (dataExvIsAssumedSize && dimension + 1 == dataExvRank) {
           extent = zero;
@@ -343,8 +339,11 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
       // and this already includes the lower extents.
       if (strideIncludeLowerExtent && !strideInBytes) {
         stride = cumulativeExtent;
+        mlir::Value strideExtent = extent;
+        if (!triplet && dimension + 1 < dataExvRank)
+          strideExtent = genSourceExtent();
         cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
-            loc, cumulativeExtent, extent);
+            loc, cumulativeExtent, strideExtent);
       }
 
       mlir::Value bound =

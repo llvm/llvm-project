@@ -81,13 +81,13 @@ define amdgpu_kernel void @caller() {
 ; GFX9-SDAG-NEXT:    s_add_u32 s4, s4, callee@gotpcrel32@lo+4
 ; GFX9-SDAG-NEXT:    s_addc_u32 s5, s5, callee@gotpcrel32@hi+12
 ; GFX9-SDAG-NEXT:    s_load_dwordx2 s[14:15], s[4:5], 0x0
-; GFX9-SDAG-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX9-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX9-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX9-SDAG-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX9-SDAG-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GFX9-SDAG-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX9-SDAG-NEXT:    s_mov_b32 s32, 0
@@ -111,13 +111,13 @@ define amdgpu_kernel void @caller() {
 ; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, callee@gotpcrel32@lo+4
 ; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, callee@gotpcrel32@hi+12
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[0:1], 0x0
-; GFX9-GISEL-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; GFX9-GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GFX9-GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; GFX9-GISEL-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX9-GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX9-GISEL-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s14
+; GFX9-GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], s[12:13]
 ; GFX9-GISEL-NEXT:    s_mov_b32 s12, s14
@@ -140,13 +140,13 @@ define amdgpu_kernel void @caller() {
 ; GFX9ARCH-SDAG-NEXT:    s_add_u32 s4, s4, callee@gotpcrel32@lo+4
 ; GFX9ARCH-SDAG-NEXT:    s_addc_u32 s5, s5, callee@gotpcrel32@hi+12
 ; GFX9ARCH-SDAG-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x0
-; GFX9ARCH-SDAG-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX9ARCH-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX9ARCH-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX9ARCH-SDAG-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX9ARCH-SDAG-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9ARCH-SDAG-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX9ARCH-SDAG-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX9ARCH-SDAG-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GFX9ARCH-SDAG-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9ARCH-SDAG-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX9ARCH-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX9ARCH-SDAG-NEXT:    s_mov_b32 s32, 0
@@ -169,13 +169,13 @@ define amdgpu_kernel void @caller() {
 ; GFX9ARCH-GISEL-NEXT:    s_add_u32 s0, s0, callee@gotpcrel32@lo+4
 ; GFX9ARCH-GISEL-NEXT:    s_addc_u32 s1, s1, callee@gotpcrel32@hi+12
 ; GFX9ARCH-GISEL-NEXT:    s_load_dwordx2 s[14:15], s[0:1], 0x0
-; GFX9ARCH-GISEL-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; GFX9ARCH-GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX9ARCH-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX9ARCH-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GFX9ARCH-GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; GFX9ARCH-GISEL-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX9ARCH-GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX9ARCH-GISEL-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
+; GFX9ARCH-GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GFX9ARCH-GISEL-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX9ARCH-GISEL-NEXT:    s_mov_b64 s[4:5], s[12:13]
 ; GFX9ARCH-GISEL-NEXT:    s_mov_b32 s32, 0

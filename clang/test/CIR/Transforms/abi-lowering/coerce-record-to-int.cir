@@ -1,0 +1,56 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
+
+#coerce_pair_to_i64 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !s64i } ]
+}
+
+#caller_no_args = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @takes_pair(%arg0: !rec_Pair)
+      attributes { test_classify = #coerce_pair_to_i64 } {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
+    cir.store %arg0, %0 : !rec_Pair, !cir.ptr<!rec_Pair>
+    cir.return
+  }
+
+  // Entry-block memory roundtrip recovers !rec_Pair from the !s64i argument.
+  // CHECK:      cir.func{{.*}} @takes_pair(%[[ARG:.*]]: !s64i)
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!s64i>
+  // CHECK:        cir.store %[[ARG]], %[[SLOT]] : !s64i, !cir.ptr<!s64i>
+  // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!s64i> -> !cir.ptr<!rec_Pair>
+  // CHECK:        %[[REC:.*]] = cir.load %[[CAST]] : !cir.ptr<!rec_Pair>, !rec_Pair
+  // CHECK:        %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Pair>
+  // CHECK:        cir.store %[[REC]], %[[P]] : !rec_Pair, !cir.ptr<!rec_Pair>
+
+  cir.func @caller()
+      attributes { test_classify = #caller_no_args } {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
+    %1 = cir.load %0 : !cir.ptr<!rec_Pair>, !rec_Pair
+    cir.call @takes_pair(%1) : (!rec_Pair) -> ()
+    cir.return
+  }
+
+  // Call site coerces the !rec_Pair operand to !s64i through memory.
+  // CHECK:      cir.func{{.*}} @caller()
+  // CHECK:        %[[VAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_Pair>, !rec_Pair
+  // CHECK:        cir.store %[[VAL]], %{{.*}} : !rec_Pair, !cir.ptr<!rec_Pair>
+  // CHECK:        %[[ARGCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s64i>
+  // CHECK:        %[[ARGINT:.*]] = cir.load %[[ARGCAST]] : !cir.ptr<!s64i>, !s64i
+  // CHECK:        cir.call @takes_pair(%[[ARGINT]]) : (!s64i) -> ()
+
+}

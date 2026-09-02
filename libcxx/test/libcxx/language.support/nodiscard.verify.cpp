@@ -14,6 +14,7 @@
 
 #include <compare>
 #include <coroutine>
+#include <cstddef>
 #include <exception>
 #include <initializer_list>
 #include <new>
@@ -83,6 +84,29 @@ void test() {
       // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       std::noop_coroutine();
     }
+  }
+#endif
+
+#if TEST_STD_VER >= 17
+  { // <cstddef>
+    std::byte b{0};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b | b;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b & b;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b ^ b;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ~b;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b << 1;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b >> 1;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::to_integer<int>(b);
   }
 #endif
 

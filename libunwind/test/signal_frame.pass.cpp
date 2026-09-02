@@ -9,8 +9,9 @@
 
 // Ensure that functions marked as signal frames are reported as such.
 
-// TODO: Investigate this failure on Apple
-// XFAIL: target={{.+}}-apple-{{.+}}
+// Older clang versions had a bug: .cfi_signal_frame can't be encoded in compact
+// unwind.
+// XFAIL: apple-clang-21
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan

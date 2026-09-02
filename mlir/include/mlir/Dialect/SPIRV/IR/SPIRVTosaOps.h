@@ -6,7 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MLIR_DIALECT_SPIRV_IR_SPIRVTOSAOPS_H_
+#define MLIR_DIALECT_SPIRV_IR_SPIRVTOSAOPS_H_
+
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpImplementation.h"
 
 namespace mlir::spirv {
 
@@ -17,3 +22,5 @@ void printSPIRV_I32_1DArmTensor(OpAsmPrinter &printer, Operation *,
                                 DenseIntElementsAttr attr);
 
 } // namespace mlir::spirv
+
+#endif // MLIR_DIALECT_SPIRV_IR_SPIRVTOSAOPS_H_

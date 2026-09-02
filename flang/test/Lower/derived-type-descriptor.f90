@@ -31,7 +31,7 @@ end subroutine
   !CHECK: fir.address_of(@_QFfooE.c.sometype)
 ! CHECK:}
 
-! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.c.sometype constant {{.*}} {
+! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.c.sometype {alignment = 64 : i64} constant {{.*}} {
   ! CHECK: fir.address_of(@_QFfooE.n.num)
   ! CHECK: fir.address_of(@_QFfooE.di.sometype.num) : !fir.ref<i32>
   ! CHECK: fir.address_of(@_QFfooE.n.values)
@@ -50,6 +50,6 @@ end subroutine
 ! CHECK: %[[res:.*]] = fir.string_lit "Empty   "(8) : !fir.char<1,8>
 ! CHECK: fir.has_value %[[res]] : !fir.char<1,8>
 
-! CHECK-LABEL: fir.global linkonce_odr @_QFchar_comp_initE.c.t constant target : {{.*}} {
+! CHECK-LABEL: fir.global linkonce_odr @_QFchar_comp_initE.c.t {alignment = 64 : i64} constant target : {{.*}} {
   ! CHECK: fir.address_of(@_QFchar_comp_initE.di.t.name) : !fir.ref<!fir.char<1,8>>
 ! CHECK: }

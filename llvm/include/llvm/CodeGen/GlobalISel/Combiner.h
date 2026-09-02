@@ -23,7 +23,6 @@
 namespace llvm {
 class MachineRegisterInfo;
 class GISelCSEInfo;
-class TargetPassConfig;
 class MachineFunction;
 class MachineIRBuilder;
 
@@ -31,7 +30,7 @@ class MachineIRBuilder;
 /// one of these each time they enter a new function.
 ///
 /// TODO: Is it worth making this module-wide?
-class Combiner : public GIMatchTableExecutor {
+class LLVM_ABI Combiner : public GIMatchTableExecutor {
 private:
   using WorkListTy = GISelWorkList<512>;
 
@@ -58,8 +57,7 @@ public:
   /// If CSEInfo is not null, then the Combiner will use CSEInfo as the observer
   /// and also create a CSEMIRBuilder. Pass nullptr if CSE is not needed.
   Combiner(MachineFunction &MF, const CombinerInfo &CInfo,
-           const TargetPassConfig *TPC, GISelValueTracking *VT,
-           GISelCSEInfo *CSEInfo = nullptr);
+           GISelValueTracking *VT, GISelCSEInfo *CSEInfo = nullptr);
   ~Combiner() override;
 
   virtual bool tryCombineAll(MachineInstr &I) const = 0;
@@ -74,7 +72,6 @@ protected:
   MachineRegisterInfo &MRI;
   GISelValueTracking *VT;
 
-  const TargetPassConfig *TPC;
   GISelCSEInfo *CSEInfo;
 };
 

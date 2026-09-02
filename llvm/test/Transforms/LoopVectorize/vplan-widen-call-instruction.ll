@@ -4,7 +4,6 @@
 ; Test that VPlan native path is able to widen call intructions like
 ; llvm.sqrt.* intrincis calls.
 
-declare double @llvm.sqrt.f64(double %0)
 define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr noalias nocapture readonly %b.in, ptr noalias nocapture %c.out) {
 ; CHECK-LABEL: define void @widen_call_instruction(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[A_IN:%.*]], ptr noalias readonly captures(none) [[B_IN:%.*]], ptr noalias captures(none) [[C_OUT:%.*]]) {
@@ -27,7 +26,7 @@ define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr no
 ; CHECK-NEXT:    [[TMP3]] = fadd <4 x double> [[TMP2]], [[VEC_PHI3]]
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i32> [[VEC_PHI]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[TMP4]], splat (i32 10000)
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH]], label %[[FOR2_HEADER2]]
 ; CHECK:       [[VECTOR_LATCH]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[C_OUT]], <4 x i64> [[VEC_IND]]
@@ -35,34 +34,10 @@ define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr no
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    br label %[[FOR1_HEADER:.*]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[FOR1_HEADER:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[FOR1_HEADER]]:
-; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i64 [ 1000, %[[SCALAR_PH]] ], [ [[INDVAR11:%.*]], %[[FOR1_LATCH:.*]] ]
-; CHECK-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds double, ptr [[A_IN]], i64 [[INDVAR1]]
-; CHECK-NEXT:    [[A:%.*]] = load double, ptr [[A_PTR]], align 8
-; CHECK-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds double, ptr [[B_IN]], i64 [[INDVAR1]]
-; CHECK-NEXT:    [[B:%.*]] = load double, ptr [[B_PTR]], align 8
-; CHECK-NEXT:    [[B_SQRT:%.*]] = call double @llvm.sqrt.f64(double [[B]])
 ; CHECK-NEXT:    br label %[[FOR2_HEADER:.*]]
 ; CHECK:       [[FOR2_HEADER]]:
-; CHECK-NEXT:    [[INDVAR2:%.*]] = phi i32 [ 0, %[[FOR1_HEADER]] ], [ [[INDVAR21:%.*]], %[[FOR2_HEADER]] ]
-; CHECK-NEXT:    [[A_REDUCTION:%.*]] = phi double [ [[A]], %[[FOR1_HEADER]] ], [ [[A_REDUCTION1:%.*]], %[[FOR2_HEADER]] ]
-; CHECK-NEXT:    [[A_REDUCTION1]] = fadd double [[B_SQRT]], [[A_REDUCTION]]
-; CHECK-NEXT:    [[INDVAR21]] = add nuw nsw i32 [[INDVAR2]], 1
-; CHECK-NEXT:    [[FOR2_COND:%.*]] = icmp eq i32 [[INDVAR21]], 10000
-; CHECK-NEXT:    br i1 [[FOR2_COND]], label %[[FOR1_LATCH]], label %[[FOR2_HEADER]]
-; CHECK:       [[FOR1_LATCH]]:
-; CHECK-NEXT:    [[A_REDUCTION1_LCSSA:%.*]] = phi double [ [[A_REDUCTION1]], %[[FOR2_HEADER]] ]
-; CHECK-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds double, ptr [[C_OUT]], i64 [[INDVAR1]]
-; CHECK-NEXT:    store double [[A_REDUCTION1_LCSSA]], ptr [[C_PTR]], align 8
-; CHECK-NEXT:    [[INDVAR11]] = add nuw nsw i64 [[INDVAR1]], 1
-; CHECK-NEXT:    [[FOR1_COND:%.*]] = icmp eq i64 [[INDVAR11]], 1000
-; CHECK-NEXT:    br i1 [[FOR1_COND]], label %[[EXIT]], label %[[FOR1_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -114,7 +89,7 @@ define void @call_to_non_intrinsic() {
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add i64 [[OUTER_IV]], 1
 ; CHECK-NEXT:    [[OUTER_EC:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[OUTER_EC]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OUTER_EC]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -149,7 +124,6 @@ declare void @use()
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]]}
+; CHECK: [[META4]] = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.

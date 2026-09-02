@@ -9,17 +9,30 @@
 #ifndef LLVM_UNITTESTS_TARGET_AMDGPU_AMDGPUUNITTESTS_H
 #define LLVM_UNITTESTS_TARGET_AMDGPU_AMDGPUUNITTESTS_H
 
+#include "AMDGPUGenSubtargetInfo.inc"
+#include "AMDGPUTargetMachine.h"
+#include "CodeGenTestBase.h"
+#include "GCNSubtarget.h"
 #include <memory>
 #include <string>
 
 namespace llvm {
-
 class GCNTargetMachine;
 class StringRef;
-
-std::unique_ptr<const GCNTargetMachine>
-createAMDGPUTargetMachine(std::string TStr, StringRef CPU, StringRef FS);
-
 } // end namespace llvm
+
+std::unique_ptr<llvm::GCNTargetMachine>
+createAMDGPUTargetMachine(std::string TStr, llvm::StringRef CPU,
+                          llvm::StringRef FS);
+
+class AMDGPUTestBase : public testing::Test {
+public:
+  static void SetUpTestSuite();
+};
+
+class AMDGPUCodeGenTestBase : public llvm::CodeGenTestBase {
+public:
+  static void SetUpTestSuite();
+};
 
 #endif // LLVM_UNITTESTS_TARGET_AMDGPU_AMDGPUUNITTESTS_H

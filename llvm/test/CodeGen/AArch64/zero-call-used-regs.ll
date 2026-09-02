@@ -780,15 +780,4 @@ entry:
   ret double %mul
 }
 
-; Don't emit zeroing registers in "main" function.
-define dso_local i32 @main() local_unnamed_addr #0 {
-; CHECK-LABEL: main:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ret
-
-entry:
-  ret i32 0
-}
-
 attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn uwtable "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon,+v8a" }

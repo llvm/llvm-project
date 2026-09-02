@@ -29,6 +29,9 @@
 //       spuriously fail.
 // REQUIRES: no-exceptions
 
+// No member named 'regex'.
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <cstddef>
 #include <new>
 

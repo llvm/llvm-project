@@ -10,7 +10,7 @@ union U1 {
   char c;
 };
 
-// CIR:  !rec_U1 = !cir.record<union "U1" {!s32i, !s8i}>
+// CIR:  !rec_U1 = !cir.union<"U1" {!s32i, !s8i}>
 // LLVM: %union.U1 = type { i32 }
 // OGCG: %union.U1 = type { i32 }
 
@@ -22,7 +22,7 @@ union U2 {
   double d;
 };
 
-// CIR:  !rec_U2 = !cir.record<union "U2" {!s8i, !s16i, !s32i, !cir.float, !cir.double}>
+// CIR:  !rec_U2 = !cir.union<"U2" {!s8i, !s16i, !s32i, !cir.float, !cir.double}>
 // LLVM: %union.U2 = type { double }
 // OGCG: %union.U2 = type { double }
 
@@ -31,7 +31,7 @@ union U3 {
   int i;
 } __attribute__((packed));
 
-// CIR:  !rec_U3 = !cir.record<union "U3" packed padded {!cir.array<!s8i x 5>, !s32i, !u8i}>
+// CIR:  !rec_U3 = !cir.union<"U3" packed {!cir.array<!s8i x 5>, !s32i}, padding = {!u8i}>
 // LLVM: %union.U3 = type <{ i32, i8 }>
 // OGCG: %union.U3 = type <{ i32, i8 }>
 
@@ -40,7 +40,7 @@ union U4 {
   int i;
 };
 
-// CIR:  !rec_U4 = !cir.record<union "U4" padded {!cir.array<!s8i x 5>, !s32i, !cir.array<!u8i x 4>}>
+// CIR:  !rec_U4 = !cir.union<"U4" {!cir.array<!s8i x 5>, !s32i}, padding = {!cir.array<!u8i x 4>}>
 // LLVM: %union.U4 = type { i32, [4 x i8] }
 // OGCG: %union.U4 = type { i32, [4 x i8] }
 
@@ -55,7 +55,7 @@ void f1(void) {
 }
 
 // CIR:      cir.func{{.*}} @f1()
-// CIR-NEXT:   cir.alloca !cir.ptr<!rec_IncompleteU>, !cir.ptr<!cir.ptr<!rec_IncompleteU>>, ["p"]
+// CIR-NEXT:   cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!rec_IncompleteU>>
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f1()
@@ -74,8 +74,8 @@ int f2(void) {
 }
 
 // CIR:      cir.func{{.*}} @f2() -> !s32i
-// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
-// CIR-NEXT:   %[[U:.*]] = cir.alloca !rec_U1, !cir.ptr<!rec_U1>, ["u"] {alignment = 4 : i64}
+// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(4) : !cir.ptr<!rec_U1>
 // CIR-NEXT:   %[[I:.*]] = cir.const #cir.int<42> : !s32i
 // CIR-NEXT:   %[[N:.*]] = cir.get_member %[[U]][0] {name = "n"} : !cir.ptr<!rec_U1> -> !cir.ptr<!s32i>
 // CIR-NEXT:   cir.store{{.*}} %[[I]], %[[N]] : !s32i, !cir.ptr<!s32i>
@@ -113,7 +113,7 @@ void shouldGenerateUnionAccess(union U2 u) {
 }
 
 // CIR:      cir.func{{.*}} @shouldGenerateUnionAccess(%[[ARG:.*]]: !rec_U2
-// CIR-NEXT:   %[[U:.*]] = cir.alloca !rec_U2, !cir.ptr<!rec_U2>, ["u", init] {alignment = 8 : i64}
+// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(8) init : !cir.ptr<!rec_U2>
 // CIR-NEXT:   cir.store{{.*}} %[[ARG]], %[[U]] : !rec_U2, !cir.ptr<!rec_U2>
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
 // CIR-NEXT:   %[[B_PTR:.*]] = cir.get_member %[[U]][0] {name = "b"} : !cir.ptr<!rec_U2> -> !cir.ptr<!s8i>
@@ -144,7 +144,7 @@ void shouldGenerateUnionAccess(union U2 u) {
 // LLVM-NEXT:   %[[B_VAL:.*]] = load i8, ptr %[[U]], align 8
 // LLVM-NEXT:   store i32 1, ptr %[[U]], align 8
 // LLVM-NEXT:   %[[I_VAL:.*]] = load i32, ptr %[[U]], align 8
-// LLVM-NEXT:   store float 0x3FB99999A0000000, ptr %[[U]], align 8
+// LLVM-NEXT:   store float 1.000000e-01, ptr %[[U]], align 8
 // LLVM-NEXT:   %[[F_VAL:.*]] = load float, ptr %[[U]], align 8
 // LLVM-NEXT:   store double 1.000000e-01, ptr %[[U]], align 8
 // LLVM-NEXT:   %[[D_VAL:.*]] = load double, ptr %[[U]], align 8
@@ -159,7 +159,7 @@ void shouldGenerateUnionAccess(union U2 u) {
 // OGCG-NEXT:   %[[B_VAL:.*]] = load i8, ptr %[[U]], align 8
 // OGCG-NEXT:   store i32 1, ptr %[[U]], align 8
 // OGCG-NEXT:   %[[I_VAL:.*]] = load i32, ptr %[[U]], align 8
-// OGCG-NEXT:   store float 0x3FB99999A0000000, ptr %[[U]], align 8
+// OGCG-NEXT:   store float 1.000000e-01, ptr %[[U]], align 8
 // OGCG-NEXT:   %[[F_VAL:.*]] = load float, ptr %[[U]], align 8
 // OGCG-NEXT:   store double 1.000000e-01, ptr %[[U]], align 8
 // OGCG-NEXT:   %[[D_VAL:.*]] = load double, ptr %[[U]], align 8
@@ -170,12 +170,12 @@ void f3(union U3 u) {
 }
 
 // CIR:      cir.func{{.*}} @f3(%[[ARG:.*]]: !rec_U3
-// CIR-NEXT:   %[[U:.*]] = cir.alloca !rec_U3, !cir.ptr<!rec_U3>, ["u", init] {alignment = 1 : i64}
+// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(1) init : !cir.ptr<!rec_U3>
 // CIR-NEXT:   cir.store{{.*}} %[[ARG]], %[[U]] : !rec_U3, !cir.ptr<!rec_U3>
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
-// CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<2> : !s32i
+// CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<2> : !s64i
 // CIR-NEXT:   %[[C_PTR:.*]] = cir.get_member %[[U]][0] {name = "c"} : !cir.ptr<!rec_U3> -> !cir.ptr<!cir.array<!s8i x 5>>
-// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.get_element %[[C_PTR]][%[[IDX]] : !s32i] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
+// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.get_element %[[C_PTR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
 // CIR-NEXT:   cir.store{{.*}} %[[ZERO]], %[[ELEM_PTR]] : !s8i, !cir.ptr<!s8i>
 // CIR-NEXT:   cir.return
 
@@ -199,12 +199,12 @@ void f5(union U4 u) {
 }
 
 // CIR:      cir.func{{.*}} @f5(%[[ARG:.*]]: !rec_U4
-// CIR-NEXT:   %[[U:.*]] = cir.alloca !rec_U4, !cir.ptr<!rec_U4>, ["u", init] {alignment = 4 : i64}
+// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(4) init : !cir.ptr<!rec_U4>
 // CIR-NEXT:   cir.store{{.*}} %[[ARG]], %[[U]] : !rec_U4, !cir.ptr<!rec_U4>
 // CIR-NEXT:   %[[CHAR_VAL:.*]] = cir.const #cir.int<65> : !s8i
-// CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<4> : !s32i
+// CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<4> : !s64i
 // CIR-NEXT:   %[[C_PTR:.*]] = cir.get_member %[[U]][0] {name = "c"} : !cir.ptr<!rec_U4> -> !cir.ptr<!cir.array<!s8i x 5>>
-// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.get_element %[[C_PTR]][%[[IDX]] : !s32i] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
+// CIR-NEXT:   %[[ELEM_PTR:.*]] = cir.get_element %[[C_PTR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s8i x 5>> -> !cir.ptr<!s8i>
 // CIR-NEXT:   cir.store{{.*}} %[[CHAR_VAL]], %[[ELEM_PTR]] : !s8i, !cir.ptr<!s8i>
 // CIR-NEXT:   cir.return
 

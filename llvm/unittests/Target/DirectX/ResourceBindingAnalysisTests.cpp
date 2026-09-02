@@ -71,7 +71,7 @@ TEST_F(ResourceBindingAnalysisTest, TestOverlap) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 0, i32 -1, i32 100, ptr null)
+  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 0, i32 0, i32 100, ptr null)
   %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 4, i32 1, i32 0, ptr null)
   ret void
 }

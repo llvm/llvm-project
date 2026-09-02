@@ -28,7 +28,8 @@ program threadprivate02
   !$omp threadprivate(eq_c)
   equivalence(eq_c, eq_d)
 
-  !ERROR: A variable in a THREADPRIVATE directive cannot appear in an EQUIVALENCE statement (variable 'eq_e' from common block '/blk2/')
+  ! This is an extension to the OpenMP semantics, see https://github.com/llvm/llvm-project/issues/180493
+  !WARNING: A variable in a THREADPRIVATE directive used in an EQUIVALENCE statement is an OpenMP extension (variable 'eq_e' from common block '/blk2/') [-Wopenmp-threadprivate-equivalence]
   !$omp threadprivate(/blk2/)
 
 contains

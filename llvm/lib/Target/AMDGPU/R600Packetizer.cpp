@@ -129,7 +129,7 @@ private:
       if (OperandIdx < 0)
         continue;
       Register Src = MI.getOperand(OperandIdx).getReg();
-      const DenseMap<unsigned, unsigned>::const_iterator It = PVs.find(Src);
+      const auto It = PVs.find(Src);
       if (It != PVs.end())
         MI.getOperand(OperandIdx).setReg(It->second);
     }

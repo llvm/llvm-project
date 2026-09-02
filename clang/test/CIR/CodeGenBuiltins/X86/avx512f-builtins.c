@@ -199,7 +199,7 @@ __mmask16 test_mm512_kandn(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: _mm512_kandn
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
@@ -244,7 +244,7 @@ __mmask16 test_mm512_kxnor(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: _mm512_kxnor
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
@@ -288,7 +288,7 @@ __mmask16 test_mm512_kxor(__mmask16 A, __mmask16 B) {
 __mmask16 test_mm512_knot(__mmask16 A) {
   // CIR-LABEL: _mm512_knot
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
   // LLVM-LABEL: _mm512_knot

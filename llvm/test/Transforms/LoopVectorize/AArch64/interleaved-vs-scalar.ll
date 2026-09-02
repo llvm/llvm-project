@@ -7,8 +7,8 @@ target triple = "aarch64--linux-gnu"
 %pair = type { i8, i8 }
 
 ; CHECK-LABEL: test
-; CHECK: Found an estimated cost of 8 for VF 2 For instruction:   {{.*}} load i8
-; CHECK: Found an estimated cost of 8 for VF 2 For instruction:   {{.*}} load i8
+; CHECK: Cost of 8 for VF 2: REPLICATE ir<%tmp1> = load ir<%tmp0>
+; CHECK: Cost of 8 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp2>
 ; CHECK-LABEL: entry:
 ; CHECK-LABEL: vector.body:
 ; CHECK: [[LOAD1:%.*]] = load i8

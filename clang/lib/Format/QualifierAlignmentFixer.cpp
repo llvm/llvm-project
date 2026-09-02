@@ -169,6 +169,12 @@ static bool isQualifier(const FormatToken *const Tok) {
   case tok::kw_constexpr:
   case tok::kw_restrict:
   case tok::kw_friend:
+  case tok::kw__Nonnull:
+  case tok::kw__Nullable:
+  case tok::kw__Null_unspecified:
+  case tok::kw___ptr32:
+  case tok::kw___ptr64:
+  case tok::kw___funcref:
     return true;
   default:
     return false;
@@ -273,7 +279,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
     return Tok;
 
   // Stay safe and don't move past macros, also don't bother with sorting.
-  if (isPossibleMacro(TypeToken))
+  if (TypeToken->isPossibleMacro())
     return Tok;
 
   // The case `const long long int volatile` -> `long long int const volatile`
@@ -410,7 +416,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   }
 
   // Stay safe and don't move past macros, also don't bother with sorting.
-  if (isPossibleMacro(TypeToken))
+  if (TypeToken->isPossibleMacro())
     return Tok;
 
   // Examples given in order of ['const', 'volatile', 'type']
@@ -639,31 +645,6 @@ bool isConfiguredQualifierOrType(const FormatToken *Tok,
                                  const LangOptions &LangOpts) {
   return Tok && (Tok->isTypeName(LangOpts) || Tok->is(tok::kw_auto) ||
                  isConfiguredQualifier(Tok, Qualifiers));
-}
-
-// If a token is an identifier and it's upper case, it could
-// be a macro and hence we need to be able to ignore it.
-bool isPossibleMacro(const FormatToken *Tok) {
-  assert(Tok);
-  if (Tok->isNot(tok::identifier))
-    return false;
-
-  const auto Text = Tok->TokenText;
-  assert(!Text.empty());
-
-  // T,K,U,V likely could be template arguments
-  if (Text.size() == 1)
-    return false;
-
-  // It's unlikely that qualified names are object-like macros.
-  const auto *Prev = Tok->getPreviousNonComment();
-  if (Prev && Prev->is(tok::coloncolon))
-    return false;
-  const auto *Next = Tok->getNextNonComment();
-  if (Next && Next->is(tok::coloncolon))
-    return false;
-
-  return Text == Text.upper();
 }
 
 } // namespace format

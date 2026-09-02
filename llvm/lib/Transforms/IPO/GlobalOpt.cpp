@@ -1983,6 +1983,10 @@ OptimizeFunctions(Module &M,
     if (!F.hasLocalLinkage())
       continue;
 
+    // Ensure function definition is available for interprocedural analysis.
+    if (!F.isDefinitionExact())
+      continue;
+
     // If we have an inalloca parameter that we can safely remove the
     // inalloca attribute from, do so. This unlocks optimizations that
     // wouldn't be safe in the presence of inalloca.
@@ -2061,16 +2065,16 @@ OptimizeGlobalVars(Module &M,
     if (!GV.hasName() && !GV.isDeclaration() && !GV.hasLocalLinkage())
       GV.setLinkage(GlobalValue::InternalLinkage);
     // Simplify the initializer.
-    if (GV.hasInitializer())
-      if (auto *C = dyn_cast<Constant>(GV.getInitializer())) {
-        auto &DL = M.getDataLayout();
-        // TLI is not used in the case of a Constant, so use default nullptr
-        // for that optional parameter, since we don't have a Function to
-        // provide GetTLI anyway.
-        Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
-        if (New != C)
-          GV.setInitializer(New);
-      }
+    if (GV.hasInitializer()) {
+      const Constant *C = GV.getInitializer();
+      auto &DL = M.getDataLayout();
+      // TLI is not used in the case of a Constant, so use default nullptr
+      // for that optional parameter, since we don't have a Function to
+      // provide GetTLI anyway.
+      Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
+      if (New != C)
+        GV.setInitializer(New);
+    }
 
     if (deleteIfDead(GV, NotDiscardableComdats)) {
       Changed = true;

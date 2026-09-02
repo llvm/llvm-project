@@ -46,6 +46,8 @@ namespace llvm {
 template <typename NodeT, bool IsPostDom>
 class DominatorTreeBase;
 
+template <class BlockT, class LoopT> class LoopInfoBase;
+
 namespace DomTreeBuilder {
 template <typename DomTreeT>
 struct SemiNCAInfo;
@@ -316,8 +318,9 @@ protected:
   unsigned BlockNumberEpoch = 0;
 
   friend struct DomTreeBuilder::SemiNCAInfo<DominatorTreeBase>;
+  template <class BlockT, class LoopT> friend class LoopInfoBase;
 
- public:
+public:
   DominatorTreeBase() = default;
 
   DominatorTreeBase(const DominatorTreeBase &) = delete;
@@ -382,13 +385,24 @@ protected:
   }
 
 private:
+  // For LoopInfoBase's use in deriving a reverse-preorder traversal.
+  auto nodes() const {
+    return make_filter_range(DomTreeNodes, [](const DomTreeNodeBase<NodeT> *N) {
+      return N != nullptr;
+    });
+  }
+
   std::optional<unsigned> getNodeIndex(const NodeT *BB) const {
     if constexpr (GraphHasNodeNumbers<NodeT *>) {
-      // BB can be nullptr, map nullptr to index 0.
       assert(BlockNumberEpoch ==
                  GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
              "dominator tree used with outdated block numbers");
-      return BB ? GraphTraits<const NodeT *>::getNumber(BB) + 1 : 0;
+      if constexpr (IsPostDom) {
+        if (!BB)
+          return 0; // BB may be nullptr for post-dominator tree, map to 0.
+      } else
+        assert(BB && "dominator tree block must be non-null");
+      return GraphTraits<const NodeT *>::getNumber(BB) + 1;
     } else {
       if (auto It = NodeNumberMap.find(BB); It != NodeNumberMap.end())
         return It->second;
@@ -846,7 +860,7 @@ public:
       // If we visited all of the children of this node, "recurse" back up the
       // stack setting the DFOutNum.
       if (ChildIt == Node->end()) {
-        Node->DFSNumOut = DFSNum++;
+        Node->DFSNumOut = DFSNum;
         WorkStack.pop_back();
       } else {
         // Otherwise, recursively visit this child.

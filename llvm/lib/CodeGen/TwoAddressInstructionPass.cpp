@@ -361,7 +361,7 @@ bool TwoAddressInstructionImpl::noUseAfterLastDef(Register Reg, unsigned Dist,
     MachineInstr *MI = MO.getParent();
     if (MI->getParent() != MBB || MI->isDebugValue())
       continue;
-    DenseMap<MachineInstr*, unsigned>::iterator DI = DistanceMap.find(MI);
+    auto DI = DistanceMap.find(MI);
     if (DI == DistanceMap.end())
       continue;
     if (MO.isUse() && DI->second < LastUse)
@@ -550,7 +550,7 @@ MachineInstr *TwoAddressInstructionImpl::findOnlyInterestingUse(
 static MCRegister getMappedReg(Register Reg,
                                DenseMap<Register, Register> &RegMap) {
   while (Reg.isVirtual()) {
-    DenseMap<Register, Register>::iterator SI = RegMap.find(Reg);
+    auto SI = RegMap.find(Reg);
     if (SI == RegMap.end())
       return 0;
     Reg = SI->second;
@@ -863,7 +863,7 @@ void TwoAddressInstructionImpl::scanUses(Register DstReg) {
     if (IsCopy && !Processed.insert(UseMI).second)
       break;
 
-    DenseMap<MachineInstr*, unsigned>::iterator DI = DistanceMap.find(UseMI);
+    auto DI = DistanceMap.find(UseMI);
     if (DI != DistanceMap.end())
       // Earlier in the same MBB.Reached via a back edge.
       break;
@@ -939,7 +939,7 @@ bool TwoAddressInstructionImpl::rescheduleMIBelowKill(
     return false;
 
   MachineInstr *MI = &*mi;
-  DenseMap<MachineInstr*, unsigned>::iterator DI = DistanceMap.find(MI);
+  auto DI = DistanceMap.find(MI);
   if (DI == DistanceMap.end())
     // Must be created from unfolded load. Don't waste time trying this.
     return false;
@@ -1104,7 +1104,7 @@ bool TwoAddressInstructionImpl::isDefTooClose(Register Reg, unsigned Dist,
       continue;
     if (&DefMI == MI)
       return true; // MI is defining something KillMI uses
-    DenseMap<MachineInstr*, unsigned>::iterator DDI = DistanceMap.find(&DefMI);
+    auto DDI = DistanceMap.find(&DefMI);
     if (DDI == DistanceMap.end())
       return true;  // Below MI
     unsigned DefDist = DDI->second;
@@ -1127,7 +1127,7 @@ bool TwoAddressInstructionImpl::rescheduleKillAboveMI(
     return false;
 
   MachineInstr *MI = &*mi;
-  DenseMap<MachineInstr*, unsigned>::iterator DI = DistanceMap.find(MI);
+  auto DI = DistanceMap.find(MI);
   if (DI == DistanceMap.end())
     // Must be created from unfolded load. Don't waste time trying this.
     return false;
@@ -1148,9 +1148,26 @@ bool TwoAddressInstructionImpl::rescheduleKillAboveMI(
   } else {
     KillMI = LV->getVarInfo(Reg).findKill(MBB);
   }
-  if (!KillMI || MI == KillMI || KillMI->isCopy() || KillMI->isCopyLike())
-    // Don't mess with copies, they may be coalesced later.
+  if (!KillMI || MI == KillMI)
     return false;
+
+  if (KillMI->isCopyLike()) {
+    if (!MI->mayLoad())
+      return false;
+
+    Register CopySrcReg, CopyDstReg;
+    bool IsCopySrcPhys, IsCopyDstPhys;
+    // Most copies are better left for coalescing. Allow moving only the
+    // case of a kill-copy from a source virtual register into a
+    // physical register when the current two-address instruction has a folded
+    // load; that preserves the memory form and avoids introducing a load+copy.
+    if (!isCopyToReg(*KillMI, CopySrcReg, CopyDstReg, IsCopySrcPhys,
+                     IsCopyDstPhys))
+      return false;
+
+    if (CopySrcReg != Reg || IsCopySrcPhys || !IsCopyDstPhys)
+      return false;
+  }
 
   Register DstReg;
   if (isTwoAddrUse(*KillMI, Reg, DstReg))

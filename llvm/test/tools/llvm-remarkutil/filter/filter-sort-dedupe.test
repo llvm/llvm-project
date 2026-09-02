@@ -1,0 +1,46 @@
+RUN: llvm-remarkutil filter --sort %p/Inputs/filter-unsorted.yaml | FileCheck %s --strict-whitespace --check-prefix=SORTED
+RUN: llvm-remarkutil filter --dedupe %p/Inputs/filter2.yaml %p/Inputs/filter2.yaml | FileCheck %s --strict-whitespace --check-prefix=DEDUPED
+RUN: llvm-remarkutil filter --sort %p/Inputs/filter.yaml %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace --check-prefix=SORTED-DUP
+RUN: llvm-remarkutil filter --sort --dedupe %p/Inputs/filter-unsorted.yaml %p/Inputs/filter-unsorted.yaml | FileCheck %s --strict-whitespace --check-prefix=SORTED
+
+; SORTED: --- !Passed
+; SORTED: Name:            Remark1
+; SORTED: ...
+; SORTED-NEXT: --- !Missed
+; SORTED: Name:            Remark2
+; SORTED: ...
+; SORTED-NEXT: --- !Analysis
+; SORTED: Name:            Remark3
+; SORTED: ...
+; SORTED-NOT: {{.}}
+
+; SORTED-DUP: --- !Passed
+; SORTED-DUP: Name:            Remark1
+; SORTED-DUP: ...
+; SORTED-DUP-NEXT: --- !Passed
+; SORTED-DUP: Name:            Remark1
+; SORTED-DUP: ...
+; SORTED-DUP-NEXT: --- !Missed
+; SORTED-DUP: Name:            Remark2
+; SORTED-DUP: ...
+; SORTED-DUP-NEXT: --- !Missed
+; SORTED-DUP: Name:            Remark2
+; SORTED-DUP: ...
+; SORTED-DUP-NEXT: --- !Analysis
+; SORTED-DUP: Name:            Remark3
+; SORTED-DUP: ...
+; SORTED-DUP-NEXT: --- !Analysis
+; SORTED-DUP: Name:            Remark3
+; SORTED-DUP: ...
+; SORTED-DUP-NOT: {{.}}
+
+; DEDUPED: --- !Passed
+; DEDUPED-NEXT: Pass:            pass4
+; DEDUPED-NEXT: Name:            Remark4
+; DEDUPED-NEXT: DebugLoc:        { File: 'path/to/func4.c', Line: 1, Column: 2 }
+; DEDUPED-NEXT: Function:        func4
+; DEDUPED-NEXT: Args:
+; DEDUPED-NEXT:   - String:          ' text'
+; DEDUPED-NEXT:   - arg4:            argval4
+; DEDUPED-NEXT: ...
+; DEDUPED-NOT: {{.}}

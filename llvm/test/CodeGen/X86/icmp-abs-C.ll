@@ -55,7 +55,7 @@ define i64 @eq_or_with_dom_abs(i64 %x) nounwind {
 ; X64-NEXT:    cmpq $2345, %rdx # imm = 0x929
 ; X64-NEXT:    cmovaeq %rdx, %rax
 ; X64-NEXT:    retq
-  %absx = call i64 @llvm.abs.i64(i64 %x, i1 true)
+  %absx = call i64 @llvm.abs.i64(i64 %x, i1 false)
   %foo = xor i64 %absx, 12312
   %bar = icmp ugt i64 %foo, 2344
   %cmp0 = icmp eq i64 %x, 64
@@ -100,7 +100,7 @@ define i32 @eq_or_with_dom_abs_non_po2(i32 %x) nounwind {
 ; X64-NEXT:    cmpl $2345, %edx # imm = 0x929
 ; X64-NEXT:    cmovael %edx, %eax
 ; X64-NEXT:    retq
-  %absx = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %absx = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %foo = xor i32 %absx, 12312
   %bar = icmp ugt i32 %foo, 2344
   %cmp0 = icmp eq i32 %x, 123
@@ -146,7 +146,7 @@ define i8 @ne_and_with_dom_abs_non_pow2(i8 %x) nounwind {
 ; X64-NEXT:    cmovael %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
-  %absx = call i8 @llvm.abs.i8(i8 %x, i1 true)
+  %absx = call i8 @llvm.abs.i8(i8 %x, i1 false)
   %foo = xor i8 %absx, 12
   %bar = icmp ugt i8 %foo, 23
   %cmp0 = icmp ne i8 %x, 121
@@ -197,7 +197,7 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
 ; X64-NEXT:    cmovael %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
-  %absx = call i16 @llvm.abs.i16(i16 %x, i1 true)
+  %absx = call i16 @llvm.abs.i16(i16 %x, i1 false)
   %foo = xor i16 %absx, 12312
   %bar = icmp ugt i16 %foo, 2344
   %cmp0 = icmp ne i16 %x, 64
@@ -206,4 +206,52 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
   %cmp64 = zext i1 %cmp to i16
   %r = select i1 %bar, i16 %foo, i16 %cmp64
   ret i16 %r
+}
+
+define i32 @eq_or_with_dom_abs_min_poison_non_pow2(i32 %x) nounwind {
+; X86-LABEL: eq_or_with_dom_abs_min_poison_non_pow2:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
+; X86-NEXT:    cmpl $123, %edx
+; X86-NEXT:    sete %cl
+; X86-NEXT:    cmpl $-123, %edx
+; X86-NEXT:    sete %dl
+; X86-NEXT:    cmpl $2345, %eax # imm = 0x929
+; X86-NEXT:    jae .LBB4_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    orb %dl, %cl
+; X86-NEXT:    movzbl %cl, %eax
+; X86-NEXT:  .LBB4_2:
+; X86-NEXT:    retl
+;
+; X64-LABEL: eq_or_with_dom_abs_min_poison_non_pow2:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    negl %ecx
+; X64-NEXT:    cmovsl %edi, %ecx
+; X64-NEXT:    xorl $12312, %ecx # imm = 0x3018
+; X64-NEXT:    cmpl $123, %edi
+; X64-NEXT:    sete %al
+; X64-NEXT:    cmpl $-123, %edi
+; X64-NEXT:    sete %dl
+; X64-NEXT:    orb %al, %dl
+; X64-NEXT:    cmpl $2345, %ecx # imm = 0x929
+; X64-NEXT:    movzbl %dl, %eax
+; X64-NEXT:    cmovael %ecx, %eax
+; X64-NEXT:    retq
+  %absx = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %foo = xor i32 %absx, 12312
+  %bar = icmp ugt i32 %foo, 2344
+  %cmp0 = icmp eq i32 %x, 123
+  %cmp1 = icmp eq i32 %x, -123
+  %cmp = or i1 %cmp0, %cmp1
+  %cmp64 = zext i1 %cmp to i32
+  %r = select i1 %bar, i32 %foo, i32 %cmp64
+  ret i32 %r
 }

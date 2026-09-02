@@ -15,6 +15,10 @@
     _ZTSN4sycl*; /* typeinfo name */
     _ZTVN4sycl*; /* vtable */
 
+    /* Export offload image hooks */
+    __sycl_register_lib;
+    __sycl_unregister_lib;
+
   local:
     *;
 };

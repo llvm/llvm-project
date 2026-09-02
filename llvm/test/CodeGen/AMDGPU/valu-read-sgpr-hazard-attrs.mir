@@ -2,8 +2,6 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass post-RA-hazard-rec,amdgpu-wait-sgpr-hazards -o - %s | FileCheck -check-prefix=GCN %s
 
 --- |
-  define amdgpu_gs void @hazard_disable() #0 { ret void }
-  define amdgpu_gs void @hazard_enable() #1 { ret void }
   define amdgpu_cs void @hazard_calls() #2 { ret void }
   define void @hazard_callee1() #2 { ret void }
   define void @hazard_callee2() #2 { ret void }
@@ -15,42 +13,9 @@
   define amdgpu_cs void @hazard_cull_global() #3 { ret void }
   define amdgpu_cs void @hazard_nocull_flat() #3 { ret void }
 
-  attributes #0 = { "amdgpu-sgpr-hazard-wait"="0" }
-  attributes #1 = { "amdgpu-sgpr-hazard-wait"="1" }
   attributes #2 = { "amdgpu-sgpr-hazard-boundary-cull" }
   attributes #3 = { "amdgpu-sgpr-hazard-mem-wait-cull" "amdgpu-sgpr-hazard-mem-wait-cull-threshold"="1" }
   attributes #4 = { "amdgpu-sgpr-hazard-mem-wait-cull" "amdgpu-sgpr-hazard-mem-wait-cull-threshold"="2" }
-...
-
----
-name:            hazard_disable
-body:            |
-  bb.0:
-    ; GCN-LABEL: name: hazard_disable
-    ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
-    ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
-    ; GCN-NEXT: S_ENDPGM 0
-    $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
-    $sgpr0_sgpr1 = S_GETPC_B64
-    $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
-    S_ENDPGM 0
-...
-
----
-name:            hazard_enable
-body:            |
-  bb.0:
-    ; GCN-LABEL: name: hazard_enable
-    ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
-    ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
-    ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
-    ; GCN-NEXT: S_ENDPGM 0
-    $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
-    $sgpr0_sgpr1 = S_GETPC_B64
-    $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
-    S_ENDPGM 0
 ...
 
 ---

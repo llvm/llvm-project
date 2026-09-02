@@ -72,47 +72,46 @@ int main()
 }
 #endif
 // IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41
-// IR-GPU-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+// IR-GPU-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // IR-GPU-NEXT:  entry:
-// IR-GPU-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NEXT:    [[N_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_ADDR]] to ptr
 // IR-GPU-NEXT:    [[VLA_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR]] to ptr
 // IR-GPU-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
 // IR-GPU-NEXT:    [[VLA_ADDR2_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR2]] to ptr
 // IR-GPU-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
-// IR-GPU-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
+// IR-GPU-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
-// IR-GPU-NEXT:    [[DOTTHREADID_TEMP__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
-// IR-GPU-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[N]], ptr [[N_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META7:![0-9]+]], !align [[META8:![0-9]+]]
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41_kernel_environment to ptr), ptr [[DYN_PTR]])
 // IR-GPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP4]], -1
 // IR-GPU-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // IR-GPU:       user_code.entry:
 // IR-GPU-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
 // IR-GPU-NEXT:    [[TMP6:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP6]], ptr [[N_CASTED_ASCAST]], align 4
-// IR-GPU-NEXT:    [[TMP7:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
+// IR-GPU-NEXT:    store i32 [[TMP6]], ptr addrspace(5) [[N_CASTED]], align 4
+// IR-GPU-NEXT:    [[TMP7:%.*]] = load i64, ptr addrspace(5) [[N_CASTED]], align 8
 // IR-GPU-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP5]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
-// IR-GPU-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP7]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]]) #[[ATTR2:[0-9]+]]
+// IR-GPU-NEXT:    store i32 [[TMP5]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4
+// IR-GPU-NEXT:    [[TMP8:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
+// IR-GPU-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41_omp_outlined(ptr [[TMP8]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP7]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]]) #[[ATTR2:[0-9]+]]
 // IR-GPU-NEXT:    call void @__kmpc_target_deinit()
 // IR-GPU-NEXT:    ret void
 // IR-GPU:       worker.exit:
@@ -158,7 +157,6 @@ int main()
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_IS_LAST_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IS_LAST]] to ptr
 // IR-GPU-NEXT:    [[J5_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J5]] to ptr
-// IR-GPU-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
 // IR-GPU-NEXT:    [[CAPTURED_VARS_ADDRS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 // IR-GPU-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR_ASCAST]], align 8
@@ -168,9 +166,9 @@ int main()
 // IR-GPU-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
@@ -220,8 +218,8 @@ int main()
 // IR-GPU-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP19]] to i64
 // IR-GPU-NEXT:    [[TMP21:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP21]], ptr [[N_CASTED_ASCAST]], align 4
-// IR-GPU-NEXT:    [[TMP22:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
+// IR-GPU-NEXT:    store i32 [[TMP21]], ptr addrspace(5) [[N_CASTED]], align 4
+// IR-GPU-NEXT:    [[TMP22:%.*]] = load i64, ptr addrspace(5) [[N_CASTED]], align 8
 // IR-GPU-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [7 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 0
 // IR-GPU-NEXT:    [[TMP24:%.*]] = inttoptr i64 [[TMP18]] to ptr
 // IR-GPU-NEXT:    store ptr [[TMP24]], ptr [[TMP23]], align 8
@@ -336,9 +334,9 @@ int main()
 // IR-GPU-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
@@ -408,47 +406,46 @@ int main()
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46
-// IR-GPU-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
+// IR-GPU-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // IR-GPU-NEXT:  entry:
-// IR-GPU-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NEXT:    [[N_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_ADDR]] to ptr
 // IR-GPU-NEXT:    [[VLA_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR]] to ptr
 // IR-GPU-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
 // IR-GPU-NEXT:    [[VLA_ADDR2_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR2]] to ptr
 // IR-GPU-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
-// IR-GPU-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
+// IR-GPU-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
-// IR-GPU-NEXT:    [[DOTTHREADID_TEMP__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
-// IR-GPU-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[N]], ptr [[N_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46_kernel_environment to ptr), ptr [[DYN_PTR]])
 // IR-GPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP4]], -1
 // IR-GPU-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // IR-GPU:       user_code.entry:
 // IR-GPU-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr))
 // IR-GPU-NEXT:    [[TMP6:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP6]], ptr [[N_CASTED_ASCAST]], align 4
-// IR-GPU-NEXT:    [[TMP7:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
+// IR-GPU-NEXT:    store i32 [[TMP6]], ptr addrspace(5) [[N_CASTED]], align 4
+// IR-GPU-NEXT:    [[TMP7:%.*]] = load i64, ptr addrspace(5) [[N_CASTED]], align 8
 // IR-GPU-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP5]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
-// IR-GPU-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP7]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]]) #[[ATTR2]]
+// IR-GPU-NEXT:    store i32 [[TMP5]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4
+// IR-GPU-NEXT:    [[TMP8:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
+// IR-GPU-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46_omp_outlined(ptr [[TMP8]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP7]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]]) #[[ATTR2]]
 // IR-GPU-NEXT:    call void @__kmpc_target_deinit()
 // IR-GPU-NEXT:    ret void
 // IR-GPU:       worker.exit:
@@ -502,7 +499,6 @@ int main()
 // IR-GPU-NEXT:    [[DOTOMP_IS_LAST_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IS_LAST]] to ptr
 // IR-GPU-NEXT:    [[I11_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I11]] to ptr
 // IR-GPU-NEXT:    [[J12_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J12]] to ptr
-// IR-GPU-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
 // IR-GPU-NEXT:    [[CAPTURED_VARS_ADDRS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 // IR-GPU-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR_ASCAST]], align 8
@@ -512,9 +508,9 @@ int main()
 // IR-GPU-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
@@ -576,8 +572,8 @@ int main()
 // IR-GPU-NEXT:    [[TMP20:%.*]] = load i64, ptr [[DOTOMP_COMB_LB_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP21:%.*]] = load i64, ptr [[DOTOMP_COMB_UB_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP22:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP22]], ptr [[N_CASTED_ASCAST]], align 4
-// IR-GPU-NEXT:    [[TMP23:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
+// IR-GPU-NEXT:    store i32 [[TMP22]], ptr addrspace(5) [[N_CASTED]], align 4
+// IR-GPU-NEXT:    [[TMP23:%.*]] = load i64, ptr addrspace(5) [[N_CASTED]], align 8
 // IR-GPU-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [7 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 0
 // IR-GPU-NEXT:    [[TMP25:%.*]] = inttoptr i64 [[TMP20]] to ptr
 // IR-GPU-NEXT:    store ptr [[TMP25]], ptr [[TMP24]], align 8
@@ -700,9 +696,9 @@ int main()
 // IR-GPU-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
@@ -812,55 +808,53 @@ int main()
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55
-// IR-GPU-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4:[0-9]+]] {
+// IR-GPU-SAME: (i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR4:[0-9]+]] {
 // IR-GPU-NEXT:  entry:
-// IR-GPU-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[NT_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[NT_CASTED:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NEXT:    [[N_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_ADDR]] to ptr
 // IR-GPU-NEXT:    [[NT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[NT_ADDR]] to ptr
 // IR-GPU-NEXT:    [[VLA_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR]] to ptr
 // IR-GPU-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
 // IR-GPU-NEXT:    [[VLA_ADDR2_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR2]] to ptr
 // IR-GPU-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
-// IR-GPU-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
-// IR-GPU-NEXT:    [[NT_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[NT_CASTED]] to ptr
+// IR-GPU-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
-// IR-GPU-NEXT:    [[DOTTHREADID_TEMP__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
-// IR-GPU-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[N]], ptr [[N_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[NT]], ptr [[NT_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55_kernel_environment to ptr), ptr [[DYN_PTR]])
 // IR-GPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP4]], -1
 // IR-GPU-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // IR-GPU:       user_code.entry:
 // IR-GPU-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr))
 // IR-GPU-NEXT:    [[TMP6:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP6]], ptr [[N_CASTED_ASCAST]], align 4
-// IR-GPU-NEXT:    [[TMP7:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
+// IR-GPU-NEXT:    store i32 [[TMP6]], ptr addrspace(5) [[N_CASTED]], align 4
+// IR-GPU-NEXT:    [[TMP7:%.*]] = load i64, ptr addrspace(5) [[N_CASTED]], align 8
 // IR-GPU-NEXT:    [[TMP8:%.*]] = load i32, ptr [[NT_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP8]], ptr [[NT_CASTED_ASCAST]], align 4
-// IR-GPU-NEXT:    [[TMP9:%.*]] = load i64, ptr [[NT_CASTED_ASCAST]], align 8
+// IR-GPU-NEXT:    store i32 [[TMP8]], ptr addrspace(5) [[NT_CASTED]], align 4
+// IR-GPU-NEXT:    [[TMP9:%.*]] = load i64, ptr addrspace(5) [[NT_CASTED]], align 8
 // IR-GPU-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP5]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
-// IR-GPU-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]]) #[[ATTR2]]
+// IR-GPU-NEXT:    store i32 [[TMP5]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4
+// IR-GPU-NEXT:    [[TMP10:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
+// IR-GPU-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55_omp_outlined(ptr [[TMP10]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]]) #[[ATTR2]]
 // IR-GPU-NEXT:    call void @__kmpc_target_deinit()
 // IR-GPU-NEXT:    ret void
 // IR-GPU:       worker.exit:
@@ -909,8 +903,6 @@ int main()
 // IR-GPU-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
 // IR-GPU-NEXT:    [[DOTOMP_IS_LAST_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IS_LAST]] to ptr
 // IR-GPU-NEXT:    [[I5_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I5]] to ptr
-// IR-GPU-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
-// IR-GPU-NEXT:    [[NT_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[NT_CASTED]] to ptr
 // IR-GPU-NEXT:    [[CAPTURED_VARS_ADDRS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 // IR-GPU-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR_ASCAST]], align 8
@@ -921,9 +913,9 @@ int main()
 // IR-GPU-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
@@ -973,11 +965,11 @@ int main()
 // IR-GPU-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP19]] to i64
 // IR-GPU-NEXT:    [[TMP21:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP21]], ptr [[N_CASTED_ASCAST]], align 4
-// IR-GPU-NEXT:    [[TMP22:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
+// IR-GPU-NEXT:    store i32 [[TMP21]], ptr addrspace(5) [[N_CASTED]], align 4
+// IR-GPU-NEXT:    [[TMP22:%.*]] = load i64, ptr addrspace(5) [[N_CASTED]], align 8
 // IR-GPU-NEXT:    [[TMP23:%.*]] = load i32, ptr [[NT_ADDR_ASCAST]], align 4
-// IR-GPU-NEXT:    store i32 [[TMP23]], ptr [[NT_CASTED_ASCAST]], align 4
-// IR-GPU-NEXT:    [[TMP24:%.*]] = load i64, ptr [[NT_CASTED_ASCAST]], align 8
+// IR-GPU-NEXT:    store i32 [[TMP23]], ptr addrspace(5) [[NT_CASTED]], align 4
+// IR-GPU-NEXT:    [[TMP24:%.*]] = load i64, ptr addrspace(5) [[NT_CASTED]], align 8
 // IR-GPU-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [8 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 0
 // IR-GPU-NEXT:    [[TMP26:%.*]] = inttoptr i64 [[TMP18]] to ptr
 // IR-GPU-NEXT:    store ptr [[TMP26]], ptr [[TMP25]], align 8
@@ -1100,9 +1092,9 @@ int main()
 // IR-GPU-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META7]], !align [[META8]]
 // IR-GPU-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // IR-GPU-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
@@ -1176,7 +1168,7 @@ int main()
 // IR-GPU-NEXT:    [[TMP24:%.*]] = load i32, ptr [[J_ASCAST]], align 4
 // IR-GPU-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP24]], 1
 // IR-GPU-NEXT:    store i32 [[INC]], ptr [[J_ASCAST]], align 4
-// IR-GPU-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
+// IR-GPU-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP9:![0-9]+]]
 // IR-GPU:       for.end:
 // IR-GPU-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // IR-GPU:       omp.body.continue:
@@ -1224,11 +1216,11 @@ int main()
 // IR-NEXT:    [[TMP5:%.*]] = load i32, ptr @N, align 4
 // IR-NEXT:    store i32 [[TMP5]], ptr [[N_CASTED]], align 4
 // IR-NEXT:    [[TMP6:%.*]] = load i64, ptr [[N_CASTED]], align 8
-// IR-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41(i64 [[TMP6]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]]) #[[ATTR3:[0-9]+]]
+// IR-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41(i64 [[TMP6]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]], ptr null) #[[ATTR3:[0-9]+]]
 // IR-NEXT:    [[TMP7:%.*]] = load i32, ptr @N, align 4
 // IR-NEXT:    store i32 [[TMP7]], ptr [[N_CASTED2]], align 4
 // IR-NEXT:    [[TMP8:%.*]] = load i64, ptr [[N_CASTED2]], align 8
-// IR-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46(i64 [[TMP8]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]]) #[[ATTR3]]
+// IR-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46(i64 [[TMP8]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]], ptr null) #[[ATTR3]]
 // IR-NEXT:    store i32 0, ptr [[NT]], align 4
 // IR-NEXT:    [[TMP9:%.*]] = load i32, ptr @N, align 4
 // IR-NEXT:    store i32 [[TMP9]], ptr [[N_CASTED3]], align 4
@@ -1236,7 +1228,7 @@ int main()
 // IR-NEXT:    [[TMP11:%.*]] = load i32, ptr [[NT]], align 4
 // IR-NEXT:    store i32 [[TMP11]], ptr [[NT_CASTED]], align 4
 // IR-NEXT:    [[TMP12:%.*]] = load i64, ptr [[NT_CASTED]], align 8
-// IR-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55(i64 [[TMP10]], i64 [[TMP12]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]]) #[[ATTR3]]
+// IR-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55(i64 [[TMP10]], i64 [[TMP12]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]], ptr null) #[[ATTR3]]
 // IR-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // IR-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
 // IR-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP13]])
@@ -1245,23 +1237,25 @@ int main()
 //
 //
 // IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41
-// IR-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+// IR-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
+// IR-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8
 // IR-NEXT:    store i64 [[N]], ptr [[N_ADDR]], align 8
 // IR-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR]], align 8
 // IR-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // IR-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
+// IR-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // IR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // IR-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NEXT:    store i32 [[TMP4]], ptr [[N_CASTED]], align 4
 // IR-NEXT:    [[TMP5:%.*]] = load i64, ptr [[N_CASTED]], align 8
@@ -1298,9 +1292,9 @@ int main()
 // IR-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1401,9 +1395,9 @@ int main()
 // IR-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1484,23 +1478,25 @@ int main()
 //
 //
 // IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46
-// IR-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
+// IR-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8
 // IR-NEXT:    store i64 [[N]], ptr [[N_ADDR]], align 8
 // IR-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR]], align 8
 // IR-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // IR-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
+// IR-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // IR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NEXT:    store i32 [[TMP4]], ptr [[N_CASTED]], align 4
 // IR-NEXT:    [[TMP5:%.*]] = load i64, ptr [[N_CASTED]], align 8
@@ -1541,9 +1537,9 @@ int main()
 // IR-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -1659,9 +1655,9 @@ int main()
 // IR-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -1783,7 +1779,7 @@ int main()
 //
 //
 // IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55
-// IR-SAME: (i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-SAME: (i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[NT_ADDR:%.*]] = alloca i64, align 8
@@ -1791,6 +1787,7 @@ int main()
 // IR-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
+// IR-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[NT_CASTED:%.*]] = alloca i64, align 8
 // IR-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
@@ -1800,10 +1797,11 @@ int main()
 // IR-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // IR-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
+// IR-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // IR-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    call void @__kmpc_push_num_teams(ptr @[[GLOB3]], i32 [[TMP0]], i32 32, i32 0)
 // IR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NEXT:    store i32 [[TMP5]], ptr [[N_CASTED]], align 4
@@ -1847,9 +1845,9 @@ int main()
 // IR-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -1956,9 +1954,9 @@ int main()
 // IR-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -2044,7 +2042,7 @@ int main()
 // IR-NEXT:    [[TMP28:%.*]] = load i32, ptr [[J]], align 4
 // IR-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP28]], 1
 // IR-NEXT:    store i32 [[INC]], ptr [[J]], align 4
-// IR-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
+// IR-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
 // IR:       for.end:
 // IR-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // IR:       omp.body.continue:
@@ -2091,11 +2089,11 @@ int main()
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr @N, align 4
 // IR-PCH-NEXT:    store i32 [[TMP5]], ptr [[N_CASTED]], align 4
 // IR-PCH-NEXT:    [[TMP6:%.*]] = load i64, ptr [[N_CASTED]], align 8
-// IR-PCH-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41(i64 [[TMP6]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]]) #[[ATTR3:[0-9]+]]
+// IR-PCH-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41(i64 [[TMP6]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]], ptr null) #[[ATTR3:[0-9]+]]
 // IR-PCH-NEXT:    [[TMP7:%.*]] = load i32, ptr @N, align 4
 // IR-PCH-NEXT:    store i32 [[TMP7]], ptr [[N_CASTED2]], align 4
 // IR-PCH-NEXT:    [[TMP8:%.*]] = load i64, ptr [[N_CASTED2]], align 8
-// IR-PCH-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46(i64 [[TMP8]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]]) #[[ATTR3]]
+// IR-PCH-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46(i64 [[TMP8]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]], ptr null) #[[ATTR3]]
 // IR-PCH-NEXT:    store i32 0, ptr [[NT]], align 4
 // IR-PCH-NEXT:    [[TMP9:%.*]] = load i32, ptr @N, align 4
 // IR-PCH-NEXT:    store i32 [[TMP9]], ptr [[N_CASTED3]], align 4
@@ -2103,7 +2101,7 @@ int main()
 // IR-PCH-NEXT:    [[TMP11:%.*]] = load i32, ptr [[NT]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP11]], ptr [[NT_CASTED]], align 4
 // IR-PCH-NEXT:    [[TMP12:%.*]] = load i64, ptr [[NT_CASTED]], align 8
-// IR-PCH-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55(i64 [[TMP10]], i64 [[TMP12]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]]) #[[ATTR3]]
+// IR-PCH-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55(i64 [[TMP10]], i64 [[TMP12]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]], ptr null) #[[ATTR3]]
 // IR-PCH-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // IR-PCH-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
 // IR-PCH-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP13]])
@@ -2112,23 +2110,25 @@ int main()
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41
-// IR-PCH-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+// IR-PCH-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    store i64 [[N]], ptr [[N_ADDR]], align 8
 // IR-PCH-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // IR-PCH-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // IR-PCH-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP4]], ptr [[N_CASTED]], align 4
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i64, ptr [[N_CASTED]], align 8
@@ -2165,9 +2165,9 @@ int main()
 // IR-PCH-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -2268,9 +2268,9 @@ int main()
 // IR-PCH-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -2351,23 +2351,25 @@ int main()
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46
-// IR-PCH-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-PCH-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    store i64 [[N]], ptr [[N_ADDR]], align 8
 // IR-PCH-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // IR-PCH-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP4]], ptr [[N_CASTED]], align 4
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i64, ptr [[N_CASTED]], align 8
@@ -2408,9 +2410,9 @@ int main()
 // IR-PCH-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -2526,9 +2528,9 @@ int main()
 // IR-PCH-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -2650,7 +2652,7 @@ int main()
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55
-// IR-PCH-SAME: (i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-PCH-SAME: (i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[NT_ADDR:%.*]] = alloca i64, align 8
@@ -2658,6 +2660,7 @@ int main()
 // IR-PCH-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[NT_CASTED:%.*]] = alloca i64, align 8
 // IR-PCH-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
@@ -2667,10 +2670,11 @@ int main()
 // IR-PCH-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // IR-PCH-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    call void @__kmpc_push_num_teams(ptr @[[GLOB3]], i32 [[TMP0]], i32 32, i32 0)
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP5]], ptr [[N_CASTED]], align 4
@@ -2714,9 +2718,9 @@ int main()
 // IR-PCH-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -2823,9 +2827,9 @@ int main()
 // IR-PCH-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -2911,7 +2915,7 @@ int main()
 // IR-PCH-NEXT:    [[TMP28:%.*]] = load i32, ptr [[J]], align 4
 // IR-PCH-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP28]], 1
 // IR-PCH-NEXT:    store i32 [[INC]], ptr [[J]], align 4
-// IR-PCH-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
+// IR-PCH-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
 // IR-PCH:       for.end:
 // IR-PCH-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // IR-PCH:       omp.body.continue:
@@ -2933,47 +2937,46 @@ int main()
 //
 //
 // IR-GPU-NESTED-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64
-// IR-GPU-NESTED-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+// IR-GPU-NESTED-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // IR-GPU-NESTED-NEXT:  entry:
-// IR-GPU-NESTED-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// IR-GPU-NESTED-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(5)
-// IR-GPU-NESTED-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NESTED-NEXT:    [[N_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_ADDR]] to ptr
 // IR-GPU-NESTED-NEXT:    [[VLA_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR]] to ptr
 // IR-GPU-NESTED-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
 // IR-GPU-NESTED-NEXT:    [[VLA_ADDR2_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR2]] to ptr
 // IR-GPU-NESTED-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
-// IR-GPU-NESTED-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
+// IR-GPU-NESTED-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NESTED-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
-// IR-GPU-NESTED-NEXT:    [[DOTTHREADID_TEMP__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
-// IR-GPU-NESTED-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    store i64 [[N]], ptr [[N_ADDR_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NESTED-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META5:![0-9]+]], !align [[META6:![0-9]+]]
 // IR-GPU-NESTED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META5]], !align [[META6]]
 // IR-GPU-NESTED-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64_kernel_environment to ptr), ptr [[DYN_PTR]])
 // IR-GPU-NESTED-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP4]], -1
 // IR-GPU-NESTED-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // IR-GPU-NESTED:       user_code.entry:
 // IR-GPU-NESTED-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
 // IR-GPU-NESTED-NEXT:    [[TMP6:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
-// IR-GPU-NESTED-NEXT:    store i32 [[TMP6]], ptr [[N_CASTED_ASCAST]], align 4
-// IR-GPU-NESTED-NEXT:    [[TMP7:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
+// IR-GPU-NESTED-NEXT:    store i32 [[TMP6]], ptr addrspace(5) [[N_CASTED]], align 4
+// IR-GPU-NESTED-NEXT:    [[TMP7:%.*]] = load i64, ptr addrspace(5) [[N_CASTED]], align 8
 // IR-GPU-NESTED-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
-// IR-GPU-NESTED-NEXT:    store i32 [[TMP5]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
-// IR-GPU-NESTED-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP7]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]]) #[[ATTR2:[0-9]+]]
+// IR-GPU-NESTED-NEXT:    store i32 [[TMP5]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4
+// IR-GPU-NESTED-NEXT:    [[TMP8:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
+// IR-GPU-NESTED-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64_omp_outlined(ptr [[TMP8]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP7]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]]) #[[ATTR2:[0-9]+]]
 // IR-GPU-NESTED-NEXT:    call void @__kmpc_target_deinit()
 // IR-GPU-NESTED-NEXT:    ret void
 // IR-GPU-NESTED:       worker.exit:
@@ -3027,7 +3030,6 @@ int main()
 // IR-GPU-NESTED-NEXT:    [[DOTOMP_IS_LAST_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IS_LAST]] to ptr
 // IR-GPU-NESTED-NEXT:    [[I11_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I11]] to ptr
 // IR-GPU-NESTED-NEXT:    [[J12_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J12]] to ptr
-// IR-GPU-NESTED-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
 // IR-GPU-NESTED-NEXT:    [[CAPTURED_VARS_ADDRS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 // IR-GPU-NESTED-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR_ASCAST]], align 8
@@ -3037,9 +3039,9 @@ int main()
 // IR-GPU-NESTED-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META5]], !align [[META6]]
 // IR-GPU-NESTED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META5]], !align [[META6]]
 // IR-GPU-NESTED-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // IR-GPU-NESTED-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NESTED-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
@@ -3101,8 +3103,8 @@ int main()
 // IR-GPU-NESTED-NEXT:    [[TMP20:%.*]] = load i64, ptr [[DOTOMP_COMB_LB_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    [[TMP21:%.*]] = load i64, ptr [[DOTOMP_COMB_UB_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    [[TMP22:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
-// IR-GPU-NESTED-NEXT:    store i32 [[TMP22]], ptr [[N_CASTED_ASCAST]], align 4
-// IR-GPU-NESTED-NEXT:    [[TMP23:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
+// IR-GPU-NESTED-NEXT:    store i32 [[TMP22]], ptr addrspace(5) [[N_CASTED]], align 4
+// IR-GPU-NESTED-NEXT:    [[TMP23:%.*]] = load i64, ptr addrspace(5) [[N_CASTED]], align 8
 // IR-GPU-NESTED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [7 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 0
 // IR-GPU-NESTED-NEXT:    [[TMP25:%.*]] = inttoptr i64 [[TMP20]] to ptr
 // IR-GPU-NESTED-NEXT:    store ptr [[TMP25]], ptr [[TMP24]], align 8
@@ -3225,9 +3227,9 @@ int main()
 // IR-GPU-NESTED-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// IR-GPU-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// IR-GPU-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META5]], !align [[META6]]
 // IR-GPU-NESTED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2_ASCAST]], align 8
-// IR-GPU-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// IR-GPU-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8, !nonnull [[META5]], !align [[META6]]
 // IR-GPU-NESTED-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // IR-GPU-NESTED-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // IR-GPU-NESTED-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
@@ -3359,7 +3361,7 @@ int main()
 // IR-NESTED-NEXT:    [[TMP5:%.*]] = load i32, ptr @N, align 4
 // IR-NESTED-NEXT:    store i32 [[TMP5]], ptr [[N_CASTED]], align 4
 // IR-NESTED-NEXT:    [[TMP6:%.*]] = load i64, ptr [[N_CASTED]], align 8
-// IR-NESTED-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64(i64 [[TMP6]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]]) #[[ATTR3:[0-9]+]]
+// IR-NESTED-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64(i64 [[TMP6]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]], ptr null) #[[ATTR3:[0-9]+]]
 // IR-NESTED-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // IR-NESTED-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
 // IR-NESTED-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP7]])
@@ -3368,23 +3370,25 @@ int main()
 //
 //
 // IR-NESTED-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64
-// IR-NESTED-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+// IR-NESTED-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-NESTED-NEXT:  entry:
 // IR-NESTED-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // IR-NESTED-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8
 // IR-NESTED-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // IR-NESTED-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8
 // IR-NESTED-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
+// IR-NESTED-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // IR-NESTED-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8
 // IR-NESTED-NEXT:    store i64 [[N]], ptr [[N_ADDR]], align 8
 // IR-NESTED-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR]], align 8
 // IR-NESTED-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // IR-NESTED-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NESTED-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
+// IR-NESTED-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // IR-NESTED-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // IR-NESTED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NESTED-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NESTED-NEXT:    store i32 [[TMP4]], ptr [[N_CASTED]], align 4
 // IR-NESTED-NEXT:    [[TMP5:%.*]] = load i64, ptr [[N_CASTED]], align 8
@@ -3425,9 +3429,9 @@ int main()
 // IR-NESTED-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NESTED-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-NESTED-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NESTED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NESTED-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NESTED-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NESTED-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -3543,9 +3547,9 @@ int main()
 // IR-NESTED-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-NESTED-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-NESTED-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NESTED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-NESTED-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-NESTED-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NESTED-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -3689,7 +3693,7 @@ int main()
 // IR-PCH-NESTED-NEXT:    [[TMP5:%.*]] = load i32, ptr @N, align 4
 // IR-PCH-NESTED-NEXT:    store i32 [[TMP5]], ptr [[N_CASTED]], align 4
 // IR-PCH-NESTED-NEXT:    [[TMP6:%.*]] = load i64, ptr [[N_CASTED]], align 8
-// IR-PCH-NESTED-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64(i64 [[TMP6]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]]) #[[ATTR3:[0-9]+]]
+// IR-PCH-NESTED-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64(i64 [[TMP6]], i64 [[TMP1]], ptr [[VLA]], i64 [[TMP4]], ptr [[VLA1]], ptr null) #[[ATTR3:[0-9]+]]
 // IR-PCH-NESTED-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // IR-PCH-NESTED-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
 // IR-PCH-NESTED-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP7]])
@@ -3698,23 +3702,25 @@ int main()
 //
 //
 // IR-PCH-NESTED-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64
-// IR-PCH-NESTED-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+// IR-PCH-NESTED-SAME: (i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-PCH-NESTED-NEXT:  entry:
 // IR-PCH-NESTED-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
 // IR-PCH-NESTED-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8
 // IR-PCH-NESTED-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NESTED-NEXT:    [[VLA_ADDR2:%.*]] = alloca i64, align 8
 // IR-PCH-NESTED-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
+// IR-PCH-NESTED-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NESTED-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8
 // IR-PCH-NESTED-NEXT:    store i64 [[N]], ptr [[N_ADDR]], align 8
 // IR-PCH-NESTED-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR]], align 8
 // IR-PCH-NESTED-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // IR-PCH-NESTED-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NESTED-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
+// IR-PCH-NESTED-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // IR-PCH-NESTED-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // IR-PCH-NESTED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NESTED-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NESTED-NEXT:    store i32 [[TMP4]], ptr [[N_CASTED]], align 4
 // IR-PCH-NESTED-NEXT:    [[TMP5:%.*]] = load i64, ptr [[N_CASTED]], align 8
@@ -3755,9 +3761,9 @@ int main()
 // IR-PCH-NESTED-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NESTED-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-PCH-NESTED-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NESTED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NESTED-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NESTED-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NESTED-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
@@ -3873,9 +3879,9 @@ int main()
 // IR-PCH-NESTED-NEXT:    store i64 [[VLA1]], ptr [[VLA_ADDR2]], align 8
 // IR-PCH-NESTED-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // IR-PCH-NESTED-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// IR-PCH-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// IR-PCH-NESTED-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NESTED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR2]], align 8
-// IR-PCH-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// IR-PCH-NESTED-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // IR-PCH-NESTED-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // IR-PCH-NESTED-NEXT:    store i32 [[TMP4]], ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-PCH-NESTED-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4

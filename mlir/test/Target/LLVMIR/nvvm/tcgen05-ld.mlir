@@ -3,8 +3,8 @@
 // CHECK-LABEL: @nvvm_tcgen05_ld_16x64b
 llvm.func @nvvm_tcgen05_ld_16x64b(%tmemAddr : !llvm.ptr<6>) {
 
-// CHECK:  call i32 @llvm.nvvm.tcgen05.ld.16x64b.x1(ptr addrspace(6) {{%[0-9]+}}, i1 false)
-  %ldv1 = nvvm.tcgen05.ld %tmemAddr { shape = #nvvm.tcgen05_ldst_shape<shape_16x64b>} : i32
+// CHECK:  call <1 x i32> @llvm.nvvm.tcgen05.ld.16x64b.x1(ptr addrspace(6) {{%[0-9]+}}, i1 false)
+  %ldv1 = nvvm.tcgen05.ld %tmemAddr { shape = #nvvm.tcgen05_ldst_shape<shape_16x64b>} : vector<1 x i32>
 
 // CHECK:  call <2 x i32> @llvm.nvvm.tcgen05.ld.16x64b.x2(ptr addrspace(6) {{%[0-9]+}}, i1 false)
   %ldv2 = nvvm.tcgen05.ld %tmemAddr { shape = #nvvm.tcgen05_ldst_shape<shape_16x64b>} : vector<2 x i32>
@@ -33,8 +33,8 @@ llvm.func @nvvm_tcgen05_ld_16x64b(%tmemAddr : !llvm.ptr<6>) {
 // CHECK-LABEL: @nvvm_tcgen05_ld_16x64b_pack
 llvm.func @nvvm_tcgen05_ld_16x64b_pack(%tmemAddr : !llvm.ptr<6>) {
 
-// CHECK:  call i32 @llvm.nvvm.tcgen05.ld.16x64b.x1(ptr addrspace(6) {{%[0-9]+}}, i1 true)
-  %ldv1 = nvvm.tcgen05.ld %tmemAddr pack { shape = #nvvm.tcgen05_ldst_shape<shape_16x64b>} : i32
+// CHECK:  call <1 x i32> @llvm.nvvm.tcgen05.ld.16x64b.x1(ptr addrspace(6) {{%[0-9]+}}, i1 true)
+  %ldv1 = nvvm.tcgen05.ld %tmemAddr pack { shape = #nvvm.tcgen05_ldst_shape<shape_16x64b>} : vector<1 x i32>
 
 // CHECK:  call <2 x i32> @llvm.nvvm.tcgen05.ld.16x64b.x2(ptr addrspace(6) {{%[0-9]+}}, i1 true)
   %ldv2 = nvvm.tcgen05.ld %tmemAddr pack { shape = #nvvm.tcgen05_ldst_shape<shape_16x64b>} : vector<2 x i32>
@@ -165,8 +165,8 @@ llvm.func @nvvm_tcgen05_ld_16x256b_pack(%tmemAddr : !llvm.ptr<6>) {
 // CHECK-LABEL: @nvvm_tcgen05_ld_32x32b
 llvm.func @nvvm_tcgen05_ld_32x32b(%tmemAddr : !llvm.ptr<6>) {
 
-// CHECK:  call i32 @llvm.nvvm.tcgen05.ld.32x32b.x1(ptr addrspace(6) {{%[0-9]+}}, i1 false)
-  %ldv1 = nvvm.tcgen05.ld %tmemAddr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : i32
+// CHECK:  call <1 x i32> @llvm.nvvm.tcgen05.ld.32x32b.x1(ptr addrspace(6) {{%[0-9]+}}, i1 false)
+  %ldv1 = nvvm.tcgen05.ld %tmemAddr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<1 x i32>
 
 // CHECK:  call <2 x i32> @llvm.nvvm.tcgen05.ld.32x32b.x2(ptr addrspace(6) {{%[0-9]+}}, i1 false)
   %ldv2 = nvvm.tcgen05.ld %tmemAddr { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<2 x i32>
@@ -195,8 +195,8 @@ llvm.func @nvvm_tcgen05_ld_32x32b(%tmemAddr : !llvm.ptr<6>) {
 // CHECK-LABEL: @nvvm_tcgen05_ld_32x32b_pack
 llvm.func @nvvm_tcgen05_ld_32x32b_pack(%tmemAddr : !llvm.ptr<6>) {
 
-// CHECK:  call i32 @llvm.nvvm.tcgen05.ld.32x32b.x1(ptr addrspace(6) {{%[0-9]+}}, i1 true)
-  %ldv1 = nvvm.tcgen05.ld %tmemAddr pack { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : i32
+// CHECK:  call <1 x i32> @llvm.nvvm.tcgen05.ld.32x32b.x1(ptr addrspace(6) {{%[0-9]+}}, i1 true)
+  %ldv1 = nvvm.tcgen05.ld %tmemAddr pack { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<1 x i32>
 
 // CHECK:  call <2 x i32> @llvm.nvvm.tcgen05.ld.32x32b.x2(ptr addrspace(6) {{%[0-9]+}}, i1 true)
   %ldv2 = nvvm.tcgen05.ld %tmemAddr pack { shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>} : vector<2 x i32>
@@ -227,8 +227,8 @@ llvm.func @nvvm_tcgen05_ld_16x32bx2(%tmemAddr : !llvm.ptr<6>) {
 
   %halfSplitOffset = llvm.mlir.constant(2:i64) : i64
 
-// CHECK:  call i32 @llvm.nvvm.tcgen05.ld.16x32bx2.x1(ptr addrspace(6) {{%[0-9]+}}, i64 2, i1 false)
-  %ldv1 = nvvm.tcgen05.ld %tmemAddr, %halfSplitOffset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : i32
+// CHECK:  call <1 x i32> @llvm.nvvm.tcgen05.ld.16x32bx2.x1(ptr addrspace(6) {{%[0-9]+}}, i64 2, i1 false)
+  %ldv1 = nvvm.tcgen05.ld %tmemAddr, %halfSplitOffset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<1 x i32>
 
 // CHECK:  call <2 x i32> @llvm.nvvm.tcgen05.ld.16x32bx2.x2(ptr addrspace(6) {{%[0-9]+}}, i64 2, i1 false)
   %ldv2 = nvvm.tcgen05.ld %tmemAddr, %halfSplitOffset { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<2 x i32>
@@ -259,8 +259,8 @@ llvm.func @nvvm_tcgen05_ld_16x32bx2_pack(%tmemAddr : !llvm.ptr<6>) {
 
   %halfSplitOffset = llvm.mlir.constant(2:i64) : i64
 
-// CHECK:  call i32 @llvm.nvvm.tcgen05.ld.16x32bx2.x1(ptr addrspace(6) {{%[0-9]+}}, i64 2, i1 true)
-  %ldv1 = nvvm.tcgen05.ld %tmemAddr, %halfSplitOffset pack { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : i32
+// CHECK:  call <1 x i32> @llvm.nvvm.tcgen05.ld.16x32bx2.x1(ptr addrspace(6) {{%[0-9]+}}, i64 2, i1 true)
+  %ldv1 = nvvm.tcgen05.ld %tmemAddr, %halfSplitOffset pack { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<1 x i32>
 
 // CHECK:  call <2 x i32> @llvm.nvvm.tcgen05.ld.16x32bx2.x2(ptr addrspace(6) {{%[0-9]+}}, i64 2, i1 true)
   %ldv2 = nvvm.tcgen05.ld %tmemAddr, %halfSplitOffset pack { shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>} : vector<2 x i32>

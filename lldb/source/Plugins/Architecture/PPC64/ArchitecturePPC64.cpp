@@ -58,5 +58,5 @@ void ArchitecturePPC64::AdjustBreakpointAddress(const Symbol &func,
   if (!loffs)
     return;
 
-  addr.SetOffset(addr.GetOffset() + loffs);
+  addr.Slide(loffs);
 }

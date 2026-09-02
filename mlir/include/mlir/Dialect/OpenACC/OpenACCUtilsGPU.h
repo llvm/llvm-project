@@ -16,6 +16,8 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Value.h"
+#include "llvm/ADT/DenseMap.h"
 #include <optional>
 
 namespace mlir {
@@ -38,6 +40,16 @@ constexpr llvm::StringLiteral kDefaultGPUModuleName = "acc_gpu_module";
 std::optional<gpu::GPUModuleOp>
 getOrCreateGPUModule(ModuleOp mod, bool create = true,
                      llvm::StringRef name = kDefaultGPUModuleName);
+
+/// Return the launch dimension for \p processor from \p launch, or from
+/// \p dimensionOps when \p launch is null.
+Value getGPUSize(gpu::Processor processor, gpu::LaunchOp launch,
+                 const llvm::DenseMap<gpu::Processor, Value> &dimensionOps);
+
+/// Return the thread/block index for \p processor from \p launch, or from
+/// \p indexOps when \p launch is null.
+Value getGPUThreadId(gpu::Processor processor, gpu::LaunchOp launch,
+                     const llvm::DenseMap<gpu::Processor, Value> &indexOps);
 
 } // namespace acc
 } // namespace mlir

@@ -238,6 +238,10 @@ gpu.module @barriers {
     // CHECK:         [[NONE_FLAG2:%.*]] = llvm.mlir.constant(0 : i32) : i32
     // CHECK:         llvm.call spir_funccc @_Z7barrierj([[NONE_FLAG2]])
     gpu.barrier memfence [#gpu.address_space<private>]
+    // Constant memory is read-only, no fencing needed (same as private)
+    // CHECK:         [[NONE_FLAG3:%.*]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[NONE_FLAG3]])
+    gpu.barrier memfence [#gpu.address_space<constant>]
     return
   }
 }

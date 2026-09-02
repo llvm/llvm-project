@@ -614,3 +614,87 @@ func.func @ipowi_i1_const_neg_exp() -> i1 {
   %r = math.ipowi %b, %e : i1
   return %r : i1
 }
+
+// CHECK-LABEL: @fpowi_fold
+// CHECK: %[[cst:.+]] = arith.constant 4.000000e+00 : f64
+// CHECK: %[[cst0:.+]] = arith.constant 4.000000e+00 : f32
+// CHECK: return %[[cst]], %[[cst0]] : f64, f32
+func.func @fpowi_fold() -> (f64, f32) {
+  %cst = arith.constant 2.000000e+00 : f64
+  %cst_0 = arith.constant 2.000000e+00 : f32
+  %c2_i32 = arith.constant 2 : i32
+  %0 = math.fpowi %cst, %c2_i32 : f64, i32
+  %1 = math.fpowi %cst_0, %c2_i32 : f32, i32
+  return %0, %1 : f64, f32
+}
+
+// CHECK-LABEL: @fpowi_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<[1.000000e+00, 1.600000e+01, 9.000000e+00, 1.600000e+01]> : vector<4xf32>
+// CHECK: return %[[cst]]
+func.func @fpowi_fold_vec() -> vector<4xf32> {
+  %cst = arith.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : vector<4xf32>
+  %cst_0 = arith.constant dense<[2, 4, 2, 2]> : vector<4xi32>
+  %0 = math.fpowi %cst, %cst_0 : vector<4xf32>, vector<4xi32>
+  return %0 : vector<4xf32>
+}
+
+// 16777217 is not exactly representable in f32.
+// CHECK-LABEL: @fpowi_fold_failed
+// CHECK:       math.fpowi
+func.func @fpowi_fold_failed() -> f32 {
+  %cst = arith.constant 2.000000e+00 : f32
+  %c16777217_i32 = arith.constant 16777217 : i32
+  %0 = math.fpowi %cst, %c16777217_i32 : f32, i32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @sincos_fold_f32
+// CHECK: %[[sin:.+]] = arith.constant 0.84{{[0-9]+}} : f32
+// CHECK: %[[cos:.+]] = arith.constant 0.54{{[0-9]+}} : f32
+// CHECK: return %[[sin]], %[[cos]]
+func.func @sincos_fold_f32() -> (f32, f32) {
+  %cst = arith.constant 1.000000e+00 : f32
+  %sin, %cos = math.sincos %cst : f32
+  return %sin, %cos : f32, f32
+}
+
+// CHECK-LABEL: @sincos_fold_f64
+// CHECK: %[[sin:.+]] = arith.constant 0.84{{[0-9]+}} : f64
+// CHECK: %[[cos:.+]] = arith.constant 0.54{{[0-9]+}} : f64
+// CHECK: return %[[sin]], %[[cos]]
+func.func @sincos_fold_f64() -> (f64, f64) {
+  %cst = arith.constant 1.000000e+00 : f64
+  %sin, %cos = math.sincos %cst : f64
+  return %sin, %cos : f64, f64
+}
+
+// CHECK-LABEL: @sincos_fold_vec
+// CHECK: %[[sin:.+]] = arith.constant dense<[0.000000e+00, 0.84{{[0-9]+}}, 0.000000e+00, 0.84{{[0-9]+}}]> : vector<4xf32>
+// CHECK: %[[cos:.+]] = arith.constant dense<[1.000000e+00, 0.54{{[0-9]+}}, 1.000000e+00, 0.54{{[0-9]+}}]> : vector<4xf32>
+// CHECK: return %[[sin]], %[[cos]]
+func.func @sincos_fold_vec() -> (vector<4xf32>, vector<4xf32>) {
+  %cst = arith.constant dense<[0.0, 1.0, 0.0, 1.0]> : vector<4xf32>
+  %sin, %cos = math.sincos %cst : vector<4xf32>
+  return %sin, %cos : vector<4xf32>, vector<4xf32>
+}
+
+// CHECK-LABEL: @cbrt_fold
+// CHECK: %[[cst:.+]] = arith.constant 2.000000e+00 : f64
+// CHECK: %[[cst0:.+]] = arith.constant -2.000000e+00 : f32
+// CHECK: return %[[cst]], %[[cst0]]
+func.func @cbrt_fold() -> (f64, f32) {
+  %cst = arith.constant 8.000000e+00 : f64
+  %cst_0 = arith.constant -8.000000e+00 : f32
+  %0 = math.cbrt %cst : f64
+  %1 = math.cbrt %cst_0 : f32
+  return %0, %1 : f64, f32
+}
+
+// CHECK-LABEL: @cbrt_fold_vec
+// CHECK: %[[cst:.+]] = arith.constant dense<[-1.000000e+00, 0.000000e+00, 1.000000e+00, 2.000000e+00]> : vector<4xf32>
+// CHECK: return %[[cst]]
+func.func @cbrt_fold_vec() -> vector<4xf32> {
+  %cst = arith.constant dense<[-1.0, 0.0, 1.0, 8.0]> : vector<4xf32>
+  %0 = math.cbrt %cst : vector<4xf32>
+  return %0 : vector<4xf32>
+}

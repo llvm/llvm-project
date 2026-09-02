@@ -35,6 +35,12 @@
     // gi = ObjectSize2(&t[1].t[1]);
   }
 
+void foo2(struct Foo *t) {
+  // CHECK: call i32 @ObjectSize3(ptr noundef %{{.*}}, i64 noundef 36)
+  ObjectSize3(&t->t[1]);
+}
+
+
 /// Used to crash due to the void-typed ArraySubscriptExpr.
 void foo(void *p) {
   int i = __builtin_object_size(&p[2], 3);

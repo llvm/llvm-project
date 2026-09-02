@@ -112,7 +112,9 @@ auipc t6, 32
 .option pop
 
 # CHECK-DIS: 0f81 <unknown>
-# CHECK: :[[@LINE+1]]:8: error: register must be a GPR excluding zero (x0)
+# CHECK: :[[@LINE+3]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE+2]]:8: note: invalid operand for instruction
+# CHECK: :[[@LINE+1]]:8: note: register must be a GPR excluding zero (x0)
 c.addi x31, 0
 # CHECK-DIS: 9846 <unknown>
 # CHECK: :[[@LINE+1]]:7: error: invalid operand for instruction

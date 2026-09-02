@@ -3,7 +3,7 @@
 
 // clang-format off
 
-// RUN: %clang %cflags -g -Wl,-q -o %t %s
+// RUN: %clang %cflags64 -g -Wl,-q -o %t %s
 
 /// Verify that the binary indeed contains a fake label ".L0 " at _start.
 // RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=CHECK-ELF

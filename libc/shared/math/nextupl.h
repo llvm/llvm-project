@@ -10,6 +10,10 @@
 #define LLVM_LIBC_SHARED_MATH_NEXTUPL_H
 
 #include "shared/libc_common.h"
+#include "src/__support/macros/properties/types.h"
+
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+
 #include "src/__support/math/nextupl.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -19,5 +23,7 @@ using math::nextupl;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
 #endif // LLVM_LIBC_SHARED_MATH_NEXTUPL_H

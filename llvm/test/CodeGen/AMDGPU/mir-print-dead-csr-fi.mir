@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=prologepilog -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -run-pass=prolog-epilog -o - %s | FileCheck %s
 
 # Make sure the MIR printer doesn't crash when there are dead frame indexes. The
 # CSR SGPR frame indexes are inserted, but deleted.

@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 @skipIfWindows  # The Windows platform doesn't implement DoLoadImage.
 class LoadUsingPathsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True

@@ -18,8 +18,6 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 
 namespace mlir {
 class Value;

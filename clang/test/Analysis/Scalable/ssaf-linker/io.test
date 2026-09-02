@@ -19,5 +19,4 @@
 // RUN: touch %t/out.json
 // RUN: not clang-ssaf-linker %S/Inputs/tu-empty.json -o %t/out.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=OUTPUT-EXISTS
-// OUTPUT-EXISTS:      clang-ssaf-linker: error: writing LUSummary to file '{{.*}}out.json'
-// OUTPUT-EXISTS-NEXT: failed to write file '{{.*}}out.json': file already exists
+// OUTPUT-EXISTS: clang-ssaf-linker: error: failed to validate path '{{.*}}out.json': File already exists

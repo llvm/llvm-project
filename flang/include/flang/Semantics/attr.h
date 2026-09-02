@@ -11,7 +11,6 @@
 
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
-#include <cinttypes>
 #include <string>
 
 namespace llvm {
@@ -25,7 +24,7 @@ ENUM_CLASS(Attr, ABSTRACT, ALLOCATABLE, ASYNCHRONOUS, BIND_C, CONTIGUOUS,
     DEFERRED, ELEMENTAL, EXTENDS, EXTERNAL, IMPURE, INTENT_IN, INTENT_INOUT,
     INTENT_OUT, INTRINSIC, MODULE, NON_OVERRIDABLE, NON_RECURSIVE, NOPASS,
     OPTIONAL, PARAMETER, PASS, POINTER, PRIVATE, PROTECTED, PUBLIC, PURE,
-    RECURSIVE, SAVE, TARGET, VALUE, VOLATILE)
+    RECURSIVE, SAVE, SIMPLE, TARGET, VALUE, VOLATILE)
 
 // Set of attributes
 class Attrs : public common::EnumSet<Attr, Attr_enumSize> {

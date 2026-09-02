@@ -3,6 +3,12 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --min-call-count-for-cg-matching=10 --min-func-count-for-cg-matching=10 2>&1 | FileCheck %s  --check-prefix=TINY-FUNC
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile --salvage-unused-profile-max-functions=1 -S --debug-only=sample-profile-matcher 2>&1 | FileCheck %s --check-prefix=SKIP-SALVAGE
 
+;; Test that stale profile matching (CFG matching) works correctly for a renamed
+;; function whose profile has shifted probe locations. This exercises the fix
+;; that uses the profile name (not IR name) to index FuncMappings, ensuring
+;; distributeIRToProfileLocationMap can find the mapping.
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming-lineshift.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 --func-profile-similarity-threshold=70 2>&1 | FileCheck %s --check-prefix=LINESHIFT
+
 ; Verify find new IR functions.
 ; SKIP-SALVAGE: define dso_local i32 @main()
 ; SKIP-SALVAGE-NOT: Function new_block_only is not in profile or profile symbol list.
@@ -32,6 +38,24 @@
 
 ; TINY-FUNC-NOT: Function:new_foo matches profile:foo
 ; TINY-FUNC-NOT: Function:new_block_only matches profile:block_only
+
+;; Verify CG matching still works with the shifted profile.
+; LINESHIFT: Function:new_foo matches profile:foo
+; LINESHIFT: Function:new_block_only matches profile:block_only
+
+;; Verify CFG matching produces non-identity location remappings for the
+;; renamed function new_foo (IR probes 1-4 matched to profile probes 2-5).
+; LINESHIFT: Run stale profile matching for new_foo
+; LINESHIFT-NEXT: Location is matched from 1 to 1
+; LINESHIFT-NEXT: Callsite with callee:bar is matched from 2 to 3
+; LINESHIFT-NEXT: Callsite with callee:baz is matched from 3 to 4
+; LINESHIFT-NEXT: Callsite with callee:bar is matched from 4 to 5
+
+;; Verify the renamed+shifted function is still inlined correctly, which
+;; requires the location mapping to be distributed to the FunctionSamples.
+; LINESHIFT: 'new_foo' inlined into 'main' to match profiling context with (cost=110, threshold=3000) at callsite main:2:7.5;
+; LINESHIFT: 'new_block_only' inlined into 'main' to match profiling context with (cost=75, threshold=3000) at callsite baz:1:3.2 @ new_foo:2:3.3 @ main:2:7.5;
+; LINESHIFT: 'new_foo' inlined into 'test_noninline' to match profiling context with (cost=110, threshold=3000) at callsite test_noninline:1:3.2;
 
 
 @x = dso_local global i32 0, align 4, !dbg !0

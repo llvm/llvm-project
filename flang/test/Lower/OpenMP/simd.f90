@@ -4,8 +4,8 @@
 
 ! To prevent testing for unrelated clauses like implicit linear clause and focusing on the
 ! clauses of interest here, the OpenMP version is 6.0
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
-! RUN: bbc -hlfir -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
 
 !CHECK: omp.declare_reduction @[[REDUCER:.*]] : i32
 

@@ -127,8 +127,7 @@ def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
 def rpath : Separate<["--", "-"], "rpath">;
 def rpath_EQ : Joined<["--", "-"], "rpath=">, Flags<[HelpHidden]>, Alias<rpath>;
 
-def v : Flag<["--", "-"], "v">, HelpText<"Display the version number and exit">;
-def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>, Alias<v>;
+def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>;
 
 def whole_archive : Flag<["--", "-"], "whole-archive">, Flags<[HelpHidden]>;
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">, Flags<[HelpHidden]>;

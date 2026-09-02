@@ -80,6 +80,21 @@ template <typename T>
 #endif // __builtin_sub_overflow
 }
 
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr bool mul_overflow(T a, T b, T &res) {
+#if __has_builtin(__builtin_mul_overflow)
+  return __builtin_mul_overflow(a, b, &res);
+#else
+  T max = cpp::numeric_limits<T>::max();
+  T min = cpp::numeric_limits<T>::min();
+  bool overflow = (b > 0 && (a > max / b || a < min / b)) ||
+                  (b < 0 && (a < max / b || a > min / b));
+  if (!overflow)
+    res = a * b;
+  return overflow;
+#endif
+}
+
 #define RETURN_IF(TYPE, BUILTIN)                                               \
   if constexpr (cpp::is_same_v<T, TYPE>)                                       \
     return BUILTIN(a, b, carry_in, &carry_out);

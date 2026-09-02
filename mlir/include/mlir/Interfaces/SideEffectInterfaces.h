@@ -127,8 +127,8 @@ public:
   /// Return a string name of the resource.
   virtual StringRef getName() const = 0;
 
-  /// Return the parent resource in the hierarchy, or nullptr for a root.
-  virtual Resource *getParent() const { return nullptr; }
+  /// Return the parent resource in the hierarchy.
+  virtual Resource *getParent() const;
 
   /// Returns true if this resource is addressable (effects on it can alias
   /// pointer-based memory). Default is true.
@@ -175,16 +175,23 @@ private:
   TypeID id;
 };
 
-/// A conservative default resource kind.
+/// The default resource kind. It serves as the root of the resource hierarchy:
+/// all resources that do not override getParent() have DefaultResource as their
+/// parent.
 struct DefaultResource : public Resource::Base<DefaultResource> {
   DefaultResource() = default;
   StringRef getName() const override { return "<Default>"; }
+  Resource *getParent() const override { return nullptr; }
 
 protected:
   /// For use when this type is the parent of another resource; allows the
   /// derived resource to pass its TypeID so the hierarchy is correct.
   DefaultResource(TypeID id) : Base(id) {}
 };
+
+/// All resources that do not override getParent() have DefaultResource
+/// as their parent.
+inline Resource *Resource::getParent() const { return DefaultResource::get(); }
 
 /// An automatic allocation-scope resource that is valid in the context of a
 /// parent AutomaticAllocationScope trait.

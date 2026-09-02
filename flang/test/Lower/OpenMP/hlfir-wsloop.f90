@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP DO Directive with HLFIR.
 
-! RUN: bbc -hlfir -fopenmp -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -flang-experimental-hlfir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QPsimple_loop()
 subroutine simple_loop

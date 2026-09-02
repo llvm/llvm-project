@@ -66,3 +66,7 @@
 // RUN: %clang -target aarch64 -march=armv9.6-a+pops -### -c %s 2>&1 | FileCheck -check-prefix=V96A-POPS %s
 // V96A-POPS: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+pops"
 //
+// RUN: %clang -target aarch64 -march=armv9.6a+hinte -### -c %s 2>&1 | FileCheck -check-prefix=V96A-hinte %s
+// RUN: %clang -target aarch64 -march=armv9.6-a+hinte -### -c %s 2>&1 | FileCheck -check-prefix=V96A-hinte %s
+// V96A-hinte: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.6a"{{.*}} "-target-feature" "+hinte"
+//

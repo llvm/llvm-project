@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Compiler.h"
@@ -34,40 +35,79 @@ class MCInst;
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetFeatureKV {
-  const char *Key;                      ///< K-V key string
-  const char *Desc;                     ///< Help descriptor
+  uint16_t KeyStrOff;
+  uint16_t DescStrOff;
   unsigned Value;                       ///< K-V integer value
   FeatureBitArray Implies;              ///< K-V bit mask
 
-  /// Compare routine for std::lower_bound
-  bool operator<(StringRef S) const {
-    return StringRef(Key) < S;
+  constexpr SubtargetFeatureKV(uint16_t KeyStrOff, uint16_t DescStrOff,
+                               unsigned Value, FeatureBitArray Implies)
+      : KeyStrOff(KeyStrOff), DescStrOff(DescStrOff), Value(Value),
+        Implies(Implies) {}
+
+  // Because of relative string offsets, this type is not copyable.
+  SubtargetFeatureKV(const SubtargetFeatureKV &) = delete;
+  SubtargetFeatureKV &operator=(const SubtargetFeatureKV &) = delete;
+
+  const char *key() const {
+    return reinterpret_cast<const char *>(this) + KeyStrOff;
   }
+
+  const char *desc() const {
+    return reinterpret_cast<const char *>(this) + DescStrOff;
+  }
+
+  /// Compare routine for std::lower_bound
+  bool operator<(StringRef S) const { return StringRef(key()) < S; }
 
   /// Compare routine for std::is_sorted.
   bool operator<(const SubtargetFeatureKV &Other) const {
-    return StringRef(Key) < StringRef(Other.Key);
+    return StringRef(key()) < StringRef(Other.key());
   }
+};
+
+template <size_t NumFeatures, size_t FeatureStrTabSize>
+struct SubtargetFeatureKVStorage {
+  SubtargetFeatureKV Features[NumFeatures];
+  char Strings[FeatureStrTabSize];
 };
 
 //===----------------------------------------------------------------------===//
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetSubTypeKV {
-  const char *Key;                      ///< K-V key string
+  uint16_t KeyStrOff;
+  unsigned SchedModelIdx;
   FeatureBitArray Implies;              ///< K-V bit mask
   FeatureBitArray TuneImplies;          ///< K-V bit mask
-  const MCSchedModel *SchedModel;
+
+  constexpr SubtargetSubTypeKV(uint16_t KeyStrOff, FeatureBitArray Implies,
+                               FeatureBitArray TuneImplies,
+                               unsigned SchedModelIdx)
+      : KeyStrOff(KeyStrOff), SchedModelIdx(SchedModelIdx), Implies(Implies),
+        TuneImplies(TuneImplies) {}
+
+  // Because of relative string offsets, this type is not copyable.
+  SubtargetSubTypeKV(const SubtargetSubTypeKV &) = delete;
+  SubtargetSubTypeKV &operator=(const SubtargetSubTypeKV &) = delete;
+
+  const char *key() const {
+    return reinterpret_cast<const char *>(this) + KeyStrOff;
+  }
 
   /// Compare routine for std::lower_bound
-  bool operator<(StringRef S) const {
-    return StringRef(Key) < S;
-  }
+  bool operator<(StringRef S) const { return StringRef(key()) < S; }
 
   /// Compare routine for std::is_sorted.
   bool operator<(const SubtargetSubTypeKV &Other) const {
-    return StringRef(Key) < StringRef(Other.Key);
+    return StringRef(key()) < StringRef(Other.key());
   }
+};
+
+template <size_t NumSubTypes, size_t SubTypeStrTabSize>
+struct SubtargetSubTypeKVStorage {
+  SubtargetSubTypeKV SubTypes[NumSubTypes];
+  char Strings[SubTypeStrTabSize];
 };
 
 //===----------------------------------------------------------------------===//
@@ -78,9 +118,10 @@ class LLVM_ABI MCSubtargetInfo {
   Triple TargetTriple;
   std::string CPU; // CPU being targeted.
   std::string TuneCPU; // CPU being tuned for.
-  ArrayRef<StringRef> ProcNames; // Processor list, including aliases
+  StringTable ProcNames; // Processor list, including aliases
   ArrayRef<SubtargetFeatureKV> ProcFeatures;  // Processor feature list
   ArrayRef<SubtargetSubTypeKV> ProcDesc;  // Processor descriptions
+  const MCSchedModel *ProcSchedModels;    ///< Processor scheduling models.
 
   // Scheduler machine model
   const MCWriteProcResEntry *WriteProcResTable;
@@ -97,9 +138,8 @@ class LLVM_ABI MCSubtargetInfo {
 public:
   MCSubtargetInfo(const MCSubtargetInfo &) = default;
   MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                  StringRef FS, ArrayRef<StringRef> PN,
-                  ArrayRef<SubtargetFeatureKV> PF,
-                  ArrayRef<SubtargetSubTypeKV> PD,
+                  StringRef FS, StringTable PN, ArrayRef<SubtargetFeatureKV> PF,
+                  ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
                   const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
                   const MCReadAdvanceEntry *RA, const InstrStage *IS,
                   const unsigned *OC, const unsigned *FP);
@@ -158,6 +198,12 @@ public:
   /// Check whether the subtarget features are enabled/disabled as per
   /// the provided string, ignoring all other features.
   bool checkFeatures(StringRef FS) const;
+
+  /// Check whether the current subtarget satisfies a target feature expression.
+  /// The expression uses feature names from the target's subtarget feature
+  /// table. Comma means AND, | means OR, comma has higher precedence than |,
+  /// and parentheses group expressions.
+  bool checkFeatureExpression(StringRef FeatureExpr) const;
 
   /// Get the machine model of a CPU.
   const MCSchedModel &getSchedModelForCPU(StringRef CPU) const;
@@ -230,7 +276,7 @@ public:
   /// Check whether the CPU string is valid.
   virtual bool isCPUStringValid(StringRef CPU) const {
     auto Found = llvm::lower_bound(ProcDesc, CPU);
-    return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
+    return Found != ProcDesc.end() && StringRef(Found->key()) == CPU;
   }
 
   /// Return processor descriptions.
@@ -244,7 +290,7 @@ public:
   }
 
   /// Return the list of processor features currently enabled.
-  std::vector<SubtargetFeatureKV> getEnabledProcessorFeatures() const;
+  std::vector<const SubtargetFeatureKV *> getEnabledProcessorFeatures() const;
 
   /// HwMode IDs are stored and accessed in a bit set format, enabling
   /// users to efficiently retrieve specific IDs, such as the RegInfo

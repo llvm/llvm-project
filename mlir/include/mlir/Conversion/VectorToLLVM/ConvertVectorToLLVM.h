@@ -17,7 +17,7 @@ class LLVMTypeConverter;
 void populateVectorToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions = false, bool force32BitVectorIndices = false,
-    bool useVectorAlignment = false);
+    bool useVectorAlignment = false, bool enableGEPInboundsNuw = false);
 
 namespace vector {
 void registerConvertVectorToLLVMInterface(DialectRegistry &registry);

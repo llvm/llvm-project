@@ -194,6 +194,14 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
   // Allocate the array to hold the vector elements
   Builder.SetInsertPointPastAllocas(Builder.GetInsertBlock()->getParent());
   Type *ArrTy = equivalentArrayTypeFromVector(Vec->getType());
+  // DXIL indexable temps cannot hold i1 elements; booleans occupy 32 bits in
+  // memory. Widen i1 element arrays to i32.
+  Type *ArrElemTy = ArrTy->getArrayElementType();
+  bool WidenBool = ArrElemTy->isIntegerTy(1);
+  if (WidenBool) {
+    ArrElemTy = Builder.getInt32Ty();
+    ArrTy = ArrayType::get(ArrElemTy, ArrTy->getArrayNumElements());
+  }
   AllocaInst *ArrAlloca =
       Builder.CreateAlloca(ArrTy, nullptr, Name + ".alloca");
   const uint64_t ArrNumElems = ArrTy->getArrayNumElements();
@@ -206,6 +214,8 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
   SmallVector<Value *, 4> GEPs(ArrNumElems);
   for (unsigned I = 0; I < ArrNumElems; ++I) {
     Value *EE = Builder.CreateExtractElement(Vec, I, Name + ".extract");
+    if (WidenBool)
+      EE = Builder.CreateZExt(EE, ArrElemTy, Name + ".zext");
     GEPs[I] = Builder.CreateInBoundsGEP(
         ArrTy, ArrAlloca, {Builder.getInt32(0), Builder.getInt32(I)},
         Name + ".index");
@@ -243,17 +253,30 @@ bool DataScalarizerVisitor::replaceDynamicInsertElementInst(
   Type *ArrTy = std::get<1>(ArrAllocaAndGEPs);
   SmallVector<Value *, 4> &ArrGEPs = std::get<2>(ArrAllocaAndGEPs);
 
+  // The array element type may have been widened (e.g. i1 -> i32) so that the
+  // indexable temp uses a legal DXIL memory type. Convert between the vector
+  // element type and the (possibly wider) array element type as needed.
+  Type *ArrElemTy = ArrTy->getArrayElementType();
+  Type *VecElemTy = cast<VectorType>(Vec->getType())->getElementType();
+  bool WidenBool = ArrElemTy != VecElemTy && VecElemTy->isIntegerTy(1);
+
   auto GEPAndLoad =
       dynamicallyLoadArray(Builder, ArrAlloca, ArrTy, Index, IEI.getName());
   Value *GEP = GEPAndLoad.first;
   Value *Load = GEPAndLoad.second;
 
-  Builder.CreateStore(Val, GEP);
+  Value *StoreVal = Val;
+  if (WidenBool)
+    StoreVal = Builder.CreateZExt(Val, ArrElemTy, IEI.getName() + ".zext");
+  Builder.CreateStore(StoreVal, GEP);
   Value *NewIEI = PoisonValue::get(Vec->getType());
   for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
-    Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), ArrGEPs[I],
-                                     IEI.getName() + ".load");
-    NewIEI = Builder.CreateInsertElement(NewIEI, Load, Builder.getInt32(I),
+    Value *EltLoad =
+        Builder.CreateLoad(ArrElemTy, ArrGEPs[I], IEI.getName() + ".load");
+    if (WidenBool)
+      EltLoad =
+          Builder.CreateTrunc(EltLoad, VecElemTy, IEI.getName() + ".trunc");
+    NewIEI = Builder.CreateInsertElement(NewIEI, EltLoad, Builder.getInt32(I),
                                          IEI.getName() + ".insert");
   }
 
@@ -286,6 +309,15 @@ bool DataScalarizerVisitor::replaceDynamicExtractElementInst(
   auto GEPAndLoad = dynamicallyLoadArray(Builder, ArrAlloca, ArrTy,
                                          EEI.getIndexOperand(), EEI.getName());
   Value *Load = GEPAndLoad.second;
+
+  // The array element type may have been widened (e.g. i1 -> i32) so that the
+  // indexable temp uses a legal DXIL memory type. Truncate back to the original
+  // element type of the extractelement if necessary.
+  if (Load->getType() != EEI.getType()) {
+    assert(Load->getType()->isIntegerTy(32) && EEI.getType()->isIntegerTy(1) &&
+           "Unexpected type mismatch: only i32 -> i1 widening is supported");
+    Load = Builder.CreateTrunc(Load, EEI.getType(), EEI.getName() + ".trunc");
+  }
 
   EEI.replaceAllUsesWith(Load);
   EEI.eraseFromParent();

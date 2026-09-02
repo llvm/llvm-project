@@ -164,7 +164,7 @@ __device__ double ffp4(double *p, float f) {
 
 __device__ double ffp5(double *p, int i) {
   // FUN-LABEL: @_Z4ffp5Pdi
-  // CHECK: sitofp i32 {{.*}} to double
+  // CHECK: sitofp contract i32 {{.*}} to double
   // SAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
   // UNSAFEIR: atomicrmw fsub ptr {{.*}} monotonic, align 8, [[DEFMD]]
   __atomic_fetch_sub(p, i, memory_order_relaxed);

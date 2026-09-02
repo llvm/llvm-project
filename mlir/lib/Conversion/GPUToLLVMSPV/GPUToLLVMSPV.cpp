@@ -138,6 +138,8 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
           memFenceFlag = memFenceFlag | localMemFenceFlag;
           break;
         case gpu::AddressSpace::Private:
+        case gpu::AddressSpace::Constant:
+          // Private is thread-local, constant is read-only; no fencing needed.
           break;
         }
       }

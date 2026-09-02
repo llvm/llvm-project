@@ -797,3 +797,70 @@ define i8 @scmp_ashr_slt_pattern_neg(i8 %a) {
   %retval = select i1 %cmp, i8 %a.lobit, i8 1
   ret i8 %retval
 }
+
+define i64 @sext_scmp(i32 %x, i32 %y) {
+; CHECK-LABEL: define i64 @sext_scmp(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.scmp.i64.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %cmp = call i8 @llvm.scmp(i32 %x, i32 %y)
+  %ext = sext i8 %cmp to i64
+  ret i64 %ext
+}
+
+; Don't fold when scmp has multiple uses: would leave the narrow scmp alive
+; and add a second wider scmp.
+define i64 @sext_scmp_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: define i64 @sext_scmp_multiuse(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    call void @use(i8 [[CMP]])
+; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[CMP]] to i64
+; CHECK-NEXT:    ret i64 [[EXT]]
+;
+  %cmp = call i8 @llvm.scmp(i32 %x, i32 %y)
+  call void @use(i8 %cmp)
+  %ext = sext i8 %cmp to i64
+  ret i64 %ext
+}
+
+declare void @use32(i32 %value)
+
+define i8 @trunc_scmp(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @trunc_scmp(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %cmp = call i32 @llvm.scmp(i32 %x, i32 %y)
+  %tr = trunc i32 %cmp to i8
+  ret i8 %tr
+}
+
+define <4 x i8> @trunc_scmp_vec(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i8> @trunc_scmp_vec(
+; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.scmp.v4i8.v4i32(<4 x i32> [[X]], <4 x i32> [[Y]])
+; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
+;
+  %cmp = call <4 x i32> @llvm.scmp(<4 x i32> %x, <4 x i32> %y)
+  %tr = trunc <4 x i32> %cmp to <4 x i8>
+  ret <4 x i8> %tr
+}
+
+; Don't fold when scmp has multiple uses: would leave the wide scmp alive
+; and add a second narrower scmp.
+define i8 @trunc_scmp_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @trunc_scmp_multiuse(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    call void @use32(i32 [[CMP]])
+; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[CMP]] to i8
+; CHECK-NEXT:    ret i8 [[TR]]
+;
+  %cmp = call i32 @llvm.scmp(i32 %x, i32 %y)
+  call void @use32(i32 %cmp)
+  %tr = trunc i32 %cmp to i8
+  ret i8 %tr
+}

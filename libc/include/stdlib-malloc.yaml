@@ -22,6 +22,21 @@ functions:
     return_type: void
     arguments:
       - type: void *
+  - name: free_aligned_sized
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: size_t
+  - name: free_sized
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: void *
+      - type: size_t
   - name: malloc
     standards:
       - stdc

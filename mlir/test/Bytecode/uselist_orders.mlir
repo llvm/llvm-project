@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -split-input-file --test-verify-uselistorder -verify-diagnostics
+// RUN: mlir-opt %s -split-input-file --test-verify-uselistorder="rng-seed=54" -verify-diagnostics
 
 // COM: --test-verify-uselistorder will randomly shuffle the uselist of every
 //      value and do a roundtrip to bytecode. An error is returned if the
@@ -61,3 +62,22 @@ test.graph_region {
   %1 = "test.bar"(%2) : (i32) -> i32
   %2 = "test.baz"() : () -> i32
 }
+
+// -----
+
+// This is a reproducer test (for the fixed seed run) for use-def list
+// ordering.
+func.func @test_with_8_uses(%arg0 : i32) -> i32 {
+  %0 = arith.constant 45 : i32
+  %1 = "test.addi"(%arg0, %0) : (i32, i32) -> i32
+  %2 = "test.addi"(%1, %0) : (i32, i32) -> i32
+  %3 = "test.addi"(%1, %0) : (i32, i32) -> i32
+  %4 = "test.addi"(%1, %0) : (i32, i32) -> i32
+  %5 = "test.addi"(%1, %0) : (i32, i32) -> i32
+  %6 = "test.addi"(%1, %0) : (i32, i32) -> i32
+  %7 = "test.addi"(%1, %0) : (i32, i32) -> i32
+  %8 = "test.addi"(%1, %0) : (i32, i32) -> i32
+  %9 = "test.addi"(%1, %0) : (i32, i32) -> i32
+  return %9 : i32
+}
+

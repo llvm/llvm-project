@@ -249,6 +249,29 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
   }
 }
 
+/// A ``Reason`` prefixed with ``>`` produces a fully-custom message and
+/// suppresses the ``Replacement`` suffix; an empty ``Replacement`` yields
+/// the "it should not be used" form; otherwise the standard suggestion
+/// form is used.
+static void emitDiag(ClangTidyCheck &Check, const Expr *SourceExpr,
+                     const FunctionDecl *FuncDecl, StringRef Replacement,
+                     StringRef Reason) {
+  if (Reason.consume_front(">")) {
+    Check.diag(SourceExpr->getExprLoc(), "function %0 %1")
+        << FuncDecl << Reason.trim() << SourceExpr->getSourceRange();
+    return;
+  }
+  if (Replacement.empty()) {
+    Check.diag(SourceExpr->getExprLoc(),
+               "function %0 %1; it should not be used")
+        << FuncDecl << Reason << SourceExpr->getSourceRange();
+    return;
+  }
+  Check.diag(SourceExpr->getExprLoc(),
+             "function %0 %1; '%2' should be used instead")
+      << FuncDecl << Reason << Replacement << SourceExpr->getSourceRange();
+}
+
 void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
   const Expr *SourceExpr = nullptr;
   const FunctionDecl *FuncDecl = nullptr;
@@ -282,60 +305,50 @@ void UnsafeFunctionsCheck::check(const MatchFinder::MatchResult &Result) {
       isAnnexKAvailable(IsAnnexKAvailable, PP, getLangOpts());
   StringRef FunctionName = FuncDecl->getName();
 
+  std::string Replacement;
+  std::string Reason;
+
   if (Custom) {
+    const CheckedFunction *MatchedEntry = nullptr;
     for (const auto &Entry : CustomFunctions) {
       if (Entry.Pattern.match(*FuncDecl)) {
-        StringRef Reason =
-            Entry.Reason.empty() ? "is marked as unsafe" : Entry.Reason.c_str();
-
-        // Omit the replacement, when a fully-custom reason is given.
-        if (Reason.consume_front(">")) {
-          diag(SourceExpr->getExprLoc(), "function %0 %1")
-              << FuncDecl << Reason.trim() << SourceExpr->getSourceRange();
-          // Do not recommend a replacement when it is not present.
-        } else if (Entry.Replacement.empty()) {
-          diag(SourceExpr->getExprLoc(),
-               "function %0 %1; it should not be used")
-              << FuncDecl << Reason << Entry.Replacement
-              << SourceExpr->getSourceRange();
-          // Otherwise, emit the replacement.
-        } else {
-          diag(SourceExpr->getExprLoc(),
-               "function %0 %1; '%2' should be used instead")
-              << FuncDecl << Reason << Entry.Replacement
-              << SourceExpr->getSourceRange();
-        }
-
-        return;
+        MatchedEntry = &Entry;
+        break;
       }
     }
+    if (!MatchedEntry) {
+      llvm_unreachable("No custom function was matched.");
+      return;
+    }
+    Replacement = MatchedEntry->Replacement;
+    Reason = MatchedEntry->Reason.empty() ? "is marked as unsafe"
+                                          : MatchedEntry->Reason;
+  } else {
+    const std::optional<std::string> ReplacementFunctionName =
+        [&]() -> std::optional<std::string> {
+      if (AnnexK) {
+        if (AnnexKIsAvailable)
+          return getAnnexKReplacementFor(FunctionName);
+        return std::nullopt;
+      }
 
-    llvm_unreachable("No custom function was matched.");
-    return;
+      if (Normal)
+        return getReplacementFor(FunctionName, AnnexKIsAvailable).str();
+
+      if (Additional)
+        return getReplacementForAdditional(FunctionName, AnnexKIsAvailable)
+            .str();
+
+      llvm_unreachable("Unhandled match category");
+    }();
+    if (!ReplacementFunctionName)
+      return;
+
+    Replacement = *ReplacementFunctionName;
+    Reason = getRationaleFor(FunctionName).str();
   }
 
-  const std::optional<std::string> ReplacementFunctionName =
-      [&]() -> std::optional<std::string> {
-    if (AnnexK) {
-      if (AnnexKIsAvailable)
-        return getAnnexKReplacementFor(FunctionName);
-      return std::nullopt;
-    }
-
-    if (Normal)
-      return getReplacementFor(FunctionName, AnnexKIsAvailable).str();
-
-    if (Additional)
-      return getReplacementForAdditional(FunctionName, AnnexKIsAvailable).str();
-
-    llvm_unreachable("Unhandled match category");
-  }();
-  if (!ReplacementFunctionName)
-    return;
-
-  diag(SourceExpr->getExprLoc(), "function %0 %1; '%2' should be used instead")
-      << FuncDecl << getRationaleFor(FunctionName)
-      << ReplacementFunctionName.value() << SourceExpr->getSourceRange();
+  emitDiag(*this, SourceExpr, FuncDecl, Replacement, Reason);
 }
 
 void UnsafeFunctionsCheck::registerPPCallbacks(

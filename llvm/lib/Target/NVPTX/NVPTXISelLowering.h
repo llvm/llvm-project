@@ -83,11 +83,6 @@ public:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
-  std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
-                           const SmallVectorImpl<ISD::OutputArg> &,
-                           std::optional<unsigned> FirstVAArg,
-                           const CallBase &CB, unsigned UniqueCallSite) const;
-
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
@@ -238,6 +233,16 @@ private:
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+  bool mayFoldFMULIntoFMA(SDNode *N, MachineFunction &MF,
+                          CodeGenOptLevel OptLevel) const;
+  SDValue performScalarizeV2F32Op(SDNode *N, DAGCombinerInfo &DCI,
+                                  CodeGenOptLevel OptLevel) const;
+  SDValue performFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
+                                         DAGCombinerInfo &DCI,
+                                         CodeGenOptLevel OptLevel) const;
+  SDValue performFADDCombine(SDNode *N, DAGCombinerInfo &DCI,
+                             CodeGenOptLevel OptLevel) const;
 };
 
 } // namespace llvm

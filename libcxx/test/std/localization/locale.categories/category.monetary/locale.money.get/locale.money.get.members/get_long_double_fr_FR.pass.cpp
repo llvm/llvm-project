@@ -8,7 +8,6 @@
 
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // REQUIRES: locale.fr_FR.UTF-8
 
@@ -30,6 +29,11 @@
 #include "locale_helpers.h"
 #include "platform_support.h" // locale name macros
 #include "test_macros.h"
+
+// glibc <langinfo.h> has a THOUSANDS_SEP macro already defined
+#ifdef THOUSANDS_SEP
+#  undef THOUSANDS_SEP
+#endif
 
 #ifdef _AIX
 // the AIX libc expects U202F as LC_MONETARY thousands_sep

@@ -60,8 +60,6 @@ namespace math {
 
 namespace sqrtf128_internal {
 
-using FPBits = fputil::FPBits<float128>;
-
 template <typename T, typename U = T> LIBC_INLINE constexpr T prod_hi(T, U);
 
 // Get high part of integer multiplications.

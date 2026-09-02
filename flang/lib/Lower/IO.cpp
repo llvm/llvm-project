@@ -30,7 +30,6 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/parse-tree.h"
@@ -38,7 +37,6 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-io"
@@ -84,9 +82,10 @@ static constexpr std::tuple<
     mkIOKey(SetAccess), mkIOKey(SetAction), mkIOKey(SetAdvance),
     mkIOKey(SetAsynchronous), mkIOKey(SetBlank), mkIOKey(SetCarriagecontrol),
     mkIOKey(SetConvert), mkIOKey(SetDecimal), mkIOKey(SetDelim),
-    mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm), mkIOKey(SetPad),
-    mkIOKey(SetPos), mkIOKey(SetPosition), mkIOKey(SetRec), mkIOKey(SetRecl),
-    mkIOKey(SetRound), mkIOKey(SetSign), mkIOKey(SetStatus)>
+    mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm),
+    mkIOKey(SetLeadingZero), mkIOKey(SetPad), mkIOKey(SetPos),
+    mkIOKey(SetPosition), mkIOKey(SetRec), mkIOKey(SetRecl), mkIOKey(SetRound),
+    mkIOKey(SetSign), mkIOKey(SetStatus)>
     newIOTable;
 } // namespace Fortran::lower
 
@@ -1246,6 +1245,10 @@ mlir::Value genIOOption<Fortran::parser::ConnectSpec::CharExpr>(
   case Fortran::parser::ConnectSpec::CharExpr::Kind::Form:
     ioFunc = fir::runtime::getIORuntimeFunc<mkIOKey(SetForm)>(loc, builder);
     break;
+  case Fortran::parser::ConnectSpec::CharExpr::Kind::Leading_Zero:
+    ioFunc =
+        fir::runtime::getIORuntimeFunc<mkIOKey(SetLeadingZero)>(loc, builder);
+    break;
   case Fortran::parser::ConnectSpec::CharExpr::Kind::Pad:
     ioFunc = fir::runtime::getIORuntimeFunc<mkIOKey(SetPad)>(loc, builder);
     break;
@@ -1311,6 +1314,10 @@ mlir::Value genIOOption<Fortran::parser::IoControlSpec::CharExpr>(
     break;
   case Fortran::parser::IoControlSpec::CharExpr::Kind::Delim:
     ioFunc = fir::runtime::getIORuntimeFunc<mkIOKey(SetDelim)>(loc, builder);
+    break;
+  case Fortran::parser::IoControlSpec::CharExpr::Kind::Leading_Zero:
+    ioFunc =
+        fir::runtime::getIORuntimeFunc<mkIOKey(SetLeadingZero)>(loc, builder);
     break;
   case Fortran::parser::IoControlSpec::CharExpr::Kind::Pad:
     ioFunc = fir::runtime::getIORuntimeFunc<mkIOKey(SetPad)>(loc, builder);

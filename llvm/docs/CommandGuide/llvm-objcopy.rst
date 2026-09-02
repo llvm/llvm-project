@@ -294,6 +294,10 @@ multiple file formats.
  ``<file>``. If the section ``<name>`` is part of a segment, the new contents
  cannot be larger than the existing section.
 
+.. option:: --verbose, -v
+
+ Print the paths of files that are copied.
+
 .. option:: --version, -V
 
  Display the version of the :program:`llvm-objcopy` executable.

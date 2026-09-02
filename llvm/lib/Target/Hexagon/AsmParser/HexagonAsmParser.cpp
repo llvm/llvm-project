@@ -159,9 +159,8 @@ class HexagonAsmParser : public MCTargetAsmParser {
 
 public:
   HexagonAsmParser(const MCSubtargetInfo &_STI, MCAsmParser &_Parser,
-                   const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, _STI, MII), Parser(_Parser),
-      InBrackets(false) {
+                   const MCInstrInfo &MII)
+      : MCTargetAsmParser(_STI, MII), Parser(_Parser), InBrackets(false) {
     MCB.setOpcode(Hexagon::BUNDLE);
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
 
@@ -459,7 +458,7 @@ public:
 void HexagonOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case Immediate:
-    HexagonMCAsmInfo(Triple()).printExpr(OS, *getImm());
+    MAI.printExpr(OS, *getImm());
     break;
   case Register:
     OS << "<register R";
@@ -870,7 +869,7 @@ bool HexagonAsmParser::ParseDirectiveComm(bool IsLocal, SMLoc Loc) {
 
 // validate register against architecture
 bool HexagonAsmParser::RegisterMatchesArch(MCRegister MatchNum) const {
-  if (HexagonMCRegisterClasses[Hexagon::V62RegsRegClassID].contains(MatchNum))
+  if (getHexagonMCRegisterClass(Hexagon::V62RegsRegClassID).contains(MatchNum))
     if (!getSTI().hasFeature(Hexagon::ArchV62))
       return false;
   return true;
@@ -1560,7 +1559,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
 
       MES->switchSection(mySection);
       unsigned byteSize = is32bit ? 4 : 8;
-      getStreamer().emitCodeAlignment(Align(byteSize), &getSTI(), byteSize);
+      getStreamer().emitCodeAlignment(Align(byteSize), getSTI(), byteSize);
 
       MCSymbol *Sym;
 

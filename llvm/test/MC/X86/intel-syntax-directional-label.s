@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-apple-darwin -x86-asm-syntax=intel %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-apple-darwin -x86-asm-syntax=intel --output-asm-variant=0 %s | FileCheck %s
 // rdar://14961158
 	.text
 	.align 16

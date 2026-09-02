@@ -128,7 +128,7 @@ define i32 @pdep32_load(i32 %x, ptr %y)   {
 define i32 @pdep32_anyext(i16 %x)   {
 ; X86-LABEL: pdep32_anyext:
 ; X86:       # %bb.0:
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $-1431655766, %ecx # imm = 0xAAAAAAAA
 ; X86-NEXT:    pdepl %ecx, %eax, %eax
 ; X86-NEXT:    retl
@@ -178,7 +178,7 @@ define i32 @pdep32_demandedbits(i32 %x) {
 define i32 @pdep32_demandedbits2(i32 %x, i32 %y) {
 ; X86-LABEL: pdep32_demandedbits2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pdepl {{[0-9]+}}(%esp), %eax, %eax
 ; X86-NEXT:    andl $128, %eax
 ; X86-NEXT:    retl
@@ -203,9 +203,8 @@ define i32 @pdep32_demandedbits2(i32 %x, i32 %y) {
 define i32 @pdep32_demandedbits_mask(i32 %x, i16 %y) {
 ; X86-LABEL: pdep32_demandedbits_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    pdepl %eax, %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pdepl {{[0-9]+}}(%esp), %eax, %eax
 ; X86-NEXT:    andl $32768, %eax # imm = 0x8000
 ; X86-NEXT:    retl
 ;
@@ -230,9 +229,8 @@ define i32 @pdep32_demandedbits_mask(i32 %x, i16 %y) {
 define i32 @pdep32_demandedbits_mask2(i32 %x, i16 %y) {
 ; X86-LABEL: pdep32_demandedbits_mask2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    pdepl %eax, %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pdepl {{[0-9]+}}(%esp), %eax, %eax
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
 ;

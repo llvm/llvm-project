@@ -679,7 +679,7 @@ public:
   bool visitLocalTopLevelDecls(void *context, DeclVisitorFn Fn);
 
   /// Get the PCH file if one was included.
-  OptionalFileEntryRef getPCHFile();
+  std::optional<StringRef> getPCHFile();
 
   /// Returns true if the ASTUnit was constructed from a serialized
   /// module file.

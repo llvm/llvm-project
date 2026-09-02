@@ -230,6 +230,9 @@
 # BTI_REPORT-ERROR: aarch64-feature-bti.s.tmp2.o: -z bti-report: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property
 # BTI_REPORT-ERROR-EMPTY:
 
+## Ensure that warnings from force-bti can be silenced with bti-report=none.
+# RUN: ld.lld %t.o %t2.o -z force-bti -z bti-report=none %t.so -o %t.so 2>&1 | count 0
+
 # RUN: llvm-readelf -n %tforcebti.exe | FileCheck --check-prefix=BTIPROP %s
 # RUN: llvm-readelf --dynamic-table %tforcebti.exe | FileCheck --check-prefix BTIDYN %s
 # RUN: llvm-objdump --no-print-imm-hex -d --mattr=+bti --no-show-raw-insn %tforcebti.exe | FileCheck --check-prefix=FORCE %s

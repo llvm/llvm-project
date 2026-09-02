@@ -10,7 +10,7 @@
 // NO_RELOC-NOT: checking if module {{.*}} has relocated
 
 // RUN: mkdir %t/preferred_frameworks/
-// RUN: cp -r %t/fallback_frameworks/IndirectDep.framework %t/preferred_frameworks/
+// RUN: cp -R %t/fallback_frameworks/IndirectDep.framework %t/preferred_frameworks/
 
 // Verify no relocation checks happen because pcms are newer than timestamp.
 // RUN: %clang -fmodules -fimplicit-module-maps  -fsyntax-only %t/tu1.c \
@@ -26,11 +26,9 @@
 // RUN:   -fbuild-session-file=%t/session.timestamp -fmodules-validate-once-per-build-session \
 // RUN:   -Xclang -fno-modules-check-relocated -Rmodule-validation 2>&1 | FileCheck %s --check-prefix=NO_RELOC
 
-// Ensure future new timestamp doesn't have same time as older one.
-// RUN: sleep 1
-
-// Now remove the disablement and check.
-// RUN: touch %t/session.timestamp
+// Force session.timestamp into the future so it is strictly greater than any
+// cached pcm or timestamp mtime, regardless of wall-clock resolution.
+// RUN: %python -c "import os, time; t = time.time() + 3600; os.utime('%/t/session.timestamp', (t, t))"
 // RUN: %clang -fmodules -fimplicit-module-maps  -fsyntax-only %t/tu1.c \
 // RUN:   -fmodules-cache-path=%t/cache -F%t/preferred_frameworks -F%t/fallback_frameworks \
 // RUN:   -fbuild-session-file=%t/session.timestamp -fmodules-validate-once-per-build-session \

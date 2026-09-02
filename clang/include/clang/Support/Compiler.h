@@ -27,6 +27,11 @@
 /// CLANG_TEMPLATE_ABI is for annotating extern template declarations in headers
 /// for both functions and classes. On windows its turned in to dllimport for
 /// library consumers, for other platforms its a default visibility attribute.
+///
+/// CLANG_ABI_EXPORT always exports (or, in a static build, does nothing), it
+/// never expands to dllimport. It is the clang analogue of LLVM_ABI_EXPORT and
+/// is used where a symbol must be exported by the defining library but must not
+/// be imported by consumers.
 #ifndef CLANG_ABI_GENERATING_ANNOTATIONS
 // Marker to add to classes or functions in public headers that should not have
 // export macros added to them by the clang tool
@@ -37,6 +42,7 @@
 // missing symbol linker errors on windows.
 #if defined(CLANG_BUILD_STATIC)
 #define CLANG_ABI
+#define CLANG_ABI_EXPORT
 #define CLANG_TEMPLATE_ABI
 #define CLANG_EXPORT_TEMPLATE
 #elif defined(_WIN32) && !defined(__MINGW32__)
@@ -49,13 +55,16 @@
 #define CLANG_TEMPLATE_ABI __declspec(dllimport)
 #define CLANG_EXPORT_TEMPLATE
 #endif
+#define CLANG_ABI_EXPORT __declspec(dllexport)
 #elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
     defined(__MVS__) || defined(__CYGWIN__)
 #define CLANG_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define CLANG_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define CLANG_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define CLANG_EXPORT_TEMPLATE
 #elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
 #define CLANG_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define CLANG_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define CLANG_TEMPLATE_ABI
 #define CLANG_EXPORT_TEMPLATE
 #endif

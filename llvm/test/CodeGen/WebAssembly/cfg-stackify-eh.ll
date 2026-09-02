@@ -709,7 +709,7 @@ try.cont:                                         ; preds = %catch.start0
   ret i32 0
 }
 
-; We have two call unwind unwind mismatches:
+; We have two call unwind mismatches:
 ; - A may-throw instruction unwinds to an incorrect EH pad after linearizing the
 ;   CFG, when it is supposed to unwind to another EH pad.
 ; - A may-throw instruction unwinds to an incorrect EH pad after linearizing the
@@ -1427,9 +1427,9 @@ unreachable:                                      ; preds = %rethrow, %rethrow6
 ; should make sure to take out (c)'s exception out of (a)'s exception too.
 define void @exception_grouping_2() personality ptr @__gxx_wasm_personality_v0 {
 entry:
-  %exception = call ptr @__cxa_allocate_exception(i32 4) #1
+  %exception = call ptr @__cxa_allocate_exception(i32 4) #0
   store i32 0, ptr %exception, align 16
-  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #3
+  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #1
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
@@ -1439,18 +1439,18 @@ catch.start:                                      ; preds = %catch.dispatch
   %1 = catchpad within %0 [ptr @_ZTIi]
   %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #1
+  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
   %matches = icmp eq i32 %3, %4
   br i1 %matches, label %catch, label %rethrow
 
 catch:                                            ; preds = %catch.start
-  %5 = call ptr @__cxa_begin_catch(ptr %2) #1 [ "funclet"(token %1) ]
+  %5 = call ptr @__cxa_begin_catch(ptr %2) #0 [ "funclet"(token %1) ]
   %6 = load i32, ptr %5, align 4
-  call void @__cxa_end_catch() #1 [ "funclet"(token %1) ]
+  call void @__cxa_end_catch() #0 [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont8
 
 rethrow:                                          ; preds = %catch.start
-  invoke void @llvm.wasm.rethrow() #3 [ "funclet"(token %1) ]
+  invoke void @llvm.wasm.rethrow() #1 [ "funclet"(token %1) ]
           to label %unreachable unwind label %catch.dispatch1
 
 catch.dispatch1:                                  ; preds = %rethrow, %catch.dispatch
@@ -1460,18 +1460,18 @@ catch.start2:                                     ; preds = %catch.dispatch1
   %8 = catchpad within %7 [ptr @_ZTIi]
   %9 = call ptr @llvm.wasm.get.exception(token %8)
   %10 = call i32 @llvm.wasm.get.ehselector(token %8)
-  %11 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #1
+  %11 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
   %matches3 = icmp eq i32 %10, %11
   br i1 %matches3, label %catch5, label %rethrow4
 
 catch5:                                           ; preds = %catch.start2
-  %12 = call ptr @__cxa_begin_catch(ptr %9) #1 [ "funclet"(token %8) ]
+  %12 = call ptr @__cxa_begin_catch(ptr %9) #0 [ "funclet"(token %8) ]
   %13 = load i32, ptr %12, align 4
-  call void @__cxa_end_catch() #1 [ "funclet"(token %8) ]
+  call void @__cxa_end_catch() #0 [ "funclet"(token %8) ]
   catchret from %8 to label %try.cont8
 
 rethrow4:                                         ; preds = %catch.start2
-  call void @llvm.wasm.rethrow() #3 [ "funclet"(token %8) ]
+  call void @llvm.wasm.rethrow() #1 [ "funclet"(token %8) ]
   unreachable
 
 try.cont8:                                        ; preds = %catch, %catch5
@@ -1485,18 +1485,18 @@ catch.start10:                                    ; preds = %catch.dispatch9
   %15 = catchpad within %14 [ptr @_ZTIi]
   %16 = call ptr @llvm.wasm.get.exception(token %15)
   %17 = call i32 @llvm.wasm.get.ehselector(token %15)
-  %18 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #1
+  %18 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
   %matches11 = icmp eq i32 %17, %18
   br i1 %matches11, label %catch13, label %rethrow12
 
 catch13:                                          ; preds = %catch.start10
-  %19 = call ptr @__cxa_begin_catch(ptr %16) #1 [ "funclet"(token %15) ]
+  %19 = call ptr @__cxa_begin_catch(ptr %16) #0 [ "funclet"(token %15) ]
   %20 = load i32, ptr %19, align 4
-  call void @__cxa_end_catch() #1 [ "funclet"(token %15) ]
+  call void @__cxa_end_catch() #0 [ "funclet"(token %15) ]
   catchret from %15 to label %try.cont16
 
 rethrow12:                                        ; preds = %catch.start10
-  call void @llvm.wasm.rethrow() #3 [ "funclet"(token %15) ]
+  call void @llvm.wasm.rethrow() #1 [ "funclet"(token %15) ]
   unreachable
 
 try.cont16:                                       ; preds = %try.cont8, %catch13
@@ -1506,16 +1506,131 @@ unreachable:                                      ; preds = %rethrow, %entry
   unreachable
 }
 
+; A regression test for the case where fixCatchUnwindMismatches generates a
+; single trampoline BB targeted by multiple try_tables. This should not crash.
+define i32 @shared_trampoline(ptr %arg, i1 %arg1) personality ptr @__gxx_wasm_personality_v0 {
+bb:
+  br i1 %arg1, label %bb2, label %bb10
+
+bb2:                                              ; preds = %bb
+  invoke void @f1(ptr null, ptr null)
+          to label %bb3 unwind label %bb8
+
+bb3:                                              ; preds = %bb2
+  %i = invoke ptr @f2(ptr null, ptr null)
+          to label %bb4 unwind label %bb6
+
+bb4:                                              ; preds = %bb3
+  %i5 = invoke ptr @f3(ptr null, ptr null)
+          to label %common.ret unwind label %bb8
+
+common.ret:                                       ; preds = %bb21, %bb18, %bb13, %bb6, %bb4
+  %common.ret.op = phi i32 [ 0, %bb18 ], [ 0, %bb6 ], [ 0, %bb13 ], [ 0, %bb21 ], [ 0, %bb4 ]
+  ret i32 %common.ret.op
+
+bb6:                                              ; preds = %bb3
+  %i7 = cleanuppad within none []
+  br label %common.ret
+
+bb8:                                              ; preds = %bb4, %bb2
+  %i9 = cleanuppad within none []
+  cleanupret from %i9 unwind to caller
+
+bb10:                                             ; preds = %bb
+  invoke void @f4(ptr null)
+          to label %bb21 unwind label %bb11
+
+bb11:                                             ; preds = %bb10
+  %i12 = catchswitch within none [label %bb13] unwind to caller
+
+bb13:                                             ; preds = %bb11
+  %i14 = catchpad within %i12 [ptr null]
+  %i15 = tail call ptr @llvm.wasm.get.exception(token %i14)
+  br label %common.ret
+
+bb16:                                             ; preds = %bb21
+  %i17 = catchswitch within none [label %bb18] unwind to caller
+
+bb18:                                             ; preds = %bb16
+  %i19 = catchpad within %i17 [ptr null]
+  %i20 = tail call ptr @llvm.wasm.get.exception(token %i19)
+  br label %common.ret
+
+bb21:                                             ; preds = %bb10
+  %i22 = invoke i32 @f5(ptr null)
+          to label %common.ret unwind label %bb16
+}
+
+; NOSORT-LABEL: nested_cleanup_unwind_to_caller:
+; NOSORT:      block     exnref
+; NOSORT:        try_table    (catch_all_ref 0)             # 0: down to label[[L0:[0-9]+]]
+; NOSORT:          block     exnref
+; NOSORT:            block     exnref
+; NOSORT:              try_table    (catch_all_ref 0)       # 0: down to label[[L1:[0-9]+]]
+; NOSORT:                call  throwing_func
+; NOSORT:                try_table    (catch_all_ref 2)     # 2: down to label[[L2:[0-9]+]]
+; NOSORT:                  call  throwing_func
+; NOSORT:                end_try_table
+; NOSORT:                try_table    (catch_all_ref 5)     # 5: down to label[[L4:[0-9]+]]
+; NOSORT:                  call  cleanup_dtor
+; NOSORT:                end_try_table
+; NOSORT:                return
+; NOSORT:              end_try_table
+; NOSORT:              unreachable
+; NOSORT:            end_block                              # label[[L1]]:
+; NOSORT:            try_table    (catch_all_ref 3)         # 3: down to label[[L4]]
+; NOSORT:              call  cleanup_dtor
+; NOSORT:              throw_ref
+; NOSORT:      .LBB{{[0-9]+}}_{{[0-9]+}}:
+; NOSORT-NEXT:       end_try_table
+; NOSORT-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
+; NOSORT-NEXT:       unreachable
+; NOSORT-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
+; NOSORT-NEXT:     end_block                           # label[[L2]]:
+define hidden void @nested_cleanup_unwind_to_caller() personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  %c = alloca i8, align 1
+  %dummy1 = alloca i32, align 4
+  %dummy2 = alloca i32, align 4
+  invoke void @throwing_func()
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %entry
+  invoke void @throwing_func()
+          to label %invoke.cont2 unwind label %ehcleanup2
+
+invoke.cont2:                                     ; preds = %invoke.cont
+  %ignore1 = call ptr @cleanup_dtor(ptr %c)
+  ret void
+
+ehcleanup:                                        ; preds = %entry
+  %pad = cleanuppad within none []
+  %ignore2 = call ptr @cleanup_dtor(ptr %c) [ "funclet"(token %pad) ]
+  cleanupret from %pad unwind to caller
+
+ehcleanup2:                                       ; preds = %invoke.cont
+  %pad2 = cleanuppad within none []
+  %ignore3 = call ptr @cleanup_dtor(ptr %c) [ "funclet"(token %pad2) ]
+  cleanupret from %pad2 unwind to caller
+}
+
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 23 wasm-cfg-stackify    - Number of call unwind mismatches found
-; NOSORT:  4 wasm-cfg-stackify    - Number of catch unwind mismatches found
+; NOSORT: 28 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT:  5 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()
 declare void @bar()
 declare i32 @baz()
+declare void @throwing_func()
+declare ptr @cleanup_dtor(ptr)
 declare i32 @qux(i32)
 declare void @quux(i32)
 declare void @fun(i32)
+declare void @f1(ptr, ptr)
+declare ptr @f2(ptr, ptr)
+declare ptr @f3(ptr, ptr)
+declare void @f4(ptr)
+declare i32 @f5(ptr)
 ; Function Attrs: nounwind
 declare void @nothrow(i32) #0
 ; Function Attrs: nounwind

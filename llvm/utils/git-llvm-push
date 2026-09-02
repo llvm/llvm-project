@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """A script to automate the creation and landing of a stack of Pull Requests."""
 
+# TODO: Remove typing workarounds when we use a newer python.
+from __future__ import annotations
+
 import argparse
 import json
 import os
@@ -11,8 +14,6 @@ import time
 import urllib.error
 import urllib.request
 
-# TODO: Remove typing workarounds when we use a newer python.
-from typing import List, Optional, Tuple
 from http.client import HTTPResponse
 from dataclasses import dataclass
 
@@ -26,6 +27,8 @@ DEFAULT_LABEL = "skip-precommit-approval"
 LLVM_GITHUB_TOKEN_VAR = "LLVM_GITHUB_TOKEN"
 LLVM_REPO = "llvm/llvm-project"
 GITHUB_API = "https://api.github.com"
+
+GIT_CONFIG_PREFIX = "git-llvm-push."
 
 MERGE_MAX_RETRIES = 10
 MERGE_RETRY_DELAY = 5  # seconds
@@ -46,7 +49,7 @@ class PRAutomatorConfig:
     upstream_remote: str
     prefix: str
     draft: bool
-    labels: List[str]
+    labels: list[str]
     no_merge: bool
     auto_merge: bool
 
@@ -73,13 +76,13 @@ class CommandRunner:
 
     def run_command(
         self,
-        command: List[str],
+        command: list[str],
         check: bool = True,
         capture_output: bool = False,
         text: bool = False,
-        stdin_input: Optional[str] = None,
+        stdin_input: str | None = None,
         read_only: bool = False,
-        env: Optional[dict] = None,
+        env: dict | None = None,
     ) -> subprocess.CompletedProcess:
         if self.dry_run and not read_only:
             self.print(f"[Dry Run] Would run: {' '.join(command)}")
@@ -124,7 +127,7 @@ class GitHubAPI:
         )
 
     def _request(
-        self, method: str, endpoint: str, json_payload: Optional[dict] = None
+        self, method: str, endpoint: str, json_payload: dict | None = None
     ) -> HTTPResponse:
         url = f"{GITHUB_API}{endpoint}"
         self.runner.verbose_print(f"API Request: {method.upper()} {url}")
@@ -153,7 +156,7 @@ class GitHubAPI:
             raise e
 
     def _request_and_parse_json(
-        self, method: str, endpoint: str, json_payload: Optional[dict] = None
+        self, method: str, endpoint: str, json_payload: dict | None = None
     ) -> dict:
         with self._request(method, endpoint, json_payload) as response:
             # Expect a 200 'OK' or 201 'Created' status on success and JSON body.
@@ -165,7 +168,7 @@ class GitHubAPI:
             return {}
 
     def _request_no_content(
-        self, method: str, endpoint: str, json_payload: Optional[dict] = None
+        self, method: str, endpoint: str, json_payload: dict | None = None
     ) -> None:
         with self._request(method, endpoint, json_payload) as response:
             # Expected a 204 No Content status on success, indicating the
@@ -184,7 +187,7 @@ class GitHubAPI:
             )
 
     def _log_unexpected_status(
-        self, expected_statuses: List[int], actual_status: int
+        self, expected_statuses: list[int], actual_status: int
     ) -> None:
         if actual_status not in expected_statuses:
             self.runner.print(
@@ -204,8 +207,10 @@ class GitHubAPI:
         draft: bool,
     ) -> tuple:
         if self.runner.dry_run:
-            self.runner.print(f"[Dry Run] Would create pull request for '{head_branch}'...")
-            return 0
+            self.runner.print(
+                f"[Dry Run] Would create pull request for '{head_branch}'..."
+            )
+            return (0, 0)
 
         self.runner.print(f"Creating pull request for '{head_branch}'...")
         data = {
@@ -218,13 +223,13 @@ class GitHubAPI:
         response_data = self._request_and_parse_json(
             "POST", f"/repos/{LLVM_REPO}/pulls", json_payload=data
         )
-        self.runner.print(f"Pull request created: {response_data.get("html_url")}")
+        self.runner.print(f"Pull request created: {response_data.get('html_url')}")
         return (response_data.get("node_id"), response_data.get("number"))
 
     def get_repo_settings(self) -> dict:
         return self._request_and_parse_json("GET", f"/repos/{LLVM_REPO}")
 
-    def _get_pr_details(self, pr_number: str) -> dict:
+    def _get_pr_details(self, pr_number: int) -> dict:
         """Fetches the JSON details for a given pull request number."""
         return self._request_and_parse_json(
             "GET", f"/repos/{LLVM_REPO}/pulls/{pr_number}"
@@ -233,20 +238,23 @@ class GitHubAPI:
     def add_labels(
         self,
         pr_number: int,
-        labels: List[str],
+        labels: list[str],
     ) -> None:
         if self.runner.dry_run:
-            self.runner.print(f"[Dry Run] Would set labels for #{pr_number}: {' '.join(labels)}")
+            self.runner.print(
+                f"[Dry Run] Would set labels for #{pr_number}: {' '.join(labels)}"
+            )
             return None
 
         self.runner.print(f"Setting labels for #{pr_number}: {' '.join(labels)}")
 
         self._request_and_parse_json(
-            "POST", f"/repos/{LLVM_REPO}/issues/{pr_number}/labels",
+            "POST",
+            f"/repos/{LLVM_REPO}/issues/{pr_number}/labels",
             json_payload={"labels": labels},
         )
 
-    def _attempt_squash_merge(self, pr_number: str) -> bool:
+    def _attempt_squash_merge(self, pr_number: int) -> bool:
         """Attempts to squash merge a PR, returning True on success."""
         try:
             self._request_and_parse_json(
@@ -262,7 +270,7 @@ class GitHubAPI:
             # Re-raise other HTTP errors.
             raise e
 
-    def merge_pr(self, pr_number: int) -> Optional[str]:
+    def merge_pr(self, pr_number: int) -> str | None:
         if self.runner.dry_run:
             self.runner.print(f"[Dry Run] Would merge #{pr_number}")
             return None
@@ -313,7 +321,7 @@ class GitHubAPI:
         self.runner.print("Auto-merge enabled.")
 
     def delete_branch(
-        self, branch_name: str, default_branch: Optional[str] = None
+        self, branch_name: str, default_branch: str | None = None
     ) -> None:
         if default_branch and branch_name == default_branch:
             self.runner.print(
@@ -350,7 +358,7 @@ class LLVMPRAutomator:
         self.config = config
         self.remote = remote
         self.original_branch: str = ""
-        self.created_branches: List[str] = []
+        self.created_branches: list[str] = []
         self.repo_settings: dict = {}
 
     def _get_git_env(self) -> dict:
@@ -431,7 +439,7 @@ class LLVMPRAutomator:
                 )
             raise LlvmPrError("rebase operation failed.") from e
 
-    def _get_commit_stack(self) -> List[str]:
+    def _get_commit_stack(self) -> list[str]:
         target = f"{self.config.upstream_remote}/{self.config.base_branch}"
         result = self.runner.run_command(
             ["git", "rev-list", "--reverse", f"{target}..HEAD"],
@@ -441,7 +449,7 @@ class LLVMPRAutomator:
         )
         return result.stdout.strip().splitlines()
 
-    def _get_commit_details(self, commit_hash: str) -> Tuple[str, str]:
+    def _get_commit_details(self, commit_hash: str) -> tuple[str, str]:
         # Get the subject and body from git show. Insert "\n\n" between to make
         # parsing simple to do w/ split.
         result = self.runner.run_command(
@@ -590,15 +598,39 @@ def check_prerequisites(runner: CommandRunner) -> None:
     runner.print("Prerequisites met.")
 
 
+def get_token_from_cli(runner: CommandRunner) -> str:
+    runner.print("Getting token...")
+    result = runner.run_command(
+        ["gh", "auth", "token"], capture_output=True, read_only=True
+    )
+    return result.stdout.strip().decode("utf-8")
+
+
+def get_git_config_options() -> argparse.Namespace:
+    # We do not use a runner here as we need to run this before we know what
+    # flags we want to pass to the runner.
+    try:
+        process = subprocess.run(
+            ["git", "config", "--list"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        args = argparse.Namespace()
+        for line in process.stdout.decode("utf-8").split("\n"):
+            if line.startswith(GIT_CONFIG_PREFIX):
+                line_parts = line.split("=")
+                setattr(
+                    args,
+                    line_parts[0][len(GIT_CONFIG_PREFIX) :].replace("-", "_"),
+                    line_parts[1],
+                )
+        return args
+    except:
+        return argparse.Namespace()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create and land a stack of Pull Requests."
     )
-
-    command_runner = CommandRunner()
-    token = os.getenv(LLVM_GITHUB_TOKEN_VAR)
-    if not token:
-        raise LlvmPrError(f"{LLVM_GITHUB_TOKEN_VAR} environment variable not set.")
 
     parser.add_argument(
         "--base",
@@ -630,9 +662,14 @@ def main() -> None:
     )
     parser.add_argument(
         "--labels",
-        nargs='*',
+        nargs="*",
         default=[DEFAULT_LABEL],
-        help=f"Set the PR labels (default: {DEFAULT_LABEL})."
+        help=f"Set the PR labels (default: {DEFAULT_LABEL}).",
+    )
+    parser.add_argument(
+        "--use-gh-cli-token",
+        action="store_true",
+        help="Automatically get a token from gh CLI.",
     )
     merging = parser.add_mutually_exclusive_group()
     merging.add_argument(
@@ -657,12 +694,20 @@ def main() -> None:
         help="Print only essential output and errors.",
     )
 
-    args = parser.parse_args()
+    git_config_args = get_git_config_options()
+    args = parser.parse_args(None, git_config_args)
 
     command_runner = CommandRunner(
         dry_run=args.dry_run, verbose=args.verbose, quiet=args.quiet
     )
     check_prerequisites(command_runner)
+    token = None
+    if args.use_gh_cli_token:
+        token = get_token_from_cli(command_runner)
+    else:
+        token = os.getenv(LLVM_GITHUB_TOKEN_VAR)
+    if not token:
+        raise LlvmPrError(f"{LLVM_GITHUB_TOKEN_VAR} environment variable not set.")
 
     github_api = GitHubAPI(command_runner, token)
     if not args.login:

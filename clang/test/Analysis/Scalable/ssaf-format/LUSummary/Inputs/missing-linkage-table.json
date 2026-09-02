@@ -1,0 +1,12 @@
+{
+  "lu_namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "test.exe"
+    }
+  ],
+  "id_table": [],
+  "data": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "LUSummary"
+}

@@ -1,4 +1,5 @@
 ; RUN: opt --bpf-check-and-opt-ir -S -mtriple=bpf-pc-linux %s | FileCheck %s
+; RUN: opt -passes=bpf-check-and-opt-ir -S -mtriple=bpf-pc-linux %s | FileCheck %s
 
 ; Test plan:
 ; @test1: x <  umin(i64 a, i64 b)

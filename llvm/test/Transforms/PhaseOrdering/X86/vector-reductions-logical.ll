@@ -335,9 +335,8 @@ define float @test_merge_allof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i4 [[TMP4]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TMP2]], [[TMP5]]
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[T_FR]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[T_FR]], [[SHIFT]]
-; CHECK-NEXT:    [[ADD:%.*]] = extractelement <4 x i32> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[T_FR]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[ADD:%.*]] = tail call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[ADD]] to float
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND]], float 0.000000e+00, float [[CONV]]
 ; CHECK-NEXT:    ret float [[RETVAL_0]]
@@ -406,9 +405,8 @@ define float @test_merge_anyof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <8 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i1> [[TMP4]] to i8
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[TMP5]], 0
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[T]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[T]], [[SHIFT]]
-; CHECK-NEXT:    [[ADD:%.*]] = extractelement <4 x i32> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[T]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[ADD:%.*]] = tail call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[ADD]] to float
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[DOTNOT]], float [[CONV]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[RETVAL_0]]
@@ -480,9 +478,8 @@ define i32 @test_separate_allof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[T_FR]], splat (i32 256)
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i4 [[TMP4]], 0
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[T_FR]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[T_FR]], [[SHIFT]]
-; CHECK-NEXT:    [[ADD:%.*]] = extractelement <4 x i32> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[T_FR]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[ADD:%.*]] = tail call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP5]], i32 0, i32 [[ADD]]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
@@ -558,9 +555,8 @@ define i32 @test_separate_anyof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i32> [[T_FR]], splat (i32 255)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i1> [[TMP2]] to i4
 ; CHECK-NEXT:    [[DOTNOT6:%.*]] = icmp eq i4 [[TMP3]], 0
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[T_FR]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <4 x i32> [[T_FR]], [[SHIFT]]
-; CHECK-NEXT:    [[ADD:%.*]] = extractelement <4 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[T_FR]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[ADD:%.*]] = tail call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[DOTNOT6]], i32 [[ADD]], i32 0
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:

@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 
+    @skipIfWasm  # no expression evaluation
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

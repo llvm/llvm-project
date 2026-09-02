@@ -205,8 +205,12 @@ def parseScript(test, preamble):
         )
 
     # Perform substitutions in the script itself.
+    conditions = {feature: True for feature in test.config.available_features}
     script = lit.TestRunner.applySubstitutions(
-        script, substitutions, recursion_limit=test.config.recursiveExpansionLimit
+        script,
+        substitutions,
+        conditions,
+        recursion_limit=test.config.recursiveExpansionLimit,
     )
 
     return script

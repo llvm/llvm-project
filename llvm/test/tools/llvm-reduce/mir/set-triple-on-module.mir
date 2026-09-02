@@ -1,0 +1,16 @@
+# REQUIRES: x86-registered-target
+
+# RUN: llvm-reduce -simplify-mir -mtriple="x86_64-unknown-linux-gnu" --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+# RUN: FileCheck %s < %t
+
+# CHECK-INTERESTINGNESS: RET64
+
+# CHECK: target triple = "x86_64-unknown-linux-gnu"
+# CHECK: name:            func
+
+---
+name: func
+body: |
+  bb.0:
+    RET64
+...

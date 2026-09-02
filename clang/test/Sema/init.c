@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -Wno-pointer-to-int-cast -verify -fsyntax-only -ffreestanding
+// RUN: %clang_cc1 %s -Wno-pointer-to-int-cast -verify -fsyntax-only -ffreestanding -fexperimental-new-constant-interpreter
 
 #include <stddef.h>
 #include <stdint.h>

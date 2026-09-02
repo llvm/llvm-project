@@ -1,6 +1,7 @@
 ! Check that acc.terminator is not inserted in data construct
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -fcuda -emit-hlfir %s -o - | FileCheck %s
 
 program main
   use, intrinsic :: iso_c_binding

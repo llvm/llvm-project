@@ -49,18 +49,6 @@ static constexpr bool ExpensiveChecksEnabled = true;
 static constexpr bool ExpensiveChecksEnabled = false;
 #endif
 
-bool BasicBlockEdge::isSingleEdge() const {
-  unsigned NumEdgesToEnd = 0;
-  for (const BasicBlock *Succ : successors(Start)) {
-    if (Succ == End)
-      ++NumEdgesToEnd;
-    if (NumEdgesToEnd >= 2)
-      return false;
-  }
-  assert(NumEdgesToEnd == 1);
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 //  DominatorTree Implementation
 //===----------------------------------------------------------------------===//

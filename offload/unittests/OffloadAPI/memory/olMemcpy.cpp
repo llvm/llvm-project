@@ -163,15 +163,14 @@ TEST_P(olMemcpyGlobalTest, SuccessWrite) {
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t),
                             &DestMem));
-  struct {
-    void *Mem;
-  } Args{DestMem};
+  void *ArgPtrs[] = {&DestMem};
+  size_t ArgSizes[] = {sizeof(DestMem)};
 
   ASSERT_SUCCESS(
       olMemcpy(Queue, Addr, Device, SourceMem, Host, 64 * sizeof(uint32_t)));
   ASSERT_SUCCESS(olSyncQueue(Queue));
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, ReadKernel, &Args, sizeof(Args),
-                                &LaunchArgs));
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, ReadKernel, &LaunchArgs, nullptr,
+                                1, ArgPtrs, ArgSizes));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *DestData = (uint32_t *)DestMem;
@@ -188,8 +187,8 @@ TEST_P(olMemcpyGlobalTest, SuccessRead) {
                             LaunchArgs.GroupSize.x * sizeof(uint32_t),
                             &DestMem));
 
-  ASSERT_SUCCESS(
-      olLaunchKernel(Queue, Device, WriteKernel, nullptr, 0, &LaunchArgs));
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, WriteKernel, &LaunchArgs,
+                                nullptr, 0, nullptr, nullptr));
   ASSERT_SUCCESS(olSyncQueue(Queue));
   ASSERT_SUCCESS(
       olMemcpy(Queue, DestMem, Host, Addr, Device, 64 * sizeof(uint32_t)));

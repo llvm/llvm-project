@@ -50,3 +50,7 @@ ld.lld: error: src.o: requires an executable stack, but -z execstack is not spec
 flang-22: error: linker command failed with exit code 1 (use -v to see invocation)
 $ flang src.f90 -fuse-ld=lld -Wl,-z,execstack
 ```
+
+Since LLVM 23, Flang has a new compiler flag `-fsafe-trampoline`, which is disabled by default and is currently supported on x86-64 and AArch64 targets.
+If this is enabled, the trampoline is generated on a dedicated `mmap`'d region instead of the stack.
+Where supported, we recommend using this flag to reduce the security risk of an executable stack.

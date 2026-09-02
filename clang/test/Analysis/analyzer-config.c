@@ -135,6 +135,7 @@
 // CHECK-NEXT: track-conditions = true
 // CHECK-NEXT: track-conditions-debug = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:AddNoOwnershipChangeNotes = true
+// CHECK-NEXT: unix.DynamicMemoryModeling:ModelAllocationFailure = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
 // CHECK-NEXT: unix.Errno:AllowErrnoReadOutsideConditionExpressions = true
 // CHECK-NEXT: unix.StdCLibraryFunctions:DisplayLoadedSummaries = false

@@ -5,19 +5,10 @@ define void @test(ptr %dest, ptr %p) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[DEST:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[INC0:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; CHECK-NEXT:    [[INC1:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 2
-; CHECK-NEXT:    [[E0:%.*]] = load i16, ptr [[P]], align 4
-; CHECK-NEXT:    [[E1:%.*]] = load i16, ptr [[INC0]], align 2
-; CHECK-NEXT:    [[A0:%.*]] = sub i16 [[E0]], 1
-; CHECK-NEXT:    [[A1:%.*]] = shl i16 [[E1]], 1
-; CHECK-NEXT:    [[INC4:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 1
-; CHECK-NEXT:    [[INC5:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[INC1]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i16> [[TMP0]], splat (i16 1)
-; CHECK-NEXT:    store i16 [[A0]], ptr [[DEST]], align 4
-; CHECK-NEXT:    store i16 [[A1]], ptr [[INC4]], align 2
-; CHECK-NEXT:    store <2 x i16> [[TMP1]], ptr [[INC5]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> <i16 -1, i16 poison, i16 1, i16 1>, <4 x i32> <i32 4, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i16> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[DEST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

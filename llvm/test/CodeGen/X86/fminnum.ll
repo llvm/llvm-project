@@ -538,7 +538,7 @@ define <2 x double> @minnum_intrinsic_nnan_fmf_v2f64(<2 x double> %a, <2 x doubl
 
 ; Current (but legacy someday): a function-level attribute should also enable the fold.
 
-define double @minnum_intrinsic_nnan_attr_f64(double %a, double %b) #0 {
+define double @minnum_intrinsic_nnan_attr_f64(double %a, double %b) {
 ; SSE-LABEL: minnum_intrinsic_nnan_attr_f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    minsd %xmm1, %xmm0
@@ -548,13 +548,13 @@ define double @minnum_intrinsic_nnan_attr_f64(double %a, double %b) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vminsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %r = tail call double @llvm.minnum.f64(double %a, double %b)
+  %r = tail call nnan double @llvm.minnum.f64(double %a, double %b)
   ret double %r
 }
 
 ; Make sure vectors work too.
 
-define <4 x float> @minnum_intrinsic_nnan_attr_v4f32(<4 x float> %a, <4 x float> %b) #0 {
+define <4 x float> @minnum_intrinsic_nnan_attr_v4f32(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: minnum_intrinsic_nnan_attr_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    minps %xmm1, %xmm0
@@ -564,7 +564,7 @@ define <4 x float> @minnum_intrinsic_nnan_attr_v4f32(<4 x float> %a, <4 x float>
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vminps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %r = tail call <4 x float> @llvm.minnum.v4f32(<4 x float> %a, <4 x float> %b)
+  %r = tail call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> %a, <4 x float> %b)
   ret <4 x float> %r
 }
 
@@ -639,6 +639,3 @@ define float @test_minnum_snan(float %x) {
   %r = call float @llvm.minnum.f32(float 0x7ff4000000000000, float %x)
   ret float %r
 }
-
-attributes #0 = { "no-nans-fp-math"="true" }
-

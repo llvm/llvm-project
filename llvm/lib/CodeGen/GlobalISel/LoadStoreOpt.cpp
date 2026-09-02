@@ -310,10 +310,10 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
   initializeStoreMergeTargetInfo(AS);
   const auto &LegalSizes = LegalStoreSizes[AS];
 
-#ifndef NDEBUG
+  // FIXME: Support mismatching types (i16 + f16).
   for (auto *StoreMI : StoresToMerge)
-    assert(MRI->getType(StoreMI->getValueReg()) == OrigTy);
-#endif
+    if (MRI->getType(StoreMI->getValueReg()) != OrigTy)
+      return false;
 
   bool AnyMerged = false;
   do {
@@ -819,7 +819,8 @@ bool LoadStoreOpt::mergeTruncStore(GStore &StoreMI,
     // We didn't find enough stores to merge into the size of the original
     // source value, but we may be able to generate a smaller store if we
     // truncate the source value.
-    WideStoreTy = LLT::scalar(FoundStores.size() * MemTy.getScalarSizeInBits());
+    WideStoreTy =
+        LLT::integer(FoundStores.size() * MemTy.getScalarSizeInBits());
   }
 
   unsigned NumStoresFound = FoundStores.size();

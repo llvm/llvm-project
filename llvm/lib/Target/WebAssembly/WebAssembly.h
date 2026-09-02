@@ -18,6 +18,7 @@
 #include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CodeGen.h"
 
@@ -32,8 +33,8 @@ ModulePass *createWebAssemblyLowerEmscriptenEHSjLj();
 ModulePass *createWebAssemblyAddMissingPrototypes();
 ModulePass *createWebAssemblyFixFunctionBitcasts();
 FunctionPass *createWebAssemblyOptimizeReturned();
-FunctionPass *createWebAssemblyLowerRefTypesIntPtrConv();
 FunctionPass *createWebAssemblyRefTypeMem2Local();
+FunctionPass *createWebAssemblyReduceToAnyAllTrue(WebAssemblyTargetMachine &TM);
 
 // GlobalISel
 InstructionSelector *
@@ -48,8 +49,14 @@ FunctionPass *createWebAssemblyPreLegalizerCombiner();
 void initializeWebAssemblyPreLegalizerCombinerPass(PassRegistry &);
 
 // ISel and immediate followup passes.
-FunctionPass *createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
-                                       CodeGenOptLevel OptLevel);
+class WebAssemblyISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  WebAssemblyISelDAGToDAGPass(WebAssemblyTargetMachine &TM,
+                              CodeGenOptLevel OptLevel);
+};
+
+FunctionPass *createWebAssemblyISelDagLegacyPass(WebAssemblyTargetMachine &TM,
+                                                 CodeGenOptLevel OptLevel);
 FunctionPass *createWebAssemblyArgumentMove();
 FunctionPass *createWebAssemblySetP2AlignOperands();
 FunctionPass *createWebAssemblyCleanCodeAfterTrap();
@@ -69,6 +76,7 @@ FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyExplicitLocals();
 FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
+FunctionPass *createWebAssemblyVecReduce();
 FunctionPass *createWebAssemblyDebugFixup();
 FunctionPass *createWebAssemblyPeephole();
 ModulePass *createWebAssemblyMCLowerPrePass();
@@ -92,7 +100,6 @@ void initializeWebAssemblyFixIrreducibleControlFlowPass(PassRegistry &);
 void initializeWebAssemblyLateEHPreparePass(PassRegistry &);
 void initializeWebAssemblyLowerBrUnlessPass(PassRegistry &);
 void initializeWebAssemblyLowerEmscriptenEHSjLjPass(PassRegistry &);
-void initializeWebAssemblyLowerRefTypesIntPtrConvPass(PassRegistry &);
 void initializeWebAssemblyMCLowerPrePassPass(PassRegistry &);
 void initializeWebAssemblyMemIntrinsicResultsPass(PassRegistry &);
 void initializeWebAssemblyNullifyDebugValueListsPass(PassRegistry &);

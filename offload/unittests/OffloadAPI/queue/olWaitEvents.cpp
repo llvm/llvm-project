@@ -38,22 +38,21 @@ TEST_P(olWaitEventsTest, Success) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
                             NUM_KERNELS * sizeof(uint32_t), &Mem));
-  struct {
-    uint32_t Idx;
-    void *Mem;
-  } Args{0, Mem};
+  uint32_t Idx = 0;
+  void *ArgPtrs[] = {&Idx, &Mem};
+  size_t ArgSizes[] = {sizeof(Idx), sizeof(Mem)};
 
   for (size_t I = 0; I < NUM_KERNELS; I++) {
-    Args.Idx = I;
+    Idx = I;
 
     ASSERT_SUCCESS(olCreateQueue(Device, &Queues[I]));
 
     if (I > 0)
       ASSERT_SUCCESS(olWaitEvents(Queues[I], &Events[I - 1], 1));
 
-    ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
-                                  sizeof(Args), &LaunchArgs));
-    ASSERT_SUCCESS(olCreateEvent(Queues[I], &Events[I]));
+    ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &LaunchArgs,
+                                  nullptr, 2, ArgPtrs, ArgSizes));
+    ASSERT_SUCCESS(olCreateEvent(Queues[I], OL_EVENT_FLAGS_NONE, &Events[I]));
   }
 
   ASSERT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));
@@ -74,20 +73,19 @@ TEST_P(olWaitEventsTest, SuccessSingleQueue) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
                             NUM_KERNELS * sizeof(uint32_t), &Mem));
-  struct {
-    uint32_t Idx;
-    void *Mem;
-  } Args{0, Mem};
+  uint32_t Idx = 0;
+  void *ArgPtrs[] = {&Idx, &Mem};
+  size_t ArgSizes[] = {sizeof(Idx), sizeof(Mem)};
 
   for (size_t I = 0; I < NUM_KERNELS; I++) {
-    Args.Idx = I;
+    Idx = I;
 
     if (I > 0)
       ASSERT_SUCCESS(olWaitEvents(Queue, &Events[I - 1], 1));
 
-    ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                  &LaunchArgs));
-    ASSERT_SUCCESS(olCreateEvent(Queue, &Events[I]));
+    ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr,
+                                  2, ArgPtrs, ArgSizes));
+    ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &Events[I]));
   }
 
   ASSERT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));
@@ -106,22 +104,21 @@ TEST_P(olWaitEventsTest, SuccessMultipleEvents) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
                             NUM_KERNELS * sizeof(uint32_t), &Mem));
-  struct {
-    uint32_t Idx;
-    void *Mem;
-  } Args{0, Mem};
+  uint32_t Idx = 0;
+  void *ArgPtrs[] = {&Idx, &Mem};
+  size_t ArgSizes[] = {sizeof(Idx), sizeof(Mem)};
 
   for (size_t I = 0; I < NUM_KERNELS; I++) {
-    Args.Idx = I;
+    Idx = I;
 
     ASSERT_SUCCESS(olCreateQueue(Device, &Queues[I]));
 
     if (I > 0)
       ASSERT_SUCCESS(olWaitEvents(Queues[I], Events, I));
 
-    ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
-                                  sizeof(Args), &LaunchArgs));
-    ASSERT_SUCCESS(olCreateEvent(Queues[I], &Events[I]));
+    ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &LaunchArgs,
+                                  nullptr, 2, ArgPtrs, ArgSizes));
+    ASSERT_SUCCESS(olCreateEvent(Queues[I], OL_EVENT_FLAGS_NONE, &Events[I]));
   }
 
   ASSERT_SUCCESS(olSyncEvent(Events[NUM_KERNELS - 1]));

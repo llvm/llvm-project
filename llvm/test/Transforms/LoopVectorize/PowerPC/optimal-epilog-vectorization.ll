@@ -253,6 +253,7 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK:       [[VECTOR_PH]]:
 ; VF-TWO-CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 32
 ; VF-TWO-CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
+; VF-TWO-CHECK-NEXT:    [[IND_END18:%.*]] = trunc i64 [[N_VEC]] to i32
 ; VF-TWO-CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF-TWO-CHECK:       [[VECTOR_BODY]]:
 ; VF-TWO-CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -277,22 +278,22 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP67]], align 4
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[TMP69]], align 4
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x float>, ptr [[TMP71]], align 4
-; VF-TWO-CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x float> [[WIDE_LOAD]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[REVERSE3:%.*]] = shufflevector <4 x float> [[WIDE_LOAD2]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[REVERSE5:%.*]] = shufflevector <4 x float> [[WIDE_LOAD4]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[REVERSE7:%.*]] = shufflevector <4 x float> [[WIDE_LOAD6]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[REVERSE9:%.*]] = shufflevector <4 x float> [[WIDE_LOAD8]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[REVERSE11:%.*]] = shufflevector <4 x float> [[WIDE_LOAD10]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[REVERSE13:%.*]] = shufflevector <4 x float> [[WIDE_LOAD12]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[REVERSE15:%.*]] = shufflevector <4 x float> [[WIDE_LOAD14]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[TMP72:%.*]] = fadd fast <4 x float> [[REVERSE]], splat (float 1.000000e+00)
-; VF-TWO-CHECK-NEXT:    [[TMP73:%.*]] = fadd fast <4 x float> [[REVERSE3]], splat (float 1.000000e+00)
-; VF-TWO-CHECK-NEXT:    [[TMP74:%.*]] = fadd fast <4 x float> [[REVERSE5]], splat (float 1.000000e+00)
-; VF-TWO-CHECK-NEXT:    [[TMP75:%.*]] = fadd fast <4 x float> [[REVERSE7]], splat (float 1.000000e+00)
-; VF-TWO-CHECK-NEXT:    [[TMP76:%.*]] = fadd fast <4 x float> [[REVERSE9]], splat (float 1.000000e+00)
-; VF-TWO-CHECK-NEXT:    [[TMP77:%.*]] = fadd fast <4 x float> [[REVERSE11]], splat (float 1.000000e+00)
-; VF-TWO-CHECK-NEXT:    [[TMP78:%.*]] = fadd fast <4 x float> [[REVERSE13]], splat (float 1.000000e+00)
-; VF-TWO-CHECK-NEXT:    [[TMP79:%.*]] = fadd fast <4 x float> [[REVERSE15]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP21:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP22:%.*]] = fadd fast <4 x float> [[WIDE_LOAD2]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP23:%.*]] = fadd fast <4 x float> [[WIDE_LOAD4]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP29:%.*]] = fadd fast <4 x float> [[WIDE_LOAD6]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP25:%.*]] = fadd fast <4 x float> [[WIDE_LOAD8]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP26:%.*]] = fadd fast <4 x float> [[WIDE_LOAD10]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP27:%.*]] = fadd fast <4 x float> [[WIDE_LOAD12]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP28:%.*]] = fadd fast <4 x float> [[WIDE_LOAD14]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP72:%.*]] = shufflevector <4 x float> [[TMP21]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-TWO-CHECK-NEXT:    [[TMP73:%.*]] = shufflevector <4 x float> [[TMP22]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-TWO-CHECK-NEXT:    [[TMP74:%.*]] = shufflevector <4 x float> [[TMP23]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-TWO-CHECK-NEXT:    [[TMP75:%.*]] = shufflevector <4 x float> [[TMP29]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-TWO-CHECK-NEXT:    [[TMP76:%.*]] = shufflevector <4 x float> [[TMP25]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-TWO-CHECK-NEXT:    [[TMP77:%.*]] = shufflevector <4 x float> [[TMP26]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-TWO-CHECK-NEXT:    [[TMP78:%.*]] = shufflevector <4 x float> [[TMP27]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-TWO-CHECK-NEXT:    [[TMP79:%.*]] = shufflevector <4 x float> [[TMP28]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF-TWO-CHECK-NEXT:    [[TMP80:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; VF-TWO-CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 4
 ; VF-TWO-CHECK-NEXT:    [[TMP90:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 8
@@ -316,7 +317,6 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; VF-TWO-CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; VF-TWO-CHECK-NEXT:    [[IND_END18:%.*]] = trunc i64 [[N_VEC]] to i32
 ; VF-TWO-CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; VF-TWO-CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; VF-TWO-CHECK:       [[VEC_EPILOG_PH]]:
@@ -334,8 +334,8 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP102:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP101]]
 ; VF-TWO-CHECK-NEXT:    [[TMP104:%.*]] = getelementptr inbounds float, ptr [[TMP102]], i64 -1
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD23:%.*]] = load <2 x float>, ptr [[TMP104]], align 4
-; VF-TWO-CHECK-NEXT:    [[REVERSE24:%.*]] = shufflevector <2 x float> [[WIDE_LOAD23]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; VF-TWO-CHECK-NEXT:    [[TMP105:%.*]] = fadd fast <2 x float> [[REVERSE24]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP45:%.*]] = fadd fast <2 x float> [[WIDE_LOAD23]], splat (float 1.000000e+00)
+; VF-TWO-CHECK-NEXT:    [[TMP105:%.*]] = shufflevector <2 x float> [[TMP45]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
 ; VF-TWO-CHECK-NEXT:    [[TMP106:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX21]]
 ; VF-TWO-CHECK-NEXT:    store <2 x float> [[TMP105]], ptr [[TMP106]], align 4
 ; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT25]] = add nuw i64 [[INDEX21]], 2
@@ -367,6 +367,7 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK:       [[VECTOR_PH]]:
 ; VF-FOUR-CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 32
 ; VF-FOUR-CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
+; VF-FOUR-CHECK-NEXT:    [[IND_END18:%.*]] = trunc i64 [[N_VEC]] to i32
 ; VF-FOUR-CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF-FOUR-CHECK:       [[VECTOR_BODY]]:
 ; VF-FOUR-CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -391,22 +392,22 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP67]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[TMP69]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x float>, ptr [[TMP71]], align 4
-; VF-FOUR-CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x float> [[WIDE_LOAD]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[REVERSE3:%.*]] = shufflevector <4 x float> [[WIDE_LOAD2]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[REVERSE5:%.*]] = shufflevector <4 x float> [[WIDE_LOAD4]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[REVERSE7:%.*]] = shufflevector <4 x float> [[WIDE_LOAD6]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[REVERSE9:%.*]] = shufflevector <4 x float> [[WIDE_LOAD8]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[REVERSE11:%.*]] = shufflevector <4 x float> [[WIDE_LOAD10]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[REVERSE13:%.*]] = shufflevector <4 x float> [[WIDE_LOAD12]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[REVERSE15:%.*]] = shufflevector <4 x float> [[WIDE_LOAD14]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[TMP72:%.*]] = fadd fast <4 x float> [[REVERSE]], splat (float 1.000000e+00)
-; VF-FOUR-CHECK-NEXT:    [[TMP73:%.*]] = fadd fast <4 x float> [[REVERSE3]], splat (float 1.000000e+00)
-; VF-FOUR-CHECK-NEXT:    [[TMP74:%.*]] = fadd fast <4 x float> [[REVERSE5]], splat (float 1.000000e+00)
-; VF-FOUR-CHECK-NEXT:    [[TMP75:%.*]] = fadd fast <4 x float> [[REVERSE7]], splat (float 1.000000e+00)
-; VF-FOUR-CHECK-NEXT:    [[TMP76:%.*]] = fadd fast <4 x float> [[REVERSE9]], splat (float 1.000000e+00)
-; VF-FOUR-CHECK-NEXT:    [[TMP77:%.*]] = fadd fast <4 x float> [[REVERSE11]], splat (float 1.000000e+00)
-; VF-FOUR-CHECK-NEXT:    [[TMP78:%.*]] = fadd fast <4 x float> [[REVERSE13]], splat (float 1.000000e+00)
-; VF-FOUR-CHECK-NEXT:    [[TMP79:%.*]] = fadd fast <4 x float> [[REVERSE15]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP21:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP22:%.*]] = fadd fast <4 x float> [[WIDE_LOAD2]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP23:%.*]] = fadd fast <4 x float> [[WIDE_LOAD4]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP29:%.*]] = fadd fast <4 x float> [[WIDE_LOAD6]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP25:%.*]] = fadd fast <4 x float> [[WIDE_LOAD8]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP26:%.*]] = fadd fast <4 x float> [[WIDE_LOAD10]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP27:%.*]] = fadd fast <4 x float> [[WIDE_LOAD12]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP28:%.*]] = fadd fast <4 x float> [[WIDE_LOAD14]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP72:%.*]] = shufflevector <4 x float> [[TMP21]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-FOUR-CHECK-NEXT:    [[TMP73:%.*]] = shufflevector <4 x float> [[TMP22]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-FOUR-CHECK-NEXT:    [[TMP74:%.*]] = shufflevector <4 x float> [[TMP23]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-FOUR-CHECK-NEXT:    [[TMP75:%.*]] = shufflevector <4 x float> [[TMP29]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-FOUR-CHECK-NEXT:    [[TMP76:%.*]] = shufflevector <4 x float> [[TMP25]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-FOUR-CHECK-NEXT:    [[TMP77:%.*]] = shufflevector <4 x float> [[TMP26]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-FOUR-CHECK-NEXT:    [[TMP78:%.*]] = shufflevector <4 x float> [[TMP27]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; VF-FOUR-CHECK-NEXT:    [[TMP79:%.*]] = shufflevector <4 x float> [[TMP28]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF-FOUR-CHECK-NEXT:    [[TMP80:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 4
 ; VF-FOUR-CHECK-NEXT:    [[TMP90:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 8
@@ -430,7 +431,6 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; VF-FOUR-CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; VF-FOUR-CHECK-NEXT:    [[IND_END18:%.*]] = trunc i64 [[N_VEC]] to i32
 ; VF-FOUR-CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; VF-FOUR-CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; VF-FOUR-CHECK:       [[VEC_EPILOG_PH]]:
@@ -448,8 +448,8 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK-NEXT:    [[TMP102:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP101]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP104:%.*]] = getelementptr inbounds float, ptr [[TMP102]], i64 -3
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD23:%.*]] = load <4 x float>, ptr [[TMP104]], align 4
-; VF-FOUR-CHECK-NEXT:    [[REVERSE24:%.*]] = shufflevector <4 x float> [[WIDE_LOAD23]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; VF-FOUR-CHECK-NEXT:    [[TMP105:%.*]] = fadd fast <4 x float> [[REVERSE24]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP45:%.*]] = fadd fast <4 x float> [[WIDE_LOAD23]], splat (float 1.000000e+00)
+; VF-FOUR-CHECK-NEXT:    [[TMP105:%.*]] = shufflevector <4 x float> [[TMP45]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF-FOUR-CHECK-NEXT:    [[TMP106:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX21]]
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP105]], ptr [[TMP106]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[INDEX_NEXT25]] = add nuw i64 [[INDEX21]], 4

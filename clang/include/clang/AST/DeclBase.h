@@ -228,6 +228,14 @@ public:
     /// module is imported.
     VisibleWhenImported,
 
+    /// This declaration has an owning module, and is not visible to the
+    /// current TU but we promoted it to be visible for various reasons,
+    /// e.g., we have the same declaration in the current TU but we'd
+    /// like to avoid parsing it again.
+    ///
+    /// The vibility should be never be serialized.
+    VisiblePromoted,
+
     /// This declaration has an owning module, and is visible to lookups
     /// that occurs within that module. And it is reachable in other module
     /// when the owning module is transitively imported.
@@ -668,7 +676,7 @@ public:
   bool isInExportDeclContext() const;
 
   bool isInvisibleOutsideTheOwningModule() const {
-    return getModuleOwnershipKind() > ModuleOwnershipKind::VisibleWhenImported;
+    return getModuleOwnershipKind() > ModuleOwnershipKind::VisiblePromoted;
   }
 
   /// Whether this declaration comes from another module unit.
@@ -679,6 +687,10 @@ public:
 
   /// Whether the definition of the declaration should be emitted in external
   /// sources.
+  /// FIXME: This conflates two questions: if the entity should be emitted into
+  ///   other object files (because there's no primary), and if the debug info
+  ///   should be emitted into other object files. This matters for
+  //    `-fmodules-debuginfo`, `-fmodules-codgen`, and `isInNamedModule()`.
   bool shouldEmitInExternalSource() const;
 
   /// Whether this declaration comes from explicit global module.
@@ -870,6 +882,11 @@ public:
   void setVisibleDespiteOwningModule() {
     if (!isUnconditionallyVisible())
       setModuleOwnershipKind(ModuleOwnershipKind::Visible);
+  }
+
+  void setVisiblePromoted() {
+    if (isInvisibleOutsideTheOwningModule() && isFromASTFile())
+      setModuleOwnershipKind(ModuleOwnershipKind::VisiblePromoted);
   }
 
   /// Get the kind of module ownership for this declaration.
@@ -2195,6 +2212,10 @@ public:
     return getDeclKind() == Decl::RequiresExprBody;
   }
 
+  bool isExpansionStmt() const {
+    return getDeclKind() == Decl::CXXExpansionStmt;
+  }
+
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }
 
   bool isStdNamespace() const;
@@ -2290,6 +2311,15 @@ public:
   RecordDecl *getOuterLexicalRecordContext();
   const RecordDecl *getOuterLexicalRecordContext() const {
     return const_cast<DeclContext *>(this)->getOuterLexicalRecordContext();
+  }
+
+  /// Retrieve the innermost enclosing context that doesn't belong to an
+  /// expansion statement. Returns 'this' if this context is not an expansion
+  /// statement.
+  DeclContext *getEnclosingNonExpansionStatementContext();
+  const DeclContext *getEnclosingNonExpansionStatementContext() const {
+    return const_cast<DeclContext *>(this)
+        ->getEnclosingNonExpansionStatementContext();
   }
 
   /// Test if this context is part of the enclosing namespace set of

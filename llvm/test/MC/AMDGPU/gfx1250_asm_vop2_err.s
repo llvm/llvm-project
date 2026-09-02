@@ -27,3 +27,18 @@ v_mul_u64 v[4:5], v[2:3], v[8:9] clamp
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX1250-ERR-NEXT:{{^}}v_mul_u64 v[4:5], v[2:3], v[8:9] clamp
 // GFX1250-ERR-NEXT:{{^}}                                 ^
+
+v_add_f64 v[4:5], v[8:9], 0xffffffff1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR-NEXT:{{^}}v_add_f64 v[4:5], v[8:9], 0xffffffff1
+// GFX1250-ERR-NEXT:{{^}}                          ^
+
+v_add_f64 v[4:5], v[8:9], lit64(101.0)
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR-NEXT:{{^}}v_add_f64 v[4:5], v[8:9], lit64(101.0)
+// GFX1250-ERR-NEXT:{{^}}                                ^
+
+v_add_f64 v[4:5], v[8:9], lit64(1.0)
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR-NEXT:{{^}}v_add_f64 v[4:5], v[8:9], lit64(1.0)
+// GFX1250-ERR-NEXT:{{^}}                                ^

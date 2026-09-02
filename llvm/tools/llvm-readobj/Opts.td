@@ -49,6 +49,7 @@ defm string_dump : Eq<"string-dump", "Display the specified section(s) as a list
 def string_table : FF<"string-table", "Display the string table (only for XCOFF/COFF now)">;
 def symbols : FF<"symbols", "Display the symbol table. Also display the dynamic symbol table when using GNU output style for ELF">;
 def unwind : FF<"unwind", "Display unwind information">;
+def unwind_show_wod_pool : FF<"unwind-show-wod-pool", "Also display the raw Windows x64 unwind V3 WOD pool with byte offsets (requires --unwind)">;
 
 // ELF specific options.
 def grp_elf : OptionGroup<"kind">, HelpText<"OPTIONS (ELF specific)">;

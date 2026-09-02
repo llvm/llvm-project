@@ -13,6 +13,12 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("bpf-check-and-opt-ir", BPFCheckAndAdjustIRPass())
+#undef MODULE_PASS
+
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
@@ -30,3 +36,14 @@ FUNCTION_PASS_WITH_PARAMS(
     },
     parseBPFPreserveStaticOffsetOptions, "allow-partial")
 #undef FUNCTION_PASS_WITH_PARAMS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("bpf-mi-expand-stack-arg-pseudos", BPFMIExpandStackArgPseudosPass())
+MACHINE_FUNCTION_PASS("bpf-isel", BPFISelDAGToDAGPass(*this))
+MACHINE_FUNCTION_PASS("bpf-mi-checking", BPFMIPreEmitCheckingPass())
+MACHINE_FUNCTION_PASS("bpf-mi-peephole", BPFMIPeepholePass())
+MACHINE_FUNCTION_PASS("bpf-mi-pre-emit-peephole", BPFMIPreEmitPeepholePass())
+MACHINE_FUNCTION_PASS("bpf-mi-simplify-patchable", BPFMISimplifyPatchablePass())
+#undef MACHINE_FUNCTION_PASS

@@ -309,3 +309,24 @@ struct test {
 test<three> x;
 
 }
+
+namespace SusbtitutionFailureInArguments1 {
+  template <class T1, class T2 = typename T1::type>
+    concept C = sizeof(T1) == sizeof(T2);
+
+  template<class>
+    requires requires { { 0 } -> C; }
+    void f();
+
+  // FIXME: We should explain the substitution failure in a note.
+  template<class T>
+    requires requires { { T() } -> C; } // expected-note {{because 'C<expr-type>' would be invalid}}
+    void g();
+  // expected-note@-1 {{ignored: constraints not satisfied}}
+  template void g<int>();
+  // expected-error@-1 {{does not refer to a function template}}
+
+  // FIXME: static_assert should gain support for explaining non-satisfied requirements.
+  static_assert(requires { { 0 } -> C; });
+  // expected-error@-1 {{static assertion failed due to requirement 'requires { { <<error-expression>> } -> C; }'}}
+} // namespace SubstitutionFailureInArguments1

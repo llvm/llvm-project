@@ -163,7 +163,7 @@ bool ClangASTSource::FindExternalVisibleDeclsByName(
     }
   }
 
-  ConstString const_decl_name(decl_name.c_str());
+  ConstString const_decl_name(decl_name);
 
   const char *uniqued_const_decl_name = const_decl_name.GetCString();
   if (m_active_lookups.find(uniqued_const_decl_name) !=
@@ -193,8 +193,9 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
     if (!namespace_map)
       return nullptr;
 
-    LLDB_LOGV(log, "      CTD Inspecting namespace map{0:x} ({1} entries)",
-              namespace_map.get(), namespace_map->size());
+    LLDB_LOG_VERBOSE(log,
+                     "      CTD Inspecting namespace map{0:x} ({1} entries)",
+                     namespace_map.get(), namespace_map->size());
 
     for (const ClangASTImporter::NamespaceMapItem &item : *namespace_map) {
       LLDB_LOG(log, "      CTD Searching namespace {0} in module {1}",
@@ -262,15 +263,13 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
 void ClangASTSource::CompleteType(TagDecl *tag_decl) {
   Log *log = GetLog(LLDBLog::Expressions);
 
-  if (log) {
-    LLDB_LOG(log,
-             "    CompleteTagDecl on (ASTContext*){0} Completing "
-             "(TagDecl*){1:x} named {2}",
-             m_clang_ast_context->getDisplayName(), tag_decl,
-             tag_decl->getName());
+  LLDB_LOG(log,
+           "    CompleteTagDecl on (ASTContext*){0} Completing "
+           "(TagDecl*){1:x} named {2}",
+           m_clang_ast_context->getDisplayName(), tag_decl,
+           tag_decl->getName());
 
-    LLDB_LOG(log, "      CTD Before:\n{0}", ClangUtil::DumpDecl(tag_decl));
-  }
+  LLDB_LOG(log, "      CTD Before:\n{0}", ClangUtil::DumpDecl(tag_decl));
 
   auto iter = m_active_lexical_decls.find(tag_decl);
   if (iter != m_active_lexical_decls.end())
@@ -335,7 +334,7 @@ clang::ObjCInterfaceDecl *ClangASTSource::GetCompleteObjCInterface(
   if (!language_runtime)
     return nullptr;
 
-  ConstString class_name(interface_decl->getNameAsString().c_str());
+  ConstString class_name(interface_decl->getNameAsString());
 
   lldb::TypeSP complete_type_sp(
       language_runtime->LookupInCompleteClassCache(class_name));
@@ -500,7 +499,7 @@ void ClangASTSource::FindExternalLexicalDecls(
 void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
   assert(m_ast_context);
 
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const auto name = context.m_decl_name.getAsString();
 
   Log *log = GetLog(LLDBLog::Expressions);
 
@@ -541,9 +540,9 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
   }
 
   if (!context.m_namespace_map->empty()) {
-    if (log && log->GetVerbose())
-      LLDB_LOG(log, "  CAS::FEVD Registering namespace map {0:x} ({1} entries)",
-               context.m_namespace_map.get(), context.m_namespace_map->size());
+    LLDB_LOG_VERBOSE(
+        log, "  CAS::FEVD Registering namespace map {0:x} ({1} entries)",
+        context.m_namespace_map.get(), context.m_namespace_map->size());
 
     NamespaceDecl *clang_namespace_decl = AddNamespace(context);
 
@@ -582,7 +581,7 @@ void ClangASTSource::FindExternalVisibleDecls(
 
   SymbolContextList sc_list;
 
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const ConstString name(context.m_decl_name.getAsString());
   if (IgnoreName(name, true))
     return;
 
@@ -644,7 +643,7 @@ void ClangASTSource::FindExternalVisibleDecls(
 void ClangASTSource::FillNamespaceMap(
     NameSearchContext &context, lldb::ModuleSP module_sp,
     const CompilerDeclContext &namespace_decl) {
-  const ConstString name(context.m_decl_name.getAsString().c_str());
+  const ConstString name(context.m_decl_name.getAsString());
   if (IgnoreName(name, true))
     return;
 
@@ -932,7 +931,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
 
   do {
     StreamString ms;
-    ms.Printf("-[%s %s]", interface_name.c_str(), selector_name.AsCString());
+    ms.Format("-[{0} {1}]", interface_name, selector_name);
     ms.Flush();
     ConstString instance_method_name(ms.GetString());
 
@@ -945,7 +944,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
       break;
 
     ms.Clear();
-    ms.Printf("+[%s %s]", interface_name.c_str(), selector_name.AsCString());
+    ms.Format("+[{0} {1}]", interface_name, selector_name);
     ms.Flush();
     ConstString class_method_name(ms.GetString());
 
@@ -971,7 +970,8 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
       if (!candidate_sc.function)
         continue;
 
-      const char *candidate_name = candidate_sc.function->GetName().AsCString();
+      const char *candidate_name =
+          candidate_sc.function->GetName().AsCString(nullptr);
 
       const char *cursor = candidate_name;
 
@@ -1077,7 +1077,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
 
     if (std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
             GetClangModulesDeclVendor()) {
-      ConstString interface_name(interface_decl->getNameAsString().c_str());
+      ConstString interface_name(interface_decl->getNameAsString());
       bool append = false;
       uint32_t max_matches = 1;
       std::vector<CompilerDecl> decls;
@@ -1195,7 +1195,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
   DeclFromUser<const ObjCInterfaceDecl> origin_iface_decl(
       parser_iface_decl.GetOrigin(*m_ast_importer_sp));
 
-  ConstString class_name(parser_iface_decl->getNameAsString().c_str());
+  ConstString class_name(parser_iface_decl->getNameAsString());
 
   LLDB_LOG(log,
            "ClangASTSource::FindObjCPropertyAndIvarDecls on "
@@ -1329,8 +1329,9 @@ void ClangASTSource::LookupInNamespace(NameSearchContext &context) {
   ClangASTImporter::NamespaceMapSP namespace_map =
       m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
-  LLDB_LOGV(log, "  CAS::FEVD Inspecting namespace map {0:x} ({1} entries)",
-            namespace_map.get(), namespace_map->size());
+  LLDB_LOG_VERBOSE(log,
+                   "  CAS::FEVD Inspecting namespace map {0:x} ({1} entries)",
+                   namespace_map.get(), namespace_map->size());
 
   if (!namespace_map)
     return;

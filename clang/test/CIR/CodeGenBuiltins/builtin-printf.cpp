@@ -21,8 +21,8 @@ void func(char const * const str, int i) {
 // CIR: cir.func{{.*}} @printf(!cir.ptr<!s8i> {{.*}}, ...) -> !s32i
 
 // CIR: cir.func{{.*}} @_Z4funcPKci(%[[arg0:.+]]: !cir.ptr<!s8i>{{.*}}, %[[arg1:.+]]: !s32i
-// CIR:   %[[str_ptr:.+]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["str", init, const]
-// CIR:   %[[i_ptr:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
+// CIR:   %[[str_ptr:.+]] = cir.alloca "str" {{.*}} init const : !cir.ptr<!cir.ptr<!s8i>>
+// CIR:   %[[i_ptr:.+]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.store %[[arg0]], %[[str_ptr]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
 // CIR:   cir.store %[[arg1]], %[[i_ptr]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[null_ptr:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>

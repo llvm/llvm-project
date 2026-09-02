@@ -11,12 +11,12 @@ template <typename T> void summable(T a) {
   }
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG_A:.*]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.scope {
 // CIR:   %[[CONST_TRUE:.*]] = cir.const #true
 // CIR:   cir.if %[[CONST_TRUE]] {
-// CIR:     %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR:     %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR:     %[[TMP_A_1:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[TMP_A_2:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[RESULT:.*]] = cir.add nsw %[[TMP_A_1]], %[[TMP_A_2]] : !s32i

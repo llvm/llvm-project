@@ -32,6 +32,14 @@ func.func @non_signless_constant() {
 
 // -----
 
+func.func @non_signless_tensor_constant() {
+  // expected-error @+1 {{'arith.constant' op integer return type must be signless}}
+  %0 = arith.constant dense<[10, 20]> : tensor<2xui8>
+  return
+}
+
+// -----
+
 func.func @complex_constant_wrong_attribute_type() {
   // expected-error @+1 {{'arith.constant' op failed to verify that all of {value, result} have same type}}
   %0 = "arith.constant" () {value = 1.0 : f32} : () -> complex<f32>
@@ -43,6 +51,14 @@ func.func @complex_constant_wrong_attribute_type() {
 func.func @non_signless_constant() {
   // expected-error @+1 {{'arith.constant' op integer return type must be signless}}
   %0 = arith.constant 0 : si32
+  return
+}
+
+// -----
+
+func.func @non_signless_vector_constant() {
+  // expected-error @+1 {{'arith.constant' op integer return type must be signless}}
+  %0 = arith.constant dense<[0, 1]> : vector<2xsi32>
   return
 }
 
@@ -163,6 +179,38 @@ func.func @func_with_ops(%a: vector<8xi32>) {
 func.func @func_with_ops(%a: vector<8xi32>) {
   // expected-error@+1 {{'arith.addui_extended' op all non-scalar operands/results must have the same shape and base type}}
   %r:2 = arith.addui_extended %a, %a : vector<8xi32>, tensor<8xi1>
+  return
+}
+
+// -----
+
+func.func @func_with_ops(%a: f32) {
+  // expected-error@+1 {{'arith.subui_extended' op operand #0 must be signless-non-zero-bitwidth-integer-like}}
+  %r:2 = arith.subui_extended %a, %a : f32, i32
+  return
+}
+
+// -----
+
+func.func @func_with_ops(%a: i32) {
+  // expected-error@+1 {{'arith.subui_extended' op result #1 must be bool-like}}
+  %r:2 = arith.subui_extended %a, %a : i32, i32
+  return
+}
+
+// -----
+
+func.func @func_with_ops(%a: vector<8xi32>) {
+  // expected-error@+1 {{'arith.subui_extended' op if an operand is non-scalar, then all results must be non-scalar}}
+  %r:2 = arith.subui_extended %a, %a : vector<8xi32>, i1
+  return
+}
+
+// -----
+
+func.func @func_with_ops(%a: vector<8xi32>) {
+  // expected-error@+1 {{'arith.subui_extended' op all non-scalar operands/results must have the same shape and base type}}
+  %r:2 = arith.subui_extended %a, %a : vector<8xi32>, tensor<8xi1>
   return
 }
 
@@ -530,6 +578,54 @@ func.func @fptrunc_vec_i32_to_f32(%arg0 : vector<2xi32>) {
 func.func @fptrunc_vec_f32_to_i32(%arg0 : vector<2xf32>) {
   // expected-error@+1 {{op result #0 must be floating-point-like, but got 'vector<2xi32>'}}
   %0 = arith.truncf %arg0 : vector<2xf32> to vector<2xi32>
+  return
+}
+
+// -----
+
+func.func @convertf_same_type(%arg0 : f16) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : f16 to f16
+  return
+}
+
+// -----
+
+func.func @convertf_different_bitwidth(%arg0 : f16) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : f16 to f32
+  return
+}
+
+// -----
+
+func.func @convertf_different_bitwidth_trunc(%arg0 : f32) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : f32 to f16
+  return
+}
+
+// -----
+
+func.func @convertf_vec_same_type(%arg0 : vector<2xf16>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<2xf16>
+  return
+}
+
+// -----
+
+func.func @convertf_vec_different_bitwidth(%arg0 : vector<2xf16>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<2xf32>
+  return
+}
+
+// -----
+
+func.func @convertf_shape_mismatch(%arg0 : vector<2xf16>) {
+  // expected-error@+1 {{op requires the same shape for all operands and results}}
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<3xbf16>
   return
 }
 
@@ -1015,4 +1111,44 @@ func.func @index_castui_i0(%a: i0) -> index {
   // expected-error @+1 {{'arith.index_castui' op operand #0 must be signless-non-zero-bitwidth-integer-like or memref of signless-integer, but got 'i0'}}
   %0 = arith.index_castui %a : i0 to index
   return %0 : index
+}
+
+// -----
+
+func.func @convertf_same_type(%arg0 : f32) {
+  // expected-error @+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : f32 to f32
+  return
+}
+
+// -----
+
+func.func @convertf_same_type_vec(%arg0 : vector<2xf16>) {
+  // expected-error @+1 {{are cast incompatible}}
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<2xf16>
+  return
+}
+
+// -----
+
+func.func @convertf_shape_mismatch(%arg0 : vector<2xf16>) {
+  // expected-error @+1 {{op requires the same shape for all operands and results}}
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @convertf_int_input(%arg0 : i32) {
+  // expected-error @+1 {{op operand #0 must be floating-point-like, but got 'i32'}}
+  %0 = arith.convertf %arg0 : i32 to f32
+  return
+}
+
+// -----
+
+func.func @convertf_int_output(%arg0 : f32) {
+  // expected-error @+1 {{op result #0 must be floating-point-like, but got 'i32'}}
+  %0 = arith.convertf %arg0 : f32 to i32
+  return
 }

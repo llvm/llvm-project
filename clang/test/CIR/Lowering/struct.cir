@@ -3,7 +3,7 @@
 
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!ty_S = !cir.record<struct "S" {!u8i, !s32i}>
+!ty_S = !cir.struct<"S" {!u8i, !s32i}>
 
 module {
   // CHECK-LABEL: @test_value

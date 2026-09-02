@@ -122,6 +122,13 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     return true;
   }
 
+  // The frame register is referenced through DW_OP_fbreg relative to
+  // DW_AT_frame_base, so it needs no DWARF register number of its own.
+  if (isFrameRegister(TRI, MachineReg)) {
+    DwarfRegs.push_back(Register::createRegister(-1, nullptr));
+    return true;
+  }
+
   // Walk up the super-register chain until we find a valid number.
   // For example, EAX on x86_64 is a 32-bit fragment of RAX with offset 0.
   for (MCPhysReg SR : TRI.superregs(MachineReg)) {
@@ -234,6 +241,28 @@ void DwarfExpression::addUnsignedConstant(const APInt &Value) {
     addOpPiece(std::min(Size - Offset, 64u), Offset);
     Offset += 64;
   }
+}
+
+void DwarfExpression::addImplicitValue(const APInt &Value,
+                                       const AsmPrinter &AP) {
+  assert(isImplicitLocation() || isUnknownLocation());
+  assert(DwarfVersion >= 4);
+
+  APInt API = Value;
+  unsigned NumBytes = API.getBitWidth() / 8;
+  assert(API.getBitWidth() == NumBytes * 8 &&
+         "implicit value must be byte-sized");
+
+  emitOp(dwarf::DW_OP_implicit_value);
+  emitUnsigned(NumBytes);
+
+  // The loop below is emitting the value starting at the least significant
+  // byte, so byte-swap first for big-endian targets.
+  if (AP.getDataLayout().isBigEndian())
+    API = API.byteSwap();
+
+  for (unsigned I = 0; I < NumBytes; ++I)
+    emitData1(API.extractBits(8, I * 8).getZExtValue());
 }
 
 void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
@@ -569,7 +598,7 @@ bool DwarfExpression::addExpression(
       unsigned DerefSize = 0;
       //  Operations are done in the DWARF "generic type" whose size
       // is the size of a pointer.
-      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI->getCodePointerSize();
+      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI.getCodePointerSize();
 
       // If we have a memory location then dereference to get the value, though
       // we have to make sure we don't dereference any bytes past the end of the
@@ -723,6 +752,12 @@ bool DwarfExpression::addExpression(
       emitUnsigned(Op->getArg(0));
       emitSigned(Op->getArg(1));
       break;
+    case dwarf::DW_OP_LLVM_implicit_pointer:
+      // Handled in DwarfCompileUnit::emitImplicitPointerLocation for
+      // Loc::Single variables. If we reach here, the variable has a
+      // location list or other unsupported path. Drop the
+      // location rather than crashing.
+      return false;
     default:
       llvm_unreachable("unhandled opcode found in expression");
     }

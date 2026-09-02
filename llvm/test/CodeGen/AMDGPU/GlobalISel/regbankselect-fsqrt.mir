@@ -16,8 +16,8 @@ body: |
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC]](s16)
     ; GFX9-NEXT: [[FSQRT:%[0-9]+]]:vgpr(s16) = G_FSQRT [[COPY1]]
-    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[FSQRT]](s16)
-    ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(i32) = G_ANYEXT [[FSQRT]](s16)
+    ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     ;
     ; GFX12-LABEL: name: fsqrt_s16_s
     ; GFX12: liveins: $sgpr0

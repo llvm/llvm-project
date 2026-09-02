@@ -342,6 +342,90 @@ TEST_F(TargetDeclTest, DesignatedInit) {
   EXPECT_DECLS("DesignatedInitExpr", "int a");
 }
 
+TEST_F(TargetDeclTest, OffsetOf) {
+  Code = R"cpp(
+    struct Foo { int bar; };
+    int x = __builtin_offsetof(Foo, [[bar]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int bar");
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, [[b]].c);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "Inner b");
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, b.[[c]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int c");
+
+  // Selection that spans multiple components doesn't match any single
+  // OffsetOfNode.
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, [[b.c]]);
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfExpr"), ::testing::IsEmpty());
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, [[b.]]c);
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfExpr"), ::testing::IsEmpty());
+
+  Code = R"cpp(
+    struct Inner { int c; };
+    struct Outer { Inner b; };
+    int x = __builtin_offsetof(Outer, b[[.c]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int c");
+
+  Code = R"cpp(
+    struct Foo { int bar; };
+    int x = __builtin_[[offsetof]](Foo, bar);
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfExpr"), ::testing::IsEmpty());
+
+  // Base-class component: the implicit Base node has no source range, so
+  // the cursor on `x` resolves precisely to the inherited field.
+  Code = R"cpp(
+    struct B { int x; };
+    struct D : B {};
+    int o = __builtin_offsetof(D, [[x]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int x");
+
+  // Dependent-type identifier component: no resolvable decl, but must not
+  // crash and must not produce spurious targets.
+  Code = R"cpp(
+    template <typename T> int f() { return __builtin_offsetof(T, [[x]]); }
+  )cpp";
+  EXPECT_THAT(assertNodeAndPrintDecls("OffsetOfNode"), ::testing::IsEmpty());
+
+  // C-style offsetof macro form resolves the same as __builtin_offsetof.
+  Code = R"cpp(
+    #define offsetof(t, m) __builtin_offsetof(t, m)
+    struct Foo { int bar; };
+    int x = offsetof(Foo, [[bar]]);
+  )cpp";
+  EXPECT_DECLS("OffsetOfNode", "int bar");
+
+  // Array-index expression in an offsetof designator should still resolve as
+  // the expression, not as the enclosing OffsetOfNode.
+  Code = R"cpp(
+    struct Foo { int bar[4]; };
+    int i;
+    int x = __builtin_offsetof(Foo, bar[ [[i]] ]);
+  )cpp";
+  EXPECT_DECLS("DeclRefExpr", "int i");
+}
+
 TEST_F(TargetDeclTest, NestedNameSpecifier) {
   Code = R"cpp(
     namespace a { namespace b { int c; } }
@@ -2076,6 +2160,53 @@ TEST_F(FindExplicitReferencesTest, AllRefsInFoo) {
         "6: targets = {bar}, decl\n"
         "7: targets = {foo()::Bar::Foo}\n"
         "8: targets = {foo()::Baz::Field}\n"},
+       // offsetof
+       {R"cpp(
+            void foo() {
+              struct $0^Foo { int $1^bar; };
+              int $2^x = __builtin_offsetof($3^Foo, $4^bar);
+            }
+        )cpp",
+        "0: targets = {Foo}, decl\n"
+        "1: targets = {foo()::Foo::bar}, decl\n"
+        "2: targets = {x}, decl\n"
+        "3: targets = {Foo}\n"
+        "4: targets = {foo()::Foo::bar}\n"},
+       // offsetof with a nested field designator -- each component must
+       // resolve to its own source position, not a shared one.
+       {R"cpp(
+            void foo() {
+              struct $0^A {
+                $1^struct { int $2^c; } $3^B;
+              };
+              int $4^x = __builtin_offsetof($5^A, $6^B.$7^c);
+            }
+        )cpp",
+        "0: targets = {A}, decl\n"
+        "1: targets = {foo()::A::(unnamed struct)}\n"
+        "2: targets = {foo()::A::(unnamed struct)::c}, decl\n"
+        "3: targets = {foo()::A::B}, decl\n"
+        "4: targets = {x}, decl\n"
+        "5: targets = {A}\n"
+        "6: targets = {foo()::A::B}\n"
+        "7: targets = {foo()::A::(unnamed struct)::c}\n"},
+       // offsetof with an array-subscript component -- array indices are not
+       // emitted as offsetof references (the subscript expression is still
+       // visited independently).
+       {R"cpp(
+            void foo() {
+              struct $0^A { int $1^arr[4]; };
+              int $2^i = 0;
+              int $3^x = __builtin_offsetof($4^A, $5^arr[$6^i]);
+            }
+        )cpp",
+        "0: targets = {A}, decl\n"
+        "1: targets = {foo()::A::arr}, decl\n"
+        "2: targets = {i}, decl\n"
+        "3: targets = {x}, decl\n"
+        "4: targets = {A}\n"
+        "5: targets = {foo()::A::arr}\n"
+        "6: targets = {i}\n"},
        {R"cpp(
            template<typename T>
            void crash(T);

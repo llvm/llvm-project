@@ -8,8 +8,9 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
 
-#include "hdr/stdint_proxy.h"                  // SIZE_MAX
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE_VAR
+#include "hdr/stdint_proxy.h"                // SIZE_MAX
+#include "src/__support/macros/attributes.h" // LIBC_INLINE_VAR
+#include "src/__support/macros/is_defined.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_x86.h"
@@ -35,6 +36,15 @@ LIBC_INLINE_VAR constexpr size_t K_THREE_CACHELINES = 3 * K_ONE_CACHELINE;
 
 LIBC_INLINE_VAR constexpr bool K_USE_SOFTWARE_PREFETCHING =
     LLVM_LIBC_IS_DEFINED(LIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING);
+
+// Whether to use NTA stores and what threshold for switching to NTA
+#ifdef LIBC_COPT_MEMCPY_X86_USE_NTA_STORES
+// Mostly based on empirical data. Theoretical justification:
+// upper bound of L2 size is 1MB on most x86 machines.
+LIBC_INLINE_VAR constexpr size_t K_NTA_THRESHOLD = 1 << 20;
+#else
+LIBC_INLINE_VAR constexpr size_t K_NTA_THRESHOLD = 0;
+#endif
 
 // Whether to use rep;movsb exclusively (0), not at all (SIZE_MAX), or only
 // above a certain threshold. Defaults to "do not use rep;movsb".
@@ -143,14 +153,31 @@ inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
   // - we prefetched cachelines at 'src + 64', 'src + 128', and 'src + 196'
   // - 'dst' is 32B aligned,
   // - count >= 128.
-  while (offset + K_THREE_CACHELINES + 64 <= count) {
-    // Three cache lines at a time.
-    inline_memcpy_prefetch(dst, src, offset + K_ONE_CACHELINE);
-    inline_memcpy_prefetch(dst, src, offset + K_TWO_CACHELINES);
-    inline_memcpy_prefetch(dst, src, offset + K_THREE_CACHELINES);
-    // Copy one cache line at a time to prevent the use of `rep;movsb`.
-    for (size_t i = 0; i < 3; ++i, offset += K_ONE_CACHELINE)
-      builtin::Memcpy<K_ONE_CACHELINE>::block_offset(dst, src, offset);
+  // If we are using the Non-temporal stores, we don't need prefetching
+  bool need_prefetch_run = true;
+  if constexpr (x86::K_NTA_THRESHOLD != 0) {
+    if (count >= x86::K_NTA_THRESHOLD) {
+      while (offset + K_THREE_CACHELINES + 64 <= count) {
+        for (size_t i = 0; i < 3; ++i, offset += K_ONE_CACHELINE) {
+          generic::stream(dst + offset, generic::load<__m256i>(src + offset));
+          generic::stream(dst + offset + 32,
+                          generic::load<__m256i>(src + offset + 32));
+        }
+      }
+      generic::fence<__m256i>();
+      need_prefetch_run = false;
+    }
+  }
+  if (need_prefetch_run) {
+    while (offset + K_THREE_CACHELINES + 64 <= count) {
+      // Three cache lines at a time.
+      inline_memcpy_prefetch(dst, src, offset + K_ONE_CACHELINE);
+      inline_memcpy_prefetch(dst, src, offset + K_TWO_CACHELINES);
+      inline_memcpy_prefetch(dst, src, offset + K_THREE_CACHELINES);
+      // Copy one cache line at a time to prevent the use of `rep;movsb`.
+      for (size_t i = 0; i < 3; ++i, offset += K_ONE_CACHELINE)
+        builtin::Memcpy<K_ONE_CACHELINE>::block_offset(dst, src, offset);
+    }
   }
   // We don't use 'loop_and_tail_offset' because it assumes at least one
   // iteration of the loop.

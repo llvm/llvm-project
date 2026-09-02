@@ -341,8 +341,7 @@ static void collectStatsForDie(DWARFDie Die, const std::string &FnPrefix,
 
   auto IsEntryValue = [&](ArrayRef<uint8_t> D) -> bool {
     DWARFUnit *U = Die.getDwarfUnit();
-    DataExtractor Data(toStringRef(D),
-                       Die.getDwarfUnit()->getContext().isLittleEndian(), 0);
+    DataExtractor Data(D, Die.getDwarfUnit()->getContext().isLittleEndian());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
     // Consider the expression containing the DW_OP_entry_value as

@@ -58,6 +58,13 @@
 #if defined(_WIN32)
 #include <windows.h>
 #else
+// On macOS/Darwin, the flang-rt CMake configuration sets
+// -D_POSIX_C_SOURCE=200809, which hides BSD/Apple-specific mmap flags
+// (MAP_ANON, MAP_JIT) from <sys/mman.h>. Define _DARWIN_C_SOURCE to
+// re-expose them for MAP_JIT on Apple Silicon and MAP_ANON elsewhere.
+#if defined(__APPLE__) && !defined(_DARWIN_C_SOURCE)
+#define _DARWIN_C_SOURCE
+#endif
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -224,7 +231,11 @@ private:
     }
     if (codeRegion_) {
       // Enable writing on this thread (MAP_JIT defaults to execute).
-      pthread_jit_write_protect_np(0); // 0 = writable
+      // Guard for deployment targets older than macOS 11.0 (Apple Silicon
+      // always runs >= 11.0, so this is effectively unconditional at runtime).
+      if (__builtin_available(macOS 11.0, *)) {
+        pthread_jit_write_protect_np(0); // 0 = writable
+      }
     }
 #elif defined(MAP_ANONYMOUS)
     // Linux and other POSIX platforms with MAP_ANONYMOUS.
@@ -274,7 +285,9 @@ private:
     VirtualProtect(codeRegion_, codeSize, PAGE_EXECUTE_READ, &oldProtect);
 #elif defined(__APPLE__) && defined(__aarch64__)
     // Switch back to execute-only (MAP_JIT manages per-thread W^X).
-    pthread_jit_write_protect_np(1); // 1 = executable
+    if (__builtin_available(macOS 11.0, *)) {
+      pthread_jit_write_protect_np(1); // 1 = executable
+    }
 #else
     mprotect(codeRegion_, codeSize, PROT_READ | PROT_EXEC);
 #endif

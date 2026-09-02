@@ -1,0 +1,99 @@
+REQUIRES: ld.lld
+
+## Check that DTLTO passes LTO configuration to the remote Clang via the
+## command line.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang --target=x86_64-unknown-linux-gnu -flto=thin -c test.c -o elf.o
+RUN: %clang --target=x86_64-pc-windows-msvc -flto=thin -c test.c -o coff.o
+RUN: touch profile.prof
+
+## The validate.py distributor prints the DTLTO JSON and then exits without
+## producing native objects, so each llvm-lto2 command is expected to fail after
+## the JSON has been emitted.
+DEFINE: %{base} = not llvm-lto2 run \
+DEFINE:   -dtlto-distributor=%python \
+DEFINE:   -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
+DEFINE:   -dtlto-compiler=%clang \
+DEFINE:   -o test.out
+
+DEFINE: %{lld} = not ld.lld elf.o \
+DEFINE:   --thinlto-distributor=%python \
+DEFINE:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
+DEFINE:   --thinlto-remote-compiler=%clang \
+DEFINE:   -o test.elf
+
+DEFINE: %{lto2-elf} = %{base} elf.o -r=elf.o,foo,px
+DEFINE: %{lto2-coff} = %{base} coff.o -r=coff.o,foo,px
+
+ARGS: "args": [
+
+## Optimization level.
+RUN: %{lto2-elf} -O0 2>&1 | FileCheck %s --check-prefixes=ARGS,O0,ERR
+RUN: %{lto2-elf} -O3 2>&1 | FileCheck %s --check-prefixes=ARGS,O3,ERR
+O0: "-O0"
+O3: "-O3"
+
+## Address-significance table, function sections, and data sections.
+RUN: %{lto2-elf} -addrsig -function-sections -data-sections 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,SECTIONS,ERR
+SECTIONS: "-faddrsig"
+SECTIONS: "-ffunction-sections"
+SECTIONS: "-fdata-sections"
+
+RUN: %{lto2-elf} 2>&1 | FileCheck %s --check-prefixes=ARGS,NO-SECTIONS,ERR
+NO-SECTIONS-NOT: "-faddrsig"
+NO-SECTIONS-NOT: "-ffunction-sections"
+NO-SECTIONS-NOT: "-fdata-sections"
+
+## Loop interchange.
+RUN: %{lto2-elf} -enable-loopinterchange=true 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,LOOP-INTERCHANGE,ERR
+LOOP-INTERCHANGE: "-floop-interchange"
+
+RUN: %{lto2-elf} -enable-loopinterchange=false 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,NO-LOOP-INTERCHANGE,ERR
+NO-LOOP-INTERCHANGE-NOT: "-floop-interchange"
+
+## PIC is forwarded as -fpic for ELF targets but not for COFF targets because
+## Clang does not accept -fpic for every target.
+RUN: %{lto2-elf} -relocation-model=pic 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,PIC,ERR
+PIC: "-fpic"
+
+RUN: %{lto2-elf} -relocation-model=static 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,NO-PIC,ERR
+NO-PIC-NOT: "-fpic"
+
+RUN: %{lto2-coff} -relocation-model=pic 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=COFF-PIC,ERR
+COFF-PIC-NOT: "-fpic"
+
+## Sample profile forwarding and common-input serialization.
+RUN: %{lto2-elf} -lto-sample-profile-file=profile.prof 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,SAMPLE,ERR
+SAMPLE: "-fprofile-sample-use=profile.prof"
+SAMPLE: "inputs": [
+SAMPLE: "profile.prof"
+
+RUN: %{lto2-elf} 2>&1 | FileCheck %s --check-prefixes=ARGS,NO-SAMPLE,ERR
+NO-SAMPLE-NOT: "-fprofile-sample-use=profile.prof"
+NO-SAMPLE-NOT: "profile.prof"
+
+## PGO warning mismatch control is an LLD-driver option rather than an
+## llvm-lto2 option, so check it through the ELF linker.
+RUN: %{lld} --no-lto-pgo-warn-mismatch 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,PGO-WARN,ERR
+PGO-WARN: "-mllvm"
+PGO-WARN-NEXT: "-no-pgo-warn-mismatch"
+
+RUN: %{lld} 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,NO-PGO-WARN,ERR
+NO-PGO-WARN-NOT: "-no-pgo-warn-mismatch"
+
+## Check for the expected error from the use of validate.py.
+ERR: DTLTO backend compilation: cannot open native object file:
+
+#--- test.c
+void foo(void) {}

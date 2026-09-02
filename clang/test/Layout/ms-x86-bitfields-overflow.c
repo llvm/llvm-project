@@ -20,12 +20,12 @@ struct __attribute__((packed, aligned(1))) B {
 // CHECK-LABEL:   0 | struct A{{$}}
 // CHECK-NEXT:0:0-1 |   _BitInt(250) f1
 // CHECK-NEXT:0:2-3 |   _BitInt(250) f2
-// CHECK-NEXT:      | [sizeof=32, align=32]
+// CHECK-NEXT:      | [sizeof=32, align=1]
 
 // CHECK-LABEL:   0 | struct B{{$}}
 // CHECK-NEXT:0:0-1 |   _BitInt(500) f1
 // CHECK-NEXT:0:2-256 |   _BitInt(500) f2
-// CHECK-NEXT:      | [sizeof=64, align=64]
+// CHECK-NEXT:      | [sizeof=64, align=1]
 
 int x[sizeof(struct A)];
 int y[sizeof(struct B)];

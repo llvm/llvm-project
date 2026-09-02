@@ -174,7 +174,9 @@ def Async_FuncOp : Async_Op<"func",
     unsigned getNumResults() {return getResultTypes().size();}
 
     /// Is the async func stateful
-    bool isStateful() { return isa<TokenType>(getFunctionType().getResult(0));}
+    bool isStateful() {
+      return isa<async::TokenType>(getFunctionType().getResult(0));
+    }
 
     //===------------------------------------------------------------------===//
     // OpAsmOpInterface Methods
@@ -484,7 +486,7 @@ def Async_CoroEndOp : Async_Op<"coro.end"> {
   let description = [{
     The `async.coro.end` marks the point where a coroutine needs to return
     control back to the caller if it is not an initial invocation of the
-    coroutine. It the start part of the coroutine is is no-op.
+    coroutine. In the start part of the coroutine it is no-op.
   }];
 
   let arguments = (ins Async_CoroHandleType:$handle);

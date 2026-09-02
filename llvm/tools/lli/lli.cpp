@@ -1023,17 +1023,19 @@ static int runOrcJIT(const char *ProgName) {
     Builder.getJITTargetMachineBuilder()
         ->setRelocationModel(Reloc::PIC_)
         .setCodeModel(CodeModel::Small);
-    Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
-      return std::make_unique<orc::ObjectLinkingLayer>(ES);
-    });
+    Builder.setObjectLinkingLayerCreator(
+        [&](orc::ExecutionSession &ES, jitlink::JITLinkMemoryManager &MemMgr) {
+          return std::make_unique<orc::ObjectLinkingLayer>(ES, MemMgr);
+        });
     break;
   case JITLinkerKind::RuntimeDyld:
-    Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
-      return std::make_unique<orc::RTDyldObjectLinkingLayer>(
-          ES, [](const MemoryBuffer &) {
-            return std::make_unique<SectionMemoryManager>();
-          });
-    });
+    Builder.setObjectLinkingLayerCreator(
+        [&](orc::ExecutionSession &ES, jitlink::JITLinkMemoryManager &MemMgr) {
+          return std::make_unique<orc::RTDyldObjectLinkingLayer>(
+              ES, [](const MemoryBuffer &) {
+                return std::make_unique<SectionMemoryManager>();
+              });
+        });
     break;
   case JITLinkerKind::Default:
     // Let LLJITBuilder decide
@@ -1252,8 +1254,8 @@ static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
 
   // Return a SimpleRemoteEPC instance connected to our end of the pipes.
   return orc::SimpleRemoteEPC::Create<orc::FDSimpleRemoteEPCTransport>(
-      std::make_unique<llvm::orc::InPlaceTaskDispatcher>(),
-      llvm::orc::SimpleRemoteEPC::Setup(), PipeFD[1][0], PipeFD[0][1]);
+      std::make_unique<llvm::orc::InPlaceTaskDispatcher>(), PipeFD[1][0],
+      PipeFD[0][1]);
 #endif
 }
 

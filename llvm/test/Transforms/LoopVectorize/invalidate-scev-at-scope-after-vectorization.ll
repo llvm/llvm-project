@@ -34,9 +34,9 @@ define void @test_invalidate_scevs_at_scope(ptr %p) {
 ; CHECK-NEXT:    [[ADD_LCSSA1:%.*]] = phi i32 [ [[ADD_1]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = add i32 [[TMP4]], 100
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[ADD_LCSSA]], i32 100)
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SMAX]], -100
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[SMAX]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP5]], -100
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP8]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP7]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH2:.*]]

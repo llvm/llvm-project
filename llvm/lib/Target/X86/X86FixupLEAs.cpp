@@ -343,9 +343,9 @@ static inline bool hasInefficientLEABaseReg(const MachineOperand &Base,
          Index.getReg().isValid();
 }
 
-static inline bool hasLEAOffset(const MachineOperand &Offset) {
-  return (Offset.isImm() && Offset.getImm() != 0) || Offset.isGlobal() ||
-         Offset.isBlockAddress();
+// Returns true if this operand may have a non-zero offset.
+static inline bool mayHaveOffset(const MachineOperand &Offset) {
+  return !(Offset.isImm() && Offset.getImm() == 0);
 }
 
 static inline unsigned getADDrrFromLEA(unsigned LEAOpcode) {
@@ -790,7 +790,7 @@ void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
   // Only do this if the LEA would otherwise be split into 2-instruction
   // (either it has a an Offset or neither base nor index are dst)
   if (IsScale1 && BaseReg == IndexReg &&
-      (hasLEAOffset(Offset) || (IsInefficientBase && !BaseOrIndexIsDst))) {
+      (mayHaveOffset(Offset) || (IsInefficientBase && !BaseOrIndexIsDst))) {
     NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(LEAOpcode))
                 .add(Dest)
                 .addReg(0)
@@ -845,7 +845,7 @@ void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
   // replace the instruction.
   if (NewMI) {
     // Create ADD instruction for the Offset in case of 3-Ops LEA.
-    if (hasLEAOffset(Offset)) {
+    if (mayHaveOffset(Offset)) {
       if (OptIncDec && Offset.isImm() &&
           (Offset.getImm() == 1 || Offset.getImm() == -1)) {
         unsigned NewOpc =
@@ -877,7 +877,7 @@ void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
     return;
 
   // lea (%base,%index,1), %dst => mov %base,%dst; add %index,%dst
-  if (IsScale1 && !hasLEAOffset(Offset)) {
+  if (IsScale1 && !mayHaveOffset(Offset)) {
     bool BIK = Base.isKill() && BaseReg != IndexReg;
     TII->copyPhysReg(MBB, MI, MI.getDebugLoc(), DestReg, BaseReg, BIK);
     LLVM_DEBUG(MI.getPrevNode()->dump(););

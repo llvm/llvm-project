@@ -148,9 +148,9 @@ using CGSCCPassManager =
 template <typename AnalysisT>
 struct RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>
-    : PassInfoMixin<RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC,
-                                        CGSCCAnalysisManager, LazyCallGraph &,
-                                        CGSCCUpdateResult &>> {
+    : RequiredPassInfoMixin<RequireAnalysisPass<
+          AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
+          CGSCCUpdateResult &>> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &) {
     (void)AM.template getResult<AnalysisT>(C, CG);
@@ -313,7 +313,7 @@ struct CGSCCUpdateResult {
 /// pass over the module to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class ModuleToPostOrderCGSCCPassAdaptor
-    : public PassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor> {
+    : public RequiredPassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<LazyCallGraph::SCC, CGSCCAnalysisManager,
@@ -345,8 +345,6 @@ public:
     Pass->printPipeline(OS, MapClassName2PassName);
     OS << ')';
   }
-
-  static bool isRequired() { return true; }
 
 private:
   std::unique_ptr<PassConceptT> Pass;
@@ -445,7 +443,7 @@ LLVM_ABI LazyCallGraph::SCC &updateCGAndAnalysisManagerForCGSCCPass(
 /// pass over the SCC to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class CGSCCToFunctionPassAdaptor
-    : public PassInfoMixin<CGSCCToFunctionPassAdaptor> {
+    : public RequiredPassInfoMixin<CGSCCToFunctionPassAdaptor> {
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
@@ -490,8 +488,6 @@ public:
     Pass->printPipeline(OS, MapClassName2PassName);
     OS << ')';
   }
-
-  static bool isRequired() { return true; }
 
 private:
   std::unique_ptr<PassConceptT> Pass;
@@ -544,7 +540,8 @@ public:
 /// This repetition has the potential to be very large however, as each one
 /// might refine a single call site. As a consequence, in practice we use an
 /// upper bound on the number of repetitions to limit things.
-class DevirtSCCRepeatedPass : public PassInfoMixin<DevirtSCCRepeatedPass> {
+class DevirtSCCRepeatedPass
+    : public OptionalPassInfoMixin<DevirtSCCRepeatedPass> {
 public:
   using PassConceptT =
       detail::PassConcept<LazyCallGraph::SCC, CGSCCAnalysisManager,

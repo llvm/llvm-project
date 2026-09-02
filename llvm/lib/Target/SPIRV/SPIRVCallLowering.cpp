@@ -21,6 +21,7 @@
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
@@ -85,15 +86,6 @@ static uint32_t getFunctionControl(const Function &F,
   return FuncControl;
 }
 
-static ConstantInt *getConstInt(MDNode *MD, unsigned NumOp) {
-  if (MD->getNumOperands() > NumOp) {
-    auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(NumOp));
-    if (CMeta)
-      return dyn_cast<ConstantInt>(CMeta->getValue());
-  }
-  return nullptr;
-}
-
 // If the function has pointer arguments, we are forced to re-create this
 // function type from the very beginning, changing PointerType by
 // TypedPointerType for each pointer argument. Otherwise, the same `Type*`
@@ -103,14 +95,10 @@ static FunctionType *
 fixFunctionTypeIfPtrArgs(SPIRVGlobalRegistry *GR, const Function &F,
                          FunctionType *FTy, SPIRVTypeInst SRetTy,
                          const SmallVector<SPIRVTypeInst, 4> &SArgTys) {
-  bool hasArgPtrs = false;
-  for (auto &Arg : F.args()) {
+  bool hasArgPtrs = any_of(F.args(), [](const Argument &Arg) {
     // check if it's an instance of a non-typed PointerType
-    if (Arg.getType()->isPointerTy()) {
-      hasArgPtrs = true;
-      break;
-    }
-  }
+    return Arg.getType()->isPointerTy();
+  });
   if (!hasArgPtrs) {
     Type *RetTy = FTy->getReturnType();
     // check if it's an instance of a non-typed PointerType
@@ -162,13 +150,25 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
   Type *OriginalArgType =
       SPIRV::getOriginalFunctionType(F)->getParamType(ArgIdx);
 
+  // Vector of untyped pointers: build with the deduced pointee instead of
+  // the default i8 (mismatches typed uses downstream).
+  Argument *Arg = F.getArg(ArgIdx);
+  if (auto *VTy = dyn_cast<FixedVectorType>(OriginalArgType);
+      VTy && isUntypedPointerTy(VTy->getElementType()))
+    if (Type *ElemTy = GR->findDeducedElementType(Arg))
+      return GR->getOrCreateSPIRVVectorType(
+          GR->getOrCreateSPIRVPointerType(
+              ElemTy, MIRBuilder,
+              addressSpaceToStorageClass(
+                  getPointerAddressSpace(OriginalArgType), ST)),
+          VTy->getNumElements(), MIRBuilder, true);
+
   // If OriginalArgType is non-pointer, use the OriginalArgType (the type cannot
   // be legally reassigned later).
   if (!isPointerTy(OriginalArgType))
     return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual,
                                     true);
 
-  Argument *Arg = F.getArg(ArgIdx);
   Type *ArgType = Arg->getType();
   if (isTypedPointerTy(ArgType)) {
     return GR->getOrCreateSPIRVPointerType(
@@ -288,43 +288,51 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,
                         {Alignment});
       }
-      if (Arg.hasAttribute(Attribute::ReadOnly)) {
-        auto Attr =
-            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoWrite);
-        buildOpDecorate(VRegs[i][0], MIRBuilder,
-                        SPIRV::Decoration::FuncParamAttr, {Attr});
-      }
-      if (Arg.hasAttribute(Attribute::ZExt)) {
-        auto Attr =
-            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
-        buildOpDecorate(VRegs[i][0], MIRBuilder,
-                        SPIRV::Decoration::FuncParamAttr, {Attr});
-      }
-      if (Arg.hasAttribute(Attribute::NoAlias)) {
-        auto Attr =
-            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoAlias);
-        buildOpDecorate(VRegs[i][0], MIRBuilder,
-                        SPIRV::Decoration::FuncParamAttr, {Attr});
-      }
-      // TODO: the AMDGPU BE only supports ByRef argument passing, thus for
-      //       AMDGCN flavoured SPIRV we CodeGen for ByRef, but lower it to
-      //       ByVal, handling the impedance mismatch during reverse
-      //       translation from SPIRV to LLVM IR; the vendor check should be
-      //       removed once / if SPIRV adds ByRef support.
-      if (Arg.hasAttribute(Attribute::ByVal) ||
-          (Arg.hasAttribute(Attribute::ByRef) &&
-           F.getParent()->getTargetTriple().getVendor() ==
-               Triple::VendorType::AMD)) {
-        auto Attr =
-            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::ByVal);
-        buildOpDecorate(VRegs[i][0], MIRBuilder,
-                        SPIRV::Decoration::FuncParamAttr, {Attr});
-      }
-      if (Arg.hasAttribute(Attribute::StructRet)) {
-        auto Attr =
-            static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sret);
-        buildOpDecorate(VRegs[i][0], MIRBuilder,
-                        SPIRV::Decoration::FuncParamAttr, {Attr});
+      if (!ST->isShader()) {
+        if (Arg.hasAttribute(Attribute::ReadOnly)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoWrite);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        if (Arg.hasAttribute(Attribute::ZExt)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        if (Arg.hasAttribute(Attribute::SExt)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sext);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        if (Arg.hasAttribute(Attribute::NoAlias)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoAlias);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        // TODO: the AMDGPU BE only supports ByRef argument passing, thus for
+        //       AMDGCN flavoured SPIRV we CodeGen for ByRef, but lower it to
+        //       ByVal, handling the impedance mismatch during reverse
+        //       translation from SPIRV to LLVM IR; the vendor check should be
+        //       removed once / if SPIRV adds ByRef support.
+        if (Arg.hasAttribute(Attribute::ByVal) ||
+            (Arg.hasAttribute(Attribute::ByRef) &&
+             F.getParent()->getTargetTriple().getVendor() ==
+                 Triple::VendorType::AMD)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::ByVal);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        if (Arg.hasAttribute(Attribute::StructRet)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sret);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
       }
 
       if (F.getCallingConv() == CallingConv::SPIR_KERNEL) {
@@ -341,13 +349,13 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         for (const MDOperand &MDOp : MD->operands()) {
           MDNode *MD2 = dyn_cast<MDNode>(MDOp);
           assert(MD2 && "Metadata operand is expected");
-          ConstantInt *Const = getConstInt(MD2, 0);
+          ConstantInt *Const = getMDOperandAsConstInt(MD2, 0);
           assert(Const && "MDOperand should be ConstantInt");
           auto Dec =
               static_cast<SPIRV::Decoration::Decoration>(Const->getZExtValue());
           std::vector<uint32_t> DecVec;
           for (unsigned j = 1; j < MD2->getNumOperands(); j++) {
-            ConstantInt *Const = getConstInt(MD2, j);
+            ConstantInt *Const = getMDOperandAsConstInt(MD2, j);
             assert(Const && "MDOperand should be ConstantInt");
             DecVec.push_back(static_cast<uint32_t>(Const->getZExtValue()));
           }
@@ -395,7 +403,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     assert(VRegs[i].size() == 1 && "Formal arg has multiple vregs");
     Register ArgReg = VRegs[i][0];
     MRI->setRegClass(ArgReg, GR->getRegClass(ArgTypeVRegs[i]));
-    MRI->setType(ArgReg, GR->getRegType(ArgTypeVRegs[i]));
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
                    .addDef(ArgReg)
                    .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
@@ -410,11 +417,14 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
+    if (F.getName().empty())
+      report_fatal_error("SPIR-V entry point function must have a name");
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
                    .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
-  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F)) {
+  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F);
+             LnkTy && !F.getName().empty()) {
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
                     {static_cast<uint32_t>(*LnkTy)}, F.getName());
   }
@@ -459,19 +469,19 @@ void SPIRVCallLowering::produceIndirectPtrType(
     if (!GR->getSPIRVTypeForVReg(IC.ArgRegs[i]))
       GR->assignSPIRVTypeToVReg(SPIRVTy, IC.ArgRegs[i], MF);
   }
-    // SPIR-V function type:
-    FunctionType *FTy =
-        FunctionType::get(const_cast<Type *>(IC.RetTy), IC.ArgTys, false);
-    SPIRVTypeInst SpirvFuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
-        FTy, SpirvRetTy, SpirvArgTypes, MIRBuilder);
-    // SPIR-V pointer to function type:
-    auto SC = ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
-                  ? SPIRV::StorageClass::CodeSectionINTEL
-                  : SPIRV::StorageClass::Function;
-    SPIRVTypeInst IndirectFuncPtrTy =
-        GR->getOrCreateSPIRVPointerType(SpirvFuncTy, MIRBuilder, SC);
-    // Correct the Callee type
-    GR->assignSPIRVTypeToVReg(IndirectFuncPtrTy, IC.Callee, MF);
+  // SPIR-V function type:
+  FunctionType *FTy =
+      FunctionType::get(const_cast<Type *>(IC.RetTy), IC.ArgTys, false);
+  SPIRVTypeInst SpirvFuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
+      FTy, SpirvRetTy, SpirvArgTypes, MIRBuilder);
+  // SPIR-V pointer to function type:
+  auto SC = ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
+                ? SPIRV::StorageClass::CodeSectionINTEL
+                : SPIRV::StorageClass::Function;
+  SPIRVTypeInst IndirectFuncPtrTy =
+      GR->getOrCreateSPIRVPointerType(SpirvFuncTy, MIRBuilder, SC);
+  // Correct the Callee type
+  GR->assignSPIRVTypeToVReg(IndirectFuncPtrTy, IC.Callee, MF);
 }
 
 bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,

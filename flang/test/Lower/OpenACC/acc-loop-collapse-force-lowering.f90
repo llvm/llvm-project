@@ -1,7 +1,7 @@
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
-! Verify collapse(force:2) sinks prologue (between loops) and epilogue (after inner loop)
-! into the acc.loop region body.
+! Verify collapse(force:2) sinks prologue/epilogue and eliminates
+! the inner loop (absorbed by the outer collapse).
 
 subroutine collapse_force_sink(n, m)
   integer, intent(in) :: n, m
@@ -20,22 +20,15 @@ subroutine collapse_force_sink(n, m)
   !$acc end parallel loop
 end subroutine
 
-! CHECK: func.func @_QPcollapse_force_sink(
+! CHECK-LABEL: func.func @_QPcollapse_force_sink(
 ! CHECK: acc.parallel
-! Ensure outer acc.loop is combined(parallel)
+! Only one acc.loop with collapse = [2], inner loop absorbed
 ! CHECK: acc.loop combined(parallel)
-! Prologue: constant 4.2 and an assign before inner loop
+! Prologue (4.2), body (2.0 add), epilogue (7.3) all inside
 ! CHECK: arith.constant 4.200000e+00
 ! CHECK: hlfir.assign
-! Inner loop and its body include 2.0 add and an assign
-! CHECK: acc.loop
 ! CHECK: arith.constant 2.000000e+00
-! CHECK: arith.addf
 ! CHECK: hlfir.assign
-! Epilogue: constant 7.3 and an assign after inner loop
 ! CHECK: arith.constant 7.300000e+00
 ! CHECK: hlfir.assign
-! And the outer acc.loop has collapse = [2]
-! CHECK: } attributes {collapse = [2]
-
-
+! CHECK: collapse = [2]

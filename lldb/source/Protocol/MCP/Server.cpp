@@ -50,17 +50,23 @@ void ServerInfoHandle::Remove() {
 }
 
 json::Value lldb_protocol::mcp::toJSON(const ServerInfo &SM) {
-  return json::Object{{"connection_uri", SM.connection_uri}};
+  return json::Object{{"connection_uri", SM.connection_uri}, {"pid", SM.pid}};
 }
 
 bool lldb_protocol::mcp::fromJSON(const json::Value &V, ServerInfo &SM,
                                   json::Path P) {
   json::ObjectMapper O(V, P);
-  return O && O.map("connection_uri", SM.connection_uri);
+  return O && O.map("connection_uri", SM.connection_uri) &&
+         O.mapOptional("pid", SM.pid);
 }
 
 Expected<ServerInfoHandle> ServerInfo::Write(const ServerInfo &info) {
-  std::string buf = formatv("{0}", toJSON(info)).str();
+  // The file is written by the process that hosts the server, so stamp its pid
+  // to keep it consistent with the filename below.
+  ServerInfo stamped = info;
+  stamped.pid = getpid();
+
+  std::string buf = formatv("{0}", toJSON(stamped)).str();
   size_t num_bytes = buf.size();
 
   FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
@@ -70,7 +76,7 @@ Expected<ServerInfoHandle> ServerInfo::Write(const ServerInfo &info) {
     return error.takeError();
 
   FileSpec mcp_registry_entry_path = user_lldb_dir.CopyByAppendingPathComponent(
-      formatv("lldb-mcp-{0}.json", getpid()).str());
+      formatv("lldb-mcp-{0}.json", stamped.pid).str());
 
   const File::OpenOptions flags = File::eOpenOptionWriteOnly |
                                   File::eOpenOptionCanCreate |

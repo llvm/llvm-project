@@ -2210,3 +2210,29 @@ double my_roundeven(double x) {
   // OGCG: define{{.*}}@my_roundeven(
   // OGCG: call double @llvm.roundeven.f64(
 }
+
+int my_flt_rounds(void) {
+  return __builtin_flt_rounds();
+  // CIR: cir.func no_inline dso_local @my_flt_rounds
+  // CIR:   cir.call_llvm_intrinsic "get.rounding"  : () -> !s32i
+
+  // LLVM: define{{.*}} i32 @my_flt_rounds
+  // LLVM:   call i32 @llvm.get.rounding()
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_flt_rounds
+  // OGCG: call i32 @llvm.get.rounding()
+}
+
+void my_set_flt_rounds(int rounding) {
+  __builtin_set_flt_rounds(rounding);
+  // CIR: cir.func no_inline dso_local @my_set_flt_rounds
+  // CIR:   cir.call_llvm_intrinsic "set.rounding" %{{.*}} : (!s32i)
+
+  // LLVM: define{{.*}} void @my_set_flt_rounds
+  // LLVM:   call void @llvm.set.rounding(i32 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_set_flt_rounds
+  // OGCG: call void @llvm.set.rounding(i32 %{{.+}})
+}

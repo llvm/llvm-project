@@ -34,7 +34,7 @@ func.func private @_QMmod1Psub1(!fir.ref<!fir.array<10xi32>> {cuf.data_attr = #c
 
 // CHECK: gpu.func @_QPsub_device1()
 
-// CHECK: gpu.func @_QPsub_device2(%[[ARG0:.*]]: !fir.ref<f32>) {
+// CHECK: gpu.func @_QPsub_device2(%[[ARG0:.*]]: !fir.ref<f32>
 // CHECK:   %[[DECL:.*]] = fir.declare %[[ARG0]] {uniq_name = "_QFsub1Ei"} : (!fir.ref<f32>) -> !fir.ref<f32>
 // CHECK:   %[[CST:.*]] = arith.constant 2.000000e+00 : f32
 // CHECK:   fir.store %[[CST]] to %[[DECL]] : !fir.ref<f32>
@@ -151,9 +151,36 @@ func.func @_QPpartialsumshflshflr8(%arg0: !fir.ref<!fir.array<?xf64>> {cuf.data_
 }
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
-// CHECK: gpu.func @_QPpartialsumshflshflr8(%arg0: !fir.ref<!fir.array<?xf64>>, %arg1: i32) kernel
+// CHECK: gpu.func @_QPpartialsumshflshflr8(%{{.*}}) kernel
       
 // CHECK: func.func @_QPpartialsumshflshflr8
+
+// -----
+
+func.func @_QPldg_attrs(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "b"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %c10 = arith.constant 10 : index
+  %scope = fir.dummy_scope : !fir.dscope
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %0 = fir.declare %arg0(%shape) dummy_scope %scope arg 1 {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QFldg_attrsEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+  %1 = fir.declare %arg1(%shape) dummy_scope %scope arg 2 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFldg_attrsEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+  return
+}
+
+// CHECK-LABEL: gpu.module @cuda_device_mod
+// CHECK: gpu.func @_QPldg_attrs(%{{.*}}: !fir.ref<!fir.array<?xf32>>{{.*}}, %{{.*}}: !fir.ref<!fir.array<?xf32>> {{{.*}}llvm.noalias, llvm.readonly}) kernel
+
+// -----
+
+func.func @_QPvalue_in(%arg0: i32 {fir.bindc_name = "n"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %scope = fir.dummy_scope : !fir.dscope
+  %0 = fir.alloca i32
+  fir.store %arg0 to %0 : !fir.ref<i32>
+  %1 = fir.declare %0 dummy_scope %scope {fortran_attrs = #fir.var_attrs<intent_in, value>, uniq_name = "_QPvalue_inEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: gpu.module @cuda_device_mod
+// CHECK: gpu.func @_QPvalue_in(%{{.*}}: i32 {fir.bindc_name = "n"}) kernel
 
 // -----
 
@@ -163,3 +190,14 @@ func.func @_QPsub_maxtnid() attributes {cuf.launch_bounds = #cuf.launch_bounds<m
 }
 
 // CHECK: gpu.func @_QPsub_maxtnid() kernel attributes {nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i64}
+
+// -----
+
+// The minimum-blocks-per-multiprocessor operand is optional: only maxntid is set.
+func.func @_QPsub_maxtnid_only() attributes {cuf.launch_bounds = #cuf.launch_bounds<maxTPB = 256 : i64>, cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %cst = arith.constant 2.000000e+00 : f32
+  return
+}
+
+// CHECK: gpu.func @_QPsub_maxtnid_only() kernel attributes {nvvm.maxntid = array<i32: 256, 1, 1>}
+// CHECK-NOT: nvvm.minctasm

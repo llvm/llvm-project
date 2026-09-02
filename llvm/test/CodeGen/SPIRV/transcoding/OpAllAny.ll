@@ -1,16 +1,26 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; This test checks SYCL relational builtin any and all with vector input types.
 
-; CHECK-SPIRV: %[[#BoolTypeID:]] = OpTypeBool
+; CHECK-SPIRV-DAG: %[[#BoolTypeID:]] = OpTypeBool
+; CHECK-SPIRV-DAG: %[[#BoolVecTypeID:]] = OpTypeVector %[[#BoolTypeID]] 2
 
+; CHECK-SPIRV: %[[#]] = OpINotEqual %[[#BoolVecTypeID]]
 ; CHECK-SPIRV: OpAny %[[#BoolTypeID]]
+; CHECK-SPIRV: %[[#]] = OpINotEqual %[[#BoolVecTypeID]]
 ; CHECK-SPIRV: OpAny %[[#BoolTypeID]]
+; CHECK-SPIRV: %[[#]] = OpINotEqual %[[#BoolVecTypeID]]
 ; CHECK-SPIRV: OpAny %[[#BoolTypeID]]
+; CHECK-SPIRV: %[[#]] = OpINotEqual %[[#BoolVecTypeID]]
 ; CHECK-SPIRV: OpAny %[[#BoolTypeID]]
+; CHECK-SPIRV: %[[#]] = OpINotEqual %[[#BoolVecTypeID]]
 ; CHECK-SPIRV: OpAll %[[#BoolTypeID]]
+; CHECK-SPIRV: %[[#]] = OpINotEqual %[[#BoolVecTypeID]]
 ; CHECK-SPIRV: OpAll %[[#BoolTypeID]]
+; CHECK-SPIRV: %[[#]] = OpINotEqual %[[#BoolVecTypeID]]
 ; CHECK-SPIRV: OpAll %[[#BoolTypeID]]
+; CHECK-SPIRV: %[[#]] = OpINotEqual %[[#BoolVecTypeID]]
 ; CHECK-SPIRV: OpAll %[[#BoolTypeID]]
 
 define dso_local spir_func void @test_vector(ptr addrspace(4) nocapture writeonly %out, <2 x i8> %c, <2 x i16> %s, <2 x i32> %i, <2 x i64> %l) local_unnamed_addr {

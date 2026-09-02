@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <numeric>
+#include <type_traits>
 
 namespace mlir {
 namespace shard {
@@ -27,6 +28,41 @@ namespace shard {
 #include "mlir/Dialect/Shard/Transforms/Passes.h.inc"
 
 namespace {
+
+template <typename LhsOp, typename RhsOp>
+static bool haveSameGridAndGridAxes(LhsOp lhsOp, RhsOp rhsOp) {
+  return lhsOp.getGrid() == rhsOp.getGrid() &&
+         lhsOp.getGridAxes() == rhsOp.getGridAxes();
+}
+
+static bool isAllGatherAllSliceFoldable(AllGatherOp gatherOp,
+                                        AllSliceOp sliceOp) {
+  return haveSameGridAndGridAxes(gatherOp, sliceOp) &&
+         gatherOp.getGatherAxis() == sliceOp.getSliceAxis();
+}
+
+template <typename OuterOp, typename InnerOp>
+static LogicalResult foldAllGatherAllSlice(OuterOp outerOp, InnerOp innerOp,
+                                           PatternRewriter &rewriter) {
+  if (!innerOp)
+    return failure();
+
+  AllGatherOp gatherOp;
+  AllSliceOp sliceOp;
+  if constexpr (std::is_same_v<OuterOp, AllGatherOp>) {
+    gatherOp = outerOp;
+    sliceOp = innerOp;
+  } else {
+    gatherOp = innerOp;
+    sliceOp = outerOp;
+  }
+
+  if (!isAllGatherAllSliceFoldable(gatherOp, sliceOp))
+    return failure();
+
+  rewriter.replaceOp(outerOp, innerOp.getInput());
+  return success();
+}
 
 // This folding can not be done with an operation's fold method or
 // DialectFoldInterface, because it needs a SymbolTableCollection to cache the
@@ -117,8 +153,7 @@ struct AllReduceAllSliceSimplification : OpRewritePattern<AllSliceOp> {
       return failure();
 
     // Both ops must operate on the same grid and grid axes.
-    if (reduceOp.getGrid() != sliceOp.getGrid() ||
-        reduceOp.getGridAxes() != sliceOp.getGridAxes())
+    if (!haveSameGridAndGridAxes(reduceOp, sliceOp))
       return failure();
 
     // Replace with a single ReduceScatterOp.
@@ -128,6 +163,19 @@ struct AllReduceAllSliceSimplification : OpRewritePattern<AllSliceOp> {
         reduceOp.getReductionAttr(), sliceOp.getSliceAxisAttr());
 
     return success();
+  }
+};
+
+// Simplify all_slice(all_gather(x)) and all_gather(all_slice(x)) to x when
+// both ops share grid, grid_axes, and axis.
+template <typename OuterOp, typename InnerOp>
+struct AllGatherAllSliceSimplification : OpRewritePattern<OuterOp> {
+  using OpRewritePattern<OuterOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OuterOp outerOp,
+                                PatternRewriter &rewriter) const override {
+    auto innerOp = outerOp.getInput().template getDefiningOp<InnerOp>();
+    return foldAllGatherAllSlice(outerOp, innerOp, rewriter);
   }
 };
 
@@ -154,7 +202,10 @@ void populateSimplifyPatterns(RewritePatternSet &patterns,
   populateAllReduceEndomorphismSimplifyPatterns<arith::MaxUIOp>(
       patterns, ReductionKind::Max);
 
-  patterns.add<AllReduceAllSliceSimplification>(patterns.getContext());
+  patterns.add<AllReduceAllSliceSimplification,
+               AllGatherAllSliceSimplification<AllSliceOp, AllGatherOp>,
+               AllGatherAllSliceSimplification<AllGatherOp, AllSliceOp>>(
+      patterns.getContext());
 
   // TODO: add simplify patterns for all-gather and other collectives.
 

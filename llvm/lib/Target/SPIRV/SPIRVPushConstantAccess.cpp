@@ -24,6 +24,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "spirv-pushconstant-access"
 using namespace llvm;
@@ -35,7 +36,8 @@ static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
         storageClassToAddressSpace(SPIRV::StorageClass::PushConstant))
       continue;
 
-    GV.removeDeadConstantUsers();
+    convertUsersOfConstantsToInstructions(
+        llvm::SmallVector<Constant *, 1>(1, &GV));
 
     Type *PCType = llvm::TargetExtType::get(
         M.getContext(), "spirv.PushConstant", {GV.getValueType()});

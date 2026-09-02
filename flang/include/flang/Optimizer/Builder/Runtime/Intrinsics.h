@@ -82,6 +82,9 @@ mlir::Value genSecnds(fir::FirOpBuilder &builder, mlir::Location loc,
 /// generate time runtime call
 mlir::Value genTime(fir::FirOpBuilder &builder, mlir::Location loc);
 
+/// generate timef runtime call
+mlir::Value genTimef(fir::FirOpBuilder &builder, mlir::Location loc);
+
 /// generate runtime call to transfer intrinsic with no size argument
 void genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Value resultBox, mlir::Value sourceBox,

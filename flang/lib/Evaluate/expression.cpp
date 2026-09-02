@@ -7,19 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/expression.h"
-#include "int-power.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/variable.h"
-#include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "llvm/Support/raw_ostream.h"
-#include <string>
 #include <type_traits>
 
 using namespace Fortran::parser::literals;
@@ -60,6 +57,16 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
               if (auto rlen{c.right().LEN()}) {
                 return Expr<SubscriptInteger>{Extremum<SubscriptInteger>{
                     Ordering::Greater, *std::move(llen), *std::move(rlen)}};
+              }
+            }
+            return std::nullopt;
+          },
+          [](const ConditionalExpr<Result> &x) -> T {
+            if (auto tlen{x.thenValue().LEN()}) {
+              if (auto elen{x.elseValue().LEN()}) {
+                if (*tlen == *elen) {
+                  return tlen;
+                }
               }
             }
             return std::nullopt;
@@ -139,6 +146,12 @@ template <typename A> LLVM_DUMP_METHOD void ExpressionBase<A>::dump() const {
 
 template <typename A> bool Extremum<A>::operator==(const Extremum &that) const {
   return ordering == that.ordering && Base::operator==(that);
+}
+
+template <typename A>
+bool ConditionalExpr<A>::operator==(const ConditionalExpr &that) const {
+  return condition_ == that.condition_ && thenValue_ == that.thenValue_ &&
+      elseValue_ == that.elseValue_;
 }
 
 template <int KIND>

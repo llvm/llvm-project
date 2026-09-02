@@ -180,6 +180,15 @@ protected:
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
   }
 
+  template <
+      typename ValType,
+      cpp::enable_if_t<
+          cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::wstring_view>, int> = 0>
+  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
+            const char *RHSStr, internal::Location Loc) {
+    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
+  }
+
   template <typename ValType,
             cpp::enable_if_t<
                 cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::string>, int> = 0>
@@ -495,10 +504,19 @@ CString libc_make_test_file_path_func(const char *file_name);
 #define ASSERT_EXITS(FUNC, EXIT)                                               \
   LIBC_TEST_PROCESS_(testProcessExits, FUNC, EXIT, return)
 
+#ifdef LIBC_TEST_SKIP_DEATH_TESTS
+
+#define EXPECT_DEATH(FUNC, SIG)
+#define ASSERT_DEATH(FUNC, SIG)
+
+#else
+
 #define EXPECT_DEATH(FUNC, SIG)                                                \
   LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, )
 #define ASSERT_DEATH(FUNC, SIG)                                                \
   LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, return)
+
+#endif // LIBC_TEST_SKIP_DEATH_TESTS
 
 #endif // ENABLE_SUBPROCESS_TESTS
 

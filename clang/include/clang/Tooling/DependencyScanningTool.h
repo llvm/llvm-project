@@ -47,6 +47,7 @@ public:
   /// dependency file contents otherwise.
   std::optional<std::string>
   getDependencyFile(ArrayRef<std::string> CommandLine, StringRef CWD,
+                    dependencies::LookupModuleOutputCallback LookupModuleOutput,
                     DiagnosticConsumer &DiagConsumer);
 
   /// Collect the module dependency in P1689 format for C++20 named modules.
@@ -109,9 +110,12 @@ public:
   llvm::Expected<dependencies::TranslationUnitDeps> getModuleDependencies(
       StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::LookupModuleOutputCallback LookupModuleOutput);
+      dependencies::DependencyActionController &Controller);
 
-  llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
+  /// Returns the worker tracing VFS, if it was requested via the service.
+  llvm::vfs::TracingFileSystem *getWorkerTracingVFS() const {
+    return Worker.getTracingVFS();
+  }
 
 private:
   dependencies::DependencyScanningWorker Worker;
@@ -136,7 +140,7 @@ bool computeDependencies(
     dependencies::DependencyConsumer &Consumer,
     dependencies::DependencyActionController &Controller,
     DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
 class CompilerInstanceWithContext {
   // Context
@@ -175,7 +179,7 @@ class CompilerInstanceWithContext {
   bool initialize(dependencies::DependencyActionController &Controller,
                   std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
                       DiagEngineWithDiagOpts,
-                  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
+                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS);
 
 public:
   /// @brief Initialize the tool's compiler instance from the commandline.
@@ -200,10 +204,10 @@ public:
   /// @param CWD The current working directory used during the scan.
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
-  static llvm::Expected<CompilerInstanceWithContext> initializeOrError(
-      DependencyScanningTool &Tool, StringRef CWD,
-      ArrayRef<std::string> CommandLine,
-      dependencies::LookupModuleOutputCallback LookupModuleOutput);
+  static llvm::Expected<CompilerInstanceWithContext>
+  initializeOrError(DependencyScanningTool &Tool, StringRef CWD,
+                    ArrayRef<std::string> CommandLine,
+                    dependencies::DependencyActionController &Controller);
 
   bool
   computeDependencies(StringRef ModuleName,
@@ -228,7 +232,7 @@ public:
   computeDependenciesByNameOrError(
       StringRef ModuleName,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::LookupModuleOutputCallback LookupModuleOutput);
+      dependencies::DependencyActionController &Controller);
 
   // MaxNumOfQueries is the upper limit of the number of names the by-name
   // scanning API (computeDependencies) can support after a

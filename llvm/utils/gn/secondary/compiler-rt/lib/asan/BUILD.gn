@@ -109,6 +109,7 @@ if (current_toolchain == host_toolchain) {
 
         # ubsan
         "-Wl,-U,___ubsan_default_options",
+        "-Wl,-U,___ubsan_default_suppressions",
 
         # sanitizer_common
         "-Wl,-U,___sanitizer_free_hook",

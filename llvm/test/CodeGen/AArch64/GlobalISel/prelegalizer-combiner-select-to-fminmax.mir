@@ -10,7 +10,7 @@ body:             |
     ; CHECK: liveins: $h0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
     ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(s16) = G_FMAXIMUM [[COPY]], [[C]]
     ; CHECK-NEXT: $h0 = COPY [[FMAXIMUM]](s16)
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
@@ -98,7 +98,7 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
     ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(<8 x s16>) = G_FMAXIMUM [[COPY]], [[BUILD_VECTOR]]
     ; CHECK-NEXT: $q0 = COPY [[FMAXIMUM]](<8 x s16>)

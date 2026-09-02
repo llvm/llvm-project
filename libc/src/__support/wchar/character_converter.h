@@ -42,17 +42,18 @@ private:
   static constexpr int MAX_UTF8_LENGTH = 4;
 
 public:
-  CharacterConverter(mbstate *mbstate) : state(mbstate) {}
+  explicit LIBC_INLINE CharacterConverter(mbstate *state_ptr)
+      : state(state_ptr) {}
 
-  void clear() {
+  LIBC_INLINE void clear() {
     state->partial = 0;
     state->bytes_stored = 0;
     state->total_bytes = 0;
   }
-  bool isFull() {
+  LIBC_INLINE bool isFull() {
     return state->bytes_stored == state->total_bytes && state->total_bytes != 0;
   }
-  bool isEmpty() { return state->bytes_stored == 0; }
+  LIBC_INLINE bool isEmpty() { return state->bytes_stored == 0; }
   bool isValidState();
 
   template <typename CharType> size_t sizeAs();

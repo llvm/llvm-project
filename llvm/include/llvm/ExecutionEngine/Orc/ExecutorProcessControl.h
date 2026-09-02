@@ -14,9 +14,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/DylibManager.h"
-#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
@@ -30,9 +27,17 @@
 #include <mutex>
 #include <vector>
 
+namespace llvm::jitlink {
+
+class JITLinkMemoryManager;
+
+} // namespace llvm::jitlink
+
 namespace llvm::orc {
 
+class DylibManager;
 class ExecutionSession;
+class MemoryAccess;
 
 /// ExecutorProcessControl supports interaction with a JIT target process.
 class LLVM_ABI ExecutorProcessControl {
@@ -134,23 +139,16 @@ public:
   /// Get the JIT dispatch function and context address for the executor.
   const JITDispatchInfo &getJITDispatchInfo() const { return JDI; }
 
-  /// Return a MemoryAccess object for the target process.
-  MemoryAccess &getMemoryAccess() const {
-    assert(MemAccess && "No MemAccess object set.");
-    return *MemAccess;
-  }
+  /// Create a default JITLinkMemoryManager for the target process.
+  virtual Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager() = 0;
 
-  /// Return a JITLinkMemoryManager for the target process.
-  jitlink::JITLinkMemoryManager &getMemMgr() const {
-    assert(MemMgr && "No MemMgr object set");
-    return *MemMgr;
-  }
+  /// Create a default DylibManager for the target process.
+  virtual Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() = 0;
 
-  /// Return the DylibManager for the target process.
-  DylibManager &getDylibMgr() const {
-    assert(DylibMgr && "No DylibMgr object set");
-    return *DylibMgr;
-  }
+  /// Create a default MemoryAccess for the target process.
+  virtual Expected<std::unique_ptr<MemoryAccess>>
+  createDefaultMemoryAccess() = 0;
 
   /// Returns the bootstrap map.
   const StringMap<std::vector<char>> &getBootstrapMap() const {
@@ -315,9 +313,6 @@ protected:
   Triple TargetTriple;
   unsigned PageSize = 0;
   JITDispatchInfo JDI;
-  MemoryAccess *MemAccess = nullptr;
-  jitlink::JITLinkMemoryManager *MemMgr = nullptr;
-  DylibManager *DylibMgr = nullptr;
   StringMap<std::vector<char>> BootstrapMap;
   StringMap<ExecutorAddr> BootstrapSymbols;
 };

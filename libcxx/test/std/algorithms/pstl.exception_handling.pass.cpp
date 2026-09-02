@@ -176,6 +176,21 @@ int main(int, char**) {
       }
 
       {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // find_first_of(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::find_first_of(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // find_first_of(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::find_first_of(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), pred);
+        });
+      }
+
+      {
         auto func = maybe_throw(tokens[5], [](int) {});
 
         // for_each(first, last, func)
@@ -193,6 +208,13 @@ int main(int, char**) {
 
         // generate_n(first, n, func)
         assert_non_throwing([=, &policy] { (void)std::generate_n(policy, std::move(first1), n, gen); });
+      }
+
+      {
+        // reverse_copy(first, last, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::reverse_copy(policy, std::move(first1), std::move(last1), std::move(dest));
+        });
       }
 
       {

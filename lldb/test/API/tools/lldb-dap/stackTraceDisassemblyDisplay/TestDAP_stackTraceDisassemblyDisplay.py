@@ -1,12 +1,14 @@
 """
-Test lldb-dap stack trace when some of the source paths are missing
+Test lldb-dap stack trace when some of the source paths are missing,
+under each `stop-disassembly-display` setting.
 """
 
-from lldbsuite.test.lldbtest import line_number
-import lldbdap_testcase
-from contextlib import contextmanager
 import os
 
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.session_helpers import ThreadContext
 
 OTHER_C_SOURCE_CODE = """
 int no_source_func(int n) {
@@ -15,158 +17,142 @@ int no_source_func(int n) {
 """
 
 
-@contextmanager
-def delete_file_on_exit(path):
-    try:
-        yield path
-    finally:
-        if os.path.exists(path):
-            os.remove(path)
-
-
-class TestDAP_stackTraceMissingSourcePath(lldbdap_testcase.DAPTestCaseBase):
-    def build_and_run_until_breakpoint(self):
-        """
-        Build the program and run until the breakpoint is hit, and return the stack frames.
+class TestDAP_stackTraceDisassemblyDisplay(DAPTestCaseBase):
+    def build_and_run_until_other_c_breakpoint(self):
+        """Build, launch, stop at the breakpoint in other.c, and return the
+        thread context for the stopped thread.
         """
         other_source_file = self.getBuildArtifact("other.c")
-        with delete_file_on_exit(other_source_file):
-            with open(other_source_file, "w") as f:
-                f.write(OTHER_C_SOURCE_CODE)
+        with open(other_source_file, "w") as f:
+            f.write(OTHER_C_SOURCE_CODE)
+        breakpoint_line = line_number(other_source_file, "// Break here")
 
-            breakpoint_line = line_number(other_source_file, "// Break here")
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
 
-            program = self.getBuildArtifact("a.out")
-            self.build_and_launch(program, commandEscapePrefix="")
-
-            breakpoint_ids = self.set_source_breakpoints(
+        with session.configure(LaunchArgs(program, commandEscapePrefix="")) as ctx:
+            breakpoint_ids = session.resolve_source_breakpoints(
                 other_source_file, [breakpoint_line]
             )
-            self.assertEqual(
-                len(breakpoint_ids), 1, "expect correct number of breakpoints"
-            )
 
-            self.continue_to_breakpoints(breakpoint_ids)
+        stop_event = session.verify_stopped_on_breakpoint(
+            breakpoint_ids, after=ctx.process_event
+        )
+        # Remove other.c so LLDB sees it as "source unavailable" for the
+        # subsequent stop-disassembly-display checks.
+        os.remove(other_source_file)
 
-        frames = self.get_stackFrames()
+        thread_ctx = session.thread_context_from(stop_event)
+
+        frames = [f.frame for f in thread_ctx.frames()]
         self.assertLessEqual(2, len(frames), "expect at least 2 frames")
 
-        self.assertIn(
-            "path",
-            frames[0]["source"],
-            "Expect source path to always be in frame (other.c)",
+        frame_0_source = self.expect_not_none(frames[0].source)
+        frame_1_source = self.expect_not_none(frames[1].source)
+        self.assertIsNotNone(
+            frame_0_source.path, "expect source path to always be in frame (other.c)"
         )
-        self.assertIn(
-            "path",
-            frames[1]["source"],
-            "Expect source path in always be in frame (main.c)",
+        self.assertIsNotNone(
+            frame_1_source.path, "expect source path to always be in frame (main.c)"
         )
-
-        return frames
+        return session, thread_ctx
 
     def verify_frames_source(
-        self, frames, main_frame_assembly: bool, other_frame_assembly: bool
+        self,
+        thread_ctx: ThreadContext,
+        main_frame_assembly: bool,
+        other_frame_assembly: bool,
     ):
+        frames = [f.frame for f in thread_ctx.frames(levels=2)]
         self.assertLessEqual(2, len(frames), "expect at least 2 frames")
-        source_0 = frames[0].get("source")
-        source_1 = frames[1].get("source")
-        self.assertIsNotNone(source_0, "Expects a source object in frame 0")
-        self.assertIsNotNone(source_1, "Expects a source object in frame 1")
+        source_0 = self.expect_not_none(
+            frames[0].source, "expects a source object in frame 0"
+        )
+        source_1 = self.expect_not_none(
+            frames[1].source, "expects a source object in frame 1"
+        )
 
-        # it does not always have a path.
-        source_0_path: str = source_0.get("path", "")
-        source_1_path: str = source_1.get("path", "")
+        # It does not always have a path.
+        source_0_path = source_0.path or ""
+        source_1_path = source_1.path or ""
 
         if other_frame_assembly:
             self.assertFalse(
                 source_0_path.endswith("other.c"),
-                "Expect original source path to not be in unavailable source frame (other.c)",
+                "expect original source path to not be in unavailable source frame (other.c).",
             )
-            self.assertIn(
-                "sourceReference",
-                source_0,
-                "Expect sourceReference to be in unavailable source frame (other.c)",
+            self.assertIsNotNone(
+                source_0.sourceReference,
+                "expect sourceReference to be in unavailable source frame (other.c).",
             )
         else:
             self.assertTrue(
                 source_0_path.endswith("other.c"),
-                "Expect original source path to be in normal source frame (other.c)",
+                "expect original source path to be in normal source frame (other.c).",
             )
-            self.assertNotIn(
-                "sourceReference",
-                source_0,
-                "Expect sourceReference to not be in normal source frame (other.c)",
+            self.assertIsNone(
+                source_0.sourceReference,
+                "expect sourceReference to not be in normal source frame (other.c).",
             )
 
         if main_frame_assembly:
             self.assertFalse(
                 source_1_path.endswith("main.c"),
-                "Expect original source path to not be in unavailable source frame (main.c)",
+                "expect original source path to not be in unavailable source frame (main.c).",
             )
-            self.assertIn(
-                "sourceReference",
-                source_1,
-                "Expect sourceReference to be in unavailable source frame (main.c)",
+            self.assertIsNotNone(
+                source_1.sourceReference,
+                "expect sourceReference to be in unavailable source frame (main.c).",
             )
         else:
             self.assertTrue(
                 source_1_path.endswith("main.c"),
-                "Expect original source path to be in normal source frame (main.c)",
+                "expect original source path to be in normal source frame (main.c).",
             )
-            self.assertNotIn(
-                "sourceReference",
-                source_1,
-                "Expect sourceReference to not be in normal source code frame (main.c)",
+            self.assertIsNone(
+                source_1.sourceReference,
+                "expect sourceReference to not be in normal source code frame (main.c).",
             )
 
     def test_stopDisassemblyDisplay(self):
-        """
-        Test that with with all stop-disassembly-display values you get correct assembly / no assembly source code.
-        """
-        self.build_and_run_until_breakpoint()
-        frames = self.get_stackFrames()
-        self.assertLessEqual(2, len(frames), "expect at least 2 frames")
+        """With each `stop-disassembly-display` setting, the corresponding frames
+        carry either an original source path or a sourceReference for assembly."""
+        session, thread_ctx = self.build_and_run_until_other_c_breakpoint()
 
-        self.assertIn(
-            "path",
-            frames[0]["source"],
-            "Expect source path to always be in frame (other.c)",
+        # Baseline: both source files are present on disk.
+        baseline_frames = [f.frame for f in thread_ctx.frames(levels=2)]
+        self.assertLessEqual(2, len(baseline_frames), "expect at least 2 frames")
+        self.assertIsNotNone(
+            baseline_frames[0].source and baseline_frames[0].source.path,
+            "expect source path to always be in frame (other.c)",
         )
-        self.assertIn(
-            "path",
-            frames[1]["source"],
-            "Expect source path in always be in frame (main.c)",
+        self.assertIsNotNone(
+            baseline_frames[1].source and baseline_frames[1].source.path,
+            "expect source path to always be in frame (main.c)",
         )
 
-        self.dap_server.request_evaluate(
-            "settings set stop-disassembly-display never", context="repl"
-        )
-        frames = self.get_stackFrames()
+        session.evaluate("settings set stop-disassembly-display never", context="repl")
         self.verify_frames_source(
-            frames, main_frame_assembly=False, other_frame_assembly=False
+            thread_ctx, main_frame_assembly=False, other_frame_assembly=False
         )
 
-        self.dap_server.request_evaluate(
-            "settings set stop-disassembly-display always", context="repl"
-        )
-        frames = self.get_stackFrames()
+        session.evaluate("settings set stop-disassembly-display always", context="repl")
         self.verify_frames_source(
-            frames, main_frame_assembly=True, other_frame_assembly=True
+            thread_ctx, main_frame_assembly=True, other_frame_assembly=True
         )
 
-        self.dap_server.request_evaluate(
+        session.evaluate(
             "settings set stop-disassembly-display no-source", context="repl"
         )
-        frames = self.get_stackFrames()
         self.verify_frames_source(
-            frames, main_frame_assembly=False, other_frame_assembly=True
+            thread_ctx, main_frame_assembly=False, other_frame_assembly=True
         )
 
-        self.dap_server.request_evaluate(
+        session.evaluate(
             "settings set stop-disassembly-display no-debuginfo", context="repl"
         )
-        frames = self.get_stackFrames()
         self.verify_frames_source(
-            frames, main_frame_assembly=False, other_frame_assembly=False
+            thread_ctx, main_frame_assembly=False, other_frame_assembly=False
         )
-        self.continue_to_exit()
+
+        session.continue_to_exit()

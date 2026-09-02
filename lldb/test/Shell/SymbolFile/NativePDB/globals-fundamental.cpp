@@ -39,7 +39,7 @@ char16_t C16_24 = u'\24';
 // CHECK-NEXT: (char16_t) C16_24 = U+0014
 char32_t C32_42 = U'\42';
 // CHECK-NEXT: (lldb) target variable C32_42
-// CHECK-NEXT: (char32_t) C32_42 = U+0x00000022
+// CHECK-NEXT: (char32_t) C32_42 = U+0022
 wchar_t WC1 = L'1';
 // CHECK-NEXT: (lldb) target variable WC1
 // CHECK-NEXT: (wchar_t) WC1 = L'1'
@@ -130,7 +130,7 @@ const char16_t CC16_24 = u'\24';
 // CHECK-NEXT: (const char16_t) CC16_24 = U+0014
 const char32_t CC32_42 = U'\42';
 // CHECK-NEXT: (lldb) target variable CC32_42
-// CHECK-NEXT: (const char32_t) CC32_42 = U+0x00000022
+// CHECK-NEXT: (const char32_t) CC32_42 = U+0022
 const wchar_t CWC1 = L'1';
 // CHECK-NEXT: (lldb) target variable CWC1
 // CHECK-NEXT: (const wchar_t) CWC1 = L'1'
@@ -222,7 +222,7 @@ constexpr char16_t ConstexprC16_24 = u'\24';
 // CHECK-NEXT: (const char16_t) ConstexprC16_24 = U+0014
 constexpr char32_t ConstexprC32_42 = U'\42';
 // CHECK-NEXT: (lldb) target variable ConstexprC32_42
-// CHECK-NEXT: (const char32_t) ConstexprC32_42 = U+0x00000022
+// CHECK-NEXT: (const char32_t) ConstexprC32_42 = U+0022
 constexpr wchar_t ConstexprWC1 = L'1';
 // CHECK-NEXT: (lldb) target variable ConstexprWC1
 // CHECK-NEXT: (const wchar_t) ConstexprWC1 = L'1'
@@ -641,7 +641,7 @@ char16_t &RC16_24 = C16_24;
 // FIXME: (char16_t &) RC16_24 = {{.*}} (&::RC16_24 = U+0014)
 char32_t &RC32_42 = C32_42;
 // CHECK: (lldb) target variable RC32_42
-// FIXME: (char32_t &) RC32_42 = {{.*}} (&::RC32_42 = U+0x00000022)
+// FIXME: (char32_t &) RC32_42 = {{.*}} (&::RC32_42 = U+0022)
 wchar_t &RWC1 = WC1;
 // CHECK: (lldb) target variable RWC1
 // FIXME: (wchar_t &) RWC1 = {{.*}} (&::RWC1 = L'1')
@@ -653,7 +653,7 @@ const char16_t &CRC16_24 = C16_24;
 // FIXME: (const char16_t &) CRC16_24 = {{.*}} (&::CRC16_24 = U+0014)
 const char32_t &CRC32_42 = C32_42;
 // CHECK: (lldb) target variable CRC32_42
-// FIXME: (const char32_t &) CRC32_42 = {{.*}} (&::CRC32_42 = U+0x00000022)
+// FIXME: (const char32_t &) CRC32_42 = {{.*}} (&::CRC32_42 = U+0022)
 const wchar_t &CRWC1 = WC1;
 // CHECK: (lldb) target variable CRWC1
 // FIXME: (const wchar_t &) CRWC1 = {{.*}} (&::CRWC1 = L'1')

@@ -1,0 +1,44 @@
+## Check that the PRIV part round-trips through yaml2obj and obj2yaml when the
+## part size is not a multiple of 4. The pipeline is run twice to ensure obj2yaml
+## output with a non-multiple-of-4 FileSize can be fed back through yaml2obj.
+
+# RUN: yaml2obj %s -o %t.dxbc
+# RUN: obj2yaml %t.dxbc | yaml2obj -o %t2.dxbc
+# RUN: obj2yaml %t2.dxbc | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       2
+Parts:
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    0
+      ShaderKind:      5
+      Size:            6
+      DXILMajorVersion: 0
+      DXILMinorVersion: 1
+      DXILSize:        0
+  - Name:            PRIV
+    Size:            5
+    PrivateData:     [ 0xDE, 0xAD, 0xBE, 0xEF, 0x42 ]
+...
+
+# CHECK:   FileSize:        85
+# CHECK:   PartCount:       2
+# CHECK:   PartOffsets:     [ 40, 72 ]
+# CHECK: Parts:
+# CHECK:   - Name:            DXIL
+# CHECK:     Program:
+# CHECK:       MajorVersion:    6
+# CHECK:       MinorVersion:    0
+# CHECK:       ShaderKind:      5
+# CHECK:   - Name:            PRIV
+# CHECK:     Size:            5
+# CHECK:     PrivateData:     [ 0xDE, 0xAD, 0xBE, 0xEF, 0x42 ]

@@ -15,7 +15,7 @@ struct S {
 
 void S::key() {}
 
-// CHECK-DAG: !rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>}>
+// CHECK-DAG: !rec_anon_struct = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>}>
 
 // The definition of the key function should result in the vtable being emitted.
 // CHECK:      cir.global "private" external @_ZTV1S = #cir.vtable<{

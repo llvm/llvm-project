@@ -301,8 +301,12 @@ Expected<void *> MemAllocatorTy::MemPoolTy::alloc(size_t Size,
     void *Base = *BaseOrErr;
     if (ZeroInit) {
       auto Err = Allocator->enqueueMemSet(Base, 0, BlockSize);
-      if (Err)
-        return Err;
+      if (Err) {
+        // deallocate Base on error.
+        if (auto DeallocErr = Allocator->deallocFromL0(Base))
+          return joinErrors(std::move(Err), std::move(DeallocErr));
+        return std::move(Err);
+      }
     }
 
     BlockTy *Block = new BlockTy(Base, BlockSize, ChunkSize);
@@ -626,11 +630,11 @@ Error MemAllocatorTy::deallocLocked(void *Ptr) {
 }
 
 Error MemAllocatorTy::enqueueMemSet(void *Dst, int8_t Value, size_t Size) {
-  return Device->enqueueMemFill(Dst, &Value, sizeof(int8_t), Size);
+  return Device->enqueueMemFillAndSync(Dst, &Value, sizeof(int8_t), Size);
 }
 
 Error MemAllocatorTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size) {
-  return Device->enqueueMemCopy(Dst, Src, Size);
+  return Device->enqueueMemCopyAndSync(Dst, Src, Size);
 }
 
 Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
@@ -689,44 +693,6 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
 Error MemAllocatorTy::deallocFromL0(void *Ptr) {
   CALL_ZE_RET_ERROR(zeMemFree, L0Context->getZeContext(), Ptr);
   ODBG(OLDT_Alloc) << "Freed device pointer " << Ptr;
-  return Plugin::success();
-}
-
-Expected<ze_event_handle_t> EventPoolTy::getEvent() {
-  std::lock_guard<std::mutex> Lock(*Mtx);
-
-  if (Events.empty()) {
-    // Need to create a new L0 pool.
-    ze_event_pool_desc_t Desc{ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr, 0, 0};
-    Desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE | Flags;
-    Desc.count = PoolSize;
-    ze_event_pool_handle_t Pool;
-    CALL_ZE_RET_ERROR(zeEventPoolCreate, Context, &Desc, 0, nullptr, &Pool);
-    Pools.push_back(Pool);
-
-    // Create events.
-    ze_event_desc_t EventDesc{ZE_STRUCTURE_TYPE_EVENT_DESC, nullptr, 0, 0, 0};
-    EventDesc.wait = 0;
-    EventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
-    for (uint32_t I = 0; I < PoolSize; I++) {
-      EventDesc.index = I;
-      ze_event_handle_t Event;
-      CALL_ZE_RET_ERROR(zeEventCreate, Pool, &EventDesc, &Event);
-      Events.push_back(Event);
-    }
-  }
-
-  auto Ret = Events.back();
-  Events.pop_back();
-
-  return Ret;
-}
-
-/// Return an event to the pool.
-Error EventPoolTy::releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device) {
-  std::lock_guard<std::mutex> Lock(*Mtx);
-  CALL_ZE_RET_ERROR(zeEventHostReset, Event);
-  Events.push_back(Event);
   return Plugin::success();
 }
 

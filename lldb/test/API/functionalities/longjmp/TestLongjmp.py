@@ -9,8 +9,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # setjmp/longjmp on wasm requires exception-handling support
 class LongjmpTestCase(TestBase):
     @skipIfDarwin  # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
+    @skipIfWindows # Test is flaky on Windows
     @expectedFlakeyNetBSD
     def test_step_out(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-out."""
@@ -18,6 +20,7 @@ class LongjmpTestCase(TestBase):
         self.step_out()
 
     @skipIfDarwin  # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
+    @skipIfWindows # Test is flaky on Windows
     @skipIfNetBSD
     def test_step_over(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-over a longjmp."""
@@ -25,6 +28,7 @@ class LongjmpTestCase(TestBase):
         self.step_over()
 
     @skipIfDarwin  # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
+    @skipIfWindows # Test is flaky on Windows
     @expectedFlakeyNetBSD
     def test_step_back_out(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-out after thread step-in."""

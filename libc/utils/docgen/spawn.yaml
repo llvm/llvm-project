@@ -1,0 +1,63 @@
+macros:
+  POSIX_SPAWN_RESETIDS:
+    in-latest-posix: ''
+  POSIX_SPAWN_SETPGROUP:
+    in-latest-posix: ''
+  POSIX_SPAWN_SETSCHEDPARAM:
+    in-latest-posix: ''
+  POSIX_SPAWN_SETSCHEDULER:
+    in-latest-posix: ''
+  POSIX_SPAWN_SETSID:
+    in-latest-posix: ''
+  POSIX_SPAWN_SETSIGDEF:
+    in-latest-posix: ''
+  POSIX_SPAWN_SETSIGMASK:
+    in-latest-posix: ''
+
+functions:
+  posix_spawn:
+    in-latest-posix: ''
+  posix_spawn_file_actions_addchdir:
+    in-latest-posix: ''
+  posix_spawn_file_actions_addclose:
+    in-latest-posix: ''
+  posix_spawn_file_actions_adddup2:
+    in-latest-posix: ''
+  posix_spawn_file_actions_addfchdir:
+    in-latest-posix: ''
+  posix_spawn_file_actions_addopen:
+    in-latest-posix: ''
+  posix_spawn_file_actions_destroy:
+    in-latest-posix: ''
+  posix_spawn_file_actions_init:
+    in-latest-posix: ''
+  posix_spawnattr_destroy:
+    in-latest-posix: ''
+  posix_spawnattr_getflags:
+    in-latest-posix: ''
+  posix_spawnattr_getpgroup:
+    in-latest-posix: ''
+  posix_spawnattr_getschedparam:
+    in-latest-posix: ''
+  posix_spawnattr_getschedpolicy:
+    in-latest-posix: ''
+  posix_spawnattr_getsigdefault:
+    in-latest-posix: ''
+  posix_spawnattr_getsigmask:
+    in-latest-posix: ''
+  posix_spawnattr_init:
+    in-latest-posix: ''
+  posix_spawnattr_setflags:
+    in-latest-posix: ''
+  posix_spawnattr_setpgroup:
+    in-latest-posix: ''
+  posix_spawnattr_setschedparam:
+    in-latest-posix: ''
+  posix_spawnattr_setschedpolicy:
+    in-latest-posix: ''
+  posix_spawnattr_setsigdefault:
+    in-latest-posix: ''
+  posix_spawnattr_setsigmask:
+    in-latest-posix: ''
+  posix_spawnp:
+    in-latest-posix: ''

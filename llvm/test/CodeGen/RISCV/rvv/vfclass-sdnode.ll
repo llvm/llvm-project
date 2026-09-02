@@ -13,10 +13,10 @@
 ; RUN:     --check-prefixes=CHECK,ZVFBFMIN,ZVFHMIN
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zfhmin,+zvfhmin,+experimental-zvfbfa,+v \
 ; RUN:     -target-abi=ilp32d -verify-machineinstrs < %s | FileCheck %s \
-; RUN:     --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:     --check-prefixes=CHECK,ZVFBFA
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfhmin,+zvfhmin,+experimental-zvfbfa,+v \
 ; RUN:     -target-abi=lp64d -verify-machineinstrs < %s | FileCheck %s \
-; RUN:     --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:     --check-prefixes=CHECK,ZVFBFA
 
 define <vscale x 2 x i1> @isnan_nxv2bf16(<vscale x 2 x bfloat> %x) {
 ; ZVFBFMIN-LABEL: isnan_nxv2bf16:
@@ -158,12 +158,10 @@ define <vscale x 8 x i1> @iszero_nxv8bf16(<vscale x 8 x bfloat> %x) {
 define <vscale x 8 x i1> @isfinite_nxv8bf16(<vscale x 8 x bfloat> %x) {
 ; ZVFBFMIN-LABEL: isfinite_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    lui a0, 8
-; ZVFBFMIN-NEXT:    addi a1, a0, -1
-; ZVFBFMIN-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
-; ZVFBFMIN-NEXT:    vand.vx v8, v8, a1
-; ZVFBFMIN-NEXT:    addi a0, a0, -128
-; ZVFBFMIN-NEXT:    vmslt.vx v0, v8, a0
+; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVFBFMIN-NEXT:    vadd.vv v8, v8, v8
+; ZVFBFMIN-NEXT:    li a0, -256
+; ZVFBFMIN-NEXT:    vmsltu.vx v0, v8, a0
 ; ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: isfinite_nxv8bf16:
@@ -236,6 +234,17 @@ define <vscale x 2 x i1> @isnan_nxv2f16(<vscale x 2 x half> %x) {
 ; ZVFHMIN-NEXT:    slli a0, a0, 10
 ; ZVFHMIN-NEXT:    vmsgt.vx v0, v8, a0
 ; ZVFHMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: isnan_nxv2f16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 8
+; ZVFBFA-NEXT:    addi a0, a0, -1
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFBFA-NEXT:    vand.vx v8, v8, a0
+; ZVFBFA-NEXT:    li a0, 31
+; ZVFBFA-NEXT:    slli a0, a0, 10
+; ZVFBFA-NEXT:    vmsgt.vx v0, v8, a0
+; ZVFBFA-NEXT:    ret
   %1 = call <vscale x 2 x i1> @llvm.is.fpclass.nxv2f16(<vscale x 2 x half> %x, i32 3)  ; nan
   ret <vscale x 2 x i1> %1
 }

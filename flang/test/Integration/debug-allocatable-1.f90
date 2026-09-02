@@ -21,4 +21,4 @@ end subroutine ff
 ! CHECK-DAG: ![[ELEM2]] = !DISubrange(count: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref), lowerBound: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref), stride: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref))
 ! CHECK-DAG: !DILocalVariable(name: "sc"{{.*}}type: ![[TY2:[0-9]+]])
 ! CHECK-DAG: ![[TY2]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[TY3:[0-9]+]]{{.*}})
-! CHECK-DAG: ![[TY3]] = !DIBasicType(name: "real"{{.*}})
+! CHECK-DAG: ![[TY3]] = !DIBasicType(name: "real(kind=4)"{{.*}})

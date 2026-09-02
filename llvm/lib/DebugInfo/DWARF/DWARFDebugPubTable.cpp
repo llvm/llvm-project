@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
-#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
@@ -93,24 +95,30 @@ void DWARFDebugPubTable::extract(
 void DWARFDebugPubTable::dump(raw_ostream &OS) const {
   for (const Set &S : Sets) {
     int OffsetDumpWidth = 2 * dwarf::getDwarfOffsetByteSize(S.Format);
-    OS << "length = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Length);
+    OS << "length = "
+       << formatv("0x{0:x-}",
+                  fmt_align(S.Length, AlignStyle::Right, OffsetDumpWidth, '0'));
     OS << ", format = " << dwarf::FormatString(S.Format);
-    OS << ", version = " << format("0x%04x", S.Version);
+    OS << ", version = " << formatv("{0:x4}", S.Version);
     OS << ", unit_offset = "
-       << format("0x%0*" PRIx64, OffsetDumpWidth, S.Offset);
-    OS << ", unit_size = " << format("0x%0*" PRIx64, OffsetDumpWidth, S.Size)
+       << formatv("0x{0:x-}",
+                  fmt_align(S.Offset, AlignStyle::Right, OffsetDumpWidth, '0'));
+    OS << ", unit_size = "
+       << formatv("0x{0:x-}",
+                  fmt_align(S.Size, AlignStyle::Right, OffsetDumpWidth, '0'))
        << '\n';
     OS << (GnuStyle ? "Offset     Linkage  Kind     Name\n"
                     : "Offset     Name\n");
 
     for (const Entry &E : S.Entries) {
-      OS << format("0x%0*" PRIx64 " ", OffsetDumpWidth, E.SecOffset);
+      OS << formatv("0x{0:x-} ", fmt_align(E.SecOffset, AlignStyle::Right,
+                                           OffsetDumpWidth, '0'));
       if (GnuStyle) {
         StringRef EntryLinkage =
             GDBIndexEntryLinkageString(E.Descriptor.Linkage);
         StringRef EntryKind = dwarf::GDBIndexEntryKindString(E.Descriptor.Kind);
-        OS << format("%-8s", EntryLinkage.data()) << ' '
-           << format("%-8s", EntryKind.data()) << ' ';
+        OS << formatv("{0,-8}", EntryLinkage.data()) << ' '
+           << formatv("{0,-8}", EntryKind.data()) << ' ';
       }
       OS << '\"' << E.Name << "\"\n";
     }

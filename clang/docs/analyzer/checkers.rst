@@ -2075,6 +2075,32 @@ unix
 ^^^^
 POSIX/Unix checkers.
 
+.. _unix-generic-options:
+
+unix generic options
+""""""""""""""""""""
+These are common options that affect multiple checkers in the ``unix`` group.
+
+* ``unix.DynamicMemoryModeling:Optimistic``
+
+  If set to ``true``, the static analyzer assumes that all memory allocations
+  and deallocations (like ``malloc`` or ``free``) are marked with
+  ``ownership_holds``, ``ownership_takes`` and ``ownership_returns``
+  attributes. For more information see
+  `Attributes in Clang <../AttributeReference.html#ownership-holds-ownership-returns-ownership-takes-clang-static-analyzer>`_.
+  Default value is ``false``.
+
+* ``unix.DynamicMemoryModeling:ModelAllocationFailure``
+
+  Setting this option to ``true`` enforces that the return value of memory
+  allocation functions is tested for null by the programmer (if applicable).
+  By default the analyzer does not know if a returned pointer is null or
+  non-null after an allocation and access of this pointer is not reported as
+  null pointer access. If the option is set to ``true`` the analyzer adds a
+  specific execution branch where the return value is known to be null and a
+  possible null pointer access can be found by other checkers. Default value of
+  the option is ``false``.
+
 .. _unix-API:
 
 unix.API (C)
@@ -2352,6 +2378,40 @@ Check for null pointers being passed as arguments to C string functions:
  int test() {
    return strlen(0); // warn
  }
+
+.. _unix-cstring-UninitializedRead:
+
+unix.cstring.UninitializedRead (C)
+""""""""""""""""""""""""""""""""""
+Check for uninitialized reads from common memory copy/manipulation functions such as:
+ ``memcpy, mempcpy, memmove, memcmp, strcmp, strncmp, strcpy, strlen, strsep`` and many more.
+
+.. code-block:: c
+
+ void test() {
+  char src[10];
+  char dst[5];
+  memcpy(dst,src,sizeof(dst)); // warn: Bytes string function accesses uninitialized/garbage values
+ }
+
+Limitations:
+
+   - Due to limitations of the memory modeling in the analyzer, one can likely
+     observe some false-positives of the following kind:
+
+      .. code-block:: c
+
+        void false_positive() {
+          int src[] = {1, 2, 3, 4};
+          int dst[5] = {0};
+          memcpy(dst, src, 4 * sizeof(int)); // false-positive:
+          // The 'src' buffer was correctly initialized, yet we cannot conclude
+          // that since the analyzer could not see a direct initialization of the
+          // very last byte of the source buffer.
+        }
+
+     More details at the corresponding `GitHub issue <https://github.com/llvm/llvm-project/issues/43459>`_.
+
 
 .. _unix-StdCLibraryFunctions:
 
@@ -3701,39 +3761,6 @@ the analyzer cannot detect embedded NULL characters when determining the string 
    memcpy(buffer, str, sizeof(str)); // warn
  }
 
-.. _alpha-unix-cstring-UninitializedRead:
-
-alpha.unix.cstring.UninitializedRead (C)
-""""""""""""""""""""""""""""""""""""""""
-Check for uninitialized reads from common memory copy/manipulation functions such as:
- ``memcpy, mempcpy, memmove, memcmp, strcmp, strncmp, strcpy, strlen, strsep`` and many more.
-
-.. code-block:: c
-
- void test() {
-  char src[10];
-  char dst[5];
-  memcpy(dst,src,sizeof(dst)); // warn: Bytes string function accesses uninitialized/garbage values
- }
-
-Limitations:
-
-   - Due to limitations of the memory modeling in the analyzer, one can likely
-     observe a lot of false-positive reports like this:
-
-      .. code-block:: c
-
-        void false_positive() {
-          int src[] = {1, 2, 3, 4};
-          int dst[5] = {0};
-          memcpy(dst, src, 4 * sizeof(int)); // false-positive:
-          // The 'src' buffer was correctly initialized, yet we cannot conclude
-          // that since the analyzer could not see a direct initialization of the
-          // very last byte of the source buffer.
-        }
-
-     More details at the corresponding `GitHub issue <https://github.com/llvm/llvm-project/issues/43459>`_.
-
 alpha.WebKit
 ^^^^^^^^^^^^
 
@@ -3939,6 +3966,23 @@ alpha.webkit.UncheckedCallArgsChecker
 The goal of this rule is to make sure that lifetime of any dynamically allocated CheckedPtr capable object passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. CheckedPtr capable objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unchecked types.
 
 The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
+alpha.webkit.UncheckedLambdaCapturesChecker
+"""""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to unchecked types can't be captured in lambdas. Only CheckedPtr or CheckedRef is allowed.
+
+.. code-block:: cpp
+
+ struct CheckedObject {
+   void incrementCheckedPtr() {}
+   void decrementCheckedPtr() {}
+ };
+
+ void foo(CheckedObject* a, CheckedObject& b) {
+   [&, a](){ // warn about 'a'
+     do_something(b); // warn about 'b'
+   };
+ };
 
 alpha.webkit.UnretainedCallArgsChecker
 """"""""""""""""""""""""""""""""""""""

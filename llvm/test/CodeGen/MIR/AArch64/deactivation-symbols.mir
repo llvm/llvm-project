@@ -5,7 +5,7 @@
   @ds = external global i8
 
   define i64 @pauth_sign_zero(i64 %p) {
-    ; CHECK: G_INTRINSIC intrinsic(@llvm.ptrauth.sign), %0(s64), 0, %2(s64), deactivation-symbol @ds
+    ; CHECK: G_INTRINSIC intrinsic(@llvm.ptrauth.sign), %0(i64), 0, %2(i64), deactivation-symbol @ds
     %signed = call i64 @llvm.ptrauth.sign(i64 %p, i32 0, i64 0) [ "deactivation-symbol"(ptr @ds) ]
     ret i64 %signed
   }

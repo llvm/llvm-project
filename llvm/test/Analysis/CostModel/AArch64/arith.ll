@@ -132,7 +132,7 @@ define void @i128() {
 ; CHECK-LABEL: 'i128'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %c = add i128 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %d = sub i128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e = mul i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e = mul i128 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %f = ashr i128 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %g = lshr i128 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %h = shl i128 undef, undef
@@ -150,6 +150,31 @@ define void @i128() {
   %i = and i128 undef, undef
   %j = or i128 undef, undef
   %k = xor i128 undef, undef
+  ret void
+}
+
+define void @i256() {
+; CHECK-LABEL: 'i256'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %c = add i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %d = sub i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:1 SizeLat:1 for: %e = mul i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %f = ashr i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %g = lshr i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %h = shl i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %i = and i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %j = or i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %k = xor i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %c = add i256 undef, undef
+  %d = sub i256 undef, undef
+  %e = mul i256 undef, undef
+  %f = ashr i256 undef, undef
+  %g = lshr i256 undef, undef
+  %h = shl i256 undef, undef
+  %i = and i256 undef, undef
+  %j = or i256 undef, undef
+  %k = xor i256 undef, undef
   ret void
 }
 
@@ -474,7 +499,7 @@ define void @vi128() {
 ; CHECK-LABEL: 'vi128'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %c2 = add <2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %d2 = sub <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %f2 = ashr <2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %g2 = lshr <2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %h2 = shl <2 x i128> undef, undef
@@ -492,5 +517,36 @@ define void @vi128() {
   %i2 = and <2 x i128> undef, undef
   %j2 = or <2 x i128> undef, undef
   %k2 = xor <2 x i128> undef, undef
+  ret void
+}
+
+define void @nonuniform_constant_shift_costs(<2 x i64> %x, i64 %scalar,
+; CHECK-LABEL: 'nonuniform_constant_shift_costs'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %insert = insertelement <2 x i64> poison, i64 %scalar, i64 0
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <2 x i64> %insert, <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %ashr.arbitrary = ashr <2 x i64> %x, <i64 1, i64 2>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %lshr.arbitrary = lshr <2 x i64> %x, <i64 1, i64 2>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %shl.arbitrary = shl <2 x i64> %x, <i64 1, i64 2>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %ashr.splat = ashr <2 x i64> %splat, <i64 1, i64 2>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %lshr.splat = lshr <2 x i64> %splat, <i64 1, i64 2>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %shl.splat = shl <2 x i64> %splat, <i64 1, i64 2>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %lshr.uniform = lshr <2 x i64> %x, splat (i64 1)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %lshr.wide = lshr <4 x i64> %wide, <i64 1, i64 2, i64 3, i64 4>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+                                             <4 x i64> %wide) {
+  %insert = insertelement <2 x i64> poison, i64 %scalar, i64 0
+  %splat = shufflevector <2 x i64> %insert, <2 x i64> poison, <2 x i32> zeroinitializer
+
+  %ashr.arbitrary = ashr <2 x i64> %x, <i64 1, i64 2>
+  %lshr.arbitrary = lshr <2 x i64> %x, <i64 1, i64 2>
+  %shl.arbitrary = shl <2 x i64> %x, <i64 1, i64 2>
+
+  %ashr.splat = ashr <2 x i64> %splat, <i64 1, i64 2>
+  %lshr.splat = lshr <2 x i64> %splat, <i64 1, i64 2>
+  %shl.splat = shl <2 x i64> %splat, <i64 1, i64 2>
+
+  %lshr.uniform = lshr <2 x i64> %x, splat (i64 1)
+  %lshr.wide = lshr <4 x i64> %wide, <i64 1, i64 2, i64 3, i64 4>
   ret void
 }

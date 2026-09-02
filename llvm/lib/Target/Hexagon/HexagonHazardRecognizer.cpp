@@ -38,7 +38,7 @@ void HexagonHazardRecognizer::Reset() {
 ScheduleHazardRecognizer::HazardType
 HexagonHazardRecognizer::getHazardType(SUnit *SU, int stalls) {
   MachineInstr *MI = SU->getInstr();
-  if (!MI || TII->isZeroCost(MI->getOpcode()))
+  if (!MI || TII->isZeroCost(MI->getOpcode()) || MI->isMetaInstruction())
     return NoHazard;
 
   if (!Resources->canReserveResources(*MI)) {
@@ -120,7 +120,7 @@ void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {
     if (MO.isReg() && MO.isDef() && !MO.isImplicit())
       RegDefs.insert(MO.getReg());
 
-  if (TII->isZeroCost(MI->getOpcode()))
+  if (TII->isZeroCost(MI->getOpcode()) || MI->isMetaInstruction())
     return;
 
   if (!Resources->canReserveResources(*MI) || isNewStore(*MI)) {

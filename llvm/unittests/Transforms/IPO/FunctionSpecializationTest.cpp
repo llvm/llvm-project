@@ -207,7 +207,7 @@ TEST_F(FunctionSpecializationTest, SwitchInst) {
   EXPECT_TRUE(Test > 0);
 }
 
-TEST_F(FunctionSpecializationTest, BranchInst) {
+TEST_F(FunctionSpecializationTest, CondBrInst) {
   const char *ModuleString = R"(
     define void @foo(i32 %a, i32 %b, i1 %cond) {
     entry:

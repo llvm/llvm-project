@@ -32,9 +32,10 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
     return KeyValue.first->getName() == "SIGTERM" &&
            KeyValue.first->hasMacroDefinition();
   };
+  const auto Macros = PP->macros();
   const auto TryExpandAsInteger =
-      [](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
-    if (It == PP->macro_end())
+      [&](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
+    if (It == Macros.end())
       return std::nullopt;
     const MacroInfo *MI = PP->getMacroInfo(It->first);
     const Token &T = MI->tokens().back();
@@ -55,7 +56,7 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
     return IntValue.getZExtValue();
   };
 
-  const auto SigtermMacro = llvm::find_if(PP->macros(), IsSigterm);
+  const auto SigtermMacro = llvm::find_if(Macros, IsSigterm);
 
   if (!SigtermValue && !(SigtermValue = TryExpandAsInteger(SigtermMacro)))
     return;

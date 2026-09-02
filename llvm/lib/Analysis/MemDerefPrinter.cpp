@@ -27,10 +27,10 @@ PreservedAnalyses MemDerefPrinterPass::run(Function &F,
   for (auto &I : instructions(F)) {
     if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
       Value *PO = LI->getPointerOperand();
-      if (isDereferenceablePointer(PO, LI->getType(), DL, LI))
+      if (isDereferenceablePointer(PO, LI->getType(), SimplifyQuery(DL, LI)))
         Deref.push_back(PO);
       if (isDereferenceableAndAlignedPointer(PO, LI->getType(), LI->getAlign(),
-                                             DL, LI))
+                                             SimplifyQuery(DL, LI)))
         DerefAndAligned.insert(PO);
     }
   }

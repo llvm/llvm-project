@@ -173,8 +173,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
     ; CHECK-NEXT: %trunc:gpr(s8) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:gpr(s32) = G_ANYEXT %trunc(s8)
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:fpr(<16 x s8>) = G_DUP [[ANYEXT]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:gpr(i32) = G_ANYEXT %trunc(s8)
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:fpr(<16 x s8>) = G_DUP [[ANYEXT]](i32)
     ; CHECK-NEXT: $q0 = COPY [[DUP]](<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(s32) = COPY $w0

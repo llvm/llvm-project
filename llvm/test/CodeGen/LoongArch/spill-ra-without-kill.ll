@@ -19,7 +19,6 @@ define dso_local ptr @f(i32 noundef signext %i) "frame-pointer"="all" {
 ; CHECK-NEXT:    addi.d $fp, $sp, 48
 ; CHECK-NEXT:    .cfi_def_cfa 22, 0
 ; CHECK-NEXT:    st.d $ra, $fp, -40 # 8-byte Folded Spill
-; CHECK-NEXT:    # kill: def $r5 killed $r4
 ; CHECK-NEXT:    st.w $a0, $fp, -28
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(calls)
 ; CHECK-NEXT:    addi.d $a2, $a0, %pc_lo12(calls)

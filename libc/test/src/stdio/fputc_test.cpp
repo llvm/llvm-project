@@ -9,6 +9,7 @@
 #include "src/__support/File/file.h"
 #include "src/stdio/fputc.h"
 #include "src/stdio/putchar.h"
+#include "src/stdio/stderr.h"
 
 #include "test/UnitTest/Test.h"
 

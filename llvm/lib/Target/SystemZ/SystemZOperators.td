@@ -21,6 +21,11 @@ def SDT_ZICmp               : SDTypeProfile<1, 3,
                                             [SDTCisVT<0, i32>,
                                              SDTCisSameAs<1, 2>,
                                              SDTCisVT<3, i32>]>;
+def SDT_ZICmpSG             : SDTypeProfile<1, 1,
+                                            [SDTCisVT<0, i32>,
+                                             SDTCisPtrTy<1>]>;
+def SDT_ZMovSG              : SDTypeProfile<0, 1,
+                                            [SDTCisPtrTy<0>]>;
 def SDT_ZBRCCMask           : SDTypeProfile<0, 4,
                                             [SDTCisVT<0, i32>,
                                              SDTCisVT<1, i32>,
@@ -302,6 +307,15 @@ def z_pcrel_offset      : SDNode<"SystemZISD::PCREL_OFFSET",
 // Integer comparisons.  There are three operands: the two values
 // to compare, and an integer of type SystemZICMP.
 def z_icmp              : SDNode<"SystemZISD::ICMP", SDT_ZICmp>;
+
+// A special form of icmp dedicated to comparing a stack protector value
+// to a stack slot. Kept separate to enable custom lowering.
+def z_cmp_stackguard    : SDNode<"SystemZISD::CMP_STACKGUARD", SDT_ZICmpSG>;
+
+// A special ISD node intended to mirror z_cmp_stackguard, but modeling
+// the moving of the stackguard to the stack instead of the (later) compare.
+def z_mov_stackguard    : SDNode<"SystemZISD::MOV_STACKGUARD", SDT_ZMovSG,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 
 // Floating-point comparisons.  The two operands are the values to compare.
 def z_fcmp              : SDNode<"SystemZISD::FCMP", SDT_ZCmp>;
@@ -1158,8 +1172,8 @@ class storei<SDPatternOperator operator, SDPatternOperator store = store>
 
 // Create a shift operator that optionally ignores an AND of the
 // shift count with an immediate if the bottom 6 bits are all set.
-def imm32bottom6set : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x3f) == 0x3f;
+def imm32bottom6set : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x3f) == 0x3f;
 }]>;
 class shiftop<SDPatternOperator operator>
   : PatFrags<(ops node:$val, node:$count),
@@ -1168,23 +1182,23 @@ class shiftop<SDPatternOperator operator>
 
 // Create a shift operator that optionally ignores an AND of the
 // shift count with an immediate if the bottom 7 bits are all set.
-def imm32bottom7set : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x7f) == 0x7f;
+def imm32bottom7set : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x7f) == 0x7f;
 }]>;
 class vshiftop<SDPatternOperator operator>
   : PatFrags<(ops node:$val, node:$count),
              [(operator node:$val, node:$count),
               (operator node:$val, (and node:$count, imm32bottom7set))]>;
 
-def imm32mod64  : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() % 64 == 0);
+def imm32mod64  : IntImmLeaf<i32, [{
+  return Imm.getZExtValue() % 64 == 0;
 }]>;
 
-def imm32nobits : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x07) == 0;
+def imm32nobits : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x07) == 0;
 }]>;
-def imm32nobytes : PatLeaf<(i32 imm), [{
-  return (N->getZExtValue() & 0x78) == 0;
+def imm32nobytes : IntImmLeaf<i32, [{
+  return (Imm.getZExtValue() & 0x78) == 0;
 }]>;
 
 // Load a scalar and replicate it in all elements of a vector.

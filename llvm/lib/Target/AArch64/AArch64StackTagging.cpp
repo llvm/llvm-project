@@ -333,7 +333,7 @@ private:
       AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
     if (MergeInit)
       AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+    AU.addUsedIfAvailable<OptimizationRemarkEmitterWrapperPass>();
   }
 };
 
@@ -477,9 +477,9 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   assert(PrologueBB);
 
   IRBuilder<> IRB(&PrologueBB->front());
-  Instruction *Base =
-      IRB.CreateIntrinsic(Intrinsic::aarch64_irg_sp, {},
-                          {Constant::getNullValue(IRB.getInt64Ty())});
+  Instruction *Base = IRB.CreateIntrinsicWithoutFolding(
+      Intrinsic::aarch64_irg_sp, {},
+      {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
   const Triple &TargetTriple = M.getTargetTriple();
   // This ABI will make it into Android API level 35.
@@ -518,12 +518,20 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   DL = &Fn.getDataLayout();
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  OptimizationRemarkEmitter &ORE =
-      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+
+  std::unique_ptr<OptimizationRemarkEmitter> DeleteORE;
+  OptimizationRemarkEmitter *ORE = nullptr;
+  if (auto *P = getAnalysisIfAvailable<OptimizationRemarkEmitterWrapperPass>())
+    ORE = &P->getORE();
+
+  if (ORE == nullptr) {
+    DeleteORE = std::make_unique<OptimizationRemarkEmitter>(F);
+    ORE = DeleteORE.get();
+  }
 
   memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE);
   for (Instruction &I : instructions(F))
-    SIB.visit(ORE, I);
+    SIB.visit(*ORE, I);
   memtag::StackInfo &SInfo = SIB.get();
 
   if (SInfo.AllocasToInstrument.empty())
@@ -575,10 +583,10 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
-    Instruction *TagPCall =
-        IRB.CreateIntrinsic(Intrinsic::aarch64_tagp, {Info.AI->getType()},
-                            {Constant::getNullValue(Info.AI->getType()), Base,
-                             ConstantInt::get(IRB.getInt64Ty(), Tag)});
+    Instruction *TagPCall = IRB.CreateIntrinsicWithoutFolding(
+        Intrinsic::aarch64_tagp, {Info.AI->getType()},
+        {Constant::getNullValue(Info.AI->getType()), Base,
+         ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DbgVariableRecords.

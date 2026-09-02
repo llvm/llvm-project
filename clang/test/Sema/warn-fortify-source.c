@@ -21,10 +21,16 @@ extern int sprintf(char *str, const char *format, ...);
 #else
 void *memcpy(void *dst, const void *src, size_t c);
 #endif
+void bcopy(const void *src, void *dst, size_t n);
+void bzero(void *dst, size_t n);
 
 #ifdef __cplusplus
 }
 #endif
+
+// umask is recognized as a builtin by name; this header just supplies a
+// realistic system-header declaration and the mode_t typedef used below.
+#include "Inputs/warn-fortify-source-umask.h"
 
 void call_memcpy(void) {
   char dst[10];
@@ -102,6 +108,16 @@ void call_memset(void) {
   char buf[10];
   __builtin_memset(buf, 0xff, 10);
   __builtin_memset(buf, 0xff, 11); // expected-warning {{'memset' will always overflow; destination buffer has size 10, but size argument is 11}}
+}
+
+void call_bcopy_bzero(void) {
+  char src[20], dst[10];
+  bcopy(src, dst, 20); // expected-warning {{'bcopy' will always overflow; destination buffer has size 10, but size argument is 20}}
+  bzero(dst, 11); // expected-warning {{'bzero' will always overflow; destination buffer has size 10, but size argument is 11}}
+  __builtin_bcopy(src, dst, 10);
+  __builtin_bcopy(src, dst, 20); // expected-warning {{'bcopy' will always overflow; destination buffer has size 10, but size argument is 20}}
+  __builtin_bzero(dst, 10);
+  __builtin_bzero(dst, 11); // expected-warning {{'bzero' will always overflow; destination buffer has size 10, but size argument is 11}}
 }
 
 void call_snprintf(double d, int n) {
@@ -228,6 +244,18 @@ void call_sprintf(void) {
   sprintf(buf, "%+.3f", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
   sprintf(buf, "%.0e", 9.f);
   sprintf(buf, "5%.1e", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 8}}
+}
+
+void call_umask(mode_t runtime_mode) {
+  umask(0);
+  umask(022);
+  umask(0644);
+  umask(0777);
+  umask(01000);   // expected-warning {{'umask' argument sets non-file-permission bits (01000); those bits are ignored}}
+  umask(0xFFFF);  // expected-warning {{'umask' argument sets non-file-permission bits (0177000); those bits are ignored}}
+  umask(7777);    // expected-warning {{'umask' argument sets non-file-permission bits (017000); those bits are ignored}}
+  umask(-1);      // expected-warning {{'umask' argument sets non-file-permission bits (}}
+  umask(runtime_mode); // no warning, not a constant
 }
 
 #ifdef __cplusplus

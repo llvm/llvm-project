@@ -8,8 +8,8 @@
 ; GCN-GCNTRACKERS:    NumVgprs: 2
 ; GCN:    ScratchSize: 0
 ; GCN-GCNTRACKERS:    ScratchSize: 0
-; GCN:    Occupancy: 5
-; GCN-GCNTRACKERS:    Occupancy: 5
+; GCN:    Occupancy: 4
+; GCN-GCNTRACKERS:    Occupancy: 4
 
 ; FIXME: GCN Trackers do not track pressure from PhysRegs, so scheduling is actually worse
 

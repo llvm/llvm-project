@@ -243,7 +243,7 @@ size_t DIEAttributeCloner::cloneDieRefAttr(
       InUnit.resolveDIEReference(Val, ResolveInterCUReferencesMode::Resolve);
   if (!RefDiePair || !RefDiePair->DieEntry) {
     // If the referenced DIE is not found,  drop the attribute.
-    InUnit.warn("cann't find referenced DIE.", InputDieEntry);
+    InUnit.warn("could not find referenced DIE", InputDieEntry);
     return 0;
   }
 
@@ -514,16 +514,64 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   } else if (AttrSpec.Attr == dwarf::DW_AT_declaration && Value)
     AttrInfo.IsDeclaration = true;
 
-  return Generator.addScalarAttribute(AttrSpec.Attr, ResultingForm, Value)
-      .second;
+  // DW_AT_LLVM_stmt_sequence refers to line info in this unit's
+  // .debug_line contribution, which only exists for compile units.
+  // DependencyTracker can route a module-scope subprogram to a type
+  // unit when ODR deduplication applies (see
+  // DependencyTracker.cpp: DW_TAG_subprogram case), so drop the
+  // attribute on that path — mirroring how cloneBlockAttr handles
+  // type-unit placement.
+  if (AttrSpec.Attr == dwarf::DW_AT_LLVM_stmt_sequence &&
+      !OutUnit.isCompileUnit())
+    return 0;
+
+  auto Result =
+      Generator.addScalarAttribute(AttrSpec.Attr, ResultingForm, Value);
+  // Record DW_AT_LLVM_stmt_sequence so the attribute value can be
+  // rewritten with the correct .debug_line offset after the line table
+  // for this CU has been emitted. We also register a DebugOffsetPatch so
+  // that the final-section offset of .debug_line gets added when the
+  // section is placed in the combined output.
+  if (AttrSpec.Attr == dwarf::DW_AT_LLVM_stmt_sequence) {
+    // Record the attribute's raw input stmt-sequence offset. Resolution
+    // to a first-row index — including the boundary-walk fallback for
+    // sequences the DWARF parser may not have registered — happens in
+    // a post-cloning pass (buildStmtSeqOffsetToFirstRowIndex), so that
+    // matches the classic linker's behaviour.
+    OutUnit.getAsCompileUnit()->noteStmtSeqListAttribute(&Result.first, Value);
+    DebugInfoOutputSection.notePatchWithOffsetUpdate(
+        DebugOffsetPatch{
+            AttrOutOffset,
+            &OutUnit->getOrCreateSectionDescriptor(DebugSectionKind::DebugLine),
+            /*AddLocalValue=*/true},
+        PatchesOffsets);
+  }
+  return Result.second;
+}
+
+static bool expressionDependsOnOriginUnit(const DWARFExpression &Expr) {
+  using Encoding = DWARFExpression::Operation::Encoding;
+
+  for (const DWARFExpression::Operation &Op : Expr) {
+    switch (Op.getCode()) {
+    case dwarf::DW_OP_addr:
+    case dwarf::DW_OP_addrx:
+    case dwarf::DW_OP_constx:
+      return true;
+    default:
+      break;
+    }
+
+    if (llvm::is_contained(Op.getDescription().Op, Encoding::BaseTypeRef))
+      return true;
+  }
+
+  return false;
 }
 
 size_t DIEAttributeCloner::cloneBlockAttr(
     const DWARFFormValue &Val,
     const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
-
-  if (OutUnit.isTypeUnit())
-    return 0;
 
   size_t NumberOfPatchesAtStart = PatchesOffsets.size();
 
@@ -534,11 +582,15 @@ size_t DIEAttributeCloner::cloneBlockAttr(
   if (DWARFAttribute::mayHaveLocationExpr(AttrSpec.Attr) &&
       (Val.isFormClass(DWARFFormValue::FC_Block) ||
        Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
-    DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
-                       InUnit.getOrigUnit().isLittleEndian(),
-                       InUnit.getOrigUnit().getAddressByteSize());
+    DataExtractor Data(Bytes, InUnit.getOrigUnit().isLittleEndian());
     DWARFExpression Expr(Data, InUnit.getOrigUnit().getAddressByteSize(),
                          InUnit.getFormParams().Format);
+
+    // A type unit is shared by every compile unit that references the type, so
+    // an expression resolving against one origin unit has no single correct
+    // value there.
+    if (OutUnit.isTypeUnit() && expressionDependsOnOriginUnit(Expr))
+      return 0;
 
     InUnit.cloneDieAttrExpression(Expr, Buffer, DebugInfoOutputSection,
                                   VarAddressAdjustment, PatchesOffsets);

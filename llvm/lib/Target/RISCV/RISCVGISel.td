@@ -32,7 +32,7 @@ def simm12Minus1NonzeroNonNeg1 : ImmLeaf<XLenVT, [{
 // Return an immediate value plus 1.
 def ImmPlus1 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue() + 1, SDLoc(N),
-                                   N->getValuePtrVTpe(0));}]>;
+                                   N->getValueType(0));}]>;
 def GIImmPlus1 :
   GICustomOperandRenderer<"renderImmPlus1">,
   GISDNodeXFormEquiv<ImmPlus1>;

@@ -162,7 +162,8 @@ bool DynamicLoaderFreeBSDKernel::ReadELFHeader(Process *process,
     *read_error = false;
 
   if (process->ReadMemory(addr, &header, sizeof(header), error) !=
-      sizeof(header)) {
+          sizeof(header) ||
+      error.Fail()) {
     if (read_error)
       *read_error = true;
     return false;
@@ -255,8 +256,6 @@ void DynamicLoaderFreeBSDKernel::DebuggerInit(
 DynamicLoaderFreeBSDKernel::DynamicLoaderFreeBSDKernel(Process *process,
                                                        addr_t kernel_address)
     : DynamicLoader(process), m_process(process),
-      m_linker_file_list_struct_addr(LLDB_INVALID_ADDRESS),
-      m_linker_file_head_addr(LLDB_INVALID_ADDRESS),
       m_kernel_load_address(kernel_address), m_mutex() {
   process->SetCanRunCode(false);
 }
@@ -293,7 +292,8 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::ReadMemoryModule(
       llvm::ELF::Elf64_Ehdr elf_eheader;
       Status error;
       if (process->ReadMemory(m_load_address, &elf_eheader, sizeof(elf_eheader),
-                              error) == sizeof(elf_eheader))
+                              error) == sizeof(elf_eheader) &&
+          error.Success())
         size_to_read = sizeof(llvm::ELF::Elf64_Ehdr) +
                        elf_eheader.e_phnum * elf_eheader.e_phentsize;
     }
@@ -360,7 +360,8 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
       if (IsKernel()) {
         Status error;
         if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
-                                                       true)) {
+                                                       true) &&
+            error.Success()) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec()))
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());
@@ -715,11 +716,8 @@ void DynamicLoaderFreeBSDKernel::LoadKernelModules() {
     llvm::StringRef kernel_name("freebsd_kernel");
     module_sp = m_kernel_image_info.GetModule();
     if (module_sp.get() && module_sp->GetObjectFile() &&
-        !module_sp->GetObjectFile()->GetFileSpec().GetFilename().IsEmpty())
-      kernel_name = module_sp->GetObjectFile()
-                        ->GetFileSpec()
-                        .GetFilename()
-                        .GetStringRef();
+        !module_sp->GetObjectFile()->GetFileSpec().GetFilename().empty())
+      kernel_name = module_sp->GetObjectFile()->GetFileSpec().GetFilename();
     m_kernel_image_info.SetName(kernel_name.data());
 
     if (m_kernel_image_info.GetLoadAddress() == LLDB_INVALID_ADDRESS) {

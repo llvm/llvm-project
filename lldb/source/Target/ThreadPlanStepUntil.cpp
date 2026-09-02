@@ -24,9 +24,8 @@ using namespace lldb_private;
 // the current frame
 
 ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
-                                         lldb::addr_t *address_list,
-                                         size_t num_addresses, bool stop_others,
-                                         uint32_t frame_idx)
+                                         llvm::ArrayRef<addr_t> address_list,
+                                         bool stop_others, uint32_t frame_idx)
     : ThreadPlan(ThreadPlan::eKindStepUntil, "Step until", thread,
                  eVoteNoOpinion, eVoteNoOpinion),
       m_step_from_insn(LLDB_INVALID_ADDRESS),
@@ -63,15 +62,15 @@ ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
     m_stack_id = frame_sp->GetStackID();
 
     // Now set breakpoints on all our return addresses:
-    for (size_t i = 0; i < num_addresses; i++) {
+    for (addr_t address : address_list) {
       Breakpoint *until_bp =
-          target_sp->CreateBreakpoint(address_list[i], true, false).get();
+          target_sp->CreateBreakpoint(address, true, false).get();
       if (until_bp != nullptr) {
         until_bp->SetThreadID(m_tid);
-        m_until_points[address_list[i]] = until_bp->GetID();
+        m_until_points[address] = until_bp->GetID();
         until_bp->SetBreakpointKind("until-target");
       } else {
-        m_until_points[address_list[i]] = LLDB_INVALID_BREAK_ID;
+        m_until_points[address] = LLDB_INVALID_BREAK_ID;
       }
     }
   }

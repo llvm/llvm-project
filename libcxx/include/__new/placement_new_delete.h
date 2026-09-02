@@ -27,8 +27,8 @@ operator new(std::size_t, void* __p) _NOEXCEPT {
 operator new[](std::size_t, void* __p) _NOEXCEPT {
   return __p;
 }
-inline _LIBCPP_HIDE_FROM_ABI void operator delete(void*, void*) _NOEXCEPT {}
-inline _LIBCPP_HIDE_FROM_ABI void operator delete[](void*, void*) _NOEXCEPT {}
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void operator delete(void*, void*) _NOEXCEPT {}
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void operator delete[](void*, void*) _NOEXCEPT {}
 #endif
 
 #endif // _LIBCPP___NEW_PLACEMENT_NEW_DELETE_H

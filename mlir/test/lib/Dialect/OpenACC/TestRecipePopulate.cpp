@@ -80,15 +80,15 @@ void TestRecipePopulatePass::runOnOperation() {
     ValueRange bounds; // No bounds for memref tests
 
     if (recipeType == "private") {
-      auto recipe = PrivateRecipeOp::createAndPopulate(
-          builder, loc, recipeName, var.getType(), varName, bounds);
+      auto recipe = PrivateRecipeOp::createAndPopulate(builder, loc, recipeName,
+                                                       var, varName, bounds);
 
       if (!recipe) {
         op->emitError("Failed to create private recipe for ") << varName;
       }
     } else if (recipeType == "firstprivate") {
       auto recipe = FirstprivateRecipeOp::createAndPopulate(
-          builder, loc, recipeName, var.getType(), varName, bounds);
+          builder, loc, recipeName, var, varName, bounds);
 
       if (!recipe) {
         op->emitError("Failed to create firstprivate recipe for ") << varName;
@@ -101,7 +101,7 @@ void TestRecipePopulatePass::runOnOperation() {
       std::string privName = "private_from_firstprivate_" + varName;
 
       auto firstpriv = FirstprivateRecipeOp::createAndPopulate(
-          builder, loc, firstprivName, var.getType(), varName, bounds);
+          builder, loc, firstprivName, var, varName, bounds);
 
       if (!firstpriv) {
         op->emitError("Failed to create firstprivate recipe for ") << varName;

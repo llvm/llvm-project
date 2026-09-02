@@ -4,6 +4,7 @@ static_library("Options") {
   include_dirs = [ "." ]
   deps = [
     "//clang/include/clang/Config",
+    "//clang/include/clang/StaticAnalyzer/Checkers",
     "//clang/lib/Basic",
     "//llvm/lib/Option",
     "//llvm/lib/Support",

@@ -1,0 +1,198 @@
+//===- TripleName.def - Triple component name table -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+//===----------------------------------------------------------------------===//
+// OS names.
+//
+// TRIPLE_OS(Enum, Name)
+//   Enum - the Triple::OSType enumerator
+//   Name - the canonical string
+//
+// TRIPLE_OS_ALIAS(Enum, AliasName)
+//   An additional prefix maps to an OSType.
+//
+// Order is significant: parsing uses prefix matching, so a name that is a
+// prefix of another must come AFTER it (wasip1/2/3 before wasi).
+// ===----------------------------------------------------------------------===//
+
+#ifndef TRIPLE_OS
+#define TRIPLE_OS(Enum, Name)
+#endif
+#ifndef TRIPLE_OS_ALIAS
+#define TRIPLE_OS_ALIAS(Enum, AliasName)
+#endif
+
+TRIPLE_OS(Darwin, "darwin")
+TRIPLE_OS(DragonFly, "dragonfly")
+TRIPLE_OS(FreeBSD, "freebsd")
+TRIPLE_OS(Fuchsia, "fuchsia")
+TRIPLE_OS(IOS, "ios")
+TRIPLE_OS(KFreeBSD, "kfreebsd")
+TRIPLE_OS(Linux, "linux")
+TRIPLE_OS(Lv2, "lv2")
+TRIPLE_OS(MacOSX, "macosx")
+TRIPLE_OS_ALIAS(MacOSX, "macos")
+TRIPLE_OS(Managarm, "managarm")
+TRIPLE_OS(NetBSD, "netbsd")
+TRIPLE_OS(OpenBSD, "openbsd")
+TRIPLE_OS(Solaris, "solaris")
+TRIPLE_OS(UEFI, "uefi")
+TRIPLE_OS(Win32, "windows")
+TRIPLE_OS_ALIAS(Win32, "win32")
+TRIPLE_OS(ZOS, "zos")
+TRIPLE_OS(Haiku, "haiku")
+TRIPLE_OS(RTEMS, "rtems")
+TRIPLE_OS(AIX, "aix")
+TRIPLE_OS(CUDA, "cuda")
+TRIPLE_OS(NVCL, "nvcl")
+TRIPLE_OS(AMDHSA, "amdhsa")
+TRIPLE_OS(PS4, "ps4")
+TRIPLE_OS(PS5, "ps5")
+TRIPLE_OS(ELFIAMCU, "elfiamcu")
+TRIPLE_OS(TvOS, "tvos")
+TRIPLE_OS(WatchOS, "watchos")
+TRIPLE_OS(BridgeOS, "bridgeos")
+TRIPLE_OS(DriverKit, "driverkit")
+TRIPLE_OS(XROS, "xros")
+TRIPLE_OS_ALIAS(XROS, "visionos")
+TRIPLE_OS(Mesa3D, "mesa3d")
+TRIPLE_OS(AMDPAL, "amdpal")
+TRIPLE_OS(HermitCore, "hermit")
+TRIPLE_OS(Hurd, "hurd")
+TRIPLE_OS(WASIp1, "wasip1")
+TRIPLE_OS(WASIp2, "wasip2")
+TRIPLE_OS(WASIp3, "wasip3")
+TRIPLE_OS(WASI, "wasi")
+TRIPLE_OS(Emscripten, "emscripten")
+TRIPLE_OS(ShaderModel, "shadermodel")
+TRIPLE_OS(LiteOS, "liteos")
+TRIPLE_OS(Serenity, "serenity")
+TRIPLE_OS(Vulkan, "vulkan")
+TRIPLE_OS(CheriotRTOS, "cheriotrtos")
+TRIPLE_OS(OpenCL, "opencl")
+TRIPLE_OS(ChipStar, "chipstar")
+TRIPLE_OS(Firmware, "firmware")
+TRIPLE_OS(QURT, "qurt")
+TRIPLE_OS(H2, "h2")
+
+#undef TRIPLE_OS
+#undef TRIPLE_OS_ALIAS
+
+//===----------------------------------------------------------------------===//
+// Environment names.
+//
+// TRIPLE_ENV(Enum, Name)
+//   Enum - the Triple::EnvironmentType enumerator.
+//   Name - the canonical string
+//
+// Order is significant for the same prefix-matching reason as OS (eabihf before
+// eabi; the gnu*/musl* variants before gnu/musl).
+//===----------------------------------------------------------------------===//
+
+#ifndef TRIPLE_ENV
+#define TRIPLE_ENV(Enum, Name)
+#endif
+
+TRIPLE_ENV(EABIHF, "eabihf")
+TRIPLE_ENV(EABI, "eabi")
+TRIPLE_ENV(GNUABIN32, "gnuabin32")
+TRIPLE_ENV(GNUABI64, "gnuabi64")
+TRIPLE_ENV(GNUEABIHFT64, "gnueabihft64")
+TRIPLE_ENV(GNUEABIHF, "gnueabihf")
+TRIPLE_ENV(GNUEABIT64, "gnueabit64")
+TRIPLE_ENV(GNUEABI, "gnueabi")
+TRIPLE_ENV(GNUF32, "gnuf32")
+TRIPLE_ENV(GNUF64, "gnuf64")
+TRIPLE_ENV(GNUSF, "gnusf")
+TRIPLE_ENV(GNUX32, "gnux32")
+TRIPLE_ENV(GNUILP32, "gnu_ilp32")
+TRIPLE_ENV(CODE16, "code16")
+TRIPLE_ENV(GNUT64, "gnut64")
+TRIPLE_ENV(GNU, "gnu")
+TRIPLE_ENV(Android, "android")
+TRIPLE_ENV(MuslABIN32, "muslabin32")
+TRIPLE_ENV(MuslABI64, "muslabi64")
+TRIPLE_ENV(MuslEABIHF, "musleabihf")
+TRIPLE_ENV(MuslEABI, "musleabi")
+TRIPLE_ENV(MuslF32, "muslf32")
+TRIPLE_ENV(MuslSF, "muslsf")
+TRIPLE_ENV(MuslX32, "muslx32")
+TRIPLE_ENV(MuslWALI, "muslwali")
+TRIPLE_ENV(Musl, "musl")
+TRIPLE_ENV(MSVC, "msvc")
+TRIPLE_ENV(Itanium, "itanium")
+TRIPLE_ENV(Cygnus, "cygnus")
+TRIPLE_ENV(CoreCLR, "coreclr")
+TRIPLE_ENV(Simulator, "simulator")
+TRIPLE_ENV(MacABI, "macabi")
+TRIPLE_ENV(Pixel, "pixel")
+TRIPLE_ENV(Vertex, "vertex")
+TRIPLE_ENV(Geometry, "geometry")
+TRIPLE_ENV(Hull, "hull")
+TRIPLE_ENV(Domain, "domain")
+TRIPLE_ENV(Compute, "compute")
+TRIPLE_ENV(Library, "library")
+TRIPLE_ENV(RayGeneration, "raygeneration")
+TRIPLE_ENV(Intersection, "intersection")
+TRIPLE_ENV(AnyHit, "anyhit")
+TRIPLE_ENV(ClosestHit, "closesthit")
+TRIPLE_ENV(Miss, "miss")
+TRIPLE_ENV(Callable, "callable")
+TRIPLE_ENV(Mesh, "mesh")
+TRIPLE_ENV(Amplification, "amplification")
+TRIPLE_ENV(RootSignature, "rootsignature")
+TRIPLE_ENV(OpenHOS, "ohos")
+TRIPLE_ENV(PAuthTest, "pauthtest")
+TRIPLE_ENV(LLVM, "llvm")
+TRIPLE_ENV(Mlibc, "mlibc")
+TRIPLE_ENV(MTIA, "mtia")
+
+#undef TRIPLE_ENV
+
+//===----------------------------------------------------------------------===//
+// Vendor names.
+//
+// TRIPLE_VENDOR(Enum, Name)
+//   Enum - the Triple::VendorType enumerator.
+//   Name - the canonical string
+//
+// TRIPLE_VENDOR_ALIAS(Enum, AliasName)
+//   An additional string that maps to a VendorType.
+//
+// Unlike OS and environment names, vendors are matched exactly,
+// so entry order is insignificant.
+//===----------------------------------------------------------------------===//
+
+#ifndef TRIPLE_VENDOR
+#define TRIPLE_VENDOR(Enum, Name)
+#endif
+#ifndef TRIPLE_VENDOR_ALIAS
+#define TRIPLE_VENDOR_ALIAS(Enum, AliasName)
+#endif
+
+TRIPLE_VENDOR(AMD, "amd")
+TRIPLE_VENDOR(Apple, "apple")
+TRIPLE_VENDOR(CSR, "csr")
+TRIPLE_VENDOR(Freescale, "fsl")
+TRIPLE_VENDOR(IBM, "ibm")
+TRIPLE_VENDOR(ImaginationTechnologies, "img")
+TRIPLE_VENDOR(Intel, "intel")
+TRIPLE_VENDOR(Mesa, "mesa")
+TRIPLE_VENDOR(MipsTechnologies, "mti")
+TRIPLE_VENDOR(NVIDIA, "nvidia")
+TRIPLE_VENDOR(OpenEmbedded, "oe")
+TRIPLE_VENDOR(PC, "pc")
+TRIPLE_VENDOR(SCEI, "scei")
+TRIPLE_VENDOR_ALIAS(SCEI, "sie")
+TRIPLE_VENDOR(SUSE, "suse")
+TRIPLE_VENDOR(Meta, "meta")
+
+#undef TRIPLE_VENDOR
+#undef TRIPLE_VENDOR_ALIAS

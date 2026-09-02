@@ -7,17 +7,11 @@ target triple = "aarch64-linux-gnu"
 define void @fdot_v4f32(ptr %accptr, ptr %aptr, ptr %bptr) {
 ; SVE2-LABEL: fdot_v4f32:
 ; SVE2:       // %bb.0: // %entry
-; SVE2-NEXT:    ldr q0, [x1]
-; SVE2-NEXT:    ldr q1, [x2]
-; SVE2-NEXT:    fcvtl v2.4s, v0.4h
-; SVE2-NEXT:    fcvtl v3.4s, v1.4h
-; SVE2-NEXT:    fcvtl2 v0.4s, v0.8h
-; SVE2-NEXT:    fcvtl2 v1.4s, v1.8h
-; SVE2-NEXT:    fmul v2.4s, v2.4s, v3.4s
-; SVE2-NEXT:    ldr q3, [x0]
-; SVE2-NEXT:    fmul v0.4s, v0.4s, v1.4s
-; SVE2-NEXT:    fadd v1.4s, v3.4s, v2.4s
-; SVE2-NEXT:    fadd v0.4s, v1.4s, v0.4s
+; SVE2-NEXT:    ldr q0, [x0]
+; SVE2-NEXT:    ldr q1, [x1]
+; SVE2-NEXT:    ldr q2, [x2]
+; SVE2-NEXT:    fmlalb z0.s, z1.h, z2.h
+; SVE2-NEXT:    fmlalt z0.s, z1.h, z2.h
 ; SVE2-NEXT:    str q0, [x0]
 ; SVE2-NEXT:    ret
 ;
@@ -216,14 +210,12 @@ entry:
 define <4 x float> @fixed_fdot_wide(<4 x float> %acc, <8 x half> %a, <8 x half> %b) {
 ; SVE2-LABEL: fixed_fdot_wide:
 ; SVE2:       // %bb.0: // %entry
-; SVE2-NEXT:    fcvtl v3.4s, v1.4h
-; SVE2-NEXT:    fcvtl v4.4s, v2.4h
-; SVE2-NEXT:    fcvtl2 v1.4s, v1.8h
-; SVE2-NEXT:    fcvtl2 v2.4s, v2.8h
-; SVE2-NEXT:    fmul v3.4s, v3.4s, v4.4s
-; SVE2-NEXT:    fmul v1.4s, v1.4s, v2.4s
-; SVE2-NEXT:    fadd v0.4s, v0.4s, v3.4s
-; SVE2-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    fmlalb z0.s, z1.h, z2.h
+; SVE2-NEXT:    fmlalt z0.s, z1.h, z2.h
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; SVE2P1-LABEL: fixed_fdot_wide:
@@ -245,12 +237,12 @@ entry:
 define <2 x float> @fixed_fdot(<2 x float> %acc, <4 x half> %a, <4 x half> %b) {
 ; SVE2-LABEL: fixed_fdot:
 ; SVE2:       // %bb.0: // %entry
-; SVE2-NEXT:    fcvtl v1.4s, v1.4h
-; SVE2-NEXT:    fcvtl v2.4s, v2.4h
-; SVE2-NEXT:    fmul v1.4s, v1.4s, v2.4s
-; SVE2-NEXT:    fadd v0.2s, v0.2s, v1.2s
-; SVE2-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; SVE2-NEXT:    fadd v0.2s, v1.2s, v0.2s
+; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE2-NEXT:    // kill: def $d2 killed $d2 def $z2
+; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
+; SVE2-NEXT:    fmlalb z0.s, z1.h, z2.h
+; SVE2-NEXT:    fmlalt z0.s, z1.h, z2.h
+; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; SVE2P1-LABEL: fixed_fdot:

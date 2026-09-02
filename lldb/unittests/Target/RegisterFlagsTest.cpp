@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/StreamString.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -336,9 +336,22 @@ TEST(RegisterFlagsTest, DumpEnums) {
                               RegisterFlags::Field{"E", 0, 0},
                           })
                 .DumpEnums(80),
-            "B: 0 = an_enumerator, 1 = another_enumerator\n"
+            "B, D: 0 = an_enumerator, 1 = another_enumerator");
+
+  // Fields using the same enum should be grouped together.
+  FieldEnum repeated_enum("repeated_enum",
+                          {{0, "zero"}, {1, "one"}, {2, "two"}});
+  ASSERT_EQ(RegisterFlags("", 8,
+                          {
+                              RegisterFlags::Field{"A", 6, 7, &repeated_enum},
+                              RegisterFlags::Field{"B", 4, 5, &repeated_enum},
+                              RegisterFlags::Field{"C", 2, 3, &enum_2},
+                              RegisterFlags::Field{"D", 0, 1, &repeated_enum},
+                          })
+                .DumpEnums(80),
+            "A, B, D: 0 = zero, 1 = one, 2 = two\n"
             "\n"
-            "D: 0 = an_enumerator, 1 = another_enumerator");
+            "C: 0 = Cdef_enumerator_1, 1 = Cdef_enumerator_2");
 }
 
 TEST(RegisterFieldsTest, FlagsToXML) {

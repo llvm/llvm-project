@@ -210,7 +210,7 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
                "{0}: Couldn't get the lock, sent 'q' to {1}, error = '{2}'.",
                this, m_pipe.GetWriteFileDescriptor(), err);
       consumeError(std::move(err));
-    } else if (log) {
+    } else {
       LLDB_LOGF(log,
                 "%p ConnectionFileDescriptor::Disconnect(): Couldn't get the "
                 "lock, but no command pipe is available.",
@@ -271,13 +271,11 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
   size_t bytes_read = dst_len;
   error = m_io_sp->Read(dst, bytes_read);
 
-  if (log) {
-    LLDB_LOG(log,
-             "{0} ConnectionFileDescriptor::Read()  fd = {1}"
-             ", dst = {2}, dst_len = {3}) => {4}, error = {5}",
-             this, m_io_sp->GetWaitableHandle(), dst, dst_len, bytes_read,
-             error.AsCString());
-  }
+  LLDB_LOG(log,
+           "{0} ConnectionFileDescriptor::Read()  fd = {1}"
+           ", dst = {2}, dst_len = {3}) => {4}, error = {5}",
+           this, m_io_sp->GetWaitableHandle(), dst, dst_len, bytes_read,
+           error.AsCString());
 
   if (bytes_read == 0) {
     error.Clear(); // End-of-file.  Do not automatically close; pass along for
@@ -373,13 +371,11 @@ size_t ConnectionFileDescriptor::Write(const void *src, size_t src_len,
   size_t bytes_sent = src_len;
   error = m_io_sp->Write(src, bytes_sent);
 
-  if (log) {
-    LLDB_LOG(log,
-             "{0} ConnectionFileDescriptor::Write(fd = {1}"
-             ", src = {2}, src_len = {3}) => {4} (error = {5})",
-             this, m_io_sp->GetWaitableHandle(), src, src_len, bytes_sent,
-             error.AsCString());
-  }
+  LLDB_LOG(log,
+           "{0} ConnectionFileDescriptor::Write(fd = {1}"
+           ", src = {2}, src_len = {3}) => {4} (error = {5})",
+           this, m_io_sp->GetWaitableHandle(), src, src_len, bytes_sent,
+           error.AsCString());
 
   if (error_ptr)
     *error_ptr = error.Clone();

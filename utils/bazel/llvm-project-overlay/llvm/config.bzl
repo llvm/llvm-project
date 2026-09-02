@@ -28,8 +28,6 @@ def native_arch_defines(arch, triple):
 
 posix_defines = [
     "LLVM_ON_UNIX=1",
-    "HAVE_BACKTRACE=1",
-    "BACKTRACE_HEADER=<execinfo.h>",
     r'LTDL_SHLIB_EXT=\".so\"',
     r'LLVM_PLUGIN_EXT=\".so\"',
     "LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS=1",
@@ -48,10 +46,23 @@ posix_defines = [
     "HAVE_UNISTD_H=1",
 ]
 
+backtrace_defines = select({
+    "@platforms//os:windows": [],
+    "@llvm//platforms/config:musl": [],
+    "//conditions:default": [
+        "HAVE_BACKTRACE=1",
+        "BACKTRACE_HEADER=<execinfo.h>",
+    ],
+})
+
+mallinfo_defines = select({
+    "@llvm//platforms/config:gnu": ["HAVE_MALLINFO=1"],
+    "//conditions:default": [],
+})
+
 linux_defines = posix_defines + [
     "_GNU_SOURCE",
     "HAVE_GETAUXVAL=1",
-    "HAVE_MALLINFO=1",
     "HAVE_SBRK=1",
     "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
 ]
@@ -83,30 +94,30 @@ win32_defines = [
 # TODO: We should switch to platforms-based config settings to make this easier
 # to express.
 os_defines = select({
-    "@bazel_tools//src/conditions:windows": win32_defines,
-    "@bazel_tools//src/conditions:darwin": macos_defines,
-    "@bazel_tools//src/conditions:freebsd": posix_defines,
+    "@platforms//os:freebsd": posix_defines,
+    "@platforms//os:macos": macos_defines,
+    "@platforms//os:windows": win32_defines,
     "//conditions:default": linux_defines,
-})
+}) + backtrace_defines + mallinfo_defines
 
 # HAVE_BUILTIN_THREAD_POINTER is true for on Linux (outside of ppc64) for
 # all recent toolchains. Add it here by default on Linux as we can't perform a
 # configure time check.
 builtin_thread_pointer = select({
-    "@bazel_tools//src/conditions:linux_ppc64le": [],
-    "@bazel_tools//src/conditions:linux": ["HAVE_BUILTIN_THREAD_POINTER"],
+    Label("//llvm:linux_ppc64le"): [],
+    "@platforms//os:linux": ["HAVE_BUILTIN_THREAD_POINTER"],
     "//conditions:default": [],
 })
 
 # TODO: We should split out host vs. target here.
 llvm_config_defines = os_defines + builtin_thread_pointer + select({
-    "@bazel_tools//src/conditions:windows": native_arch_defines("X86", "x86_64-pc-win32"),
-    "@bazel_tools//src/conditions:darwin_arm64": native_arch_defines("AArch64", "arm64-apple-darwin"),
-    "@bazel_tools//src/conditions:darwin_x86_64": native_arch_defines("X86", "x86_64-unknown-darwin"),
-    "@bazel_tools//src/conditions:linux_aarch64": native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),
-    "@bazel_tools//src/conditions:linux_ppc64le": native_arch_defines("PowerPC", "powerpc64le-unknown-linux-gnu"),
-    "@bazel_tools//src/conditions:linux_riscv64": native_arch_defines("RISCV", "riscv64-unknown-linux-gnu"),
-    "@bazel_tools//src/conditions:linux_s390x": native_arch_defines("SystemZ", "systemz-unknown-linux_gnu"),
+    Label("//llvm:darwin_arm64"): native_arch_defines("AArch64", "arm64-apple-darwin"),
+    Label("//llvm:darwin_x86_64"): native_arch_defines("X86", "x86_64-unknown-darwin"),
+    Label("//llvm:linux_aarch64"): native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),
+    Label("//llvm:linux_ppc64le"): native_arch_defines("PowerPC", "powerpc64le-unknown-linux-gnu"),
+    Label("//llvm:linux_riscv64"): native_arch_defines("RISCV", "riscv64-unknown-linux-gnu"),
+    Label("//llvm:linux_s390x"): native_arch_defines("SystemZ", "systemz-unknown-linux_gnu"),
+    "@platforms//os:windows": native_arch_defines("X86", "x86_64-pc-win32"),
     "//conditions:default": native_arch_defines("X86", "x86_64-unknown-linux-gnu"),
 }) + [
     "LLVM_VERSION_MAJOR={}".format(LLVM_VERSION_MAJOR),

@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -verify-diagnostics
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 module {
   cir.func @l0() {
@@ -6,6 +6,23 @@ module {
   }
 
   cir.func @l1() alias(@l0) { // expected-error {{function alias shall not have a body}}
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  cir.func @l0() func_info<> { // expected-error {{expected attribute value}}
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error@below {{expected a function info attribute, got 32 : i32}}
+  cir.func @l0() func_info<32 : i32> {
     cir.return
   }
 }

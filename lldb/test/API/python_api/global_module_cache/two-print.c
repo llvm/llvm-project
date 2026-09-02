@@ -1,8 +1,4 @@
-#include <stdio.h>
-
+int counter = 2;
 int main() {
-  int counter = 0;
-  printf("I print one time: %d.\n", counter++);
-  printf("I print two times: %d.\n", counter++);
-  return counter;
+  return 0; // break here
 }

@@ -36,6 +36,10 @@ public:
 
   /// isEnabled() should return true before calling shouldRunPass().
   virtual bool isEnabled() const { return false; }
+
+  /// Reset the pass gate to its initial configuration, before any command line
+  /// options were parsed.
+  virtual void reset() {}
 };
 
 /// This class implements a mechanism to disable passes and individual
@@ -70,6 +74,11 @@ public:
   /// isEnabled() should return true before calling shouldRunPass().
   bool isEnabled() const override {
     return !BisectIntervals.empty() || !DisabledPasses.empty();
+  }
+
+  void reset() override {
+    clearIntervals();
+    DisabledPasses.clear();
   }
 
   /// Set intervals directly from an IntervalList.

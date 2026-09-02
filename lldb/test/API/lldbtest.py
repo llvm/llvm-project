@@ -55,6 +55,10 @@ class LLDBTest(TestFormat):
         # python exe as the first parameter of the command.
         cmd = [executable] + self.dotest_cmd + [testPath, "-p", testFile]
 
+        launcher = getattr(test.config, "lldb_launcher", None)
+        if launcher:
+            cmd = [launcher] + cmd
+
         if isLuaTest:
             cmd.extend(["--env", "LUA_EXECUTABLE=%s" % test.config.lua_executable])
             cmd.extend(["--env", "LLDB_LUA_CPATH=%s" % test.config.lldb_lua_cpath])
@@ -64,14 +68,14 @@ class LLDBTest(TestFormat):
             out, err, exitCode = lit.util.executeCommand(
                 cmd,
                 env=test.config.environment,
-                timeout=litConfig.maxIndividualTestTime,
+                timeout=test.config.maxIndividualTestTime,
             )
         except lit.util.ExecuteCommandTimeoutException as e:
             out = e.out
             err = e.err
             exitCode = e.exitCode
             timeoutInfo = "Reached timeout of {} seconds".format(
-                litConfig.maxIndividualTestTime
+                test.config.maxIndividualTestTime
             )
 
         output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (" ".join(cmd), exitCode)

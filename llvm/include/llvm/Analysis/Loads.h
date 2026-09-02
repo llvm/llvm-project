@@ -14,6 +14,7 @@
 #define LLVM_ANALYSIS_LOADS_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/Support/CommandLine.h"
@@ -35,38 +36,41 @@ class SCEVPredicate;
 template <typename T> class SmallVectorImpl;
 class TargetLibraryInfo;
 
-/// Return true if this is always a dereferenceable pointer. If the context
-/// instruction is specified perform context-sensitive analysis and return true
-/// if the pointer is dereferenceable at the specified instruction.
-LLVM_ABI bool isDereferenceablePointer(const Value *V, Type *Ty,
-                                       const DataLayout &DL,
-                                       const Instruction *CtxI = nullptr,
-                                       AssumptionCache *AC = nullptr,
-                                       const DominatorTree *DT = nullptr,
-                                       const TargetLibraryInfo *TLI = nullptr);
-
 /// Returns true if V is always a dereferenceable pointer with alignment
 /// greater or equal than requested. If the context instruction is specified
 /// performs context-sensitive analysis and returns true if the pointer is
 /// dereferenceable at the specified instruction.
-LLVM_ABI bool isDereferenceableAndAlignedPointer(
-    const Value *V, Type *Ty, Align Alignment, const DataLayout &DL,
-    const Instruction *CtxI = nullptr, AssumptionCache *AC = nullptr,
-    const DominatorTree *DT = nullptr, const TargetLibraryInfo *TLI = nullptr);
+/// If \p IgnoreFree is set, ignore potential frees of the object.
+LLVM_ABI bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
+                                                 Align Alignment,
+                                                 const SimplifyQuery &Q,
+                                                 bool IgnoreFree = false);
 
 /// Returns true if V is always dereferenceable for Size byte with alignment
 /// greater or equal than requested. If the context instruction is specified
 /// performs context-sensitive analysis and returns true if the pointer is
 /// dereferenceable at the specified instruction.
-LLVM_ABI bool isDereferenceableAndAlignedPointer(
-    const Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
-    const Instruction *CtxI = nullptr, AssumptionCache *AC = nullptr,
-    const DominatorTree *DT = nullptr, const TargetLibraryInfo *TLI = nullptr);
+/// If \p IgnoreFree is set, ignore potential frees of the object.
+LLVM_ABI bool isDereferenceableAndAlignedPointer(const Value *V,
+                                                 Align Alignment,
+                                                 const APInt &Size,
+                                                 const SimplifyQuery &Q,
+                                                 bool IgnoreFree = false);
+
+/// Equivalent to isDereferenceableAndAlignedPointer with an alignment of 1.
+LLVM_ABI bool isDereferenceablePointer(const Value *V, Type *Ty,
+                                       const SimplifyQuery &Q,
+                                       bool IgnoreFree = false);
+
+/// Equivalent to isDereferenceableAndAlignedPointer with an alignment of 1.
+LLVM_ABI bool isDereferenceablePointer(const Value *V, const APInt &Size,
+                                       const SimplifyQuery &Q,
+                                       bool IgnoreFree = false);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
-/// If DT and ScanFrom are specified this method performs context-sensitive
-/// analysis and returns true if it is safe to load immediately before ScanFrom.
+/// If ScanFrom is specified this method performs context-sensitive analysis
+/// and returns true if it is safe to load immediately before ScanFrom.
 ///
 /// If it is not obviously safe to load from the specified pointer, we do a
 /// quick local scan of the basic block containing ScanFrom, to determine if

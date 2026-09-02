@@ -1,0 +1,57 @@
+# REQUIRES: x86
+## Test ELF header and phdrs allocation. Also check that SIZEOF_HEADERS as a
+## symbol value matches the post-layout address.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+
+## Fits: . leaves enough room below the first alloc section, same page.
+# RUN: ld.lld -T fit.t a.o -o fit
+# RUN: llvm-readelf -ls fit | FileCheck %s --check-prefix=FIT
+
+## After .text's alignment is applied, `min` is 4 bytes below headerSize => headers dropped.
+# RUN: ld.lld -T nofit.t a.o -o nofit
+# RUN: llvm-readelf -l nofit | FileCheck %s --check-prefix=NOFIT
+
+## min is page-aligned, base = alignDown(min, page) = min, so min - base == 0
+## and allocating would add a whole page => headers dropped.
+# RUN: ld.lld -T page.t a.o -o page -z max-page-size=0x1000
+# RUN: llvm-readelf -l page | FileCheck %s --check-prefix=NOFIT
+
+## Explicit FILEHDR/PHDRS but headers cannot fit => error.
+# RUN: not ld.lld -T explicit-nofit.t a.o 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: error: could not allocate headers
+
+# FIT:      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# FIT-NEXT: PHDR           0x000040 0x0000000000000040 0x0000000000000040 0x0000e0 0x0000e0 R   0x8
+# FIT-NEXT: LOAD           0x000000 0x0000000000000000 0x0000000000000000 0x000120 0x000120 R   0x1000
+# FIT-NEXT: LOAD           0x000120 0x0000000000000120 0x0000000000000120 0x000001 0x000001 R E 0x1000
+# FIT:      0000000000000120 0 NOTYPE GLOBAL DEFAULT   1 _start
+# FIT-NEXT: 0000000000000120 0 NOTYPE GLOBAL DEFAULT ABS _size
+
+# NOFIT:     Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# NOFIT-NEXT: LOAD
+# NOFIT-NOT:  PHDR
+
+#--- a.s
+.globl _start
+_start:
+  ret
+
+#--- fit.t
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  _size = SIZEOF_HEADERS;
+  .text : { *(.text) }
+}
+
+#--- nofit.t
+SECTIONS { . = SIZEOF_HEADERS - 4; .text : { *(.text) } }
+
+#--- page.t
+SECTIONS { . = 0x1000; .text : { *(.text) } }
+
+#--- explicit-nofit.t
+PHDRS { foobar PT_LOAD FILEHDR PHDRS; }
+SECTIONS { .text : { *(.text) } : foobar }

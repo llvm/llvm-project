@@ -4,6 +4,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # no remote platform file/process APIs
 class SBPlatformAPICase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

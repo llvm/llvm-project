@@ -56,6 +56,7 @@
 %include "./interface/SBPlatformExtensions.i"
 %include "./interface/SBProcessDocstrings.i"
 %include "./interface/SBProcessInfoDocstrings.i"
+%include "./interface/SBProcessInfoExtensions.i"
 %include "./interface/SBProgressDocstrings.i"
 %include "./interface/SBQueueDocstrings.i"
 %include "./interface/SBQueueItemDocstrings.i"
@@ -89,6 +90,9 @@
 %include "./interface/SBVariablesOptionsDocstrings.i"
 %include "./interface/SBWatchpointDocstrings.i"
 %include "./interface/SBWatchpointOptionsDocstrings.i"
+
+/* Method replacements, must be called before the including API headers. */
+REPLACE_BUF_GETTER_WITH_STRING(SBStructuredData, GetStringValue)
 
 /* API headers */
 %include "lldb/API/SBAddress.h"

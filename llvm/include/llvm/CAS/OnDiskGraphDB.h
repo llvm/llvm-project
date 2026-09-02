@@ -202,8 +202,8 @@ public:
   explicit ObjectHandle(uint64_t Opaque) : Opaque(Opaque) {}
   uint64_t getOpaqueData() const { return Opaque; }
 
-  static ObjectHandle fromFileOffset(FileOffset Offset);
-  static ObjectHandle fromMemory(uintptr_t Ptr);
+  LLVM_ABI static ObjectHandle fromFileOffset(FileOffset Offset);
+  LLVM_ABI static ObjectHandle fromMemory(uintptr_t Ptr);
 
   friend bool operator==(const ObjectHandle &LHS, const ObjectHandle &RHS) {
     return LHS.Opaque == RHS.Opaque;
@@ -261,8 +261,8 @@ public:
   /// already a record for this object the operation is a no-op. \param ID the
   /// object ID to associate the data & references with. \param Refs references
   /// \param Data data buffer.
-  LLVM_ABI_FOR_TEST Error store(ObjectID ID, ArrayRef<ObjectID> Refs,
-                                ArrayRef<char> Data);
+  LLVM_ABI Error store(ObjectID ID, ArrayRef<ObjectID> Refs,
+                       ArrayRef<char> Data);
 
   /// Associates the data of a file with a particular object ID. If there is
   /// already a record for this object the operation is a no-op.
@@ -275,10 +275,10 @@ public:
   ///
   /// \param ID the object ID to associate the data with.
   /// \param FilePath the path of the file data.
-  LLVM_ABI_FOR_TEST Error storeFile(ObjectID ID, StringRef FilePath);
+  LLVM_ABI Error storeFile(ObjectID ID, StringRef FilePath);
 
   /// \returns \p nullopt if the object associated with \p Ref does not exist.
-  LLVM_ABI_FOR_TEST Expected<std::optional<ObjectHandle>> load(ObjectID Ref);
+  LLVM_ABI Expected<std::optional<ObjectHandle>> load(ObjectID Ref);
 
   /// \returns the hash bytes digest for the object reference.
   ArrayRef<uint8_t> getDigest(ObjectID Ref) const {
@@ -288,17 +288,17 @@ public:
 
   /// Form a reference for the provided hash. The reference can be used as part
   /// of a CAS object even if it's not associated with an object yet.
-  LLVM_ABI_FOR_TEST Expected<ObjectID> getReference(ArrayRef<uint8_t> Hash);
+  LLVM_ABI Expected<ObjectID> getReference(ArrayRef<uint8_t> Hash);
 
   /// Get an existing reference to the object \p Digest.
   ///
   /// Returns \p nullopt if the object is not stored in this CAS.
-  LLVM_ABI_FOR_TEST std::optional<ObjectID>
+  LLVM_ABI std::optional<ObjectID>
   getExistingReference(ArrayRef<uint8_t> Digest, bool CheckUpstream = true);
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function will fault-in according to the policy.
-  Expected<bool> isMaterialized(ObjectID Ref);
+  LLVM_ABI Expected<bool> isMaterialized(ObjectID Ref);
 
   /// Check whether the object associated with \p Ref is stored in the CAS.
   /// Note that this function does not fault-in.
@@ -320,7 +320,7 @@ public:
   }
 
   /// \returns the data part of the provided object handle.
-  LLVM_ABI_FOR_TEST ArrayRef<char> getObjectData(ObjectHandle Node) const;
+  LLVM_ABI ArrayRef<char> getObjectData(ObjectHandle Node) const;
 
   /// \returns the object referenced by the provided object handle.
   object_refs_range getObjectRefs(ObjectHandle Node) const {
@@ -351,20 +351,21 @@ public:
   /// loading the data in memory and then writing it to a file, the client could
   /// clone the underlying file directly. The client *must not* write to or
   /// delete the underlying file, the path is provided only for reading/copying.
-  FileBackedData getInternalFileBackedObjectData(ObjectHandle Node) const;
+  LLVM_ABI FileBackedData
+  getInternalFileBackedObjectData(ObjectHandle Node) const;
 
   /// \returns Total size of stored objects.
   ///
   /// NOTE: There's a possibility that the returned size is not including a
   /// large object if the process crashed right at the point of inserting it.
-  LLVM_ABI_FOR_TEST size_t getStorageSize() const;
+  LLVM_ABI size_t getStorageSize() const;
 
   /// \returns The precentage of space utilization of hard space limits.
   ///
   /// Return value is an integer between 0 and 100 for percentage.
-  unsigned getHardStorageLimitUtilization() const;
+  LLVM_ABI unsigned getHardStorageLimitUtilization() const;
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   /// Hashing function type for validation.
   using HashingFuncT = function_ref<void(
@@ -376,11 +377,11 @@ public:
   /// corruption in stored objects, otherwise just validate the structure of
   /// CAS database.
   /// \param Hasher is the hashing function used for objects inside CAS.
-  Error validate(bool Deep, HashingFuncT Hasher) const;
+  LLVM_ABI Error validate(bool Deep, HashingFuncT Hasher) const;
 
   /// Checks that \p ID exists in the index. It is allowed to not have data
   /// associated with it.
-  LLVM_ABI_FOR_TEST Error validateObjectID(ObjectID ID) const;
+  LLVM_ABI Error validateObjectID(ObjectID ID) const;
 
   /// How to fault-in nodes if an upstream database is used.
   enum class FaultInPolicy {
@@ -406,13 +407,13 @@ public:
   /// \param Policy If \p UpstreamDB is provided, controls how nodes are copied
   /// to primary store. This is recorded at creation time and subsequent opens
   /// need to pass the same policy otherwise the \p open will fail.
-  LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<OnDiskGraphDB>>
+  LLVM_ABI static Expected<std::unique_ptr<OnDiskGraphDB>>
   open(StringRef Path, StringRef HashName, unsigned HashByteSize,
        OnDiskGraphDB *UpstreamDB = nullptr,
        std::shared_ptr<OnDiskCASLogger> Logger = nullptr,
        FaultInPolicy Policy = FaultInPolicy::FullTree);
 
-  LLVM_ABI_FOR_TEST ~OnDiskGraphDB();
+  LLVM_ABI ~OnDiskGraphDB();
 
 private:
   /// Forward declaration for a proxy for an ondisk index record.
@@ -425,8 +426,8 @@ private:
   };
 
   /// Check if object exists and if it is on upstream only.
-  LLVM_ABI_FOR_TEST Expected<ObjectPresence>
-  getObjectPresence(ObjectID Ref, bool CheckUpstream) const;
+  LLVM_ABI Expected<ObjectPresence> getObjectPresence(ObjectID Ref,
+                                                      bool CheckUpstream) const;
 
   /// When \p load is called for a node that doesn't exist, this function tries
   /// to load it from the upstream store and copy it to the primary one.
@@ -467,8 +468,7 @@ private:
 
   static InternalRef makeInternalRef(FileOffset IndexOffset);
 
-  LLVM_ABI_FOR_TEST Expected<ArrayRef<uint8_t>>
-  getDigest(InternalRef Ref) const;
+  LLVM_ABI Expected<ArrayRef<uint8_t>> getDigest(InternalRef Ref) const;
 
   ArrayRef<uint8_t> getDigest(const IndexProxy &I) const;
 
@@ -477,8 +477,7 @@ private:
   IndexProxy
   getIndexProxyFromPointer(OnDiskTrieRawHashMap::ConstOnDiskPtr P) const;
 
-  LLVM_ABI_FOR_TEST InternalRefArrayRef
-  getInternalRefs(ObjectHandle Node) const;
+  LLVM_ABI InternalRefArrayRef getInternalRefs(ObjectHandle Node) const;
   /// \}
 
   /// Get the atomic variable that keeps track of the standalone data storage

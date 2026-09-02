@@ -17,7 +17,7 @@
 
 namespace llvm {
 
-class DXILOpLowering : public PassInfoMixin<DXILOpLowering> {
+class DXILOpLowering : public OptionalPassInfoMixin<DXILOpLowering> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

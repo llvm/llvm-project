@@ -4,9 +4,9 @@ void acc_cache() {
   // CHECK: cir.func{{.*}} @acc_cache()
 
   int iArr[10];
-  // CHECK-NEXT: %[[IARR:.*]] = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["iArr"]
+  // CHECK-NEXT: %[[IARR:.*]] = cir.alloca "iArr" {{.*}} : !cir.ptr<!cir.array<!s32i x 10>>
   float fArr[10];
-  // CHECK-NEXT: %[[FARR:.*]] = cir.alloca !cir.array<!cir.float x 10>, !cir.ptr<!cir.array<!cir.float x 10>>, ["fArr"]
+  // CHECK-NEXT: %[[FARR:.*]] = cir.alloca "fArr" {{.*}} : !cir.ptr<!cir.array<!cir.float x 10>>
 
 #pragma acc cache(iArr[1], fArr[1:5])
   // This does nothing, as it is not in a loop.
@@ -27,7 +27,7 @@ void acc_cache() {
     }
   }
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1 : i64
@@ -35,9 +35,9 @@ void acc_cache() {
   // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 10>> {name = "iArr[1]", structured = false}
   //
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[FIVE:.*]] = cir.const #cir.int<5>
-  // CHECK-NEXT: %[[FIVE_CAST:.*]] = builtin.unrealized_conversion_cast %[[FIVE]] : !s32i to si32
+  // CHECK-NEXT: %[[FIVE_CAST:.*]] = cir.builtin_int_cast %[[FIVE]] : !s32i -> si32
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[FIVE_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST]] : i64)
@@ -52,7 +52,7 @@ void acc_cache() {
 #pragma acc cache(iArr[1], fArr[1:5])
   }
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1 : i64
@@ -60,9 +60,9 @@ void acc_cache() {
   // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 10>> {name = "iArr[1]", structured = false}
   //
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[FIVE:.*]] = cir.const #cir.int<5>
-  // CHECK-NEXT: %[[FIVE_CAST:.*]] = builtin.unrealized_conversion_cast %[[FIVE]] : !s32i to si32
+  // CHECK-NEXT: %[[FIVE_CAST:.*]] = cir.builtin_int_cast %[[FIVE]] : !s32i -> si32
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[FIVE_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST]] : i64)
@@ -78,7 +78,7 @@ void acc_cache() {
   }
   // CHECK-NEXT: acc.parallel combined(loop) {
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1 : i64
@@ -86,9 +86,9 @@ void acc_cache() {
   // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 10>> {name = "iArr[1]", structured = false}
   //
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[FIVE:.*]] = cir.const #cir.int<5>
-  // CHECK-NEXT: %[[FIVE_CAST:.*]] = builtin.unrealized_conversion_cast %[[FIVE]] : !s32i to si32
+  // CHECK-NEXT: %[[FIVE_CAST:.*]] = cir.builtin_int_cast %[[FIVE]] : !s32i -> si32
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[FIVE_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST]] : i64)
@@ -108,7 +108,7 @@ void acc_cache() {
   }
   // CHECK-NEXT: acc.parallel combined(loop) {
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1 : i64
@@ -116,9 +116,9 @@ void acc_cache() {
   // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 10>> {name = "iArr[1]", structured = false}
   //
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[FIVE:.*]] = cir.const #cir.int<5>
-  // CHECK-NEXT: %[[FIVE_CAST:.*]] = builtin.unrealized_conversion_cast %[[FIVE]] : !s32i to si32
+  // CHECK-NEXT: %[[FIVE_CAST:.*]] = cir.builtin_int_cast %[[FIVE]] : !s32i -> si32
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[FIVE_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST]] : i64)

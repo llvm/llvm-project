@@ -69,7 +69,10 @@ class CGDebugInfo {
   ModuleMap *ClangModuleMap = nullptr;
   ASTSourceDescriptor PCHDescriptor;
   SourceLocation CurLoc;
-  llvm::MDNode *CurInlinedAt = nullptr;
+  llvm::DIFile *CurLocFile = nullptr;
+  unsigned CurLocLine = 0;
+  unsigned CurLocColumn = 0;
+  llvm::DILocation *CurInlinedAt = nullptr;
   llvm::DIType *VTablePtrType = nullptr;
   llvm::DIType *ClassTy = nullptr;
   llvm::DICompositeType *ObjTy = nullptr;
@@ -346,6 +349,18 @@ private:
   /// A helper function to collect debug info for btf_decl_tag annotations.
   llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
 
+  /// A helper function to collect debug info for btf_decl_tag annotations and
+  /// append them to Annotations.
+  void
+  CollectBTFDeclTagAnnotations(const Decl *D,
+                               SmallVectorImpl<llvm::Metadata *> &Annotations);
+
+  /// A helper function to collect debug info for btf_type_tag annotations and
+  /// append them to Annotations.
+  void
+  CollectBTFTypeTagAnnotations(QualType Ty,
+                               SmallVectorImpl<llvm::Metadata *> &Annotations);
+
   llvm::DIType *createFieldType(StringRef name, QualType type,
                                 SourceLocation loc, AccessSpecifier AS,
                                 uint64_t offsetInBits, uint32_t AlignInBits,
@@ -474,10 +489,10 @@ public:
 
   /// Update the current inline scope. All subsequent calls to \p EmitLocation
   /// will create a location with this inlinedAt field.
-  void setInlinedAt(llvm::MDNode *InlinedAt) { CurInlinedAt = InlinedAt; }
+  void setInlinedAt(llvm::DILocation *InlinedAt) { CurInlinedAt = InlinedAt; }
 
   /// \return the current inline scope.
-  llvm::MDNode *getInlinedAt() const { return CurInlinedAt; }
+  llvm::DILocation *getInlinedAt() const { return CurInlinedAt; }
 
   // Converts a SourceLocation to a DebugLoc
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Loc);
@@ -660,8 +675,12 @@ public:
   ///
   /// This is used to indiciate instructions that come from compiler
   /// instrumentation.
-  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc Location,
-                                            StringRef FuncName);
+  llvm::DILocation *
+  CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                          llvm::DISubprogram *SynthSubprogram);
+  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                            StringRef SynthFuncName,
+                                            llvm::DIFile *SynthFile);
 
   /// Reset internal state.
   void completeFunction();
@@ -872,8 +891,15 @@ private:
 
   /// Get column number for the location. If location is
   /// invalid then use current location.
-  /// \param Force  Assume DebugColumnInfo option is true.
-  unsigned getColumnNumber(SourceLocation Loc, bool Force = false);
+  unsigned getColumnNumber(SourceLocation Loc);
+
+  /// Clear the current location and its derived metadata.
+  void clearCurLoc() {
+    CurLoc = SourceLocation();
+    CurLocFile = nullptr;
+    CurLocLine = 0;
+    CurLocColumn = 0;
+  }
 
   /// Collect various properties of a FunctionDecl.
   /// \param GD  A GlobalDecl whose getDecl() must return a FunctionDecl.
@@ -935,7 +961,7 @@ public:
     Other.CGF = nullptr;
   }
 
-  // Define copy assignment operator.
+  // Define move assignment operator.
   ApplyDebugLocation &operator=(ApplyDebugLocation &&Other) {
     if (this != &Other) {
       CGF = Other.CGF;

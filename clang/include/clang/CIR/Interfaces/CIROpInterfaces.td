@@ -145,6 +145,12 @@ let cppNamespace = "::cir" in {
       }]
       >,
       InterfaceMethod<"",
+      "void", "setGlobalVisibility", (ins "cir::VisibilityKind":$val), [{}],
+      /*defaultImplementation=*/[{
+        $_op.setGlobalVisibility(val);
+      }]
+      >,
+      InterfaceMethod<"",
       "bool", "isDSOLocal", (ins), [{}],
       /*defaultImplementation=*/[{
         return $_op.getDsoLocal();
@@ -154,6 +160,48 @@ let cppNamespace = "::cir" in {
       "bool", "isWeakForLinker", (ins), [{}],
       /*defaultImplementation=*/[{
         return cir::isWeakForLinker($_op.getLinkage());
+      }]
+      >,
+      InterfaceMethod<"",
+      "void", "setSection", (ins "mlir::StringAttr":$val), [{}],
+      /*defaultImplementation=*/[{
+        if (val)
+          $_op->setAttr("section", val);
+        else
+          $_op->removeAttr("section");
+      }]
+      >,
+      InterfaceMethod<"",
+      "mlir::StringAttr", "getSectionAttr", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return mlir::dyn_cast_if_present<mlir::StringAttr>(
+            $_op->getAttr("section"));
+      }]
+      >,
+      // Added for readability.
+      InterfaceMethod<"",
+      "bool", "isDefinition", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return !$_op.isDeclaration();
+      }]
+      >,
+      // TODO(cir): Make GlobalAlias a separate op.
+      InterfaceMethod<"",
+      "void", "setAliasee", (ins "::std::optional<::llvm::StringRef>":$val), [{}],
+      /*defaultImplementation=*/[{
+        if (val) {
+          auto aliaseeRef =
+              ::mlir::FlatSymbolRefAttr::get($_op->getContext(), *val);
+          $_op->setAttr("aliasee", aliaseeRef);
+        } else {
+          $_op->removeAttr("aliasee");
+        }
+      }]
+      >,
+      InterfaceMethod<"",
+      "void", "setLinkage", (ins "::cir::GlobalLinkageKind":$val), [{}],
+      /*defaultImplementation=*/[{
+        $_op.setLinkage(val);
       }]
       >
     ];
@@ -180,6 +228,27 @@ let cppNamespace = "::cir" in {
         "mlir::Value", "getRhs", (ins), [{}],
         /*defaultImplementation=*/[{
           return $_op.getRhs();
+        }]>,
+      InterfaceMethod<"Return the result value.",
+        "mlir::Value", "getResult", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getResult();
+        }]>,
+    ];
+  }
+
+  def CIR_UnaryOpInterface : OpInterface<"UnaryOpInterface"> {
+    let description = [{
+      Common interface for CIR unary operations.
+      Provides uniform access to the input operand and result of any unary
+      operation in the CIR dialect.
+    }];
+
+    let methods = [
+      InterfaceMethod<"Return the input operand.",
+        "mlir::Value", "getInput", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getInput();
         }]>,
       InterfaceMethod<"Return the result value.",
         "mlir::Value", "getResult", (ins), [{}],

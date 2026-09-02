@@ -5,8 +5,8 @@
 ; RUN: opt -mattr=+neon -vector-library=sleefgnuabi -passes=loop-vectorize -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=NEON-SLEEF
 ; RUN: opt -mattr=+sve -vector-library=ArmPL -passes=loop-vectorize -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-ARMPL
 ; RUN: opt -mattr=+sve -vector-library=sleefgnuabi -passes=loop-vectorize -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-SLEEF
-; RUN: opt -mattr=+sve -vector-library=ArmPL -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-dont-vectorize -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-ARMPL-TAILFOLD
-; RUN: opt -mattr=+sve -vector-library=sleefgnuabi -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-dont-vectorize -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-SLEEF-TAILFOLD
+; RUN: opt -mattr=+sve -vector-library=ArmPL -passes=loop-vectorize -tail-folding-policy=must-fold-tail -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-ARMPL-TAILFOLD
+; RUN: opt -mattr=+sve -vector-library=sleefgnuabi -passes=loop-vectorize -tail-folding-policy=must-fold-tail -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-SLEEF-TAILFOLD
 
 target triple = "aarch64-unknown-linux-gnu"
 

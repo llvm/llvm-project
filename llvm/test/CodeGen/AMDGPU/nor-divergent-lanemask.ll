@@ -18,8 +18,9 @@ define amdgpu_ps i64 @test_nor(i64 inreg %a, i64 inreg %b) {
 ;
 ; GISEL-W64-LABEL: test_nor:
 ; GISEL-W64:       ; %bb.0:
-; GISEL-W64-NEXT:    s_nor_b64 s[0:1], s[0:1], s[2:3]
-; GISEL-W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-W64-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; GISEL-W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GISEL-W64-NEXT:    s_xor_b64 s[0:1], s[0:1], exec
 ; GISEL-W64-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GISEL-W64-NEXT:    ; return to shader part epilog
 ;
@@ -34,8 +35,10 @@ define amdgpu_ps i64 @test_nor(i64 inreg %a, i64 inreg %b) {
 ;
 ; GISEL-W32-LABEL: test_nor:
 ; GISEL-W32:       ; %bb.0:
-; GISEL-W32-NEXT:    s_nor_b32 s0, s0, s2
+; GISEL-W32-NEXT:    s_or_b32 s0, s0, s2
 ; GISEL-W32-NEXT:    s_mov_b32 s1, 0
+; GISEL-W32-NEXT:    s_xor_b32 s0, s0, exec_lo
+; GISEL-W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-W32-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GISEL-W32-NEXT:    ; return to shader part epilog
   %a.lanemask = call i1 @llvm.amdgcn.inverse.ballot.i64(i64 %a)
@@ -66,7 +69,7 @@ define amdgpu_ps i64 @test_or_two_uses(i64 inreg %a, i64 inreg %b) {
 ; GISEL-W64:       ; %bb.0:
 ; GISEL-W64-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
 ; GISEL-W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GISEL-W64-NEXT:    s_xor_b64 s[2:3], s[0:1], -1
+; GISEL-W64-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
 ; GISEL-W64-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GISEL-W64-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GISEL-W64-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
@@ -88,12 +91,12 @@ define amdgpu_ps i64 @test_or_two_uses(i64 inreg %a, i64 inreg %b) {
 ;
 ; GISEL-W32-LABEL: test_or_two_uses:
 ; GISEL-W32:       ; %bb.0:
-; GISEL-W32-NEXT:    s_or_b32 s0, s0, s2
+; GISEL-W32-NEXT:    s_or_b32 s2, s0, s2
 ; GISEL-W32-NEXT:    s_mov_b32 s1, 0
-; GISEL-W32-NEXT:    s_xor_b32 s4, s0, -1
-; GISEL-W32-NEXT:    s_and_b32 s2, s0, exec_lo
+; GISEL-W32-NEXT:    s_xor_b32 s0, s2, exec_lo
+; GISEL-W32-NEXT:    s_and_b32 s2, s2, exec_lo
+; GISEL-W32-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GISEL-W32-NEXT:    s_mov_b32 s3, s1
-; GISEL-W32-NEXT:    s_and_b32 s0, s4, exec_lo
 ; GISEL-W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-W32-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
 ; GISEL-W32-NEXT:    ; return to shader part epilog

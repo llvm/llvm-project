@@ -10,7 +10,6 @@
 #include "DAPLog.h"
 #include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolTypes.h"
-#include "TestUtilities.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBFrame.h"
@@ -18,21 +17,17 @@
 #include "lldb/API/SBValue.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
-using namespace lldb_dap_tests;
 using namespace lldb_dap::protocol;
-
-static lldb::SBDebugger CreateDebugger() {
-  return lldb::SBDebugger::Create(/*source_init_files*/ false);
-}
 
 class VariablesTest : public ::testing::Test {
 
 public:
-  VariablesTest() : log(llvm::nulls(), mutex), vars(log) {}
+  VariablesTest() : log(llvm::nulls(), mutex), vars(log, config) {}
 
   static void SetUpTestSuite() {
     lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
@@ -41,6 +36,10 @@ public:
   static void TearDownTestSuite() { SBDebugger::Terminate(); }
 
   void TearDown() override {
+    if (core)
+      ASSERT_THAT_ERROR(core->discard(), Succeeded());
+    if (binary)
+      ASSERT_THAT_ERROR(binary->discard(), Succeeded());
     if (debugger)
       debugger.Clear();
   }
@@ -49,10 +48,44 @@ protected:
   enum : bool { Permanent = true, Temporary = false };
   Log::Mutex mutex;
   Log log;
+  protocol::Configuration config;
   VariableReferenceStorage vars;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
   lldb::SBProcess process;
+
+  static constexpr llvm::StringLiteral k_binary = "linux-x86_64.out.yaml";
+  static constexpr llvm::StringLiteral k_core = "linux-x86_64.core.yaml";
+
+  std::optional<llvm::sys::fs::TempFile> core;
+  std::optional<llvm::sys::fs::TempFile> binary;
+
+  void CreateDebugger() { debugger = lldb::SBDebugger::Create(); }
+
+  void LoadCore() {
+    ASSERT_TRUE(debugger);
+
+    llvm::Expected<lldb_private::TestFile> binary_yaml =
+        lldb_private::TestFile::fromYamlFile(k_binary);
+    ASSERT_THAT_EXPECTED(binary_yaml, Succeeded());
+    llvm::Expected<llvm::sys::fs::TempFile> binary_file =
+        binary_yaml->writeToTemporaryFile();
+    ASSERT_THAT_EXPECTED(binary_file, Succeeded());
+    binary = std::move(*binary_file);
+    target = debugger.CreateTarget(binary->TmpName.data());
+    ASSERT_TRUE(target);
+    debugger.SetSelectedTarget(target);
+
+    llvm::Expected<lldb_private::TestFile> core_yaml =
+        lldb_private::TestFile::fromYamlFile(k_core);
+    ASSERT_THAT_EXPECTED(core_yaml, Succeeded());
+    llvm::Expected<llvm::sys::fs::TempFile> core_file =
+        core_yaml->writeToTemporaryFile();
+    ASSERT_THAT_EXPECTED(core_file, Succeeded());
+    this->core = std::move(*core_file);
+    process = target.LoadCore(this->core->TmpName.data());
+    ASSERT_TRUE(process);
+  }
 
   static const protocol::Scope *
   FindScope(const std::vector<protocol::Scope> &scopes,
@@ -66,19 +99,16 @@ protected:
 };
 
 TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
-  SKIP_IF_LLVM_TARGET_MISSING("X86");
-
-  debugger = CreateDebugger();
-  std::tie(target, process) = lldb_private::LoadCore(
-      debugger, k_linux_x86_64_binary, k_linux_x86_64_core);
+  CreateDebugger();
+  LoadCore();
   auto x15 = target.CreateValueFromExpression("x", "15");
   auto y42 = target.CreateValueFromExpression("y", "42");
   auto gzero = target.CreateValueFromExpression("$0", "42");
   auto gone = target.CreateValueFromExpression("$1", "7");
-  const var_ref_t temp1 = vars.Insert(x15, Temporary);
-  const var_ref_t temp2 = vars.Insert(y42, Temporary);
-  const var_ref_t perm1 = vars.Insert(gzero, Permanent);
-  const var_ref_t perm2 = vars.Insert(gone, Permanent);
+  const var_ref_t temp1 = vars.Insert(x15, Temporary, /*is_internal=*/false);
+  const var_ref_t temp2 = vars.Insert(y42, Temporary, /*is_internal=*/false);
+  const var_ref_t perm1 = vars.Insert(gzero, Permanent, /*is_internal=*/false);
+  const var_ref_t perm2 = vars.Insert(gone, Permanent, /*is_internal=*/false);
   EXPECT_NE(temp1.AsUInt32(), temp2.AsUInt32());
   EXPECT_NE(perm1.AsUInt32(), perm2.AsUInt32());
   EXPECT_LT(temp1.AsUInt32(), perm1.AsUInt32());
@@ -87,7 +117,7 @@ TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
 
 TEST_F(VariablesTest, InsertAndGetVariable_Temporary) {
   lldb::SBValue dummy;
-  const var_ref_t ref = vars.Insert(dummy, Temporary);
+  const var_ref_t ref = vars.Insert(dummy, Temporary, /*is_internal=*/false);
   lldb::SBValue out = vars.GetVariable(ref);
 
   EXPECT_EQ(out.IsValid(), dummy.IsValid());
@@ -95,15 +125,17 @@ TEST_F(VariablesTest, InsertAndGetVariable_Temporary) {
 
 TEST_F(VariablesTest, InsertAndGetVariable_Permanent) {
   lldb::SBValue dummy;
-  const var_ref_t ref = vars.Insert(dummy, Permanent);
+  const var_ref_t ref = vars.Insert(dummy, Permanent, /*is_internal=*/false);
   lldb::SBValue out = vars.GetVariable(ref);
 
   EXPECT_EQ(out.IsValid(), dummy.IsValid());
 }
 
 TEST_F(VariablesTest, IsPermanentVariableReference) {
-  const var_ref_t perm = vars.Insert(lldb::SBValue(), Permanent);
-  const var_ref_t temp = vars.Insert(lldb::SBValue(), Temporary);
+  const var_ref_t perm =
+      vars.Insert(lldb::SBValue(), Permanent, /*is_internal=*/false);
+  const var_ref_t temp =
+      vars.Insert(lldb::SBValue(), Temporary, /*is_internal=*/false);
 
   EXPECT_EQ(perm.Kind(), eReferenceKindPermanent);
   EXPECT_EQ(temp.Kind(), eReferenceKindTemporary);
@@ -111,8 +143,8 @@ TEST_F(VariablesTest, IsPermanentVariableReference) {
 
 TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
   lldb::SBValue dummy;
-  const var_ref_t temp = vars.Insert(dummy, Temporary);
-  const var_ref_t perm = vars.Insert(dummy, Permanent);
+  const var_ref_t temp = vars.Insert(dummy, Temporary, /*is_internal=*/false);
+  const var_ref_t perm = vars.Insert(dummy, Permanent, /*is_internal=*/false);
   vars.Clear();
 
   EXPECT_FALSE(vars.GetVariable(temp).IsValid());
@@ -120,12 +152,8 @@ TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
 }
 
 TEST_F(VariablesTest, VariablesStore) {
-  SKIP_IF_LLVM_TARGET_MISSING("X86");
-
-  debugger = CreateDebugger();
-  std::tie(target, process) = lldb_private::LoadCore(
-      debugger, k_linux_x86_64_binary, k_linux_x86_64_core);
-
+  CreateDebugger();
+  LoadCore();
   lldb::SBFrame frame = process.GetSelectedThread().GetSelectedFrame();
 
   std::vector<protocol::Scope> scopes = vars.Insert(frame);
@@ -159,7 +187,7 @@ TEST_F(VariablesTest, VariablesStore) {
 
   ASSERT_TRUE(vars.FindVariable(local_ref, "rect").IsValid());
 
-  auto variables = locals_store->GetVariables(vars, {}, {});
+  auto variables = locals_store->GetVariables({});
   ASSERT_THAT_EXPECTED(variables, Succeeded());
   ASSERT_EQ(variables->size(), 1u);
   auto rect = variables->at(0);
@@ -171,7 +199,7 @@ TEST_F(VariablesTest, VariablesStore) {
   auto *store = vars.GetVariableStore(args.variablesReference);
   ASSERT_NE(store, nullptr);
 
-  variables = store->GetVariables(vars, {}, args);
+  variables = store->GetVariables(args);
   ASSERT_THAT_EXPECTED(variables, Succeeded());
   ASSERT_EQ(variables->size(), 4u);
   EXPECT_EQ(variables->at(0).name, "x");

@@ -169,7 +169,7 @@ define i64 @test_trunc_with_constexpr() {
 
 define align 4 ptr @maybe_not_aligned(ptr noundef %p) {
 ; CHECK-LABEL: define align 4 ptr @maybe_not_aligned(
-; CHECK-SAME: ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   ret ptr %p
@@ -177,7 +177,7 @@ define align 4 ptr @maybe_not_aligned(ptr noundef %p) {
 
 define align 4 ptr @definitely_aligned(ptr noundef align 4 %p) {
 ; CHECK-LABEL: define noundef align 4 ptr @definitely_aligned(
-; CHECK-SAME: ptr noundef readnone returned align 4 captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree noundef readnone returned align 4 captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   ret ptr %p
@@ -185,7 +185,7 @@ define align 4 ptr @definitely_aligned(ptr noundef align 4 %p) {
 
 define nonnull ptr @maybe_not_nonnull(ptr noundef %p) {
 ; CHECK-LABEL: define nonnull ptr @maybe_not_nonnull(
-; CHECK-SAME: ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   ret ptr %p
@@ -193,7 +193,7 @@ define nonnull ptr @maybe_not_nonnull(ptr noundef %p) {
 
 define nonnull ptr @definitely_nonnull(ptr noundef nonnull %p) {
 ; CHECK-LABEL: define noundef nonnull ptr @definitely_nonnull(
-; CHECK-SAME: ptr noundef nonnull readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree noundef nonnull readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   ret ptr %p
@@ -213,4 +213,30 @@ define range(i8 0, 10) i8 @definitely_in_range(i8 noundef range(i8 0, 10) %v) {
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
   ret i8 %v
+}
+
+define nofpclass(nan) float @maybe_nofpclass(float noundef %x) {
+; CHECK-LABEL: define nofpclass(nan) float @maybe_nofpclass(
+; CHECK-SAME: float noundef returned [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret float [[X]]
+;
+  ret float %x
+}
+
+define nofpclass(nan) float @compute_not_nofpclass(float noundef nofpclass(nan) %x) {
+; CHECK-LABEL: define nofpclass(nan) float @compute_not_nofpclass(
+; CHECK-SAME: float noundef nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[Y:%.*]] = fmul float [[X]], +qnan
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %y = fmul float %x, 0x7FF8000000000000
+  ret float %y
+}
+
+define nofpclass(nan) float @definitely_nofpclass(float noundef nofpclass(nan) %x) {
+; CHECK-LABEL: define noundef nofpclass(nan) float @definitely_nofpclass(
+; CHECK-SAME: float noundef returned nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret float [[X]]
+;
+  ret float %x
 }

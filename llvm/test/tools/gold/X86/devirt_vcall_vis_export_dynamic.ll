@@ -26,7 +26,7 @@
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ;; Regular LTO WPD
-; RUN: opt -o %t4.o %s
+; RUN: opt -passes=assign-guid -o %t4.o %s
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
@@ -92,7 +92,7 @@
 ; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 
 ;; Regular LTO WPD
-; RUN: opt -relocation-model=pic -o %t5.o %s
+; RUN: opt -passes=assign-guid -relocation-model=pic -o %t5.o %s
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN: 	 %t5.o -o %t5.so -shared
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \

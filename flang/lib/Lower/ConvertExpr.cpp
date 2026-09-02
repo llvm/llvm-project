@@ -11,13 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertExpr.h"
-#include "flang/Common/unwrap.h"
-#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/real.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/Bridge.h"
-#include "flang/Lower/BuiltinModules.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ComponentPath.h"
 #include "flang/Lower/ConvertCall.h"
@@ -42,10 +39,8 @@
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
-#include "flang/Runtime/support.h"
 #include "flang/Semantics/dump-expr.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
@@ -925,6 +920,11 @@ public:
   }
   ExtValue genval(const Fortran::evaluate::NullPointer &) {
     return builder.createNullConstant(getLoc());
+  }
+
+  template <typename A>
+  ExtValue genval(const Fortran::evaluate::ConditionalExpr<A> &) {
+    fir::emitFatalError(getLoc(), "ConditionalExpr should be lowered to HLFIR");
   }
 
   static bool
@@ -5364,6 +5364,11 @@ private:
           .createAssign(temp, lf(iters));
       return temp;
     };
+  }
+
+  template <typename A>
+  CC genarr(const Fortran::evaluate::ConditionalExpr<A> &) {
+    fir::emitFatalError(getLoc(), "ConditionalExpr should be lowered to HLFIR");
   }
 
   template <typename T>

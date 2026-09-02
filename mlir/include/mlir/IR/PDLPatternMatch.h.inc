@@ -14,6 +14,7 @@
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
 //===----------------------------------------------------------------------===//
@@ -519,6 +520,7 @@ template <typename T>
 struct ProcessPDLValue<T, std::enable_if_t<std::is_base_of<OpState, T>::value>>
     : public ProcessDerivedPDLValue<T, Operation *> {
   static T processAsArg(Operation *value) { return cast<T>(value); }
+  using ProcessDerivedPDLValue<T, Operation *>::processAsArg;
 };
 
 //===----------------------------------------------------------------------===//

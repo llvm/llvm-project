@@ -103,12 +103,12 @@ define i32 @foo4(i64 %i) local_unnamed_addr #0 {
 ; CHECK-NEXT:    andq $-16, %rcx
 ; CHECK-NEXT:    subq %rcx, %rax
 ; CHECK-NEXT:    cmpq %rsp, %rax
-; CHECK-NEXT:    jge .LBB3_3
+; CHECK-NEXT:    jae .LBB3_3
 ; CHECK-NEXT:  .LBB3_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xorq $0, (%rsp)
 ; CHECK-NEXT:    subq $4096, %rsp # imm = 0x1000
 ; CHECK-NEXT:    cmpq %rsp, %rax
-; CHECK-NEXT:    jl .LBB3_2
+; CHECK-NEXT:    jb .LBB3_2
 ; CHECK-NEXT:  .LBB3_3:
 ; CHECK-NEXT:    andq $-64, %rax
 ; CHECK-NEXT:    movq %rax, %rsp

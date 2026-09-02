@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-env33-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/command-processor.html
 
 cert-env33-c
 ============
@@ -11,4 +9,4 @@ for more information.
 
 This check corresponds to the CERT C Coding Standard rule
 `ENV33-C. Do not call system()
-<https://www.securecoding.cert.org/confluence/display/c/ENV33-C.+Do+not+call+system()>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/environment-env/env33-c/>`_.

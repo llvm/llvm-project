@@ -405,10 +405,13 @@ Error SyntheticTypeNameBuilder::addDIETypeName(
   // Check if DIE already has a name.
   if (!TypeEntryPtr) {
     size_t NameStart = SyntheticName.size();
-    if (AssignNameToTypeDescriptor) {
-      if (Error Err = addParentName(*UnitEntryPair))
-        return Err;
-    }
+    // Prepend the parent scope so this name matches the key the type is
+    // stored under in the pool (the getKey() branch below). Otherwise the
+    // same type gets different names depending on whether it already has a
+    // pool entry, which races under parallel assignment and breaks
+    // deterministic deduplication.
+    if (Error Err = addParentName(*UnitEntryPair))
+      return Err;
     addTypePrefix(UnitEntryPair->DieEntry);
 
     if (ChildIndex) {
@@ -671,7 +674,8 @@ OrderedChildrenIndexAssigner::OrderedChildrenIndexAssigner(
   case dwarf::DW_TAG_subroutine_type:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_GNU_template_template_param:
-  case dwarf::DW_TAG_GNU_formal_parameter_pack: {
+  case dwarf::DW_TAG_GNU_formal_parameter_pack:
+  case dwarf::DW_TAG_GNU_template_parameter_pack: {
     NeedCountChildren = true;
   } break;
   case dwarf::DW_TAG_enumeration_type: {
@@ -724,6 +728,7 @@ std::optional<size_t> OrderedChildrenIndexAssigner::tagToArrayIndex(
     return 0;
   case dwarf::DW_TAG_template_value_parameter:
   case dwarf::DW_TAG_template_type_parameter:
+  case dwarf::DW_TAG_GNU_template_template_param:
     return 1;
   case dwarf::DW_TAG_enumeration_type:
     if (std::optional<uint32_t> ParentIdx = DieEntry->getParentIdx()) {

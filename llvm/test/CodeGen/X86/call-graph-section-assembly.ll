@@ -6,9 +6,9 @@
 
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -o - < %s | FileCheck %s
 
-declare !type !0 void @direct_foo()
-declare !type !1 i32 @direct_bar(i8)
-declare !type !2 ptr @direct_baz(ptr)
+declare !callgraph !0 void @direct_foo()
+declare !callgraph !1 i32 @direct_bar(i8)
+declare !callgraph !2 ptr @direct_baz(ptr)
 
 ; CHECK: ball:
 define ptr @ball() {
@@ -29,11 +29,11 @@ entry:
 }
 
 !0 = !{!1}
-!1 = !{i64 0, !"_ZTSFvE.generalized"}
+!1 = !{!"_ZTSFvE.generalized"}
 !2 = !{!3}
-!3 = !{i64 0, !"_ZTSFicE.generalized"}
+!3 = !{!"_ZTSFicE.generalized"}
 !4 = !{!5}
-!5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
+!5 = !{!"_ZTSFPvS_E.generalized"}
 
 ; CHECK: .section .llvm.callgraph,"o",@llvm_call_graph,.text
 ;; Version

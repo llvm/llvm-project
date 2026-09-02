@@ -8,6 +8,7 @@
 // file created by the host and appended as an attribute to the module.
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  // CHECK-DAG: @_QMtest_0Esp = internal global i32
   // CHECK-DAG: @_QMtest_0Esp_decl_tgt_ref_ptr = weak global ptr null, align 8
   llvm.mlir.global external @_QMtest_0Esp() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : i32 {
     %0 = llvm.mlir.constant(0 : i32) : i32
@@ -22,7 +23,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
   // CHECK-DAG: store i32 1, ptr %[[V]], align 4
   // CHECK-DAG: br label %omp.region.cont
     %map = omp.map.info var_ptr(%0 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-    omp.target   map_entries(%map -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%map -> %arg0 : !llvm.ptr) {
       %1 = llvm.mlir.constant(1 : i32) : i32
       llvm.store %1, %arg0 : i32, !llvm.ptr
       omp.terminator

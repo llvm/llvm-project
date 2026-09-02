@@ -37,8 +37,8 @@ bool MCInstrDesc::hasImplicitDefOfPhysReg(MCRegister Reg,
   return false;
 }
 
-bool MCInstrDesc::hasDefOfPhysReg(const MCInst &MI, MCRegister Reg,
-                                  const MCRegisterInfo &RI) const {
+bool MCInstrDesc::hasExplicitDefOfPhysReg(const MCInst &MI, MCRegister Reg,
+                                          const MCRegisterInfo &RI) const {
   for (int i = 0, e = NumDefs; i != e; ++i)
     if (MI.getOperand(i).isReg() && MI.getOperand(i).getReg() &&
         RI.isSubRegisterEq(Reg, MI.getOperand(i).getReg()))
@@ -48,5 +48,11 @@ bool MCInstrDesc::hasDefOfPhysReg(const MCInst &MI, MCRegister Reg,
       if (MI.getOperand(i).isReg() &&
           RI.isSubRegisterEq(Reg, MI.getOperand(i).getReg()))
         return true;
-  return hasImplicitDefOfPhysReg(Reg, &RI);
+  return false;
+}
+
+bool MCInstrDesc::hasDefOfPhysReg(const MCInst &MI, MCRegister Reg,
+                                  const MCRegisterInfo &RI) const {
+  return hasExplicitDefOfPhysReg(MI, Reg, RI) ||
+         hasImplicitDefOfPhysReg(Reg, &RI);
 }

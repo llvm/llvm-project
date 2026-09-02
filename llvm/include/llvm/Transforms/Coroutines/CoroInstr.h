@@ -215,7 +215,8 @@ public:
   void setInfo(Constant *C) { setArgOperand(InfoArg, C); }
 
   Function *getCoroutine() const {
-    return cast<Function>(getArgOperand(CoroutineArg)->stripPointerCasts());
+    return cast<Function>(
+        getArgOperand(CoroutineArg)->stripPointerCastsAndAliases());
   }
   void setCoroutineSelf() {
     if (!isa<ConstantPointerNull>(getArgOperand(CoroutineArg)))
@@ -254,17 +255,20 @@ public:
   /// attributes, and calling convention of the continuation function(s)
   /// are taken from this declaration.
   Function *getPrototype() const {
-    return cast<Function>(getArgOperand(PrototypeArg)->stripPointerCasts());
+    return cast<Function>(
+        getArgOperand(PrototypeArg)->stripPointerCastsAndAliases());
   }
 
   /// Return the function to use for allocating memory.
   Function *getAllocFunction() const {
-    return cast<Function>(getArgOperand(AllocArg)->stripPointerCasts());
+    return cast<Function>(
+        getArgOperand(AllocArg)->stripPointerCastsAndAliases());
   }
 
   /// Return the function to use for deallocating memory.
   Function *getDeallocFunction() const {
-    return cast<Function>(getArgOperand(DeallocArg)->stripPointerCasts());
+    return cast<Function>(
+        getArgOperand(DeallocArg)->stripPointerCastsAndAliases());
   }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:
@@ -450,6 +454,20 @@ public:
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::coro_free;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.dead instruction.
+class CoroDeadInst : public IntrinsicInst {
+public:
+  Value *getFrame() const { return getArgOperand(0); }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_dead;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));

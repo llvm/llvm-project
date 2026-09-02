@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --split-input-file --tosa-to-linalg-pipeline -verify-diagnostics
+// RUN: mlir-opt %s --split-input-file --tosa-to-linalg-pipeline -verify-diagnostics | FileCheck %s
 
 
 // -----
@@ -27,4 +27,29 @@ func.func @avg_pool2d_with_unsupported_quant_type(%arg0: tensor<1x7x7x9x!quant.u
   // expected-error@+1 {{failed to legalize operation 'tosa.avg_pool2d'}}
   %0 = "tosa.avg_pool2d"(%arg0, %arg1, %arg2) {acc_type = i32, kernel = array<i64: 2, 2>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 1>} : (tensor<1x7x7x9x!quant.uniform<i8:f32, 0.01>>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x7x7x9x!quant.uniform<i8:f32, 0.01>>
   return %0 : tensor<1x7x7x9x!quant.uniform<i8:f32, 0.01>>
+}
+
+// -----
+
+// CHECK-LABEL: rescale_doubleround
+func.func @rescale_doubleround(%arg0: tensor<8x9x7x14xi32>) -> tensor<8x9x7x14xi8> {
+  %0 = "tosa.const"() <{values = dense<0> : tensor<14xi32>}> : () -> tensor<14xi32>
+  %1 = "tosa.const"() <{values = dense<0> : tensor<14xi8>}> : () -> tensor<14xi8>
+  %2 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %3 = "tosa.const"() <{values = dense<-5> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // CHECK: tosa.apply_scale
+  %4 = tosa.rescale %arg0, %0, %1, %2, %3 {input_unsigned = false, output_unsigned = false, per_channel = true, rounding_mode = DOUBLE_ROUND, scale32 = true} : (tensor<8x9x7x14xi32>, tensor<14xi32>, tensor<14xi8>, tensor<1xi32>, tensor<1xi8>) -> tensor<8x9x7x14xi8>
+  return %4 : tensor<8x9x7x14xi8>
+}
+
+// -----
+
+func.func @rescale_inexactround(%arg0: tensor<8x9x7x14xi32>) -> tensor<8x9x7x14xi8> {
+  %0 = "tosa.const"() <{values = dense<0> : tensor<14xi32>}> : () -> tensor<14xi32>
+  %1 = "tosa.const"() <{values = dense<0> : tensor<14xi8>}> : () -> tensor<14xi8>
+  %2 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %3 = "tosa.const"() <{values = dense<-5> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.rescale' op failed attribute check: rounding_mode = INEXACT_ROUND requires extension [inexactround]}}
+  %4 = tosa.rescale %arg0, %0, %1, %2, %3 {input_unsigned = false, output_unsigned = false, per_channel = true, rounding_mode = INEXACT_ROUND, scale32 = true} : (tensor<8x9x7x14xi32>, tensor<14xi32>, tensor<14xi8>, tensor<1xi32>, tensor<1xi8>) -> tensor<8x9x7x14xi8>
+  return %4 : tensor<8x9x7x14xi8>
 }

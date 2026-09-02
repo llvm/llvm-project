@@ -112,4 +112,4 @@ v_sqrt_f64 v[2:3], v[0:1]
 # CHECK-NEXT: 4.     1     0.0    0.0    0.0       v_rcp_f64_e32 v[0:1], v[0:1]
 # CHECK-NEXT: 5.     1     0.0    0.0    0.0       v_rsq_f64_e32 v[1:2], v[1:2]
 # CHECK-NEXT: 6.     1     0.0    0.0    0.0       v_sqrt_f64_e32 v[2:3], v[0:1]
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        7     0.0    0.0    0.0       <total>

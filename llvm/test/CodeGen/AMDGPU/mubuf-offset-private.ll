@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 

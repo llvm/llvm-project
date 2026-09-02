@@ -136,7 +136,6 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB,
     FunctionType *ResumeTy = FunctionType::get(
         Type::getVoidTy(Ctx), PointerType::getUnqual(Ctx), false);
     auto *ResumeCall = Builder.CreateCall(ResumeTy, ResumeAddr, {NewCall});
-    ResumeCall->setCallingConv(CallingConv::Fast);
 
     // We can't insert the 'ret' instruction and adjust the cc until the
     // function has been split, so remember this for later.
@@ -163,6 +162,50 @@ static void maybeFreeRetconStorage(IRBuilder<> &Builder,
     return;
 
   Shape.emitDealloc(Builder, FramePtr, CG);
+}
+
+/// Create a pointer to the switch destroy function field in the coroutine
+/// frame.
+static Value *createSwitchDestroyPtr(const coro::Shape &Shape,
+                                     IRBuilder<> &Builder, Value *FramePtr) {
+  auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
+                                  Shape.SwitchLowering.DestroyOffset);
+  return Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "destroy.addr");
+}
+
+/// Make resume-clone coro.free conditional on whether the frame is elided.
+///
+/// The destroy slot holds the cleanup clone for an elided frame and the destroy
+/// clone for a heap frame. Load it before user code can reentrantly destroy the
+/// enclosing caller frame, then use the cached comparison to suppress only the
+/// deallocation. The resume clone has already performed the shared coroutine
+/// cleanup, so calling either clone here would run that cleanup twice.
+static void replaceSwitchResumeCoroFree(const coro::Shape &Shape,
+                                        Function &Resume, Function &Cleanup) {
+  Value *FramePtr = Resume.getArg(0);
+  IRBuilder<> EntryBuilder(Resume.getEntryBlock().getTerminator());
+  Value *DestroyAddr = createSwitchDestroyPtr(Shape, EntryBuilder, FramePtr);
+  Value *DestroyFn = EntryBuilder.CreateLoad(Shape.getSwitchResumePointerType(),
+                                             DestroyAddr, "destroy");
+  Value *CleanupFn =
+      EntryBuilder.CreatePointerCast(&Cleanup, DestroyFn->getType());
+  Value *IsElided =
+      EntryBuilder.CreateICmpEQ(DestroyFn, CleanupFn, "is.elided");
+
+  SmallVector<CoroFreeInst *, 4> CoroFrees;
+  for (User *U : FramePtr->users()) {
+    if (auto *CF = dyn_cast<CoroFreeInst>(U))
+      CoroFrees.push_back(CF);
+  }
+
+  for (CoroFreeInst *CF : CoroFrees) {
+    IRBuilder<> Builder(CF);
+    auto *Null = ConstantPointerNull::get(cast<PointerType>(CF->getType()));
+    Value *Replacement =
+        Builder.CreateSelect(IsElided, Null, FramePtr, "coro.free");
+    CF->replaceAllUsesWith(Replacement);
+    CF->eraseFromParent();
+  }
 }
 
 /// Replace an llvm.coro.end.async.
@@ -453,7 +496,7 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
 
   Function *NewF =
       Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
-                       OrigF.getName() + Suffix);
+                       OrigF.getAddressSpace(), OrigF.getName() + Suffix);
 
   M->getFunctionList().insert(InsertBefore, NewF);
 
@@ -687,8 +730,7 @@ void coro::BaseCloner::replaceEntryBlock() {
   // exactly one predecessor, which we created when splitting out
   // AllocaSpillBlock to begin with.
   assert(Entry->hasOneUse());
-  auto BranchToEntry = cast<BranchInst>(Entry->user_back());
-  assert(BranchToEntry->isUnconditional());
+  auto BranchToEntry = cast<UncondBrInst>(Entry->user_back());
   Builder.SetInsertPoint(BranchToEntry);
   Builder.CreateUnreachable();
   BranchToEntry->eraseFromParent();
@@ -717,8 +759,7 @@ void coro::BaseCloner::replaceEntryBlock() {
              Shape.ABI == coro::ABI::RetconOnce) &&
             isa<CoroSuspendRetconInst>(ActiveSuspend)));
     auto *MappedCS = cast<AnyCoroSuspendInst>(VMap[ActiveSuspend]);
-    auto Branch = cast<BranchInst>(MappedCS->getNextNode());
-    assert(Branch->isUnconditional());
+    auto Branch = cast<UncondBrInst>(MappedCS->getNextNode());
     Builder.CreateBr(Branch->getSuccessor(0));
     break;
   }
@@ -820,10 +861,10 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   // instructions are not in the same BB.
   // FIXME: remove this hardcoded number of tries.
   for (unsigned Repeat = 0; Repeat < 2; Repeat++) {
-    auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
-    if (!Branch || !Branch->isUnconditional())
+    auto *Branch = dyn_cast_or_null<UncondBrInst>(Successor);
+    if (!Branch)
       break;
-    Successor = Branch->getSuccessor(0)->getFirstNonPHIOrDbg();
+    Successor = Branch->getSuccessor()->getFirstNonPHIOrDbg();
   }
 
   // Find the first successor of ActiveSuspend with a non-zero line location.
@@ -1102,10 +1143,9 @@ void coro::SwitchCloner::create() {
   // Clone the function
   coro::BaseCloner::create();
 
-  // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
-  // to suppress deallocation code.
-  coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
-                        /*Elide=*/FKind == coro::CloneKind::SwitchCleanup);
+  // Replacing coro.free with 'null' in cleanup to suppress deallocation code.
+  if (FKind == coro::CloneKind::SwitchCleanup)
+    elideCoroFree(NewFramePtr);
 }
 
 static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
@@ -1165,10 +1205,9 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
   auto *CoroBegin = Shape.CoroBegin;
   switch (Shape.ABI) {
   case coro::ABI::Switch: {
-    auto SwitchId = Shape.getSwitchCoroId();
-    auto *AllocInst = SwitchId->getCoroAlloc();
-    coro::replaceCoroFree(SwitchId, /*Elide=*/AllocInst != nullptr);
-    if (AllocInst) {
+    if (auto *AllocInst = Shape.getSwitchCoroId()->getCoroAlloc()) {
+      coro::elideCoroFree(CoroBegin);
+
       IRBuilder<> Builder(AllocInst);
       // Create an alloca for a byte array of the frame size
       auto *FrameTy = ArrayType::get(Type::getInt8Ty(Builder.getContext()),
@@ -1307,7 +1346,7 @@ static bool simplifySuspendPoint(CoroSuspendInst *Suspend,
 
   // No longer need a call to coro.resume or coro.destroy.
   if (auto *Invoke = dyn_cast<InvokeInst>(CB)) {
-    BranchInst::Create(Invoke->getNormalDest(), Invoke->getIterator());
+    UncondBrInst::Create(Invoke->getNormalDest(), Invoke->getIterator());
   }
 
   // Grab the CalledValue from CB before erasing the CallInstr.
@@ -1387,6 +1426,9 @@ struct SwitchCoroutineSplitter {
     auto *CleanupClone = coro::SwitchCloner::createClone(
         F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI);
 
+    if (Shape.SwitchLowering.HasCoroElideNoAllocVariant)
+      replaceSwitchResumeCoroFree(Shape, *ResumeClone, *CleanupClone);
+
     postSplitCleanup(*ResumeClone);
     postSplitCleanup(*DestroyClone);
     postSplitCleanup(*CleanupClone);
@@ -1425,8 +1467,8 @@ struct SwitchCoroutineSplitter {
 
     auto *NewFnTy = FunctionType::get(OrigFnTy->getReturnType(), NewParams,
                                       OrigFnTy->isVarArg());
-    Function *NoAllocF =
-        Function::Create(NewFnTy, F.getLinkage(), F.getName() + ".noalloc");
+    Function *NoAllocF = Function::Create(
+        NewFnTy, F.getLinkage(), F.getAddressSpace(), F.getName() + ".noalloc");
 
     ValueToValueMapTy VMap;
     unsigned int Idx = 0;
@@ -1443,9 +1485,8 @@ struct SwitchCoroutineSplitter {
     if (Shape.CoroBegin) {
       auto *NewCoroBegin =
           cast_if_present<CoroBeginInst>(VMap[Shape.CoroBegin]);
-      auto *NewCoroId = cast<CoroIdInst>(NewCoroBegin->getId());
-      coro::replaceCoroFree(NewCoroId, /*Elide=*/true);
-      coro::suppressCoroAllocs(NewCoroId);
+      coro::elideCoroFree(NewCoroBegin);
+      coro::suppressCoroAllocs(cast<CoroIdInst>(NewCoroBegin->getId()));
       NewCoroBegin->replaceAllUsesWith(NoAllocF->getArg(FrameIdx));
       NewCoroBegin->eraseFromParent();
     }
@@ -1563,7 +1604,7 @@ private:
           S->getNextNode(), ResumeBB->getName() + Twine(".landing"));
       Switch->addCase(IndexVal, ResumeBB);
 
-      cast<BranchInst>(SuspendBB->getTerminator())->setSuccessor(0, LandingBB);
+      cast<UncondBrInst>(SuspendBB->getTerminator())->setSuccessor(LandingBB);
       auto *PN = PHINode::Create(Builder.getInt8Ty(), 2, "");
       PN->insertBefore(LandingBB->begin());
       S->replaceAllUsesWith(PN);
@@ -1782,7 +1823,7 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
     // point.
     auto *SuspendBB = Suspend->getParent();
     auto *NewSuspendBB = SuspendBB->splitBasicBlock(Suspend);
-    auto *Branch = cast<BranchInst>(SuspendBB->getTerminator());
+    auto *Branch = cast<UncondBrInst>(SuspendBB->getTerminator());
 
     // Place it before the first suspend.
     auto *ReturnBB =
@@ -1880,7 +1921,7 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
     // the suspend point.
     auto SuspendBB = Suspend->getParent();
     auto NewSuspendBB = SuspendBB->splitBasicBlock(Suspend);
-    auto Branch = cast<BranchInst>(SuspendBB->getTerminator());
+    auto Branch = cast<UncondBrInst>(SuspendBB->getTerminator());
 
     // Create the unified return block.
     if (!ReturnBB) {
@@ -2020,6 +2061,9 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   bool shouldCreateNoAllocVariant =
       !isNoSuspendCoroutine && Shape.ABI == coro::ABI::Switch &&
       hasSafeElideCaller(F) && !F.hasFnAttribute(llvm::Attribute::NoInline);
+  if (Shape.ABI == coro::ABI::Switch)
+    Shape.SwitchLowering.HasCoroElideNoAllocVariant =
+        shouldCreateNoAllocVariant;
 
   // If there are no suspend points, no split required, just remove
   // the allocation and deallocation blocks, they are not needed.
@@ -2058,10 +2102,22 @@ static LazyCallGraph::SCC &updateCallGraphAfterCoroutineSplit(
   if (!Clones.empty()) {
     switch (Shape.ABI) {
     case coro::ABI::Switch:
-      // Each clone in the Switch lowering is independent of the other clones.
-      // Let the LazyCallGraph know about each one separately.
-      for (Function *Clone : Clones)
-        CG.addSplitFunction(N.getFunction(), *Clone);
+      // The resume clone's elided-frame check holds a reference to the cleanup
+      // clone. Add the cleanup clone first, so populating the resume node does
+      // not materialize an unregistered cleanup node.
+      if (Shape.SwitchLowering.HasCoroElideNoAllocVariant) {
+        assert(Clones.size() >= 3 && "expected switch coroutine clones");
+        CG.addSplitFunction(N.getFunction(), *Clones[2]);
+        CG.addSplitFunction(N.getFunction(), *Clones[1]);
+        CG.addSplitFunction(N.getFunction(), *Clones[0]);
+        for (Function *Clone : drop_begin(Clones, 3))
+          CG.addSplitFunction(N.getFunction(), *Clone);
+      } else {
+        // Each clone in the Switch lowering is independent of the other
+        // clones. Let the LazyCallGraph know about each one separately.
+        for (Function *Clone : Clones)
+          CG.addSplitFunction(N.getFunction(), *Clone);
+      }
       break;
     case coro::ABI::Async:
     case coro::ABI::Retcon:

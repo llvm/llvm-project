@@ -27,7 +27,7 @@ using namespace PatternMatch;
 namespace {
 struct ConditionInfo {
   /// Branch instruction with this condition
-  BranchInst *BI = nullptr;
+  CondBrInst *BI = nullptr;
   /// ICmp instruction with this condition
   ICmpInst *ICmp = nullptr;
   /// Preciate info
@@ -156,7 +156,7 @@ static bool hasProcessableCondition(const Loop &L, ScalarEvolution &SE,
 }
 
 static bool isProcessableCondBI(const ScalarEvolution &SE,
-                                const BranchInst *BI) {
+                                const CondBrInst *BI) {
   BasicBlock *TrueSucc = nullptr;
   BasicBlock *FalseSucc = nullptr;
   Value *LHS, *RHS;
@@ -201,7 +201,7 @@ static bool canSplitLoopBound(const Loop &L, const DominatorTree &DT,
   if (!ExitingBB)
     return false;
 
-  BranchInst *ExitingBI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+  CondBrInst *ExitingBI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
   if (!ExitingBI)
     return false;
 
@@ -218,7 +218,7 @@ static bool canSplitLoopBound(const Loop &L, const DominatorTree &DT,
   return true;
 }
 
-static bool isProfitableToTransform(const Loop &L, const BranchInst *BI) {
+static bool isProfitableToTransform(const Loop &L, const CondBrInst *BI) {
   // If the conditional branch splits a loop into two halves, we could
   // generally say it is profitable.
   //
@@ -238,7 +238,7 @@ static bool isProfitableToTransform(const Loop &L, const BranchInst *BI) {
   return true;
 }
 
-static BranchInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
+static CondBrInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
                                       ConditionInfo &ExitingCond,
                                       ConditionInfo &SplitCandidateCond) {
   for (auto *BB : L.blocks()) {
@@ -246,7 +246,7 @@ static BranchInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
     if (L.getLoopLatch() == BB)
       continue;
 
-    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
     if (!BI)
       continue;
 
@@ -356,6 +356,19 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
   BasicBlock *PostLoopPreHeader = PostLoop->getLoopPreheader();
   IRBuilder<> Builder(&PostLoopPreHeader->front());
 
+  // Replace exit branch target of pre-loop by post-loop's preheader.
+  // Note: update the branch here after calling cloneLoopWithPreheader()
+  // to keep the IR valid.
+  if (L.getExitBlock() == ExitingCond.BI->getSuccessor(0))
+    ExitingCond.BI->setSuccessor(0, PostLoopPreHeader);
+  else
+    ExitingCond.BI->setSuccessor(1, PostLoopPreHeader);
+
+  // Update dominator tree.
+  DT.changeImmediateDominator(PostLoopPreHeader, L.getExitingBlock());
+#ifndef NDEBUG
+  LI.verify(DT);
+#endif
   // Update phi nodes in header of post-loop.
   bool isExitingLatch = L.getExitingBlock() == L.getLoopLatch();
   Value *ExitingCondLCSSAPhi = nullptr;
@@ -377,6 +390,8 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
     // Find PHI with exiting condition from pre-loop. The PHI should be
     // SCEVAddRecExpr and have same incoming value from backedge with
     // ExitingCond.
+    //
+    // TODO: Separate SCEV queries from PHI node updates.
     if (!SE.isSCEVable(PN.getType()))
       continue;
 
@@ -386,13 +401,22 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
       ExitingCondLCSSAPhi = LCSSAPhi;
   }
 
-  // Add conditional branch to check we can skip post-loop in its preheader.
+  // Add conditional branch to check we can skip post-loop in its preheader,
+  // and update DT.
   Instruction *OrigBI = PostLoopPreHeader->getTerminator();
   ICmpInst::Predicate Pred = ICmpInst::ICMP_NE;
   Value *Cond =
       Builder.CreateICmp(Pred, ExitingCondLCSSAPhi, ExitingCond.BoundValue);
   Builder.CreateCondBr(Cond, PostLoop->getHeader(), PostLoop->getExitBlock());
   OrigBI->eraseFromParent();
+  DT.changeImmediateDominator(PostLoop->getExitBlock(), PostLoopPreHeader);
+#ifdef EXPENSIVE_CHECKS
+  assert(DT.verify(DominatorTree::VerificationLevel::Full) &&
+         "DT broken during transformation!");
+#else
+  assert(DT.verify(DominatorTree::VerificationLevel::Fast) &&
+         "DT broken during transformation!");
+#endif
 
   // Create new loop bound and add it into preheader of pre-loop.
   const SCEV *NewBoundSCEV = ExitingCond.BoundSCEV;
@@ -415,15 +439,9 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
   SplitCandidateCond.BI->setCondition(ConstantInt::getTrue(Context));
 
   // Replace cloned SplitCandidateCond.BI's condition in post-loop by False.
-  BranchInst *ClonedSplitCandidateBI =
-      cast<BranchInst>(VMap[SplitCandidateCond.BI]);
+  CondBrInst *ClonedSplitCandidateBI =
+      cast<CondBrInst>(VMap[SplitCandidateCond.BI]);
   ClonedSplitCandidateBI->setCondition(ConstantInt::getFalse(Context));
-
-  // Replace exit branch target of pre-loop by post-loop's preheader.
-  if (L.getExitBlock() == ExitingCond.BI->getSuccessor(0))
-    ExitingCond.BI->setSuccessor(0, PostLoopPreHeader);
-  else
-    ExitingCond.BI->setSuccessor(1, PostLoopPreHeader);
 
   // Update phi node in exit block of post-loop.
   Builder.SetInsertPoint(PostLoopPreHeader, PostLoopPreHeader->begin());
@@ -448,10 +466,6 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
       }
     }
   }
-
-  // Update dominator tree.
-  DT.changeImmediateDominator(PostLoopPreHeader, L.getExitingBlock());
-  DT.changeImmediateDominator(PostLoop->getExitBlock(), PostLoopPreHeader);
 
   // Invalidate cached SE information.
   SE.forgetLoop(&L);

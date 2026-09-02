@@ -53,7 +53,10 @@ attributes #0 = { readnone }
 ; CHECK-SAME:  !llvm.ptr {llvm.preallocated = f64}
 ; CHECK-SAME:  !llvm.ptr {llvm.returned}
 ; CHECK-SAME:  !llvm.ptr {llvm.alignstack = 32 : i64}
-; CHECK-SAME:  !llvm.ptr {llvm.writeonly}
+; CHECK-SAME:  !llvm.ptr {llvm.writable, llvm.writeonly}
+; CHECK-SAME:  !llvm.ptr {llvm.dead_on_unwind}
+; CHECK-SAME:  !llvm.ptr {llvm.dead_on_return = 8 : i64}
+; CHECK-SAME:  f32 {llvm.nofpclass = 519 : i64}
 ; CHECK-SAME:  i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>}
 define ptr @func_arg_attrs(
     ptr byval(i64) %arg0,
@@ -73,8 +76,11 @@ define ptr @func_arg_attrs(
     ptr preallocated(double) %arg16,
     ptr returned %arg17,
     ptr alignstack(32) %arg18,
-    ptr writeonly %arg19,
-    i64 range(i64 0, 4097) %arg20) {
+    ptr writable writeonly %arg19,
+    ptr dead_on_unwind %arg20,
+    ptr dead_on_return(8) %arg21,
+    float nofpclass(nan inf) %arg22,
+    i64 range(i64 0, 4097) %arg23) {
   ret ptr %arg17
 }
 
@@ -134,6 +140,12 @@ declare noundef ptr @func_res_attr_noundef()
 
 ; // -----
 
+; CHECK-LABEL: @func_res_attr_nofpclass
+; CHECK-SAME:  (f32 {llvm.nofpclass = 519 : i64})
+declare nofpclass(nan inf) float @func_res_attr_nofpclass()
+
+; // -----
+
 ; CHECK-LABEL: @func_res_attr_dereferenceable
 ; CHECK-SAME:  !llvm.ptr {llvm.dereferenceable = 42 : i64}
 declare dereferenceable(42) ptr @func_res_attr_dereferenceable()
@@ -159,12 +171,86 @@ declare range(i64 0, 4097) i64 @func_res_attr_range()
 ; // -----
 
 ; CHECK-LABEL: @entry_count
-; CHECK-SAME:  attributes {function_entry_count = 4242 : i64}
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 4242>}
 define void @entry_count() !prof !1 {
   ret void
 }
 
 !1 = !{!"function_entry_count", i64 4242}
+
+; // -----
+
+; CHECK-LABEL: @synthetic_entry_count
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic>}
+define void @synthetic_entry_count() !prof !2 {
+  ret void
+}
+
+!2 = !{!"synthetic_function_entry_count", i64 7}
+
+; // -----
+
+; CHECK-LABEL: @entry_count_imports
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 7, imports = 1234, 18446744073709551615, 4, 1234>}
+define void @entry_count_imports() !prof !3 {
+  ret void
+}
+
+!3 = !{!"function_entry_count", i64 7, i64 1234, i64 -1, i64 4, i64 1234}
+
+; // -----
+
+; CHECK-LABEL: @synthetic_entry_count_imports
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic, imports = 1234>}
+define void @synthetic_entry_count_imports() !prof !4 {
+  ret void
+}
+
+!4 = !{!"synthetic_function_entry_count", i64 7, i64 1234}
+
+; // -----
+
+; CHECK-LABEL: @entry_count_malformed_import
+; CHECK-NOT: function_entry_count
+; expected-warning @unknown {{unhandled function metadata}}
+define void @entry_count_malformed_import() !prof !5 {
+  ret void
+}
+
+!5 = !{!"function_entry_count", i64 7, !"bad"}
+
+; // -----
+
+; CHECK-LABEL: @entry_count_too_wide_count
+; CHECK-NOT: function_entry_count
+; expected-warning @unknown {{unhandled function metadata}}
+define void @entry_count_too_wide_count() !prof !6 {
+  ret void
+}
+
+!6 = !{!"function_entry_count", i128 18446744073709551616}
+
+; // -----
+
+; CHECK-LABEL: @entry_count_too_wide_import
+; CHECK-NOT: function_entry_count
+; expected-warning @unknown {{unhandled function metadata}}
+define void @entry_count_too_wide_import() !prof !7 {
+  ret void
+}
+
+!7 = !{!"function_entry_count", i64 7, i128 18446744073709551616}
+
+; // -----
+
+; Preserve the raw i64 metadata bit pattern.
+; CHECK-LABEL: @entry_count_negative_count
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 18446744073709551615>}
+define void @entry_count_negative_count() !prof !8 {
+  ret void
+}
+
+!8 = !{!"function_entry_count", i64 -1}
 
 ; // -----
 
@@ -300,18 +386,6 @@ define void @align_func() align 2 {
 ; CHECK-LABEL: @align_decl
 ; CHECK-SAME: attributes {alignment = 64 : i64}
 declare void @align_decl() align 64
-
-; // -----
-
-; CHECK-LABEL: @func_attr_no_nans_fp_math_true
-; CHECK-SAME: attributes {no_nans_fp_math = true}
-declare void @func_attr_no_nans_fp_math_true() "no-nans-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_no_nans_fp_math_false
-; CHECK-SAME: attributes {no_nans_fp_math = false}
-declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
 
 ; // -----
 

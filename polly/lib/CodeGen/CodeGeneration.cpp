@@ -297,6 +297,8 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
     Builder.SetInsertPoint(StartBlock,
                            StartBlock->getTerminator()->getIterator());
 
+    NodeBuilder.generateBeginScopTrace();
+
     NodeBuilder.create(AstRoot.release());
     NodeBuilder.finalize();
     fixRegionInfo(*EnteringBB->getParent(), *R->getParent(), RI);

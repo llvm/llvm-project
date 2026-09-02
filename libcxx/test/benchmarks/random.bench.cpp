@@ -34,4 +34,29 @@ static void BM_SeedSeq_Generate(benchmark::State& state) {
 }
 BENCHMARK(BM_SeedSeq_Generate)->Ranges({{1, MAX_SEED_LEN}, {1, MAX_BUFFER_LEN}});
 
+template <class Engine>
+static void BM_engine(benchmark::State& state) {
+  Engine engine;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(engine());
+  }
+}
+BENCHMARK(BM_engine<std::mt19937_64>)->Name("std::mt19937_64::operator()");
+BENCHMARK(BM_engine<std::mt19937>)->Name("std::mt19937::operator()");
+
+template <class Engine>
+static void BM_engine_array(benchmark::State& state) {
+  Engine engine;
+
+  typename Engine::result_type buffer[128];
+
+  for (auto _ : state) {
+    std::generate(std::begin(buffer), std::end(buffer), std::ref(engine));
+    benchmark::DoNotOptimize(buffer);
+  }
+}
+BENCHMARK(BM_engine_array<std::mt19937_64>)->Name("std::mt19937_64::operator() (into array)");
+BENCHMARK(BM_engine_array<std::mt19937>)->Name("std::mt19937::operator() (into array)");
+
 BENCHMARK_MAIN();

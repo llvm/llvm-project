@@ -83,8 +83,10 @@ static const OmpDirectiveSet topParallelSet{
     Directive::OMPD_parallel_do,
     Directive::OMPD_parallel_do_simd,
     Directive::OMPD_parallel_loop,
+    Directive::OMPD_parallel_masked,
     Directive::OMPD_parallel_masked_taskloop,
     Directive::OMPD_parallel_masked_taskloop_simd,
+    Directive::OMPD_parallel_master,
     Directive::OMPD_parallel_master_taskloop,
     Directive::OMPD_parallel_master_taskloop_simd,
     Directive::OMPD_parallel_sections,
@@ -278,12 +280,14 @@ static const OmpDirectiveSet loopConstructSet{
     Directive::OMPD_fuse,
     Directive::OMPD_tile,
     Directive::OMPD_unroll,
+    Directive::OMPD_interchange,
 };
 
 static const OmpDirectiveSet loopTransformationSet{
     Directive::OMPD_tile,
     Directive::OMPD_unroll,
     Directive::OMPD_fuse,
+    Directive::OMPD_interchange,
 };
 
 static const OmpDirectiveSet nonPartialVarSet{

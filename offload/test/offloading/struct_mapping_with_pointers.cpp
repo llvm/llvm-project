@@ -6,7 +6,6 @@
 
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-// XFAIL: intelgpu
 
 #include <stdio.h>
 #include <stdlib.h>

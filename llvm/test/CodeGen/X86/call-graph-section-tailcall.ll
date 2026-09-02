@@ -6,13 +6,13 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
 ; RUN: llvm-readelf -x .llvm.callgraph - | FileCheck %s
 
-define i32 @check_tailcall(ptr %func, i8 %x) !type !0 {
+define i32 @check_tailcall(ptr %func, i8 %x) !callgraph !0 {
 entry:
   %call = tail call i32 %func(i8 signext %x), !callee_type !1
   ret i32 %call
 }
 
-define i32 @main(i32 %argc) !type !3 {
+define i32 @main(i32 %argc) !callgraph !3 {
 entry:
   %andop = and i32 %argc, 1
   %cmp = icmp eq i32 %andop, 0
@@ -21,14 +21,14 @@ entry:
   ret i32 %call.i
 }
 
-declare !type !2 i32 @foo(i8 signext)
+declare !callgraph !2 i32 @foo(i8 signext)
 
-declare !type !2 i32 @bar(i8 signext)
+declare !callgraph !2 i32 @bar(i8 signext)
 
-!0 = !{i64 0, !"_ZTSFiPvcE.generalized"}
+!0 = !{!"_ZTSFiPvcE.generalized"}
 !1 = !{!2}
-!2 = !{i64 0, !"_ZTSFicE.generalized"}
-!3 = !{i64 0, !"_ZTSFiiE.generalized"}
+!2 = !{!"_ZTSFicE.generalized"}
+!3 = !{!"_ZTSFiiE.generalized"}
 
 ; CHECK: Hex dump of section '.llvm.callgraph':
 ; CHECK-NEXT: 0x00000000 00050000 00000000 00008e19 0b7f3326

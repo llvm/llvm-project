@@ -115,8 +115,10 @@ PWACtx SCEVAffinator::getPWACtxFromPWA(isl::pw_aff PWA) {
 }
 
 PWACtx SCEVAffinator::getPwAff(const SCEV *Expr, BasicBlock *BB,
-                               RecordedAssumptionsTy *RecordedAssumptions) {
+                               RecordedAssumptionsTy *RecordedAssumptions,
+                               bool IsInsideDomain) {
   this->BB = BB;
+  this->IsInsideDomain = IsInsideDomain;
   this->RecordedAssumptions = RecordedAssumptions;
 
   if (BB) {
@@ -137,7 +139,7 @@ PWACtx SCEVAffinator::checkForWrapping(const SCEV *Expr, PWACtx PWAC) const {
   // whereas n is the number of bits of the Expr, hence:
   //   n = bitwidth(ExprType)
 
-  if (IgnoreIntegerWrapping || (getNoWrapFlags(Expr) & SCEV::FlagNSW))
+  if (IgnoreIntegerWrapping || any(getNoWrapFlags(Expr) & SCEV::FlagNSW))
     return PWAC;
 
   isl::pw_aff PWAMod = addModuloSemantic(PWAC.first, Expr->getType());
@@ -178,7 +180,7 @@ bool SCEVAffinator::hasNSWAddRecForLoop(Loop *L) const {
       continue;
     if (AddRec->getLoop() != L)
       continue;
-    if (AddRec->getNoWrapFlags() & SCEV::FlagNSW)
+    if (AddRec->hasNoSignedWrap())
       return true;
   }
 
@@ -189,7 +191,7 @@ bool SCEVAffinator::computeModuloForExpr(const SCEV *Expr) {
   unsigned Width = TD.getTypeSizeInBits(Expr->getType());
   // We assume nsw expressions never overflow.
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Expr))
-    if (NAry->getNoWrapFlags() & SCEV::FlagNSW)
+    if (NAry->hasNoSignedWrap())
       return false;
   return Width <= MaxSmallBitWidth;
 }
@@ -309,7 +311,7 @@ PWACtx SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   }
 
   recordAssumption(RecordedAssumptions, UNSIGNED, isl::manage(OutOfBoundsDom),
-                   DebugLoc(), AS_RESTRICTION, BB);
+                   DebugLoc(), AS_RESTRICTION, IsInsideDomain ? BB : nullptr);
 
   return OpPWAC;
 }

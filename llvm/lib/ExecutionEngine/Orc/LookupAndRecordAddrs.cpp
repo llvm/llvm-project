@@ -51,33 +51,5 @@ Error lookupAndRecordAddrs(
   return ResultF.get();
 }
 
-Error lookupAndRecordAddrs(
-    ExecutorProcessControl &EPC, tpctypes::DylibHandle H,
-    std::vector<std::pair<SymbolStringPtr, ExecutorAddr *>> Pairs,
-    SymbolLookupFlags LookupFlags) {
-
-  SymbolLookupSet Symbols;
-  for (auto &KV : Pairs)
-    Symbols.add(KV.first, LookupFlags);
-
-  DylibManager::LookupRequest LR(H, Symbols);
-  auto Result = EPC.getDylibMgr().lookupSymbols(LR);
-  if (!Result)
-    return Result.takeError();
-
-  if (Result->size() != 1)
-    return make_error<StringError>("Error in lookup result",
-                                   inconvertibleErrorCode());
-  if (Result->front().size() != Pairs.size())
-    return make_error<StringError>("Error in lookup result elements",
-                                   inconvertibleErrorCode());
-
-  for (unsigned I = 0; I != Pairs.size(); ++I) {
-    if (Result->front()[I])
-      *Pairs[I].second = Result->front()[I]->getAddress();
-  }
-  return Error::success();
-}
-
 } // End namespace orc.
 } // End namespace llvm.

@@ -52,21 +52,28 @@ program omp_simd
 
   print *, a
 
-  !ERROR: 'c' is a common block name and can not appear in an ALIGNED clause
+  !ERROR: 'c' in ALIGNED clause must be of type C_PTR, POINTER or ALLOCATABLE
   !$omp simd aligned(c)
   do i = 1, 10
     c = 5
   end do
   !$omp end simd
 
+  !ERROR: 'cmn' is a common block name and can not appear in an ALIGNED clause
+  !$omp simd aligned(/cmn/)
+  do i = 1, 10
+    c = 5
+  end do
+  !$omp end simd
+
   !ERROR: 'd' in ALIGNED clause must be of type C_PTR, POINTER or ALLOCATABLE
-  !WARNING: Alignment is not a power of 2, Aligned clause will be ignored [-Wopen-mp-usage]
+  !WARNING: Alignment is not a power of 2, Aligned clause will be ignored [-Wopenmp-usage]
   !$omp simd aligned(d:100)
   do i = 1, 100
     d(i) = i
   end do
 
-  !WARNING: Alignment is not a power of 2, Aligned clause will be ignored [-Wopen-mp-usage]
+  !WARNING: Alignment is not a power of 2, Aligned clause will be ignored [-Wopenmp-usage]
   !$omp simd aligned(b:65)
   do i = 1, 100
     b(i) = i

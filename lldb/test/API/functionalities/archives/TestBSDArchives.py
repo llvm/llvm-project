@@ -10,6 +10,7 @@ import time
 
 
 class BSDArchivesTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
     # each debug info format.

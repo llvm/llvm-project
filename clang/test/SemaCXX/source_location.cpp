@@ -1081,3 +1081,13 @@ static_assert(X{}.
 static_assert(X{}.
                 foo() == 10001);
 }
+
+#ifdef MS
+namespace GH178324 {
+  struct a {
+    using e = int;
+  };
+  void current(const char * = __builtin_FUNCSIG());
+  template <class> void c() { decltype(a(current()))::e; }
+} // namespace GH178324
+#endif

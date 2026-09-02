@@ -15,8 +15,8 @@
 ! RUN: %flang_fc1 -E -fbackslash %s  2>&1 | FileCheck %s --check-prefix=UNESCAPED
 
 ! ESCAPED:program Backslash
-! ESCAPED-NEXT:New\\nline
-! ESCAPED-NOT:New\nline
+! ESCAPED-NEXT:New\nline
+! ESCAPED-NOT:New\\nline
 
 ! UNESCAPED:program Backslash
 ! UNESCAPED-NEXT:New\nline

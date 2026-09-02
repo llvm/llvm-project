@@ -176,3 +176,92 @@ Foo i7 = bazQuux.m2(b0);
 
 auto v1 = []() { return std::vector<int>({1, 2}); }();
 auto v2 = []() -> std::vector<int> { return std::vector<int>({1, 2}); }();
+
+
+struct Saz {
+  Saz(const int&) {}
+};
+
+Saz fn1() {
+  return Saz(0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0};
+}
+
+Saz fn2() {
+  int x = 1;
+  return Saz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+struct Taz {
+  Taz(const int) {}
+};
+
+Taz gn1() {
+  return Taz(0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0};
+}
+
+Taz gn2() {
+  int x = 0;
+  return Taz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+Taz gn3() {
+  const int& x = 0;
+  return Taz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+struct MultiSaz {
+  MultiSaz(const int&, const double) {}
+};
+
+MultiSaz mfn1() {
+  int x = 1;
+  double y = 2.0;
+  return MultiSaz(x, y);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x, y};
+}
+
+struct Vol {
+  Vol(volatile int) {}
+};
+
+Vol vn1() {
+  int x = 1;
+  return Vol(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+struct Gaz {
+  Gaz(int) {}
+};
+
+Gaz hn1() {
+  return Gaz(0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0};
+}
+
+Gaz hn2() {
+  const int x = 1;
+  return Gaz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+Gaz hn3() {
+  const int& x = 2;
+  return Gaz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}

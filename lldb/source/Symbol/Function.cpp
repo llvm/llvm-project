@@ -59,10 +59,6 @@ const Declaration &FunctionInfo::GetDeclaration() const {
 
 ConstString FunctionInfo::GetName() const { return m_name; }
 
-size_t FunctionInfo::MemorySize() const {
-  return m_name.MemorySize() + m_declaration.MemorySize();
-}
-
 InlineFunctionInfo::InlineFunctionInfo(const char *name,
                                        llvm::StringRef mangled,
                                        const Declaration *decl_ptr,
@@ -89,9 +85,9 @@ void InlineFunctionInfo::DumpStopContext(Stream *s) const {
   //    s->Indent("[inlined] ");
   s->Indent();
   if (m_mangled)
-    s->PutCString(m_mangled.GetName().AsCString());
+    s->PutCString(m_mangled.GetName());
   else
-    s->PutCString(m_name.AsCString());
+    s->PutCString(m_name);
 }
 
 ConstString InlineFunctionInfo::GetName() const {
@@ -115,10 +111,6 @@ const Declaration &InlineFunctionInfo::GetCallSite() const {
 Mangled &InlineFunctionInfo::GetMangled() { return m_mangled; }
 
 const Mangled &InlineFunctionInfo::GetMangled() const { return m_mangled; }
-
-size_t InlineFunctionInfo::MemorySize() const {
-  return FunctionInfo::MemorySize() + m_mangled.MemorySize();
-}
 
 /// @name Call site related structures
 /// @{
@@ -158,39 +150,37 @@ lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
   return GetLoadAddress(GetUnresolvedReturnPCAddress(), caller, target);
 }
 
-void DirectCallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
-  if (resolved)
-    return;
+Function *DirectCallEdge::ResolveCallee(ModuleList &images) {
+  if (!m_symbol_name)
+    return nullptr;
 
   Log *log = GetLog(LLDBLog::Step);
   LLDB_LOG(log, "DirectCallEdge: Lazily parsing the call graph for {0}",
-           lazy_callee.symbol_name);
+           m_symbol_name);
 
-  auto resolve_lazy_callee = [&]() -> Function * {
-    ConstString callee_name{lazy_callee.symbol_name};
-    SymbolContextList sc_list;
-    images.FindFunctionSymbols(callee_name, eFunctionNameTypeAuto, sc_list);
-    size_t num_matches = sc_list.GetSize();
-    if (num_matches == 0 || !sc_list[0].symbol) {
-      LLDB_LOG(log,
-               "DirectCallEdge: Found no symbols for {0}, cannot resolve it",
-               callee_name);
-      return nullptr;
-    }
-    Address callee_addr = sc_list[0].symbol->GetAddress();
-    if (!callee_addr.IsValid()) {
-      LLDB_LOG(log, "DirectCallEdge: Invalid symbol address");
-      return nullptr;
-    }
-    Function *f = callee_addr.CalculateSymbolContextFunction();
-    if (!f) {
-      LLDB_LOG(log, "DirectCallEdge: Could not find complete function");
-      return nullptr;
-    }
-    return f;
-  };
-  lazy_callee.def = resolve_lazy_callee();
-  resolved = true;
+  SymbolContextList sc_list;
+  images.FindFunctionSymbols(ConstString(m_symbol_name), eFunctionNameTypeAuto,
+                             sc_list);
+  size_t num_matches = sc_list.GetSize();
+  if (num_matches == 0 || !sc_list[0].symbol) {
+    LLDB_LOG(log, "DirectCallEdge: Found no symbols for {0}, cannot resolve it",
+             m_symbol_name);
+    return nullptr;
+  }
+
+  Address callee_addr = sc_list[0].symbol->GetAddress();
+  if (!callee_addr.IsValid()) {
+    LLDB_LOG(log, "DirectCallEdge: Invalid symbol address");
+    return nullptr;
+  }
+
+  Function *f = callee_addr.CalculateSymbolContextFunction();
+  if (!f) {
+    LLDB_LOG(log, "DirectCallEdge: Could not find complete function");
+    return nullptr;
+  }
+
+  return f;
 }
 
 DirectCallEdge::DirectCallEdge(const char *symbol_name,
@@ -198,14 +188,13 @@ DirectCallEdge::DirectCallEdge(const char *symbol_name,
                                lldb::addr_t caller_address, bool is_tail_call,
                                CallSiteParameterArray &&parameters)
     : CallEdge(caller_address_type, caller_address, is_tail_call,
-               std::move(parameters)) {
-  lazy_callee.symbol_name = symbol_name;
-}
+               std::move(parameters)),
+      m_symbol_name(symbol_name) {}
 
 Function *DirectCallEdge::GetCallee(ModuleList &images, ExecutionContext &) {
-  ParseSymbolFileAndResolve(images);
-  assert(resolved && "Did not resolve lazy callee");
-  return lazy_callee.def;
+  std::call_once(m_resolved_flag,
+                 [&] { m_callee_def = ResolveCallee(images); });
+  return m_callee_def;
 }
 
 IndirectCallEdge::IndirectCallEdge(DWARFExpressionList call_target,
@@ -236,6 +225,13 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
   if (raw_addr == LLDB_INVALID_ADDRESS) {
     LLDB_LOG(log, "IndirectCallEdge: Could not extract address from scalar");
     return nullptr;
+  }
+
+  if (auto *process = exe_ctx.GetProcessPtr()) {
+    raw_addr = process->FixCodeAddress(raw_addr);
+  } else {
+    LLDB_LOG(log, "IndirectCallEdge: No Process available, unable to call "
+                  "FixCodeAddress on function pointer");
   }
 
   Address callee_addr;
@@ -505,11 +501,6 @@ void Function::DumpSymbolContext(Stream *s) {
   s->Printf(", Function{0x%8.8" PRIx64 "}", GetID());
 }
 
-size_t Function::MemorySize() const {
-  size_t mem_size = sizeof(Function) + m_block.MemorySize();
-  return mem_size;
-}
-
 bool Function::GetIsOptimized() {
   bool result = false;
 
@@ -586,8 +577,39 @@ uint32_t Function::GetPrologueByteSize() {
     if (line_table) {
       LineEntry first_line_entry;
       uint32_t first_line_entry_idx = UINT32_MAX;
-      if (line_table->FindLineEntryByAddress(GetAddress(), first_line_entry,
-                                             &first_line_entry_idx)) {
+      bool found_first_line_entry = line_table->FindLineEntryByAddress(
+          GetAddress(), first_line_entry, &first_line_entry_idx);
+
+      // When the entry point isn't covered (e.g. WebAssembly), fall back to the
+      // first line entry that begins within the function so the prologue is
+      // still skipped to a real instruction instead of leaving the breakpoint
+      // on the (unexecutable) entry address.
+      if (!found_first_line_entry) {
+        AddressRange entry_range;
+        if (m_block.GetRangeContainingAddress(m_address, entry_range)) {
+          const addr_t func_start_addr = m_address.GetFileAddress();
+          const addr_t func_end_addr =
+              entry_range.GetBaseAddress().GetFileAddress() +
+              entry_range.GetByteSize();
+          const uint32_t line_table_size = line_table->GetSize();
+          for (uint32_t idx = 0; idx < line_table_size; ++idx) {
+            LineEntry line_entry;
+            bool success = line_table->GetLineEntryAtIndex(idx, line_entry);
+            assert(success && "idx is within the line table size");
+            UNUSED_IF_ASSERT_DISABLED(success);
+            const addr_t entry_addr =
+                line_entry.range.GetBaseAddress().GetFileAddress();
+            if (entry_addr >= func_start_addr && entry_addr < func_end_addr) {
+              first_line_entry = line_entry;
+              first_line_entry_idx = idx;
+              found_first_line_entry = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (found_first_line_entry) {
         // Make sure the first line entry isn't already the end of the prologue
         addr_t prologue_end_file_addr = LLDB_INVALID_ADDRESS;
         addr_t line_zero_end_file_addr = LLDB_INVALID_ADDRESS;

@@ -382,7 +382,6 @@ define dso_local void @test_api(i32 %cond, i16 signext %row, i16 signext %col) #
 ; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %cx # 2-byte Reload
 ; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
 ; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; AVX512-NEXT:    # kill: def $r8 killed $rax
 ; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
 ; AVX512-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %zmm0
 ; AVX512-NEXT:    vmovaps %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -598,7 +597,6 @@ define dso_local void @test_api(i32 %cond, i16 signext %row, i16 signext %col) #
 ; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %si # 2-byte Reload
 ; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %dx # 2-byte Reload
 ; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; AVX512-NEXT:    # kill: def $rdi killed $rax
 ; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; AVX512-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %zmm0
 ; AVX512-NEXT:    vmovdqa64 {{[0-9]+}}(%rsp), %zmm1

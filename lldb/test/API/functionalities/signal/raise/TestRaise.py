@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWindows  # signals do not exist on Windows
+@skipIfNoSignals
 class RaiseTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

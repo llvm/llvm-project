@@ -196,9 +196,6 @@ few actions in common:
   if the predicate is satisfied and indicates that there is no way to make it
   legal and the compiler should fail.
 
-* ``fallback()`` falls back on an older API and should only be used while porting
-  existing code from that API.
-
 Rule Predicates
 """""""""""""""
 

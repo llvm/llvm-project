@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
+@skipIfWasm  # no expression evaluation
 class TestRerunExpr(TestBase):
     SHARED_BUILD_TESTCASE = False
 

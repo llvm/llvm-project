@@ -79,7 +79,6 @@ for.end:
   ret void
 }
 
-declare float @llvm.sin.f32(float) nounwind readnone
 
 ; Dummy metadata
 !3 = !{!3, !{!"llvm.loop.parallel_accesses", !13}}

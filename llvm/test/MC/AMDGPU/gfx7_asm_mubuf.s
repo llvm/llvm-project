@@ -3172,6 +3172,9 @@ buffer_atomic_xor_x2 v[254:255], off, s[12:15], s4 offset:4095
 buffer_load_dword v255, off, s[8:11], s3 offset:4095
 // CHECK: buffer_load_dword v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x30,0xe0,0x00,0xff,0x02,0x03]
 
+buffer_load_dword v255, off, s[8:11], s3 offset:4095 nolds
+// CHECK: buffer_load_dword v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x30,0xe0,0x00,0xff,0x02,0x03]
+
 buffer_load_dword v5, off, s[100:103], s3 offset:4095
 // CHECK: buffer_load_dword v5, off, s[100:103], s3 offset:4095 ; encoding: [0xff,0x0f,0x30,0xe0,0x00,0x05,0x19,0x03]
 
@@ -3566,6 +3569,9 @@ buffer_load_dwordx4 v[5:8], v[0:1], s[8:11], s3 addr64 offset:4095
 // CHECK: buffer_load_dwordx4 v[5:8], v[0:1], s[8:11], s3 addr64 offset:4095 ; encoding: [0xff,0x8f,0x38,0xe0,0x00,0x05,0x02,0x03]
 
 buffer_load_format_x v255, off, s[8:11], s3 offset:4095
+// CHECK: buffer_load_format_x v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x00,0xe0,0x00,0xff,0x02,0x03]
+
+buffer_load_format_x v255, off, s[8:11], s3 offset:4095 nolds
 // CHECK: buffer_load_format_x v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x00,0xe0,0x00,0xff,0x02,0x03]
 
 buffer_load_format_x v5, off, s[100:103], s3 offset:4095
@@ -3964,6 +3970,9 @@ buffer_load_format_xyzw v[5:8], v[0:1], s[8:11], s3 addr64 offset:4095
 buffer_load_sbyte v255, off, s[8:11], s3 offset:4095
 // CHECK: buffer_load_sbyte v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x24,0xe0,0x00,0xff,0x02,0x03]
 
+buffer_load_sbyte v255, off, s[8:11], s3 offset:4095 nolds
+// CHECK: buffer_load_sbyte v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x24,0xe0,0x00,0xff,0x02,0x03]
+
 buffer_load_sbyte v5, off, s[100:103], s3 offset:4095
 // CHECK: buffer_load_sbyte v5, off, s[100:103], s3 offset:4095 ; encoding: [0xff,0x0f,0x24,0xe0,0x00,0x05,0x19,0x03]
 
@@ -4061,6 +4070,9 @@ buffer_load_sbyte v5, v[0:1], s[8:11], s3 addr64 offset:4095
 // CHECK: buffer_load_sbyte v5, v[0:1], s[8:11], s3 addr64 offset:4095 ; encoding: [0xff,0x8f,0x24,0xe0,0x00,0x05,0x02,0x03]
 
 buffer_load_sshort v255, off, s[8:11], s3 offset:4095
+// CHECK: buffer_load_sshort v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x2c,0xe0,0x00,0xff,0x02,0x03]
+
+buffer_load_sshort v255, off, s[8:11], s3 offset:4095 nolds
 // CHECK: buffer_load_sshort v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x2c,0xe0,0x00,0xff,0x02,0x03]
 
 buffer_load_sshort v5, off, s[100:103], s3 offset:4095
@@ -4162,6 +4174,9 @@ buffer_load_sshort v5, v[0:1], s[8:11], s3 addr64 offset:4095
 buffer_load_ubyte v255, off, s[8:11], s3 offset:4095
 // CHECK: buffer_load_ubyte v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x20,0xe0,0x00,0xff,0x02,0x03]
 
+buffer_load_ubyte v255, off, s[8:11], s3 offset:4095 nolds
+// CHECK: buffer_load_ubyte v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x20,0xe0,0x00,0xff,0x02,0x03]
+
 buffer_load_ubyte v5, off, s[100:103], s3 offset:4095
 // CHECK: buffer_load_ubyte v5, off, s[100:103], s3 offset:4095 ; encoding: [0xff,0x0f,0x20,0xe0,0x00,0x05,0x19,0x03]
 
@@ -4259,6 +4274,9 @@ buffer_load_ubyte v5, v[0:1], s[8:11], s3 addr64 offset:4095
 // CHECK: buffer_load_ubyte v5, v[0:1], s[8:11], s3 addr64 offset:4095 ; encoding: [0xff,0x8f,0x20,0xe0,0x00,0x05,0x02,0x03]
 
 buffer_load_ushort v255, off, s[8:11], s3 offset:4095
+// CHECK: buffer_load_ushort v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x28,0xe0,0x00,0xff,0x02,0x03]
+
+buffer_load_ushort v255, off, s[8:11], s3 offset:4095 nolds
 // CHECK: buffer_load_ushort v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x28,0xe0,0x00,0xff,0x02,0x03]
 
 buffer_load_ushort v5, off, s[100:103], s3 offset:4095

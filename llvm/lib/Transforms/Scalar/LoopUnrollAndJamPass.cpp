@@ -84,15 +84,6 @@ static cl::opt<unsigned> PragmaUnrollAndJamThreshold(
     cl::desc("Unrolled size limit for loops with an unroll_and_jam(full) or "
              "unroll_count pragma."));
 
-// Returns the loop hint metadata node with the given name (for example,
-// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
-// returned.
-static MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
-  if (MDNode *LoopID = L->getLoopID())
-    return GetUnrollMetadata(LoopID, Name);
-  return nullptr;
-}
-
 // Returns true if the loop has any metadata starting with Prefix. For example a
 // Prefix of "llvm.loop.unroll." returns true if we have any unroll metadata.
 static bool hasAnyUnrollPragma(const Loop *L, StringRef Prefix) {
@@ -157,23 +148,13 @@ static bool computeUnrollAndJamCount(
     TargetTransformInfo::UnrollingPreferences &UP,
     TargetTransformInfo::PeelingPreferences &PP) {
   unsigned OuterLoopSize = OuterUCE.getRolledLoopSize();
-  // First up use computeUnrollCount from the loop unroller to get a count
-  // for unrolling the outer loop, plus any loops requiring explicit
-  // unrolling we leave to the unroller. This uses UP.Threshold /
-  // UP.PartialThreshold / UP.MaxCount to come up with sensible loop values.
+  // Use computeUnrollCount from the loop unroller to get a count for
+  // unrolling the outer loop. This uses UP.Threshold / UP.PartialThreshold /
+  // UP.MaxCount to come up with sensible loop values.
   // We have already checked that the loop has no unroll.* pragmas.
-  bool ExplicitUnroll =
-      computeUnrollCount(L, TTI, DT, LI, AC, SE, EphValues, ORE, OuterTripCount,
-                         /*MaxTripCount*/ 0, /*MaxOrZero*/ false,
-                         OuterTripMultiple, OuterUCE, UP, PP);
-  if (ExplicitUnroll) {
-    // If the user explicitly set the loop as unrolled, dont UnJ it. Leave it
-    // for the unroller instead.
-    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; explicit count set by "
-                         "computeUnrollCount\n");
-    UP.Count = 0;
-    return false;
-  }
+  computeUnrollCount(L, TTI, DT, LI, AC, SE, EphValues, ORE, OuterTripCount,
+                     /*MaxTripCount*/ 0, /*MaxOrZero*/ false, OuterTripMultiple,
+                     OuterUCE, UP, PP);
 
   // Override with any explicit Count from the "unroll-and-jam-count" option.
   bool UserUnrollCount = UnrollAndJamCount.getNumOccurrences() > 0;

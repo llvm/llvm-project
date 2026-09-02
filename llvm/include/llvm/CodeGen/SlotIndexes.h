@@ -659,14 +659,14 @@ class raw_ostream;
     LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
   };
 
-  class SlotIndexesPrinterPass : public PassInfoMixin<SlotIndexesPrinterPass> {
+  class SlotIndexesPrinterPass
+      : public RequiredPassInfoMixin<SlotIndexesPrinterPass> {
     raw_ostream &OS;
 
   public:
     explicit SlotIndexesPrinterPass(raw_ostream &OS) : OS(OS) {}
     LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM);
-    static bool isRequired() { return true; }
   };
 
   class LLVM_ABI SlotIndexesWrapperPass : public MachineFunctionPass {

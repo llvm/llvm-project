@@ -350,21 +350,6 @@ clang_tidy_library(
 )
 
 clang_tidy_library(
-    name = "hicpp",
-    deps = [
-        ":bugprone",
-        ":cppcoreguidelines",
-        ":google",
-        ":lib",
-        ":misc",
-        ":modernize",
-        ":performance",
-        ":portability",
-        ":readability",
-    ],
-)
-
-clang_tidy_library(
     name = "plugin",
     deps = [":lib"],
 )
@@ -381,7 +366,6 @@ CHECKS = [
     ":darwin",
     ":fuchsia",
     ":google",
-    ":hicpp",
     ":linuxkernel",
     ":llvm",
     ":llvmlibc",

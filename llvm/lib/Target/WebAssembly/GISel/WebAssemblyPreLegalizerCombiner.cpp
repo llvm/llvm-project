@@ -48,8 +48,8 @@ protected:
 
 public:
   WebAssemblyPreLegalizerCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const WebAssemblyPreLegalizerCombinerImplRuleConfig &RuleConfig,
       const WebAssemblySubtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
@@ -69,12 +69,12 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 WebAssemblyPreLegalizerCombinerImpl::WebAssemblyPreLegalizerCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const WebAssemblyPreLegalizerCombinerImplRuleConfig &RuleConfig,
     const WebAssemblySubtarget &STI, MachineDominatorTree *MDT,
     const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+    : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ true, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -155,8 +155,8 @@ bool WebAssemblyPreLegalizerCombiner::runOnMachineFunction(
   // This is the first Combiner, so the input IR might contain dead
   // instructions.
   CInfo.EnableFullDCE = true;
-  WebAssemblyPreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *VT, CSEInfo,
-                                           RuleConfig, ST, MDT, LI);
+  WebAssemblyPreLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig,
+                                           ST, MDT, LI);
   return Impl.combineMachineInstrs();
 }
 

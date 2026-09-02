@@ -142,6 +142,7 @@ DeletionKind cir::CopyOp::removeBlockingUses(
   if (loadsFrom(slot))
     cir::StoreOp::create(builder, getLoc(), reachingDefinition, getDst(),
                          /*isVolatile=*/false,
+                         /*isNontemporal=*/false,
                          /*alignment=*/mlir::IntegerAttr{},
                          /*sync_scope=*/cir::SyncScopeKindAttr(),
                          /*mem-order=*/cir::MemOrderAttr());
@@ -155,7 +156,8 @@ bool cir::CopyOp::canUsesBeRemoved(
   if (getDst() == getSrc())
     return false;
 
-  return getLength(dataLayout) == dataLayout.getTypeSize(slot.elemType);
+  return getCopySizeInBytes(dataLayout) ==
+         dataLayout.getTypeSize(slot.elemType);
 }
 
 //===----------------------------------------------------------------------===//

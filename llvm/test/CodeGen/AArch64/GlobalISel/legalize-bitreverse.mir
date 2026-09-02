@@ -152,9 +152,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %vec:_(<4 x s16>) = COPY $d0
     ; CHECK-NEXT: [[BSWAP:%[0-9]+]]:_(<4 x s16>) = G_BSWAP %vec
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[BSWAP]](<4 x s16>)
-    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(<8 x s8>) = G_BITREVERSE [[BITCAST]]
-    ; CHECK-NEXT: %bitreverse:_(<4 x s16>) = G_BITCAST [[BITREVERSE]](<8 x s8>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[BSWAP]](<4 x s16>)
+    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(<8 x i8>) = G_BITREVERSE [[BITCAST]]
+    ; CHECK-NEXT: %bitreverse:_(<4 x s16>) = G_BITCAST [[BITREVERSE]](<8 x i8>)
     ; CHECK-NEXT: $d0 = COPY %bitreverse(<4 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %vec:_(<4 x s16>) = COPY $d0
@@ -173,9 +173,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %vec:_(<2 x s32>) = COPY $d0
     ; CHECK-NEXT: [[BSWAP:%[0-9]+]]:_(<2 x s32>) = G_BSWAP %vec
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s8>) = G_BITCAST [[BSWAP]](<2 x s32>)
-    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(<8 x s8>) = G_BITREVERSE [[BITCAST]]
-    ; CHECK-NEXT: %bitreverse:_(<2 x s32>) = G_BITCAST [[BITREVERSE]](<8 x s8>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST [[BSWAP]](<2 x s32>)
+    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(<8 x i8>) = G_BITREVERSE [[BITCAST]]
+    ; CHECK-NEXT: %bitreverse:_(<2 x s32>) = G_BITCAST [[BITREVERSE]](<8 x i8>)
     ; CHECK-NEXT: $d0 = COPY %bitreverse(<2 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %vec:_(<2 x s32>) = COPY $d0
@@ -194,9 +194,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %vec:_(<2 x s64>) = COPY $q0
     ; CHECK-NEXT: [[BSWAP:%[0-9]+]]:_(<2 x s64>) = G_BSWAP %vec
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[BSWAP]](<2 x s64>)
-    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(<16 x s8>) = G_BITREVERSE [[BITCAST]]
-    ; CHECK-NEXT: %bitreverse:_(<2 x s64>) = G_BITCAST [[BITREVERSE]](<16 x s8>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x i8>) = G_BITCAST [[BSWAP]](<2 x s64>)
+    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(<16 x i8>) = G_BITREVERSE [[BITCAST]]
+    ; CHECK-NEXT: %bitreverse:_(<2 x s64>) = G_BITCAST [[BITREVERSE]](<16 x i8>)
     ; CHECK-NEXT: $q0 = COPY %bitreverse(<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %vec:_(<2 x s64>) = COPY $q0
@@ -215,9 +215,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %vec:_(<4 x s32>) = COPY $q0
     ; CHECK-NEXT: [[BSWAP:%[0-9]+]]:_(<4 x s32>) = G_BSWAP %vec
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[BSWAP]](<4 x s32>)
-    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(<16 x s8>) = G_BITREVERSE [[BITCAST]]
-    ; CHECK-NEXT: %bitreverse:_(<4 x s32>) = G_BITCAST [[BITREVERSE]](<16 x s8>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x i8>) = G_BITCAST [[BSWAP]](<4 x s32>)
+    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(<16 x i8>) = G_BITREVERSE [[BITCAST]]
+    ; CHECK-NEXT: %bitreverse:_(<4 x s32>) = G_BITCAST [[BITREVERSE]](<16 x i8>)
     ; CHECK-NEXT: $q0 = COPY %bitreverse(<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %vec:_(<4 x s32>) = COPY $q0
@@ -236,9 +236,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %vec:_(<8 x s16>) = COPY $q0
     ; CHECK-NEXT: [[BSWAP:%[0-9]+]]:_(<8 x s16>) = G_BSWAP %vec
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[BSWAP]](<8 x s16>)
-    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(<16 x s8>) = G_BITREVERSE [[BITCAST]]
-    ; CHECK-NEXT: %bitreverse:_(<8 x s16>) = G_BITCAST [[BITREVERSE]](<16 x s8>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x i8>) = G_BITCAST [[BSWAP]](<8 x s16>)
+    ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(<16 x i8>) = G_BITREVERSE [[BITCAST]]
+    ; CHECK-NEXT: %bitreverse:_(<8 x s16>) = G_BITCAST [[BITREVERSE]](<16 x i8>)
     ; CHECK-NEXT: $q0 = COPY %bitreverse(<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %vec:_(<8 x s16>) = COPY $q0

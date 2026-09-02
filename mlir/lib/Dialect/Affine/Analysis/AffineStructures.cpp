@@ -133,14 +133,14 @@ LogicalResult FlatAffineValueConstraints::addAffineParallelOpDomain(
     }
 
     AffineMap lowerBound = parallelOp.getLowerBoundMap(ivPos);
-    if (lowerBound.isConstant())
+    if (lowerBound.isSingleConstant())
       addBound(BoundType::LB, pos, lowerBound.getSingleConstantResult());
     else if (failed(addBound(BoundType::LB, pos, lowerBound,
                              parallelOp.getLowerBoundsOperands())))
       return failure();
 
     auto upperBound = parallelOp.getUpperBoundMap(ivPos);
-    if (upperBound.isConstant())
+    if (upperBound.isSingleConstant())
       addBound(BoundType::UB, pos, upperBound.getSingleConstantResult() - 1);
     else if (failed(addBound(BoundType::UB, pos, upperBound,
                              parallelOp.getUpperBoundsOperands())))

@@ -3,7 +3,7 @@
 
 define ptr @f() presplitcoroutine !func_sanitize !0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.alloc, label %dyn.alloc, label %begin
 
@@ -51,11 +51,15 @@ entry:
 ; CHECK: ret ptr %hdl
 
 ; CHECK-LABEL: @f.resume({{.*}}) {
+; CHECK: %[[DESTROY_ADDR:.+]] = getelementptr inbounds i8, ptr %hdl, i64 8
+; CHECK-NEXT: %[[DESTROY:.+]] = load ptr, ptr %[[DESTROY_ADDR]]
+; CHECK-NEXT: %[[IS_ELIDED:.+]] = icmp eq ptr %[[DESTROY]], @f.cleanup
 ; CHECK-NOT: call ptr @malloc
 ; CHECK-NOT: call void @print(i32 0)
 ; CHECK: call void @print(i32 1)
 ; CHECK-NOT: call void @print(i32 0)
-; CHECK: call void @free(
+; CHECK: %[[CORO_FREE:.+]] = select i1 %[[IS_ELIDED]], ptr null, ptr %hdl
+; CHECK-NEXT: call void @free(ptr %[[CORO_FREE]])
 ; CHECK: ret void
 
 ; CHECK-LABEL: @f.destroy({{.*}}) {

@@ -456,7 +456,9 @@ static bool allCallersPassValidPointerForArgument(
   APInt Bytes(64, NeededDerefBytes);
 
   // Check if the argument itself is marked dereferenceable and aligned.
-  if (isDereferenceableAndAlignedPointer(Arg, NeededAlign, Bytes, DL))
+  if (isDereferenceableAndAlignedPointer(
+          Arg, NeededAlign, Bytes,
+          SimplifyQuery(DL, &Callee->getEntryBlock().front())))
     return true;
 
   // Look at all call sites of the function.  At this point we know we only have
@@ -491,7 +493,8 @@ static bool allCallersPassValidPointerForArgument(
       return true;
 
     return isDereferenceableAndAlignedPointer(CB.getArgOperand(Arg->getArgNo()),
-                                              NeededAlign, Bytes, DL);
+                                              NeededAlign, Bytes,
+                                              SimplifyQuery(DL, &CB));
   });
 }
 
@@ -812,6 +815,10 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
 
   // Make sure that it is local to this module.
   if (!F->hasLocalLinkage())
+    return nullptr;
+
+  // Ensure function definition is available for interprocedural analysis.
+  if (!F->isDefinitionExact())
     return nullptr;
 
   // Don't promote arguments for variadic functions. Adding, removing, or

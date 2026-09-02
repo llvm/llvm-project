@@ -21,9 +21,9 @@ define void @replace_half_memset_test() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [2 x half], align 4
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x half], ptr [[ACCUM_I_FLAT]], i32 0, i32 0
-; CHECK-NEXT:    store half 0xH0000, ptr [[GEP]], align 2
+; CHECK-NEXT:    store half 0.000000e+00, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [2 x half], ptr [[ACCUM_I_FLAT]], i32 0, i32 1
-; CHECK-NEXT:    store half 0xH0000, ptr [[GEP1]], align 2
+; CHECK-NEXT:    store half 0.000000e+00, ptr [[GEP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [2 x half], align 4

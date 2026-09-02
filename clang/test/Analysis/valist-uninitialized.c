@@ -10,8 +10,25 @@
 //
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu %s \
 // RUN:   -analyzer-checker=core,security.VAList
+//
+// RUN: %clang_analyze_cc1 -triple hexagon-unknown-linux -std=c23 -verify %s \
+// RUN:   -analyzer-checker=core,security.VAList \
+// RUN:   -analyzer-disable-checker=core.CallAndMessage \
+// RUN:   -analyzer-output=text
+//
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -std=c23 -verify %s \
+// RUN:   -analyzer-checker=core,security.VAList \
+// RUN:   -analyzer-disable-checker=core.CallAndMessage \
+// RUN:   -analyzer-output=text
+//
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -std=c23 %s \
+// RUN:   -analyzer-checker=core,security.VAList
 
+#if __STDC_VERSION__ >= 202311L
+#include "Inputs/system-header-simulator-for-valist-c23.h"
+#else
 #include "Inputs/system-header-simulator-for-valist.h"
+#endif
 
 void f1(int fst, ...) {
   va_list va;
@@ -164,3 +181,13 @@ void all_state_changes(va_list unknown, int fst, ...) {
   va_end(va); // expected-warning{{va_end() is called on an already released va_list}}
   // expected-note@-1{{va_end() is called on an already released va_list}}
 }
+
+#if __STDC_VERSION__ >= 202311L
+// C23 allows va_start with a single argument (no second parameter required).
+void c23_one_arg_no_warning(int fst, ...) {
+  va_list va;
+  va_start(va);
+  (void)va_arg(va, int);
+  va_end(va);
+} // no-warning
+#endif

@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/Alignment.h"
+#include <bitset>
 #include <memory>
 #include <string>
 #include <vector>
@@ -63,8 +64,13 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool HasPreV65 = false;
   bool HasMemNoShuf = false;
   bool EnableDuplex = false;
-  bool ReservedR19 = false;
+  std::bitset<Hexagon::NUM_TARGET_REGS> UserReservedRegister;
+  std::bitset<Hexagon::NUM_TARGET_REGS> SCSPointerRegister;
   bool NoreturnStackElim = false;
+
+  /// Register holding the shadow call stack pointer, resolved from
+  /// SCSPointerRegister in initializeSubtargetDependencies().
+  Register SCSPReg;
 
 public:
   Hexagon::ArchEnum HexagonArchVersion;
@@ -286,7 +292,15 @@ public:
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
 
   bool hasMemNoShuf() const { return HasMemNoShuf; }
-  bool hasReservedR19() const { return ReservedR19; }
+  bool isRegisterReservedByUser(Register i) const override {
+    assert(i.id() < Hexagon::NUM_TARGET_REGS && "Register out of range");
+    return UserReservedRegister[i.id()];
+  }
+
+  /// Returns the register that holds the shadow call stack pointer.  Defaults
+  /// to R18, overridable with the "scs-reg-rN" subtarget features.
+  Register getSCSPReg() const { return SCSPReg; }
+
   bool usePredicatedCalls() const;
 
   bool noreturnStackElim() const { return NoreturnStackElim; }

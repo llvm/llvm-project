@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
 
-#include "__llvm-libc-common.h"
+#include "../../__llvm-libc-common.h"
 
 #define SIGHUP 1
 #define SIGINT 2
@@ -73,6 +73,8 @@
 #define SA_RESTART 0x10000000
 #define SA_RESTORER 0x04000000
 #define SA_ONSTACK 0x08000000
+#define SA_NODEFER 0x40000000
+#define SA_RESETHAND 0x80000000
 
 // Signal stack flags
 #define SS_ONSTACK 0x1

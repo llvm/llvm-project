@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/Support/NVVMAttributes.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -272,9 +273,9 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
 
         for (auto IV : llvm::enumerate(FD->parameters()))
           if (IV.value()->hasAttr<CUDAGridConstantAttr>())
-            F->addParamAttr(
-                IV.index(),
-                llvm::Attribute::get(F->getContext(), "nvvm.grid_constant"));
+            F->addParamAttr(IV.index(),
+                            llvm::Attribute::get(F->getContext(),
+                                                 llvm::NVVMAttr::GridConstant));
       }
       if (CUDALaunchBoundsAttr *Attr = FD->getAttr<CUDALaunchBoundsAttr>())
         M.handleCUDALaunchBoundsAttr(F, Attr);
@@ -358,7 +359,8 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
     if (MaxThreadsVal)
       *MaxThreadsVal = MaxThreads.getExtValue();
     if (F)
-      F->addFnAttr("nvvm.maxntid", llvm::utostr(MaxThreads.getExtValue()));
+      F->addFnAttr(llvm::NVVMAttr::MaxNTID,
+                   llvm::utostr(MaxThreads.getExtValue()));
   }
 
   // min and max blocks is an optional argument for CUDALaunchBoundsAttr. If it
@@ -371,7 +373,8 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
       if (MinBlocksVal)
         *MinBlocksVal = MinBlocks.getExtValue();
       if (F)
-        F->addFnAttr("nvvm.minctasm", llvm::utostr(MinBlocks.getExtValue()));
+        F->addFnAttr(llvm::NVVMAttr::MinCTASm,
+                     llvm::utostr(MinBlocks.getExtValue()));
     }
   }
   if (Attr->getMaxBlocks()) {
@@ -381,7 +384,7 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
       if (MaxClusterRankVal)
         *MaxClusterRankVal = MaxBlocks.getExtValue();
       if (F)
-        F->addFnAttr("nvvm.maxclusterrank",
+        F->addFnAttr(llvm::NVVMAttr::MaxClusterRank,
                      llvm::utostr(MaxBlocks.getExtValue()));
     }
   }

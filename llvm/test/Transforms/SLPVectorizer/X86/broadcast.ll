@@ -17,9 +17,9 @@ define void @bcast_vals(ptr %A, ptr %B, ptr %S) {
 ; CHECK-NEXT:    [[B0:%.*]] = load i64, ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[V1:%.*]] = sub i64 [[A0]], 1
 ; CHECK-NEXT:    [[V2:%.*]] = sub i64 [[B0]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[V1]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[V1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> poison, i64 [[V2]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> poison, i64 [[V2]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[S:%.*]], align 8
@@ -65,12 +65,12 @@ define void @bcast_vals2(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, ptr %S) {
 ; CHECK-NEXT:    [[D0:%.*]] = load i16, ptr [[D:%.*]], align 8
 ; CHECK-NEXT:    [[E0:%.*]] = load i16, ptr [[E:%.*]], align 8
 ; CHECK-NEXT:    [[V1:%.*]] = sext i16 [[A0]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[B0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> [[TMP0]], i16 [[C0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> [[TMP1]], i16 [[E0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> [[TMP2]], i16 [[D0]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[B0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> [[TMP0]], i16 [[C0]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> [[TMP1]], i16 [[E0]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> [[TMP2]], i16 [[D0]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i16> [[TMP3]] to <4 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[V1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[V1]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP6]], [[TMP4]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[S:%.*]], align 8

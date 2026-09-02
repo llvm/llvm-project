@@ -68,7 +68,6 @@ define i32 @umax(i32 %a, i32 %b) {
 define i32 @exths(i16 %a) {
 ; CHECK-LABEL: exths:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $x11 killed $x10
 ; CHECK-NEXT:    cv.exths a0, a0
 ; CHECK-NEXT:    ret
   %1 = sext i16 %a to i32
@@ -78,7 +77,6 @@ define i32 @exths(i16 %a) {
 define i32 @exthz(i16 %a) {
 ; CHECK-LABEL: exthz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $x11 killed $x10
 ; CHECK-NEXT:    cv.exthz a0, a0
 ; CHECK-NEXT:    ret
   %1 = zext i16 %a to i32
@@ -88,7 +86,6 @@ define i32 @exthz(i16 %a) {
 define i32 @extbs(i8 %a) {
 ; CHECK-LABEL: extbs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $x11 killed $x10
 ; CHECK-NEXT:    cv.extbs a0, a0
 ; CHECK-NEXT:    ret
   %1 = sext i8 %a to i32
@@ -98,7 +95,6 @@ define i32 @extbs(i8 %a) {
 define i32 @extbz(i8 %a) {
 ; CHECK-LABEL: extbz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $x11 killed $x10
 ; CHECK-NEXT:    cv.extbz a0, a0
 ; CHECK-NEXT:    ret
   %1 = zext i8 %a to i32
