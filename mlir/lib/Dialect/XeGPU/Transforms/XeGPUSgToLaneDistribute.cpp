@@ -1793,12 +1793,10 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 // These name the moving parts of the scheme:
 //
-//   donor              the lane a value is read from, `slot + donorDelta`, with
-//                      `donorDelta` a multiple of `lanePeriod`
-//   donor group        the lanes one `donorDelta` names, one per slot:
-//                      `donorDelta` through `donorDelta + lanePeriod - 1`.
-//                      Candidates are tried a group at a time, since every slot
-//                      has to be served by the same `donorDelta`
+//   donor              the lane a value is read from, `slot + donorDelta`.
+//                      `donorDelta` is one multiple of `lanePeriod`, shared by
+//                      every slot, so it is the single choice the scheme makes
+//                      per element
 //   element source     where one element of the target fragment comes from: a
 //                      donor, and the index to extract from that donor's
 //                      fragment. One per element, and it needs a shuffle
@@ -1845,19 +1843,19 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                        slicing away every distributed dimension:
 //                        slice<layout<[1, 1, 16]>, dims = [2]>
 //
-//   partially broadcast  groups of lanes each hold part of it, so a lane has to
-//                        be given whatever its group lacks. Either spelling of
-//                        replication from Terms above.
+//   partially broadcast  each broadcast group holds part of it, so a lane has
+//                        to be given whatever its group lacks. Either spelling
+//                        of replication from Terms above.
 //
 // The target's lane period decides where a lane may be given that from. Donors
-// sit at multiples of the period, so a period `P` over `S` lanes offers `S / P`
-// donor groups:
+// sit at multiples of the period, so a period `P` over `S` lanes leaves `S / P`
+// values of `donorDelta` to choose from:
 //
-//   period < S   several groups, so elements can cross lanes. `layout<[8, 1]>`
-//                offers 2, `layout<[2, 1]>` offers 8.
+//   period < S   more than one, so elements can cross lanes. `layout<[8, 1]>`
+//                leaves 2, `layout<[2, 1]>` leaves 8.
 //
-//   period == S  one group, `donorDelta` 0, so nothing can cross a lane: only
-//                an input already holding each lane's target fragment works.
+//   period == S  only `donorDelta` 0, so nothing can cross a lane: only an
+//                input already holding each lane's target fragment works.
 //                A replicating target can have this period, slicing not
 //                reducing it.
 //
@@ -2000,9 +1998,8 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 // The shuffle is dropped exactly when `donorDelta` is 0, since the extract then
 // lands on an element the lane owns. Replication makes that a choice: several
-// donor groups may hold the element and all give the same value, so the
-// smallest `donorDelta` is taken, which is what leaves a fully broadcast input
-// shuffle-free.
+// values of `donorDelta` may work and all give the same value, so the smallest
+// is taken, which is what leaves a fully broadcast input shuffle-free.
 //
 // Only the first `lanePeriod` lanes are required to end up correct -- each is
 // the one lane of its slot the target layout distributes to, and the layout
@@ -2257,13 +2254,12 @@ static FailureOr<FragmentIndex> fitFragmentIndex(ArrayRef<int64_t> needed,
 
 /// Works out where element `pos` of the target fragment comes from: which donor
 /// lane, at `slot + donorDelta` for some multiple of the lane period, and which
-/// element of that donor's fragment. Candidates are tried a donor group at a
-/// time -- the lanes one `donorDelta` names, one per slot -- because every slot
-/// has to be served by the same `donorDelta`. The smallest is preferred, so a
-/// lane that already holds the element needs no shuffle.
+/// element of that donor's fragment. Candidates are tried one `donorDelta` at a
+/// time because every slot has to be served by the same one; the smallest is
+/// preferred so that a lane already holding the element needs no shuffle.
 ///
-/// Fails when no donor group holds the element for every slot, or when the
-/// indices they would be read at are not of `FragmentIndex`'s form.
+/// Fails when no `donorDelta` puts the element within reach of every slot, or
+/// when the indices it would be read at are not of `FragmentIndex`'s form.
 static FailureOr<ElementSource>
 deriveElementSource(const OwnedCoords &inputOwned,
                     const OwnedCoords &targetOwned, int64_t pos,
@@ -2278,9 +2274,9 @@ deriveElementSource(const OwnedCoords &inputOwned,
     return -1;
   };
 
-  // Donor groups, smallest `donorDelta` first. `sawCompleteDonor` records
-  // whether any group held the element at all, which is what distinguishes the
-  // two ways this fails.
+  // Each `donorDelta`, smallest first. `sawCompleteDonor` records whether any
+  // of them held the element at all, which is what distinguishes the two ways
+  // this fails.
   bool sawCompleteDonor = false;
   for (int64_t donorDelta = 0; donorDelta < subgroupSize;
        donorDelta += lanePeriod) {
