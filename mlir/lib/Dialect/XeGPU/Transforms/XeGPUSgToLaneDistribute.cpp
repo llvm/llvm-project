@@ -1803,66 +1803,33 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // ---------------
 //
 // Two properties shape the outcome: the input's replication sets how many
-// elements need a cross-lane shuffle -- `gpu.shuffle idx`, as opposed to the
-// within-lane `vector.shuffle` the neighbouring patterns use -- and the
-// target's lane period sets where they may be shuffled from. Only the second
-// can decline the conversion. Examples stay on a `vector<8x2>` over 16 lanes;
-// the case numbers are used throughout the rest of this comment.
+// elements need a cross-lane shuffle, and the target's lane period sets where
+// they may be shuffled from. The period alone can decline the conversion; the
+// input's replication only does so together with it. Examples stay on a
+// `vector<8x2>` over 16 lanes; the case numbers are used throughout the rest of
+// this comment.
 //
 // The input's replication decides what each lane already holds, and so how many
-// shuffles are needed:
+// shuffles are needed.
 //
-//   fully broadcast      every lane already holds the whole value, so the
-//                        result is extracts alone. Spelled by slicing away
-//                        every distributed dimension:
-//                        slice<layout<[1, 1, 16]>, dims = [2]>
-//
-//   partially broadcast  each broadcast group holds part of it, so a lane has
-//                        to be given whatever its group lacks. Spelled either
-//                        by slicing a dimension away or by a `lane_layout`
-//                        shorter than the subgroup.
-//
-// The target's lane period decides where a lane may be given that from. Donors
-// sit at multiples of the period, so a period `P` over `S` lanes leaves `S / P`
-// values of `donorDelta` to choose from:
-//
-//   period < S   more than one, so elements can cross lanes. `layout<[8, 1]>`
-//                leaves 2, `layout<[2, 1]>` leaves 8.
-//
-//   period == S  only `donorDelta` 0, so nothing can cross a lane: only an
-//                input already holding each lane's target fragment works.
-//                A replicating target can have this period, slicing not
-//                reducing it.
-//
-// One example per combination, and what the tests show it emitting. The target
-// is given as its `lane_layout`, the period following from it; the input as its
-// category, `sliced` meaning a sliced dimension and `short` a `lane_layout`
-// shorter than the subgroup:
+// Below are the categories of input and target combination, with one example
+// each and what the tests emit for it. The target is given as its `lane_layout`
+// and the period following from it; the input as its category, where `sliced`
+// means a sliced dimension and `short` a `lane_layout` shorter than the
+// subgroup:
 //
 //   case  input            target             period  emits
 //   1     fully broadcast  [4, 1]                  4  4 extracts
 //   3     fully broadcast  [8, 1, 2] sliced       16  8 extracts
 //   2     partial, sliced  [8, 1]                  8  1 extract, 1 shuffle
 //   4     partial, short   [2, 1]                  2  2 extracts, 6 shuffles
-//   --    partial, short   [8, 1, 2] sliced       16  declined
 //
-// The counts follow from the target fragment. One shuffle per element the
-// reader lane does not already hold, and one extract per distinct position read
-// in the donor lane's fragment, elements reading the same position sharing one.
-// So case 2's 1x2 fragment is two elements read at the same position: one
+// The `emits` column follows from the target fragment. One shuffle per element
+// the reader lane does not already hold, and one extract per distinct position
+// read in the donor lane's fragment, elements reading the same position sharing
+// one. So case 2's 1x2 fragment is two elements read at the same position: one
 // extract, and one of the two shuffled. Case 4's 4x2 fragment is eight elements
 // over two positions: two extracts, six of the eight shuffled.
-//
-// Only the target varies within a category, so the test suite carries more than
-// one of some -- @convert_layout_broadcast_all_lanes is case 1 with `[8, 1]` --
-// but they behave alike and only one is described here. Case 1 is the one whose
-// constants are all distinct, which the index expression below is read off.
-//
-// The last row is the boundary the two properties imply: with only `donorDelta`
-// 0 available, a lane holding less than its target fragment cannot be
-// completed, and the match fails with NoDonorDelta. There a lane holds 2
-// elements, `layout<[8, 1]>` giving it one row, and needs the sliced target's
-// 8, one whole column.
 //
 // Case 2 is the running example below: lanes 0-7 hold all of column
 // 0, lanes 8-15 all of column 1, and lane `i` leaves holding row `i`. Lane 3
@@ -1927,7 +1894,11 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // way:
 //
 //   a partially broadcast input into a target of       NoDonorDelta
-//   period `S`, the last row of the table above
+//   period `S`, where only `donorDelta` 0 is available
+//   and a lane holding less than its target fragment
+//   cannot be completed:
+//
+//      layout<[8, 1]>  ->  slice<layout<[8, 1, 2]>, dims = [0]>
 //
 //   a target whose distributed dimension the index     IndexNotLaneAffine
 //   cannot walk, `order` having transposed it
