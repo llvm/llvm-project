@@ -999,11 +999,9 @@ PlatformPOSIX::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
              )";
 }
 
-ConstString PlatformPOSIX::GetFullNameForDylib(ConstString basename) {
-  if (basename.IsEmpty())
-    return basename;
+std::string PlatformPOSIX::GetFullNameForDylib(llvm::StringRef basename) {
+  if (basename.empty())
+    return basename.str();
 
-  StreamString stream;
-  stream.Printf("lib%s.so", basename.GetCString());
-  return ConstString(stream.GetString());
+  return llvm::formatv("lib{0}.so", basename).str();
 }

@@ -245,12 +245,16 @@ void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
 } // namespace vputils
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
-/// VPInstructions where possible, and returning nullptr for unsupported
-/// expressions (like adds, casts, min/max).
+/// VPInstructions and live-ins. SCEVAddRecExprs are wrapped in a
+/// VPExpandSCEVRecipe to be expanded to IR later.
 class VPSCEVExpander {
   VPBuilder &Builder;
   ScalarEvolution &SE;
   DebugLoc DL;
+
+  /// When true, nested SCEVUDivExprs are expanded so that they cannot divide by
+  /// zero, matching SCEVExpander's SafeUDivMode.
+  bool SafeUDivMode = false;
 
   /// Try to find a loop-invariant IR value in the plan's entry block whose
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
@@ -261,9 +265,8 @@ public:
   VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)
       : Builder(Builder), SE(SE), DL(DL) {}
 
-  /// Try to expand \p S into recipes and live-ins using the builder. Returns
-  /// nullptr if \p S cannot be expanded yet.
-  VPValue *tryToExpand(const SCEV *S);
+  /// Expand \p S into recipes and live-ins using the builder.
+  VPValue *expand(const SCEV *S);
 };
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.

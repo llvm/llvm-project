@@ -1,6 +1,6 @@
 # Run the unit tests for get_triple_system_name.py, which parses
 # TripleName.def and must stay in sync with llvm::Triple.
 
-# RUN: "%python" %S/get_triple_system_name_test.py 2>&1 | FileCheck %s
+# RUN: %python %S/get_triple_system_name_test.py 2>&1 | FileCheck %s
 
 # CHECK: OK

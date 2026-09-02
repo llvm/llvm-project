@@ -5,14 +5,14 @@
 ## intentionally has no DWARF. The warning is emitted only when its runtime
 ## address is covered by a recorded MMAP range.
 
-## BaseAddress is initially zero. Ensure that a first MMAP at address zero is
-## recorded before the same-address early return.
+## BaseAddress is initially zero. Ensure that an MMAP at address zero is
+## recorded and used to validate the runtime address.
 # RUN: llvm-profgen --binary=%t/warn-not-symbolized-mmap.exe \
 # RUN:   --perfscript=%t/zero.perfscript --warn-not-symbolized \
 # RUN:   --output=/dev/null 2>&1 | FileCheck %s --check-prefix=ZERO
 
 ## The second MMAP has the same non-zero address but extends the mapped range.
-## Ensure that it is recorded before the same-address early return.
+## Ensure overlapping MMAP events are coalesced without losing coverage.
 # RUN: llvm-profgen --binary=%t/warn-not-symbolized-mmap.exe \
 # RUN:   --perfscript=%t/repeated.perfscript --warn-not-symbolized \
 # RUN:   --output=/dev/null 2>&1 | FileCheck %s --check-prefix=REPEATED

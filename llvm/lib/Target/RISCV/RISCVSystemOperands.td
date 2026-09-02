@@ -141,6 +141,7 @@ def : SysReg<"sstatus", 0x100>;
 def : SysReg<"sie", 0x104>;
 def : SysReg<"stvec", 0x105>;
 def : SysReg<"scounteren", 0x106>;
+def : SysReg<"sijt", 0x107>;
 def : SysReg<"sieh", 0x114, RV32Only=true>;
 
 //===----------------------------------------------------------------------===//
@@ -191,6 +192,8 @@ foreach i = 4...6 in {
 
 def : SysReg<"satp", 0x180>;
 def : DeprecatedSysRegName<"sptbr", 0x180>;
+def : SysReg<"spmpen", 0x183>;
+def : SysReg<"spmpenh", 0x193, RV32Only=true>;
 
 //===----------------------------------------------------------------------===//
 // Supervisor Timer Compare
@@ -358,6 +361,7 @@ def : SysReg<"mideleg", 0x303>;
 def : SysReg<"mie", 0x304>;
 def : SysReg<"mtvec", 0x305>;
 def : SysReg<"mcounteren", 0x306>;
+def : SysReg<"mijt", 0x307>;
 def : SysReg<"mvien", 0x308>;
 def : SysReg<"mvip", 0x309>;
 def : SysReg<"mstatush", 0x310, RV32Only=true>;
@@ -410,6 +414,8 @@ def : SysReg<"mseccfgh", 0x757, RV32Only=true>;
 //===----------------------------------------------------------------------===//
 // Machine Memory Protection
 //===----------------------------------------------------------------------===//
+
+def : SysReg<"mpmpdeleg", 0x316>;
 
 // pmpcfg0-pmpcfg15 at 0x3A0-0x3AF. Odd-numbered registers are RV32-only.
 foreach i = 0...15 in {

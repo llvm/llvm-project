@@ -41,13 +41,13 @@ NestedNameSpecifier::MakeNamespaceAndPrefixStorage(
   llvm::FoldingSetNodeID ID;
   NamespaceAndPrefixStorage::Profile(ID, Namespace, Prefix);
 
-  void *InsertPos = nullptr;
+  llvm::FoldingSetInsertToken Token;
   NamespaceAndPrefixStorage *S =
-      Ctx.NamespaceAndPrefixStorages.FindNodeOrInsertPos(ID, InsertPos);
+      Ctx.NamespaceAndPrefixStorages.lookup(ID, Token);
   if (!S) {
     S = new (Ctx, alignof(NamespaceAndPrefixStorage))
         NamespaceAndPrefixStorage(Namespace, Prefix);
-    Ctx.NamespaceAndPrefixStorages.InsertNode(S, InsertPos);
+    Ctx.NamespaceAndPrefixStorages.insert(S, Token);
   }
   return S;
 }

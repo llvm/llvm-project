@@ -24,7 +24,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
@@ -82,19 +81,10 @@ static cl::opt<bool>
                  cl::desc("Generate the profile for Linux kernel binary."),
                  cl::cat(ProfGenCategory));
 
-static cl::opt<uint32_t>
-    ProfPageSize("page-size", cl::desc("Page size of a profiling system"),
-                 cl::init(0x1000), cl::cat(ProfGenCategory));
-
-static cl::opt<bool> UseSystemPageSize(
-    "use-system-page-size",
-    cl::desc("Use the page size of the system running llvm-profgen"),
-    cl::cat(ProfGenCategory));
-
-static cl::opt<bool> WarnNotSymbolized(
-    "warn-not-symbolized", cl::init(false),
-    cl::desc("Generate warnings for not symbolized addresses"),
-    cl::cat(ProfGenCategory));
+static cl::opt<bool>
+    WarnNotSymbolized("warn-not-symbolized", cl::init(false),
+                      cl::desc("Generate warnings for unsymbolized addresses"),
+                      cl::cat(ProfGenCategory));
 
 namespace sampleprof {
 
@@ -377,33 +367,20 @@ template <class ELFT>
 void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                       StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
-  // FIXME: Read the page size from the perf.data header when available.
-  // Keep the default independent of the post-processing host so profiles can
-  // be processed on a system with a different page size.
-  // Note that we don't use EXEC_PAGESIZE from <linux/param.h> because we may
-  // build the tools on non-linux.
-  if (UseSystemPageSize && ProfPageSize.getNumOccurrences())
-    exitWithError(
-        "--page-size and --use-system-page-size cannot be used together");
-  uint64_t PageSize = UseSystemPageSize
-                          ? llvm::sys::Process::getPageSizeEstimate()
-                          : ProfPageSize;
-  if (!isPowerOf2_64(PageSize))
-    exitWithError("--page-size must be a power of two");
   bool SeenFirstLoadableSegment = false;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if (Phdr.p_type == ELF::PT_INTERP)
       HasInterp = true;
     if (Phdr.p_type == ELF::PT_LOAD) {
       if (!SeenFirstLoadableSegment) {
-        FirstLoadableAddress = Phdr.p_vaddr & ~(PageSize - 1U);
+        // Derive the preferred address corresponding to file offset zero
+        // without assuming a page size.
+        FirstLoadableAddress = Phdr.p_vaddr - Phdr.p_offset;
         SeenFirstLoadableSegment = true;
       }
       if (Phdr.p_flags & ELF::PF_X) {
-        // Segments will always be loaded at a page boundary.
-        PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
-                                                ~(PageSize - 1U));
-        TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
+        PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr);
+        TextSegmentOffsets.push_back(Phdr.p_offset);
       } else {
         PhdrInfo Info;
         Info.FileOffset = Phdr.p_offset;

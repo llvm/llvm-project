@@ -31,6 +31,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 
 # Third-party modules
 import unittest
@@ -315,7 +316,8 @@ def parseOptionsAndInitTestdirs():
         configuration.libcxx_include_target_dir = None
         configuration.libcxx_library_dir = None
 
-    configuration.cmake_build_type = args.cmake_build_type.lower()
+    if args.cmake_build_type:
+        configuration.cmake_build_type = args.cmake_build_type.lower()
 
     if args.channels:
         lldbtest_config.channels = args.channels
@@ -449,6 +451,8 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_available_ports = args.lldb_platform_available_ports
     if platform_system == "Darwin" and args.apple_sdk:
         configuration.apple_sdk = args.apple_sdk
+    if args.timeout:
+        configuration.timeout = args.timeout
     if args.test_build_dir:
         configuration.test_build_dir = args.test_build_dir
     if args.lldb_module_cache_dir:
@@ -503,6 +507,17 @@ def registerFaulthandler():
     # faulthandler.register is not available on Windows.
     if getattr(faulthandler, "register", None):
         faulthandler.register(signal.SIGTERM, chain=True)
+
+    if sys.platform != "win32":
+        return
+
+    # Dump every thread's stack shortly before lit's own per-test timeout would
+    # kill the process.
+    if configuration.timeout <= 0:
+        return
+
+    secs = max(1.0, configuration.timeout * 0.9)
+    faulthandler.dump_traceback_later(secs, exit=False)
 
 
 def setupSysPath():
@@ -1135,14 +1150,31 @@ def run_suite():
             platform_connect_options = lldb.SBPlatformConnectOptions(
                 configuration.lldb_platform_url
             )
-            err = lldb.remote_platform.ConnectRemote(platform_connect_options)
+            # Connecting to a remote platform through a port forward can fail
+            # transiently while the connection itself is perfectly healthy, so
+            # retry a few times before giving up. Every attempt is reported, and
+            # a device that is genuinely unreachable still fails quickly with the
+            # same error on each attempt, so this doesn't hide a broken device.
+            max_connect_attempts = 4
+            for attempt in range(1, max_connect_attempts + 1):
+                err = lldb.remote_platform.ConnectRemote(platform_connect_options)
+                if err.Success():
+                    break
+                print(
+                    "error: failed to connect to remote platform using URL "
+                    "'%s': %s (attempt %d of %d)"
+                    % (
+                        configuration.lldb_platform_url,
+                        err,
+                        attempt,
+                        max_connect_attempts,
+                    )
+                )
+                if attempt < max_connect_attempts:
+                    time.sleep(attempt)
             if err.Success():
                 print("Connected.")
             else:
-                print(
-                    "error: failed to connect to remote platform using URL '%s': %s"
-                    % (configuration.lldb_platform_url, err)
-                )
                 exitTestSuite(1)
         else:
             configuration.lldb_platform_url = None
@@ -1254,6 +1286,12 @@ def run_suite():
             ).run(configuration.suite)
 
     configuration.failed = not result.wasSuccessful()
+
+    if getattr(result, "skipped", None):
+        sys.stderr.write(
+            "Skip breakdown (unsupported=%d, skipped=%d)\n"
+            % (result.countUnsupported(), result.countSkipped())
+        )
 
     if configuration.sdir_has_content and configuration.verbose:
         sys.stderr.write(

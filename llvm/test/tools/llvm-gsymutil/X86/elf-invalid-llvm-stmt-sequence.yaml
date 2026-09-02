@@ -7,10 +7,20 @@
 # RUN: llvm-gsymutil --convert %t -o %t.gsym  2>&1 | FileCheck %s --check-prefix=CONVERT
 # RUN: llvm-gsymutil %t.gsym 2>&1 | FileCheck %s --check-prefix=DUMP
 
+## --quiet silences the error text but still counts it, and leaves the rest of
+## the output alone.
+# RUN: llvm-gsymutil --convert %t -o %t.gsym --quiet 2>&1 | FileCheck %s --check-prefix=QUIET
+
 # Make sure we get an error when parsing due to an invalid
 # DW_AT_LLVM_stmt_sequence.
 # CONVERT: error: function DIE at 0x00000015 has a DW_AT_LLVM_stmt_sequence value 0x0000002a which doesn't match any line table sequence offset but there are 2 matching line entries in other sequences.
 # CONVERT: Loaded 1 functions from DWARF.
+# CONVERT: Invalid DW_AT_LLVM_stmt_sequence value occurred 1 time(s)
+
+# QUIET-NOT: error:
+# QUIET: Loaded 1 functions from DWARF.
+# QUIET: Invalid DW_AT_LLVM_stmt_sequence value occurred 1 time(s)
+# QUIET-NOT: error:
 
 # Check that the line table got converted correctly for the function with
 # a valid DW_AT_LLVM_stmt_sequence.

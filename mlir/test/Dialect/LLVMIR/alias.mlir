@@ -15,6 +15,12 @@ llvm.mlir.alias external @_ZTV1D : !llvm.struct<(array<3 x ptr>)> {
   llvm.return %0 : !llvm.ptr
 }
 
+llvm.mlir.global external @private_symbol_global() {sym_visibility = "private"} : i32
+llvm.mlir.alias external @nested_alias {sym_visibility = "nested"} : i32 {
+  %0 = llvm.mlir.addressof @private_symbol_global : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
 // CHECK: llvm.mlir.alias external @foo_alias : !llvm.ptr {
 // CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @callee : !llvm.ptr
 // CHECK:   llvm.return %[[ADDR]] : !llvm.ptr
@@ -23,6 +29,8 @@ llvm.mlir.alias external @_ZTV1D : !llvm.struct<(array<3 x ptr>)> {
 // CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @callee : !llvm.ptr
 // CHECK:   llvm.return %[[ADDR]] : !llvm.ptr
 // CHECK: }
+// CHECK: llvm.mlir.global external @private_symbol_global() {addr_space = 0 : i32, sym_visibility = "private"} : i32
+// CHECK: llvm.mlir.alias external @nested_alias {sym_visibility = "nested"} : i32 {
 
 // -----
 
@@ -136,6 +144,62 @@ llvm.mlir.alias private thread_local unnamed_addr @a30 {dso_local} : i32 {
 }
 
 // CHECK: llvm.mlir.alias private thread_local unnamed_addr @a30 {dso_local} : i32 {
+// CHECK:   %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+// CHECK:   llvm.return %0 : !llvm.ptr
+// CHECK: }
+
+// -----
+
+llvm.mlir.global private @g30(0 : i32) {dso_local} : i32
+
+llvm.mlir.alias private thread_local(generaldynamic) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK: llvm.mlir.alias private thread_local unnamed_addr @a30 {dso_local} : i32 {
+// CHECK:   %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+// CHECK:   llvm.return %0 : !llvm.ptr
+// CHECK: }
+
+// -----
+
+llvm.mlir.global private @g30(0 : i32) {dso_local} : i32
+
+llvm.mlir.alias private thread_local(localdynamic) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK: llvm.mlir.alias private thread_local(localdynamic) unnamed_addr @a30 {dso_local} : i32 {
+// CHECK:   %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+// CHECK:   llvm.return %0 : !llvm.ptr
+// CHECK: }
+
+// -----
+
+llvm.mlir.global private @g30(0 : i32) {dso_local} : i32
+
+llvm.mlir.alias private thread_local(initialexec) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK: llvm.mlir.alias private thread_local(initialexec) unnamed_addr @a30 {dso_local} : i32 {
+// CHECK:   %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+// CHECK:   llvm.return %0 : !llvm.ptr
+// CHECK: }
+
+// -----
+
+llvm.mlir.global private @g30(0 : i32) {dso_local} : i32
+
+llvm.mlir.alias private thread_local(localexec) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK: llvm.mlir.alias private thread_local(localexec) unnamed_addr @a30 {dso_local} : i32 {
 // CHECK:   %0 = llvm.mlir.addressof @g30 : !llvm.ptr
 // CHECK:   llvm.return %0 : !llvm.ptr
 // CHECK: }

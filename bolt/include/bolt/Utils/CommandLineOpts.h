@@ -48,7 +48,13 @@ enum SplitFunctionsStrategy : char {
   All
 };
 
-using HeatmapBlockSizes = std::vector<unsigned>;
+/// A bucket size and how it was spelled on the command line, so output can
+/// echo "64K" rather than reformatting the value.
+struct HeatmapBlockSize {
+  unsigned Value = 0;
+  std::string Spec;
+};
+using HeatmapBlockSizes = std::vector<HeatmapBlockSize>;
 struct HeatmapBlockSpecParser : public llvm::cl::parser<HeatmapBlockSizes> {
   explicit HeatmapBlockSpecParser(llvm::cl::Option &O)
       : llvm::cl::parser<HeatmapBlockSizes>(O) {}
@@ -94,6 +100,7 @@ extern llvm::cl::opt<HeatmapBlockSizes, false, HeatmapBlockSpecParser>
     HeatmapBlock;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
+extern llvm::cl::opt<int> HeatmapCdfPct;
 extern llvm::cl::opt<bool> HeatmapPrintMappings;
 extern llvm::cl::opt<std::string> HeatmapOutput;
 extern llvm::cl::opt<bool> HotData;
@@ -112,6 +119,7 @@ extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 enum ProfileFormatKind { PF_Fdata, PF_YAML, PF_PreAgg, PF_PerfScript };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
+extern llvm::cl::list<std::string> ReorderData;
 extern llvm::cl::opt<bool> ShowDensity;
 extern llvm::cl::opt<bool> SplitEH;
 extern llvm::cl::opt<bool> StrictMode;
@@ -131,6 +139,10 @@ extern llvm::cl::opt<bool> UpdateDebugSections;
 // errs() for errors and warnings.
 // dbgs() for output within DEBUG().
 extern llvm::cl::opt<unsigned> Verbosity;
+
+// Option to control whether liveness analysis should be used by
+// FixupBranches and LongJmpPass. Needed for branch inversion on AArch64.
+extern llvm::cl::opt<bool> FixBranchesWithLiveness;
 
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();

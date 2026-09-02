@@ -710,7 +710,7 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
 #undef REVERTIBLE_TYPE_TRAIT
 #undef RTT_JOIN
   }
@@ -902,8 +902,10 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
         // Annotate the token and tail recurse.
         // If the token is not annotated, then it might be an expression pack
         // indexing
-        if (!TryAnnotateTypeOrScopeToken() &&
-            Tok.isOneOf(tok::annot_pack_indexing_type, tok::annot_cxxscope))
+        if (TryAnnotateTypeOrScopeToken())
+          return ExprError();
+        if (Tok.isOneOf(tok::annot_cxxscope, tok::annot_pack_indexing_type,
+                        tok::annot_template_id))
           return ParseCastExpression(ParseKind, isAddressOfOperand,
                                      CorrectionBehavior, isVectorLiteral,
                                      NotPrimaryExpression);
@@ -1563,7 +1565,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     return ExprError();
   }
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
     // HACK: libstdc++ uses some of the transform-type-traits as alias
     // templates, so we need to work around this.
     if (!NextToken().is(tok::l_paren)) {

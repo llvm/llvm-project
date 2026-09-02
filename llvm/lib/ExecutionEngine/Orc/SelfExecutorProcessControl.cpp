@@ -19,6 +19,8 @@
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
 
+#include "TargetProcess/OrcRTBootstrap.h"
+
 #define DEBUG_TYPE "orc"
 
 namespace llvm::orc {
@@ -44,6 +46,7 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->PageSize = PageSize;
 
   addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
+  rt_bootstrap::addRunAsFunctionWrappersTo(BootstrapSymbols);
 
   BootstrapSymbols[rt::DispatchName] =
       ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager);
@@ -83,18 +86,6 @@ SelfExecutorProcessControl::runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) {
   using MainTy = int (*)(int, char *[]);
   return orc::runAsMain(MainFnAddr.toPtr<MainTy>(), Args);
-}
-
-Expected<int32_t>
-SelfExecutorProcessControl::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
-  using VoidTy = int (*)();
-  return orc::runAsVoidFunction(VoidFnAddr.toPtr<VoidTy>());
-}
-
-Expected<int32_t>
-SelfExecutorProcessControl::runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) {
-  using IntTy = int (*)(int);
-  return orc::runAsIntFunction(IntFnAddr.toPtr<IntTy>(), Arg);
 }
 
 void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,

@@ -581,6 +581,10 @@ INDEX iIndex = 0;
 //===----------------------------------------------------------------------===//
 // Class
 //===----------------------------------------------------------------------===//
+class Incomplete;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for identifier 'Incomplete'
+// CHECK-FIXES: class CIncomplete;
+
 class ClassCase { int Func(); };
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for class 'ClassCase' [readability-identifier-naming]
 // CHECK-FIXES: class CClassCase { int Func(); };

@@ -183,7 +183,7 @@ public:
 
 /// Base class for results with reason.
 class LegalityResultWithReason : public LegalityResult {
-  [[maybe_unused]] ResultReason Reason;
+  ResultReason Reason;
   LegalityResultWithReason(LegalityResultID ID, ResultReason Reason)
       : LegalityResult(ID), Reason(Reason) {}
   friend class Pack; // For constructor.

@@ -50,8 +50,8 @@ IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
                                  const lldb::TargetSP &target_sp,
                                  const SymbolContext &sym_ctx,
                                  std::vector<std::string> &cpu_features)
-    : IRMemoryMap(target_sp), m_context_up(context_up.release()),
-      m_module_up(module_up.release()), m_module(m_module_up.get()),
+    : IRMemoryMap(target_sp), m_context_up(std::move(context_up)),
+      m_module_up(std::move(module_up)), m_module(m_module_up.get()),
       m_cpu_features(cpu_features), m_name(name), m_sym_ctx(sym_ctx),
       m_did_jit(false), m_function_load_addr(LLDB_INVALID_ADDRESS),
       m_function_end_load_addr(LLDB_INVALID_ADDRESS),
@@ -670,7 +670,8 @@ public:
 
       // First try the symbol.
       if (candidate_sc.symbol) {
-        load_address = candidate_sc.symbol->ResolveCallableAddress(m_target);
+        load_address = candidate_sc.symbol->ResolveCallableAddress(
+            m_target, candidate_sc.module_sp);
         if (load_address == LLDB_INVALID_ADDRESS) {
           Address addr = candidate_sc.symbol->GetAddress();
           load_address = m_target.GetProcessSP()

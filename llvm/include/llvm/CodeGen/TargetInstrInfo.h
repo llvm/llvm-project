@@ -50,7 +50,6 @@ class MachineLoop;
 class MachineLoopInfo;
 class MachineMemOperand;
 class MachineModuleInfo;
-class MachineOptimizationRemarkEmitter;
 class MachineRegisterInfo;
 class MCAsmInfo;
 class MCInst;
@@ -193,9 +192,9 @@ public:
            (MI.getDesc().isRematerializable() && isReMaterializableImpl(MI));
   }
 
-  /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
-  /// of instruction rematerialization or sinking.
-  virtual bool isIgnorableUse(const MachineOperand &MO) const {
+  /// Given operand \p OpIdx of \p MI is a PhysReg use, return if it can be
+  /// ignored for the purpose of instruction rematerialization or sinking.
+  virtual bool isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const {
     return false;
   }
 
@@ -898,11 +897,8 @@ public:
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
   /// conditions can be understood enough produce a PipelinerLoopInfo object.
-  /// \p ORE, if non-null, may be used by targets to emit optimization remarks
-  /// explaining why the loop was rejected for pipelining.
-  virtual std::unique_ptr<PipelinerLoopInfo> analyzeLoopForPipelining(
-      MachineBasicBlock *LoopBB,
-      MachineOptimizationRemarkEmitter *ORE = nullptr) const {
+  virtual std::unique_ptr<PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
     return nullptr;
   }
 
