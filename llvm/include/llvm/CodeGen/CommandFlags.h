@@ -111,8 +111,6 @@ LLVM_ABI bool getUniqueBasicBlockSectionNames();
 
 LLVM_ABI bool getSeparateNamedSections();
 
-LLVM_ABI llvm::EABI getEABIVersion();
-
 LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
 
 LLVM_ABI llvm::VectorLibrary getVectorLibrary();

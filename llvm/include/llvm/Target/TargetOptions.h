@@ -343,9 +343,6 @@ public:
   /// for things like atomics
   ThreadModel::Model ThreadModel = ThreadModel::POSIX;
 
-  /// EABIVersion - This flag specifies the EABI version
-  EABI EABIVersion = EABI::Default;
-
   /// Which debugger to tune for.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 

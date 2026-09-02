@@ -1361,7 +1361,6 @@ namespace {
 void RenderARMABI(const Driver &D, const llvm::Triple &Triple,
                   const ArgList &Args, ArgStringList &CmdArgs) {
   // Select the ABI to use.
-  // FIXME: Support -meabi.
   // FIXME: Parts of this are duplicated in the backend, unify this somehow.
   const char *ABIName = nullptr;
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
@@ -5960,9 +5959,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       RelocationModel == llvm::Reloc::ROPI_RWPI)
     CmdArgs.push_back("-frwpi");
 
+  // -meabi=gnu/5 are encoded in the cc1 -triple environment; forward only other
+  // values (e.g. 4, which has no triple representation, and invalid values).
   if (Arg *A = Args.getLastArg(options::OPT_meabi)) {
-    CmdArgs.push_back("-meabi");
-    CmdArgs.push_back(A->getValue());
+    StringRef Value = A->getValue();
+    if (Value != "gnu" && Value != "5") {
+      CmdArgs.push_back("-meabi");
+      CmdArgs.push_back(A->getValue());
+    }
   }
 
   // -fsemantic-interposition is forwarded to CC1: set the
