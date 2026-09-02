@@ -1,4 +1,16 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -o - < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %s | FileCheck %s
+
+define <2 x i33> @v2i33_zero() {
+; CHECK-LABEL: v2i33_zero:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  ret <2 x i33> zeroinitializer
+}
 
 define <4 x i63> @v4i63_zero() {
 ; CHECK-LABEL: v4i63_zero:

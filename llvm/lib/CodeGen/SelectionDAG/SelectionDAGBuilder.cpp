@@ -335,26 +335,26 @@ static bool getNonABIVectorTypeBreakdown(const TargetLowering &TLI,
                                          EVT ABIIntermediateVT,
                                          unsigned ABINumIntermediates,
                                          unsigned ABINumRegs, MVT ABIRegisterVT,
-                                         EVT &NormalIntermediateVT,
-                                         unsigned &NormalNumIntermediates) {
+                                         EVT &LegalIntermediateVT,
+                                         unsigned &LegalNumIntermediates) {
   if (ValueVT.isScalableVector())
     return false;
 
-  MVT NormalRegisterVT;
-  unsigned NormalNumRegs = TLI.getVectorTypeBreakdown(
-      *DAG.getContext(), ValueVT, NormalIntermediateVT, NormalNumIntermediates,
-      NormalRegisterVT);
+  MVT LegalRegisterVT;
+  unsigned LegalNumRegs = TLI.getVectorTypeBreakdown(
+      *DAG.getContext(), ValueVT, LegalIntermediateVT, LegalNumIntermediates,
+      LegalRegisterVT);
 
-  if (NormalNumIntermediates == 0 || ABINumRegs % NormalNumIntermediates != 0 ||
-      NormalNumRegs * NormalRegisterVT.getSizeInBits() !=
+  if (LegalNumIntermediates == 0 || ABINumRegs % LegalNumIntermediates != 0 ||
+      LegalNumRegs * LegalRegisterVT.getSizeInBits() !=
           ABINumRegs * ABIRegisterVT.getSizeInBits())
     return false;
 
-  unsigned NormalVectorBits =
-      NormalIntermediateVT.getSizeInBits() * NormalNumIntermediates;
+  unsigned LegalVectorBits =
+      LegalIntermediateVT.getSizeInBits() * LegalNumIntermediates;
   unsigned ABIVectorBits =
       ABIIntermediateVT.getSizeInBits() * ABINumIntermediates;
-  return NormalVectorBits == ABIVectorBits;
+  return LegalVectorBits == ABIVectorBits;
 }
 
 /// getCopyFromPartsVector - Create a value that contains the specified legal
@@ -805,16 +805,14 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
 
   EVT BuildIntermediateVT = IntermediateVT;
   unsigned BuildNumIntermediates = NumIntermediates;
-  EVT NormalIntermediateVT;
-  unsigned NormalNumIntermediates;
-  bool PackToABI = false;
+  EVT LegalIntermediateVT;
+  unsigned LegalNumIntermediates;
   if (IsABIRegCopy &&
       getNonABIVectorTypeBreakdown(
           TLI, DAG, ValueVT, IntermediateVT, NumIntermediates, NumRegs,
-          RegisterVT, NormalIntermediateVT, NormalNumIntermediates)) {
-    BuildIntermediateVT = NormalIntermediateVT;
-    BuildNumIntermediates = NormalNumIntermediates;
-    PackToABI = true;
+          RegisterVT, LegalIntermediateVT, LegalNumIntermediates)) {
+    BuildIntermediateVT = LegalIntermediateVT;
+    BuildNumIntermediates = LegalNumIntermediates;
   }
 
   std::optional<ElementCount> DestEltCnt;
@@ -850,20 +848,15 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
 
   assert(Val.getValueType() == BuiltVectorTy && "Unexpected vector value type");
 
-  if (PackToABI) {
-    EVT ABIBuiltVectorTy =
+  if (IsABIRegCopy) {
+    ElementCount ABIDestEltCnt =
         IntermediateVT.isVector()
-            ? EVT::getVectorVT(
-                  *DAG.getContext(), IntermediateVT.getScalarType(),
-                  IntermediateVT.getVectorElementCount() * NumIntermediates)
-            : EVT::getVectorVT(*DAG.getContext(),
-                               IntermediateVT.getScalarType(),
-                               NumIntermediates);
-    if (Val.getValueType() != ABIBuiltVectorTy &&
-        Val.getValueType().getSizeInBits() == ABIBuiltVectorTy.getSizeInBits())
+            ? IntermediateVT.getVectorElementCount() * NumIntermediates
+            : ElementCount::getFixed(NumIntermediates);
+    EVT ABIBuiltVectorTy = EVT::getVectorVT(
+        *DAG.getContext(), IntermediateVT.getScalarType(), ABIDestEltCnt);
+    if (BuiltVectorTy != ABIBuiltVectorTy)
       Val = DAG.getNode(ISD::BITCAST, DL, ABIBuiltVectorTy, Val);
-    assert(Val.getValueType() == ABIBuiltVectorTy &&
-           "Unexpected ABI vector value type");
   }
 
   // Split the vector into intermediate operands.
