@@ -1834,11 +1834,11 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // What it declines
 // ----------------
 //
-// The layout combinations, in the terms above, with the `RedistributionLimit` a
-// match failure names. None is a limit of `convert_layout`, which is meaningful
-// for any pair and so always lowerable; each is a limit of the scheme here, one
-// shuffle per element from a donor a whole number of lane periods away. Another
-// pattern or a more general scheme lowers any of them.
+// Each combination below is declined, with the `RedistributionLimit` that the
+// match failure reports. None means a limit of `convert_layout` itself, which
+// is meaningful for any pair of layouts and always lowerable by some pattern.
+// They limit only the scheme used here -- one shuffle per element, from a donor
+// a whole number of lane periods away -- and a more general scheme lifts them.
 //
 // Decided by inspecting the layouts. None of these rejects the input on its
 // own -- the input is only read, so any `lane_layout` is admissible until the
