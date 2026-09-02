@@ -1786,14 +1786,13 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //   ownership table    tabulated "element of a fragment" to coordinate mapping
 //                      with respect to undistributed value. one table per input
 //                      and target
-//   donorDelta         a lane offset from the reader lane to
-//                      the lane supplying an element. Can have multiple
-//                      candidates.
+//   donorDelta         a lane offset from the slot to the lane supplying an
+//                      element. Can have multiple candidates.
 //   donor lane         supplying lane, computed as `slot + donorDelta`. First
 //                      fit is taken by enumerating through the donorDeltas.
 //   donor index        where in the donor lane's fragment the element sits. A
-//                      function of the slot, so every lane computes it with its
-//                      own
+//                      function of the slot, so every lane computes it from its
+//                      own slot
 //   element source     for one element of the target fragment, a tuple: which
 //                      donor lane supplies it, the donor index within that
 //                      lane's fragment, and whether a shuffle is needed. One is
@@ -1813,10 +1812,10 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // shuffles are needed.
 //
 // Below are the categories of input and target combination, with one example
-// each and what the tests emit for it. The target is given as its `lane_layout`
-// and the period following from it; the input as its category, where `sliced`
-// means a sliced dimension and `short` a `lane_layout` shorter than the
-// subgroup:
+// each and what the pattern emits for it. The target is given as its
+// `lane_layout` and the period following from it; the input as its category,
+// where `sliced` means a sliced dimension and `short` a `lane_layout` shorter
+// than the subgroup:
 //
 //   case  input            target             period  emits
 //   1     fully broadcast  [4, 1]                  4  4 extracts
