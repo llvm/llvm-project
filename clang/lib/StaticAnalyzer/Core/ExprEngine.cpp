@@ -3026,10 +3026,11 @@ ExprEngine::resolveAsLambdaCapturedVar(const Expr *Ex, const ValueDecl *VD,
 
   const auto *MD = dyn_cast<CXXMethodDecl>(SF->getDecl());
   const auto *DeclRefEx = dyn_cast<DeclRefExpr>(Ex);
-  if (!(AMgr.options.ShouldInlineLambdas && DeclRefEx &&
-        DeclRefEx->refersToEnclosingVariableOrCapture() && MD &&
-        MD->getParent()->isLambda()))
+  if (!AMgr.options.ShouldInlineLambdas || !DeclRefEx ||
+      !DeclRefEx->refersToEnclosingVariableOrCapture() || !MD ||
+      !MD->getParent()->isLambda()) {
     return std::nullopt;
+  }
   // Lookup the field of the lambda.
   const CXXRecordDecl *CXXRec = MD->getParent();
   llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
@@ -3050,6 +3051,12 @@ ExprEngine::resolveAsLambdaCapturedVar(const Expr *Ex, const ValueDecl *VD,
           MRMgr.getParamVarRegion(CallSite, /*Index=*/0, SF);
       const Expr *SelfArgExpr = cast<CallExpr>(CallSite)->getArg(0);
       if (PVD->getType()->isReferenceType()) {
+        // TODO: This binding should happen at call entry instead. The same way
+        // it does for the implicit object parameter (CXXThisRegion, bound in
+        // CXXInstanceCall::getInitialStackFrameContents). The explicit object
+        // parameter's ParamVarRegion is never bound there today, so this
+        // binding is just a workaround. A follow-up PR should properly bind it
+        // at call entry, so it is no longer needed here.
         State =
             State->bindLoc(loc::MemRegionVal(PVR),
                            State->getSVal(SelfArgExpr, SF->getParent()), SF);
