@@ -26,6 +26,7 @@ add_lldb_library(lldbTarget
   Memory.cpp
   MemoryHistory.cpp
   MemoryRegionInfo.cpp
+  MemoryRegionInfoCache.cpp
   MemoryTagMap.cpp
   ModuleCache.cpp
   OperatingSystem.cpp
@@ -39,7 +40,6 @@ add_lldb_library(lldbTarget
   QueueList.cpp
   RegisterContext.cpp
   RegisterContextUnwind.cpp
-  RegisterFlags.cpp
   RegisterNumber.cpp
   RemoteAwarePlatform.cpp
   ScriptedThreadPlan.cpp
@@ -56,6 +56,7 @@ add_lldb_library(lldbTarget
   StructuredDataPlugin.cpp
   SystemRuntime.cpp
   Target.cpp
+  TargetAPIMutex.cpp
   TargetList.cpp
   Thread.cpp
   ThreadCollection.cpp

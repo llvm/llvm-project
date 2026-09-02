@@ -8,7 +8,6 @@
 
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Common/enum-set.h"
-#include "flang/Common/float128.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
@@ -23,7 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <climits>
-#include <cmath>
 #include <map>
 #include <string>
 #include <utility>
@@ -620,6 +618,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"i", OperandUnsigned}, {"j", OperandUnsigned, Rank::elementalOrBOZ}},
         OperandUnsigned},
     {"iand", {{"i", BOZ}, {"j", SameIntOrUnsigned}}, SameIntOrUnsigned},
+    {"iargc", {}, TypePattern{IntType, KindCode::exactKind, 4}, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"ibclr", {{"i", SameIntOrUnsigned}, {"pos", AnyInt}}, SameIntOrUnsigned},
     {"ibits", {{"i", SameIntOrUnsigned}, {"pos", AnyInt}, {"len", AnyInt}},
         SameIntOrUnsigned},
@@ -1664,6 +1664,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"trim_name", AnyLogical, Rank::scalar, Optionality::optional},
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"getarg",
+        {{"pos", AnyInt, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"value", DefaultChar, Rank::scalar, Optionality::required,
+                common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"getcwd",
         {{"c", DefaultChar, Rank::scalar, Optionality::required,
@@ -2791,7 +2797,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const auto &arg{rearranged[j]}) {
-      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+      if (const Expr<SomeType> *expr{arg->GetArgExpr()}) {
         std::string kw{d.keyword};
         if (arg->keyword()) {
           kw = arg->keyword()->ToString();
@@ -3515,8 +3521,9 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
         !(IsObjectPointer(*expr) ||
             (IsVariable(*expr) && GetLastTarget(GetSymbolVector(*expr))))) {
       if (context.languageFeatures().IsEnabled(
-              common::LanguageFeature::RelaxedCLoc)) {
-        context.Warn(common::UsageWarning::CLoc, arguments[0]->sourceLocation(),
+              common::LanguageFeature::RelaxedCLocChecks)) {
+        context.Warn(common::LanguageFeature::RelaxedCLocChecks,
+            arguments[0]->sourceLocation(),
             "C_LOC() argument should be a data pointer or target"_warn_en_US);
       } else {
         context.messages().Say(arguments[0]->sourceLocation(),
@@ -3566,7 +3573,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
       specificCall.arguments.emplace_back(std::move(arguments[0]));
       return specificCall;
     } else if (context.languageFeatures().IsEnabled(
-                   common::LanguageFeature::RelaxedCLoc)) {
+                   common::LanguageFeature::RelaxedCLocChecks)) {
       if (!expr || !IsProcedurePointer(*expr)) {
         // There are more specific errors as to why the expression doesn't exist
         // or isn't characterizable as a data object or procedure.

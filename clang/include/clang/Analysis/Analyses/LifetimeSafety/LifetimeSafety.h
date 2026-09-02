@@ -38,6 +38,9 @@ struct LifetimeSafetyOpts {
   /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
   /// be skipped.
   size_t MaxCFGBlocks;
+
+  /// Whether to suggest lifetime annotations.
+  bool SuggestAnnotations;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -63,7 +66,8 @@ public:
 
   virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                                    const Expr *MovedExpr,
-                                   SourceLocation FreeLoc) {}
+                                   SourceLocation FreeLoc,
+                                   llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
@@ -72,21 +76,25 @@ public:
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
                                    const Expr *MovedExpr,
+                                   bool IsCapturedByLambda,
                                    SourceLocation ExpiryLoc) {}
 
   virtual void reportDanglingGlobal(const Expr *IssueExpr,
                                     const VarDecl *DanglingGlobal,
                                     const Expr *MovedExpr,
-                                    SourceLocation ExpiryLoc) {}
+                                    SourceLocation ExpiryLoc,
+                                    bool IsMain = false) {}
 
   // Reports when a reference/iterator is used after the container operation
   // that invalidated it.
-  virtual void reportUseAfterInvalidation(const Expr *IssueExpr,
-                                          const Expr *UseExpr,
-                                          const Expr *InvalidationExpr) {}
-  virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
-                                          const Expr *UseExpr,
-                                          const Expr *InvalidationExpr) {}
+  virtual void
+  reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
+  virtual void
+  reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void reportInvalidatedField(const Expr *IssueExpr,
                                       const FieldDecl *Field,
                                       const Expr *InvalidationExpr) {}
@@ -141,6 +149,8 @@ public:
                                             const ParmVarDecl *PVDDef,
                                             const ParmVarDecl *PVDDecl) {}
 
+  virtual void reportInapplicableLifetimebound(const ParmVarDecl *PVD) {}
+
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,
                                                   const CXXMethodDecl *MD,
@@ -154,6 +164,7 @@ public:
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetySemaHelper *SemaHelper,
+                               const LifetimeSafetyOpts &Opts,
                                LifetimeSafetyStats &Stats, bool CollectStats);
 
 namespace internal {
@@ -164,10 +175,10 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
-  OriginLoanMap::Factory OriginMapFactory{/*canonicalize=*/false};
-  LoanSet::Factory LoanSetFactory{/*canonicalize=*/false};
-  MovedLoansMap::Factory MovedLoansMapFactory{/*canonicalize=*/false};
-  LivenessMap::Factory LivenessMapFactory{/*canonicalize=*/false};
+  OriginLoanMap::Factory OriginMapFactory;
+  LoanSet::Factory LoanSetFactory;
+  MovedLoansMap::Factory MovedLoansMapFactory;
+  LivenessMap::Factory LivenessMapFactory;
 };
 
 /// Running the lifetime safety analysis and querying its results. It

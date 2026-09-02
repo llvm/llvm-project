@@ -101,6 +101,10 @@ private:
   static llvm::Expected<T> parse(const llvm::json::Value &Raw,
                                  llvm::StringRef PayloadName,
                                  llvm::StringRef PayloadKind);
+  static llvm::Error handleParseError(const llvm::json::Value &Raw,
+                                      llvm::StringRef PayloadName,
+                                      llvm::StringRef PayloadKind,
+                                      const llvm::json::Path::Root &Root);
 
   RawHandlers &Raw;
   RawOutgoing &Out;
@@ -112,20 +116,8 @@ llvm::Expected<T> LSPBinder::parse(const llvm::json::Value &Raw,
                                    llvm::StringRef PayloadKind) {
   T Result;
   llvm::json::Path::Root Root;
-  if (!fromJSON(Raw, Result, Root)) {
-    elog("Failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
-         Root.getError());
-    // Dump the relevant parts of the broken message.
-    std::string Context;
-    llvm::raw_string_ostream OS(Context);
-    Root.printErrorContext(Raw, OS);
-    vlog("{0}", OS.str());
-    // Report the error (e.g. to the client).
-    return llvm::make_error<LSPError>(
-        llvm::formatv("failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
-                      fmt_consume(Root.getError())),
-        ErrorCode::InvalidParams);
-  }
+  if (!fromJSON(Raw, Result, Root))
+    return handleParseError(Raw, PayloadName, PayloadKind, Root);
   return std::move(Result);
 }
 

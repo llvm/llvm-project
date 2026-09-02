@@ -12,6 +12,7 @@
 
 #include "NVPTXTargetStreamer.h"
 #include "NVPTXUtilities.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -181,4 +182,56 @@ void NVPTXAsmTargetStreamer::emitTargetDirective(StringRef Target,
 void NVPTXAsmTargetStreamer::emitAddressSizeDirective(unsigned AddrSize) {
   OS << ".address_size " << AddrSize << "\n"
      << "\n";
+}
+
+void NVPTXAsmTargetStreamer::emitBranchTargetsDirective(
+    ArrayRef<const MCSymbol *> Targets) {
+  const MCAsmInfo &MAI = getStreamer().getContext().getAsmInfo();
+  OS << "\t.branchtargets\n\t\t";
+  interleave(
+      Targets, OS, [&](const MCSymbol *Target) { Target->print(OS, &MAI); },
+      ",\n\t\t");
+  OS << ";\n";
+}
+
+void NVPTXAsmTargetStreamer::emitRegDirective(unsigned SizeInBits,
+                                              StringRef Name,
+                                              std::optional<unsigned> Count) {
+  OS << "\t.reg ";
+  if (SizeInBits == 1)
+    OS << ".pred";
+  else
+    OS << ".b" << SizeInBits;
+
+  OS << " \t" << Name;
+  if (Count)
+    OS << "<" << *Count << ">";
+  OS << ";\n";
+}
+
+void NVPTXAsmTargetStreamer::emitLocalDirective(Align Alignment,
+                                                const MCSymbol *Name,
+                                                uint64_t Size) {
+  const MCAsmInfo &MAI = getStreamer().getContext().getAsmInfo();
+  OS << "\t.local .align " << Alignment.value() << " .b8 \t";
+  Name->print(OS, &MAI);
+  OS << "[" << Size << "];\n";
+}
+
+void NVPTXAsmTargetStreamer::emitAliasDirective(const MCSymbol *Name,
+                                                const MCSymbol *Aliasee) {
+  const MCAsmInfo &MAI = getStreamer().getContext().getAsmInfo();
+  OS << ".alias ";
+  Name->print(OS, &MAI);
+  OS << ", ";
+  Aliasee->print(OS, &MAI);
+  OS << ";\n";
+}
+
+void NVPTXAsmTargetStreamer::emitPragmaDirective(StringRef Pragma) {
+  OS << "\t.pragma \"" << Pragma << "\";\n";
+}
+
+void NVPTXAsmTargetStreamer::emitEmptySectionDirective(StringRef Name) {
+  OS << "\t.section\t" << Name << "\t{\t}\n";
 }

@@ -11,7 +11,7 @@
 
 #include "test_macros.h"
 
-#include <type_traits> // for __libcpp_is_trivially_relocatable
+#include <type_traits> // for __is_trivially_relocatable_v
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct Throws {
@@ -109,6 +109,6 @@ struct NonTriviallyRelocatable {
     return a.value_ == b.value_;
   }
 };
-LIBCPP_STATIC_ASSERT(!std::__libcpp_is_trivially_relocatable<NonTriviallyRelocatable>::value, "");
+LIBCPP_NON_FROZEN_STATIC_ASSERT(!std::__is_trivially_relocatable_v<NonTriviallyRelocatable>, "");
 
 #endif // TEST_STD_CONTAINERS_SEQUENCES_VECTOR_VECTOR_MODIFIERS_COMMON_H

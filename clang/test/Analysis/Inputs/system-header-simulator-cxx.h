@@ -386,6 +386,8 @@ namespace std {
     void assign(std::initializer_list<T> ilist);
 
     void clear();
+    size_t size() const;
+    bool empty() const;
 
     void push_back(const T &value);
     void push_back(T &&value);
@@ -1002,6 +1004,28 @@ next(ForwardIterator it,
   OutputIterator copy(InputIterator first, InputIterator last,
                       OutputIterator result);
 
+  template<class InputIterator, class OutputIterator>
+  OutputIterator move(InputIterator first, InputIterator last,
+                      OutputIterator result);
+
+  template <typename Container> struct back_insert_iterator {
+    Container *item;
+
+    back_insert_iterator(Container& container) : item(&container) {}
+
+    back_insert_iterator& operator=(const typename Container::value_type& value) {
+      item->push_back(value);
+      return *this;
+    }
+    back_insert_iterator& operator*() {return *this;}
+    back_insert_iterator& operator++() {return *this;}
+    back_insert_iterator operator++(int) {return *this;}
+  };
+
+  template <typename Container>
+  back_insert_iterator<Container> back_inserter(Container& c) {
+    return back_insert_iterator<Container>(c);
+  }
 }
 
 #if __cplusplus >= 201103L

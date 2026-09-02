@@ -34,7 +34,8 @@ struct SlotMapping;
 class SMDiagnostic;
 class SourceMgr;
 class StringRef;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetSubtargetInfo;
 
 struct VRegInfo {
@@ -172,7 +173,6 @@ struct PerFunctionMIParsingState {
   PerTargetMIParsingState &Target;
 
   std::map<unsigned, TrackingMDNodeRef> MachineMetadataNodes;
-  std::map<unsigned, std::pair<TempMDTuple, SMLoc>> MachineForwardRefMDNodes;
 
   DenseMap<unsigned, MachineBasicBlock *> MBBSlots;
   DenseMap<Register, VRegInfo *> VRegInfos;
@@ -247,10 +247,6 @@ LLVM_ABI bool parsePrefetchTarget(PerFunctionMIParsingState &PFS,
                                   SMDiagnostic &Error);
 LLVM_ABI bool parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
                           StringRef Src, SMDiagnostic &Error);
-
-LLVM_ABI bool parseMachineMetadata(PerFunctionMIParsingState &PFS,
-                                   StringRef Src, SMRange SourceRange,
-                                   SMDiagnostic &Error);
 
 } // end namespace llvm
 

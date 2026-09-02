@@ -11,8 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#undef LIBC_MATH_USE_SYSTEM_FENV
-
 #include "FPExceptMatcher.h"
 
 #include "src/__support/macros/config.h"
@@ -22,7 +20,9 @@
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include <setjmp.h>
+#if TARGET_SUPPORTS_SIGNAL_CATCHING
 #include <signal.h>
+#endif
 
 #if LIBC_TEST_HAS_MATCHERS()
 
@@ -35,31 +35,38 @@ namespace testing {
 #define siglongjmp(buf, val) longjmp(buf, val)
 #endif
 
-#ifdef __FreeBSD__
-using sighandler_t = __sighandler_t *;
-#endif
+static thread_local bool caughtExcept;
+
+#if TARGET_SUPPORTS_SIGNAL_CATCHING
 
 static thread_local sigjmp_buf jumpBuffer;
-static thread_local bool caughtExcept;
 
 static void sigfpeHandler([[maybe_unused]] int sig) {
   caughtExcept = true;
   siglongjmp(jumpBuffer, -1);
 }
 
+#endif // TARGET_SUPPORTS_SIGNAL_CATCHING
+
 FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
+#if TARGET_SUPPORTS_SIGNAL_CATCHING
   auto *oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
+#endif
 
   caughtExcept = false;
   fenv_t oldEnv;
   fputil::get_env(&oldEnv);
+#if TARGET_SUPPORTS_SIGNAL_CATCHING
   if (sigsetjmp(jumpBuffer, 1) == 0)
+#endif
     func->call();
   delete func;
   // We restore the previous floating point environment after
   // the call to the function which can potentially raise SIGFPE.
   fputil::set_env(&oldEnv);
+#if TARGET_SUPPORTS_SIGNAL_CATCHING
   signal(SIGFPE, oldSIGFPEHandler);
+#endif
   exceptionRaised = caughtExcept;
 }
 

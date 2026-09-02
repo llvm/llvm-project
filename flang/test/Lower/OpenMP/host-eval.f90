@@ -1,6 +1,6 @@
 ! The "thread_limit" clause was added to the "target" construct in OpenMP 5.1.
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefixes=BOTH,HOST
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes=BOTH,DEVICE
+! RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefixes=BOTH,HOST
+! RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes=BOTH,DEVICE
 
 ! BOTH-LABEL: func.func @_QPteams
 subroutine teams()
@@ -22,10 +22,8 @@ subroutine teams()
 
   !$omp end target
 
-  ! HOST: omp.teams
-  ! HOST-SAME: num_teams({{.*}}) thread_limit({{.*}}) {
-
-  ! DEVICE-NOT: omp.teams
+  ! BOTH: omp.teams
+  ! BOTH-SAME: num_teams({{.*}}) thread_limit({{.*}}) {
   !$omp teams num_teams(1) thread_limit(2)
   call foo()
   !$omp end teams
@@ -78,18 +76,13 @@ subroutine distribute_parallel_do()
   !$omp end distribute parallel do
   !$omp end target teams
 
-  ! HOST: omp.teams
-  ! DEVICE-NOT: omp.teams
+  ! BOTH: omp.teams
   !$omp teams
 
-  ! HOST: omp.parallel
-  ! HOST-SAME: num_threads({{.*}})
-  ! HOST: omp.distribute
-  ! HOST-NEXT: omp.wsloop
-
-  ! DEVICE-NOT: omp.parallel
-  ! DEVICE-NOT: omp.distribute
-  ! DEVICE-NOT: omp.wsloop
+  ! BOTH: omp.parallel
+  ! BOTH-SAME: num_threads({{.*}})
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
   !$omp distribute parallel do num_threads(1)
   do i=1,10
     call foo()
@@ -147,15 +140,14 @@ subroutine distribute_parallel_do_simd()
   !$omp end distribute parallel do simd
   !$omp end target teams
 
-  ! HOST: omp.teams
-  ! DEVICE-NOT: omp.teams
+  ! BOTH: omp.teams
   !$omp teams
 
-  ! HOST: omp.parallel
-  ! HOST-SAME: num_threads({{.*}})
-  ! HOST: omp.distribute
-  ! HOST-NEXT: omp.wsloop
-  ! HOST-NEXT: omp.simd
+  ! BOTH: omp.parallel
+  ! BOTH-SAME: num_threads({{.*}})
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
+  ! BOTH-NEXT: omp.simd
 
   ! DEVICE-NOT: omp.parallel
   ! DEVICE-NOT: omp.distribute
@@ -207,12 +199,10 @@ subroutine distribute()
   !$omp end distribute
   !$omp end target teams
 
-  ! HOST: omp.teams
-  ! DEVICE-NOT: omp.teams
+  ! BOTH: omp.teams
   !$omp teams
 
-  ! HOST: omp.distribute
-  ! DEVICE-NOT: omp.distribute
+  ! BOTH: omp.distribute
   !$omp distribute
   do i=1,10
     call foo()
@@ -261,15 +251,11 @@ subroutine distribute_simd()
   !$omp end distribute simd
   !$omp end target teams
 
-  ! HOST: omp.teams
-  ! DEVICE-NOT: omp.teams
+  ! BOTH: omp.teams
   !$omp teams
 
-  ! HOST: omp.distribute
-  ! HOST-NEXT: omp.simd
-
-  ! DEVICE-NOT: omp.distribute
-  ! DEVICE-NOT: omp.simd
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.simd
   !$omp distribute simd
   do i=1,10
     call foo()

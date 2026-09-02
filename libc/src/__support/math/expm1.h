@@ -126,13 +126,13 @@ LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 }
 
 #ifdef DEBUGDEBUG
-std::ostream &operator<<(std::ostream &OS, const DFloat128 &r) {
+LIBC_INLINE std::ostream &operator<<(std::ostream &OS, const DFloat128 &r) {
   OS << (r.sign == Sign::NEG ? "-(" : "(") << r.mantissa.val[0] << " + "
      << r.mantissa.val[1] << " * 2^64) * 2^" << r.exponent << "\n";
   return OS;
 }
 
-std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
+LIBC_INLINE std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
   OS << std::hexfloat << "(" << r.hi << " + " << r.lo << ")"
      << std::defaultfloat << "\n";
   return OS;
@@ -265,9 +265,11 @@ LIBC_INLINE double set_exceptional(double x) {
   // x >= round(log(MAX_NORMAL), D, RU) = 0x1.62e42fefa39fp+9 or +inf/nan
   // x is finite
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
       return FPBits::max_normal().get_val();
+#endif
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);

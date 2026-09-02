@@ -35,17 +35,6 @@ namespace llvm {
 
 class FoldingSetNodeID;
 
-// Provide PointerLikeTypeTraits for clang::Expr*, this default one requires a
-// full definition of Expr, but this file only sees a forward del because of
-// the dependency.
-template <> struct PointerLikeTypeTraits<clang::Expr *> {
-  static inline void *getAsVoidPointer(clang::Expr *P) { return P; }
-  static inline clang::Expr *getFromVoidPointer(void *P) {
-    return static_cast<clang::Expr *>(P);
-  }
-  static constexpr int NumLowBitsAvailable = 2;
-};
-
 } // namespace llvm
 
 namespace clang {
@@ -294,6 +283,8 @@ public:
 
   /// Return the kind of stored template argument.
   ArgKind getKind() const { return (ArgKind)TypeOrValue.Kind; }
+
+  StringRef getKindName() const;
 
   /// Determine whether this template argument has no value.
   bool isNull() const { return getKind() == Null; }
@@ -732,9 +723,6 @@ private:
 
   ASTTemplateArgumentListInfo(const TemplateArgumentListInfo &List);
 
-  // FIXME: Is it ever necessary to copy to another context?
-  ASTTemplateArgumentListInfo(const ASTTemplateArgumentListInfo *List);
-
 public:
   /// The source location of the left angle bracket ('<').
   SourceLocation LAngleLoc;
@@ -764,16 +752,12 @@ public:
 
   static const ASTTemplateArgumentListInfo *
   Create(const ASTContext &C, const TemplateArgumentListInfo &List);
-
-  // FIXME: Is it ever necessary to copy to another context?
-  static const ASTTemplateArgumentListInfo *
-  Create(const ASTContext &C, const ASTTemplateArgumentListInfo *List);
 };
 
 /// Represents an explicit template argument list in C++, e.g.,
 /// the "<int>" in "sort<int>".
 ///
-/// It is intended to be used as a trailing object on AST nodes, and
+/// It is designed to be usable as a trailing object on AST nodes, and
 /// as such, doesn't contain the array of TemplateArgumentLoc itself,
 /// but expects the containing object to also provide storage for
 /// that.

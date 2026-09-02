@@ -26,7 +26,6 @@
 #include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemAlloc.h"
@@ -35,7 +34,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <cstring>
 #include <initializer_list>
 #include <iterator>
@@ -723,9 +721,9 @@ private:
 
   template <typename LookupKeyT>
   const BucketT *doFind(const LookupKeyT &Val) const {
-    auto [BucketsPtr, U, NumBuckets] = getRep();
-    if (NumBuckets == 0)
+    if (empty())
       return nullptr;
+    auto [BucketsPtr, U, NumBuckets] = getRep();
 
     const unsigned Mask = NumBuckets - 1;
     unsigned BucketNo = KeyInfoT::getHashValue(Val) & Mask;
@@ -1340,12 +1338,7 @@ public:
 
   [[nodiscard]] friend bool operator==(const DenseMapIterator &LHS,
                                        const DenseMapIterator &RHS) {
-    assert((!LHS.getEpochAddress() || LHS.isHandleInSync()) &&
-           "handle not in sync!");
-    assert((!RHS.getEpochAddress() || RHS.isHandleInSync()) &&
-           "handle not in sync!");
-    assert(LHS.getEpochAddress() == RHS.getEpochAddress() &&
-           "comparing incomparable iterators!");
+    assert(LHS.isComparableWith(RHS) && "incomparable iterators!");
     return LHS.Ptr == RHS.Ptr;
   }
 

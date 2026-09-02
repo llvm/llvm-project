@@ -43,9 +43,9 @@ T tmain(T argc) {
   for (int i=0; i<100; i++) foo();
 #pragma omp target teams distribute parallel for num_teams(3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
   for (int i=0; i<100; i++) foo();
-#pragma omp target teams distribute parallel for num_teams(1, 2, 3) // expected-error {{only two expressions allowed in 'num_teams' clause}}
+#pragma omp target teams distribute parallel for num_teams(1, 2, 3) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 1, have 3)}}
   for (int i=0; i<100; i++) foo();
-#pragma omp target teams distribute parallel for thread_limit(1, 2, 3) // expected-error {{only one expression allowed in 'thread_limit' clause}}
+#pragma omp target teams distribute parallel for thread_limit(1, 2, 3) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 1, have 3)}}
   for (int i=0; i<100; i++) foo();
 
   return 0;
@@ -89,10 +89,10 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for num_teams (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   for (int i=0; i<100; i++) foo();
 
-#pragma omp target teams distribute parallel for num_teams(1, 2, 3) // expected-error {{only two expressions allowed in 'num_teams' clause}}
+#pragma omp target teams distribute parallel for num_teams(1, 2, 3) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 1, have 3)}}
   for (int i=0; i<100; i++) foo();
 
-#pragma omp target teams distribute parallel for thread_limit(1, 2, 3) // expected-error {{only one expression allowed in 'thread_limit' clause}}
+#pragma omp target teams distribute parallel for thread_limit(1, 2, 3) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 1, have 3)}}
   for (int i=0; i<100; i++) foo();
 
   return tmain<int, 10>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 10>' requested here}}

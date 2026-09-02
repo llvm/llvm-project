@@ -30,6 +30,10 @@ int main() { return 0; }
 // RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit21.0.1.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
 // RUN: %clang %s -target x86_64-apple-driverkit23.0 -isysroot %S/Inputs/DriverKit23.0.sdk -x c++ -### 2>&1 \
 // RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit23.0.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
+// RUN: %clang %s -target ppc-apple-driverkit23.0 -isysroot %S/Inputs/DriverKit23.0.sdk -x c++ -### 2>&1 \
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit23.0.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
+// RUN: %clang %s -target arm64-apple-driverkit23.0-macabi -isysroot %S/Inputs/DriverKit23.0.sdk -x c++ -### 2>&1 \
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit23.0.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
 //
 // INC: "-isysroot" "[[SDKROOT]]"
 // INC: "-internal-isystem" "[[SDKROOT]]/System/DriverKit/usr/local/include"

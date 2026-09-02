@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=5 -stop-after=branch-relaxation  %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 -verify-machineinstrs -amdgpu-s-branch-bits=5 -stop-after=branch-relaxation  %s -o - | FileCheck %s
 
 ; Test long branch reserved register pass when all
 ; SGPRs are used
@@ -16,6 +16,7 @@
 ; CHECK-NEXT:   waveLimiter:     false
 ; CHECK-NEXT:   hasSpilledSGPRs: false
 ; CHECK-NEXT:   hasSpilledVGPRs: false
+; CHECK-NEXT:   hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT:   numWaveDispatchSGPRs: 0
 ; CHECK-NEXT:   numWaveDispatchVGPRs: 0
 ; CHECK-NEXT:   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -39,7 +40,7 @@
 ; CHECK-NEXT:     fp64-fp16-input-denormals: true
 ; CHECK-NEXT:     fp64-fp16-output-denormals: true
 ; CHECK-NEXT:   highBitsOf32BitAddress: 0
-; CHECK-NEXT:   occupancy:       5
+; CHECK-NEXT:   occupancy:       4
 ; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
@@ -289,6 +290,7 @@
 ; CHECK-NEXT:   waveLimiter:     false
 ; CHECK-NEXT:   hasSpilledSGPRs: false
 ; CHECK-NEXT:   hasSpilledVGPRs: false
+; CHECK-NEXT:   hasNoWWMPoolSGPRSpillFallback: false
 ; CHECK-NEXT:   numWaveDispatchSGPRs: 0
 ; CHECK-NEXT:   numWaveDispatchVGPRs: 0
 ; CHECK-NEXT:   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -312,7 +314,7 @@
 ; CHECK-NEXT:     fp64-fp16-input-denormals: true
 ; CHECK-NEXT:     fp64-fp16-output-denormals: true
 ; CHECK-NEXT:   highBitsOf32BitAddress: 0
-; CHECK-NEXT:   occupancy:       5
+; CHECK-NEXT:   occupancy:       4
 ; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
 ; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'

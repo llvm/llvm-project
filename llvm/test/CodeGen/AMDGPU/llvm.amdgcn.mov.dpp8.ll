@@ -1,14 +1,14 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10PLUS %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10PLUS %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GFX10PLUS %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GFX10PLUS %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GFX10PLUS %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GFX10PLUS %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu10.10 < %s | FileCheck -check-prefix=GFX10PLUS %s
+; xUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu10.10 < %s | FileCheck -check-prefix=GFX10PLUS %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GFX10PLUS %s
+; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu11.00 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GFX10PLUS %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GFX10PLUS %s
+; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu12.00 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefix=GFX10PLUS %s
 
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgcn -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu9.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; xUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgpu9.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-; ERR: error: <unknown>:0:0: in function dpp8_test void (ptr addrspace(1), i32): intrinsic not supported on subtarget
+; ERR: error: <unknown>:0:0: in function @dpp8_test void (ptr addrspace(1), i32): llvm.amdgcn.mov.dpp8 requires target feature 'dpp8'
 
 ; GFX10PLUS-LABEL: {{^}}dpp8_test:
 ; GFX10PLUS: v_mov_b32_e32 [[SRC:v[0-9]+]], s{{[0-9]+}}

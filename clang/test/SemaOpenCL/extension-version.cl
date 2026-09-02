@@ -4,12 +4,14 @@
 // RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple spir-unknown-unknown
 // RUN: %clang_cc1 -x cl -cl-std=clc++ %s -verify -triple spir-unknown-unknown
 // RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple spir-unknown-unknown
+// RUN: %clang_cc1 -x cl -cl-std=CL3.1 %s -verify -triple spir-unknown-unknown
 // RUN: %clang_cc1 -x cl -cl-std=CL %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL1.1 %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL1.2 %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL2.0 %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=clc++ %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
+// RUN: %clang_cc1 -x cl -cl-std=CL3.1 %s -verify -triple spir-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 
 // Extensions in all versions
 #ifndef cl_clang_storage_class_specifiers

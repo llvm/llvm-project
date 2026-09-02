@@ -13,26 +13,26 @@ void bar(vect32 p[][2]);
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [4 x [2 x [[UNION_VECT32:%.*]]]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP]]) #[[ATTR3:[0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[INDEX]], align 4, !tbaa [[TBAA1:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[INDEX]], align 4, !tbaa [[TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[ARR]], i32 [[TMP0]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA1]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[TMP1]], [[NUM]]
 // CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP]], i32 [[TMP0]]
-// CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX2]], align 8, !tbaa [[TBAA5:![0-9]+]]
+// CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX2]], align 8, !tbaa [[TBAA7:![0-9]+]]
 // CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX]], i32 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4, !tbaa [[TBAA1]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[MUL6:%.*]] = mul i32 [[TMP2]], [[NUM]]
 // CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX2]], i32 4
-// CHECK-NEXT:    store i32 [[MUL6]], ptr [[ARRAYIDX8]], align 4, !tbaa [[TBAA5]]
+// CHECK-NEXT:    store i32 [[MUL6]], ptr [[ARRAYIDX8]], align 4, !tbaa [[TBAA7]]
 // CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[MUL]], 16
-// CHECK-NEXT:    store i32 [[TMP3]], ptr [[VEC]], align 4, !tbaa [[TBAA1]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[INDEX]], align 4, !tbaa [[TBAA1]]
+// CHECK-NEXT:    store i32 [[TMP3]], ptr [[VEC]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[INDEX]], align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP]], i32 [[TMP4]]
 // CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX13]], i32 6
-// CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX15]], align 2, !tbaa [[TBAA5]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX15]], align 2, !tbaa [[TBAA7]]
 // CHECK-NEXT:    [[CONV16:%.*]] = zext i16 [[TMP5]] to i32
 // CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i32 4
-// CHECK-NEXT:    store i32 [[CONV16]], ptr [[ARRAYIDX17]], align 4, !tbaa [[TBAA1]]
+// CHECK-NEXT:    store i32 [[CONV16]], ptr [[ARRAYIDX17]], align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    call void @bar(ptr noundef nonnull [[TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
@@ -47,9 +47,9 @@ void fred(unsigned Num, int Vec[2], int *Index, int Arr[4][2]) {
 }
 
 //.
-// CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-// CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
-// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[TBAA5]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[TBAA6]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[TBAA7]] = !{[[META4]], [[META4]], i64 0}
 //.

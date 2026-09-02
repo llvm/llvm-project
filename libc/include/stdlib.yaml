@@ -171,6 +171,12 @@ functions:
     return_type: size_t
     arguments:
       - type: const void *
+  - name: mkstemp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char *
   - name: posix_memalign
     standards:
       - posix
@@ -179,6 +185,12 @@ functions:
       - type: void **
       - type: size_t
       - type: size_t
+  - name: putenv
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char *
   - name: qsort
     standards:
       - stdc
@@ -210,6 +222,13 @@ functions:
     return_type: int
     arguments:
       - type: void
+  - name: realpath
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *__restrict
+      - type: char *__restrict
   - name: srand
     standards:
       - stdc
@@ -367,6 +386,12 @@ functions:
   - name: system
     standards:
       - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+  - name: unsetenv
+    standards:
+      - posix
     return_type: int
     arguments:
       - type: const char *

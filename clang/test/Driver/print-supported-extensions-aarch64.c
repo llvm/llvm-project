@@ -38,6 +38,7 @@
 // CHECK-NEXT:     gcie                FEAT_GCIE                                              Enable GICv5 (Generic Interrupt Controller) CPU Interface Extension
 // CHECK-NEXT:     gcs                 FEAT_GCS                                               Enable Armv9.4-A Guarded Call Stack Extension
 // CHECK-NEXT:     hbc                 FEAT_HBC                                               Enable Armv8.8-A Hinted Conditional Branches Extension
+// CHECK-NEXT:     hinte               FEAT_HINTE                                             Enable extended A64 hint instruction space
 // CHECK-NEXT:     i8mm                FEAT_I8MM                                              Enable Matrix Multiply Int8 Extension
 // CHECK-NEXT:     ite                 FEAT_ITE                                               Enable Armv9.4-A Instrumentation Extension
 // CHECK-NEXT:     jscvt               FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions

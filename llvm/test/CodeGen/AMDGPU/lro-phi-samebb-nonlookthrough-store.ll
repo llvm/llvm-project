@@ -1,5 +1,5 @@
 ; RUN: opt -S -passes=amdgpu-late-codegenprepare \
-; RUN:   -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a %s | FileCheck %s
+; RUN:   -mtriple=amdgpu9.0a-amd-amdhsa %s | FileCheck %s
 
 ; Goal: With a loop-header PHI in illegal vector type and a same-BB
 ; non-lookthrough user (vector add) in the header, LRO should still coerce

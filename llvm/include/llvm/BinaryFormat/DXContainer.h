@@ -24,7 +24,7 @@
 #include <stdint.h>
 
 namespace llvm {
-template <typename T> struct EnumEntry;
+template <typename, unsigned> class EnumStrings;
 
 // The DXContainer file format is arranged as a header and "parts". Semantically
 // parts are similar to sections in other object file formats. The File format
@@ -167,7 +167,7 @@ enum class RootFlags : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(SamplerHeapDirectlyIndexed)
 };
 
-LLVM_ABI ArrayRef<EnumEntry<RootFlags>> getRootFlags();
+LLVM_ABI EnumStrings<RootFlags, 1> getRootFlags();
 
 #define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag) Enum = Num,
 enum class RootDescriptorFlags : uint32_t {
@@ -176,7 +176,7 @@ enum class RootDescriptorFlags : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(DataStatic)
 };
 
-LLVM_ABI ArrayRef<EnumEntry<RootDescriptorFlags>> getRootDescriptorFlags();
+LLVM_ABI EnumStrings<RootDescriptorFlags, 1> getRootDescriptorFlags();
 
 #define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag) Enum = Num,
 enum class DescriptorRangeFlags : uint32_t {
@@ -185,7 +185,7 @@ enum class DescriptorRangeFlags : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(DescriptorsStaticKeepingBufferBoundsChecks)
 };
 
-LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeFlags>> getDescriptorRangeFlags();
+LLVM_ABI EnumStrings<DescriptorRangeFlags, 1> getDescriptorRangeFlags();
 
 #define STATIC_SAMPLER_FLAG(Num, Enum, Flag) Enum = Num,
 enum class StaticSamplerFlags : uint32_t {
@@ -194,76 +194,76 @@ enum class StaticSamplerFlags : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(NonNormalizedCoordinates)
 };
 
-LLVM_ABI ArrayRef<EnumEntry<StaticSamplerFlags>> getStaticSamplerFlags();
+LLVM_ABI EnumStrings<StaticSamplerFlags, 1> getStaticSamplerFlags();
 
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
 enum class RootParameterType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+LLVM_ABI EnumStrings<RootParameterType, 1> getRootParameterTypes();
 
-LLVM_ABI_FOR_TEST bool isValidParameterType(uint32_t V);
+LLVM_ABI bool isValidParameterType(uint32_t V);
 
-bool isValidRangeType(uint32_t V);
+LLVM_ABI bool isValidRangeType(uint32_t V);
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
 enum class ShaderVisibility : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
+LLVM_ABI EnumStrings<ShaderVisibility, 1> getShaderVisibility();
 
-bool isValidShaderVisibility(uint32_t V);
+LLVM_ABI bool isValidShaderVisibility(uint32_t V);
 
 #define FILTER(Val, Enum) Enum = Val,
 enum class SamplerFilter : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-bool isValidSamplerFilter(uint32_t V);
+LLVM_ABI bool isValidSamplerFilter(uint32_t V);
 
-LLVM_ABI ArrayRef<EnumEntry<SamplerFilter>> getSamplerFilters();
+LLVM_ABI EnumStrings<SamplerFilter, 1> getSamplerFilters();
 
 #define TEXTURE_ADDRESS_MODE(Val, Enum) Enum = Val,
 enum class TextureAddressMode : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<TextureAddressMode>> getTextureAddressModes();
+LLVM_ABI EnumStrings<TextureAddressMode, 1> getTextureAddressModes();
 
-bool isValidAddress(uint32_t V);
+LLVM_ABI bool isValidAddress(uint32_t V);
 
 #define COMPARISON_FUNC(Val, Enum) Enum = Val,
 enum class ComparisonFunc : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<ComparisonFunc>> getComparisonFuncs();
+LLVM_ABI EnumStrings<ComparisonFunc, 1> getComparisonFuncs();
 
-bool isValidComparisonFunc(uint32_t V);
+LLVM_ABI bool isValidComparisonFunc(uint32_t V);
 
 #define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
 enum class StaticBorderColor : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-bool isValidBorderColor(uint32_t V);
+LLVM_ABI bool isValidBorderColor(uint32_t V);
 
-bool isValidRootDesciptorFlags(uint32_t V);
+LLVM_ABI bool isValidRootDesciptorFlags(uint32_t V);
 
-bool isValidDescriptorRangeFlags(uint32_t V);
+LLVM_ABI bool isValidDescriptorRangeFlags(uint32_t V);
 
-bool isValidStaticSamplerFlags(uint32_t V);
+LLVM_ABI bool isValidStaticSamplerFlags(uint32_t V);
 
-LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
+LLVM_ABI EnumStrings<StaticBorderColor, 1> getStaticBorderColors();
 
 LLVM_ABI PartType parsePartType(StringRef S);
 
-bool isDebugProgramPart(PartType PT);
+LLVM_ABI bool isDebugProgramPart(PartType PT);
 
-const char *getProgramPartName(bool IsDebug);
-bool isProgramPart(StringRef PartName);
+LLVM_ABI const char *getProgramPartName(bool IsDebug);
+LLVM_ABI bool isProgramPart(StringRef PartName);
 
 struct VertexPSVInfo {
   uint8_t OutputPositionPresent;
@@ -394,35 +394,35 @@ enum class SemanticKind : uint8_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<SemanticKind>> getSemanticKinds();
+LLVM_ABI EnumStrings<SemanticKind, 1> getSemanticKinds();
 
 #define COMPONENT_TYPE(Val, Enum) Enum = Val,
 enum class ComponentType : uint8_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<ComponentType>> getComponentTypes();
+LLVM_ABI EnumStrings<ComponentType, 1> getComponentTypes();
 
 #define INTERPOLATION_MODE(Val, Enum) Enum = Val,
 enum class InterpolationMode : uint8_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<InterpolationMode>> getInterpolationModes();
+LLVM_ABI EnumStrings<InterpolationMode, 1> getInterpolationModes();
 
 #define RESOURCE_TYPE(Val, Enum) Enum = Val,
 enum class ResourceType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<ResourceType>> getResourceTypes();
+LLVM_ABI EnumStrings<ResourceType, 1> getResourceTypes();
 
 #define RESOURCE_KIND(Val, Enum) Enum = Val,
 enum class ResourceKind : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<ResourceKind>> getResourceKinds();
+LLVM_ABI EnumStrings<ResourceKind, 1> getResourceKinds();
 
 #define RESOURCE_FLAG(Index, Enum) bool Enum = false;
 struct ResourceFlags {
@@ -591,21 +591,21 @@ enum class SigMinPrecision : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<SigMinPrecision>> getSigMinPrecisions();
+LLVM_ABI EnumStrings<SigMinPrecision, 1> getSigMinPrecisions();
 
 #define D3D_SYSTEM_VALUE(Val, Enum) Enum = Val,
 enum class D3DSystemValue : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<D3DSystemValue>> getD3DSystemValues();
+LLVM_ABI EnumStrings<D3DSystemValue, 1> getD3DSystemValues();
 
 #define COMPONENT_TYPE(Val, Enum) Enum = Val,
 enum class SigComponentType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-LLVM_ABI ArrayRef<EnumEntry<SigComponentType>> getSigComponentTypes();
+LLVM_ABI EnumStrings<SigComponentType, 1> getSigComponentTypes();
 
 struct ProgramSignatureHeader {
   uint32_t ParamCount;
@@ -832,7 +832,7 @@ enum class CompilerVersionFlags : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(Internal)
 };
 
-bool isValidCompilerVersionFlags(uint32_t V);
+LLVM_ABI bool isValidCompilerVersionFlags(uint32_t V);
 
 struct CompilerVersionHeader {
   uint16_t Major;
@@ -881,7 +881,7 @@ enum class SectionType : uint16_t {
   LLVM_MARK_AS_BITMASK_ENUM(Args)
 };
 
-LLVM_ABI ArrayRef<EnumEntry<SectionType>> getSectionTypes();
+LLVM_ABI EnumStrings<SectionType, 1> getSectionTypes();
 LLVM_ABI bool isValidSectionType(uint16_t V);
 LLVM_ABI StringRef getSectionName(SectionType Type);
 
@@ -950,8 +950,8 @@ enum class CompressionType : uint16_t {
   LLVM_MARK_AS_BITMASK_ENUM(Zlib)
 };
 
-LLVM_ABI ArrayRef<EnumEntry<CompressionType>> getCompressionTypes();
-bool isValidCompressionType(uint16_t V);
+LLVM_ABI EnumStrings<CompressionType, 1> getCompressionTypes();
+LLVM_ABI bool isValidCompressionType(uint16_t V);
 
 struct Header {
   /// Size of the section including this header. Aligned to a 4-byte boundary.

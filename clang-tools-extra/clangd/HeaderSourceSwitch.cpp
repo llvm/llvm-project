@@ -125,29 +125,34 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
 
 std::vector<const Decl *> getIndexableLocalDecls(ParsedAST &AST) {
   std::vector<const Decl *> Results;
-  std::function<void(Decl *)> TraverseDecl = [&](Decl *D) {
-    auto *ND = llvm::dyn_cast<NamedDecl>(D);
-    if (!ND || ND->isImplicit())
-      return;
-    if (!SymbolCollector::shouldCollectSymbol(*ND, D->getASTContext(), {},
-                                              /*IsMainFileSymbol=*/false))
-      return;
-    if (!llvm::isa<FunctionDecl>(ND)) {
-      // Visit the children, but we skip function decls as we are not interested
-      // in the function body.
-      if (auto *Scope = llvm::dyn_cast<DeclContext>(ND)) {
-        for (auto *D : Scope->decls())
-          TraverseDecl(D);
+  struct IndexableLocalDeclCollector {
+    std::vector<const Decl *> &Results;
+
+    void traverse(Decl *D) {
+      auto *ND = llvm::dyn_cast<NamedDecl>(D);
+      if (!ND || ND->isImplicit())
+        return;
+      if (!SymbolCollector::shouldCollectSymbol(*ND, D->getASTContext(), {},
+                                                /*IsMainFileSymbol=*/false))
+        return;
+      if (!llvm::isa<FunctionDecl>(ND)) {
+        // Visit the children, but we skip function decls as we are not
+        // interested in the function body.
+        if (auto *Scope = llvm::dyn_cast<DeclContext>(ND)) {
+          for (Decl *Child : Scope->decls())
+            traverse(Child);
+        }
       }
+      if (llvm::isa<NamespaceDecl>(D))
+        return; // namespace is indexable, but we're not interested.
+      Results.push_back(D);
     }
-    if (llvm::isa<NamespaceDecl>(D))
-      return; // namespace is indexable, but we're not interested.
-    Results.push_back(D);
   };
+  IndexableLocalDeclCollector Collector{Results};
   // Traverses the ParsedAST directly to collect all decls present in the main
   // file.
   for (auto *TopLevel : AST.getLocalTopLevelDecls())
-    TraverseDecl(TopLevel);
+    Collector.traverse(TopLevel);
   return Results;
 }
 

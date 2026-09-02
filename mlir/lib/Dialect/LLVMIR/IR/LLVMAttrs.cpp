@@ -17,9 +17,13 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -34,6 +38,17 @@ static ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
 /// operation. Some operands are printed in their textual form.
 static void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
                                ArrayRef<uint64_t> args);
+
+/// Parses a source language from either the historical inline `DW_LANG_*`
+/// syntax or a nested `DISourceLanguageNameAttr`.
+static ParseResult parseSourceLanguage(AsmParser &parser,
+                                       DISourceLanguageNameAttr &language);
+
+/// Prints an unversioned source language without a dialect using the
+/// historical inline `DW_LANG_*` syntax. All other source languages are
+/// printed as a nested `DISourceLanguageNameAttr`.
+static void printSourceLanguage(AsmPrinter &printer,
+                                DISourceLanguageNameAttr language);
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.cpp.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
@@ -133,6 +148,40 @@ bool AddressSpaceAttr::isValidPtrIntCast(
   // dialect.
   assert(false && "unimplemented, see TODO in the source.");
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// FunctionMetadataAttr
+//===----------------------------------------------------------------------===//
+
+static constexpr unsigned kReservedFunctionMetadataKinds[] = {
+    llvm::LLVMContext::MD_dbg, llvm::LLVMContext::MD_prof};
+
+static StringRef getFixedMetadataKindName(unsigned kind) {
+  switch (kind) {
+#define LLVM_FIXED_MD_KIND(EnumID, Name, Value)                                \
+  case llvm::LLVMContext::EnumID:                                              \
+    return Name;
+#include "llvm/IR/FixedMetadataKinds.def"
+#undef LLVM_FIXED_MD_KIND
+  }
+  llvm_unreachable("unknown fixed metadata kind");
+}
+
+LogicalResult
+FunctionMetadataAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             StringAttr metadataName, MDNodeAttr node) {
+  (void)node;
+  StringRef name = metadataName.getValue();
+  if (name.empty())
+    return emitError() << "function_metadata entry name must not be empty";
+  if (llvm::any_of(kReservedFunctionMetadataKinds, [&](unsigned kind) {
+        return name == getFixedMetadataKindName(kind);
+      })) {
+    return emitError() << "reserved function_metadata entry '" << name
+                       << "' is not supported by the generic carrier";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -346,6 +395,60 @@ DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
 }
 
 //===----------------------------------------------------------------------===//
+// DISourceLanguageNameAttr
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseSourceLanguage(AsmParser &parser,
+                                       DISourceLanguageNameAttr &language) {
+  DISourceLanguageNameAttr nestedLanguage;
+  OptionalParseResult nestedResult =
+      parser.parseOptionalAttribute(nestedLanguage);
+  if (nestedResult.has_value()) {
+    if (failed(*nestedResult))
+      return failure();
+    language = nestedLanguage;
+    return success();
+  }
+
+  // If we cannot parse the full attr, try to just parse a DWARF language.
+  SMLoc loc = parser.getCurrentLocation();
+  StringRef spelling;
+  if (parser.parseKeyword(&spelling))
+    return failure();
+  if (unsigned value = llvm::dwarf::getLanguage(spelling)) {
+    language = DISourceLanguageNameAttr::get(
+        parser.getContext(), value, /*name=*/0, /*version=*/std::nullopt,
+        /*dialect=*/0);
+    return success();
+  }
+  return parser.emitError(loc)
+         << "invalid debug info source language: " << spelling;
+}
+
+static void printSourceLanguage(AsmPrinter &printer,
+                                DISourceLanguageNameAttr language) {
+  // Print only the DWARF language if the other fields are not set.
+  if (language.getLanguage() && !language.getName() && !language.getVersion() &&
+      !language.getDialect()) {
+    printer << llvm::dwarf::LanguageString(language.getLanguage());
+    return;
+  }
+  printer.printAttribute(language);
+}
+
+LogicalResult DISourceLanguageNameAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, unsigned language,
+    unsigned name, std::optional<uint32_t> version, unsigned /*dialect*/) {
+  if (static_cast<bool>(language) == static_cast<bool>(name))
+    return emitError() << "expected exactly one of language or name";
+  if (name && !version)
+    return emitError() << "DW_LNAME requires a version";
+  if (language && version)
+    return emitError() << "DW_LANG cannot have a version";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DICompileUnitAttr
 //===----------------------------------------------------------------------===//
 
@@ -361,10 +464,24 @@ DIRecursiveTypeAttrInterface DICompileUnitAttr::getRecSelf(DistinctAttr recId) {
 
   return DICompileUnitAttr::get(
       recId.getContext(), recId, /*isRecSelf=*/true, /*id=*/{},
-      /*sourceLanguage=*/0u, /*file=*/{}, /*producer=*/{},
-      /*isOptimized=*/false, DIEmissionKind::None,
+      /*sourceLanguage=*/{},
+      /*file=*/{}, /*producer=*/{}, /*isOptimized=*/false, DIEmissionKind::None,
       /*isDebugInfoForProfiling=*/false, DINameTableKind::Default,
       /*splitDebugFilename=*/{}, /*importedEntities=*/{});
+}
+
+LogicalResult DICompileUnitAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, DistinctAttr recId,
+    bool isRecSelf, DistinctAttr id, DISourceLanguageNameAttr sourceLanguage,
+    DIFileAttr file, StringAttr producer, bool isOptimized,
+    DIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    DINameTableKind nameTableKind, StringAttr splitDebugFilename,
+    ArrayRef<DINodeAttr> importedEntities) {
+  if (isRecSelf)
+    return success();
+  if (!sourceLanguage)
+    return emitError() << "sourceLanguage must be set";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -544,10 +661,9 @@ FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
 // ModuleFlagAttr
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                       LLVM::ModFlagBehavior flagBehavior, StringAttr key,
-                       Attribute value) {
+LogicalResult LLVM::detail::verifyModuleFlagValue(
+    StringAttr key, Attribute value,
+    function_ref<InFlightDiagnostic()> emitError) {
   if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
     auto arrayAttr = dyn_cast<ArrayAttr>(value);
     if ((!arrayAttr) || (!llvm::all_of(arrayAttr, [](Attribute attr) {
@@ -565,7 +681,7 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return success();
   }
 
-  if (isa<IntegerAttr, StringAttr>(value))
+  if (isa<IntegerAttr, StringAttr, IntrinsicIntegerAttrInterface>(value))
     return success();
 
   // Allow non-empty ArrayAttr of StringAttrs to represent MDTuples of
@@ -578,7 +694,40 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
         llvm::all_of(arrayAttr, [](Attribute a) { return isa<StringAttr>(a); }))
       return success();
 
-  return emitError() << "only integer, string, and string-array values are "
-                        "currently supported for unknown key '"
-                     << key << "'";
+  return emitError()
+         << "only integer, integer-like dialect attributes, string, "
+            "and string-array values are currently supported for "
+            "unknown key '"
+         << key << "'";
+}
+
+LogicalResult
+ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       LLVM::ModFlagBehavior flagBehavior, StringAttr key,
+                       Attribute value) {
+  return LLVM::detail::verifyModuleFlagValue(key, value, emitError);
+}
+
+ModFlagBehavior ModuleFlagAttr::getModuleFlagBehavior() const {
+  return getBehavior();
+}
+
+StringAttr ModuleFlagAttr::getModuleFlagKey() const { return getKey(); }
+
+Attribute ModuleFlagAttr::getModuleFlagValue() const { return getValue(); }
+
+//===----------------------------------------------------------------------===//
+// MDAddrSpaceCastAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+MDAddrSpaceCastAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            Attribute arg, unsigned addressSpace) {
+  // `addrspacecast` operates on pointers, so the operand must be a metadata
+  // attribute that models a pointer-typed constant.
+  if (!isa<MDGlobalValueAttr, MDNullAttr, MDAddrSpaceCastAttr>(arg))
+    return emitError() << "expected #llvm.md_global_value, #llvm.md_null, or "
+                          "#llvm.md_addrspacecast operand, but got "
+                       << arg;
+  return success();
 }

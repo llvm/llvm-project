@@ -18,13 +18,12 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 ; CHECK-LABEL: @widen_ptr_phi_unrolled(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP3]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP5]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[TMP26]]
@@ -57,7 +56,7 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[TMP20]], i64 [[TMP3]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP18]], ptr [[TMP20]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP19]], ptr [[TMP22]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -126,13 +125,12 @@ define void @widen_2ptrs_phi_unrolled(ptr noalias nocapture %dst, ptr noalias no
 ; CHECK-LABEL: @widen_2ptrs_phi_unrolled(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP4]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 [[TMP3]]
@@ -151,7 +149,7 @@ define void @widen_2ptrs_phi_unrolled(ptr noalias nocapture %dst, ptr noalias no
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[NEXT_GEP5]], i64 [[TMP4]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[NEXT_GEP5]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP10]], ptr [[TMP12]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
@@ -210,12 +208,11 @@ define i32 @pointer_iv_mixed(ptr noalias %a, ptr noalias %b, i64 %n) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], [[TMP6]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP3]]
@@ -235,8 +232,8 @@ define i32 @pointer_iv_mixed(ptr noalias %a, ptr noalias %b, i64 %n) #0 {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12]] = add <vscale x 2 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    store <vscale x 2 x ptr> [[VECTOR_GEP]], ptr [[NEXT_GEP]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP15:%.*]] = shl i64 [[TMP6]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shl i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -313,24 +310,8 @@ define void @phi_used_in_vector_compare_and_scalar_indvar_update_and_store(ptr %
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], [[IF_END1:%.*]] ], [ 1024, [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[IV_PTR:%.*]] = phi ptr [ [[INCDEC_IV_PTR:%.*]], [[IF_END1]] ], [ [[TMP2]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne ptr [[IV_PTR]], null
-; CHECK-NEXT:    br i1 [[CMP_I]], label [[IF_END_SINK_SPLIT:%.*]], label [[IF_END1]]
-; CHECK:       if.end.sink.split:
-; CHECK-NEXT:    store i16 0, ptr [[IV_PTR]], align 2
-; CHECK-NEXT:    br label [[IF_END1]]
-; CHECK:       if.end:
-; CHECK-NEXT:    [[INCDEC_IV_PTR]] = getelementptr inbounds i16, ptr [[IV_PTR]], i64 1
-; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp ult i64 [[INC]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[IF_END]], label [[FOR_END]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br label [[IF_END1:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[IV_PTR_1_LCSSA:%.*]] = phi ptr [ [[INCDEC_IV_PTR]], [[IF_END1]] ], [ [[TMP2]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -362,8 +343,8 @@ attributes #0 = { vscale_range(1, 16) }
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
+!4 = !{!"llvm.loop.vectorize.enable"}
 !5 = !{!"llvm.loop.interleave.count", i32 2}
 !6 = distinct !{!6, !1, !7, !3, !4, !8}
 !7 = !{!"llvm.loop.vectorize.width", i32 2}

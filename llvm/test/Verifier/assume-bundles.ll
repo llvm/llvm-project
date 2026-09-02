@@ -42,7 +42,9 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 %P1)]
 ; CHECK: first argument should be a pointer
   call void @llvm.assume(i1 true) ["dereferenceable"(i32 %P1, i32 %P1)]
-; CHECK: second argument should be an integer
+; CHECK: second argument should be an integer with a maximum width of 64 bits
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i65 0)]
+; CHECK: second argument should be an integer with a maximum width of 64 bits
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, float 1.5)]
 ; CHECK: dereferenceable assumptions should have 2 arguments
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %P, i32 8, i32 8)]
@@ -53,7 +55,9 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
   call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr %P, i32 %P1)]
 ; CHECK: first argument should be a pointer
   call void @llvm.assume(i1 true) ["dereferenceable_or_null"(i32 %P1, i32 %P1)]
-; CHECK: second argument should be an integer
+; CHECK: second argument should be an integer with a maximum width of 64 bits
+  call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr %P, i65 0)]
+; CHECK: second argument should be an integer with a maximum width of 64 bits
   call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr %P, float 1.5)]
 ; CHECK: dereferenceable assumptions should have 2 arguments
   call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr %P, i32 8, i32 8)]

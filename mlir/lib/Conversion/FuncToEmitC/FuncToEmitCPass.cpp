@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/FuncToEmitC/FuncToEmitCPass.h"
 
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Conversion/FuncToEmitC/FuncToEmitC.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -28,6 +29,7 @@ using namespace mlir;
 namespace {
 struct ConvertFuncToEmitC
     : public impl::ConvertFuncToEmitCBase<ConvertFuncToEmitC> {
+  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace
@@ -40,15 +42,9 @@ void ConvertFuncToEmitC::runOnOperation() {
 
   RewritePatternSet patterns(&getContext());
 
-  TypeConverter typeConverter;
-  // Fallback for other types.
-  typeConverter.addConversion([](Type type) -> std::optional<Type> {
-    if (!emitc::isSupportedEmitCType(type))
-      return {};
-    return type;
-  });
+  EmitCTypeConverter typeConverter(&getContext());
 
-  populateFuncToEmitCPatterns(typeConverter, patterns);
+  populateFuncToEmitCPatterns(typeConverter, patterns, this->lowerToCpp);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

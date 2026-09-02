@@ -26,6 +26,14 @@ SymbolTable::Visibility OverriddenSymbolVisibilityOp::getVisibility() {
   return SymbolTable::Visibility::Private;
 }
 
+StringAttr OverriddenSymbolVisibilityOp::getNameAttr() {
+  return getSymNameAttr();
+}
+
+void OverriddenSymbolVisibilityOp::setName(StringAttr name) {
+  setSymNameAttr(name);
+}
+
 static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   switch (visibility) {
   case SymbolTable::Visibility::Private:
@@ -82,7 +90,7 @@ SuccessorOperands TestInternalBranchOp::getSuccessorOperands(unsigned index) {
 
 LogicalResult TestCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getCalleeAttr();
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   if (!symbolTable.lookupNearestSymbolFrom<FunctionOpInterface>(*this, fnAttr))
@@ -459,7 +467,8 @@ struct TestResource : public SideEffects::Resource::Base<TestResource> {
 void SideEffectOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.
-  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  ArrayAttr effectsAttr =
+      (*this)->getDiscardableAttrOfType<ArrayAttr>("effects");
   if (!effectsAttr)
     return;
 
@@ -520,7 +529,8 @@ void ConditionalSideEffectOp::getEffects(
 void SideEffectWithRegionOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.
-  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  ArrayAttr effectsAttr =
+      (*this)->getDiscardableAttrOfType<ArrayAttr>("effects");
   if (!effectsAttr)
     return;
 
@@ -629,10 +639,15 @@ void StringAttrPrettyNameOp::print(OpAsmPrinter &p) {
     }
   }
 
-  if (namesDisagree)
-    p.printOptionalAttrDictWithKeyword((*this)->getAttrs());
-  else
-    p.printOptionalAttrDictWithKeyword((*this)->getAttrs(), {"names"});
+  if (namesDisagree) {
+    SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+    attrs.emplace_back(getNamesAttrName(), getNamesAttr());
+    llvm::sort(attrs);
+    p.printOptionalAttrDictWithKeyword(attrs);
+  } else {
+    p.printOptionalAttrDictWithKeyword(
+        (*this)->getDiscardableAttrDictionary().getValue(), {"names"});
+  }
 }
 
 // We set the SSA name in the asm syntax to the contents of the name
@@ -775,7 +790,7 @@ void RegionIfOp::getSuccessorRegions(
         &getJoinRegion())
       regions.push_back(RegionSuccessor(&getJoinRegion()));
     else
-      regions.push_back(RegionSuccessor::parent());
+      regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -785,7 +800,7 @@ void RegionIfOp::getSuccessorRegions(
 }
 
 ValueRange RegionIfOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   if (successor == &getThenRegion())
     return getThenArgs();
@@ -814,11 +829,11 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange AnyCondOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -953,7 +968,13 @@ ParseResult TestWithBoundsRegionOp::parse(OpAsmParser &parser,
 }
 
 void TestWithBoundsRegionOp::print(OpAsmPrinter &p) {
-  p.printOptionalAttrDict((*this)->getAttrs());
+  SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+  attrs.emplace_back(getUminAttrName(), getUminAttr());
+  attrs.emplace_back(getUmaxAttrName(), getUmaxAttr());
+  attrs.emplace_back(getSminAttrName(), getSminAttr());
+  attrs.emplace_back(getSmaxAttrName(), getSmaxAttr());
+  llvm::sort(attrs);
+  p.printOptionalAttrDict(attrs);
   p << ' ';
   p.printRegionArgument(getRegion().getArgument(0), /*argAttrs=*/{},
                         /*omitType=*/false);
@@ -1237,6 +1258,12 @@ SmallVector<utils::IteratorType> TilingNoDpsOp::getLoopIteratorTypes() {
   return {};
 }
 
+FailureOr<TilingResult> TilingNoDpsOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
+}
+
 FailureOr<TilingResult>
 TilingNoDpsOp::getTiledImplementation(OpBuilder &builder,
                                       ArrayRef<OpFoldResult> offsets,
@@ -1309,12 +1336,12 @@ void LoopBlockOp::getSuccessorRegions(
   if (point.isParent())
     return;
 
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange LoopBlockOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange(getBody().getArguments());
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange(getBody().getArguments());
 }
 
 OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
@@ -1328,9 +1355,40 @@ OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
 
 MutableOperandRange
 LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getExitArgMutable();
   return getNextIterArgMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopWithExtraResultOp / LoopWithExtraResultYieldOp
+//===----------------------------------------------------------------------===//
+
+void LoopWithExtraResultOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // Parent always enters the body; the body can loop back or exit to parent.
+  regions.emplace_back(&getBody());
+  if (!point.isParent())
+    regions.push_back(RegionSuccessor(getOperation()));
+}
+
+ValueRange
+LoopWithExtraResultOp::getSuccessorInputs(RegionSuccessor successor) {
+  // When branching to the parent, only iterResult (result #1) is a successor
+  // input; extraResult (#0) is not. Similaly when branching to the body, only
+  // body block arg #1 (iterArg) is a successor input; arg #0 is not.
+  if (successor.isOperation())
+    return getResults().drop_front(1);
+  return getBody().getArguments().drop_front(1);
+}
+
+OperandRange LoopWithExtraResultOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return MutableOperandRange(getInitMutable());
+}
+
+MutableOperandRange
+LoopWithExtraResultYieldOp::getMutableSuccessorOperands(RegionSuccessor) {
+  return getIterArgMutable();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1439,6 +1497,37 @@ MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
 }
 
 //===----------------------------------------------------------------------===//
+// TestCallAndProduceOp
+//===----------------------------------------------------------------------===//
+
+CallInterfaceCallable TestCallAndProduceOp::getCallableForCallee() {
+  return getCallee();
+}
+
+void TestCallAndProduceOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
+}
+
+Operation::operand_range TestCallAndProduceOp::getArgOperands() {
+  return getForwardedOperands();
+}
+
+MutableOperandRange TestCallAndProduceOp::getArgOperandsMutable() {
+  return getForwardedOperandsMutable();
+}
+
+Operation::result_range TestCallAndProduceOp::getForwardedResults() {
+  // The first result (`produced_status`) is produced by this operation and is
+  // not forwarded from the callee.
+  return getForwarded();
+}
+
+LogicalResult
+TestCallAndProduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return call_interface_impl::verifyCallOpInterface(*this, symbolTable);
+}
+
+//===----------------------------------------------------------------------===//
 // TestStoreWithARegion
 //===----------------------------------------------------------------------===//
 
@@ -1447,12 +1536,12 @@ void TestStoreWithARegion::getSuccessorRegions(
   if (point.isParent())
     regions.emplace_back(&getBody());
   else
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange TestStoreWithARegion::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange(getBody().front().getArguments());
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1465,13 +1554,13 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // back into the operation itself. It is possible for the operation not to
   // enter the body.
   regions.emplace_back(&getBody());
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange
 TestStoreWithALoopRegion::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange(getBody().front().getArguments());
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1483,7 +1572,7 @@ void TestRegionTypesCompatOp::getSuccessorRegions(
   if (point.isParent())
     regions.emplace_back(&getBody());
   else
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 OperandRange
@@ -1493,7 +1582,7 @@ TestRegionTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
 
 ValueRange
 TestRegionTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getBody().getArguments();
 }
@@ -1510,7 +1599,7 @@ void TestLoopTypesCompatOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   regions.emplace_back(&getBody());
   if (!point.isParent())
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 OperandRange TestLoopTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
@@ -1519,7 +1608,7 @@ OperandRange TestLoopTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
 
 ValueRange
 TestLoopTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getBody().getArguments();
 }
@@ -1555,7 +1644,7 @@ void TestRegionTypeChangerOp::getSuccessorRegions(
   if (point.isParent())
     regions.emplace_back(&getBody());
   else
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 OperandRange
@@ -1565,7 +1654,7 @@ TestRegionTypeChangerOp::getEntrySuccessorOperands(RegionSuccessor) {
 
 ValueRange
 TestRegionTypeChangerOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getBody().getArguments();
 }
@@ -1950,38 +2039,33 @@ Value TestPartialAlias::projectAliasValueToSlotValue(
       .getResult(0);
 }
 
-namespace {
-/// Returns test dialect's memref layout for test dialect's tensor encoding when
-/// applicable.
-MemRefLayoutAttrInterface
-getMemRefLayoutForTensorEncoding(RankedTensorType tensorType) {
-  if (auto encoding =
-          dyn_cast<test::TestTensorEncodingAttr>(tensorType.getEncoding())) {
-    return cast<MemRefLayoutAttrInterface>(test::TestMemRefLayoutAttr::get(
-        tensorType.getContext(), encoding.getDummy()));
-  }
-  return {};
+//===----------------------------------------------------------------------===//
+// TestSlotTracker
+//===----------------------------------------------------------------------===//
+
+bool TestSlotTracker::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+  return (*blockingUses.begin())->get() == getSource();
 }
 
-/// Auxiliary bufferization function for test and builtin tensors.
-bufferization::BufferLikeType
-convertTensorToBuffer(mlir::Operation *op,
-                      const bufferization::BufferizationOptions &options,
-                      bufferization::TensorLikeType tensorLike) {
-  auto buffer =
-      *tensorLike.getBufferType(options, [&]() { return op->emitError(); });
-  if (auto memref = dyn_cast<MemRefType>(buffer)) {
-    // Note: For the sake of testing, we want to ensure that encoding -> layout
-    // bufferization happens. This is currently achieved manually.
-    auto layout =
-        getMemRefLayoutForTensorEncoding(cast<RankedTensorType>(tensorLike));
-    return cast<bufferization::BufferLikeType>(
-        MemRefType::get(memref.getShape(), memref.getElementType(), layout,
-                        memref.getMemorySpace()));
-  }
-  return buffer;
+DeletionKind TestSlotTracker::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
 }
-} // namespace
+
+bool TestSlotTracker::requiresReplacedValues() { return true; }
+
+void TestSlotTracker::visitReplacedValues(
+    ArrayRef<std::pair<Operation *, Value>> definitions, OpBuilder &builder) {
+  for (auto [op, value] : definitions) {
+    builder.setInsertionPointAfter(op);
+    TestTrackedValue::create(builder, getLoc(), value, getNameAttr());
+  }
+}
 
 ::mlir::LogicalResult test::TestDummyTensorOp::bufferize(
     ::mlir::RewriterBase &rewriter,
@@ -1992,12 +2076,14 @@ convertTensorToBuffer(mlir::Operation *op,
   if (mlir::failed(buffer))
     return failure();
 
-  const auto outType = getOutput().getType();
   const auto bufferizedOutType =
-      convertTensorToBuffer(getOperation(), options, outType);
+      mlir::bufferization::getBufferType(getOutput(), options, state);
+  if (mlir::failed(bufferizedOutType))
+    return failure();
+
   // replace op with memref analogy
   auto dummyMemrefOp = test::TestDummyMemrefOp::create(
-      rewriter, getLoc(), bufferizedOutType, *buffer);
+      rewriter, getLoc(), *bufferizedOutType, *buffer);
 
   mlir::bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
                                                      dummyMemrefOp.getResult());
@@ -2007,15 +2093,14 @@ convertTensorToBuffer(mlir::Operation *op,
 
 mlir::FailureOr<mlir::bufferization::BufferLikeType>
 test::TestDummyTensorOp::getBufferType(
-    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &options,
     const mlir::bufferization::BufferizationState &,
     llvm::SmallVector<::mlir::Value> &) {
-  const auto type = dyn_cast<test::TestTensorType>(value.getType());
-  if (type == nullptr)
-    return failure();
-
-  return cast<mlir::bufferization::BufferLikeType>(test::TestMemrefType::get(
-      getContext(), type.getShape(), type.getElementType(), nullptr));
+  // let unknown type converter handle the types - assume test operations work
+  // with test-one-shot-module-bufferize pass.
+  return options.unknownTypeConverterFn(
+      cast<mlir::bufferization::TensorLikeType>(value.getType()), nullptr,
+      options);
 }
 
 ::mlir::LogicalResult test::TestCreateTensorOp::bufferize(
@@ -2044,11 +2129,98 @@ test::TestCreateTensorOp::getBufferType(
     mlir::Value value, const mlir::bufferization::BufferizationOptions &options,
     const mlir::bufferization::BufferizationState &,
     llvm::SmallVector<::mlir::Value> &) {
-  const auto type = dyn_cast<bufferization::TensorLikeType>(value.getType());
-  if (type == nullptr)
+  // let unknown type converter handle the types - assume test operations work
+  // with test-one-shot-module-bufferize pass.
+  return options.unknownTypeConverterFn(
+      cast<mlir::bufferization::TensorLikeType>(value.getType()), nullptr,
+      options);
+}
+
+::mlir::LogicalResult test::TestTensorWithFutureLayoutOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::mlir::bufferization::BufferizationState &state) {
+  const auto bufferizedOutType =
+      mlir::bufferization::getBufferType(getOutput(), options, state);
+  if (mlir::failed(bufferizedOutType))
     return failure();
 
-  return convertTensorToBuffer(getOperation(), options, type);
+  auto createMemrefOp =
+      test::TestCreateMemrefOp::create(rewriter, getLoc(), *bufferizedOutType);
+  mlir::bufferization::replaceOpWithBufferizedValues(
+      rewriter, getOperation(), createMemrefOp.getResult());
+  return mlir::success();
+}
+
+mlir::FailureOr<mlir::bufferization::BufferLikeType>
+test::TestTensorWithFutureLayoutOp::getBufferType(
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    const mlir::bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  return llvm::TypeSwitch<mlir::Type,
+                          mlir::FailureOr<mlir::bufferization::BufferLikeType>>(
+             value.getType())
+      .Case([&](RankedTensorType tensorType) {
+        // Set the memref layout to the op's 'layout' attribute, ignoring
+        // any pre-existing tensor encoding. This is what lets two
+        // `test.tensor_with_layout` ops produce *bufferized* memrefs with
+        // different layouts while keeping their *tensor* result types identical
+        // -- which is required to construct SCF iter_arg/branch mismatches that
+        // the verifier still accepts.
+        auto layout = cast<MemRefLayoutAttrInterface>(getLayout());
+        return cast<bufferization::BufferLikeType>(MemRefType::get(
+            tensorType.getShape(), tensorType.getElementType(), layout));
+      })
+      .Case([&](TestTensorType tensorType) {
+        auto layout = cast<MemRefLayoutAttrInterface>(getLayout());
+        return cast<bufferization::BufferLikeType>(
+            TestMemrefType::get(tensorType.getContext(), tensorType.getShape(),
+                                tensorType.getElementType(), layout));
+      })
+      .Default([&](Type) { return emitError("unknown type"); });
+}
+
+LogicalResult test::TestForceNewLayoutOp::bufferize(
+    RewriterBase &rewriter, const bufferization::BufferizationOptions &options,
+    bufferization::BufferizationState &state) {
+  auto buffer = bufferization::getBuffer(rewriter, getInput(), options, state);
+  if (failed(buffer))
+    return failure();
+
+  const auto bufferizedOutType =
+      bufferization::getBufferType(getOutput(), options, state);
+  if (failed(bufferizedOutType))
+    return failure();
+
+  auto dummyMemrefOp = test::TestDummyMemrefOp::create(
+      rewriter, getLoc(), *bufferizedOutType, *buffer);
+  bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
+                                               dummyMemrefOp.getResult());
+  return success();
+}
+
+FailureOr<bufferization::BufferLikeType>
+test::TestForceNewLayoutOp::getBufferType(
+    mlir::Value value, const bufferization::BufferizationOptions &options,
+    const bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  return llvm::TypeSwitch<mlir::Type,
+                          mlir::FailureOr<mlir::bufferization::BufferLikeType>>(
+             value.getType())
+      .Case([&](RankedTensorType tensorType) {
+        // Set the memref layout to the op's 'layout' attribute, ignoring any
+        // pre-existing tensor encoding.
+        auto layout = cast<MemRefLayoutAttrInterface>(getLayout());
+        return cast<bufferization::BufferLikeType>(MemRefType::get(
+            tensorType.getShape(), tensorType.getElementType(), layout));
+      })
+      .Case([&](TestTensorType tensorType) {
+        auto layout = cast<MemRefLayoutAttrInterface>(getLayout());
+        return cast<bufferization::BufferLikeType>(
+            TestMemrefType::get(tensorType.getContext(), tensorType.getShape(),
+                                tensorType.getElementType(), layout));
+      })
+      .Default([&](Type) { return emitError("unknown type"); });
 }
 
 // Define a custom builder for ManyRegionsOp declared in TestOps.td.

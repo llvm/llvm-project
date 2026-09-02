@@ -160,10 +160,6 @@ public:
     return visit(Expr->getOperand());
   }
 
-  ValidatorResult visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
-    return visit(Expr->getOperand());
-  }
-
   ValidatorResult visitTruncateExpr(const SCEVTruncateExpr *Expr) {
     return visitZeroExtendOrTruncateExpr(Expr, Expr->getOperand());
   }

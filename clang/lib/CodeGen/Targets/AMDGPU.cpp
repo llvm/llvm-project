@@ -10,6 +10,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -346,8 +347,30 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   const bool IsHIPKernel = M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>();
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
+
+  // __launch_bounds__ only takes effect on kernels and is silently ignored on
+  // other functions The arguments are honored only if the equivalent native
+  // amdgpu_flat_work_group_size / amdgpu_waves_per_eu attribute was not also
+  // used out; those take precedence.
+  const auto *LaunchBounds =
+      IsHIPKernel ? FD->getAttr<CUDALaunchBoundsAttr>() : nullptr;
+  unsigned LBMaxThreads = 0;
+  unsigned LBMinWaves = 0;
+  if (LaunchBounds) {
+    LBMaxThreads = LaunchBounds->getMaxThreads()
+                       ->EvaluateKnownConstInt(M.getContext())
+                       .getExtValue();
+    if (const Expr *MinBlocks = LaunchBounds->getMinBlocks()) {
+      LBMinWaves =
+          MinBlocks->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    }
+  }
+
   if (ReqdWGS || FlatWGS) {
     M.handleAMDGPUFlatWorkGroupSizeAttr(F, FlatWGS, ReqdWGS);
+  } else if (LBMaxThreads > 0) {
+    F->addFnAttr("amdgpu-flat-work-group-size",
+                 "1," + llvm::utostr(LBMaxThreads));
   } else if (IsOpenCLKernel || IsHIPKernel) {
     // By default, restrict the maximum size to a value specified by
     // --gpu-max-threads-per-block=n or its default value for HIP.
@@ -360,8 +383,15 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   }
 
-  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>())
+  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>()) {
     M.handleAMDGPUWavesPerEUAttr(F, Attr);
+  } else if (LBMinWaves > 0) {
+    // HIP reinterprets the second argument as the minimum waves per EU.
+    //
+    // TODO: The third argument (maxclusterrank) could be used if the AMDGPU
+    // "clusters" feature is supported for the current subtarget.
+    F->addFnAttr("amdgpu-waves-per-eu", llvm::utostr(LBMinWaves));
+  }
 
   if (const auto *Attr = FD->getAttr<AMDGPUNumSGPRAttr>()) {
     unsigned NumSGPR = Attr->getNumSGPR();
@@ -510,32 +540,11 @@ StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
                   Scope <= SyncScope::OpenCLSubGroup &&
                   Ordering != llvm::AtomicOrdering::SequentiallyConsistent);
 
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return IsOneAs ? "singlethread-one-as" : "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    return IsOneAs ? "wavefront-one-as" : "wavefront";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-    assert(!IsOneAs && "OpenCL does not have cluster scope");
-    return "cluster";
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return IsOneAs ? "workgroup-one-as" : "workgroup";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return IsOneAs ? "agent-one-as" : "agent";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return IsOneAs ? "one-as" : "";
-  }
-  llvm_unreachable("Unknown SyncScope enum");
+  llvm::AtomicScope AS = getAtomicScope(Scope);
+  assert((AS != llvm::AtomicScope::Cluster || !IsOneAs) &&
+         "OpenCL does not have cluster scope");
+  return *llvm::getAtomicScopeIRString(getABIInfo().getTarget().getTriple(), AS,
+                                       IsOneAs);
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
@@ -559,6 +568,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
         llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
     AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
   }
+
+  CGF.AddAMDGPUAvailableVisibleMMRA(&AtomicInst);
 
   if (!RMW)
     return;
@@ -731,15 +742,15 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
   auto Eval = [&](Expr *E) {
     return E->EvaluateKnownConstInt(getContext()).getExtValue();
   };
-  if (FlatWGS) {
+  if (ReqdWGS) {
+    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
+                Eval(ReqdWGS->getZDim());
+  } else if (FlatWGS) {
     Min = Eval(FlatWGS->getMin());
     Max = Eval(FlatWGS->getMax());
   }
-  if (ReqdWGS && Min == 0 && Max == 0)
-    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
-                Eval(ReqdWGS->getZDim());
 
-  if (Min != 0) {
+  if (Min != 0 || ReqdWGS) {
     assert(Min <= Max && "Min must be less than or equal Max");
 
     if (MinThreadsVal)

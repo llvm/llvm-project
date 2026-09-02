@@ -1,6 +1,6 @@
-; RUN: opt -mtriple=amdgcn-- -S -structurizecfg -si-annotate-control-flow %s | FileCheck -check-prefix=OPT %s
-; RUN: opt -mtriple=amdgcn-- -S -passes=structurizecfg,si-annotate-control-flow %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: opt -mtriple=amdgpu-- -S -structurizecfg -si-annotate-control-flow %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -mtriple=amdgpu-- -S -passes=structurizecfg,si-annotate-control-flow %s | FileCheck -check-prefix=OPT %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
 
 
 ; OPT-LABEL: @annotate_unreachable(

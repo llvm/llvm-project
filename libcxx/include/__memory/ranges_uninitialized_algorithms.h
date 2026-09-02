@@ -44,14 +44,16 @@ namespace ranges {
 struct __uninitialized_default_construct {
   template <__nothrow_forward_iterator _ForwardIterator, __nothrow_sentinel_for<_ForwardIterator> _Sentinel>
     requires default_initializable<iter_value_t<_ForwardIterator>>
-  _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+  operator()(_ForwardIterator __first, _Sentinel __last) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
     return std::__uninitialized_default_construct<_ValueType>(std::move(__first), std::move(__last));
   }
 
   template <__nothrow_forward_range _ForwardRange>
     requires default_initializable<range_value_t<_ForwardRange>>
-  _LIBCPP_HIDE_FROM_ABI borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 borrowed_iterator_t<_ForwardRange>
+  operator()(_ForwardRange&& __range) const {
     return (*this)(ranges::begin(__range), ranges::end(__range));
   }
 };
@@ -65,7 +67,7 @@ inline constexpr auto uninitialized_default_construct = __uninitialized_default_
 struct __uninitialized_default_construct_n {
   template <__nothrow_forward_iterator _ForwardIterator>
     requires default_initializable<iter_value_t<_ForwardIterator>>
-  _LIBCPP_HIDE_FROM_ABI _ForwardIterator
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
   operator()(_ForwardIterator __first, iter_difference_t<_ForwardIterator> __n) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
     return std::__uninitialized_default_construct_n<_ValueType>(std::move(__first), __n);

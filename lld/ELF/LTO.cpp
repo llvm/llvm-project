@@ -231,6 +231,11 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
+void BitcodeCompiler::waitForLTOCleanup() {
+  if (ltoObj)
+    ltoObj->waitForCleanup();
+}
+
 void BitcodeCompiler::add(BitcodeFile &f) {
   lto::InputFile &obj = *f.obj;
   bool isExec = !ctx.arg.shared && !ctx.arg.relocatable;
@@ -336,7 +341,8 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.arg.thinLTOCacheDir.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.arg.thinLTOCacheDir,
-                             createAddBufferFn(files, filenames)));
+                             createAddBufferFn(files, filenames),
+                             !ctx.arg.dtltoDistributor.empty()));
 
   if (!ctx.bitcodeFiles.empty())
     checkError(ctx.e, ltoObj->run(

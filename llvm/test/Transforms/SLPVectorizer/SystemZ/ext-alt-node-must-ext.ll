@@ -8,15 +8,15 @@ define i32 @test(ptr %0, ptr %1) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 32
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> poison, i64 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> poison, i64 [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <2 x i64> [[TMP14]], zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext <2 x i1> [[TMP9]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i1> [[TMP9]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i8> [[TMP16]], <2 x i8> [[TMP11]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i8> [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i8> [[TMP12]], i64 0
 ; CHECK-NEXT:    [[DOTNEG:%.*]] = sext i8 [[TMP13]] to i32
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i8> [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i8> [[TMP12]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP15]] to i32
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[DOTNEG]], [[TMP8]]
 ; CHECK-NEXT:    ret i32 [[TMP10]]

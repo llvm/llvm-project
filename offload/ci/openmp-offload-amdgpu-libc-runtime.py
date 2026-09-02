@@ -29,6 +29,7 @@ with worker.run(
                 "-GNinja",
                 f"-DLLVM_LIT_ARGS=-vv --show-unsupported --show-xfail -j {w.jobs} --time-tests --timeout 100",
                 f"-DCMAKE_INSTALL_PREFIX={w.in_workdir(llvminstalldir)}",
+                f"-DRUNTIMES_amdgpu-amd-amdhsa_CMAKE_CROSSCOMPILING_EMULATOR={w.in_workdir(llvmbuilddir)}/bin/llvm-gpu-loader",
             ]
         )
 
@@ -55,9 +56,16 @@ with worker.run(
             ["check-lld"], add_env={"HSA_ENABLE_SDMA": "0"}, builddir=llvmbuilddir
         )
 
-    with w.step("run check-libc-amdgcn-amd-amdhsa"):
+    with w.step("run check-libc-amdgpu-amd-amdhsa"):
         w.run_ninja(
-            ["check-libc-amdgcn-amd-amdhsa"],
+            ["check-libc-amdgpu-amd-amdhsa"],
+            add_env={"HSA_ENABLE_SDMA": "0"},
+            builddir=llvmbuilddir,
+        )
+
+    with w.step("run check-compiler-rt-amdgpu-amd-amdhsa"):
+        w.run_ninja(
+            ["check-compiler-rt-amdgpu-amd-amdhsa"],
             add_env={"HSA_ENABLE_SDMA": "0"},
             builddir=llvmbuilddir,
         )

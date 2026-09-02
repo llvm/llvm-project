@@ -475,7 +475,8 @@ public:
   }
 
   /// Check whether this conditional branch can be reversed
-  virtual bool isReversibleBranch(const MCInst &Inst) const {
+  virtual bool isReversibleBranch(const MCInst &Inst,
+                                  bool MustPreserveFlags = true) const {
     assert(!isUnsupportedInstruction(Inst) && isConditionalBranch(Inst) &&
            "Instruction is not known conditional branch");
 
@@ -1995,6 +1996,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Creates a breakpoint instruction in Inst.
+  virtual void createBreakpoint(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Creates an instruction to bump the stack pointer just like a call.
   virtual void createStackPointerIncrement(MCInst &Inst, int Size = 8,
                                            bool NoFlagsClobber = false) const {
@@ -2077,6 +2083,16 @@ public:
     return {};
   }
 
+  /// Create a sequence of instructions to compare contents of a register
+  /// \p Reg1 to a register \p Reg2 and jump to \p Target if they are different.
+  virtual InstructionListType createCmpJNEWithReg(MCPhysReg Reg1,
+                                                  MCPhysReg Reg2,
+                                                  const MCSymbol *Target,
+                                                  MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
   /// Find memcpy size in bytes by using preceding instructions.
   /// Returns std::nullopt if size cannot be determined (no-op for most
   /// targets).
@@ -2135,9 +2151,13 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Reverses the branch condition in Inst and update its taken target to TBB.
-  virtual void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                                      MCContext *Ctx) const {
+  /// Return the instruction sequence for the reversed branch condition of
+  /// \p Inst and update its taken target to \p TBB. Assumes that the branch is
+  /// reversible. It may replace Inst with a longer instruction sequence on some
+  /// targets.
+  virtual InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const {
     llvm_unreachable("not implemented");
   }
 
@@ -2501,7 +2521,7 @@ public:
   };
 
   virtual BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst,
+      const MCInst &CallInst, MCPhysReg Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,

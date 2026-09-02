@@ -129,8 +129,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  recvmmsg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.recvmmsg
+)
+
+
+add_entrypoint_object(
   shutdown
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.shutdown
+)
+
+add_entrypoint_object(
+  sockatmark
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sockatmark
 )

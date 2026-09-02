@@ -25,8 +25,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/OptimizedStructLayout.h"
@@ -42,6 +44,10 @@
 #include <optional>
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 #define DEBUG_TYPE "coro-frame"
 
@@ -743,11 +749,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   // If we don't add __coro_frame to the RetainedNodes, user may get
   // `no symbol __coro_frame in context` rather than `__coro_frame`
   // is optimized out, which is more precise.
-  auto RetainedNodes = DIS->getRetainedNodes();
-  SmallVector<Metadata *, 32> RetainedNodesVec(RetainedNodes.begin(),
-                                               RetainedNodes.end());
-  RetainedNodesVec.push_back(FrameDIVar);
-  DIS->replaceOperandWith(7, (MDTuple::get(F.getContext(), RetainedNodesVec)));
+  DIS->retainNodes(&FrameDIVar, &FrameDIVar + 1);
 
   // Construct the location for the frame debug variable. The column number
   // is fake but it should be fine.
@@ -1363,6 +1365,20 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
     SetDispatchValuePN->addIncoming(SwitchConstant, Pred);
     SwitchOnDispatch->addCase(SwitchConstant, CaseBB);
     SwitchIndex++;
+  }
+
+  if (!ProfcheckDisableMetadataFixes) {
+    // Add branch weights to SwitchOnDispatch, where branches are unreachable by
+    // default. We mark all branches as having equal weights because they are
+    // mutually exclusive.
+    MDBuilder MDB(CleanupPadBB->getContext());
+    SmallVector<uint32_t> Weights;
+    Weights.push_back(0);
+    for (int i = 0; i < SwitchIndex; ++i) {
+      Weights.push_back(llvm::MDBuilder::kUnlikelyBranchWeight);
+    }
+    SwitchOnDispatch->setMetadata(LLVMContext::MD_prof,
+                                  MDB.createBranchWeights(Weights));
   }
 }
 

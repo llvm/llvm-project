@@ -532,7 +532,7 @@ define double @test_fcmp_ord_select_fabs_fcmp_intersect_drop_nnan(double %x, dou
 
 define float @test_select_nnan_nsz_fcmp_olt(float %x) {
 ; CHECK-LABEL: @test_select_nnan_nsz_fcmp_olt(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
 ; CHECK-NEXT:    ret float [[SEL1]]
 ;
@@ -543,8 +543,8 @@ define float @test_select_nnan_nsz_fcmp_olt(float %x) {
 
 define float @test_select_nnan_nsz_fcmp_ult(float %x) {
 ; CHECK-LABEL: @test_select_nnan_nsz_fcmp_ult(
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
 ; CHECK-NEXT:    ret float [[SEL1]]
 ;
   %cmp = fcmp ult float %x, 0.000000e+00

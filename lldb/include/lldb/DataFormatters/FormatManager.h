@@ -96,13 +96,6 @@ public:
 
   void ForEachCategory(TypeCategoryMap::ForEachCallback callback);
 
-  lldb::TypeCategoryImplSP GetCategory(const char *category_name = nullptr,
-                                       bool can_create = true) {
-    if (!category_name)
-      return GetCategory(m_default_category_name);
-    return GetCategory(ConstString(category_name));
-  }
-
   lldb::TypeCategoryImplSP GetCategory(ConstString category_name,
                                        bool can_create = true);
 
@@ -126,16 +119,6 @@ public:
 
   lldb::SyntheticChildrenSP
   GetSyntheticChildren(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
-
-  bool
-  AnyMatches(const FormattersMatchCandidate &candidate_type,
-             TypeCategoryImpl::FormatCategoryItems items =
-                 TypeCategoryImpl::ALL_ITEM_TYPES,
-             bool only_enabled = true, const char **matching_category = nullptr,
-             TypeCategoryImpl::FormatCategoryItems *matching_type = nullptr) {
-    return m_categories_map.AnyMatches(candidate_type, items, only_enabled,
-                                       matching_category, matching_type);
-  }
 
   static bool GetFormatFromCString(const char *format_cstr,
                                    lldb::Format &format);

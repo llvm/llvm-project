@@ -33,7 +33,7 @@ using namespace lldb_private;
 TargetThreadWindows::TargetThreadWindows(ProcessWindows &process,
                                          const HostThread &thread)
     : Thread(process, thread.GetNativeThread().GetThreadId()),
-      m_thread_reg_ctx_sp(), m_host_thread(thread) {}
+      m_host_thread(thread) {}
 
 TargetThreadWindows::~TargetThreadWindows() { DestroyThread(); }
 
@@ -43,6 +43,46 @@ void TargetThreadWindows::RefreshStateAfterStop() {
 }
 
 void TargetThreadWindows::WillResume(lldb::StateType resume_state) {}
+
+StructuredData::ObjectSP TargetThreadWindows::FetchThreadExtendedInfo() {
+  struct ThreadBasicInformation {
+    LONG ExitStatus;
+    PVOID TebBaseAddress;
+    struct {
+      HANDLE UniqueProcess;
+      HANDLE UniqueThread;
+    } ClientId;
+    ULONG_PTR AffinityMask;
+    LONG Priority;
+    LONG BasePriority;
+  };
+  using NtQueryInformationThreadFn =
+      LONG(WINAPI *)(HANDLE ThreadHandle, ULONG ThreadInformationClass,
+                     PVOID ThreadInformation, ULONG ThreadInformationLength,
+                     PULONG ReturnLength);
+
+  static LazyImport<NtQueryInformationThreadFn> s_query_information_thread{
+      L"Kernel32.dll", "NtQueryInformationThread"};
+  if (!s_query_information_thread)
+    return StructuredData::ObjectSP();
+  auto NtQueryInformationThread = *s_query_information_thread;
+
+  HANDLE handle = m_host_thread.GetNativeThread().GetSystemHandle();
+  if (!handle || handle == INVALID_HANDLE_VALUE)
+    return StructuredData::ObjectSP();
+
+  ThreadBasicInformation info = {};
+  // ThreadInformationClass 0 is ThreadBasicInformation.
+  if (NtQueryInformationThread(handle, 0, &info, sizeof(info), nullptr) < 0)
+    return StructuredData::ObjectSP();
+  if (!info.TebBaseAddress)
+    return StructuredData::ObjectSP();
+
+  auto dict = std::make_shared<StructuredData::Dictionary>();
+  dict->AddIntegerItem("teb_address",
+                       reinterpret_cast<uint64_t>(info.TebBaseAddress));
+  return dict;
+}
 
 void TargetThreadWindows::DidStop() {}
 

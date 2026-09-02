@@ -78,8 +78,8 @@ struct CastAwayExtractStridedSliceLeadingOneDim
 
     Location loc = extractOp.getLoc();
 
-    Value newSrcVector = vector::ExtractOp::create(
-        rewriter, loc, extractOp.getSource(), splatZero(dropCount));
+    Value newSrcVector = rewriter.createOrFold<ShapeCastOp>(
+        loc, newSrcType, extractOp.getSource());
 
     // The offsets/sizes/strides attribute can have a less number of elements
     // than the input vector's rank: it is meant for the leading dimensions.
@@ -94,7 +94,7 @@ struct CastAwayExtractStridedSliceLeadingOneDim
         rewriter, loc, newDstType, newSrcVector, newOffsets, newSizes,
         newStrides);
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(extractOp, oldDstType,
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(extractOp, oldDstType,
                                                      newExtractOp);
 
     return success();
@@ -122,10 +122,10 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     // Trim leading one dimensions from both operands.
     Location loc = insertOp.getLoc();
 
-    Value newSrcVector = vector::ExtractOp::create(
-        rewriter, loc, insertOp.getValueToStore(), splatZero(srcDropCount));
-    Value newDstVector = vector::ExtractOp::create(
-        rewriter, loc, insertOp.getDest(), splatZero(dstDropCount));
+    Value newSrcVector = rewriter.createOrFold<vector::ShapeCastOp>(
+        loc, newSrcType, insertOp.getValueToStore());
+    Value newDstVector = rewriter.createOrFold<vector::ShapeCastOp>(
+        loc, newDstType, insertOp.getDest());
 
     auto newOffsets = rewriter.getArrayAttr(
         insertOp.getOffsets().getValue().take_back(newDstType.getRank()));
@@ -136,7 +136,7 @@ struct CastAwayInsertStridedSliceLeadingOneDim
         rewriter, loc, newDstType, newSrcVector, newDstVector, newOffsets,
         newStrides);
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(insertOp, oldDstType,
                                                      newInsertOp);
 
     return success();
@@ -144,7 +144,7 @@ struct CastAwayInsertStridedSliceLeadingOneDim
 };
 
 // Casts away leading one dimensions in vector.insert's vector inputs by
-// inserting vector.broadcast.
+// inserting vector.shape_cast.
 struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
   using Base::Base;
 
@@ -172,11 +172,11 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
 
     Value newSrcVector = insertOp.getValueToStore();
     if (oldSrcRank != 0) {
-      newSrcVector = vector::ExtractOp::create(
-          rewriter, loc, insertOp.getValueToStore(), splatZero(srcDropCount));
+      newSrcVector = rewriter.createOrFold<vector::ShapeCastOp>(
+          loc, cast<VectorType>(newSrcType), insertOp.getValueToStore());
     }
-    Value newDstVector = vector::ExtractOp::create(
-        rewriter, loc, insertOp.getDest(), splatZero(dstDropCount));
+    Value newDstVector = rewriter.createOrFold<vector::ShapeCastOp>(
+        loc, newDstType, insertOp.getDest());
 
     // New position rank needs to be computed in two steps: (1) if destination
     // type has leading unit dims, we also trim the position array accordingly,
@@ -193,7 +193,7 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     auto newInsertOp = vector::InsertOp::create(rewriter, loc, newSrcVector,
                                                 newDstVector, newPosition);
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(insertOp, oldDstType,
                                                      newInsertOp);
 
     return success();

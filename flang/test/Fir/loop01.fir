@@ -48,6 +48,33 @@ func.func private @f2() -> i1
 
 // -----
 
+func.func @typed_loop(%lo: i32, %up: i32, %step: i32,
+                      %addr: !fir.ref<i32>) {
+  fir.do_loop %iv = %lo to %up step %step : i32 {
+    fir.store %iv to %addr : !fir.ref<i32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @typed_loop(
+// CHECK-SAME: %[[LO:.*]]: i32, %[[UP:.*]]: i32, %[[STEP:.*]]: i32,
+// CHECK-SAME: %[[ADDR:.*]]: !fir.ref<i32>) {
+// CHECK: %[[LO_IDX:.*]] = fir.convert %[[LO]] : (i32) -> index
+// CHECK: %[[UP_IDX:.*]] = fir.convert %[[UP]] : (i32) -> index
+// CHECK: %[[STEP_IDX:.*]] = fir.convert %[[STEP]] : (i32) -> index
+// CHECK: %[[DIFF:.*]] = arith.subi %[[UP_IDX]], %[[LO_IDX]] : index
+// CHECK: %[[DISTANCE:.*]] = arith.addi %[[DIFF]], %[[STEP_IDX]] : index
+// CHECK: %[[TRIP:.*]] = arith.divsi %[[DISTANCE]], %[[STEP_IDX]] : index
+// CHECK: br ^bb1(%[[LO]], %[[TRIP]] : i32, index)
+// CHECK: ^bb1(%[[IV:.*]]: i32, %[[COUNT:.*]]: index):
+// CHECK: fir.store %[[IV]] to %[[ADDR]] : !fir.ref<i32>
+// CHECK: %[[NEXT:.*]] = arith.addi %[[IV]], %[[STEP]] overflow<nsw> : i32
+// CHECK: %[[ONE:.*]] = arith.constant 1 : index
+// CHECK: %[[COUNT_NEXT:.*]] = arith.subi %[[COUNT]], %[[ONE]] : index
+// CHECK: br ^bb1(%[[NEXT]], %[[COUNT_NEXT]] : i32, index)
+
+// -----
+
 func.func @x2(%lo : index, %up : index, %ok : i1) {
   %c1 = arith.constant 1 : index
   %unused = fir.iterate_while (%i = %lo to %up step %c1) and (%ok1 = %ok) {

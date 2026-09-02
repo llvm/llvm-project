@@ -10,14 +10,14 @@ void foo() {
   int _Complex b = ~a;
 }
 
-// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a"]
-// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
+// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
+// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR-BEFORE: %[[COMPLEX_CONJ:.*]] = cir.complex.conj %[[TMP]] : !cir.complex<!s32i>
 // CIR-BEFORE: cir.store{{.*}} %[[COMPLEX_CONJ]], %[[B_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a"]
-// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
+// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR-AFTER: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR-AFTER: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!s32i> -> !s32i
 // CIR-AFTER: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!s32i> -> !s32i
@@ -25,8 +25,8 @@ void foo() {
 // CIR-AFTER: %[[RESULT_VAL:.*]] = cir.complex.create %[[REAL]], %[[IMAG_MINUS]] : !s32i -> !cir.complex<!s32i>
 // CIR-AFTER: cir.store{{.*}} %[[RESULT_VAL]], %[[B_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM: %[[TMP:.*]] = load { i32, i32 }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { i32, i32 } %[[TMP]], 0
 // LLVM: %[[IMAG:.*]] = extractvalue { i32, i32 } %[[TMP]], 1
@@ -52,14 +52,14 @@ void foo2() {
   float _Complex b = ~a;
 }
 
-// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-BEFORE: %[[COMPLEX_CONJ:.*]] = cir.complex.conj %[[TMP]] : !cir.complex<!cir.float>
 // CIR-BEFORE: cir.store{{.*}} %[[COMPLEX_CONJ]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -67,8 +67,8 @@ void foo2() {
 // CIR-AFTER: %[[RESULT_VAL:.*]] = cir.complex.create %[[REAL]], %[[IMAG_MINUS]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-AFTER: cir.store{{.*}} %[[RESULT_VAL]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { float, float } %[[TMP]], 0
 // LLVM: %[[IMAG:.*]] = extractvalue { float, float } %[[TMP]], 1
@@ -94,8 +94,8 @@ void foo3() {
   float _Complex b = a++;
 }
 
-// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-BEFORE: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-BEFORE: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -105,8 +105,8 @@ void foo3() {
 // CIR-BEFORE: cir.store{{.*}} %[[NEW_COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: cir.store{{.*}} %[[TMP]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -116,8 +116,8 @@ void foo3() {
 // CIR-AFTER: cir.store{{.*}} %[[NEW_COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: cir.store{{.*}} %[[TMP]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { float, float } %[[TMP]], 0
 // LLVM: %[[IMAG:.*]] = extractvalue { float, float } %[[TMP]], 1
@@ -148,8 +148,8 @@ void foo4() {
   float _Complex b = ++a;
 }
 
-// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-BEFORE: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-BEFORE: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -159,8 +159,8 @@ void foo4() {
 // CIR-BEFORE: cir.store{{.*}} %[[NEW_COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: cir.store{{.*}} %[[NEW_COMPLEX]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -170,8 +170,8 @@ void foo4() {
 // CIR-AFTER: cir.store{{.*}} %[[NEW_COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: cir.store{{.*}} %[[NEW_COMPLEX]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { float, float } %[[TMP]], 0
 // LLVM: %[[IMAG:.*]] = extractvalue { float, float } %[[TMP]], 1
@@ -202,8 +202,8 @@ void foo5() {
   float _Complex b = a--;
 }
 
-// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-BEFORE: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-BEFORE: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -213,8 +213,8 @@ void foo5() {
 // CIR-BEFORE: cir.store{{.*}} %[[NEW_COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: cir.store{{.*}} %[[TMP]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -224,8 +224,8 @@ void foo5() {
 // CIR-AFTER: cir.store{{.*}} %[[NEW_COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: cir.store{{.*}} %[[TMP]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { float, float } %[[TMP]], 0
 // LLVM: %[[IMAG:.*]] = extractvalue { float, float } %[[TMP]], 1
@@ -256,8 +256,8 @@ void foo6() {
   float _Complex b = --a;
 }
 
-// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-BEFORE: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-BEFORE: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -267,8 +267,8 @@ void foo6() {
 // CIR-BEFORE: cir.store{{.*}} %[[NEW_COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: cir.store{{.*}} %[[NEW_COMPLEX]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -278,8 +278,8 @@ void foo6() {
 // CIR-AFTER: cir.store{{.*}} %[[NEW_COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: cir.store{{.*}} %[[NEW_COMPLEX]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { float, float } %[[TMP]], 0
 // LLVM: %[[IMAG:.*]] = extractvalue { float, float } %[[TMP]], 1
@@ -310,18 +310,18 @@ void foo7() {
   float _Complex b = +a;
 }
 
-// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-BEFORE: cir.store{{.*}} %[[TMP]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER: cir.store{{.*}} %[[TMP]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: store { float, float } %[[TMP]], ptr %[[B_ADDR]], align 4
 
@@ -341,8 +341,8 @@ void foo8() {
   float _Complex b = -a;
 }
 
-// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-BEFORE: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-BEFORE: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -351,8 +351,8 @@ void foo8() {
 // CIR-BEFORE: %[[NEW_COMPLEX:.*]] = cir.complex.create %[[REAL_MINUS]], %[[IMAG_MINUS]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-BEFORE: cir.store{{.*}} %[[NEW_COMPLEX]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: %[[TMP:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
@@ -361,8 +361,8 @@ void foo8() {
 // CIR-AFTER: %[[NEW_COMPLEX:.*]] = cir.complex.create %[[REAL_MINUS]], %[[IMAG_MINUS]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-AFTER: cir.store{{.*}} %[[NEW_COMPLEX]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { float, float } %[[TMP]], 0
 // LLVM: %[[IMAG:.*]] = extractvalue { float, float } %[[TMP]], 1
@@ -391,15 +391,15 @@ void foo9() {
 }
 
 
-// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
-// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["b", init]
+// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.f16>>
+// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.f16>>
 // CIR-BEFORE: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
 // CIR-BEFORE: %[[A_COMPLEX_F32:.*]] = cir.cast float_complex %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.complex<!cir.float>
 // CIR-BEFORE: %[[A_COMPLEX_F16:.*]] = cir.cast float_complex %[[A_COMPLEX_F32]] : !cir.complex<!cir.float> -> !cir.complex<!cir.f16>
 // CIR-BEFORE: cir.store{{.*}} %[[A_COMPLEX_F16]], %[[B_ADDR]] : !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
-// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["b", init]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.f16>>
+// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.f16>>
 // CIR-AFTER: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
 // CIR-AFTER: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
 // CIR-AFTER: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
@@ -413,8 +413,8 @@ void foo9() {
 // CIR-AFTER: %[[RESULT_COMPLEX_F16:.*]] = cir.complex.create %[[RESULT_REAL_F16]], %[[RESULT_IMAG_F16]] : !cir.f16 -> !cir.complex<!cir.f16>
 // CIR-AFTER: cir.store{{.*}} %[[RESULT_COMPLEX_F16]], %[[B_ADDR]] : !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { half, half }, i64 1, align 2
-// LLVM: %[[B_ADDR:.*]] = alloca { half, half }, i64 1, align 2
+// LLVM: %[[A_ADDR:.*]] = alloca { half, half }, align 2
+// LLVM: %[[B_ADDR:.*]] = alloca { half, half }, align 2
 // LLVM: %[[TMP_A:.*]] = load { half, half }, ptr %[[A_ADDR]], align 2
 // LLVM: %[[A_REAL:.*]] = extractvalue { half, half } %[[TMP_A]], 0
 // LLVM: %[[A_IMAG:.*]] = extractvalue { half, half } %[[TMP_A]], 1
@@ -446,8 +446,8 @@ void foo10() {
   _Float16 _Complex b = -a;
 }
 
-// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
-// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["b", init]
+// CIR-BEFORE: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.f16>>
+// CIR-BEFORE: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.f16>>
 // CIR-BEFORE: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
 // CIR-BEFORE: %[[A_COMPLEX_F32:.*]] = cir.cast float_complex %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.complex<!cir.float>
 // CIR-BEFORE: %[[REAL:.*]] = cir.complex.real %[[A_COMPLEX_F32]] : !cir.complex<!cir.float> -> !cir.float
@@ -458,8 +458,8 @@ void foo10() {
 // CIR-BEFORE: %[[A_COMPLEX_F16:.*]] = cir.cast float_complex %[[RESULT]] : !cir.complex<!cir.float> -> !cir.complex<!cir.f16>
 // CIR-BEFORE: cir.store{{.*}} %[[A_COMPLEX_F16]], %[[B_ADDR]] : !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
-// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["b", init]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.f16>>
+// CIR-AFTER: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.f16>>
 // CIR-AFTER: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
 // CIR-AFTER: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
 // CIR-AFTER: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
@@ -478,8 +478,8 @@ void foo10() {
 // CIR-AFTER: %[[RESULT_COMPLEX_F16:.*]] = cir.complex.create %[[RESULT_REAL_F16]], %[[RESULT_IMAG_F16]] : !cir.f16 -> !cir.complex<!cir.f16>
 // CIR-AFTER: cir.store{{.*}} %[[RESULT_COMPLEX_F16]], %[[B_ADDR]] : !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { half, half }, i64 1, align 2
-// LLVM: %[[B_ADDR:.*]] = alloca { half, half }, i64 1, align 2
+// LLVM: %[[A_ADDR:.*]] = alloca { half, half }, align 2
+// LLVM: %[[B_ADDR:.*]] = alloca { half, half }, align 2
 // LLVM: %[[TMP_A:.*]] = load { half, half }, ptr %[[A_ADDR]], align 2
 // LLVM: %[[A_REAL:.*]] = extractvalue { half, half } %[[TMP_A]], 0
 // LLVM: %[[A_IMAG:.*]] = extractvalue { half, half } %[[TMP_A]], 1
@@ -520,7 +520,7 @@ void complex_unary_inc_lvalue() {
 }
 
 
-// CIR-BEFORE: %[[A_ADDR]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-BEFORE: %[[A_ADDR]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-BEFORE: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-BEFORE: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
@@ -529,7 +529,7 @@ void complex_unary_inc_lvalue() {
 // CIR-BEFORE: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-BEFORE: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
@@ -538,7 +538,7 @@ void complex_unary_inc_lvalue() {
 // CIR-AFTER: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-AFTER: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
 // LLVM: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
@@ -563,7 +563,7 @@ void complex_unary_dec_lvalue() {
   --a;
 }
 
-// CIR-BEFORE: %[[A_ADDR]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-BEFORE: %[[A_ADDR]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-BEFORE: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-BEFORE: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
@@ -572,7 +572,7 @@ void complex_unary_dec_lvalue() {
 // CIR-BEFORE: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-BEFORE: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR-AFTER: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-AFTER: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
@@ -581,7 +581,7 @@ void complex_unary_dec_lvalue() {
 // CIR-AFTER: %[[RESULT:.*]] = cir.complex.create %[[RESULT_REAL]], %[[A_IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR-AFTER: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
 // LLVM: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1

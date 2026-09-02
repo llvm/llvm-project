@@ -38,6 +38,9 @@ FPType = ByteSizes([
    ("bfloat", 2),
    ("float",  4),
    ("double", 8)])
+
+FP128LoadType = ByteSizes([
+   ("fp128", 16)])
 # fmt: on
 
 
@@ -206,6 +209,7 @@ def align(val, aligned: bool) -> int:
 def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
     instr = "atomicrmw"
     generate_unused = False
+    attrs = " #0" if featname == "lsfe" else ""
     tests = []
     for op in atomicrmw_ops:
         for aligned in Aligned:
@@ -216,7 +220,7 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
                     tests.append(
                         textwrap.dedent(
                             f"""
-                        define dso_local {ty} @{name}(ptr %ptr, {ty} %value) {{
+                        define dso_local {ty} @{name}(ptr %ptr, {ty} %value){attrs} {{
                             %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
                             ret {ty} %r
                         }}
@@ -229,7 +233,7 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
                         tests.append(
                             textwrap.dedent(
                                 f"""
-                           define dso_local void @{name}(ptr %ptr, {ty} %value) {{
+                           define dso_local void @{name}(ptr %ptr, {ty} %value){attrs} {{
                                %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
                                ret void
                            }}
@@ -247,12 +251,32 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
     for test in tests:
         f.write(test)
 
+    if featname == "lsfe":
+        f.write(
+            textwrap.dedent(
+                """
+                define dso_local float @atomicrmw_fadd_float_aligned_seq_cst_trapping(ptr %ptr, float %value) {
+                    %r = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4
+                    ret float %r
+                }
 
-def all_load(f):
-    for aligned in Aligned:
-        for ty, val in Type:
+                define dso_local float @atomicrmw_fadd_float_aligned_seq_cst_strictfp(ptr %ptr, float %value) #1 {
+                    %r = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4
+                    ret float %r
+                }
+
+                attributes #0 = { "no-trapping-math"="true" }
+                attributes #1 = { strictfp "no-trapping-math"="true" }
+                """
+            )
+        )
+
+
+def emit_load_tests(f, datatypes, alignments, orderings):
+    for aligned in alignments:
+        for ty, val in datatypes:
             alignval = align(val, aligned)
-            for ordering in ATOMIC_LOAD_ORDERS:
+            for ordering in orderings:
                 for const in [False, True]:
                     name = f"load_atomic_{ty}_{aligned}_{ordering}"
                     instr = "load atomic"
@@ -269,6 +293,12 @@ def all_load(f):
                     """
                         )
                     )
+
+
+def all_load(f, feature):
+    emit_load_tests(f, Type, Aligned, ATOMIC_LOAD_ORDERS)
+    if feature in [Feature.lse2, Feature.rcpc3, Feature.lse2_lse128]:
+        emit_load_tests(f, FP128LoadType, [Aligned.aligned], [AtomicOrder.seq_cst])
 
 
 def all_store(f):
@@ -389,7 +419,7 @@ def write_lit_tests(feature, datatypes, ops):
             with open(f"{triple}-atomic-load-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
                 header(f, triple, [feat], filter_args)
-                all_load(f)
+                all_load(f, feat)
 
             with open(f"{triple}-atomic-store-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'

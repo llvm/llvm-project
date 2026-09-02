@@ -811,9 +811,9 @@ static bool shouldCheckArgs(CallBase &CI, const TargetLibraryInfo &TLI,
     return false;
 
   const auto ID = Fn->getIntrinsicID();
-  LibFunc LFunc = LibFunc::NotLibFunc;
+  LibFunc LFunc = TLI.getLibFunc(*Fn);
   // Always check args of unknown functions.
-  if (ID == Intrinsic::ID() && !TLI.getLibFunc(*Fn, LFunc))
+  if (ID == Intrinsic::ID() && LFunc == NotLibFunc)
     return true;
 
   // Do not check args of an `fabs` call that is used for a comparison.
@@ -856,8 +856,7 @@ void NumericalStabilitySanitizer::populateShadowStack(
 
   // Do not create shadow stacks for intrinsics/known lib funcs.
   if (Function *Fn = CI.getCalledFunction()) {
-    LibFunc LFunc;
-    if (Fn->isIntrinsic() || TLI.getLibFunc(*Fn, LFunc))
+    if (Fn->isIntrinsic() || TLI.getLibFunc(*Fn) != NotLibFunc)
       return;
   }
 
@@ -1532,8 +1531,8 @@ const KnownIntrinsic::WidenedIntrinsic *KnownIntrinsic::widen(StringRef Name) {
 // Returns the name of the LLVM intrinsic corresponding to the given function.
 static const char *getIntrinsicFromLibfunc(Function &Fn, Type *VT,
                                            const TargetLibraryInfo &TLI) {
-  LibFunc LFunc;
-  if (!TLI.getLibFunc(Fn, LFunc))
+  LibFunc LFunc = TLI.getLibFunc(Fn);
+  if (LFunc == NotLibFunc)
     return nullptr;
 
   if (const char *Name = KnownIntrinsic::get(LFunc))
@@ -1897,8 +1896,9 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
         break;
       }
 
-      if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
-        BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
+      if (BitcastTy)
+        if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
+          BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
     }
     if (BitcastTy) {
       const MemoryExtents Extents = getMemoryExtentsOrDie(BitcastTy);
@@ -2088,7 +2088,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   //
   //    For example, in the following example, the instrumentation in
   //    `instrumented_1` rejects the shadow return value from `instrumented_3`
-  //    because is is not tagged as expected (`&instrumented_3` instead of
+  //    because it is not tagged as expected (`&instrumented_3` instead of
   //    `non_instrumented_2`):
   //
   //        instrumented_1()

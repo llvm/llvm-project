@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Lower/BuiltinModules.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Support.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/TypeCode.h"
-#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/support.h"
 #include "flang/Support/Fortran.h"

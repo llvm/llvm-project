@@ -153,7 +153,7 @@ struct FormatResourceDimension
 
   bool HasCounter;
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     dxil::ResourceKind RK = Item.getResourceKind();
     switch (RK) {
     default: {
@@ -193,8 +193,8 @@ struct FormatBindingID
       : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI),
         RC(RTI.getResourceClass()) {}
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
-    OS << getRCPrefix(RC).upper() << Item.getBinding().RecordID;
+  void format(llvm::raw_ostream &OS, StringRef Style) {
+    OS << getRCPrefix(RC).upper() << Item.getBinding().BindingID;
   }
 };
 
@@ -207,7 +207,7 @@ struct FormatBindingLocation
       : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI),
         RC(RTI.getResourceClass()) {}
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     const auto &Binding = Item.getBinding();
     OS << getRCPrefix(RC) << Binding.LowerBound;
     if (Binding.Space)
@@ -220,7 +220,7 @@ struct FormatBindingSize
   explicit FormatBindingSize(const dxil::ResourceInfo &RI)
       : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI) {}
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     uint32_t Size = Item.getBinding().Size;
     if (Size == 0)
       OS << "unbounded";
@@ -243,6 +243,8 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
 
   // TODO: Do we want to sort these by binding or something like that?
   for (const dxil::ResourceInfo &RI : DRM) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
 
     dxil::ResourceClass RC = RTI.getResourceClass();
@@ -312,12 +314,10 @@ public:
 } // namespace
 
 static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
-                        DXILResourceTypeMap &DRTM) {
+                        DXILResourceTypeMap &DRTM, const DXILDebugInfoMap &DI) {
   formatted_raw_ostream FOS(OS);
 
   prettyPrintResources(FOS, DRM, DRTM);
-
-  DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
 
   ModuleSlotTracker MST(&M);
   AbstractSlotTrackerStorage *STS = nullptr;
@@ -353,7 +353,8 @@ PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
-  prettyPrint(OS, M, DRM, DRTM);
+  const DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
+  prettyPrint(OS, M, DRM, DRTM, DI);
   return PreservedAnalyses::none();
 }
 
@@ -389,8 +390,9 @@ bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
       getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  prettyPrint(OS, M, DRM, DRTM);
-  return false;
+  const DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
+  prettyPrint(OS, M, DRM, DRTM, DI);
+  return DI.Modified;
 }
 
 ModulePass *llvm::createDXILPrettyPrinterLegacyPass(raw_ostream &OS) {

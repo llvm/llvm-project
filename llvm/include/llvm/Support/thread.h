@@ -51,7 +51,9 @@ class thread {
 public:
 #ifdef LLVM_ON_UNIX
   using native_handle_type = pthread_t;
-#ifdef __MVS__
+#if defined(__LLVM_LIBC__)
+  using id = pthread_id_np_t;
+#elif defined(__MVS__)
   using id = unsigned long long;
 #else
   using id = pthread_t;

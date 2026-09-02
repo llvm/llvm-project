@@ -294,7 +294,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     NewCS->setAttributes(AttributeList::get(F->getContext(),
                                             CallPAL.getFnAttrs(),
                                             CallPAL.getRetAttrs(), ArgAttrVec));
-    NewCS->copyMetadata(CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+    NewCS->copyProfileAndDebugMetadata(CB);
     Args.clear();
     ArgAttrVec.clear();
 
@@ -456,8 +456,9 @@ static bool allCallersPassValidPointerForArgument(
   APInt Bytes(64, NeededDerefBytes);
 
   // Check if the argument itself is marked dereferenceable and aligned.
-  if (isDereferenceableAndAlignedPointer(Arg, NeededAlign, Bytes, DL,
-                                         &Callee->getEntryBlock().front()))
+  if (isDereferenceableAndAlignedPointer(
+          Arg, NeededAlign, Bytes,
+          SimplifyQuery(DL, &Callee->getEntryBlock().front())))
     return true;
 
   // Look at all call sites of the function.  At this point we know we only have
@@ -492,7 +493,8 @@ static bool allCallersPassValidPointerForArgument(
       return true;
 
     return isDereferenceableAndAlignedPointer(CB.getArgOperand(Arg->getArgNo()),
-                                              NeededAlign, Bytes, DL, &CB);
+                                              NeededAlign, Bytes,
+                                              SimplifyQuery(DL, &CB));
   });
 }
 
@@ -805,14 +807,18 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
 /// calls the DoPromotion method.
 static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
                                   unsigned MaxElements, bool IsRecursive) {
-  // Don't perform argument promotion for naked functions; otherwise we can end
-  // up removing parameters that are seemingly 'not used' as they are referred
-  // to in the assembly.
-  if (F->hasFnAttribute(Attribute::Naked))
+  // Don't rewrite the signature of functions whose ABI must be preserved. For
+  // naked functions we can end up removing parameters that are seemingly 'not
+  // used' as they are referred to in the assembly.
+  if (!F->canChangeSignature())
     return nullptr;
 
   // Make sure that it is local to this module.
   if (!F->hasLocalLinkage())
+    return nullptr;
+
+  // Ensure function definition is available for interprocedural analysis.
+  if (!F->isDefinitionExact())
     return nullptr;
 
   // Don't promote arguments for variadic functions. Adding, removing, or

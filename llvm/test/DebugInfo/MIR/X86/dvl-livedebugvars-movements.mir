@@ -13,7 +13,7 @@
 # CHECK-NEXT:  DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rax, $rbx,
 # CHECK-NEXT:  CALL64pcrel32 @foo
 # CHECK-NEXT:  DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref, DW_OP_LLVM_arg, 1, DW_OP_plus), %stack.0, $rbx,
-# CHECK-NEXT:  $rcx = COPY killed renamable $rbx
+# CHECK-NEXT:  $rcx = lr-split COPY killed renamable $rbx
 # CHECK-NEXT:  DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref, DW_OP_LLVM_arg, 1, DW_OP_plus), %stack.0, $rcx,
 # CHECK-NEXT:  INLINEASM
 # CHECK-NEXT:  $rax = MOV64rm %stack.0

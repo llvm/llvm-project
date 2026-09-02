@@ -84,21 +84,20 @@ namespace {
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// spirv.AccessChainOp
+// spirv.AccessChainOp / spirv.InBoundsAccessChainOp
 //===----------------------------------------------------------------------===//
 
 namespace {
 
-/// Combines chained `spirv::AccessChainOp` operations into one
-/// `spirv::AccessChainOp` operation.
-struct CombineChainedAccessChain final
-    : OpRewritePattern<spirv::AccessChainOp> {
-  using Base::Base;
+/// Combines chained SPIR-V access chain operations of the same kind into one.
+template <typename AccessChainOp>
+struct CombineChainedAccessChain final : OpRewritePattern<AccessChainOp> {
+  using OpRewritePattern<AccessChainOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(spirv::AccessChainOp accessChainOp,
+  LogicalResult matchAndRewrite(AccessChainOp accessChainOp,
                                 PatternRewriter &rewriter) const override {
     auto parentAccessChainOp =
-        accessChainOp.getBasePtr().getDefiningOp<spirv::AccessChainOp>();
+        accessChainOp.getBasePtr().template getDefiningOp<AccessChainOp>();
 
     if (!parentAccessChainOp) {
       return failure();
@@ -108,7 +107,7 @@ struct CombineChainedAccessChain final
     SmallVector<Value, 4> indices(parentAccessChainOp.getIndices());
     llvm::append_range(indices, accessChainOp.getIndices());
 
-    rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
+    rewriter.replaceOpWithNewOp<AccessChainOp>(
         accessChainOp, parentAccessChainOp.getBasePtr(), indices);
 
     return success();
@@ -118,7 +117,12 @@ struct CombineChainedAccessChain final
 
 void spirv::AccessChainOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<CombineChainedAccessChain>(context);
+  results.add<CombineChainedAccessChain<spirv::AccessChainOp>>(context);
+}
+
+void spirv::InBoundsAccessChainOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<CombineChainedAccessChain<spirv::InBoundsAccessChainOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -314,9 +318,14 @@ struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
     bool isApplicable = false;
     if (auto prevInt = dyn_cast<IntegerAttr>(prevValue)) {
       auto currInt = cast<IntegerAttr>(currValue);
+      if (currInt.getValue().isZero())
+        return failure();
       isApplicable = prevInt.getValue().urem(currInt.getValue()) == 0;
     } else if (auto prevVec = dyn_cast<DenseElementsAttr>(prevValue)) {
       auto currVec = cast<DenseElementsAttr>(currValue);
+      if (llvm::any_of(currVec.getValues<APInt>(),
+                       [](const APInt &curr) { return curr.isZero(); }))
+        return failure();
       isApplicable = llvm::all_of(llvm::zip_equal(prevVec.getValues<APInt>(),
                                                   currVec.getValues<APInt>()),
                                   [](const auto &pair) {
@@ -1275,14 +1284,15 @@ struct ConvertSelectionOpToSelect final : OpRewritePattern<spirv::SelectionOp> {
     Value trueValue = getSrcValue(trueBlock);
     Value falseValue = getSrcValue(falseBlock);
     Value ptrValue = getDstPtr(trueBlock);
-    auto storeOpAttributes =
-        cast<spirv::StoreOp>(trueBlock->front())->getAttrs();
+    auto storeOp = cast<spirv::StoreOp>(trueBlock->front());
 
     auto selectOp = spirv::SelectOp::create(
         rewriter, selectionOp.getLoc(), trueValue.getType(),
         brConditionalOp.getCondition(), trueValue, falseValue);
-    spirv::StoreOp::create(rewriter, selectOp.getLoc(), ptrValue,
-                           selectOp.getResult(), storeOpAttributes);
+    auto newStore = spirv::StoreOp::create(
+        rewriter, selectOp.getLoc(), ptrValue, selectOp.getResult(),
+        storeOp.getMemoryAccessAttr(), storeOp.getAlignmentAttr());
+    newStore->setDiscardableAttrs(storeOp->getDiscardableAttrDictionary());
 
     // `spirv.mlir.selection` is not needed anymore.
     rewriter.eraseOp(op);

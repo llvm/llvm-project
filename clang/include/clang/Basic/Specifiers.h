@@ -89,7 +89,7 @@ namespace clang {
     TST_typeof_unqualExpr, // C23 typeof_unqual(expression)
     TST_decltype,          // C++11 decltype
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     TST_auto,            // C++11 auto
     TST_decltype_auto,   // C++1y decltype(auto)
     TST_auto_type,       // __auto_type extension
@@ -193,8 +193,6 @@ namespace clang {
     /// This template specialization was implicitly instantiated from a
     /// template. (C++ [temp.inst]).
     TSK_ImplicitInstantiation,
-    /// This template is a friend declaration.
-    TSK_FriendDeclaration,
     /// This template specialization was declared or defined by an
     /// explicit specialization (C++ [temp.expl.spec]) or partial
     /// specialization (C++ [temp.class.spec]).
@@ -229,7 +227,6 @@ namespace clang {
 
     case TSK_Undeclared:
     case TSK_ImplicitInstantiation:
-    case TSK_FriendDeclaration:
       return false;
     }
     llvm_unreachable("bad template specialization kind");
@@ -292,7 +289,6 @@ namespace clang {
     CC_AAPCS,              // __attribute__((pcs("aapcs")))
     CC_AAPCS_VFP,          // __attribute__((pcs("aapcs-vfp")))
     CC_IntelOclBicc,       // __attribute__((intel_ocl_bicc))
-    CC_SpirFunction,       // default for OpenCL functions on SPIR target
     CC_DeviceKernel,       // __attribute__((device_kernel))
     CC_Swift,              // __attribute__((swiftcall))
     CC_SwiftAsync,         // __attribute__((swiftasynccall))
@@ -328,7 +324,6 @@ namespace clang {
     case CC_X86RegCall:
     case CC_X86Pascal:
     case CC_X86VectorCall:
-    case CC_SpirFunction:
     case CC_DeviceKernel:
     case CC_Swift:
     case CC_SwiftAsync:

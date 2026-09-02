@@ -2154,7 +2154,7 @@ LLVM_ATTRIBUTE_USED static bool isHidden(const CheckerRegistryData &Registry,
 }
 
 PathSensitiveBugReport::PathSensitiveBugReport(
-    const BugType &bt, StringRef shortDesc, StringRef desc,
+    const BugType &bt, const llvm::Twine &shortDesc, const llvm::Twine &desc,
     const ExplodedNode *errorNode, PathDiagnosticLocation LocationToUnique,
     const Decl *DeclToUnique)
     : BugReport(Kind::PathSensitive, bt, shortDesc, desc), ErrorNode(errorNode),
@@ -2188,8 +2188,8 @@ void PathSensitiveBugReport::addVisitor(
   llvm::FoldingSetNodeID ID;
   visitor->Profile(ID);
 
-  void *InsertPos = nullptr;
-  if (CallbacksSet.FindNodeOrInsertPos(ID, InsertPos)) {
+  llvm::FoldingSetInsertToken InsertToken;
+  if (CallbacksSet.lookup(ID, InsertToken)) {
     return;
   }
 
@@ -2850,9 +2850,9 @@ generateVisitorsDiagnostics(PathSensitiveBugReport *R,
     if (!Pred) {
       PathDiagnosticPieceRef LastPiece;
       for (auto &V : visitors) {
-        V->finalizeVisitor(BRC, ErrorNode, *R);
+        V->finalizeVisitor(ErrorNode, BRC, *R);
 
-        if (auto Piece = V->getEndPath(BRC, ErrorNode, *R)) {
+        if (auto Piece = V->getEndPath(ErrorNode, BRC, *R)) {
           assert(!LastPiece &&
                  "There can only be one final piece in a diagnostic.");
           assert(Piece->getKind() == PathDiagnosticPiece::Kind::Event &&
@@ -2985,12 +2985,12 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   R->Profile(ID);
 
   // Lookup the equivance class.  If there isn't one, create it.
-  void *InsertPos;
-  BugReportEquivClass* EQ = EQClasses.FindNodeOrInsertPos(ID, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  BugReportEquivClass *EQ = EQClasses.lookup(ID, InsertToken);
 
   if (!EQ) {
     EQ = new BugReportEquivClass(std::move(R));
-    EQClasses.InsertNode(EQ, InsertPos);
+    EQClasses.insert(EQ, InsertToken);
     EQClassesVector.push_back(EQ);
   } else
     EQ->AddReport(std::move(R));

@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=tahiti < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgpu6.00 < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: invalid register "flat_scratch_lo" for subtarget.
 

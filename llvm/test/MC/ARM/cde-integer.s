@@ -114,11 +114,11 @@ cx1d  p1, r1, #1234
 cx1d  p1, r2, r4, #1234
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an even-numbered register in the range [r0, r10]
 cx1da  p0, r1, #1234
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,8191]
 cx1   p0, r0, r0, #1234
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,8191]
 cx1d   p0, r0, r1, r2, #1234
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,8191]
 cx1a   p0, r0, r2, #1234
 
 // CHECK-LABEL: test_cx2:
@@ -142,11 +142,11 @@ cx2d  p0, r12, r7, #123
 cx2da  p0, r7, r7, #123
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an even-numbered register in the range [r0, r10]
 cx2da  p1, apsr_nzcv, r7, #123
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,511]
 cx2   p0, r0, r0, r7, #1
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be a consecutive register
 cx2d   p0, r0, r0, r7, #1
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,511]
 cx2a   p0, r0, r2, r7, #1
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be a consecutive register
 cx2da   p0, r0, r2, r7, #1
@@ -172,48 +172,48 @@ cx3     p0, r1, r5, r7, #64
 cx3da   p1, r14, r2, r3, #12
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be a register in the range [r0, r12], r14 or apsr_nzcv
 cx3a    p0, r15, r2, r3, #12
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,511]
 cx2   p0, r0, r0, r7, r3, #1
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be a consecutive register
 cx2d   p0, r0, r0, r7, r3, #1
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,63]
 cx3a    p0, r1, r2, r5, r7, #63
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be a consecutive register
 cx3da   p0, r8, apsr_nzcv, r2, r3, #12
 
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx1    p0, s0, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx1    p0, d0, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx1    p0, q0, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx1a   p0, s0, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx1a   p0, d0, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx1a   p0, q0, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx2    p0, s0, s1, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx2    p0, d0, d1, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx2    p0, q0, q1, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx2a   p0, s0, s1, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx2a   p0, d0, d1, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx2    p0, q0, q1, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx3    p0, s0, s1, s2, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx3    p0, d0, d1, d2, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx3    p0, q0, q1, q2, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx3a   p0, s0, s1, s2, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx3a   p0, d0, d1, d2, #0
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 vcx3a   p0, q0, q1, q2, #0

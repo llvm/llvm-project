@@ -1138,8 +1138,7 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
     NewState = processLoopEnd(S, NewState);
 
   LoopExit PP(S, Pred->getStackFrame());
-  ExplodedNode *N = Engine.makeNode(PP, NewState, Pred);
-  if (N && !N->isSink())
+  if (ExplodedNode *N = Engine.makeNode(PP, NewState, Pred))
     Engine.enqueueStmtNode(N, getCurrBlock(), currStmtIdx);
 }
 
@@ -1148,14 +1147,12 @@ void ExprEngine::ProcessLifetimeEnd(const Stmt *S, const VarDecl *D,
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 S->getBeginLoc(),
                                 "Error evaluating end of a lifetime");
-  ExplodedNodeSet Src;
-  NodeBuilder Bldr(Pred, Src, *currBldrCtx);
   LifetimeEnd PP(S, D, Pred->getStackFrame());
-  Bldr.generateNode(PP, Pred->getState(), Pred);
+  ExplodedNode *Src = Engine.makeNode(PP, Pred->getState(), Pred);
 
   ExplodedNodeSet Dst;
   getCheckerManager().runCheckersForLifetimeEnd(Dst, Src, D, *this);
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
@@ -1198,7 +1195,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       }
 
       SVal InitVal;
-      if (Init->getType()->isArrayType()) {
+      if (Field->getType()->isArrayType()) {
         // Handle arrays of trivial type. We can represent this with a
         // primitive load/copy from the base array region.
         const ArraySubscriptExpr *ASE;
@@ -1568,10 +1565,9 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   }
 
   ExplodedNode *CleanPred = Engine.makePostStmtNode(BTE, State, Pred);
-  if (!CleanPred || CleanPred->isSink()) {
+  if (!CleanPred) {
     // FIXME: We can get a null node here due to temporaries being
     // bound to default parameters.
-    // Sink check is just PosteriorlyOverconstrained paranoia.
     CleanPred = Pred;
   }
 
@@ -1639,7 +1635,6 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
     Dst = PreVisit;
     return;
   }
-  NodeBuilder Builder(PreVisit, Dst, *currBldrCtx);
   for (ExplodedNode *Node : PreVisit) {
     ProgramStateRef State = Node->getState();
     const StackFrame *SF = Node->getStackFrame();
@@ -1650,7 +1645,7 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
       // temporary destructor nodes.
       State = addObjectUnderConstruction(State, BTE, SF, UnknownVal());
     }
-    Builder.generateNode(BTE, Node, State);
+    Dst.insert(Engine.makePostStmtNode(BTE, State, Node));
   }
 }
 
@@ -1704,6 +1699,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ExpressionTraitExprClass:
     case Stmt::UnresolvedLookupExprClass:
     case Stmt::UnresolvedMemberExprClass:
+    case Stmt::DependentTemplateIdExprClass:
     case Stmt::RecoveryExprClass:
     case Stmt::CXXNoexceptExprClass:
     case Stmt::PackExpansionExprClass:
@@ -1719,6 +1715,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SEHExceptStmtClass:
     case Stmt::SEHLeaveStmtClass:
     case Stmt::SEHFinallyStmtClass:
+    case Stmt::CXXExpansionStmtPatternClass:
+    case Stmt::CXXExpansionStmtInstantiationClass:
+    case Stmt::CXXExpansionSelectExprClass:
     case Stmt::OMPCanonicalLoopClass:
     case Stmt::OMPParallelDirectiveClass:
     case Stmt::OMPSimdDirectiveClass:
@@ -1744,7 +1743,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPFlushDirectiveClass:
     case Stmt::OMPDepobjDirectiveClass:
     case Stmt::OMPScanDirectiveClass:
-    case Stmt::OMPOrderedDirectiveClass:
+    case Stmt::OMPOrderedStandaloneDirectiveClass:
+    case Stmt::OMPOrderedBlockAssocDirectiveClass:
     case Stmt::OMPAtomicDirectiveClass:
     case Stmt::OMPAssumeDirectiveClass:
     case Stmt::OMPTargetDirectiveClass:
@@ -2132,12 +2132,12 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       ExplodedNodeSet PreVisit;
       const auto *CDE = cast<CXXDeleteExpr>(S);
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
+
       ExplodedNodeSet PostVisit;
-      getCheckerManager().runCheckersForPostStmt(PostVisit, PreVisit, S, *this);
+      for (const auto i : PreVisit)
+        VisitCXXDeleteExpr(CDE, i, PostVisit);
 
-      for (const auto i : PostVisit)
-        VisitCXXDeleteExpr(CDE, i, Dst);
-
+      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
       break;
     }
       // FIXME: ChooseExpr is really a constant.  We need to fix
@@ -2377,6 +2377,9 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
   ExplodedNode *NewNode = G.getNode(NewNodeLoc, NewNodeState, false, &IsNew);
   // We cached out at this point. Caching out is common due to us backtracking
   // from the inlined function, which might spawn several paths.
+  // NOTE: We must return before the `addPredecessor()` call, otherwise the
+  // node vectors `NewNode->Preds` and `BeforeProcessingCall->Succs` would
+  // end up containing multiple copies of `BeforeProcessingCall` / `NewNode`.
   if (!IsNew)
     return true;
 
@@ -2390,44 +2393,29 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
 }
 
 /// Block entrance.  (Update counters).
-/// FIXME: `BlockEdge &L` is only used for debug statistics, consider removing
-/// it and using `BlockEntrance &BE` (where `BlockEntrance` is a subtype of
-/// `ProgramPoint`) for statistical purposes.
-void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
-                                         const BlockEntrance &BE,
-                                         NodeBuilder &Builder,
-                                         ExplodedNode *Pred) {
-  // If we reach a loop which has a known bound (and meets
-  // other constraints) then consider completely unrolling it.
-  if(AMgr.options.ShouldUnrollLoops) {
-    unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
-    const Stmt *Term = getCurrBlock()->getTerminatorStmt();
-    if (Term) {
-      ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
-                                                 Pred, maxBlockVisitOnPath);
-      if (NewState != Pred->getState()) {
-        ExplodedNode *UpdatedNode = Builder.generateNode(BE, NewState, Pred);
-        if (!UpdatedNode)
-          return;
-        Pred = UpdatedNode;
-      }
-    }
+ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
+                                                  ExplodedNode *Pred) {
+  const StackFrame *SF = Pred->getStackFrame();
+  const Stmt *Term = getCurrBlock()->getTerminatorStmt();
+  ProgramStateRef State = Pred->getState();
+  unsigned MaxBlockVisit = AMgr.options.maxBlockVisitOnPath;
+
+  // If we reach a loop which has a known bound (and meets other constraints)
+  // then consider completely unrolling it.
+  if (AMgr.options.ShouldUnrollLoops) {
+    if (Term)
+      State = updateLoopStack(Term, AMgr.getASTContext(), Pred, MaxBlockVisit);
     // Is we are inside an unrolled loop then no need the check the counters.
-    if(isUnrolledState(Pred->getState()))
-      return;
+    if (isUnrolledState(State))
+      return Engine.makeNode(BE, State, Pred);
   }
 
   // If this block is terminated by a loop and it has already been visited the
   // maximum number of times, widen the loop.
   unsigned int BlockCount = getNumVisitedCurrent();
-  if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
-      AMgr.options.ShouldWidenLoops) {
-    const Stmt *Term = getCurrBlock()->getTerminatorStmt();
+  if (BlockCount == MaxBlockVisit - 1 && AMgr.options.ShouldWidenLoops) {
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
-      return;
-
-    // Widen.
-    const StackFrame *SF = Pred->getStackFrame();
+      return Engine.makeNode(BE, State, Pred);
 
     // FIXME:
     // We cannot use the CFG element from the via `ExprEngine::getCFGElementRef`
@@ -2436,44 +2424,45 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // block, but the terminator cannot be referred as a CFG element.
     // Here we just pass the the first CFG element in the block.
     ProgramStateRef WidenedState = getWidenedLoopState(
-        Pred->getState(), SF, BlockCount, *getCurrBlock()->ref_begin());
-    Builder.generateNode(BE, WidenedState, Pred);
-    return;
+        State, SF, BlockCount, *getCurrBlock()->ref_begin());
+    return Engine.makeNode(BE, WidenedState, Pred);
   }
 
-  // FIXME: Refactor this into a checker.
-  if (BlockCount >= AMgr.options.maxBlockVisitOnPath) {
-    static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
-    const ProgramPoint TaggedLoc = BE.withTag(&Tag);
-    const ExplodedNode *Sink =
-        Builder.generateSink(TaggedLoc, Pred->getState(), Pred);
+  // If we did not reach MaxBlockVisitOnPath, continue the analysis normally.
+  if (BlockCount < MaxBlockVisit)
+    return Engine.makeNode(BE, State, Pred);
 
-    const StackFrame *SF = Pred->getStackFrame();
-    if (!SF->inTopFrame()) {
-      // FIXME: This will unconditionally prevent inlining this function (even
-      // from other entry points), which is not a reasonable heuristic: even if
-      // we reached max block count on this particular execution path, there
-      // may be other execution paths (especially with other parametrizations)
-      // where the analyzer can reach the end of the function (so there is no
-      // natural reason to avoid inlining it). However, disabling this would
-      // significantly increase the analysis time (because more entry points
-      // would exhaust their allocated budget), so it must be compensated by a
-      // different (more reasonable) reduction of analysis scope.
-      Engine.FunctionSummaries->markShouldNotInline(SF->getDecl());
+  // ... otherwise, discard this execution path.
+  static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
+  const ExplodedNode *Sink =
+      Engine.makeNode(BE.withTag(&Tag), State, Pred, /*MarkAsSink=*/true);
 
-      // Re-run the call evaluation without inlining it, by storing the
-      // no-inlining policy in the state and enqueuing the new work item on
-      // the list. Replay should almost never fail. Use the stats to catch it
-      // if it does.
-      if ((!AMgr.options.NoRetryExhausted && replayWithoutInlining(Pred, SF)))
-        return;
-      NumMaxBlockCountReachedInInlined++;
-    } else
-      NumMaxBlockCountReached++;
+  if (!SF->inTopFrame()) {
+    // FIXME: This will unconditionally prevent inlining this function (even
+    // from other entry points), which is not a reasonable heuristic: even if
+    // we reached max block count on this particular execution path, there
+    // may be other execution paths (especially with other parametrizations)
+    // where the analyzer can reach the end of the function (so there is no
+    // natural reason to avoid inlining it). However, disabling this would
+    // significantly increase the analysis time (because more entry points
+    // would exhaust their allocated budget), so it must be compensated by a
+    // different (more reasonable) reduction of analysis scope.
+    Engine.FunctionSummaries->markShouldNotInline(SF->getDecl());
 
-    // Make sink nodes as exhausted(for stats) only if retry failed.
-    Engine.blocksExhausted.push_back(std::make_pair(L, Sink));
-  }
+    // Re-run the call evaluation without inlining it, by storing the
+    // no-inlining policy in the state and enqueuing the new work item on
+    // the list. Replay should almost never fail. Use the stats to catch it
+    // if it does.
+    if (!AMgr.options.NoRetryExhausted && replayWithoutInlining(Pred, SF))
+      return nullptr;
+    NumMaxBlockCountReachedInInlined++;
+  } else
+    NumMaxBlockCountReached++;
+
+  // Make sink nodes as exhausted(for stats) only if retry failed.
+  Engine.blocksExhausted.push_back(std::make_pair(BE, Sink));
+
+  return nullptr;
 }
 
 void ExprEngine::runCheckersForBlockEntrance(const BlockEntrance &Entrance,
@@ -2664,7 +2653,6 @@ assumeCondition(const Stmt *ConditionStmt, ExplodedNode *N) {
 
   DefinedSVal V = X.castAs<DefinedSVal>();
 
-  ProgramStateRef StTrue, StFalse;
   return State->assume(V);
 }
 
@@ -3193,20 +3181,20 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
 void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
                                         ExplodedNode *Pred,
                                         ExplodedNodeSet &Dst) {
+  const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
+
   ExplodedNodeSet CheckerPreStmt;
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, Ex, *this);
 
   ExplodedNodeSet EvalSet;
-  NodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
-
-  const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
+  if (isa<CXXConstructExpr>(Ex->getSubExpr())) {
+    // The constructor visitor has already handled everything, so let's skip
+    // forward to PostStmt handling by clearing the range of the 'for' loop.
+    EvalSet.insert(CheckerPreStmt);
+    CheckerPreStmt.clear();
+  }
 
   for (auto *Node : CheckerPreStmt) {
-
-    // The constructor visitior has already taken care of everything.
-    if (isa<CXXConstructExpr>(Ex->getSubExpr()))
-      break;
-
     const StackFrame *SF = Node->getStackFrame();
     ProgramStateRef state = Node->getState();
 
@@ -3281,7 +3269,7 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
     else
       Base = UnknownVal();
 
-    Bldr.generateNode(Ex, Node, state->BindExpr(Ex, SF, Base));
+    EvalSet.insert(Engine.makeNodeWithBinding(Node, Ex, Base));
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
@@ -3352,8 +3340,6 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
     for (const auto I : CheckedSet)
       VisitCommonDeclRefExpr(M, Member, I, EvalSet);
   } else {
-    NodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
-    ExplodedNodeSet Tmp;
 
     for (const auto I : CheckedSet) {
       ProgramStateRef state = I->getState();
@@ -3366,9 +3352,8 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
           state = createTemporaryRegionIfNeeded(state, SF, BaseExpr);
 
         SVal MDVal = svalBuilder.getFunctionPointer(MD);
-        state = state->BindExpr(M, SF, MDVal);
 
-        Bldr.generateNode(M, I, state);
+        EvalSet.insert(Engine.makeNodeWithBinding(I, M, MDVal, state));
         continue;
       }
 
@@ -3412,12 +3397,10 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
             L = UnknownVal();
         }
 
-        Bldr.generateNode(M, I, state->BindExpr(M, SF, L), nullptr,
-                          ProgramPoint::PostLValueKind);
+        EvalSet.insert(Engine.makeNodeWithBinding(
+            I, M, L, state, ProgramPoint::PostLValueKind));
       } else {
-        Bldr.takeNodes(I);
-        evalLoad(Tmp, M, M, I, state, L);
-        Bldr.addNodes(Tmp);
+        evalLoad(EvalSet, M, M, I, state, L);
       }
     }
   }
@@ -3434,16 +3417,14 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
   // FIXME: Ideally we should model the behavior of the atomics precisely here.
 
   ExplodedNodeSet AfterInvalidateSet;
-  NodeBuilder Bldr(AfterPreSet, AfterInvalidateSet, *currBldrCtx);
 
   for (const auto I : AfterPreSet) {
     ProgramStateRef State = I->getState();
     const StackFrame *SF = I->getStackFrame();
 
     SmallVector<SVal, 8> ValuesToInvalidate;
-    for (unsigned SI = 0, Count = AE->getNumSubExprs(); SI != Count; SI++) {
-      const Expr *SubExpr = AE->getSubExprs()[SI];
-      SVal SubExprVal = State->getSVal(SubExpr, SF);
+    for (const Stmt *SubExpr : AE->children()) {
+      SVal SubExprVal = State->getSVal(cast<Expr>(SubExpr), SF);
       ValuesToInvalidate.push_back(SubExprVal);
     }
 
@@ -3452,10 +3433,8 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
                                      /*CausedByPointerEscape*/ true,
                                      /*Symbols=*/nullptr);
 
-    SVal ResultVal = UnknownVal();
-    State = State->BindExpr(AE, SF, ResultVal);
-    Bldr.generateNode(AE, I, State, nullptr,
-                      ProgramPoint::PostStmtKind);
+    AfterInvalidateSet.insert(
+        Engine.makeNodeWithBinding(I, AE, UnknownVal(), State));
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, AfterInvalidateSet, AE, *this);
@@ -3646,9 +3625,10 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
   if (Tmp.empty())
     return;
 
-  NodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
-  if (location.isUndef())
+  if (location.isUndef()) {
+    Dst.insert(Tmp);
     return;
+  }
 
   // Proceed with the load.
   for (const auto I : Tmp) {
@@ -3661,29 +3641,26 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
       V = state->getSVal(location.castAs<Loc>(), LoadTy);
     }
 
-    Bldr.generateNode(NodeEx, I,
-                      state->BindExpr(BoundEx, I->getStackFrame(), V), tag,
-                      ProgramPoint::PostLoadKind);
+    const auto *SF = I->getStackFrame();
+    PostLoad Loc(NodeEx, SF, tag);
+    Dst.insert(Engine.makeNode(Loc, state->BindExpr(BoundEx, SF, V), I));
   }
 }
 
-void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
-                              const Stmt *NodeEx,
-                              const Stmt *BoundEx,
-                              ExplodedNode *Pred,
-                              ProgramStateRef state,
-                              SVal location,
+void ExprEngine::evalLocation(ExplodedNodeSet &Dst, const Stmt *NodeEx,
+                              const Stmt *BoundEx, ExplodedNode *Pred,
+                              ProgramStateRef state, SVal location,
                               bool isLoad) {
-  NodeBuilder BldrTop(Pred, Dst, *currBldrCtx);
   // Early checks for performance reason.
   if (location.isUnknown()) {
+    Dst.insert(Pred);
     return;
   }
 
   ExplodedNodeSet Src;
-  BldrTop.takeNodes(Pred);
-  NodeBuilder Bldr(Pred, Src, *currBldrCtx);
-  if (Pred->getState() != state) {
+  if (Pred->getState() == state) {
+    Src.insert(Pred);
+  } else {
     // Associate this new state with an ExplodedNode.
     // FIXME: If I pass null tag, the graph is incorrect, e.g for
     //   int *p;
@@ -3694,12 +3671,14 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
     // "Variable 'p' initialized to a null pointer value"
 
     static SimpleProgramPointTag tag(TagProviderName, "Location");
-    Bldr.generateNode(NodeEx, Pred, state, &tag);
+    PostStmt Loc(NodeEx, Pred->getStackFrame(), &tag);
+    Src.insert(Engine.makeNode(Loc, state, Pred));
   }
+
   ExplodedNodeSet Tmp;
   getCheckerManager().runCheckersForLocation(Tmp, Src, location, isLoad,
                                              NodeEx, BoundEx, *this);
-  BldrTop.addNodes(Tmp);
+  Dst.insert(Tmp);
 }
 
 std::pair<const ProgramPointTag *, const ProgramPointTag *>
@@ -3719,20 +3698,20 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeExprIfSuccessful,
 void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
                                               ExplodedNodeSet &Src,
                                               const Expr *Ex) {
-  NodeBuilder Bldr(Src, Dst, *currBldrCtx);
-
   for (ExplodedNode *Pred : Src) {
+    const StackFrame *SF = Pred->getStackFrame();
     // Test if the previous node was as the same expression.  This can happen
     // when the expression fails to evaluate to anything meaningful and
     // (as an optimization) we don't generate a node.
     ProgramPoint P = Pred->getLocation();
     if (!P.getAs<PostStmt>() || P.castAs<PostStmt>().getStmt() != Ex) {
+      Dst.insert(Pred);
       continue;
     }
 
     ProgramStateRef State = Pred->getState();
     State = State->set<LastEagerlyAssumeExprIfSuccessful>(nullptr);
-    SVal V = State->getSVal(Ex, Pred->getStackFrame());
+    SVal V = State->getSVal(Ex, SF);
     std::optional<nonloc::SymbolVal> SEV = V.getAs<nonloc::SymbolVal>();
     if (SEV && SEV->isExpression()) {
       const auto &[TrueTag, FalseTag] = getEagerlyAssumeBifurcationTags();
@@ -3747,16 +3726,20 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
       // First assume that the condition is true.
       if (StateTrue) {
         SVal Val = svalBuilder.makeIntVal(1U, Ex->getType());
-        StateTrue = StateTrue->BindExpr(Ex, Pred->getStackFrame(), Val);
-        Bldr.generateNode(Ex, Pred, StateTrue, TrueTag);
+        StateTrue = StateTrue->BindExpr(Ex, SF, Val);
+        PostStmt PostStmtTrue(Ex, SF, TrueTag);
+        Dst.insert(Engine.makeNode(PostStmtTrue, StateTrue, Pred));
       }
 
       // Next, assume that the condition is false.
       if (StateFalse) {
         SVal Val = svalBuilder.makeIntVal(0U, Ex->getType());
-        StateFalse = StateFalse->BindExpr(Ex, Pred->getStackFrame(), Val);
-        Bldr.generateNode(Ex, Pred, StateFalse, FalseTag);
+        StateFalse = StateFalse->BindExpr(Ex, SF, Val);
+        PostStmt PostStmtFalse(Ex, SF, FalseTag);
+        Dst.insert(Engine.makeNode(PostStmtFalse, StateFalse, Pred));
       }
+    } else {
+      Dst.insert(Pred);
     }
   }
 }
@@ -3768,7 +3751,6 @@ bool ExprEngine::didEagerlyAssumeBifurcateAt(ProgramStateRef State,
 
 void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   // We have processed both the inputs and the outputs.  All of the outputs
   // should evaluate to Locs.  Nuke all of their values.
 
@@ -3800,13 +3782,12 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
                                        /*CausedByPointerEscape=*/true);
   }
 
-  Bldr.generateNode(A, Pred, state);
+  Dst.insert(Engine.makePostStmtNode(A, state, Pred));
 }
 
 void ExprEngine::VisitMSAsmStmt(const MSAsmStmt *A, ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst) {
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-  Bldr.generateNode(A, Pred, Pred->getState());
+  Dst.insert(Engine.makePostStmtNode(A, Pred->getState(), Pred));
 }
 
 //===----------------------------------------------------------------------===//
@@ -3972,25 +3953,23 @@ void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
 
   const StackFrame *SF = Pred->getStackFrame();
 
-  NodeBuilder B(Pred, Dst, *currBldrCtx);
   ProgramStateRef S = Pred->getState();
   QualType T = E->getType().getCanonicalType();
 
   bool IsCompound = T->isArrayType() || T->isRecordType() ||
                     T->isAnyComplexType() || T->isVectorType();
 
+  SVal Val;
   if (Args.size() > 1 || (E->isPRValue() && IsCompound && !IsTransparent)) {
     llvm::ImmutableList<SVal> ArgList = getBasicVals().getEmptySValList();
     for (Expr *E : llvm::reverse(Args))
       ArgList = getBasicVals().prependSVal(S->getSVal(E, SF), ArgList);
 
-    B.generateNode(E, Pred,
-                   S->BindExpr(E, SF, svalBuilder.makeCompoundVal(T, ArgList)));
+    Val = getSValBuilder().makeCompoundVal(T, ArgList);
+  } else if (Args.size() == 0) {
+    Val = getSValBuilder().makeZeroVal(T);
   } else {
-    B.generateNode(E, Pred,
-                   S->BindExpr(E, SF,
-                               Args.size() == 0
-                                   ? getSValBuilder().makeZeroVal(T)
-                                   : S->getSVal(Args.front(), SF)));
+    Val = S->getSVal(Args.front(), SF);
   }
+  Dst.insert(Engine.makeNodeWithBinding(Pred, E, Val));
 }

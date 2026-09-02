@@ -187,3 +187,60 @@ TEST(AcceleratorGDBRemotePacketsTest,
   EXPECT_EQ("exit",
             deserialized->actions->breakpoints[0].by_name->function_name);
 }
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorConnectionInfo) {
+  AcceleratorConnectionInfo conn;
+  conn.connect_url = "connect://localhost:1234";
+  conn.platform_name = "remote-gdb-server";
+  conn.triple = "amdgcn-amd-amdhsa";
+  conn.exe_path = "/path/to/accel.elf";
+  conn.synchronous = true;
+
+  Expected<AcceleratorConnectionInfo> deserialized = roundtripJSON(conn);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(conn.connect_url, deserialized->connect_url);
+  EXPECT_EQ(conn.platform_name, deserialized->platform_name);
+  EXPECT_EQ(conn.triple, deserialized->triple);
+  EXPECT_EQ(conn.exe_path, deserialized->exe_path);
+  EXPECT_EQ(conn.synchronous, deserialized->synchronous);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorConnectionInfoMinimal) {
+  // Only the required fields; exe_path defaults to nullopt and synchronous to
+  // false.
+  AcceleratorConnectionInfo conn;
+  conn.connect_url = "connect://localhost:5678";
+  conn.platform_name = "host";
+  conn.triple = "x86_64-unknown-linux-gnu";
+
+  Expected<AcceleratorConnectionInfo> deserialized = roundtripJSON(conn);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(conn.connect_url, deserialized->connect_url);
+  EXPECT_EQ(conn.platform_name, deserialized->platform_name);
+  EXPECT_EQ(conn.triple, deserialized->triple);
+  EXPECT_EQ(std::nullopt, deserialized->exe_path);
+  EXPECT_FALSE(deserialized->synchronous);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActionsWithConnectInfo) {
+  AcceleratorActions actions("mock", 3);
+  AcceleratorConnectionInfo conn;
+  conn.connect_url = "connect://localhost:9999";
+  conn.synchronous = true;
+  actions.connect_info = std::move(conn);
+
+  Expected<AcceleratorActions> deserialized = roundtripJSON(actions);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  ASSERT_TRUE(deserialized->connect_info.has_value());
+  EXPECT_EQ("connect://localhost:9999",
+            deserialized->connect_info->connect_url);
+  EXPECT_TRUE(deserialized->connect_info->synchronous);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActionsWithoutConnectInfo) {
+  AcceleratorActions actions("mock", 4);
+
+  Expected<AcceleratorActions> deserialized = roundtripJSON(actions);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_FALSE(deserialized->connect_info.has_value());
+}

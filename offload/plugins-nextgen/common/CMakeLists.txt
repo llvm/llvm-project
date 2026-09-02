@@ -3,8 +3,8 @@
 include(TableGen)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API/OffloadAPI.td)
-tablegen(OFFLOAD include/OffloadErrcodes.inc -gen-errcodes -I ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
-tablegen(OFFLOAD include/OffloadInfo.inc -gen-info -I ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
+tablegen(OFFLOAD include/OffloadErrcodes.inc -gen-errcodes EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
+tablegen(OFFLOAD include/OffloadInfo.inc -gen-info EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
 add_public_tablegen_target(PluginErrcodes)
 
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
@@ -21,7 +21,7 @@ add_library(PluginCommon OBJECT
 add_dependencies(PluginCommon intrinsics_gen PluginErrcodes OffloadAPI)
 
 # Only enable JIT for those targets that LLVM can support.
-set(supported_jit_targets AMDGPU NVPTX)
+set(supported_jit_targets AMDGPU NVPTX SPIRV)
 if (NOT LLVM_LINK_LLVM_DYLIB)
   foreach(target IN LISTS supported_jit_targets)
     if("${target}" IN_LIST LLVM_TARGETS_TO_BUILD)

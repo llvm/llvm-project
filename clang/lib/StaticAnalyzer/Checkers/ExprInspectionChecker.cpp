@@ -456,8 +456,6 @@ void ExprInspectionChecker::analyzerDenote(const CallExpr *CE,
     return;
   }
 
-  ProgramStateRef State = C.getState();
-
   C.addTransition(C.getState()->set<DenotedSymbols>(Sym, E));
 }
 

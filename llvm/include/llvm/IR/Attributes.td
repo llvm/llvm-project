@@ -201,7 +201,11 @@ def NoDuplicate : EnumAttr<"noduplicate", IntersectPreserve, [FnAttr]>;
 def NoExt : EnumAttr<"noext", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Function does not deallocate memory.
+/// Argument cannot be freed based on the argument pointer.
 def NoFree : EnumAttr<"nofree", IntersectAnd, [FnAttr, ParamAttr]>;
+
+/// Underlying object of argument/return cannot be freed.
+def NoFreeObj : EnumAttr<"nofreeobj", IntersectAnd, [ParamAttr, RetAttr]>;
 
 /// Argument is dead if the call unwinds.
 def DeadOnUnwind : EnumAttr<"dead_on_unwind", IntersectAnd, [ParamAttr]>;
@@ -217,6 +221,9 @@ def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
 
 /// nooutline
 def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;
+
+/// Do not do interprocedural analysis or optimization including this function
+def NoIPA : EnumAttr<"noipa", IntersectPreserve, [FnAttr]>;
 
 /// Function is called early and/or often, so lazy binding isn't worthwhile.
 def NonLazyBind : EnumAttr<"nonlazybind", IntersectPreserve, [FnAttr]>;

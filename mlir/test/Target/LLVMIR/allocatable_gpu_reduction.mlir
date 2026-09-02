@@ -4,7 +4,7 @@
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 : ui64, "dlti.global_memory_space" = 1 : ui64>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
   omp.private {type = private} @_QFfooEi_private_i32 : i32
-  omp.declare_reduction @add_reduction_byref_box_heap_f32 : !llvm.ptr attributes {byref_element_type = f32} alloc {
+  omp.declare_reduction @add_reduction_byref_box_heap_f32 byref_element_type(f32) : !llvm.ptr alloc {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
@@ -46,9 +46,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     %4 = llvm.alloca %0 x i1 : (i64) -> !llvm.ptr<5>
     %5 = llvm.addrspacecast %4 : !llvm.ptr<5> to !llvm.ptr
     %8 = llvm.getelementptr %5[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-    %9 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%8 : !llvm.ptr, f32) -> !llvm.ptr {name = ""}
-    %10 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, implicit, descriptor, to) capture(ByRef) members(%9 : [0] : !llvm.ptr) -> !llvm.ptr {name = "scalar_alloc"}
-    omp.target map_entries(%10 -> %arg0 : !llvm.ptr) {
+    %9 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%8 : !llvm.ptr, f32) name("") -> !llvm.ptr
+    %10 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, implicit, descriptor, to) capture(ByRef) members(%9 : [0] : !llvm.ptr) name("scalar_alloc") -> !llvm.ptr
+    omp.target kernel_type(spmd) map_entries(%10 -> %arg0 : !llvm.ptr) {
       %13 = llvm.mlir.constant(1000 : i32) : i32
       %14 = llvm.mlir.constant(1 : i32) : i32
       omp.parallel {
@@ -58,9 +58,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
 }

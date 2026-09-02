@@ -148,11 +148,22 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
             }
             llvm_unreachable("offset was not found within the record");
           })
-          .Default([](mlir::Type otherTy) {
+          .Case<cir::IntType>([&](cir::IntType intTy) -> mlir::Type {
+            // Integer element type: the offset is a flat element count.
+            // This covers pointer arithmetic through a plain integer base,
+            // e.g. a char* GlobalViewAttr whose pointee type is !s8i rather
+            // than an array — the GEP is getelementptr i8, ptr @sym, i64 N.
+            int64_t eltSize =
+                (int64_t)layout.getTypeAllocSize(intTy).getFixedValue();
+            assert(eltSize > 0 && "element size must be positive");
+            const auto [index, newOffset] =
+                getIndexAndNewOffset(offset, eltSize);
+            indices.push_back(index);
+            offset = newOffset;
+            return intTy;
+          })
+          .Default([](mlir::Type) -> mlir::Type {
             llvm_unreachable("unexpected type");
-            return otherTy; // Even though this is unreachable, we need to
-                            // return a type to satisfy the return type of the
-                            // lambda.
           });
 
   assert(subType);
@@ -174,6 +185,9 @@ uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
     } else if (auto arrayTy = dyn_cast<cir::ArrayType>(ty)) {
       ty = arrayTy.getElementType();
       offset += layout.getTypeAllocSize(ty) * idx;
+    } else if (mlir::isa<cir::IntType>(ty)) {
+      // Integer element type: the index is a flat element count.
+      offset += (int64_t)layout.getTypeAllocSize(ty).getFixedValue() * idx;
     } else {
       llvm_unreachable("unexpected type");
     }
@@ -181,31 +195,8 @@ uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
   return offset;
 }
 
-cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(
-    mlir::ArrayAttr fields, bool packed, bool padded, llvm::StringRef name) {
-  assert(!cir::MissingFeatures::astRecordDeclAttr());
-  llvm::SmallVector<mlir::Type> members;
-  members.reserve(fields.size());
-  llvm::transform(fields, std::back_inserter(members),
-                  [](mlir::Attribute attr) {
-                    return mlir::cast<mlir::TypedAttr>(attr).getType();
-                  });
-
-  if (name.empty())
-    return getAnonRecordTy(members, packed, padded);
-
-  return getCompleteNamedRecordType(members, packed, padded, name);
-}
-
 mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(
-    mlir::ArrayAttr arrayAttr, bool packed, bool padded, mlir::Type type) {
-  auto recordTy = mlir::cast_or_null<cir::RecordType>(type);
-
-  // Record type not specified: create anon record type from members.
-  if (!recordTy) {
-    recordTy = getCompleteRecordType(arrayAttr, packed, padded);
-  }
-
+    mlir::ArrayAttr arrayAttr, cir::RecordType recordTy) {
   // Return zero or anonymous constant record.
   const bool isZero = llvm::all_of(
       arrayAttr, [&](mlir::Attribute a) { return isNullValue(a); });

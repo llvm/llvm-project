@@ -15,6 +15,13 @@ bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
   if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector())
     return false;
 
+  // A matrix type is modeled as an array but lowers to a single flattened
+  // vector and has scalar evaluation kind in classic CodeGen, so it is not an
+  // aggregate for ABI purposes.
+  if (const auto *AT = dyn_cast<ArrayType>(Ty))
+    if (AT->isMatrixType())
+      return false;
+
   // Everything else is treated as aggregate.
   return true;
 }
@@ -43,4 +50,35 @@ RecordArgABI TargetInfo::getRecordArgABI(const Type *Ty) const {
   if (!RT)
     return RAA_Default;
   return getRecordArgABI(RT);
+}
+
+const Type *TargetInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
+  if (const auto *RT = dyn_cast<RecordType>(Ty)) {
+    if (RT->isUnion() && RT->isTransparentUnion()) {
+      auto Fields = RT->getFields();
+      assert(!Fields.empty() && "transparent union cannot be empty");
+      return Fields.front().FieldType;
+    }
+  }
+  return Ty;
+}
+
+bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
+  const abi::Type *Ty = FI.getReturnType();
+
+  // TODO: When Microsoft ABI is supported, CXX records may need different
+  // handling here (see MicrosoftCXXABI::classifyReturnType in Clang).
+  if (const auto *RT = llvm::dyn_cast<abi::RecordType>(Ty)) {
+    if (!RT->canPassInRegisters()) {
+      // A record that cannot pass in registers (e.g. a non-trivial copy/dtor)
+      // is returned indirectly with ByVal=false. This is the RAA path and is
+      // distinct from getIndirectReturnResult (plain aggregates), which uses
+      // ByVal=true.
+      FI.getReturnInfo() =
+          ArgInfo::getIndirect(RT->getAlignment(), /*ByVal=*/false);
+      return true;
+    }
+  }
+
+  return false;
 }

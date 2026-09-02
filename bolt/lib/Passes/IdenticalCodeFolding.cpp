@@ -384,8 +384,8 @@ namespace bolt {
 void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
   for (const auto &[Address, Data] : BC.getBinaryData()) {
     // Filter out all symbols that are not vtables.
-    if (!Data->getName().starts_with("_ZTV") && // vtable
-        !Data->getName().starts_with("_ZTCN"))  // construction vtable
+    if (!Data->nameStartsWith("_ZTV") && // vtable
+        !Data->nameStartsWith("_ZTCN"))  // construction vtable
       continue;
     for (uint64_t I = Address, End = I + Data->getSize(); I < End;
          I += VTableAddressGranularity)
@@ -570,20 +570,30 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
       LLVM_DEBUG(T.stopTimer());
     };
 
-    // Create a task for each congruent bucket
-    for (auto &Entry : CongruentBuckets) {
-      std::set<BinaryFunction *> &Bucket = Entry.second;
-      if (Bucket.size() < 2)
-        continue;
+    if (opts::NoThreads) {
+      // Sort buckets by address for deterministic folding order when running
+      // single-threaded.
+      SmallVector<std::pair<uint64_t, std::set<BinaryFunction *> *>>
+          SortedBuckets;
+      for (auto &Entry : CongruentBuckets) {
+        if (Entry.second.size() >= 2)
+          SortedBuckets.push_back({Entry.first->getAddress(), &Entry.second});
+      }
+      llvm::sort(SortedBuckets, [](const auto &A, const auto &B) {
+        return A.first < B.first;
+      });
+      for (auto &[Addr, Bucket] : SortedBuckets)
+        processSingleBucket(*Bucket);
+    } else {
+      for (auto &Entry : CongruentBuckets) {
+        std::set<BinaryFunction *> &Bucket = Entry.second;
+        if (Bucket.size() < 2)
+          continue;
 
-      if (opts::NoThreads)
-        processSingleBucket(Bucket);
-      else
-        ThPool->async(processSingleBucket, std::ref(Bucket));
-    }
-
-    if (!opts::NoThreads)
+        ThPool->async(processSingleBucket, std::ref(Entry.second));
+      }
       ThPool->wait();
+    }
 
     LLVM_DEBUG(SinglePass.stopTimer());
   };

@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// constexpr split_view(View base, Pattern pattern); // explicit since C++23
+// constexpr explicit split_view(View base, Pattern pattern); // explicit since C++23
 
 #include <algorithm>
 #include <cassert>
@@ -46,17 +46,8 @@ using Pattern = ViewWithCounting;
 
 // SFINAE tests.
 
-#if TEST_STD_VER >= 23
-
 static_assert(!test_convertible<std::ranges::split_view<View, Pattern>, View, Pattern>(),
               "This constructor must be explicit");
-
-#else
-
-static_assert( test_convertible<std::ranges::split_view<View, Pattern>, View, Pattern>(),
-              "This constructor must not be explicit");
-
-#endif // TEST_STD_VER >= 23
 
 constexpr bool test() {
   {

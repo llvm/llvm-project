@@ -59,7 +59,7 @@ namespace {
 
 struct PreISelIntrinsicLowering {
   const TargetMachine *TM;
-  const LibcallLoweringModuleAnalysisResult &ModuleLibcalls;
+  const ModuleLibcallLoweringInfo &ModuleLibcalls;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
   const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
 
@@ -70,7 +70,7 @@ struct PreISelIntrinsicLowering {
 
   explicit PreISelIntrinsicLowering(
       const TargetMachine *TM_,
-      const LibcallLoweringModuleAnalysisResult &ModuleLibcalls_,
+      const ModuleLibcallLoweringInfo &ModuleLibcalls_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       bool UseMemIntrinsicLibFunc_ = true)
@@ -241,25 +241,24 @@ bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
   return SizeVal > Threshold || Threshold == 0;
 }
 
-static bool
-canEmitLibcall(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
-               const TargetMachine *TM, Function *F, RTLIB::Libcall LC) {
+static bool canEmitLibcall(const ModuleLibcallLoweringInfo &ModuleLowering,
+                           const TargetMachine *TM, Function *F,
+                           RTLIB::Libcall LC) {
   // TODO: Should this consider the address space of the memcpy?
   if (!TM)
     return true;
   const LibcallLoweringInfo &Lowering =
-      ModuleLowering.getLibcallLowering(*TM->getSubtargetImpl(*F));
+      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
   return Lowering.getLibcallImpl(LC) != RTLIB::Unsupported;
 }
 
-static bool
-canEmitMemcpy(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
-              const TargetMachine *TM, Function *F) {
+static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
+                          const TargetMachine *TM, Function *F) {
   // TODO: Should this consider the address space of the memcpy?
   if (!TM)
     return true;
   const LibcallLoweringInfo &Lowering =
-      ModuleLowering.getLibcallLowering(*TM->getSubtargetImpl(*F));
+      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
   return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
 }
 
@@ -847,7 +846,7 @@ public:
   }
 
   bool runOnModule(Module &M) override {
-    const LibcallLoweringModuleAnalysisResult &ModuleLibcalls =
+    const ModuleLibcallLoweringInfo &ModuleLibcalls =
         getAnalysis<LibcallLoweringInfoWrapper>().getResult(M);
 
     auto LookupTTI = [this](Function &F) -> TargetTransformInfo & {
@@ -885,7 +884,7 @@ ModulePass *llvm::createPreISelIntrinsicLoweringPass() {
 
 PreservedAnalyses
 PreISelIntrinsicLoweringPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  const LibcallLoweringModuleAnalysisResult &LibcallLowering =
+  const ModuleLibcallLoweringInfo &LibcallLowering =
       MAM.getResult<LibcallLoweringModuleAnalysis>(M);
 
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();

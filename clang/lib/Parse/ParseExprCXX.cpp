@@ -188,43 +188,54 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
            GetLookAheadToken(1).is(tok::ellipsis) &&
            GetLookAheadToken(2).is(tok::l_square) &&
            !GetLookAheadToken(3).is(tok::r_square)) {
-    SourceLocation Start = Tok.getLocation();
-    DeclSpec DS(AttrFactory);
-    SourceLocation CCLoc;
-    SourceLocation EndLoc = ParsePackIndexingType(DS);
-    if (DS.getTypeSpecType() == DeclSpec::TST_error)
-      return false;
+    // C++29 [temp.names]p1:
+    //   pack-index-template-name:
+    //     simple-template-name ... [ constant-expression ]
+    UnqualifiedId TemplateName;
+    TemplateTy Template;
+    TemplateNameKind TNK = isPackIndexingTemplateName(TemplateName, Template);
+    if (TNK != TNK_Non_template) {
+      if (AnnotatePackIndexingTemplateName(SS, TemplateName, Template, TNK))
+        return true;
+    } else {
+      SourceLocation Start = Tok.getLocation();
+      DeclSpec DS(AttrFactory);
+      SourceLocation CCLoc;
+      SourceLocation EndLoc = ParsePackIndexingType(DS);
+      if (DS.getTypeSpecType() == DeclSpec::TST_error)
+        return false;
 
-    QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
-    QualType Type =
-        Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
-                                      DS.getBeginLoc(), DS.getEllipsisLoc());
+      QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
+      QualType Type =
+          Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
+                                        DS.getBeginLoc(), DS.getEllipsisLoc());
 
-    if (Type.isNull())
-      return false;
+      if (Type.isNull())
+        return false;
 
-    // C++ [cpp23.dcl.dcl-2]:
-    //   Previously, T...[n] would declare a pack of function parameters.
-    //   T...[n] is now a pack-index-specifier. [...] Valid C++ 2023 code that
-    //   declares a pack of parameters without specifying a declarator-id
-    //   becomes ill-formed.
-    //
-    // However, we still treat it as a pack indexing type because the use case
-    // is fairly rare, to ensure semantic consistency given that we have
-    // backported this feature to pre-C++26 modes.
-    if (!Tok.is(tok::coloncolon) && !getLangOpts().CPlusPlus26 &&
-        getCurScope()->isFunctionDeclarationScope())
-      Diag(Start, diag::warn_pre_cxx26_ambiguous_pack_indexing_type) << Type;
+      // C++ [cpp23.dcl.dcl-2]:
+      //   Previously, T...[n] would declare a pack of function parameters.
+      //   T...[n] is now a pack-index-specifier. [...] Valid C++ 2023 code
+      //   that declares a pack of parameters without specifying a
+      //   declarator-id becomes ill-formed.
+      //
+      // However, we still treat it as a pack indexing type because the use
+      // case is fairly rare, to ensure semantic consistency given that we have
+      // backported this feature to pre-C++26 modes.
+      if (!Tok.is(tok::coloncolon) && !getLangOpts().CPlusPlus26 &&
+          getCurScope()->isFunctionDeclarationScope())
+        Diag(Start, diag::warn_pre_cxx26_ambiguous_pack_indexing_type) << Type;
 
-    if (!TryConsumeToken(tok::coloncolon, CCLoc)) {
-      AnnotateExistingIndexedTypeNamePack(ParsedType::make(Type), Start,
-                                          EndLoc);
-      return false;
+      if (!TryConsumeToken(tok::coloncolon, CCLoc)) {
+        AnnotateExistingIndexedTypeNamePack(ParsedType::make(Type), Start,
+                                            EndLoc);
+        return false;
+      }
+      if (Actions.ActOnCXXNestedNameSpecifierIndexedPack(SS, DS, CCLoc,
+                                                         std::move(Type)))
+        SS.SetInvalid(SourceRange(Start, CCLoc));
+      HasScopeSpecifier = true;
     }
-    if (Actions.ActOnCXXNestedNameSpecifierIndexedPack(SS, DS, CCLoc,
-                                                       std::move(Type)))
-      SS.SetInvalid(SourceRange(Start, CCLoc));
-    HasScopeSpecifier = true;
   }
 
   // Preferred type might change when parsing qualifiers, we need the original.
@@ -375,7 +386,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
     switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
       if (!NextToken().is(tok::l_paren)) {
         Tok.setKind(tok::identifier);
         Diag(Tok, diag::ext_keyword_as_ident)
@@ -496,7 +507,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
               getCurScope(), SS,
               /*hasTemplateKeyword=*/false, TemplateName, ObjectType,
               EnteringContext, Template, MemberOfUnknownSpecialization,
-              Disambiguation)) {
+              /*AllowTypoCorrection=*/!Disambiguation)) {
         // If lookup didn't find anything, we treat the name as a template-name
         // anyway. C++20 requires this, and in prior language modes it improves
         // error recovery. But before we commit to this, check that we actually
@@ -1865,11 +1876,11 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   return DG;
 }
 
-Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
-                                                SourceLocation Loc,
-                                                Sema::ConditionKind CK,
-                                                bool MissingOK,
-                                                ForRangeInfo *FRI) {
+Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
+                                             SourceLocation Loc,
+                                             Sema::ConditionKind CK,
+                                             bool MissingOK,
+                                             ForRangeInfo *FRI) {
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   PreferredType.enterCondition(Actions, Tok.getLocation());
 
@@ -1880,15 +1891,73 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
     return Sema::ConditionError();
   }
 
+  if (Tok.is(tok::kw___extension__)) {
+    // The first clause of a condition may be a declaration used as an
+    // init-statement (C2y), and that declaration may be prefixed by one or more
+    // __extension__ markers. Consume them up front -- mirroring block-statement
+    // parsing -- so the disambiguation below sees the real start of the
+    // declaration. The markers also silence extension diagnostics for the rest
+    // of the condition, including the diagnostic for the init-statement
+    // extension itself.
+    std::optional<ExtensionRAIIObject> ExtensionGuard;
+    ExtensionGuard.emplace(Diags);
+    while (TryConsumeToken(tok::kw___extension__))
+      ;
+  }
+
+  // FIXME(#198244): We need to support GNU attributes in C2y. We had a
+  // discussion about it and decided to wait and see what GCC would end up doing
+  // because as of now GCC does not support it either as an attribute
+  // declaration.
   ParsedAttributes attrs(AttrFactory);
-  MaybeParseCXX11Attributes(attrs);
+  bool ParsedAttrs = MaybeParseCXX11Attributes(attrs);
 
   const auto WarnOnInit = [this, &CK] {
-    Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
-                                ? diag::warn_cxx14_compat_init_statement
-                                : diag::ext_init_statement)
-        << (CK == Sema::ConditionKind::Switch);
+    if (getLangOpts().CPlusPlus)
+      Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
+                                  ? diag::warn_cxx14_compat_init_statement
+                                  : diag::ext_init_statement)
+          << (CK == Sema::ConditionKind::Switch);
+    else
+      DiagCompat(Tok.getLocation(), diag_compat::decl_statement)
+          << (CK == Sema::ConditionKind::Switch);
   };
+
+  if (!getLangOpts().CPlusPlus) {
+    if (isDeclarationStatement() && !isCXXSimpleDeclaration(false)) {
+      // Accept a C2y declaration, *only* if it's not a simple declaration.
+      WarnOnInit();
+      DeclGroupPtrTy DG;
+      SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
+      ParsedAttributes DeclSpecAttrs(AttrFactory);
+      // C2y replaces the init-statement in C++17 to be a declaration instead.
+      DG = ParseDeclaration(DeclaratorContext::SelectionInit, DeclEnd, attrs,
+                            DeclSpecAttrs);
+      StmtResult DeclStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
+      if (InitStmt == nullptr) {
+        if (DeclStmt.isUsable())
+          Diag(DeclStmt.get()->getBeginLoc(), diag::err_expected_expression)
+              << DeclStmt.get()->getSourceRange();
+        else
+          Diag(DeclStart, diag::err_expected_expression);
+      } else
+        *InitStmt = DeclStmt;
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
+    }
+
+    // Handle '(; expr)', '([[...]]; expr)' and '(__attribute__((...)); expr)'
+    // when GNU-style attributes are finalized.
+    if (InitStmt && Tok.is(tok::semi)) {
+      StmtResult Null = Actions.ActOnNullStmt(ConsumeToken());
+      if (ParsedAttrs) {
+        WarnOnInit();
+        *InitStmt = Actions.ActOnAttributedStmt(attrs, Null.get());
+      } else
+        Diag(Null.get()->getBeginLoc(),
+             diag::err_c2y_first_condition_clause_is_not_declaration);
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
+    }
+  }
 
   // Determine what kind of thing we have.
   switch (isCXXConditionDeclarationOrInitStatement(InitStmt, FRI)) {
@@ -1907,7 +1976,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
       }
       ConsumeToken();
       *InitStmt = Actions.ActOnNullStmt(SemiLoc);
-      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
     EnterExpressionEvaluationContext Eval(
@@ -1925,7 +1994,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
       WarnOnInit();
       *InitStmt = Actions.ActOnExprStmt(Expr.get());
       ConsumeToken();
-      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
     return Actions.ActOnCondition(getCurScope(), Loc, Expr.get(), CK,
@@ -1945,7 +2014,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
                                   attrs, DeclSpecAttrs, /*RequireSemi=*/true);
     }
     *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
-    return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+    return ParseCondition(nullptr, Loc, CK, MissingOK);
   }
 
   case ConditionOrInitStatement::ForRangeDecl: {
@@ -2276,9 +2345,9 @@ bool Parser::ParseUnqualifiedIdTemplateId(
           EnteringContext, Template, /*AllowInjectedClassName*/ true);
     } else {
       TNK = Actions.isTemplateName(getCurScope(), SS, TemplateKWLoc.isValid(),
-                                   TemplateName, ObjectType,
-                                   EnteringContext, Template,
-                                   MemberOfUnknownSpecialization);
+                                   TemplateName, ObjectType, EnteringContext,
+                                   Template, MemberOfUnknownSpecialization,
+                                   /*AllowTypoCorrection=*/false);
 
       if (TNK == TNK_Non_template && !Id.DestructorName.get()) {
         Diag(NameLoc, diag::err_destructor_template_id)
@@ -2823,7 +2892,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
 
   switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     if (!NextToken().is(tok::l_paren)) {
       Tok.setKind(tok::identifier);
       Diag(Tok, diag::ext_keyword_as_ident)
@@ -3406,7 +3475,7 @@ case tok::kw_ ## Spelling: return BTT_ ## Name;
 #include "clang/Basic/TokenKinds.def"
 #define TYPE_TRAIT_N(Spelling, Name, Key) \
   case tok::kw_ ## Spelling: return TT_ ## Name;
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
@@ -3417,7 +3486,7 @@ static ArrayTypeTrait ArrayTypeTraitFromTokKind(tok::TokenKind kind) {
 #define ARRAY_TYPE_TRAIT(Spelling, Name, Key)                                  \
   case tok::kw_##Spelling:                                                     \
     return ATT_##Name;
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
@@ -3428,7 +3497,7 @@ static ExpressionTrait ExpressionTraitFromTokKind(tok::TokenKind kind) {
 #define EXPRESSION_TRAIT(Spelling, Name, Key)                                  \
   case tok::kw_##Spelling:                                                     \
     return ET_##Name;
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 

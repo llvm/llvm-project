@@ -15,43 +15,24 @@ from __future__ import absolute_import, division, print_function
 import sys, os
 from datetime import date
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath("."))
+from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
+
+globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
+
+myst_enable_extensions += ["deflist"]
 
 # -- General configuration -----------------------------------------------------
 
-# If your documentation needs a minimal Sphinx version, state it here.
-# needs_sphinx = '1.0'
-
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.graphviz", "ghlinks"]
-
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-
+extensions += [
+    "sphinx.ext.todo",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.graphviz",
+    "llvm_sphinx.ext.ghlinks",
+]
 
 import sphinx
-
-# When building man pages, we do not use the markdown pages,
-# So, we can continue without the myst_parser dependencies.
-# Doing so reduces dependencies of some packaged llvm distributions.
-try:
-    import myst_parser
-
-    extensions.append("myst_parser")
-except ImportError:
-    if not tags.has("builder-man"):
-        raise
-
-
-# The encoding of source files.
-# source_encoding = 'utf-8-sig'
-
-# The master toctree document.
-master_doc = "index"
 
 # General information about the project.
 project = "Clang"
@@ -225,24 +206,14 @@ man_page_authors = "Maintained by the Clang / LLVM Team (<http://clang.llvm.org>
 command_guide_subpath = "CommandGuide"
 command_guide_path = os.path.join(basedir, command_guide_subpath)
 for name in os.listdir(command_guide_path):
-    # Ignore non-ReST files and the index page.
-    if not name.endswith(".rst") or name in ("index.rst",):
+    # Ignore non-Markdown files and the index page.
+    if not name.endswith(".md") or name in ("index.md",):
         continue
 
     # Otherwise, automatically extract the description.
     file_subpath = os.path.join(command_guide_subpath, name)
     with open(os.path.join(command_guide_path, name)) as f:
-        title = f.readline().rstrip("\n")
-        header = f.readline().rstrip("\n")
-
-        if len(header) != len(title):
-            print(
-                (
-                    "error: invalid header in %r (does not match title)"
-                    % (file_subpath,)
-                ),
-                file=sys.stderr,
-            )
+        title = f.readline().removeprefix("# ").rstrip("\n")
         if " - " not in title:
             print(
                 (
@@ -258,7 +229,7 @@ for name in os.listdir(command_guide_path):
         # Split the name out of the title.
         name, description = title.split(" - ", 1)
         man_pages.append(
-            (file_subpath.replace(".rst", ""), name, description, man_page_authors, 1)
+            (file_subpath.removesuffix(".md"), name, description, man_page_authors, 1)
         )
 
 
@@ -291,3 +262,8 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
+
+# Pygments lexers are sometimes out of date or fail on custom/new Clang C++
+# attributes (e.g. [[clang::...]]). Suppress the warning so the build
+# doesn't abort under -W.
+suppress_warnings = ["misc.highlighting_failure"]

@@ -859,16 +859,16 @@ define <vscale x 2 x i32> @vpselect_trunc(<vscale x 2 x i32> %passthru, <vscale 
 define void @test_dag_loop() {
 ; CHECK-LABEL: test_dag_loop:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 0, e8, m4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vsetivli zero, 0, e16, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m4, tu, mu
-; CHECK-NEXT:    vssubu.vx v12, v8, zero, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmseq.vv v0, v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmv.v.i v20, 0
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m4, tu, mu
+; CHECK-NEXT:    vssubu.vx v20, v16, zero, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
+; CHECK-NEXT:    vmseq.vv v0, v20, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m8, tu, mu
 ; CHECK-NEXT:    vle16.v v8, (zero), v0.t
 ; CHECK-NEXT:    vse16.v v8, (zero)
@@ -919,9 +919,10 @@ define <vscale x 2 x i32> @vredsum(<vscale x 2 x i32> %passthru, <vscale x 2 x i
 define <vscale x 2 x float> @vfredusum(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: vfredusum:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vfredusum.vs v11, v9, v10
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v11, v0
 ; CHECK-NEXT:    fsrm a1
@@ -1191,4 +1192,50 @@ entry:
   %6 = add i64 %5, -1
   %7 = extractelement <vscale x 16 x i32> %4, i64 %6
   ret i32 %7
+}
+
+; Test case for https://github.com/llvm/llvm-project/issues/202894
+define i32 @pr202894(<vscale x 16 x i32> %0, <vscale x 16 x i1> %1, i32 %2, <vscale x 16 x ptr> %p) {
+; CHECK-LABEL: pr202894:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v7, v0
+; CHECK-NEXT:    vl8re64.v v24, (a1)
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    mv a3, a1
+; CHECK-NEXT:    bltu a1, a2, .LBB88_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a3, 1
+; CHECK-NEXT:  .LBB88_2:
+; CHECK-NEXT:    vsetvli a4, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v6, 0
+; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
+; CHECK-NEXT:    vsoxei64.v v6, (zero), v16, v0.t
+; CHECK-NEXT:    srli a3, a1, 3
+; CHECK-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v7, a3
+; CHECK-NEXT:    sub a2, a2, a1
+; CHECK-NEXT:    sltiu a1, a2, 2
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vsoxei64.v v6, (zero), v24, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v8, v8, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  call void @llvm.vp.scatter(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x ptr> %p, <vscale x 16 x i1> %1, i32 1)
+  %4 = zext <vscale x 16 x i1> %1 to <vscale x 16 x i32>
+  %5 = shl <vscale x 16 x i32> %0, %4
+  %6 = zext nneg i32 %2 to i64
+  %7 = add i64 %6, -1
+  %8 = extractelement <vscale x 16 x i32> %5, i64 %7
+  ret i32 %8
 }

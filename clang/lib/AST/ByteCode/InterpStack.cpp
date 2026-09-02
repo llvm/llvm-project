@@ -118,3 +118,9 @@ void InterpStack::dump() const {
     ++Index;
   }
 }
+
+void InterpStack::discardSlow() {
+  assert(!empty());
+
+  TYPE_SWITCH(ItemTypes.back(), { discard<T>(); });
+}

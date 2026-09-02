@@ -71,8 +71,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -979,7 +977,7 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
       if (!IsLastTerminator) {
         LIS->RemoveMachineInstrFromMaps(MI);
       } else {
-        assert(MBB.succ_size() == 1 && MI.getOpcode() != AMDGPU::SI_DEMOTE_I1);
+        assert(MBB.succ_size() == 1);
         MachineInstr *NewTerm = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_BRANCH))
                                     .addMBB(*MBB.succ_begin());
         LIS->ReplaceMachineInstrInMaps(MI, *NewTerm);

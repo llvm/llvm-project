@@ -53,4 +53,6 @@ def no_flush_module_cache : F<"no-flush-module-cache", "do not flush the module 
 
 def verbatim_args : F<"verbatim-args", "Pass commands to the scanner verbatim without adjustments">;
 
+defm log_path : Eq<"log-path", "Write dependency scanning log to file">;
+
 def DASH_DASH : Option<["--"], "", KIND_REMAINING_ARGS>;

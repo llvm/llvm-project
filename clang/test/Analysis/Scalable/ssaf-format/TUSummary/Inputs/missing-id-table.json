@@ -3,5 +3,7 @@
     "kind": "CompilationUnit",
     "name": "test.cpp"
   },
-  "data": []
+  "data": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "TUSummary"
 }

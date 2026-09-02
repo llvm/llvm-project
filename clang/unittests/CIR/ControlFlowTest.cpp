@@ -248,7 +248,7 @@ TEST_F(CIRControlFlowTest, ScopeOpWithResult) {
 
   // getSuccessorInputs(parent) should return the scope's result.
   ValueRange parentInputs =
-      scopeOp.getSuccessorInputs(RegionSuccessor::parent());
+      scopeOp.getSuccessorInputs(mlir::RegionSuccessor(scopeOp));
   EXPECT_EQ(parentInputs.size(), 1u);
 
   // The yield's operands are forwarded to the parent result.
@@ -256,7 +256,7 @@ TEST_F(CIRControlFlowTest, ScopeOpWithResult) {
       getTerminator(scopeOp.getScopeRegion());
   ASSERT_TRUE(term);
   OperandRange yieldOperands =
-      term.getSuccessorOperands(RegionSuccessor::parent());
+      term.getSuccessorOperands(mlir::RegionSuccessor(scopeOp));
   EXPECT_EQ(yieldOperands.size(), 1u);
 
   verifyControlFlowInterfaceConsistency(scopeOp);
@@ -416,6 +416,75 @@ TEST_F(CIRControlFlowTest, DoWhileOp) {
   EXPECT_TRUE(doWhileBranch.hasLoop());
 
   verifyControlFlowInterfaceConsistency(doWhileOp);
+}
+
+TEST_F(CIRControlFlowTest, WhileOpWithCleanup) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func @f(%cond : !cir.bool) {
+      cir.while {
+        cir.condition(%cond)
+      } do {
+        cir.yield
+      } cleanup all {
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto whileOp = findFirstOp<cir::WhileOp>(*module);
+  Region *cleanup = whileOp.maybeGetCleanup();
+  ASSERT_NE(cleanup, nullptr);
+
+  // Parent enters the condition region.
+  expectSuccessors(whileOp, RegionBranchPoint::parent(), {&whileOp.getCond()});
+
+  // Condition branches to the body or, on the false edge, the cleanup region.
+  expectTerminatorSuccessors(whileOp.getCond(), {&whileOp.getBody(), cleanup});
+
+  // Body routes through the cleanup region (there is no step region).
+  expectTerminatorSuccessors(whileOp.getBody(), {cleanup});
+
+  // Cleanup loops back to the condition or exits the loop.
+  expectTerminatorSuccessors(*cleanup, {&whileOp.getCond(), nullptr});
+
+  verifyControlFlowInterfaceConsistency(whileOp);
+}
+
+TEST_F(CIRControlFlowTest, ForOpWithCleanup) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func @f(%cond : !cir.bool) {
+      cir.for : cond {
+        cir.condition(%cond)
+      } body {
+        cir.yield
+      } step {
+        cir.yield
+      } cleanup all {
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto forOp = findFirstOp<cir::ForOp>(*module);
+  Region *cleanup = forOp.maybeGetCleanup();
+  ASSERT_NE(cleanup, nullptr);
+
+  // Parent enters the condition region.
+  expectSuccessors(forOp, RegionBranchPoint::parent(), {&forOp.getCond()});
+
+  // Condition branches to the body or, on the false edge, the cleanup region.
+  expectTerminatorSuccessors(forOp.getCond(), {&forOp.getBody(), cleanup});
+
+  // Body goes to the step region.
+  expectTerminatorSuccessors(forOp.getBody(), {&forOp.getStep()});
+
+  // Step routes through the cleanup region.
+  expectTerminatorSuccessors(forOp.getStep(), {cleanup});
+
+  // Cleanup loops back to the condition or exits the loop.
+  expectTerminatorSuccessors(*cleanup, {&forOp.getCond(), nullptr});
+
+  verifyControlFlowInterfaceConsistency(forOp);
 }
 
 TEST_F(CIRControlFlowTest, TryOpWithCatchAll) {

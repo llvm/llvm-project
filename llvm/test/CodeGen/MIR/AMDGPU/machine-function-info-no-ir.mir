@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -verify-machineinstrs %s -o - | FileCheck -check-prefixes=FULL,ALL %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -verify-machineinstrs %s -o - | FileCheck -check-prefixes=FULL,ALL %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
 
 
 ---
@@ -16,6 +16,7 @@
 # FULL-NEXT: waveLimiter:     true
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 # FULL-NEXT: numWaveDispatchSGPRs: 0
 # FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$sgpr8_sgpr9_sgpr10_sgpr11'
@@ -88,6 +89,7 @@
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT: occupancy: 8
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 name: kernel0
 machineFunctionInfo:
@@ -128,6 +130,7 @@ body:             |
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 # FULL-NEXT: numWaveDispatchSGPRs: 0
 # FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
@@ -187,6 +190,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT:  occupancy: 10
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 
 name: no_mfi
@@ -210,6 +214,7 @@ body:             |
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 # FULL-NEXT: numWaveDispatchSGPRs: 0
 # FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
@@ -269,6 +274,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT:  occupancy: 10
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 
 name: empty_mfi
@@ -293,6 +299,7 @@ body:             |
 # FULL-NEXT: waveLimiter:     false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
+# FULL-NEXT: hasNoWWMPoolSGPRSpillFallback: false
 # FULL-NEXT: numWaveDispatchSGPRs: 0
 # FULL-NEXT: numWaveDispatchVGPRs: 0
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
@@ -353,6 +360,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT: occupancy: 10
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 
 name: empty_mfi_entry_func

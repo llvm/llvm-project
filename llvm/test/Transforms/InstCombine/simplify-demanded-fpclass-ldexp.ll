@@ -487,3 +487,17 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
   %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
   ret float %ldexp
 }
+
+; Make sure there's no assertion from trying to query
+; getIntegerBitWidth on the vector type.
+define <2 x float> @ldexp_v2f32_v2i32_fmul_crash(<2 x i32> %exp) {
+; CHECK-LABEL: define <2 x float> @ldexp_v2f32_v2i32_fmul_crash(
+; CHECK-SAME: <2 x i32> [[EXP:%.*]]) {
+; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[EXP]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[LDEXP]], zeroinitializer
+; CHECK-NEXT:    ret <2 x float> [[MUL]]
+;
+  %ldexp = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.0), <2 x i32> %exp)
+  %mul = fmul <2 x float> %ldexp, zeroinitializer
+  ret <2 x float> %mul
+}

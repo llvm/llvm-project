@@ -88,7 +88,7 @@ defm fatal_warnings: B<"fatal-warnings",
     "Do not treat warnings as errors (default)">;
 
 defm gc_sections: B<"gc-sections",
-    "Enable garbage collection of unused sections (defualt)",
+    "Enable garbage collection of unused sections (default)",
     "Disable garbage collection of unused sections">;
 
 defm merge_data_segments: BB<"merge-data-segments",
@@ -238,8 +238,8 @@ def page_size: JJ<"page-size=">,
 def initial_memory: JJ<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;
 
-def libcall_thread_context: FF<"libcall-thread-context">,
-  HelpText<"Use library calls for thread context access instead of globals.">;
+def cooperative_threading: FF<"cooperative-threading">,
+  HelpText<"Enable cooperative multithreading.">;
   
 def max_memory: JJ<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;

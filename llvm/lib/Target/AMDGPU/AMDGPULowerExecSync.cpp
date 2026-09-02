@@ -18,17 +18,13 @@
 #include "AMDGPU.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-
-#include <algorithm>
 
 #define DEBUG_TYPE "amdgpu-lower-exec-sync"
 
@@ -83,8 +79,7 @@ unsigned allocateExecSyncID(T &NextAvailableIDTracker,
 }
 
 // Main utility function for special LDS variables lowering.
-static bool lowerExecSyncGlobalVariables(Module &M,
-                                         LDSUsesInfoTy &LDSUsesInfo) {
+static bool lowerExecSyncGlobalVariables(Module &M, GVUsesInfoTy &GVUsesInfo) {
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
@@ -92,7 +87,7 @@ static bool lowerExecSyncGlobalVariables(Module &M,
   MapVector<GlobalVariable *, SmallVector<Function *>> AllocationQ;
   DenseMap<Function *, SmallVector<unsigned, NumBarScopes>> KernelBarrierIDs;
 
-  for (auto &[F, GVs] : LDSUsesInfo.indirect_access) {
+  for (auto &[F, GVs] : GVUsesInfo.IndirectAccess) {
     for (auto *GV : GVs) {
       if (!isNamedBarrier(*GV) || GV->isAbsoluteSymbolRef())
         continue;
@@ -104,7 +99,7 @@ static bool lowerExecSyncGlobalVariables(Module &M,
     }
   }
 
-  for (auto &[F, GVs] : LDSUsesInfo.direct_access) {
+  for (auto &[F, GVs] : GVUsesInfo.DirectAccess) {
     for (auto *GV : GVs) {
       if (!isNamedBarrier(*GV) || GV->isAbsoluteSymbolRef())
         continue;
@@ -149,11 +144,23 @@ static bool lowerExecSyncGlobalVariables(Module &M,
   }
 
   // Also erase those special LDS variables from indirect_access.
-  for (auto &K : LDSUsesInfo.indirect_access) {
+  for (auto &K : GVUsesInfo.IndirectAccess) {
     assert(isKernel(*K.first));
     K.second.remove_if([](GlobalVariable *GV) { return isNamedBarrier(*GV); });
   }
   return Changed;
+}
+
+static bool hasBarrierToLower(const GVUsesInfoTy &GVUsesInfo) {
+  for (auto &Map : {GVUsesInfo.DirectAccess, GVUsesInfo.IndirectAccess}) {
+    for (auto &[Fn, GVs] : Map) {
+      for (auto &GV : GVs) {
+        if (AMDGPU::isNamedBarrier(*GV))
+          return true;
+      }
+    }
+  }
+  return false;
 }
 
 // With object linking, barrier ID assignment is deferred to the linker.
@@ -202,16 +209,18 @@ static bool runLowerExecSyncGlobals(Module &M) {
 
   CallGraph CG = CallGraph(M);
   bool Changed = false;
-  Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
+  Changed |=
+      eliminateGVConstantExprUsesFromAllInstructions(M, isLDSVariableToLower);
 
   // For each kernel, what variables does it access directly or through
   // callees
-  LDSUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDS(CG, M);
+  GVUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDSForLowering(CG, M);
 
-  if (LDSUsesInfo.HasSpecialGVs) {
+  if (hasBarrierToLower(LDSUsesInfo)) {
     // Special LDS variables need special address assignment
     Changed |= lowerExecSyncGlobalVariables(M, LDSUsesInfo);
   }
+
   return Changed;
 }
 

@@ -1,11 +1,11 @@
 // REQUIRES: x86-registered-target, amdgpu-registered-target
 // UNSUPPORTED: system-windows
 
-// Build a fake resource dir containing both the base profile runtime and the
-// ROCm device-profile runtime so the driver's existence check passes.
-// RUN: rm -rf %t && mkdir -p %t/lib/x86_64-unknown-linux
+// Build a fake resource dir containing host and device profile runtimes.
+// RUN: rm -rf %t && mkdir -p %t/lib/x86_64-unknown-linux %t/lib/amdgcn-amd-amdhsa
 // RUN: touch %t/lib/x86_64-unknown-linux/libclang_rt.profile.a
 // RUN: touch %t/lib/x86_64-unknown-linux/libclang_rt.profile_rocm.a
+// RUN: touch %t/lib/amdgcn-amd-amdhsa/libclang_rt.profile.a
 // RUN: touch %t.o
 
 // HIP host link with PGO links clang_rt.profile_rocm.
@@ -15,6 +15,8 @@
 // RUN:   | FileCheck -check-prefix=HIP-PGO %s
 // profile_rocm must precede the base profile so the base archive stays inert.
 // HIP-PGO: "{{.*}}libclang_rt.profile_rocm.a"
+// The constructor-only hipModuleLoad* interceptor object is force-linked.
+// HIP-PGO: "-u" "__llvm_profile_offload_register_dynamic_module"
 // HIP-PGO: "{{.*}}libclang_rt.profile.a"
 
 // Without profiling, the ROCm device-profile runtime is not linked.
@@ -29,3 +31,10 @@
 // RUN:   | FileCheck -check-prefix=HOST-PGO %s
 // HOST-PGO: "{{.*}}libclang_rt.profile.a"
 // HOST-PGO-NOT: libclang_rt.profile_rocm.a
+
+// HIP device-only link with PGO links the device profile runtime.
+// RUN: %clang -### -x hip --offload-device-only --target=x86_64-unknown-linux \
+// RUN: --offload-arch=gfx90a -fprofile-generate -resource-dir=%t \
+// RUN: -nogpuinc -nogpulib %s 2>&1 \
+// RUN: | FileCheck -check-prefix=HIP-DEVICE-PGO %s
+// HIP-DEVICE-PGO: "{{.*}}lld" {{.*}}"{{.*}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"

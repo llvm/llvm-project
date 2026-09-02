@@ -1,0 +1,26 @@
+; REQUIRES: opencsd
+; RUN: split-file %s %t
+; RUN: printf '\200' > %t.etm
+; RUN: yaml2obj %t/x86.yaml -o %t.x86.bin
+; RUN: not llvm-profgen --etm=%t.etm --binary=%t.x86.bin --output=%t.out 2>&1 | FileCheck %s
+
+; CHECK: OpenCSD: Unsupported processor architecture. Only Arm M-profile (Cortex-M) with ETM support is currently supported.
+
+;--- x86.yaml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    VAddr:           0x1000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         C3

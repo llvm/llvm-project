@@ -24,12 +24,23 @@ def library_path_S : Separate<["--", "-"], "library-path">, Flags<[HelpHidden]>,
 def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
   Alias<library_path>;
 
-def bc_library : Separate<["--", "-"], "bc-library">, MetaVarName<"<name>">,
-  HelpText<"Add LLVM bitcode library <name> (with extension) to the link. A "
-          "relative <name> is resolved against -L paths; an absolute path is "
-          "taken as-is.">;
-def bc_library_EQ : Joined<["--", "-"], "bc-library=">, Flags<[HelpHidden]>,
-  Alias<bc_library>;
+def library : JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,
+  HelpText<"Search for library <libname>">;
+def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
+  Alias<library>;
+def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
+  Alias<library>;
+
+def whole_archive : Flag<["--", "-"], "whole-archive">,
+  HelpText<"Include all archive members in the link">;
+def no_whole_archive : Flag<["--", "-"], "no-whole-archive">,
+  HelpText<"Disable --whole-archive for the following inputs (default state)">;
+
+def u : JoinedOrSeparate<["-"], "u">, MetaVarName<"<symbol>">,
+  HelpText<"Force undefined symbol during linking">;
+def undefined : JoinedOrSeparate<["--"], "undefined">, Alias<u>;
+def undefined_EQ : Joined<["--"], "undefined=">, Flags<[HelpHidden]>,
+  Alias<u>;
 
 def arch_EQ : Joined<["--", "-"], "arch=">,
               Flags<[LinkerOnlyOption]>,
@@ -65,7 +76,7 @@ def opencl_aot_options_EQ : Joined<["--", "-"], "opencl-aot-options=">,
 def module_split_mode_EQ : Joined<["--", "-"], "module-split-mode=">,
   Flags<[LinkerOnlyOption]>, MetaVarName<"<mode>">,
   HelpText<"SYCL device code module split mode. Valid values:\n"
-           "- 'source' (default) emits one device image per translation unit that contains "
+           "- 'translation_unit' (default) emits one device image per translation unit that contains "
            "at least one entry point;\n"
            "- 'kernel' emits one device image per kernel function;\n"
-           "- 'none' emits a single device image.">;
+           "- 'link_unit' emits one device image per linking unit.">;

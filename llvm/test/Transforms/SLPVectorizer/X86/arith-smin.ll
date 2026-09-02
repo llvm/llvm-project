@@ -6,6 +6,10 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=knl -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX
 
 @a64 = common global [8 x i64] zeroinitializer, align 64
 @b64 = common global [8 x i64] zeroinitializer, align 64

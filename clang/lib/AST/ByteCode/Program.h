@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_PROGRAM_H
 #define LLVM_CLANG_AST_INTERP_PROGRAM_H
 
+#include "DeclOrExpr.h"
 #include "Function.h"
 #include "Pointer.h"
 #include "PrimType.h"
@@ -48,23 +49,16 @@ public:
     // Records might actually allocate memory themselves, but they
     // are allocated using a BumpPtrAllocator. Call their desctructors
     // here manually so they are properly freeing their resources.
-    for (auto RecordPair : Records) {
+    for (const auto &RecordPair : Records) {
       if (Record *R = RecordPair.second)
         R->~Record();
     }
+
+    for (Function *F : Funcs.values())
+      F->~Function();
   }
 
   const Context &getContext() const { return Ctx; }
-
-  /// Marshals a native pointer to an ID for embedding in bytecode.
-  unsigned getOrCreateNativePointer(const void *Ptr);
-
-  /// Returns the value of a marshalled native pointer.
-  const void *getNativePointer(unsigned Idx) const;
-
-  /// Emits a string literal among global data.
-  unsigned createGlobalString(const StringLiteral *S,
-                              const Expr *Base = nullptr);
 
   /// Returns a pointer to a global.
   Pointer getPtrGlobal(unsigned Idx) const;
@@ -88,7 +82,7 @@ public:
                                    const Expr *Init = nullptr);
 
   /// Returns or creates a dummy value for unknown declarations.
-  unsigned getOrCreateDummy(const DeclTy &D, bool IsConstexprUnknown = false);
+  unsigned getOrCreateDummy(DeclOrExpr D, bool IsConstexprUnknown = false);
 
   /// Creates a global and returns its index.
   UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init,
@@ -100,14 +94,15 @@ public:
   /// Creates a new function from a code range.
   template <typename... Ts>
   Function *createFunction(const FunctionDecl *Def, Ts &&...Args) {
-    Def = Def->getCanonicalDecl();
-    auto *Func = new Function(*this, Def, std::forward<Ts>(Args)...);
-    Funcs.insert({Def, std::unique_ptr<Function>(Func)});
+    Def = Def->getFirstDecl();
+    auto *Func = new (Allocate(sizeof(Function)))
+        Function(Def, std::forward<Ts>(Args)...);
+    Funcs.insert({Def, Func});
     return Func;
   }
   /// Creates an anonymous function.
   template <typename... Ts> Function *createFunction(Ts &&...Args) {
-    auto *Func = new Function(*this, std::forward<Ts>(Args)...);
+    auto *Func = new Function(std::forward<Ts>(Args)...);
     AnonFuncs.emplace_back(Func);
     return Func;
   }
@@ -119,19 +114,17 @@ public:
   Record *getOrCreateRecord(const RecordDecl *RD);
 
   /// Creates a descriptor for a primitive type.
-  Descriptor *createDescriptor(const DeclTy &D, PrimType T,
+  Descriptor *createDescriptor(DeclOrExpr D, PrimType T,
                                const Type *SourceTy = nullptr,
-                               Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false,
                                bool IsVolatile = false) {
-    return allocateDescriptor(D, SourceTy, T, MDSize, IsConst, IsTemporary,
-                              IsMutable, IsVolatile);
+    return allocateDescriptor(D, SourceTy, T, IsConst, IsTemporary, IsMutable,
+                              IsVolatile);
   }
 
   /// Creates a descriptor for a composite type.
-  Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
-                               Descriptor::MetadataSize MDSize = std::nullopt,
+  Descriptor *createDescriptor(DeclOrExpr D, const Type *Ty,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false, bool IsVolatile = false,
                                const Expr *Init = nullptr);
@@ -168,7 +161,7 @@ public:
 private:
   friend class DeclScope;
 
-  UnsignedOrNone createGlobal(const DeclTy &D, QualType Ty, bool IsStatic,
+  UnsignedOrNone createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
                               bool IsExtern, bool IsWeak,
                               bool IsConstexprUnknown,
                               const Expr *Init = nullptr);
@@ -176,14 +169,9 @@ private:
   /// Reference to the VM context.
   Context &Ctx;
   /// Mapping from decls to cached bytecode functions.
-  llvm::DenseMap<const FunctionDecl *, std::unique_ptr<Function>> Funcs;
+  llvm::DenseMap<const FunctionDecl *, Function *> Funcs;
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
-
-  /// Native pointers referenced by bytecode.
-  std::vector<const void *> NativePointers;
-  /// Cached native pointer indices.
-  llvm::DenseMap<const void *, unsigned> NativePointerIndices;
 
   /// Custom allocator for global storage.
   using PoolAllocTy = llvm::BumpPtrAllocator;

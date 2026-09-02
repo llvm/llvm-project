@@ -51,6 +51,48 @@ cl::opt<unsigned> AlignFunctions(
     cl::desc("align functions at a given value (relocation mode)"),
     cl::init(64), cl::cat(BoltOptCategory));
 
+cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
+                          cl::cat(BoltOptCategory));
+
+cl::opt<unsigned> AlignBlocksMinSize(
+    "align-blocks-min-size",
+    cl::desc("minimal size of the basic block that should be aligned"),
+    cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+
+cl::opt<unsigned> AlignBlocksThreshold(
+    "align-blocks-threshold",
+    cl::desc(
+        "align only blocks with frequency larger than containing function "
+        "execution frequency specified in percent. E.g. 1000 means aligning "
+        "blocks that are 10 times more frequently executed than the "
+        "containing function."),
+    cl::init(800), cl::Hidden, cl::cat(BoltOptCategory));
+
+cl::opt<unsigned> AlignFunctionsMaxBytes(
+    "align-functions-max-bytes",
+    cl::desc("maximum number of bytes to use to align functions"), cl::init(32),
+    cl::cat(BoltOptCategory));
+
+cl::opt<unsigned>
+    BlockAlignment("block-alignment",
+                   cl::desc("boundary to use for alignment of basic blocks"),
+                   cl::init(16), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+
+cl::opt<bool>
+    PreserveBlocksAlignment("preserve-blocks-alignment",
+                            cl::desc("try to preserve basic block alignment"),
+                            cl::cat(BoltOptCategory));
+
+cl::opt<bool>
+    UseCompactAligner("use-compact-aligner",
+                      cl::desc("Use compact approach for aligning functions"),
+                      cl::init(true), cl::cat(BoltOptCategory));
+
+cl::opt<bool> X86AlignBranchBoundaryHotOnly(
+    "x86-align-branch-boundary-hot-only",
+    cl::desc("only apply branch boundary alignment in hot code"),
+    cl::init(true), cl::cat(BoltOptCategory));
+
 cl::opt<bool>
 AggregateOnly("aggregate-only",
   cl::desc("exit after writing aggregated data file"),
@@ -150,7 +192,9 @@ bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
   unsigned PreviousSize = 0;
   for (StringRef Size : Sizes) {
     StringRef OrigSize = Size;
-    unsigned &SizeVal = Val.emplace_back(0);
+    HeatmapBlockSize &Block = Val.emplace_back();
+    Block.Spec = OrigSize.str();
+    unsigned &SizeVal = Block.Value;
     if (Size.consumeInteger(10, SizeVal)) {
       O.error("'" + OrigSize + "' value can't be parsed as an integer");
       return true;
@@ -174,9 +218,22 @@ cl::opt<opts::HeatmapBlockSizes, false, opts::HeatmapBlockSpecParser>
     HeatmapBlock(
         "block-size", cl::value_desc("initial_size{,zoom-out_size,...}"),
         cl::desc("heatmap bucket size, optionally followed by zoom-out sizes "
-                 "for coarse-grained heatmaps (default 64B, 4K, 256K)."),
-        cl::init(HeatmapBlockSizes{/*Initial*/ 64, /*Zoom-out*/ 4096, 262144}),
+                 "for coarse-grained heatmaps (default 64, 4K, 16K, 64K, 2M)."),
+        // Cache line, then the page sizes x86-64 and AArch64 actually use
+        // (4K, and 16K/64K on AArch64), then the PMD hugepage above a 4K base
+        // page.
+        cl::init(HeatmapBlockSizes{/*Initial*/ {64, "64"},
+                                   /*Zoom-out*/ {4096, "4K"},
+                                   {16384, "16K"},
+                                   {65536, "64K"},
+                                   {2097152, "2M"}}),
         cl::cat(HeatmapCategory));
+
+cl::opt<int> HeatmapCdfPct(
+    "heatmap-cdf-pct", cl::init(990000),
+    cl::desc("Sample CDF cutoff, in millionths, at which to report the working "
+             "set."),
+    cl::value_desc("n"), cl::cat(HeatmapCategory));
 
 cl::opt<unsigned long long> HeatmapMaxAddress(
     "max-address", cl::init(0xffffffff),
@@ -283,6 +340,10 @@ cl::opt<ProfileFormatKind> ProfileFormat(
                           "perfscript profile format")),
     cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
+cl::list<std::string> ReorderData(
+    "reorder-data", cl::CommaSeparated, cl::desc("list of sections to reorder"),
+    cl::value_desc("section1,section2,section3,..."), cl::cat(BoltOptCategory));
+
 cl::opt<std::string> SaveProfile("w",
                                  cl::desc("save recorded profile to a file"),
                                  cl::cat(BoltOutputCategory));
@@ -322,6 +383,12 @@ cl::opt<unsigned>
     Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
               cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
+
+cl::opt<bool> FixBranchesWithLiveness(
+    "fix-branches-with-liveness",
+    cl::desc("use liveness analysis during branch fixup "
+             "(needed for branch inversion on AArch64)"),
+    cl::init(false), cl::cat(BoltCategory));
 
 bool processAllFunctions() {
   if (opts::AggregateOnly)

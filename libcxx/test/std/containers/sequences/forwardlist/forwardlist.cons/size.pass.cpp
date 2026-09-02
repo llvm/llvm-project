@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // <forward_list>
 
 // explicit forward_list(size_type n);                 // constexpr since C++26
@@ -21,15 +23,10 @@
 
 template <class T, class Allocator>
 void check_allocator(unsigned n, Allocator const& alloc = Allocator()) {
-#if TEST_STD_VER > 11
   typedef std::forward_list<T, Allocator> C;
   C d(n, alloc);
   assert(d.get_allocator() == alloc);
   assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == n);
-#else
-  ((void)n);
-  ((void)alloc);
-#endif
 }
 
 int main(int, char**) {
@@ -46,13 +43,23 @@ int main(int, char**) {
     unsigned n = 0;
 
     for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n) {
-#if TEST_STD_VER >= 11
       assert(*i == T());
-#else
-      ((void)0);
-#endif
     }
     assert(n == N);
+  }
+  {
+    typedef DefaultOnly T;
+    typedef std::forward_list<T, std::allocator<T> > C;
+    unsigned N = 10;
+    C c(N, std::allocator<T>());
+    unsigned n = 0;
+
+    for (C::const_iterator i = c.begin(), e = c.end(); i != e; ++i, ++n) {
+      assert(*i == T());
+    }
+    assert(n == N);
+    check_allocator<T, std::allocator<T> >(0);
+    check_allocator<T, std::allocator<T> >(3);
   }
 #if TEST_STD_VER >= 11
   {

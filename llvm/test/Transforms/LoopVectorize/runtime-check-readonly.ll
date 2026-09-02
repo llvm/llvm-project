@@ -13,9 +13,11 @@ define void @add_ints(ptr nocapture %A, ptr nocapture %B, ptr nocapture %C) {
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[B2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 15
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[C3]]
-; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 15
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

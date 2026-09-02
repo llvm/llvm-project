@@ -22,3 +22,20 @@ define i32 @partial_reduce_extract_subvector_crash(<4 x i32> %vec) {
   %result = extractelement <4 x i32> %add, i32 0
   ret i32 %result
 }
+
+; Same crash with a two-shuffle subvector split (256 -> 128).
+define i32 @subvector_split_crash(<8 x i32> %vec) {
+; CHECK-LABEL: define i32 @subvector_split_crash(
+; CHECK-SAME: <8 x i32> [[VEC:%.*]]) {
+; CHECK-NEXT:    [[LO:%.*]] = shufflevector <8 x i32> [[VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[HI:%.*]] = shufflevector <8 x i32> [[VEC]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[LO]], [[HI]]
+; CHECK-NEXT:    [[RESULT:%.*]] = extractelement <4 x i32> [[ADD]], i32 0
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %lo = shufflevector <8 x i32> %vec, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %hi = shufflevector <8 x i32> %vec, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %add = add <4 x i32> %lo, %hi
+  %result = extractelement <4 x i32> %add, i32 0
+  ret i32 %result
+}

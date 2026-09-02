@@ -17,17 +17,18 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
+#include <cstdint>
 
 namespace llvm {
 
 /// Cost Table Entry
 template <typename CostType>
 struct CostTblEntryT {
-  int ISD;
+  uint16_t ISD;
   MVT::SimpleValueType Type;
   CostType Cost;
 };
-using CostTblEntry = CostTblEntryT<unsigned>;
+using CostTblEntry = CostTblEntryT<uint16_t>;
 
 /// Find in cost table.
 template <class CostType>
@@ -53,12 +54,12 @@ CostTableLookup(const CostTblEntryT<CostType> (&Table)[N], int ISD, MVT Ty) {
 /// Type Conversion Cost Table
 template <typename CostType>
 struct TypeConversionCostTblEntryT {
-  int ISD;
+  uint16_t ISD;
   MVT::SimpleValueType Dst;
   MVT::SimpleValueType Src;
   CostType Cost;
 };
-using TypeConversionCostTblEntry = TypeConversionCostTblEntryT<unsigned>;
+using TypeConversionCostTblEntry = TypeConversionCostTblEntryT<uint16_t>;
 
 /// Find in type conversion cost table.
 template <class CostType>

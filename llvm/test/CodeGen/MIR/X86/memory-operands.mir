@@ -169,6 +169,8 @@
   }
 
   !12 = !{i8 0, i8 2}
+  !13 = !{i32 0, !14}
+  !14 = !{!"nvvm.l1_eviction", !"first"}
 
   %st = type { i32, i32 }
 
@@ -490,8 +492,8 @@ body: |
   bb.0.entry:
     liveins: $rdi
   ; CHECK-LABEL: name: range_metadata
-  ; CHECK: $al = MOV8rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s8) from %ir.x, !range !11)
-    $al = MOV8rm killed $rdi, 1, _, 0, _ :: (load (s8) from %ir.x, !range !11)
+  ; CHECK: $al = MOV8rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s8) from %ir.x, !range !11, !mem.cache_hint !12)
+    $al = MOV8rm killed $rdi, 1, _, 0, _ :: (load (s8) from %ir.x, !range !11, !mem.cache_hint !12)
     RET64 $al
 ...
 ---

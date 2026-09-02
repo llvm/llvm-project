@@ -530,8 +530,8 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       newDataOp = acc::PresentOp::create(builder, loc, var,
                                          /*structured=*/true, /*implicit=*/true,
                                          accSupport.getVariableName(var));
-      newDataOp->setAttr(acc::getFromDefaultClauseAttrName(),
-                         builder.getUnitAttr());
+      newDataOp->setDiscardableAttr(acc::getFromDefaultClauseAttrName(),
+                                    builder.getUnitAttr());
     } else {
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
@@ -708,12 +708,14 @@ void ACCImplicitData::generateImplicitDataOps(
     std::optional<acc::ClauseDefaultValue> &defaultClause,
     acc::OpenACCSupport &accSupport) {
   // Implicit data attributes are only applied if "[t]here is no default(none)
-  // clause visible at the compute construct."
-  if (defaultClause.has_value() &&
+  // clause visible at the compute construct", unless ignoreDefaultNone is set.
+  if (!ignoreDefaultNone && defaultClause.has_value() &&
       defaultClause.value() == acc::ClauseDefaultValue::None)
     return;
   assert(!defaultClause.has_value() ||
-         defaultClause.value() == acc::ClauseDefaultValue::Present);
+         defaultClause.value() == acc::ClauseDefaultValue::Present ||
+         (ignoreDefaultNone &&
+          defaultClause.value() == acc::ClauseDefaultValue::None));
 
   // 1) Collect live-in values.
   Region &accRegion = computeConstructOp->getRegion(0);

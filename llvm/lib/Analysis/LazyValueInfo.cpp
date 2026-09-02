@@ -856,27 +856,10 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
       continue;
 
     if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
-      auto OBU = I->getOperandBundleAt(AssumeVH.Index);
-      switch (getBundleAttrFromOBU(OBU)) {
-      case BundleAttr::NonNull:
-        if (getAssumeNonNullInfo(OBU).Ptr != Val)
-          break;
+      if (assumeBundleImpliesNonNull(Val, BBI->getFunction(),
+                                     I->getOperandBundleAt(AssumeVH.Index)))
         BBLV = BBLV.intersect(ValueLatticeElement::getNot(
             Constant::getNullValue(Val->getType())));
-        break;
-
-      case BundleAttr::Dereferenceable: {
-        auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
-        if (Ptr != Val)
-          break;
-        if (auto *CI = dyn_cast<ConstantInt>(Count); CI && !CI->isZero())
-          BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-              Constant::getNullValue(Val->getType())));
-      } break;
-
-      default:
-        break;
-      }
     } else {
       BBLV = BBLV.intersect(*getValueFromCondition(Val, I->getArgOperand(0),
                                                    /*IsTrueDest*/ true,
@@ -1372,6 +1355,33 @@ static ValueLatticeElement getValueFromICmpCtpop(ICmpInst::Predicate Pred,
       ConstantRange::getNonEmpty(std::move(ValMin), ValMax + 1));
 }
 
+/// Get the unsigned range for \p V from a `mul nuw V, V` comparison.
+static std::optional<ConstantRange>
+getRangeForNUWMulSquare(const Value *V, CmpInst::Predicate Pred,
+                        const Value *LHS, const Value *RHS) {
+  if (!V->getType()->isIntegerTy())
+    return std::nullopt;
+
+  if (!match(LHS, m_NUWMul(m_Specific(V), m_Specific(V)))) {
+    if (!match(RHS, m_NUWMul(m_Specific(V), m_Specific(V))))
+      return std::nullopt;
+
+    Pred = CmpInst::getSwappedPredicate(Pred);
+    RHS = LHS;
+  }
+
+  ConstantRange MulCR =
+      ConstantRange::getFull(V->getType()->getScalarSizeInBits());
+  const APInt *C;
+  if (match(RHS, m_APInt(C)))
+    MulCR = ConstantRange::makeExactICmpRegion(Pred, *C);
+
+  ConstantRange Res = MulCR.sqrtFloor();
+  if (Res.isFullSet())
+    return std::nullopt;
+  return Res;
+}
+
 std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
     Value *Val, ICmpInst *ICI, bool isTrueDest, bool UseBlockValue) {
   Value *LHS = ICI->getOperand(0);
@@ -1395,6 +1405,9 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
     return ValueLatticeElement::getOverdefined();
 
   unsigned BitWidth = Ty->getScalarSizeInBits();
+  if (auto Range = getRangeForNUWMulSquare(Val, EdgePred, LHS, RHS))
+    return ValueLatticeElement::getRange(*Range);
+
   APInt Offset(BitWidth, 0);
   if (matchICmpOperand(Offset, LHS, Val, EdgePred))
     return getValueFromSimpleICmpCondition(EdgePred, RHS, Offset, ICI,
@@ -1863,6 +1876,7 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
   Value *V = U.get();
   auto *CxtI = cast<Instruction>(U.getUser());
   ValueLatticeElement VL = getValueInBlock(V, CxtI->getParent(), CxtI);
+  BasicBlock *LastQueriedBB = CxtI->getParent();
 
   // Check whether the only (possibly transitive) use of the value is in a
   // position where V can be constrained by a select or branch condition.
@@ -1872,6 +1886,17 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
   for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
     std::optional<ValueLatticeElement> CondVal;
     auto *CurrI = cast<Instruction>(CurrU->getUser());
+
+    // All instructions on the one-use chain between the original use and CurrI
+    // are speculatable and have a single user each, so they could be sunk to
+    // CurrI. This means information that holds at CurrI also holds for the
+    // original use and can be used to refine it. Skip phis, as V may not
+    // dominate their block.
+    if (I != 0 && !isa<PHINode>(CurrI) && CurrI->getParent() != LastQueriedBB) {
+      LastQueriedBB = CurrI->getParent();
+      VL = VL.intersect(getValueInBlock(V, LastQueriedBB, CurrI));
+    }
+
     if (auto *SI = dyn_cast<SelectInst>(CurrI)) {
       // If the value is undef, a different value may be chosen in
       // the select condition and at use.
@@ -1905,6 +1930,11 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
     if (!CurrI->hasOneUse() ||
         !isSafeToSpeculativelyExecuteWithVariableReplaced(
             CurrI, /*IgnoreUBImplyingAttrs=*/false))
+      break;
+    // Also stop walking at cross-lane operations, since they may rearrange
+    // lanes so that a later select per-lane condition might no longer
+    // correspond to the original value's lanes.
+    if (V->getType()->isVectorTy() && !isNotCrossLaneOperation(CurrI))
       break;
     CurrU = &*CurrI->use_begin();
   }

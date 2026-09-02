@@ -11,14 +11,14 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
+#include "hdr/types/sigset_t.h"
 #include "src/signal/pthread_sigmask.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigaddset.h"
 #include "src/signal/sigemptyset.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
-
-#include <signal.h>
 
 class LlvmLibcPthreadSigmaskTest
     : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {

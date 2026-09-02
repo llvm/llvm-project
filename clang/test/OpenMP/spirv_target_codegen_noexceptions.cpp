@@ -3,7 +3,8 @@
 // RUN: FileCheck -implicit-check-not='{{invoke|throw|cxa}}' %s
 void foo() {
   // CHECK: call addrspace(9) void @llvm.trap()
-  // CHECK-NEXT: call spir_func addrspace(9) void @__kmpc_target_deinit()
+  // CHECK-NEXT: unreachable
+  // CHECK: call spir_func addrspace(9) void @__kmpc_target_deinit()
   #pragma omp target
   throw "bad";
 }

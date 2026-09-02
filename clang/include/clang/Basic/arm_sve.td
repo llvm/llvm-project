@@ -1919,6 +1919,19 @@ let SVETargetGuard = "(sve2|sme2),lut", SMETargetGuard = "sme2,lut" in {
   def SVLUTI4_x2 : SInst<"svluti4_lane[_{d}_x2]", "d2.d[i", "sUshb", MergeNone, "aarch64_sve_luti4_lane_x2", [VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
 }
 
+let SVETargetGuard = "sve2p3", SMETargetGuard = InvalidMode in {
+  def SVLUTI6 : SInst<"svluti6[_{d}_x2]", "d2[", "cUcm", MergeNone, "aarch64_sve_luti6", [IsOverloadNone]>;
+}
+
+let SVETargetGuard = "sve2p3", SMETargetGuard = "sve2p3|sme2p3" in {
+  def SVLUTI6_x2 : SInst<"svluti6_lane[_{d}_x2]", "d2.d[i", "sUshb", MergeNone, "aarch64_sve_luti6_lane_x2", [VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_1>]>;
+}
+
+let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2p3" in {
+  def SVLUTI6_X4_U8X2 : SInst<"svluti6_lane_{d}_x4[_{d}_x2_u8_x2]", "422.[i", "sUshb", MergeNone, "aarch64_sme_luti6_lane_x4_x2", [IsStreaming], [ImmCheck<2, ImmCheck0_1>]>;
+  def SVLUTI6_X4_U8X3 : SInst<"svluti6_lane_{d}_x4[_{d}_x2_u8_x3]", "423.[i", "sUshb", MergeNone, "aarch64_sme_luti6_lane_x4_x3", [IsStreaming], [ImmCheck<2, ImmCheck0_1>]>;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Optional
 
@@ -2068,6 +2081,10 @@ let SVETargetGuard = "sve2p1|sme2", SMETargetGuard = "sve2p1|sme2" in {
 def SVDOT_X2_S : SInst<"svdot[_{d}_{2}]", "ddhh", "i",  MergeNone, "aarch64_sve_sdot_x2", [VerifyRuntimeMode], []>;
 def SVDOT_X2_U : SInst<"svdot[_{d}_{2}]", "ddhh", "Ui", MergeNone, "aarch64_sve_udot_x2", [VerifyRuntimeMode], []>;
 def SVDOT_X2_F : SInst<"svdot[_{d}_{2}]", "ddhh", "f",  MergeNone, "aarch64_sve_fdot_x2", [VerifyRuntimeMode], []>;
+
+def SVDOT_N_X2_S : SInst<"svdot[_n_{d}_{2}]", "ddhR", "i",  MergeNone, "aarch64_sve_sdot_x2", [VerifyRuntimeMode], []>;
+def SVDOT_N_X2_U : SInst<"svdot[_n_{d}_{2}]", "ddhR", "Ui", MergeNone, "aarch64_sve_udot_x2", [VerifyRuntimeMode], []>;
+def SVDOT_N_X2_F : SInst<"svdot[_n_{d}_{2}]", "ddhR", "f",  MergeNone, "aarch64_sve_fdot_x2", [VerifyRuntimeMode], []>;
 
 def SVDOT_LANE_X2_S : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "i",  MergeNone, "aarch64_sve_sdot_lane_x2", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_3>]>;
 def SVDOT_LANE_X2_U : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "Ui", MergeNone, "aarch64_sve_udot_lane_x2", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_3>]>;

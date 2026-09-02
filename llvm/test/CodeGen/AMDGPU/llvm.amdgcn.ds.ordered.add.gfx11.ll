@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s 2>&1 | FileCheck -check-prefix=GFX12-ERR %s
+; RUN: llc -mtriple=amdgpu11.00 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -global-isel -mtriple=amdgpu11.00 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: not --crash llc -mtriple=amdgpu12.00 -amdgpu-enable-vopd=0 < %s 2>&1 | FileCheck -check-prefix=GFX12-ERR %s
 
 ; GFX12-ERR: LLVM ERROR: Cannot select: {{.*}} = AMDGPUISD::DS_ORDERED_COUNT
 

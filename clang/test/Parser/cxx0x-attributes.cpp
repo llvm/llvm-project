@@ -215,7 +215,7 @@ struct [[]] N::S s; // expected-error {{an attribute list cannot appear here}}
 struct [[]] Template<int> t; // expected-error {{an attribute list cannot appear here}}
 struct [[]] ::template Template<int> u; // expected-error {{an attribute list cannot appear here}}
 template struct [[]] Template<char>; // expected-error {{an attribute list cannot appear here}}
-template struct __attribute__((pure)) Template<std::size_t>; // We still allow GNU-style attributes here
+template struct __attribute__((warn_unused)) Template<std::size_t>; // We still allow GNU-style attributes here
 template <> struct [[]] Template<void>;
 
 enum [[]] E1 {};
@@ -355,7 +355,7 @@ unsigned [[gnu::used]] static int [[gnu::unused]] v1; // expected-error {{'gnu::
            expected-error {{an attribute list cannot appear here}}
 typedef [[gnu::used]] unsigned long [[gnu::unused]] v2; // expected-error {{'gnu::unused' attribute cannot be applied to types}} \
           expected-error {{an attribute list cannot appear here}}
-int [[carries_dependency]] foo(int [[carries_dependency]] x); // expected-error 2{{'carries_dependency' attribute cannot be applied to types}}
+int [[deprecated]] foo(int [[deprecated]] x); // expected-error 2{{'deprecated' attribute cannot be applied to types}}
 
 // Forbid [[gnu::...]] attributes on declarator chunks.
 int *[[gnu::unused]] v3; // expected-warning {{attribute 'gnu::unused' ignored}}
@@ -364,7 +364,8 @@ int v5()[[gnu::unused]]; // expected-warning {{attribute 'gnu::unused' ignored}}
 
 [[attribute_declaration]]; // expected-warning {{unknown attribute 'attribute_declaration' ignored}}
 [[noreturn]]; // expected-error {{'noreturn' attribute only applies to functions}}
-[[carries_dependency]]; // expected-error {{'carries_dependency' attribute only applies to parameters, Objective-C methods, and functions}}
+// carries_dependency was removed from the standard by P3475R2.
+[[carries_dependency]]; // expected-warning {{unknown attribute 'carries_dependency' ignored}}
 
 class A {
   A([[gnu::unused]] int a);

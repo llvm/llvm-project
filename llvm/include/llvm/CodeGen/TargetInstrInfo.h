@@ -63,7 +63,8 @@ class SelectionDAG;
 class SMSchedule;
 class SwingSchedulerDAG;
 class RegScavenger;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
@@ -191,9 +192,9 @@ public:
            (MI.getDesc().isRematerializable() && isReMaterializableImpl(MI));
   }
 
-  /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
-  /// of instruction rematerialization or sinking.
-  virtual bool isIgnorableUse(const MachineOperand &MO) const {
+  /// Given operand \p OpIdx of \p MI is a PhysReg use, return if it can be
+  /// ignored for the purpose of instruction rematerialization or sinking.
+  virtual bool isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const {
     return false;
   }
 
@@ -1915,7 +1916,8 @@ public:
                                    SDNode *Node) const;
 
   /// Return the default expected latency for a def based on its opcode.
-  unsigned defaultDefLatency(const MCSchedModel &SchedModel,
+  unsigned defaultDefLatency(const TargetSubtargetInfo &STI,
+                             const MCSchedModel &SchedModel,
                              const MachineInstr &DefMI) const;
 
   /// Return true if this opcode has high latency to its result.

@@ -9,6 +9,7 @@
 // <deque>
 
 // explicit deque(size_type n);
+// explicit deque(size_type n, const Allocator& a);
 
 #include "asan_testing.h"
 #include <deque>
@@ -22,7 +23,7 @@
 
 template <class T, class Allocator>
 TEST_CONSTEXPR_CXX26 void test2(unsigned n) {
-#if TEST_STD_VER > 11
+#if TEST_STD_VER >= 11
   typedef std::deque<T, Allocator> C;
   typedef typename C::const_iterator const_iterator;
   if (!TEST_IS_CONSTANT_EVALUATED)
@@ -68,7 +69,7 @@ TEST_CONSTEXPR_CXX26 void test1(unsigned n) {
 
 template <class T, class Allocator>
 TEST_CONSTEXPR_CXX26 void test3(unsigned n, Allocator const& alloc = Allocator()) {
-#if TEST_STD_VER > 11
+#if TEST_STD_VER >= 11
   typedef std::deque<T, Allocator> C;
   {
     C d(n, alloc);
@@ -108,7 +109,7 @@ TEST_CONSTEXPR_CXX26 bool tests() {
   test<DefaultOnly, min_allocator<DefaultOnly> >(4095);
 #endif
 
-#if TEST_STD_VER > 11
+#if TEST_STD_VER >= 11
   test3<DefaultOnly, std::allocator<DefaultOnly>>(1023);
   test3<int, std::allocator<int>>(1);
   test3<int, min_allocator<int>>(3);

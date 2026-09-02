@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 // expected-no-diagnostics
 

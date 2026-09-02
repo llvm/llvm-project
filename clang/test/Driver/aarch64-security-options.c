@@ -9,9 +9,20 @@
 // RUN: %clang --target=aarch64 -c %s -### -msign-return-address=all                              2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-ALL      --check-prefix=KEY-A --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
 
+// This spelling cannot express a key, so it has to pick the one the target
+// supports. AArch64 Windows only supports B-key.
+// RUN: %clang --target=aarch64-windows-msvc -c %s -### -msign-return-address=non-leaf            2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-B --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
+
+// RUN: %clang --target=aarch64-windows-msvc -c %s -### -msign-return-address=all                 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-ALL      --check-prefix=KEY-B --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
+
 // -mbranch-protection with standard
 // RUN: %clang --target=aarch64 -c %s -### -mbranch-protection=standard                                2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=GCS-ON --check-prefix=WARN
+
+// RUN: %clang --target=aarch64-windows-msvc -c %s -### -mbranch-protection=standard                  2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-B --check-prefix=BTE-ON --check-prefix=GCS-ON --check-prefix=WARN
 
 // If the -msign-return-address and -mbranch-protection are both used, the
 // right-most one controls return address signing.
@@ -30,6 +41,18 @@
 // RUN: %clang --target=aarch64 -### -o /dev/null -mbranch-protection=standard /dev/null 2>&1 | \
 // RUN: FileCheck --allow-empty %s --check-prefix=LINKER-DRIVER
 
+// Check that Android enables PAC and BTI by default on AArch64.
+// RUN: %clang --target=aarch64-linux-android -### -c %s 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=GCS-OFF --check-prefix=WARN
+
+// Check that the Android default can be overridden.
+// RUN: %clang --target=aarch64-linux-android -mbranch-protection=none -### -c %s 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-OFF --check-prefix=KEY --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
+
+// Check that Android enables BTI by default when -msign-return-address is passed.
+// RUN: %clang --target=aarch64-linux-android -msign-return-address=non-leaf -### -c %s 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=GCS-OFF --check-prefix=WARN
+
 // WARN-NOT: warning: ignoring '-mbranch-protection=' option because the 'aarch64' architecture does not support it [-Wbranch-protection]
 
 // RA-OFF: "-msign-return-address=none"
@@ -37,6 +60,7 @@
 // RA-ALL: "-msign-return-address=all"
 
 // KEY-A: "-msign-return-address-key=a_key"
+// KEY-B: "-msign-return-address-key=b_key"
 // KEY-NOT: "-msign-return-address-key"
 
 // BTE-OFF-NOT: "-mbranch-target-enforce"

@@ -68,6 +68,20 @@ static Value collapseInnerDims(OpBuilder &builder, mlir::Location loc,
   return memref::CollapseShapeOp::create(builder, loc, input, reassociation);
 }
 
+// Check if a vector.contract operand has a memref read source.
+static bool isReadSrcMemref(Value operand) {
+  Operation *defOp = operand.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  Value srcBuff;
+  llvm::TypeSwitch<Operation *>(operand.getDefiningOp())
+      .Case<TransferReadOp, LoadOp>(
+          [&](auto readOp) { srcBuff = readOp.getOperand(0); });
+
+  return srcBuff && isa<MemRefType>(srcBuff.getType());
+}
+
 // Get the MemRef source and offset index for the operands of
 // vector.contract.
 static FailureOr<std::pair<Value, SmallVector<Value>>>
@@ -86,7 +100,7 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
         srcBuff = readOp.getOperand(0);
       });
 
-  if (!srcBuff)
+  if (!srcBuff || !isa<MemRefType>(srcBuff.getType()))
     return failure();
 
   if (isNotAcc)
@@ -478,17 +492,21 @@ static SmallVector<Value> createTileZeros(OpBuilder &rewriter, Location loc,
   return loopItrArgs;
 }
 
-static Value getIndxToLoadStoreFromPckBuffer(
-    OpBuilder &rewriter, Location loc, Value ivInnerLoop, Value ivOuterLoop,
-    bool isInnerLoopUBHasOddQuot, bool isInnerLoopUBLarger, bool pack,
-    unsigned int blockingFactor) {
+static Value getIndxToLoadStoreFromPckBuffer(OpBuilder &rewriter, Location loc,
+                                             Value ivInnerLoop,
+                                             Value ivOuterLoop,
+                                             bool isInnerLoopUBHasOddQuot,
+                                             bool isInnerLoopUBLarger,
+                                             bool pack, Value blockStride) {
 
   Value c2 = arith::ConstantIndexOp::create(rewriter, loc, 2);
-  Value packOffset =
-      arith::ConstantIndexOp::create(rewriter, loc, (16 * blockingFactor));
 
+  // `blockStride` is the reduction (K) loop step, i.e. the amount by which the
+  // induction variable advances for one K-block. Dividing the induction value
+  // by it yields the K-block index regardless of whether the loop counts
+  // K-elements (step == 16*blockingFactor) or pre-blocked K-tiles (step == 1).
   Value quotientInnerLoop =
-      arith::DivUIOp::create(rewriter, loc, ivInnerLoop, packOffset);
+      arith::DivUIOp::create(rewriter, loc, ivInnerLoop, blockStride);
   Value remInnerLoop = arith::RemUIOp::create(
       rewriter, loc, rewriter.getIndexType(), quotientInnerLoop, c2);
 
@@ -573,8 +591,7 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
                                                      nLoadIndx, ivNewInnerLoop);
               indxToStoreInBuffer = getIndxToLoadStoreFromPckBuffer(
                   rewriter, loc, ivNewInnerLoop, ivOuterLoop,
-                  isInnerLoopUBHasOddQuot, isInnerLoopUBLarger, pack,
-                  blockingFactor);
+                  isInnerLoopUBHasOddQuot, isInnerLoopUBLarger, pack, step);
               Value indxToLoadFromMatB =
                   arith::AddIOp::create(rewriter, loc, indxToStoreInBuffer, c1);
               indxToLoadFromBuffer =
@@ -639,14 +656,16 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
         if (!isVnni) {
           if (outerLoop) {
             if (!pack) {
-              Value nLoadIndx = arith::ConstantIndexOp::create(
-                  rewriter, locNewInnerLoop, offset);
               matB = Value();
               indxToLoadFromBuffer = c0;
+              // Use the real spill-block induction value (== spillInnerLoop)
+              // together with the loop step so the computed ping-pong slot
+              // matches the prefetch store side for any number of register
+              // blocks, including odd counts (e.g. 96 = 3 blocks). Passing a
+              // constant here mis-parities the slot for odd block counts.
               indxToLoadFromBuffer = getIndxToLoadStoreFromPckBuffer(
-                  rewriter, loc, nLoadIndx, ivOuterLoop,
-                  isInnerLoopUBHasOddQuot, isInnerLoopUBLarger, pack,
-                  blockingFactor);
+                  rewriter, loc, ivNewInnerLoop, ivOuterLoop,
+                  isInnerLoopUBHasOddQuot, isInnerLoopUBLarger, pack, step);
             }
           } else {
             if (!pack) {
@@ -783,14 +802,18 @@ struct VectorContractToAMXDotProduct
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
 
-    Operation *resultWriteOp =
-        traceToVectorWriteLikeUserOperation(contractOp.getResult());
+    // Only the contract result's first consumer is needed, not the final
+    // store. This keeps the lowering independent of the epilogue ops (truncf,
+    // bias add, ReLU, ...) that sit between the contraction and the write.
+    Value resultChainEnd = contractionUsersAfterYield(contractOp.getResult());
 
-    if (!accReadOp || !resultWriteOp)
+    if (!accReadOp || !resultChainEnd)
       return rewriter.notifyMatchFailure(
           contractOp, "The ACC operand of the vector.contract should be a "
-                      "transfer_read or a load. And, the result should be "
-                      "stored using transfer_write or store.");
+                      "transfer_read or a load. And, the result should have a "
+                      "single-use chain to its consumer.");
+
+    Block *resultBlock = resultChainEnd.user_begin()->getBlock();
 
     Type ipType = rewriter.getBF16Type();
     Type opType = rewriter.getF32Type();
@@ -807,14 +830,19 @@ struct VectorContractToAMXDotProduct
       ipType = rewriter.getF8E5M2Type();
 
     if (accReadOp->getBlock() == contractOp->getBlock() &&
-        resultWriteOp->getBlock() != contractOp->getBlock())
+        resultBlock != contractOp->getBlock())
       return rewriter.notifyMatchFailure(
           contractOp, "The accumulator store is in different block.");
 
     if (accReadOp->getBlock() != contractOp->getBlock() &&
-        resultWriteOp->getBlock() == contractOp->getBlock())
+        resultBlock == contractOp->getBlock())
       return rewriter.notifyMatchFailure(
           contractOp, "The accumulator read is in different block.");
+
+    if (!(isReadSrcMemref(contractOp.getLhs()) &&
+          isReadSrcMemref(contractOp.getRhs())))
+      return rewriter.notifyMatchFailure(
+          contractOp, "The LHS or RHS src is not a MemRef type.");
 
     unsigned int dimValue = blockingFactor;
     if (!isVnni)
@@ -823,7 +851,11 @@ struct VectorContractToAMXDotProduct
     // Case 1: For just one VC rewrite. Where all accumulator read/write
     // within the same block.
     if (accReadOp->getBlock() == contractOp->getBlock() &&
-        resultWriteOp->getBlock() == contractOp->getBlock()) {
+        resultBlock == contractOp->getBlock()) {
+
+      if (!isReadSrcMemref(contractOp.getAcc()))
+        return rewriter.notifyMatchFailure(contractOp,
+                                           "The ACC src is not a MemRef type.");
 
       bool collapse = false;
       if (isVnni)
@@ -844,14 +876,14 @@ struct VectorContractToAMXDotProduct
                                         contractOp.getLhs(), collapse);
       if (failed(srcIndxLhs))
         return rewriter.notifyMatchFailure(contractOp,
-                                           "The LHS src is not a MemRef type.");
+                                           "Failed to get the LHS src.");
       auto [srcBuffLhs, indicesLhs] = *srcIndxLhs;
 
       auto srcIndxRhs = getSrcIndxValue(rewriter, contractOp.getLoc(),
                                         contractOp.getRhs(), collapse);
       if (failed(srcIndxRhs))
         return rewriter.notifyMatchFailure(contractOp,
-                                           "The RHS src is not a MemRef type.");
+                                           "Failed to get the RHS src.");
       auto rhsSrc = *srcIndxRhs;
       auto srcBuffRhs = rhsSrc.first;
       auto indicesRhs = rhsSrc.second;
@@ -860,7 +892,7 @@ struct VectorContractToAMXDotProduct
                                         contractOp.getAcc(), false);
       if (failed(srcIndxAcc))
         return rewriter.notifyMatchFailure(contractOp,
-                                           "The ACC src is not a MemRef type.");
+                                           "Failed to get the ACC src.");
       auto [srcBuffAcc, indicesAcc] = *srcIndxAcc;
 
       Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
@@ -1022,10 +1054,18 @@ struct VectorContractToAMXDotProduct
     while (true) {
       Operation *parent = current->getParentOfType<scf::ForOp>();
 
-      if (!parent)
+      if (!parent) {
+        // The accumulator initialization can be hoisted above an enclosing
+        // parallel region (scf.parallel/scf.forall) when the register tile
+        // matches the problem size and the M/N register loops fold away. In
+        // that case the reduction loop(s) collected so far are still valid to
+        // rewrite, so stop climbing instead of bailing out.
+        if (!loopLists.empty())
+          break;
         return rewriter.notifyMatchFailure(
             contractOp,
             "Accumulator read and contract op not within scf.for op");
+      }
 
       loopLists.push_back(dyn_cast<scf::ForOp>(parent));
 
@@ -1043,14 +1083,14 @@ struct VectorContractToAMXDotProduct
                                       contractOp.getLhs(), false);
     if (failed(srcIndxLhs))
       return rewriter.notifyMatchFailure(contractOp,
-                                         "The LHS src is not a MemRef type.");
+                                         "Failed to get the LHS src.");
     auto [srcBuffLhs, indicesLhs] = *srcIndxLhs;
 
     auto srcIndxRhs = getSrcIndxValue(rewriter, contractOp.getLoc(),
                                       contractOp.getRhs(), false);
     if (failed(srcIndxRhs))
       return rewriter.notifyMatchFailure(contractOp,
-                                         "The RHS src is not a MemRef type.");
+                                         "Failed to get the RHS src.");
     auto [srcBuffRhs, indicesRhs] = *srcIndxRhs;
     Operation *vectorOpLhs;
     llvm::TypeSwitch<Operation *>(contractOp.getLhs().getDefiningOp())
@@ -1063,6 +1103,10 @@ struct VectorContractToAMXDotProduct
         .Case<TransferReadOp, LoadOp>([&](auto readOp) {
           vectorOpRhs = readOp.getBase().getDefiningOp();
         });
+
+    if (!vectorOpLhs || !vectorOpRhs)
+      return rewriter.notifyMatchFailure(
+          contractOp, "Failed to find LHS or RHS read source operation");
 
     // Retrive all the contaction operation within the loop.
     SmallVector<vector::ContractionOp> ops;

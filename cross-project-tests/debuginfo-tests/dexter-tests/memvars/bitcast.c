@@ -4,7 +4,7 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w %dexter_lldb_args --binary %t -- %s
+// RUN: %dexter -w %dexter_lldb_args --binary %t -- %s | FileCheck %s
 
 //// Adapted from https://bugs.llvm.org/show_bug.cgi?id=34136#c1
 //// LowerDbgDeclare has since been updated to look through bitcasts. We still
@@ -64,14 +64,24 @@ void alias(char* c) {
 
 int main() {
   int x = getint(5);
-  int y = getint(5); // DexLabel('s1')
-  int z = getint(5); // DexLabel('s2')
-  alias((char*)&x);  // DexLabel('s3')
+  int y = getint(5); // !dex_label s1
+  int z = getint(5); // !dex_label s2
+  alias((char*)&x);  // !dex_label s3
   alias((char*)&y);
   alias((char*)&z);
-  return 0;          // DexLabel('s4')
+  return 0;          // !dex_label s4
 }
 
-// DexExpectWatchValue('x', '5',  from_line=ref('s1'), to_line=ref('s4'))
-// DexExpectWatchValue('y', '5',  from_line=ref('s2'), to_line=ref('s4'))
-// DexExpectWatchValue('z', '5',  from_line=ref('s3'), to_line=ref('s4'))
+// CHECK-DAG: seen_values: 3
+// CHECK-DAG: correct_step_coverage: 100.0%
+
+/*
+---
+!where {lines: !range [!label s1, !label s4]}:
+  !value x: 5
+!where {lines: !range [!label s2, !label s4]}:
+  !value y: 5
+!where {lines: !range [!label s3, !label s4]}:
+  !value z: 5
+...
+*/

@@ -1,6 +1,6 @@
 ; RUN: opt -S -dxil-translate-metadata < %s | FileCheck %s
 ; RUN: opt -S --passes="dxil-pretty-printer" < %s 2>&1 | FileCheck %s --check-prefix=PRINT
-; RUN: llc %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
+; RUN: llc %s -o - -disable-dxil-remove-unused-resources -stop-before=dxil-op-lower 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxil-pc-shadermodel6.6-compute"
@@ -15,6 +15,9 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 @Seven.str = private unnamed_addr constant [6 x i8] c"Seven\00", align 1
 @Array.str = private unnamed_addr constant [6 x i8] c"Array\00", align 1
 @Array2.str = private unnamed_addr constant [7 x i8] c"Array2\00", align 1
+
+; Make sure heap resource does not appear in the resource list.
+; PRINT-NOT: ; i16
 
 ; PRINT:; Resource Bindings:
 ; PRINT-NEXT:;
@@ -84,10 +87,19 @@ define void @test() #0 {
   %Array2_20_h = call target("dx.TypedBuffer", double, 0, 0, 0)
             @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 20, ptr @Array2.str)
 
+  ; Resource from heap should not appear anywhere in the resource list
+  ; since it does not have a binding. Use <2 x i16> element type to make sure
+  ; it does not match any of the other resources.
+  %heap_resource = tail call target("dx.TypedBuffer", <2 x i16>, 0, 0, 0)
+            @llvm.dx.resource.handlefromheap(i32 5)
+
   ret void
 }
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
+
+; Heap resource is the only one using <2 x i16> and it should not appear in list
+; CHECK-NOT: = type { <2 x i16> }
 
 ; CHECK: %"Buffer<half4>" = type { <4 x half> }
 ; CHECK: %"Buffer<float2>" = type { <2 x float> }

@@ -323,6 +323,11 @@ public:
   /// per-function processing of the pass.
   virtual bool runOnFunction(Function &F) = 0;
 
+  /// For --print-changed, serialize the IR unit this pass operates on. The
+  /// default prints \p F; MachineFunctionPass prints its MachineFunction.
+  /// Returns false if there is nothing to report.
+  virtual bool printIRUnit(raw_ostream &OS, Function &F);
+
   void assignPassManager(PMStack &PMS, PassManagerType T) override;
 
   ///  Return what kind of Pass Manager can manage this pass.

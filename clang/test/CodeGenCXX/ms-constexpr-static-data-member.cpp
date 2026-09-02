@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -triple=x86_64-windows-msvc %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple=x86_64-windows-msvc \
+// RUN:   -fclang-abi-compat=22 %s -o - | FileCheck %s --check-prefix=COMPAT
 
 struct Foo { int x, y; };
 
@@ -24,3 +26,9 @@ void usethem() {
 // CHECK-DAG: @"?sdm_char_ptr@S@@2QEBDEB" = linkonce_odr dso_local constant ptr @"??_C@_04JIHMPGLA@asdf?$AA@", comdat, align 8
 
 // CHECK-DAG: @"?sdm_udt@S@@2UFoo@@B" = linkonce_odr dso_local constant %struct.Foo { i32 1, i32 2 }, comdat, align 8
+
+// COMPAT-DAG: @"?sdm_char_array@S@@2QBDB" = linkonce_odr dso_local constant [5 x i8] c"asdf\00", comdat, align 1
+
+// COMPAT-DAG: @"?sdm_char_ptr@S@@2QEBDEB" = linkonce_odr dso_local constant ptr @"??_C@_04JIHMPGLA@asdf?$AA@", comdat, align 8
+
+// COMPAT-DAG: @"?sdm_udt@S@@2UFoo@@B" = linkonce_odr dso_local constant %struct.Foo { i32 1, i32 2 }, comdat, align 4

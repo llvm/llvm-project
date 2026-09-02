@@ -189,7 +189,7 @@ Platform::LocateExecutableScriptingResourcesFromSafePaths(
       target.GetDebugger()
           .GetScriptInterpreter()
           ->GetSanitizedScriptingModuleName(
-              module_spec.GetFileNameStrippingExtension().GetStringRef());
+              module_spec.GetFileNameStrippingExtension());
 
   FileSpecList paths = target.GetSafeAutoLoadPaths();
 
@@ -257,7 +257,7 @@ Platform::LocateExecutableScriptingResources(Target *target, Module &module,
 }
 
 Status Platform::GetSharedModule(
-    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
   if (IsHost())
     // Note: module_search_paths_ptr functionality is now handled internally
@@ -293,7 +293,7 @@ Status Platform::GetSharedModule(
     return error;
   };
 
-  return GetRemoteSharedModule(module_spec, process, module_sp, resolver,
+  return GetRemoteSharedModule(module_spec, &target, module_sp, resolver,
                                did_create_ptr);
 }
 
@@ -345,7 +345,7 @@ void Platform::GetStatus(Stream &strm) {
   ArchSpec arch(GetSystemArchitecture());
   if (arch.IsValid()) {
     if (!arch.GetTriple().str().empty()) {
-      strm.Printf("    Triple: ");
+      strm.PutCString("    Triple: ");
       arch.DumpTriple(strm.AsRawOstream());
       strm.EOL();
     }
@@ -490,7 +490,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
   case fs::file_type::directory_file: {
     // make the new directory and get in there
     FileSpec dst_dir = rc_baton->dst;
-    if (!dst_dir.GetFilename())
+    if (dst_dir.GetFilename().empty())
       dst_dir.SetFilename(src.GetFilename());
     Status error = rc_baton->platform_ptr->MakeDirectory(
         dst_dir, lldb::eFilePermissionsDirectoryDefault);
@@ -506,7 +506,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // Make a filespec that only fills in the directory of a FileSpec so when
     // we enumerate we can quickly fill in the filename for dst copies
     FileSpec recurse_dst;
-    recurse_dst.SetDirectory(dst_dir.GetPathAsConstString());
+    recurse_dst.SetDirectory(dst_dir.GetPath());
     RecurseCopyBaton rc_baton2 = {recurse_dst, rc_baton->platform_ptr,
                                   Status()};
     FileSystem::Instance().EnumerateDirectory(src_dir_path, true, true, true,
@@ -521,7 +521,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
   case fs::file_type::symlink_file: {
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
-    if (!dst_file.GetFilename())
+    if (dst_file.GetFilename().empty())
       dst_file.SetFilename(src.GetFilename());
 
     FileSpec src_resolved;
@@ -543,7 +543,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
   case fs::file_type::regular_file: {
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
-    if (!dst_file.GetFilename())
+    if (dst_file.GetFilename().empty())
       dst_file.SetFilename(src.GetFilename());
     Status err = rc_baton->platform_ptr->PutFile(src, dst_file);
     if (err.Fail()) {
@@ -570,21 +570,21 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
             src.GetPath().c_str(), dst.GetPath().c_str());
   FileSpec fixed_dst(dst);
 
-  if (!fixed_dst.GetFilename())
+  if (fixed_dst.GetFilename().empty())
     fixed_dst.SetFilename(src.GetFilename());
 
   FileSpec working_dir = GetWorkingDirectory();
 
   if (dst) {
-    if (dst.GetDirectory()) {
-      const char first_dst_dir_char = dst.GetDirectory().GetCString()[0];
+    if (!dst.GetDirectory().empty()) {
+      const char first_dst_dir_char = dst.GetDirectory().front();
       if (first_dst_dir_char == '/' || first_dst_dir_char == '\\') {
         fixed_dst.SetDirectory(dst.GetDirectory());
       }
       // If the fixed destination file doesn't have a directory yet, then we
       // must have a relative path. We will resolve this relative path against
       // the platform's working directory
-      if (!fixed_dst.GetDirectory()) {
+      if (fixed_dst.GetDirectory().empty()) {
         FileSpec relative_spec;
         if (working_dir) {
           relative_spec = working_dir;
@@ -599,7 +599,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
       }
     } else {
       if (working_dir) {
-        fixed_dst.SetDirectory(working_dir.GetPathAsConstString());
+        fixed_dst.SetDirectory(working_dir.GetPath());
       } else {
         error = Status::FromErrorStringWithFormat(
             "platform working directory must be valid for relative path '%s'",
@@ -609,7 +609,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
     }
   } else {
     if (working_dir) {
-      fixed_dst.SetDirectory(working_dir.GetPathAsConstString());
+      fixed_dst.SetDirectory(working_dir.GetPath());
     } else {
       error =
           Status::FromErrorString("platform working directory must be valid "
@@ -637,7 +637,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
         // Make a filespec that only fills in the directory of a FileSpec so
         // when we enumerate we can quickly fill in the filename for dst copies
         FileSpec recurse_dst;
-        recurse_dst.SetDirectory(fixed_dst.GetPathAsConstString());
+        recurse_dst.SetDirectory(fixed_dst.GetPath());
         std::string src_dir_path(src.GetPath());
         RecurseCopyBaton baton = {recurse_dst, this, Status()};
         FileSystem::Instance().EnumerateDirectory(
@@ -791,8 +791,8 @@ const char *Platform::GetHostname() {
   return m_hostname.c_str();
 }
 
-ConstString Platform::GetFullNameForDylib(ConstString basename) {
-  return basename;
+std::string Platform::GetFullNameForDylib(llvm::StringRef basename) {
+  return basename.str();
 }
 
 bool Platform::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
@@ -1542,7 +1542,7 @@ Status Platform::GetCachedExecutable(ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp) {
   FileSpec platform_spec = module_spec.GetFileSpec();
   Status error = GetRemoteSharedModule(
-      module_spec, nullptr, module_sp,
+      module_spec, /*target=*/nullptr, module_sp,
       [&](const ModuleSpec &spec) {
         return Platform::ResolveExecutable(spec, module_sp);
       },
@@ -1556,7 +1556,7 @@ Status Platform::GetCachedExecutable(ModuleSpec &module_spec,
 }
 
 Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
-                                       Process *process,
+                                       Target *target,
                                        lldb::ModuleSP &module_sp,
                                        const ModuleResolver &module_resolver,
                                        bool *did_create_ptr) {
@@ -1564,7 +1564,7 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
   ModuleSpec resolved_module_spec;
   ArchSpec process_host_arch;
   bool got_module_spec = false;
-  if (process) {
+  if (Process *process = target ? target->GetProcessSP().get() : nullptr) {
     process_host_arch = process->GetSystemArchitecture();
     // Try to get module information from the process
     if (process->GetModuleSpec(module_spec.GetFileSpec(),
@@ -1951,9 +1951,8 @@ uint32_t Platform::LoadImageUsingPaths(lldb_private::Process *process,
 {
   FileSpec file_to_use;
   if (remote_filename.IsAbsolute())
-    file_to_use = FileSpec(remote_filename.GetFilename().GetStringRef(),
-
-                           remote_filename.GetPathStyle());
+    file_to_use =
+        FileSpec(remote_filename.GetFilename(), remote_filename.GetPathStyle());
   else
     file_to_use = remote_filename;
 

@@ -8,7 +8,7 @@ define i64 @test(i64 %0) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [20 x i64], align 8
 ; CHECK-NEXT:    store i64 0, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 72
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i64> [[TMP4]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8

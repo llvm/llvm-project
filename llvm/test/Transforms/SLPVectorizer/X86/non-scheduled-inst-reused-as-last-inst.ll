@@ -10,7 +10,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP6]] = or <2 x i32> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i64 0
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 null(i32 [[TMP7]])
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb4:

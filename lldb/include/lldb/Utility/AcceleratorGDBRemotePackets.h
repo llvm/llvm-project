@@ -85,6 +85,33 @@ bool fromJSON(const llvm::json::Value &value,
               AcceleratorBreakpointHitArgs &data, llvm::json::Path path);
 llvm::json::Value toJSON(const AcceleratorBreakpointHitArgs &data);
 
+/// Information the client needs to connect to an accelerator GDB server. When
+/// an AcceleratorActions carries this, the client creates a new target and
+/// connects to \a connect_url.
+struct AcceleratorConnectionInfo {
+  /// Connection URL the client should connect to (as in "process connect
+  /// <url>").
+  std::string connect_url;
+  /// Name of the platform to select when creating the accelerator target. The
+  /// platform must be able to handle \a triple and is used to connect to the
+  /// accelerator's GDB server.
+  std::string platform_name;
+  /// Target triple for the accelerator target. Used to ensure the architecture
+  /// is compatible with \a platform_name.
+  std::string triple;
+  /// Path to the executable to use when creating the accelerator target. If
+  /// not set, an empty target is created.
+  std::optional<std::string> exe_path;
+  /// If true, connect synchronously: the client blocks until the accelerator
+  /// process is connected and stopped before continuing. If false, the
+  /// connection is made asynchronously.
+  bool synchronous = false;
+};
+
+bool fromJSON(const llvm::json::Value &value, AcceleratorConnectionInfo &data,
+              llvm::json::Path path);
+llvm::json::Value toJSON(const AcceleratorConnectionInfo &data);
+
 /// Actions to be performed in the native process on behalf of an accelerator
 /// plugin. AcceleratorActions are returned in the following contexts:
 ///
@@ -114,6 +141,9 @@ struct AcceleratorActions {
   int64_t identifier = 0;
   /// New breakpoints to set. Nothing to set if this is empty.
   std::vector<AcceleratorBreakpointInfo> breakpoints;
+  /// If set, the client should create a new target and connect to the
+  /// accelerator GDB server described here.
+  std::optional<AcceleratorConnectionInfo> connect_info;
 };
 
 bool fromJSON(const llvm::json::Value &value, AcceleratorActions &data,
