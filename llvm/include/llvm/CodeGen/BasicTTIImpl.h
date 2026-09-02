@@ -3271,7 +3271,7 @@ public:
     // Try to find actual number of parts for non-power-of-2 elements as
     // ceil(num-of-elements/num-of-subtype-elements).
     if (auto *FTp = dyn_cast<FixedVectorType>(Tp);
-        Tp && LT.second.isFixedLengthVector() &&
+        FTp && LT.second.isFixedLengthVector() &&
         !has_single_bit(FTp->getNumElements())) {
       if (auto *SubTp = dyn_cast_if_present<FixedVectorType>(
               EVT(LT.second).getTypeForEVT(Tp->getContext()));
