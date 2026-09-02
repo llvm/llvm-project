@@ -193,14 +193,13 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
         // parameter; copy its contents into the out parameter for this
         // occurrence.
         if (!inserted) {
-          if (it->second != arg &&
-              failed(options.memCpyFn(builder, op->getLoc(), it->second, arg)))
+          if (failed(options.memCpyFn(builder, op->getLoc(), it->second, arg)))
             return WalkResult::interrupt();
           continue;
         }
         orig.replaceAllUsesWith(arg);
         toErase.insert(orig.getDefiningOp());
-      } else {
+      } else if (orig != arg) {
         if (failed(options.memCpyFn(builder, op.getLoc(), orig, arg)))
           return WalkResult::interrupt();
       }
