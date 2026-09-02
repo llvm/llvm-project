@@ -4,8 +4,44 @@
 declare void @llvm.amdgcn.global.load.lds(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture, i32, i32, i32)
 declare void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32>, ptr addrspace(3) nocapture, i32, i32, i32, i32, i32)
 
-define i32 @global_load_lds_war_wg(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds) #0 {
-; CHECK-LABEL: global_load_lds_war_wg:
+define i32 @lds_then_dma.global.singlethread(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: lds_then_dma.global.singlethread:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    ds_read_b32 v2, v2
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_lds_dword v[0:1], off
+; CHECK-NEXT:    v_mov_b32_e32 v0, v2
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("singlethread") release, !mmra !0
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  ret i32 %v
+}
+
+define i32 @lds_then_dma.global.wave(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: lds_then_dma.global.wave:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    ds_read_b32 v2, v2
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_lds_dword v[0:1], off
+; CHECK-NEXT:    v_mov_b32_e32 v0, v2
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("wavefront") release, !mmra !0
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  ret i32 %v
+}
+
+define i32 @lds_then_dma.global.wg(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: lds_then_dma.global.wg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
@@ -22,106 +58,44 @@ define i32 @global_load_lds_war_wg(ptr addrspace(1) %g, ptr addrspace(3) inreg %
   ret i32 %v
 }
 
-define i32 @global_load_lds_war_wave(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds) #0 {
-; CHECK-LABEL: global_load_lds_war_wave:
+define i32 @lds_then_dma.global.agent(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: lds_then_dma.global.agent:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    ds_read_b32 v2, v2
+; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_lds_dword v[0:1], off
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
-  fence syncscope("wavefront") release, !mmra !0
+  fence syncscope("agent") release, !mmra !0
   call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
   ret i32 %v
 }
 
-define i32 @buffer_load_lds_war_wg(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) #0 {
-; CHECK-LABEL: buffer_load_lds_war_wg:
+define i32 @lds_then_dma.global.system(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: lds_then_dma.global.system:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s16
-; CHECK-NEXT:    s_mov_b32 m0, s16
-; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    ds_read_b32 v2, v2
+; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    global_load_lds_dword v[0:1], off
+; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
-  fence syncscope("workgroup") release, !mmra !0
-  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  fence release, !mmra !0
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
   ret i32 %v
 }
 
-define i32 @buffer_load_lds_war_wave(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) #0 {
-; CHECK-LABEL: buffer_load_lds_war_wave:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s16
-; CHECK-NEXT:    s_mov_b32 m0, s16
-; CHECK-NEXT:    ds_read_b32 v0, v0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %v = load i32, ptr addrspace(3) %lds, align 4
-  fence syncscope("wavefront") release, !mmra !0
-  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
-  ret i32 %v
-}
-
-define i32 @global_load_lds_war_wave_partial(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
-; CHECK-LABEL: global_load_lds_war_wave_partial:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 m0, s0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
-; CHECK-NEXT:    ds_read_b32 v2, v2
-; CHECK-NEXT:    ds_read_b32 v3, v3
-; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    global_load_lds_dword v[0:1], off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_add_u32_e32 v0, v2, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %v1 = load i32, ptr addrspace(3) %lds, align 4
-  fence syncscope("wavefront") release, !mmra !0
-  %v2 = load i32, ptr addrspace(3) %lds2, align 4
-  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  %s = add i32 %v1, %v2
-  ret i32 %s
-}
-
-define i32 @global_load_lds_war_wg_partial(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
-; CHECK-LABEL: global_load_lds_war_wg_partial:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 m0, s0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s1
-; CHECK-NEXT:    ds_read_b32 v2, v2
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    ds_read_b32 v3, v3
-; CHECK-NEXT:    global_load_lds_dword v[0:1], off
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_add_u32_e32 v0, v2, v3
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %v1 = load i32, ptr addrspace(3) %lds, align 4
-  fence syncscope("workgroup") release, !mmra !0
-  %v2 = load i32, ptr addrspace(3) %lds2, align 4
-  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  %s = add i32 %v1, %v2
-  ret i32 %s
-}
-
-define i32 @global_load_lds_war_singlethread_partial(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
-; CHECK-LABEL: global_load_lds_war_singlethread_partial:
+define i32 @lds_then_dma.global.singlethread.partial(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: lds_then_dma.global.singlethread.partial:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 m0, s0
@@ -143,8 +117,54 @@ define i32 @global_load_lds_war_singlethread_partial(ptr addrspace(1) %g, ptr ad
   ret i32 %s
 }
 
-define i32 @global_load_lds_war_agent_partial(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
-; CHECK-LABEL: global_load_lds_war_agent_partial:
+define i32 @lds_then_dma.global.wave.partial(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: lds_then_dma.global.wave.partial:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    ds_read_b32 v2, v2
+; CHECK-NEXT:    ds_read_b32 v3, v3
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
+; CHECK-NEXT:    global_load_lds_dword v[0:1], off
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_add_u32_e32 v0, v2, v3
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v1 = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("wavefront") release, !mmra !0
+  %v2 = load i32, ptr addrspace(3) %lds2, align 4
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  %s = add i32 %v1, %v2
+  ret i32 %s
+}
+
+define i32 @lds_then_dma.global.wg.partial(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: lds_then_dma.global.wg.partial:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 m0, s0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    ds_read_b32 v2, v2
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ds_read_b32 v3, v3
+; CHECK-NEXT:    global_load_lds_dword v[0:1], off
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_add_u32_e32 v0, v2, v3
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v1 = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("workgroup") release, !mmra !0
+  %v2 = load i32, ptr addrspace(3) %lds2, align 4
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  %s = add i32 %v1, %v2
+  ret i32 %s
+}
+
+define i32 @lds_then_dma.global.agent.partial(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: lds_then_dma.global.agent.partial:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
@@ -166,8 +186,8 @@ define i32 @global_load_lds_war_agent_partial(ptr addrspace(1) %g, ptr addrspace
   ret i32 %s
 }
 
-define i32 @global_load_lds_war_system_partial(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
-; CHECK-LABEL: global_load_lds_war_system_partial:
+define i32 @lds_then_dma.global.system.partial(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: lds_then_dma.global.system.partial:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
@@ -189,23 +209,204 @@ define i32 @global_load_lds_war_system_partial(ptr addrspace(1) %g, ptr addrspac
   ret i32 %s
 }
 
-define void @global_load_lds_war_no_prior_read(ptr addrspace(1) %g, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
-; CHECK-LABEL: global_load_lds_war_no_prior_read:
+define i32 @lds_then_dma.buffer.singlethread(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: lds_then_dma.buffer.singlethread:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, s1
-; CHECK-NEXT:    s_mov_b32 m0, s0
-; CHECK-NEXT:    ds_read_b32 v3, v2
-; CHECK-NEXT:    global_load_lds_dword v[0:1], off
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    ds_write_b32 v2, v3
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    s_mov_b32 m0, s16
+; CHECK-NEXT:    ds_read_b32 v0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("singlethread") release, !mmra !0
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  ret i32 %v
+}
+
+define i32 @lds_then_dma.buffer.wave(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: lds_then_dma.buffer.wave:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    s_mov_b32 m0, s16
+; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(3) %lds, align 4
   fence syncscope("wavefront") release, !mmra !0
-  %r = load i32, ptr addrspace(3) %lds2, align 4
-  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  store i32 %r, ptr addrspace(3) %lds2, align 4
-  ret void
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  ret i32 %v
+}
+
+define i32 @lds_then_dma.buffer.wg(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: lds_then_dma.buffer.wg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    s_mov_b32 m0, s16
+; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("workgroup") release, !mmra !0
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  ret i32 %v
+}
+
+define i32 @lds_then_dma.buffer.agent(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: lds_then_dma.buffer.agent:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    s_mov_b32 m0, s16
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("agent") release, !mmra !0
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  ret i32 %v
+}
+
+define i32 @lds_then_dma.buffer.system(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) #0 {
+; CHECK-LABEL: lds_then_dma.buffer.system:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    s_mov_b32 m0, s16
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v = load i32, ptr addrspace(3) %lds, align 4
+  fence release, !mmra !0
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  ret i32 %v
+}
+
+define i32 @lds_then_dma.buffer.singlethread.partial(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: lds_then_dma.buffer.singlethread.partial:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 m0, s16
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    v_mov_b32_e32 v1, s17
+; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    ds_read_b32 v1, v1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
+; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_add_u32_e32 v0, v0, v1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v1 = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("singlethread") release, !mmra !0
+  %v2 = load i32, ptr addrspace(3) %lds2, align 4
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  %s = add i32 %v1, %v2
+  ret i32 %s
+}
+
+define i32 @lds_then_dma.buffer.wave.partial(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: lds_then_dma.buffer.wave.partial:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 m0, s16
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    v_mov_b32_e32 v1, s17
+; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    ds_read_b32 v1, v1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
+; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_add_u32_e32 v0, v0, v1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v1 = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("wavefront") release, !mmra !0
+  %v2 = load i32, ptr addrspace(3) %lds2, align 4
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  %s = add i32 %v1, %v2
+  ret i32 %s
+}
+
+define i32 @lds_then_dma.buffer.wg.partial(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: lds_then_dma.buffer.wg.partial:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 m0, s16
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    v_mov_b32_e32 v1, s17
+; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ds_read_b32 v1, v1
+; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_add_u32_e32 v0, v0, v1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v1 = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("workgroup") release, !mmra !0
+  %v2 = load i32, ptr addrspace(3) %lds2, align 4
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  %s = add i32 %v1, %v2
+  ret i32 %s
+}
+
+define i32 @lds_then_dma.buffer.agent.partial(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: lds_then_dma.buffer.agent.partial:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    s_mov_b32 m0, s16
+; CHECK-NEXT:    v_mov_b32_e32 v1, s17
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ds_read_b32 v1, v1
+; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_add_u32_e32 v0, v0, v1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v1 = load i32, ptr addrspace(3) %lds, align 4
+  fence syncscope("agent") release, !mmra !0
+  %v2 = load i32, ptr addrspace(3) %lds2, align 4
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  %s = add i32 %v1, %v2
+  ret i32 %s
+}
+
+define i32 @lds_then_dma.buffer.system.partial(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds, ptr addrspace(3) inreg %lds2) #0 {
+; CHECK-LABEL: lds_then_dma.buffer.system.partial:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s16
+; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    s_mov_b32 m0, s16
+; CHECK-NEXT:    v_mov_b32_e32 v1, s17
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ds_read_b32 v1, v1
+; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_add_u32_e32 v0, v0, v1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %v1 = load i32, ptr addrspace(3) %lds, align 4
+  fence release, !mmra !0
+  %v2 = load i32, ptr addrspace(3) %lds2, align 4
+  call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
+  %s = add i32 %v1, %v2
+  ret i32 %s
 }
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,32" }
