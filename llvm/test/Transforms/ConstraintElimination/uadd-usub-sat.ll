@@ -72,7 +72,7 @@ define i64 @usub_sat_signed_precondition(i64 %a, i64 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B_NNEG]])
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp sge i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;
   %a.nneg = icmp sge i64 %a, 0
@@ -98,9 +98,8 @@ define i1 @usub_sat_span_offset(i64 %count, i64 %base, i64 %n) {
 ; CHECK-NEXT:    [[REM:%.*]] = sub nsw i64 [[COUNT]], [[N]]
 ; CHECK-NEXT:    [[FITS:%.*]] = icmp sge i64 [[REM]], [[BASE]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[FITS]])
-; CHECK-NEXT:    [[AVAIL:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[COUNT]], i64 [[BASE]])
-; CHECK-NEXT:    [[T:%.*]] = icmp sge i64 [[AVAIL]], [[N]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    [[AVAIL:%.*]] = sub nuw nsw i64 [[COUNT]], [[BASE]]
+; CHECK-NEXT:    ret i1 true
 ;
   %count.nneg = icmp sge i64 %count, 0
   call void @llvm.assume(i1 %count.nneg)
@@ -121,7 +120,7 @@ define i64 @usub_sat_unsigned_precondition_no_nsw(i64 %a, i64 %b) {
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;
   %pre = icmp uge i64 %a, %b
@@ -135,10 +134,9 @@ define i1 @usub_sat_unsigned_query(i64 %a, i64 %b) {
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
 ; CHECK-NEXT:    [[BACK:%.*]] = add nuw i64 [[SUB]], [[B]]
-; CHECK-NEXT:    [[T:%.*]] = icmp uge i64 [[BACK]], [[A]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pre = icmp uge i64 %a, %b
   call void @llvm.assume(i1 %pre)
