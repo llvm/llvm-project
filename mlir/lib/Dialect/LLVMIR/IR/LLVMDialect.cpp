@@ -50,6 +50,13 @@ using mlir::LLVM::tailcallkind::getMaxEnumValForTailCallKind;
 
 static constexpr const char kElemTypeAttrName[] = "elem_type";
 
+static NamedAttrList getAttrsForPrinting(Operation *op) {
+  NamedAttrList attrs(op->getRawDictionaryAttrs());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { attrs.set(name, attr); });
+  return attrs;
+}
+
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
@@ -278,14 +285,15 @@ static std::optional<ParseResult> parseOpBundles(
 void ICmpOp::print(OpAsmPrinter &p) {
   p << " \"" << stringifyICmpPredicate(getPredicate()) << "\" " << getOperand(0)
     << ", " << getOperand(1);
-  p.printOptionalAttrDict((*this)->getAttrs(), {"predicate"});
+  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(), {"predicate"});
   p << " : " << getLhs().getType();
 }
 
 void FCmpOp::print(OpAsmPrinter &p) {
   p << " \"" << stringifyFCmpPredicate(getPredicate()) << "\" " << getOperand(0)
     << ", " << getOperand(1);
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()), {"predicate"});
+  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
+                          {"predicate"});
   p << " : " << getLhs().getType();
 }
 
@@ -397,13 +405,10 @@ void AllocaOp::print(OpAsmPrinter &p) {
     p << " inalloca";
 
   p << ' ' << getArraySize() << " x " << getElemType();
+  NamedAttrList attrs((*this)->getDiscardableAttrDictionary().getValue());
   if (getAlignment() && *getAlignment() != 0)
-    p.printOptionalAttrDict((*this)->getAttrs(),
-                            {kElemTypeAttrName, getInallocaAttrName()});
-  else
-    p.printOptionalAttrDict(
-        (*this)->getAttrs(),
-        {getAlignmentAttrName(), kElemTypeAttrName, getInallocaAttrName()});
+    attrs.append(getAlignmentAttrName(), getAlignmentAttr());
+  p.printOptionalAttrDict(attrs);
   p << " : " << funcTy;
 }
 
@@ -1379,7 +1384,7 @@ void CallOp::print(OpAsmPrinter &p) {
                    getOpBundleOperands().getTypes(), getOpBundleTags());
   }
 
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
+  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
                           {getCalleeAttrName(), getTailCallKindAttrName(),
                            getVarCalleeTypeAttrName(), getCConvAttrName(),
                            getOperandSegmentSizesAttrName(),
@@ -1707,7 +1712,7 @@ void InvokeOp::print(OpAsmPrinter &p) {
                    getOpBundleOperands().getTypes(), getOpBundleTags());
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs(),
+  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(),
                           {getCalleeAttrName(), getOperandSegmentSizeAttr(),
                            getCConvAttrName(), getVarCalleeTypeAttrName(),
                            getOpBundleSizesAttrName(),
@@ -1887,7 +1892,7 @@ void LandingpadOp::print(OpAsmPrinter &p) {
       << value.getType() << ") ";
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs(), {"cleanup"});
+  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(), {"cleanup"});
 
   p << ": " << getType();
 }
@@ -4259,7 +4264,7 @@ void CallIntrinsicOp::print(OpAsmPrinter &p) {
                    getOpBundleOperands().getTypes(), getOpBundleTagsAttr());
   }
 
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
+  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
                           {getOperandSegmentSizesAttrName(),
                            getOpBundleSizesAttrName(), getIntrinAttrName(),
                            getOpBundleTagsAttrName(), getArgAttrsAttrName(),

@@ -302,7 +302,7 @@ struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
                     op, dim, std::nullopt,
                     gpu::index_lowering::IndexKind::Block,
                     gpu::index_lowering::IntrType::Id, 32))
-          tidOp->setAttr("range", range);
+          tidOp->setInherentAttr(rewriter.getStringAttr("range"), range);
       };
       setBoundFromContext(tidX, gpu::Dimension::x);
       setBoundFromContext(tidY, gpu::Dimension::y);
@@ -737,16 +737,17 @@ struct LowerGpuOpsToROCDLOpsPass final
     gpu::GPUModuleOp m = getOperation();
     MLIRContext *ctx = m.getContext();
 
-    auto llvmDataLayout = m->getAttrOfType<StringAttr>(
+    auto llvmDataLayout = m->getDiscardableAttrOfType<StringAttr>(
         LLVM::LLVMDialect::getDataLayoutAttrName());
     if (!llvmDataLayout) {
       llvmDataLayout = StringAttr::get(ctx, amdgcnDataLayout);
-      m->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(), llvmDataLayout);
+      m->setDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
+                            llvmDataLayout);
     }
     // Request C wrapper emission.
     for (auto func : m.getOps<func::FuncOp>()) {
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(ctx));
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(ctx));
     }
 
     FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
