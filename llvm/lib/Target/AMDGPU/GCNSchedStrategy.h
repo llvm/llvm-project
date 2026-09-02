@@ -772,10 +772,11 @@ public:
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
   PreRARematStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
-      : GCNSchedStage(StageID, DAG), TargetRegions(DAG.Regions.size()),
-        RescheduleRegions(DAG.Regions.size()),
+      : GCNSchedStage(StageID, DAG),
+        TargetRegions(static_cast<unsigned>(DAG.Regions.size())),
+        RescheduleRegions(static_cast<unsigned>(DAG.Regions.size())),
         Remater(MF, DAG.Regions, *DAG.LIS) {
-    const unsigned NumRegions = DAG.Regions.size();
+    const unsigned NumRegions = static_cast<unsigned>(DAG.Regions.size());
     RPTargets.reserve(NumRegions);
   }
 };
