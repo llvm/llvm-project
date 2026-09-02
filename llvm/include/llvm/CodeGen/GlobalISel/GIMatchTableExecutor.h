@@ -91,11 +91,19 @@ enum {
   ///        requires an extra opcode and iteration in the interpreter on each
   ///        failed match.
   GIM_Try,
+  /// GIM_Try with an 8-bit forward-relative OnFail.
+  GIM_Try8,
+  /// GIM_Try with a 16-bit forward-relative OnFail.
+  GIM_Try16,
 
   /// GIM_Try only if the feature bits match.
   /// - OnFail(4) - The MatchTable entry at which to resume if the match fails.
   /// - Feature(2) - Expected features
   GIM_Try_CheckFeatures,
+  /// GIM_Try_CheckFeatures with an 8-bit forward-relative OnFail.
+  GIM_Try_CheckFeatures8,
+  /// GIM_Try_CheckFeatures with a 16-bit forward-relative OnFail.
+  GIM_Try_CheckFeatures16,
 
   /// Switch over the opcode on the specified instruction
   /// - InsnID(ULEB128) - Instruction ID
@@ -597,6 +605,8 @@ enum {
   /// Keeping track of the number of the GI opcodes. Must be the last entry.
   GIU_NumOpcodes,
 };
+static_assert(GIU_NumOpcodes <= 256,
+              "GlobalISel opcodes must fit in a match table byte");
 
 /// Provides the logic to execute GlobalISel match tables, which are used by the
 /// instruction selector and instruction combiners as their engine to match and
