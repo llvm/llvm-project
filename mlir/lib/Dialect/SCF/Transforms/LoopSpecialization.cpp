@@ -270,8 +270,9 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   return success();
 }
 
-static constexpr char kPeeledLoopLabel[] = "__peeled_loop__";
 static constexpr char kPartialIterationLabel[] = "__partial_iteration__";
+
+StringRef mlir::scf::getPeeledLoopAttrName() { return "__peeled_loop__"; }
 
 namespace {
 struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
@@ -286,7 +287,7 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
                                          "unsigned loops are not supported");
 
     // Do not peel already peeled loops.
-    if (forOp->hasAttr(kPeeledLoopLabel))
+    if (forOp->hasAttr(scf::getPeeledLoopAttrName()))
       return failure();
 
     scf::ForOp partialIteration;
@@ -314,11 +315,12 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
 
     // Apply label, so that the same loop is not rewritten a second time.
     rewriter.modifyOpInPlace(partialIteration, [&]() {
-      partialIteration->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
+      partialIteration->setAttr(scf::getPeeledLoopAttrName(),
+                                rewriter.getUnitAttr());
       partialIteration->setAttr(kPartialIterationLabel, rewriter.getUnitAttr());
     });
     rewriter.modifyOpInPlace(forOp, [&]() {
-      forOp->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
+      forOp->setAttr(scf::getPeeledLoopAttrName(), rewriter.getUnitAttr());
     });
     return success();
   }
@@ -365,7 +367,7 @@ struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
 
     // Drop the markers.
     parentOp->walk([](Operation *op) {
-      op->removeAttr(kPeeledLoopLabel);
+      op->removeAttr(scf::getPeeledLoopAttrName());
       op->removeAttr(kPartialIterationLabel);
     });
   }
