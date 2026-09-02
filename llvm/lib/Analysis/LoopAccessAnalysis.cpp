@@ -355,12 +355,14 @@ static bool isKnownNonDecreasingInLoop(const SCEV *S, const Loop *L,
 ///
 /// If the offset is provably monotonically non-decreasing the accessed range is
 /// bounded by the offset's value at the first iteration (via
-/// SplitIntoInitAndPostInc) and last iteration (via getSCEVAtScope)
+/// SplitIntoInitAndPostInc) and last iteration (via getSCEVAtScope). The
+/// returned range is half-open: \p EltSizeSCEV is added to the address of the
+/// last accessed element to form the end.
 ///
 /// Returns {nullptr, nullptr} if no such bound can be formed.
 static std::pair<const SCEV *, const SCEV *>
 getNonAffineMonotonicBounds(const Loop *Lp, const SCEV *PtrExpr,
-                            ScalarEvolution *SE) {
+                            const SCEV *EltSizeSCEV, ScalarEvolution *SE) {
   const auto *PtrAdd = dyn_cast<SCEVAddExpr>(PtrExpr);
   if (!PtrAdd || !PtrAdd->hasNoUnsignedWrap())
     return {nullptr, nullptr};
@@ -382,7 +384,8 @@ getNonAffineMonotonicBounds(const Loop *Lp, const SCEV *PtrExpr,
       !SE->isLoopInvariant(OffStart, Lp) || !SE->isLoopInvariant(OffEnd, Lp))
     return {nullptr, nullptr};
 
-  return {SE->getAddExpr(Base, OffStart), SE->getAddExpr(Base, OffEnd)};
+  return {SE->getAddExpr(Base, OffStart),
+          SE->getAddExpr(Base, OffEnd, EltSizeSCEV)};
 }
 
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
@@ -472,7 +475,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
   } else {
     // The pointer is loop-variant but not an affine AddRec. Try to form a
     // tight bound for a monotonic offset (see getNonAffineMonotonicBounds).
-    std::tie(ScStart, ScEnd) = getNonAffineMonotonicBounds(Lp, PtrExpr, SE);
+    std::tie(ScStart, ScEnd) =
+        getNonAffineMonotonicBounds(Lp, PtrExpr, EltSizeSCEV, SE);
     if (!ScStart)
       return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
   }
@@ -1350,6 +1354,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
                                           unsigned ASId, bool Assume) {
   Value *Ptr = Access.getPointer();
   ScalarEvolution *SE = PSE.getSE();
+  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
 
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> RTCheckPtrs;
@@ -1385,8 +1390,11 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       AR = PSE.getAsAddRec(Ptr, &Predicates);
     if (!AR || !AR->isAffine()) {
       // Check if bounds for non-affine monotonic expressions can be formed.
+      const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(
+          DL.getIndexType(P.getPointer()->getType()), AccessTy);
       if (!Assume ||
-          !getNonAffineMonotonicBounds(TheLoop, P.getPointer(), SE).first)
+          !getNonAffineMonotonicBounds(TheLoop, P.getPointer(), EltSizeSCEV, SE)
+               .first)
         return false;
       continue;
     }
