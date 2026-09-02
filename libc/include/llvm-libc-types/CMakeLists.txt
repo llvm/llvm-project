@@ -207,6 +207,7 @@ add_header(sigjmp_buf HDR sigjmp_buf.h DEPENDS .__jmp_buf)
 add_header(struct_sigaction HDR struct_sigaction.h DEPENDS .sigset_t .siginfo_t)
 add_header(struct_sigevent HDR struct_sigevent.h DEPENDS .union_sigval .pthread_attr_t .pid_t)
 add_header(struct_timespec HDR struct_timespec.h DEPENDS .time_t)
+add_header(struct_itimerspec HDR struct_itimerspec.h DEPENDS .struct_timespec)
 add_header(
   struct_stat
   HDR struct_stat.h
@@ -216,6 +217,7 @@ add_header(
 )
 add_header(struct_tm HDR struct_tm.h)
 add_header(struct_passwd HDR struct_passwd.h DEPENDS .uid_t .gid_t)
+add_header(struct_group HDR struct_group.h DEPENDS .gid_t)
 if(TARGET libc.include.llvm-libc-types.${LIBC_TARGET_OS}.struct_sysinfo)
   add_header(struct_sysinfo HDR struct_sysinfo.h DEPENDS .${LIBC_TARGET_OS}.struct_sysinfo)
 else()
@@ -254,6 +256,7 @@ add_header(wctype_t HDR wctype_t.h)
 add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
+add_header(struct_addrinfo HDR struct_addrinfo.h DEPENDS .socklen_t .struct_sockaddr)
 add_header(struct_sockaddr_in HDR struct_sockaddr_in.h DEPENDS .in_port_t .sa_family_t .struct_in_addr)
 add_header(
   struct_sockaddr_in6

@@ -51,6 +51,13 @@ macro(enable_cuda_compilation name files)
     list(REMOVE_ITEM sources
          io-api.cpp io-error.cpp io-stmt.cpp descriptor-io.cpp namelist.cpp)
     list(APPEND sources io-stmt-minimal.cpp)
+    # io-stmt-minimal.cpp is not part of ${files}, so it did not get the CUDA
+    # language and compile options set above. Without them it is compiled as
+    # plain C++ and contributes no PTX, leaving its definitions out of the
+    # device library.
+    set_source_files_properties(io-stmt-minimal.cpp PROPERTIES
+      LANGUAGE CUDA
+      COMPILE_OPTIONS "${CUDA_COMPILE_OPTIONS}")
     add_flangrt_library(obj.${name}PTX OBJECT ${sources})
     set_target_properties(obj.${name}PTX PROPERTIES
       CUDA_PTX_COMPILATION ON

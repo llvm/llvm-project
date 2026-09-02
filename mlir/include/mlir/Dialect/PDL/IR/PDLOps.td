@@ -393,7 +393,7 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
 //===----------------------------------------------------------------------===//
 
 def PDL_PatternOp : PDL_Op<"pattern", [
-    IsolatedFromAbove, SingleBlock, Symbol,
+    IsolatedFromAbove, SingleBlock, SymbolName, SymbolVisibility, Symbol,
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getDefaultDialect"]>
   ]> {
   let summary = "Define a rewrite pattern";
@@ -421,10 +421,12 @@ def PDL_PatternOp : PDL_Op<"pattern", [
   }];
 
   let arguments = (ins ConfinedAttr<I16Attr, [IntNonNegative]>:$benefit,
-                       OptionalAttr<SymbolNameAttr>:$sym_name);
+                       OptionalAttr<SymbolNameAttr>:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = [{
-    ($sym_name^)? `:` `benefit` `(` $benefit `)` attr-dict-with-keyword $bodyRegion
+    ($sym_visibility^)? ($sym_name^)? `:` `benefit` `(` $benefit `)`
+    attr-dict-with-keyword $bodyRegion
   }];
 
   let builders = [

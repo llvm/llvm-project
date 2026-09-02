@@ -17,6 +17,7 @@ static_library("OpenMP") {
     "DirectiveNameParser.cpp",
     "OMP.cpp",
     "OMPContext.cpp",
+    "OMPDescriptors.cpp",
     "OMPIRBuilder.cpp",
   ]
 }

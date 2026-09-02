@@ -15,7 +15,7 @@
 ## Check that the copied archive has the correct index contents.
 # RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefix=INDEX-TABLE %s
 # RUN: llvm-nm --print-armap %t2.a | FileCheck --check-prefix=INDEX-TABLE %s
-## Verify that llvm-objcopy has not modifed the input.
+## Verify that llvm-objcopy has not modified the input.
 # RUN: cmp %t.copy.a %t.a
 
 # INDEX-TABLE: Archive map

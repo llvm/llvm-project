@@ -56,8 +56,8 @@ define void @vldst4(ptr nocapture readonly %pIn, ptr nocapture %pOut, i32 %numRo
 ; CHECK-NEXT:    vins.f16 s8, s1
 ; CHECK-NEXT:    vmovx.f16 s1, s23
 ; CHECK-NEXT:    vins.f16 s16, s18
-; CHECK-NEXT:    vmov.f32 s18, s0
 ; CHECK-NEXT:    vmov.f32 s17, s20
+; CHECK-NEXT:    vmov.f32 s18, s0
 ; CHECK-NEXT:    vins.f16 s9, s1
 ; CHECK-NEXT:    vmov.f32 s19, s12
 ; CHECK-NEXT:    vins.f16 s7, s15
@@ -99,13 +99,13 @@ define void @vldst4(ptr nocapture readonly %pIn, ptr nocapture %pOut, i32 %numRo
 ; CHECK-NEXT:    vins.f16 s13, s25
 ; CHECK-NEXT:    vins.f16 s30, s0
 ; CHECK-NEXT:    vins.f16 s3, s8
-; CHECK-NEXT:    vmov.f32 s1, s4
 ; CHECK-NEXT:    vmov.f32 s0, s12
-; CHECK-NEXT:    vmov.f32 s21, s6
+; CHECK-NEXT:    vmov.f32 s1, s4
 ; CHECK-NEXT:    vmov.f32 s20, s14
-; CHECK-NEXT:    vmov.f32 s29, s7
-; CHECK-NEXT:    vstrh.16 q5, [r1, #32]
+; CHECK-NEXT:    vmov.f32 s21, s6
 ; CHECK-NEXT:    vmov.f32 s28, s15
+; CHECK-NEXT:    vstrh.16 q5, [r1, #32]
+; CHECK-NEXT:    vmov.f32 s29, s7
 ; CHECK-NEXT:    vstrh.16 q7, [r1, #48]
 ; CHECK-NEXT:    vstrh.16 q0, [r1], #64
 ; CHECK-NEXT:    vmov.f32 s16, s13

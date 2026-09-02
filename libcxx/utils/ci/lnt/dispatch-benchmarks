@@ -291,17 +291,9 @@ def report(args: argparse.Namespace, decisions: Sequence[Decision], runs: Runs) 
                             tablefmt='plain', disable_numparse=True,
                             colalign=('left', 'left', 'left', 'right', 'left'))
           if rows else '  nothing to do', file=out)
-    print('', file=out)
 
-    counts = {'dispatch': 0, 'skip': 0, 'defer': 0}
-    for decision in decisions:
-        counts[decision.action] += 1
-    jobs = sum(d.jobs for d in decisions if d.action == 'dispatch')
-    print(f'Summary: {len(decisions)} commit/machine pairs requested by the plan, '
-          f'{counts["skip"]} already in flight or given up on, '
-          f'{counts["dispatch"]} being requested now ({jobs} runs), '
-          f'{counts["defer"]} left for later.', file=out)
     if args.dry_run:
+        print('', file=out)
         print('DRY RUN: nothing was requested.', file=out)
 
 

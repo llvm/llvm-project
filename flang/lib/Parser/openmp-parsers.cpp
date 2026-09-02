@@ -49,7 +49,23 @@ using namespace Fortran::parser::omp;
       state.GetLocation(), std::min<size_t>(64, state.BytesRemaining()));
 }
 
-constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
+// Accept the standard "!$omp" sentinel as well as the implementation-defined
+// extension sentinels "!$omx" (fixed form) and "!$ompx" (free form) defined in
+// OpenMP 5.2, section 3.1.  The prescanner normalizes the comment character of
+// fixed-form sentinels (c$omx, *$omx) to '!'.
+//
+// The extension sentinels are tried before "!$omp".  Because "omp" is a prefix
+// of "ompx", matching "!$omp" first would consume the start of an "!$ompx" line
+// and leave a stray "x" ahead of the directive name; trying "!$ompx"/"!$omx"
+// first avoids that.  "_sptok" (rather than "_id") is required because in fixed
+// form the prescanner can emit the sentinel immediately followed by the
+// directive name with no intervening space (e.g. "c$omp0parallel" becomes
+// "!$ompparallel"); "_id" would reject such a token because it is followed by
+// an identifier character.
+constexpr auto ompxSentinel = "!$OMPX "_sptok || "!$OMX "_sptok;
+constexpr auto ompSentinel = "!$OMP "_sptok;
+constexpr auto startOmpLine =
+    skipStuffBeforeStatement >> (ompxSentinel || ompSentinel);
 constexpr auto endOmpLine = space >> endOfLine;
 
 constexpr auto logicalConstantExpr{logical(constantExpr)};
@@ -250,7 +266,7 @@ void OmpDirectiveNameParser::initTokens(std::vector<NameWithId> table[]) const {
   for (size_t i{0}, e{llvm::omp::Directive_enumSize}; i != e; ++i) {
     llvm::StringSet spellings;
     auto id{static_cast<llvm::omp::Directive>(i)};
-    for (unsigned version : llvm::omp::getOpenMPVersions()) {
+    for (llvm::omp::Version version : llvm::omp::getOpenMPVersions()) {
       spellings.insert(llvm::omp::getOpenMPDirectiveName(id, version));
     }
     for (auto &[name, _] : spellings) {
@@ -953,7 +969,8 @@ struct OmpMapTypeParser {
   using resultType = OmpMapType::Value;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version < 60) {
       auto parser{//
           "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
@@ -983,7 +1000,8 @@ struct OmpMapTypeModifierParser {
   using resultType = OmpMapTypeModifier::Value;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version < 60) {
       auto parser{//
           "ALWAYS" >> pure(OmpMapTypeModifier::Value::Always) ||
@@ -1001,6 +1019,9 @@ TYPE_PARSER(OmpMapTypeModifierParser{})
 
 TYPE_PARSER(construct<OmpMemSpace>( //
     "MEMSPACE" >> parenthesized(scalarIntExpr)))
+
+TYPE_PARSER(construct<OmpMotionModifier>( //
+    "PRESENT" >> pure(OmpMotionModifier::Value::Present)))
 
 TYPE_PARSER(construct<OmpOrderModifier>(
     "REPRODUCIBLE" >> pure(OmpOrderModifier::Value::Reproducible) ||
@@ -1114,8 +1135,14 @@ template <typename MotionClause> struct OmpMotionClauseModifierParser {
   using resultType = typename MotionClause::Modifier;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    unsigned version{state.userState()->langOptions().OpenMPVersion};
-    if (version == 52) {
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
+    if (version <= 51) {
+      auto motion{sourced(construct<resultType>(Parser<OmpMotionModifier>{}))};
+      if (auto &&result{attempt(motion).Parse(state)}) {
+        return std::move(result);
+      }
+    } else if (version == 52) {
       auto expect{sourced(construct<resultType>(Parser<OmpExpectation>{}))};
       if (auto &&result{attempt(expect).Parse(state)}) {
         return std::move(result);
@@ -1154,7 +1181,8 @@ struct OmpLinearClauseModifierParser {
   using resultType = OmpLinearClause::Modifier;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    llvm::omp::Version version{
+        state.userState()->langOptions().getOpenMPVersion()};
     if (version < 52) {
       auto parser{sourced( //
           construct<resultType>(Parser<OmpLinearModifier>{}) ||
@@ -2825,7 +2853,26 @@ static constexpr llvm::omp::DirectiveSet GetAllDirectives() {
 TYPE_PARSER(construct<OpenMPMisplacedEndDirective>(
     OmpEndDirectiveParser{GetAllDirectives()}))
 
-TYPE_PARSER(startOmpLine >>
-    sourced(construct<OpenMPInvalidDirective>(
-        maybe("BEGIN"_sptok) >> !OmpDirectiveNameParser{} >> SkipTo<'\n'>{})))
+// A string following an OpenMP sentinel that is not a recognized directive.
+// When it follows an implementation-defined extension sentinel (!$omx / !$ompx)
+// the node is flagged (true) so that semantics ignores it with a warning rather
+// than reporting an error, allowing portable use of vendor extensions
+// (OpenMP 5.2, section 3.1).
+//
+// This is a fallback that is attempted before the enclosing program unit is
+// reparsed as an execution-part construct, so the standard "!$omp" branch uses
+// the strict "_id" spelling: it must not prefix-match the "!$omp" that begins
+// "!$ompx" line, otherwise a valid extension directive such as "!$ompx barrier"
+// would be misreported as an invalid "!$omp" directive instead of being handled
+// as a real construct.
+static constexpr auto skipUnrecognized{
+    maybe("BEGIN"_sptok) >> !OmpDirectiveNameParser{} >> SkipTo<'\n'>{}};
+
+static constexpr auto unrecognizedExtension{ompxSentinel >>
+    construct<OpenMPInvalidDirective>(skipUnrecognized >> pure(true))};
+static constexpr auto invalidDirective{"!$OMP"_id >>
+    construct<OpenMPInvalidDirective>(skipUnrecognized >> pure(false))};
+
+TYPE_PARSER(sourced(
+    skipStuffBeforeStatement >> (unrecognizedExtension || invalidDirective)))
 } // namespace Fortran::parser

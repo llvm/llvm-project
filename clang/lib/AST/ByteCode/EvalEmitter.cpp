@@ -149,7 +149,7 @@ void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
-Scope::Local EvalEmitter::createLocal(Descriptor *D) {
+Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize() +
                                          Block::InlineDescMD);
@@ -170,7 +170,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Register the local.
   unsigned Off = Locals.size();
   Locals.push_back(std::move(Memory));
-  return {Off, D};
+  return {D, Off};
 }
 
 bool EvalEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
@@ -245,7 +245,6 @@ template <PrimType OpType> bool EvalEmitter::emitRet(SourceInfo Info) {
 }
 
 template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
-  // llvm::errs()<< __PRETTY_FUNCTION__ << "Ret\n";
   if (!isActive())
     return true;
 
@@ -268,9 +267,6 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
     if (Ptr.isPastEnd())
-      return false;
-
-    if (Ptr.pointsToStringLiteral() && Ptr.isArrayRoot())
       return false;
 
     if (!Ptr.isZero() && !CheckFinalLoad(S, CodePtr(), Ptr))

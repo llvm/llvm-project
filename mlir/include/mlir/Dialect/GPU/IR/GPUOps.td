@@ -346,7 +346,8 @@ def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
 >;
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
-    HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
+    HasParent<"GPUModuleOp">, AutomaticAllocationScope, SymbolName,
+    SymbolVisibility, FunctionOpInterface,
     IsolatedFromAbove, AffineScope
   ]> {
   let summary = "Function executable on a GPU";
@@ -419,7 +420,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     attribution.
   }];
 
-  let arguments = (ins TypeAttrOf<FunctionType>:$function_type,
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
+                       TypeAttrOf<FunctionType>:$function_type,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
@@ -1543,7 +1546,8 @@ def GPU_InitializeNamedBarrierOp
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
       IsolatedFromAbove, DataLayoutOpInterface, HasDefaultDLTIDataLayout,
-      NoRegionArguments, SymbolTable, Symbol] # GraphRegionNoTerminator.traits> {
+      NoRegionArguments, SymbolTable, SymbolName, SymbolVisibility,
+      Symbol] # GraphRegionNoTerminator.traits> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
   let description = [{
     GPU module contains code that is intended to be run on a GPU. A host device
@@ -1593,11 +1597,12 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
 
   let arguments = (ins
       SymbolNameAttr:$sym_name,
+      OptionalAttr<StrAttr>:$sym_visibility,
       OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
       OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler);
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = [{
-    $sym_name
+    ($sym_visibility^)? $sym_name
     (`<` $offloadingHandler^ `>`)?
     ($targets^)? attr-dict-with-keyword $bodyRegion
   }];
@@ -1617,8 +1622,10 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
   let hasVerifier = 1;
 }
 
-def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
+def GPU_BinaryOp
+    : GPU_Op<"binary", [SymbolName, SymbolVisibility, Symbol]>, Arguments<(ins
       SymbolNameAttr:$sym_name,
+      OptionalAttr<StrAttr>:$sym_visibility,
       OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler,
       ConfinedAttr<GPUObjectArrayAttr, [ArrayMinCount<1>]>:$objects)
     > {
@@ -1657,7 +1664,8 @@ def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
   ];
   let skipDefaultBuilders = 1;
   let assemblyFormat = [{
-    $sym_name custom<OffloadingHandler>($offloadingHandler) attr-dict $objects
+    ($sym_visibility^)? $sym_name
+    custom<OffloadingHandler>($offloadingHandler) attr-dict $objects
   }];
 }
 

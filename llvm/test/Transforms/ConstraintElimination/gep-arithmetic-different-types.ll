@@ -123,11 +123,11 @@ define i1 @gep_shl_nsw_positive_index(ptr %A, ptr %upper, i8 %idx) {
 ; CHECK-LABEL: @gep_shl_nsw_positive_index(
 ; CHECK-NEXT:    [[IDX_POS:%.*]] = icmp sge i8 [[IDX:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_POS]])
-; CHECK-NEXT:    [[IDX_2:%.*]] = shl nsw i8 [[IDX]], 2
+; CHECK-NEXT:    [[IDX_2:%.*]] = shl nuw nsw i8 [[IDX]], 2
 ; CHECK-NEXT:    [[ADD_I8_IDX_2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i8 [[IDX_2]]
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ult ptr [[ADD_I8_IDX_2]], [[UPPER:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
-; CHECK-NEXT:    [[IDX_1:%.*]] = shl nsw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_1:%.*]] = shl nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[ADD_I32_IDX_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i8 [[IDX_1]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[ADD_I32_IDX_1]], [[UPPER]]
 ; CHECK-NEXT:    [[ADD_I8_IDX_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i8 [[IDX_1]]
