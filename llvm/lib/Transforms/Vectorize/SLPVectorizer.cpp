@@ -351,54 +351,6 @@ static const int MinScheduleRegionSize = 16;
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
 
-/// Returns the number of elements of the given type \p Ty, not less than \p Sz,
-/// which forms type, which splits by \p TTI into whole vector types during
-/// legalization.
-static unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI,
-                                              Type *Ty, unsigned Sz) {
-  if (!isValidElementType(Ty, SLPReVec) || isa<StructType>(Ty))
-    return bit_ceil(Sz);
-  // Find the number of elements, which forms full vectors.
-  const unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
-  if (NumParts == 0 || NumParts >= Sz)
-    return bit_ceil(Sz);
-  return bit_ceil(divideCeil(Sz, NumParts)) * NumParts;
-}
-
-/// Returns the number of elements of the given type \p Ty, not greater than \p
-/// Sz, which forms type, which splits by \p TTI into whole vector types during
-/// legalization.
-static unsigned
-getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
-                                   unsigned Sz) {
-  if (!isValidElementType(Ty, SLPReVec) || isa<StructType>(Ty))
-    return bit_floor(Sz);
-  // Find the number of elements, which forms full vectors.
-  unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
-  if (NumParts == 0 || NumParts >= Sz)
-    return bit_floor(Sz);
-  unsigned RegVF = bit_ceil(divideCeil(Sz, NumParts));
-  if (RegVF > Sz)
-    return bit_floor(Sz);
-  return (Sz / RegVF) * RegVF;
-}
-
-/// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, returns the
-/// padded full-register vector type if padding is structurally possible, or
-/// nullptr if the vector already fills a register or the opcode is not
-/// div/rem. Does not check profitability; see getMaskedDivRemCost for that.
-static FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
-                                            unsigned Opcode, Type *ScalarTy,
-                                            unsigned NumElts) {
-  if (!Instruction::isIntDivRem(Opcode) || has_single_bit(NumElts))
-    return nullptr;
-  unsigned PaddedNumElts =
-      getFullVectorNumberOfElements(TTI, ScalarTy, NumElts);
-  if (PaddedNumElts == NumElts)
-    return nullptr;
-  return cast<FixedVectorType>(getWidenedType(ScalarTy, PaddedNumElts));
-}
-
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
 /// padding to a full register and using the masked div/rem intrinsic is
 /// cheaper than the direct vector op. Returns the cost of the masked
@@ -409,7 +361,7 @@ getMaskedDivRemCost(const TargetTransformInfo &TTI, unsigned Opcode,
                     const TTI::TargetCostKind CostKind,
                     FixedVectorType **PaddedTy = nullptr) {
   FixedVectorType *PaddedVecTy =
-      getMaskedDivRemType(TTI, Opcode, ScalarTy, NumElts);
+      getMaskedDivRemType(TTI, Opcode, ScalarTy, NumElts, SLPReVec);
   if (!PaddedVecTy)
     return InstructionCost::getInvalid();
   // One mask bit per element of the padded vector, not per padded lane.
@@ -540,24 +492,6 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
               : TargetTransformInfo::SK_PermuteSingleSrc;
 }
 
-/// Returns true if widened type of \p Ty elements with size \p Sz represents
-/// full vector type, i.e. adding extra element results in extra parts upon type
-/// legalization.
-static bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
-                                     unsigned Sz) {
-  if (Sz <= 1)
-    return false;
-  if (!isValidElementType(Ty, SLPReVec) && !isa<FixedVectorType>(Ty))
-    return false;
-  if (has_single_bit(Sz))
-    return true;
-  if (isa<StructType>(Ty))
-    return false;
-  const unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
-  return NumParts > 0 && NumParts < Sz && has_single_bit(Sz / NumParts) &&
-         Sz % NumParts == 0;
-}
-
 /// Returns number of parts, the type \p VecTy will be split at the codegen
 /// phase. If the type is going to be scalarized or does not uses whole
 /// registers, returns 1.
@@ -572,10 +506,10 @@ getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy, Type *ScalarTy,
   unsigned Sz = getNumElements(VecTy);
   unsigned ScalarSz = getNumElements(ScalarTy);
   Type *ElementTy = toScalarizedTy(VecTy);
-  unsigned PWSz = getFullVectorNumberOfElements(TTI, ElementTy, Sz);
+  unsigned PWSz = getFullVectorNumberOfElements(TTI, ElementTy, Sz, SLPReVec);
   if (NumParts >= Sz || PWSz % NumParts != 0 ||
       (PWSz / NumParts) % ScalarSz != 0 ||
-      !hasFullVectorsOrPowerOf2(TTI, ElementTy, PWSz / NumParts))
+      !hasFullVectorsOrPowerOf2(TTI, ElementTy, PWSz / NumParts, SLPReVec))
     return 1;
   const unsigned NumElts = PWSz / NumParts;
   if (divideCeil(Sz, NumElts) != NumParts)
@@ -6373,7 +6307,8 @@ static bool isMaskedLoadCompress(
   if (IsStrided && !IsMasked && Order.empty()) {
     // Check for potential segmented(interleaved) loads.
     VectorType *AlignedLoadVecTy = cast<VectorType>(getWidenedType(
-        ScalarTy, getFullVectorNumberOfElements(TTI, ScalarTy, *Diff + 1)));
+        ScalarTy,
+        getFullVectorNumberOfElements(TTI, ScalarTy, *Diff + 1, SLPReVec)));
     SimplifyQuery SQ(DL, &TLI, &DT, &AC, cast<LoadInst>(VL.back()));
     if (!isSafeToLoadUnconditionally(Ptr0, AlignedLoadVecTy, CommonAlignment,
                                      SQ))
@@ -7019,10 +6954,10 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     DemandedElts.clearAllBits();
     // Iterate through possible vectorization factors and check if vectorized +
     // shuffles is better than just gather.
-    for (unsigned VF =
-             getFloorFullVectorNumberOfElements(TTI, ScalarTy, VL.size() - 1);
-         VF >= MinVF;
-         VF = getFloorFullVectorNumberOfElements(TTI, ScalarTy, VF - 1)) {
+    for (unsigned VF = getFloorFullVectorNumberOfElements(
+             TTI, ScalarTy, VL.size() - 1, SLPReVec);
+         VF >= MinVF; VF = getFloorFullVectorNumberOfElements(
+                          TTI, ScalarTy, VF - 1, SLPReVec)) {
       SmallVector<std::pair<unsigned, LoadsState>> States;
       for (unsigned Cnt = 0, End = VL.size(); Cnt < End; Cnt += VF) {
         const unsigned SliceVF = std::min(VF, End - Cnt);
@@ -9318,9 +9253,10 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     if (isAllowedNonPowerOf2VF(MaxVF))
       CandidateVFs.push_back(MaxVF);
     for (int NumElts = getFloorFullVectorNumberOfElements(
-             *TTI, Loads.front()->getType(), MaxVF);
-         NumElts > 1; NumElts = getFloorFullVectorNumberOfElements(
-                          *TTI, Loads.front()->getType(), NumElts - 1)) {
+             *TTI, Loads.front()->getType(), MaxVF, SLPReVec);
+         NumElts > 1;
+         NumElts = getFloorFullVectorNumberOfElements(
+             *TTI, Loads.front()->getType(), NumElts - 1, SLPReVec)) {
       CandidateVFs.push_back(NumElts);
       if (VectorizeNonPowerOf2 && NumElts > 2)
         CandidateVFs.push_back(NumElts - 1);
@@ -10979,8 +10915,8 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
             S.getMainOp()->getDataLayout().getTypeSizeInBits(ScalarTy);
         unsigned MinVF = R.getMinVF(EltBits);
         auto RegWidth = [&](unsigned N) {
-          return std::max(getFullVectorNumberOfElements(TTI, ScalarTy, N),
-                          MinVF);
+          return std::max(
+              getFullVectorNumberOfElements(TTI, ScalarTy, N, SLPReVec), MinVF);
         };
         // Keeping the originals just moves the reshuffle to the operand
         // columns with duplicates; keep them only if at most one column has
@@ -11129,11 +11065,12 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
     ReorderIndices.clear();
   // When VL fills a power-of-2 register but the split halves do not, the
   // reorder shuffle makes the split unprofitable - reject.
-  else if (hasFullVectorsOrPowerOf2(*TTI, Op1.front()->getType(), VL.size()) &&
-           (!hasFullVectorsOrPowerOf2(*TTI, Op1.front()->getType(),
-                                      Op1.size()) ||
-            !hasFullVectorsOrPowerOf2(*TTI, Op2.front()->getType(),
-                                      Op2.size())))
+  else if (hasFullVectorsOrPowerOf2(*TTI, Op1.front()->getType(), VL.size(),
+                                    SLPReVec) &&
+           (!hasFullVectorsOrPowerOf2(*TTI, Op1.front()->getType(), Op1.size(),
+                                      SLPReVec) ||
+            !hasFullVectorsOrPowerOf2(*TTI, Op2.front()->getType(), Op2.size(),
+                                      SLPReVec)))
     return false;
   SmallVector<int> Mask;
   if (!ReorderIndices.empty())
@@ -14520,7 +14457,7 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
         }
         if (Sz > 1 && isa<Instruction>(P.second.front())) {
           const unsigned SubVF = getFloorFullVectorNumberOfElements(
-              *TTI, TE.Scalars.front()->getType(), Sz);
+              *TTI, TE.Scalars.front()->getType(), Sz, SLPReVec);
           SubVectors.emplace_back(Cnt - Sz, SubVF);
           for (unsigned I : seq<unsigned>(Cnt - Sz, Cnt - Sz + SubVF))
             DemandedElts.clearBit(I);
@@ -15133,9 +15070,9 @@ void BoUpSLP::transformNodes() {
       unsigned End = VL.size();
       SmallBitVector Processed(End);
       for (unsigned VF = getFloorFullVectorNumberOfElements(
-               *TTI, VL.front()->getType(), VL.size() - 1);
+               *TTI, VL.front()->getType(), VL.size() - 1, SLPReVec);
            VF >= MinVF; VF = getFloorFullVectorNumberOfElements(
-                            *TTI, VL.front()->getType(), VF - 1)) {
+                            *TTI, VL.front()->getType(), VF - 1, SLPReVec)) {
         if (StartIdx + VF > End)
           continue;
         SmallVector<std::pair<unsigned, unsigned>> Slices;
@@ -15821,7 +15758,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
             SubMask);
       }
       const unsigned BaseVF = getFullVectorNumberOfElements(
-          *R.TTI, VL.front()->getType(), alignTo(NumElts, EltsPerVector));
+          *R.TTI, VL.front()->getType(), alignTo(NumElts, EltsPerVector),
+          SLPReVec);
       for (const auto [Idx, SubVecSize] : zip(Indices, SubVecSizes)) {
         assert((Idx + SubVecSize) <= BaseVF &&
                "SK_ExtractSubvector index out of range");
@@ -21575,7 +21513,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     unsigned MinIdx = MinElement % VF;
     if (MinIdx > 1) {
       unsigned RegFloor = getFloorFullVectorNumberOfElements(
-          *TTI, VL.front()->getType(), MinIdx);
+          *TTI, VL.front()->getType(), MinIdx, SLPReVec);
       auto *RegFloorTy = getWidenedType(VL.front()->getType(), RegFloor);
       unsigned RegFloorParts =
           getNumberOfParts(RegFloorTy, VL.front()->getType(), RegFloor);
@@ -21721,8 +21659,8 @@ BoUpSLP::isGatherShuffledEntry(
   Mask.assign(VL.size(), PoisonMaskElem);
   assert((TE->UserTreeIndex || TE == &getRootNode()) &&
          "Expected only single user of the gather node.");
-  unsigned PWSz =
-      getFullVectorNumberOfElements(*TTI, VL.front()->getType(), VL.size());
+  unsigned PWSz = getFullVectorNumberOfElements(*TTI, VL.front()->getType(),
+                                                VL.size(), SLPReVec);
   if (TE->UserTreeIndex && TE->UserTreeIndex.UserTE->isGather() &&
       TE->UserTreeIndex.EdgeIdx == UINT_MAX &&
       (TE->Idx == 0 ||
@@ -29080,7 +29018,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
   if (!has_single_bit(Sz) ||
       !hasFullVectorsOrPowerOf2(
           *TTI, cast<StoreInst>(Chain.front())->getValueOperand()->getType(),
-          VF) ||
+          VF, SLPReVec) ||
       VF < 2 || VF < MinVF) {
     // Check if vectorizing with a non-power-of-2 VF should be considered; see
     // isAllowedNonPowerOf2VF for supported widths.
@@ -29100,9 +29038,10 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
       Analysis.buildInstructionsState(ValOps.getArrayRef(), R);
   if (all_of(ValOps, IsaPred<Instruction>) && ValOps.size() > 1) {
     DenseSet<Value *> Stores(Chain.begin(), Chain.end());
-    bool IsAllowedSize = hasFullVectorsOrPowerOf2(
-                             *TTI, ValOps.front()->getType(), ValOps.size()) ||
-                         isAllowedNonPowerOf2VF(ValOps.size());
+    bool IsAllowedSize =
+        hasFullVectorsOrPowerOf2(*TTI, ValOps.front()->getType(), ValOps.size(),
+                                 SLPReVec) ||
+        isAllowedNonPowerOf2VF(ValOps.size());
     if ((!IsAllowedSize && S && S.getOpcode() != Instruction::Load &&
          (!S.getMainOp()->isSafeToRemove() ||
           any_of(ValOps.getArrayRef(),
@@ -29547,7 +29486,7 @@ bool StoreChainContext::updateCandidateVFs(const TargetTransformInfo &TTI) {
   // Attempt again to vectorize even larger chains if all previous
   // attempts were unsuccessful because of the cost issues.
   unsigned Limit =
-      getFloorFullVectorNumberOfElements(TTI, StoreTy, MaxTotalNum);
+      getFloorFullVectorNumberOfElements(TTI, StoreTy, MaxTotalNum, SLPReVec);
   if (bit_floor(Limit) == VF && Limit != VF)
     CandidateVFs.push(Limit);
   CandidateVFs.push(VF);
@@ -30121,11 +30060,12 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   Type *ScalarTy = getValueType(VL[0], SLPReVec, /*LookThroughCmp=*/true);
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
-  unsigned MaxVF = std::max<unsigned>(
-      isAllowedNonPowerOf2VF(VL.size())
-          ? VL.size()
-          : getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()),
-      MinVF);
+  unsigned MaxVF =
+      std::max<unsigned>(isAllowedNonPowerOf2VF(VL.size())
+                             ? VL.size()
+                             : getFloorFullVectorNumberOfElements(
+                                   *TTI, ScalarTy, VL.size(), SLPReVec),
+                         MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
   // Standalone seeds only need one register worth of lanes.
   if (StandaloneSeeds && Sz != 0)
@@ -30145,7 +30085,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
   unsigned NextInst = 0, MaxInst = VL.size();
   for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
-       VF = getFloorFullVectorNumberOfElements(*TTI, I0->getType(), VF - 1)) {
+       VF = getFloorFullVectorNumberOfElements(*TTI, I0->getType(), VF - 1,
+                                               SLPReVec)) {
     // No actual vectorization should happen, if number of parts is the same as
     // provided vectorization factor (i.e. the scalar type is used for vector
     // code during codegen).
@@ -30155,7 +30096,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     for (unsigned I = NextInst; I < MaxInst; ++I) {
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
-      if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF) &&
+      if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF, SLPReVec) &&
           (ActualVF != VL.size() || !isAllowedNonPowerOf2VF(ActualVF)))
         continue;
 
@@ -31493,8 +31434,8 @@ public:
       auto GetVectorFactor = [&, &TTI = *TTI](unsigned ReduxWidth) {
         unsigned NumParts, NumRegs;
         Type *ScalarTy = Candidates.front()->getType();
-        ReduxWidth =
-            getFloorFullVectorNumberOfElements(TTI, ScalarTy, ReduxWidth);
+        ReduxWidth = getFloorFullVectorNumberOfElements(TTI, ScalarTy,
+                                                        ReduxWidth, SLPReVec);
         VectorType *Tp = cast<VectorType>(getWidenedType(ScalarTy, ReduxWidth));
         NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
         NumRegs =
@@ -31688,10 +31629,10 @@ public:
             if (ReduxWidth > ReductionLimit && V.isTreeNotExtendable()) {
               // Add subvectors of VL to the list of the analyzed values.
               for (unsigned VF = getFloorFullVectorNumberOfElements(
-                       *TTI, VL.front()->getType(), ReduxWidth - 1);
+                       *TTI, VL.front()->getType(), ReduxWidth - 1, SLPReVec);
                    VF >= ReductionLimit;
                    VF = getFloorFullVectorNumberOfElements(
-                       *TTI, VL.front()->getType(), VF - 1)) {
+                       *TTI, VL.front()->getType(), VF - 1, SLPReVec)) {
                 if (has_single_bit(VF) &&
                     V.getCanonicalGraphSize() != V.getTreeSize())
                   continue;
@@ -32061,8 +32002,8 @@ public:
     unsigned ReduxWidth = 0;
     auto GetVectorFactor = [&, &TTI = *TTI](unsigned ReduxWidth) {
       Type *ScalarTy = Candidates.front()->getType();
-      ReduxWidth =
-          getFloorFullVectorNumberOfElements(TTI, ScalarTy, ReduxWidth);
+      ReduxWidth = getFloorFullVectorNumberOfElements(TTI, ScalarTy, ReduxWidth,
+                                                      SLPReVec);
       Type *Tp = getWidenedType(ScalarTy, ReduxWidth);
       unsigned NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
       unsigned NumRegs =
