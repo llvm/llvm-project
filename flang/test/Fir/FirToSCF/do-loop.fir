@@ -1,5 +1,9 @@
 // RUN: fir-opt %s --fir-to-scf --split-input-file | FileCheck %s --check-prefixes=CHECK,NO-PARALLEL
 // RUN: fir-opt %s --fir-to-scf='parallel-unordered' --split-input-file | FileCheck %s --check-prefixes=CHECK,PARALLEL
+// Without the no-wrap flags there is nothing to preserve, so the narrowing
+// stays a plain conversion.
+// RUN: fir-opt %s --fir-to-scf='set-nsw=false' --split-input-file | FileCheck %s --check-prefix=NONSW
+// NONSW-NOT: arith.trunci
 
 // CHECK-LABEL:   func.func @simple_loop(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>) {
@@ -48,9 +52,12 @@ func.func @simple_loop(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[C1:.*]] = arith.constant 1 : index
 // CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[TRIP]] step %[[C1]] {
-// CHECK:   %[[I_TYPED:.*]] = fir.convert %[[I]] : (index) -> i32
-// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_TYPED]], %[[STEP]] overflow<nsw> : i32
-// CHECK:   %[[IV:.*]] = arith.addi %[[LB]], %[[SCALED]] overflow<nsw> : i32
+// CHECK:   %[[I_WIDE:.*]] = fir.convert %[[I]] : (index) -> i64
+// CHECK:   %[[LB_WIDE:.*]] = fir.convert %[[LB]] : (i32) -> i64
+// CHECK:   %[[STEP_WIDE:.*]] = fir.convert %[[STEP]] : (i32) -> i64
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_WIDE]], %[[STEP_WIDE]] overflow<nsw> : i64
+// CHECK:   %[[WIDE_IV:.*]] = arith.addi %[[LB_WIDE]], %[[SCALED]] overflow<nsw> : i64
+// CHECK:   %[[IV:.*]] = arith.trunci %[[WIDE_IV]] overflow<nsw> : i64 to i32
 // CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.ref<i32>
 // CHECK: }
 // CHECK-NOT: iter_args
@@ -72,9 +79,12 @@ func.func @typed_loop(%lb: i32, %ub: i32, %step: i32,
 // CHECK: %[[C0_IDX:.*]] = arith.constant 0 : index
 // CHECK: %[[C1_IDX:.*]] = arith.constant 1 : index
 // CHECK: %[[RES:.*]] = scf.for %[[I:.*]] = %[[C0_IDX]] to %[[TRIP]] step %[[C1_IDX]] iter_args(%[[ACC:.*]] = %[[C0]]) -> (i32) {
-// CHECK:   %[[I_TYPED:.*]] = fir.convert %[[I]] : (index) -> i32
-// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_TYPED]], %[[C1]] overflow<nsw> : i32
-// CHECK:   %[[IV:.*]] = arith.addi %[[C1]], %[[SCALED]] overflow<nsw> : i32
+// CHECK:   %[[I_WIDE:.*]] = fir.convert %[[I]] : (index) -> i64
+// CHECK:   %[[LB_WIDE:.*]] = fir.convert %[[C1]] : (i32) -> i64
+// CHECK:   %[[STEP_WIDE:.*]] = fir.convert %[[C1]] : (i32) -> i64
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_WIDE]], %[[STEP_WIDE]] overflow<nsw> : i64
+// CHECK:   %[[WIDE_IV:.*]] = arith.addi %[[LB_WIDE]], %[[SCALED]] overflow<nsw> : i64
+// CHECK:   %[[IV:.*]] = arith.trunci %[[WIDE_IV]] overflow<nsw> : i64 to i32
 // CHECK:   %[[SUM:.*]] = arith.addi %[[ACC]], %[[IV]] : i32
 // CHECK:   scf.yield %[[SUM]] : i32
 // CHECK: }
@@ -108,9 +118,12 @@ func.func @typed_loop_iter_args(%addr: !fir.ref<i32>) -> i32 {
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[C1_IDX:.*]] = arith.constant 1 : index
 // CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[TRIP]] step %[[C1_IDX]] {
-// CHECK:   %[[I_TYPED:.*]] = fir.convert %[[I]] : (index) -> i32
-// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_TYPED]], %[[CM1]] overflow<nsw> : i32
-// CHECK:   %[[IV:.*]] = arith.addi %[[C10]], %[[SCALED]] overflow<nsw> : i32
+// CHECK:   %[[I_WIDE:.*]] = fir.convert %[[I]] : (index) -> i64
+// CHECK:   %[[LB_WIDE:.*]] = fir.convert %[[C10]] : (i32) -> i64
+// CHECK:   %[[STEP_WIDE:.*]] = fir.convert %[[CM1]] : (i32) -> i64
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_WIDE]], %[[STEP_WIDE]] overflow<nsw> : i64
+// CHECK:   %[[WIDE_IV:.*]] = arith.addi %[[LB_WIDE]], %[[SCALED]] overflow<nsw> : i64
+// CHECK:   %[[IV:.*]] = arith.trunci %[[WIDE_IV]] overflow<nsw> : i64 to i32
 // CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.ref<i32>
 // CHECK: }
 // CHECK-NOT: iter_args
@@ -119,6 +132,49 @@ func.func @typed_loop_negative_step(%addr: !fir.ref<i32>) {
   %c10_i32 = arith.constant 10 : i32
   %cm1_i32 = arith.constant -1 : i32
   fir.do_loop %iv = %c10_i32 to %c1_i32 step %cm1_i32 : i32 {
+    fir.store %iv to %addr : !fir.ref<i32>
+  }
+  return
+}
+
+// -----
+
+// An induction variable that is not narrower than the canonical one needs no
+// truncation, so it keeps the plain conversion.
+// CHECK-LABEL: func.func @typed_loop_i64(
+// CHECK: scf.for %[[I:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:   %[[I_TYPED:.*]] = fir.convert %[[I]] : (index) -> i64
+// CHECK-NOT: arith.trunci
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_TYPED]], %{{.*}} overflow<nsw> : i64
+func.func @typed_loop_i64(%lb: i64, %ub: i64, %step: i64,
+                          %addr: !fir.ref<i64>) {
+  fir.do_loop %iv = %lb to %ub step %step : i64 {
+    fir.store %iv to %addr : !fir.ref<i64>
+  }
+  return
+}
+
+// -----
+
+// do i = -huge(i), huge(i)-1 has a trip count of 2^32-2, which does not fit in
+// the i32 loop variable. The arithmetic stays in i64 so nothing wraps, and only
+// the result is narrowed.
+// CHECK-LABEL: func.func @typed_loop_huge_trip_count(
+// CHECK: %[[LB:.*]] = arith.constant -2147483647 : i32
+// CHECK: %[[UB:.*]] = arith.constant 2147483646 : i32
+// CHECK: %[[STEP:.*]] = arith.constant 1 : i32
+// CHECK: scf.for %[[I:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:   %[[I_WIDE:.*]] = fir.convert %[[I]] : (index) -> i64
+// CHECK:   %[[LB_WIDE:.*]] = fir.convert %[[LB]] : (i32) -> i64
+// CHECK:   %[[STEP_WIDE:.*]] = fir.convert %[[STEP]] : (i32) -> i64
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_WIDE]], %[[STEP_WIDE]] overflow<nsw> : i64
+// CHECK:   %[[WIDE_IV:.*]] = arith.addi %[[LB_WIDE]], %[[SCALED]] overflow<nsw> : i64
+// CHECK:   %[[IV:.*]] = arith.trunci %[[WIDE_IV]] overflow<nsw> : i64 to i32
+func.func @typed_loop_huge_trip_count(%addr: !fir.ref<i32>) {
+  %lb = arith.constant -2147483647 : i32
+  %ub = arith.constant 2147483646 : i32
+  %step = arith.constant 1 : i32
+  fir.do_loop %iv = %lb to %ub step %step : i32 {
     fir.store %iv to %addr : !fir.ref<i32>
   }
   return

@@ -12,6 +12,12 @@
 // RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-NOTEXEL
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 -DDXIL_TY=9 \
+// RUN:   -DRW=0 --check-prefixes=CHECK,CHECK-NOTEXEL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \
 // RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -o - %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DDXIL_TY=7 \
