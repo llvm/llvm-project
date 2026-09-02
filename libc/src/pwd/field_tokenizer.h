@@ -25,39 +25,36 @@ namespace pwd {
 
 // In-place field tokenizer for delimited database records.
 class FieldTokenizer {
-  char *data_ptr;
-  size_t data_len;
+  cpp::span<char> data;
   char separator;
 
 public:
   LIBC_INLINE constexpr explicit FieldTokenizer(cpp::span<char> buf,
                                                 char sep = ':')
-      : data_ptr(buf.data()), data_len(buf.size()), separator(sep) {}
+      : data(buf), separator(sep) {}
 
   // Extracts the next null-terminated field.
   LIBC_INLINE cpp::optional<cpp::span<char>> next_field() {
-    if (data_len == 0)
+    if (data.empty())
       return cpp::nullopt;
 
-    cpp::string_view sv(data_ptr, data_len);
+    cpp::string_view sv(data.data(), data.size());
     size_t pos = sv.find_first_of(separator);
 
     // If a delimiter was found, replace it with a null terminator and return
     // the field.
     if (pos != cpp::string_view::npos) {
-      data_ptr[pos] = '\0';
-      auto field = cpp::span<char>(data_ptr, pos + 1);
-      data_ptr += pos + 1;
-      data_len -= pos + 1;
+      data[pos] = '\0';
+      auto field = data.first(pos + 1);
+      data = data.subspan(pos + 1);
       return field;
     }
 
     // If null-terminated without delimiters, return the remaining span as the
     // final field.
-    if (cpp::span<char>(data_ptr, data_len).back() == '\0') {
-      auto field = cpp::span<char>(data_ptr, data_len);
-      data_ptr += data_len;
-      data_len = 0;
+    if (data.back() == '\0') {
+      auto field = data;
+      data = cpp::span<char>();
       return field;
     }
 
