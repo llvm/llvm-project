@@ -116,7 +116,7 @@ void case_default(int i) {
   }
 }
 
-void gh210575(int i) {
+void PR211162(int i) {
   switch (i) {
     template for (auto x : {1, 2}) {
       switch (i) {
