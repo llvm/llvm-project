@@ -14,6 +14,10 @@
 // RUN:   -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=Texture2DArray -o - %s \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2DArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture3D \
+// RUN:   -o - %s \
+// RUN:   | FileCheck %s -DTEXTURE=Texture3D
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
