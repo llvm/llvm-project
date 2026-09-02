@@ -865,6 +865,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
     addUInt(Buffer, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
             STy->getEncoding());
   }
+
+  if (STy->getCharType())
+    addType(Buffer, STy->getCharType());
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {

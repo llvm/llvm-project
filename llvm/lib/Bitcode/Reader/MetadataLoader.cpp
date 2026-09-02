@@ -1653,7 +1653,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_STRING_TYPE: {
-    if (Record.size() > 9 || Record.size() < 8)
+    if (Record.size() > 10 || Record.size() < 8)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
@@ -1665,13 +1665,16 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     unsigned Offset = SizeIs8 ? 5 : 6;
     Metadata *SizeInBits =
         getMetadataOrConstant(SizeIsMetadata, Record[Offset]);
+    Metadata *CharType = (Record.size() > Offset + 3)
+                             ? getMDOrNull(Record[Offset + 3])
+                             : nullptr;
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIStringType,
                         (Context, Record[1], getMDString(Record[2]),
                          getMDOrNull(Record[3]), getMDOrNull(Record[4]),
                          StringLocationExp, SizeInBits, Record[Offset + 1],
-                         Record[Offset + 2])),
+                         Record[Offset + 2], CharType)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
