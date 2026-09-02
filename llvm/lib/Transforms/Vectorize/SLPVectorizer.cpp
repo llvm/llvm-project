@@ -18936,6 +18936,23 @@ InstructionCost BoUpSLP::getSpillCost() {
     LoopBodyHasNonVecCall.try_emplace(L, false);
     return false;
   };
+  auto GetLoopInvariantSpillRegion = [&](BasicBlock *UseBB,
+                                         BasicBlock *DefBB) -> const Loop * {
+    // If Op is loop-invariant, a call anywhere in the loop body forces a spill,
+    // even when a call-free forward path from Root back to OpParent exists on
+    // the first iteration. Find the outermost such enclosing loop and reject if
+    // its body contains a non-vec call.
+    const Loop *L = LI->getLoopFor(UseBB);
+    const Loop *Outermost = nullptr;
+    while (L && !L->contains(DefBB)) {
+      Outermost = L;
+      L = L->getParentLoop();
+    }
+    if (Outermost && LoopBodyHasCall(Outermost)) {
+      return Outermost;
+    }
+    return nullptr;
+  };
   auto CheckPredecessors = [&](BasicBlock *Root, BasicBlock *Pred,
                                BasicBlock *OpParent) {
     auto Key = std::make_pair(Root, OpParent);
@@ -18944,18 +18961,8 @@ InstructionCost BoUpSLP::getSpillCost() {
       return It->second;
     uint64_t Res = 0;
     scope_exit Cleanup([&]() { ParentOpParentToPreds.try_emplace(Key, Res); });
-    // If Op is loop-invariant, a call anywhere in the loop body forces a spill,
-    // even when a call-free forward path from Root back to OpParent exists on
-    // the first iteration. Find the outermost such enclosing loop and reject if
-    // its body contains a non-vec call.
-    const Loop *L = LI->getLoopFor(Root);
-    const Loop *Outermost = nullptr;
-    while (L && !L->contains(OpParent)) {
-      Outermost = L;
-      L = L->getParentLoop();
-    }
-    if (Outermost && LoopBodyHasCall(Outermost)) {
-      Res = getLoopNestScale(Outermost);
+    if (const auto *L = GetLoopInvariantSpillRegion(Root, OpParent)) {
+      Res = getLoopNestScale(L);
       return Res;
     }
     SmallVector<BasicBlock *> Worklist;
@@ -19040,6 +19047,44 @@ InstructionCost BoUpSLP::getSpillCost() {
     }
     return nullptr;
   };
+  auto IsCoveredByMatchingVectorEntry = [&](const TreeEntry *Gather,
+                                            const Loop *SpillLoop) -> bool {
+    assert(Gather->isGather() && Gather->hasState());
+
+    // Find the real vector entry reused by this perfect-diamond gather.
+    const TreeEntry *SameTE = getSameValuesTreeEntry(
+        Gather->getMainOp(), Gather->Scalars, /*SameVF=*/true);
+    if (!SameTE || SameTE == Gather || SameTE->State != TreeEntry::Vectorize ||
+        ScalarOrPseudoEntries.contains(SameTE) || !SameTE->UserTreeIndex)
+      return false;
+
+    // Only permit an ordinary vectorized user.
+    const TreeEntry *UserTE = SameTE->UserTreeIndex.UserTE;
+    if (!UserTE || UserTE->State != TreeEntry::Vectorize ||
+        ScalarOrPseudoEntries.contains(UserTE) ||
+        UserTE->getOpcode() == Instruction::PHI)
+      return false;
+
+    Instruction *Def = EntriesToLastInstruction.lookup(SameTE);
+    Instruction *Use = EntriesToLastInstruction.lookup(UserTE);
+    if (!Def || !Use)
+      return false;
+
+    // Require the matching entry to be defined outside the loop and its use to
+    // execute directly in the same loop as the gather user.
+    if (SpillLoop->contains(Def->getParent()) ||
+        LI->getLoopFor(Use->getParent()) != SpillLoop)
+      return false;
+
+    // Ensure that the matching entry is also loop invariant.
+    if (!all_of(SameTE->Scalars, [&](Value *V) {
+          return !isa<Instruction>(V) || SpillLoop->isLoopInvariant(V);
+        }))
+      return false;
+
+    return GetLoopInvariantSpillRegion(Use->getParent(), Def->getParent()) ==
+           SpillLoop;
+  };
   while (!LiveEntries.empty()) {
     const TreeEntry *Entry = LiveEntries.pop_back_val();
     const auto OpIt = EntriesToOperands.find(Entry);
@@ -19079,7 +19124,8 @@ InstructionCost BoUpSLP::getSpillCost() {
             all_of(Op->Scalars, [&](Value *V) {
               return !isa<Instruction>(V) || L->isLoopInvariant(V);
             }))
-          AddCosts(Op, GetSpillScale(Parent));
+          if (!IsCoveredByMatchingVectorEntry(Op, L))
+            AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
       Budget = 0;
