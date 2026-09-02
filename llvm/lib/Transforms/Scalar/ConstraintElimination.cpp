@@ -556,6 +556,15 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
   if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
     return V;
 
+  if (!IsSigned) {
+    Value *PtrOp;
+    if (match(V, m_PtrToInt(m_Value(PtrOp))) &&
+        DL.getTypeSizeInBits(Ty) ==
+            DL.getIndexTypeSizeInBits(PtrOp->getType())) {
+      return decompose(PtrOp, Info, IsSigned, DL);
+    }
+  }
+
   // Decompose \p V used with a signed predicate.
   if (IsSigned) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -706,6 +715,24 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
     return V;
   }
 
+  if (match(V, m_Exact(m_Shr(m_Value(Op0), m_ConstantInt(CI)))) &&
+      canUseSExt(CI)) {
+    if (CI->getSExtValue() >= 0 && CI->getSExtValue() < 63) {
+      int64_t Shift = CI->getSExtValue();
+      int64_t Factor = int64_t(1) << Shift;
+      auto Result = decompose(Op0, Info, IsSigned, DL);
+      if (Result.Offset % Factor == 0 &&
+          all_of(Result.Vars, [Factor](const DecompEntry &E) {
+            return E.Coefficient % Factor == 0;
+          })) {
+        Result.Offset /= Factor;
+        for (auto &E : Result.Vars)
+          E.Coefficient /= Factor;
+        return Result;
+      }
+    }
+  }
+
   if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
     // a - b can be decomposed when there is no unsigned wrap (either known via
     // flag or proven as precondition).
@@ -774,6 +801,35 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                         IsSigned, DL);
   auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(), *this,
                         IsSigned, DL);
+
+  Value *Sub0 = nullptr, *Sub1 = nullptr;
+  ConstantInt *Shift0 = nullptr, *Shift1 = nullptr;
+  bool IsShift0 =
+      match(Op0, m_Exact(m_Shr(m_Value(Sub0), m_ConstantInt(Shift0)))) &&
+      canUseSExt(Shift0);
+  bool IsShift1 =
+      match(Op1, m_Exact(m_Shr(m_Value(Sub1), m_ConstantInt(Shift1)))) &&
+      canUseSExt(Shift1);
+  if (IsShift0 && IsShift1 && Shift0->getValue() == Shift1->getValue()) {
+    ADec = decompose(Sub0->stripPointerCastsSameRepresentation(), *this,
+                     IsSigned, DL);
+    BDec = decompose(Sub1->stripPointerCastsSameRepresentation(), *this,
+                     IsSigned, DL);
+  } else if (IsShift1 && Shift1->getSExtValue() > 0 &&
+             Shift1->getSExtValue() < 63) {
+    int64_t Factor = int64_t(1) << Shift1->getSExtValue();
+    if (BDec.Vars.size() <= 1 && !ADec.mul(Factor)) {
+      BDec = decompose(Sub1->stripPointerCastsSameRepresentation(), *this,
+                       IsSigned, DL);
+    }
+  } else if (IsShift0 && Shift0->getSExtValue() > 0 &&
+             Shift0->getSExtValue() < 63) {
+    int64_t Factor = int64_t(1) << Shift0->getSExtValue();
+    if (ADec.Vars.size() <= 1 && !BDec.mul(Factor)) {
+      ADec = decompose(Sub0->stripPointerCastsSameRepresentation(), *this,
+                       IsSigned, DL);
+    }
+  }
   int64_t Offset1 = ADec.Offset;
   int64_t Offset2 = BDec.Offset;
   if (MulOverflow(Offset1, int64_t(-1), Offset1))
@@ -1090,8 +1146,11 @@ void State::addInfoForInductions(BasicBlock &BB) {
   PHINode *PN = nullptr;
   const APInt *IncStep = nullptr;
   CmpPredicate Pred;
+  auto BaseInd =
+      m_CombineOr(m_Phi(PN), m_c_Add(m_Phi(PN), m_APInt(IncStep)));
   auto IndValue =
-      m_Value(A, m_CombineOr(m_Phi(PN), m_c_Add(m_Phi(PN), m_APInt(IncStep))));
+      m_Value(A, m_CombineOr(BaseInd,
+                             m_CombineOr(m_ZExt(BaseInd), m_SExt(BaseInd))));
 
   if (!match(BB.getTerminator(),
              m_Br(m_c_ICmp(Pred, IndValue, m_Value(B)), m_Value(), m_Value())))
@@ -1116,7 +1175,9 @@ void State::addInfoForInductions(BasicBlock &BB) {
   BasicBlock *InLoopSucc = cast<CondBrInst>(BB.getTerminator())
                                ->getSuccessor(ContinueOnTrue ? 0 : 1);
 
-  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
+  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB))
+    return;
+  if (InLoopSucc == &BB && (&BB != Latch || !IncStep))
     return;
 
   BasicBlock *LoopPred = L->getLoopPredecessor();
@@ -1223,27 +1284,54 @@ void State::addInfoForInductions(BasicBlock &BB) {
     LowerBoundNSW = !SOverflow;
   }
 
+  Value *IndTarget = PN;
+  Value *ExtLowerBound = LowerBound;
+  Value *ExtStartValue = StartValue;
+  if (&BB == Header &&
+      (match(A, m_ZExt(m_Value())) || match(A, m_SExt(m_Value())))) {
+    IndTarget = A;
+    if (auto *LowerC = dyn_cast<ConstantInt>(LowerBound)) {
+      if (match(A, m_ZExt(m_Value()))) {
+        ExtLowerBound = ConstantInt::get(
+            A->getType(),
+            LowerC->getValue().zext(A->getType()->getScalarSizeInBits()));
+        ExtStartValue = ConstantInt::get(
+            A->getType(), cast<ConstantInt>(StartValue)
+                              ->getValue()
+                              .zext(A->getType()->getScalarSizeInBits()));
+      } else {
+        ExtLowerBound = ConstantInt::get(
+            A->getType(),
+            LowerC->getValue().sext(A->getType()->getScalarSizeInBits()));
+        ExtStartValue = ConstantInt::get(
+            A->getType(), cast<ConstantInt>(StartValue)
+                              ->getValue()
+                              .sext(A->getType()->getScalarSizeInBits()));
+      }
+    }
+  }
+
   // AR may wrap. Add PN >= StartValue conditional on LowerBound <= B, which
   // guarantees that the loop exits before wrapping in combination with the
   // restrictions on B and the step above.
-  ConditionTy StartBeforeBoundULE = {CmpInst::ICMP_ULE, LowerBound, B};
-  ConditionTy StartBeforeBoundSLE = {CmpInst::ICMP_SLE, LowerBound, B};
+  ConditionTy StartBeforeBoundULE = {CmpInst::ICMP_ULE, ExtLowerBound, B};
+  ConditionTy StartBeforeBoundSLE = {CmpInst::ICMP_SLE, ExtLowerBound, B};
   if (!Info.Unsigned && LowerBoundNUW)
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundULE));
+        DTN, CmpInst::ICMP_UGE, IndTarget, ExtStartValue, StartBeforeBoundULE));
   if (!Info.Signed && LowerBoundNSW)
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSLE));
+        DTN, CmpInst::ICMP_SGE, IndTarget, ExtStartValue, StartBeforeBoundSLE));
 
   if (LowerBoundNSW)
-    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
-                                                     B, StartBeforeBoundSLE));
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SLT, IndTarget, B, StartBeforeBoundSLE));
 
   if (!LowerBoundNUW)
     return;
 
-  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_ULT, PN,
-                                                   B, StartBeforeBoundULE));
+  WorkList.push_back(FactOrCheck::getConditionFact(
+      DTN, CmpInst::ICMP_ULT, IndTarget, B, StartBeforeBoundULE));
 
   // Try to add condition from the header or latch to the dedicated exit
   // blocks. When exiting either with EQ or NE, we know that the induction value
@@ -2040,10 +2128,13 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
 void ConstraintInfo::tightenBoundUsingNe(
     Value *A, Value *B, unsigned NumIn, unsigned NumOut,
     SmallVectorImpl<StackEntry> &DFSInStack) {
-  if (!A->getType()->isIntegerTy())
+  if (!A->getType()->isIntegerTy() && !A->getType()->isPointerTy())
     return;
 
   for (bool IsSigned : {false, true}) {
+    if (IsSigned && A->getType()->isPointerTy())
+      continue;
+
     // In the unsigned system `A u>= 0` holds for every A, so getConstraint
     // already turned `A != 0` into `A u> 0`.
     if (!IsSigned && match(B, m_Zero()))
@@ -2475,17 +2566,38 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       Pred = CB.Cond.Pred;
       A = CB.Cond.Op0;
       B = CB.Cond.Op1;
-      if (CB.DoesHold.Pred != CmpInst::BAD_ICMP_PREDICATE &&
-          !Info.doesHold(CB.DoesHold.Pred, CB.DoesHold.Op0, CB.DoesHold.Op1)) {
-        LLVM_DEBUG({
-          dbgs() << "Not adding fact ";
-          dumpUnpackedICmp(dbgs(), Pred, A, B);
-          dbgs() << " because precondition ";
-          dumpUnpackedICmp(dbgs(), CB.DoesHold.Pred, CB.DoesHold.Op0,
-                           CB.DoesHold.Op1);
-          dbgs() << " does not hold.\n";
-        });
-        continue;
+      if (CB.DoesHold.Pred != CmpInst::BAD_ICMP_PREDICATE) {
+        bool PrecondHolds =
+            Info.doesHold(CB.DoesHold.Pred, CB.DoesHold.Op0, CB.DoesHold.Op1);
+        if (!PrecondHolds && CB.DoesHold.Pred == CmpInst::ICMP_ULE &&
+            match(CB.DoesHold.Op0, m_One())) {
+          PrecondHolds = Info.doesHold(
+              CmpInst::ICMP_NE, CB.DoesHold.Op1,
+              Constant::getNullValue(CB.DoesHold.Op1->getType()));
+        }
+        if (!PrecondHolds && CB.DoesHold.Pred == CmpInst::ICMP_SLE &&
+            match(CB.DoesHold.Op0, m_Zero())) {
+          PrecondHolds = isKnownNonNegative(CB.DoesHold.Op1, F.getDataLayout());
+        }
+        if (!PrecondHolds &&
+            CB.DoesHold.Op0->getType() == CB.DoesHold.Op1->getType() &&
+            S.SE.isSCEVable(CB.DoesHold.Op0->getType()) &&
+            S.SE.isKnownPredicate(CB.DoesHold.Pred,
+                                  S.SE.getSCEV(CB.DoesHold.Op0),
+                                  S.SE.getSCEV(CB.DoesHold.Op1))) {
+          PrecondHolds = true;
+        }
+        if (!PrecondHolds) {
+          LLVM_DEBUG({
+            dbgs() << "Not adding fact ";
+            dumpUnpackedICmp(dbgs(), Pred, A, B);
+            dbgs() << " because precondition ";
+            dumpUnpackedICmp(dbgs(), CB.DoesHold.Pred, CB.DoesHold.Op0,
+                             CB.DoesHold.Op1);
+            dbgs() << " does not hold.\n";
+          });
+          continue;
+        }
       }
     } else {
       [[maybe_unused]] bool Matched =
