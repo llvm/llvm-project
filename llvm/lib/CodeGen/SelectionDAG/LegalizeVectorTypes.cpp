@@ -7595,9 +7595,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_STRICT_FSETCC(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
-  // Only need to handle fp types here; integers should be promoted.
-  assert(N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA &&
-         "Expected FP partial reduction");
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
