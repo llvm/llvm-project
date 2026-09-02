@@ -3366,11 +3366,11 @@ void JoinVals::pruneValues(JoinVals &Other,
   }
 }
 
-// Check if the segment consists of a copied live-through value (i.e. the copy
-// in the block only extended the liveness, of an undef value which we may need
-// to handle).
+// Check whether the subrange contains the same value before and after the
+// copy. Removing the copy can leave such a live-through subrange with a stale
+// endpoint, so it must be considered when shrinking the joined interval.
 static bool isLiveThrough(const LiveQueryResult Q) {
-  return Q.valueIn() && Q.valueIn()->isPHIDef() && Q.valueIn() == Q.valueOut();
+  return Q.valueIn() && Q.valueIn() == Q.valueOut();
 }
 
 /// Consider the following situation when coalescing the copy between
