@@ -5137,7 +5137,7 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   // Legacy asyncmark intrinsics missed the stage operand. Append the ALL stage,
   // which is the behavior they had: every async operation belongs to it.
   if ((F->getIntrinsicID() == Intrinsic::amdgcn_asyncmark &&
-       CI->arg_size() == 0) ||
+       CI->arg_empty()) ||
       (F->getIntrinsicID() == Intrinsic::amdgcn_wait_asyncmark &&
        CI->arg_size() == 1)) {
     SmallVector<Value *, 2> Args(CI->args());

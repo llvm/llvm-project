@@ -1,19 +1,17 @@
 ; RUN: split-file %s %t
-; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null %t/oob.ll 2>&1 | FileCheck %s -check-prefix=OOB
-; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null %t/oob.ll 2>&1 | FileCheck %s -check-prefix=OOB
-; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null %t/oob-wait.ll 2>&1 | FileCheck %s -check-prefix=OOB-WAIT
-; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null %t/oob-wait.ll 2>&1 | FileCheck %s -check-prefix=OOB-WAIT
-; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null %t/reserved.ll 2>&1 | FileCheck %s -check-prefix=RESERVED
-; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null %t/reserved.ll 2>&1 | FileCheck %s -check-prefix=RESERVED
-; RUN: not llc -global-isel=0 -mtriple=amdgpu12.50 -filetype=null %t/reserved-wait.ll 2>&1 | FileCheck %s -check-prefix=RESERVED-WAIT
-; RUN: not llc -global-isel=1 -mtriple=amdgpu12.50 -filetype=null %t/reserved-wait.ll 2>&1 | FileCheck %s -check-prefix=RESERVED-WAIT
+; RUN: not llc -mtriple=amdgpu12.50 -filetype=null %t/oob.ll 2>&1 | FileCheck %s -check-prefix=OOB
+; RUN: not llc -mtriple=amdgpu12.50 -filetype=null %t/oob-wait.ll 2>&1 | FileCheck %s -check-prefix=OOB-WAIT
+; RUN: not llc -mtriple=amdgpu12.50 -filetype=null %t/reserved.ll 2>&1 | FileCheck %s -check-prefix=RESERVED
+; RUN: not llc -mtriple=amdgpu12.50 -filetype=null %t/reserved-wait.ll 2>&1 | FileCheck %s -check-prefix=RESERVED-WAIT
 
-; Invalid asyncmark stages are rejected during instruction selection, with the
-; same wording from both selectors. SIInsertWaitcnts must never see them.
+; The stage operand carries a RangeSet covering the valid, non-reserved stages,
+; so the IR verifier rejects bad stages before instruction selection. Reserved
+; stages are simply the gaps in that set.
 
 ;--- oob.ll
 ; Values above ALL, and values between STAGE_LAST and ALL, are out of range.
-; OOB: error: {{.*}}intrinsic @llvm.amdgcn.*.asyncmark: invalid stage
+; OOB: immarg value 11 for arg 0 out of range set
+; OOB: immarg value 17 for arg 0 out of range set
 define amdgpu_kernel void @asyncmark_out_of_range() {
   call void @llvm.amdgcn.asyncmark(i32 11)
   call void @llvm.amdgcn.asyncmark(i32 17)
@@ -21,15 +19,21 @@ define amdgpu_kernel void @asyncmark_out_of_range() {
 }
 
 ;--- oob-wait.ll
-; OOB-WAIT: error: {{.*}}intrinsic @llvm.amdgcn.*.asyncmark: invalid stage
+; OOB-WAIT: immarg value 15 for arg 1 out of range set
 define amdgpu_kernel void @wait_asyncmark_out_of_range() {
   call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 15)
   ret void
 }
 
 ;--- reserved.ll
-; Reserved stages are rejected too.
-; RESERVED: error: {{.*}}intrinsic @llvm.amdgcn.*.asyncmark: invalid stage
+; Every reserved stage is rejected. These hold slots in the stage numbering for
+; async operations that do not exist yet.
+; RESERVED: immarg value 4 for arg 0 out of range set
+; RESERVED: immarg value 6 for arg 0 out of range set
+; RESERVED: immarg value 7 for arg 0 out of range set
+; RESERVED: immarg value 8 for arg 0 out of range set
+; RESERVED: immarg value 9 for arg 0 out of range set
+; RESERVED: immarg value 10 for arg 0 out of range set
 define amdgpu_kernel void @asyncmark_reserved() {
   call void @llvm.amdgcn.asyncmark(i32 4)
   call void @llvm.amdgcn.asyncmark(i32 6)
@@ -41,7 +45,7 @@ define amdgpu_kernel void @asyncmark_reserved() {
 }
 
 ;--- reserved-wait.ll
-; RESERVED-WAIT: error: {{.*}}intrinsic @llvm.amdgcn.*.asyncmark: invalid stage
+; RESERVED-WAIT: immarg value 4 for arg 1 out of range set
 define amdgpu_kernel void @wait_asyncmark_reserved() {
   call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 4)
   ret void
