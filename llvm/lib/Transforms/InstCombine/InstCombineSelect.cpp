@@ -2190,6 +2190,50 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
   return nullptr;
 }
 
+/// a > -1 ? 1 : ( a | (+ve)value) --> smin(1, a | (+ve)value)
+/// a < -1 ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
+/// a < 0  ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
+static Value *foldSelectInstWithICmpOr(SelectInst &SI, ICmpInst *ICI,
+                                       InstCombiner::BuilderTy &Builder,
+                                       const SimplifyQuery &SQ) {
+  Value *OrVal, *ConstVal, *Mask;
+  Value *A = ICI->getOperand(0);
+  Value *B = ICI->getOperand(1);
+  Value *TVal = SI.getTrueValue();
+  Value *FVal = SI.getFalseValue();
+
+  const APInt *CmpC;
+  if (!match(B, m_APInt(CmpC)))
+    return nullptr;
+
+  bool TrueIfSigned;
+  if (!isSignBitCheck(ICI->getPredicate(), *CmpC, TrueIfSigned))
+    return nullptr;
+
+  if (TrueIfSigned) {
+    OrVal = TVal;
+    ConstVal = FVal;
+  } else {
+    OrVal = FVal;
+    ConstVal = TVal;
+  }
+
+  const APInt *C;
+  if (!match(ConstVal, m_APInt(C)))
+    return nullptr;
+
+  if (!(C->isZero() || C->isOne() || C->isAllOnes()))
+    return nullptr;
+
+  if (!match(OrVal, m_c_Or(m_Specific(A), m_Value(Mask))))
+    return nullptr;
+
+  if (!isKnownPositive(Mask, SQ))
+    return nullptr;
+
+  return Builder.CreateBinaryIntrinsic(Intrinsic::smin, OrVal, ConstVal);
+}
+
 /// `A == MIN_INT ? B != MIN_INT : A < B` --> `A < B`
 /// `A == MAX_INT ? B != MAX_INT : A > B` --> `A > B`
 static Instruction *foldSelectWithExtremeEqCond(Value *CmpLHS, Value *CmpRHS,
@@ -2409,6 +2453,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectInstWithICmpConst(SI, ICI, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectInstWithICmpOr(SI, ICI, Builder, SQ))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeClampLike(SI, *ICI, Builder, *this))
