@@ -380,30 +380,30 @@ static std::optional<SubviewFootprint> resolveSubviewFootprint(Value base) {
   auto rootTy = dyn_cast<MemRefType>(source.getType());
   if (!rootTy || !rootTy.hasStaticShape())
     return std::nullopt;
-  SubviewFootprint fp;
-  fp.root = source;
+  SubviewFootprint footprint;
+  footprint.root = source;
   // Seed with the whole-root footprint (offset 0, full extent per dimension).
   // Each subview in the chain narrows it below.
-  fp.offsets.assign(rootTy.getRank(), 0);
-  fp.sizes.assign(rootTy.getShape().begin(), rootTy.getShape().end());
+  footprint.offsets.assign(rootTy.getRank(), 0);
+  footprint.sizes.assign(rootTy.getShape().begin(), rootTy.getShape().end());
   // Compose from the outermost subview (closest to the root) inward.
   for (SubViewOp sv : llvm::reverse(chain)) {
     // Rank-reducing subviews would misalign the per-dimension bookkeeping.
     if (sv.getSourceType().getRank() != sv.getType().getRank())
       return std::nullopt;
-    ArrayRef<int64_t> offs = sv.getStaticOffsets();
-    ArrayRef<int64_t> szs = sv.getStaticSizes();
-    ArrayRef<int64_t> strides = sv.getStaticStrides();
-    if (llvm::any_of(offs, ShapedType::isDynamic) ||
-        llvm::any_of(szs, ShapedType::isDynamic) ||
-        llvm::any_of(strides, [](int64_t s) { return s != 1; }))
+    ArrayRef<int64_t> staticOffsets = sv.getStaticOffsets();
+    ArrayRef<int64_t> staticSizes = sv.getStaticSizes();
+    ArrayRef<int64_t> staticStrides = sv.getStaticStrides();
+    if (llvm::any_of(staticOffsets, ShapedType::isDynamic) ||
+        llvm::any_of(staticSizes, ShapedType::isDynamic) ||
+        llvm::any_of(staticStrides, [](int64_t s) { return s != 1; }))
       return std::nullopt;
-    for (unsigned d = 0, e = offs.size(); d < e; ++d) {
-      fp.offsets[d] += offs[d];
-      fp.sizes[d] = szs[d];
+    for (unsigned d = 0, e = staticOffsets.size(); d < e; ++d) {
+      footprint.offsets[d] += staticOffsets[d];
+      footprint.sizes[d] = staticSizes[d];
     }
   }
-  return fp;
+  return footprint;
 }
 
 /// True if two footprints provably cover disjoint memory: they must share the
