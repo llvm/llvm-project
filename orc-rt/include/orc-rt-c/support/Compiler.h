@@ -38,14 +38,18 @@
 #define ORC_RT_C_EXTERN_C_END ORC_RT_C_STRICT_PROTOTYPES_END
 #endif
 
-/* ORC_RT_C_ABI is the export/visibility macro used to mark symbols declared
-   in orc-rt-c as exported when built as a shared library. */
+/* ORC_RT_C_EXPORT marks a symbol declared in orc-rt-c as part of the ORC
+   runtime's binary interface: exported from the runtime when it is built as a
+   shared library, and imported by consumers of that library.
+
+   TODO: Add the Windows __declspec(dllexport) / __declspec(dllimport) and
+   static-build cases once there is a shared-library build to exercise them. */
 #if defined(__has_attribute) && __has_attribute(visibility)
-#define ORC_RT_C_ABI __attribute__((visibility("default")))
+#define ORC_RT_C_EXPORT __attribute__((visibility("default")))
 #endif
 
-#if !defined(ORC_RT_C_ABI)
-#define ORC_RT_C_ABI
+#if !defined(ORC_RT_C_EXPORT)
+#define ORC_RT_C_EXPORT
 #endif
 
 /* ORC_RT_C_NOTHROW indicates that a function won't throw a C++ exception. */
