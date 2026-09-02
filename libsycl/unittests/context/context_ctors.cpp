@@ -18,6 +18,7 @@ void dummyAsyncHandler(exception_list) {}
 TEST(Context, DefaultConstructor) {
   mock::MockWrapper Mock;
 
+  // TODO: remove once context is properly implemented
   std::ignore = device{};
 
   EXPECT_CALL(Mock.get(), olCreateContext(_, _, _)).Times(1);
@@ -68,4 +69,18 @@ TEST(Context, DeviceListConstructor) {
   EXPECT_CALL(Mock.get(), olDestroyContext(_)).Times(1);
 
   context Ctx({Dev1, Dev2}, AsyncHandler);
+}
+
+TEST(Context, DeviceListConstructorThrowsOnEmptyList) {
+  mock::MockWrapper Mock;
+  async_handler AsyncHandler = dummyAsyncHandler;
+
+  EXPECT_CALL(Mock.get(), olCreateContext(_, _, _)).Times(0);
+
+  try {
+    context Ctx(std::vector<device>{}, AsyncHandler);
+    FAIL() << "Expected sycl::exception";
+  } catch (const exception &Ex) {
+    EXPECT_EQ(Ex.code(), make_error_code(errc::invalid));
+  }
 }

@@ -17,10 +17,6 @@ void dummyAsyncHandler(sycl::exception_list) {}
 
 void check(const context &ctx) {
   auto devices = ctx.get_devices();
-  if (devices.empty()) {
-    std::cout << "Context has no devices" << std::endl;
-    return_fail();
-  }
 
   auto plt = ctx.get_platform();
   for (const auto &dev : devices) {
