@@ -27,7 +27,7 @@ define internal void @B() noinline {
 }
 
 ; CHECK-LABEL: Function: main
-; CHECK: NoModRef:  Ptr: i32* @g	<->  call void @A()
+; CHECK: Both ModRef:  Ptr: i32* @g	<->  call void @A()
 define i32 @main() {
   store i32 1, ptr @g
   call void @A()
