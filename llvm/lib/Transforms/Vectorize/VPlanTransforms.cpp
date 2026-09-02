@@ -3935,8 +3935,16 @@ void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
       unsigned Opcode = isa<VPWidenLoadRecipe>(MemOp->getAsRecipe())
                             ? Instruction::Load
                             : Instruction::Store;
+
+      std::optional<Instruction::CastOps> CastHint;
+      VPUser *MaybeCast = Opcode == Instruction::Store
+                              ? StoredValue->getDefiningRecipe()
+                              : R.getVPSingleValue()->getSingleUser();
+      if (auto *Cast = dyn_cast_if_present<VPWidenCastRecipe>(MaybeCast))
+        CastHint = Cast->getOpcode();
+
       unsigned ScaleFactor = TTI.getPreferredVFMultipleForMemoryOp(
-          Opcode, AccessType, VF, UF, /*IsMasked=*/false);
+          Opcode, AccessType, VF, UF, /*IsMasked=*/false, CastHint);
       assert((ScaleFactor != 0 && UF % ScaleFactor == 0) &&
              "ScaleFactor must divide UF");
       MemOp->setVFMultiple(ScaleFactor);

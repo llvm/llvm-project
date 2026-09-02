@@ -368,3 +368,73 @@ loop:
 exit:
   ret i64 %select.data
 }
+
+; Negative test: We should not use a wide load when the result of the load is extended.
+; In this case, it's better to use SVE extending loads (rather than a multi-vector load).
+define void @extending_load(ptr noalias %dst, ptr %src, i64 %n) {
+; UNMASKED-SVE2P1-LABEL: define void @extending_load(
+; UNMASKED-SVE2P1-SAME: ptr noalias [[DST:%.*]], ptr [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; UNMASKED-SVE2P1-NEXT:  [[ITER_CHECK:.*:]]
+; UNMASKED-SVE2P1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; UNMASKED-SVE2P1-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[VEC_EPILOG_SCALAR_PH:label %.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; UNMASKED-SVE2P1:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; UNMASKED-SVE2P1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; UNMASKED-SVE2P1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
+; UNMASKED-SVE2P1-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], [[TMP1]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[MIN_ITERS_CHECK1]], [[VEC_EPILOG_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; UNMASKED-SVE2P1:       [[VECTOR_PH]]:
+; UNMASKED-SVE2P1-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
+; UNMASKED-SVE2P1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
+; UNMASKED-SVE2P1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; UNMASKED-SVE2P1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; UNMASKED-SVE2P1:       [[VECTOR_BODY]]:
+; UNMASKED-SVE2P1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; UNMASKED-SVE2P1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP2]], 1
+; UNMASKED-SVE2P1-NEXT:    [[TMP5:%.*]] = mul nuw nsw i64 [[TMP2]], 3
+; UNMASKED-SVE2P1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i64 [[TMP2]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i64 [[TMP4]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i64 [[TMP5]]
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 4
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x i32>, ptr [[TMP8]], align 4
+; UNMASKED-SVE2P1-NEXT:    [[TMP9:%.*]] = sext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
+; UNMASKED-SVE2P1-NEXT:    [[TMP10:%.*]] = sext <vscale x 4 x i32> [[WIDE_LOAD2]] to <vscale x 4 x i64>
+; UNMASKED-SVE2P1-NEXT:    [[TMP11:%.*]] = sext <vscale x 4 x i32> [[WIDE_LOAD3]] to <vscale x 4 x i64>
+; UNMASKED-SVE2P1-NEXT:    [[TMP12:%.*]] = sext <vscale x 4 x i32> [[WIDE_LOAD4]] to <vscale x 4 x i64>
+; UNMASKED-SVE2P1-NEXT:    [[TMP13:%.*]] = mul nsw <vscale x 4 x i64> [[TMP9]], splat (i64 42)
+; UNMASKED-SVE2P1-NEXT:    [[TMP14:%.*]] = mul nsw <vscale x 4 x i64> [[TMP10]], splat (i64 42)
+; UNMASKED-SVE2P1-NEXT:    [[TMP15:%.*]] = mul nsw <vscale x 4 x i64> [[TMP11]], splat (i64 42)
+; UNMASKED-SVE2P1-NEXT:    [[TMP16:%.*]] = mul nsw <vscale x 4 x i64> [[TMP12]], splat (i64 42)
+; UNMASKED-SVE2P1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i64, ptr [[DST]], i64 [[INDEX]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i64, ptr [[TMP17]], i64 [[TMP4]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP19:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv4i64(<vscale x 8 x i64> poison, <vscale x 4 x i64> [[TMP13]], i64 0)
+; UNMASKED-SVE2P1-NEXT:    [[TMP20:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv4i64(<vscale x 8 x i64> [[TMP19]], <vscale x 4 x i64> [[TMP14]], i64 4)
+; UNMASKED-SVE2P1-NEXT:    store <vscale x 8 x i64> [[TMP20]], ptr [[TMP17]], align 8
+; UNMASKED-SVE2P1-NEXT:    [[TMP21:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv4i64(<vscale x 8 x i64> poison, <vscale x 4 x i64> [[TMP15]], i64 0)
+; UNMASKED-SVE2P1-NEXT:    [[TMP22:%.*]] = call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv4i64(<vscale x 8 x i64> [[TMP21]], <vscale x 4 x i64> [[TMP16]], i64 4)
+; UNMASKED-SVE2P1-NEXT:    store <vscale x 8 x i64> [[TMP22]], ptr [[TMP18]], align 8
+; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %src.ptr = getelementptr inbounds nuw i32, ptr %src, i64 %iv
+  %src.val = load i32, ptr %src.ptr, align 4
+  %conv = sext i32 %src.val to i64
+  %mul = mul nsw i64 %conv, 42
+  %dst.ptr = getelementptr inbounds nuw i64, ptr %dst, i64 %iv
+  store i64 %mul, ptr %dst.ptr, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cmp = icmp eq i64 %iv.next, %n
+  br i1 %exit.cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
