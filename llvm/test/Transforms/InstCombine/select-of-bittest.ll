@@ -3,6 +3,10 @@
 
 ; https://bugs.llvm.org/show_bug.cgi?id=36950
 
+declare void @use32(i32)
+declare void @use1(i1)
+declare void @use_vec1(<2 x i1>)
+
 ; These all should be just and+icmp, there should be no select.
 
 define i32 @and_lshr_and(i32 %arg) {
@@ -20,6 +24,40 @@ define i32 @and_lshr_and(i32 %arg) {
   ret i32 %t4
 }
 
+define i32 @and_lshr_and_ne_cond(i32 %arg) {
+; CHECK-LABEL: @and_lshr_and_ne_cond(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[ARG:%.*]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    call void @use1(i1 [[TMP2]])
+; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[ARG]], 1
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[T2]], 1
+; CHECK-NEXT:    [[T4:%.*]] = select i1 [[TMP2]], i32 1, i32 [[T3]]
+; CHECK-NEXT:    ret i32 [[T4]]
+;
+  %t = and i32 %arg, 4
+  %t1 = icmp ne i32 %t, 0
+  call void @use1(i1 %t1)
+  %t2 = lshr i32 %arg, 1
+  %t3 = and i32 %t2, 1
+  %t4 = select i1 %t1, i32 1, i32 %t3
+  ret i32 %t4
+}
+
+define i32 @and_lshr_and_trunc_cond(i32 %arg) {
+; CHECK-LABEL: @and_lshr_and_trunc_cond(
+; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[ARG:%.*]] to i1
+; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[ARG]], 1
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[T2]], 1
+; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], i32 1, i32 [[T3]]
+; CHECK-NEXT:    ret i32 [[T4]]
+;
+  %t1 = trunc i32 %arg to i1
+  %t2 = lshr i32 %arg, 1
+  %t3 = and i32 %t2, 1
+  %t4 = select i1 %t1, i32 1, i32 %t3
+  ret i32 %t4
+}
+
 define <2 x i32> @and_lshr_and_splatvec(<2 x i32> %arg) {
 ; CHECK-LABEL: @and_lshr_and_splatvec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[ARG:%.*]], splat (i32 3)
@@ -32,6 +70,40 @@ define <2 x i32> @and_lshr_and_splatvec(<2 x i32> %arg) {
   %t2 = lshr <2 x i32> %arg, <i32 1, i32 1>
   %t3 = and <2 x i32> %t2, <i32 1, i32 1>
   %t4 = select <2 x i1> %t1, <2 x i32> %t3, <2 x i32> <i32 1, i32 1>
+  ret <2 x i32> %t4
+}
+
+define <2 x i32> @and_lshr_and_ne_cond_splatvec(<2 x i32> %arg) {
+; CHECK-LABEL: @and_lshr_and_ne_cond_splatvec(
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[ARG:%.*]], splat (i32 4)
+; CHECK-NEXT:    [[T1:%.*]] = icmp ne <2 x i32> [[T]], zeroinitializer
+; CHECK-NEXT:    call void @use_vec1(<2 x i1> [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = lshr <2 x i32> [[ARG]], splat (i32 1)
+; CHECK-NEXT:    [[T3:%.*]] = and <2 x i32> [[T2]], splat (i32 1)
+; CHECK-NEXT:    [[T4:%.*]] = select <2 x i1> [[T1]], <2 x i32> splat (i32 1), <2 x i32> [[T3]]
+; CHECK-NEXT:    ret <2 x i32> [[T4]]
+;
+  %t = and <2 x i32> %arg, <i32 4, i32 4>
+  %t1 = icmp ne <2 x i32> %t, zeroinitializer
+  call void @use_vec1(<2 x i1> %t1)
+  %t2 = lshr <2 x i32> %arg, <i32 1, i32 1>
+  %t3 = and <2 x i32> %t2, <i32 1, i32 1>
+  %t4 = select <2 x i1> %t1, <2 x i32> <i32 1, i32 1>, <2 x i32> %t3
+  ret <2 x i32> %t4
+}
+
+define <2 x i32> @and_lshr_and_trunc_cond_splatvec(<2 x i32> %arg) {
+; CHECK-LABEL: @and_lshr_and_trunc_cond_splatvec(
+; CHECK-NEXT:    [[T1:%.*]] = trunc <2 x i32> [[ARG:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[T2:%.*]] = lshr <2 x i32> [[ARG]], splat (i32 1)
+; CHECK-NEXT:    [[T3:%.*]] = and <2 x i32> [[T2]], splat (i32 1)
+; CHECK-NEXT:    [[T4:%.*]] = select <2 x i1> [[T1]], <2 x i32> splat (i32 1), <2 x i32> [[T3]]
+; CHECK-NEXT:    ret <2 x i32> [[T4]]
+;
+  %t1 = trunc <2 x i32> %arg to <2 x i1>
+  %t2 = lshr <2 x i32> %arg, <i32 1, i32 1>
+  %t3 = and <2 x i32> %t2, <i32 1, i32 1>
+  %t4 = select <2 x i1> %t1, <2 x i32> <i32 1, i32 1>, <2 x i32> %t3
   ret <2 x i32> %t4
 }
 
@@ -448,10 +520,6 @@ define <3 x i32> @f_var3_vec_poison(<3 x i32> %arg, <3 x i32> %arg1, <3 x i32> %
 ; ============================================================================ ;
 
 ; One use only.
-
-declare void @use32(i32)
-
-declare void @use1(i1)
 
 define i32 @n_var0_oneuse(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: @n_var0_oneuse(
