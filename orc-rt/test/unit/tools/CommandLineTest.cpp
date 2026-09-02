@@ -33,13 +33,13 @@ protected:
 
 TEST_F(CommandLineParserTest, NoopTest) {
   CommandLineParser Parser;
-  const char *Argv[] = {"appname"};
-  auto Err = Parser.parse(1, const_cast<char **>(Argv));
+  const char *Argv[] = {""};
+  auto Err = Parser.parse(std::begin(Argv), std::end(Argv));
   EXPECT_FALSE(!!Err);
 }
 
 TEST_F(CommandLineParserTest, ValueRequired) {
-  const char *Argv[] = {"appname", "--host"};
+  const char *Argv[] = {"--host"};
   auto Err = Parser.parse(std::begin(Argv), std::end(Argv));
   if (!Err) {
     ADD_FAILURE() << "--host requires a value, shouldn't succeed.";
@@ -49,7 +49,7 @@ TEST_F(CommandLineParserTest, ValueRequired) {
 }
 
 TEST_F(CommandLineParserTest, UnknownOption) {
-  const char *Argv[] = {"appname", "--unknown=foo"};
+  const char *Argv[] = {"--unknown=foo"};
   auto Err = Parser.parse(std::begin(Argv), std::end(Argv));
   if (!Err) {
     ADD_FAILURE() << "unknown option, shouldn't succeed.";
@@ -59,7 +59,7 @@ TEST_F(CommandLineParserTest, UnknownOption) {
 }
 
 TEST_F(CommandLineParserTest, InvalidInteger) {
-  const char *Argv[] = {"appname", "--port=not_a_number"};
+  const char *Argv[] = {"--port=not_a_number"};
   auto Err = Parser.parse(std::begin(Argv), std::end(Argv));
   if (!Err) {
     ADD_FAILURE() << "Invalid integer, shouldn't succeed.";
@@ -69,8 +69,7 @@ TEST_F(CommandLineParserTest, InvalidInteger) {
 }
 
 TEST_F(CommandLineParserTest, ParseFullConfiguration) {
-  const char *Argv[] = {"appname", "--host=example.com", "--port=8080",
-                        "--verbose=true"};
+  const char *Argv[] = {"--host=example.com", "--port=8080", "--verbose=true"};
   cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
   EXPECT_EQ(Host, "example.com");
   EXPECT_EQ(Port, 8080);
@@ -78,36 +77,60 @@ TEST_F(CommandLineParserTest, ParseFullConfiguration) {
 }
 
 TEST_F(CommandLineParserTest, ShortFlagClustering) {
-  const char *Argv[] = {"appname", "-v?"};
+  const char *Argv[] = {"-v?"};
   cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
   EXPECT_TRUE(Verbose);
   EXPECT_TRUE(Help);
 }
 
 TEST_F(CommandLineParserTest, ShortFlagWithValue) {
-  const char *Argv[] = {"appname", "-p", "1234", "-hlocalhost"};
+  const char *Argv[] = {"-p", "1234", "-hlocalhost"};
   cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
   EXPECT_EQ(Port, 1234);
   EXPECT_EQ(Host, "localhost");
 }
 
 TEST_F(CommandLineParserTest, ClusterWithValueAtEnd) {
-  const char *Argv[] = {"appname", "-vp9999"};
+  const char *Argv[] = {"-vp9999"};
   cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
   EXPECT_TRUE(Verbose);
   EXPECT_EQ(Port, 9999);
 }
 
 TEST_F(CommandLineParserTest, DoubleDashTerminatesOptionParsing) {
-  const char *Argv[] = {"appname", "-v", "--", "-p", "1234"};
-  cantFail(Parser.parse(static_cast<int>(std::size(Argv)),
-                        const_cast<char **>(Argv)));
+  const char *Argv[] = {"-v", "--", "-p", "1234"};
+  cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
 
   EXPECT_TRUE(Verbose);
   EXPECT_EQ(Port, 8080); // Should remain default
   ASSERT_EQ(Parser.positionals().size(), 2u);
   EXPECT_EQ(Parser.positionals()[0], "-p");
   EXPECT_EQ(Parser.positionals()[1], "1234");
+}
+
+TEST_F(CommandLineParserTest, ParseAsMainWithEmptyArgsSucceeds) {
+  const char *Argv[] = {"appname"};
+  auto Err = Parser.parseAsMainArgs(std::size(Argv), const_cast<char **>(Argv));
+  EXPECT_FALSE(!!Err);
+}
+
+TEST_F(CommandLineParserTest, ParseAsMainWithRegularArgsSucceeds) {
+  const char *Argv[] = {"appname", "-v", "--", "-p", "1234"};
+  cantFail(Parser.parseAsMainArgs(std::size(Argv), const_cast<char **>(Argv)));
+
+  EXPECT_TRUE(Verbose);
+  EXPECT_EQ(Port, 8080); // Should remain default
+  ASSERT_EQ(Parser.positionals().size(), 2u);
+  EXPECT_EQ(Parser.positionals()[0], "-p");
+  EXPECT_EQ(Parser.positionals()[1], "1234");
+}
+
+TEST_F(CommandLineParserTest, ParseAsMainWithEmplyListFails) {
+  const char *Argv[] = {};
+  auto Err = Parser.parseAsMainArgs(0, const_cast<char **>(Argv));
+
+  EXPECT_TRUE(!!Err);
+  consumeError(std::move(Err));
 }
 
 TEST_F(CommandLineParserTest, PrintHelpAlignmentWithShortFlags) {
