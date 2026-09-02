@@ -80,6 +80,124 @@ if.end:
   ret i64 %result
 }
 
+define i64 @test_x16_slh(i64 %arg) speculative_load_hardening "branch-protection-pauth-lr" "sign-return-address"="non-leaf" {
+; COMPAT-LABEL: test_x16_slh:
+; COMPAT:         dsb sy
+; COMPAT-NEXT:    isb
+; COMPAT-NEXT:    cmp x0, #0
+; COMPAT-NEXT:    b.eq .LBB1_3
+; COMPAT-NEXT:    dsb sy
+; COMPAT-NEXT:    isb
+; COMPAT-NEXT:    hint #39
+; COMPAT-NEXT:  .Ltmp1:
+; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp1
+; COMPAT-NEXT:    str x30, [sp, #-16]!
+; COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; COMPAT-NEXT:    .cfi_offset w30, -16
+; COMPAT-NEXT:    //APP
+; COMPAT-NEXT:    mov x30, #12345
+; COMPAT-NEXT:    //NO_APP
+; COMPAT-NEXT:    ldr x30, [sp], #16
+; COMPAT-NEXT:    adrp x16, .Ltmp1
+; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp1
+; COMPAT-NEXT:    hint #39
+; COMPAT-NEXT:    hint #29
+; COMPAT-NEXT:    b .LBB1_4
+; COMPAT-NEXT:  .LBB1_3:
+; COMPAT-NEXT:    dsb sy
+; COMPAT-NEXT:    isb
+; COMPAT-NEXT:  .LBB1_4:
+; COMPAT-NEXT:    //APP
+; COMPAT-NEXT:    nop
+; COMPAT-NEXT:    //NO_APP
+; COMPAT-NEXT:    //APP
+; COMPAT-NEXT:    mov x0, #42
+; COMPAT-NEXT:    //NO_APP
+; COMPAT-NEXT:    ret
+;
+; V83A-LABEL: test_x16_slh:
+; V83A:         dsb sy
+; V83A-NEXT:    isb
+; V83A-NEXT:    cmp x0, #0
+; V83A-NEXT:    b.eq .LBB1_3
+; V83A-NEXT:    dsb sy
+; V83A-NEXT:    isb
+; V83A-NEXT:    hint #39
+; V83A-NEXT:  .Ltmp1:
+; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp1
+; V83A-NEXT:    str x30, [sp, #-16]!
+; V83A-NEXT:    .cfi_def_cfa_offset 16
+; V83A-NEXT:    .cfi_offset w30, -16
+; V83A-NEXT:    //APP
+; V83A-NEXT:    mov x30, #12345
+; V83A-NEXT:    //NO_APP
+; V83A-NEXT:    ldr x30, [sp], #16
+; V83A-NEXT:    adrp x16, .Ltmp1
+; V83A-NEXT:    add x16, x16, :lo12:.Ltmp1
+; V83A-NEXT:    hint #39
+; V83A-NEXT:    autiasp
+; V83A-NEXT:    b .LBB1_4
+; V83A-NEXT:  .LBB1_3:
+; V83A-NEXT:    dsb sy
+; V83A-NEXT:    isb
+; V83A-NEXT:  .LBB1_4:
+; V83A-NEXT:    //APP
+; V83A-NEXT:    nop
+; V83A-NEXT:    //NO_APP
+; V83A-NEXT:    //APP
+; V83A-NEXT:    mov x0, #42
+; V83A-NEXT:    //NO_APP
+; V83A-NEXT:    ret
+;
+; PAUTHLR-LABEL: test_x16_slh:
+; PAUTHLR:         cmp sp, #0
+; PAUTHLR-NEXT:    csetm x16, ne
+; PAUTHLR-NEXT:    cmp x0, #0
+; PAUTHLR-NEXT:    b.eq .LBB1_3
+; PAUTHLR-NEXT:    csel x16, x16, xzr, ne
+; PAUTHLR-NEXT:  .Ltmp1:
+; PAUTHLR-NEXT:    paciasppc
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp1
+; PAUTHLR-NEXT:    str x30, [sp, #-16]!
+; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
+; PAUTHLR-NEXT:    .cfi_offset w30, -16
+; PAUTHLR-NEXT:    //APP
+; PAUTHLR-NEXT:    mov x30, #12345
+; PAUTHLR-NEXT:    //NO_APP
+; PAUTHLR-NEXT:    ldr x30, [sp], #16
+; PAUTHLR-NEXT:    and x30, x30, x16
+; PAUTHLR-NEXT:    csdb
+; PAUTHLR-NEXT:    autiasppc .Ltmp1
+; PAUTHLR-NEXT:    b .LBB1_4
+; PAUTHLR-NEXT:  .LBB1_3:
+; PAUTHLR-NEXT:    csel x16, x16, xzr, eq
+; PAUTHLR-NEXT:  .LBB1_4:
+; PAUTHLR-NEXT:    mov x1, sp
+; PAUTHLR-NEXT:    //APP
+; PAUTHLR-NEXT:    nop
+; PAUTHLR-NEXT:    //NO_APP
+; PAUTHLR-NEXT:    //APP
+; PAUTHLR-NEXT:    mov x0, #42
+; PAUTHLR-NEXT:    //NO_APP
+; PAUTHLR-NEXT:    and x1, x1, x16
+; PAUTHLR-NEXT:    mov sp, x1
+; PAUTHLR-NEXT:    ret
+  %cond = icmp eq i64 %arg, 0
+  br i1 %cond, label %if.end, label %if.then
+
+if.then:
+  tail call void asm sideeffect "mov x30, 12345", "~{lr}"()
+  br label %if.end
+
+if.end:
+  ; Insert an extra "nop" to make it expensive to duplicate this basic block.
+  tail call void asm sideeffect "nop", ""()
+  %result = tail call i64 asm sideeffect "mov $0, 42", "=r"()
+  ret i64 %result
+}
+
 ; Make sure the scratch registers that are alive at the insertion point of
 ; PAUTH_EPILOGUE are spilled to the free registers.
 ;
@@ -118,11 +236,11 @@ define i64 @test_x16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; COMPAT-NEXT:    mov x16, #42
 ; COMPAT-NEXT:    mov x17, #123
 ; COMPAT-NEXT:    //NO_APP
-; COMPAT-NEXT:    cbz x0, .LBB1_2
+; COMPAT-NEXT:    cbz x0, .LBB2_2
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:  .Ltmp1:
+; COMPAT-NEXT:  .Ltmp2:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp1
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp2
 ; COMPAT-NEXT:    str x30, [sp, #-16]!
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
@@ -131,12 +249,12 @@ define i64 @test_x16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; COMPAT-NEXT:    //NO_APP
 ; COMPAT-NEXT:    ldr x30, [sp], #16
 ; COMPAT-NEXT:    mov x0, x16
-; COMPAT-NEXT:    adrp x16, .Ltmp1
-; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp1
+; COMPAT-NEXT:    adrp x16, .Ltmp2
+; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp2
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:    hint #29
 ; COMPAT-NEXT:    mov x16, x0
-; COMPAT-NEXT:  .LBB1_2:
+; COMPAT-NEXT:  .LBB2_2:
 ; COMPAT-NEXT:    //APP
 ; COMPAT-NEXT:    add x0, x16, x17
 ; COMPAT-NEXT:    //NO_APP
@@ -147,11 +265,11 @@ define i64 @test_x16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; V83A-NEXT:    mov x16, #42
 ; V83A-NEXT:    mov x17, #123
 ; V83A-NEXT:    //NO_APP
-; V83A-NEXT:    cbz x0, .LBB1_2
+; V83A-NEXT:    cbz x0, .LBB2_2
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:  .Ltmp1:
+; V83A-NEXT:  .Ltmp2:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp1
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp2
 ; V83A-NEXT:    str x30, [sp, #-16]!
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
@@ -160,12 +278,12 @@ define i64 @test_x16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; V83A-NEXT:    //NO_APP
 ; V83A-NEXT:    ldr x30, [sp], #16
 ; V83A-NEXT:    mov x0, x16
-; V83A-NEXT:    adrp x16, .Ltmp1
-; V83A-NEXT:    add x16, x16, :lo12:.Ltmp1
+; V83A-NEXT:    adrp x16, .Ltmp2
+; V83A-NEXT:    add x16, x16, :lo12:.Ltmp2
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:    autiasp
 ; V83A-NEXT:    mov x16, x0
-; V83A-NEXT:  .LBB1_2:
+; V83A-NEXT:  .LBB2_2:
 ; V83A-NEXT:    //APP
 ; V83A-NEXT:    add x0, x16, x17
 ; V83A-NEXT:    //NO_APP
@@ -176,10 +294,10 @@ define i64 @test_x16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; PAUTHLR-NEXT:    mov x16, #42
 ; PAUTHLR-NEXT:    mov x17, #123
 ; PAUTHLR-NEXT:    //NO_APP
-; PAUTHLR-NEXT:    cbz x0, .LBB1_2
-; PAUTHLR-NEXT:  .Ltmp1:
+; PAUTHLR-NEXT:    cbz x0, .LBB2_2
+; PAUTHLR-NEXT:  .Ltmp2:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp1
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp2
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]!
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
@@ -187,8 +305,8 @@ define i64 @test_x16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; PAUTHLR-NEXT:    mov x30, #12345
 ; PAUTHLR-NEXT:    //NO_APP
 ; PAUTHLR-NEXT:    ldr x30, [sp], #16
-; PAUTHLR-NEXT:    autiasppc .Ltmp1
-; PAUTHLR-NEXT:  .LBB1_2:
+; PAUTHLR-NEXT:    autiasppc .Ltmp2
+; PAUTHLR-NEXT:  .LBB2_2:
 ; PAUTHLR-NEXT:    //APP
 ; PAUTHLR-NEXT:    add x0, x16, x17
 ; PAUTHLR-NEXT:    //NO_APP
@@ -214,11 +332,11 @@ define i32 @test_w16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; COMPAT-NEXT:    mov w16, #42
 ; COMPAT-NEXT:    mov w17, #123
 ; COMPAT-NEXT:    //NO_APP
-; COMPAT-NEXT:    cbz x0, .LBB2_2
+; COMPAT-NEXT:    cbz x0, .LBB3_2
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:  .Ltmp2:
+; COMPAT-NEXT:  .Ltmp3:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp2
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp3
 ; COMPAT-NEXT:    str x30, [sp, #-16]!
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 16
 ; COMPAT-NEXT:    .cfi_offset w30, -16
@@ -227,12 +345,12 @@ define i32 @test_w16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; COMPAT-NEXT:    //NO_APP
 ; COMPAT-NEXT:    ldr x30, [sp], #16
 ; COMPAT-NEXT:    mov x0, x16
-; COMPAT-NEXT:    adrp x16, .Ltmp2
-; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp2
+; COMPAT-NEXT:    adrp x16, .Ltmp3
+; COMPAT-NEXT:    add x16, x16, :lo12:.Ltmp3
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:    hint #29
 ; COMPAT-NEXT:    mov x16, x0
-; COMPAT-NEXT:  .LBB2_2:
+; COMPAT-NEXT:  .LBB3_2:
 ; COMPAT-NEXT:    //APP
 ; COMPAT-NEXT:    add w0, w16, w17
 ; COMPAT-NEXT:    //NO_APP
@@ -243,11 +361,11 @@ define i32 @test_w16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; V83A-NEXT:    mov w16, #42
 ; V83A-NEXT:    mov w17, #123
 ; V83A-NEXT:    //NO_APP
-; V83A-NEXT:    cbz x0, .LBB2_2
+; V83A-NEXT:    cbz x0, .LBB3_2
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:  .Ltmp2:
+; V83A-NEXT:  .Ltmp3:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp2
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp3
 ; V83A-NEXT:    str x30, [sp, #-16]!
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
@@ -256,12 +374,12 @@ define i32 @test_w16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; V83A-NEXT:    //NO_APP
 ; V83A-NEXT:    ldr x30, [sp], #16
 ; V83A-NEXT:    mov x0, x16
-; V83A-NEXT:    adrp x16, .Ltmp2
-; V83A-NEXT:    add x16, x16, :lo12:.Ltmp2
+; V83A-NEXT:    adrp x16, .Ltmp3
+; V83A-NEXT:    add x16, x16, :lo12:.Ltmp3
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:    autiasp
 ; V83A-NEXT:    mov x16, x0
-; V83A-NEXT:  .LBB2_2:
+; V83A-NEXT:  .LBB3_2:
 ; V83A-NEXT:    //APP
 ; V83A-NEXT:    add w0, w16, w17
 ; V83A-NEXT:    //NO_APP
@@ -272,10 +390,10 @@ define i32 @test_w16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; PAUTHLR-NEXT:    mov w16, #42
 ; PAUTHLR-NEXT:    mov w17, #123
 ; PAUTHLR-NEXT:    //NO_APP
-; PAUTHLR-NEXT:    cbz x0, .LBB2_2
-; PAUTHLR-NEXT:  .Ltmp2:
+; PAUTHLR-NEXT:    cbz x0, .LBB3_2
+; PAUTHLR-NEXT:  .Ltmp3:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp2
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp3
 ; PAUTHLR-NEXT:    str x30, [sp, #-16]!
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; PAUTHLR-NEXT:    .cfi_offset w30, -16
@@ -283,8 +401,8 @@ define i32 @test_w16_alive(i64 %arg) "branch-protection-pauth-lr" "sign-return-a
 ; PAUTHLR-NEXT:    mov x30, #12345
 ; PAUTHLR-NEXT:    //NO_APP
 ; PAUTHLR-NEXT:    ldr x30, [sp], #16
-; PAUTHLR-NEXT:    autiasppc .Ltmp2
-; PAUTHLR-NEXT:  .LBB2_2:
+; PAUTHLR-NEXT:    autiasppc .Ltmp3
+; PAUTHLR-NEXT:  .LBB3_2:
 ; PAUTHLR-NEXT:    //APP
 ; PAUTHLR-NEXT:    add w0, w16, w17
 ; PAUTHLR-NEXT:    //NO_APP
@@ -331,11 +449,11 @@ define swifttailcc i64 @test_multiple_scratch_regs(i64 %arg, %large_struct %s) "
 ; COMPAT-NEXT:    //NO_APP
 ; COMPAT-NEXT:    //APP
 ; COMPAT-NEXT:    //NO_APP
-; COMPAT-NEXT:    cbz x15, .LBB3_2
+; COMPAT-NEXT:    cbz x15, .LBB4_2
 ; COMPAT-NEXT:    hint #39
-; COMPAT-NEXT:  .Ltmp3:
+; COMPAT-NEXT:  .Ltmp4:
 ; COMPAT-NEXT:    hint #25
-; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp3
+; COMPAT-NEXT:    .cfi_set_ra_state 2, .Ltmp4
 ; COMPAT-NEXT:    sub sp, sp, #80
 ; COMPAT-NEXT:    str x30, [sp, #64]
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 80
@@ -348,15 +466,15 @@ define swifttailcc i64 @test_multiple_scratch_regs(i64 %arg, %large_struct %s) "
 ; COMPAT-NEXT:    mov x22, x16
 ; COMPAT-NEXT:    add x16, sp, #80
 ; COMPAT-NEXT:    mov x17, x30
-; COMPAT-NEXT:    adrp x15, .Ltmp3
-; COMPAT-NEXT:    add x15, x15, :lo12:.Ltmp3
+; COMPAT-NEXT:    adrp x15, .Ltmp4
+; COMPAT-NEXT:    add x15, x15, :lo12:.Ltmp4
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:    hint #12
 ; COMPAT-NEXT:    mov x30, x17
 ; COMPAT-NEXT:    add sp, sp, #160
 ; COMPAT-NEXT:    mov x16, x22
 ; COMPAT-NEXT:    mov x17, x20
-; COMPAT-NEXT:  .LBB3_2:
+; COMPAT-NEXT:  .LBB4_2:
 ; COMPAT-NEXT:    //APP
 ; COMPAT-NEXT:    //NO_APP
 ; COMPAT-NEXT:    //APP
@@ -372,11 +490,11 @@ define swifttailcc i64 @test_multiple_scratch_regs(i64 %arg, %large_struct %s) "
 ; V83A-NEXT:    //NO_APP
 ; V83A-NEXT:    //APP
 ; V83A-NEXT:    //NO_APP
-; V83A-NEXT:    cbz x15, .LBB3_2
+; V83A-NEXT:    cbz x15, .LBB4_2
 ; V83A-NEXT:    hint #39
-; V83A-NEXT:  .Ltmp3:
+; V83A-NEXT:  .Ltmp4:
 ; V83A-NEXT:    paciasp
-; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp3
+; V83A-NEXT:    .cfi_set_ra_state 2, .Ltmp4
 ; V83A-NEXT:    sub sp, sp, #80
 ; V83A-NEXT:    str x30, [sp, #64]
 ; V83A-NEXT:    .cfi_def_cfa_offset 80
@@ -389,15 +507,15 @@ define swifttailcc i64 @test_multiple_scratch_regs(i64 %arg, %large_struct %s) "
 ; V83A-NEXT:    mov x22, x16
 ; V83A-NEXT:    add x16, sp, #80
 ; V83A-NEXT:    mov x17, x30
-; V83A-NEXT:    adrp x15, .Ltmp3
-; V83A-NEXT:    add x15, x15, :lo12:.Ltmp3
+; V83A-NEXT:    adrp x15, .Ltmp4
+; V83A-NEXT:    add x15, x15, :lo12:.Ltmp4
 ; V83A-NEXT:    hint #39
 ; V83A-NEXT:    autia1716
 ; V83A-NEXT:    mov x30, x17
 ; V83A-NEXT:    add sp, sp, #160
 ; V83A-NEXT:    mov x16, x22
 ; V83A-NEXT:    mov x17, x20
-; V83A-NEXT:  .LBB3_2:
+; V83A-NEXT:  .LBB4_2:
 ; V83A-NEXT:    //APP
 ; V83A-NEXT:    //NO_APP
 ; V83A-NEXT:    //APP
@@ -413,10 +531,10 @@ define swifttailcc i64 @test_multiple_scratch_regs(i64 %arg, %large_struct %s) "
 ; PAUTHLR-NEXT:    //NO_APP
 ; PAUTHLR-NEXT:    //APP
 ; PAUTHLR-NEXT:    //NO_APP
-; PAUTHLR-NEXT:    cbz x15, .LBB3_2
-; PAUTHLR-NEXT:  .Ltmp3:
+; PAUTHLR-NEXT:    cbz x15, .LBB4_2
+; PAUTHLR-NEXT:  .Ltmp4:
 ; PAUTHLR-NEXT:    paciasppc
-; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp3
+; PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp4
 ; PAUTHLR-NEXT:    sub sp, sp, #80
 ; PAUTHLR-NEXT:    str x30, [sp, #64]
 ; PAUTHLR-NEXT:    .cfi_def_cfa_offset 80
@@ -429,14 +547,14 @@ define swifttailcc i64 @test_multiple_scratch_regs(i64 %arg, %large_struct %s) "
 ; PAUTHLR-NEXT:    mov x22, x16
 ; PAUTHLR-NEXT:    add x16, sp, #80
 ; PAUTHLR-NEXT:    mov x17, x30
-; PAUTHLR-NEXT:    adrp x15, .Ltmp3
-; PAUTHLR-NEXT:    add x15, x15, :lo12:.Ltmp3
+; PAUTHLR-NEXT:    adrp x15, .Ltmp4
+; PAUTHLR-NEXT:    add x15, x15, :lo12:.Ltmp4
 ; PAUTHLR-NEXT:    autia171615
 ; PAUTHLR-NEXT:    mov x30, x17
 ; PAUTHLR-NEXT:    add sp, sp, #160
 ; PAUTHLR-NEXT:    mov x16, x22
 ; PAUTHLR-NEXT:    mov x17, x20
-; PAUTHLR-NEXT:  .LBB3_2:
+; PAUTHLR-NEXT:  .LBB4_2:
 ; PAUTHLR-NEXT:    //APP
 ; PAUTHLR-NEXT:    //NO_APP
 ; PAUTHLR-NEXT:    //APP
