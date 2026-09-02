@@ -311,6 +311,40 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
   ret <vscale x 16 x i1> %r
 }
 
+define <vscale x 16 x i1> @match_nxv16i8_v32i8_vscale_range(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask) #0 vscale_range(2, 2) {
+; CHECK-LABEL: match_nxv16i8_v32i8_vscale_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z2.q, q2
+; CHECK-NEXT:    mov z1.q, q1
+; CHECK-NEXT:    match p1.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    match p2.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    sel p0.b, p2, p2.b, p1.b
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask)
+  ret <vscale x 16 x i1> %r
+}
+
+define <16 x i1> @match_v16i8_v32i8_vscale_range(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask) #0 vscale_range(2, 2) {
+; CHECK-LABEL: match_v16i8_v32i8_vscale_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v3.16b, v3.16b, #7
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    cmpne p1.b, p0/z, z3.b, #0
+; CHECK-NEXT:    match p0.b, p1/z, z0.b, z2.b
+; CHECK-NEXT:    match p2.b, p1/z, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.b, p2/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask)
+  ret <16 x i1> %r
+}
+
 define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v16i8_v32i8:
 ; CHECK:       // %bb.0:
