@@ -53,7 +53,7 @@ const SUnit &MachineSchedSearchRegion::getSUnit(unsigned Node) const {
 }
 
 SmallVector<unsigned, 0> MachineSchedSearchRegion::getInitialOrder() const {
-  SmallVector<unsigned, 0> Order = to_vector<0>(seq<unsigned>(size()));;
+  SmallVector<unsigned, 0> Order = to_vector<0>(seq<unsigned>(size()));
   return Order;
 }
 
