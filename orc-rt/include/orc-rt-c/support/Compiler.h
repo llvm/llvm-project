@@ -14,6 +14,19 @@
 #ifndef ORC_RT_C_SUPPORT_COMPILER_H
 #define ORC_RT_C_SUPPORT_COMPILER_H
 
+/* ORC_RT_HAS_BUILTIN(X) expands to 1 if the compiler provides the builtin X,
+   and to 0 otherwise.
+
+   This wraps __has_builtin rather than supplying a fallback definition for it.
+   __has_builtin is a reserved identifier, and defining one from a public header
+   can collide with the compiler's own definition or with other libraries that
+   the client also includes. */
+#if defined(__has_builtin)
+#define ORC_RT_HAS_BUILTIN(X) __has_builtin(X)
+#else
+#define ORC_RT_HAS_BUILTIN(X) 0
+#endif
+
 /* Helper to promote strict prototype warnings to errors */
 #ifdef __clang__
 #define ORC_RT_C_STRICT_PROTOTYPES_BEGIN                                       \
