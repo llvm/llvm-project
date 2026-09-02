@@ -234,6 +234,13 @@
 #    error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++29"
 #  endif
 
+#  ifndef __cpp_lib_constexpr_deque
+#    error "__cpp_lib_constexpr_deque should be defined in c++29"
+#  endif
+#  if __cpp_lib_constexpr_deque != 202502L
+#    error "__cpp_lib_constexpr_deque should have the value 202502L in c++29"
+#  endif
+
 #  ifndef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should be defined in c++29"
 #  endif
