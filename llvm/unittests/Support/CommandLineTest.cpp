@@ -438,6 +438,92 @@ TEST(CommandLineTest, TokenizeConfigFile11) {
   testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
 }
 
+TEST(CommandLineTest, TokenizeConfigFileTrailingComment) {
+  const char *Input = "-c # comment\n";
+  const char *const Output[] = {"-c"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileTrailingCommentNoNewline) {
+  const char *Input = "-c # comment";
+  const char *const Output[] = {"-c"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileLineAfterComment) {
+  const char *Input = "-a # comment\n-b\n";
+  const char *const Output[] = {"-a", "-b"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileNoContinuationInComment) {
+  // A backslash-newline inside a comment is not a continuation.
+  const char *Input = "-c # comment \\\n-d\n";
+  const char *const Output[] = {"-c", "-d"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileHashNotAtTokenStart) {
+  // '#' not preceded by whitespace is not a comment.
+  const char *Input = "-DFOO=1#2\n";
+  const char *const Output[] = {"-DFOO=1#2"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileHashInQuotes) {
+  const char *Input = "-DFOO=\"a # b\" # comment\n";
+  const char *const Output[] = {"-DFOO=a # b"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileHashAfterClosingQuote) {
+  const char *Input = "-DFOO=\"a\"#b\n";
+  const char *const Output[] = {"-DFOO=a#b"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileNewlineEndsQuote) {
+  // A literal newline ends the line even inside a quoted string.
+  const char *Input = "-DA=\"x\n-DB=y\n";
+  const char *const Output[] = {"-DA=x", "-DB=y"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileEscapedHash) {
+  const char *Input = "-c \\#comment\n";
+  const char *const Output[] = {"-c", "#comment"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileCommentAfterContinuationWithSpace) {
+  // The splice keeps the preceding whitespace in effect, so the '#' begins a
+  // token and starts a comment.
+  const char *Input = "-c \\\n# comment\n";
+  const char *const Output[] = {"-c"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileHashAfterContinuationNoSpace) {
+  // No whitespace before the splice: '#' continues the token (cf.
+  // TokenizeConfigFile4).
+  const char *Input = "abc\\\n#comment\n";
+  const char *const Output[] = {"abc#comment"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileCommentAfterContinuationWithOption) {
+  const char *Input = "-c \\\noption # comment\n";
+  const char *const Output[] = {"-c", "option"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
+TEST(CommandLineTest, TokenizeConfigFileHashesInFlagNotComment) {
+  // None of the '#'s in -### begins a token.
+  const char *Input = "-### # comment\n";
+  const char *const Output[] = {"-###"};
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output);
+}
+
 TEST(CommandLineTest, AliasesWithArguments) {
   static const size_t ARGC = 3;
   const char *const Inputs[][ARGC] = {

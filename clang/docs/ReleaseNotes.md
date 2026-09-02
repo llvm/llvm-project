@@ -255,6 +255,9 @@ features cannot lower the translation-unit ABI level;
 
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
+- `--config` files now support trailing `#` comments after an option, in
+  addition to whole-line comments.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
