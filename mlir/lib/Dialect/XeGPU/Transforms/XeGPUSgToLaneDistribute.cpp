@@ -2045,6 +2045,14 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //   emit, per element source: an extract at index(slot), a `gpu.shuffle idx`
 //     from `slot + donorDelta` unless that is the lane itself, and an insert.
 //
+// At runtime `lane_id` is the only input; everything the search settles is a
+// constant by then. Two values reach an op that needs one:
+//
+//   lane_id --> slot --+--> index(slot)               --> extract position
+//                      +--> donor = slot + donorDelta --> shuffle source lane
+//
+// The insert needs neither, its position being the compile-time `pos`.
+//
 // The shuffle is dropped exactly when `donorDelta` is 0, since the extract then
 // lands on an element the lane owns. Replication makes that a choice: several
 // values of `donorDelta` may work and all give the same value, so the smallest
