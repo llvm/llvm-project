@@ -531,6 +531,13 @@ public:
   /// value, or null if it didn't simplify.
   Value *foldUsingDistributiveLaws(BinaryOperator &I);
 
+  Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
+                          Instruction::BinaryOps InnerOpcode, Value *A,
+                          Value *B, Value *C, Value *D);
+
+  bool rightDistributesOverLeft(BinaryOperator &LOp,
+                                Instruction::BinaryOps ROpcode);
+
   /// Tries to simplify add operations using the definition of remainder.
   ///
   /// The definition of remainder is X % C = X - (X / C ) * C. The add
