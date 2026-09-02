@@ -21,7 +21,6 @@
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
@@ -1865,6 +1864,7 @@ private:
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   bool validateLdsDirect(const MCInst &Inst, const OperandVector &Operands);
   bool validateWMMA(const MCInst &Inst, const OperandVector &Operands);
+  bool validateMonitorSleep(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -5586,6 +5586,23 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateMonitorSleep(const MCInst &Inst,
+                                           const OperandVector &Operands) {
+  unsigned Opc = Inst.getOpcode();
+  if (Opc != AMDGPU::S_MONITOR_SLEEP_gfx12 ||
+      !getSTI().hasFeature(AMDGPU::FeatureNoSleepForever))
+    return true;
+
+  int ImmIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::simm16);
+  if (Inst.getOperand(ImmIdx).getImm() & 0x8000) {
+    Error(getOperandLoc(Operands, ImmIdx),
+          "sleep forever is unsuported on the target");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
                                           const OperandVector &Operands) {
   if (!validateLdsDirect(Inst, Operands))
@@ -5715,6 +5732,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
     return false;
   }
   if (!validateWMMA(Inst, Operands)) {
+    return false;
+  }
+  if (!validateMonitorSleep(Inst, Operands)) {
     return false;
   }
 

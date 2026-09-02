@@ -1023,10 +1023,14 @@ private:
             auto &label = std::get<parser::Label>(s.t);
             const auto *sym = std::get<parser::Name>(s.t).symbol;
             assert(sym && "missing AssignStmt symbol");
-            lower::pft::Evaluation *target{
-                labelEvaluationMap->find(label)->second};
+            auto labelIter{labelEvaluationMap->find(label)};
+            assert(labelIter != labelEvaluationMap->end() &&
+                   "assigned label has no evaluation");
+            lower::pft::Evaluation *target{labelIter->second};
             assert(target && "missing branch target evaluation");
-            if (!target->isA<parser::FormatStmt>()) {
+            // Consult the same classification the assigned GO TO uses, so the
+            // two agree on which statements may be branched to.
+            if (semanticsContext.IsRecordedBranchTarget(target->position)) {
               target->isNewBlock = true;
               for (lower::pft::Evaluation *parent = target->parentConstruct;
                    parent; parent = parent->parentConstruct) {
@@ -1048,27 +1052,33 @@ private:
             }
           },
           [&](const parser::AssignedGotoStmt &s) {
-            // Mark every possible target of the assigned GO TO so that
-            // wrappability analyses can see any escape from an enclosing
-            // construct.
-            const auto &labelList = std::get<std::list<parser::Label>>(s.t);
-            if (!labelList.empty()) {
-              // Explicit target list: `go to v, (l1, l2, ...)`.
-              for (const auto &label : labelList)
-                markBranchTarget(eval, label);
-            } else {
-              // No explicit list (`go to v`): fall back to the set of labels
-              // that have been previously ASSIGN'd to v.
-              // TODO: This may miss assignments that appear later in program
-              // order, but it matches the information available at this point
-              // in the walk.
-              const auto *sym = std::get<parser::Name>(s.t).symbol;
-              if (sym) {
-                auto iter = assignSymbolLabelMap->find(*sym);
-                if (iter != assignSymbolLabelMap->end())
-                  for (auto label : iter->second)
-                    markBranchTarget(eval, label);
-              }
+            // See Fortran 90 Clause 8.2.4.
+            // Relax the requirement that the GOTO variable must have a value in
+            // the label list when a list is present, and allow a branch to any
+            // non-format target that has an ASSIGN statement for the variable.
+            //
+            // (Both PFT builder and MLIR lowering bridge apply the same
+            // relaxation)
+            auto markIfBranchTarget = [&](parser::Label label) {
+              assert(label && "missing branch target label");
+              auto iter{labelEvaluationMap->find(label)};
+              assert(iter != labelEvaluationMap->end() &&
+                     "branch target label has no evaluation");
+              lower::pft::Evaluation *target{iter->second};
+              assert(target && "missing branch target evaluation");
+              if (semanticsContext.IsRecordedBranchTarget(target->position))
+                markBranchTarget(eval, *target);
+            };
+            for (const auto &label : std::get<std::list<parser::Label>>(s.t))
+              markIfBranchTarget(label);
+            // TODO: This may miss assignments that appear later in program
+            // order, but it matches the information available at this point in
+            // the walk.
+            if (const auto *sym = std::get<parser::Name>(s.t).symbol) {
+              auto iter = assignSymbolLabelMap->find(*sym);
+              if (iter != assignSymbolLabelMap->end())
+                for (auto label : iter->second)
+                  markIfBranchTarget(label);
             }
             eval.isUnstructured = true;
             markSuccessorAsNewBlock(eval);
@@ -2619,7 +2629,7 @@ static bool isOmpLoopBody(const Fortran::lower::pft::Evaluation &eval,
   if (!loop)
     return false;
 
-  unsigned version = semaCtx.langOptions().OpenMPVersion;
+  llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
   auto [depth, _] =
       semantics::omp::GetAffectedNestDepthWithReason(loop->BeginDir(), version);
   int64_t n = depth.value.value_or(1);

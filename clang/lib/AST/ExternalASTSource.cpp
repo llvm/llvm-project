@@ -134,3 +134,10 @@ uint32_t ExternalASTSource::incrementGeneration(ASTContext &C) {
 
   return OldGeneration;
 }
+
+LazyGenerationalDeclPtr::ValueType
+LazyGenerationalDeclPtr::makeValue(const ASTContext &Ctx, Decl *Value) {
+  if (auto *Source = Ctx.getExternalSource())
+    return new (Ctx) LazyData(Source, Value);
+  return Value;
+}

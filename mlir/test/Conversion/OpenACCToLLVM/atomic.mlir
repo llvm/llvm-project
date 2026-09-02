@@ -140,9 +140,14 @@ module {
 
 // -----
 
+// A simple binop capture uses atomicrmw; the read follows the update, so the
+// captured value is recomputed from the old one.
+
 // CHECK-LABEL: llvm.func @convert_capture_ur
-// CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.ptr, i32
-// CHECK: llvm.store %{{.*}}, %{{.*}} : i32, !llvm.ptr
+// CHECK-NOT: llvm.cmpxchg
+// CHECK: %[[OLD:.*]] = llvm.atomicrmw add %{{.*}}, %[[VAL:.*]] monotonic : !llvm.ptr, i32
+// CHECK: %[[NEW:.*]] = llvm.add %[[OLD]], %[[VAL]] : i32
+// CHECK: llvm.store %[[NEW]], %{{.*}} : i32, !llvm.ptr
 
 module {
   func.func @convert_capture_ur(%v: memref<i32>, %x: memref<i32>, %val: i32) {
@@ -150,6 +155,50 @@ module {
       acc.atomic.update %x : memref<i32> {
       ^bb0(%arg: i32):
         %0 = arith.addi %arg, %val : i32
+        acc.yield %0 : i32
+      }
+      acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    }
+    return
+  }
+}
+
+// -----
+
+// The read precedes the update, so the old value is captured directly.
+
+// CHECK-LABEL: llvm.func @convert_capture_ru_atomicrmw
+// CHECK-NOT: llvm.cmpxchg
+// CHECK: %[[OLD:.*]] = llvm.atomicrmw sub %{{.*}}, %{{.*}} monotonic : !llvm.ptr, i32
+// CHECK: llvm.store %[[OLD]], %{{.*}} : i32, !llvm.ptr
+
+module {
+  func.func @convert_capture_ru_atomicrmw(%v: memref<i32>, %x: memref<i32>, %val: i32) {
+    acc.atomic.capture {
+      acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+      acc.atomic.update %x : memref<i32> {
+      ^bb0(%arg: i32):
+        %0 = arith.subi %arg, %val : i32
+        acc.yield %0 : i32
+      }
+    }
+    return
+  }
+}
+
+// -----
+
+// `expr - x` is not an atomicrmw sub and must keep the cmpxchg loop.
+
+// CHECK-LABEL: llvm.func @convert_capture_sub_rhs
+// CHECK: llvm.cmpxchg
+
+module {
+  func.func @convert_capture_sub_rhs(%v: memref<i32>, %x: memref<i32>, %val: i32) {
+    acc.atomic.capture {
+      acc.atomic.update %x : memref<i32> {
+      ^bb0(%arg: i32):
+        %0 = arith.subi %val, %arg : i32
         acc.yield %0 : i32
       }
       acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32

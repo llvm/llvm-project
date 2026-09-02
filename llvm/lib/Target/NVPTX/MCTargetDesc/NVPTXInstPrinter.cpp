@@ -24,7 +24,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <cctype>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -98,6 +97,11 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum,
     // SATFINITE flag
     if (Imm & NVPTX::PTXCvtMode::SATFINITE_FLAG)
       O << ".satfinite";
+    return;
+  } else if (Modifier == "pzo") {
+    // PZO flag
+    if (Imm & NVPTX::PTXCvtMode::PZO_FLAG)
+      O << ".pzo";
     return;
   } else if (Modifier == "relu") {
     // RELU flag
@@ -561,6 +565,18 @@ void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
     return;
   }
   llvm_unreachable("Invalid cta_group in printCTAGroup");
+}
+
+void NVPTXInstPrinter::printEvictPolicy(const MCInst *MI, int OpNum,
+                                        const MCSubtargetInfo &, raw_ostream &O,
+                                        StringRef Modifier) {
+  const auto Policy =
+      static_cast<nvvm::EvictPolicyType>(MI->getOperand(OpNum).getImm());
+  // Evict normal is the default priority policy for prefetch and does not print
+  // a qualifier.
+  if (Policy == nvvm::EvictPolicyType::EVICT_NORMAL)
+    return;
+  O << "." << nvvm::getEvictPolicyName(Policy);
 }
 
 void NVPTXInstPrinter::printCallOperand(const MCInst *MI, int OpNum,

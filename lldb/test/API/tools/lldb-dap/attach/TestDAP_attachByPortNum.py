@@ -38,6 +38,7 @@ class TestDAP_attachByPortNum(DAPTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD  # Try enable, get_debug_server_path previously returned None.
+    @requireSocketPermission  # the debug server listens on the port we attach to
     def test_by_port(self):
         """Tests attaching to a process by port."""
         program_path = self.build_for_attach()
