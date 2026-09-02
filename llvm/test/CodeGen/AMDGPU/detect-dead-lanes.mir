@@ -402,3 +402,23 @@ body: |
     S_NOP 0, implicit %2.sub2
     S_NOP 0, implicit %2.sub3
 ...
+---
+# Check that operands inside a BUNDLE are visited. MachineBasicBlock's default
+# iterator only walks top-level instructions, so a register referenced both by
+# the BUNDLE header and by a bundled instruction currently gets the undef flag
+# on the header alone, leaving the two disagreeing about whether the bundle
+# reads it.
+# CHECK-LABEL: name: bundle0
+# CHECK: BUNDLE implicit undef %0 {
+# CHECK-NEXT: S_NOP 0, implicit %0
+name: bundle0
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_32_xm0 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    BUNDLE implicit %0 {
+      S_NOP 0, implicit %0
+    }
+...
