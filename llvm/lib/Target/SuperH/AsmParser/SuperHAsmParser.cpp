@@ -557,7 +557,7 @@ ParseStatus SuperHAsmParser::tryParseRegRelative(MCRegister &BaseReg, MCRegister
   // Parse base register
   ParseStatus Result = tryParseRegister(BaseReg, RegKind, StartLoc, EndLoc);
   if (!Result.isSuccess())
-    return ParseStatus::Failure;
+    return Error(StartLoc, "expected register");
 
   // Whoops! missing ending parenthesis.
   if (parseToken(AsmToken::RParen, "expected ')'"))
@@ -587,7 +587,7 @@ ParseStatus SuperHAsmParser::tryParseRegIndirect(MCRegister &Reg, bool &IsInc, b
 
   // Parse Register
   if (!tryParseRegister(Reg, RegKind, S, E).isSuccess()) {
-    return ParseStatus::Failure;
+    return Error(E, "expected register");
   }
 
   // Parse possible post-increment
