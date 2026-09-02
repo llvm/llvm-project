@@ -30,7 +30,7 @@ static constinit __libcpp_mutex_t mut  = _LIBCPP_MUTEX_INITIALIZER;
 static constinit __libcpp_condvar_t cv = _LIBCPP_CONDVAR_INITIALIZER;
 #endif
 
-void __call_once(volatile once_flag::_State_type& flag, void* arg, void (*func)(void*)) {
+void __call_once(volatile uintptr_t& flag, void* arg, void (*func)(void*)) {
 #if !_LIBCPP_HAS_THREADS
 
   if (flag == once_flag::_Unset) {

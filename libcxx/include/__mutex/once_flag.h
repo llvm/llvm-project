@@ -52,18 +52,12 @@ struct once_flag {
   once_flag(const once_flag&)            = delete;
   once_flag& operator=(const once_flag&) = delete;
 
-#ifdef _WIN32
-  typedef uintptr_t _State_type;
-#else
-  typedef unsigned long _State_type;
-#endif
-
-  static const _State_type _Unset    = 0;
-  static const _State_type _Pending  = 1;
-  static const _State_type _Complete = ~_State_type(0);
+  static const uintptr_t _Unset    = 0;
+  static const uintptr_t _Pending  = 1;
+  static const uintptr_t _Complete = ~uintptr_t(0);
 
 private:
-  _State_type __state_;
+  uintptr_t __state_;
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class _Callable, class... _Args>
@@ -114,7 +108,7 @@ void _LIBCPP_HIDE_FROM_ABI __call_once_proxy(void* __vp) {
 }
 
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
-_LIBCPP_EXPORTED_FROM_ABI void __call_once(volatile once_flag::_State_type&, void*, void (*)(void*));
+_LIBCPP_EXPORTED_FROM_ABI void __call_once(volatile uintptr_t&, void*, void (*)(void*));
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _ValueType>
