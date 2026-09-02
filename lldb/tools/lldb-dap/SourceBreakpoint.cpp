@@ -86,7 +86,7 @@ void SourceBreakpoint::CreatePathBreakpoint(const protocol::Source &source) {
 }
 
 llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithSourceReference(
-    int64_t source_reference) {
+    src_ref_t source_reference) {
   std::optional<lldb::addr_t> raw_addr =
       m_dap.GetSourceReferenceAddress(source_reference);
   if (!raw_addr)
@@ -399,8 +399,8 @@ bool SourceBreakpoint::BreakpointHitCallback(
       // evaluation
       const std::string &expr_str = messagePart.text;
       const char *expr = expr_str.c_str();
-      lldb::SBValue value = frame.GetValueForVariablePath(
-          expr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
+      lldb::SBValue value = frame.GetValueForVariablePathWithMode(
+          expr, lldb::eDILModeLegacy, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
       output += VariableDescription(

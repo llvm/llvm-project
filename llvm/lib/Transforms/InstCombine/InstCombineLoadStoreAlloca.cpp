@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -1161,9 +1160,9 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
       //  select(Cond, load (addrspacecast(&V1)), load (addrspacecast(&V2))).
       Align Alignment = LI.getAlign();
       if (isSafeToLoadUnconditionally(SI->getOperand(1), LI.getType(),
-                                      Alignment, DL, SI) &&
+                                      Alignment, SQ.getWithInstruction(SI)) &&
           isSafeToLoadUnconditionally(SI->getOperand(2), LI.getType(),
-                                      Alignment, DL, SI)) {
+                                      Alignment, SQ.getWithInstruction(SI))) {
 
         auto MaybeCastedLoadOperand = [&](Value *Op) {
           if (ASC)

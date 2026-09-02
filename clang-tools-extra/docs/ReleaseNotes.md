@@ -102,11 +102,22 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
+- New {doc}`llvm-invalid-regex-pattern
+  <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
+
+  Detects malformed regex patterns defined in a single string literal.
+
 - New {doc}`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
+
+- New {doc}`portability-avoid-pragma-comment
+  <clang-tidy/checks/portability/avoid-pragma-comment>` check.
+
+  Finds uses of `#pragma comment` and, for `lib` or `linker` comments, suggests
+  using the build system for improved portability.
 
 - New {doc}`readability-redundant-zero-initializer
   <clang-tidy/checks/readability/redundant-zero-initializer>` check.
@@ -118,9 +129,19 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
+  by suggesting a wider type of the same signedness as the original operands,
+  instead of forcing a signed type, when a multiplication of two unsigned
+  operands narrower than `int` is only signed due to integer promotion.
+
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
   checking an array new expression without a size expression.
+
+- Fixed a crash in {doc}`bugprone-pointer-arithmetic-on-polymorphic-object
+  <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` when
+  the pointer points to an incomplete (forward-declared) type.
 
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
@@ -129,7 +150,7 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
-  
+
 - Improved {doc}`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
 
@@ -148,11 +169,27 @@ infrastructure are described first, followed by tool-specific sections.
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
 
+- Fixed a crash in {doc}`modernize-raw-string-literal
+  <clang-tidy/checks/modernize/raw-string-literal>` on synthetic string
+  literals created for raw user-defined literal operators, such as `12_w`.
+
 - Improved {doc}`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to no longer
   rewrite the return value when the constructed type has a
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
+
+- Fixed a crash in {doc}`modernize-use-noexcept
+  <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
+  code with an unparsed exception specification.
+
+- Improved {doc}`performance-inefficient-algorithm
+  <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
+  produce a fix with the container or the searched-for value missing, such as
+  `.find(43)` or `s.find()`, when either comes from a macro. The value is
+  copied as written rather than with its parentheses stripped, and no fix is
+  offered when an argument covers only part of a macro expansion, as it then
+  has no source text of its own.
 
 - Improved {doc}`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by adding
@@ -169,12 +206,22 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
 
+  - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
+    the new `LambdaCapture` options. Simple, non-init captures continue to follow
+    the naming style of the variable they capture.
+
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
   standard tag types (e.g. `std::in_place_t`, `std::allocator_arg_t`,
   `std::nothrow_t`, iterator tags, lock tags, etc.) that are used
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
+
+- Improved {doc}`readability-trailing-comma
+  <clang-tidy/checks/readability/trailing-comma>` check by fixing false
+  positives on designated initializers, where initializer lists synthesized
+  for intermediate subobjects caused the trailing comma of the enclosing
+  list to be incorrectly rewritten.
 
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious

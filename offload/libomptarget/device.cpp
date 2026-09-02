@@ -405,8 +405,8 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   llvm::copy(KernelArgs.UserNumBlocks, LaunchArgs.UserNumBlocks);
   llvm::copy(KernelArgs.UserThreadLimit, LaunchArgs.UserThreadLimit);
   LaunchArgs.Flags.Cooperative = KernelArgs.Flags.Cooperative;
-  LaunchArgs.Flags.StrictBlocksAndThreads =
-      KernelArgs.Flags.StrictBlocksAndThreads;
+  LaunchArgs.Flags.StrictBlocks = KernelArgs.Flags.StrictBlocks;
+  LaunchArgs.Flags.StrictThreads = KernelArgs.Flags.StrictThreads;
   LaunchArgs.Flags.DynCGroupMemFallback = KernelArgs.Flags.DynCGroupMemFallback;
 
   if (KernelArgs.Flags.IsCUDA) {

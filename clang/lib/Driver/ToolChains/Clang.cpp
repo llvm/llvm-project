@@ -1422,7 +1422,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     }
   }
 
-  if (!A && Triple.isOSOpenBSD() && isAArch64) {
+  if (!A && (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64) {
     CmdArgs.push_back("-msign-return-address=non-leaf");
     CmdArgs.push_back("-msign-return-address-key=a_key");
     CmdArgs.push_back("-mbranch-target-enforce");
@@ -1443,8 +1443,11 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       if (Scope != "none" && Scope != "non-leaf" && Scope != "all")
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Scope;
-      Key = "a_key";
-      IndirectBranches = Triple.isOSOpenBSD() && isAArch64;
+      // This spelling cannot express a key, and AArch64 Windows only supports
+      // B-key, so default to it there as parseBranchProtection() does.
+      Key = isAArch64 && Triple.isOSWindows() ? "b_key" : "a_key";
+      IndirectBranches =
+          (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
       BranchProtectionPAuthLR = false;
       GuardedControlStack = false;
     } else {
@@ -4006,6 +4009,7 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
       options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version,
       options::OPT_fhlsl_spv_use_unknown_image_format,
+      options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order,
       options::OPT_fhlsl_spv_enable_maximal_reconvergence,
       options::OPT_fhlsl_spv_preserve_interface};
   if (!types::isHLSL(InputType))
@@ -4249,8 +4253,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   if (HaveClangModules)
     Args.AddLastArg(CmdArgs, options::OPT_fmodules_user_build_path);
 
-  // Pass through all -fmodules-ignore-macro arguments.
   Args.AddAllArgs(CmdArgs, options::OPT_fmodules_ignore_macro);
+  Args.AddAllArgs(CmdArgs, options::OPT_fmodules_ignore_search_path);
   Args.AddLastArg(CmdArgs, options::OPT_fmodules_prune_interval);
   Args.AddLastArg(CmdArgs, options::OPT_fmodules_prune_after);
 
@@ -6653,17 +6657,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,
                     options::OPT_fno_unique_basic_block_section_names);
 
-  if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
-                               options::OPT_fno_split_machine_functions)) {
-    if (!A->getOption().matches(options::OPT_fno_split_machine_functions)) {
-      // This codegen pass is only available on x86 and AArch64 ELF targets.
-      if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF())
-        A->render(Args, CmdArgs);
-      else
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << A->getAsString(Args) << TripleStr;
-    }
-  }
+  addSplitMachineFunctionsArgs(D, Args, CmdArgs, Triple);
 
   if (Arg *A =
           Args.getLastArg(options::OPT_fpartition_static_data_sections,
@@ -8181,6 +8175,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_no_extract_from_system_headers);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_source_transformation);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_global_scope_analysis_result);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_link_unit_id);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_src_edit_file);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_transformation_report_file);
 
@@ -8733,7 +8728,8 @@ ObjCRuntime Clang::AddObjCRuntimeArgs(const ArgList &args,
     if ((runtime.getKind() == ObjCRuntime::GNUstep) &&
         (runtime.getVersion() >= VersionTuple(2, 0)))
       if (!getToolChain().getTriple().isOSBinFormatELF() &&
-          !getToolChain().getTriple().isOSBinFormatCOFF()) {
+          !getToolChain().getTriple().isOSBinFormatCOFF() &&
+          !getToolChain().getTriple().isOSBinFormatWasm()) {
         getToolChain().getDriver().Diag(
             diag::err_drv_gnustep_objc_runtime_incompatible_binary)
           << runtime.getVersion().getMajor();

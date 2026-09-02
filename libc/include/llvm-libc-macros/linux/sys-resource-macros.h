@@ -30,4 +30,12 @@
 
 #define RLIM_INFINITY ((rlim_t) - 1)
 
+#define RUSAGE_SELF 0
+#define RUSAGE_CHILDREN (-1)
+#define RUSAGE_THREAD 1
+
+#define PRIO_PROCESS 0
+#define PRIO_PGRP 1
+#define PRIO_USER 2
+
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_RESOURCE_MACROS_H

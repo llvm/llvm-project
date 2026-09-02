@@ -290,15 +290,8 @@ LogicalResult Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
-  StringAttr memoryModelName = module.getMemoryModelAttrName();
-  auto mm = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::MemoryModelAttr>(memoryModelName)
-          .getValue());
-
-  StringAttr addressingModelName = module.getAddressingModelAttrName();
-  auto am = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::AddressingModelAttr>(addressingModelName)
-          .getValue());
+  auto mm = static_cast<uint32_t>(module.getMemoryModel());
+  auto am = static_cast<uint32_t>(module.getAddressingModel());
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }
@@ -1738,7 +1731,7 @@ Serializer::processCompositeConstructOp(spirv::CompositeConstructOp op) {
   encodeInstructionWithContinuationInto(
       functionBody, spirv::Opcode::OpCompositeConstruct, operands);
 
-  for (auto attr : op->getAttrs()) {
+  for (auto attr : op->getDiscardableAttrDictionary().getValue()) {
     if (failed(processDecoration(loc, resultID, attr)))
       return failure();
   }
@@ -1781,7 +1774,7 @@ LogicalResult Serializer::processOpWithoutGrammarAttr(Operation *op,
   }
 
   if (op->getNumResults() != 0) {
-    for (auto attr : op->getAttrs()) {
+    for (auto attr : op->getDiscardableAttrDictionary().getValue()) {
       if (failed(processDecoration(loc, resultID, attr)))
         return failure();
     }

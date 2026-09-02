@@ -271,7 +271,7 @@ define i1 @shared_operand_no_const(i8 %a, i8 %b) {
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   %0 = icmp ule i8 %b, %a
 ; CHECK-NEXT:   call void @llvm.assume(i1 %0)
-; CHECK-NEXT:   %sub = sub i8 %a, %b
+; CHECK-NEXT:   %sub = sub nuw i8 %a, %b
 ; CHECK-NEXT:   %sub.2 = sub nuw i8 %sub, 0
 ; CHECK-NEXT:   %c.5 = icmp ult i8 %sub.2, %sub
 ; CHECK-NEXT:   ret i1 %c.5

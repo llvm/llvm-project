@@ -5,15 +5,15 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   ^bb0(%arg0: !llvm.ptr):
     %0 = llvm.mlir.constant(0 : i32) : i32
     %1 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>
-    %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var%data"}
-    %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) members(%2 : [0] : !llvm.ptr) -> !llvm.ptr {name = "var", partial_map = true}
+    %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("var%data") -> !llvm.ptr
+    %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) members(%2 : [0] : !llvm.ptr) name("var") partial_map(true) -> !llvm.ptr
     omp.declare_mapper.info map_entries(%3, %2 : !llvm.ptr, !llvm.ptr)
   }
 
   llvm.func @_QPopenmp_target_data_mapper() {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.struct<"_QFmy_testTmy_type", (i32)> {bindc_name = "a"} : (i64) -> !llvm.ptr
-    %2 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@_QQFmy_testmy_mapper) -> !llvm.ptr {name = "a"}
+    %2 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@_QQFmy_testmy_mapper) name("a") -> !llvm.ptr
     omp.target_data map_entries(%2 : !llvm.ptr) {
       %3 = llvm.mlir.constant(10 : i32) : i32
       %4 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>

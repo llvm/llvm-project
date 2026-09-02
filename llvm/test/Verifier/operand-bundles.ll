@@ -99,6 +99,15 @@ define void @f_clang_arc_attachedcall() {
   ret void
 }
 
+define void @f_label() {
+; CHECK: Operand bundle operands cannot be labels
+  call void @g() ["bundle"(label %foo)]
+  br label %foo
+
+foo:
+  ret void
+}
+
 declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 declare ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr)
 declare ptr @objc_retainAutoreleasedReturnValue(ptr)
