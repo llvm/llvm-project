@@ -61,6 +61,37 @@ attributes(global) subroutine test_global_local()
   n = 42
 end subroutine
 ! CHECK-LABEL: func.func @{{.*}}test_global_local
-! CHECK: hlfir.declare {{.*}}"_QFtest_global_localEn"
+! CHECK: %[[N:.*]]:2 = hlfir.declare {{.*}}"_QFtest_global_localEn"
 ! CHECK: fir.zero_bits i32
-! CHECK: fir.store {{.*}} : !fir.ref<i32>
+! CHECK: fir.store %{{.*}} to %[[N]]#0 : !fir.ref<i32>
+
+! An explicit 'device' local in an attributes(host,device) routine is
+! allocated via cuf.alloc (not fir.alloca) because cuf::isCUDADeviceContext
+! returns false for HostDevice.  A plain fir.store cannot reach cuf.alloc
+! storage, so shouldInitLocal must return false for this case.
+attributes(host,device) subroutine test_host_device_local()
+  real, device :: x
+  x = 1.0
+end subroutine
+! CHECK-LABEL: func.func @{{.*}}test_host_device_local
+! CHECK-NOT: fir.zero_bits f32
+
+! A BLOCK-construct local inside an attributes(global) kernel lives in
+! device-side fir.alloca storage and MUST be initialized.  The old code
+! used IsCUDADeviceContext on the BlockConstruct scope (which has no
+! subprogram symbol) and returned false, so the variable was skipped.
+! The fix uses cuf::isCUDADeviceContext(builder.getRegion()) in genInitLocal,
+! which walks up through nested regions to the enclosing func and returns
+! true for global kernels regardless of whether the variable is in a BLOCK.
+attributes(global) subroutine test_global_block_local()
+  integer :: m
+  block
+    integer :: n
+    n = 99
+    m = n
+  end block
+end subroutine
+! CHECK-LABEL: func.func @{{.*}}test_global_block_local
+! CHECK: %[[N:.*]]:2 = hlfir.declare {{.*}}"_QFtest_global_block_local{{.*}}En"
+! CHECK: fir.zero_bits i32
+! CHECK: fir.store %{{.*}} to %[[N]]#0 : !fir.ref<i32>

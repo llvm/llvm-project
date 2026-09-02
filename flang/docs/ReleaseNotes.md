@@ -97,6 +97,7 @@ page](https://llvm.org/releases/).
   are `zero` and `0x<hex-byte>` (e.g. `0xAA`). The gfortran
   compatibility alias `-finit-local-zero` is equivalent to `-finit-local=zero`.
   Both modes fill every storage byte including struct padding.
+  PowerPC vector locals (`vector(real(4))` etc.) are not initialized.
 
 ## Windows Support
 

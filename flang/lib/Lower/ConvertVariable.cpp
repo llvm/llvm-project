@@ -1282,8 +1282,10 @@ getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
 /// -finit-local= initialization. Excluded: variables without a symbol,
 /// globals, dummy arguments, SAVE'd vars, ALLOCATABLE/POINTER, vars in
 /// an EQUIVALENCE set, vars with explicit or default initialization, and
-/// CUDA variables whose storage is not host-accessible (device, constant,
-/// shared, usedevice).
+/// CUDA variables whose storage is always unreachable by a plain fir.store
+/// (constant, shared, usedevice). The Device case is deferred to genInitLocal
+/// which applies cuf::isCUDADeviceContext to distinguish cuf.alloc from
+/// fir.alloca storage.
 static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
   if (!var.hasSymbol() || var.isGlobal())
     return false;
@@ -1307,14 +1309,22 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
   // descriptor, not the pointee storage.
   if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return false;
+  // PowerPC vector types (vector(real(4)) etc.) lower to fir::VectorType
+  // which does not implement DataLayoutTypeInterface at the HLFIR level.
+  // Exclude them here so no initialization is attempted.
+  if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
+    if (const Fortran::semantics::DerivedTypeSpec *derived =
+            declTy->AsDerived())
+      if (derived->IsVectorType())
+        return false;
   // CUDA storage accessibility:
   //   constant / shared / usedevice: always unreachable by a plain fir.store
   //     from the host -- skip.
-  //   device in a HOST context: lives in global device memory; a host
-  //     fir.store cannot reach it -- skip.
-  //   device in a DEVICE subprogram: implicitly set by SetImplicitCUDADevice
-  //     for every local in a device kernel; these are per-thread stack
-  //     allocations reachable by a device fir.store -- initialize.
+  //   device: the allocation choice (cuf.alloc vs fir.alloca) depends on
+  //     whether the insertion point is in a device context; that check
+  //     requires the MLIR builder and is deferred to genInitLocal, which
+  //     calls cuf::isCUDADeviceContext(builder.getRegion()) after this
+  //     predicate returns true.
   //   managed / unified / pinned: host-accessible unified memory -- initialize.
   if (auto cudaAttr = Fortran::semantics::GetCUDADataAttr(&sym)) {
     switch (*cudaAttr) {
@@ -1322,13 +1332,6 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
     case Fortran::common::CUDADataAttr::Shared:
     case Fortran::common::CUDADataAttr::UseDevice:
       return false;
-    case Fortran::common::CUDADataAttr::Device:
-      // In a device subprogram the attribute is implicit
-      // (SetImplicitCUDADevice) and the variable is a thread-local stack
-      // allocation -- initialize it.
-      if (!Fortran::semantics::IsCUDADeviceContext(&sym.owner()))
-        return false;
-      break;
     default:
       break;
     }
@@ -1337,10 +1340,12 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
 }
 
 /// Build a constant whose every byte equals \p bytePat.
-/// FP types: bitcast from an integer splat. Complex: apply to both parts.
-/// LOGICAL(k): returns a raw iN integer (caller stores via bitcasted address).
-/// Character: falls back to fir.zero_bits (see TODO). Derived types are
-/// handled by the caller before this function is reached.
+/// Handles: integer, float (bitcast from integer splat), complex (both parts),
+/// and logical (raw integer, stored via bitcasted address by the caller).
+/// Character, derived-type, and sequence types are all intercepted by
+/// genInitLocalStore or initAddr before this function is called and must
+/// not reach it. fir::VectorType (PowerPC vector locals) is excluded
+/// upstream by shouldInitLocal and will never reach this function.
 static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Type ty,
                                     uint8_t bytePat) {
@@ -1376,8 +1381,13 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
     return makeIntCst(logTy.getFKind() * 8);
   }
-  // Fallback (e.g. fir.char reached via an unexpected path): zero-initialise.
-  return fir::ZeroOp::create(builder, loc, eleTy);
+  // All types that pass shouldInitLocal and reach genInitLocalStore are
+  // handled explicitly above (integer, float, complex, logical) or are
+  // intercepted before this call (character, record, sequence).
+  // PowerPC vector types are excluded at shouldInitLocal and never reach here.
+  // A silent zero for an unhandled type would violate the hex-mode contract,
+  // so assert rather than fall back silently.
+  llvm_unreachable("genByteSplatInit: unhandled type in hex mode");
 }
 
 /// Emit a store of the -finit-local= pattern for a single scalar address.
@@ -1504,7 +1514,9 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Arrays: all modes use a flat fir.do_loop + fir.coordinate_of over a
 /// rank-1 view to avoid both the llvm.mlir.constant crash on non-zero
 /// ArrayAttrs and the quadratic compile time of fir.insert_on_range.
-/// Derived types use a whole-struct byte-loop for hex. Scalars store directly.
+/// Derived types use a byte-fill loop. PowerPC vector locals are
+/// excluded upstream by shouldInitLocal and never reach this function.
+/// Scalars store directly via genInitLocalStore.
 static void genInitLocal(Fortran::lower::AbstractConverter &converter,
                          const Fortran::lower::pft::Variable &var,
                          Fortran::lower::SymMap &symMap) {
@@ -1518,6 +1530,18 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
   uint8_t hexByte = converter.getLoweringOptions().getInitLocalPattern();
+
+  // Mirror the allocation decision: a CUDA Device variable is allocated via
+  // cuf.alloc when cuf::isCUDADeviceContext is false (host or host_device
+  // subprograms), and via fir.alloca when it is true (device/global kernels,
+  // including BLOCK-construct locals inside such kernels).  Only the fir.alloca
+  // path is reachable by a plain fir.store, so skip initialization if the
+  // variable has a Device attribute but the current region is not a device
+  // context (which would mean the storage is a cuf.alloc).
+  if (auto cudaAttr = Fortran::semantics::GetCUDADataAttr(&var.getSymbol()))
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Device &&
+        !cuf::isCUDADeviceContext(builder.getRegion()))
+      return;
 
   fir::ExtendedValue exv =
       converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
