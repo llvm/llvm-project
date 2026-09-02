@@ -34,6 +34,7 @@ ScalableStaticAnalysis/index
 DataFlowAnalysisIntro
 FunctionEffectAnalysis
 AddressSanitizer
+HardwareAssistedAddressSanitizer
 ThreadSanitizer
 MemorySanitizer
 UndefinedBehaviorSanitizer
