@@ -140,8 +140,7 @@ struct FoldAddIntoDest final : public OpRewritePattern<linalg::AddOp> {
     // Replace the additive-ident, i.e. zero, out arg of the dominated op by the
     // dominating summand. This makes the dominated op's result the sum of both
     // of addOp's arguments - therefore we replace addOp and it uses by it.
-    rewriter.modifyOpInPlace(
-        dominatedOp, [&]() { dominatedOp->setOperand(2, dominatingOperand); });
+    rewriter.setOperand(dominatedOp, 2, dominatingOperand);
     rewriter.replaceAllOpUsesWith(addOp, dominatedOp->getResult(0));
     return success();
   }

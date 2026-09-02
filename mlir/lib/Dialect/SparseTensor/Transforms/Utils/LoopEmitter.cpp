@@ -784,8 +784,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
       Operation *newRed = rewriter.clone(*redExp);
       // Replaces arguments of the reduction expression by using the block
       // arguments from scf.reduce.
-      rewriter.modifyOpInPlace(
-          newRed, [&]() { newRed->setOperands(redBlock->getArguments()); });
+      rewriter.setOperands(newRed, redBlock->getArguments());
       // Erases the out-dated reduction expression.
       rewriter.eraseOp(redExp);
       rewriter.setInsertionPointToEnd(redBlock);

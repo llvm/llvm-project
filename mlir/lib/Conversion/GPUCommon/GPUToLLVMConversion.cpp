@@ -893,7 +893,7 @@ LogicalResult ConvertAsyncYieldToGpuRuntimeCallPattern::matchAndRewrite(
   for (auto stream : streams)
     streamDestroyCallBuilder.create(loc, rewriter, {stream});
 
-  rewriter.modifyOpInPlace(yieldOp, [&] { yieldOp->setOperands(newOperands); });
+  rewriter.setOperands(yieldOp, newOperands);
   return success();
 }
 

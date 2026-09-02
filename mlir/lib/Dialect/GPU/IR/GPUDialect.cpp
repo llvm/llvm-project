@@ -2247,7 +2247,7 @@ public:
         continue;
       validOperands.push_back(operand);
     }
-    rewriter.modifyOpInPlace(op, [&]() { op->setOperands(validOperands); });
+    rewriter.setOperands(op, validOperands);
     return success();
   }
 };

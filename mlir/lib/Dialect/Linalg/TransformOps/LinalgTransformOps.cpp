@@ -1218,10 +1218,8 @@ tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   rewriter.replaceOp(sliceOpToTile, *maybeRankReduced);
 
   // Replace the use in containingOp.
-  rewriter.modifyOpInPlace(containingOp, [&]() {
-    containingOp->setOperand(pUse->getOperandNumber(),
-                             destinationTensors.front());
-  });
+  rewriter.setOperand(containingOp, pUse->getOperandNumber(),
+                      destinationTensors.front());
 
   return tileAndFuseResult->tiledOps;
 }

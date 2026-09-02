@@ -152,8 +152,7 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
       LLVM_DEBUG(DBGS() << "New loop: " << newLoop << "\n");
 
       rewriter.replaceAllUsesWith(newLoop.getResult(index), broadcast);
-      rewriter.modifyOpInPlace(
-          broadcast, [&] { broadcast.setOperand(newLoop.getResult(index)); });
+      rewriter.setOperand(broadcast, 0, newLoop.getResult(index));
 
       changed = true;
       return WalkResult::interrupt();

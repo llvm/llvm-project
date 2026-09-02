@@ -616,10 +616,8 @@ static Value relinkBranch(CodegenEnv &env, RewriterBase &rewriter, Block *block,
     if (def->getBlock() == block) {
       rewriter.setInsertionPoint(def);
       for (unsigned i = 0, n = def->getNumOperands(); i < n; i++) {
-        rewriter.modifyOpInPlace(def, [&]() {
-          def->setOperand(
-              i, relinkBranch(env, rewriter, block, def->getOperand(i)));
-        });
+        rewriter.setOperand(
+            def, i, relinkBranch(env, rewriter, block, def->getOperand(i)));
       }
     }
   }
