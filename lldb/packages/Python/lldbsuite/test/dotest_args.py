@@ -54,7 +54,7 @@ def create_parser():
         dest="fortran_compiler",
         default="",
         help=textwrap.dedent(
-            """The Fortran compiler used to build the test programs."""
+            """Specify the compiler used to build the inferior Fortran executables. The compiler path can be an executable basename or a full path to a compiler executable."""
         ),
     )
     group.add_argument(

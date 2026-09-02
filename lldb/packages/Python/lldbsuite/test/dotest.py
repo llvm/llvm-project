@@ -280,7 +280,7 @@ def parseOptionsAndInitTestdirs():
             sys.exit(-1)
     else:
         # If no Fortran compiler was explicitly specified, search for local fallbacks.
-        candidateFortranCompilers = ["flang-new", "flang", "gfortran"]
+        candidateFortranCompilers = ["flang", "flang-new", "gfortran"]
         for candidate in candidateFortranCompilers:
             if which(candidate):
                 configuration.fortran_compiler = candidate
