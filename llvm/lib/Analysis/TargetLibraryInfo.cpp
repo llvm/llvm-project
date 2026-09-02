@@ -1343,6 +1343,14 @@ constexpr VecDesc VecFuncs_AMDLIBM[] = {
 #undef TLI_DEFINE_AMDLIBM_VECFUNCS
 };
 
+const VecDesc VecFuncs_HVML[] = {
+#define TLI_DEFINE_HVML_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_HVML_VECFUNCS
+};
+
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {
   switch (VecLib) {
@@ -1406,6 +1414,10 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
   }
   case VectorLibrary::AMDLIBM: {
     addVectorizableFunctions(VecFuncs_AMDLIBM);
+    break;
+  }
+  case VectorLibrary::HVML: {
+    addVectorizableFunctions(VecFuncs_HVML);
     break;
   }
   case VectorLibrary::NoLibrary:

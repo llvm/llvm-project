@@ -451,7 +451,9 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(VectorLibrary::ArmPL, "ArmPL",
                      "Arm Performance Libraries"),
           clEnumValN(VectorLibrary::AMDLIBM, "AMDLIBM",
-                     "AMD vector math library")));
+                     "AMD vector math library"),
+          clEnumValN(VectorLibrary::HVML, "HVML",
+                      "Hygon vector math library")));
   CGBINDOPT(VectorLibrary);
 
   static cl::opt<bool> EnableStackSizeSection(

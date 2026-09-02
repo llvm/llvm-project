@@ -7,6 +7,7 @@
 ; RUN: opt -mtriple=aarch64-unknown-linux-gnu -vector-library=sleefgnuabi -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SLEEFGNUABI
 ; RUN: opt -mtriple=riscv64-unknown-linux-gnu -vector-library=sleefgnuabi -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SLEEFGNUABI_RISCV
 ; RUN: opt -mtriple=aarch64-unknown-linux-gnu -vector-library=ArmPL -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,ARMPL
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=HVML -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,HVML
 
 ; COMMON-LABEL: @llvm.compiler.used = appending global
 ; SVML-SAME:        [6 x ptr] [
@@ -90,6 +91,11 @@
 ; ARMPL-SAME:         ptr @armpl_svlog10_f32_x,
 ; ARMPL-SAME:         ptr @armpl_vldexpq_f64,
 ; ARMPL-SAME:         ptr @armpl_svldexp_f64_x
+; HVML-SAME:        [4 x ptr] [
+; HVML-SAME:          ptr @hvml_vd2_sin,
+; HVML-SAME:          ptr @hvml_vd4_sin,
+; HVML-SAME:          ptr @hvml_vs4_log10,
+; HVML-SAME:          ptr @hvml_vs8_log10
 ; COMMON-SAME:      ], section "llvm.metadata"
 
 define double @modf_f64(double %in, ptr %iptr) {
@@ -123,6 +129,7 @@ define double @sin_f64(double %in) {
 ; SLEEFGNUABI:        call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; SLEEFGNUABI_RISCV:  call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; ARMPL:              call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
+; HVML:               call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; No mapping of "sin" to a vector function for Accelerate.
 ; ACCELERATE-NOT:  _ZGV_LLVM_{{.*}}_sin({{.*}})
   %call = tail call double @sin(double %in)
@@ -211,6 +218,7 @@ define float @call_llvm.log10.f32(float %in) {
 ; SLEEFGNUABI:        call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; SLEEFGNUABI_RISCV:  call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; ARMPL:              call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
+; HVML:               call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; No mapping of "llvm.log10.f32" to a vector function for SVML.
 ; SVML-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
 ; AMDLIBM-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
@@ -303,6 +311,11 @@ declare double @ldexp(double, i32 signext) #0
 ; ARMPL: declare void @armpl_svsincospi_f32_x(<vscale x 4 x float>, ptr, ptr, <vscale x 4 x i1>)
 ; ARMPL: declare aarch64_vector_pcs <4 x float> @armpl_vlog10q_f32(<4 x float>)
 ; ARMPL: declare <vscale x 4 x float> @armpl_svlog10_f32_x(<vscale x 4 x float>, <vscale x 4 x i1>)
+
+; HVML: declare <2 x double> @hvml_vd2_sin(<2 x double>)
+; HVML: declare <4 x double> @hvml_vd4_sin(<4 x double>)
+; HVML: declare <4 x float> @hvml_vs4_log10(<4 x float>)
+; HVML: declare <8 x float> @hvml_vs8_log10(<8 x float>)
 
 attributes #0 = { nounwind readnone }
 
@@ -414,3 +427,10 @@ attributes #0 = { nounwind readnone }
 ; ARMPL:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N4v_llvm.log10.f32(armpl_vlog10q_f32),
 ; ARMPL-SAME:    _ZGVsMxv_llvm.log10.f32(armpl_svlog10_f32_x)" }
+
+; HVML:      attributes #[[SIN]] = { "vector-function-abi-variant"=
+; HVML-SAME:    "_ZGV_LLVM_N2v_sin(hvml_vd2_sin),
+; HVML-SAME:    _ZGV_LLVM_N4v_sin(hvml_vd4_sin)" }
+; HVML:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
+; HVML-SAME:    "_ZGV_LLVM_N4v_llvm.log10.f32(hvml_vs4_log10),
+; HVML-SAME:    _ZGV_LLVM_N8v_llvm.log10.f32(hvml_vs8_log10)" }

@@ -47,7 +47,8 @@ enum class VectorLibrary {
   SLEEF,              // SLEEF SIMD Library for Evaluating Elementary Functions.
   Darwin_libsystem_m, // Use Darwin's libsystem_m vector functions.
   ArmPL,              // Arm Performance Libraries.
-  AMDLIBM             // AMD vector math library.
+  AMDLIBM,            // AMD vector math library.
+  HVML                // Hygon vector math library.
 };
 
 LLVM_ABI llvm::VectorLibrary
