@@ -1600,16 +1600,16 @@ gpu.func @convert_layout_partial_subgroup() {
 // CHECK:         %[[BITS:.*]] = vector.bitcast %[[FLAT]] : vector<8xf8E8M0FNU> to vector<8xi8>
 // CHECK:         %[[LANE:.*]] = gpu.lane_id
 // CHECK:         %[[C8:.*]] = arith.constant 8 : index
-// CHECK:         %[[ROW:.*]] = arith.remui %[[LANE]], %[[C8]] : index
+// CHECK:         %[[SLOT:.*]] = arith.remui %[[LANE]], %[[C8]] : index
 // CHECK:         %[[ZERO:.*]] = arith.constant dense<0> : vector<2xi8>
-// CHECK:         %[[ELEM:.*]] = vector.extract %[[BITS]][%[[ROW]]] : i8 from vector<8xi8>
+// CHECK:         %[[ELEM:.*]] = vector.extract %[[BITS]][%[[SLOT]]] : i8 from vector<8xi8>
 
 // CHECK:         %[[INS0:.*]] = vector.insert %[[ELEM]], %[[ZERO]] [0] : i8 into vector<2xi8>
 
 // CHECK:         %[[WIDTH:.*]] = arith.constant 16 : i32
-// CHECK:         %[[ROW_I32:.*]] = arith.index_cast %[[ROW]] : index to i32
+// CHECK:         %[[SLOT_I32:.*]] = arith.index_cast %[[SLOT]] : index to i32
 // CHECK:         %[[C8_I32:.*]] = arith.constant 8 : i32
-// CHECK:         %[[LANE1:.*]] = arith.addi %[[ROW_I32]], %[[C8_I32]] : i32
+// CHECK:         %[[LANE1:.*]] = arith.addi %[[SLOT_I32]], %[[C8_I32]] : i32
 // CHECK:         %[[SHUF1:.*]], %{{.*}} = gpu.shuffle idx %[[ELEM]], %[[LANE1]], %[[WIDTH]] : i8
 // CHECK:         %[[INS1:.*]] = vector.insert %[[SHUF1]], %[[INS0]] [1] : i8 into vector<2xi8>
 // CHECK:         %[[BACK:.*]] = vector.bitcast %[[INS1]] : vector<2xi8> to vector<2xf8E8M0FNU>
@@ -1632,14 +1632,14 @@ gpu.func @convert_layout_broadcast_to_lane_distributed() {
 // CHECK:         %[[BITS:.*]] = vector.bitcast %[[FLAT]] : vector<16xf8E8M0FNU> to vector<16xi8>
 // CHECK:         %[[LANE:.*]] = gpu.lane_id
 // CHECK:         %[[C8:.*]] = arith.constant 8 : index
-// CHECK:         %[[ROW:.*]] = arith.remui %[[LANE]], %[[C8]] : index
+// CHECK:         %[[SLOT:.*]] = arith.remui %[[LANE]], %[[C8]] : index
 // CHECK:         %[[ZERO:.*]] = arith.constant dense<0> : vector<2xi8>
 // CHECK:         %[[C2:.*]] = arith.constant 2 : index
-// CHECK:         %[[IDX0:.*]] = arith.muli %[[ROW]], %[[C2]] : index
+// CHECK:         %[[IDX0:.*]] = arith.muli %[[SLOT]], %[[C2]] : index
 // CHECK:         %[[ELEM0:.*]] = vector.extract %[[BITS]][%[[IDX0]]] : i8 from vector<16xi8>
 // CHECK:         %[[INS0:.*]] = vector.insert %[[ELEM0]], %[[ZERO]] [0] : i8 into vector<2xi8>
 // CHECK:         %[[C2_1:.*]] = arith.constant 2 : index
-// CHECK:         %[[MUL1:.*]] = arith.muli %[[ROW]], %[[C2_1]] : index
+// CHECK:         %[[MUL1:.*]] = arith.muli %[[SLOT]], %[[C2_1]] : index
 // CHECK:         %[[C1:.*]] = arith.constant 1 : index
 // CHECK:         %[[IDX1:.*]] = arith.addi %[[MUL1]], %[[C1]] : index
 // CHECK:         %[[ELEM1:.*]] = vector.extract %[[BITS]][%[[IDX1]]] : i8 from vector<16xi8>
@@ -1699,7 +1699,7 @@ gpu.func @convert_layout_broadcast_to_sliced_target() {
 // reaching it through two nested slices. They are coalesced, so what counts is
 // the parent lane_layout covering all 16 lanes and the dims the slices drop
 // together: the 8 lanes of the dropped dim 0 hold the same fragment, while the
-// kept dim of extent 2 splits the columns between the two groups.
+// kept dim of size 2 splits the columns between the two groups.
 // CHECK-LABEL: gpu.func @convert_layout_broadcast_nested_slice
 // CHECK:         %[[SRC:.*]] = arith.constant dense<1.000000e+00> : vector<8x1xf8E8M0FNU>
 // CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<8x1xf8E8M0FNU> to vector<8xf8E8M0FNU>
