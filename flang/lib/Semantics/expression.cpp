@@ -367,13 +367,21 @@ static void ValidateSubscriptValue(semantics::SemanticsContext &context,
     return;
   }
   parser::ContextualMessages &messages{context.foldingContext().messages()};
-  if (msg->severity() == parser::Severity::ErrorUnlessDeadCode &&
+  if (msg->severity() == parser::Severity::ErrorUnlessDeadCode && *co == '\0' &&
       context.IsEnabled(common::LanguageFeature::OutOfBoundsSubscripts)) {
     // A subscript value is required to be within its bounds only when the
     // reference is executed (F'2023 9.5.3.1 p2), so a reference that appears
     // in code that never runs does not render the program nonconforming.
-    // That case can't be recognized in general, so this extension accepts
-    // any out-of-bounds constant subscript with a warning.
+    // That case can't be recognized in general -- consider a procedure whose
+    // only call site is in dead code, or one that is never called at all --
+    // so by default these references are accepted with a warning, and
+    // -fno-out-of-bounds-subscripts restores a hard error.  The endpoints of
+    // array sections are validated here too and get the same treatment.
+    //
+    // Cosubscripts (a nonempty 'co') are deliberately excluded: their
+    // requirement is F'2023 9.6 p2 rather than 9.5.3.1 p2, and a cosubscript
+    // list determines an image index, so an out-of-cobounds constant
+    // cosubscript remains a hard error.
     msg->set_severity(parser::Severity::Warning);
     AttachDeclaration(
         context.Warn(messages, common::LanguageFeature::OutOfBoundsSubscripts,

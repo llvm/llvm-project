@@ -923,7 +923,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   opts.features.Enable(
       Fortran::common::LanguageFeature::OutOfBoundsSubscripts,
       args.hasFlag(clang::options::OPT_fout_of_bounds_subscripts,
-                   clang::options::OPT_fno_out_of_bounds_subscripts, false));
+                   clang::options::OPT_fno_out_of_bounds_subscripts, true));
 
   // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
   opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,

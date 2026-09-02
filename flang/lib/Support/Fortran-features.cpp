@@ -156,9 +156,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
   disable_.set(LanguageFeature::Coarray);
   disable_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
-  // An out-of-bounds constant subscript is a hard error by default; enabling
-  // this extension reduces it to a warning.
-  disable_.set(LanguageFeature::OutOfBoundsSubscripts);
   // These warnings are enabled by default, but only because they used
   // to be unconditional.  TODO: prune this list
   warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
