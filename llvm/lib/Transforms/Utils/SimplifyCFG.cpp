@@ -205,8 +205,6 @@ static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
     cl::desc("Limit number of blocks a define in a threaded block is allowed "
              "to be live in"));
 
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
 } // end namespace llvm
 
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
@@ -4198,13 +4196,12 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   Value *BICond = VMap[BI->getCondition()];
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
-  if (!ProfcheckDisableMetadataFixes)
-    if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
-      if (!MDWeights.empty()) {
-        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
-        setFittedBranchWeights(*SI, {MDWeights[0], MDWeights[1]},
-                               /*IsExpected=*/false, /*ElideAllZero=*/true);
-      }
+  if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
+    if (!MDWeights.empty()) {
+      assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+      setFittedBranchWeights(*SI, {MDWeights[0], MDWeights[1]},
+                             /*IsExpected=*/false, /*ElideAllZero=*/true);
+    }
 
   ++NumFoldBranchToCommonDest;
   return true;
@@ -4550,8 +4547,7 @@ static bool mergeConditionalStoreToAddress(
   auto *T = SplitBlockAndInsertIfThen(CombinedPred, InsertPt,
                                       /*Unreachable=*/false,
                                       /*BranchWeights=*/nullptr, DTU);
-  if (hasBranchWeightMD(*PBranch) && hasBranchWeightMD(*QBranch) &&
-      !ProfcheckDisableMetadataFixes) {
+  if (hasBranchWeightMD(*PBranch) && hasBranchWeightMD(*QBranch)) {
     SmallVector<uint32_t, 2> PWeights, QWeights;
     extractBranchWeights(*PBranch, PWeights);
     extractBranchWeights(*QBranch, QWeights);
@@ -4937,16 +4933,15 @@ static bool SimplifyCondBranchToCondBranch(CondBrInst *PBI, CondBrInst *BI,
                            /*ElideAllZero=*/true);
     // Cond may be a select instruction with the first operand set to "true", or
     // the second to "false" (see how createLogicalOp works for `and` and `or`)
-    if (!ProfcheckDisableMetadataFixes)
-      if (auto *SI = dyn_cast<SelectInst>(Cond)) {
-        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
-        // The select is predicated on PBICond
-        assert(SI->getCondition() == PBICond);
-        // The corresponding probabilities are what was referred to above as
-        // PredCommon and PredOther.
-        setFittedBranchWeights(*SI, {PredCommon, PredOther},
-                               /*IsExpected=*/false, /*ElideAllZero=*/true);
-      }
+    if (auto *SI = dyn_cast<SelectInst>(Cond)) {
+      assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+      // The select is predicated on PBICond
+      assert(SI->getCondition() == PBICond);
+      // The corresponding probabilities are what was referred to above as
+      // PredCommon and PredOther.
+      setFittedBranchWeights(*SI, {PredCommon, PredOther},
+                             /*IsExpected=*/false, /*ElideAllZero=*/true);
+    }
   }
 
   // OtherDest may have phi nodes.  If so, add an entry from PBI's
@@ -5123,8 +5118,7 @@ bool SimplifyCFGOpt::simplifyIndirectBrOnSelect(IndirectBrInst *IBI,
   // The select's profile becomes the profile of the conditional branch that
   // replaces the indirect branch.
   SmallVector<uint32_t> SelectBranchWeights(2);
-  if (!ProfcheckDisableMetadataFixes)
-    extractBranchWeights(*SI, SelectBranchWeights);
+  extractBranchWeights(*SI, SelectBranchWeights);
   // Perform the actual simplification.
   return simplifyTerminatorOnSelect(IBI, SI->getCondition(), TrueBB, FalseBB,
                                     SelectBranchWeights[0],
@@ -5378,8 +5372,7 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(CondBrInst *BI,
     return false;
 
   SmallVector<uint32_t> BranchWeights;
-  const bool HasProfile = !ProfcheckDisableMetadataFixes &&
-                          extractBranchWeights(*BI, BranchWeights);
+  const bool HasProfile = extractBranchWeights(*BI, BranchWeights);
 
   // Figure out which block is which destination.
   BasicBlock *DefaultBB = BI->getSuccessor(1);
@@ -6665,8 +6658,7 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
   //   default: return 4;          %3 = select i1 %2, i32 2, i32 %1
   // }
 
-  const bool HasBranchWeights =
-      !BranchWeights.empty() && !ProfcheckDisableMetadataFixes;
+  const bool HasBranchWeights = !BranchWeights.empty();
 
   if (ResultVector.size() == 2 && ResultVector[0].second.size() == 1 &&
       ResultVector[1].second.size() == 1) {
@@ -6861,11 +6853,9 @@ static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
   assert(PHI != nullptr && "PHI for value select not found");
   Builder.SetInsertPoint(SI);
   SmallVector<uint32_t, 4> BranchWeights;
-  if (!ProfcheckDisableMetadataFixes) {
-    [[maybe_unused]] auto HasWeights =
-        extractBranchWeights(getBranchWeightMDNode(*SI), BranchWeights);
-    assert(!HasWeights == (BranchWeights.empty()));
-  }
+  [[maybe_unused]] auto HasWeights =
+      extractBranchWeights(getBranchWeightMDNode(*SI), BranchWeights);
+  assert(!HasWeights == (BranchWeights.empty()));
   assert(BranchWeights.empty() ||
          (BranchWeights.size() >=
           UniqueResults.size() + (DefaultResult != nullptr)));
@@ -7742,8 +7732,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     Updates.push_back({DominatorTree::Insert, LookupBB, CommonDest});
 
   SmallVector<uint32_t> BranchWeights;
-  const bool HasBranchWeights = CondBranch && !ProfcheckDisableMetadataFixes &&
-                                extractBranchWeights(*SI, BranchWeights);
+  const bool HasBranchWeights =
+      CondBranch && extractBranchWeights(*SI, BranchWeights);
   uint64_t ToLookupWeight = 0;
   uint64_t ToDefaultWeight = 0;
 
@@ -8043,8 +8033,7 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     BasicBlock *SplitBB = SplitBlock(OrigBB, SI, DTU);
     auto It = OrigBB->getTerminator()->getIterator();
     SmallVector<uint32_t> Weights;
-    auto HasWeights =
-        !ProfcheckDisableMetadataFixes && extractBranchWeights(*SI, Weights);
+    auto HasWeights = extractBranchWeights(*SI, Weights);
     auto *BI = CondBrInst::Create(IsPow2, SplitBB, DefaultCaseBB, It);
     if (HasWeights && any_of(Weights, not_equal_to(0))) {
       // IsPow2 covers a subset of the cases in which we'd go to the default
@@ -8527,8 +8516,7 @@ bool SimplifyCFGOpt::simplifyIndirectBr(IndirectBrInst *IBI) {
   BasicBlock *BB = IBI->getParent();
   bool Changed = false;
   SmallVector<uint32_t> BranchWeights;
-  const bool HasBranchWeights = !ProfcheckDisableMetadataFixes &&
-                                extractBranchWeights(*IBI, BranchWeights);
+  const bool HasBranchWeights = extractBranchWeights(*IBI, BranchWeights);
 
   DenseMap<const BasicBlock *, uint64_t> TargetWeight;
   if (HasBranchWeights)
