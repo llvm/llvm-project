@@ -1831,32 +1831,6 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // extract, and one of the two shuffled. Case 4's 4x2 fragment is eight elements
 // over two positions: two extracts, six of the eight shuffled.
 //
-// Case 2 is the running example below: lanes 0-7 hold all of column
-// 0, lanes 8-15 all of column 1, and lane `i` leaves holding row `i`. Lane 3
-// wants (3, 0) and (3, 1); it holds (3, 0) already, while (3, 1) is in lane 11.
-//
-// Nested slices are coalesced before anything else looks at a layout, so only
-// the lane_layout of the underlying layout and the union of the sliced dims
-// matter; @convert_layout_broadcast_nested_slice covers a two-level input.
-//
-// Why donors sit a whole period apart
-// -----------------------------------
-//
-// `gpu.shuffle idx` is not a remote read: every lane extracts one element from
-// its own fragment and contributes it, then receives whatever the lane it names
-// contributed. A donor has therefore already extracted, at its own index,
-// before any shuffle happens, and never learns who asked. So the index the
-// donor used has to be the one the reader wanted, and since the index is a
-// function of the slot, the two have to share one:
-//
-//   donorSlot = (slot + donorDelta) % targetLanePeriod = slot
-//
-// which holds exactly when `donorDelta` is a multiple of `targetLanePeriod`.
-//
-// In case 2, reader slot 3 gets (3, 0) from donorDelta 0 and (3, 1) from
-// donorDelta 8, lane 11 -- and both lanes extract at index 3, the input giving
-// lane 3 column 0 and lane 11 column 1.
-//
 // What it declines
 // ----------------
 //
@@ -1901,6 +1875,31 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // Not layout conditions: SubByteElement, `gpu.shuffle` having no type for an
 // element narrower than a byte, and FragmentSizeMismatch, an invariant check
 // for a layout disagreeing with the vector type the caller derived from it.
+//
+// Why donors sit a whole period apart
+// -----------------------------------
+//
+// Case 2 is the running example from here on: lanes 0-7 hold all of column 0,
+// lanes 8-15 all of column 1, and lane `i` leaves holding row `i`.
+//
+// Nested slices are coalesced before anything else looks at a layout, so only
+// the lane_layout of the underlying layout and the union of the sliced dims
+// matter; @convert_layout_broadcast_nested_slice covers a two-level input.
+//
+// `gpu.shuffle idx` is not a remote read: every lane extracts one element from
+// its own fragment and contributes it, then receives whatever the lane it names
+// contributed. A donor has therefore already extracted, at its own index,
+// before any shuffle happens, and never learns who asked. So the index the
+// donor used has to be the one the reader wanted, and since the index is a
+// function of the slot, the two have to share one:
+//
+//   donorSlot = (slot + donorDelta) % targetLanePeriod = slot
+//
+// which holds exactly when `donorDelta` is a multiple of `targetLanePeriod`.
+//
+// In case 2, reader slot 3 gets (3, 0) from donorDelta 0 and (3, 1) from
+// donorDelta 8, lane 11 -- and both lanes extract at index 3, the input giving
+// lane 3 column 0 and lane 11 column 1.
 //
 // The reverse map
 // ---------------
