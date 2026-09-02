@@ -39,7 +39,7 @@ void SymbolTable::addFile(InputFile *file, StringRef symName) {
 
   // .so file
   if (auto *f = dyn_cast<SharedFile>(file)) {
-    // If we are not reporting undefined symbols that we don't actualy
+    // If we are not reporting undefined symbols that we don't actually
     // parse the shared library symbol table.
     f->parse();
     ctx.sharedFiles.push_back(f);
@@ -335,6 +335,18 @@ static bool shouldReplace(const Symbol *existing, InputFile *newFile,
     return true;
   }
 
+  // If existing symbol is common, it can be overridden by a strong definition.
+  if (existing->isCommon()) {
+    if ((newFlags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK) {
+      LLVM_DEBUG(dbgs() << "existing common symbol " << existing->getName()
+                        << " takes precedence over new weak\n");
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "replacing existing common symbol "
+                      << existing->getName() << " with strong definition\n");
+    return true;
+  }
+
   // Now we have two defined symbols. If the new one is weak, we can ignore it.
   if ((newFlags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK) {
     LLVM_DEBUG(dbgs() << "existing symbol takes precedence\n");
@@ -493,6 +505,51 @@ Symbol *SymbolTable::addSharedData(StringRef name, uint32_t flags,
 
   checkDataType(s, file);
   replaceSymbol<SharedData>(s, name, flags, file);
+  return s;
+}
+
+Symbol *SymbolTable::addCommon(StringRef name, uint32_t flags, InputFile *file,
+                               uint64_t size, uint32_t alignment) {
+  LLVM_DEBUG(dbgs() << "addCommon: " << name << " size:" << size
+                    << " align:" << alignment << "\n");
+  auto val = insert(name, file);
+  Symbol *s = val.first;
+  bool wasInserted = val.second;
+
+  auto replaceSym = [&]() {
+    replaceSymbol<CommonSymbol>(s, name, flags, file, size, alignment);
+  };
+
+  if (wasInserted || s->isLazy()) {
+    replaceSym();
+    return s;
+  }
+
+  checkDataType(s, file);
+
+  if (auto *existingCommon = dyn_cast<CommonSymbol>(s)) {
+    uint64_t newSize = std::max(existingCommon->getSize(), size);
+    uint32_t newAlign = std::max(existingCommon->getAlignment(), alignment);
+    existingCommon->setCommon(newSize, newAlign);
+    existingCommon->flags |= flags & WASM_SYMBOL_NO_STRIP;
+    return s;
+  }
+
+  if (s->isDefined()) {
+    if (s->isWeak()) {
+      LLVM_DEBUG(
+          dbgs() << "replacing existing weak defined symbol with common\n");
+      replaceSym();
+    } else {
+      LLVM_DEBUG(
+          dbgs()
+          << "existing strong defined symbol takes precedence over common\n");
+    }
+    return s;
+  }
+
+  LLVM_DEBUG(dbgs() << "resolving existing undefined symbol with common\n");
+  replaceSym();
   return s;
 }
 
@@ -691,7 +748,7 @@ updateExistingUndefined(Symbol *existing, uint32_t flags, InputFile *file,
     existing->flags = (existing->flags & ~WASM_SYMBOL_BINDING_MASK) | binding;
   }
 
-  // Certain flags such as NO_STRIP should be maintianed if either old or
+  // Certain flags such as NO_STRIP should be maintained if either old or
   // new symbol is marked as such.
   existing->flags |= flags & WASM_SYMBOL_NO_STRIP;
 }

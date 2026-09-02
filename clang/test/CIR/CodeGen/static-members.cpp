@@ -19,7 +19,7 @@ struct S {
 // CIR:   %[[DTOR:.*]] = cir.get_global @_ZN7HasDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>>
 // CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[HD_CAST:.*]] = cir.cast bitcast %[[HD]] : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!void>
-// CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
+// CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
 // CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[HD_CAST]], %[[HANDLE]])
 
 // LLVM: @_ZN1S2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat
@@ -66,8 +66,8 @@ struct Outer {
 // CIR:   %[[DTOR:.*]] = cir.get_global @_ZN7HasDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>>
 // CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[HD_CAST:.*]] = cir.cast bitcast %[[HD]] : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!void>
-// CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[HD_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
+// CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[HD_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 
 // LLVM: define internal void @__cxx_global_var_init.1()
 // LLVM:   call i32 @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN5Outer5Inner2hdE, ptr @__dso_handle)

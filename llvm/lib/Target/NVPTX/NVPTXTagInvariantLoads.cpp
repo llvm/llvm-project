@@ -108,6 +108,7 @@ FunctionPass *llvm::createNVPTXTagInvariantLoadsPass() {
 
 PreservedAnalyses NVPTXTagInvariantLoadsPass::run(Function &F,
                                                   FunctionAnalysisManager &) {
-  return tagInvariantLoads(F) ? PreservedAnalyses::none()
-                              : PreservedAnalyses::all();
+  if (!tagInvariantLoads(F))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

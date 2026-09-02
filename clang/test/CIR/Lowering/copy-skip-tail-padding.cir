@@ -5,6 +5,7 @@
 !u8i = !cir.int<u, 8>
 !u16i = !cir.int<u, 16>
 !s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
 
 !rec_Plain = !cir.struct<"Plain" {data !s32i, data !s32i}>
 !rec_Trail =
@@ -23,6 +24,12 @@
 !rec_AlignasTail =
     !cir.struct<"AlignasTail" {data !s8i, pad !cir.array<!u8i x 7>, data !s32i,
                                pad !cir.array<!u8i x 4>}>
+!rec_TailZw =
+    !cir.struct<"TailZw" {data !s8i, pad !cir.array<!u8i x 3>,
+                          bitfield !cir.array<!s32i x 0>}>
+!rec_ZwAlign =
+    !cir.struct<"ZwAlign" {data !s8i, bitfield !cir.array<!s64i x 0>,
+                           data !s8i}>
 !rec_SpanMixed =
     !cir.struct<"SpanMixed" {data !u8i, pad !cir.array<!u8i x 3>, empty !u8i,
                              pad !cir.array<!u8i x 3>}>
@@ -124,6 +131,28 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu",
   cir.func @alignas_tail(%arg0: !cir.ptr<!rec_AlignasTail>,
                          %arg1: !cir.ptr<!rec_AlignasTail>) {
     cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_AlignasTail>
+    cir.return
+  }
+
+  // A zero-width bit-field holds no storage, so it neither ends the trailing
+  // run nor keeps the padding ahead of it inside the data size.
+  // CHECK-LABEL: llvm.func @tail_zero_width
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @tail_zero_width(%arg0: !cir.ptr<!rec_TailZw>,
+                            %arg1: !cir.ptr<!rec_TailZw>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_TailZw>
+    cir.return
+  }
+
+  // Nor does it lend the record its declared type's alignment, which would
+  // otherwise push the member after it up to offset eight.
+  // CHECK-LABEL: llvm.func @zero_width_align
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(2 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @zero_width_align(%arg0: !cir.ptr<!rec_ZwAlign>,
+                             %arg1: !cir.ptr<!rec_ZwAlign>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_ZwAlign>
     cir.return
   }
 

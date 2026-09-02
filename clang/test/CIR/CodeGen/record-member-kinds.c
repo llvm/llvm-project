@@ -40,43 +40,63 @@ struct UnnamedBitOnly { int : 8; };
 struct UnnamedBitThenField { int : 8; int f; };
 // CIR-DAG: !rec_UnnamedBitThenField = !cir.struct<"UnnamedBitThenField" {empty !u8i, data !s32i}>
 
+// The trailing unit is narrower than its bit-field's declared type and is not
+// pad, so it stays in the data size.
+struct NamedFieldThenUnnamedBit { char c; int : 24; };
+// CIR-DAG: !rec_NamedFieldThenUnnamedBit = !cir.struct<"NamedFieldThenUnnamedBit" {data !s8i, empty !cir.array<!u8i x 3>}>
+
 // The discrete ms_struct path allocates a unit per formal type.  A unit whose
 // only occupant is unnamed holds no data.
 struct MsOnlyUnnamed { int : 3; } __attribute__((ms_struct));
 // CIR-DAG: !rec_MsOnlyUnnamed = !cir.struct<"MsOnlyUnnamed" {empty !s32i}>
 
 struct MsNamedThenUnnamed { int a : 3; int : 3; } __attribute__((ms_struct));
-// CIR-DAG: !rec_MsNamedThenUnnamed = !cir.struct<"MsNamedThenUnnamed" {data !s32i}>
+// CIR-DAG: !rec_MsNamedThenUnnamed = !cir.struct<"MsNamedThenUnnamed" {bitfield !s32i}>
 
 struct MsUnnamedThenNamed { int : 3; int b : 3; } __attribute__((ms_struct));
-// CIR-DAG: !rec_MsUnnamedThenNamed = !cir.struct<"MsUnnamedThenNamed" {data !s32i}>
+// CIR-DAG: !rec_MsUnnamedThenNamed = !cir.struct<"MsUnnamedThenNamed" {bitfield !s32i}>
 
 // A differing formal type starts a new unit, so this record carries one unit of
 // each kind.
 struct MsMixed { int a : 3; char : 3; } __attribute__((ms_struct));
-// CIR-DAG: !rec_MsMixed = !cir.struct<"MsMixed" {data !s32i, empty !s8i}>
+// CIR-DAG: !rec_MsMixed = !cir.struct<"MsMixed" {bitfield !s32i, empty !s8i}>
 
 struct MsEmptyFirst { char : 3; int a : 3; } __attribute__((ms_struct));
-// CIR-DAG: !rec_MsEmptyFirst = !cir.struct<"MsEmptyFirst" {empty !s8i, data !s32i}>
+// CIR-DAG: !rec_MsEmptyFirst = !cir.struct<"MsEmptyFirst" {empty !s8i, bitfield !s32i}>
 
 struct MsEmptyMiddle {
   int a : 3; char : 3; short b : 3;
 } __attribute__((ms_struct));
-// CIR-DAG: !rec_MsEmptyMiddle = !cir.struct<"MsEmptyMiddle" {data !s32i, empty !s8i, data !s16i}>
+// CIR-DAG: !rec_MsEmptyMiddle = !cir.struct<"MsEmptyMiddle" {bitfield !s32i, empty !s8i, bitfield !s16i}>
 
 // A zero-width bit-field ends the run here too, so the unit after it is a
-// fresh one that has to be marked on its own.
+// fresh one that has to be marked on its own, and the bit-field itself becomes
+// a member.
 struct MsZeroWidthSplit { int a : 3; int : 0; int : 3; } __attribute__((ms_struct));
-// CIR-DAG: !rec_MsZeroWidthSplit = !cir.struct<"MsZeroWidthSplit" {data !s32i, empty !s32i}>
+// CIR-DAG: !rec_MsZeroWidthSplit = !cir.struct<"MsZeroWidthSplit" {bitfield !s32i, bitfield !cir.array<!s32i x 0>, empty !s32i}>
 
 struct MsZeroWidthSplit2 { int : 3; int : 0; int b : 3; } __attribute__((ms_struct));
-// CIR-DAG: !rec_MsZeroWidthSplit2 = !cir.struct<"MsZeroWidthSplit2" {empty !s32i, data !s32i}>
+// CIR-DAG: !rec_MsZeroWidthSplit2 = !cir.struct<"MsZeroWidthSplit2" {empty !s32i, bitfield !cir.array<!s32i x 0>, bitfield !s32i}>
 
 union UnnamedBitUnion { int : 8; };
 // CIR-DAG: !rec_UnnamedBitUnion = !cir.union<"UnnamedBitUnion" {empty !u8i}>
 
 union ContainsEmptyUnion { struct E e; };
 // CIR-DAG: !rec_ContainsEmptyUnion = !cir.union<"ContainsEmptyUnion" {empty !rec_E}>
+
+// The two pairs that follow are byte-identical apart from their marks, in a
+// struct and in a union alike.
+struct BitWideUnit { long long x : 32; } __attribute__((aligned(16)));
+// CIR-DAG: !rec_BitWideUnit = !cir.struct<"BitWideUnit" {bitfield !u32i, pad !cir.array<!u8i x 12>}>
+
+struct UIntOverAligned { unsigned x; } __attribute__((aligned(16)));
+// CIR-DAG: !rec_UIntOverAligned = !cir.struct<"UIntOverAligned" {data !u32i, pad !cir.array<!u8i x 12>}>
+
+union BitUnit { unsigned a : 1; unsigned b : 1; };
+// CIR-DAG: !rec_BitUnit = !cir.union<"BitUnit" {bitfield !u8i, bitfield !u8i}, padding = {!cir.array<!u8i x 3>}>
+
+union UCharOverAligned { unsigned char c, d; } __attribute__((aligned(4)));
+// CIR-DAG: !rec_UCharOverAligned = !cir.union<"UCharOverAligned" {data !u8i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
 
 struct AlignedTail { char c; int i __attribute__((aligned(8))); };
 // CIR-DAG: !rec_AlignedTail = !cir.struct<"AlignedTail" {data !s8i, pad !cir.array<!u8i x 7>, data !s32i, pad !cir.array<!u8i x 4>}>
@@ -92,7 +112,10 @@ void useTypes(struct ContainsEmpty *a, struct ContainsEmptyAndInt *b,
               struct MsMixed *l, struct MsEmptyFirst *m,
               struct MsEmptyMiddle *n, struct MsZeroWidthSplit *o,
               struct MsZeroWidthSplit2 *p, union UnnamedBitUnion *q,
-              union ContainsEmptyUnion *r) {}
+              union ContainsEmptyUnion *r,
+              struct NamedFieldThenUnnamedBit *s, struct BitWideUnit *t,
+              struct UIntOverAligned *u, union BitUnit *v,
+              union UCharOverAligned *w) {}
 
 struct AlignedTail gAlignedTail;
 

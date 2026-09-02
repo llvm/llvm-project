@@ -176,7 +176,9 @@ end
 ```
   Note that internally the main program symbol name is all uppercase, unlike
   the names of all other symbols, which are usually all lowercase. This
-  may make a difference in testing/debugging.
+  may make a difference in testing. It is not visible in the debug
+  information, which spells the main program name in lowercase like every
+  other name.
 * A `PROCEDURE()` with no interface name or type may be called as an
   subroutine with an implicit interface, F'2023 15.4.3.6 paragraph 4 and
   C1525 notwithstanding.

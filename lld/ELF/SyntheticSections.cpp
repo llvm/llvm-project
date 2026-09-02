@@ -102,7 +102,7 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
-                                InputSectionBase &section) {
+                                SectionBase &section) {
   Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
                            type, value, size, &section);
   if (ctx.in.symTab)
@@ -2875,14 +2875,14 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
         FoldingSetNodeID id;
         abbrev.Profile(id);
         uint32_t newCode;
-        void *insertPos;
-        if (Abbrev *existing = abbrevSet.FindNodeOrInsertPos(id, insertPos)) {
+        FoldingSetInsertToken token;
+        if (Abbrev *existing = abbrevSet.lookup(id, token)) {
           // Found it; we've already seen an identical abbreviation.
           newCode = existing->code;
         } else {
           Abbrev *abbrev2 =
               new (abbrevAlloc.Allocate()) Abbrev(std::move(abbrev));
-          abbrevSet.InsertNode(abbrev2, insertPos);
+          abbrevSet.insert(abbrev2, token);
           abbrevTable.push_back(abbrev2);
           newCode = abbrevTable.size();
           abbrev2->code = newCode;

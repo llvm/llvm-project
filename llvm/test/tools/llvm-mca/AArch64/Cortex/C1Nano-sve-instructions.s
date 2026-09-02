@@ -571,11 +571,15 @@
 # NONSTREAMING-NEXT:  1      4     1.00                        facge	p0.h, p0/z, z1.h, z0.h
 # NONSTREAMING-NEXT:  1      4     1.00                        facge	p0.s, p0/z, z0.s, z1.s
 # NONSTREAMING-NEXT:  1      4     1.00                        facge	p0.s, p0/z, z1.s, z0.s
+# NONSTREAMING-NEXT:  1      4     1.00                        facge	p0.d, p0/z, z1.d, z0.d
+# NONSTREAMING-NEXT:  1      4     1.00                        facge	p0.s, p0/z, z1.s, z0.s
 # NONSTREAMING-NEXT:  1      4     1.00                        facgt	p0.d, p0/z, z0.d, z1.d
 # NONSTREAMING-NEXT:  1      4     1.00                        facgt	p0.d, p0/z, z1.d, z0.d
 # NONSTREAMING-NEXT:  1      4     1.00                        facgt	p0.h, p0/z, z0.h, z1.h
 # NONSTREAMING-NEXT:  1      4     1.00                        facgt	p0.h, p0/z, z1.h, z0.h
 # NONSTREAMING-NEXT:  1      4     1.00                        facgt	p0.s, p0/z, z0.s, z1.s
+# NONSTREAMING-NEXT:  1      4     1.00                        facgt	p0.s, p0/z, z1.s, z0.s
+# NONSTREAMING-NEXT:  1      4     1.00                        facgt	p0.d, p0/z, z1.d, z0.d
 # NONSTREAMING-NEXT:  1      4     1.00                        facgt	p0.s, p0/z, z1.s, z0.s
 # NONSTREAMING-NEXT:  1      4     0.50                        fadd	z0.d, p0/m, z0.d, #0.5
 # NONSTREAMING-NEXT:  1      4     0.50                        fadd	z0.d, p7/m, z0.d, z31.d
@@ -3987,11 +3991,15 @@
 # STREAMING-NEXT:     1      4     1.00                        facge	p0.h, p0/z, z1.h, z0.h
 # STREAMING-NEXT:     1      4     1.00                        facge	p0.s, p0/z, z0.s, z1.s
 # STREAMING-NEXT:     1      4     1.00                        facge	p0.s, p0/z, z1.s, z0.s
+# STREAMING-NEXT:     1      4     1.00                        facge	p0.d, p0/z, z1.d, z0.d
+# STREAMING-NEXT:     1      4     1.00                        facge	p0.s, p0/z, z1.s, z0.s
 # STREAMING-NEXT:     1      4     1.00                        facgt	p0.d, p0/z, z0.d, z1.d
 # STREAMING-NEXT:     1      4     1.00                        facgt	p0.d, p0/z, z1.d, z0.d
 # STREAMING-NEXT:     1      4     1.00                        facgt	p0.h, p0/z, z0.h, z1.h
 # STREAMING-NEXT:     1      4     1.00                        facgt	p0.h, p0/z, z1.h, z0.h
 # STREAMING-NEXT:     1      4     1.00                        facgt	p0.s, p0/z, z0.s, z1.s
+# STREAMING-NEXT:     1      4     1.00                        facgt	p0.s, p0/z, z1.s, z0.s
+# STREAMING-NEXT:     1      4     1.00                        facgt	p0.d, p0/z, z1.d, z0.d
 # STREAMING-NEXT:     1      4     1.00                        facgt	p0.s, p0/z, z1.s, z0.s
 # STREAMING-NEXT:     1      4     0.50                        fadd	z0.d, p0/m, z0.d, #0.5
 # STREAMING-NEXT:     1      4     0.50                        fadd	z0.d, p7/m, z0.d, z31.d
@@ -6932,11 +6940,11 @@
 
 # NONSTREAMING:      Resource pressure per iteration:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     393.00 54.00  9.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     221.00 2425.00  -     -     1378.50 1308.50 212.00 212.00 676.00
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     393.00 54.00  9.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     221.00 2425.00  -     -     1382.50 1312.50 212.00 212.00 676.00
 
 # STREAMING:         Resource pressure per iteration:
 # STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# STREAMING-NEXT:    2.67   2.67   2.67    -      -      -      -      -     225.00 14.00  9.00   245.00 211.00  -      -     464.50 267.50  -      -      -      -     122.00 1283.50 1.50  179.00 730.50 1.50   179.00  -     241.50 2093.50  -     -     184.50 172.50 6.00   6.00   435.00
+# STREAMING-NEXT:    2.67   2.67   2.67    -      -      -      -      -     225.00 14.00  9.00   245.00 211.00  -      -     464.50 267.50  -      -      -      -     122.00 1287.50 1.50  179.00 730.50 1.50   179.00  -     241.50 2093.50  -     -     184.50 172.50 6.00   6.00   435.00
 
 # NONSTREAMING:      Resource pressure by instruction:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   Instructions:
@@ -7492,11 +7500,15 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.h, p0/z, z1.h, z0.h
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.s, p0/z, z0.s, z1.s
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.s, p0/z, z1.s, z0.s
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.d, p0/z, z1.d, z0.d
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.s, p0/z, z1.s, z0.s
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.d, p0/z, z0.d, z1.d
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.d, p0/z, z1.d, z0.d
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.h, p0/z, z0.h, z1.h
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.h, p0/z, z1.h, z0.h
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.s, p0/z, z0.s, z1.s
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.d, p0/z, z1.d, z0.d
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z0.d, p0/m, z0.d, #0.5
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z0.d, p7/m, z0.d, z31.d
@@ -10909,11 +10921,15 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facge	p0.h, p0/z, z1.h, z0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facge	p0.s, p0/z, z0.s, z1.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facge	p0.s, p0/z, z1.s, z0.s
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facge	p0.d, p0/z, z1.d, z0.d
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facge	p0.s, p0/z, z1.s, z0.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facgt	p0.d, p0/z, z0.d, z1.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facgt	p0.d, p0/z, z1.d, z0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facgt	p0.h, p0/z, z0.h, z1.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facgt	p0.h, p0/z, z1.h, z0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facgt	p0.s, p0/z, z0.s, z1.s
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facgt	p0.d, p0/z, z1.d, z0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     fadd	z0.d, p0/m, z0.d, #0.5
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     fadd	z0.d, p7/m, z0.d, z31.d

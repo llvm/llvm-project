@@ -1047,6 +1047,28 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
+      if (Name.consume_front("convert.from.svbool")) {
+        // 'aarch64.sve.convert.from.svbool'
+        auto *TTy = dyn_cast<TargetExtType>(F->getReturnType());
+        if (!TTy || TTy->getName() != "aarch64.svcount")
+          return false;
+
+        Intrinsic::ID ID = Intrinsic::aarch64_sve_convert_to_svcount;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+
+      if (Name.consume_front("convert.to.svbool")) {
+        // 'aarch64.sve.convert.to.svbool'
+        auto *TTy = dyn_cast<TargetExtType>(F->arg_begin()->getType());
+        if (!TTy || TTy->getName() != "aarch64.svcount")
+          return false;
+
+        Intrinsic::ID ID = Intrinsic::aarch64_sve_convert_from_svcount;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+
       if (Name.consume_front("addqv")) {
         // 'aarch64.sve.addqv'.
         if (!F->getReturnType()->isFPOrFPVectorTy())
@@ -1279,6 +1301,27 @@ shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(Function *F, StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
+static Intrinsic::ID
+shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(Function *F, StringRef Name) {
+  if (F->arg_size() != 2)
+    return Intrinsic::not_intrinsic;
+
+  if (Name.consume_front("tcgen05.alloc.shared.") ||
+      Name.consume_front("tcgen05.alloc."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("tcgen05.dealloc."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_dealloc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_dealloc_cg2)
+        .Default(Intrinsic::not_intrinsic);
+
+  return Intrinsic::not_intrinsic;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("fma.rn."))
     return StringSwitch<Intrinsic::ID>(Name)
@@ -1345,6 +1388,27 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
+static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
+  FunctionType *NewFnTy = Intrinsic::getType(F->getContext(), IID);
+  FunctionType *OldFnTy = F->getFunctionType();
+  auto IsOldBF16StorageTy = [](Type *OldTy, Type *NewTy) {
+    return OldTy->getScalarType()->isIntegerTy() &&
+           OldTy->getPrimitiveSizeInBits() == NewTy->getPrimitiveSizeInBits();
+  };
+
+  if (!IsOldBF16StorageTy(OldFnTy->getReturnType(), NewFnTy->getReturnType()))
+    return false;
+
+  if (OldFnTy->getNumParams() != NewFnTy->getNumParams())
+    return false;
+
+  for (unsigned I = 0, E = OldFnTy->getNumParams(); I != E; ++I)
+    if (!IsOldBF16StorageTy(OldFnTy->getParamType(I), NewFnTy->getParamType(I)))
+      return false;
+
+  return true;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
                                                            StringRef Name) {
   if (!Name.consume_front("tcgen05.mma."))
@@ -1361,6 +1425,90 @@ static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
   return Name.consume_front("local") || Name.consume_front("shared") ||
          Name.consume_front("global") || Name.consume_front("constant") ||
          Name.consume_front("param");
+}
+
+static unsigned getFunctionalOpcodeForVP(StringRef Name) {
+  if (!Name.consume_front("vp."))
+    return 0;
+  return StringSwitch<unsigned>(Name)
+      .StartsWith("select", Instruction::Select)
+      .StartsWith("add", Instruction::Add)
+      .StartsWith("sub", Instruction::Sub)
+      .StartsWith("mul", Instruction::Mul)
+      .StartsWith("ashr", Instruction::AShr)
+      .StartsWith("lshr", Instruction::LShr)
+      .StartsWith("shl", Instruction::Shl)
+      .StartsWith("or", Instruction::Or)
+      .StartsWith("and", Instruction::And)
+      .StartsWith("xor", Instruction::Xor)
+      .StartsWith("fadd", Instruction::FAdd)
+      .StartsWith("fsub", Instruction::FSub)
+      .StartsWith("fmuladd", 0)
+      .StartsWith("fmul", Instruction::FMul)
+      .StartsWith("fdiv", Instruction::FDiv)
+      .StartsWith("frem", Instruction::FRem)
+      .StartsWith("fneg", Instruction::FNeg)
+      .StartsWith("trunc", Instruction::Trunc)
+      .StartsWith("zext", Instruction::ZExt)
+      .StartsWith("sext", Instruction::SExt)
+      .StartsWith("fptrunc", Instruction::FPTrunc)
+      .StartsWith("fpext", Instruction::FPExt)
+      .StartsWith("fptoui", Instruction::FPToUI)
+      .StartsWith("fptosi", Instruction::FPToSI)
+      .StartsWith("uitofp", Instruction::UIToFP)
+      .StartsWith("sitofp", Instruction::SIToFP)
+      .StartsWith("ptrtoint", Instruction::PtrToInt)
+      .StartsWith("inttoptr", Instruction::IntToPtr)
+      .StartsWith("icmp", Instruction::ICmp)
+      .StartsWith("fcmp", Instruction::FCmp)
+      .Default(0);
+}
+
+static Intrinsic::ID getFunctionalIntrinsicIDForVP(StringRef Name) {
+  if (!Name.consume_front("vp."))
+    return 0;
+  return StringSwitch<Intrinsic::ID>(Name)
+      .StartsWith("abs", Intrinsic::abs)
+      .StartsWith("smax", Intrinsic::smax)
+      .StartsWith("smin", Intrinsic::smin)
+      .StartsWith("umax", Intrinsic::umax)
+      .StartsWith("umin", Intrinsic::umin)
+      .StartsWith("copysign", Intrinsic::copysign)
+      .StartsWith("minnum", Intrinsic::minnum)
+      .StartsWith("maxnum", Intrinsic::maxnum)
+      .StartsWith("minimum", Intrinsic::minimum)
+      .StartsWith("maximum", Intrinsic::maximum)
+      .StartsWith("fabs", Intrinsic::fabs)
+      .StartsWith("sqrt", Intrinsic::sqrt)
+      .StartsWith("fma", Intrinsic::fma)
+      .StartsWith("fmuladd", Intrinsic::fmuladd)
+      .StartsWith("ceil", Intrinsic::ceil)
+      .StartsWith("floor", Intrinsic::floor)
+      .StartsWith("rint", Intrinsic::rint)
+      .StartsWith("nearbyint", Intrinsic::nearbyint)
+      .StartsWith("roundeven", Intrinsic::roundeven)
+      .StartsWith("roundtozero", Intrinsic::trunc)
+      .StartsWith("round", Intrinsic::round)
+      .StartsWith("lrint", Intrinsic::lrint)
+      .StartsWith("llrint", Intrinsic::llrint)
+      .StartsWith("bitreverse", Intrinsic::bitreverse)
+      .StartsWith("bswap", Intrinsic::bswap)
+      .StartsWith("ctpop", Intrinsic::ctpop)
+      .StartsWith("ctlz", Intrinsic::ctlz)
+      .StartsWith("cttz.elts", 0)
+      .StartsWith("cttz", Intrinsic::cttz)
+      .StartsWith("sadd.sat", Intrinsic::sadd_sat)
+      .StartsWith("uadd.sat", Intrinsic::uadd_sat)
+      .StartsWith("ssub.sat", Intrinsic::ssub_sat)
+      .StartsWith("usub.sat", Intrinsic::usub_sat)
+      .StartsWith("fshl", Intrinsic::fshl)
+      .StartsWith("fshr", Intrinsic::fshr)
+      .StartsWith("is.fpclass", Intrinsic::is_fpclass)
+      .Default(0);
+}
+
+static bool shouldUpgradeVPIntrinsic(StringRef Name) {
+  return getFunctionalOpcodeForVP(Name) || getFunctionalIntrinsicIDForVP(Name);
 }
 
 static bool convertIntrinsicValidType(StringRef Name,
@@ -1487,6 +1635,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           NewFn = nullptr;
           return true;
         }
+      }
+
+      if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+        NewFn = nullptr;
+        return true;
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -1776,9 +1929,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
 
       // Check for nvvm intrinsics that need a return type adjustment.
-      if (!F->getReturnType()->getScalarType()->isBFloatTy()) {
+      {
         Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
-        if (IID != Intrinsic::not_intrinsic) {
+        if (IID != Intrinsic::not_intrinsic &&
+            isLegacyNVPTXBF16IntSignature(F, IID)) {
           NewFn = nullptr;
           return true;
         }
@@ -1808,6 +1962,19 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         NewFn = Intrinsic::getOrInsertDeclaration(
             F->getParent(), IID, F->getReturnType(),
             F->getFunctionType()->params());
+        return true;
+      }
+
+      // Upgrade tcgen05.alloc/dealloc with the is_exclusive argument and
+      // tcgen05.alloc shared variants to anyptr intrinsics.
+      IID = shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        if (Intrinsic::isOverloaded(IID))
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                    {F->getArg(0)->getType()});
+        else
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
       }
 
@@ -2019,6 +2186,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break;
       return true;
     }
+    if (shouldUpgradeVPIntrinsic(Name))
+      return true;
     break;
   }
 
@@ -3071,7 +3240,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
-        !F->getReturnType()->getScalarType()->isBFloatTy()) {
+        isLegacyNVPTXBF16IntSignature(F, IID)) {
       rename(F);
       Function *NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
       SmallVector<Value *, 2> Args;
@@ -4969,7 +5138,6 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
     NewCall->setCallingConv(CI->getCallingConv());
     NewCall->setAttributes(CI->getAttributes());
-    NewCall->setDebugLoc(CI->getDebugLoc());
     NewCall->copyMetadata(*CI);
     return NewCall;
   };
@@ -5026,11 +5194,25 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
     NewCall->setCallingConv(CI->getCallingConv());
     NewCall->setAttributes(CI->getAttributes());
-    NewCall->setDebugLoc(CI->getDebugLoc());
     NewCall->copyMetadata(*CI);
     NewCall->takeName(CI);
     return NewCall;
   }
+  }
+
+  if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+    Value *LHS = CI->getArgOperand(0);
+    Value *RHS = CI->getArgOperand(1);
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(
+        cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue());
+    Value *Cmp = Builder.CreateCmp(Pred, LHS, RHS);
+    CallInst *NewCall = Builder.CreateIntrinsicWithoutFolding(
+        CI->getType(), Intrinsic::amdgcn_ballot, Cmp);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->copyMetadata(*CI);
+    NewCall->takeName(CI);
+    return NewCall;
   }
 
   AtomicRMWInst::BinOp RMWOp =
@@ -5226,6 +5408,77 @@ static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
   return nullptr;
 }
 
+static ICmpInst::Predicate getVPIntPredicateFromMD(const Value *Op) {
+  Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return ICmpInst::BAD_ICMP_PREDICATE;
+  return StringSwitch<ICmpInst::Predicate>(cast<MDString>(MD)->getString())
+      .Case("eq", ICmpInst::ICMP_EQ)
+      .Case("ne", ICmpInst::ICMP_NE)
+      .Case("ugt", ICmpInst::ICMP_UGT)
+      .Case("uge", ICmpInst::ICMP_UGE)
+      .Case("ult", ICmpInst::ICMP_ULT)
+      .Case("ule", ICmpInst::ICMP_ULE)
+      .Case("sgt", ICmpInst::ICMP_SGT)
+      .Case("sge", ICmpInst::ICMP_SGE)
+      .Case("slt", ICmpInst::ICMP_SLT)
+      .Case("sle", ICmpInst::ICMP_SLE)
+      .Default(ICmpInst::BAD_ICMP_PREDICATE);
+}
+
+static FCmpInst::Predicate getVPFPPredicateFromMD(const Value *Op) {
+  Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return FCmpInst::BAD_FCMP_PREDICATE;
+  return StringSwitch<FCmpInst::Predicate>(cast<MDString>(MD)->getString())
+      .Case("oeq", FCmpInst::FCMP_OEQ)
+      .Case("ogt", FCmpInst::FCMP_OGT)
+      .Case("oge", FCmpInst::FCMP_OGE)
+      .Case("olt", FCmpInst::FCMP_OLT)
+      .Case("ole", FCmpInst::FCMP_OLE)
+      .Case("one", FCmpInst::FCMP_ONE)
+      .Case("ord", FCmpInst::FCMP_ORD)
+      .Case("uno", FCmpInst::FCMP_UNO)
+      .Case("ueq", FCmpInst::FCMP_UEQ)
+      .Case("ugt", FCmpInst::FCMP_UGT)
+      .Case("uge", FCmpInst::FCMP_UGE)
+      .Case("ult", FCmpInst::FCMP_ULT)
+      .Case("ule", FCmpInst::FCMP_ULE)
+      .Case("une", FCmpInst::FCMP_UNE)
+      .Default(FCmpInst::BAD_FCMP_PREDICATE);
+}
+
+static Value *upgradeVPIntrinsicCall(StringRef Name, CallBase *CI,
+                                     IRBuilder<> &Builder) {
+  Value *Rep;
+  unsigned Opcode = getFunctionalOpcodeForVP(Name);
+  if (Opcode && Instruction::isUnaryOp(Opcode))
+    Rep =
+        Builder.CreateUnOp((Instruction::UnaryOps)Opcode, CI->getArgOperand(0));
+  else if (Opcode && Instruction::isBinaryOp(Opcode))
+    Rep = Builder.CreateBinOp((Instruction::BinaryOps)Opcode,
+                              CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode && Instruction::isCast(Opcode))
+    Rep = Builder.CreateCast((Instruction::CastOps)Opcode, CI->getArgOperand(0),
+                             CI->getType());
+  else if (Opcode == Instruction::ICmp)
+    Rep = Builder.CreateICmp(getVPIntPredicateFromMD(CI->getArgOperand(2)),
+                             CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode == Instruction::FCmp)
+    Rep = Builder.CreateFCmp(getVPFPPredicateFromMD(CI->getArgOperand(2)),
+                             CI->getArgOperand(0), CI->getArgOperand(1));
+  else if (Opcode == Instruction::Select)
+    Rep = Builder.CreateSelect(CI->getArgOperand(0), CI->getArgOperand(1),
+                               CI->getArgOperand(2));
+  else if (auto IntrinsicID = getFunctionalIntrinsicIDForVP(Name)) {
+    SmallVector<Value *, 2> Args(drop_end(CI->args(), 2));
+    Rep = Builder.CreateIntrinsic(CI->getType(), IntrinsicID, Args, {});
+  } else
+    llvm_unreachable("Unexpected vp intrinsic");
+  Rep->takeName(CI);
+  return Rep;
+}
+
 static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
                                                 IRBuilder<> &Builder) {
   Intrinsic::ID IID = NewFn->getIntrinsicID();
@@ -5334,6 +5587,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else if (Name == "lifetime.start.i64" || Name == "lifetime.end.i64") {
       // Delete calls to invalid @llvm.lifetime.{start,end}.i64 intrinsics.
       Rep = nullptr;
+    } else if (shouldUpgradeVPIntrinsic(Name)) {
+      Rep = upgradeVPIntrinsicCall(Name, CI, Builder);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
@@ -5803,6 +6058,14 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
+  case Intrinsic::nvvm_tcgen05_alloc_cg1:
+  case Intrinsic::nvvm_tcgen05_alloc_cg2:
+  case Intrinsic::nvvm_tcgen05_dealloc_cg1:
+  case Intrinsic::nvvm_tcgen05_dealloc_cg2:
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                   Builder.getFalse()});
+    break;
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
   case Intrinsic::riscv_sha256sum0:

@@ -270,10 +270,14 @@ public:
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
-  void convertFromNewDbgValues() {
+  /// Returns true if any function's conversion modified the module.
+  bool convertFromNewDbgValues() {
+    bool Modified = false;
     for (auto &F : *this) {
-      F.convertFromNewDbgValues();
+      if (F.convertFromNewDbgValues())
+        Modified = true;
     }
+    return Modified;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -1066,7 +1070,7 @@ public:
   /// @{
 
   /// Returns the floating-point ABI recorded by the "float-abi" module flag, or
-  /// FloatABI::Default when the flag is absent (meaning the target default).
+  /// the ABI implied by the target triple when the flag is absent.
   FloatABI::ABIType getFloatABI() const;
   /// @}
 

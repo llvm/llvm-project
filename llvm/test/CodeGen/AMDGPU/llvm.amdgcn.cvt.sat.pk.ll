@@ -10,10 +10,10 @@ declare i16 @llvm.amdgcn.sat.pk4.u4.u8(i32) #0
 define amdgpu_kernel void @sat_pk4_i4_i8_f32_v(i32 %src, ptr %out) #1 {
 ; SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_v:
 ; SDAG-REAL16:       ; %bb.0:
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-REAL16-NEXT:    v_nop
 ; SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_clause 0x1
 ; SDAG-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -25,10 +25,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_v(i32 %src, ptr %out) #1 {
 ;
 ; SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_v:
 ; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-FAKE16-NEXT:    v_nop
 ; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_clause 0x1
 ; SDAG-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -40,10 +40,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_v(i32 %src, ptr %out) #1 {
 ;
 ; GISEL-REAL16-LABEL: sat_pk4_i4_i8_f32_v:
 ; GISEL-REAL16:       ; %bb.0:
+; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-REAL16-NEXT:    v_nop
 ; GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_clause 0x1
 ; GISEL-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -55,10 +55,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_v(i32 %src, ptr %out) #1 {
 ;
 ; GISEL-FAKE16-LABEL: sat_pk4_i4_i8_f32_v:
 ; GISEL-FAKE16:       ; %bb.0:
+; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-FAKE16-NEXT:    v_nop
 ; GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_clause 0x1
 ; GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -75,10 +75,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_v(i32 %src, ptr %out) #1 {
 define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_s:
 ; SDAG-REAL16:       ; %bb.0:
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-REAL16-NEXT:    v_nop
 ; SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, s8
@@ -88,10 +88,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 ;
 ; SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_s:
 ; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-FAKE16-NEXT:    v_nop
 ; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v1, s8
@@ -101,10 +101,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 ;
 ; GISEL-REAL16-LABEL: sat_pk4_i4_i8_f32_s:
 ; GISEL-REAL16:       ; %bb.0:
+; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-REAL16-NEXT:    v_nop
 ; GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_clause 0x1
 ; GISEL-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -116,10 +116,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 ;
 ; GISEL-FAKE16-LABEL: sat_pk4_i4_i8_f32_s:
 ; GISEL-FAKE16:       ; %bb.0:
+; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-FAKE16-NEXT:    v_nop
 ; GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_clause 0x1
 ; GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -136,10 +136,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 define amdgpu_kernel void @sat_pk4_i4_i8_f32_i(ptr %out) #1 {
 ; SDAG-REAL16-LABEL: sat_pk4_i4_i8_f32_i:
 ; SDAG-REAL16:       ; %bb.0:
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-REAL16-NEXT:    v_nop
 ; SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, 0x64
@@ -149,10 +149,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_i(ptr %out) #1 {
 ;
 ; SDAG-FAKE16-LABEL: sat_pk4_i4_i8_f32_i:
 ; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-FAKE16-NEXT:    v_nop
 ; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v1, 0x64
@@ -162,10 +162,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_i(ptr %out) #1 {
 ;
 ; GISEL-REAL16-LABEL: sat_pk4_i4_i8_f32_i:
 ; GISEL-REAL16:       ; %bb.0:
+; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-REAL16-NEXT:    v_nop
 ; GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GISEL-REAL16-NEXT:    v_sat_pk4_i4_i8_e32 v0.l, 0x64
 ; GISEL-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -175,10 +175,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_i(ptr %out) #1 {
 ;
 ; GISEL-FAKE16-LABEL: sat_pk4_i4_i8_f32_i:
 ; GISEL-FAKE16:       ; %bb.0:
+; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-FAKE16-NEXT:    v_nop
 ; GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GISEL-FAKE16-NEXT:    v_sat_pk4_i4_i8_e32 v0, 0x64
 ; GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
@@ -193,10 +193,10 @@ define amdgpu_kernel void @sat_pk4_i4_i8_f32_i(ptr %out) #1 {
 define amdgpu_kernel void @sat_pk4_u4_u8_f32_v(i32 %src, ptr %out) #1 {
 ; SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_v:
 ; SDAG-REAL16:       ; %bb.0:
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-REAL16-NEXT:    v_nop
 ; SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_clause 0x1
 ; SDAG-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -208,10 +208,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_v(i32 %src, ptr %out) #1 {
 ;
 ; SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_v:
 ; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-FAKE16-NEXT:    v_nop
 ; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_clause 0x1
 ; SDAG-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -223,10 +223,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_v(i32 %src, ptr %out) #1 {
 ;
 ; GISEL-REAL16-LABEL: sat_pk4_u4_u8_f32_v:
 ; GISEL-REAL16:       ; %bb.0:
+; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-REAL16-NEXT:    v_nop
 ; GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_clause 0x1
 ; GISEL-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -238,10 +238,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_v(i32 %src, ptr %out) #1 {
 ;
 ; GISEL-FAKE16-LABEL: sat_pk4_u4_u8_f32_v:
 ; GISEL-FAKE16:       ; %bb.0:
+; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-FAKE16-NEXT:    v_nop
 ; GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_clause 0x1
 ; GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -258,10 +258,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_v(i32 %src, ptr %out) #1 {
 define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_s:
 ; SDAG-REAL16:       ; %bb.0:
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-REAL16-NEXT:    v_nop
 ; SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, s8
@@ -271,10 +271,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 ;
 ; SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_s:
 ; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-FAKE16-NEXT:    v_nop
 ; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v1, s8
@@ -284,10 +284,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 ;
 ; GISEL-REAL16-LABEL: sat_pk4_u4_u8_f32_s:
 ; GISEL-REAL16:       ; %bb.0:
+; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-REAL16-NEXT:    v_nop
 ; GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_clause 0x1
 ; GISEL-REAL16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -299,10 +299,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 ;
 ; GISEL-FAKE16-LABEL: sat_pk4_u4_u8_f32_s:
 ; GISEL-FAKE16:       ; %bb.0:
+; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-FAKE16-NEXT:    v_nop
 ; GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_clause 0x1
 ; GISEL-FAKE16-NEXT:    s_load_b32 s2, s[4:5], 0x0 nv
 ; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -319,10 +319,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 define amdgpu_kernel void @sat_pk4_u4_u8_f32_i(ptr %out) #1 {
 ; SDAG-REAL16-LABEL: sat_pk4_u4_u8_f32_i:
 ; SDAG-REAL16:       ; %bb.0:
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-REAL16-NEXT:    v_nop
 ; SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; SDAG-REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, 0x64
@@ -332,10 +332,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_i(ptr %out) #1 {
 ;
 ; SDAG-FAKE16-LABEL: sat_pk4_u4_u8_f32_i:
 ; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-FAKE16-NEXT:    v_nop
 ; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v1, 0x64
@@ -345,10 +345,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_i(ptr %out) #1 {
 ;
 ; GISEL-REAL16-LABEL: sat_pk4_u4_u8_f32_i:
 ; GISEL-REAL16:       ; %bb.0:
+; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-REAL16-NEXT:    v_nop
 ; GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GISEL-REAL16-NEXT:    v_sat_pk4_u4_u8_e32 v0.l, 0x64
 ; GISEL-REAL16-NEXT:    v_mov_b32_e32 v1, 0
@@ -358,10 +358,10 @@ define amdgpu_kernel void @sat_pk4_u4_u8_f32_i(ptr %out) #1 {
 ;
 ; GISEL-FAKE16-LABEL: sat_pk4_u4_u8_f32_i:
 ; GISEL-FAKE16:       ; %bb.0:
+; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-FAKE16-NEXT:    v_nop
 ; GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GISEL-FAKE16-NEXT:    v_sat_pk4_u4_u8_e32 v0, 0x64
 ; GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
