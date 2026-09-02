@@ -2310,8 +2310,8 @@ static FailureOr<DonorIndex> fitDonorIndex(ArrayRef<int64_t> needed,
     // Every slot reads `offset`; no dimension is involved.
     dimStride = 1;
   } else {
-    for (int64_t index : needed) {
-      int64_t diff = index - offset;
+    for (int64_t wanted : needed) {
+      int64_t diff = wanted - offset;
       if (diff < 0 || diff % stride != 0)
         return failure();
       dimExtent = std::max(dimExtent, diff / stride + 1);
@@ -2319,12 +2319,12 @@ static FailureOr<DonorIndex> fitDonorIndex(ArrayRef<int64_t> needed,
   }
 
   // Derived from the table, so verify against the table before relying on it.
-  DonorIndex index{stride, offset, dimStride, dimExtent};
+  DonorIndex donorIndex{stride, offset, dimStride, dimExtent};
   if (!llvm::all_of(llvm::seq<int64_t>(0, targetLanePeriod), [&](int64_t slot) {
-        return needed[slot] == index.at(slot);
+        return needed[slot] == donorIndex.at(slot);
       }))
     return failure();
-  return index;
+  return donorIndex;
 }
 
 /// Works out where element `pos` of the target fragment comes from: which donor
@@ -2358,23 +2358,25 @@ deriveElementSource(const OwnedCoords &inputOwned,
     // Where in its fragment each slot's donor keeps the element it needs.
     SmallVector<int64_t> needed;
     for (int64_t slot = 0; slot < targetLanePeriod; slot++) {
-      int64_t index = findInFragment(slot + donorDelta, targetOwned[slot][pos]);
-      if (index < 0)
+      int64_t wanted =
+          findInFragment(slot + donorDelta, targetOwned[slot][pos]);
+      if (wanted < 0)
         break;
-      needed.push_back(index);
+      needed.push_back(wanted);
     }
     if (static_cast<int64_t>(needed.size()) != targetLanePeriod)
       continue;
     sawCompleteDonor = true;
 
-    FailureOr<DonorIndex> index = fitDonorIndex(needed, targetLanePeriod);
-    if (failed(index))
+    FailureOr<DonorIndex> donorIndex = fitDonorIndex(needed, targetLanePeriod);
+    if (failed(donorIndex))
       continue;
 
     // The donor is the lane itself exactly when `donorDelta` is 0:
     // `needed[slot]` was located in the fragment of lane `slot + donorDelta`,
     // so at 0 every slot's extract is local by construction.
-    return ElementSource{*index, donorDelta, /*needsShuffle=*/donorDelta != 0};
+    return ElementSource{*donorIndex, donorDelta,
+                         /*needsShuffle=*/donorDelta != 0};
   }
   limit = sawCompleteDonor ? RedistributionLimit::IndexNotLaneAffine
                            : RedistributionLimit::NoDonorDelta;
@@ -2466,39 +2468,39 @@ static FailureOr<Value> redistributeBroadcastedValue(
   Value width;
   Value slotI32;
 
-  // The lane's index along the selected dimension, shared by sources over the
-  // same one. Either step is skipped when it is a no-op over `slot`.
+  // The lane's coordinate along the selected dimension, shared by sources over
+  // the same one. Either step is skipped when it is a no-op over `slot`.
   llvm::DenseMap<std::pair<int64_t, int64_t>, Value> dimIndices;
-  auto getDimIndex = [&](const DonorIndex &index) -> Value {
-    Value &dimIndex = dimIndices[{index.dimStride, index.dimExtent}];
+  auto getDimIndex = [&](const DonorIndex &donorIndex) -> Value {
+    Value &dimIndex = dimIndices[{donorIndex.dimStride, donorIndex.dimExtent}];
     if (dimIndex)
       return dimIndex;
     dimIndex = slot;
-    if (index.dimStride != 1)
+    if (donorIndex.dimStride != 1)
       dimIndex = arith::DivUIOp::create(
           rewriter, loc, dimIndex,
-          arith::ConstantIndexOp::create(rewriter, loc, index.dimStride));
-    if (index.dimExtent < targetLanePeriod / index.dimStride)
+          arith::ConstantIndexOp::create(rewriter, loc, donorIndex.dimStride));
+    if (donorIndex.dimExtent < targetLanePeriod / donorIndex.dimStride)
       dimIndex = arith::RemUIOp::create(
           rewriter, loc, dimIndex,
-          arith::ConstantIndexOp::create(rewriter, loc, index.dimExtent));
+          arith::ConstantIndexOp::create(rewriter, loc, donorIndex.dimExtent));
     return dimIndex;
   };
 
-  // The index the lane extracts.
-  auto getDonorIndex = [&](const DonorIndex &index) -> OpFoldResult {
+  // `donorIndex(slot)`: which element of its own fragment the lane extracts.
+  auto getDonorIndex = [&](const DonorIndex &donorIndex) -> OpFoldResult {
     // Every slot reads the same element; no dimension is involved.
-    if (index.stride == 0)
-      return rewriter.getIndexAttr(index.offset);
-    Value value = getDimIndex(index);
-    if (index.stride != 1)
+    if (donorIndex.stride == 0)
+      return rewriter.getIndexAttr(donorIndex.offset);
+    Value value = getDimIndex(donorIndex);
+    if (donorIndex.stride != 1)
       value = arith::MulIOp::create(
           rewriter, loc, value,
-          arith::ConstantIndexOp::create(rewriter, loc, index.stride));
-    if (index.offset != 0)
+          arith::ConstantIndexOp::create(rewriter, loc, donorIndex.stride));
+    if (donorIndex.offset != 0)
       value = arith::AddIOp::create(
           rewriter, loc, value,
-          arith::ConstantIndexOp::create(rewriter, loc, index.offset));
+          arith::ConstantIndexOp::create(rewriter, loc, donorIndex.offset));
     return value;
   };
 
