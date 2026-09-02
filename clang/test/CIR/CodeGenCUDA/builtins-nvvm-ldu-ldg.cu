@@ -41,119 +41,196 @@ typedef double double2 __attribute__((ext_vector_type(2)));
 // CIR-LABEL: @_Z8nvvm_ldgPKv
 // LLVM-LABEL: @_Z8nvvm_ldgPKv
 __device__ void nvvm_ldg(const void *p) {
-  // CIR: cir.cast address_space %{{.*}} : !cir.ptr<!s8i> -> !cir.ptr<!s8i, target_address_space(1)>
-  // CIR: cir.load invariant align(1) %{{.*}} : !cir.ptr<!s8i, target_address_space(1)>, !s8i
-  // CIR: cir.cast address_space %{{.*}} : !cir.ptr<!u8i> -> !cir.ptr<!u8i, target_address_space(1)>
-  // CIR: cir.load invariant align(1) %{{.*}} : !cir.ptr<!u8i, target_address_space(1)>, !u8i
-  // CIR: cir.cast address_space %{{.*}} : !cir.ptr<!s8i> -> !cir.ptr<!s8i, target_address_space(1)>
-  // CIR: cir.load invariant align(1) %{{.*}} : !cir.ptr<!s8i, target_address_space(1)>, !s8i
-  // LLVM: load i8, ptr addrspace(1) {{%[0-9]+}}, align 1, !invariant.load
-  // LLVM: load i8, ptr addrspace(1) {{%[0-9]+}}, align 1, !invariant.load
-  // LLVM: load i8, ptr addrspace(1) {{%[0-9]+}}, align 1, !invariant.load
+  // CIR: %[[C_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!s8i> -> !cir.ptr<!s8i, target_address_space(1)>
+  // CIR: cir.load invariant align(1) %[[C_CAST]] : !cir.ptr<!s8i, target_address_space(1)>, !s8i
+  // LLVM: %[[C_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load i8, ptr addrspace(1) %[[C_CAST]], align 1, !invariant.load
   __nvvm_ldg_c((const char *)p);
+
+  // CIR: %[[UC_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!u8i> -> !cir.ptr<!u8i, target_address_space(1)>
+  // CIR: cir.load invariant align(1) %[[UC_CAST]] : !cir.ptr<!u8i, target_address_space(1)>, !u8i
+  // LLVM: %[[UC_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load i8, ptr addrspace(1) %[[UC_CAST]], align 1, !invariant.load
   __nvvm_ldg_uc((const unsigned char *)p);
+
+  // CIR: %[[SC_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!s8i> -> !cir.ptr<!s8i, target_address_space(1)>
+  // CIR: cir.load invariant align(1) %[[SC_CAST]] : !cir.ptr<!s8i, target_address_space(1)>, !s8i
+  // LLVM: %[[SC_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load i8, ptr addrspace(1) %[[SC_CAST]], align 1, !invariant.load
   __nvvm_ldg_sc((const signed char *)p);
 
-  // CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!s16i, target_address_space(1)>, !s16i
-  // CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!u16i, target_address_space(1)>, !u16i
-  // LLVM: load i16, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
-  // LLVM: load i16, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
+  // CIR: %[[S_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!s16i> -> !cir.ptr<!s16i, target_address_space(1)>
+  // CIR: cir.load invariant align(2) %[[S_CAST]] : !cir.ptr<!s16i, target_address_space(1)>, !s16i
+  // LLVM: %[[S_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load i16, ptr addrspace(1) %[[S_CAST]], align 2, !invariant.load
   __nvvm_ldg_s((const short *)p);
+
+  // CIR: %[[US_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!u16i> -> !cir.ptr<!u16i, target_address_space(1)>
+  // CIR: cir.load invariant align(2) %[[US_CAST]] : !cir.ptr<!u16i, target_address_space(1)>, !u16i
+  // LLVM: %[[US_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load i16, ptr addrspace(1) %[[US_CAST]], align 2, !invariant.load
   __nvvm_ldg_us((const unsigned short *)p);
 
-  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!s32i, target_address_space(1)>, !s32i
-  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!u32i, target_address_space(1)>, !u32i
-  // LLVM: load i32, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
-  // LLVM: load i32, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // CIR: %[[I_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!s32i> -> !cir.ptr<!s32i, target_address_space(1)>
+  // CIR: cir.load invariant align(4) %[[I_CAST]] : !cir.ptr<!s32i, target_address_space(1)>, !s32i
+  // LLVM: %[[I_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load i32, ptr addrspace(1) %[[I_CAST]], align 4, !invariant.load
   __nvvm_ldg_i((const int *)p);
+
+  // CIR: %[[UI_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!u32i> -> !cir.ptr<!u32i, target_address_space(1)>
+  // CIR: cir.load invariant align(4) %[[UI_CAST]] : !cir.ptr<!u32i, target_address_space(1)>, !u32i
+  // LLVM: %[[UI_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load i32, ptr addrspace(1) %[[UI_CAST]], align 4, !invariant.load
   __nvvm_ldg_ui((const unsigned int *)p);
 
-  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!s64i, target_address_space(1)>, !s64i
-  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!u64i, target_address_space(1)>, !u64i
-  // LLVM: load i64, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
-  // LLVM: load i64, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // CIR: %[[L_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!s64i> -> !cir.ptr<!s64i, target_address_space(1)>
+  // CIR: cir.load invariant align(8) %[[L_CAST]] : !cir.ptr<!s64i, target_address_space(1)>, !s64i
+  // LLVM: %[[L_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load i64, ptr addrspace(1) %[[L_CAST]], align 8, !invariant.load
   __nvvm_ldg_l((const long *)p);
+
+  // CIR: %[[UL_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!u64i> -> !cir.ptr<!u64i, target_address_space(1)>
+  // CIR: cir.load invariant align(8) %[[UL_CAST]] : !cir.ptr<!u64i, target_address_space(1)>, !u64i
+  // LLVM: %[[UL_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load i64, ptr addrspace(1) %[[UL_CAST]], align 8, !invariant.load
   __nvvm_ldg_ul((const unsigned long *)p);
 
-  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.float, target_address_space(1)>, !cir.float
-  // LLVM: load float, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // CIR: %[[F_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.float> -> !cir.ptr<!cir.float, target_address_space(1)>
+  // CIR: cir.load invariant align(4) %[[F_CAST]] : !cir.ptr<!cir.float, target_address_space(1)>, !cir.float
+  // LLVM: %[[F_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load float, ptr addrspace(1) %[[F_CAST]], align 4, !invariant.load
   __nvvm_ldg_f((const float *)p);
-  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.double, target_address_space(1)>, !cir.double
-  // LLVM: load double, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+
+  // CIR: %[[D_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.double> -> !cir.ptr<!cir.double, target_address_space(1)>
+  // CIR: cir.load invariant align(8) %[[D_CAST]] : !cir.ptr<!cir.double, target_address_space(1)>, !cir.double
+  // LLVM: %[[D_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load double, ptr addrspace(1) %[[D_CAST]], align 8, !invariant.load
   __nvvm_ldg_d((const double *)p);
 
-  // CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!cir.vector<2 x !s8i>, target_address_space(1)>, !cir.vector<2 x !s8i>
-  // CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!cir.vector<2 x !u8i>, target_address_space(1)>, !cir.vector<2 x !u8i>
-  // CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!cir.vector<2 x !s8i>, target_address_space(1)>, !cir.vector<2 x !s8i>
-  // LLVM: load <2 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
-  // LLVM: load <2 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
-  // LLVM: load <2 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
+  // CIR: %[[C2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !s8i>> -> !cir.ptr<!cir.vector<2 x !s8i>, target_address_space(1)>
+  // CIR: cir.load invariant align(2) %[[C2_CAST]] : !cir.ptr<!cir.vector<2 x !s8i>, target_address_space(1)>, !cir.vector<2 x !s8i>
+  // LLVM: %[[C2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i8>, ptr addrspace(1) %[[C2_CAST]], align 2, !invariant.load
   __nvvm_ldg_c2((const char2 *)p);
+
+  // CIR: %[[UC2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !u8i>> -> !cir.ptr<!cir.vector<2 x !u8i>, target_address_space(1)>
+  // CIR: cir.load invariant align(2) %[[UC2_CAST]] : !cir.ptr<!cir.vector<2 x !u8i>, target_address_space(1)>, !cir.vector<2 x !u8i>
+  // LLVM: %[[UC2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i8>, ptr addrspace(1) %[[UC2_CAST]], align 2, !invariant.load
   __nvvm_ldg_uc2((const uchar2 *)p);
+
+  // CIR: %[[SC2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !s8i>> -> !cir.ptr<!cir.vector<2 x !s8i>, target_address_space(1)>
+  // CIR: cir.load invariant align(2) %[[SC2_CAST]] : !cir.ptr<!cir.vector<2 x !s8i>, target_address_space(1)>, !cir.vector<2 x !s8i>
+  // LLVM: %[[SC2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i8>, ptr addrspace(1) %[[SC2_CAST]], align 2, !invariant.load
   __nvvm_ldg_sc2((const schar2 *)p);
 
-  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.vector<4 x !s8i>, target_address_space(1)>, !cir.vector<4 x !s8i>
-  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.vector<4 x !u8i>, target_address_space(1)>, !cir.vector<4 x !u8i>
-  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.vector<4 x !s8i>, target_address_space(1)>, !cir.vector<4 x !s8i>
-  // LLVM: load <4 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
-  // LLVM: load <4 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
-  // LLVM: load <4 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // CIR: %[[C4_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<4 x !s8i>> -> !cir.ptr<!cir.vector<4 x !s8i>, target_address_space(1)>
+  // CIR: cir.load invariant align(4) %[[C4_CAST]] : !cir.ptr<!cir.vector<4 x !s8i>, target_address_space(1)>, !cir.vector<4 x !s8i>
+  // LLVM: %[[C4_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <4 x i8>, ptr addrspace(1) %[[C4_CAST]], align 4, !invariant.load
   __nvvm_ldg_c4((const char4 *)p);
+
+  // CIR: %[[UC4_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<4 x !u8i>> -> !cir.ptr<!cir.vector<4 x !u8i>, target_address_space(1)>
+  // CIR: cir.load invariant align(4) %[[UC4_CAST]] : !cir.ptr<!cir.vector<4 x !u8i>, target_address_space(1)>, !cir.vector<4 x !u8i>
+  // LLVM: %[[UC4_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <4 x i8>, ptr addrspace(1) %[[UC4_CAST]], align 4, !invariant.load
   __nvvm_ldg_uc4((const uchar4 *)p);
+
+  // CIR: %[[SC4_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<4 x !s8i>> -> !cir.ptr<!cir.vector<4 x !s8i>, target_address_space(1)>
+  // CIR: cir.load invariant align(4) %[[SC4_CAST]] : !cir.ptr<!cir.vector<4 x !s8i>, target_address_space(1)>, !cir.vector<4 x !s8i>
+  // LLVM: %[[SC4_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <4 x i8>, ptr addrspace(1) %[[SC4_CAST]], align 4, !invariant.load
   __nvvm_ldg_sc4((const schar4 *)p);
 
-  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.vector<2 x !s16i>, target_address_space(1)>, !cir.vector<2 x !s16i>
-  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.vector<2 x !u16i>, target_address_space(1)>, !cir.vector<2 x !u16i>
-  // LLVM: load <2 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
-  // LLVM: load <2 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // CIR: %[[S2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !s16i>> -> !cir.ptr<!cir.vector<2 x !s16i>, target_address_space(1)>
+  // CIR: cir.load invariant align(4) %[[S2_CAST]] : !cir.ptr<!cir.vector<2 x !s16i>, target_address_space(1)>, !cir.vector<2 x !s16i>
+  // LLVM: %[[S2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i16>, ptr addrspace(1) %[[S2_CAST]], align 4, !invariant.load
   __nvvm_ldg_s2((const short2 *)p);
+
+  // CIR: %[[US2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !u16i>> -> !cir.ptr<!cir.vector<2 x !u16i>, target_address_space(1)>
+  // CIR: cir.load invariant align(4) %[[US2_CAST]] : !cir.ptr<!cir.vector<2 x !u16i>, target_address_space(1)>, !cir.vector<2 x !u16i>
+  // LLVM: %[[US2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i16>, ptr addrspace(1) %[[US2_CAST]], align 4, !invariant.load
   __nvvm_ldg_us2((const ushort2 *)p);
 
-  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.vector<4 x !s16i>, target_address_space(1)>, !cir.vector<4 x !s16i>
-  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.vector<4 x !u16i>, target_address_space(1)>, !cir.vector<4 x !u16i>
-  // LLVM: load <4 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
-  // LLVM: load <4 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // CIR: %[[S4_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<4 x !s16i>> -> !cir.ptr<!cir.vector<4 x !s16i>, target_address_space(1)>
+  // CIR: cir.load invariant align(8) %[[S4_CAST]] : !cir.ptr<!cir.vector<4 x !s16i>, target_address_space(1)>, !cir.vector<4 x !s16i>
+  // LLVM: %[[S4_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <4 x i16>, ptr addrspace(1) %[[S4_CAST]], align 8, !invariant.load
   __nvvm_ldg_s4((const short4 *)p);
+
+  // CIR: %[[US4_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<4 x !u16i>> -> !cir.ptr<!cir.vector<4 x !u16i>, target_address_space(1)>
+  // CIR: cir.load invariant align(8) %[[US4_CAST]] : !cir.ptr<!cir.vector<4 x !u16i>, target_address_space(1)>, !cir.vector<4 x !u16i>
+  // LLVM: %[[US4_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <4 x i16>, ptr addrspace(1) %[[US4_CAST]], align 8, !invariant.load
   __nvvm_ldg_us4((const ushort4 *)p);
 
-  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.vector<2 x !s32i>, target_address_space(1)>, !cir.vector<2 x !s32i>
-  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.vector<2 x !u32i>, target_address_space(1)>, !cir.vector<2 x !u32i>
-  // LLVM: load <2 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
-  // LLVM: load <2 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // CIR: %[[I2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !s32i>> -> !cir.ptr<!cir.vector<2 x !s32i>, target_address_space(1)>
+  // CIR: cir.load invariant align(8) %[[I2_CAST]] : !cir.ptr<!cir.vector<2 x !s32i>, target_address_space(1)>, !cir.vector<2 x !s32i>
+  // LLVM: %[[I2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i32>, ptr addrspace(1) %[[I2_CAST]], align 8, !invariant.load
   __nvvm_ldg_i2((const int2 *)p);
+
+  // CIR: %[[UI2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !u32i>> -> !cir.ptr<!cir.vector<2 x !u32i>, target_address_space(1)>
+  // CIR: cir.load invariant align(8) %[[UI2_CAST]] : !cir.ptr<!cir.vector<2 x !u32i>, target_address_space(1)>, !cir.vector<2 x !u32i>
+  // LLVM: %[[UI2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i32>, ptr addrspace(1) %[[UI2_CAST]], align 8, !invariant.load
   __nvvm_ldg_ui2((const uint2 *)p);
 
-  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>, target_address_space(1)>, !cir.vector<4 x !s32i>
-  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<4 x !u32i>, target_address_space(1)>, !cir.vector<4 x !u32i>
-  // LLVM: load <4 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
-  // LLVM: load <4 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // CIR: %[[I4_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!cir.vector<4 x !s32i>, target_address_space(1)>
+  // CIR: cir.load invariant align(16) %[[I4_CAST]] : !cir.ptr<!cir.vector<4 x !s32i>, target_address_space(1)>, !cir.vector<4 x !s32i>
+  // LLVM: %[[I4_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <4 x i32>, ptr addrspace(1) %[[I4_CAST]], align 16, !invariant.load
   __nvvm_ldg_i4((const int4 *)p);
+
+  // CIR: %[[UI4_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<4 x !u32i>> -> !cir.ptr<!cir.vector<4 x !u32i>, target_address_space(1)>
+  // CIR: cir.load invariant align(16) %[[UI4_CAST]] : !cir.ptr<!cir.vector<4 x !u32i>, target_address_space(1)>, !cir.vector<4 x !u32i>
+  // LLVM: %[[UI4_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <4 x i32>, ptr addrspace(1) %[[UI4_CAST]], align 16, !invariant.load
   __nvvm_ldg_ui4((const uint4 *)p);
 
-  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>, target_address_space(1)>, !cir.vector<2 x !s64i>
-  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>, target_address_space(1)>, !cir.vector<2 x !u64i>
-  // LLVM: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
-  // LLVM: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // CIR: %[[L2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>> -> !cir.ptr<!cir.vector<2 x !s64i>, target_address_space(1)>
+  // CIR: cir.load invariant align(16) %[[L2_CAST]] : !cir.ptr<!cir.vector<2 x !s64i>, target_address_space(1)>, !cir.vector<2 x !s64i>
+  // LLVM: %[[L2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i64>, ptr addrspace(1) %[[L2_CAST]], align 16, !invariant.load
   __nvvm_ldg_l2((const long2 *)p);
+
+  // CIR: %[[UL2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>> -> !cir.ptr<!cir.vector<2 x !u64i>, target_address_space(1)>
+  // CIR: cir.load invariant align(16) %[[UL2_CAST]] : !cir.ptr<!cir.vector<2 x !u64i>, target_address_space(1)>, !cir.vector<2 x !u64i>
+  // LLVM: %[[UL2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i64>, ptr addrspace(1) %[[UL2_CAST]], align 16, !invariant.load
   __nvvm_ldg_ul2((const ulong2 *)p);
 
-  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>, target_address_space(1)>, !cir.vector<2 x !s64i>
-  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>, target_address_space(1)>, !cir.vector<2 x !u64i>
-  // LLVM: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
-  // LLVM: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // CIR: %[[LL2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>> -> !cir.ptr<!cir.vector<2 x !s64i>, target_address_space(1)>
+  // CIR: cir.load invariant align(16) %[[LL2_CAST]] : !cir.ptr<!cir.vector<2 x !s64i>, target_address_space(1)>, !cir.vector<2 x !s64i>
+  // LLVM: %[[LL2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i64>, ptr addrspace(1) %[[LL2_CAST]], align 16, !invariant.load
   __nvvm_ldg_ll2((const longlong2 *)p);
+
+  // CIR: %[[ULL2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>> -> !cir.ptr<!cir.vector<2 x !u64i>, target_address_space(1)>
+  // CIR: cir.load invariant align(16) %[[ULL2_CAST]] : !cir.ptr<!cir.vector<2 x !u64i>, target_address_space(1)>, !cir.vector<2 x !u64i>
+  // LLVM: %[[ULL2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x i64>, ptr addrspace(1) %[[ULL2_CAST]], align 16, !invariant.load
   __nvvm_ldg_ull2((const ulonglong2 *)p);
 
-  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.float>, target_address_space(1)>, !cir.vector<2 x !cir.float>
-  // LLVM: load <2 x float>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // CIR: %[[F2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.float>> -> !cir.ptr<!cir.vector<2 x !cir.float>, target_address_space(1)>
+  // CIR: cir.load invariant align(8) %[[F2_CAST]] : !cir.ptr<!cir.vector<2 x !cir.float>, target_address_space(1)>, !cir.vector<2 x !cir.float>
+  // LLVM: %[[F2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x float>, ptr addrspace(1) %[[F2_CAST]], align 8, !invariant.load
   __nvvm_ldg_f2((const float2 *)p);
 
-  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>, target_address_space(1)>, !cir.vector<4 x !cir.float>
-  // LLVM: load <4 x float>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // CIR: %[[F4_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>> -> !cir.ptr<!cir.vector<4 x !cir.float>, target_address_space(1)>
+  // CIR: cir.load invariant align(16) %[[F4_CAST]] : !cir.ptr<!cir.vector<4 x !cir.float>, target_address_space(1)>, !cir.vector<4 x !cir.float>
+  // LLVM: %[[F4_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <4 x float>, ptr addrspace(1) %[[F4_CAST]], align 16, !invariant.load
   __nvvm_ldg_f4((const float4 *)p);
 
-  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>, target_address_space(1)>, !cir.vector<2 x !cir.double>
-  // LLVM: load <2 x double>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // CIR: %[[D2_CAST:.*]] = cir.cast address_space %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>> -> !cir.ptr<!cir.vector<2 x !cir.double>, target_address_space(1)>
+  // CIR: cir.load invariant align(16) %[[D2_CAST]] : !cir.ptr<!cir.vector<2 x !cir.double>, target_address_space(1)>, !cir.vector<2 x !cir.double>
+  // LLVM: %[[D2_CAST:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(1)
+  // LLVM: load <2 x double>, ptr addrspace(1) %[[D2_CAST]], align 16, !invariant.load
   __nvvm_ldg_d2((const double2 *)p);
 }
 
