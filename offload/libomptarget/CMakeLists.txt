@@ -14,12 +14,7 @@ add_library(omptarget SHARED
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
 
-  ../libompaccsupport/AsyncInfo.cpp
-  ../libompaccsupport/device.cpp
-  ../libompaccsupport/PluginManager.cpp
-  ../libompaccsupport/DeviceImage.cpp
-  ../libompaccsupport/Mapping.cpp
-  ../libompaccsupport/OmpAccError.cpp
+  ${LIBOMPACCSUPPORT_SOURCES}
 
   KernelLanguage/API.cpp
 )
