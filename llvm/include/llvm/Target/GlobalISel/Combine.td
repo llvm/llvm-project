@@ -447,26 +447,26 @@ def bitreverse_lshr : GICombineRule<
   (apply (G_SHL $d, $val, $amt))>;
 
 // Combine (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
-// Combine (shl (or  x, c1), c2) -> (or  (shl x, c2), c1 << c2)
-// Apply rebuilds the matched opcode, so it stays inline C++.
-def commute_shift_frags : GICombinePatFrag<
-  (outs root:$dst, $binop), (ins $x, $c1, $c2),
-  !foreach(op, [G_ADD, G_OR],
-    (pattern (op $binop, $x, $c1), (G_SHL $dst, $binop, $c2)))>;
-def commute_shift : GICombineRule<
+// Combine (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
+// Apply rebuilds the matched opcode, so it stays inline C++. The builder is
+// used rather than an apply pattern so that (shl c1, c2) is constant folded.
+class commute_shift_binop<Instruction binop> : GICombineRule<
   (defs root:$dst),
-  (match (commute_shift_frags $dst, $binop, $x, $c1, $c2):$shl,
-         [{ return MRI.hasOneNonDBGUse(${binop}.getReg()) &&
+  (match (binop $binop_dst, $x, $c1):$binop,
+         (G_SHL $dst, $binop_dst, $c2):$shl,
+         [{ return MRI.hasOneNonDBGUse(${binop_dst}.getReg()) &&
                    isConstantOrConstantSplatVector(${c1}.getReg(), MRI) &&
                    isConstantOrConstantSplatVector(${c2}.getReg(), MRI) &&
                    Helper.isDesirableToCommuteWithShift(*${shl}); }]),
   (apply [{ auto &B = Helper.getBuilder();
             LLT Ty = MRI.getType(${dst}.getReg());
-            unsigned Opc = MRI.getVRegDef(${binop}.getReg())->getOpcode();
             auto S1 = B.buildShl(Ty, ${x}.getReg(), ${c2}.getReg());
             auto S2 = B.buildShl(Ty, ${c1}.getReg(), ${c2}.getReg());
-            auto New = B.buildInstr(Opc, {Ty}, {S1, S2});
+            auto New = B.buildInstr(${binop}->getOpcode(), {Ty}, {S1, S2});
             Helper.replaceSingleDefInstWithReg(*${shl}, New.getReg(0)); }])>;
+def commute_shift_add : commute_shift_binop<G_ADD>;
+def commute_shift_or : commute_shift_binop<G_OR>;
+def commute_shift : GICombineGroup<[commute_shift_add, commute_shift_or]>;
 
 // Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (lshr x, (C1 + C2))
 def lshr_of_trunc_of_lshr_matchdata : GIDefMatchData<"LshrOfTruncOfLshr">;
@@ -1003,7 +1003,7 @@ def neg_and_one_to_sext_inreg : GICombineRule<
 >;
 
 // Fold and(and(x, C1), C2) -> C1&C2 ? and(x, C1&C2) : 0
-def overlapping_and : GICombineRule<
+def overlapping_and: GICombineRule <
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_AND):$root,
          [{ return Helper.matchOverlappingAnd(*${root}, ${info}); }]),
