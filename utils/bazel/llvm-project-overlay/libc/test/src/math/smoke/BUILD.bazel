@@ -574,6 +574,9 @@ math_test(
 math_test(
     name = "fmaximumf128",
     hdrs = ["FMaximumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -702,6 +705,9 @@ math_test(
 math_test(
     name = "fminimumf128",
     hdrs = ["FMinimumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
