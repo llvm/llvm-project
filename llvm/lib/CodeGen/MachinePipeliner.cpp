@@ -123,8 +123,8 @@ static cl::opt<bool> EnableSWPOptSize("enable-pipeliner-opt-size",
 
 /// A command line argument to limit minimum initial interval for pipelining.
 static cl::opt<int> SwpMaxMii("pipeliner-max-mii",
-                              cl::desc("Size limit for the MII."),
-                              cl::Hidden, cl::init(27));
+                              cl::desc("Size limit for the MII."), cl::Hidden,
+                              cl::init(256));
 
 /// A command line argument to force pipeliner to use specified initial
 /// interval.
