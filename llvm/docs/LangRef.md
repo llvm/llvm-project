@@ -2273,6 +2273,15 @@ define void @f() "no-sse" { ... }
     around the cases where the training input does not have good coverage
     on all the hot functions.
 
+`hybrid_patchable`
+:   This attribute applies to code compiled for ARM64EC (target triple
+    'arm64ec-*') targets and indicates that the function may be patched at
+    runtime. In addition to the function's actual implementation, an x86-64
+    function thunk is generated. Code referencing the function will use this
+    thunk as its address, and calls to the function perform an additional
+    runtime check to execute the call through the emulator if the thunk has
+    been patched.
+
 `inlinehint`
 :   This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
@@ -7285,6 +7294,19 @@ be used for the structure type.
 ```text
 !3 = !DIObjCProperty(name: "foo", file: !1, line: 7, setter: "setFoo",
                      getter: "getFoo", attributes: 7, type: !2)
+```
+
+##### DIProperty
+
+`DIProperty` nodes represent an entity that is syntactically accessed like a
+data member but whose access is implemented by an accessor. The node models
+the property's backing variable (for example, an Objective-C `@property`'s
+backing ivar).
+
+```text
+!3 = !DIDerivedType(tag: DW_TAG_member, name: "_x", scope: !1, file: !2,
+                    line: 8, baseType: !4, size: 32)
+!5 = !DIProperty(name: "x", file: !2, line: 8, type: !4, backing_storage: !3)
 ```
 
 ##### DIImportedEntity

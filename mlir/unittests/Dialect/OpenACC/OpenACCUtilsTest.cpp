@@ -734,7 +734,8 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseRecipe) {
   auto i32Type = b.getI32Type();
   llvm::StringRef recipeName = "test_recipe";
   OwningOpRef<PrivateRecipeOp> recipeOp =
-      PrivateRecipeOp::create(b, loc, recipeName, i32Type);
+      PrivateRecipeOp::create(b, loc, recipeName,
+                              /*sym_visibility=*/nullptr, i32Type);
 
   // Create a value to privatize
   auto memrefTy = MemRefType::get({10}, b.getI32Type());
@@ -918,7 +919,8 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseNullDefiningOpPtr) {
   auto i32Type = b.getI32Type();
   llvm::StringRef recipeName = "test_recipe";
   OwningOpRef<PrivateRecipeOp> recipeOp =
-      PrivateRecipeOp::create(b, loc, recipeName, i32Type);
+      PrivateRecipeOp::create(b, loc, recipeName,
+                              /*sym_visibility=*/nullptr, i32Type);
 
   // Create a value to privatize
   auto memrefTy = MemRefType::get({10}, b.getI32Type());

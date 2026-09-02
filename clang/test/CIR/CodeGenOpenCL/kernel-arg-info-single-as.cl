@@ -2,6 +2,10 @@
 // spaces even if the target has only one address space like x86_64 does.
 // RUN: %clang_cc1 %s -fclangir -cl-std=CL2.0 -triple x86_64-unknown-linux-gnu -emit-cir -o %t.cir
 // RUN: FileCheck %s --input-file=%t.cir --check-prefix=CIR
+// RUN: %clang_cc1 %s -fclangir -cl-std=CL2.0 -triple x86_64-unknown-linux-gnu -emit-llvm -o %t.ll
+// RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -triple x86_64-unknown-linux-gnu -emit-llvm -o %t.ogcg.ll
+// RUN: FileCheck %s --input-file=%t.ogcg.ll --check-prefix=LLVM
 
 kernel void spir_addr_space_kernel_args(__global int *G, __constant int *C,
                                         __local int *L) {
@@ -11,12 +15,18 @@ kernel void spir_addr_space_kernel_args(__global int *G, __constant int *C,
 // CIR-LABEL: cir.func{{.*}} @spir_addr_space_kernel_args
 // CIR-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(offload_constant)>, #cir<lang_address_space(offload_local)>]
 
+// LLVM-DAG: define{{.*}} void @spir_addr_space_kernel_args{{.*}} !kernel_arg_addr_space ![[ADDR_SPACES:[0-9]+]]
+// LLVM-DAG: ![[ADDR_SPACES]] = !{i32 1, i32 2, i32 3}
+
 kernel void global_device_host_kernel_args(
     __attribute__((opencl_global_device)) int *D,
     __attribute__((opencl_global_host)) int *H) {}
 
 // CIR-LABEL: cir.func{{.*}} @global_device_host_kernel_args
 // CIR-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir<lang_address_space(offload_global_device)>, #cir<lang_address_space(offload_global_host)>]
+
+// LLVM-DAG: define{{.*}} void @global_device_host_kernel_args{{.*}} !kernel_arg_addr_space ![[GLOBAL_DEVICE_HOST_ADDR_SPACES:[0-9]+]]
+// LLVM-DAG: ![[GLOBAL_DEVICE_HOST_ADDR_SPACES]] = !{i32 5, i32 6}
 
 // Target-specific address spaces stay on pointer types but do not represent an
 // OpenCL language address-space qualifier.
@@ -26,3 +36,6 @@ kernel void target_address_space_kernel_arg(
 // CIR-LABEL: cir.func{{.*}} @target_address_space_kernel_arg
 // CIR-SAME: !cir.ptr<!s32i, target_address_space(5)>
 // CIR-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<addr_space = [#cir<lang_address_space(default)>]
+
+// LLVM-DAG: define{{.*}} void @target_address_space_kernel_arg{{.*}}ptr addrspace(5){{.*}} !kernel_arg_addr_space ![[TARGET_ADDR_SPACE:[0-9]+]]
+// LLVM-DAG: ![[TARGET_ADDR_SPACE]] = !{i32 0}

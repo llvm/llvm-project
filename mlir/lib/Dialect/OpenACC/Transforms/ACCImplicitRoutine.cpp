@@ -102,6 +102,7 @@ private:
     auto routineOp = acc::RoutineOp::create(
         builder, loc,
         /* sym_name=*/builder.getStringAttr(routineName),
+        /* sym_visibility=*/nullptr,
         /* func_name=*/
         mlir::SymbolRefAttr::get(builder.getContext(),
                                  builder.getStringAttr(callee.getName())),
