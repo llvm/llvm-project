@@ -118,7 +118,7 @@ static bool isOpenCLVersionAttrName(StringRef attrName) {
 static LogicalResult verifyOpenCLVersionAttrPlacement(Operation *op,
                                                       NamedAttribute attr) {
   StringRef attrName = attr.getName().getValue();
-  if (!isOpenCLVersionAttrName(attrName) || isa<ModuleOp>(op))
+  if (isa<ModuleOp>(op))
     return success();
 
   return op->emitError() << attrName
@@ -153,36 +153,48 @@ static LogicalResult verifyOpenCLCXXVersion(ModuleOp module,
   return success();
 }
 
-LogicalResult cir::CIRDialect::verifyOperationAttribute(Operation *op,
-                                                        NamedAttribute attr) {
-  StringRef attrName = attr.getName().getValue();
-  if (!isOpenCLVersionAttrName(attrName))
-    return success();
-
+static LogicalResult verifyOpenCLVersionAttr(Operation *op,
+                                             NamedAttribute attr) {
   if (failed(verifyOpenCLVersionAttrPlacement(op, attr)))
     return failure();
 
+  StringRef attrName = attr.getName().getValue();
   auto version = dyn_cast<cir::OpenCLVersionAttr>(attr.getValue());
   if (!version) {
     return op->emitError() << "expected " << attrName
                            << " to be #cir.cl.version";
   }
 
-  if (attrName == getOpenCLCXXVersionAttrName())
+  if (attrName == CIRDialect::getOpenCLCXXVersionAttrName())
     return verifyOpenCLCXXVersion(cast<ModuleOp>(op), version);
 
   return success();
 }
 
+LogicalResult cir::CIRDialect::verifyOperationAttribute(Operation *op,
+                                                        NamedAttribute attr) {
+  StringRef attrName = attr.getName().getValue();
+  if (!isOpenCLVersionAttrName(attrName))
+    return success();
+
+  return verifyOpenCLVersionAttr(op, attr);
+}
+
 LogicalResult cir::CIRDialect::verifyRegionArgAttribute(
     Operation *op, unsigned /*regionIndex*/, unsigned /*argIndex*/,
     NamedAttribute attr) {
+  if (!isOpenCLVersionAttrName(attr.getName().getValue()))
+    return success();
+
   return verifyOpenCLVersionAttrPlacement(op, attr);
 }
 
 LogicalResult cir::CIRDialect::verifyRegionResultAttribute(
     Operation *op, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
     NamedAttribute attr) {
+  if (!isOpenCLVersionAttrName(attr.getName().getValue()))
+    return success();
+
   return verifyOpenCLVersionAttrPlacement(op, attr);
 }
 
