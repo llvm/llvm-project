@@ -933,7 +933,7 @@ defm BUFFER_STORE_FORMAT_XYZW : MUBUF_Pseudo_Stores <
   "buffer_store_format_xyzw", v4f32
 >;
 
-let OtherPredicates = [HasUnpackedD16VMem], D16Buf = 1 in {
+let OtherPredicates = [HasUnpackedD16VMem] in {
 let TiedSourceNotRead = 1 in {
   defm BUFFER_LOAD_FORMAT_D16_X_gfx80 : MUBUF_Pseudo_Loads <
     "buffer_load_format_d16_x", i32
@@ -960,7 +960,7 @@ let TiedSourceNotRead = 1 in {
   defm BUFFER_STORE_FORMAT_D16_XYZW_gfx80 : MUBUF_Pseudo_Stores <
     "buffer_store_format_d16_xyzw", v4i32
   >;
-} // End OtherPredicates = [HasUnpackedD16VMem], D16Buf = 1.
+} // End OtherPredicates = [HasUnpackedD16VMem].
 
 
 let TiedSourceNotRead = 1, SubtargetPredicate = HasD16LoadStore, OtherPredicates = [HasFormattedMUBUFInsts] in
@@ -968,7 +968,7 @@ defm BUFFER_LOAD_FORMAT_D16_HI_X : MUBUF_Pseudo_Loads <
   "buffer_load_format_d16_hi_x", i32
 >;
 
-let OtherPredicates = [HasPackedD16VMem], D16Buf = 1 in {
+let OtherPredicates = [HasPackedD16VMem] in {
 let TiedSourceNotRead = 1 in {
   defm BUFFER_LOAD_FORMAT_D16_X : MUBUF_Pseudo_Loads_t16 <
     "buffer_load_format_d16_x", f16, 0, 0, "BUFFER_LOAD_FORMAT_D16_HI_X"
@@ -995,7 +995,7 @@ let TiedSourceNotRead = 1 in {
   defm BUFFER_STORE_FORMAT_D16_XYZW : MUBUF_Pseudo_Stores <
     "buffer_store_format_d16_xyzw", v4f16
   >;
-} // End OtherPredicates = [HasPackedD16VMem], D16Buf = 1.
+} // End OtherPredicates = [HasPackedD16VMem].
 } // End SubtargetPredicate = HasFormattedMUBUFInsts.
 
 defm BUFFER_LOAD_UBYTE : MUBUF_Pseudo_Loads_Lds <
@@ -1321,7 +1321,7 @@ defm TBUFFER_STORE_FORMAT_XY   : MTBUF_Pseudo_Stores <"tbuffer_store_format_xy",
 defm TBUFFER_STORE_FORMAT_XYZ  : MTBUF_Pseudo_Stores <"tbuffer_store_format_xyz",  AVLdSt_96,  3>;
 defm TBUFFER_STORE_FORMAT_XYZW : MTBUF_Pseudo_Stores <"tbuffer_store_format_xyzw", AVLdSt_128, 4>;
 
-let SubtargetPredicate = HasUnpackedD16VMem, D16Buf = 1 in {
+let SubtargetPredicate = HasUnpackedD16VMem in {
 let TiedSourceNotRead = 1 in {
   defm TBUFFER_LOAD_FORMAT_D16_X_gfx80     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_x",     AVLdSt_32,  1>;
   defm TBUFFER_LOAD_FORMAT_D16_XY_gfx80    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xy",    AVLdSt_64,  2>;
@@ -1334,7 +1334,7 @@ let TiedSourceNotRead = 1 in {
   defm TBUFFER_STORE_FORMAT_D16_XYZW_gfx80 : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyzw", AVLdSt_128, 4>;
 } // End HasUnpackedD16VMem.
 
-let SubtargetPredicate = HasPackedD16VMem, D16Buf = 1 in {
+let SubtargetPredicate = HasPackedD16VMem in {
 let TiedSourceNotRead = 1 in {
   defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_x",     AVLdSt_32, 1>;
   defm TBUFFER_LOAD_FORMAT_D16_XY    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xy",    AVLdSt_32, 2>;
