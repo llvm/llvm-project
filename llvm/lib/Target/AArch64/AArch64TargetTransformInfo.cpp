@@ -5863,8 +5863,7 @@ AArch64TTIImpl::getPreferredVFMultipleForMemoryOp(unsigned Opcode, Type *DataTy,
   if (!ST->enableSubRegLiveness())
     return 1;
 
-  if ((Opcode != Instruction::Load && Opcode != Instruction::Store) ||
-      !ST->hasSVE2p1() || !VF.isScalable() || !isPowerOf2_32(UF))
+  if (!ST->hasSVE2p1() || !VF.isScalable() || !isPowerOf2_32(UF))
     return 1;
 
   unsigned VectorWidth = VF.getKnownMinValue() * DL.getTypeSizeInBits(DataTy);
