@@ -1,0 +1,336 @@
+// RUN: cir-opt %s --cir-loop-opt=test-annotate=true -o - | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module {
+  cir.global external @A = #cir.zero : !cir.array<!cir.array<!cir.double x 1024> x 1024>
+  cir.global external @B = #cir.zero : !cir.array<!cir.array<!cir.double x 1024> x 1024>
+
+  // CHECK-LABEL: cir.func @product_swapped_factors()
+  // CHECK-NOT: cir.loopopt.test
+  // CHECK: } {cir.loopopt.test = {kind = "inner_product_upper"}}
+  // CHECK-NEXT: cir.return
+  cir.func @product_swapped_factors() {
+    %0 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.alloca "j" align(4) init : !cir.ptr<!s32i>
+    %2 = cir.const #cir.int<1> : !s32i
+    cir.store align(4) %2, %0 : !s32i, !cir.ptr<!s32i>
+    cir.for : cond {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.const #cir.int<1024> : !s32i
+      %5 = cir.cmp lt %3, %4 : !s32i
+      cir.condition(%5)
+    } body {
+      %3 = cir.const #cir.int<0> : !s32i
+      cir.store align(4) %3, %1 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %4 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.mul nsw %4, %5 : !s32i
+        %7 = cir.const #cir.int<1024> : !s32i
+        %8 = cir.cmp lt %6, %7 : !s32i
+        cir.condition(%8)
+      } body {
+        cir.yield
+      } step {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.inc nsw %4 : !s32i
+        cir.store align(4) %5, %1 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    } step {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.inc nsw %3 : !s32i
+      cir.store align(4) %4, %0 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @product_of_affine_outer()
+  // CHECK-NOT: cir.loopopt.test
+  cir.func @product_of_affine_outer() {
+    %0 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.alloca "j" align(4) init : !cir.ptr<!s32i>
+    %2 = cir.const #cir.int<1> : !s32i
+    cir.store align(4) %2, %0 : !s32i, !cir.ptr<!s32i>
+    cir.for : cond {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.const #cir.int<1024> : !s32i
+      %5 = cir.cmp lt %3, %4 : !s32i
+      cir.condition(%5)
+    } body {
+      %3 = cir.const #cir.int<0> : !s32i
+      cir.store align(4) %3, %1 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.const #cir.int<1> : !s32i
+        %7 = cir.add nsw %5, %6 : !s32i
+        %8 = cir.mul nsw %4, %7 : !s32i
+        %9 = cir.const #cir.int<1024> : !s32i
+        %10 = cir.cmp lt %8, %9 : !s32i
+        cir.condition(%10)
+      } body {
+        cir.yield
+      } step {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.inc nsw %4 : !s32i
+        cir.store align(4) %5, %1 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    } step {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.inc nsw %3 : !s32i
+      cir.store align(4) %4, %0 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @product_of_inner_squared()
+  // CHECK-NOT: cir.loopopt.test
+  cir.func @product_of_inner_squared() {
+    %0 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.alloca "j" align(4) init : !cir.ptr<!s32i>
+    %2 = cir.const #cir.int<1> : !s32i
+    cir.store align(4) %2, %0 : !s32i, !cir.ptr<!s32i>
+    cir.for : cond {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.const #cir.int<1024> : !s32i
+      %5 = cir.cmp lt %3, %4 : !s32i
+      cir.condition(%5)
+    } body {
+      %3 = cir.const #cir.int<0> : !s32i
+      cir.store align(4) %3, %1 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.mul nsw %4, %5 : !s32i
+        %7 = cir.const #cir.int<1024> : !s32i
+        %8 = cir.cmp lt %6, %7 : !s32i
+        cir.condition(%8)
+      } body {
+        cir.yield
+      } step {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.inc nsw %4 : !s32i
+        cir.store align(4) %5, %1 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    } step {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.inc nsw %3 : !s32i
+      cir.store align(4) %4, %0 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @outer_start_not_positive()
+  // CHECK-NOT: cir.loopopt.test
+  cir.func @outer_start_not_positive() {
+    %0 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.alloca "j" align(4) init : !cir.ptr<!s32i>
+    %2 = cir.const #cir.int<0> : !s32i
+    cir.store align(4) %2, %0 : !s32i, !cir.ptr<!s32i>
+    cir.for : cond {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.const #cir.int<1024> : !s32i
+      %5 = cir.cmp lt %3, %4 : !s32i
+      cir.condition(%5)
+    } body {
+      %3 = cir.const #cir.int<0> : !s32i
+      cir.store align(4) %3, %1 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.mul nsw %4, %5 : !s32i
+        %7 = cir.const #cir.int<1024> : !s32i
+        %8 = cir.cmp lt %6, %7 : !s32i
+        cir.condition(%8)
+      } body {
+        cir.yield
+      } step {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.inc nsw %4 : !s32i
+        cir.store align(4) %5, %1 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    } step {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.inc nsw %3 : !s32i
+      cir.store align(4) %4, %0 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @limits_differ()
+  // CHECK-NOT: cir.loopopt.test
+  cir.func @limits_differ() {
+    %0 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.alloca "j" align(4) init : !cir.ptr<!s32i>
+    %2 = cir.const #cir.int<1> : !s32i
+    cir.store align(4) %2, %0 : !s32i, !cir.ptr<!s32i>
+    cir.for : cond {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.const #cir.int<1024> : !s32i
+      %5 = cir.cmp lt %3, %4 : !s32i
+      cir.condition(%5)
+    } body {
+      %3 = cir.const #cir.int<0> : !s32i
+      cir.store align(4) %3, %1 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.mul nsw %4, %5 : !s32i
+        %7 = cir.const #cir.int<2048> : !s32i
+        %8 = cir.cmp lt %6, %7 : !s32i
+        cir.condition(%8)
+      } body {
+        cir.yield
+      } step {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.inc nsw %4 : !s32i
+        cir.store align(4) %5, %1 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    } step {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.inc nsw %3 : !s32i
+      cir.store align(4) %4, %0 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @inner_init_not_zero()
+  // CHECK-NOT: cir.loopopt.test
+  cir.func @inner_init_not_zero() {
+    %0 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.alloca "j" align(4) init : !cir.ptr<!s32i>
+    %2 = cir.const #cir.int<1> : !s32i
+    cir.store align(4) %2, %0 : !s32i, !cir.ptr<!s32i>
+    cir.for : cond {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.const #cir.int<1024> : !s32i
+      %5 = cir.cmp lt %3, %4 : !s32i
+      cir.condition(%5)
+    } body {
+      %3 = cir.const #cir.int<1> : !s32i
+      cir.store align(4) %3, %1 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+        %6 = cir.mul nsw %4, %5 : !s32i
+        %7 = cir.const #cir.int<1024> : !s32i
+        %8 = cir.cmp lt %6, %7 : !s32i
+        cir.condition(%8)
+      } body {
+        cir.yield
+      } step {
+        %4 = cir.load align(4) %1 : !cir.ptr<!s32i>, !s32i
+        %5 = cir.inc nsw %4 : !s32i
+        cir.store align(4) %5, %1 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    } step {
+      %3 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+      %4 = cir.inc nsw %3 : !s32i
+      cir.store align(4) %4, %0 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @product_i8_limit64_fits
+  // CHECK-NOT: cir.loopopt.test
+  // CHECK: } {cir.loopopt.test = {kind = "inner_product_upper"}}
+  // CHECK-NEXT: cir.return
+  cir.func @product_i8_limit64_fits() {
+    %0 = cir.alloca "i" align(1) init : !cir.ptr<!s8i>
+    %1 = cir.alloca "j" align(1) init : !cir.ptr<!s8i>
+    %2 = cir.const #cir.int<1> : !s8i
+    cir.store align(1) %2, %0 : !s8i, !cir.ptr<!s8i>
+    cir.for : cond {
+      %3 = cir.load align(1) %0 : !cir.ptr<!s8i>, !s8i
+      %4 = cir.const #cir.int<64> : !s8i
+      %5 = cir.cmp lt %3, %4 : !s8i
+      cir.condition(%5)
+    } body {
+      %3 = cir.const #cir.int<0> : !s8i
+      cir.store align(1) %3, %1 : !s8i, !cir.ptr<!s8i>
+      cir.for : cond {
+        %4 = cir.load align(1) %1 : !cir.ptr<!s8i>, !s8i
+        %5 = cir.load align(1) %0 : !cir.ptr<!s8i>, !s8i
+        %6 = cir.mul nsw %4, %5 : !s8i
+        %7 = cir.const #cir.int<64> : !s8i
+        %8 = cir.cmp lt %6, %7 : !s8i
+        cir.condition(%8)
+      } body {
+        cir.yield
+      } step {
+        %4 = cir.load align(1) %1 : !cir.ptr<!s8i>, !s8i
+        %5 = cir.inc nsw %4 : !s8i
+        cir.store align(1) %5, %1 : !s8i, !cir.ptr<!s8i>
+        cir.yield
+      }
+      cir.yield
+    } step {
+      %3 = cir.load align(1) %0 : !cir.ptr<!s8i>, !s8i
+      %4 = cir.inc nsw %3 : !s8i
+      cir.store align(1) %4, %0 : !s8i, !cir.ptr<!s8i>
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @product_i8_limit65_overflows
+  // CHECK-NOT: cir.loopopt.test
+  cir.func @product_i8_limit65_overflows() {
+    %0 = cir.alloca "i" align(1) init : !cir.ptr<!s8i>
+    %1 = cir.alloca "j" align(1) init : !cir.ptr<!s8i>
+    %2 = cir.const #cir.int<1> : !s8i
+    cir.store align(1) %2, %0 : !s8i, !cir.ptr<!s8i>
+    cir.for : cond {
+      %3 = cir.load align(1) %0 : !cir.ptr<!s8i>, !s8i
+      %4 = cir.const #cir.int<65> : !s8i
+      %5 = cir.cmp lt %3, %4 : !s8i
+      cir.condition(%5)
+    } body {
+      %3 = cir.const #cir.int<0> : !s8i
+      cir.store align(1) %3, %1 : !s8i, !cir.ptr<!s8i>
+      cir.for : cond {
+        %4 = cir.load align(1) %1 : !cir.ptr<!s8i>, !s8i
+        %5 = cir.load align(1) %0 : !cir.ptr<!s8i>, !s8i
+        %6 = cir.mul nsw %4, %5 : !s8i
+        %7 = cir.const #cir.int<65> : !s8i
+        %8 = cir.cmp lt %6, %7 : !s8i
+        cir.condition(%8)
+      } body {
+        cir.yield
+      } step {
+        %4 = cir.load align(1) %1 : !cir.ptr<!s8i>, !s8i
+        %5 = cir.inc nsw %4 : !s8i
+        cir.store align(1) %5, %1 : !s8i, !cir.ptr<!s8i>
+        cir.yield
+      }
+      cir.yield
+    } step {
+      %3 = cir.load align(1) %0 : !cir.ptr<!s8i>, !s8i
+      %4 = cir.inc nsw %3 : !s8i
+      cir.store align(1) %4, %0 : !s8i, !cir.ptr<!s8i>
+      cir.yield
+    }
+    cir.return
+  }
+}
