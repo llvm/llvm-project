@@ -1776,8 +1776,8 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 // unit keep the meanings the dialect gives them.
 //
 //   element            scalar of some element type
-//   fragment           everything one lane owns. Consists of elements.
-//   broadcast group    the lanes that hold the same fragment.
+//   fragment           everything one lane owns. Consists of elements
+//   broadcast group    the lanes that hold the same fragment
 //   lane period        how many lanes the layout lays out,
 //                      `product(lane_layout)`. A larger subgroup repeats: lane
 //                      `l` and lane `l + period` get the same fragment
@@ -1787,18 +1787,18 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                      within one target period. A target-side notion: lanes
 //                      sharing a slot are assigned the same target fragment
 //   ownership table    tabulated "element of a fragment" to coordinate mapping
-//                      with respect to undistributed value. one table per input
-//                      and target
+//                      with respect to the undistributed value, one table per
+//                      input and target
 //   donorDelta         a lane offset from the slot to the lane supplying an
-//                      element. Can have multiple candidates.
-//   donor lane         supplying lane, computed as `slot + donorDelta`.
+//                      element. Can have multiple candidates
+//   donor lane         supplying lane, computed as `slot + donorDelta`
 //   donor index        where in the donor lane's fragment the element sits. A
 //                      function of the slot, so every lane computes it from its
 //                      own slot
 //   element source     for one element of the target fragment, a tuple: which
 //                      donor lane supplies it, the donor index within that
 //                      lane's fragment, and whether a shuffle is needed. One is
-//                      derived per element position, at compile time.
+//                      derived per element position, at compile time
 //
 // What it handles
 // ---------------
