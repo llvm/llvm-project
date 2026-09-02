@@ -289,23 +289,20 @@ InFlightDiagnostic Operation::emitRemark(const Twine &message) {
   return diag;
 }
 
-/// Emit a remark about this operation for each message, reporting up to
-/// any diagnostic handlers that may be listening.
-SmallVector<InFlightDiagnostic>
-Operation::emitRemark(const ArrayRef<Twine> messages) {
-  SmallVector<InFlightDiagnostic> diags;
-  diags.reserve(messages.size());
-  for (size_t i = 0, e = messages.size(); i < e; ++i) {
-    InFlightDiagnostic diag = mlir::emitRemark(getLoc(), messages[i]);
-    if (i == e - 1 && getContext()->shouldPrintOpOnDiagnostic())
-      diag.attachNote(getLoc()) << "see current operation: " << *this;
+/// Emit remarks about this operation for each message, reporting up to any
+/// diagnostic handlers that may be listening.
+InFlightDiagnostic Operation::emitRemark(const ArrayRef<Twine> messages) {
+  if (messages.empty())
+    return {};
 
-    // Explicitly report to flush immediately in order, preventing reverse-order
-    // emission during vector destruction.
-    diag.report();
-    diags.push_back(std::move(diag));
+  InFlightDiagnostic diag = mlir::emitRemark(getLoc(), messages.front());
+  for (size_t i = 1, e = messages.size(); i < e; ++i) {
+    diag.report(true);
+    diag.append(messages[i]);
   }
-  return diags;
+  if (getContext()->shouldPrintOpOnDiagnostic())
+    diag.attachNote(getLoc()) << "see current operation: " << *this;
+  return diag;
 }
 
 DictionaryAttr Operation::getAttrDictionary() {
@@ -874,10 +871,9 @@ InFlightDiagnostic OpState::emitRemark(const Twine &message) {
   return getOperation()->emitRemark(message);
 }
 
-/// Emit a remark about this operation for each message, reporting up to
-/// any diagnostic handlers that may be listening.
-SmallVector<InFlightDiagnostic>
-OpState::emitRemark(const ArrayRef<Twine> messages) {
+/// Emit remarks about this operation for each message, reporting up to any
+/// diagnostic handlers that may be listening.
+InFlightDiagnostic OpState::emitRemark(const ArrayRef<Twine> messages) {
   return getOperation()->emitRemark(messages);
 }
 

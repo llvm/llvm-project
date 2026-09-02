@@ -150,9 +150,9 @@ public:
   /// handlers that may be listening.
   InFlightDiagnostic emitRemark(const Twine &message = {});
 
-  /// Emit a remark about this operation for each message, reporting up to any
+  /// Emit remarks about this operation for each message, reporting up to any
   /// diagnostic handlers that may be listening.
-  SmallVector<InFlightDiagnostic> emitRemark(const ArrayRef<Twine> messages);
+  InFlightDiagnostic emitRemark(const ArrayRef<Twine> messages);
 
   /// Walk the operation by calling the callback for each nested operation
   /// (including this one), block or region, depending on the callback provided.
