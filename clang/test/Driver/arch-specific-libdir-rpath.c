@@ -96,18 +96,22 @@
 //
 // LIBPATH-X86_64: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}
 // RPATH-X86_64:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
+// RPATH-X86_64-NOT: "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
 //
 // NO-LIBPATH-X86_64-NOT: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}
 // NO-RPATH-X86_64-NOT:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
 //
 // LIBPATH-AARCH64: -L[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)aarch64}}
 // RPATH-AARCH64:   "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)aarch64}}"
+// RPATH-AARCH64-NOT: "-rpath" "[[RESDIR]]{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)aarch64}}"
 //
 // LINKONLY-X86_64: -L{{[^"]*}}resource_dir_with_arch_subdir{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}
 // LINKONLY-X86_64: "-rpath" "{{[^"]*}}resource_dir_with_arch_subdir{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
+// LINKONLY-X86_64-NOT: "-rpath" "{{[^"]*}}resource_dir_with_arch_subdir{{(/|\\\\)lib(/|\\\\)linux(/|\\\\)x86_64}}"
 //
 // NO-RPATH-UNSUPPORTED-NOT: "-rpath"
 
 // PERTARGET: "-resource-dir" "[[PTRESDIR:[^"]*]]"
 // PERTARGET: -L[[PTRESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux-gnu}}
 // PERTARGET:   "-rpath" "[[PTRESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux-gnu}}"
+// PERTARGET-NOT: "-rpath" "[[PTRESDIR]]{{(/|\\\\)lib(/|\\\\)x86_64-unknown-linux-gnu}}"
