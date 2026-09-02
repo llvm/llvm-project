@@ -2141,7 +2141,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<I32Attr>:$intel_reqd_sub_group_size,
     OptionalAttr<LLVM_FunctionMetadataArrayAttr>:$function_metadata,
     OptionalAttr<UWTableKindAttr>:$uwtable_kind,
-    OptionalAttr<BoolAttr>:$use_sample_profile
+    OptionalAttr<BoolAttr>:$use_sample_profile,
+    OptionalAttr<BoolAttr>:$disable_tail_calls
   );
 
   let regions = (region AnyRegion:$body);
