@@ -73,13 +73,42 @@ enum class CTAGroupKind : uint8_t {
   CG_2 = 2,    // cta_group::2 modifier
 };
 
-enum class Tcgen05MMAKind : uint8_t { F16 = 0, TF32 = 1, F8F6F4 = 2, I8 = 3 };
+// Eviction priorities applicable for prefetch and applypriority intrinsics.
+enum class EvictPolicyType : uint8_t {
+  EVICT_NORMAL = 0, // default
+  EVICT_LAST = 1,
+};
+
+inline StringRef getEvictPolicyName(EvictPolicyType Policy) {
+  switch (Policy) {
+  case EvictPolicyType::EVICT_NORMAL:
+    return "L2::evict_normal";
+  case EvictPolicyType::EVICT_LAST:
+    return "L2::evict_last";
+  }
+  llvm_unreachable("invalid evict policy");
+}
+
+enum class Tcgen05MMAKind : uint8_t {
+  F16 = 0,
+  TF32 = 1,
+  F8F6F4 = 2,
+  I8 = 3,
+  TI16 = 4,
+};
 
 enum class Tcgen05CollectorUsageOp : uint8_t {
   DISCARD = 0,
   LASTUSE = 1,
   FILL = 2,
   USE = 3,
+};
+
+enum class Tcgen05MMACollectorBBuffer : uint8_t {
+  B0 = 0,
+  B1 = 1,
+  B2 = 2,
+  B3 = 3,
 };
 
 enum class TensormapElemType : uint8_t {
@@ -129,10 +158,15 @@ enum class TensormapFillMode : uint8_t {
 
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 
+LLVM_ABI void printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal);
+
 LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
                                            const Constant *ImmArgVal);
+
+LLVM_ABI void printTcgen05MMACollectorBBuffer(raw_ostream &OS,
+                                              const Constant *ImmArgVal);
 
 LLVM_ABI void printTensormapElemType(raw_ostream &OS,
                                      const Constant *ImmArgVal);

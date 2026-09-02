@@ -1786,6 +1786,8 @@ More information can be found [here](https://clang.llvm.org/docs/Modules.html).
 | `= delete ("should have a reason");`          | \_\_cpp_deleted_function           | C++26         | C++03         |
 | Variadic Friends                              | \_\_cpp_variadic_friend            | C++26         | C++03         |
 | Trivial Relocatability                        | \_\_cpp_trivial_relocatability     | C++26         | C++03         |
+|``auto()`` cast                                | \_\_cpp_auto_cast                  | C++26         | C++03         |
+| Pack Indexing for Template Names              | \_\_cpp_pack_indexing >= 202606L   | C++2d         | C++03         |
 | Designated initializers (N494)                |                                    | C99           | C89           |
 | `_Complex` (N693)                             |                                    | C99           | C89, C++      |
 | `_Bool` (N815)                                |                                    | C99           | C89           |
@@ -2058,6 +2060,9 @@ The following type trait primitives are supported by Clang. Those traits marked
 - `__builtin_lt_synthesizes_from_spaceship`, `__builtin_gt_synthesizes_from_spaceship`,
   `__builtin_le_synthesizes_from_spaceship`, `__builtin_ge_synthesizes_from_spaceship` (Clang):
   These builtins can be used to determine whether the corresponding operator is synthesized from a spaceship operator.
+- `__builtin_type_order` (C++): Returns `std::strong_ordering::less` if `T` precedes `U` in an
+  implementation-defined total ordering of all types, `std::strong_ordering::greater` if `U` precedes `T`, 
+  and `std::strong_ordering::equal` if they are the same type.
 
 In addition, the following expression traits are supported:
 
@@ -2565,6 +2570,8 @@ Further examples of these attributes are available in the static analyzer's
 Query for these features with `__has_attribute(ns_consumed)`,
 `__has_attribute(ns_returns_retained)`, etc.
 
+(langext-objective-c-available)=
+
 ### Objective-C @available
 
 It is possible to use the newest SDK but still build a program that can run on
@@ -3030,6 +3037,44 @@ static __externref_t tableDst[0];
 // [dst, dst + nelem - 1] in tableDst
 void copy(int dst, int src, int nelem) {
   __builtin_wasm_table_copy(tableDst, tableSrc, dst, src, nelem);
+}
+```
+
+### `__builtin_wasm_memory_copy`
+
+This builtin function copies bytes from a source memory to a possibly
+overlapping destination region using the WebAssembly `memory.copy` instruction.
+It takes five arguments:
+1. Destination memory index (must be a constant integer)
+2. Source memory index (must be a constant integer)
+3. Destination pointer (`void *`)
+4. Source pointer (`const void *`)
+5. Number of bytes to copy (`size_t`)
+
+It returns nothing. Note that unlike C `memcpy` or `memmove`, `memory.copy`
+traps if either pointer is out of bounds even when the number of bytes is zero.
+
+```c++
+void copy(void *dst, const void *src, size_t n) {
+  __builtin_wasm_memory_copy(0, 0, dst, src, n);
+}
+```
+
+### `__builtin_wasm_memory_fill`
+
+This builtin function sets bytes in memory using the WebAssembly `memory.fill`
+instruction. It takes four arguments:
+1. Memory index (must be a constant integer)
+2. Destination pointer (`void *`)
+3. Byte value to set (passed as `int`, lowest 8 bits used)
+4. Number of bytes to set (`size_t`)
+
+It returns nothing. Note that unlike C `memset`, `memory.fill` traps if the
+pointer is out of bounds even when the number of bytes is zero.
+
+```c++
+void fill(void *dst, int val, size_t n) {
+  __builtin_wasm_memory_fill(0, dst, val, n);
 }
 ```
 
@@ -5714,6 +5759,8 @@ commandline.
   - Enable frame pointers
 ```
 
+(langext-loop-hint-optimizations)=
+
 ## Extensions for loop hint optimizations
 
 The `#pragma clang loop` directive is used to specify hints for optimizing the
@@ -6086,6 +6133,8 @@ for(...) {
   a = b[i] * c[i] + e;
 }
 ```
+
+(langext-atomic-code-generation)=
 
 ## Extensions for controlling atomic code generation
 
@@ -6509,6 +6558,8 @@ Clang treats it as being at file scope when it appears within other scopes.
 When `#pragma comment(copyright, ...)` appears in a C++20 module interface
 unit, the copyright string is embedded only in the object file compiled from
 that interface unit. Importing TUs do not re-emit the string.
+
+(langext-evaluating-object-size)=
 
 ## Evaluating Object Size
 

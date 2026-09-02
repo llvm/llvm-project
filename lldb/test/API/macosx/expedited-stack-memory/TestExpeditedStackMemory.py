@@ -47,7 +47,6 @@ class TestExpeditedStackMemory(TestBase):
         stub, producing memory-read packets."""
         self.check_packets_during_backtrace(disable_memory_cache=True)
 
-    @skipIfOutOfTreeDebugserver
     @requireDarwin
     def test_memory_reads_when_examining_frame0_locals(self):
         """Model an IDE stop: walk the whole stack (a backtrace / debug
@@ -92,6 +91,11 @@ class TestExpeditedStackMemory(TestBase):
                 self.examine_locals(frame)
 
         sent = self.walk_stack(per_frame, disable_memory_cache=False)
+
+        if not expect_stack_reads:
+            # Only a stub that expedites frame 0's stack can serve its locals
+            # from the cache.
+            lldbutil.require_qsupported_capability(self, "ExpediteStack+")
 
         # The process is still stopped after the walk; consult its memory map to
         # classify the reads we just provoked.  Frame 0 is func_e (where we

@@ -285,6 +285,52 @@ genMutableBoxValue(Fortran::lower::AbstractConverter &converter,
   return converter.genExprMutableBox(loc, *expr);
 }
 
+/// Search a DataRef for a symbol with CUDA attributes. Returns true and
+/// sets \p sym if found.
+static bool findCUDAAttrInDataRef(const Fortran::parser::DataRef &ref,
+                                  const Fortran::semantics::Symbol *&sym) {
+  return Fortran::common::visit(
+      Fortran::common::visitors{
+          [&](const Fortran::parser::Name &name) {
+            if (name.symbol && Fortran::semantics::HasCUDAAttr(*name.symbol)) {
+              sym = name.symbol;
+              return true;
+            }
+            return false;
+          },
+          [&](const Fortran::common::Indirection<
+              Fortran::parser::StructureComponent> &sc) {
+            if (sc.value().Component().symbol &&
+                Fortran::semantics::HasCUDAAttr(
+                    *sc.value().Component().symbol)) {
+              sym = sc.value().Component().symbol;
+              return true;
+            }
+            return findCUDAAttrInDataRef(sc.value().Base(), sym);
+          },
+          [&](const Fortran::common::Indirection<Fortran::parser::ArrayElement>
+                  &ae) {
+            return findCUDAAttrInDataRef(ae.value().Base(), sym);
+          },
+          [&](const Fortran::common::Indirection<
+              Fortran::parser::CoindexedNamedObject> &) { return false; },
+      },
+      ref.u);
+}
+
+/// When \p allocObj is a structure component (e.g. a%b%c), return the first
+/// parent carrying CUDA attributes, or nullptr when there is none.
+static const Fortran::semantics::Symbol *
+getCUDAAttrParentSymbol(const Fortran::parser::AllocateObject &allocObj) {
+  if (const auto *sc =
+          std::get_if<Fortran::parser::StructureComponent>(&allocObj.u)) {
+    const Fortran::semantics::Symbol *sym = nullptr;
+    if (findCUDAAttrInDataRef(sc->Base(), sym))
+      return sym;
+  }
+  return nullptr;
+}
+
 /// Implement Allocate statement lowering.
 class AllocateStmtHelper {
 public:
@@ -456,49 +502,17 @@ private:
     fir::StoreOp::create(builder, loc, falseConv, pinned);
   }
 
-  /// Search a DataRef for a symbol with CUDA attributes. Returns true and
-  /// sets \p sym if found.
-  static bool findCUDAAttrInDataRef(const Fortran::parser::DataRef &ref,
-                                    const Fortran::semantics::Symbol *&sym) {
-    return Fortran::common::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::parser::Name &name) {
-              if (name.symbol &&
-                  Fortran::semantics::HasCUDAAttr(*name.symbol)) {
-                sym = name.symbol;
-                return true;
-              }
-              return false;
-            },
-            [&](const Fortran::common::Indirection<
-                Fortran::parser::StructureComponent> &sc) {
-              if (sc.value().Component().symbol &&
-                  Fortran::semantics::HasCUDAAttr(
-                      *sc.value().Component().symbol)) {
-                sym = sc.value().Component().symbol;
-                return true;
-              }
-              return findCUDAAttrInDataRef(sc.value().Base(), sym);
-            },
-            [&](const Fortran::common::Indirection<
-                Fortran::parser::ArrayElement> &ae) {
-              return findCUDAAttrInDataRef(ae.value().Base(), sym);
-            },
-            [&](const Fortran::common::Indirection<
-                Fortran::parser::CoindexedNamedObject> &) { return false; },
-        },
-        ref.u);
-  }
-
   /// When the allocate object is a structure component (e.g.,
   /// managed_var(1)%component or a%b%c), walk the DataRef chain and check
   /// whether any parent has CUDA attributes. If so, update \p sym to that
   /// symbol and return true so allocations use its memory space.
   bool propagateCUDAAttrsFromParent(const Allocation &alloc,
                                     const Fortran::semantics::Symbol *&sym) {
-    if (const auto *sc = std::get_if<Fortran::parser::StructureComponent>(
-            &alloc.getAllocObj().u))
-      return findCUDAAttrInDataRef(sc->Base(), sym);
+    if (const Fortran::semantics::Symbol *parent =
+            getCUDAAttrParentSymbol(alloc.getAllocObj())) {
+      sym = parent;
+      return true;
+    }
     return false;
   }
 
@@ -957,8 +971,14 @@ genDeallocate(fir::FirOpBuilder &builder,
               Fortran::lower::AbstractConverter &converter, mlir::Location loc,
               const fir::MutableBoxValue &box, ErrorManager &errorManager,
               mlir::Value declaredTypeDesc = {},
-              const Fortran::semantics::Symbol *symbol = nullptr) {
-  bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
+              const Fortran::semantics::Symbol *symbol = nullptr,
+              const Fortran::semantics::Symbol *cudaSymbol = nullptr) {
+  // A component inherits its parent's memory space at ALLOCATE, so the
+  // deallocation must use the parent's attribute too.
+  if (!cudaSymbol)
+    cudaSymbol = symbol;
+  bool isCudaSymbol =
+      cudaSymbol && Fortran::semantics::HasCUDAAttr(*cudaSymbol);
   bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
   // A plain allocatable/pointer under -gpu=mem:unified was given the unified
   // allocator index at ALLOCATE, so its deallocation must go through the
@@ -1002,7 +1022,7 @@ genDeallocate(fir::FirOpBuilder &builder,
     stat =
         genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
   else
-    stat = genCudaDeallocate(builder, loc, box, errorManager, *symbol);
+    stat = genCudaDeallocate(builder, loc, box, errorManager, *cudaSymbol);
   fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
   if (symbol)
     postDeallocationAction(converter, builder, *symbol);
@@ -1080,8 +1100,15 @@ void Fortran::lower::genDeallocateStmt(
               Fortran::lower::getTypeDescAddr(converter, loc, *derivedTypeSpec);
         }
     }
-    mlir::Value beginOpValue = genDeallocate(
-        builder, converter, loc, box, errorManager, declaredTypeDesc, &symbol);
+    // ALLOCATE gives the object's own attribute precedence over the parent's;
+    // both sides must match or the allocators differ.
+    const Fortran::semantics::Symbol *cudaSymbol = nullptr;
+    if (!Fortran::semantics::HasCUDAAttr(symbol) &&
+        !Fortran::semantics::HasCUDAComponent(symbol))
+      cudaSymbol = getCUDAAttrParentSymbol(allocateObject);
+    mlir::Value beginOpValue =
+        genDeallocate(builder, converter, loc, box, errorManager,
+                      declaredTypeDesc, &symbol, cudaSymbol);
     preDeallocationAction(converter, builder, beginOpValue, symbol);
   }
   builder.restoreInsertionPoint(insertPt);

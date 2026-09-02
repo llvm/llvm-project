@@ -2,9 +2,9 @@
 # RUN: llc -mtriple=amdgpu9.08 -passes=machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
-# CHECK: ********** MI Scheduling **********
+# CHECK: Current Schedule Region
 # CHECK-NEXT: test_get_liveins:%bb.0
-# CHECK: ********** MI Scheduling **********
+# CHECK: Current Schedule Region
 # CHECK-NEXT: test_get_liveins:%bb.1
 # CHECK: Region live-in pressure:  VGPRs: 1 AGPRs: 0, SGPRs: 0, LVGPR WT: 0, LSGPR WT: 0
 # CHECK: ScheduleDAGMILive::schedule starting

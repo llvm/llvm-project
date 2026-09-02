@@ -31,9 +31,10 @@ define amdgpu_ps bfloat @fcanonicalize_bf16_v(bfloat %src) {
 ;
 ; GFX1250-LABEL: fcanonicalize_bf16_v:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX1250-NEXT:    v_max_num_f32_e32 v0, v0, v0
 ; GFX1250-NEXT:    v_bfe_u32 v1, v0, 16, 1
@@ -86,9 +87,10 @@ define amdgpu_ps bfloat @fcanonicalize_bf16_s(bfloat inreg %src) {
 ;
 ; GFX1250-LABEL: fcanonicalize_bf16_s:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX1250-NEXT:    v_max_num_f32_e64 v0, s0, s0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
@@ -152,9 +154,10 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_v(<2 x bfloat> %src) {
 ;
 ; GFX1250-LABEL: fcanonicalize_v2bf16_v:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_mov_b16_e32 v1.l, v0.h
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
 ; GFX1250-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
@@ -236,9 +239,10 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_s(<2 x bfloat> inreg %src) {
 ;
 ; GFX1250-LABEL: fcanonicalize_v2bf16_s:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_lshl_b32 s1, s0, 16
 ; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX1250-NEXT:    v_max_num_f32_e64 v0, s1, s1

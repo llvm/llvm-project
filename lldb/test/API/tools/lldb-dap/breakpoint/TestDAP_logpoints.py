@@ -4,10 +4,7 @@ Test lldb-dap logpoints feature.
 
 import os
 
-from lldbsuite.test.decorators import (
-    skipIfTargetDoesNotSupportSharedLibraries,
-    skipIfWindows,
-)
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
 from lldbsuite.test.tools.lldb_dap.types import (
@@ -15,7 +12,6 @@ from lldbsuite.test.tools.lldb_dap.types import (
     SourceBreakpoint,
     StoppedEvent,
 )
-
 
 @skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_logpoints(DAPTestCaseBase):

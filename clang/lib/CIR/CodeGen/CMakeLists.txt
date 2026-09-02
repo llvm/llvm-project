@@ -56,6 +56,7 @@ add_clang_library(clangCIR
   CIRGenTypes.cpp
   CIRGenVTables.cpp
   TargetInfo.cpp
+  Targets/AArch64.cpp
   Targets/AMDGPU.cpp
   Targets/NVPTX.cpp
   Targets/SPIRV.cpp

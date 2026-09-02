@@ -132,8 +132,10 @@ features = [
             #include <stdlib.h>
             #include <wctype.h>
 
+            #include "test_macros.h"
+
             int main(int, char**) {
-            #if !defined(_LIBCPP_VERSION) || (defined(_LIBCPP_HAS_LOCALIZATION) && _LIBCPP_HAS_LOCALIZATION)
+            #ifndef TEST_HAS_NO_LOCALIZATION
               setlocale(LC_ALL, "en_US.UTF-8");
               return towlower(L'\\xDA') == L'\\xFA' ? EXIT_FAILURE : EXIT_SUCCESS;
             #else

@@ -33,9 +33,9 @@ public:
 
   size_t Read(lldb::addr_t addr, void *dst, size_t dst_len, Status &error);
 
-  /// Reads multiple memory ranges, serving cache hits from L1 and batching all
-  /// misses through Process::DoReadMemoryRanges. The semantics of the return
-  /// value match Process::ReadMemoryRanges.
+  /// Reads multiple memory ranges, serving cache hits from L1 and L2 and
+  /// batching all misses through Process::DoReadMemoryRanges. The semantics of
+  /// the return value match Process::ReadMemoryRanges.
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
   ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
              llvm::MutableArrayRef<uint8_t> buffer);
@@ -82,6 +82,17 @@ private:
   // returns a pointer into that entry's data at the correct offset. Returns
   // nullptr on a miss. Caller must hold m_mutex.
   const uint8_t *FindL1CacheEntry(lldb::addr_t addr, size_t len) const;
+
+  // If the entire range [addr, addr+len) is covered by a single cache line
+  // that is already in L2, returns a pointer into that line's data at the
+  // correct offset. Never reads from the inferior. Returns nullptr on a miss.
+  // Caller must hold m_mutex.
+  const uint8_t *FindL2CacheEntry(lldb::addr_t addr, size_t len) const;
+
+  // Looks the range [addr, addr+len) up in L1 and then L2, returning a pointer
+  // into the data of whichever entry covers it. Returns nullptr on a miss.
+  // Caller must hold m_mutex.
+  const uint8_t *FindCacheEntry(lldb::addr_t addr, size_t len) const;
 };
 
     

@@ -111,7 +111,6 @@ private:
   ArgInfo classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
                                unsigned &NeededInt, unsigned &NeededSse,
                                bool IsNamedArg, bool IsRegCall = false) const;
-  const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
 
 public:
   X86_64TargetInfo(TypeBuilder &TypeBuilder, X86AVXABILevel AVXABILevel,
@@ -121,6 +120,9 @@ public:
 
   bool has64BitPointers() const { return Has64BitPointers; }
 };
+
+static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
+                                  unsigned EndBit);
 
 // Gets the "best" type to represent the union.
 static const Type *reduceUnionForX8664(const RecordType *UnionType,
@@ -146,6 +148,16 @@ static const Type *reduceUnionForX8664(const RecordType *UnionType,
       StorageType = FieldType;
       break;
     }
+
+    // A member that holds no user data supplies no bytes for a coercion to
+    // read, so it must not become the storage type however wide or aligned it
+    // is declared.  Clang compares lowered types instead, where an empty class
+    // is a byte array whose i8 leaf lets getIntegerTypeAtOffset narrow the
+    // coercion.  A record mapped here holds no fields, so there is no such
+    // leaf and the eightbyte would be sized from the union.
+    if (bitsContainNoUserData(FieldType, 0,
+                              FieldType->getSizeInBits().getFixedValue()))
+      continue;
 
     if (!StorageType ||
         FieldType->getAlignment() > StorageType->getAlignment() ||
@@ -545,7 +557,9 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Field.OffsetInBits;
       bool BitField = Field.IsBitField;
 
-      if (BitField && Field.IsUnnamedBitfield)
+      // Ignore zero-length bit-fields. Other unnamed bit-fields are real
+      // storage and classify like named ones, matching GCC.
+      if (BitField && Field.BitFieldWidth == 0)
         continue;
 
       if (Size > 128 &&
@@ -594,18 +608,6 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
 
   Lo = Memory;
   Hi = NoClass;
-}
-
-const Type *
-X86_64TargetInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
-  if (const auto *RT = dyn_cast<RecordType>(Ty)) {
-    if (RT->isUnion() && RT->isTransparentUnion()) {
-      auto Fields = RT->getFields();
-      assert(!Fields.empty() && "transparent union cannot be empty");
-      return Fields.front().FieldType;
-    }
-  }
-  return Ty;
 }
 
 ArgInfo
@@ -1392,24 +1394,6 @@ ArgInfo X86_64TargetInfo::getIndirectReturnResult(const Type *Ty) const {
   return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
 }
 
-static bool classifyCXXReturnType(FunctionInfo &FI) {
-  const abi::Type *Ty = FI.getReturnType();
-
-  if (const auto *RT = llvm::dyn_cast<abi::RecordType>(Ty)) {
-    if (!RT->canPassInRegisters()) {
-      // A C++ record that cannot pass in registers (non-trivial copy/dtor)
-      // is returned indirectly with ByVal=false, matching
-      // ItaniumCXXABI::classifyReturnType. This is the RAA path and is distinct
-      // from getIndirectReturnResult (plain aggregates), which uses ByVal=true.
-      FI.getReturnInfo() =
-          ArgInfo::getIndirect(RT->getAlignment(), /*ByVal=*/false);
-      return true;
-    }
-  }
-
-  return false;
-}
-
 void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
   CallingConv::ID CallingConv = FI.getCallingConvention();
 
@@ -1428,7 +1412,7 @@ void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
   unsigned FreeSSERegs = 8;
   unsigned NeededInt = 0, NeededSSE = 0;
 
-  if (!classifyCXXReturnType(FI)) {
+  if (!maybeCommonClassifyReturnType(FI)) {
     const Type *RetTy = FI.getReturnType();
     FI.getReturnInfo() = classifyReturnType(RetTy);
   }

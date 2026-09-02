@@ -13,7 +13,7 @@ union U {
   float f;
   double d;
 };
-// CIR: !rec_U = !cir.union<"U" {!cir.bool, !s16i, !s32i, !cir.float, !cir.double}>
+// CIR: !rec_U = !cir.union<"U" {data !cir.bool, data !s16i, data !s32i, data !cir.float, data !cir.double}>
 // LLVM: %union.U = type { double }
 // OGCG: %union.U = type { double }
 
