@@ -408,13 +408,14 @@ foreach i = 4...6 in {
 
 def : SysReg<"menvcfg", 0x30A>;
 def : SysReg<"menvcfgh", 0x31A, RV32Only=true>;
-def : SysReg<"mpmpdeleg", 0x316>;
 def : SysReg<"mseccfg", 0x747>;
 def : SysReg<"mseccfgh", 0x757, RV32Only=true>;
 
 //===----------------------------------------------------------------------===//
 // Machine Memory Protection
 //===----------------------------------------------------------------------===//
+
+def : SysReg<"mpmpdeleg", 0x316>;
 
 // pmpcfg0-pmpcfg15 at 0x3A0-0x3AF. Odd-numbered registers are RV32-only.
 foreach i = 0...15 in {
