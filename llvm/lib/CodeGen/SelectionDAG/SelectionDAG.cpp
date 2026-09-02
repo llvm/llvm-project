@@ -15367,12 +15367,11 @@ SDValue SelectionDAG::buildVectorFromUnrolledParts(EVT VT, const SDLoc &DL,
     return getBuildVector(VT, DL, Scalars);
 
   SDValue Vec = getPOISON(VT);
-  for (unsigned I = 0, E = Scalars.size(); I != E; ++I) {
-    // Iterate in reverse so result remains poison until we encounter a lane
-    // that exists, after which all lower-numbered lanes must also exist.
-    unsigned IdxVal = E - I - 1;
+  // Iterate in reverse so result remains poison until we encounter a lane that
+  // exists, after which all lower-numbered lanes must also exist.
+  for (unsigned IdxVal : reverse(seq(Scalars.size())))
     Vec = getInsertVectorElt(DL, Vec, Scalars[IdxVal], IdxVal);
-  }
+
   return Vec;
 }
 
