@@ -488,9 +488,6 @@ public:
   void setScalarizeGlobalBehavior(bool b) { ScalarizeGlobal = b; }
   bool getScalarizeGlobalBehavior() const { return ScalarizeGlobal; }
 
-  // static wrappers
-  static bool hasHalfRate64Ops(const TargetSubtargetInfo &STI);
-
   // XXX - Why is this here if it isn't in the default pass set?
   bool enableEarlyIfConversion() const override { return true; }
 
@@ -947,12 +944,12 @@ public:
 
   /// \returns Minimum flat work group size supported by the subtarget.
   unsigned getMinFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMinFlatWorkGroupSize(*this);
+    return AMDGPU::getMinFlatWorkGroupSize();
   }
 
   /// \returns Maximum flat work group size supported by the subtarget.
   unsigned getMaxFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
+    return AMDGPU::getMaxFlatWorkGroupSize();
   }
 
   /// \returns Number of waves per execution unit required to support the given

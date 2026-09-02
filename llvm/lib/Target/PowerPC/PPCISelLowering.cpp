@@ -4281,13 +4281,10 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
         case MVT::v16i8:
         case MVT::v8i16:
         case MVT::v4i32:
-          RC = &PPC::VRRCRegClass;
-          break;
         case MVT::v4f32:
-          RC = &PPC::VRRCRegClass;
-          break;
         case MVT::v2f64:
         case MVT::v2i64:
+        case MVT::f128:
           RC = &PPC::VRRCRegClass;
           break;
       }
@@ -14922,9 +14919,9 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // IMPLICIT_DEF register.
     BuildMI(*BB, MI, dl, TII->get(TargetOpcode::IMPLICIT_DEF), ImDefReg);
     BuildMI(*BB, MI, dl, TII->get(PPC::INSERT_SUBREG), ExtSrcReg)
-      .addReg(ImDefReg)
-      .add(SrcOp)
-      .addImm(1);
+        .addReg(ImDefReg)
+        .add(SrcOp)
+        .addImm(PPC::sub_32);
 
     Register NewFPSCRTmpReg = RegInfo.createVirtualRegister(&PPC::G8RCRegClass);
     BuildMI(*BB, MI, dl, TII->get(PPC::RLDIMI), NewFPSCRTmpReg)

@@ -83,7 +83,8 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
 bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
 
 UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
-                                         unsigned Kind, Pointer &Ptr);
+                                         unsigned Kind, Pointer &Ptr,
+                                         const Expr *E, bool IsDynamic = false);
 
 template <typename T>
 bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {

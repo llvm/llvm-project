@@ -3985,6 +3985,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithUtils",
+        ":ControlFlowInterfaces",
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
@@ -11004,6 +11005,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCUtils",
         ":Pass",
+        ":SideEffectInterfaces",
         ":Transforms",
         "//llvm:Support",
     ],
