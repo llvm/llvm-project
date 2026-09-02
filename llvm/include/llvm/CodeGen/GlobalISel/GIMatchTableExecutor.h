@@ -490,11 +490,11 @@ enum {
   GIR_AddCImm,
 
   /// Add a floating-point immediate to the specified instruction.
-  /// The immediate is interpreted as a floating-point value (a double) and
-  /// converted to the semantics matching Ty before being attached.
+  /// Imm is the IEEE bit pattern of a value with Ty's scalar semantics; it is
+  /// not converted from an integer or a double.
   /// - InsnID(ULEB128) - Instruction ID to modify
   /// - Ty(1) - Type of the constant immediate.
-  /// - Imm(8) - The immediate (interpreted as a double) to add
+  /// - Imm(8) - Bit pattern of the floating-point immediate
   GIR_AddCFPImm,
 
   /// Render complex operands to the specified instruction

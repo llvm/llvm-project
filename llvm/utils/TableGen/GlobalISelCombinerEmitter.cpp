@@ -2130,9 +2130,9 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
     RuleMatcher &M, BuildMIAction &DstMI, const CodeGenInstructionPattern &P,
     const InstructionOperand &O) {
   // If we have a type, we implicitly emit a G_CONSTANT, except for G_CONSTANT
-  // itself (which needs a CImm) and G_FCONSTANT (which needs an FP immediate,
-  // the literal being interpreted as a floating-point value since the
-  // pattern grammar has no fp literals).
+  // itself (which needs a CImm) and G_FCONSTANT (which needs an FP immediate).
+  // The pattern grammar has no fp literals, so a G_FCONSTANT immediate is an
+  // IEEE bit pattern of the immediate's type (0 is +0.0 for every FP width).
   //
   // No type means we emit a simple imm.
   // G_CONSTANT/G_FCONSTANT are special cases and need a typed immediate

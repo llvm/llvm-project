@@ -2033,8 +2033,8 @@ public:
 
 /// Adds a specific immediate to the instruction being built.
 /// If a LLT is passed, a ConstantInt immediate is created instead, unless
-/// IsFP is set, in which case the immediate is interpreted as a
-/// floating-point value (a double) and a ConstantFP immediate is created.
+/// IsFP is set, in which case Imm is treated as an IEEE bit pattern and a
+/// ConstantFP immediate is created.
 class ImmRenderer : public OperandRenderer {
 protected:
   unsigned InsnID;
