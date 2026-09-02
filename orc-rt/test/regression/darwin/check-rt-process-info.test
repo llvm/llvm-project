@@ -1,5 +1,3 @@
-# REQUIRES: system-darwin
-#
 # RUN: orc-rt-process-info-check --print-triple --print-cpu-features --print-page-size  \
 # RUN:   | FileCheck %s -DVERSION=%macos-product-version
 
