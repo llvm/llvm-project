@@ -914,6 +914,11 @@ def warn_dyn_class_memaccess : Warning<
   InGroup<DynamicClassMemaccess>;
 def note_bad_memaccess_silence : Note<
   "explicitly cast the pointer to silence this warning">;
+def warn_suspicious_memcmp_nonunique : Warning<
+  "%select{first|second}0 operand of this %1 call is a pointer to type %2 "
+  "which does not have a unique object representation; consider comparing "
+  "%select{the values|the members of the object}3 manually">,
+  InGroup<SuspiciousMemcmp>;
 def warn_sizeof_pointer_expr_memaccess : Warning<
   "'%0' call operates on objects of type %1 while the size is based on a "
   "different type %2">,

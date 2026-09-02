@@ -284,6 +284,14 @@ features cannot lower the translation-unit ABI level;
 - Fixed concept template parameters not being recognized in `-Wdocumentation`
   when mentioned in tparam comments. (#GH64087)
 
+- Added `-Wsuspicious-memcmp` (on by default, grouped under
+  `-Wsuspicious-memaccess`), which warns when `memcmp` or `bcmp` is used as a
+  whole-object equality test on a type that does not have a unique object
+  representation, such as a struct with padding bytes or floating-point
+  members, where two equal values may compare unequal. Partial (prefix)
+  comparisons and non-constant sizes are not diagnosed; casting a pointer
+  argument to `void *` silences the warning.
+
 - `-Wunused-but-set-variable` now diagnoses file-scope variables with
   internal linkage (`static` storage class) that are assigned but never used.
   This new coverage is added under the subgroup `-Wunused-but-set-global`,
@@ -496,6 +504,12 @@ features cannot lower the translation-unit ABI level;
   such as when the call is used as an `auto` non-type template argument.
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
+
+- `__has_unique_object_representations` now returns `true` for `_Atomic` types
+  whose object representation is identical to that of their value type, such
+  as `_Atomic(int)`. Atomic types whose size is rounded up to a power of two
+  (adding padding bits) continue to report `false`. This also fixes a false
+  positive in the `bugprone-suspicious-memory-comparison` clang-tidy check.
 
 #### Bug Fixes to Attribute Support
 

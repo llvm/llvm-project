@@ -3504,6 +3504,16 @@ static_assert(__has_unique_object_representations(const int *), "as are pointers
 static_assert(__has_unique_object_representations(volatile int *), "as are pointers");
 static_assert(__has_unique_object_representations(const volatile int *), "as are pointers");
 
+static_assert(__has_unique_object_representations(_Atomic(int)), "layout-identical atomics are");
+static_assert(!__has_unique_object_representations(_Atomic(float)), "value type is not unique");
+struct AtomicReprThreeChars { char a, b, c; };
+static_assert(!__has_unique_object_representations(_Atomic(AtomicReprThreeChars)),
+              "atomic size rounded up to a power of two adds padding");
+struct AtomicReprMember { _Atomic(int) x; };
+static_assert(__has_unique_object_representations(AtomicReprMember), "atomic member, no padding");
+struct AtomicReprPadded { char c; _Atomic(int) x; };
+static_assert(!__has_unique_object_representations(AtomicReprPadded), "padding before atomic member");
+
 class C {};
 using FP = int (*)(int);
 using PMF = int (C::*)(int);

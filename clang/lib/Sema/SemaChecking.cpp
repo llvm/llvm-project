@@ -11150,13 +11150,14 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
     if (PointeeTy == QualType())
       continue;
 
+    const bool IsCmp = BId == Builtin::BImemcmp || BId == Builtin::BIbcmp;
+
     // Always complain about dynamic classes.
     bool IsContained;
     if (const CXXRecordDecl *ContainedRD =
             getContainedDynamicClass(PointeeTy, IsContained)) {
 
       unsigned OperationType = 0;
-      const bool IsCmp = BId == Builtin::BImemcmp || BId == Builtin::BIbcmp;
       // "overwritten" if we're warning about the destination for any call
       // but memcmp; otherwise a verb appropriate to the call.
       if (ArgIdx != 0 || IsCmp) {
@@ -11180,7 +11181,26 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
         PDiag(diag::warn_arc_object_memaccess)
           << ArgIdx << FnName << PointeeTy
           << Call->getCallee()->getSourceRange());
-    else if (const auto *RD = PointeeTy->getAsRecordDecl()) {
+    else if (IsCmp && !PointeeTy->isDependentType() &&
+             !PointeeTy->isIncompleteType() && !PointeeTy->isFunctionType() &&
+             !PointeeTy->isSizelessType()) {
+      // Comparing objects whose equal values may differ in object
+      // representation (padding bytes, multiple floating-point encodings)
+      // is not a reliable equality test. Only diagnose when the constant
+      // length covers the entire object; a partial (prefix) compare of
+      // leading members is deliberate use.
+      Expr::EvalResult SizeResult;
+      if (LenExpr->isValueDependent() ||
+          !LenExpr->EvaluateAsInt(SizeResult, Context) ||
+          SizeResult.Val.getInt().ult(static_cast<uint64_t>(
+              Context.getTypeSizeInChars(PointeeTy).getQuantity())) ||
+          Context.hasUniqueObjectRepresentations(PointeeTy))
+        continue;
+      DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                          PDiag(diag::warn_suspicious_memcmp_nonunique)
+                              << ArgIdx << FnName << PointeeTy
+                              << !PointeeTy->isScalarType());
+    } else if (const auto *RD = PointeeTy->getAsRecordDecl()) {
 
       // FIXME: Do not consider incomplete types even though they may be
       // completed later. GCC does not diagnose such code, but we may want to

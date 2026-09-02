@@ -181,7 +181,11 @@ _LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _AtomicWaitable&) {}
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp const& __rhs) {
-  return std::memcmp(std::addressof(__lhs), std::addressof(__rhs), sizeof(_Tp)) == 0;
+  // The object representations are compared on purpose ([atomics.wait]); the casts
+  // opt out of -Wsuspicious-memcmp.
+  return std::memcmp(static_cast<const void*>(std::addressof(__lhs)),
+                     static_cast<const void*>(std::addressof(__rhs)),
+                     sizeof(_Tp)) == 0;
 }
 
 template <class _Tp>
