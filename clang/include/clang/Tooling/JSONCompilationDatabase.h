@@ -66,14 +66,14 @@ public:
   /// loaded from the given file.
   static std::unique_ptr<JSONCompilationDatabase>
   loadFromFile(StringRef FilePath, std::string &ErrorMessage,
-               JSONCommandLineSyntax Syntax);
+               JSONCommandLineSyntax Syntax, bool ResolveRealPaths = false);
 
   /// Loads a JSON compilation database from a data buffer.
   ///
   /// Returns NULL and sets ErrorMessage if the database could not be loaded.
   static std::unique_ptr<JSONCompilationDatabase>
   loadFromBuffer(StringRef DatabaseString, std::string &ErrorMessage,
-                 JSONCommandLineSyntax Syntax);
+                 JSONCommandLineSyntax Syntax, bool ResolveRealPaths = false);
 
   /// Returns all compile commands in which the specified file was
   /// compiled.
@@ -95,8 +95,9 @@ public:
 private:
   /// Constructs a JSON compilation database on a memory buffer.
   JSONCompilationDatabase(std::unique_ptr<llvm::MemoryBuffer> Database,
-                          JSONCommandLineSyntax Syntax)
+                          JSONCommandLineSyntax Syntax, bool ResolveRealPaths)
       : Database(std::move(Database)), Syntax(Syntax),
+        ResolveRealPaths(ResolveRealPaths),
         YAMLStream(this->Database->getBuffer(), SM) {}
 
   /// Parses the database file and creates the index.
@@ -132,6 +133,7 @@ private:
 
   std::unique_ptr<llvm::MemoryBuffer> Database;
   JSONCommandLineSyntax Syntax;
+  bool ResolveRealPaths;
   llvm::SourceMgr SM;
   llvm::yaml::Stream YAMLStream;
 };
