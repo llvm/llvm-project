@@ -137,8 +137,6 @@ let Attributes = [NoThrow, Const, Constexpr] in {
 
 let Features = "bmi2", Attributes = [NoThrow, Const, Constexpr] in {
   def bzhi_di : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
-  def pdep_di : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
-  def pext_di : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
 
 let Features = "tbm", Attributes = [NoThrow, Const, Constexpr] in {
