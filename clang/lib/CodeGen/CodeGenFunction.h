@@ -4136,7 +4136,36 @@ public:
   /// Helper for the OpenMP loop directives.
   void EmitOMPLoopBody(const OMPLoopDirective &D, JumpDest LoopExit);
 
-  /// Emit code for the worksharing loop-based directive.
+  /// Codegen lambda emitting the loop structure a worksharing loop body is
+  /// wrapped in: the schedule initialization and the loop itself. It is passed
+  /// the privatization scope set up by EmitOMPWorksharingLoopBody().
+  typedef llvm::function_ref<void(CodeGenFunction &, OMPPrivateScope &)>
+      CodeGenLoopStructureTy;
+
+  /// Emit the body of a worksharing loop-based directive: the data-sharing
+  /// clauses (firstprivate, private, lastprivate, reduction, linear), the
+  /// privatized loop counters, the work of the construct itself - emitted by
+  /// \p CodeGenLoopStructure - and the finalization of those clauses.
+  ///
+  /// This is factored out of EmitOMPWorksharingLoop() so that it can also be
+  /// used on its own by "no-loop" codegen, i.e. when iterations can be mapped
+  /// 1:1 onto threads and no loop has to be emitted at all. In that case
+  /// \p CodeGenLoopStructure emits the loop body a single time instead of a
+  /// loop around it.
+  ///
+  /// \param IL LValue of the "is last iteration" helper variable, used to
+  ///           guard the finalization of the clauses above.
+  /// \param HasLinears Whether EmitOMPLinearClauseInit() emitted any linear
+  ///                   clause initialization for \p S.
+  /// \return true, if this construct has any lastprivate clause, false -
+  /// otherwise.
+  bool EmitOMPWorksharingLoopBody(
+      const OMPLoopDirective &S, LValue IL, bool HasLinears,
+      const CodeGenLoopStructureTy &CodeGenLoopStructure);
+
+  /// Emit code for the worksharing loop-based directive: the loop structure
+  /// (precondition, helper variables, schedule and the loop itself) around the
+  /// body emitted by EmitOMPWorksharingLoopBody().
   /// \return true, if this construct has any lastprivate clause, false -
   /// otherwise.
   bool EmitOMPWorksharingLoop(const OMPLoopDirective &S, Expr *EUB,

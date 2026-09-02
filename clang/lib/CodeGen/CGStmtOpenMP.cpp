@@ -3782,6 +3782,62 @@ struct ScheduleKindModifiersTy {
 };
 } // namespace
 
+bool CodeGenFunction::EmitOMPWorksharingLoopBody(
+    const OMPLoopDirective &S, LValue IL, bool HasLinears,
+    const CodeGenLoopStructureTy &CodeGenLoopStructure) {
+  OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
+  OMPPrivateScope LoopScope(*this);
+  if (EmitOMPFirstprivateClause(S, LoopScope) || HasLinears) {
+    // Emit implicit barrier to synchronize threads and avoid data races on
+    // initialization of firstprivate variables and post-update of
+    // lastprivate variables.
+    CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getBeginLoc(), OMPD_unknown,
+                                           /*EmitChecks=*/false,
+                                           /*ForceSimpleCall=*/true);
+  }
+  EmitOMPPrivateClause(S, LoopScope);
+  CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(
+      *this, S, EmitLValue(S.getIterationVariable()));
+  bool HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
+  EmitOMPReductionClauseInit(S, LoopScope);
+  EmitOMPPrivateLoopCounters(S, LoopScope);
+  EmitOMPLinearClause(S, LoopScope);
+  (void)LoopScope.Privatize();
+  if (isOpenMPTargetExecutionDirective(EKind))
+    CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(*this, S);
+
+  // Emit the loop structure around the body of the construct. For "no-loop"
+  // codegen this emits the body a single time instead.
+  CodeGenLoopStructure(*this, LoopScope);
+
+  if (isOpenMPSimdDirective(EKind)) {
+    EmitOMPSimdFinal(S, [IL, &S](CodeGenFunction &CGF) {
+      return CGF.Builder.CreateIsNotNull(
+          CGF.EmitLoadOfScalar(IL, S.getBeginLoc()));
+    });
+  }
+  EmitOMPReductionClauseFinal(S,
+                              /*ReductionKind=*/isOpenMPSimdDirective(EKind)
+                                  ? /*Parallel and Simd*/ OMPD_parallel_for_simd
+                                  : /*Parallel only*/ OMPD_parallel);
+  // Emit post-update of the reduction variables if IsLastIter != 0.
+  emitPostUpdateForReductionClause(*this, S, [IL, &S](CodeGenFunction &CGF) {
+    return CGF.Builder.CreateIsNotNull(
+        CGF.EmitLoadOfScalar(IL, S.getBeginLoc()));
+  });
+  // Emit final copy of the lastprivate variables if IsLastIter != 0.
+  if (HasLastprivateClause)
+    EmitOMPLastprivateClauseFinal(
+        S, isOpenMPSimdDirective(EKind),
+        Builder.CreateIsNotNull(EmitLoadOfScalar(IL, S.getBeginLoc())));
+  LoopScope.restoreMap();
+  EmitOMPLinearClauseFinal(S, [IL, &S](CodeGenFunction &CGF) {
+    return CGF.Builder.CreateIsNotNull(
+        CGF.EmitLoadOfScalar(IL, S.getBeginLoc()));
+  });
+  return HasLastprivateClause;
+}
+
 bool CodeGenFunction::EmitOMPWorksharingLoop(
     const OMPLoopDirective &S, Expr *EUB,
     const CodeGenLoopBoundsTy &CodeGenLoopBounds,
@@ -3844,28 +3900,13 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
     LValue IL =
         EmitOMPHelperVar(*this, cast<DeclRefExpr>(S.getIsLastIterVariable()));
 
-    // Emit 'then' code.
-    {
+    // Emit 'then' code: the schedule and the loop that the body of the
+    // construct is wrapped in.
+    auto &&CodeGenLoopStructure = [&S, EUB, &CGDispatchBounds, IVExpr, Ordered,
+                                   &RT, LB, UB, ST,
+                                   IL](CodeGenFunction &CGF,
+                                       OMPPrivateScope &LoopScope) {
       OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
-      OMPPrivateScope LoopScope(*this);
-      if (EmitOMPFirstprivateClause(S, LoopScope) || HasLinears) {
-        // Emit implicit barrier to synchronize threads and avoid data races on
-        // initialization of firstprivate variables and post-update of
-        // lastprivate variables.
-        CGM.getOpenMPRuntime().emitBarrierCall(
-            *this, S.getBeginLoc(), OMPD_unknown, /*EmitChecks=*/false,
-            /*ForceSimpleCall=*/true);
-      }
-      EmitOMPPrivateClause(S, LoopScope);
-      CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(
-          *this, S, EmitLValue(S.getIterationVariable()));
-      HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
-      EmitOMPReductionClauseInit(S, LoopScope);
-      EmitOMPPrivateLoopCounters(S, LoopScope);
-      EmitOMPLinearClause(S, LoopScope);
-      (void)LoopScope.Privatize();
-      if (isOpenMPTargetExecutionDirective(EKind))
-        CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(*this, S);
 
       // Detect the loop schedule kind and chunk.
       const Expr *ChunkExpr = nullptr;
@@ -3877,23 +3918,23 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
         ChunkExpr = C->getChunkSize();
       } else {
         // Default behaviour for schedule clause.
-        CGM.getOpenMPRuntime().getDefaultScheduleAndChunk(
-            *this, S, ScheduleKind.Schedule, ChunkExpr);
+        CGF.CGM.getOpenMPRuntime().getDefaultScheduleAndChunk(
+            CGF, S, ScheduleKind.Schedule, ChunkExpr);
       }
       bool HasChunkSizeOne = false;
       llvm::Value *Chunk = nullptr;
       if (ChunkExpr) {
-        Chunk = EmitScalarExpr(ChunkExpr);
-        Chunk = EmitScalarConversion(Chunk, ChunkExpr->getType(),
-                                     S.getIterationVariable()->getType(),
-                                     S.getBeginLoc());
+        Chunk = CGF.EmitScalarExpr(ChunkExpr);
+        Chunk = CGF.EmitScalarConversion(Chunk, ChunkExpr->getType(),
+                                         S.getIterationVariable()->getType(),
+                                         S.getBeginLoc());
         Expr::EvalResult Result;
-        if (ChunkExpr->EvaluateAsInt(Result, getContext())) {
+        if (ChunkExpr->EvaluateAsInt(Result, CGF.getContext())) {
           llvm::APSInt EvaluatedChunk = Result.Val.getInt();
           HasChunkSizeOne = (EvaluatedChunk.getLimitedValue() == 1);
         }
       }
-      const unsigned IVSize = getContext().getTypeSize(IVExpr->getType());
+      const unsigned IVSize = CGF.getContext().getTypeSize(IVExpr->getType());
       const bool IVSigned = IVExpr->getType()->hasSignedIntegerRepresentation();
       // OpenMP 4.5, 2.7.1 Loop Construct, Description.
       // If the static schedule kind is specified or if the ordered clause is
@@ -3911,7 +3952,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
       // disagree; the assert guards the invariant that makes this safe today,
       // aka that the implicit GPU default schedule is always static chunk-one.
       ScheduleKind.UseFusedDistChunkSchedule =
-          canEmitGPUFusedDistSchedule(CGM, S, EKind);
+          canEmitGPUFusedDistSchedule(CGF.CGM, S, EKind);
       assert((!ScheduleKind.UseFusedDistChunkSchedule || StaticChunkedOne) &&
              "fused distribute schedule requires a static chunk-one schedule");
       bool IsMonotonic =
@@ -3925,10 +3966,10 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
                                  /* Chunked */ Chunk != nullptr) ||
            StaticChunkedOne) &&
           !Ordered) {
-        JumpDest LoopExit =
-            getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
+        JumpDest LoopExit = CGF.getJumpDestInCurrentScope(
+            CGF.createBasicBlock("omp.loop.exit"));
         emitCommonSimdLoop(
-            *this, S,
+            CGF, S,
             [&S, EKind](CodeGenFunction &CGF, PrePostActionTy &) {
               if (isOpenMPSimdDirective(EKind)) {
                 CGF.EmitOMPSimdInit(S);
@@ -3979,13 +4020,13 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
                   },
                   [](CodeGenFunction &) {});
             });
-        EmitBlock(LoopExit.getBlock());
+        CGF.EmitBlock(LoopExit.getBlock());
         // Tell the runtime we are done.
         auto &&CodeGen = [&S](CodeGenFunction &CGF) {
           CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, S.getEndLoc(),
                                                          OMPD_for);
         };
-        OMPCancelStack.emitExit(*this, EKind, CodeGen);
+        CGF.OMPCancelStack.emitExit(CGF, EKind, CodeGen);
       } else {
         // Emit the outer loop, which requests its work chunk [LB..UB] from
         // runtime and runs the inner loop to process it.
@@ -3993,36 +4034,12 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
                                        ST.getAddress(), IL.getAddress(), Chunk,
                                        EUB);
         LoopArguments.DKind = OMPD_for;
-        EmitOMPForOuterLoop(ScheduleKind, IsMonotonic, S, LoopScope, Ordered,
-                            LoopArguments, CGDispatchBounds);
+        CGF.EmitOMPForOuterLoop(ScheduleKind, IsMonotonic, S, LoopScope,
+                                Ordered, LoopArguments, CGDispatchBounds);
       }
-      if (isOpenMPSimdDirective(EKind)) {
-        EmitOMPSimdFinal(S, [IL, &S](CodeGenFunction &CGF) {
-          return CGF.Builder.CreateIsNotNull(
-              CGF.EmitLoadOfScalar(IL, S.getBeginLoc()));
-        });
-      }
-      EmitOMPReductionClauseFinal(
-          S, /*ReductionKind=*/isOpenMPSimdDirective(EKind)
-                 ? /*Parallel and Simd*/ OMPD_parallel_for_simd
-                 : /*Parallel only*/ OMPD_parallel);
-      // Emit post-update of the reduction variables if IsLastIter != 0.
-      emitPostUpdateForReductionClause(
-          *this, S, [IL, &S](CodeGenFunction &CGF) {
-            return CGF.Builder.CreateIsNotNull(
-                CGF.EmitLoadOfScalar(IL, S.getBeginLoc()));
-          });
-      // Emit final copy of the lastprivate variables if IsLastIter != 0.
-      if (HasLastprivateClause)
-        EmitOMPLastprivateClauseFinal(
-            S, isOpenMPSimdDirective(EKind),
-            Builder.CreateIsNotNull(EmitLoadOfScalar(IL, S.getBeginLoc())));
-      LoopScope.restoreMap();
-      EmitOMPLinearClauseFinal(S, [IL, &S](CodeGenFunction &CGF) {
-        return CGF.Builder.CreateIsNotNull(
-            CGF.EmitLoadOfScalar(IL, S.getBeginLoc()));
-      });
-    }
+    };
+    HasLastprivateClause =
+        EmitOMPWorksharingLoopBody(S, IL, HasLinears, CodeGenLoopStructure);
     DoacrossCleanupScope.ForceCleanup();
     // We're now done with the loop, so jump to the continuation block.
     if (ContBlock) {
