@@ -26,9 +26,7 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> HotText;
-extern cl::opt<bool> Hugify;
 extern cl::opt<bool> HugifyAllText;
-extern cl::opt<bool> HugifyAllTextStats;
 
 static cl::opt<std::string>
     RuntimeHugifyLib("runtime-hugify-lib",
@@ -69,11 +67,6 @@ void HugifyRuntimeLibrary::emitBinary(BinaryContext &BC, MCStreamer &Streamer) {
   Streamer.emitLabel(Mode);
   Streamer.emitSymbolAttribute(Mode, MCSymbolAttr::MCSA_Global);
   Streamer.emitInt32(opts::HugifyAllText ? 1 : 0);
-
-  MCSymbol *Stats = BC.Ctx->getOrCreateSymbol("__bolt_hugify_all_text_stats");
-  Streamer.emitLabel(Stats);
-  Streamer.emitSymbolAttribute(Stats, MCSymbolAttr::MCSA_Global);
-  Streamer.emitInt32(opts::HugifyAllTextStats ? 1 : 0);
 }
 
 void HugifyRuntimeLibrary::link(BinaryContext &BC, StringRef ToolPath,
