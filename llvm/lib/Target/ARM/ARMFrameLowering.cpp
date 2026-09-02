@@ -147,6 +147,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -3939,6 +3940,477 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   McrMBB->addSuccessor(GetMBB);
 
   PrevStackMBB->addSuccessor(McrMBB);
+
+#ifdef EXPENSIVE_CHECKS
+  MF.verify();
+#endif
+}
+
+/// Return the smallest value >= \p StackSize that is encodable as a Thumb2
+/// "modified immediate" so it can be used directly as the operand of the ADD
+/// that forms the lowest admissible SP value. Rounding the required size up is
+/// conservative. It can only make the check trap slightly earlier, never miss
+/// a genuine overflow.
+static unsigned getEncodableRequiredSize(uint64_t StackSize) {
+  unsigned V = StackSize > 0xFFFFFFFFULL ? 0xFFFFFFFFU
+                                         : static_cast<unsigned>(StackSize);
+  // Anything already encodable as a Thumb2 modified immediate needs no
+  // rounding (rotated 8-bit values and byte-splat patterns).
+  if (ARM_AM::getT2SOImmVal(V) != -1)
+    return V;
+
+  // Otherwise keep only the top 8 significant bits and round the rest up. The
+  // result is a value of the form (0x80..0xFF) << s, which can be encoded as a
+  // Thumb2 modified immediate, and overshoots StackSize by less than 1/256 of
+  // the original value.
+  unsigned Shift = Log2_32(V) - 7; // V > 0xFF here, so Log2_32(V) >= 8.
+  uint64_t Mask = (UINT64_C(1) << Shift) - 1;
+  uint64_t Rounded = (static_cast<uint64_t>(V) + Mask) & ~Mask;
+
+  // A carry out of the top 8 bits (e.g. they were all ones) can push the result
+  // past 32 bits; that only happens for absurd multi-gigabyte frames, so clamp
+  // to the all-ones splat, the largest representable value.
+  if (Rounded > 0xFFFFFFFFULL)
+    return 0xFFFFFFFFU;
+
+  assert(ARM_AM::getT2SOImmVal(static_cast<unsigned>(Rounded)) != -1 &&
+         "rounded stack size is not a Thumb2 modified immediate");
+  return static_cast<unsigned>(Rounded);
+}
+
+// Implements -fstack-limit-variable=<var> for Thumb (Cortex-M) targets. For a
+// function carrying the "stack-limit-variable"="<var>" attribute this prepends
+// a prologue sequence that:
+//
+//   1. Reads the global variable named by the attribute (the lowest address
+//      the stack is allowed to reach).
+//   2. Computes the lowest admissible SP value as <var> plus the stack size
+//      required by this function's frame.
+//   3. Compares SP against it. The sum can only wrap around zero if the limit
+//      lies within a frame size of the top of the address space, which cannot
+//      happen for a downward-growing stack, and an SP already at or below the
+//      limit always traps.
+//   4. If there is enough space the function body runs as usual; otherwise it
+//      executes "svc #<n>", where <n> is the trap immediate selected by
+//      -fstack-limit-trap-number (default 255).
+//
+// On Thumb2 (thumbv7m / Cortex-M3, thumbv7em / Cortex-M4 and later) the
+// address is materialized with movw/movt and the arithmetic uses the wide
+// encodings and IP (r12) as scratch, for
+// -fstack-limit-variable=__stack_boundary:
+//
+//     movw r12, :lower16:__stack_boundary
+//     movt r12, :upper16:__stack_boundary
+//     ldr  r12, [r12]           ; r12 = __stack_boundary (limit)
+//     add  r12, r12, #frameSize ; r12 = lowest admissible SP
+//     cmp  sp, r12
+//     bhs  .Lbody               ; enough space -> run the body
+//     svc  #<n>                 ; insufficient space -> trap
+//   .Lbody:
+//     <original prologue/body>
+//
+// Both variants treat r12 (IP) as a free scratch register. Thumb2 computes the
+// check in it and Thumb1 uses it as a spill-free save slot. Under AAPCS r12 is
+// call-clobbered and carries no value into a function, with one exception: a
+// 'nest' parameter is passed in r12. Rather than pessimizing the sequence to
+// preserve it, the pass rejects functions where r12 is live on entry with a
+// fatal error, which is extremely unlikely.
+//
+// Thumb1 (thumbv6m / Cortex-M0) has neither movw/movt nor the wide encodings,
+// so the same check is built from 16-bit instructions. The limit's address is
+// loaded from the constant pool and the sum is formed in a low register.
+//
+//     mov  r12, r3?              ; stash r3 in IP if it is live on entry
+//     ldr  r3, =__stack_boundary ; via a PC-relative constant pool entry
+//     ldr  r3, [r3]              ; r3 = __stack_boundary (limit)
+//     adds r3, #frameSize        ; r3 = lowest admissible SP
+//                                ; (large frames: ldr r2, =size; adds r3,r3,r2)
+//     cmp  sp, r3
+//     mov  r3, r12?              ; restore; high-register "mov" keeps the flags
+//     bhs  .Lbody
+//     svc  #<n>
+//   .Lbody:
+//     <original prologue/body>
+void ARMFrameLowering::adjustForStackLimitCheck(MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  const ARMSubtarget &ST = MF.getSubtarget<ARMSubtarget>();
+
+  // The check sequence is implemented for Thumb only. Thumb2 (thumbv7m /
+  // Cortex-M3, thumbv7em / Cortex-M4 and later) uses movw/movt and the wide
+  // encodings, while Thumb1 (thumbv6m / Cortex-M0) loads the symbol address
+  // from the constant pool and uses low-register scratch. ARM (A32) mode is
+  // not supported.
+  if (!ST.isThumb()) {
+    report_fatal_error("-fstack-limit-variable is not supported for ARM (A32) "
+                       "code. Only Thumb (Cortex-M) targets are supported");
+  }
+
+  // The Thumb1 sequence forms the symbol address through the constant pool.
+  // Execute-only targets have no constant pool (and no movw/movt), so there is
+  // no way to materialize it.
+  if (!ST.isThumb2() && ST.genExecuteOnly()) {
+    report_fatal_error("-fstack-limit-variable is not supported for "
+                       "execute-only ARMv6-M (Thumb1) code, which has no "
+                       "constant pool to hold the limit address");
+  }
+
+  // The attribute value is the name of the global holding the stack limit.
+  StringRef LimitVar =
+      F.getFnAttribute("stack-limit-variable").getValueAsString();
+  if (LimitVar.empty()) {
+    report_fatal_error("'stack-limit-variable' attribute must name a non-empty "
+                       "global variable");
+  }
+
+  // The trap immediate is configurable via -fstack-limit-trap-number. When the
+  // attribute is absent the default svc number is used.
+  unsigned TrapNumber = 255;
+  if (F.hasFnAttribute("stack-limit-trap-number")) {
+    StringRef TrapStr =
+        F.getFnAttribute("stack-limit-trap-number").getValueAsString();
+    unsigned Parsed;
+    if (TrapStr.getAsInteger(0, Parsed) || Parsed > 255) {
+      report_fatal_error(
+          "'stack-limit-trap-number' value '" + Twine(TrapStr) +
+          "' is not a valid supervisor-call number. Expected an integer in the "
+          "range 0-255");
+    }
+    TrapNumber = Parsed;
+  }
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const uint64_t StackSize = MFI.getStackSize();
+
+  // No frame of our own means nothing to check.
+  if (StackSize == 0)
+    return;
+
+  // Both sequences use r12 (IP) as a scratch register. Thumb2 computes the
+  // check in it, and Thumb1 stashes a live low scratch register in it. Under
+  // AAPCS r12 carries no value into a function, with a single exception: a
+  // 'nest' parameter (a static chain pointer) is passed in r12. Rather than
+  // pessimizing the sequence to preserve r12, reject the function. In practice
+  // this never fires for the main embedded languages. Clang never emits a
+  // 'nest' parameter on a function it compiles from C/C++ (GCC-style nested
+  // functions are not supported. The static chain only arises at call sites
+  // via __builtin_call_with_static_chain), and rustc never uses 'nest' either
+  // (closures capture through an ordinary environment parameter). Static
+  // chains come from other frontends, e.g. Fortran or Ada inner procedures, or
+  // from hand-written IR.
+  if (!MF.getProperties().hasTracksLiveness() ||
+      MF.front().isLiveIn(ARM::R12)) {
+    report_fatal_error("-fstack-limit-variable uses r12 (IP) as a scratch "
+                       "register, but r12 cannot be proven free on entry to "
+                       "function '" +
+                       Twine(F.getName()) +
+                       "'. Functions taking a 'nest' parameter, which is "
+                       "passed in r12, are not supported");
+  }
+
+  const TargetInstrInfo &TII = *ST.getInstrInfo();
+
+  // BodyMBB is the original entry block, i.e. the ".Lbody" label of the
+  // sketches above, the original prologue and function body.
+  MachineBasicBlock *BodyMBB = &MF.front();
+  const DebugLoc DL; // Prologue instructions carry no source location.
+
+  // CheckMBB:  materialize/compare and branch over the trap.
+  // TrapMBB:   svc #<n> on insufficient stack.
+  // Layout:    CheckMBB -> TrapMBB -> BodyMBB, with CheckMBB conditionally
+  //            branching straight to BodyMBB when there is enough space.
+  //            (When the Thumb1 sequence must push a scratch register it
+  //            splits the check across two more blocks, see below.)
+  MachineBasicBlock *CheckMBB = MF.CreateMachineBasicBlock();
+  MachineBasicBlock *TrapMBB = MF.CreateMachineBasicBlock();
+
+  MachineFunction::iterator BodyIt = BodyMBB->getIterator();
+  MF.insert(BodyIt, CheckMBB);
+  MF.insert(BodyIt, TrapMBB);
+
+  // The function's incoming live registers now enter through CheckMBB and flow
+  // unchanged into the body.
+  for (const auto &LI : BodyMBB->liveins()) {
+    CheckMBB->addLiveIn(LI.PhysReg, LI.LaneMask);
+    TrapMBB->addLiveIn(LI.PhysReg, LI.LaneMask);
+  }
+
+  TrapMBB->addSuccessor(BodyMBB);
+
+  if (ST.isThumb2()) {
+    // ---- Thumb2 (thumbv7m / Cortex-M3, thumbv7em / Cortex-M4 and later) ----
+    // The whole check lives in CheckMBB. It is computed in IP (r12), a
+    // call-clobbered scratch register that was proven free on entry above,
+    // so nothing needs saving.
+    const Register Scratch = ARM::R12;
+    const unsigned RequiredSize = getEncodableRequiredSize(StackSize);
+
+    const char *LimitSym = MF.createExternalSymbolName(LimitVar);
+
+    // movw r12, :lower16:<var>
+    BuildMI(CheckMBB, DL, TII.get(ARM::t2MOVi16), Scratch)
+        .addExternalSymbol(LimitSym, ARMII::MO_LO16)
+        .add(predOps(ARMCC::AL));
+    // movt r12, :upper16:<var>
+    BuildMI(CheckMBB, DL, TII.get(ARM::t2MOVTi16), Scratch)
+        .addReg(Scratch)
+        .addExternalSymbol(LimitSym, ARMII::MO_HI16)
+        .add(predOps(ARMCC::AL));
+    // ldr r12, [r12]   ; r12 = value of <var> (the stack limit)
+    BuildMI(CheckMBB, DL, TII.get(ARM::t2LDRi12), Scratch)
+        .addReg(Scratch)
+        .addImm(0)
+        .add(predOps(ARMCC::AL));
+    // add r12, r12, #frameSize ; r12 = lowest admissible SP
+    BuildMI(CheckMBB, DL, TII.get(ARM::t2ADDri), Scratch)
+        .addReg(Scratch)
+        .addImm(RequiredSize)
+        .add(predOps(ARMCC::AL))
+        .add(condCodeOp());
+    // cmp sp, r12
+    BuildMI(CheckMBB, DL, TII.get(ARM::t2CMPrr))
+        .addReg(ARM::SP)
+        .addReg(Scratch)
+        .add(predOps(ARMCC::AL));
+    // bhs BodyMBB      ; enough stack space (unsigned) -> run the body
+    CheckMBB->addSuccessor(BodyMBB);
+    CheckMBB->addSuccessor(TrapMBB);
+    BuildMI(CheckMBB, DL, TII.get(ARM::tBcc))
+        .addMBB(BodyMBB)
+        .addImm(ARMCC::HS)
+        .addReg(ARM::CPSR);
+  } else {
+    // ---- Thumb1 (thumbv6m / Cortex-M0) ----
+    // ARMv6-M has no movw/movt or wide encodings, so the limit's address is
+    // loaded from the constant pool and the lowest admissible SP value is
+    // formed in a low register.
+    const unsigned RawSize = StackSize > 0xFFFFFFFFULL
+                                 ? 0xFFFFFFFFU
+                                 : static_cast<unsigned>(StackSize);
+    // Small frames fit the 8-bit "adds" immediate and need one scratch
+    // register. Larger sizes are loaded from the constant pool and need a
+    // second one. The scratches are r3 and r2 (in that order): under AAPCS the
+    // integer argument registers are assigned r0, r1, r2, r3 in order, so
+    // these are the argument registers least likely to hold an incoming value.
+    // They must be low registers because the Thumb1 loads and adds cannot
+    // address r12.
+    const bool LargeFrame = RawSize > 255;
+    const Register AccReg = ARM::R3;  // &limit -> limit -> limit + frameSize
+    const Register SizeReg = ARM::R2; // frameSize (large frames only)
+
+    // A scratch register that is dead on entry is clobbered directly. Live
+    // ones must be preserved. The first is stashed in r12 (proven free above)
+    // with a pair of "mov"s, which touches no memory and leaves SP unchanged.
+    // r12 is a single slot, so when a large-frame check needs both r2 and r3,
+    // the second one uses a push/pop pair. After the restores the only
+    // registers disturbed on the fall-through path are the dead scratch
+    // registers, r12 and the condition flags, so all live argument and
+    // callee-saved registers reach the original prologue untouched.
+    Register StashReg;
+    Register PushReg;
+    SmallVector<Register, 2> UsedRegs = {AccReg};
+    if (LargeFrame)
+      UsedRegs.push_back(SizeReg);
+    for (Register R : UsedRegs) {
+      if (!CheckMBB->isLiveIn(R))
+        continue;
+      if (!StashReg)
+        StashReg = R;
+      else
+        PushReg = R;
+    }
+
+    // mov r12, <reg>   ; stash the first live scratch register in r12
+    if (StashReg) {
+      BuildMI(CheckMBB, DL, TII.get(ARM::tMOVr), ARM::R12)
+          .addReg(StashReg)
+          .add(predOps(ARMCC::AL));
+    }
+    // ldr r3, =<var>   ; r3 = &<var> via a PC-relative constant pool entry
+    ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
+    unsigned PCLabelId = AFI->createPICLabelUId();
+    ARMConstantPoolValue *CPV =
+        ARMConstantPoolSymbol::Create(F.getContext(), LimitVar, PCLabelId, 0);
+    unsigned CPI = MF.getConstantPool()->getConstantPoolIndex(CPV, Align(4));
+    BuildMI(CheckMBB, DL, TII.get(ARM::tLDRpci), AccReg)
+        .addConstantPoolIndex(CPI)
+        .add(predOps(ARMCC::AL));
+    // ldr r3, [r3]     ; r3 = value of <var> (the stack limit)
+    BuildMI(CheckMBB, DL, TII.get(ARM::tLDRi), AccReg)
+        .addReg(AccReg)
+        .addImm(0)
+        .add(predOps(ARMCC::AL));
+
+    if (!LargeFrame) {
+      // ---- Small frames ----
+      // The size fits the 8-bit "adds" immediate, only r3 is needed, and the
+      // whole check lives in CheckMBB.
+
+      // adds r3, #frameSize ; r3 = lowest admissible SP
+      BuildMI(CheckMBB, DL, TII.get(ARM::tADDi8), AccReg)
+          .add(t1CondCodeOp())
+          .addReg(AccReg)
+          .addImm(RawSize)
+          .add(predOps(ARMCC::AL));
+      // cmp sp, r3
+      BuildMI(CheckMBB, DL, TII.get(ARM::tCMPhir))
+          .addReg(ARM::SP)
+          .addReg(AccReg)
+          .add(predOps(ARMCC::AL));
+      // mov r3, r12      ; restore r3 if it was stashed. A "mov" involving a
+      // high register leaves the flags intact.
+      if (StashReg) {
+        BuildMI(CheckMBB, DL, TII.get(ARM::tMOVr), StashReg)
+            .addReg(ARM::R12)
+            .add(predOps(ARMCC::AL));
+      }
+      // bhs BodyMBB      ; enough stack space (unsigned) -> run the body
+      CheckMBB->addSuccessor(BodyMBB);
+      CheckMBB->addSuccessor(TrapMBB);
+      BuildMI(CheckMBB, DL, TII.get(ARM::tBcc))
+          .addMBB(BodyMBB)
+          .addImm(ARMCC::HS)
+          .addReg(ARM::CPSR);
+    } else if (!PushReg) {
+      // ---- Large frames, at most one live scratch register ----
+      // The size does not fit the "adds" immediate, so it is loaded into r2
+      // from the constant pool and the registers are added. The whole check
+      // still lives in CheckMBB.
+
+      // ldr r2, =<size>  ; then adds r3, r3, r2: r3 = lowest admissible SP
+      MachineBasicBlock::iterator It = CheckMBB->end();
+      ST.getRegisterInfo()->emitLoadConstPool(*CheckMBB, It, DL, SizeReg, 0,
+                                              RawSize);
+      BuildMI(CheckMBB, DL, TII.get(ARM::tADDrr), AccReg)
+          .add(t1CondCodeOp())
+          .addReg(AccReg)
+          .addReg(SizeReg)
+          .add(predOps(ARMCC::AL));
+      // cmp sp, r3
+      BuildMI(CheckMBB, DL, TII.get(ARM::tCMPhir))
+          .addReg(ARM::SP)
+          .addReg(AccReg)
+          .add(predOps(ARMCC::AL));
+      // mov <reg>, r12   ; restore the stashed scratch register, if any. A
+      // "mov" involving a high register leaves the flags intact.
+      if (StashReg) {
+        BuildMI(CheckMBB, DL, TII.get(ARM::tMOVr), StashReg)
+            .addReg(ARM::R12)
+            .add(predOps(ARMCC::AL));
+      }
+      // bhs BodyMBB      ; enough stack space (unsigned) -> run the body
+      CheckMBB->addSuccessor(BodyMBB);
+      CheckMBB->addSuccessor(TrapMBB);
+      BuildMI(CheckMBB, DL, TII.get(ARM::tBcc))
+          .addMBB(BodyMBB)
+          .addImm(ARMCC::HS)
+          .addReg(ARM::CPSR);
+    } else {
+      // ---- Large frames with both scratch registers live ----
+      // r3 is stashed in r12, but that is a single slot, so r2 must be
+      // preserved with a push/pop pair. The push would write below SP before
+      // anything has been checked, and if SP were already at or below the
+      // limit that write would land below the limit. Split the check instead:
+      // compare SP against the limit itself first and trap if the stack is
+      // exhausted. SP is architecturally kept 4-byte aligned on ARMv6-M, so
+      // provided the limit value is 4-byte aligned too, surviving this first
+      // check proves SP >= limit + 4 and the push in the second block stays
+      // at or above the limit. The check is laid out across three blocks:
+      //
+      //   CheckMBB:     exhaustion check, "cmp sp, r3" against the limit,
+      //                 branching to RestoreMBB on LS (SP <= limit).
+      //   SizeCheckMBB: frame-size check, "push {r2}" and "cmp sp, r3"
+      //                 against limit + (alignedSize - 8), falling through.
+      //   RestoreMBB:   runs "mov r3, r12" for both paths and branches to
+      //                 BodyMBB or falls into TrapMBB on the flags of
+      //                 whichever comparison ran last (the high-register "mov"
+      //                 and the pop leave them intact).
+      //
+      // For one branch condition to fit both comparisons, the final branch
+      // is HI, the exact complement of LS. The frame-size check compensates
+      // with a bias. The frame size is rounded up to a multiple of 4 and
+      // lowered by 8. SP, the limit (required 4-byte aligned, see above)
+      // and alignedSize are then all multiples of 4, so checking
+      // SP - 4 > limit + alignedSize - 8 is equivalent to
+      // SP >= limit + alignedSize.
+      //
+      // See large_frame_args_live in
+      // llvm/test/CodeGen/ARM/stack-limit-variable-thumb1.ll for the full
+      // generated sequence.
+      MachineBasicBlock *SizeCheckMBB = MF.CreateMachineBasicBlock();
+      MachineBasicBlock *RestoreMBB = MF.CreateMachineBasicBlock();
+      MF.insert(TrapMBB->getIterator(), SizeCheckMBB);
+      MF.insert(TrapMBB->getIterator(), RestoreMBB);
+
+      for (const auto &LI : CheckMBB->liveins()) {
+        SizeCheckMBB->addLiveIn(LI.PhysReg, LI.LaneMask);
+        RestoreMBB->addLiveIn(LI.PhysReg, LI.LaneMask);
+      }
+      SizeCheckMBB->addLiveIn(ARM::R12);
+      RestoreMBB->addLiveIn(ARM::R12);
+      // The final branch in RestoreMBB consumes flags set by its
+      // predecessors.
+      RestoreMBB->addLiveIn(ARM::CPSR);
+      CheckMBB->addSuccessor(SizeCheckMBB);
+      CheckMBB->addSuccessor(RestoreMBB);
+      SizeCheckMBB->addSuccessor(RestoreMBB);
+      RestoreMBB->addSuccessor(BodyMBB);
+      RestoreMBB->addSuccessor(TrapMBB);
+
+      // CheckMBB (continued): the exhaustion check.
+      // cmp sp, r3       ; stack already exhausted?
+      BuildMI(CheckMBB, DL, TII.get(ARM::tCMPhir))
+          .addReg(ARM::SP)
+          .addReg(AccReg)
+          .add(predOps(ARMCC::AL));
+      // bls RestoreMBB   ; SP <= limit (unsigned) -> restore r3 and trap
+      BuildMI(CheckMBB, DL, TII.get(ARM::tBcc))
+          .addMBB(RestoreMBB)
+          .addImm(ARMCC::LS)
+          .addReg(ARM::CPSR);
+
+      // SizeCheckMBB: the frame-size check.
+      // push {r2}        ; safe: the first check proved SP >= limit + 4
+      BuildMI(SizeCheckMBB, DL, TII.get(ARM::tPUSH))
+          .add(predOps(ARMCC::AL))
+          .addReg(PushReg);
+      // ldr r2, =<alignedSize - 8>
+      const unsigned BiasedSize = alignTo(RawSize, 4) - 8;
+      MachineBasicBlock::iterator It = SizeCheckMBB->end();
+      ST.getRegisterInfo()->emitLoadConstPool(*SizeCheckMBB, It, DL, SizeReg, 0,
+                                              BiasedSize);
+      // adds r3, r3, r2
+      BuildMI(SizeCheckMBB, DL, TII.get(ARM::tADDrr), AccReg)
+          .add(t1CondCodeOp())
+          .addReg(AccReg)
+          .addReg(SizeReg)
+          .add(predOps(ARMCC::AL));
+      // cmp sp, r3
+      BuildMI(SizeCheckMBB, DL, TII.get(ARM::tCMPhir))
+          .addReg(ARM::SP)
+          .addReg(AccReg)
+          .add(predOps(ARMCC::AL));
+      // pop {r2}         ; a pop of low registers leaves the flags intact
+      BuildMI(SizeCheckMBB, DL, TII.get(ARM::tPOP))
+          .add(predOps(ARMCC::AL))
+          .addReg(PushReg);
+
+      // RestoreMBB: shared restore and final branch.
+      // mov r3, r12
+      BuildMI(RestoreMBB, DL, TII.get(ARM::tMOVr), StashReg)
+          .addReg(ARM::R12)
+          .add(predOps(ARMCC::AL));
+      // bhi BodyMBB      ; enough stack space (unsigned) -> run the body
+      BuildMI(RestoreMBB, DL, TII.get(ARM::tBcc))
+          .addMBB(BodyMBB)
+          .addImm(ARMCC::HI)
+          .addReg(ARM::CPSR);
+    }
+  }
+
+  // svc #<n>         ; insufficient stack space
+  BuildMI(TrapMBB, DL, TII.get(ARM::tSVC))
+      .addImm(TrapNumber)
+      .add(predOps(ARMCC::AL));
 
 #ifdef EXPENSIVE_CHECKS
   MF.verify();
