@@ -1,4 +1,4 @@
-; RUN: not --crash llc < %s -mtriple=xcore -mcpu=xs1b-generic 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=xcore -mcpu=xs1b-generic 2>&1 | FileCheck %s
 
 ; XCoreLowerThreadLocal expands a thread-local global into an array with one
 ; element per hardware thread, which requires a known per-element size. A
