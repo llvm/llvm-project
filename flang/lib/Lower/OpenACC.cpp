@@ -258,6 +258,9 @@ static void createDeclareAllocFuncWithArg(mlir::OpBuilder &modBuilder,
   builder.restoreInsertionPoint(crtInsPt);
 }
 
+/// Actions on deallocation are split in two functions: the pre one releases
+/// the data before the host side deallocation, the post one then releases the
+/// descriptor, which is still valid storage at that point.
 template <typename ExitOp>
 static void createDeclareDeallocFuncWithArg(
     mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder, mlir::Location loc,
@@ -4077,10 +4080,10 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
   modBuilder.setInsertionPointAfter(registerFuncOp);
 }
 
-/// Action to be performed on deallocation are split in two distinct functions.
-/// - Pre deallocation function includes all the action to be performed before
-///   the actual deallocation is done on the host side.
-/// - Post deallocation function includes update to the descriptor.
+/// Generate the pre deallocation function, holding the actions to be performed
+/// before the host side deallocation. No post deallocation function is
+/// generated: a module variable's descriptor is released by the global
+/// destructor, not per deallocation.
 template <typename ExitOp>
 static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
                                      fir::FirOpBuilder &builder,
