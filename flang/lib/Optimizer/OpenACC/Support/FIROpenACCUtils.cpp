@@ -14,7 +14,10 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -677,4 +680,111 @@ mlir::Value fir::acc::getOriginalDef(mlir::Value value, bool stripDeclare) {
   }
 
   return currentValue;
+}
+
+static bool isFIRPassByValueScalar(mlir::Type type) {
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(type))
+    return charTy.hasConstantLen() && charTy.getLen() == 1;
+  return mlir::isa<fir::LogicalType>(type);
+}
+
+static bool isTriviallyCopyableRecordType(fir::RecordType recType) {
+  for (auto &field : recType.getTypeList()) {
+    mlir::Type fieldType = fir::unwrapRefType(field.second);
+    if (auto nested = mlir::dyn_cast<fir::RecordType>(fieldType)) {
+      if (!isTriviallyCopyableRecordType(nested))
+        return false;
+      continue;
+    }
+    if (fieldType.isIntOrIndexOrFloat() ||
+        mlir::isa<mlir::ComplexType>(fieldType) ||
+        isFIRPassByValueScalar(fieldType))
+      continue;
+    return false;
+  }
+  return true;
+}
+
+static bool isTriviallyCopyableScalarType(mlir::Type type) {
+  mlir::Type baseType = fir::unwrapRefType(type);
+  if (baseType.isIntOrIndexOrFloat() ||
+      mlir::isa<mlir::ComplexType>(baseType) ||
+      isFIRPassByValueScalar(baseType))
+    return true;
+  if (auto recType = mlir::dyn_cast<fir::RecordType>(baseType))
+    return isTriviallyCopyableRecordType(recType);
+  return false;
+}
+
+static bool isCUFKernelRegion(mlir::Region &region) {
+  mlir::Operation *parentOp = region.getParentOp();
+  if (!parentOp)
+    return false;
+  if (mlir::isa<cuf::KernelOp>(parentOp))
+    return true;
+  if (auto computeRegion = mlir::dyn_cast<mlir::acc::ComputeRegionOp>(parentOp))
+    return computeRegion.getOrigin() == cuf::KernelOp::getOperationName();
+  return false;
+}
+
+bool fir::acc::isValidSymbolUse(mlir::Operation *user,
+                                mlir::SymbolRefAttr symbol,
+                                mlir::Operation **definingOpPtr) {
+  // FIR uses `fir.use_stmt` for debugging; referenced symbols are not
+  // guaranteed to be defined in the module.
+  if (mlir::isa_and_nonnull<fir::UseStmtOp>(user))
+    return true;
+
+  mlir::Operation *definingOp = nullptr;
+  if (mlir::acc::isValidSymbolUse(user, symbol, &definingOp)) {
+    if (definingOpPtr)
+      *definingOpPtr = definingOp;
+    return true;
+  }
+
+  if (!definingOp)
+    return false;
+  if (definingOpPtr)
+    *definingOpPtr = definingOp;
+
+  if (definingOp->hasDiscardableAttr(
+          fir::FIROpsDialect::getFirRuntimeAttrName()))
+    return true;
+
+  if (auto cufProcAttr = definingOp->getAttrOfType<cuf::ProcAttributeAttr>(
+          cuf::getProcAttrName())) {
+    if (cufProcAttr.getValue() != cuf::ProcAttribute::Host)
+      return true;
+  }
+
+  return false;
+}
+
+bool fir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
+  if (mlir::acc::isValidValueUse(val, region))
+    return true;
+
+  if (isFIRPassByValueScalar(val.getType()))
+    return true;
+
+  // Scalars, and aggregates composed solely of them, are passed by value to a
+  // CUF kernel. Thus they need neither to be device data nor to be mapped.
+  if (isCUFKernelRegion(region) && isTriviallyCopyableScalarType(val.getType()))
+    return true;
+
+  mlir::Type type = val.getType();
+  if (mlir::acc::isPointerLikeType(type) || mlir::acc::isMappableType(type) ||
+      fir::isa_ref_type(type)) {
+    mlir::Value original = fir::acc::getOriginalDef(val, /*stripDeclare=*/true);
+    mlir::Operation *definingOp = original.getDefiningOp();
+    if (!definingOp)
+      return false;
+    if (mlir::isa<ACC_DATA_ENTRY_OPS>(definingOp))
+      return true;
+    if (definingOp->hasDiscardableAttr(cuf::getDataAttrName()) ||
+        definingOp->hasDiscardableAttr("data_attr"))
+      return true;
+  }
+
+  return false;
 }
