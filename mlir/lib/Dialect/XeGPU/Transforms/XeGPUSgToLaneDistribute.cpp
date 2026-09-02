@@ -1815,9 +1815,10 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //
 //                         layout<[8, 1]>
 //
-// The target's lane period decides where a lane may be given it from. Donors
-// sit at multiples of the period, so a period `P` over `S` lanes offers `S / P`
-// donor groups:
+// The target's lane period decides where a lane may be given it from. The period
+// is the product of its `lane_layout`, which slicing does not reduce, and donors
+// sit at multiples of it, so a period `P` over `S` lanes offers `S / P` donor
+// groups:
 //
 //   period < S          several groups, so elements can cross lanes.
 //                       layout<[8, 1]> offers 2, layout<[2, 1]> offers 8.
@@ -1830,20 +1831,20 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //                         slice<layout<[8, 1, 2], order = [0, 2, 1]>, dims =
 //                         [0]>
 //
-// One example per combination, and what the tests show it emitting:
+// One example per combination, and what the tests show it emitting. The target is
+// given as its `lane_layout`, the period following from it:
 //
-//   case  input               target      emits
-//   1     fully broadcast     period 4    4 extracts
-//   3     fully broadcast     period 16   8 extracts
-//   2     partial, sliced     period 8    1 extract, 1 shuffle
-//   4     partial, short      period 2    2 extracts, 6 shuffles
-//   --    partially broadcast period 16   declined, NoDonorDelta
+//   case  input               target lane_layout  period  emits
+//   1     fully broadcast     [4, 1]                   4  4 extracts
+//   3     fully broadcast     [8, 1, 2] sliced        16  8 extracts
+//   2     partial, sliced     [8, 1]                   8  1 extract, 1 shuffle
+//   4     partial, short      [2, 1]                   2  2 extracts, 6 shuffles
+//   --    partially broadcast [8, 1, 2] sliced        16  declined, NoDonorDelta
 //
-// The period is the only thing that varies within a category, so the test suite
-// carries more than one of some -- @convert_layout_broadcast_all_lanes is case
-// 1 with period 8 -- but they behave alike and only one is described here. Case
-// 1 is the period whose constants are all distinct, which the index expression
-// below is read off.
+// Only the target varies within a category, so the test suite carries more than
+// one of some -- @convert_layout_broadcast_all_lanes is case 1 with `[8, 1]` --
+// but they behave alike and only one is described here. Case 1 is the one whose
+// constants are all distinct, which the index expression below is read off.
 //
 // The last row is the boundary the two properties imply: with only `donorDelta`
 // 0 available, a lane arriving with less than its target fragment cannot be
@@ -1877,7 +1878,8 @@ static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
 //    neither's.
 //
 //   their common `lane_data` is not all ones               LaneDataNotUnit
-//   the target's lane period does not divide the subgroup  LanePeriodNotDivisor
+//   the product of the target's `lane_layout` does not      LanePeriodNotDivisor
+//   divide the subgroup size
 //
 // Decided by building the ownership tables, so these are shapes known to fail
 // rather than a characterisation -- other combinations fail the same way:
