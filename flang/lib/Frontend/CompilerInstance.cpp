@@ -33,6 +33,9 @@
 
 using namespace Fortran::frontend;
 
+CompilerInstance::CompilerInstance()
+    : CompilerInstance(std::make_shared<CompilerInvocation>()) {}
+
 CompilerInstance::CompilerInstance(
     std::shared_ptr<CompilerInvocation> invocation)
     : invocation(std::move(invocation)),
