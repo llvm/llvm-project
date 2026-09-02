@@ -5,19 +5,19 @@ func.func @fuse_unary(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<
 
   //     CHECK: %[[RES:.*]] = scf.for
   //     CHECK:    scf.for
-  //     CHECK:       linalg.elementwise
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: return %[[RES]]
   %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%arg0 : tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
-  %1 = linalg.add ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
@@ -31,23 +31,23 @@ func.func @fuse_unary(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<
 
   //     CHECK: %[[PARTIAL_RES:.*]] = scf.for
   //     CHECK:     scf.for
-  //     CHECK:       linalg.elementwise
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: %[[RES:.*]] = scf.for {{.*}}%[[PARTIAL_RES]]
   //     CHECK:     scf.for
-  //     CHECK:       linalg.elementwise
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: return %[[RES]]
   %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%arg0 : tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
-  %1 = linalg.add ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
     transform.loop.peel %loops#0 : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
@@ -62,19 +62,19 @@ func.func @fuse_unary_param(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> t
 
   //     CHECK: %[[RES:.*]] = scf.for
   //     CHECK:    scf.for
-  //     CHECK:       linalg.elementwise
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: return %[[RES]]
   %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%arg0 : tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
-  %1 = linalg.add ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %c32 = transform.param.constant 32 : i32 -> !transform.param<i32>
     %c32_as_any = transform.param.constant 32 : i32 -> !transform.any_param
     %c1 = transform.param.constant 1 : i32 -> !transform.param<i32>
@@ -91,19 +91,19 @@ module attributes {transform.with_named_sequence} {
 func.func @fuse_unary_forall(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
 
   //     CHECK: %[[RES:.*]] = scf.forall
-  //     CHECK:       linalg.elementwise
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: return %[[RES]]
   %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%arg0 : tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
-  %1 = linalg.add ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loop = transform.structured.fuse %0 tile_sizes [32, 32] {use_forall}
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
@@ -117,19 +117,19 @@ func.func @fuse_unary_packed_tile_sizes(%arg0: tensor<?x?xf32>, %arg1: tensor<?x
 
   //     CHECK: %[[RES:.*]] = scf.for
   //     CHECK:    scf.for
-  //     CHECK:       linalg.elementwise
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: return %[[RES]]
   %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%arg0 : tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
-  %1 = linalg.add ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %c32 = transform.param.constant 32 : i64 -> !transform.any_param
     %c64 = transform.param.constant 64 : i64 -> !transform.any_param
     %tiles = transform.merge_handles %c32, %c64 : !transform.any_param
@@ -148,19 +148,19 @@ module attributes {transform.with_named_sequence} {
 func.func @fuse_unary_packed_tile_sizes_forall(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
 
   //     CHECK: %[[RES:.*]] = scf.forall
-  //     CHECK:       linalg.elementwise
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: return %[[RES]]
   %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%arg0 : tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
-  %1 = linalg.add ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %c32 = transform.param.constant 32 : i64 -> !transform.any_param
     %c64 = transform.param.constant 64 : i64 -> !transform.any_param
     %tiles = transform.merge_handles %c32, %c64 : !transform.any_param
@@ -181,21 +181,21 @@ func.func @fuse_unary_packed_tile_sizes_multiple_targets(
 
   //     CHECK: scf.for
   //     CHECK:    scf.for
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise
   //     CHECK: %[[RES:.*]] = scf.for
   //     CHECK:    scf.for
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise
   //     CHECK: return %[[RES]]
-  %0 = linalg.add ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %0 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
-  %1 = linalg.add ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %c32 = transform.param.constant 32 : i64 -> !transform.any_param
     %c64 = transform.param.constant 64 : i64 -> !transform.any_param
     %tiles = transform.merge_handles %c32, %c64 : !transform.any_param
@@ -214,19 +214,19 @@ module attributes {transform.with_named_sequence} {
 func.func @fuse_no_tiling_packed_tile_sizes(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
 
   //     CHECK-NOT: scf.for
-  //     CHECK: linalg.elementwise
-  //     CHECK: %[[RES:.*]] = linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       %[[RES:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: return %[[RES]]
   %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%arg0 : tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
-  %1 = linalg.add ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg0 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %c0 = transform.param.constant 0 : i64 -> !transform.any_param
     %tiles = transform.merge_handles %c0, %c0 : !transform.any_param
     %1, %loops = transform.structured.fuse %0 tile_sizes *(%tiles)
@@ -366,8 +366,8 @@ func.func @fuse_through_slice(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) ->
 
   //     CHECK: %[[RES:.*]] = scf.for
   //     CHECK:     scf.for
-  //     CHECK:       linalg.elementwise
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: return %[[RES]]
   %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%arg0 : tensor<?x?xf32>)
                              outs(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32>
@@ -376,14 +376,14 @@ func.func @fuse_through_slice(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) ->
   %dim0 = tensor.dim %arg1, %c0 : tensor<?x?xf32>
   %dim1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
   %1 = tensor.extract_slice %0 [1, 1] [%dim0, %dim1] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-  %2 = linalg.add ins(%1, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %2 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%1, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %2 : tensor<?x?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1] {apply_cleanup}
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
     transform.yield
@@ -397,8 +397,8 @@ func.func @fuse_through_slice_and_cast_chain(%arg0: tensor<100x100xf32>, %arg1: 
 
   //     CHECK: %[[RES:.*]] = scf.for
   //     CHECK:     scf.for
-  //     CHECK:       linalg.elementwise
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: return %[[RES]]
   %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%arg0 : tensor<100x100xf32>)
                              outs(%arg0: tensor<100x100xf32>) -> tensor<100x100xf32>
@@ -410,14 +410,14 @@ func.func @fuse_through_slice_and_cast_chain(%arg0: tensor<100x100xf32>, %arg1: 
   %dim0 = tensor.dim %arg1, %c0 : tensor<?x?xf32>
   %dim1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
   %4 = tensor.extract_slice %3 [1, 1] [%dim0, %dim1] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-  %5 = linalg.add ins(%4, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %5 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%4, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %5 : tensor<?x?xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1] {apply_cleanup}
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
     transform.yield
@@ -433,8 +433,8 @@ func.func @fuse_unrelated_slices(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>)
   //     CHECK: %[[SLICE2:.+]] = tensor.extract_slice %[[SLICE1]]
   //     CHECK: %[[RES:.*]] = scf.for
   //     CHECK:     scf.for
-  //     CHECK:       linalg.elementwise
-  //     CHECK:       linalg.add
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  //     CHECK:       linalg.elementwise kind=#linalg.elementwise_kind<add>
   //     CHECK: return %[[RES]], %[[SLICE2]]
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -445,14 +445,14 @@ func.func @fuse_unrelated_slices(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>)
   %0 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%arg0 : tensor<?x?xf32>)
                              outs(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32>
   %1 = tensor.extract_slice %0 [1, 1] [%dim0, %dim1] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-  %2 = linalg.add ins(%1, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+  %2 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%1, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
                              outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
   return %2, %slice2 : tensor<?x?xf32>, tensor<10x10xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<add>} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 32] interchange [0, 1] {apply_cleanup}
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
     transform.yield
