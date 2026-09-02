@@ -82,9 +82,9 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; LA32R-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32R-NEXT:    st.w $s0, $sp, 4 # 4-byte Folded Spill
 ; LA32R-NEXT:    addi.w $fp, $sp, 16
-; LA32R-NEXT:    move $s0, $sp
 ; LA32R-NEXT:    addi.w $a0, $a0, 15
 ; LA32R-NEXT:    addi.w $a1, $zero, -16
+; LA32R-NEXT:    move $s0, $sp
 ; LA32R-NEXT:    and $a0, $a0, $a1
 ; LA32R-NEXT:    sub.w $a0, $sp, $a0
 ; LA32R-NEXT:    move $sp, $a0
@@ -104,8 +104,8 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; LA32S-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32S-NEXT:    st.w $s0, $sp, 4 # 4-byte Folded Spill
 ; LA32S-NEXT:    addi.w $fp, $sp, 16
-; LA32S-NEXT:    move $s0, $sp
 ; LA32S-NEXT:    addi.w $a0, $a0, 15
+; LA32S-NEXT:    move $s0, $sp
 ; LA32S-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32S-NEXT:    sub.w $a0, $sp, $a0
 ; LA32S-NEXT:    move $sp, $a0
@@ -125,8 +125,8 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; LA64-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    addi.d $fp, $sp, 32
-; LA64-NEXT:    move $s0, $sp
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    move $s0, $sp
 ; LA64-NEXT:    addi.d $a0, $a0, 15
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 32, 4
 ; LA64-NEXT:    slli.d $a0, $a0, 4
@@ -166,19 +166,19 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA32R-NEXT:    move $sp, $a0
 ; LA32R-NEXT:    addi.w $sp, $sp, -16
 ; LA32R-NEXT:    ori $a1, $zero, 12
-; LA32R-NEXT:    st.w $a1, $sp, 12
-; LA32R-NEXT:    ori $a1, $zero, 11
-; LA32R-NEXT:    st.w $a1, $sp, 8
-; LA32R-NEXT:    ori $a1, $zero, 10
-; LA32R-NEXT:    st.w $a1, $sp, 4
 ; LA32R-NEXT:    ori $t0, $zero, 9
-; LA32R-NEXT:    ori $a1, $zero, 2
 ; LA32R-NEXT:    ori $a2, $zero, 3
 ; LA32R-NEXT:    ori $a3, $zero, 4
 ; LA32R-NEXT:    ori $a4, $zero, 5
 ; LA32R-NEXT:    ori $a5, $zero, 6
 ; LA32R-NEXT:    ori $a6, $zero, 7
 ; LA32R-NEXT:    ori $a7, $zero, 8
+; LA32R-NEXT:    st.w $a1, $sp, 12
+; LA32R-NEXT:    ori $a1, $zero, 11
+; LA32R-NEXT:    st.w $a1, $sp, 8
+; LA32R-NEXT:    ori $a1, $zero, 10
+; LA32R-NEXT:    st.w $a1, $sp, 4
+; LA32R-NEXT:    ori $a1, $zero, 2
 ; LA32R-NEXT:    st.w $t0, $sp, 0
 ; LA32R-NEXT:    bl func
 ; LA32R-NEXT:    addi.w $sp, $sp, 16
@@ -200,19 +200,19 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA32S-NEXT:    move $sp, $a0
 ; LA32S-NEXT:    addi.w $sp, $sp, -16
 ; LA32S-NEXT:    ori $a1, $zero, 12
-; LA32S-NEXT:    st.w $a1, $sp, 12
-; LA32S-NEXT:    ori $a1, $zero, 11
-; LA32S-NEXT:    st.w $a1, $sp, 8
-; LA32S-NEXT:    ori $a1, $zero, 10
-; LA32S-NEXT:    st.w $a1, $sp, 4
 ; LA32S-NEXT:    ori $t0, $zero, 9
-; LA32S-NEXT:    ori $a1, $zero, 2
 ; LA32S-NEXT:    ori $a2, $zero, 3
 ; LA32S-NEXT:    ori $a3, $zero, 4
 ; LA32S-NEXT:    ori $a4, $zero, 5
 ; LA32S-NEXT:    ori $a5, $zero, 6
 ; LA32S-NEXT:    ori $a6, $zero, 7
 ; LA32S-NEXT:    ori $a7, $zero, 8
+; LA32S-NEXT:    st.w $a1, $sp, 12
+; LA32S-NEXT:    ori $a1, $zero, 11
+; LA32S-NEXT:    st.w $a1, $sp, 8
+; LA32S-NEXT:    ori $a1, $zero, 10
+; LA32S-NEXT:    st.w $a1, $sp, 4
+; LA32S-NEXT:    ori $a1, $zero, 2
 ; LA32S-NEXT:    st.w $t0, $sp, 0
 ; LA32S-NEXT:    bl func
 ; LA32S-NEXT:    addi.w $sp, $sp, 16
@@ -236,19 +236,19 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA64-NEXT:    move $sp, $a0
 ; LA64-NEXT:    addi.d $sp, $sp, -32
 ; LA64-NEXT:    ori $a1, $zero, 12
-; LA64-NEXT:    st.d $a1, $sp, 24
-; LA64-NEXT:    ori $a1, $zero, 11
-; LA64-NEXT:    st.d $a1, $sp, 16
-; LA64-NEXT:    ori $a1, $zero, 10
-; LA64-NEXT:    st.d $a1, $sp, 8
 ; LA64-NEXT:    ori $t0, $zero, 9
-; LA64-NEXT:    ori $a1, $zero, 2
 ; LA64-NEXT:    ori $a2, $zero, 3
 ; LA64-NEXT:    ori $a3, $zero, 4
 ; LA64-NEXT:    ori $a4, $zero, 5
 ; LA64-NEXT:    ori $a5, $zero, 6
 ; LA64-NEXT:    ori $a6, $zero, 7
 ; LA64-NEXT:    ori $a7, $zero, 8
+; LA64-NEXT:    st.d $a1, $sp, 24
+; LA64-NEXT:    ori $a1, $zero, 11
+; LA64-NEXT:    st.d $a1, $sp, 16
+; LA64-NEXT:    ori $a1, $zero, 10
+; LA64-NEXT:    st.d $a1, $sp, 8
+; LA64-NEXT:    ori $a1, $zero, 2
 ; LA64-NEXT:    st.d $t0, $sp, 0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(func)
 ; LA64-NEXT:    jirl $ra, $ra, 0

@@ -8,13 +8,13 @@ define i32 @boundary_test(i32 %a, i32 %b) {
 ; DEFAULT-LABEL: boundary_test:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    pcalau12i $a2, %got_pc_hi20(g)
-; DEFAULT-NEXT:    ld.d $a2, $a2, %got_pc_lo12(g)
 ; DEFAULT-NEXT:    mul.d $a3, $a0, $a1
-; DEFAULT-NEXT:    ld.w $a2, $a2, 0
 ; DEFAULT-NEXT:    addi.w $a1, $a1, 0
 ; DEFAULT-NEXT:    addi.w $a0, $a0, 0
+; DEFAULT-NEXT:    ld.d $a2, $a2, %got_pc_lo12(g)
 ; DEFAULT-NEXT:    div.w $a0, $a0, $a1
 ; DEFAULT-NEXT:    add.d $a0, $a3, $a0
+; DEFAULT-NEXT:    ld.w $a2, $a2, 0
 ; DEFAULT-NEXT:    add.w $a0, $a0, $a2
 ; DEFAULT-NEXT:    ret
 ;

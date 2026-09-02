@@ -112,6 +112,8 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; LA32-NEXT:    st.w $ra, $sp, 220 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 216 # 4-byte Folded Spill
 ; LA32-NEXT:    ld.w $s8, $sp, 224
+; LA32-NEXT:    ld.w $ra, $sp, 324
+; LA32-NEXT:    ld.w $fp, $sp, 328
 ; LA32-NEXT:    st.w $s8, $sp, 212 # 4-byte Folded Spill
 ; LA32-NEXT:    ld.w $s8, $sp, 232
 ; LA32-NEXT:    st.w $s8, $sp, 208 # 4-byte Folded Spill
@@ -159,11 +161,20 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; LA32-NEXT:    st.w $s8, $sp, 124 # 4-byte Folded Spill
 ; LA32-NEXT:    ld.w $s8, $sp, 320
 ; LA32-NEXT:    st.w $s8, $sp, 120 # 4-byte Folded Spill
-; LA32-NEXT:    ld.w $ra, $sp, 324
-; LA32-NEXT:    ld.w $fp, $sp, 328
 ; LA32-NEXT:    ld.w $s8, $sp, 332
 ; LA32-NEXT:    st.w $s1, $sp, 108
 ; LA32-NEXT:    st.w $s0, $sp, 104
+; LA32-NEXT:    move $s1, $s3
+; LA32-NEXT:    move $s3, $s5
+; LA32-NEXT:    move $s5, $s7
+; LA32-NEXT:    move $s7, $a1
+; LA32-NEXT:    move $a1, $a3
+; LA32-NEXT:    move $a3, $a5
+; LA32-NEXT:    move $a5, $a7
+; LA32-NEXT:    move $a7, $t1
+; LA32-NEXT:    move $t1, $t3
+; LA32-NEXT:    move $t3, $t5
+; LA32-NEXT:    move $t5, $t7
 ; LA32-NEXT:    st.w $s8, $sp, 100
 ; LA32-NEXT:    st.w $fp, $sp, 96
 ; LA32-NEXT:    st.w $ra, $sp, 92
@@ -212,27 +223,16 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; LA32-NEXT:    ld.w $s0, $sp, 204 # 4-byte Folded Reload
 ; LA32-NEXT:    st.w $s0, $sp, 0
 ; LA32-NEXT:    move $s0, $s2
-; LA32-NEXT:    move $s1, $s3
 ; LA32-NEXT:    move $s2, $s4
-; LA32-NEXT:    move $s3, $s5
 ; LA32-NEXT:    move $s4, $s6
-; LA32-NEXT:    move $s5, $s7
 ; LA32-NEXT:    move $s6, $a0
-; LA32-NEXT:    move $s7, $a1
 ; LA32-NEXT:    move $a0, $a2
-; LA32-NEXT:    move $a1, $a3
 ; LA32-NEXT:    move $a2, $a4
-; LA32-NEXT:    move $a3, $a5
 ; LA32-NEXT:    move $a4, $a6
-; LA32-NEXT:    move $a5, $a7
 ; LA32-NEXT:    move $a6, $t0
-; LA32-NEXT:    move $a7, $t1
 ; LA32-NEXT:    move $t0, $t2
-; LA32-NEXT:    move $t1, $t3
 ; LA32-NEXT:    move $t2, $t4
-; LA32-NEXT:    move $t3, $t5
 ; LA32-NEXT:    move $t4, $t6
-; LA32-NEXT:    move $t5, $t7
 ; LA32-NEXT:    move $t6, $t8
 ; LA32-NEXT:    ld.w $t7, $sp, 212 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $t8, $sp, 208 # 4-byte Folded Reload
@@ -296,50 +296,12 @@ define i64 @caller3() nounwind {
 ; LA32-NEXT:    st.w $s6, $sp, 128 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s7, $sp, 124 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s8, $sp, 120 # 4-byte Folded Spill
-; LA32-NEXT:    st.w $zero, $sp, 108
 ; LA32-NEXT:    ori $a0, $zero, 26
-; LA32-NEXT:    st.w $a0, $sp, 104
-; LA32-NEXT:    st.w $zero, $sp, 100
-; LA32-NEXT:    ori $a0, $zero, 25
-; LA32-NEXT:    st.w $a0, $sp, 96
-; LA32-NEXT:    st.w $zero, $sp, 92
-; LA32-NEXT:    ori $a0, $zero, 24
-; LA32-NEXT:    st.w $a0, $sp, 88
-; LA32-NEXT:    st.w $zero, $sp, 84
-; LA32-NEXT:    ori $a0, $zero, 23
-; LA32-NEXT:    st.w $a0, $sp, 80
-; LA32-NEXT:    st.w $zero, $sp, 76
-; LA32-NEXT:    ori $a0, $zero, 22
-; LA32-NEXT:    st.w $a0, $sp, 72
-; LA32-NEXT:    st.w $zero, $sp, 68
-; LA32-NEXT:    ori $a0, $zero, 21
-; LA32-NEXT:    st.w $a0, $sp, 64
-; LA32-NEXT:    st.w $zero, $sp, 60
-; LA32-NEXT:    ori $a0, $zero, 20
-; LA32-NEXT:    st.w $a0, $sp, 56
-; LA32-NEXT:    st.w $zero, $sp, 52
-; LA32-NEXT:    ori $a0, $zero, 19
-; LA32-NEXT:    st.w $a0, $sp, 48
-; LA32-NEXT:    st.w $zero, $sp, 44
-; LA32-NEXT:    ori $a0, $zero, 18
-; LA32-NEXT:    st.w $a0, $sp, 40
-; LA32-NEXT:    st.w $zero, $sp, 36
-; LA32-NEXT:    ori $a0, $zero, 17
-; LA32-NEXT:    st.w $a0, $sp, 32
-; LA32-NEXT:    st.w $zero, $sp, 28
-; LA32-NEXT:    ori $a0, $zero, 16
-; LA32-NEXT:    st.w $a0, $sp, 24
-; LA32-NEXT:    st.w $zero, $sp, 20
-; LA32-NEXT:    ori $a0, $zero, 15
-; LA32-NEXT:    st.w $a0, $sp, 16
-; LA32-NEXT:    st.w $zero, $sp, 12
-; LA32-NEXT:    ori $a0, $zero, 14
-; LA32-NEXT:    st.w $a0, $sp, 8
+; LA32-NEXT:    st.w $zero, $sp, 108
 ; LA32-NEXT:    ori $s0, $zero, 1
 ; LA32-NEXT:    ori $s2, $zero, 2
 ; LA32-NEXT:    ori $s4, $zero, 3
 ; LA32-NEXT:    ori $s6, $zero, 4
-; LA32-NEXT:    ori $a0, $zero, 5
 ; LA32-NEXT:    ori $a2, $zero, 6
 ; LA32-NEXT:    ori $a4, $zero, 7
 ; LA32-NEXT:    ori $a6, $zero, 8
@@ -348,7 +310,6 @@ define i64 @caller3() nounwind {
 ; LA32-NEXT:    ori $t4, $zero, 11
 ; LA32-NEXT:    ori $t6, $zero, 12
 ; LA32-NEXT:    ori $t8, $zero, 13
-; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    move $s1, $zero
 ; LA32-NEXT:    move $s3, $zero
 ; LA32-NEXT:    move $s5, $zero
@@ -361,6 +322,45 @@ define i64 @caller3() nounwind {
 ; LA32-NEXT:    move $t3, $zero
 ; LA32-NEXT:    move $t5, $zero
 ; LA32-NEXT:    move $t7, $zero
+; LA32-NEXT:    st.w $a0, $sp, 104
+; LA32-NEXT:    ori $a0, $zero, 25
+; LA32-NEXT:    st.w $zero, $sp, 100
+; LA32-NEXT:    st.w $a0, $sp, 96
+; LA32-NEXT:    ori $a0, $zero, 24
+; LA32-NEXT:    st.w $zero, $sp, 92
+; LA32-NEXT:    st.w $a0, $sp, 88
+; LA32-NEXT:    ori $a0, $zero, 23
+; LA32-NEXT:    st.w $zero, $sp, 84
+; LA32-NEXT:    st.w $a0, $sp, 80
+; LA32-NEXT:    ori $a0, $zero, 22
+; LA32-NEXT:    st.w $zero, $sp, 76
+; LA32-NEXT:    st.w $a0, $sp, 72
+; LA32-NEXT:    ori $a0, $zero, 21
+; LA32-NEXT:    st.w $zero, $sp, 68
+; LA32-NEXT:    st.w $a0, $sp, 64
+; LA32-NEXT:    ori $a0, $zero, 20
+; LA32-NEXT:    st.w $zero, $sp, 60
+; LA32-NEXT:    st.w $a0, $sp, 56
+; LA32-NEXT:    ori $a0, $zero, 19
+; LA32-NEXT:    st.w $zero, $sp, 52
+; LA32-NEXT:    st.w $a0, $sp, 48
+; LA32-NEXT:    ori $a0, $zero, 18
+; LA32-NEXT:    st.w $zero, $sp, 44
+; LA32-NEXT:    st.w $a0, $sp, 40
+; LA32-NEXT:    ori $a0, $zero, 17
+; LA32-NEXT:    st.w $zero, $sp, 36
+; LA32-NEXT:    st.w $a0, $sp, 32
+; LA32-NEXT:    ori $a0, $zero, 16
+; LA32-NEXT:    st.w $zero, $sp, 28
+; LA32-NEXT:    st.w $a0, $sp, 24
+; LA32-NEXT:    ori $a0, $zero, 15
+; LA32-NEXT:    st.w $zero, $sp, 20
+; LA32-NEXT:    st.w $a0, $sp, 16
+; LA32-NEXT:    ori $a0, $zero, 14
+; LA32-NEXT:    st.w $zero, $sp, 12
+; LA32-NEXT:    st.w $a0, $sp, 8
+; LA32-NEXT:    ori $a0, $zero, 5
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    bl callee_with_many_param
 ; LA32-NEXT:    move $a0, $s0
 ; LA32-NEXT:    move $a1, $s1

@@ -37,16 +37,16 @@ define i64 @caller_i128_in_regs() nounwind {
 define i64 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i128 %e, i64 %f, i128 %g, i64 %h) nounwind {
 ; CHECK-LABEL: callee_many_scalars:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.d $t0, $sp, 8
 ; CHECK-NEXT:    ld.d $t1, $sp, 0
 ; CHECK-NEXT:    andi $a0, $a0, 255
 ; CHECK-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; CHECK-NEXT:    bstrpick.d $a2, $a2, 31, 0
+; CHECK-NEXT:    ld.d $t0, $sp, 8
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    add.d $a0, $a0, $a2
+; CHECK-NEXT:    xor $a2, $a4, $a7
 ; CHECK-NEXT:    add.d $a0, $a0, $a3
 ; CHECK-NEXT:    xor $a1, $a5, $t1
-; CHECK-NEXT:    xor $a2, $a4, $a7
 ; CHECK-NEXT:    or $a1, $a2, $a1
 ; CHECK-NEXT:    sltui $a1, $a1, 1
 ; CHECK-NEXT:    add.d $a0, $a1, $a0
@@ -73,16 +73,16 @@ define i64 @caller_many_scalars() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -32
 ; CHECK-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; CHECK-NEXT:    ori $a0, $zero, 8
-; CHECK-NEXT:    st.d $a0, $sp, 8
-; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ori $a1, $zero, 2
 ; CHECK-NEXT:    ori $a2, $zero, 3
 ; CHECK-NEXT:    ori $a3, $zero, 4
 ; CHECK-NEXT:    ori $a4, $zero, 5
 ; CHECK-NEXT:    ori $a6, $zero, 6
 ; CHECK-NEXT:    ori $a7, $zero, 7
-; CHECK-NEXT:    st.d $zero, $sp, 0
 ; CHECK-NEXT:    move $a5, $zero
+; CHECK-NEXT:    st.d $a0, $sp, 8
+; CHECK-NEXT:    ori $a0, $zero, 1
+; CHECK-NEXT:    st.d $zero, $sp, 0
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_many_scalars)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
@@ -105,11 +105,11 @@ define i64 @callee_large_scalars(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    ld.d $a7, $a0, 8
 ; CHECK-NEXT:    ld.d $a1, $a1, 16
 ; CHECK-NEXT:    ld.d $a0, $a0, 16
+; CHECK-NEXT:    xor $a0, $a0, $a1
+; CHECK-NEXT:    xor $a1, $a3, $a2
 ; CHECK-NEXT:    xor $a5, $a6, $a5
 ; CHECK-NEXT:    xor $a4, $a7, $a4
 ; CHECK-NEXT:    or $a4, $a4, $a5
-; CHECK-NEXT:    xor $a0, $a0, $a1
-; CHECK-NEXT:    xor $a1, $a3, $a2
 ; CHECK-NEXT:    or $a0, $a1, $a0
 ; CHECK-NEXT:    or $a0, $a0, $a4
 ; CHECK-NEXT:    sltui $a0, $a0, 1
@@ -124,16 +124,16 @@ define i64 @caller_large_scalars() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -96
 ; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; CHECK-NEXT:    ori $a0, $zero, 2
 ; CHECK-NEXT:    st.d $zero, $sp, 40
 ; CHECK-NEXT:    vrepli.b $vr0, 0
-; CHECK-NEXT:    vst $vr0, $sp, 24
-; CHECK-NEXT:    ori $a0, $zero, 2
+; CHECK-NEXT:    ori $a2, $zero, 1
+; CHECK-NEXT:    addi.d $a1, $sp, 16
 ; CHECK-NEXT:    st.d $a0, $sp, 16
+; CHECK-NEXT:    addi.d $a0, $sp, 48
+; CHECK-NEXT:    vst $vr0, $sp, 24
 ; CHECK-NEXT:    st.d $zero, $sp, 72
 ; CHECK-NEXT:    vst $vr0, $sp, 56
-; CHECK-NEXT:    ori $a2, $zero, 1
-; CHECK-NEXT:    addi.d $a0, $sp, 48
-; CHECK-NEXT:    addi.d $a1, $sp, 16
 ; CHECK-NEXT:    st.d $a2, $sp, 48
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_large_scalars)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
@@ -152,19 +152,19 @@ define i64 @callee_large_scalars_exhausted_regs(i64 %a, i64 %b, i64 %c, i64 %d, 
 ; CHECK-LABEL: callee_large_scalars_exhausted_regs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.d $a0, $sp, 8
-; CHECK-NEXT:    ld.d $a1, $a0, 0
 ; CHECK-NEXT:    ld.d $a2, $a7, 0
-; CHECK-NEXT:    ld.d $a3, $a0, 8
-; CHECK-NEXT:    ld.d $a4, $a0, 24
 ; CHECK-NEXT:    ld.d $a5, $a7, 24
 ; CHECK-NEXT:    ld.d $a6, $a7, 8
-; CHECK-NEXT:    ld.d $a0, $a0, 16
 ; CHECK-NEXT:    ld.d $a7, $a7, 16
+; CHECK-NEXT:    ld.d $a1, $a0, 0
+; CHECK-NEXT:    ld.d $a3, $a0, 8
+; CHECK-NEXT:    ld.d $a4, $a0, 24
+; CHECK-NEXT:    ld.d $a0, $a0, 16
 ; CHECK-NEXT:    xor $a4, $a5, $a4
 ; CHECK-NEXT:    xor $a3, $a6, $a3
-; CHECK-NEXT:    or $a3, $a3, $a4
 ; CHECK-NEXT:    xor $a0, $a7, $a0
 ; CHECK-NEXT:    xor $a1, $a2, $a1
+; CHECK-NEXT:    or $a3, $a3, $a4
 ; CHECK-NEXT:    or $a0, $a1, $a0
 ; CHECK-NEXT:    or $a0, $a0, $a3
 ; CHECK-NEXT:    sltui $a0, $a0, 1
@@ -180,18 +180,7 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -112
 ; CHECK-NEXT:    st.d $ra, $sp, 104 # 8-byte Folded Spill
 ; CHECK-NEXT:    addi.d $a0, $sp, 32
-; CHECK-NEXT:    st.d $a0, $sp, 8
-; CHECK-NEXT:    ori $a0, $zero, 9
-; CHECK-NEXT:    st.d $a0, $sp, 0
-; CHECK-NEXT:    st.d $zero, $sp, 56
 ; CHECK-NEXT:    vrepli.b $vr0, 0
-; CHECK-NEXT:    vst $vr0, $sp, 40
-; CHECK-NEXT:    ori $a0, $zero, 10
-; CHECK-NEXT:    st.d $a0, $sp, 32
-; CHECK-NEXT:    st.d $zero, $sp, 88
-; CHECK-NEXT:    ori $a0, $zero, 8
-; CHECK-NEXT:    st.d $a0, $sp, 64
-; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ori $a1, $zero, 2
 ; CHECK-NEXT:    ori $a2, $zero, 3
 ; CHECK-NEXT:    ori $a3, $zero, 4
@@ -199,7 +188,18 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; CHECK-NEXT:    ori $a5, $zero, 6
 ; CHECK-NEXT:    ori $a6, $zero, 7
 ; CHECK-NEXT:    addi.d $a7, $sp, 64
+; CHECK-NEXT:    st.d $a0, $sp, 8
+; CHECK-NEXT:    ori $a0, $zero, 9
+; CHECK-NEXT:    st.d $a0, $sp, 0
+; CHECK-NEXT:    ori $a0, $zero, 10
+; CHECK-NEXT:    st.d $zero, $sp, 56
+; CHECK-NEXT:    vst $vr0, $sp, 40
+; CHECK-NEXT:    st.d $a0, $sp, 32
+; CHECK-NEXT:    ori $a0, $zero, 8
+; CHECK-NEXT:    st.d $zero, $sp, 88
 ; CHECK-NEXT:    vst $vr0, $sp, 72
+; CHECK-NEXT:    st.d $a0, $sp, 64
+; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_large_scalars_exhausted_regs)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 104 # 8-byte Folded Reload
@@ -236,18 +236,18 @@ define i64 @caller_large_struct() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -80
 ; CHECK-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
 ; CHECK-NEXT:    ori $a0, $zero, 1
-; CHECK-NEXT:    st.d $a0, $sp, 40
 ; CHECK-NEXT:    ori $a1, $zero, 2
-; CHECK-NEXT:    st.d $a1, $sp, 48
 ; CHECK-NEXT:    ori $a2, $zero, 3
-; CHECK-NEXT:    st.d $a2, $sp, 56
 ; CHECK-NEXT:    ori $a3, $zero, 4
+; CHECK-NEXT:    st.d $a0, $sp, 40
+; CHECK-NEXT:    st.d $a1, $sp, 48
+; CHECK-NEXT:    st.d $a2, $sp, 56
 ; CHECK-NEXT:    st.d $a3, $sp, 64
 ; CHECK-NEXT:    st.d $a0, $sp, 8
+; CHECK-NEXT:    addi.d $a0, $sp, 8
 ; CHECK-NEXT:    st.d $a1, $sp, 16
 ; CHECK-NEXT:    st.d $a2, $sp, 24
 ; CHECK-NEXT:    st.d $a3, $sp, 32
-; CHECK-NEXT:    addi.d $a0, $sp, 8
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_large_struct)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
@@ -285,10 +285,10 @@ define i64 @caller_small_scalar_ret() nounwind {
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_small_scalar_ret)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    addi.w $a2, $zero, -2
+; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    xor $a0, $a0, $a2
 ; CHECK-NEXT:    orn $a0, $a0, $a1
 ; CHECK-NEXT:    sltui $a0, $a0, 1
-; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
   %1 = call i128 @callee_small_scalar_ret()
@@ -317,8 +317,8 @@ define i64 @caller_small_struct_ret() nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_small_struct_ret)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
   %1 = call %struct.small @callee_small_struct_ret()
@@ -395,8 +395,8 @@ define i64 @caller_large_struct_ret() nounwind {
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $a0, $sp, 8
 ; CHECK-NEXT:    ld.d $a1, $sp, 32
-; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
+; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    addi.d $sp, $sp, 48
 ; CHECK-NEXT:    ret
   %1 = alloca %struct.large

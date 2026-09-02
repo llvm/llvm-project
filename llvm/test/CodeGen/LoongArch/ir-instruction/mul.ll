@@ -90,20 +90,20 @@ define i64 @mul_i64(i64 %a, i64 %b) {
 ; LA32R:       # %bb.0: # %entry
 ; LA32R-NEXT:    mul.w $a3, $a0, $a3
 ; LA32R-NEXT:    mulh.wu $a4, $a0, $a2
-; LA32R-NEXT:    add.w $a3, $a4, $a3
 ; LA32R-NEXT:    mul.w $a1, $a1, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a3, $a4, $a3
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64:
 ; LA32S:       # %bb.0: # %entry
 ; LA32S-NEXT:    mul.w $a3, $a0, $a3
 ; LA32S-NEXT:    mulh.wu $a4, $a0, $a2
-; LA32S-NEXT:    add.w $a3, $a4, $a3
 ; LA32S-NEXT:    mul.w $a1, $a1, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a3, $a4, $a3
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64:
@@ -120,16 +120,16 @@ define i64 @mul_pow2(i64 %a) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    srli.w $a2, $a0, 29
 ; LA32R-NEXT:    slli.w $a1, $a1, 3
-; LA32R-NEXT:    or $a1, $a1, $a2
 ; LA32R-NEXT:    slli.w $a0, $a0, 3
+; LA32R-NEXT:    or $a1, $a1, $a2
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_pow2:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    srli.w $a2, $a0, 29
 ; LA32S-NEXT:    slli.w $a1, $a1, 3
-; LA32S-NEXT:    or $a1, $a1, $a2
 ; LA32S-NEXT:    slli.w $a0, $a0, 3
+; LA32S-NEXT:    or $a1, $a1, $a2
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_pow2:
@@ -144,8 +144,8 @@ define i64 @mul_p5(i64 %a) {
 ; LA32R-LABEL: mul_p5:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 5
-; LA32R-NEXT:    mulh.wu $a2, $a0, $a2
 ; LA32R-NEXT:    slli.w $a3, $a1, 2
+; LA32R-NEXT:    mulh.wu $a2, $a0, $a2
 ; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    add.w $a1, $a2, $a1
 ; LA32R-NEXT:    slli.w $a2, $a0, 2
@@ -155,10 +155,10 @@ define i64 @mul_p5(i64 %a) {
 ; LA32S-LABEL: mul_p5:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 5
-; LA32S-NEXT:    mulh.wu $a2, $a0, $a2
 ; LA32S-NEXT:    alsl.w $a1, $a1, $a1, 2
-; LA32S-NEXT:    add.w $a1, $a2, $a1
+; LA32S-NEXT:    mulh.wu $a2, $a0, $a2
 ; LA32S-NEXT:    alsl.w $a0, $a0, $a0, 2
+; LA32S-NEXT:    add.w $a1, $a2, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_p5:
@@ -220,42 +220,42 @@ define i32 @mulh_wu(i32 %a, i32 %b) {
 define i64 @mulh_d(i64 %a, i64 %b) {
 ; LA32R-LABEL: mulh_d:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srai.w $a5, $a1, 31
-; LA32R-NEXT:    srai.w $a6, $a3, 31
 ; LA32R-NEXT:    mulh.wu $a4, $a0, $a2
 ; LA32R-NEXT:    mul.w $a7, $a1, $a2
-; LA32R-NEXT:    add.w $a4, $a7, $a4
-; LA32R-NEXT:    sltu $a7, $a4, $a7
 ; LA32R-NEXT:    mulh.wu $t0, $a1, $a2
+; LA32R-NEXT:    srai.w $a5, $a1, 31
+; LA32R-NEXT:    srai.w $a6, $a3, 31
+; LA32R-NEXT:    mul.w $t1, $a1, $a3
+; LA32R-NEXT:    add.w $a4, $a7, $a4
+; LA32R-NEXT:    mul.w $t3, $a2, $a5
+; LA32R-NEXT:    mulh.wu $a2, $a2, $a5
+; LA32R-NEXT:    mul.w $t4, $a6, $a0
+; LA32R-NEXT:    sltu $a7, $a4, $a7
+; LA32R-NEXT:    add.w $a2, $a2, $t3
+; LA32R-NEXT:    add.w $t5, $t4, $t3
 ; LA32R-NEXT:    add.w $a7, $t0, $a7
 ; LA32R-NEXT:    mul.w $t0, $a0, $a3
 ; LA32R-NEXT:    add.w $a4, $t0, $a4
 ; LA32R-NEXT:    sltu $a4, $a4, $t0
 ; LA32R-NEXT:    mulh.wu $t0, $a0, $a3
+; LA32R-NEXT:    mulh.wu $a0, $a6, $a0
 ; LA32R-NEXT:    add.w $a4, $t0, $a4
 ; LA32R-NEXT:    add.w $t0, $a7, $a4
-; LA32R-NEXT:    mul.w $t1, $a1, $a3
 ; LA32R-NEXT:    add.w $t2, $t1, $t0
-; LA32R-NEXT:    mul.w $t3, $a2, $a5
-; LA32R-NEXT:    mul.w $t4, $a6, $a0
-; LA32R-NEXT:    add.w $t5, $t4, $t3
-; LA32R-NEXT:    add.w $a4, $t2, $t5
-; LA32R-NEXT:    sltu $t6, $a4, $t2
-; LA32R-NEXT:    sltu $t1, $t2, $t1
 ; LA32R-NEXT:    sltu $a7, $t0, $a7
 ; LA32R-NEXT:    mulh.wu $t0, $a1, $a3
-; LA32R-NEXT:    add.w $a7, $t0, $a7
-; LA32R-NEXT:    add.w $a7, $a7, $t1
-; LA32R-NEXT:    mulh.wu $a2, $a2, $a5
-; LA32R-NEXT:    add.w $a2, $a2, $t3
-; LA32R-NEXT:    mul.w $a3, $a3, $a5
-; LA32R-NEXT:    add.w $a2, $a2, $a3
 ; LA32R-NEXT:    mul.w $a1, $a6, $a1
-; LA32R-NEXT:    mulh.wu $a0, $a6, $a0
+; LA32R-NEXT:    mul.w $a3, $a3, $a5
 ; LA32R-NEXT:    add.w $a0, $a0, $a1
-; LA32R-NEXT:    add.w $a0, $a0, $t4
-; LA32R-NEXT:    add.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a2, $a2, $a3
+; LA32R-NEXT:    sltu $t1, $t2, $t1
+; LA32R-NEXT:    add.w $a7, $t0, $a7
 ; LA32R-NEXT:    sltu $a1, $t5, $t4
+; LA32R-NEXT:    add.w $a4, $t2, $t5
+; LA32R-NEXT:    add.w $a0, $a0, $t4
+; LA32R-NEXT:    add.w $a7, $a7, $t1
+; LA32R-NEXT:    sltu $t6, $a4, $t2
+; LA32R-NEXT:    add.w $a0, $a0, $a2
 ; LA32R-NEXT:    add.w $a0, $a0, $a1
 ; LA32R-NEXT:    add.w $a0, $a7, $a0
 ; LA32R-NEXT:    add.w $a1, $a0, $t6
@@ -264,42 +264,42 @@ define i64 @mulh_d(i64 %a, i64 %b) {
 ;
 ; LA32S-LABEL: mulh_d:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    srai.w $a5, $a1, 31
-; LA32S-NEXT:    srai.w $a6, $a3, 31
 ; LA32S-NEXT:    mulh.wu $a4, $a0, $a2
 ; LA32S-NEXT:    mul.w $a7, $a1, $a2
-; LA32S-NEXT:    add.w $a4, $a7, $a4
-; LA32S-NEXT:    sltu $a7, $a4, $a7
 ; LA32S-NEXT:    mulh.wu $t0, $a1, $a2
+; LA32S-NEXT:    srai.w $a5, $a1, 31
+; LA32S-NEXT:    srai.w $a6, $a3, 31
+; LA32S-NEXT:    mul.w $t1, $a1, $a3
+; LA32S-NEXT:    add.w $a4, $a7, $a4
+; LA32S-NEXT:    mul.w $t3, $a2, $a5
+; LA32S-NEXT:    mulh.wu $a2, $a2, $a5
+; LA32S-NEXT:    mul.w $t4, $a6, $a0
+; LA32S-NEXT:    sltu $a7, $a4, $a7
+; LA32S-NEXT:    add.w $a2, $a2, $t3
+; LA32S-NEXT:    add.w $t5, $t4, $t3
 ; LA32S-NEXT:    add.w $a7, $t0, $a7
 ; LA32S-NEXT:    mul.w $t0, $a0, $a3
 ; LA32S-NEXT:    add.w $a4, $t0, $a4
 ; LA32S-NEXT:    sltu $a4, $a4, $t0
 ; LA32S-NEXT:    mulh.wu $t0, $a0, $a3
+; LA32S-NEXT:    mulh.wu $a0, $a6, $a0
 ; LA32S-NEXT:    add.w $a4, $t0, $a4
 ; LA32S-NEXT:    add.w $t0, $a7, $a4
-; LA32S-NEXT:    mul.w $t1, $a1, $a3
 ; LA32S-NEXT:    add.w $t2, $t1, $t0
-; LA32S-NEXT:    mul.w $t3, $a2, $a5
-; LA32S-NEXT:    mul.w $t4, $a6, $a0
-; LA32S-NEXT:    add.w $t5, $t4, $t3
-; LA32S-NEXT:    add.w $a4, $t2, $t5
-; LA32S-NEXT:    sltu $t6, $a4, $t2
-; LA32S-NEXT:    sltu $t1, $t2, $t1
 ; LA32S-NEXT:    sltu $a7, $t0, $a7
 ; LA32S-NEXT:    mulh.wu $t0, $a1, $a3
-; LA32S-NEXT:    add.w $a7, $t0, $a7
-; LA32S-NEXT:    add.w $a7, $a7, $t1
-; LA32S-NEXT:    mulh.wu $a2, $a2, $a5
-; LA32S-NEXT:    add.w $a2, $a2, $t3
-; LA32S-NEXT:    mul.w $a3, $a3, $a5
-; LA32S-NEXT:    add.w $a2, $a2, $a3
 ; LA32S-NEXT:    mul.w $a1, $a6, $a1
-; LA32S-NEXT:    mulh.wu $a0, $a6, $a0
+; LA32S-NEXT:    mul.w $a3, $a3, $a5
 ; LA32S-NEXT:    add.w $a0, $a0, $a1
-; LA32S-NEXT:    add.w $a0, $a0, $t4
-; LA32S-NEXT:    add.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a2, $a2, $a3
+; LA32S-NEXT:    sltu $t1, $t2, $t1
+; LA32S-NEXT:    add.w $a7, $t0, $a7
 ; LA32S-NEXT:    sltu $a1, $t5, $t4
+; LA32S-NEXT:    add.w $a4, $t2, $t5
+; LA32S-NEXT:    add.w $a0, $a0, $t4
+; LA32S-NEXT:    add.w $a7, $a7, $t1
+; LA32S-NEXT:    sltu $t6, $a4, $t2
+; LA32S-NEXT:    add.w $a0, $a0, $a2
 ; LA32S-NEXT:    add.w $a0, $a0, $a1
 ; LA32S-NEXT:    add.w $a0, $a7, $a0
 ; LA32S-NEXT:    add.w $a1, $a0, $t6
@@ -323,21 +323,21 @@ define i64 @mulh_du(i64 %a, i64 %b) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    mulh.wu $a4, $a0, $a2
 ; LA32R-NEXT:    mul.w $a5, $a1, $a2
+; LA32R-NEXT:    mulh.wu $a2, $a1, $a2
 ; LA32R-NEXT:    add.w $a4, $a5, $a4
 ; LA32R-NEXT:    sltu $a5, $a4, $a5
-; LA32R-NEXT:    mulh.wu $a2, $a1, $a2
 ; LA32R-NEXT:    add.w $a2, $a2, $a5
 ; LA32R-NEXT:    mul.w $a5, $a0, $a3
+; LA32R-NEXT:    mulh.wu $a0, $a0, $a3
 ; LA32R-NEXT:    add.w $a4, $a5, $a4
 ; LA32R-NEXT:    sltu $a4, $a4, $a5
-; LA32R-NEXT:    mulh.wu $a0, $a0, $a3
+; LA32R-NEXT:    mul.w $a5, $a1, $a3
+; LA32R-NEXT:    mulh.wu $a1, $a1, $a3
 ; LA32R-NEXT:    add.w $a0, $a0, $a4
 ; LA32R-NEXT:    add.w $a4, $a2, $a0
-; LA32R-NEXT:    mul.w $a5, $a1, $a3
 ; LA32R-NEXT:    add.w $a0, $a5, $a4
-; LA32R-NEXT:    sltu $a5, $a0, $a5
 ; LA32R-NEXT:    sltu $a2, $a4, $a2
-; LA32R-NEXT:    mulh.wu $a1, $a1, $a3
+; LA32R-NEXT:    sltu $a5, $a0, $a5
 ; LA32R-NEXT:    add.w $a1, $a1, $a2
 ; LA32R-NEXT:    add.w $a1, $a1, $a5
 ; LA32R-NEXT:    ret
@@ -346,21 +346,21 @@ define i64 @mulh_du(i64 %a, i64 %b) {
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    mulh.wu $a4, $a0, $a2
 ; LA32S-NEXT:    mul.w $a5, $a1, $a2
+; LA32S-NEXT:    mulh.wu $a2, $a1, $a2
 ; LA32S-NEXT:    add.w $a4, $a5, $a4
 ; LA32S-NEXT:    sltu $a5, $a4, $a5
-; LA32S-NEXT:    mulh.wu $a2, $a1, $a2
 ; LA32S-NEXT:    add.w $a2, $a2, $a5
 ; LA32S-NEXT:    mul.w $a5, $a0, $a3
+; LA32S-NEXT:    mulh.wu $a0, $a0, $a3
 ; LA32S-NEXT:    add.w $a4, $a5, $a4
 ; LA32S-NEXT:    sltu $a4, $a4, $a5
-; LA32S-NEXT:    mulh.wu $a0, $a0, $a3
+; LA32S-NEXT:    mul.w $a5, $a1, $a3
+; LA32S-NEXT:    mulh.wu $a1, $a1, $a3
 ; LA32S-NEXT:    add.w $a0, $a0, $a4
 ; LA32S-NEXT:    add.w $a4, $a2, $a0
-; LA32S-NEXT:    mul.w $a5, $a1, $a3
 ; LA32S-NEXT:    add.w $a0, $a5, $a4
-; LA32S-NEXT:    sltu $a5, $a0, $a5
 ; LA32S-NEXT:    sltu $a2, $a4, $a2
-; LA32S-NEXT:    mulh.wu $a1, $a1, $a3
+; LA32S-NEXT:    sltu $a5, $a0, $a5
 ; LA32S-NEXT:    add.w $a1, $a1, $a2
 ; LA32S-NEXT:    add.w $a1, $a1, $a5
 ; LA32S-NEXT:    ret
@@ -893,19 +893,19 @@ define i64 @mul_i64_11(i64 %a) {
 ; LA32R-LABEL: mul_i64_11:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 11
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_11:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 11
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_11:
@@ -921,19 +921,19 @@ define i64 @mul_i64_13(i64 %a) {
 ; LA32R-LABEL: mul_i64_13:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 13
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_13:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 13
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_13:
@@ -949,19 +949,19 @@ define i64 @mul_i64_19(i64 %a) {
 ; LA32R-LABEL: mul_i64_19:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 19
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_19:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 19
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_19:
@@ -977,19 +977,19 @@ define i64 @mul_i64_21(i64 %a) {
 ; LA32R-LABEL: mul_i64_21:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 21
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_21:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 21
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_21:
@@ -1005,19 +1005,19 @@ define i64 @mul_i64_25(i64 %a) {
 ; LA32R-LABEL: mul_i64_25:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 25
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_25:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 25
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_25:
@@ -1033,19 +1033,19 @@ define i64 @mul_i64_27(i64 %a) {
 ; LA32R-LABEL: mul_i64_27:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 27
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_27:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 27
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_27:
@@ -1061,19 +1061,19 @@ define i64 @mul_i64_35(i64 %a) {
 ; LA32R-LABEL: mul_i64_35:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 35
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_35:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 35
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_35:
@@ -1089,19 +1089,19 @@ define i64 @mul_i64_37(i64 %a) {
 ; LA32R-LABEL: mul_i64_37:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 37
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_37:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 37
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_37:
@@ -1117,19 +1117,19 @@ define i64 @mul_i64_41(i64 %a) {
 ; LA32R-LABEL: mul_i64_41:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 41
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_41:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 41
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_41:
@@ -1145,19 +1145,19 @@ define i64 @mul_i64_45(i64 %a) {
 ; LA32R-LABEL: mul_i64_45:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 45
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_45:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 45
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_45:
@@ -1173,19 +1173,19 @@ define i64 @mul_i64_49(i64 %a) {
 ; LA32R-LABEL: mul_i64_49:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 49
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_49:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 49
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_49:
@@ -1201,19 +1201,19 @@ define i64 @mul_i64_51(i64 %a) {
 ; LA32R-LABEL: mul_i64_51:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 51
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_51:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 51
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_51:
@@ -1229,19 +1229,19 @@ define i64 @mul_i64_69(i64 %a) {
 ; LA32R-LABEL: mul_i64_69:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 69
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_69:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 69
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_69:
@@ -1257,19 +1257,19 @@ define i64 @mul_i64_73(i64 %a) {
 ; LA32R-LABEL: mul_i64_73:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 73
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_73:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 73
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_73:
@@ -1285,19 +1285,19 @@ define i64 @mul_i64_81(i64 %a) {
 ; LA32R-LABEL: mul_i64_81:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 81
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_81:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 81
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_81:
@@ -1313,19 +1313,19 @@ define i64 @mul_i64_85(i64 %a) {
 ; LA32R-LABEL: mul_i64_85:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 85
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_85:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 85
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_85:
@@ -1341,19 +1341,19 @@ define i64 @mul_i64_137(i64 %a) {
 ; LA32R-LABEL: mul_i64_137:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 137
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_137:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 137
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_137:
@@ -1369,19 +1369,19 @@ define i64 @mul_i64_145(i64 %a) {
 ; LA32R-LABEL: mul_i64_145:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 145
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_145:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 145
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_145:
@@ -1397,19 +1397,19 @@ define i64 @mul_i64_153(i64 %a) {
 ; LA32R-LABEL: mul_i64_153:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 153
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_153:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 153
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_153:
@@ -1425,19 +1425,19 @@ define i64 @mul_i64_273(i64 %a) {
 ; LA32R-LABEL: mul_i64_273:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 273
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_273:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 273
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_273:
@@ -1453,19 +1453,19 @@ define i64 @mul_i64_289(i64 %a) {
 ; LA32R-LABEL: mul_i64_289:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 289
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_289:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 289
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_289:
@@ -1574,20 +1574,20 @@ define i64 @mul_i64_4098(i64 %a) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 1
 ; LA32R-NEXT:    ori $a2, $a2, 2
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_4098:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    lu12i.w $a2, 1
 ; LA32S-NEXT:    ori $a2, $a2, 2
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_4098:
@@ -1604,20 +1604,20 @@ define i64 @mul_i64_4100(i64 %a) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 1
 ; LA32R-NEXT:    ori $a2, $a2, 4
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_4100:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    lu12i.w $a2, 1
 ; LA32S-NEXT:    ori $a2, $a2, 4
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_4100:
@@ -1634,20 +1634,20 @@ define i64 @mul_i64_4104(i64 %a) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 1
 ; LA32R-NEXT:    ori $a2, $a2, 8
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_4104:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    lu12i.w $a2, 1
 ; LA32S-NEXT:    ori $a2, $a2, 8
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_4104:
@@ -1664,20 +1664,20 @@ define i64 @mul_i64_4112(i64 %a) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 1
 ; LA32R-NEXT:    ori $a2, $a2, 16
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_4112:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    lu12i.w $a2, 1
 ; LA32S-NEXT:    ori $a2, $a2, 16
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_4112:
@@ -1782,19 +1782,19 @@ define i64 @mul_i64_768(i64 %a) {
 ; LA32R-LABEL: mul_i64_768:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 768
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_768:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 768
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_768:
@@ -1810,19 +1810,19 @@ define i64 @mul_i64_1280(i64 %a) {
 ; LA32R-LABEL: mul_i64_1280:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 1280
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_1280:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 1280
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_1280:
@@ -1838,19 +1838,19 @@ define i64 @mul_i64_2304(i64 %a) {
 ; LA32R-LABEL: mul_i64_2304:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 2304
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_2304:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 2304
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_2304:
@@ -1867,20 +1867,20 @@ define i64 @mul_i64_4352(i64 %a) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 1
 ; LA32R-NEXT:    ori $a2, $a2, 256
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_4352:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    lu12i.w $a2, 1
 ; LA32S-NEXT:    ori $a2, $a2, 256
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_4352:
@@ -1972,20 +1972,20 @@ define i64 @mul_i64_65792(i64 %a) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 16
 ; LA32R-NEXT:    ori $a2, $a2, 256
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_65792:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    lu12i.w $a2, 16
 ; LA32S-NEXT:    ori $a2, $a2, 256
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_65792:
@@ -2003,20 +2003,20 @@ define i64 @mul_i64_65280(i64 %a) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 15
 ; LA32R-NEXT:    ori $a2, $a2, 3840
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_65280:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    lu12i.w $a2, 15
 ; LA32S-NEXT:    ori $a2, $a2, 3840
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_65280:
@@ -2034,22 +2034,22 @@ define i64 @mul_i64_minus_65280(i64 %a) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, -16
 ; LA32R-NEXT:    ori $a2, $a2, 256
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    sub.w $a3, $a3, $a0
-; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_minus_65280:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    lu12i.w $a2, -16
 ; LA32S-NEXT:    ori $a2, $a2, 256
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    sub.w $a3, $a3, $a0
-; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_minus_65280:
@@ -2068,19 +2068,19 @@ define i64 @mul_i64_1088(i64 %a) {
 ; LA32R-LABEL: mul_i64_1088:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ori $a2, $zero, 1088
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_1088:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a2, $zero, 1088
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_1088:
@@ -2098,21 +2098,21 @@ define i64 @mul_i64_minus_992(i64 %a) {
 ; LA32R-LABEL: mul_i64_minus_992:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    addi.w $a2, $zero, -992
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    sub.w $a3, $a3, $a0
-; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_minus_992:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    addi.w $a2, $zero, -992
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    sub.w $a3, $a3, $a0
-; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_minus_992:
@@ -2130,19 +2130,19 @@ define i64 @mul_i64_4456448(i64 %a) {
 ; LA32R-LABEL: mul_i64_4456448:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 1088
-; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32R-NEXT:    add.w $a1, $a3, $a1
+; LA32R-NEXT:    mul.w $a1, $a1, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_4456448:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    lu12i.w $a2, 1088
-; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mulh.wu $a3, $a0, $a2
-; LA32S-NEXT:    add.w $a1, $a3, $a1
+; LA32S-NEXT:    mul.w $a1, $a1, $a2
 ; LA32S-NEXT:    mul.w $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_4456448:
@@ -2161,32 +2161,32 @@ define i64 @mul_i64_65280_twice(i64 %a, i64 %b) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a4, 15
 ; LA32R-NEXT:    ori $a4, $a4, 3840
-; LA32R-NEXT:    mul.w $a1, $a1, $a4
 ; LA32R-NEXT:    mulh.wu $a5, $a0, $a4
-; LA32R-NEXT:    add.w $a1, $a5, $a1
-; LA32R-NEXT:    mul.w $a0, $a0, $a4
+; LA32R-NEXT:    mul.w $a1, $a1, $a4
 ; LA32R-NEXT:    mul.w $a3, $a3, $a4
+; LA32R-NEXT:    mul.w $a0, $a0, $a4
+; LA32R-NEXT:    add.w $a1, $a5, $a1
 ; LA32R-NEXT:    mulh.wu $a5, $a2, $a4
-; LA32R-NEXT:    add.w $a3, $a5, $a3
 ; LA32R-NEXT:    mul.w $a2, $a2, $a4
-; LA32R-NEXT:    xor $a1, $a1, $a3
+; LA32R-NEXT:    add.w $a3, $a5, $a3
 ; LA32R-NEXT:    xor $a0, $a0, $a2
+; LA32R-NEXT:    xor $a1, $a1, $a3
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: mul_i64_65280_twice:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    lu12i.w $a4, 15
 ; LA32S-NEXT:    ori $a4, $a4, 3840
-; LA32S-NEXT:    mul.w $a1, $a1, $a4
 ; LA32S-NEXT:    mulh.wu $a5, $a0, $a4
-; LA32S-NEXT:    add.w $a1, $a5, $a1
-; LA32S-NEXT:    mul.w $a0, $a0, $a4
+; LA32S-NEXT:    mul.w $a1, $a1, $a4
 ; LA32S-NEXT:    mul.w $a3, $a3, $a4
+; LA32S-NEXT:    mul.w $a0, $a0, $a4
+; LA32S-NEXT:    add.w $a1, $a5, $a1
 ; LA32S-NEXT:    mulh.wu $a5, $a2, $a4
-; LA32S-NEXT:    add.w $a3, $a5, $a3
 ; LA32S-NEXT:    mul.w $a2, $a2, $a4
-; LA32S-NEXT:    xor $a1, $a1, $a3
+; LA32S-NEXT:    add.w $a3, $a5, $a3
 ; LA32S-NEXT:    xor $a0, $a0, $a2
+; LA32S-NEXT:    xor $a1, $a1, $a3
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i64_65280_twice:

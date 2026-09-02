@@ -40,7 +40,6 @@ entry:
 ;ALL:       st.d $s5
 ;ALL:       st.d $s6
 ;ALL:       st.d $s7
-;ALL:       move $fp, $s8
 ;ALL:       fst.d $fa7
 ;ALL:       fst.d $fs0
 ;ALL:       fst.d $fs1
@@ -49,16 +48,8 @@ entry:
 ;ALL:       fst.d $fs4
 ;ALL:       fst.d $fs5
 ;ALL:       fst.d $fs6
+;ALL:       move $fp, $s8
 ;ALL:       fst.d $fs7
-;ALL:       ld.d $t0
-;ALL:       ld.d $t1
-;ALL:       ld.d $t2
-;ALL:       ld.d $t3
-;ALL:       ld.d $t4
-;ALL:       ld.d $t5
-;ALL:       ld.d $t6
-;ALL:       ld.d $t7
-;ALL:       ld.d $t8
 ;ALL:       ld.d $s0
 ;ALL:       ld.d $s1
 ;ALL:       ld.d $s2
@@ -68,7 +59,6 @@ entry:
 ;ALL:       ld.d $s6
 ;ALL:       ld.d $s7
 ;ALL:       move $s8, $fp
-;ALL:       fld.d $fa7
 ;ALL:       fld.d $fs0
 ;ALL:       fld.d $fs1
 ;ALL:       fld.d $fs2
@@ -77,6 +67,16 @@ entry:
 ;ALL:       fld.d $fs5
 ;ALL:       fld.d $fs6
 ;ALL:       fld.d $fs7
+;ALL:       ld.d $t0
+;ALL:       ld.d $t1
+;ALL:       ld.d $t2
+;ALL:       ld.d $t3
+;ALL:       ld.d $t4
+;ALL:       ld.d $t5
+;ALL:       ld.d $t6
+;ALL:       ld.d $t7
+;ALL:       ld.d $t8
+;ALL:       fld.d $fa7
 ;ALL:       #APP
   %a0 = call i64 asm sideeffect "", "={r12}"() nounwind
   %a1 = call i64 asm sideeffect "", "={r13}"() nounwind

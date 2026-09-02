@@ -101,8 +101,8 @@ define ptr @f1() nounwind {
 ; LA32DESC-NEXT:    addi.w $a0, $a0, %desc_pcadd_lo12(.Lpcadd_hi0)
 ; LA32DESC-NEXT:    ld.w $ra, $a0, %desc_ld(unspecified)
 ; LA32DESC-NEXT:    jirl $ra, $ra, %desc_call(unspecified)
-; LA32DESC-NEXT:    add.w $a0, $a0, $tp
 ; LA32DESC-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32DESC-NEXT:    add.w $a0, $a0, $tp
 ; LA32DESC-NEXT:    addi.w $sp, $sp, 16
 ; LA32DESC-NEXT:    ret
 ;
@@ -114,8 +114,8 @@ define ptr @f1() nounwind {
 ; LA64DESC-NEXT:    addi.d $a0, $a0, %desc_pc_lo12(unspecified)
 ; LA64DESC-NEXT:    ld.d $ra, $a0, %desc_ld(unspecified)
 ; LA64DESC-NEXT:    jirl $ra, $ra, %desc_call(unspecified)
-; LA64DESC-NEXT:    add.d $a0, $a0, $tp
 ; LA64DESC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64DESC-NEXT:    add.d $a0, $a0, $tp
 ; LA64DESC-NEXT:    addi.d $sp, $sp, 16
 ; LA64DESC-NEXT:    ret
 ;
@@ -130,8 +130,8 @@ define ptr @f1() nounwind {
 ; DESC64-NEXT:    add.d $a0, $a0, $a1
 ; DESC64-NEXT:    ld.d $ra, $a0, %desc_ld(unspecified)
 ; DESC64-NEXT:    jirl $ra, $ra, %desc_call(unspecified)
-; DESC64-NEXT:    add.d $a0, $a0, $tp
 ; DESC64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; DESC64-NEXT:    add.d $a0, $a0, $tp
 ; DESC64-NEXT:    addi.d $sp, $sp, 16
 ; DESC64-NEXT:    ret
 entry:
@@ -218,8 +218,8 @@ define ptr @f2() nounwind {
 ; LA32DESC-NEXT:    addi.w $a0, $a0, %desc_pcadd_lo12(.Lpcadd_hi1)
 ; LA32DESC-NEXT:    ld.w $ra, $a0, %desc_ld(ld)
 ; LA32DESC-NEXT:    jirl $ra, $ra, %desc_call(ld)
-; LA32DESC-NEXT:    add.w $a0, $a0, $tp
 ; LA32DESC-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32DESC-NEXT:    add.w $a0, $a0, $tp
 ; LA32DESC-NEXT:    addi.w $sp, $sp, 16
 ; LA32DESC-NEXT:    ret
 ;
@@ -231,8 +231,8 @@ define ptr @f2() nounwind {
 ; LA64DESC-NEXT:    addi.d $a0, $a0, %desc_pc_lo12(ld)
 ; LA64DESC-NEXT:    ld.d $ra, $a0, %desc_ld(ld)
 ; LA64DESC-NEXT:    jirl $ra, $ra, %desc_call(ld)
-; LA64DESC-NEXT:    add.d $a0, $a0, $tp
 ; LA64DESC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64DESC-NEXT:    add.d $a0, $a0, $tp
 ; LA64DESC-NEXT:    addi.d $sp, $sp, 16
 ; LA64DESC-NEXT:    ret
 ;
@@ -247,8 +247,8 @@ define ptr @f2() nounwind {
 ; DESC64-NEXT:    add.d $a0, $a0, $a1
 ; DESC64-NEXT:    ld.d $ra, $a0, %desc_ld(ld)
 ; DESC64-NEXT:    jirl $ra, $ra, %desc_call(ld)
-; DESC64-NEXT:    add.d $a0, $a0, $tp
 ; DESC64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; DESC64-NEXT:    add.d $a0, $a0, $tp
 ; DESC64-NEXT:    addi.d $sp, $sp, 16
 ; DESC64-NEXT:    ret
 entry:

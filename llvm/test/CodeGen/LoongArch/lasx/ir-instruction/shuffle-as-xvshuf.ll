@@ -20,9 +20,9 @@ define <16 x i16> @shufflevector_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: shufflevector_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI1_0)
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 78
 ; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 78
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI1_0)
 ; CHECK-NEXT:    xvshuf.h $xr2, $xr1, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
 ; CHECK-NEXT:    ret
@@ -48,9 +48,9 @@ define <4 x i64> @shufflevector_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: shufflevector_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI3_0)
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 238
 ; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 238
+; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI3_0)
 ; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
 ; CHECK-NEXT:    ret

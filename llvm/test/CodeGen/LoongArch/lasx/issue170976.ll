@@ -7,8 +7,8 @@ define <64 x i8> @test_i8(<64 x i8> %shuffle) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvrepli.b $xr2, -85
 ; CHECK-NEXT:    xvmuh.bu $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvsrli.b $xr0, $xr0, 1
 ; CHECK-NEXT:    xvmuh.bu $xr1, $xr1, $xr2
+; CHECK-NEXT:    xvsrli.b $xr0, $xr0, 1
 ; CHECK-NEXT:    xvsrli.b $xr1, $xr1, 1
 ; CHECK-NEXT:    ret
 entry:
@@ -23,8 +23,8 @@ define <32 x i16> @test_i16(<32 x i16> %shuffle) {
 ; CHECK-NEXT:    ori $a0, $a0, 2731
 ; CHECK-NEXT:    xvreplgr2vr.h $xr2, $a0
 ; CHECK-NEXT:    xvmuh.hu $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvsrli.h $xr0, $xr0, 1
 ; CHECK-NEXT:    xvmuh.hu $xr1, $xr1, $xr2
+; CHECK-NEXT:    xvsrli.h $xr0, $xr0, 1
 ; CHECK-NEXT:    xvsrli.h $xr1, $xr1, 1
 ; CHECK-NEXT:    ret
 entry:
@@ -39,8 +39,8 @@ define <16 x i32> @test_i32(<16 x i32> %shuffle) {
 ; CHECK-NEXT:    ori $a0, $a0, 2731
 ; CHECK-NEXT:    xvreplgr2vr.w $xr2, $a0
 ; CHECK-NEXT:    xvmuh.wu $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvsrli.w $xr0, $xr0, 1
 ; CHECK-NEXT:    xvmuh.wu $xr1, $xr1, $xr2
+; CHECK-NEXT:    xvsrli.w $xr0, $xr0, 1
 ; CHECK-NEXT:    xvsrli.w $xr1, $xr1, 1
 ; CHECK-NEXT:    ret
 entry:
@@ -54,8 +54,8 @@ define <8 x i64> @test_i64(<8 x i64> %shuffle) {
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
 ; LA32-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI3_0)
 ; LA32-NEXT:    xvmuh.du $xr0, $xr0, $xr2
-; LA32-NEXT:    xvsrli.d $xr0, $xr0, 1
 ; LA32-NEXT:    xvmuh.du $xr1, $xr1, $xr2
+; LA32-NEXT:    xvsrli.d $xr0, $xr0, 1
 ; LA32-NEXT:    xvsrli.d $xr1, $xr1, 1
 ; LA32-NEXT:    ret
 ;
@@ -67,8 +67,8 @@ define <8 x i64> @test_i64(<8 x i64> %shuffle) {
 ; LA64-NEXT:    lu52i.d $a0, $a0, -1366
 ; LA64-NEXT:    xvreplgr2vr.d $xr2, $a0
 ; LA64-NEXT:    xvmuh.du $xr0, $xr0, $xr2
-; LA64-NEXT:    xvsrli.d $xr0, $xr0, 1
 ; LA64-NEXT:    xvmuh.du $xr1, $xr1, $xr2
+; LA64-NEXT:    xvsrli.d $xr0, $xr0, 1
 ; LA64-NEXT:    xvsrli.d $xr1, $xr1, 1
 ; LA64-NEXT:    ret
 entry:
@@ -81,10 +81,10 @@ define <64 x i8> @test_sdiv_i8(<64 x i8> %shuffle) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvrepli.b $xr2, 86
 ; CHECK-NEXT:    xvmuh.b $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvsrli.b $xr3, $xr0, 7
-; CHECK-NEXT:    xvadd.b $xr0, $xr0, $xr3
 ; CHECK-NEXT:    xvmuh.b $xr1, $xr1, $xr2
+; CHECK-NEXT:    xvsrli.b $xr3, $xr0, 7
 ; CHECK-NEXT:    xvsrli.b $xr2, $xr1, 7
+; CHECK-NEXT:    xvadd.b $xr0, $xr0, $xr3
 ; CHECK-NEXT:    xvadd.b $xr1, $xr1, $xr2
 ; CHECK-NEXT:    ret
 entry:

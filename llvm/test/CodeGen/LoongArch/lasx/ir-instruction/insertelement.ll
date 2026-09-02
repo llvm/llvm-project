@@ -174,9 +174,9 @@ define void @insert_32xi8_idx(ptr %src, ptr %dst, i8 %in, i32 %idx) nounwind {
 ; LA32-LABEL: insert_32xi8_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI12_0)
-; LA32-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI12_0)
 ; LA32-NEXT:    xvld $xr1, $a0, 0
 ; LA32-NEXT:    xvreplgr2vr.b $xr2, $a3
+; LA32-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI12_0)
 ; LA32-NEXT:    xvseq.b $xr0, $xr2, $xr0
 ; LA32-NEXT:    xvreplgr2vr.b $xr2, $a2
 ; LA32-NEXT:    xvbitsel.v $xr0, $xr1, $xr2, $xr0
@@ -186,9 +186,9 @@ define void @insert_32xi8_idx(ptr %src, ptr %dst, i8 %in, i32 %idx) nounwind {
 ; LA64-LABEL: insert_32xi8_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI12_0)
-; LA64-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI12_0)
 ; LA64-NEXT:    xvld $xr1, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a3, 31, 0
+; LA64-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI12_0)
 ; LA64-NEXT:    xvreplgr2vr.b $xr2, $a0
 ; LA64-NEXT:    xvseq.b $xr0, $xr2, $xr0
 ; LA64-NEXT:    xvreplgr2vr.b $xr2, $a2
@@ -205,9 +205,9 @@ define void @insert_16xi16_idx(ptr %src, ptr %dst, i16 %in, i32 %idx) nounwind {
 ; LA32-LABEL: insert_16xi16_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI13_0)
-; LA32-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI13_0)
 ; LA32-NEXT:    xvld $xr1, $a0, 0
 ; LA32-NEXT:    xvreplgr2vr.h $xr2, $a3
+; LA32-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI13_0)
 ; LA32-NEXT:    xvseq.h $xr0, $xr2, $xr0
 ; LA32-NEXT:    xvreplgr2vr.h $xr2, $a2
 ; LA32-NEXT:    xvbitsel.v $xr0, $xr1, $xr2, $xr0
@@ -217,9 +217,9 @@ define void @insert_16xi16_idx(ptr %src, ptr %dst, i16 %in, i32 %idx) nounwind {
 ; LA64-LABEL: insert_16xi16_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI13_0)
-; LA64-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI13_0)
 ; LA64-NEXT:    xvld $xr1, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a3, 31, 0
+; LA64-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI13_0)
 ; LA64-NEXT:    xvreplgr2vr.h $xr2, $a0
 ; LA64-NEXT:    xvseq.h $xr0, $xr2, $xr0
 ; LA64-NEXT:    xvreplgr2vr.h $xr2, $a2
@@ -236,9 +236,9 @@ define void @insert_8xi32_idx(ptr %src, ptr %dst, i32 %in, i32 %idx) nounwind {
 ; LA32-LABEL: insert_8xi32_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI14_0)
-; LA32-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI14_0)
 ; LA32-NEXT:    xvld $xr1, $a0, 0
 ; LA32-NEXT:    xvreplgr2vr.w $xr2, $a3
+; LA32-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI14_0)
 ; LA32-NEXT:    xvseq.w $xr0, $xr2, $xr0
 ; LA32-NEXT:    xvreplgr2vr.w $xr2, $a2
 ; LA32-NEXT:    xvbitsel.v $xr0, $xr1, $xr2, $xr0
@@ -248,9 +248,9 @@ define void @insert_8xi32_idx(ptr %src, ptr %dst, i32 %in, i32 %idx) nounwind {
 ; LA64-LABEL: insert_8xi32_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI14_0)
-; LA64-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI14_0)
 ; LA64-NEXT:    xvld $xr1, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a3, 31, 0
+; LA64-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI14_0)
 ; LA64-NEXT:    xvreplgr2vr.w $xr2, $a0
 ; LA64-NEXT:    xvseq.w $xr0, $xr2, $xr0
 ; LA64-NEXT:    xvreplgr2vr.w $xr2, $a2
@@ -267,14 +267,14 @@ define void @insert_4xi64_idx(ptr %src, ptr %dst, i64 %in, i32 %idx) nounwind {
 ; LA32-LABEL: insert_4xi64_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a5, %pc_hi20(.LCPI15_0)
-; LA32-NEXT:    xvld $xr0, $a5, %pc_lo12(.LCPI15_0)
-; LA32-NEXT:    slli.w $a4, $a4, 1
 ; LA32-NEXT:    xvld $xr1, $a0, 0
-; LA32-NEXT:    xvreplgr2vr.w $xr2, $a4
-; LA32-NEXT:    xvseq.w $xr2, $xr2, $xr0
+; LA32-NEXT:    slli.w $a4, $a4, 1
 ; LA32-NEXT:    xvreplgr2vr.w $xr3, $a2
-; LA32-NEXT:    xvbitsel.v $xr1, $xr1, $xr3, $xr2
+; LA32-NEXT:    xvld $xr0, $a5, %pc_lo12(.LCPI15_0)
+; LA32-NEXT:    xvreplgr2vr.w $xr2, $a4
 ; LA32-NEXT:    addi.w $a0, $a4, 1
+; LA32-NEXT:    xvseq.w $xr2, $xr2, $xr0
+; LA32-NEXT:    xvbitsel.v $xr1, $xr1, $xr3, $xr2
 ; LA32-NEXT:    xvreplgr2vr.w $xr2, $a0
 ; LA32-NEXT:    xvseq.w $xr0, $xr2, $xr0
 ; LA32-NEXT:    xvreplgr2vr.w $xr2, $a3
@@ -285,9 +285,9 @@ define void @insert_4xi64_idx(ptr %src, ptr %dst, i64 %in, i32 %idx) nounwind {
 ; LA64-LABEL: insert_4xi64_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI15_0)
-; LA64-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI15_0)
 ; LA64-NEXT:    xvld $xr1, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a3, 31, 0
+; LA64-NEXT:    xvld $xr0, $a4, %pc_lo12(.LCPI15_0)
 ; LA64-NEXT:    xvreplgr2vr.d $xr2, $a0
 ; LA64-NEXT:    xvseq.d $xr0, $xr2, $xr0
 ; LA64-NEXT:    xvreplgr2vr.d $xr2, $a2
@@ -304,26 +304,26 @@ define void @insert_8xfloat_idx(ptr %src, ptr %dst, float %in, i32 %idx) nounwin
 ; LA32-LABEL: insert_8xfloat_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI16_0)
-; LA32-NEXT:    xvld $xr1, $a3, %pc_lo12(.LCPI16_0)
-; LA32-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; LA32-NEXT:    xvld $xr2, $a0, 0
+; LA32-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; LA32-NEXT:    xvreplgr2vr.w $xr3, $a2
-; LA32-NEXT:    xvseq.w $xr1, $xr3, $xr1
+; LA32-NEXT:    xvld $xr1, $a3, %pc_lo12(.LCPI16_0)
 ; LA32-NEXT:    xvreplve0.w $xr0, $xr0
+; LA32-NEXT:    xvseq.w $xr1, $xr3, $xr1
 ; LA32-NEXT:    xvbitsel.v $xr0, $xr2, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: insert_8xfloat_idx:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; LA64-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI16_0)
-; LA64-NEXT:    xvld $xr1, $a3, %pc_lo12(.LCPI16_0)
 ; LA64-NEXT:    xvld $xr2, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a2, 31, 0
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $xr0
+; LA64-NEXT:    xvld $xr1, $a3, %pc_lo12(.LCPI16_0)
 ; LA64-NEXT:    xvreplgr2vr.w $xr3, $a0
-; LA64-NEXT:    xvseq.w $xr1, $xr3, $xr1
 ; LA64-NEXT:    xvreplve0.w $xr0, $xr0
+; LA64-NEXT:    xvseq.w $xr1, $xr3, $xr1
 ; LA64-NEXT:    xvbitsel.v $xr0, $xr2, $xr0, $xr1
 ; LA64-NEXT:    xvst $xr0, $a1, 0
 ; LA64-NEXT:    ret
@@ -336,31 +336,31 @@ define void @insert_8xfloat_idx(ptr %src, ptr %dst, float %in, i32 %idx) nounwin
 define void @insert_4xdouble_idx(ptr %src, ptr %dst, double %in, i32 %idx) nounwind {
 ; LA32-LABEL: insert_4xdouble_idx:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
-; LA32-NEXT:    xvld $xr1, $a0, 0
 ; LA32-NEXT:    xvrepli.b $xr2, 0
-; LA32-NEXT:    xvinsgr2vr.w $xr2, $a2, 0
+; LA32-NEXT:    xvld $xr1, $a0, 0
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI17_0)
+; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
+; LA32-NEXT:    xvinsgr2vr.w $xr2, $a2, 0
 ; LA32-NEXT:    xvld $xr3, $a0, %pc_lo12(.LCPI17_0)
+; LA32-NEXT:    xvreplve0.d $xr0, $xr0
 ; LA32-NEXT:    xvinsgr2vr.w $xr2, $a2, 2
 ; LA32-NEXT:    xvinsgr2vr.w $xr2, $a2, 4
 ; LA32-NEXT:    xvinsgr2vr.w $xr2, $a2, 6
 ; LA32-NEXT:    xvseq.d $xr2, $xr2, $xr3
-; LA32-NEXT:    xvreplve0.d $xr0, $xr0
 ; LA32-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; LA32-NEXT:    xvst $xr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: insert_4xdouble_idx:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
 ; LA64-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI17_0)
-; LA64-NEXT:    xvld $xr1, $a3, %pc_lo12(.LCPI17_0)
 ; LA64-NEXT:    xvld $xr2, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a2, 31, 0
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
+; LA64-NEXT:    xvld $xr1, $a3, %pc_lo12(.LCPI17_0)
 ; LA64-NEXT:    xvreplgr2vr.d $xr3, $a0
-; LA64-NEXT:    xvseq.d $xr1, $xr3, $xr1
 ; LA64-NEXT:    xvreplve0.d $xr0, $xr0
+; LA64-NEXT:    xvseq.d $xr1, $xr3, $xr1
 ; LA64-NEXT:    xvbitsel.v $xr0, $xr2, $xr0, $xr1
 ; LA64-NEXT:    xvst $xr0, $a1, 0
 ; LA64-NEXT:    ret

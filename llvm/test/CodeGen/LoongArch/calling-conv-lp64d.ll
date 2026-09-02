@@ -48,8 +48,8 @@ define i64 @callee_double_in_gpr_exhausted_fprs(double %a, double %b, double %c,
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movgr2fr.d $fa0, $a0
 ; CHECK-NEXT:    ftintrz.l.d $fa1, $fa7
-; CHECK-NEXT:    movfr2gr.d $a0, $fa1
 ; CHECK-NEXT:    ftintrz.l.d $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa1
 ; CHECK-NEXT:    movfr2gr.d $a1, $fa0
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    ret
@@ -65,8 +65,6 @@ define i64 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    ori $a0, $zero, 0
-; CHECK-NEXT:    lu32i.d $a0, 131072
-; CHECK-NEXT:    lu52i.d $a0, $a0, 1026
 ; CHECK-NEXT:    vldi $vr0, -912
 ; CHECK-NEXT:    vldi $vr1, -1024
 ; CHECK-NEXT:    vldi $vr2, -1016
@@ -75,6 +73,8 @@ define i64 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; CHECK-NEXT:    vldi $vr5, -1000
 ; CHECK-NEXT:    vldi $vr6, -996
 ; CHECK-NEXT:    vldi $vr7, -992
+; CHECK-NEXT:    lu32i.d $a0, 131072
+; CHECK-NEXT:    lu52i.d $a0, $a0, 1026
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_double_in_gpr_exhausted_fprs)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -103,8 +103,8 @@ define i64 @caller_double_ret() nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_double_ret)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
   %1 = call double @callee_double_ret()

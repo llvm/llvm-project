@@ -6,8 +6,8 @@ define void @shuffle_sign_ext_2i8_to_2i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_sign_ext_2i8_to_2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.h $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
 ; CHECK-NEXT:    vrepli.b $vr1, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
 ; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
@@ -24,8 +24,8 @@ define void @shuffle_sign_ext_2i16_to_2i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_sign_ext_2i16_to_2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    vrepli.b $vr1, 0
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
@@ -51,8 +51,8 @@ define void @shuffle_sign_ext_2i32_to_2i64(ptr %ptr, ptr %dst) nounwind {
 ; LA64-LABEL: shuffle_sign_ext_2i32_to_2i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vrepli.b $vr1, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vilvl.w $vr0, $vr1, $vr0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
@@ -67,8 +67,8 @@ define void @shuffle_sign_ext_4i8_to_4i32(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_sign_ext_4i8_to_4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    vrepli.b $vr1, 0
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
@@ -85,9 +85,9 @@ define void @shuffle_sign_ext_4i16_to_4i32(ptr %ptr, ptr %dst) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vrepli.b $vr1, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.b $vr1, 0
 ; LA32-NEXT:    vilvl.h $vr0, $vr1, $vr0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
@@ -95,8 +95,8 @@ define void @shuffle_sign_ext_4i16_to_4i32(ptr %ptr, ptr %dst) nounwind {
 ; LA64-LABEL: shuffle_sign_ext_4i16_to_4i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vrepli.b $vr1, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vilvl.h $vr0, $vr1, $vr0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
@@ -112,9 +112,9 @@ define void @shuffle_sign_ext_8i8_to_8i16(ptr %ptr, ptr %dst) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vrepli.b $vr1, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.b $vr1, 0
 ; LA32-NEXT:    vilvl.b $vr0, $vr1, $vr0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
@@ -122,8 +122,8 @@ define void @shuffle_sign_ext_8i8_to_8i16(ptr %ptr, ptr %dst) nounwind {
 ; LA64-LABEL: shuffle_sign_ext_8i8_to_8i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vrepli.b $vr1, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vilvl.b $vr0, $vr1, $vr0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
@@ -174,10 +174,10 @@ define void @shuffle_sign_ext_8i16_to_8i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vrepli.b $vr1, 0
 ; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr3, $vr1, $vr2
-; CHECK-NEXT:    vilvh.w $vr2, $vr1, $vr2
 ; CHECK-NEXT:    vilvh.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vilvl.w $vr3, $vr1, $vr2
 ; CHECK-NEXT:    vilvl.w $vr4, $vr1, $vr0
+; CHECK-NEXT:    vilvh.w $vr2, $vr1, $vr2
 ; CHECK-NEXT:    vilvh.w $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 48
 ; CHECK-NEXT:    vst $vr4, $a1, 32
@@ -214,10 +214,10 @@ define void @shuffle_sign_ext_16i8_to_16i32(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vrepli.b $vr1, 0
 ; CHECK-NEXT:    vilvl.b $vr2, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr3, $vr1, $vr2
-; CHECK-NEXT:    vilvh.h $vr2, $vr1, $vr2
 ; CHECK-NEXT:    vilvh.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vilvl.h $vr3, $vr1, $vr2
 ; CHECK-NEXT:    vilvl.h $vr4, $vr1, $vr0
+; CHECK-NEXT:    vilvh.h $vr2, $vr1, $vr2
 ; CHECK-NEXT:    vilvh.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 48
 ; CHECK-NEXT:    vst $vr4, $a1, 32
@@ -237,18 +237,18 @@ define void @shuffle_sign_ext_16i8_to_16i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vrepli.b $vr1, 0
 ; CHECK-NEXT:    vilvl.b $vr2, $vr1, $vr0
-; CHECK-NEXT:    vilvl.h $vr3, $vr1, $vr2
-; CHECK-NEXT:    vilvl.w $vr4, $vr1, $vr3
-; CHECK-NEXT:    vilvh.w $vr3, $vr1, $vr3
-; CHECK-NEXT:    vilvh.h $vr2, $vr1, $vr2
-; CHECK-NEXT:    vilvl.w $vr5, $vr1, $vr2
-; CHECK-NEXT:    vilvh.w $vr2, $vr1, $vr2
 ; CHECK-NEXT:    vilvh.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vilvl.h $vr3, $vr1, $vr2
 ; CHECK-NEXT:    vilvl.h $vr6, $vr1, $vr0
-; CHECK-NEXT:    vilvl.w $vr7, $vr1, $vr6
-; CHECK-NEXT:    vilvh.w $vr6, $vr1, $vr6
+; CHECK-NEXT:    vilvh.h $vr2, $vr1, $vr2
 ; CHECK-NEXT:    vilvh.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vilvl.w $vr4, $vr1, $vr3
+; CHECK-NEXT:    vilvl.w $vr5, $vr1, $vr2
+; CHECK-NEXT:    vilvl.w $vr7, $vr1, $vr6
 ; CHECK-NEXT:    vilvl.w $vr8, $vr1, $vr0
+; CHECK-NEXT:    vilvh.w $vr3, $vr1, $vr3
+; CHECK-NEXT:    vilvh.w $vr2, $vr1, $vr2
+; CHECK-NEXT:    vilvh.w $vr6, $vr1, $vr6
 ; CHECK-NEXT:    vilvh.w $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 112
 ; CHECK-NEXT:    vst $vr8, $a1, 96

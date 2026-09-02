@@ -16,9 +16,9 @@ define void @one_div_sqrt_v4f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: one_div_sqrt_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vldi $vr2, -1400
 ; CHECK-NEXT:    vfrsqrte.s $vr1, $vr0
 ; CHECK-NEXT:    vfmul.s $vr0, $vr0, $vr1
-; CHECK-NEXT:    vldi $vr2, -1400
 ; CHECK-NEXT:    vfmadd.s $vr0, $vr0, $vr1, $vr2
 ; CHECK-NEXT:    vldi $vr2, -3137
 ; CHECK-NEXT:    vfmul.s $vr1, $vr1, $vr2
@@ -37,8 +37,8 @@ define void @one_div_sqrt_v2f64(ptr %res, ptr %a0) nounwind {
 ; FAULT-LA32-LABEL: one_div_sqrt_v2f64:
 ; FAULT-LA32:       # %bb.0: # %entry
 ; FAULT-LA32-NEXT:    vld $vr0, $a1, 0
-; FAULT-LA32-NEXT:    vfsqrt.d $vr0, $vr0
 ; FAULT-LA32-NEXT:    vldi $vr1, -912
+; FAULT-LA32-NEXT:    vfsqrt.d $vr0, $vr0
 ; FAULT-LA32-NEXT:    vfdiv.d $vr0, $vr1, $vr0
 ; FAULT-LA32-NEXT:    vst $vr0, $a0, 0
 ; FAULT-LA32-NEXT:    ret
@@ -46,11 +46,11 @@ define void @one_div_sqrt_v2f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: one_div_sqrt_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vldi $vr3, -888
+; CHECK-NEXT:    vldi $vr4, -800
 ; CHECK-NEXT:    vfrsqrte.d $vr1, $vr0
 ; CHECK-NEXT:    vfmul.d $vr2, $vr0, $vr1
-; CHECK-NEXT:    vldi $vr3, -888
 ; CHECK-NEXT:    vfmadd.d $vr2, $vr2, $vr1, $vr3
-; CHECK-NEXT:    vldi $vr4, -800
 ; CHECK-NEXT:    vfmul.d $vr1, $vr1, $vr4
 ; CHECK-NEXT:    vfmul.d $vr1, $vr1, $vr2
 ; CHECK-NEXT:    vfmul.d $vr0, $vr0, $vr1

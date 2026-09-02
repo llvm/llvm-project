@@ -45,10 +45,10 @@ define i8 @f1() #0 {
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    .cfi_def_cfa_offset 4112
 ; LA64-NEXT:    ori $a0, $zero, 3
-; LA64-NEXT:    st.b $a0, $sp, 16
-; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    lu12i.w $a1, 1
+; LA64-NEXT:    st.b $a0, $sp, 16
 ; LA64-NEXT:    ori $a1, $a1, 16
+; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    add.d $sp, $sp, $a1
 ; LA64-NEXT:    ret
 ;
@@ -61,10 +61,10 @@ define i8 @f1() #0 {
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    .cfi_def_cfa_offset 4112
 ; LA32-NEXT:    ori $a0, $zero, 3
-; LA32-NEXT:    st.b $a0, $sp, 16
-; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:    st.b $a0, $sp, 16
 ; LA32-NEXT:    ori $a1, $a1, 16
+; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    add.w $sp, $sp, $a1
 ; LA32-NEXT:    ret
 entry:
@@ -93,10 +93,10 @@ define i8 @f2() #0 {
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    .cfi_def_cfa_offset 65552
 ; LA64-NEXT:    ori $a0, $zero, 3
-; LA64-NEXT:    st.b $a0, $sp, 16
-; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    lu12i.w $a1, 16
+; LA64-NEXT:    st.b $a0, $sp, 16
 ; LA64-NEXT:    ori $a1, $a1, 16
+; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    add.d $sp, $sp, $a1
 ; LA64-NEXT:    ret
 ;
@@ -116,10 +116,10 @@ define i8 @f2() #0 {
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    .cfi_def_cfa_offset 65552
 ; LA32-NEXT:    ori $a0, $zero, 3
-; LA32-NEXT:    st.b $a0, $sp, 16
-; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    lu12i.w $a1, 16
+; LA32-NEXT:    st.b $a0, $sp, 16
 ; LA32-NEXT:    ori $a1, $a1, 16
+; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    add.w $sp, $sp, $a1
 ; LA32-NEXT:    ret
 entry:
@@ -145,10 +145,10 @@ define i8 @f3() #0 "stack-probe-size"="32768" {
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    .cfi_def_cfa_offset 65552
 ; LA64-NEXT:    ori $a0, $zero, 3
-; LA64-NEXT:    st.b $a0, $sp, 16
-; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    lu12i.w $a1, 16
+; LA64-NEXT:    st.b $a0, $sp, 16
 ; LA64-NEXT:    ori $a1, $a1, 16
+; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    add.d $sp, $sp, $a1
 ; LA64-NEXT:    ret
 ;
@@ -165,10 +165,10 @@ define i8 @f3() #0 "stack-probe-size"="32768" {
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    .cfi_def_cfa_offset 65552
 ; LA32-NEXT:    ori $a0, $zero, 3
-; LA32-NEXT:    st.b $a0, $sp, 16
-; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    lu12i.w $a1, 16
+; LA32-NEXT:    st.b $a0, $sp, 16
 ; LA32-NEXT:    ori $a1, $a1, 16
+; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    add.w $sp, $sp, $a1
 ; LA32-NEXT:    ret
 entry:
@@ -189,10 +189,10 @@ define i8 @f4() {
 ; LA64-NEXT:    sub.d $sp, $sp, $a0
 ; LA64-NEXT:    .cfi_def_cfa_offset 65552
 ; LA64-NEXT:    ori $a0, $zero, 3
-; LA64-NEXT:    st.b $a0, $sp, 16
-; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    lu12i.w $a1, 16
+; LA64-NEXT:    st.b $a0, $sp, 16
 ; LA64-NEXT:    ori $a1, $a1, 16
+; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    add.d $sp, $sp, $a1
 ; LA64-NEXT:    ret
 ;
@@ -203,10 +203,10 @@ define i8 @f4() {
 ; LA32-NEXT:    sub.w $sp, $sp, $a0
 ; LA32-NEXT:    .cfi_def_cfa_offset 65552
 ; LA32-NEXT:    ori $a0, $zero, 3
-; LA32-NEXT:    st.b $a0, $sp, 16
-; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    lu12i.w $a1, 16
+; LA32-NEXT:    st.b $a0, $sp, 16
 ; LA32-NEXT:    ori $a1, $a1, 16
+; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    add.w $sp, $sp, $a1
 ; LA32-NEXT:    ret
 entry:
@@ -235,10 +235,10 @@ define i8 @f5() #0 "stack-probe-size"="65536" {
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    .cfi_def_cfa_offset 1048592
 ; LA64-NEXT:    ori $a0, $zero, 3
-; LA64-NEXT:    st.b $a0, $sp, 16
-; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    lu12i.w $a1, 256
+; LA64-NEXT:    st.b $a0, $sp, 16
 ; LA64-NEXT:    ori $a1, $a1, 16
+; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    add.d $sp, $sp, $a1
 ; LA64-NEXT:    ret
 ;
@@ -258,10 +258,10 @@ define i8 @f5() #0 "stack-probe-size"="65536" {
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    .cfi_def_cfa_offset 1048592
 ; LA32-NEXT:    ori $a0, $zero, 3
-; LA32-NEXT:    st.b $a0, $sp, 16
-; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    lu12i.w $a1, 256
+; LA32-NEXT:    st.b $a0, $sp, 16
 ; LA32-NEXT:    ori $a1, $a1, 16
+; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    add.w $sp, $sp, $a1
 ; LA32-NEXT:    ret
 entry:
@@ -290,10 +290,10 @@ define i8 @f6() #0 {
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    .cfi_def_cfa_offset 1073741840
 ; LA64-NEXT:    ori $a0, $zero, 3
-; LA64-NEXT:    st.b $a0, $sp, 16
-; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    lu12i.w $a1, 262144
+; LA64-NEXT:    st.b $a0, $sp, 16
 ; LA64-NEXT:    ori $a1, $a1, 16
+; LA64-NEXT:    ld.b $a0, $sp, 16
 ; LA64-NEXT:    add.d $sp, $sp, $a1
 ; LA64-NEXT:    ret
 ;
@@ -313,10 +313,10 @@ define i8 @f6() #0 {
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    .cfi_def_cfa_offset 1073741840
 ; LA32-NEXT:    ori $a0, $zero, 3
-; LA32-NEXT:    st.b $a0, $sp, 16
-; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    lu12i.w $a1, 262144
+; LA32-NEXT:    st.b $a0, $sp, 16
 ; LA32-NEXT:    ori $a1, $a1, 16
+; LA32-NEXT:    ld.b $a0, $sp, 16
 ; LA32-NEXT:    add.w $sp, $sp, $a1
 ; LA32-NEXT:    ret
 entry:
@@ -347,10 +347,10 @@ define i8 @f7() #0 "stack-probe-size"="65536" {
 ; LA64-NEXT:    sub.d $sp, $sp, $a0
 ; LA64-NEXT:    .cfi_def_cfa_offset 1000000016
 ; LA64-NEXT:    ori $a0, $zero, 3
-; LA64-NEXT:    st.b $a0, $sp, 9
-; LA64-NEXT:    ld.b $a0, $sp, 9
 ; LA64-NEXT:    lu12i.w $a1, 244140
+; LA64-NEXT:    st.b $a0, $sp, 9
 ; LA64-NEXT:    ori $a1, $a1, 2576
+; LA64-NEXT:    ld.b $a0, $sp, 9
 ; LA64-NEXT:    add.d $sp, $sp, $a1
 ; LA64-NEXT:    ret
 ;
@@ -372,10 +372,10 @@ define i8 @f7() #0 "stack-probe-size"="65536" {
 ; LA32-NEXT:    sub.w $sp, $sp, $a0
 ; LA32-NEXT:    .cfi_def_cfa_offset 1000000016
 ; LA32-NEXT:    ori $a0, $zero, 3
-; LA32-NEXT:    st.b $a0, $sp, 9
-; LA32-NEXT:    ld.b $a0, $sp, 9
 ; LA32-NEXT:    lu12i.w $a1, 244140
+; LA32-NEXT:    st.b $a0, $sp, 9
 ; LA32-NEXT:    ori $a1, $a1, 2576
+; LA32-NEXT:    ld.b $a0, $sp, 9
 ; LA32-NEXT:    add.w $sp, $sp, $a1
 ; LA32-NEXT:    ret
 entry:
@@ -460,16 +460,16 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    bstrins.d $sp, $zero, 10, 0
-; LA64-NEXT:    slli.d $a0, $a0, 2
 ; LA64-NEXT:    ori $a1, $zero, 2048
-; LA64-NEXT:    add.d $a1, $sp, $a1
+; LA64-NEXT:    slli.d $a0, $a0, 2
 ; LA64-NEXT:    ori $a2, $zero, 1
+; LA64-NEXT:    add.d $a1, $sp, $a1
 ; LA64-NEXT:    stx.w $a2, $a0, $a1
 ; LA64-NEXT:    ori $a0, $zero, 2048
-; LA64-NEXT:    add.d $a0, $sp, $a0
-; LA64-NEXT:    ld.w $a0, $a0, 0
 ; LA64-NEXT:    lu12i.w $a1, 2
+; LA64-NEXT:    add.d $a0, $sp, $a0
 ; LA64-NEXT:    ori $a1, $a1, 2048
+; LA64-NEXT:    ld.w $a0, $a0, 0
 ; LA64-NEXT:    sub.d $sp, $fp, $a1
 ; LA64-NEXT:    lu12i.w $a1, 2
 ; LA64-NEXT:    ori $a1, $a1, 16
@@ -496,17 +496,17 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    bstrins.w $sp, $zero, 10, 0
-; LA32-NEXT:    slli.w $a0, $a0, 2
 ; LA32-NEXT:    ori $a1, $zero, 2048
+; LA32-NEXT:    slli.w $a0, $a0, 2
 ; LA32-NEXT:    add.w $a1, $sp, $a1
 ; LA32-NEXT:    add.w $a0, $a1, $a0
 ; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    st.w $a1, $a0, 0
 ; LA32-NEXT:    ori $a0, $zero, 2048
-; LA32-NEXT:    add.w $a0, $sp, $a0
-; LA32-NEXT:    ld.w $a0, $a0, 0
 ; LA32-NEXT:    lu12i.w $a1, 2
+; LA32-NEXT:    add.w $a0, $sp, $a0
 ; LA32-NEXT:    ori $a1, $a1, 2048
+; LA32-NEXT:    ld.w $a0, $a0, 0
 ; LA32-NEXT:    sub.w $sp, $fp, $a1
 ; LA32-NEXT:    lu12i.w $a1, 2
 ; LA32-NEXT:    ori $a1, $a1, 16
@@ -542,8 +542,8 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; LA64-NEXT:    addi.d $a1, $sp, 1024
 ; LA64-NEXT:    ori $a2, $zero, 1
 ; LA64-NEXT:    stx.w $a2, $a0, $a1
-; LA64-NEXT:    ld.w $a0, $sp, 1024
 ; LA64-NEXT:    lu12i.w $a1, 1
+; LA64-NEXT:    ld.w $a0, $sp, 1024
 ; LA64-NEXT:    ori $a1, $a1, 1024
 ; LA64-NEXT:    sub.d $sp, $fp, $a1
 ; LA64-NEXT:    addi.d $sp, $sp, 2032
@@ -571,8 +571,8 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; LA32-NEXT:    add.w $a0, $a1, $a0
 ; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    ld.w $a0, $sp, 1024
 ; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:    ld.w $a0, $sp, 1024
 ; LA32-NEXT:    ori $a1, $a1, 1024
 ; LA32-NEXT:    sub.w $sp, $fp, $a1
 ; LA32-NEXT:    addi.w $sp, $sp, 2032
@@ -604,8 +604,8 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; LA64-NEXT:    addi.d $fp, $sp, 2032
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    lu12i.w $a2, 15
-; LA64-NEXT:    sub.d $t1, $sp, $a2
 ; LA64-NEXT:    lu12i.w $t2, 1
+; LA64-NEXT:    sub.d $t1, $sp, $a2
 ; LA64-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    sub.d $sp, $sp, $t2
 ; LA64-NEXT:    st.d $zero, $sp, 0
@@ -615,19 +615,19 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 14, 0
-; LA64-NEXT:    move $s8, $sp
-; LA64-NEXT:    slli.d $a1, $a1, 2
-; LA64-NEXT:    lu12i.w $a2, 8
-; LA64-NEXT:    add.d $a2, $s8, $a2
-; LA64-NEXT:    ori $a3, $zero, 1
-; LA64-NEXT:    stx.w $a3, $a1, $a2
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    move $s8, $sp
+; LA64-NEXT:    lu12i.w $a2, 8
+; LA64-NEXT:    slli.d $a1, $a1, 2
+; LA64-NEXT:    ori $a3, $zero, 1
 ; LA64-NEXT:    addi.d $a0, $a0, 15
+; LA64-NEXT:    add.d $a2, $s8, $a2
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 32, 4
+; LA64-NEXT:    stx.w $a3, $a1, $a2
+; LA64-NEXT:    lu12i.w $a1, 1
 ; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 10, 0
-; LA64-NEXT:    lu12i.w $a1, 1
 ; LA64-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    sub.d $sp, $sp, $a1
 ; LA64-NEXT:    st.d $zero, $sp, 0
@@ -660,8 +660,8 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; LA32-NEXT:    addi.w $fp, $sp, 2032
 ; LA32-NEXT:    .cfi_def_cfa 22, 0
 ; LA32-NEXT:    lu12i.w $a2, 15
-; LA32-NEXT:    sub.w $t1, $sp, $a2
 ; LA32-NEXT:    lu12i.w $t2, 1
+; LA32-NEXT:    sub.w $t1, $sp, $a2
 ; LA32-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    sub.w $sp, $sp, $t2
 ; LA32-NEXT:    st.w $zero, $sp, 0
@@ -672,17 +672,17 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    bstrins.w $sp, $zero, 14, 0
 ; LA32-NEXT:    move $s8, $sp
-; LA32-NEXT:    slli.w $a1, $a1, 2
 ; LA32-NEXT:    lu12i.w $a2, 8
+; LA32-NEXT:    slli.w $a1, $a1, 2
+; LA32-NEXT:    addi.w $a0, $a0, 15
 ; LA32-NEXT:    add.w $a2, $s8, $a2
 ; LA32-NEXT:    add.w $a1, $a2, $a1
 ; LA32-NEXT:    ori $a2, $zero, 1
 ; LA32-NEXT:    st.w $a2, $a1, 0
-; LA32-NEXT:    addi.w $a0, $a0, 15
 ; LA32-NEXT:    addi.w $a1, $zero, -16
 ; LA32-NEXT:    and $a0, $a0, $a1
-; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    addi.w $a1, $zero, -2048
+; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    lu12i.w $a1, 1
 ; LA32-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1

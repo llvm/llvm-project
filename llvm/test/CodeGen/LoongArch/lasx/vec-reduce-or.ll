@@ -83,12 +83,12 @@ define void @vec_reduce_or_v4i64(ptr %src, ptr %dst) nounwind {
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
 ; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 0
+; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 1
 ; LA32-NEXT:    or $a0, $a2, $a0
 ; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 3
-; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 1
 ; LA32-NEXT:    or $a2, $a3, $a2
-; LA32-NEXT:    st.w $a2, $a1, 4
 ; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    st.w $a2, $a1, 4
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vec_reduce_or_v4i64:

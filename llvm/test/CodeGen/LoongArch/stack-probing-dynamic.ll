@@ -22,9 +22,9 @@ define void @dynamic(i64 %size, ptr %out) #0 {
 ; LA64-NEXT:    addi.d $fp, $sp, 16
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    addi.d $a0, $a0, 15
+; LA64-NEXT:    lu12i.w $a2, 1
 ; LA64-NEXT:    bstrins.d $a0, $zero, 3, 0
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
-; LA64-NEXT:    lu12i.w $a2, 1
 ; LA64-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    sub.d $sp, $sp, $a2
 ; LA64-NEXT:    st.d $zero, $sp, 0
@@ -52,8 +52,8 @@ define void @dynamic(i64 %size, ptr %out) #0 {
 ; LA32-NEXT:    addi.w $a0, $a0, 15
 ; LA32-NEXT:    addi.w $a1, $zero, -16
 ; LA32-NEXT:    and $a0, $a0, $a1
-; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    sub.w $sp, $sp, $a1
 ; LA32-NEXT:    st.w $zero, $sp, 0
@@ -89,12 +89,12 @@ define void @dynamic_fixed(i64 %size, ptr %out1, ptr %out2) #0 {
 ; LA64-NEXT:    .cfi_offset 22, -16
 ; LA64-NEXT:    addi.d $fp, $sp, 96
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
-; LA64-NEXT:    addi.d $a3, $fp, -88
-; LA64-NEXT:    st.d $a3, $a1, 0
 ; LA64-NEXT:    addi.d $a0, $a0, 15
+; LA64-NEXT:    addi.d $a3, $fp, -88
 ; LA64-NEXT:    bstrins.d $a0, $zero, 3, 0
-; LA64-NEXT:    sub.d $a0, $sp, $a0
+; LA64-NEXT:    st.d $a3, $a1, 0
 ; LA64-NEXT:    lu12i.w $a1, 1
+; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    sub.d $sp, $sp, $a1
 ; LA64-NEXT:    st.d $zero, $sp, 0
@@ -120,12 +120,12 @@ define void @dynamic_fixed(i64 %size, ptr %out1, ptr %out2) #0 {
 ; LA32-NEXT:    addi.w $fp, $sp, 80
 ; LA32-NEXT:    .cfi_def_cfa 22, 0
 ; LA32-NEXT:    addi.w $a1, $fp, -72
-; LA32-NEXT:    st.w $a1, $a2, 0
 ; LA32-NEXT:    addi.w $a0, $a0, 15
+; LA32-NEXT:    st.w $a1, $a2, 0
 ; LA32-NEXT:    addi.w $a1, $zero, -16
 ; LA32-NEXT:    and $a0, $a0, $a1
-; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    sub.w $sp, $sp, $a1
 ; LA32-NEXT:    st.w $zero, $sp, 0
@@ -166,12 +166,12 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; LA64-NEXT:    addi.d $fp, $sp, 128
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 5, 0
-; LA64-NEXT:    move $s8, $sp
 ; LA64-NEXT:    addi.d $a0, $a0, 15
+; LA64-NEXT:    lu12i.w $a2, 1
+; LA64-NEXT:    move $s8, $sp
 ; LA64-NEXT:    bstrins.d $a0, $zero, 3, 0
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 5, 0
-; LA64-NEXT:    lu12i.w $a2, 1
 ; LA64-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    sub.d $sp, $sp, $a2
 ; LA64-NEXT:    st.d $zero, $sp, 0
@@ -200,12 +200,12 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; LA32-NEXT:    addi.w $fp, $sp, 64
 ; LA32-NEXT:    .cfi_def_cfa 22, 0
 ; LA32-NEXT:    bstrins.w $sp, $zero, 5, 0
-; LA32-NEXT:    move $s8, $sp
 ; LA32-NEXT:    addi.w $a0, $a0, 15
 ; LA32-NEXT:    addi.w $a1, $zero, -16
+; LA32-NEXT:    move $s8, $sp
 ; LA32-NEXT:    and $a0, $a0, $a1
-; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    addi.w $a1, $zero, -64
+; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    lu12i.w $a1, 1
 ; LA32-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
@@ -256,8 +256,8 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 12, 0
-; LA64-NEXT:    move $s8, $sp
 ; LA64-NEXT:    addi.d $a0, $a0, 15
+; LA64-NEXT:    move $s8, $sp
 ; LA64-NEXT:    bstrins.d $a0, $zero, 3, 0
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 12, 0
@@ -303,12 +303,12 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    bstrins.w $sp, $zero, 12, 0
-; LA32-NEXT:    move $s8, $sp
 ; LA32-NEXT:    addi.w $a0, $a0, 15
 ; LA32-NEXT:    addi.w $a1, $zero, -16
+; LA32-NEXT:    move $s8, $sp
 ; LA32-NEXT:    and $a0, $a0, $a1
-; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    lu12i.w $a1, -2
+; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    lu12i.w $a1, 1
 ; LA32-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
@@ -350,10 +350,10 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; LA64-NEXT:    addi.d $fp, $sp, 16
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    slli.d $a0, $a0, 2
+; LA64-NEXT:    lu12i.w $a1, 1
 ; LA64-NEXT:    addi.d $a0, $a0, 15
 ; LA64-NEXT:    bstrins.d $a0, $zero, 3, 0
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
-; LA64-NEXT:    lu12i.w $a1, 1
 ; LA64-NEXT:  .LBB4_1: # %entry
 ; LA64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    sub.d $sp, $sp, $a1
@@ -386,11 +386,11 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; LA32-NEXT:    addi.w $fp, $sp, 16
 ; LA32-NEXT:    .cfi_def_cfa 22, 0
 ; LA32-NEXT:    slli.w $a0, $a0, 2
-; LA32-NEXT:    addi.w $a0, $a0, 15
 ; LA32-NEXT:    addi.w $a1, $zero, -16
+; LA32-NEXT:    addi.w $a0, $a0, 15
 ; LA32-NEXT:    and $a0, $a0, $a1
-; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:  .LBB4_1: # %entry
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    sub.w $sp, $sp, $a1

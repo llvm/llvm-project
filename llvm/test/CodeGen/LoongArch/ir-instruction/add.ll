@@ -79,8 +79,8 @@ define signext i32 @add_i32_sext(i32 %x, i32 %y) {
 define i64 @add_i64(i64 %x, i64 %y) {
 ; LA32-LABEL: add_i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    add.w $a1, $a1, $a3
 ; LA32-NEXT:    add.w $a2, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a1, $a3
 ; LA32-NEXT:    sltu $a0, $a2, $a0
 ; LA32-NEXT:    add.w $a1, $a1, $a0
 ; LA32-NEXT:    move $a0, $a2

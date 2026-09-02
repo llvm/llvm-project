@@ -50,17 +50,17 @@ define i8 @ucmp.8.64(i64 %x, i64 %y) nounwind {
 define i8 @ucmp.8.128(i128 %x, i128 %y) nounwind {
 ; CHECK-LABEL: ucmp.8.128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu $a4, $a1, $a3
 ; CHECK-NEXT:    xor $a5, $a1, $a3
+; CHECK-NEXT:    sltu $a4, $a1, $a3
+; CHECK-NEXT:    sltu $a6, $a0, $a2
+; CHECK-NEXT:    sltu $a1, $a3, $a1
+; CHECK-NEXT:    sltu $a0, $a2, $a0
 ; CHECK-NEXT:    sltui $a5, $a5, 1
 ; CHECK-NEXT:    masknez $a4, $a4, $a5
-; CHECK-NEXT:    sltu $a6, $a0, $a2
 ; CHECK-NEXT:    maskeqz $a6, $a6, $a5
-; CHECK-NEXT:    or $a4, $a6, $a4
-; CHECK-NEXT:    sltu $a1, $a3, $a1
 ; CHECK-NEXT:    masknez $a1, $a1, $a5
-; CHECK-NEXT:    sltu $a0, $a2, $a0
 ; CHECK-NEXT:    maskeqz $a0, $a0, $a5
+; CHECK-NEXT:    or $a4, $a6, $a4
 ; CHECK-NEXT:    or $a0, $a0, $a1
 ; CHECK-NEXT:    sub.d $a0, $a0, $a4
 ; CHECK-NEXT:    ret

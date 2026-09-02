@@ -107,15 +107,15 @@ define void @t3() {
 ; LA32-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-NEXT:    ld.h $a1, $a0, 20
 ; LA32-NEXT:    ld.w $a2, $a0, 16
+; LA32-NEXT:    ld.w $a3, $a0, 4
 ; LA32-NEXT:    st.h $a1, $sp, 20
 ; LA32-NEXT:    st.w $a2, $sp, 16
 ; LA32-NEXT:    ld.w $a1, $a0, 12
 ; LA32-NEXT:    ld.w $a2, $a0, 8
-; LA32-NEXT:    ld.w $a3, $a0, 4
 ; LA32-NEXT:    ld.w $a0, $a0, 0
+; LA32-NEXT:    st.w $a3, $sp, 4
 ; LA32-NEXT:    st.w $a1, $sp, 12
 ; LA32-NEXT:    st.w $a2, $sp, 8
-; LA32-NEXT:    st.w $a3, $sp, 4
 ; LA32-NEXT:    st.w $a0, $sp, 0
 ; LA32-NEXT:    addi.w $sp, $sp, 64
 ; LA32-NEXT:    ret

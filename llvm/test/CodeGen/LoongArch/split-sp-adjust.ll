@@ -34,8 +34,8 @@ define i32 @NoSplitSP() nounwind {
 ; CHECK-NEXT:    addi.d $a0, $sp, 8
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(foo)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
+; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    addi.d $sp, $sp, 2032
 ; CHECK-NEXT:    ret
 entry:

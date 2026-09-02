@@ -13,13 +13,13 @@ define <32 x i8> @test_bitreverse_v32i8(<32 x i8> %a) nounwind {
 ; LA32-NEXT:    xvsrli.b $xr0, $xr0, 4
 ; LA32-NEXT:    xvor.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvandi.b $xr1, $xr0, 51
-; LA32-NEXT:    xvslli.b $xr1, $xr1, 2
 ; LA32-NEXT:    xvsrli.b $xr0, $xr0, 2
+; LA32-NEXT:    xvslli.b $xr1, $xr1, 2
 ; LA32-NEXT:    xvandi.b $xr0, $xr0, 51
 ; LA32-NEXT:    xvor.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvandi.b $xr1, $xr0, 85
-; LA32-NEXT:    xvslli.b $xr1, $xr1, 1
 ; LA32-NEXT:    xvsrli.b $xr0, $xr0, 1
+; LA32-NEXT:    xvslli.b $xr1, $xr1, 1
 ; LA32-NEXT:    xvandi.b $xr0, $xr0, 85
 ; LA32-NEXT:    xvor.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    ret
@@ -165,13 +165,13 @@ define <4 x i64> @test_bitreverse_v4i64(<4 x i64> %a) nounwind {
 ; LA32-NEXT:    xvsrli.b $xr0, $xr0, 4
 ; LA32-NEXT:    xvor.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvandi.b $xr1, $xr0, 51
-; LA32-NEXT:    xvslli.b $xr1, $xr1, 2
 ; LA32-NEXT:    xvsrli.b $xr0, $xr0, 2
+; LA32-NEXT:    xvslli.b $xr1, $xr1, 2
 ; LA32-NEXT:    xvandi.b $xr0, $xr0, 51
 ; LA32-NEXT:    xvor.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvandi.b $xr1, $xr0, 85
-; LA32-NEXT:    xvslli.b $xr1, $xr1, 1
 ; LA32-NEXT:    xvsrli.b $xr0, $xr0, 1
+; LA32-NEXT:    xvslli.b $xr1, $xr1, 1
 ; LA32-NEXT:    xvandi.b $xr0, $xr0, 85
 ; LA32-NEXT:    xvor.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    ret

@@ -44,8 +44,8 @@ define i8 @sdiv_i8(i8 %a, i8 %b) {
 ; LA32R-LABEL: sdiv_i8:
 ; LA32R:       # %bb.0: # %entry
 ; LA32R-NEXT:    slli.w $a1, $a1, 24
-; LA32R-NEXT:    srai.w $a1, $a1, 24
 ; LA32R-NEXT:    slli.w $a0, $a0, 24
+; LA32R-NEXT:    srai.w $a1, $a1, 24
 ; LA32R-NEXT:    srai.w $a0, $a0, 24
 ; LA32R-NEXT:    div.w $a0, $a0, $a1
 ; LA32R-NEXT:    ret
@@ -67,8 +67,8 @@ define i8 @sdiv_i8(i8 %a, i8 %b) {
 ; LA32R-TRAP-LABEL: sdiv_i8:
 ; LA32R-TRAP:       # %bb.0: # %entry
 ; LA32R-TRAP-NEXT:    slli.w $a1, $a1, 24
-; LA32R-TRAP-NEXT:    srai.w $a1, $a1, 24
 ; LA32R-TRAP-NEXT:    slli.w $a0, $a0, 24
+; LA32R-TRAP-NEXT:    srai.w $a1, $a1, 24
 ; LA32R-TRAP-NEXT:    srai.w $a0, $a0, 24
 ; LA32R-TRAP-NEXT:    div.w $a0, $a0, $a1
 ; LA32R-TRAP-NEXT:    bne $a1, $zero, .LBB1_2
@@ -107,8 +107,8 @@ define i16 @sdiv_i16(i16 %a, i16 %b) {
 ; LA32R-LABEL: sdiv_i16:
 ; LA32R:       # %bb.0: # %entry
 ; LA32R-NEXT:    slli.w $a1, $a1, 16
-; LA32R-NEXT:    srai.w $a1, $a1, 16
 ; LA32R-NEXT:    slli.w $a0, $a0, 16
+; LA32R-NEXT:    srai.w $a1, $a1, 16
 ; LA32R-NEXT:    srai.w $a0, $a0, 16
 ; LA32R-NEXT:    div.w $a0, $a0, $a1
 ; LA32R-NEXT:    ret
@@ -130,8 +130,8 @@ define i16 @sdiv_i16(i16 %a, i16 %b) {
 ; LA32R-TRAP-LABEL: sdiv_i16:
 ; LA32R-TRAP:       # %bb.0: # %entry
 ; LA32R-TRAP-NEXT:    slli.w $a1, $a1, 16
-; LA32R-TRAP-NEXT:    srai.w $a1, $a1, 16
 ; LA32R-TRAP-NEXT:    slli.w $a0, $a0, 16
+; LA32R-TRAP-NEXT:    srai.w $a1, $a1, 16
 ; LA32R-TRAP-NEXT:    srai.w $a0, $a0, 16
 ; LA32R-TRAP-NEXT:    div.w $a0, $a0, $a1
 ; LA32R-TRAP-NEXT:    bne $a1, $zero, .LBB2_2
@@ -874,8 +874,8 @@ define i8 @srem_i8(i8 %a, i8 %b) {
 ; LA32R-LABEL: srem_i8:
 ; LA32R:       # %bb.0: # %entry
 ; LA32R-NEXT:    slli.w $a1, $a1, 24
-; LA32R-NEXT:    srai.w $a1, $a1, 24
 ; LA32R-NEXT:    slli.w $a0, $a0, 24
+; LA32R-NEXT:    srai.w $a1, $a1, 24
 ; LA32R-NEXT:    srai.w $a0, $a0, 24
 ; LA32R-NEXT:    mod.w $a0, $a0, $a1
 ; LA32R-NEXT:    ret
@@ -897,8 +897,8 @@ define i8 @srem_i8(i8 %a, i8 %b) {
 ; LA32R-TRAP-LABEL: srem_i8:
 ; LA32R-TRAP:       # %bb.0: # %entry
 ; LA32R-TRAP-NEXT:    slli.w $a1, $a1, 24
-; LA32R-TRAP-NEXT:    srai.w $a1, $a1, 24
 ; LA32R-TRAP-NEXT:    slli.w $a0, $a0, 24
+; LA32R-TRAP-NEXT:    srai.w $a1, $a1, 24
 ; LA32R-TRAP-NEXT:    srai.w $a0, $a0, 24
 ; LA32R-TRAP-NEXT:    mod.w $a0, $a0, $a1
 ; LA32R-TRAP-NEXT:    bne $a1, $zero, .LBB17_2
@@ -937,8 +937,8 @@ define i16 @srem_i16(i16 %a, i16 %b) {
 ; LA32R-LABEL: srem_i16:
 ; LA32R:       # %bb.0: # %entry
 ; LA32R-NEXT:    slli.w $a1, $a1, 16
-; LA32R-NEXT:    srai.w $a1, $a1, 16
 ; LA32R-NEXT:    slli.w $a0, $a0, 16
+; LA32R-NEXT:    srai.w $a1, $a1, 16
 ; LA32R-NEXT:    srai.w $a0, $a0, 16
 ; LA32R-NEXT:    mod.w $a0, $a0, $a1
 ; LA32R-NEXT:    ret
@@ -960,8 +960,8 @@ define i16 @srem_i16(i16 %a, i16 %b) {
 ; LA32R-TRAP-LABEL: srem_i16:
 ; LA32R-TRAP:       # %bb.0: # %entry
 ; LA32R-TRAP-NEXT:    slli.w $a1, $a1, 16
-; LA32R-TRAP-NEXT:    srai.w $a1, $a1, 16
 ; LA32R-TRAP-NEXT:    slli.w $a0, $a0, 16
+; LA32R-TRAP-NEXT:    srai.w $a1, $a1, 16
 ; LA32R-TRAP-NEXT:    srai.w $a0, $a0, 16
 ; LA32R-TRAP-NEXT:    mod.w $a0, $a0, $a1
 ; LA32R-TRAP-NEXT:    bne $a1, $zero, .LBB18_2
@@ -1681,8 +1681,8 @@ define signext i32 @pr107414(i32 signext %x) {
 ; LA32R-NEXT:    move $a2, $a0
 ; LA32R-NEXT:    srai.w $a3, $a0, 31
 ; LA32R-NEXT:    lu12i.w $a0, -266831
-; LA32R-NEXT:    ori $a0, $a0, 3337
 ; LA32R-NEXT:    move $a1, $zero
+; LA32R-NEXT:    ori $a0, $a0, 3337
 ; LA32R-NEXT:    bl __divdi3
 ; LA32R-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32R-NEXT:    addi.w $sp, $sp, 16
@@ -1697,8 +1697,8 @@ define signext i32 @pr107414(i32 signext %x) {
 ; LA32S-NEXT:    move $a2, $a0
 ; LA32S-NEXT:    srai.w $a3, $a0, 31
 ; LA32S-NEXT:    lu12i.w $a0, -266831
-; LA32S-NEXT:    ori $a0, $a0, 3337
 ; LA32S-NEXT:    move $a1, $zero
+; LA32S-NEXT:    ori $a0, $a0, 3337
 ; LA32S-NEXT:    bl __divdi3
 ; LA32S-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32S-NEXT:    addi.w $sp, $sp, 16
@@ -1722,8 +1722,8 @@ define signext i32 @pr107414(i32 signext %x) {
 ; LA32R-TRAP-NEXT:    move $a2, $a0
 ; LA32R-TRAP-NEXT:    srai.w $a3, $a0, 31
 ; LA32R-TRAP-NEXT:    lu12i.w $a0, -266831
-; LA32R-TRAP-NEXT:    ori $a0, $a0, 3337
 ; LA32R-TRAP-NEXT:    move $a1, $zero
+; LA32R-TRAP-NEXT:    ori $a0, $a0, 3337
 ; LA32R-TRAP-NEXT:    bl __divdi3
 ; LA32R-TRAP-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32R-TRAP-NEXT:    addi.w $sp, $sp, 16
@@ -1738,8 +1738,8 @@ define signext i32 @pr107414(i32 signext %x) {
 ; LA32S-TRAP-NEXT:    move $a2, $a0
 ; LA32S-TRAP-NEXT:    srai.w $a3, $a0, 31
 ; LA32S-TRAP-NEXT:    lu12i.w $a0, -266831
-; LA32S-TRAP-NEXT:    ori $a0, $a0, 3337
 ; LA32S-TRAP-NEXT:    move $a1, $zero
+; LA32S-TRAP-NEXT:    ori $a0, $a0, 3337
 ; LA32S-TRAP-NEXT:    bl __divdi3
 ; LA32S-TRAP-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32S-TRAP-NEXT:    addi.w $sp, $sp, 16

@@ -8,11 +8,11 @@ define <4 x i64> @should_not_be_optimized(ptr %ptr, ptr %dst) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    st.w $a2, $a1, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    st.w $a2, $a1, 0
+; LA32-NEXT:    st.w $a0, $a1, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    xvreplve0.d $xr0, $xr0
-; LA32-NEXT:    st.w $a0, $a1, 4
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: should_not_be_optimized:

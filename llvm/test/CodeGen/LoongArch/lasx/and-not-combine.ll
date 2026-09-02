@@ -198,8 +198,8 @@ define void @pre_not_and_not_combine_v4i64(ptr %res, ptr %a, i64 %b) nounwind {
 ; LA32-LABEL: pre_not_and_not_combine_v4i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    nor $a1, $a3, $zero
 ; LA32-NEXT:    nor $a2, $a2, $zero
+; LA32-NEXT:    nor $a1, $a3, $zero
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
 ; LA32-NEXT:    xvreplve0.d $xr1, $xr1
@@ -432,8 +432,8 @@ define void @and_extract_subvector_not_combine_v16i16(ptr %pa, ptr %dst) nounwin
 ; CHECK-LABEL: and_extract_subvector_not_combine_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
 ; CHECK-NEXT:    vrepli.h $vr1, 4
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
 ; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
@@ -450,8 +450,8 @@ define void @and_extract_subvector_not_combine_v8i32(ptr %pa, ptr %dst) nounwind
 ; CHECK-LABEL: and_extract_subvector_not_combine_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
 ; CHECK-NEXT:    vrepli.w $vr1, 4
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
 ; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
@@ -467,8 +467,8 @@ define void @and_extract_subvector_not_combine_v4i64(ptr %pa, ptr %dst) nounwind
 ; CHECK-LABEL: and_extract_subvector_not_combine_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
 ; CHECK-NEXT:    vrepli.d $vr1, 4
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
 ; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret

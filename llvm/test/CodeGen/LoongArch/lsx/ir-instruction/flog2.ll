@@ -12,8 +12,8 @@ define void @flog2_v4f32(ptr %res, ptr %a) nounwind {
 ; LA32-NEXT:    st.w $ra, $sp, 44 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 40 # 4-byte Folded Spill
 ; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
 ; LA32-NEXT:    move $fp, $a0
+; LA32-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
 ; LA32-NEXT:    vreplvei.w $vr0, $vr0, 1
 ; LA32-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA32-NEXT:    bl log2f
@@ -23,28 +23,28 @@ define void @flog2_v4f32(ptr %res, ptr %a) nounwind {
 ; LA32-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; LA32-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA32-NEXT:    bl log2f
-; LA32-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA32-NEXT:    vld $vr1, $sp, 0 # 16-byte Folded Reload
+; LA32-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA32-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA32-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
 ; LA32-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
 ; LA32-NEXT:    vreplvei.w $vr0, $vr0, 2
 ; LA32-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA32-NEXT:    bl log2f
-; LA32-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA32-NEXT:    vld $vr1, $sp, 0 # 16-byte Folded Reload
+; LA32-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA32-NEXT:    vextrins.w $vr1, $vr0, 32
-; LA32-NEXT:    vst $vr1, $sp, 0 # 16-byte Folded Spill
 ; LA32-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
+; LA32-NEXT:    vst $vr1, $sp, 0 # 16-byte Folded Spill
 ; LA32-NEXT:    vreplvei.w $vr0, $vr0, 3
 ; LA32-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA32-NEXT:    bl log2f
-; LA32-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA32-NEXT:    vld $vr1, $sp, 0 # 16-byte Folded Reload
+; LA32-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA32-NEXT:    ld.w $ra, $sp, 44 # 4-byte Folded Reload
 ; LA32-NEXT:    vextrins.w $vr1, $vr0, 48
 ; LA32-NEXT:    vst $vr1, $fp, 0
 ; LA32-NEXT:    ld.w $fp, $sp, 40 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $ra, $sp, 44 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 48
 ; LA32-NEXT:    ret
 ;
@@ -54,8 +54,8 @@ define void @flog2_v4f32(ptr %res, ptr %a) nounwind {
 ; LA64-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 32 # 8-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
 ; LA64-NEXT:    move $fp, $a0
+; LA64-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
 ; LA64-NEXT:    vreplvei.w $vr0, $vr0, 1
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(log2f)
@@ -67,8 +67,8 @@ define void @flog2_v4f32(ptr %res, ptr %a) nounwind {
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(log2f)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 0 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA64-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
@@ -76,21 +76,21 @@ define void @flog2_v4f32(ptr %res, ptr %a) nounwind {
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(log2f)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 0 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vextrins.w $vr1, $vr0, 32
-; LA64-NEXT:    vst $vr1, $sp, 0 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
+; LA64-NEXT:    vst $vr1, $sp, 0 # 16-byte Folded Spill
 ; LA64-NEXT:    vreplvei.w $vr0, $vr0, 3
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(log2f)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 0 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; LA64-NEXT:    vextrins.w $vr1, $vr0, 48
 ; LA64-NEXT:    vst $vr1, $fp, 0
 ; LA64-NEXT:    ld.d $fp, $sp, 32 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 48
 ; LA64-NEXT:    ret
 entry:
@@ -107,8 +107,8 @@ define void @flog2_v2f64(ptr %res, ptr %a) nounwind {
 ; LA32-NEXT:    st.w $ra, $sp, 44 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 40 # 4-byte Folded Spill
 ; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
 ; LA32-NEXT:    move $fp, $a0
+; LA32-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
 ; LA32-NEXT:    vreplvei.d $vr0, $vr0, 1
 ; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA32-NEXT:    bl log2
@@ -118,12 +118,12 @@ define void @flog2_v2f64(ptr %res, ptr %a) nounwind {
 ; LA32-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA32-NEXT:    bl log2
-; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
 ; LA32-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
+; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA32-NEXT:    ld.w $ra, $sp, 44 # 4-byte Folded Reload
 ; LA32-NEXT:    vextrins.d $vr0, $vr1, 16
 ; LA32-NEXT:    vst $vr0, $fp, 0
 ; LA32-NEXT:    ld.w $fp, $sp, 40 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $ra, $sp, 44 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 48
 ; LA32-NEXT:    ret
 ;
@@ -133,8 +133,8 @@ define void @flog2_v2f64(ptr %res, ptr %a) nounwind {
 ; LA64-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 32 # 8-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
 ; LA64-NEXT:    move $fp, $a0
+; LA64-NEXT:    vst $vr0, $sp, 0 # 16-byte Folded Spill
 ; LA64-NEXT:    vreplvei.d $vr0, $vr0, 1
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(log2)
@@ -146,12 +146,12 @@ define void @flog2_v2f64(ptr %res, ptr %a) nounwind {
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(log2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; LA64-NEXT:    vextrins.d $vr0, $vr1, 16
 ; LA64-NEXT:    vst $vr0, $fp, 0
 ; LA64-NEXT:    ld.d $fp, $sp, 32 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 48
 ; LA64-NEXT:    ret
 entry:
