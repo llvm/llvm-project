@@ -157,17 +157,13 @@ Args PlatformWasm::MakeRuntimeCommand(llvm::StringRef runtime_path,
   args.AppendArguments(runtime_args);
   args.AppendArgument(llvm::formatv("{0}{1}", port_arg, port).str());
 
-  // Forward the inferior's environment into the WASI runtime. How arguments are
-  // passed is configurable. When not configured, no environment is passed.
   if (!env_arg.empty())
     for (const auto &kv : env)
       args.AppendArgument(
           llvm::formatv("{0}{1}", env_arg, Environment::compose(kv)).str());
 
-  // The runtime is handed the module to run as a path on this host. A launch
-  // takes its executable from the name the module goes by on the platform,
-  // which for a module reported by a stub is a name of the stub's choosing
-  // rather than a path that resolves here, so run the file the target has.
+  // The runtime resolves the module as a host path, while arg0 is the name the
+  // platform reports for the executable and need not resolve here.
   Args module_args = inferior_args;
   if (!module_path.empty()) {
     if (module_args.GetArgumentCount() > 0)

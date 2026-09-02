@@ -45,8 +45,8 @@ public:
 
   /// Assemble the command line that launches the runtime on \p module_path,
   /// serving its GDB remote stub on \p port. Extra \p runtime_args precede the
-  /// port argument, so that a runtime dispatching on a leading subcommand can
-  /// name it through them. An empty \p env_arg forwards no environment.
+  /// port argument, so they can carry a subcommand the runtime expects first,
+  /// such as WasmKit's `run`. An empty \p env_arg forwards no environment.
   static Args
   MakeRuntimeCommand(llvm::StringRef runtime_path, const Args &runtime_args,
                      llvm::StringRef port_arg, uint16_t port,
