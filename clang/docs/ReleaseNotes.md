@@ -470,6 +470,13 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
+- Class template argument deduction through an alias template now works when
+  the right-hand side of the alias names another alias template that cannot
+  have deduction guides of its own, such as an identity alias
+  (`template <class T> using Identity = T;`). The deduction guides are now
+  derived from the first template in the chain that can have them, per the
+  equivalence rule of `[temp.alias]p2`, matching GCC. (#GH125821)
+
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)

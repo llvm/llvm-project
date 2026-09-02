@@ -553,7 +553,6 @@ void foo() { test<{1, 2, 3}>(); }
 
 } // namespace GH113518
 
-// FIXME: This is accepted by GCC: https://gcc.godbolt.org/z/f3rMfbacz
 namespace GH125821 {
 template<typename T>
 struct A { A(T){} };
@@ -564,7 +563,8 @@ using Proxy = T;
 template<typename T>
 using C = Proxy< A<T> >;
 
-C test{ 42 }; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
+C test{ 42 };
+static_assert(__is_same(decltype(test), A<int>));
 
 } // namespace GH125821
 
