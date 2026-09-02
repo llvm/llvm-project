@@ -19,7 +19,6 @@
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "omptarget.h"
-#include "private.h"
 #include "rtl.h"
 
 #include "Shared/EnvironmentVar.h"
