@@ -414,8 +414,6 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getPlatformInfo enum '%i' is invalid", PropName);
   }
-
-  return Error::success();
 }
 
 Error olGetPlatformInfo_impl(ol_platform_handle_t Platform,
@@ -669,8 +667,6 @@ Error olGetContextInfoImplDetail(ol_context_handle_t Context,
                               "olGetContextInfo enum '%i' is invalid",
                               PropName);
   }
-
-  return Error::success();
 }
 
 Error olGetContextInfo_impl(ol_context_handle_t Context,
@@ -851,8 +847,6 @@ Error olGetMemInfoImplDetail(const void *Ptr, ol_mem_info_t PropName,
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetMemInfo enum '%i' is invalid", PropName);
   }
-
-  return Error::success();
 }
 
 Error olGetMemInfo_impl(const void *Ptr, ol_mem_info_t PropName,
@@ -971,8 +965,6 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetQueueInfo enum '%i' is invalid", PropName);
   }
-
-  return Error::success();
 }
 
 Error olGetQueueInfo_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
@@ -1055,8 +1047,6 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetEventInfo enum '%i' is invalid", PropName);
   }
-
-  return Error::success();
 }
 
 Error olGetEventInfo_impl(ol_event_handle_t Event, ol_event_info_t PropName,
