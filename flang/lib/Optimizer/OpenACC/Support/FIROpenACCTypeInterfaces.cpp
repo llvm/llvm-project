@@ -543,7 +543,19 @@ OpenACCMappableModel<fir::PointerType>::getTypeCategory(mlir::Type type,
 template <typename Ty>
 mlir::acc::VariableInfoAttr OpenACCMappableModel<Ty>::genPrivateVariableInfo(
     mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const {
-  hlfir::Entity entity{var};
+  // A variable may already be captured by a data clause operation, for
+  // instance when privatization is applied to the result of an earlier
+  // clause. The Fortran properties belong to the variable that operation was
+  // created from, so walk back to it.
+  mlir::Value hostVar = var;
+  while (mlir::Operation *definingOp = hostVar.getDefiningOp()) {
+    mlir::Value clauseVar = mlir::acc::getVar(definingOp);
+    if (!clauseVar)
+      break;
+    hostVar = clauseVar;
+  }
+
+  hlfir::Entity entity{hostVar};
   return fir::OpenACCFortranVariableInfoAttr::get(var.getContext(),
                                                   entity.mayBeOptional());
 }
