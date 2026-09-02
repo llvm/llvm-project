@@ -624,9 +624,11 @@ define <4 x i16> @vwabdau_combine_i16(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
 define <4 x i32> @vwabdau_combine_i32(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
 ; CHECK-LABEL: vwabdau_combine_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vabd.vv v9, v8, v9
-; CHECK-NEXT:    vwaddu.vv v8, v9, v10
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf2 v11, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwabda.vv v11, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
   %sub = sub nsw <4 x i16> %a, %b
   %diff = call <4 x i16> @llvm.abs.v4i16(<4 x i16> %sub, i1 true)
