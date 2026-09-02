@@ -441,7 +441,7 @@ template <size_t Bits> struct DyadicFloat {
                                         void>>
   LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T as() const {
     if constexpr (cpp::is_same_v<T, bfloat16> || cpp::is_same_v<T, Float128> ||
-                  cpp::is_same_v<T, Float80>
+                  cpp::is_same_v<T, Float80> || cpp::is_same_v<T, Float16>
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
                   || cpp::is_same_v<T, float16>
 #endif

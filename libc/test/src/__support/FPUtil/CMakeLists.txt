@@ -9,6 +9,7 @@ add_fp_unittest(
     dyadic_float_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.float16
     libc.src.__support.macros.properties.types
   COMPILE_OPTIONS
     # Prevent constant folding with a default rounding mode.
@@ -71,6 +72,17 @@ if(LLVM_LIBC_FULL_BUILD)
 endif()
 
 add_fp_unittest(
+  float16_test
+  NEED_MPFR
+  SUITE
+    libc-fputil-tests
+  SRCS
+    float16_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.float16
+)
+
+add_fp_unittest(
   bfloat16_test
   NEED_MPFR
   SUITE
@@ -90,5 +102,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.comparison_operations
+    libc.src.__support.FPUtil.float16
     libc.src.__support.macros.properties.types
 )

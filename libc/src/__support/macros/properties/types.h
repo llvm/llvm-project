@@ -74,6 +74,15 @@
 using float16 = _Float16;
 #endif // LIBC_TYPES_HAS_FLOAT16
 
+// -- Emulated float16 support ------------------------------------------------
+// Float16 is always available regardless of built-in float16 type support in
+// the compiler.
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
+struct Float16;
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
+
 // -- float128 support --------------------------------------------------------
 // LIBC_TYPES_HAS_NATIVE_FLOAT128 and 'float128' type are provided by
 // "include/llvm-libc-types/float128.h"
