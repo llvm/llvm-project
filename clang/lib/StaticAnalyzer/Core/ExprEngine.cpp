@@ -1442,14 +1442,11 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
     CleanedStates.insert(Pred);
 
   ExplodedNodeSet PreVisited;
-  for (const auto I : CleanedStates) {
-    ExplodedNodeSet Tmp;
-    if (shouldJustCallCheckers(currStmt, PreVisitKind)) {
-      getCheckerManager().runCheckersForPreStmt(Tmp, I, currStmt, *this);
-      PreVisited.insert(Tmp);
-    } else
-      PreVisited.insert(I);
-  }
+  if (shouldJustCallCheckers(currStmt, PreVisitKind)) {
+    getCheckerManager().runCheckersForPreStmt(PreVisited, CleanedStates,
+                                              currStmt, *this);
+  } else
+    PreVisited.insert(CleanedStates);
 
   ExplodedNodeSet Visited;
   for (const auto I : PreVisited) {
@@ -1459,14 +1456,11 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   }
 
   ExplodedNodeSet PostVisited;
-  for (const auto I : Visited) {
-    ExplodedNodeSet Tmp;
-    if (shouldJustCallCheckers(currStmt, PostVisitKind)) {
-      getCheckerManager().runCheckersForPostStmt(Tmp, I, currStmt, *this);
-      PostVisited.insert(Tmp);
-    } else
-      PostVisited.insert(I);
-  }
+  if (shouldJustCallCheckers(currStmt, PostVisitKind)) {
+    getCheckerManager().runCheckersForPostStmt(PostVisited, Visited, currStmt,
+                                               *this);
+  } else
+    PostVisited.insert(Visited);
 
   // Enqueue the new nodes onto the work list.
   Engine.enqueueStmtNodes(PostVisited, getCurrBlock(), currStmtIdx);
