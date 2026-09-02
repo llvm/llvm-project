@@ -8,18 +8,18 @@ define void @fixed_sve_high_lane_insert_extract(<8 x i32> %vi32, <8 x float> %vf
 ; CHECK-LABEL: 'fixed_sve_high_lane_insert_extract'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_elt0 = extractelement <8 x i32> %vi32, i32 0
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_low = extractelement <8 x i32> %vi32, i32 3
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ei32_high = extractelement <8 x i32> %vi32, i32 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:3 SizeLat:3 for: %ei32_high = extractelement <8 x i32> %vi32, i32 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_elt0 = insertelement <8 x i32> %vi32, i32 %i32, i32 0
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_low = insertelement <8 x i32> %vi32, i32 %i32, i32 3
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ii32_high = insertelement <8 x i32> %vi32, i32 %i32, i32 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %ii32_high = insertelement <8 x i32> %vi32, i32 %i32, i32 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_low = extractelement <8 x float> %vf32, i32 3
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef32_high = extractelement <8 x float> %vf32, i32 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef64_low = extractelement <4 x double> %vf64, i32 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %ef64_high = extractelement <4 x double> %vf64, i32 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %if32_low = insertelement <8 x float> %vf32, float %f, i32 3
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %if32_high = insertelement <8 x float> %vf32, float %f, i32 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %if32_high = insertelement <8 x float> %vf32, float %f, i32 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %if64_low = insertelement <4 x double> %vf64, double %d, i32 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %if64_high = insertelement <4 x double> %vf64, double %d, i32 2
+; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:5 SizeLat:5 for: %if64_high = insertelement <4 x double> %vf64, double %d, i32 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %ei32_elt0 = extractelement <8 x i32> %vi32, i32 0
