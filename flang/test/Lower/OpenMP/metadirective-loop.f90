@@ -1173,6 +1173,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_dynamic_collapse(
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK: %[[DC_N:.*]]:2 = hlfir.declare {{.*}}dynamic_collapseEn
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK: %[[DC_I:.*]]:2 = hlfir.declare {{.*}}dynamic_collapseEi
 ! CHECK: %[[DC_J:.*]]:2 = hlfir.declare {{.*}}dynamic_collapseEj
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
@@ -1445,6 +1446,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_simd_collapse_lastprivate(
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK: %[[SC_N:.*]]:2 = hlfir.declare {{.*}}lastprivateEn
+! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK: %[[SC_I:.*]]:2 = hlfir.declare {{.*}}lastprivateEi
 ! CHECK: %[[SC_J:.*]]:2 = hlfir.declare {{.*}}lastprivateEj
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
