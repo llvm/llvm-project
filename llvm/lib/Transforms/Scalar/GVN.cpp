@@ -687,7 +687,8 @@ uint32_t GVNValueTable::computeLoadStoreVN(Instruction *I) {
 /// the phis in BB.
 uint32_t GVNValueTable::phiTranslateImpl(const BasicBlock *Pred,
                                          const BasicBlock *PhiBlock,
-                                         uint32_t Num, GVNPass &GVN) {
+                                         uint32_t Num,
+                                         GVNLeaderMap &LeaderTable) {
   // See if we can refine the value number by looking at the PN incoming value
   // for the given predecessor.
   if (PHINode *PN = NumberingPhi[Num]) {
@@ -727,7 +728,7 @@ uint32_t GVNValueTable::phiTranslateImpl(const BasicBlock *Pred,
   // If there is any value related with Num is defined in a BB other than
   // PhiBlock, it cannot depend on a phi in PhiBlock without going through
   // a backedge. We can do an early exit in that case to save compile time.
-  if (!areAllValsInBB(Num, PhiBlock, GVN))
+  if (!areAllValsInBB(Num, PhiBlock, LeaderTable))
     return Num;
 
   if (Num >= ExprIdx.size() || ExprIdx[Num] == 0)
@@ -742,7 +743,7 @@ uint32_t GVNValueTable::phiTranslateImpl(const BasicBlock *Pred,
         (I > 0 && Exp.Opcode == Instruction::ExtractValue) ||
         (I > 1 && Exp.Opcode == Instruction::ShuffleVector))
       continue;
-    Exp.VarArgs[I] = phiTranslate(Pred, PhiBlock, Exp.VarArgs[I], GVN);
+    Exp.VarArgs[I] = phiTranslate(Pred, PhiBlock, Exp.VarArgs[I], LeaderTable);
   }
 
   if (Exp.Commutative) {
@@ -759,7 +760,8 @@ uint32_t GVNValueTable::phiTranslateImpl(const BasicBlock *Pred,
 
   if (uint32_t NewNum = ExpressionNumbering[Exp]) {
     if (Exp.Opcode == Instruction::Call && NewNum != Num)
-      return areCallValsEqual(Num, NewNum, Pred, PhiBlock, GVN) ? NewNum : Num;
+      return areCallValsEqual(Num, NewNum, Pred, PhiBlock, LeaderTable) ? NewNum
+                                                                        : Num;
     return NewNum;
   }
   return Num;
@@ -769,9 +771,10 @@ uint32_t GVNValueTable::phiTranslateImpl(const BasicBlock *Pred,
 // Return false if the result is unknown.
 bool GVNValueTable::areCallValsEqual(uint32_t Num, uint32_t NewNum,
                                      const BasicBlock *Pred,
-                                     const BasicBlock *PhiBlock, GVNPass &GVN) {
+                                     const BasicBlock *PhiBlock,
+                                     GVNLeaderMap &LeaderTable) {
   CallInst *Call = nullptr;
-  auto Leaders = GVN.LeaderTable.getLeaders(Num);
+  auto Leaders = LeaderTable.getLeaders(Num);
   for (const auto &Entry : Leaders) {
     Call = dyn_cast<CallInst>(&*Entry.Val);
     if (Call && Call->getParent() == PhiBlock)
@@ -817,11 +820,10 @@ std::pair<uint32_t, bool> GVNValueTable::assignExpNewValueNum(Expression &Exp) {
 /// Return whether all the values related with the same \p num are
 /// defined in \p BB.
 bool GVNValueTable::areAllValsInBB(uint32_t Num, const BasicBlock *BB,
-                                   GVNPass &GVN) {
-  return all_of(GVN.LeaderTable.getLeaders(Num),
-                [=](const GVNPass::LeaderMap::LeaderTableEntry &L) {
-                  return L.BB == BB;
-                });
+                                   GVNLeaderMap &LeaderTable) {
+  return all_of(
+      LeaderTable.getLeaders(Num),
+      [=](const GVNLeaderMap::LeaderTableEntry &L) { return L.BB == BB; });
 }
 
 /// Include the incoming memory state into the hash of the expression for the
@@ -978,11 +980,11 @@ uint32_t GVNValueTable::lookupPtrToInt(Value *Ptr, Type *Ty) {
 /// Wrap phiTranslateImpl to provide caching functionality.
 uint32_t GVNValueTable::phiTranslate(const BasicBlock *Pred,
                                      const BasicBlock *PhiBlock, uint32_t Num,
-                                     GVNPass &GVN) {
+                                     GVNLeaderMap &LeaderTable) {
   auto FindRes = PhiTranslateTable.find({Num, Pred});
   if (FindRes != PhiTranslateTable.end())
     return FindRes->second;
-  uint32_t NewNum = phiTranslateImpl(Pred, PhiBlock, Num, GVN);
+  uint32_t NewNum = phiTranslateImpl(Pred, PhiBlock, Num, LeaderTable);
   PhiTranslateTable.insert({{Num, Pred}, NewNum});
   return NewNum;
 }
@@ -1036,7 +1038,7 @@ void GVNValueTable::verifyRemoved(const Value *V) const {
 //===----------------------------------------------------------------------===//
 
 /// Push a new Value to the LeaderTable onto the list for its value number.
-void GVNPass::LeaderMap::insert(uint32_t N, Value *V, const BasicBlock *BB) {
+void GVNLeaderMap::insert(uint32_t N, Value *V, const BasicBlock *BB) {
   const auto &[It, Inserted] = NumToLeaders.try_emplace(N, V, BB, nullptr);
   if (!Inserted) {
     // Key already exists: insert new node after the head.
@@ -1048,8 +1050,7 @@ void GVNPass::LeaderMap::insert(uint32_t N, Value *V, const BasicBlock *BB) {
 
 /// Scan the list of values corresponding to a given
 /// value number, and remove the given instruction if encountered.
-void GVNPass::LeaderMap::erase(uint32_t N, Instruction *I,
-                               const BasicBlock *BB) {
+void GVNLeaderMap::erase(uint32_t N, Instruction *I, const BasicBlock *BB) {
   auto It = NumToLeaders.find(N);
   if (It == NumToLeaders.end())
     return;
@@ -3579,8 +3580,7 @@ bool GVNPass::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
       Success = false;
       break;
     }
-    uint32_t TValNo =
-        VN.phiTranslate(Pred, Curr, VN.lookup(Op), *this);
+    uint32_t TValNo = VN.phiTranslate(Pred, Curr, VN.lookup(Op), LeaderTable);
     if (Value *V = findLeader(Pred, TValNo)) {
       Instr->setOperand(I, V);
     } else {
@@ -3672,7 +3672,7 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
       break;
     }
 
-    uint32_t TValNo = VN.phiTranslate(P, CurrentBlock, ValNo, *this);
+    uint32_t TValNo = VN.phiTranslate(P, CurrentBlock, ValNo, LeaderTable);
     Value *PredV = findLeader(P, TValNo);
     if (!PredV) {
       PredMap.push_back(std::make_pair(static_cast<Value *>(nullptr), P));
