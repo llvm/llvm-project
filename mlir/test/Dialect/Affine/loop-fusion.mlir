@@ -13,6 +13,30 @@
 
 // -----
 
+// CHECK-LABEL: func @non_affine_memory_effect_in_loop_does_not_crash(
+func.func @non_affine_memory_effect_in_loop_does_not_crash(%arg0: memref<8xf32>) {
+  %0 = builtin.unrealized_conversion_cast %arg0 : memref<8xf32> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  %c0 = arith.constant 0 : index
+  affine.for %i = 0 to 8 {
+    %1 = builtin.unrealized_conversion_cast %i : index to i64
+    %2 = llvm.extractvalue %0[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    %3 = llvm.getelementptr %2[%1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %4 = llvm.load %3 : !llvm.ptr -> f32
+    affine.store %4, %arg0[%c0] : memref<8xf32>
+  }
+  affine.for %i = 0 to 8 {
+    %1 = builtin.unrealized_conversion_cast %i : index to i64
+    %2 = llvm.extractvalue %0[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    %3 = llvm.getelementptr %2[%1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %4 = llvm.load %3 : !llvm.ptr -> f32
+    affine.store %4, %arg0[%c0] : memref<8xf32>
+  }
+  // CHECK: return
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @should_fuse_raw_dep_for_locality() {
 func.func @should_fuse_raw_dep_for_locality() {
   %m = memref.alloc() : memref<10xf32>
@@ -1575,4 +1599,3 @@ func.func @producer_consumer_with_outmost_user(%arg0 : f16) {
 }
 
 // Add further tests in mlir/test/Transforms/loop-fusion-4.mlir
-
