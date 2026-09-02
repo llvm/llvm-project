@@ -587,6 +587,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
         GV->getThreadLocalMode(), GV->getAddressSpace());
     // Start out by copying attributes from the original, including alignment.
     NGV->copyAttributesFrom(GV);
+    NGV->setComdat(GV->getComdat());
     NewGlobals.insert({OffsetForTy, NGV});
 
     // Calculate the known alignment of the field.  If the original aggregate
@@ -656,7 +657,17 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   ++NumSRA;
 
   assert(NewGlobals.size() > 0);
-  return NewGlobals.begin()->second;
+
+  auto *FirstNewGV = NewGlobals.begin()->second;
+
+  // For COFF, the comdat must contain a member which has the same name as the
+  // group. We rename the first new global to match.
+  if (auto *C = FirstNewGV->getComdat()) {
+    auto ComdatName = C->getName();
+    FirstNewGV->setName(ComdatName);
+  }
+
+  return FirstNewGV;
 }
 
 /// Return true if all users of the specified value will trap if the value is
