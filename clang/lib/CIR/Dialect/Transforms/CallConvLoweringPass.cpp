@@ -515,9 +515,10 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// unpacked into the register(s) holding it, a scalar too wide for one register
 /// split into a tuple of them, a scalar the classifier widens to fill its
 /// eightbyte, and a value whose live bytes start partway into its storage
-/// because a leading eightbyte holds no field (getDirectOffset).  getDirect
-/// keeps canFlatten set so the rewriter can split a multi-field coerced
-/// struct into individual wire arguments.  Any other scalar passes in its
+/// because a leading eightbyte holds no field (getDirectOffset).  canFlatten
+/// follows the classifier's CanBeFlattened, so the rewriter splits a
+/// multi-field coerced struct into individual wire arguments unless the
+/// classifier asked to keep it intact.  Any other scalar passes in its
 /// natural CIR type, which a null coercion denotes.  A coercion this bridge
 /// cannot represent yields std::nullopt so the caller reports NYI rather than
 /// silently passing the value unchanged.
@@ -577,7 +578,9 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // trip for nothing.
     if (comparesAgainstCoerce && coerced == origTy)
       return ArgClassification::getDirect();
-    return ArgClassification::getDirect(coerced, offset);
+    ArgClassification classified = ArgClassification::getDirect(coerced, offset);
+    classified.canFlatten = info.getCanBeFlattened();
+    return classified;
   }
   // An extended value is always read from byte 0 of its own storage, so
   // there is no offset to honor here.
