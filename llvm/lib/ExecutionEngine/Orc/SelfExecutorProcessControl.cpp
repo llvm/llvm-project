@@ -19,6 +19,8 @@
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
 
+#include "TargetProcess/OrcRTBootstrap.h"
+
 #define DEBUG_TYPE "orc"
 
 namespace llvm::orc {
@@ -44,6 +46,7 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->PageSize = PageSize;
 
   addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
+  rt_bootstrap::addRunAsFunctionWrappersTo(BootstrapSymbols);
 
   BootstrapSymbols[rt::DispatchName] =
       ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager);

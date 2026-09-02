@@ -13,18 +13,11 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryResolver.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryScanner.h"
 
-#include "llvm/ADT/StringSet.h"
-
-#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Error.h"
-
-#include <mutex>
 
 #define DEBUG_TYPE "orc-resolver"
 
