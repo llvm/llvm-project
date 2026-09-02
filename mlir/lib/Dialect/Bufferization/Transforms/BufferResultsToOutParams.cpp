@@ -168,13 +168,19 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
     }
     OpBuilder builder(op);
     SmallVector<SmallVector<Value>> dynamicSizes;
-    SetVector<Operation *> toErase;
+    // Map each returned memref to its primary out parameter.
     DenseMap<Value, BlockArgument> primaryArgs;
-    DenseMap<Value, SmallVector<Value>> dynSizes;
+    // Cache dynamic sizes by result so duplicate dynamic results can reuse
+    // their sizes when adding entries to `dynamicSizes`.
+    DenseMap<Value, SmallVector<Value>> dynamicSizesCache;
+    // Delay erasure until all return operands have been inspected because an
+    // allocation may be returned multiple times.
+    SetVector<Operation *> toErase;
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
       auto [it, inserted] = primaryArgs.try_emplace(orig, arg);
       if (!inserted) {
-        if (auto dynIt = dynSizes.find(orig); dynIt != dynSizes.end())
+        if (auto dynIt = dynamicSizesCache.find(orig);
+            dynIt != dynamicSizesCache.end())
           dynamicSizes.push_back(dynIt->second);
         if (it->second != arg &&
             failed(options.memCpyFn(builder, op->getLoc(), it->second, arg)))
@@ -195,7 +201,7 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
         if (hoistDynamicAllocs) {
           SmallVector<Value> dynamicSize = getDynamicSize(orig, func);
           dynamicSizes.push_back(dynamicSize);
-          dynSizes.try_emplace(orig, std::move(dynamicSize));
+          dynamicSizesCache.try_emplace(orig, std::move(dynamicSize));
         }
         toErase.insert(orig.getDefiningOp());
       } else {
