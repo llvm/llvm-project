@@ -29,16 +29,6 @@
 // API to be hidden.
 #define ORC_RT_EXPORT ORC_RT_C_EXPORT
 
-// Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
-// C mode, but the :: in __has_cpp_attribute(scoped::attribute) is invalid.
-#ifndef ORC_RT_HAS_CPP_ATTRIBUTE
-#if defined(__cplusplus) && defined(__has_cpp_attribute)
-#define ORC_RT_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
-#else
-#define ORC_RT_HAS_CPP_ATTRIBUTE(x) 0
-#endif
-#endif
-
 #if ORC_RT_HAS_BUILTIN(__builtin_expect)
 #define ORC_RT_LIKELY(EXPR) __builtin_expect((bool)(EXPR), true)
 #define ORC_RT_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)
