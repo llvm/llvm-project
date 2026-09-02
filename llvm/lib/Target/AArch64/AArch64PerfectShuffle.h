@@ -153,7 +153,7 @@ inline bool isUZPMask(ArrayRef<int> M, unsigned NumElts,
 /// isUZP_v_undef_Mask - Special case of isUZPMask for canonical form of
 /// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
 /// Mask is e.g., <0, 2, 0, 2> instead of <0, 2, 4, 6>,
-static bool isUZP_v_undef_Mask(ArrayRef<int> M, unsigned NumElts,
+inline bool isUZP_v_undef_Mask(ArrayRef<int> M, unsigned NumElts,
                                unsigned &WhichResult) {
   unsigned Half = NumElts / 2;
   WhichResult = (M[0] == 0 ? 0 : 1);
