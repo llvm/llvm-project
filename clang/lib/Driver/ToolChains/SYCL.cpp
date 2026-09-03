@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
+#include "SPIRV.h"
 #include "clang/Driver/CommonArgs.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -179,6 +180,11 @@ SYCLToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
 void SYCLToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
   HostTC.addClangWarningOptions(CC1Args);
+}
+
+Tool *SYCLToolChain::buildLinker() const {
+  // The SPIR-V linker dispatches to clang-sycl-linker for SYCL offloading.
+  return new tools::SPIRV::Linker(*this);
 }
 
 ToolChain::CXXStdlibType

@@ -360,7 +360,7 @@ static void mapValueToSlot(const Value *V, ModuleSlotTracker &MST,
 /// Creates the mapping from slot numbers to function's unnamed IR values.
 static void initSlots2Values(const Function &F,
                              DenseMap<unsigned, const Value *> &Slots2Values) {
-  ModuleSlotTracker MST(F.getParent(), /*ShouldInitializeAllMetadata=*/false);
+  ModuleSlotTracker MST(F.getParent());
   MST.incorporateFunction(F);
   for (const auto &Arg : F.args())
     mapValueToSlot(&Arg, MST, Slots2Values);
@@ -3813,7 +3813,7 @@ bool MIParser::parseMMRA(MDNode *&Node) {
 static void initSlots2BasicBlocks(
     const Function &F,
     DenseMap<unsigned, const BasicBlock *> &Slots2BasicBlocks) {
-  ModuleSlotTracker MST(F.getParent(), /*ShouldInitializeAllMetadata=*/false);
+  ModuleSlotTracker MST(F.getParent());
   MST.incorporateFunction(F);
   for (const auto &BB : F) {
     if (BB.hasName())

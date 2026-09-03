@@ -8242,7 +8242,7 @@ void SIInstrInfo::moveToVALUImpl(
   }
 
   case AMDGPU::S_MUL_U64:
-    if (ST.hasVMulU64Inst()) {
+    if (ST.useVMulU64Inst()) {
       NewOpcode = AMDGPU::V_MUL_U64_e64;
       break;
     }
@@ -10522,7 +10522,7 @@ void SIInstrInfo::fixImplicitOperands(MachineInstr &MI) const {
   if (MI.isInlineAsm())
     return;
 
-  if (MI.getNumOperands() < MI.getNumExplicitOperands())
+  if (MI.getNumOperands() < MI.getDesc().getNumOperands())
     return;
 
   for (auto &Op : MI.implicit_operands()) {

@@ -1476,7 +1476,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .widenScalarToNextPow2(0)
           .scalarize(0)
           .lower();
-      if (ST.hasMinMaxI64Insts()) {
+      if (ST.useMinMaxI64Insts()) {
         getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
             .legalFor({S32, S16, S64, V2S16})
             .clampMaxNumElements(0, S16, 2)
@@ -3747,9 +3747,9 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
         Ty == F16 && (!MI.getFlag(MachineInstr::FmAfn) || !ST.has16BitInsts());
     if (PromoteToF32) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
-      auto PromoteSrc = B.buildFPExt(F32, X);
+      auto PromoteSrc = B.buildFPExt(F32, X, Flags);
       legalizeFlogUnsafe(B, LogVal, PromoteSrc.getReg(0), IsLog10, Flags);
-      B.buildFPTrunc(Dst, LogVal);
+      B.buildFPTrunc(Dst, LogVal, Flags);
     } else {
       legalizeFlogUnsafe(B, Dst, X, IsLog10, Flags);
     }
@@ -4702,7 +4702,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
-  if (ST.hasVMulU64Inst() && Size == 64)
+  if (ST.useVMulU64Inst() && Size == 64)
     return true;
 
   unsigned NumParts = Size / 32;

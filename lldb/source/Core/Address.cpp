@@ -40,10 +40,12 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <cassert>
@@ -767,18 +769,17 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
     if (process) {
       addr_t load_addr = GetLoadAddress(target);
       if (load_addr != LLDB_INVALID_ADDRESS) {
-        Status memory_error;
-        addr_t dereferenced_load_addr =
-            process->ReadPointerFromMemory(load_addr, memory_error);
-        if (dereferenced_load_addr != LLDB_INVALID_ADDRESS) {
+        std::optional<addr_t> dereferenced_load_addr =
+            llvm::expectedToOptional(process->ReadPointerFromMemory(load_addr));
+        if (dereferenced_load_addr) {
           Address dereferenced_addr;
-          if (dereferenced_addr.SetLoadAddress(dereferenced_load_addr,
+          if (dereferenced_addr.SetLoadAddress(*dereferenced_load_addr,
                                                target)) {
             StreamString strm;
             if (dereferenced_addr.Dump(&strm, exe_scope,
                                        DumpStyleResolvedDescription,
                                        DumpStyleInvalid, addr_size)) {
-              DumpAddress(s->AsRawOstream(), dereferenced_load_addr, addr_size,
+              DumpAddress(s->AsRawOstream(), *dereferenced_load_addr, addr_size,
                           " -> ", " ");
               s->Write(strm.GetString().data(), strm.GetSize());
               return true;
