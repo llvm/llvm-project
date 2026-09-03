@@ -604,6 +604,11 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
     if (AMDGPU::EncValues::INLINE_FLOATING_C_MIN <= Imm &&
         Imm <= AMDGPU::EncValues::INLINE_FLOATING_C_MAX) {
       switch (OpDesc.OperandType) {
+      case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
+      case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+        // Inline constant encodings are not allowed for NOINLINE operand types.
+        // Keep the raw encoding value.
+        continue;
       case AMDGPU::OPERAND_REG_IMM_BF16:
       case AMDGPU::OPERAND_REG_IMM_V2BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_BF16:
@@ -1750,6 +1755,7 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
     UseLit = AMDGPU::isPKFMACF16InlineConstant(Val, isGFX11Plus());
     break;
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     break;
   case AMDGPU::OPERAND_REG_IMM_INT16:

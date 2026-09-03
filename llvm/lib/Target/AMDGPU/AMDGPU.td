@@ -1,3 +1,4 @@
+
 //===-- AMDGPU.td - AMDGPU Tablegen files --------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -1266,8 +1267,7 @@ defm PseudoScalarTrans : AMDGPUSubtargetFeature<"pseudo-scalar-trans",
 >;
 
 defm NoF16PseudoScalarTransInlineConstants : AMDGPUSubtargetFeature<"no-f16-pseudo-scalar-trans-inline-constants",
-  "Inline constants are not supported for F16 pseudo scalar transcendentals",
-  /*GenPredicate=*/0
+  "Inline constants are not supported for F16 pseudo scalar transcendentals"
 >;
 
 defm RestrictedSOffset : AMDGPUSubtargetFeature<"restricted-soffset",

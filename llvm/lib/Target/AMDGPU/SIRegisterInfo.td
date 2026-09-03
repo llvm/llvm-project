@@ -1395,6 +1395,7 @@ class SrcRegOrImm9_t16<string operandType, RegisterClass regClass = VS_16>
 def SSrc_b16  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT16">;
 def SSrc_bf16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_BF16">;
 def SSrc_f16  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP16">;
+def SSrc_NoInline_f16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_NOINLINE_FP16">;
 def SSrc_b32  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT32">;
 def SSrc_f32  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP32">;
 def SSrc_b64  : SrcRegOrImm9 <SReg_64_Encodable, "OPERAND_REG_IMM_INT64">;

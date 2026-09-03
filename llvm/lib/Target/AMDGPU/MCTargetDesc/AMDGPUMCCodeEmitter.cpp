@@ -336,6 +336,9 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
     // which does not have f16 support?
     return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
 
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
+    return 255;
+
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
     // We don't actually need to check Inv2Pi here because BF16 instructions can
