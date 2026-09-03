@@ -1966,9 +1966,9 @@ define <vscale x 1 x i32> @vmand_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmand.mm v8, v0, v8
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; CHECK-NEXT:    vadd.vv v8, v9, v9, v0.t
+; CHECK-NEXT:    vadd.vv v9, v9, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -1982,9 +1982,9 @@ define <vscale x 1 x i32> @vmnand_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b,
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmnand.mm v8, v0, v8
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; CHECK-NEXT:    vadd.vv v8, v9, v9, v0.t
+; CHECK-NEXT:    vadd.vv v9, v9, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmnand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -1998,9 +1998,9 @@ define <vscale x 1 x i32> @vmandn_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b,
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmandn.mm v8, v0, v8
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; CHECK-NEXT:    vadd.vv v8, v9, v9, v0.t
+; CHECK-NEXT:    vadd.vv v9, v9, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmandn.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -2014,9 +2014,9 @@ define <vscale x 1 x i32> @vmxor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmxor.mm v8, v0, v8
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; CHECK-NEXT:    vadd.vv v8, v9, v9, v0.t
+; CHECK-NEXT:    vadd.vv v9, v9, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmxor.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -2030,9 +2030,9 @@ define <vscale x 1 x i32> @vmor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, <
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmor.mm v8, v0, v8
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; CHECK-NEXT:    vadd.vv v8, v9, v9, v0.t
+; CHECK-NEXT:    vadd.vv v9, v9, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmor.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -2047,9 +2047,9 @@ define <vscale x 1 x i32> @vmnor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmnor.mm v8, v0, v8
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; CHECK-NEXT:    vadd.vv v8, v9, v9, v0.t
+; CHECK-NEXT:    vadd.vv v9, v9, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmnor.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -2063,9 +2063,9 @@ define <vscale x 1 x i32> @vmorn_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, 
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmorn.mm v8, v0, v8
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; CHECK-NEXT:    vadd.vv v8, v9, v9, v0.t
+; CHECK-NEXT:    vadd.vv v9, v9, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmorn.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)
@@ -2079,9 +2079,9 @@ define <vscale x 1 x i32> @vmxnor_mm(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b,
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmxnor.mm v8, v0, v8
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
-; CHECK-NEXT:    vadd.vv v8, v9, v9, v0.t
+; CHECK-NEXT:    vadd.vv v9, v9, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 1 x i1> @llvm.riscv.vmxnor.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b, iXLen -1)
   %2 = call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %1, iXLen %vl)

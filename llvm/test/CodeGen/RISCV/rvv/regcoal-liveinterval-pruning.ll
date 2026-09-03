@@ -30,6 +30,7 @@ asm.fallthrough:
 ; CHECK-NEXT:  vmv.v.i
 ; CHECK-NEXT:  vsetivli {{.*}} e64
 ; CHECK-NEXT:  vmv.v.i
+; CHECK-NEXT:  vmv1r.v
 ; CHECK-NEXT:  vslideup.vi
 ; CHECK-NEXT:  vmv.v.v
 

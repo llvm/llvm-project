@@ -143,7 +143,8 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    lui a1, %hi(.LCPI2_1)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI2_1)
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v0, (a1)
+; CHECK-NEXT:    vle64.v v7, (a1)
+; CHECK-NEXT:    vmv.v.v v0, v7
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, mu
 ; CHECK-NEXT:    vrgather.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    addi sp, s0, -1536

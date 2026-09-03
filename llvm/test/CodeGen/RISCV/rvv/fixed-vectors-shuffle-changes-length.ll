@@ -81,12 +81,14 @@ define <4 x i32> @v4i32_v8i32(<8 x i32>) {
 ; CHECK-LABEL: v4i32_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v0, 8
+; CHECK-NEXT:    vmv.v.i v11, 8
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vmv.v.v v0, v11
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1, v0.t
-; CHECK-NEXT:    vmv.v.i v0, 5
+; CHECK-NEXT:    vmv.v.i v11, 5
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vmv1r.v v0, v11
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
@@ -101,13 +103,15 @@ define <4 x i32> @v4i32_v16i32(<16 x i32>) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 8
+; CHECK-NEXT:    vmv.v.i v10, 8
+; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v12, v12, 3, v0.t
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 10
+; CHECK-NEXT:    vmv.v.i v11, 10
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vnsrl.wx v10, v8, a0
+; CHECK-NEXT:    vmv.v.v v0, v11
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v12, v0
 ; CHECK-NEXT:    ret
@@ -243,12 +247,14 @@ define <16 x i32> @v16i32_v4i32(<4 x i32>) {
 ; CHECK-NEXT:    vmerge.vim v9, v9, 2, v0
 ; CHECK-NEXT:    addi a1, a1, 548
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 0, v0
 ; CHECK-NEXT:    addi a0, a0, -1856
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
@@ -281,21 +287,24 @@ define <32 x i32> @v32i32_v4i32(<4 x i32>) {
 ; CHECK-NEXT:    lui a0, 135432
 ; CHECK-NEXT:    addi a0, a0, 1161
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 3
+; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vim v10, v10, 2, v0
 ; CHECK-NEXT:    lui a0, 270865
 ; CHECK-NEXT:    addi a0, a0, 548
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v10, v10, 0, v0
 ; CHECK-NEXT:    lui a0, 100550
 ; CHECK-NEXT:    addi a0, a0, 64
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma

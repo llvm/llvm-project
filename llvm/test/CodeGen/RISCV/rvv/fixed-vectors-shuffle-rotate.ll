@@ -512,8 +512,9 @@ define <8 x i16> @shuffle_v8i16_as_i64_16(<8 x i16> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, 136
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v12, a0
 ; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 1
+; ZVKB-ZVE32X-NEXT:    vmv1r.v v0, v12
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 3, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -557,8 +558,9 @@ define <8 x i16> @shuffle_v8i16_as_i64_32(<8 x i16> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, 204
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v12, a0
 ; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 2
+; ZVKB-ZVE32X-NEXT:    vmv1r.v v0, v12
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 2, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -602,8 +604,9 @@ define <8 x i16> @shuffle_v8i16_as_i64_48(<8 x i16> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, -18
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v12, a0
 ; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 3
+; ZVKB-ZVE32X-NEXT:    vmv1r.v v0, v12
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 1, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -648,7 +651,8 @@ define <8 x i32> @shuffle_v8i32_as_i64(<8 x i32> %v) {
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e32, m4, ta, mu
 ; ZVKB-ZVE32X-NEXT:    vslidedown.vi v12, v8, 1
 ; ZVKB-ZVE32X-NEXT:    li a0, 170
-; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v16, a0
+; ZVKB-ZVE32X-NEXT:    vmv1r.v v0, v16
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v12, v8, 1, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v12
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -716,8 +720,9 @@ define <8 x half> @shuffle_v8f16_as_i64_16(<8 x half> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, 136
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v12, a0
 ; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 1
+; ZVKB-ZVE32X-NEXT:    vmv1r.v v0, v12
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 3, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -761,8 +766,9 @@ define <8 x half> @shuffle_v8f16_as_i64_32(<8 x half> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, 204
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v12, a0
 ; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 2
+; ZVKB-ZVE32X-NEXT:    vmv1r.v v0, v12
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 2, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -806,8 +812,9 @@ define <8 x half> @shuffle_v8f16_as_i64_48(<8 x half> %v) {
 ; ZVKB-ZVE32X:       # %bb.0:
 ; ZVKB-ZVE32X-NEXT:    li a0, -18
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, mu
-; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v12, a0
 ; ZVKB-ZVE32X-NEXT:    vslidedown.vi v10, v8, 3
+; ZVKB-ZVE32X-NEXT:    vmv1r.v v0, v12
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v10, v8, 1, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -852,7 +859,8 @@ define <8 x float> @shuffle_v8f32_as_i64(<8 x float> %v) {
 ; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e32, m4, ta, mu
 ; ZVKB-ZVE32X-NEXT:    vslidedown.vi v12, v8, 1
 ; ZVKB-ZVE32X-NEXT:    li a0, 170
-; ZVKB-ZVE32X-NEXT:    vmv.s.x v0, a0
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v16, a0
+; ZVKB-ZVE32X-NEXT:    vmv1r.v v0, v16
 ; ZVKB-ZVE32X-NEXT:    vslideup.vi v12, v8, 1, v0.t
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v12
 ; ZVKB-ZVE32X-NEXT:    ret
@@ -912,7 +920,8 @@ define <8 x i64> @shuffle_v8i64_as_i128(<8 x i64> %v) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 1
 ; CHECK-NEXT:    li a0, 170
-; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv.s.x v16, a0
+; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    vslideup.vi v12, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -922,7 +931,8 @@ define <8 x i64> @shuffle_v8i64_as_i128(<8 x i64> %v) {
 ; ZVKB-V-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; ZVKB-V-NEXT:    vslidedown.vi v12, v8, 1
 ; ZVKB-V-NEXT:    li a0, 170
-; ZVKB-V-NEXT:    vmv.s.x v0, a0
+; ZVKB-V-NEXT:    vmv.s.x v16, a0
+; ZVKB-V-NEXT:    vmv1r.v v0, v16
 ; ZVKB-V-NEXT:    vslideup.vi v12, v8, 1, v0.t
 ; ZVKB-V-NEXT:    vmv.v.v v8, v12
 ; ZVKB-V-NEXT:    ret
@@ -1075,7 +1085,8 @@ define <8 x i64> @shuffle_v8i64_as_i128_2(<8 x i64> %v) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 1
 ; CHECK-NEXT:    li a0, 168
-; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv.s.x v16, a0
+; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    vslideup.vi v12, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1085,7 +1096,8 @@ define <8 x i64> @shuffle_v8i64_as_i128_2(<8 x i64> %v) {
 ; ZVKB-V-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; ZVKB-V-NEXT:    vslidedown.vi v12, v8, 1
 ; ZVKB-V-NEXT:    li a0, 168
-; ZVKB-V-NEXT:    vmv.s.x v0, a0
+; ZVKB-V-NEXT:    vmv.s.x v16, a0
+; ZVKB-V-NEXT:    vmv1r.v v0, v16
 ; ZVKB-V-NEXT:    vslideup.vi v12, v8, 1, v0.t
 ; ZVKB-V-NEXT:    vmv.v.v v8, v12
 ; ZVKB-V-NEXT:    ret

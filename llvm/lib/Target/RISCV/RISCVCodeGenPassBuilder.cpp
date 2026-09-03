@@ -132,10 +132,7 @@ void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   // TODO: RISCVInsertReadWriteCSRPass
   // TODO: RISCVInsertWriteVXRMPass
   // TODO: RISCVLandingPadSetupPass
-
   // TODO: MachinePipelinerPass (no new pass manager port exists yet)
-
-  // TODO: RISCVVMV0EliminationPass
 }
 
 void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
