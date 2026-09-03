@@ -888,6 +888,86 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
                  "emitConstructorBody: emit body statement failed.");
 }
 
+static bool fieldHasTrivialDestructorBody(ASTContext &context,
+                                          const FieldDecl *field);
+
+static bool
+hasTrivialDestructorBody(ASTContext &context,
+                         const CXXRecordDecl *baseClassDecl,
+                         const CXXRecordDecl *mostDerivedClassDecl) {
+  // If the destructor is trivial we don't have to check anything else.
+  if (baseClassDecl->hasTrivialDestructor())
+    return true;
+
+  if (!baseClassDecl->getDestructor()->hasTrivialBody())
+    return false;
+
+  // Check fields.
+  for (const auto *field : baseClassDecl->fields())
+    if (!fieldHasTrivialDestructorBody(context, field))
+      return false;
+
+  // Check non-virtual bases.
+  for (const auto &base : baseClassDecl->bases()) {
+    if (base.isVirtual())
+      continue;
+
+    const auto *nonVirtualBase = base.getType()->castAsCXXRecordDecl();
+    if (!hasTrivialDestructorBody(context, nonVirtualBase,
+                                  mostDerivedClassDecl))
+      return false;
+  }
+
+  if (baseClassDecl == mostDerivedClassDecl) {
+    // Check virtual bases.
+    for (const auto &vbase : baseClassDecl->vbases()) {
+      const auto *virtualBase = vbase.getType()->castAsCXXRecordDecl();
+      if (!hasTrivialDestructorBody(context, virtualBase, mostDerivedClassDecl))
+        return false;
+    }
+  }
+  return true;
+}
+
+static bool fieldHasTrivialDestructorBody(ASTContext &context,
+                                          const FieldDecl *field) {
+  QualType fieldBaseElementType = context.getBaseElementType(field->getType());
+
+  auto *fieldClassDecl = fieldBaseElementType->getAsCXXRecordDecl();
+  if (!fieldClassDecl)
+    return true;
+
+  // The destructor for an implicit anonymous union member is never invoked.
+  if (fieldClassDecl->isUnion() && fieldClassDecl->isAnonymousStructOrUnion())
+    return true;
+
+  return hasTrivialDestructorBody(context, fieldClassDecl, fieldClassDecl);
+}
+
+/// Check whether we need to initialize any vtable pointers before calling
+/// this destructor.
+static bool canSkipVTablePointerInitialization(CIRGenFunction &cgf,
+                                               const CXXDestructorDecl *dtor) {
+  const CXXRecordDecl *classDecl = dtor->getParent();
+  if (!classDecl->isDynamicClass())
+    return true;
+
+  // For a final class, the vtable pointer is known to already point to the
+  // class's vtable.
+  if (classDecl->isEffectivelyFinal())
+    return true;
+
+  if (!dtor->hasTrivialBody())
+    return false;
+
+  // Check the fields.
+  for (const auto *field : classDecl->fields())
+    if (!fieldHasTrivialDestructorBody(cgf.getContext(), field))
+      return false;
+
+  return true;
+}
+
 /// Emits the body of the current destructor.
 void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(curGD.getDecl());
@@ -972,10 +1052,20 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
+    bool needsVTableInit = !canSkipVTablePointerInitialization(*this, dtor);
+    // Launder 'this' if necessary.
+    if (needsVTableInit && cgm.getCodeGenOpts().StrictVTablePointers &&
+        cgm.getCodeGenOpts().OptimizationLevel > 0) {
+      cxxThisValue = cir::LaunderOp::create(
+          builder, getLoc(dtor->getBeginLoc()), loadCXXThis());
+    }
+
     // Enter the cleanup scopes for fields and non-virtual bases.
     enterDtorCleanups(dtor, Dtor_Base);
 
-    assert(!cir::MissingFeatures::vtableInitialization());
+    // Initialize the vtable pointers before entering the body.
+    if (needsVTableInit)
+      initializeVTablePointers(getLoc(dtor->getBeginLoc()), dtor->getParent());
 
     if (isTryBody) {
       cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
