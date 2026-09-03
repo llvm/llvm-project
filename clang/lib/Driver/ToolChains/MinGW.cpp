@@ -61,8 +61,6 @@ void tools::MinGW::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
   bool NoLibc = Args.hasArg(options::OPT_nolibc);
-  if (Args.hasArg(options::OPT_mthreads))
-    CmdArgs.push_back("-lmingwthrd");
   if (!NoLibc)
     CmdArgs.push_back("-lmingw32");
 
