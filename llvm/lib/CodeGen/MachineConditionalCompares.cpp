@@ -15,9 +15,8 @@
 // if-conversion pass. The transform itself is target-independent; the
 // recognition of a convertible compare and the emission of the conditional
 // compare are delegated to the target via TargetInstrInfo hooks
-// (getConditionalCompareFlagReg / canConvertToCCMP / convertToCCMP /
-// getCCMPCodeSizeDelta) and the pass is gated and tuned per target via
-// TargetSubtargetInfo (enableCCMPFormation / getCCmpConvHeuristics).
+// (getConditionalCompareFlagReg / canConvertToCCMP / convertToCCMP) and the
+// pass is gated per target via TargetSubtargetInfo::enableCCMPFormation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -202,10 +201,8 @@ public:
   void convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks);
 
   /// Return the expected code size delta if the conversion into a conditional
-  /// compare is performed.
-  int expectedCodeSizeDelta() const {
-    return TII->getCCMPCodeSizeDelta(Info, HeadCond);
-  }
+  /// compare is performed, as computed by canConvertToCCMP().
+  int expectedCodeSizeDelta() const { return Info.CodeSizeDelta; }
 };
 } // end anonymous namespace
 
@@ -521,7 +518,6 @@ class MachineConditionalCompares {
   MachineTraceMetrics *Traces = nullptr;
   MachineTraceMetrics::Ensemble *MinInstr = nullptr;
   MachineOptimizationRemarkEmitter *ORE = nullptr;
-  TargetSubtargetInfo::CCmpConvHeuristics Heur;
   bool MinSize = false;
   SSACCmpConv CmpConv;
 
@@ -588,8 +584,10 @@ bool MachineConditionalCompares::shouldConvert() {
   // Head dominates CmpBB, so it is always included in its trace.
   MachineTraceMetrics::Trace Trace = MinInstr->getTrace(CmpConv.CmpBB);
 
-  // If code size is the main concern.
-  if (Heur.UseCodeSizeDeltaOnMinSize && MinSize) {
+  // If code size is the main concern, decide by the code-size delta reported
+  // by the target. Targets that do not model it report 0, which falls through
+  // to the regular heuristics below.
+  if (MinSize) {
     int CodeSizeDelta = CmpConv.expectedCodeSizeDelta();
     LLVM_DEBUG(dbgs() << "Code size delta:  " << CodeSizeDelta << '\n');
     // If we are minimizing the code size, do the conversion whatever the cost
@@ -667,7 +665,6 @@ bool MachineConditionalCompares::run(MachineFunction &MF) {
   STI = &MF.getSubtarget();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();
-  Heur = STI->getCCmpConvHeuristics();
 
   bool Changed = false;
   CmpConv.init(MF, MBPI, ORE);

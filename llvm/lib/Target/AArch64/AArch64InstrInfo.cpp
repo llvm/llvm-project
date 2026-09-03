@@ -1511,6 +1511,38 @@ bool AArch64InstrInfo::canConvertToCCMP(
   Info.CmpMI = CmpMI;
   Info.TargetData[HeadCCIdx] = HeadCmpBBCC;
   Info.TargetData[TailCCIdx] = CmpBBTailCC;
+
+  // Estimate the code-size delta of the conversion for the MinSize heuristic.
+  int Delta = 0;
+  // If the Head terminator is one of the cbz / cbnz branches with a built-in
+  // compare, we need to insert an explicit compare instruction in its place
+  // (see convertToCCMP), so the conversion grows the code by one instruction.
+  if (HeadCond[0].getImm() == -1) {
+    switch (HeadCond[1].getImm()) {
+    case AArch64::CBZW:
+    case AArch64::CBNZW:
+    case AArch64::CBZX:
+    case AArch64::CBNZX:
+      Delta = 1;
+      break;
+    default:
+      llvm_unreachable("Cannot convert Head branch");
+    }
+  }
+  // If CmpMI is one of the cbz / cbnz branches with a built-in compare, it is
+  // turned into a compare instruction in Head, so no instruction is saved.
+  // Otherwise, the CmpBB branch is removed, saving one instruction.
+  switch (CmpMI->getOpcode()) {
+  default:
+    --Delta;
+    break;
+  case AArch64::CBZW:
+  case AArch64::CBNZW:
+  case AArch64::CBZX:
+  case AArch64::CBNZX:
+    break;
+  }
+  Info.CodeSizeDelta = Delta;
   return true;
 }
 
@@ -1646,42 +1678,6 @@ MachineInstr *AArch64InstrInfo::convertToCCMP(
         .add(CmpMI->getOperand(1)); // Branch target.
   }
   return MIB;
-}
-
-int AArch64InstrInfo::getCCMPCodeSizeDelta(
-    const CCmpConvInfo &Info, ArrayRef<MachineOperand> HeadCond) const {
-  int delta = 0;
-  // If the Head terminator was one of the cbz / tbz branches with built-in
-  // compare, we need to insert an explicit compare instruction in its place
-  // plus a branch instruction.
-  if (HeadCond[0].getImm() == -1) {
-    switch (HeadCond[1].getImm()) {
-    case AArch64::CBZW:
-    case AArch64::CBNZW:
-    case AArch64::CBZX:
-    case AArch64::CBNZX:
-      // Therefore delta += 1
-      delta = 1;
-      break;
-    default:
-      llvm_unreachable("Cannot convert Head branch");
-    }
-  }
-  // If the Cmp terminator was one of the cbz / tbz branches with
-  // built-in compare, it will be turned into a compare instruction
-  // into Head, but we do not save any instruction.
-  // Otherwise, we save the branch instruction.
-  switch (Info.CmpMI->getOpcode()) {
-  default:
-    --delta;
-    break;
-  case AArch64::CBZW:
-  case AArch64::CBNZW:
-  case AArch64::CBZX:
-  case AArch64::CBNZX:
-    break;
-  }
-  return delta;
 }
 
 // Return true if Imm can be loaded into a register by a "cheap" sequence of

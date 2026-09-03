@@ -442,8 +442,6 @@ public:
                               ArrayRef<MachineOperand> HeadCond,
                               const CCmpConvInfo &Info,
                               MachineRegisterInfo &MRI) const override;
-  int getCCMPCodeSizeDelta(const CCmpConvInfo &Info,
-                           ArrayRef<MachineOperand> HeadCond) const override;
 
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;

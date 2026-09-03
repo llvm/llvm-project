@@ -392,8 +392,6 @@ public:
 
   bool enableCCMPFormation() const override;
 
-  CCmpConvHeuristics getCCmpConvHeuristics() const override;
-
   std::unique_ptr<PBQPRAConstraint> getCustomPBQPConstraints() const override;
 
   bool isCallingConvWin64(CallingConv::ID CC, bool IsVarArg) const {
