@@ -16,6 +16,7 @@
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 namespace AMDGPUMI {
@@ -71,6 +72,25 @@ public:
     const AMDGPU::VLdStIdxOpcodeInfo *Info =
         AMDGPU::getVLdStIdxOpcodeInfoByOpcode(Opc);
     return Info && Info->IsStore;
+  }
+};
+
+// Wrapper for the markers bounding the lifetime of an object in the VGPR "as
+// memory" (address space 13) address space. The object is named by the memory
+// operand, which is the only thing these carry until
+// AMDGPUPrivateObjectVGPRs gives them the registers it occupies.
+class VGPRLifetimeInst : public MachineInstr {
+public:
+  bool isStart() const { return getOpcode() == AMDGPU::VGPR_LIFETIME_START; }
+
+  const AllocaInst &getObject() const {
+    return *cast<AllocaInst>((*memoperands_begin())->getValue());
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    unsigned Opc = MI->getOpcode();
+    return Opc == AMDGPU::VGPR_LIFETIME_START ||
+           Opc == AMDGPU::VGPR_LIFETIME_END;
   }
 };
 

@@ -232,6 +232,9 @@ extern char &AMDGPUMarkLastScratchLoadID;
 void initializeAMDGPULowerIdxOpsLegacyPass(PassRegistry &);
 extern char &AMDGPULowerIdxOpsID;
 
+void initializeAMDGPUPrivateObjectVGPRsLegacyPass(PassRegistry &);
+extern char &AMDGPUPrivateObjectVGPRsID;
+
 void initializeSILowerSGPRSpillsLegacyPass(PassRegistry &);
 extern char &SILowerSGPRSpillsLegacyID;
 
@@ -272,13 +275,24 @@ void initializeAMDGPUPreloadKernelArgumentsLegacyPass(PassRegistry &);
 extern char &AMDGPUPreloadKernelArgumentsLegacyID;
 
 // Passes common to R600 and SI
-FunctionPass *createAMDGPUPromoteAlloca();
+FunctionPass *createAMDGPUPromoteAlloca(CodeGenOptLevel OptLevel);
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaID;
 
 struct AMDGPUPromoteAllocaPass
     : OptionalPassInfoMixin<AMDGPUPromoteAllocaPass> {
   AMDGPUPromoteAllocaPass(TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  TargetMachine &TM;
+};
+
+/// Only allocates objects in the VGPR ("as memory") address space, which is
+/// required for functionality; used in place of AMDGPUPromoteAllocaPass when
+/// optimizations are disabled.
+struct AMDGPUVGPRAllocatePass : OptionalPassInfoMixin<AMDGPUVGPRAllocatePass> {
+  AMDGPUVGPRAllocatePass(TargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
@@ -448,6 +462,13 @@ public:
 
 class AMDGPULowerIdxOpsPass
     : public RequiredPassInfoMixin<AMDGPULowerIdxOpsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AMDGPUPrivateObjectVGPRsPass
+    : public RequiredPassInfoMixin<AMDGPUPrivateObjectVGPRsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
