@@ -192,7 +192,7 @@ mlir::Type LowerItaniumCXXABI::lowerMethodType(
   // function pointers. Let's follow this approach.
   mlir::Type members[] = {ptrdiffCIRTy, ptrdiffCIRTy};
   return cir::StructType::get(type.getContext(), members, /*packed=*/false,
-                              /*padded=*/false, /*is_class=*/false,
+                              /*is_class=*/false,
                               cir::RecordType::getAllDataKinds(members));
 }
 

@@ -30,7 +30,7 @@ func.func @test_parallel_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf32>>) {
         %idx = fir.convert %iv : (i32) -> index
         memref.store %cst, %cvt_ref[%idx] : memref<10xf32>
         acc.yield
-      } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+      } inclusiveUpperbound(array<i1: true>) independent
       acc.yield
     }
   }
@@ -63,7 +63,7 @@ func.func @test_kernels_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf32>>) {
         %idx = fir.convert %iv : (i32) -> index
         memref.store %cst, %cvt_ref[%idx] : memref<10xf32>
         acc.yield
-      } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+      } inclusiveUpperbound(array<i1: true>) independent
       acc.terminator
     }
   }
@@ -96,7 +96,7 @@ func.func @test_serial_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf32>>) {
         %idx = fir.convert %iv : (i32) -> index
         memref.store %cst, %cvt_ref[%idx] : memref<10xf32>
         acc.yield
-      } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+      } inclusiveUpperbound(array<i1: true>) independent
       acc.yield
     }
   }
@@ -138,7 +138,7 @@ func.func @test_parallel_transitive_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf
         %ref = fir.convert %addr : (i64) -> !fir.ref<f32>
         fir.store %cst to %ref : !fir.ref<f32>
         acc.yield
-      } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+      } inclusiveUpperbound(array<i1: true>) independent
       acc.yield
     }
   }

@@ -143,6 +143,7 @@ libc_test(
     name = "realpath_test",
     srcs = ["realpath_test.cpp"],
     deps = [
+        "//libc:__support_c_string",
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
         "//libc:__support_cpp_utility",
@@ -204,22 +205,12 @@ libc_test(
     ],
 )
 
-libc_test_library(
-    name = "strfrom_test_helper",
-    hdrs = ["StrfromTest.h"],
-    deps = [
-        "//libc:__support_cpp_type_traits",
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_macros_properties_architectures",
-        "//libc/test/UnitTest:LibcUnitTest",
-    ],
-)
-
 libc_test(
     name = "strfromf_test",
     srcs = ["strfromf_test.cpp"],
     deps = [
-        ":strfrom_test_helper",
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_macros_properties_architectures",
         "//libc:strfromf",
     ],
 )
@@ -228,7 +219,8 @@ libc_test(
     name = "strfromd_test",
     srcs = ["strfromd_test.cpp"],
     deps = [
-        ":strfrom_test_helper",
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_macros_properties_architectures",
         "//libc:strfromd",
     ],
 )
@@ -237,7 +229,8 @@ libc_test(
     name = "strfroml_test",
     srcs = ["strfroml_test.cpp"],
     deps = [
-        ":strfrom_test_helper",
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_macros_properties_architectures",
         "//libc:strfroml",
     ],
 )

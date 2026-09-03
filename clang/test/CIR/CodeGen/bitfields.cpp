@@ -15,7 +15,7 @@ typedef struct {
   int e : 15;
   unsigned f; // type other than int above, not a bitfield
 } S;
-// CIR-DAG:  !rec_S = !cir.struct<"S" {data !u64i, data !u16i, data !u32i}>
+// CIR-DAG:  !rec_S = !cir.struct<"S" {bitfield !u64i, bitfield !u16i, data !u32i}>
 // CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u64i, size = 17, offset = 32, is_signed = true>
 // LLVM-DAG: %struct.S = type { i64, i16, i32 }
 // OGCG-DAG: %struct.S = type { i64, i16, i32 }
@@ -25,14 +25,14 @@ typedef struct {
   unsigned b;
 } T;
 
-// CIR-DAG:  !rec_T = !cir.struct<"T" {data !u8i, data !u32i}>
+// CIR-DAG:  !rec_T = !cir.struct<"T" {bitfield !u8i, data !u32i}>
 // LLVM-DAG: %struct.T = type { i8, i32 }
 // OGCG-DAG: %struct.T = type { i8, i32 }
 
 union U { int x : 3; };
 const U u = {5};
 // CIR-DAG: cir.global "private" {{.*}}@_ZL1u = #cir.const_record<{#cir.int<5> : !u8i}> : !rec_U
-// LLVM-DAG: @_ZL1u = internal constant %union.U { i8 5, [3 x i8] undef }
+// LLVM-DAG: @_ZL1u = internal constant %union.U { i8 5, [3 x i8] zeroinitializer }
 // OGCG-DAG: @_ZL1u = internal constant %union.U { i8 5, [3 x i8] undef }
 auto use() {
   return u;

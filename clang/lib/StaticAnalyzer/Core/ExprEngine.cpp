@@ -1138,8 +1138,7 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
     NewState = processLoopEnd(S, NewState);
 
   LoopExit PP(S, Pred->getStackFrame());
-  ExplodedNode *N = Engine.makeNode(PP, NewState, Pred);
-  if (N && !N->isSink())
+  if (ExplodedNode *N = Engine.makeNode(PP, NewState, Pred))
     Engine.enqueueStmtNode(N, getCurrBlock(), currStmtIdx);
 }
 
@@ -1153,7 +1152,7 @@ void ExprEngine::ProcessLifetimeEnd(const Stmt *S, const VarDecl *D,
 
   ExplodedNodeSet Dst;
   getCheckerManager().runCheckersForLifetimeEnd(Dst, Src, D, *this);
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
@@ -1566,10 +1565,9 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   }
 
   ExplodedNode *CleanPred = Engine.makePostStmtNode(BTE, State, Pred);
-  if (!CleanPred || CleanPred->isSink()) {
+  if (!CleanPred) {
     // FIXME: We can get a null node here due to temporaries being
     // bound to default parameters.
-    // Sink check is just PosteriorlyOverconstrained paranoia.
     CleanPred = Pred;
   }
 
@@ -1701,6 +1699,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ExpressionTraitExprClass:
     case Stmt::UnresolvedLookupExprClass:
     case Stmt::UnresolvedMemberExprClass:
+    case Stmt::DependentTemplateIdExprClass:
     case Stmt::RecoveryExprClass:
     case Stmt::CXXNoexceptExprClass:
     case Stmt::PackExpansionExprClass:
@@ -2133,12 +2132,12 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       ExplodedNodeSet PreVisit;
       const auto *CDE = cast<CXXDeleteExpr>(S);
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
+
       ExplodedNodeSet PostVisit;
-      getCheckerManager().runCheckersForPostStmt(PostVisit, PreVisit, S, *this);
+      for (const auto i : PreVisit)
+        VisitCXXDeleteExpr(CDE, i, PostVisit);
 
-      for (const auto i : PostVisit)
-        VisitCXXDeleteExpr(CDE, i, Dst);
-
+      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
       break;
     }
       // FIXME: ChooseExpr is really a constant.  We need to fix
@@ -2378,6 +2377,9 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
   ExplodedNode *NewNode = G.getNode(NewNodeLoc, NewNodeState, false, &IsNew);
   // We cached out at this point. Caching out is common due to us backtracking
   // from the inlined function, which might spawn several paths.
+  // NOTE: We must return before the `addPredecessor()` call, otherwise the
+  // node vectors `NewNode->Preds` and `BeforeProcessingCall->Succs` would
+  // end up containing multiple copies of `BeforeProcessingCall` / `NewNode`.
   if (!IsNew)
     return true;
 
@@ -2415,14 +2417,6 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return Engine.makeNode(BE, State, Pred);
 
-    if (State != Pred->getState()) {
-      // TODO: This intermediate transition is very likely to be irrelevant,
-      // remove it in a follow-up change.
-      Pred = Engine.makeNode(BE, State, Pred);
-      if (!Pred)
-        return nullptr;
-    }
-
     // FIXME:
     // We cannot use the CFG element from the via `ExprEngine::getCFGElementRef`
     // since we are currently at the block entrance and the current reference
@@ -2439,15 +2433,6 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     return Engine.makeNode(BE, State, Pred);
 
   // ... otherwise, discard this execution path.
-
-  if (State != Pred->getState()) {
-    // TODO: This intermediate transition is very likely to be irrelevant,
-    // remove it in a follow-up change.
-    Pred = Engine.makeNode(BE, State, Pred);
-    if (!Pred)
-      return nullptr;
-  }
-
   static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
   const ExplodedNode *Sink =
       Engine.makeNode(BE.withTag(&Tag), State, Pred, /*MarkAsSink=*/true);

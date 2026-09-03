@@ -69,6 +69,11 @@ void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
 void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
                                            const Stmt *S, ExplodedNode *N,
                                            CheckerContext &C) const {
+  ProgramStateRef ReportedState =
+      lifetime_modeling::markAsReported(N->getState(), Region);
+  if (!ReportedState)
+    return;
+
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
       (llvm::Twine("Use of ") + lifetime_modeling::getRegionName(Region) +
@@ -79,6 +84,7 @@ void DanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
     if (const Expr *DerefExpr = bugreporter::getDerefExpr(S))
       bugreporter::trackExpressionValue(N, DerefExpr, *BR);
   }
+  C.addTransition(ReportedState, N);
   C.emitReport(std::move(BR));
 }
 

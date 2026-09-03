@@ -8,22 +8,10 @@
 
 #include "NativeProcessLinux.h"
 
-#include <cerrno>
-#include <cstdint>
-#include <cstring>
-#include <unistd.h>
-
-#include <fstream>
-#include <mutex>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-
-#include "NativeThreadLinux.h"
+#include "Plugins/Process/Linux/NativeThreadLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/LinuxProcMaps.h"
-#include "Procfs.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
@@ -32,7 +20,6 @@
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/linux/Host.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Uio.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -49,12 +36,21 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
+#include <cerrno>
+#include <cstdint>
+#include <cstring>
+#include <optional>
+
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
 #include <linux/unistd.h>
+#include <sys/ptrace.h>
 #include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #ifdef __aarch64__
 #include <asm/hwcap.h>
@@ -68,6 +64,29 @@
 
 #ifndef HWCAP2_MTE
 #define HWCAP2_MTE (1 << 18)
+#endif
+
+#ifndef PTRACE_SETREGS
+#define PTRACE_SETREGS 13
+#endif
+
+#ifndef PTRACE_SETFPREGS
+#define PTRACE_SETFPREGS 15
+#endif
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_SETREGSET
+#define PTRACE_SETREGSET 0x4205
+#endif
+
+// glibc declares ptrace taking enum __ptrace_request (which requires a cast in
+// C++), whereas bionic and musl declare it taking int and do not define
+// __ptrace_request.
+#ifndef __GLIBC__
+typedef int __ptrace_request;
 #endif
 
 using namespace lldb;
@@ -138,7 +157,8 @@ static void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
 
 static void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
   uint8_t *ptr = (uint8_t *)bytes;
-  const uint32_t loop_count = std::min<uint32_t>(DEBUG_PTRACE_MAXBYTES, count);
+  constexpr uint32_t kDebugPTraceMaxBytes = 20;
+  const uint32_t loop_count = std::min<uint32_t>(kDebugPTraceMaxBytes, count);
   for (uint32_t i = 0; i < loop_count; i++) {
     s.Printf("[%x]", *ptr);
     ptr++;
@@ -383,7 +403,10 @@ void NativeProcessLinux::Manager::SigchldHandler() {
     // vice-versa. This means that if the child event arrives first, it may not
     // be handled by any process (because it doesn't know the thread belongs to
     // it).
-    bool handled = llvm::any_of(m_processes, [&](NativeProcessLinux *process) {
+    // The loop below may modify m_processes (create or delete entries), so
+    // operate on a temporary copy.
+    auto processes = llvm::to_vector(m_processes);
+    bool handled = llvm::any_of(processes, [&](NativeProcessLinux *process) {
       return process->TryHandleWaitStatus(pid, status);
     });
     if (!handled) {
@@ -1347,8 +1370,9 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
     return std::move(Err);
   }
 
-  llvm::scope_exit restore_mem(
-      [&] { WriteMemory(exe_addr, memory.data(), memory.size(), bytes_read); });
+  llvm::scope_exit restore_mem([&] {
+    DoWriteMemory(exe_addr, memory.data(), memory.size(), bytes_read);
+  });
 
   if (llvm::Error Err = reg_ctx.SetPC(exe_addr).ToError())
     return std::move(Err);
@@ -1361,8 +1385,8 @@ NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
       return std::move(Err);
     }
   }
-  if (llvm::Error Err = WriteMemory(exe_addr, syscall_data.Insn.data(),
-                                    syscall_data.Insn.size(), bytes_read)
+  if (llvm::Error Err = DoWriteMemory(exe_addr, syscall_data.Insn.data(),
+                                      syscall_data.Insn.size(), bytes_read)
                             .ToError())
     return std::move(Err);
 
@@ -1614,8 +1638,10 @@ NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   }
 }
 
-Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+Status NativeProcessLinux::ReadMemory(const ProcessAddress &process_addr,
+                                      void *buf, size_t size,
                                       size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   Log *log = GetLog(POSIXLog::Memory);
   LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
 
@@ -1665,8 +1691,8 @@ Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   return Status();
 }
 
-Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
-                                       size_t size, size_t &bytes_written) {
+Status NativeProcessLinux::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                         size_t size, size_t &bytes_written) {
   const unsigned char *src = static_cast<const unsigned char *>(buf);
   size_t remainder;
   Status error;
@@ -1697,7 +1723,7 @@ Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
       memcpy(buff, src, remainder);
 
       size_t bytes_written_rec;
-      error = WriteMemory(addr, buff, k_ptrace_word_size, bytes_written_rec);
+      error = DoWriteMemory(addr, buff, k_ptrace_word_size, bytes_written_rec);
       if (error.Fail())
         return error;
 

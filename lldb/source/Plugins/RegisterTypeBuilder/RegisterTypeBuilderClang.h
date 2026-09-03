@@ -33,15 +33,37 @@ public:
   CompilerType GetRegisterType(const RegisterInfo &reg_info) override;
 
 private:
-  CompilerType BuildEnumType(const RegisterTypeEnum &enum_type_info,
+  CompilerType BuildBuiltinType(const RegisterTypeBuiltin *builtin_type,
+                                uint32_t expected_byte_size,
+                                lldb::TypeSystemClangSP type_system);
+
+  CompilerType BuildEnumType(const RegisterTypeEnum *enum_type_info,
                              uint32_t register_byte_size,
                              lldb::TypeSystemClangSP type_system);
 
-  CompilerType BuildFlagsType(const RegisterTypeFlags &flags_info,
+  CompilerType BuildFlagsType(const RegisterTypeFlags *flags_info,
                               uint32_t register_byte_size,
                               lldb::TypeSystemClangSP type_system);
 
   Target &m_target;
+
+  // A cache of previously created types. We do not cache by element ID because
+  // IDs are not unique across xml <feature> elements and this class does not
+  // know anything about features.
+  //
+  // The key contains the process-wide UID of the type and the size of the
+  // register we made it for. Some types (enums for example) use the register
+  // size in their type and must be rebuilt for a different size.
+  //
+  // 8 is chosen because types are only made when needed, and most lldb commands
+  // do not need them.
+  llvm::SmallDenseMap<std::pair<uint64_t, uint32_t>, CompilerType, 8>
+      m_type_cache;
+  std::weak_ptr<TypeSystemClang> m_cached_type_system;
+
+  std::optional<CompilerType>
+  GetExistingCompilerType(const RegisterType *register_type,
+                          uint32_t register_byte_size);
 };
 } // namespace lldb_private
 

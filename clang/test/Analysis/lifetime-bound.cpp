@@ -1,6 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
 // RUN:   -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
-
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
+// RUN:   -analyzer-output=text %s 2>&1 | FileCheck --strict-whitespace %s
 struct A {};
 
 struct Pair {
@@ -409,4 +410,71 @@ void no_dangling_by_value_argument() {
   // The BoundToSelf temporary's frame is not live on the stack when `self()` returns.
   // The returned reference does not dangle.
   takes_by_value(BoundToSelf());
+}
+
+int multi_params_annotated(int *p_one [[clang::lifetimebound]], int *p_two [[clang::lifetimebound]]);
+
+int test_multi_param_highlight() {
+  int local_one = 1, local_two = 2;
+  // expected-note@-1 {{'local_one' initialized here}}
+  // expected-note@-2 {{'local_two' initialized here}}
+  return multi_params_annotated(&local_one, &local_two);
+  // expected-warning@-1 {{address of stack memory associated with local variable 'local_one' returned}}
+  // expected-warning@-2 {{address of stack memory associated with local variable 'local_two' returned}}
+  // expected-warning@-3 {{Returning value bound to 'local_one' that will go out of scope}}
+  // expected-note@-4    {{Value's lifetime bound to the lifetime of 'local_one' here}}
+  // expected-note@-5    {{Lifetime of 'local_one' ended here}}
+  // expected-warning@-6 {{Returning value bound to 'local_two' that will go out of scope}}
+  // expected-note@-7    {{Value's lifetime bound to the lifetime of 'local_two' here}}
+  // expected-note@-8    {{Lifetime of 'local_two' ended here}}
+
+  // CHECK: note: Value's lifetime bound to the lifetime of 'local_one' here
+  // CHECK: return multi_params_annotated(&local_one, &local_two);
+  // CHECK-NEXT:{{\|                                 \^~~~~~~~~~$}}
+  // CHECK: note: Value's lifetime bound to the lifetime of 'local_two' here
+  // CHECK: return multi_params_annotated(&local_one, &local_two);
+  // CHECK-NEXT:{{\|                                             \^~~~~~~~~~$}}
+}
+
+int global_var;
+int test_correct_param_highlight() {
+  int local_n = 5;
+  // expected-note@-1 {{'local_n' initialized here}}
+  return multi_params_annotated(&global_var, &local_n);
+  // expected-warning@-1 {{address of stack memory associated with local variable 'local_n' returned}}
+  // expected-warning@-2 {{Returning value bound to 'local_n' that will go out of scope}}
+  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'local_n' here}}
+  // expected-note@-4    {{Lifetime of 'local_n' ended here}}
+
+  // CHECK: note: Value's lifetime bound to the lifetime of 'local_n' here
+  // CHECK: return multi_params_annotated(&global_var, &local_n);
+  // CHECK-NEXT:{{\|                                              \^~~~~~~~$}}
+}
+
+int test_multi_local_bound_to_param_highlight() {
+  int j = 4, k = 5;
+  // expected-note@-1 {{'j' initialized here}}
+  // expected-note@-2 {{'k' initialized here}}
+  return multi_params_annotated(&j, &k);
+  // expected-warning@-1 {{address of stack memory associated with local variable 'j' returned}}
+  // expected-warning@-2 {{address of stack memory associated with local variable 'k' returned}}
+  // expected-warning@-3 {{Returning value bound to 'j' that will go out of scope}}
+  // expected-note@-4    {{Value's lifetime bound to the lifetime of 'j' here}}
+  // expected-note@-5    {{Lifetime of 'j' ended here}}
+  // expected-warning@-6 {{Returning value bound to 'k' that will go out of scope}}
+  // expected-note@-7    {{Value's lifetime bound to the lifetime of 'k' here}}
+  // expected-note@-8    {{Lifetime of 'k' ended here}}
+
+  // CHECK: note: Value's lifetime bound to the lifetime of 'j' here
+  // CHECK-NEXT: int j = 4, k = 5;
+  // CHECK-NEXT:{{\|       ~$}}
+  // CHECK: note: Lifetime of 'j' ended here
+  // CHECK-NEXT: int j = 4, k = 5;
+  // CHECK-NEXT:{{\|       ~$}}
+  // CHECK: note: Value's lifetime bound to the lifetime of 'k' here
+  // CHECK-NEXT: int j = 4, k = 5;
+  // CHECK-NEXT:{{\|              ~$}}
+  // CHECK: note: Lifetime of 'k' ended here
+  // CHECK-NEXT: int j = 4, k = 5;
+  // CHECK-NEXT:{{\|              ~$}}
 }

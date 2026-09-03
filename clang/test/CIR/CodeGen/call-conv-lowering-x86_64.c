@@ -264,6 +264,83 @@ _Complex long long complex_longlong(_Complex long long c) { return c; }
 // LLVM-CIR: define dso_local { i64, i64 } @complex_longlong(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM-OGCG: define dso_local { i64, i64 } @complex_longlong(i64 noundef %{{[^,)]+}}, i64 noundef %{{[^,)]+}})
 
+// A 128-bit vector fills one xmm register and passes in its own type.
+typedef float v4f __attribute__((vector_size(16)));
+v4f vector128(v4f v) { return v; }
+
+// CIR: cir.func {{.*}}@vector128(%arg0: !cir.vector<4 x !cir.float> {{.*}}) -> !cir.vector<4 x !cir.float>
+// LLVM: define dso_local <4 x float> @vector128(<4 x float> noundef %{{[^,)]+}})
+
+// The classifier does not look inside a vector when picking the type for an SSE
+// eightbyte, so a 64-bit vector coerces to double rather than to a two-element
+// vector.
+typedef float v2f __attribute__((vector_size(8)));
+v2f vector64(v2f v) { return v; }
+
+// CIR: cir.func {{.*}}@vector64(%arg0: !cir.double {{.*}}) -> !cir.double
+// LLVM: define dso_local double @vector64(double noundef %{{[^,)]+}})
+
+// A vector at or below 32 bits classifies INTEGER, so it passes as the integer
+// covering it rather than in an xmm register.
+typedef int v1i __attribute__((vector_size(4)));
+v1i vector32(v1i v) { return v; }
+
+// CIR: cir.func {{.*}}@vector32(%arg0: !u32i {{.*}}) -> !u32i
+// LLVM: define dso_local i32 @vector32(i32 noundef %{{[^,)]+}})
+
+// An eightbyte holding a 16-bit float vector coerces to double, the same as
+// any other all-float eightbyte, but at 128 bits the format is preserved.
+typedef _Float16 v4h __attribute__((ext_vector_type(4)));
+typedef _Float16 v8h __attribute__((ext_vector_type(8)));
+void take_v4h(v4h v) { (void)v; }
+void take_v8h(v8h v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v4h(%arg0: !cir.double{{.*}})
+// CIR: cir.func {{.*}}@take_v8h(%arg0: !cir.vector<8 x !cir.f16>{{.*}})
+// LLVM: define dso_local void @take_v4h(double noundef %{{[^,)]+}})
+// LLVM: define dso_local void @take_v8h(<8 x half> noundef %{{[^,)]+}})
+
+typedef __bf16 v4bf __attribute__((ext_vector_type(4)));
+typedef __bf16 v8bf __attribute__((ext_vector_type(8)));
+void take_v4bf(v4bf v) { (void)v; }
+void take_v8bf(v8bf v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v4bf(%arg0: !cir.double{{.*}})
+// CIR: cir.func {{.*}}@take_v8bf(%arg0: !cir.vector<8 x !cir.bf16>{{.*}})
+// LLVM: define dso_local void @take_v4bf(double noundef %{{[^,)]+}})
+// LLVM: define dso_local void @take_v8bf(<8 x bfloat> noundef %{{[^,)]+}})
+
+// An integer element narrower than an eightbyte does not change the rule: the
+// eightbyte is what gets classified, and here it is SSE.
+typedef char v8c __attribute__((ext_vector_type(8)));
+void take_v8c(v8c v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v8c(%arg0: !cir.double{{.*}})
+// LLVM: define dso_local void @take_v8c(double noundef %{{[^,)]+}})
+
+// A vector of a 64-bit element keeps its own type, and a one-element vector of
+// __int128 coerces to the pair of eightbytes it occupies.
+typedef double v2d __attribute__((vector_size(16)));
+void take_v2d(v2d v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v2d(%arg0: !cir.vector<2 x !cir.double>{{.*}})
+// LLVM: define dso_local void @take_v2d(<2 x double> noundef %{{[^,)]+}})
+
+typedef __int128 v1i128 __attribute__((vector_size(16)));
+void take_v1i128(v1i128 v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v1i128(%arg0: !cir.vector<2 x !u64i>{{.*}})
+// LLVM: define dso_local void @take_v1i128(<2 x i64> noundef %{{[^,)]+}})
+
+// gcc passes a one-element vector of a 64-bit float in memory.  Its byval
+// alignment is the greater of the vector's own alignment and 8.
+typedef double v1d __attribute__((vector_size(8)));
+void take_v1d(v1d v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v1d(%arg0: !cir.ptr<!cir.vector<1 x !cir.double>> {{.*}}llvm.align = 8 : i64{{.*}}llvm.byval = !cir.vector<1 x !cir.double>{{.*}})
+// LLVM-CIR: define dso_local void @take_v1d(ptr noalias noundef byval(<1 x double>) align 8 %{{[^,)]+}})
+// LLVM-OGCG: define dso_local void @take_v1d(ptr noundef byval(<1 x double>) align 8 %{{[^,)]+}})
+
 // A _Complex reaches the classifier as a record member too, not just on its
 // own, so these cover the field walk rather than the top-level mapping.
 typedef struct { _Complex float c; } WrapComplexFloat;

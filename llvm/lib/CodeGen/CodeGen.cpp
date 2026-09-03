@@ -29,7 +29,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBreakFalseDepsLegacyPass(Registry);
   initializeCFGuardLongjmpPass(Registry);
   initializeCFIFixupLegacyPass(Registry);
-  initializeCFIInstrInserterPass(Registry);
+  initializeCFIInstrInserterLegacyPass(Registry);
   initializeCheckDebugMachineModuleLegacyPass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
   initializeComplexDeinterleavingLegacyPassPass(Registry);
@@ -38,7 +38,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeDetectDeadLanesLegacyPass(Registry);
   initializeDummyCGSCCPassPass(Registry);
   initializeDwarfEHPrepareLegacyPassPass(Registry);
-  initializeEHContGuardTargetsPass(Registry);
+  initializeEHContGuardTargetsLegacyPass(Registry);
   initializeEarlyIfConverterLegacyPass(Registry);
   initializeEarlyIfPredicatorPass(Registry);
   initializeEarlyMachineLICMPass(Registry);
@@ -49,7 +49,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeFEntryInserterLegacyPass(Registry);
   initializeFinalizeISelPass(Registry);
   initializeFixupStatepointCallerSavedLegacyPass(Registry);
-  initializeFuncletLayoutPass(Registry);
+  initializeFuncletLayoutLegacyPass(Registry);
   initializeGCEmptyBasicBlocksLegacyPass(Registry);
   initializeGCMachineCodeAnalysisPass(Registry);
   initializeGCModuleInfoPass(Registry);
@@ -57,7 +57,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeGlobalMergeFuncPassWrapperPass(Registry);
   initializeHardwareLoopsLegacyPass(Registry);
   initializeIfConverterPass(Registry);
-  initializeImplicitNullChecksPass(Registry);
+  initializeImplicitNullChecksLegacyPass(Registry);
   initializeIndirectBrExpandLegacyPassPass(Registry);
   initializeInsertCodePrefetchPass(Registry);
   initializeInitUndefLegacyPass(Registry);
@@ -88,7 +88,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineBranchProbabilityInfoWrapperPassPass(Registry);
   initializeMachineCFGPrinterLegacyPass(Registry);
   initializeMachineCSELegacyPass(Registry);
-  initializeMachineCombinerPass(Registry);
+  initializeMachineCombinerLegacyPass(Registry);
   initializeMachineDominanceFrontierWrapperPassPass(Registry);
   initializeMachineCopyPropagationLegacyPass(Registry);
   initializeMachineCycleInfoPrinterLegacyPass(Registry);
@@ -133,6 +133,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRAGreedyLegacyPass(Registry);
   initializeReachingDefInfoWrapperPassPass(Registry);
   initializeRegAllocFastPass(Registry);
+  initializeRegAllocPBQPPass(Registry);
   initializeRegAllocScoringPass(Registry);
   initializeRegUsageInfoCollectorLegacyPass(Registry);
   initializeRegUsageInfoPropagationLegacyPass(Registry);

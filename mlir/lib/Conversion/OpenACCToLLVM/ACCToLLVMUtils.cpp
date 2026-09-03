@@ -99,8 +99,8 @@ Value acc::getOrCreateGlobalString(Location loc, OpBuilder &builder,
       getOrCreateGlobalStringOp(loc, builder, name, value, module);
 
   Value globalPtr = LLVM::AddressOfOp::create(builder, loc, global);
-  Value cst0 =
-      LLVM::ConstantOp::create(builder, loc, i64Ty, builder.getIndexAttr(0));
+  Value cst0 = LLVM::ConstantOp::create(builder, loc, i64Ty,
+                                        builder.getI64IntegerAttr(0));
   return LLVM::GEPOp::create(builder, loc, ptrTy, global.getType(), globalPtr,
                              ArrayRef<Value>({cst0, cst0}));
 }
@@ -157,8 +157,8 @@ Value acc::createIdent(Location loc, StringRef functionName, OpBuilder &builder,
     builder.setInsertionPointToStart(block);
     Value ident = LLVM::ZeroOp::create(builder, loc, structTy);
     Value sourceBase = LLVM::AddressOfOp::create(builder, loc, sourceGlobal);
-    Value cst0 =
-        LLVM::ConstantOp::create(builder, loc, i64Ty, builder.getIndexAttr(0));
+    Value cst0 = LLVM::ConstantOp::create(builder, loc, i64Ty,
+                                          builder.getI64IntegerAttr(0));
     Value sourcePtr =
         LLVM::GEPOp::create(builder, loc, ptrTy, sourceGlobal.getType(),
                             sourceBase, ArrayRef<Value>({cst0, cst0}));
