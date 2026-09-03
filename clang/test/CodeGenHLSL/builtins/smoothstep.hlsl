@@ -173,3 +173,28 @@ float3 test_smoothstep_float3(float3 Min, float3 Max, float3 X) { return smooths
 // SPVCHECK-NEXT:    ret <4 x float> [[SPV_SMOOTHSTEP_I]]
 //
 float4 test_smoothstep_float4(float4 Min, float4 Max, float4 X) { return smoothstep(Min, Max, X); }
+
+// CHECK-LABEL: define hidden noundef nofpclass(nan inf) <5 x float> @_Z22test_smoothstep_float5Dv5_fS_S_(
+// CHECK-SAME: <5 x float> noundef nofpclass(nan inf) [[MIN:%.*]], <5 x float> noundef nofpclass(nan inf) [[MAX:%.*]], <5 x float> noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <5 x float> [[X]], [[MIN]]
+// CHECK-NEXT:    [[SUB1_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <5 x float> [[MAX]], [[MIN]]
+// CHECK-NEXT:    [[DIV_I:%.*]] = fdiv reassoc nnan ninf nsz arcp afn <5 x float> [[SUB_I]], [[SUB1_I]]
+// CHECK-NEXT:    [[HLSL_SATURATE_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.dx.saturate.v5f32(<5 x float> [[DIV_I]])
+// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <5 x float> [[HLSL_SATURATE_I]], splat (float 2.000000e+00)
+// CHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <5 x float> splat (float 3.000000e+00), [[MUL_I]]
+// CHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn <5 x float> [[HLSL_SATURATE_I]], [[HLSL_SATURATE_I]]
+// CHECK-NEXT:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <5 x float> [[TMP0]], [[SUB2_I]]
+// CHECK-NEXT:    ret <5 x float> [[MUL4_I]]
+//
+// SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) <5 x float> @_Z22test_smoothstep_float5Dv5_fS_S_(
+// SPVCHECK-SAME: <5 x float> noundef nofpclass(nan inf) [[MIN:%.*]], <5 x float> noundef nofpclass(nan inf) [[MAX:%.*]], <5 x float> noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) <5 x float> @llvm.spv.smoothstep.v5f32(<5 x float> nofpclass(nan inf) [[MIN]], <5 x float> nofpclass(nan inf) [[MAX]], <5 x float> nofpclass(nan inf) [[X]])
+// SPVCHECK-NEXT:    ret <5 x float> [[SPV_SMOOTHSTEP_I]]
+//
+vector<float, 5> test_smoothstep_float5(vector<float, 5> Min,
+										vector<float, 5> Max,
+										vector<float, 5> X) {
+	return smoothstep(Min, Max, X);
+}
