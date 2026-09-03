@@ -1709,9 +1709,8 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
     QualType FieldType = D->getType();
     // Only exempt arrays of vectors from pragma pack, not direct vector
     // fields.
-    bool IsVectorArray =
-        !FieldType->isVectorType() &&
-        FieldType->getBaseElementTypeUnsafe()->isVectorType();
+    bool IsVectorArray = !FieldType->isVectorType() &&
+                         FieldType->getBaseElementTypeUnsafe()->isVectorType();
     if (!IsVectorArray) {
       UnpackedFieldAlign =
           std::min(UnpackedFieldAlign, MaxFieldAlignmentInBits);
@@ -2054,8 +2053,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
       QualType BaseQualTy = QualType(BaseTy, 0);
       if (D->getType() != BaseQualTy &&
           TypeContainsVectorsOrFp80(D->getType())) {
-        FieldAlign =
-            std::max(FieldAlign, FieldRecord.getUnadjustedAlignment());
+        FieldAlign = std::max(FieldAlign, FieldRecord.getUnadjustedAlignment());
         PreferredAlign =
             std::max(PreferredAlign, FieldRecord.getUnadjustedAlignment());
       }
@@ -2278,8 +2276,8 @@ bool ItaniumRecordLayoutBuilder::TypeContainsVectorsOrFp80(QualType Ty) {
   return TypeContainsVectorsOrFp80Impl(Ty, InArray);
 }
 
-bool ItaniumRecordLayoutBuilder::TypeContainsVectorsOrFp80Impl(
-    QualType Ty, bool InArray) {
+bool ItaniumRecordLayoutBuilder::TypeContainsVectorsOrFp80Impl(QualType Ty
+                                                               bool InArray) {
   // Direct vector type.
   if (Ty->isVectorType())
     return true;
@@ -2317,8 +2315,8 @@ CharUnits ItaniumRecordLayoutBuilder::GetNaturalAlignment(QualType Ty) {
   return GetNaturalAlignmentImpl(Ty, InArray);
 }
 
-CharUnits ItaniumRecordLayoutBuilder::GetNaturalAlignmentImpl(
-    QualType Ty, bool InArray) {
+CharUnits ItaniumRecordLayoutBuilder::GetNaturalAlignmentImpl(QualType Ty,
+                                                              bool InArray) {
   // Direct vector type - get its natural alignment.
   if (Ty->isVectorType())
     return Context.getTypeAlignInChars(Ty);
@@ -2339,8 +2337,8 @@ CharUnits ItaniumRecordLayoutBuilder::GetNaturalAlignmentImpl(
     CharUnits MaxAlign = CharUnits::One();
     for (const FieldDecl *Field : RD->fields()) {
       if (TypeContainsVectorsOrFp80Impl(Field->getType(), InArray)) {
-        CharUnits FieldAlign = GetNaturalAlignmentImpl(Field->getType(),
-                                                        InArray);
+        CharUnits FieldAlign =
+            GetNaturalAlignmentImpl(Field->getType(), InArray);
         MaxAlign = std::max(MaxAlign, FieldAlign);
       }
     }
@@ -2841,8 +2839,8 @@ bool MicrosoftRecordLayoutBuilder::TypeContainsVectorsOrFp80(QualType Ty) {
   return TypeContainsVectorsOrFp80Impl(Ty, InArray);
 }
 
-bool MicrosoftRecordLayoutBuilder::TypeContainsVectorsOrFp80Impl(
-    QualType Ty, bool InArray) {
+bool MicrosoftRecordLayoutBuilder::TypeContainsVectorsOrFp80Impl(QualType Ty,
+                                                                 bool InArray) {
   // Direct vector type.
   if (Ty->isVectorType())
     return true;
@@ -2880,8 +2878,8 @@ CharUnits MicrosoftRecordLayoutBuilder::GetNaturalAlignment(QualType Ty) {
   return GetNaturalAlignmentImpl(Ty, InArray);
 }
 
-CharUnits MicrosoftRecordLayoutBuilder::GetNaturalAlignmentImpl(
-    QualType Ty, bool InArray) {
+CharUnits MicrosoftRecordLayoutBuilder::GetNaturalAlignmentImpl(QualType Ty,
+                                                                bool InArray) {
   // Direct vector type - get its natural alignment.
   if (Ty->isVectorType())
     return Context.getTypeAlignInChars(Ty);
@@ -2902,8 +2900,8 @@ CharUnits MicrosoftRecordLayoutBuilder::GetNaturalAlignmentImpl(
     CharUnits MaxAlign = CharUnits::One();
     for (const FieldDecl *Field : RD->fields()) {
       if (TypeContainsVectorsOrFp80Impl(Field->getType(), InArray)) {
-        CharUnits FieldAlign = GetNaturalAlignmentImpl(Field->getType(),
-                                                        InArray);
+        CharUnits FieldAlign =
+            GetNaturalAlignmentImpl(Field->getType(), InArray);
         MaxAlign = std::max(MaxAlign, FieldAlign);
       }
     }
