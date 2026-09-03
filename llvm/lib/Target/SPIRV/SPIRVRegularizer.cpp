@@ -13,6 +13,7 @@
 
 #include "SPIRV.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -173,6 +174,13 @@ static void runLowerI1Comparisons(Function &F) {
 
     Value *P = Cmp->getOperand(0);
     Value *Q = Cmp->getOperand(1);
+
+    const DataLayout &DL = F.getDataLayout();
+    if (Value *Simplified = simplifyICmpInst(Pred, P, Q, SimplifyQuery(DL))) {
+      Cmp->replaceAllUsesWith(Simplified);
+      Cmp->eraseFromParent();
+      continue;
+    }
 
     IRBuilder<> Builder(Cmp);
     Value *Result = nullptr;
