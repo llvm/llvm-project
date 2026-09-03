@@ -1,6 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 
-! Compiler-generated storage sequences must fit in a signed 64-bit byte size.
+! The storage sequences laid out for COMMON blocks, EQUIVALENCE sets, and
+! derived types must fit in a signed 64-bit byte size.
 ! Oversized standalone objects are left to the assembler and linker.
 
 subroutine biggest_object
