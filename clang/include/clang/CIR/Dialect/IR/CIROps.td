@@ -187,7 +187,7 @@ defvar CIR_DynamicMemoryEffects = 0;
 // CastOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
+def CIR_CastKind : CIR_I32Enum<"CastKind", "cast kind", [
   I32EnumAttrCase<"bitcast", 1>,
   // CK_LValueBitCast
   // CK_LValueToRValueBitCast
@@ -260,9 +260,7 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
   // Enums below are specific to CIR and don't have a correspondence to classic
   // codegen:
   I32EnumAttrCase<"bool_to_float", 1000>,
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_CastKindAttr : CIR_EnumAttr<CIR_CastKind, "cast">;
 
@@ -413,13 +411,11 @@ def CIR_BuiltinIntCastOp : CIR_Op<"builtin_int_cast", [Pure]> {
 // DynamicCastOp
 //===----------------------------------------------------------------------===//
 
-def CIR_DynamicCastKind : CIR_I32EnumAttr<
+def CIR_DynamicCastKind : CIR_I32Enum<
   "DynamicCastKind", "dynamic cast kind", [
     I32EnumAttrCase<"Ptr", 0, "ptr">,
     I32EnumAttrCase<"Ref", 1, "ref">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_DynamicCastKindAttr
     : CIR_EnumAttr<CIR_DynamicCastKind, "dynamic_cast">;
@@ -652,7 +648,7 @@ def CIR_SignBitOp : CIR_Op<"signbit", [Pure]> {
 // C/C++ memory order definitions
 //===----------------------------------------------------------------------===//
 
-def CIR_MemOrder : CIR_I32EnumAttr<
+def CIR_MemOrder : CIR_I32Enum<
   "MemOrder", "Memory order according to C++11 memory model", [
     I32EnumAttrCase<"Relaxed", 0, "relaxed">,
     I32EnumAttrCase<"Consume", 1, "consume">,
@@ -660,9 +656,7 @@ def CIR_MemOrder : CIR_I32EnumAttr<
     I32EnumAttrCase<"Release", 3, "release">,
     I32EnumAttrCase<"AcquireRelease", 4, "acq_rel">,
     I32EnumAttrCase<"SequentiallyConsistent", 5, "seq_cst">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_MemOrderAttr : CIR_EnumAttr<CIR_MemOrder, "mem_order">;
 
@@ -670,7 +664,7 @@ def CIR_MemOrderAttr : CIR_EnumAttr<CIR_MemOrder, "mem_order">;
 // C/C++ sync scope definitions
 //===----------------------------------------------------------------------===//
 
-def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
+def CIR_SyncScopeKind : CIR_I32Enum<"SyncScopeKind", "sync scope kind", [
   I32EnumAttrCase<"SingleThread", 0, "single_thread">,
   I32EnumAttrCase<"System", 1, "system">,
   I32EnumAttrCase<"Device", 2, "device">,
@@ -691,9 +685,7 @@ def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
   I32EnumAttrCase<"OpenCLDevice", 13, "opencl_device">,
   I32EnumAttrCase<"OpenCLAllSVMDevices", 14, "opencl_all_svm_devices">,
   I32EnumAttrCase<"OpenCLSubGroup", 15, "opencl_sub_group">,
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_SyncScopeKindAttr : CIR_EnumAttr<CIR_SyncScopeKind, "sync_scope">;
 
@@ -1370,13 +1362,11 @@ def CIR_ScopeOp : CIR_RegionBranchOpBase<"scope", [
 // CleanupScopeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CleanupKind : CIR_I32EnumAttr<"CleanupKind", "cleanup kind", [
+def CIR_CleanupKind : CIR_I32Enum<"CleanupKind", "cleanup kind", [
   I32EnumAttrCase<"Normal", 1, "normal">,
   I32EnumAttrCase<"EH", 2, "eh">,
   I32EnumAttrCase<"All", 3, "all">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup"> {
   let summary = "Cleanup kind attribute";
@@ -1540,14 +1530,12 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
 // SwitchOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CaseOpKind : CIR_I32EnumAttr<"CaseOpKind", "case kind", [
+def CIR_CaseOpKind : CIR_I32Enum<"CaseOpKind", "case kind", [
   I32EnumAttrCase<"Default", 0, "default">,
   I32EnumAttrCase<"Equal", 1, "equal">,
   I32EnumAttrCase<"Anyof", 2, "anyof">,
   I32EnumAttrCase<"Range", 3, "range">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_CaseOpKindAttr : CIR_EnumAttr<CIR_CaseOpKind, "case">;
 
@@ -2548,7 +2536,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
 // CmpOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
+def CIR_CmpOpKind : CIR_I32Enum<"CmpOpKind", "compare operation kind", [
   I32EnumAttrCase<"lt", 0>,
   I32EnumAttrCase<"le", 1>,
   I32EnumAttrCase<"gt", 2>,
@@ -2557,9 +2545,7 @@ def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
   I32EnumAttrCase<"ne", 5>,
   I32EnumAttrCase<"one", 6>,
   I32EnumAttrCase<"uno", 7>
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_CmpOpKindAttr : CIR_EnumAttr<CIR_CmpOpKind, "cmp">;
 
@@ -3320,7 +3306,7 @@ def CIR_TernaryOp : CIR_RegionBranchOpBase<"ternary", [
 // lowering, specially useful for C++ support.
 
 /// An enumeration for the kinds of linkage for global values.
-def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
+def CIR_GlobalLinkageKind : CIR_I32Enum<
   "GlobalLinkageKind", "linkage kind", [
     // Externally visible function
     I32EnumAttrCase<"ExternalLinkage", 0, "external">,
@@ -3345,9 +3331,7 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"ExternalWeakLinkage", 9, "extern_weak">,
     // Tentative definitions.
     I32EnumAttrCase<"CommonLinkage", 10, "common">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_GlobalLinkageKindAttr
     : CIR_EnumAttr<CIR_GlobalLinkageKind, "linkage">;
@@ -3356,14 +3340,12 @@ def CIR_GlobalLinkageKindAttr
 // properties of a global variable will be added over time as more of ClangIR
 // is upstreamed.
 
-def CIR_TLSModel : CIR_I32EnumAttr<"TLSModel", "TLS model", [
+def CIR_TLSModel : CIR_I32Enum<"TLSModel", "TLS model", [
   I32EnumAttrCase<"GeneralDynamic", 1, "tls_dyn">,
   I32EnumAttrCase<"LocalDynamic", 2, "tls_local_dyn">,
   I32EnumAttrCase<"InitialExec", 3, "tls_init_exec">,
   I32EnumAttrCase<"LocalExec", 4, "tls_local_exec">
-  ]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_TLSModelAttr: CIR_EnumAttr<CIR_TLSModel, "tls_model"> {
   let summary = "TLS Model attribute";
@@ -4201,15 +4183,13 @@ def CIR_OptionalPriorityAttr : OptionalAttr<
 // The enumeration cases are ordered to match `llvm::CallingConv`. The values
 // are CIR-specific and are not in sync with `llvm::CallingConv` or
 // `clang::CallingConv`.
-def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", [
+def CIR_CallingConv : CIR_I32Enum<"CallingConv", "calling convention", [
   I32EnumAttrCase<"C", 0, "c">,
   I32EnumAttrCase<"PTXKernel", 1, "ptx_kernel">,
   I32EnumAttrCase<"SpirFunction", 2, "spir_function">,
   I32EnumAttrCase<"SpirKernel", 3, "spir_kernel">,
   I32EnumAttrCase<"AMDGPUKernel", 4, "amdgpu_kernel">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_CallingConvAttr : CIR_EnumAttr<CIR_CallingConv, "calling_conv">;
 
@@ -4759,14 +4739,12 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
 // AwaitOp
 //===----------------------------------------------------------------------===//
 
-def CIR_AwaitKind : CIR_I32EnumAttr<"AwaitKind", "await kind", [
+def CIR_AwaitKind : CIR_I32Enum<"AwaitKind", "await kind", [
   I32EnumAttrCase<"Init", 0, "init">,
   I32EnumAttrCase<"User", 1, "user">,
   I32EnumAttrCase<"Yield", 2, "yield">,
   I32EnumAttrCase<"Final", 3, "final">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_AwaitKindAttr : CIR_EnumAttr<CIR_AwaitKind, "await">;
 
@@ -5453,11 +5431,9 @@ def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
 // InlineAsmOp
 //===----------------------------------------------------------------------===//
 
-def CIR_AsmFlavor : CIR_I32EnumAttr<"AsmFlavor", "ATT or Intel",
+def CIR_AsmFlavor : CIR_I32Enum<"AsmFlavor", "ATT or Intel",
                                     [I32EnumAttrCase<"x86_att", 0>,
-                                     I32EnumAttrCase<"x86_intel", 1>]> {
-  let genSpecializedAttr = 0;
-}
+                                     I32EnumAttrCase<"x86_intel", 1>]>;
 
 def CIR_AsmFlavorAttr : CIR_EnumAttr<CIR_AsmFlavor, "asm_flavor">;
 
@@ -6571,15 +6547,13 @@ def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
 // ComplexMulOp and ComplexDivOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ComplexRangeKind : CIR_I32EnumAttr<
+def CIR_ComplexRangeKind : CIR_I32Enum<
   "ComplexRangeKind", "complex multiplication and division implementation", [
     I32EnumAttrCase<"Full", 0, "full">,
     I32EnumAttrCase<"Improved", 1, "improved">,
     I32EnumAttrCase<"Promoted", 2, "promoted">,
     I32EnumAttrCase<"Basic", 3, "basic">,
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_ComplexRangeKindAttr
     : CIR_EnumAttr<CIR_ComplexRangeKind, "complex_range">;
@@ -6980,21 +6954,13 @@ def FPClass_All      : I32BitEnumAttrCaseGroup<"All",
     [FPClass_Nan, FPClass_Inf, FPClass_Fin], "fcAllFlags">;
 
 def FPClassTestEnum
-    : CIR_I32BitEnumAttr<"FPClassTest", "floating-point class test flags", [
+    : CIR_I32BitEnum<"FPClassTest", "floating-point class test flags", [
   FPClass_None, FPClass_SNan, FPClass_QNan, FPClass_NegInf, FPClass_NegNorm,
   FPClass_NegSub, FPClass_NegZero, FPClass_PosZero, FPClass_PosSub,
   FPClass_PosNorm, FPClass_PosInf, FPClass_Nan, FPClass_Inf, FPClass_Norm,
   FPClass_Sub, FPClass_Zero, FPClass_PosFin, FPClass_NegFin, FPClass_Fin,
   FPClass_Pos, FPClass_Neg, FPClass_All]> {
   let printBitEnumPrimaryGroups = 1;
-
-  // I32BitEnumAttr turns this on for backwards compatibility, which makes the
-  // operation printer quote every value that is not a single bit. Turning it
-  // off, together with the `enum` directive on cir.is_fp_class, gets a
-  // separator-aware parser and printer that spell every value unquoted.
-  let printBitEnumQuoted = 0;
-
-  let genSpecializedAttr = 0;
 }
 
 def CIR_FPClassTestAttr : CIR_EnumAttr<FPClassTestEnum, "fp_class">;
@@ -7036,15 +7002,13 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
-def CIR_AssumeBundleKind : CIR_I32EnumAttr<
+def CIR_AssumeBundleKind : CIR_I32Enum<
   "AssumeBundleKind", "kind of cir.assume operand bundle", [
   I32EnumAttrCase<"None", 0>,
   I32EnumAttrCase<"Align", 1, "align">,
   I32EnumAttrCase<"SeparateStorage", 2, "separate_storage">,
   I32EnumAttrCase<"Dereferenceable", 3, "dereferenceable">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_AssumeBundleKindAttr
     : CIR_EnumAttr<CIR_AssumeBundleKind, "assume_bundle">;
@@ -8789,7 +8753,7 @@ def CIR_EndCatchOp : CIR_Op<"end_catch"> {
 // EH Operations: InitCatchParamOp
 //===----------------------------------------------------------------------===//
 
-def CIR_InitCatchKind : CIR_I32EnumAttr<
+def CIR_InitCatchKind : CIR_I32Enum<
   "InitCatchKind", "", [
     I32EnumAttrCase<"Reference", 0, "reference">,
     I32EnumAttrCase<"Pointer", 1, "pointer">,
@@ -8797,9 +8761,7 @@ def CIR_InitCatchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Objc", 3, "objc">,
     I32EnumAttrCase<"TrivialCopy", 4, "trivial_copy">,
     I32EnumAttrCase<"NonTrivialCopy", 5, "non_trivial_copy">,
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_InitCatchKindAttr : CIR_EnumAttr<CIR_InitCatchKind, "init_catch">;
 
@@ -8914,7 +8876,7 @@ def CIR_TokenNoneOp : CIR_Op<"token.none", [
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
-def CIR_AtomicFetchKind : CIR_I32EnumAttr<
+def CIR_AtomicFetchKind : CIR_I32Enum<
   "AtomicFetchKind", "Binary opcode for atomic fetch-and-update operations", [
     I32EnumAttrCase<"Add", 0, "add">,
     I32EnumAttrCase<"Sub", 1, "sub">,
@@ -8933,9 +8895,7 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Minimum", 11, "minimum">,
     I32EnumAttrCase<"MaximumNum", 12, "maximum_num">,
     I32EnumAttrCase<"MinimumNum", 13, "minimum_num">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_AtomicFetchKindAttr
     : CIR_EnumAttr<CIR_AtomicFetchKind, "atomic_fetch">;
