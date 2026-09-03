@@ -89,11 +89,11 @@ clang::CIRGen::CIRGenBuilderTy::getConstFP(mlir::Location loc, mlir::Type t,
   return cir::ConstantOp::create(*this, loc, cir::FPAttr::get(t, fpVal));
 }
 
-void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
+bool CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
     int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
     llvm::SmallVectorImpl<int64_t> &indices) {
   if (!offset)
-    return;
+    return true;
 
   // Compute floor-division and a non-negative remainder. A negative flat
   // offset (e.g. from a pointer one element before the start of an array)
@@ -121,7 +121,12 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
             offset = newOffset;
             return arrayTy.getElementType();
           })
-          .Case<cir::RecordType>([&](auto recordTy) {
+          .Case<cir::RecordType>([&](auto recordTy) -> mlir::Type {
+            // A record can only be entered from its start. An offset before
+            // the record, or at or past its end, designates an address outside
+            // of the object, which no member index can reach.
+            if (offset < 0)
+              return {};
             ArrayRef<mlir::Type> elts = recordTy.getMembers();
             int64_t pos = 0;
             for (size_t i = 0; i < elts.size(); ++i) {
@@ -136,7 +141,6 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
               // check below
               if (!recordTy.isUnion())
                 pos = (pos + alignMask) & ~alignMask;
-              assert(offset >= 0);
               if (offset < pos + eltSize) {
                 indices.push_back(i);
                 offset -= pos;
@@ -146,7 +150,7 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
               if (!recordTy.isUnion())
                 pos += eltSize;
             }
-            llvm_unreachable("offset was not found within the record");
+            return {};
           })
           .Case<cir::IntType>([&](cir::IntType intTy) -> mlir::Type {
             // Integer element type: the offset is a flat element count.
@@ -158,16 +162,21 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
             assert(eltSize > 0 && "element size must be positive");
             const auto [index, newOffset] =
                 getIndexAndNewOffset(offset, eltSize);
+            // An integer has no subelements, so an offset into the middle of
+            // one can't be indexed.
+            if (newOffset)
+              return {};
             indices.push_back(index);
             offset = newOffset;
             return intTy;
           })
-          .Default([](mlir::Type) -> mlir::Type {
-            llvm_unreachable("unexpected type");
-          });
+          .Default([](mlir::Type) -> mlir::Type { return {}; });
 
-  assert(subType);
-  computeGlobalViewIndicesFromFlatOffset(offset, subType, layout, indices);
+  if (!subType)
+    return false;
+
+  return computeGlobalViewIndicesFromFlatOffset(offset, subType, layout,
+                                                indices);
 }
 
 uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
