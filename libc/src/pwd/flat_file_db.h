@@ -55,17 +55,15 @@ private:
     if (!f || buf.size() < 2)
       return Error(EINVAL);
 
-    f->lock();
+    File::FileLock lock(f);
     size_t bytes_read = 0;
     FileIOResult result(0);
     bool truncated = false;
 
     for (char &ch : buf.first(buf.size() - 1)) {
       result = f->read_unlocked(&ch, 1);
-      if (result.has_error()) {
-        f->unlock();
+      if (result.has_error())
         return Error(result.error);
-      }
       if (result.value != 1)
         break;
       ++bytes_read;
@@ -79,19 +77,14 @@ private:
       char c = '\0';
       while (true) {
         result = f->read_unlocked(&c, 1);
-        if (result.has_error()) {
-          f->unlock();
+        if (result.has_error())
           return Error(result.error);
-        }
         if (result.value != 1 || c == '\n')
           break;
       }
     }
 
-    bool has_error = f->error_unlocked();
-    f->unlock();
-
-    if (has_error)
+    if (f->error_unlocked())
       return Error(EIO);
 
     // If the line ended with a newline, strip it.
