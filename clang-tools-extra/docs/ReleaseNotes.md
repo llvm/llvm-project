@@ -107,6 +107,12 @@ infrastructure are described first, followed by tool-specific sections.
 
   Detects malformed regex patterns defined in a single string literal.
 
+- New {doc}`modernize-use-to-underlying
+  <clang-tidy/checks/modernize/use-to-underlying>` check.
+
+  Finds casts from a scoped enumeration (`enum class`) to an integer type and
+  replaces them with a call to `std::to_underlying` (introduced in C++23).
+
 - New {doc}`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 
