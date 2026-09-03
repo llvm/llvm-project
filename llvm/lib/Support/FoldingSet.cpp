@@ -25,10 +25,9 @@ using namespace llvm;
 // FoldingSetNodeIDRef Implementation
 
 bool llvm::operator<(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
-  if (LHS.getSize() != RHS.getSize())
-    return LHS.getSize() < RHS.getSize();
-  return memcmp(LHS.getData(), RHS.getData(),
-                LHS.getSize() * sizeof(*LHS.getData())) < 0;
+  if (LHS.size() != RHS.size())
+    return LHS.size() < RHS.size();
+  return memcmp(LHS.data(), RHS.data(), LHS.size() * sizeof(unsigned)) < 0;
 }
 
 //===----------------------------------------------------------------------===//

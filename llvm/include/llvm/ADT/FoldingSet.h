@@ -16,6 +16,7 @@
 #ifndef LLVM_ADT_FOLDINGSET_H
 #define LLVM_ADT_FOLDINGSET_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/Hashing.h"
@@ -119,13 +120,9 @@ template <typename T, typename Enable = void> struct FoldingSetTrait;
 /// since the 32-element SmallVector is often much larger than necessary, and
 /// the possibility of heap allocation means it requires a non-trivial
 /// destructor call.
-class FoldingSetNodeIDRef {
-  const unsigned *Data = nullptr;
-  size_t Size = 0;
-
+class FoldingSetNodeIDRef : public ArrayRef<unsigned> {
 public:
-  FoldingSetNodeIDRef() = default;
-  FoldingSetNodeIDRef(const unsigned *D, size_t S) : Data(D), Size(S) {}
+  using ArrayRef<unsigned>::ArrayRef;
 
   static constexpr unsigned NotAHash = 0;
 
@@ -134,8 +131,7 @@ public:
   // Never returns NotAHash: FoldingSetBase reserves it for the empty insert
   // token and for a node belonging to no set.
   unsigned computeHash() const {
-    unsigned Hash =
-        static_cast<unsigned>(hash_combine_range(Data, Data + Size));
+    unsigned Hash = static_cast<unsigned>(hash_value(*this));
     return Hash == NotAHash ? 1 : Hash;
   }
 
@@ -143,17 +139,12 @@ public:
   // on-disk serialization.
   unsigned computeStableHash() const {
     return static_cast<unsigned>(xxh3_64bits(
-        reinterpret_cast<const uint8_t *>(Data), sizeof(unsigned) * Size));
+        reinterpret_cast<const uint8_t *>(data()), sizeof(unsigned) * size()));
   }
-
-  const unsigned *getData() const { return Data; }
-  size_t getSize() const { return Size; }
 };
 
 inline bool operator==(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
-  return LHS.getSize() == RHS.getSize() &&
-         memcmp(LHS.getData(), RHS.getData(),
-                LHS.getSize() * sizeof(*LHS.getData())) == 0;
+  return LHS.equals(RHS);
 }
 
 inline bool operator!=(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
@@ -184,8 +175,7 @@ class FoldingSetNodeID {
 public:
   FoldingSetNodeID() = default;
 
-  FoldingSetNodeID(FoldingSetNodeIDRef Ref)
-      : Bits(Ref.getData(), Ref.getData() + Ref.getSize()) {}
+  FoldingSetNodeID(FoldingSetNodeIDRef Ref) : Bits(Ref) {}
 
   /// Add* - Add various data types to Bit data.
   void AddPointer(const void *Ptr) {
@@ -216,7 +206,7 @@ public:
   inline void clear() { Bits.clear(); }
 
   /// The accumulated profile, valid until this object is next modified.
-  FoldingSetNodeIDRef getRef() const { return {Bits.data(), Bits.size()}; }
+  FoldingSetNodeIDRef getRef() const { return Bits; }
 
   // Compute a strong hash value for this FoldingSetNodeID, used to lookup the
   // node in the FoldingSetBase. The hash value is not guaranteed to be
@@ -227,7 +217,7 @@ public:
   // on-disk serialization.
   unsigned computeStableHash() const { return getRef().computeStableHash(); }
 
-  operator FoldingSetNodeIDRef() const { return {Bits.data(), Bits.size()}; }
+  operator FoldingSetNodeIDRef() const { return Bits; }
 
   /// Copy this node's data to a memory region allocated from the
   /// given allocator and return a FoldingSetNodeIDRef describing the

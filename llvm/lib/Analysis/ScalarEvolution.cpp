@@ -15461,7 +15461,7 @@ SCEVWrapPredicate::getImpliedFlags(const SCEVAddRecExpr *AR,
 /// Union predicates don't get cached so create a dummy set ID for it.
 SCEVUnionPredicate::SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds,
                                        ScalarEvolution &SE)
-    : SCEVPredicate(FoldingSetNodeIDRef(nullptr, 0), P_Union) {
+    : SCEVPredicate(FoldingSetNodeIDRef(), P_Union) {
   for (const auto *P : Preds)
     add(P, SE);
 }
