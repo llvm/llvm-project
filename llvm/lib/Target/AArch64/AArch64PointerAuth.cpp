@@ -316,8 +316,7 @@ void AArch64PointerAuthImpl::authenticateLR(
   // the DW_CFA_AARCH64_negate_ra_state can't be emitted. Additionally,
   // RET{A,B} requires the SP to match its incoming value on entry to the
   // function.
-  bool TerminatorIsCombinable = std::next(MBBI) == TI &&
-                                TI != MBB.end() &&
+  bool TerminatorIsCombinable = std::next(MBBI) == TI && TI != MBB.end() &&
                                 TI->getOpcode() == AArch64::RET &&
                                 ArgumentStackToRestore == 0;
 
