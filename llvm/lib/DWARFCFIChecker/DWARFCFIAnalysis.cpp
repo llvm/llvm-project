@@ -179,7 +179,7 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
                   Reg));
     return;
   }
-  const char *RegName = MCRI->getName(*MaybeLLVMReg);
+  std::string RegName = MCRI->getName(*MaybeLLVMReg);
 
   // Each case is annotated with its corresponding number as described in
   // `llvm/include/llvm/DWARFCFIChecker/DWARFCFIAnalysis.h`.
@@ -272,10 +272,10 @@ void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
   auto NextCFA = *MaybeNextCFA;
 
   auto MaybeLLVMPrevReg = MCRI->getLLVMRegNum(PrevCFA.Reg, IsEH);
-  const char *PrevCFARegName =
+  std::string PrevCFARegName =
       MaybeLLVMPrevReg ? MCRI->getName(*MaybeLLVMPrevReg) : "";
   auto MaybeLLVMNextReg = MCRI->getLLVMRegNum(NextCFA.Reg, IsEH);
-  const char *NextCFARegName =
+  std::string NextCFARegName =
       MaybeLLVMNextReg ? MCRI->getName(*MaybeLLVMNextReg) : "";
 
   if (PrevCFA == NextCFA) {         // Case 1

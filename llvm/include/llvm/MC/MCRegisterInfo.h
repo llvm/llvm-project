@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -25,6 +26,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <string>
 #include <utility>
 
 namespace llvm {
@@ -331,6 +333,12 @@ struct MCSeqBlockDesc {
   /// to the next. Runs parallel to the first register's sub-register list and
   /// is terminated by a zero in the same way.
   uint32_t SubRegSlopes;
+
+  /// Offset into MCRegisterInfo::RegStrings of the name of the block. That is
+  /// the name of its registers but for the member each of them starts at: the
+  /// block SGPR_128 holds SGPR0_128, SGPR4_128 and so on. Registers of a block
+  /// have no names of their own.
+  uint32_t Name;
 
   /// The distance from the first register unit of one register of the block to
   /// the first register unit of the next. The remaining units of each register
@@ -642,7 +650,19 @@ public:
 
   /// Return the human-readable symbolic target-specific name for the
   /// specified physical register.
-  const char *getName(MCRegister RegNo) const {
+  ///
+  /// Registers of a sequence block have no names of their own. They are named
+  /// after their block and the member they start at, which the name of the
+  /// block leaves room for: SGPR_128 and member 4 give SGPR4_128.
+  std::string getName(MCRegister RegNo) const {
+    if (const MCSeqBlockDesc *Block = getSeqBlockOf(RegNo)) {
+      StringRef Name = RegStrings + Block->Name;
+      unsigned Member = (RegNo.id() - Block->FirstReg) * Block->Step;
+      size_t At = Name.find('_');
+      assert(At != StringRef::npos && "A block is named after its sequence and "
+                                      "the width of its registers.");
+      return (Name.take_front(At) + Twine(Member) + Name.drop_front(At)).str();
+    }
     return RegStrings + get(RegNo).Name;
   }
 

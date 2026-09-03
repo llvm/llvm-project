@@ -16,6 +16,7 @@
 
 #include "MCInstrDescView.h"
 #include "RegisterAliasing.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -83,7 +84,7 @@ private:
   std::unique_ptr<const DenseMap<StringRef, unsigned>>
   createOpcodeNameToOpcodeIdxMapping() const;
 
-  std::unique_ptr<const DenseMap<StringRef, MCRegister>>
+  std::unique_ptr<const StringMap<MCRegister>>
   createRegNameToRegNoMapping() const;
 
   LLVMState(std::unique_ptr<const TargetMachine> TM, const ExegesisTarget *ET,
@@ -96,7 +97,7 @@ private:
   const PfmCountersInfo *PfmCounters;
   std::unique_ptr<const DenseMap<StringRef, unsigned>>
       OpcodeNameToOpcodeIdxMapping;
-  std::unique_ptr<const DenseMap<StringRef, MCRegister>> RegNameToRegNoMapping;
+  std::unique_ptr<const StringMap<MCRegister>> RegNameToRegNoMapping;
 };
 
 } // namespace exegesis

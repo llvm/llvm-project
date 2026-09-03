@@ -3659,7 +3659,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     return false;
 }
 
-StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
+std::string SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
   return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 

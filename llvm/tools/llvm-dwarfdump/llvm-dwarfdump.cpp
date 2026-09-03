@@ -740,13 +740,18 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
                                             "Error in creating MCRegInfo"),
                           errs(), Filename + ": ");
 
-  auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
+  // The name is put together on demand, so it is kept here for the StringRef
+  // handed back to point at.
+  std::string RegNameStorage;
+  auto GetRegName = [&MCRegInfo, &RegNameStorage](uint64_t DwarfRegNum,
+                                                  bool IsEH) -> StringRef {
     if (!MCRegInfo)
       return {};
     if (std::optional<MCRegister> LLVMRegNum =
-            MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
-      if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
-        return StringRef(RegName);
+            MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH)) {
+      RegNameStorage = MCRegInfo->getName(*LLVMRegNum);
+      return RegNameStorage;
+    }
     return {};
   };
 

@@ -3986,8 +3986,9 @@ void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
   } else if (RISCV::VRRegClass.contains(Reg)) {
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearVR), Reg);
   } else {
-    llvm::reportFatalInternalError(
-        "buildClearRegister is not implemented for " + TRI.getRegAsmName(Reg));
+    llvm::reportFatalInternalError(Twine("buildClearRegister is not "
+                                         "implemented for ") +
+                                   TRI.getRegAsmName(Reg));
   }
 }
 

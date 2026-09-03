@@ -894,7 +894,7 @@ bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
   return false;
 }
 
-StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {
+std::string RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {
   if (Reg == RISCV::SF_VCIX_STATE)
     return "sf.vcix_state";
   return TargetRegisterInfo::getRegAsmName(Reg);

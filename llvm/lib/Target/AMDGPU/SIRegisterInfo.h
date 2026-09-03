@@ -204,7 +204,7 @@ public:
       SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
       bool SpillToPhysVGPRLane = false) const;
 
-  StringRef getRegAsmName(MCRegister Reg) const override;
+  std::string getRegAsmName(MCRegister Reg) const override;
 
   // Pseudo regs are not allowed
   unsigned getHWRegIndex(MCRegister Reg) const;

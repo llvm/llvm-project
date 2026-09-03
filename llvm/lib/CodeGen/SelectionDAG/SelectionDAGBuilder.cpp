@@ -10393,7 +10393,7 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
     if (RegError) {
       const MachineFunction &MF = DAG.getMachineFunction();
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-      const char *RegName = TRI.getName(*RegError);
+      std::string RegName = TRI.getName(*RegError);
       Info.ErrorMsg << "register '" << RegName << "' allocated for constraint '"
                     << OpInfo.ConstraintCode
                     << "' does not match required type";

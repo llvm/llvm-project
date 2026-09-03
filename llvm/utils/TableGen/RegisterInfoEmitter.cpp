@@ -1063,7 +1063,10 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   unsigned i = 0;
   for (auto I = Regs.begin(), E = Regs.end(); I != E; ++I, ++i) {
     const auto &Reg = *I;
-    RegStrings.add(Reg.getName().str());
+    // The registers of a block are named after their block and the member
+    // they begin at, so they hold no names of their own.
+    if (auto [Blk, Idx] = GetSeqBlockMember(Reg); !Blk || Idx == 0)
+      RegStrings.add(Reg.getName().str());
 
     // Compute the ordered sub-register list.
     SetVector<const CodeGenRegister *> SR;
@@ -1197,6 +1200,11 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   SubRegIdxSeqs.emit(OS, printSubRegIndex);
   OS << "};\n\n";
 
+  // The name the registers of a block go by, which is theirs but for the
+  // member each of them begins at.
+  for (const CodeGenRegisterSequenceBlock &Block : SeqBlocks)
+    RegStrings.add(Block.Name);
+
   // Emit the string table.
   RegStrings.layout();
   RegStrings.emitStringLiteralDef(OS, Twine("extern const char ") + TargetName +
@@ -1238,9 +1246,11 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       Offset = 0;
     }
 
-    OS << "  { " << RegStrings.get(Reg.getName().str()) << ", " << SubRegs
-       << ", " << SuperRegs << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i])
-       << ", " << (Offset << RegUnitBits | FirstRU) << ", "
+    OS << "  { "
+       << RegStrings.get(Block && Index != 0 ? "" : Reg.getName().str()) << ", "
+       << SubRegs << ", " << SuperRegs << ", "
+       << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
+       << (Offset << RegUnitBits | FirstRU) << ", "
        << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant << ", "
        << Reg.Artificial << " },\n";
     ++i;
@@ -1275,8 +1285,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       DiffVec Slopes(Block.SubRegSlopes);
       OS << "  { " << getRegName(Block.FirstReg->TheDef) << ", " << Block.Count
          << ", " << Block.Step << ", " << DiffSeqs.get(Slopes) << ", "
-         << Block.RegUnitStride << ", " << FirstSeries << ", "
-         << Block.SuperRegSeries.size() << " },\n";
+         << RegStrings.get(Block.Name) << ", " << Block.RegUnitStride << ", "
+         << FirstSeries << ", " << Block.SuperRegSeries.size() << " },\n";
       FirstSeries += Block.SuperRegSeries.size();
     }
     OS << "};\n\n";

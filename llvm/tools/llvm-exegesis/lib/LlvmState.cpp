@@ -133,11 +133,10 @@ LLVMState::createOpcodeNameToOpcodeIdxMapping() const {
   return std::move(Map);
 }
 
-std::unique_ptr<const DenseMap<StringRef, MCRegister>>
+std::unique_ptr<const StringMap<MCRegister>>
 LLVMState::createRegNameToRegNoMapping() const {
   const MCRegisterInfo &RegInfo = getRegInfo();
-  auto Map =
-      std::make_unique<DenseMap<StringRef, MCRegister>>(RegInfo.getNumRegs());
+  auto Map = std::make_unique<StringMap<MCRegister>>(RegInfo.getNumRegs());
   // Special-case RegNo 0, which would otherwise be spelled as ''.
   (*Map)[kNoRegister] = 0;
   for (unsigned I = 1, E = RegInfo.getNumRegs(); I < E; ++I)

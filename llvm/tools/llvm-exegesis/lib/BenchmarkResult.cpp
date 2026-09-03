@@ -23,6 +23,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string>
 
 static constexpr char kIntegerPrefix[] = "i_0x";
 static constexpr char kDoublePrefix[] = "f_";
@@ -82,11 +83,11 @@ struct YamlContext {
   // of aborting the whole file.
   bool ContinueOnError = false;
 
-  StringRef getRegName(MCRegister Reg) {
+  std::string getRegName(MCRegister Reg) {
     // Special case: Reg may be invalid. We have to deal with it explicitly.
     if (!Reg.isValid())
-      return kNoRegister;
-    const StringRef RegName = State->getRegInfo().getName(Reg);
+      return kNoRegister.str();
+    std::string RegName = State->getRegInfo().getName(Reg);
     if (RegName.empty())
       ErrorStream << "No register with enum value '" << Reg.id() << "'\n";
     return RegName;

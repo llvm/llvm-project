@@ -129,7 +129,7 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   bool isArgumentRegister(const MachineFunction &MF,
                           MCRegister Reg) const override;
 
-  StringRef getRegAsmName(MCRegister Reg) const override;
+  std::string getRegAsmName(MCRegister Reg) const override;
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;
