@@ -1,0 +1,38 @@
+REQUIRES: x86
+
+## Test dynamic debugging `-trace-symbol=<symbol>`
+
+RUN: rm -rf %t && split-file %s %t
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/foo.s -o %t/foo.o
+
+## Create dynamic debugging style object.
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/bar.s -o %t/bar.o
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/bar-unopt.s -o %t/bar-unopt.o
+RUN: llvm-objcopy --add-section=.debug_llvm_dyndbg=%t/bar-unopt.o %t/bar.o
+RUN: llvm-objcopy --set-section-type=.debug_llvm_dyndbg=0x6fff4c10 \
+RUN:              --set-section-alignment=.debug_llvm_dyndbg=8 %t/bar.o
+
+# RUN: ld.lld -trace-symbol=foo -shared %t/foo.o %t/bar.o -o /dev/null | FileCheck %s
+# CHECK: foo.o: definition of foo
+# CHECK: bar.o: reference to foo
+# CHECK: bar.o: dynamic debugging reference to foo
+
+#--- foo.s
+.globl foo
+.type foo,@function
+foo:
+  ret
+
+#--- bar.s
+.globl bar
+.type bar,@function
+bar:
+  ret
+
+#--- bar-unopt.s
+.globl __dyndbg.baz
+.hidden __dyndbg.baz
+.type __dyndbg.baz,@function
+__dyndbg.baz:
+  call foo
+  ret
