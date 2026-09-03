@@ -494,6 +494,10 @@ private:
   getTargetMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
+  MachineBasicBlock *emitTRWrapper(MachineInstr &MI,
+                                   MachineBasicBlock *MBB,
+                                   unsigned Opcode) const;
+
 private:
   bool isInternal(const Function *Fn) const;
   mutable std::map<const Function *, bool> IsInternalCache;

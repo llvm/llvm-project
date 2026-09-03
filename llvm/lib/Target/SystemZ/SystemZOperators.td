@@ -257,6 +257,12 @@ def SDT_ZSetJmp             : SDTypeProfile<1, 1,
                                              SDTCisPtrTy<1>]>;
 def SDT_ZLongJmp            : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 
+// def SDT_ZTranslate          : SDTypeProfile<0, 5, 
+//                                             [SDTCisPtrTy<0>,
+//                                              SDTCisInt<1>,  
+//                                              SDTCisInt<2>,  
+//                                              SDTCisPtrTy<3>,
+//                                              SDTCisInt<4>]>;
 
 //===----------------------------------------------------------------------===//
 // Node definitions
@@ -419,6 +425,10 @@ def z_storeeswap       : SDNode<"SystemZISD::VSTER", SDTStore,
 // Use STORE CLOCK FAST to store current TOD clock value.
 def z_stckf            : SDNode<"SystemZISD::STCKF", SDT_ZStoreInherent,
                                 [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// Translate string data from one code to another code
+// def z_tr               : SDNode<"SystemZISD::TR", SDT_ZTranslate, 
+//                                 [SDNPHasChain, SDNPMayLoad, SDNPMayStore]>;
 
 // Test Data Class.
 //

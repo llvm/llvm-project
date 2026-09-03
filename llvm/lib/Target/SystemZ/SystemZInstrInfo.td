@@ -2271,6 +2271,36 @@ let hasSideEffects = 1 in {
                                           []>;
 }
 
+// Translate
+let hasSideEffects = 1, usesCustomInserter = 1,
+    hasNoSchedulingInfo = 1, mayLoad = 1, 
+    mayStore = 1, Defs = [CC] in {
+  def TR_Pseudo : Pseudo<(outs), (ins GR64:$src, i32imm:$D1, GR32:$len, 
+                                    GR64:$tbl, i32imm:$D2), []>;
+                                  // [(z_tr GR64:$src, i32imm:$D1, GR32:$len, 
+                                  //   GR64:$tbl, i32imm:$D2)]>;
+}
+
+// Transform constant length N (1..256) into N - 1 for SS-format
+def tr_len : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() - 1, SDLoc(N), MVT::i32);
+}]>;
+
+def tr_len_leaf : ImmLeaf<i32,
+  [{ return N->getZExtValue() >= 1 && N->getZExtValue() <= 256; }],
+  tr_len
+>;
+
+// Match TR invocation w/ a static constant provided as the length
+def : Pat<(int_s390_translate ADDR64:$src, i32:$D1, tr_len_leaf:$len, 
+                                ADDR64:$tbl, i32:$D2),
+          (TR (bdladdr12onlylen8 ADDR64:$src, i32:$D1, tr_len_leaf:$len), 
+               (bdaddr12only ADDR64:$tbl, i32:$D2))>;
+
+// Match TR invocation w/ a variable provided as the length
+def : Pat<(int_s390_translate ADDR64:$src, i32:$D1, GR32:$len, GR64:$tbl, i32:$D2),
+          (TR_Pseudo ADDR64:$src, i32:$D1, GR32:$len, ADDR64:$tbl, i32:$D2)>;
+
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
 //===----------------------------------------------------------------------===//

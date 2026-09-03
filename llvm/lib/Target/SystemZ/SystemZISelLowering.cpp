@@ -5444,6 +5444,7 @@ SDValue SystemZTargetLowering::lowerPREFETCH(SDValue Op,
 SDValue
 SystemZTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
   unsigned Opcode, CCValid;
   if (isIntrinsicWithCCAndChain(Op, Opcode, CCValid)) {
     assert(Op->getNumValues() == 2 && "Expected only CC result and chain");
@@ -10528,6 +10529,45 @@ MachineBasicBlock *SystemZTargetLowering::emitExt128(MachineInstr &MI,
 }
 
 MachineBasicBlock *
+SystemZTargetLowering::emitTRWrapper(MachineInstr &MI,
+                                     MachineBasicBlock *MBB,
+                                     unsigned Opcode) const {
+  MachineFunction &MF = *MBB->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SystemZInstrInfo *TII = 
+      static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register SrcReg = MI.getOperand(0).getReg();
+  int64_t D1Imm   = MI.getOperand(1).getImm();
+  Register LenReg = MI.getOperand(2).getReg();
+  Register TblReg = MI.getOperand(3).getReg();
+  int64_t D2Imm   = MI.getOperand(4).getImm();
+
+  MRI.constrainRegClass(SrcReg, &SystemZ::ADDR64BitRegClass);
+  MRI.constrainRegClass(TblReg, &SystemZ::ADDR64BitRegClass);
+
+  Register Len32Reg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+  BuildMI(*MBB, MI, DL, TII->get(SystemZ::AHI), Len32Reg)
+      .addReg(LenReg)
+      .addImm(-1);
+  
+  // Must constrain 32-bit length register to 64-bit for EXRL execution
+  Register Len64Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+  BuildMI(*MBB, MI, DL, TII->get(SystemZ::LLGFR), Len64Reg)
+      .addReg(Len32Reg);
+  
+  BuildMI(*MBB, MI, DL, TII->get(SystemZ::EXRL_Pseudo))
+      .addImm(Opcode)
+      .addReg(Len64Reg)
+      .addReg(SrcReg).addImm(D1Imm)
+      .addReg(TblReg).addImm(D2Imm);
+  
+  MI.eraseFromParent();
+  return MBB;
+}
+
+MachineBasicBlock *
 SystemZTargetLowering::emitMemMemWrapper(MachineInstr &MI,
                                          MachineBasicBlock *MBB,
                                          unsigned Opcode, bool IsMemset) const {
@@ -11333,6 +11373,9 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
 
   case SystemZ::CMP_STACKGUARD_DAG:
     return emitStackGuardPseudo(MI, MBB, SystemZ::CMP_STACKGUARD);
+
+  case SystemZ::TR_Pseudo:
+    return emitTRWrapper(MI, MBB, SystemZ::TR);
 
   default:
     llvm_unreachable("Unexpected instr type to insert");
