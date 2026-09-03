@@ -182,7 +182,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noalias, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noundef})
   // CHECK:   %{{.*}} = cir.load %arg0 : !cir.ptr<!rec_UBig>, !rec_UBig
 
   // The byval alignment comes from the record's declared alignment, which the
@@ -192,7 +192,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_big_over_aligned(%arg0: !cir.ptr<!rec_UBigOverAligned> {llvm.align = 32 : i64, llvm.byval = !rec_UBigOverAligned, llvm.noalias, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_big_over_aligned(%arg0: !cir.ptr<!rec_UBigOverAligned> {llvm.align = 32 : i64, llvm.byval = !rec_UBigOverAligned, llvm.noundef})
 
   // The same declared-alignment source feeds every accepted record, not just
   // unions: an over-aligned STRUCT gets the same byval alignment fix, since
@@ -201,7 +201,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_struct_over_aligned(%arg0: !cir.ptr<!rec_SOverAligned> {llvm.align = 32 : i64, llvm.byval = !rec_SOverAligned, llvm.noalias, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_struct_over_aligned(%arg0: !cir.ptr<!rec_SOverAligned> {llvm.align = 32 : i64, llvm.byval = !rec_SOverAligned, llvm.noundef})
 
   // A union with no members classifies Ignore and is dropped from the
   // signature.
@@ -298,7 +298,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_big_empty_int(%arg0: !cir.ptr<!rec_UBigEmptyInt> {llvm.align = 32 : i64, llvm.byval = !rec_UBigEmptyInt, llvm.noalias, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_big_empty_int(%arg0: !cir.ptr<!rec_UBigEmptyInt> {llvm.align = 32 : i64, llvm.byval = !rec_UBigEmptyInt, llvm.noundef})
 
   // More than one empty member is skipped the same way.
   cir.func @take_two_empty(%arg0: !rec_UTwoEmpty) {
@@ -426,7 +426,7 @@ module attributes {
     cir.return %1 : !rec_UBig
   }
 
-  // CHECK: cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_UBig, llvm.writable}, %arg1: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noalias, llvm.noundef})
+  // CHECK: cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_UBig, llvm.writable}, %arg1: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noundef})
   // CHECK:   %[[VAL:.*]] = cir.load %arg1 : !cir.ptr<!rec_UBig>, !rec_UBig
   // CHECK:   cir.store %[[VAL]], %arg0 : !rec_UBig, !cir.ptr<!rec_UBig>
 
@@ -471,9 +471,9 @@ module attributes {
 // LLVM: define void @take_three(i24 %{{.+}})
 // LLVM: define void @take_narrow_storage(i64 %{{.+}})
 // LLVM: define void @take_two_eightbytes(i64 %{{.+}}, i64 %{{.+}})
-// LLVM: define void @take_big(ptr noalias noundef byval(%union.UBig) align 8 %{{.+}})
-// LLVM: define void @take_big_over_aligned(ptr noalias noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
-// LLVM: define void @take_struct_over_aligned(ptr noalias noundef byval(%struct.SOverAligned) align 32 %{{.+}})
+// LLVM: define void @take_big(ptr noundef byval(%union.UBig) align 8 %{{.+}})
+// LLVM: define void @take_big_over_aligned(ptr noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
+// LLVM: define void @take_struct_over_aligned(ptr noundef byval(%struct.SOverAligned) align 32 %{{.+}})
 // LLVM: define void @take_empty()
 // LLVM: define void @ret_empty()
 // LLVM: define void @take_empty_int(i32 %{{.+}})
@@ -484,7 +484,7 @@ module attributes {
 // LLVM: define void @take_empty_bytes(i64 %{{.+}})
 // LLVM: define void @take_arr_empty(i8 %{{.+}})
 // LLVM: define void @take_arr8_empty(i8 %{{.+}})
-// LLVM: define void @take_big_empty_int(ptr noalias noundef byval(%union.UBigEmptyInt) align 32 %{{.+}})
+// LLVM: define void @take_big_empty_int(ptr noundef byval(%union.UBigEmptyInt) align 32 %{{.+}})
 // LLVM: define void @take_two_empty(i32 %{{.+}})
 // LLVM: define void @take_empty_unnamed_bits()
 // LLVM: define void @take_empty_floats(<2 x float> %{{.+}})
@@ -499,7 +499,7 @@ module attributes {
 // LLVM: define void @take_no_regs(ptr byref(%union.UNoRegs) align 4 %{{.+}})
 // LLVM: define void @take_struct_with_union(i64 %{{.+}})
 // LLVM: define i32 @ret_int_float(i32 %{{.+}})
-// LLVM: define void @ret_big(ptr dead_on_unwind noalias writable sret(%union.UBig) align 1 %{{.+}}, ptr noalias noundef byval(%union.UBig) align 8 %{{.+}})
+// LLVM: define void @ret_big(ptr dead_on_unwind noalias writable sret(%union.UBig) align 1 %{{.+}}, ptr noundef byval(%union.UBig) align 8 %{{.+}})
 // LLVM: define void @call_int_float(i32 %{{.+}})
 // LLVM:   call void @take_int_float(i32 %{{.+}})
 // LLVM: define void @call_two_eightbytes(i64 %{{.+}}, i64 %{{.+}})
