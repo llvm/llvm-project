@@ -981,6 +981,8 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
                          E.castAs<CFGLifetimeEnds>().getVarDecl(), Pred);
       return;
     case CFGElement::CleanupFunction:
+      ProcessCleanupFunction(E.castAs<CFGCleanupFunction>(), Pred);
+      return;
     case CFGElement::FullExprCleanup:
     case CFGElement::ScopeBegin:
     case CFGElement::ScopeEnd:
@@ -1391,6 +1393,46 @@ void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
 
   VisitCXXDestructor(varType, Region, Dtor.getTriggerStmt(),
                      /*IsBase=*/false, Pred, Dst, CallOpts);
+}
+
+void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction Cleanup,
+                                        ExplodedNode *Pred) {
+  const VarDecl *VD = Cleanup.getVarDecl();
+  const FunctionDecl *FD = Cleanup.getFunctionDecl();
+
+  ProgramStateRef State = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+
+  // The implicit f(&var) call is not written in the source; anchor it at the
+  // function name in the cleanup attribute.
+  static SimpleProgramPointTag PT("ExprEngine",
+                                  "Prepare for cleanup function call");
+  PreImplicitCall PP(FD, VD->getAttr<CleanupAttr>()->getLoc(), SF,
+                     getCFGElementRef(), &PT);
+  Pred = Engine.makeNode(PP, State, Pred);
+
+  if (!Pred)
+    return;
+
+  CallEventManager &CEMgr = getStateManager().getCallEventManager();
+  CallEventRef<CleanupFunctionCall> Call = CEMgr.getCleanupFunctionCall(
+      FD, VD, Pred->getState(), SF, getCFGElementRef());
+
+  PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
+                                Call->getSourceRange().getBegin(),
+                                "Error evaluating cleanup function");
+
+  ExplodedNodeSet Dst;
+  ExplodedNodeSet DstPreCall;
+  getCheckerManager().runCheckersForPreCall(DstPreCall, Pred, *Call, *this);
+
+  ExplodedNodeSet DstInvalidated;
+  for (ExplodedNode *N : DstPreCall)
+    defaultEvalCall(DstInvalidated, N, *Call);
+
+  getCheckerManager().runCheckersForPostCall(Dst, DstInvalidated, *Call, *this);
+
+  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
