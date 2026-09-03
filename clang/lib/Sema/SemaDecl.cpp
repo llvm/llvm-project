@@ -2984,8 +2984,16 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
            (isa<CUDAHostAttr>(Attr) || isa<CUDADeviceAttr>(Attr) ||
             isa<CUDAGlobalAttr>(Attr))) {
     // CUDA target attributes are part of function signature for
-    // overloading purposes and must not be merged.
-    return false;
+    // overloading purposes and must not be merged. A redeclaration spelling
+    // that includes host usage is not a new overload and will be merged.
+    auto SpelledOnRedecl = [](const auto *A) {
+      return A && !A->isImplicit() && !A->isInherited();
+    };
+    if (isa<CUDAGlobalAttr>(Attr) || Attr->isImplicit() ||
+        SpelledOnRedecl(D->getAttr<CUDAHostAttr>()) ||
+        SpelledOnRedecl(D->getAttr<CUDADeviceAttr>()))
+      return false;
+    NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
   } else if (const auto *MA = dyn_cast<MinSizeAttr>(Attr))
     NewAttr = S.mergeMinSizeAttr(D, *MA);
   else if (const auto *SNA = dyn_cast<SwiftNameAttr>(Attr))
