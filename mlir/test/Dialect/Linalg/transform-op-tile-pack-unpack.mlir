@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -transform-interpreter -canonicalize -cse -split-input-file | FileCheck %s
 
+
 // CHECK-DAG:   #[[MAP0:.+]] = affine_map<(d0) -> (d0 * 32)>
 // CHECK:       func.func @NC_to_NCnc
 // CHECK-SAME:    %[[IN:.*]]: tensor<128x256xf32>,

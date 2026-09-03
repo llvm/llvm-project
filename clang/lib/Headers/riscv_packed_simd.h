@@ -77,6 +77,18 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return builtin(__rs1, __rs2);                                              \
   }
 
+#define __packed_ternary_builtin(name, ty, builtin)                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd, ty __rs1,    \
+                                                         ty __rs2) {           \
+    return builtin(__rd, __rs1, __rs2);                                        \
+  }
+
+#define __packed_ternary_builtin_mixed(name, rty, ty1, ty2, builtin)           \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(rty __rd, ty1 __rs1, \
+                                                          ty2 __rs2) {         \
+    return builtin(__rd, __rs1, __rs2);                                        \
+  }
+
 #define __packed_sh1add(name, ty)                                              \
   static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
     return (__rs1 << 1) + __rs2;                                               \
@@ -121,7 +133,7 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return (ty)builtin(__rs1, __rs2, __rd);                                    \
   }
 
-#define __packed_psabs(name, ty, builtin)                                      \
+#define __packed_unary_builtin(name, ty, builtin)                              \
   static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {           \
     return builtin(__rs1);                                                     \
   }
@@ -129,6 +141,24 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
 #define __packed_widen_convert(name, rty, ty)                                  \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
     return __builtin_convertvector(__rs1, rty);                                \
+  }
+#define __packed_widen_binary_op(name, rty, ty, op)                            \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return __builtin_convertvector(__rs1, rty)                                 \
+        op __builtin_convertvector(__rs2, rty);                                \
+  }
+#define __packed_widen_mul(name, rty, ty)                                      \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return __builtin_convertvector(__rs1, rty) *                               \
+           __builtin_convertvector(__rs2, rty);                                \
+  }
+#define __packed_widen_mulsu(name, rty, ty1, ty2, uty)                         \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty1 __rs1,           \
+                                                          ty2 __rs2) {         \
+    return __builtin_convertvector(__rs1, rty) *                               \
+           (rty) __builtin_convertvector(__rs2, uty);                          \
   }
 #define __packed_widen_high2(name, rty, ty)                                    \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
@@ -261,7 +291,7 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return builtin(__rs1, __rs2);                                              \
   }
 
-#define __packed_abdsum_acc(name, rty, ty, builtin)                            \
+#define __packed_ternary_builtin_cast(name, rty, ty, builtin)                  \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(rty __rd, ty __rs1,  \
                                                           ty __rs2) {          \
     return builtin(__rd, __rs1, __rs2);                                        \
@@ -510,6 +540,22 @@ __packed_shift8(psra_s_i8x8, int8x8_t, >>)
 __packed_shift16(psra_s_i16x4, int16x4_t, >>)
 __packed_shift32(psra_s_i32x2, int32x2_t, >>)
 
+/* Packed Saturating and Rounding Shifts (32-bit) */
+__packed_binary_builtin_mixed(pssha_s_i16x2, int16x2_t, int16x2_t, int, __builtin_riscv_pssha_s_i16x2)
+__packed_binary_builtin_mixed(psshar_s_i16x2, int16x2_t, int16x2_t, int, __builtin_riscv_psshar_s_i16x2)
+__packed_binary_builtin_mixed(psshl_s_u16x2, uint16x2_t, uint16x2_t, int, __builtin_riscv_psshl_s_u16x2)
+__packed_binary_builtin_mixed(psshlr_s_u16x2, uint16x2_t, uint16x2_t, int, __builtin_riscv_psshlr_s_u16x2)
+
+/* Packed Saturating and Rounding Shifts (64-bit) */
+__packed_binary_builtin_mixed(pssha_s_i16x4, int16x4_t, int16x4_t, int, __builtin_riscv_pssha_s_i16x4)
+__packed_binary_builtin_mixed(pssha_s_i32x2, int32x2_t, int32x2_t, int, __builtin_riscv_pssha_s_i32x2)
+__packed_binary_builtin_mixed(psshar_s_i16x4, int16x4_t, int16x4_t, int, __builtin_riscv_psshar_s_i16x4)
+__packed_binary_builtin_mixed(psshar_s_i32x2, int32x2_t, int32x2_t, int, __builtin_riscv_psshar_s_i32x2)
+__packed_binary_builtin_mixed(psshl_s_u16x4, uint16x4_t, uint16x4_t, int, __builtin_riscv_psshl_s_u16x4)
+__packed_binary_builtin_mixed(psshl_s_u32x2, uint32x2_t, uint32x2_t, int, __builtin_riscv_psshl_s_u32x2)
+__packed_binary_builtin_mixed(psshlr_s_u16x4, uint16x4_t, uint16x4_t, int, __builtin_riscv_psshlr_s_u16x4)
+__packed_binary_builtin_mixed(psshlr_s_u32x2, uint32x2_t, uint32x2_t, int, __builtin_riscv_psshlr_s_u32x2)
+
 /* Packed Logical Operations (32-bit) */
 __packed_binary_op(pand_i8x4, int8x4_t, &)
 __packed_binary_op(pand_u8x4, uint8x4_t, &)
@@ -563,6 +609,25 @@ __packed_widen_high4(pwcvth_i16x4, int16x4_t, int8x4_t)
 __packed_widen_high4(pwcvth_u16x4, uint16x4_t, uint8x4_t)
 __packed_widen_high2(pwcvth_i32x2, int32x2_t, int16x2_t)
 __packed_widen_high2(pwcvth_u32x2, uint32x2_t, uint16x2_t)
+
+/* Packed Widening Addition and Subtraction */
+__packed_widen_binary_op(pwadd_i16x4, int16x4_t, int8x4_t, +)
+__packed_widen_binary_op(pwadd_i32x2, int32x2_t, int16x2_t, +)
+__packed_widen_binary_op(pwaddu_u16x4, uint16x4_t, uint8x4_t, +)
+__packed_widen_binary_op(pwaddu_u32x2, uint32x2_t, uint16x2_t, +)
+__packed_widen_binary_op(pwsub_i16x4, int16x4_t, int8x4_t, -)
+__packed_widen_binary_op(pwsub_i32x2, int32x2_t, int16x2_t, -)
+__packed_widen_binary_op(pwsubu_u16x4, uint16x4_t, uint8x4_t, -)
+__packed_widen_binary_op(pwsubu_u32x2, uint32x2_t, uint16x2_t, -)
+
+/* Packed Widening Multiply (32-bit) */
+__packed_widen_mul(pwmul_i16x4, int16x4_t, int8x4_t)
+__packed_widen_mul(pwmul_i32x2, int32x2_t, int16x2_t)
+__packed_widen_mul(pwmulu_u16x4, uint16x4_t, uint8x4_t)
+__packed_widen_mul(pwmulu_u32x2, uint32x2_t, uint16x2_t)
+__packed_widen_mulsu(pwmulsu_i16x4, int16x4_t, int8x4_t, uint8x4_t, uint16x4_t)
+__packed_widen_mulsu(pwmulsu_i32x2, int32x2_t, int16x2_t, uint16x2_t,
+                     uint32x2_t)
 
 /* Packed Narrowing Convert */
 __packed_narrow_even4(pncvt_i8x4, int8x4_t, int16x4_t, int8x8_t)
@@ -728,6 +793,14 @@ __packed_binary_builtin(pmulhru_u16x2, uint16x2_t, __builtin_riscv_pmulhru_u16x2
 __packed_binary_builtin_mixed(pmulhsu_i16x2, int16x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pmulhsu_i16x2)
 __packed_binary_builtin_mixed(pmulhrsu_i16x2, int16x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pmulhrsu_i16x2)
 
+/* Packed Multiply High Accumulate (32-bit) */
+__packed_ternary_builtin(pmhacc_i16x2, int16x2_t, __builtin_riscv_pmhacc_i16x2)
+__packed_ternary_builtin(pmhracc_i16x2, int16x2_t, __builtin_riscv_pmhracc_i16x2)
+__packed_ternary_builtin(pmhaccu_u16x2, uint16x2_t, __builtin_riscv_pmhaccu_u16x2)
+__packed_ternary_builtin(pmhraccu_u16x2, uint16x2_t, __builtin_riscv_pmhraccu_u16x2)
+__packed_ternary_builtin_mixed(pmhaccsu_i16x2, int16x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pmhaccsu_i16x2)
+__packed_ternary_builtin_mixed(pmhraccsu_i16x2, int16x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pmhraccsu_i16x2)
+
 /* Packed Multiply High (64-bit) */
 __packed_binary_builtin(pmulh_i16x4, int16x4_t, __builtin_riscv_pmulh_i16x4)
 __packed_binary_builtin(pmulh_i32x2, int32x2_t, __builtin_riscv_pmulh_i32x2)
@@ -742,23 +815,89 @@ __packed_binary_builtin_mixed(pmulhsu_i32x2, int32x2_t, int32x2_t, uint32x2_t, _
 __packed_binary_builtin_mixed(pmulhrsu_i16x4, int16x4_t, int16x4_t, uint16x4_t, __builtin_riscv_pmulhrsu_i16x4)
 __packed_binary_builtin_mixed(pmulhrsu_i32x2, int32x2_t, int32x2_t, uint32x2_t, __builtin_riscv_pmulhrsu_i32x2)
 
+/* Packed Multiply High Accumulate (64-bit) */
+__packed_ternary_builtin(pmhacc_i16x4, int16x4_t, __builtin_riscv_pmhacc_i16x4)
+__packed_ternary_builtin(pmhacc_i32x2, int32x2_t, __builtin_riscv_pmhacc_i32x2)
+__packed_ternary_builtin(pmhracc_i16x4, int16x4_t, __builtin_riscv_pmhracc_i16x4)
+__packed_ternary_builtin(pmhracc_i32x2, int32x2_t, __builtin_riscv_pmhracc_i32x2)
+__packed_ternary_builtin(pmhaccu_u16x4, uint16x4_t, __builtin_riscv_pmhaccu_u16x4)
+__packed_ternary_builtin(pmhaccu_u32x2, uint32x2_t, __builtin_riscv_pmhaccu_u32x2)
+__packed_ternary_builtin(pmhraccu_u16x4, uint16x4_t, __builtin_riscv_pmhraccu_u16x4)
+__packed_ternary_builtin(pmhraccu_u32x2, uint32x2_t, __builtin_riscv_pmhraccu_u32x2)
+__packed_ternary_builtin_mixed(pmhaccsu_i16x4, int16x4_t, int16x4_t, uint16x4_t, __builtin_riscv_pmhaccsu_i16x4)
+__packed_ternary_builtin_mixed(pmhaccsu_i32x2, int32x2_t, int32x2_t, uint32x2_t, __builtin_riscv_pmhaccsu_i32x2)
+__packed_ternary_builtin_mixed(pmhraccsu_i16x4, int16x4_t, int16x4_t, uint16x4_t, __builtin_riscv_pmhraccsu_i16x4)
+__packed_ternary_builtin_mixed(pmhraccsu_i32x2, int32x2_t, int32x2_t, uint32x2_t, __builtin_riscv_pmhraccsu_i32x2)
+
+/* Packed Multiplication with Horizontal Addition (32-bit) */
+__packed_binary_builtin_mixed(pm4add_i8x4, int32_t, int8x4_t, int8x4_t, __builtin_riscv_pm4add_i8x4)
+__packed_binary_builtin_mixed(pm2add_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2add_i16x2)
+__packed_binary_builtin_mixed(pm2add_x_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2add_x_i16x2)
+__packed_binary_builtin_mixed(pm4addu_u8x4, uint32_t, uint8x4_t, uint8x4_t, __builtin_riscv_pm4addu_u8x4)
+__packed_binary_builtin_mixed(pm2addu_u16x2, uint32_t, uint16x2_t, uint16x2_t, __builtin_riscv_pm2addu_u16x2)
+__packed_binary_builtin_mixed(pmq2add_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pmq2add_i16x2)
+__packed_binary_builtin_mixed(pmqr2add_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pmqr2add_i16x2)
+__packed_binary_builtin_mixed(pm2sadd_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2sadd_i16x2)
+__packed_binary_builtin_mixed(pm2sadd_x_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2sadd_x_i16x2)
+__packed_binary_builtin_mixed(pm2sub_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2sub_i16x2)
+__packed_binary_builtin_mixed(pm2sub_x_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2sub_x_i16x2)
+__packed_binary_builtin_mixed(pm4addsu_i8x4, int32_t, int8x4_t, uint8x4_t, __builtin_riscv_pm4addsu_i8x4)
+__packed_binary_builtin_mixed(pm2addsu_i16x2, int32_t, int16x2_t, uint16x2_t, __builtin_riscv_pm2addsu_i16x2)
+
+/* Packed Multiplication with Horizontal Addition (64-bit) */
+__packed_binary_builtin_mixed(pm4add_i8x8, int32x2_t, int8x8_t, int8x8_t, __builtin_riscv_pm4add_i8x8)
+__packed_binary_builtin_mixed(pm2add_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pm2add_i16x4)
+__packed_binary_builtin_mixed(pm2add_x_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pm2add_x_i16x4)
+__packed_binary_builtin_mixed(pm4addu_u8x8, uint32x2_t, uint8x8_t, uint8x8_t, __builtin_riscv_pm4addu_u8x8)
+__packed_binary_builtin_mixed(pm2addu_u16x4, uint32x2_t, uint16x4_t, uint16x4_t, __builtin_riscv_pm2addu_u16x4)
+__packed_binary_builtin_mixed(pmq2add_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pmq2add_i16x4)
+__packed_binary_builtin_mixed(pmqr2add_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pmqr2add_i16x4)
+__packed_binary_builtin_mixed(pm2sadd_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pm2sadd_i16x4)
+__packed_binary_builtin_mixed(pm2sadd_x_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pm2sadd_x_i16x4)
+__packed_binary_builtin_mixed(pm2sub_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pm2sub_i16x4)
+__packed_binary_builtin_mixed(pm2sub_x_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pm2sub_x_i16x4)
+__packed_binary_builtin_mixed(pm4addsu_i8x8, int32x2_t, int8x8_t, uint8x8_t, __builtin_riscv_pm4addsu_i8x8)
+__packed_binary_builtin_mixed(pm2addsu_i16x4, int32x2_t, int16x4_t, uint16x4_t, __builtin_riscv_pm2addsu_i16x4)
+__packed_binary_builtin_mixed(pm2add_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pm2add_i32x2)
+__packed_binary_builtin_mixed(pm2add_x_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pm2add_x_i32x2)
+__packed_binary_builtin_mixed(pm2addu_u32x2, uint64_t, uint32x2_t, uint32x2_t, __builtin_riscv_pm2addu_u32x2)
+__packed_binary_builtin_mixed(pmq2add_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pmq2add_i32x2)
+__packed_binary_builtin_mixed(pm2sub_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pm2sub_i32x2)
+__packed_binary_builtin_mixed(pm2sub_x_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pm2sub_x_i32x2)
+__packed_binary_builtin_mixed(pm2addsu_i32x2, int64_t, int32x2_t, uint32x2_t, __builtin_riscv_pm2addsu_i32x2)
+__packed_binary_builtin_mixed(pmqr2add_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pmqr2add_i32x2)
+__packed_binary_builtin_mixed(pm4add_i16x4, int64_t, int16x4_t, int16x4_t, __builtin_riscv_pm4add_i16x4)
+__packed_binary_builtin_mixed(pm4addu_u16x4, uint64_t, uint16x4_t, uint16x4_t, __builtin_riscv_pm4addu_u16x4)
+__packed_binary_builtin_mixed(pm4addsu_i16x4, int64_t, int16x4_t, uint16x4_t, __builtin_riscv_pm4addsu_i16x4)
+
 /* Packed Absolute Difference Sum (32-bit) */
 __packed_abdsum(pabdsumu_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumu_u8x4_u32)
-__packed_abdsum_acc(pabdsumau_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumau_u8x4_u32)
+__packed_ternary_builtin_cast(pabdsumau_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumau_u8x4_u32)
 
 /* Packed Absolute Difference Sum (64-bit) */
 __packed_abdsum(pabdsumu_u8x8_u32, uint32_t, uint8x8_t, __builtin_riscv_pabdsumu_u8x8_u32)
 __packed_abdsum(pabdsumu_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumu_u8x8_u64)
-__packed_abdsum_acc(pabdsumau_u8x8_u32, uint32_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u32)
-__packed_abdsum_acc(pabdsumau_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u64)
+__packed_ternary_builtin_cast(pabdsumau_u8x8_u32, uint32_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u32)
+__packed_ternary_builtin_cast(pabdsumau_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u64)
 
 /* Packed Saturating Absolute Value (32-bit) */
-__packed_psabs(psabs_i8x4, int8x4_t, __builtin_riscv_psabs_i8x4)
-__packed_psabs(psabs_i16x2, int16x2_t, __builtin_riscv_psabs_i16x2)
+__packed_unary_builtin(psabs_i8x4, int8x4_t, __builtin_riscv_psabs_i8x4)
+__packed_unary_builtin(psabs_i16x2, int16x2_t, __builtin_riscv_psabs_i16x2)
 
 /* Packed Saturating Absolute Value (64-bit) */
-__packed_psabs(psabs_i8x8, int8x8_t, __builtin_riscv_psabs_i8x8)
-__packed_psabs(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
+__packed_unary_builtin(psabs_i8x8, int8x8_t, __builtin_riscv_psabs_i8x8)
+__packed_unary_builtin(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
+
+/* Packed Sign and Zero Extend (32-bit) */
+__packed_unary_builtin(psext_b_i16x2, int16x2_t, __builtin_riscv_psext_b_i16x2)
+__packed_unary_builtin(pzext_b_u16x2, uint16x2_t, __builtin_riscv_pzext_b_u16x2)
+
+/* Packed Sign and Zero Extend (64-bit) */
+__packed_unary_builtin(psext_b_i16x4, int16x4_t, __builtin_riscv_psext_b_i16x4)
+__packed_unary_builtin(psext_b_i32x2, int32x2_t, __builtin_riscv_psext_b_i32x2)
+__packed_unary_builtin(psext_h_i32x2, int32x2_t, __builtin_riscv_psext_h_i32x2)
+__packed_unary_builtin(pzext_b_u16x4, uint16x4_t, __builtin_riscv_pzext_b_u16x4)
+__packed_unary_builtin(pzext_h_u32x2, uint32x2_t, __builtin_riscv_pzext_h_u32x2)
 
 /* Packed "Q-format" Multiplication (32-bit) */
 __packed_binary_builtin(pmulq_i16x2, int16x2_t, __builtin_riscv_pmulq_i16x2)
@@ -769,6 +908,86 @@ __packed_binary_builtin(pmulq_i16x4, int16x4_t, __builtin_riscv_pmulq_i16x4)
 __packed_binary_builtin(pmulqr_i16x4, int16x4_t, __builtin_riscv_pmulqr_i16x4)
 __packed_binary_builtin(pmulq_i32x2, int32x2_t, __builtin_riscv_pmulq_i32x2)
 __packed_binary_builtin(pmulqr_i32x2, int32x2_t, __builtin_riscv_pmulqr_i32x2)
+
+/* Packed Multiply Parts (32-bit) */
+__packed_binary_builtin_mixed(pmul_b00_i16x2, int16x2_t, int8x4_t, int8x4_t, __builtin_riscv_pmul_b00_i16x2)
+__packed_binary_builtin_mixed(pmul_b01_i16x2, int16x2_t, int8x4_t, int8x4_t, __builtin_riscv_pmul_b01_i16x2)
+__packed_binary_builtin_mixed(pmul_b11_i16x2, int16x2_t, int8x4_t, int8x4_t, __builtin_riscv_pmul_b11_i16x2)
+__packed_binary_builtin_mixed(pmulu_b00_u16x2, uint16x2_t, uint8x4_t, uint8x4_t, __builtin_riscv_pmulu_b00_u16x2)
+__packed_binary_builtin_mixed(pmulu_b01_u16x2, uint16x2_t, uint8x4_t, uint8x4_t, __builtin_riscv_pmulu_b01_u16x2)
+__packed_binary_builtin_mixed(pmulu_b11_u16x2, uint16x2_t, uint8x4_t, uint8x4_t, __builtin_riscv_pmulu_b11_u16x2)
+__packed_binary_builtin_mixed(pmulsu_b00_i16x2, int16x2_t, int8x4_t, uint8x4_t, __builtin_riscv_pmulsu_b00_i16x2)
+__packed_binary_builtin_mixed(pmulsu_b11_i16x2, int16x2_t, int8x4_t, uint8x4_t, __builtin_riscv_pmulsu_b11_i16x2)
+__packed_binary_builtin_mixed(mul_h00_i32, int32_t, int16x2_t, int16x2_t, __builtin_riscv_mul_h00_i32)
+__packed_binary_builtin_mixed(mul_h01_i32, int32_t, int16x2_t, int16x2_t, __builtin_riscv_mul_h01_i32)
+__packed_binary_builtin_mixed(mul_h11_i32, int32_t, int16x2_t, int16x2_t, __builtin_riscv_mul_h11_i32)
+__packed_binary_builtin_mixed(mulu_h00_u32, uint32_t, uint16x2_t, uint16x2_t, __builtin_riscv_mulu_h00_u32)
+__packed_binary_builtin_mixed(mulu_h01_u32, uint32_t, uint16x2_t, uint16x2_t, __builtin_riscv_mulu_h01_u32)
+__packed_binary_builtin_mixed(mulu_h11_u32, uint32_t, uint16x2_t, uint16x2_t, __builtin_riscv_mulu_h11_u32)
+__packed_binary_builtin_mixed(mulsu_h00_i32, int32_t, int16x2_t, uint16x2_t, __builtin_riscv_mulsu_h00_i32)
+__packed_binary_builtin_mixed(mulsu_h11_i32, int32_t, int16x2_t, uint16x2_t, __builtin_riscv_mulsu_h11_i32)
+
+/* Packed Multiply Parts (64-bit) */
+__packed_binary_builtin_mixed(pmul_b00_i16x4, int16x4_t, int8x8_t, int8x8_t, __builtin_riscv_pmul_b00_i16x4)
+__packed_binary_builtin_mixed(pmul_b01_i16x4, int16x4_t, int8x8_t, int8x8_t, __builtin_riscv_pmul_b01_i16x4)
+__packed_binary_builtin_mixed(pmul_b11_i16x4, int16x4_t, int8x8_t, int8x8_t, __builtin_riscv_pmul_b11_i16x4)
+__packed_binary_builtin_mixed(pmulu_b00_u16x4, uint16x4_t, uint8x8_t, uint8x8_t, __builtin_riscv_pmulu_b00_u16x4)
+__packed_binary_builtin_mixed(pmulu_b01_u16x4, uint16x4_t, uint8x8_t, uint8x8_t, __builtin_riscv_pmulu_b01_u16x4)
+__packed_binary_builtin_mixed(pmulu_b11_u16x4, uint16x4_t, uint8x8_t, uint8x8_t, __builtin_riscv_pmulu_b11_u16x4)
+__packed_binary_builtin_mixed(pmulsu_b00_i16x4, int16x4_t, int8x8_t, uint8x8_t, __builtin_riscv_pmulsu_b00_i16x4)
+__packed_binary_builtin_mixed(pmulsu_b11_i16x4, int16x4_t, int8x8_t, uint8x8_t, __builtin_riscv_pmulsu_b11_i16x4)
+__packed_binary_builtin_mixed(pmul_h00_i32x2, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pmul_h00_i32x2)
+__packed_binary_builtin_mixed(pmul_h01_i32x2, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pmul_h01_i32x2)
+__packed_binary_builtin_mixed(pmul_h11_i32x2, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pmul_h11_i32x2)
+__packed_binary_builtin_mixed(pmulu_h00_u32x2, uint32x2_t, uint16x4_t, uint16x4_t, __builtin_riscv_pmulu_h00_u32x2)
+__packed_binary_builtin_mixed(pmulu_h01_u32x2, uint32x2_t, uint16x4_t, uint16x4_t, __builtin_riscv_pmulu_h01_u32x2)
+__packed_binary_builtin_mixed(pmulu_h11_u32x2, uint32x2_t, uint16x4_t, uint16x4_t, __builtin_riscv_pmulu_h11_u32x2)
+__packed_binary_builtin_mixed(pmulsu_h00_i32x2, int32x2_t, int16x4_t, uint16x4_t, __builtin_riscv_pmulsu_h00_i32x2)
+__packed_binary_builtin_mixed(pmulsu_h11_i32x2, int32x2_t, int16x4_t, uint16x4_t, __builtin_riscv_pmulsu_h11_i32x2)
+__packed_binary_builtin_mixed(mul_w00_i64, int64_t, int32x2_t, int32x2_t, __builtin_riscv_mul_w00_i64)
+__packed_binary_builtin_mixed(mul_w01_i64, int64_t, int32x2_t, int32x2_t, __builtin_riscv_mul_w01_i64)
+__packed_binary_builtin_mixed(mul_w11_i64, int64_t, int32x2_t, int32x2_t, __builtin_riscv_mul_w11_i64)
+__packed_binary_builtin_mixed(mulu_w00_u64, uint64_t, uint32x2_t, uint32x2_t, __builtin_riscv_mulu_w00_u64)
+__packed_binary_builtin_mixed(mulu_w01_u64, uint64_t, uint32x2_t, uint32x2_t, __builtin_riscv_mulu_w01_u64)
+__packed_binary_builtin_mixed(mulu_w11_u64, uint64_t, uint32x2_t, uint32x2_t, __builtin_riscv_mulu_w11_u64)
+__packed_binary_builtin_mixed(mulsu_w00_i64, int64_t, int32x2_t, uint32x2_t, __builtin_riscv_mulsu_w00_i64)
+__packed_binary_builtin_mixed(mulsu_w11_i64, int64_t, int32x2_t, uint32x2_t, __builtin_riscv_mulsu_w11_i64)
+
+/* Packed "Q-format" Multiply Parts Accumulate (32-bit) */
+__packed_ternary_builtin_cast(mqacc_h00_i32, int, int16x2_t, __builtin_riscv_mqacc_h00_i32)
+__packed_ternary_builtin_cast(mqacc_h01_i32, int, int16x2_t, __builtin_riscv_mqacc_h01_i32)
+__packed_ternary_builtin_cast(mqacc_h11_i32, int, int16x2_t, __builtin_riscv_mqacc_h11_i32)
+__packed_ternary_builtin_cast(mqracc_h00_i32, int, int16x2_t, __builtin_riscv_mqracc_h00_i32)
+__packed_ternary_builtin_cast(mqracc_h01_i32, int, int16x2_t, __builtin_riscv_mqracc_h01_i32)
+__packed_ternary_builtin_cast(mqracc_h11_i32, int, int16x2_t, __builtin_riscv_mqracc_h11_i32)
+
+/* Packed "Q-format" Multiply Parts Accumulate (64-bit) */
+__packed_ternary_builtin_cast(pmqacc_h00_i32x2, int32x2_t, int16x4_t, __builtin_riscv_pmqacc_h00_i32x2)
+__packed_ternary_builtin_cast(pmqacc_h01_i32x2, int32x2_t, int16x4_t, __builtin_riscv_pmqacc_h01_i32x2)
+__packed_ternary_builtin_cast(pmqacc_h11_i32x2, int32x2_t, int16x4_t, __builtin_riscv_pmqacc_h11_i32x2)
+__packed_ternary_builtin_cast(pmqracc_h00_i32x2, int32x2_t, int16x4_t, __builtin_riscv_pmqracc_h00_i32x2)
+__packed_ternary_builtin_cast(pmqracc_h01_i32x2, int32x2_t, int16x4_t, __builtin_riscv_pmqracc_h01_i32x2)
+__packed_ternary_builtin_cast(pmqracc_h11_i32x2, int32x2_t, int16x4_t, __builtin_riscv_pmqracc_h11_i32x2)
+__packed_ternary_builtin_cast(mqacc_w00_i64, int64_t, int32x2_t, __builtin_riscv_mqacc_w00_i64)
+__packed_ternary_builtin_cast(mqacc_w01_i64, int64_t, int32x2_t, __builtin_riscv_mqacc_w01_i64)
+__packed_ternary_builtin_cast(mqacc_w11_i64, int64_t, int32x2_t, __builtin_riscv_mqacc_w11_i64)
+__packed_ternary_builtin_cast(mqracc_w00_i64, int64_t, int32x2_t, __builtin_riscv_mqracc_w00_i64)
+__packed_ternary_builtin_cast(mqracc_w01_i64, int64_t, int32x2_t, __builtin_riscv_mqracc_w01_i64)
+__packed_ternary_builtin_cast(mqracc_w11_i64, int64_t, int32x2_t, __builtin_riscv_mqracc_w11_i64)
+
+/* Packed Narrowing Clip Pair (32-bit) */
+__packed_binary_builtin_cast(pnclipp_i8x4, int16x2_t, int8x4_t, __builtin_riscv_pnclipp_i8x4)
+__packed_binary_builtin_cast(pnclipup_u8x4, uint16x2_t, uint8x4_t, __builtin_riscv_pnclipup_u8x4)
+__packed_binary_builtin_cast(pnclipp_i16x2, int, int16x2_t, __builtin_riscv_pnclipp_i16x2)
+__packed_binary_builtin_cast(pnclipup_u16x2, unsigned int, uint16x2_t, __builtin_riscv_pnclipup_u16x2)
+
+/* Packed Narrowing Clip Pair (64-bit) */
+__packed_binary_builtin_cast(pnclipp_i8x8, int16x4_t, int8x8_t, __builtin_riscv_pnclipp_i8x8)
+__packed_binary_builtin_cast(pnclipup_u8x8, uint16x4_t, uint8x8_t, __builtin_riscv_pnclipup_u8x8)
+__packed_binary_builtin_cast(pnclipp_i16x4, int32x2_t, int16x4_t, __builtin_riscv_pnclipp_i16x4)
+__packed_binary_builtin_cast(pnclipup_u16x4, uint32x2_t, uint16x4_t, __builtin_riscv_pnclipup_u16x4)
+__packed_binary_builtin_cast(pnclipp_i32x2, int64_t, int32x2_t, __builtin_riscv_pnclipp_i32x2)
+__packed_binary_builtin_cast(pnclipup_u32x2, uint64_t, uint32x2_t, __builtin_riscv_pnclipup_u32x2)
 
 /* Reinterpret Casts, Packed <-> Scalar (32-bit) */
 __packed_reinterpret(u8x4_u32, uint32_t, uint8x4_t)
@@ -875,6 +1094,8 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_unary_op
 #undef __packed_binary_builtin
 #undef __packed_binary_builtin_mixed
+#undef __packed_ternary_builtin
+#undef __packed_ternary_builtin_mixed
 #undef __packed_sh1add
 #undef __packed_sh1sadd
 #undef __packed_cmp
@@ -882,8 +1103,11 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_binary_builtin_cast
 #undef __packed_reduction
 #undef __packed_merge_builtin
-#undef __packed_psabs
+#undef __packed_unary_builtin
 #undef __packed_widen_convert
+#undef __packed_widen_binary_op
+#undef __packed_widen_mul
+#undef __packed_widen_mulsu
 #undef __packed_widen_high2
 #undef __packed_widen_high4
 #undef __packed_narrow_even2
@@ -912,7 +1136,7 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_nziph2
 #undef __packed_nziph4
 #undef __packed_abdsum
-#undef __packed_abdsum_acc
+#undef __packed_ternary_builtin_cast
 #undef __packed_reinterpret
 #undef __DEFAULT_FN_ATTRS
 

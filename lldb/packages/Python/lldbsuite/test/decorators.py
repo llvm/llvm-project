@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import Optional
 from packaging import version
 import contextlib
@@ -13,6 +13,7 @@ import locale
 import os
 import platform
 import re
+import socket
 import sys
 import tempfile
 import subprocess
@@ -1234,6 +1235,13 @@ def requirePOSIX(func):
     return requireNotPlatform(["windows"], reason="uses the posix API.")(func)
 
 
+def requireMacOS(func):
+    """Mark the item as inherently macOS-only, as opposed to other Darwin
+    platforms (iOS, tvOS, watchOS, ...).
+    """
+    return requirePlatform(["macosx"])(func)
+
+
 def requireSignals(func):
     """Mark the item as requiring POSIX signal support on the target."""
     return requireNotPlatform(["windows", "wasip1", "wasi"])(func)
@@ -1271,16 +1279,38 @@ def requireDarwinHost(func):
     return requireHostPlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
 
 
-def skipIfTargetDoesNotSupportThreads():
-    """Skip tests that require thread support (e.g. pthreads)."""
+def requireThreadSupport(func):
+    """Mark the item as requiring thread support (e.g. pthreads) on the target."""
     platform = lldbplatformutil.getPlatform()
-    # WASI targets ending in "-threads" (e.g. wasip1-threads) support threads;
-    # other WASI targets (e.g. wasip1, wasip2) do not.
-    no_threads = platform.startswith("wasi") and not platform.endswith("threads")
     return unittest.skipIf(
-        no_threads,
-        "threads are not supported on %s" % platform,
-    )
+        # WASI targets ending in "-threads" (e.g. wasip1-threads) support threads;
+        # other WASI targets (e.g. wasip1, wasip2) do not.
+        platform.startswith("wasi") and not platform.endswith("threads"),
+        UnsupportedReason(f"threads are not supported on {platform}"),
+    )(func)
+
+
+@lru_cache(maxsize=None)
+def _socketPermissionError() -> Optional[str]:
+    """Probe whether the host lets us open a listening socket.
+    Returns None if it does, otherwise a description of why it doesn't.
+    """
+
+    family = socket.AF_INET
+    addr = ("localhost", 0)
+    try:
+        with socket.socket(family, socket.SOCK_STREAM) as sock:
+            sock.bind(addr)
+            sock.listen(1)
+    except OSError as e:
+        return f"host does not permit opening a listening socket: {e}"
+    return None
+
+
+def requireSocketPermission(func):
+    """Mark the item as requiring permission to open a listening socket."""
+    error = _socketPermissionError()
+    return unittest.skipIf(error is not None, UnsupportedReason(error or ""))(func)
 
 
 def skipIfTargetDoesNotSupportSharedLibraries():

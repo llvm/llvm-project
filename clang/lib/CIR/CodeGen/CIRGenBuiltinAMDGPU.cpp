@@ -76,8 +76,10 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
   mlir::Type srcTy = src0.getType();
   mlir::Type int32Ty = builder.getSInt32Ty();
 
-  cir::RecordType frExpResTy =
-      builder.getAnonRecordTy({srcTy, int32Ty}, false, false);
+  mlir::Type frExpResMembers[] = {srcTy, int32Ty};
+  cir::RecordType frExpResTy = builder.getAnonRecordTy(
+      frExpResMembers, /*packed=*/false,
+      cir::RecordType::getAllDataKinds(frExpResMembers));
 
   mlir::Value frExpResult = builder.emitIntrinsicCallOp(
       loc, "frexp", frExpResTy, mlir::ValueRange{src0});
@@ -174,8 +176,10 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     mlir::Value z = emitScalarExpr(expr->getArg(2));
 
     auto i1Ty = builder.getUIntNTy(1);
-    cir::RecordType resTy = builder.getAnonRecordTy(
-        {x.getType(), i1Ty}, /*packed=*/false, /*padded=*/false);
+    mlir::Type resMembers[] = {x.getType(), i1Ty};
+    cir::RecordType resTy =
+        builder.getAnonRecordTy(resMembers, /*packed=*/false,
+                                cir::RecordType::getAllDataKinds(resMembers));
 
     mlir::Value structResult =
         cir::LLVMIntrinsicCallOp::create(builder, getLoc(expr->getExprLoc()),
@@ -986,6 +990,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f64:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +

@@ -474,7 +474,7 @@ void GlobalSection::addInternalGOTEntry(Symbol *sym) {
 }
 
 void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
-  assert(!ctx.arg.extendedConst);
+  assert(!ctx.arg.extendedConst || TLS);
   bool is64 = ctx.arg.is64.value_or(false);
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
 
@@ -733,6 +733,9 @@ void LinkingSection::writeBody() {
             writeUleb128(sub.os, dataSym->getVA(), "data offset");
           }
           writeUleb128(sub.os, dataSym->getSize(), "data size");
+        } else if (auto *commonSym = dyn_cast<CommonSymbol>(sym)) {
+          writeUleb128(sub.os, commonSym->getSize(), "common size");
+          writeU8(sub.os, commonSym->getAlignment(), "common alignment");
         }
       } else {
         auto *s = cast<OutputSectionSymbol>(sym);

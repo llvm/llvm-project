@@ -20,7 +20,6 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -1115,6 +1114,7 @@ void LowerTypeTestsModule::importFunction(Function *F,
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              F->getAddressSpace(), Name, &M);
     FDecl->setVisibility(Visibility);
+    FDecl->setDSOLocal(F->isDSOLocal());
     Visibility = GlobalValue::HiddenVisibility;
 
     // Update aliases pointing to this function to also include the ".cfi" suffix,
@@ -1129,6 +1129,7 @@ void LowerTypeTestsModule::importFunction(Function *F,
         AliasDecl->takeName(A);
         A->replaceAllUsesWith(AliasDecl);
         A->setName(AliasName);
+        AliasDecl->setDSOLocal(A->isDSOLocal());
       }
     }
   }
@@ -1829,6 +1830,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
           GlobalAlias::create(JumpTableEntryType, 0, F->getLinkage(), "",
                               CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
+      FAlias->setDSOLocal(F->isDSOLocal());
       FAlias->takeName(F);
       if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
@@ -2276,6 +2278,16 @@ bool LowerTypeTestsModule::lower() {
           F->setMetadata(
               LLVMContext::MD_guid,
               MDTuple::get(M.getContext(), {FuncMD->getOperand(2).get()}));
+          if (ExportSummary) {
+            GlobalValue::GUID GUID =
+                cast<ConstantAsMetadata>(FuncMD->getOperand(2))
+                    ->getValue()
+                    ->getUniqueInteger()
+                    .getZExtValue();
+            if (auto VI = ExportSummary->getValueInfo(GUID))
+              F->setDSOLocal(
+                  VI.isDSOLocal(ExportSummary->withDSOLocalPropagation()));
+          }
         }
         // If the function is available_externally, remove its definition so
         // that it is handled the same way as a declaration. Later we will try
@@ -2549,6 +2561,7 @@ bool LowerTypeTestsModule::lower() {
     auto *AliasGA = GlobalAlias::create("", Target);
     AliasGA->setVisibility(A.Alias->getVisibility());
     AliasGA->setLinkage(A.Alias->getLinkage());
+    AliasGA->setDSOLocal(A.Alias->isDSOLocal());
     AliasGA->takeName(A.Alias);
     A.Alias->replaceAllUsesWith(AliasGA);
     A.Alias->eraseFromParent();

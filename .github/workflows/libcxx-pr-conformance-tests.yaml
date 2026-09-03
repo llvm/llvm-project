@@ -45,15 +45,15 @@ jobs:
         config: [
           'frozen-cxx03-headers',
           'generic-cxx03',
-          'generic-cxx26',
+          'generic-cxx29',
           'generic-modules'
         ]
         cc: [  'clang-23' ]
         cxx: [ 'clang++-23' ]
         include:
           - config: 'generic-gcc'
-            cc: 'gcc-15'
-            cxx: 'g++-15'
+            cc: 'gcc-16'
+            cxx: 'g++-16'
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -91,14 +91,15 @@ jobs:
           'generic-cxx14',
           'generic-cxx17',
           'generic-cxx20',
-          'generic-cxx23'
+          'generic-cxx23',
+          'generic-cxx26',
         ]
         cc: [ 'clang-23' ]
         cxx: [ 'clang++-23' ]
         include:
           - config: 'generic-gcc-cxx11'
-            cc: 'gcc-15'
-            cxx: 'g++-15'
+            cc: 'gcc-16'
+            cxx: 'g++-16'
           - config: 'generic-cxx26'
             cc: 'clang-22'
             cxx: 'clang++-22'

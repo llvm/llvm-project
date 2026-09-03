@@ -34,6 +34,8 @@ private:
   ABIArgInfo classifyComplexType(const ComplexType *Ty, bool IsRet) const;
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType Ty) const;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
   void computeInfo(CGFunctionInfo &FI) const override;
 };
 } // end anonymous namespace
@@ -92,6 +94,25 @@ void SparcV8ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
   for (auto &Arg : FI.arguments())
     Arg.info = classifyArgumentType(Arg.type);
+}
+
+RValue SparcV8ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty, AggValueSlot Slot) const {
+  CharUnits SlotSize = CharUnits::fromQuantity(4);
+  auto TInfo = getContext().getTypeInfoInChars(Ty);
+
+  // E.g. long double, larger _Complex and aggregate values are indirect.
+  bool IsIndirect = classifyArgumentType(Ty).isIndirect();
+
+  // An alignment higher than the slot size is not respected.
+  bool AllowHigherAlign = false;
+
+  // Force values smaller than a slot (e.g. _Complex char)
+  // into the right-most bytes.
+  bool ForceRightAdjust = true;
+
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TInfo, SlotSize,
+                          AllowHigherAlign, Slot, ForceRightAdjust);
 }
 
 namespace {
@@ -394,11 +415,14 @@ RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // Zero-sized types have a width of one byte for parameter passing purposes.
   TInfo.Width = std::max(TInfo.Width, CharUnits::fromQuantity(1));
 
+  // Small _Complex types are right-adjusted, but small aggregates are not.
+  bool ForceRightAdjust = Ty->isAnyComplexType();
+
   // Arguments bigger than 2*SlotSize bytes are passed indirectly.
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty,
                           /*IsIndirect=*/TInfo.Width > 2 * SlotSize, TInfo,
                           SlotSize,
-                          /*AllowHigherAlign=*/true, Slot);
+                          /*AllowHigherAlign=*/true, Slot, ForceRightAdjust);
 }
 
 void SparcV9ABIInfo::computeInfo(CGFunctionInfo &FI) const {

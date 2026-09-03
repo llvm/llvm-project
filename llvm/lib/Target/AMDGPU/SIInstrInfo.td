@@ -331,6 +331,10 @@ def cvt_from_fp8 : PatFrag<(ops node:$src),
 def cvt_from_bf8 : PatFrag<(ops node:$src),
                            (convert_from_arbitrary_fp node:$src, Float8E5M2)>;
 
+def AMDGPUcvt_f32_fp8_e5m3 : SDNode<"AMDGPUISD::CVT_F32_FP8_E5M3",
+  SDTypeProfile<1, 2, [SDTCisVT<0, f32>, SDTCisVT<1, i32>,
+                       SDTCisVT<2, i32>]>>;
+
 // The packed HW conversions round to nearest-even and never saturate, so only
 // those forms of convert_to_arbitrary_fp are matched here.
 def cvt_to_fp8 : PatFrag<(ops node:$src),
@@ -359,6 +363,9 @@ def cvt_pk_f16_bf8 : PatFrags<(ops node:$src),
 def AMDGPUcvt_pk_fp8_f32 : SDNode<"AMDGPUISD::CVT_PK_FP8_F32",
   SDTypeProfile<1, 4, [SDTCisVT<0, i32>, SDTCisVT<1, f32>, SDTCisVT<2, f32>,
                        SDTCisVT<3, i32>, SDTCisVT<4, i1>]>>;
+def AMDGPUcvt_pk_fp8_f32_e5m3 : SDNode<"AMDGPUISD::CVT_PK_FP8_F32_E5M3",
+  SDTypeProfile<1, 4, [SDTCisVT<0, i32>, SDTCisVT<1, f32>, SDTCisVT<2, f32>,
+                       SDTCisVT<3, i32>, SDTCisVT<4, i1>]>>;
 def AMDGPUcvt_pk_bf8_f32 : SDNode<"AMDGPUISD::CVT_PK_BF8_F32",
   SDTypeProfile<1, 4, [SDTCisVT<0, i32>, SDTCisVT<1, f32>, SDTCisVT<2, f32>,
                        SDTCisVT<3, i32>, SDTCisVT<4, i1>]>>;
@@ -370,6 +377,9 @@ def AMDGPUcvt_pk_bf8_f16 : SDNode<"AMDGPUISD::CVT_PK_BF8_F16",
 def cvt_pk_fp8_f32 : PatFrags<(ops node:$src0, node:$src1, node:$old, node:$sel),
   [(int_amdgcn_cvt_pk_fp8_f32 node:$src0, node:$src1, node:$old, node:$sel),
    (AMDGPUcvt_pk_fp8_f32 node:$src0, node:$src1, node:$old, node:$sel)]>;
+def cvt_pk_fp8_f32_e5m3 : PatFrags<(ops node:$src0, node:$src1, node:$old, node:$sel),
+  [(int_amdgcn_cvt_pk_fp8_f32_e5m3 node:$src0, node:$src1, node:$old, node:$sel),
+   (AMDGPUcvt_pk_fp8_f32_e5m3 node:$src0, node:$src1, node:$old, node:$sel)]>;
 def cvt_pk_bf8_f32 : PatFrags<(ops node:$src0, node:$src1, node:$old, node:$sel),
   [(int_amdgcn_cvt_pk_bf8_f32 node:$src0, node:$src1, node:$old, node:$sel),
    (AMDGPUcvt_pk_bf8_f32 node:$src0, node:$src1, node:$old, node:$sel)]>;
@@ -1280,6 +1290,7 @@ class SDWAOperand<string Id, string Name = NAME>
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseSDWASel(Operands, \""#Id#"\", AMDGPUOperand::"#ImmTy#"); }";
+  let DecoderMethod = "decodeSDWASel";
 }
 
 class ArrayOperand0<string Id, string Name = NAME>
@@ -1345,7 +1356,9 @@ def Dim : CustomOperand</*optional=*/1, type=i8>;
 def dst_sel : SDWAOperand<"dst_sel", "SDWADstSel">;
 def src0_sel : SDWAOperand<"src0_sel", "SDWASrc0Sel">;
 def src1_sel : SDWAOperand<"src1_sel", "SDWASrc1Sel">;
-def dst_unused : CustomOperand<1, "SDWADstUnused">;
+def dst_unused : CustomOperand<1, "SDWADstUnused"> {
+  let DecoderMethod = "decodeSDWADstUnused";
+}
 
 def op_sel0 : ArrayOperand0<"op_sel", "OpSel">;
 def op_sel_hi0 : ArrayOperand0<"op_sel_hi", "OpSelHi">;

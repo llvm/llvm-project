@@ -692,6 +692,10 @@ public:
     return data().FirstFriend.isValid();
   }
 
+  bool hasLazyFriends() const { return data().FirstFriend.isOffset(); }
+
+  void loadLazyFriends();
+
   /// \c true if a defaulted copy constructor for this class would be
   /// deleted.
   bool defaultedCopyConstructorIsDeleted() const {
@@ -2219,6 +2223,10 @@ public:
                                               bool IsAppleKext) const {
     return const_cast<CXXMethodDecl *>(this)->getDevirtualizedMethod(
         Base, IsAppleKext);
+  }
+
+  CXXSpecialMemberKind getSpecialMemberKind() const {
+    return getDefaultedFunctionKind().asSpecialMember();
   }
 
   /// Determine whether this is a usual deallocation function (C++

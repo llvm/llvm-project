@@ -284,7 +284,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
   // a `FoldingSet`, since both could end up in the same bucket.
-  mutable llvm::DenseMap<llvm::FoldingSetNodeID, AutoType *> AutoTypes;
+  // Keyed by an interned FoldingSetNodeIDRef rather than a FoldingSetNodeID to
+  // avoid its large inline SmallVector in every bucket.
+  mutable llvm::DenseMap<llvm::FoldingSetNodeIDRef, AutoType *> AutoTypes;
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
@@ -296,7 +298,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
-  llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
+  mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
+      HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
 
   mutable llvm::FoldingSet<CountAttributedType> CountAttributedTypes;
@@ -310,6 +313,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
     SubstTemplateTemplateParmPacks;
   mutable llvm::ContextualFoldingSet<DeducedTemplateStorage, ASTContext &>
       DeducedTemplates;
+  mutable llvm::ContextualFoldingSet<PackIndexingTemplateStorage, ASTContext &>
+      PackIndexingTemplates;
 
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
@@ -1896,7 +1901,22 @@ public:
 
   QualType adjustStringLiteralBaseType(QualType StrLTy) const;
 
+  // Represents an inclusive-first/exclusive last bit-offset into a type.
+  struct BitInterval {
+    // [First, Last)
+    uint64_t First;
+    uint64_t Last;
+  };
+
+  // Calculate and get the 'padding intervals' inside of a type. Note: calls to
+  // this potentially invalidate all ArrayRef objects, so effort must be made to
+  // copy the data if necessary.
+  llvm::ArrayRef<BitInterval> getPaddingIntervals(QualType Ty) const;
+
 private:
+  mutable llvm::DenseMap<QualType, llvm::SmallVector<BitInterval>>
+      PaddingIntervalCache;
+
   /// Return a normal function type with a typed argument list.
   QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
                                    const FunctionProtoType::ExtProtoInfo &EPI,
@@ -1940,7 +1960,7 @@ public:
 private:
   UnresolvedUsingType *getUnresolvedUsingTypeInternal(
       ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
-      const UnresolvedUsingTypenameDecl *D, void *InsertPos,
+      const UnresolvedUsingTypenameDecl *D, llvm::FoldingSetInsertToken Token,
       const Type *CanonicalType) const;
 
   TagType *getTagTypeInternal(ElaboratedTypeKeyword Keyword,
@@ -2140,7 +2160,7 @@ public:
   /// C++11 deduced auto type.
   QualType
   getAutoType(DeducedKind DK, QualType DeducedAsType, AutoTypeKeyword Keyword,
-              TemplateDecl *TypeConstraintConcept = nullptr,
+              TemplateName TypeConstraintConcept = TemplateName(),
               ArrayRef<TemplateArgument> TypeConstraintArgs = {}) const;
 
   /// C++11 deduction pattern for 'auto' type.
@@ -2662,6 +2682,11 @@ public:
                                                 unsigned Index,
                                                 bool Final) const;
 
+  TemplateName
+  getPackIndexingTemplateName(TemplateName Pattern, Expr *IndexExpr,
+                              bool FullySubstituted = false,
+                              ArrayRef<TemplateName> Expansions = {}) const;
+
   /// Represents a TemplateName which had some of its default arguments
   /// deduced. This both represents this default argument deduction as sugar,
   /// and provides the support for it's equivalences through canonicalization.
@@ -2915,9 +2940,16 @@ public:
   /// [[gnu::ms_struct]].
   bool defaultsToMsStruct() const;
 
+  /// Whether layout (offset and size) information can be queried for \p D.
+  static bool hasLayout(const RecordDecl *D) {
+    D = D->getDefinition();
+    return D && !D->isInvalidDecl() && D->isCompleteDefinition();
+  }
+
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.
+  /// \pre hasLayout(D)
   const ASTRecordLayout &getASTRecordLayout(const RecordDecl *D) const;
 
   /// Get or compute information about the layout of the specified
@@ -3244,12 +3276,14 @@ public:
   /// actually be an array type).
   QualType getBaseElementType(QualType QT) const;
 
-  /// Return number of constant array elements.
-  uint64_t getConstantArrayElementCount(const ConstantArrayType *CA) const;
+  /// Return number of (potentially nested) constant array elements.
+  static uint64_t getConstantArrayElementCount(const ConstantArrayType *CA);
 
-  /// Return number of elements initialized in an ArrayInitLoopExpr.
-  uint64_t
-  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE) const;
+  /// Return number of elements initialized in a (potentially nested)
+  /// ArrayInitLoopExpr.
+  /// \c AILE may be null, in which case 0 is returned.
+  static uint64_t
+  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE);
 
   /// Perform adjustment on the parameter type of a function.
   ///
@@ -4036,26 +4070,27 @@ inline void operator delete[](void *Ptr, const clang::ASTContext &C, size_t) {
   C.Deallocate(Ptr);
 }
 
-/// Create the representation of a LazyGenerationalUpdatePtr.
-template <typename Owner, typename T,
-          void (clang::ExternalASTSource::*Update)(Owner)>
-typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
-    clang::LazyGenerationalUpdatePtr<Owner, T, Update>::makeValue(
-        const clang::ASTContext &Ctx, T Value) {
-  // Note, this is implemented here so that ExternalASTSource.h doesn't need to
-  // include ASTContext.h. We explicitly instantiate it for all relevant types
-  // in ASTContext.cpp.
-  if (auto *Source = Ctx.getExternalSource())
-    return new (Ctx) LazyData(Source, Value);
-  return Value;
-}
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
-    return Val.ComputeHash();
+    return Val.computeHash();
   }
 
   static bool isEqual(const FoldingSetNodeID &LHS,
                       const FoldingSetNodeID &RHS) {
+    return LHS == RHS;
+  }
+};
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeIDRef> {
+  static unsigned getHashValue(FoldingSetNodeIDRef Val) {
+    return Val.computeHash();
+  }
+  static bool isEqual(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
+    return LHS == RHS;
+  }
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.computeHash();
+  }
+  static bool isEqual(const FoldingSetNodeID &LHS, FoldingSetNodeIDRef RHS) {
     return LHS == RHS;
   }
 };

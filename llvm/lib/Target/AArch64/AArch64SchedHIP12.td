@@ -21,7 +21,7 @@ def HIP12Model : SchedMachineModel {
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
                                                     SVE2p1Unsupported.F,
-                                                    [HasSVEB16B16, HasMTE,
+                                                    [HasSVEB16B16, HasSVEBFSCALE, HasMTE,
                                                      HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
@@ -2949,7 +2949,7 @@ def : InstRW<[HIP12Write_2c_1V02_1V13], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HS
 // Floating point multiply SVE256
 // instrs FMUL
 // instrs FSCALE, FMULX
-def : InstRW<[HIP12Write_3c_1V02_1V13], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+def : InstRW<[HIP12Write_3c_1V02_1V13], (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]",
                                                    "^FMULX_ZPZZ_[HSD]",
                                                    "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
                                                    "^FMUL_ZPZ[IZ]_[HSD]")>;

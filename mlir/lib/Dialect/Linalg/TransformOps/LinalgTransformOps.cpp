@@ -292,6 +292,11 @@ void transform::ApplyExtractSliceSinkingPatternsOp::populatePatterns(
   linalg::populateExtractSliceSinkingPatterns(patterns, defaultControlFn);
 }
 
+void transform::ApplySwapExtractSliceWithFillPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateSwapExtractSliceWithFillPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -1675,9 +1680,13 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
         if (attr.getName() == getInterfaceAttrName() ||
             attr.getName() == getOpsAttrName())
           continue;
-        if (!op->hasAttr(attr.getName()))
+        std::optional<Attribute> inherent = op->getInherentAttr(attr.getName());
+        Attribute actual = inherent.has_value()
+                               ? *inherent
+                               : op->getDiscardableAttr(attr.getName());
+        if (!actual)
           return;
-        if (op->getAttr(attr.getName()) != attr.getValue())
+        if (actual != attr.getValue())
           return;
       }
     }
@@ -3113,8 +3122,11 @@ void SplitOp::print(OpAsmPrinter &printer) {
   else
     printer << getDynamicChunkSizes();
   printer << " ";
-  printer.printOptionalAttrDict(getOperation()->getAttrs(),
-                                {getStaticChunkSizesAttrName()});
+  NamedAttrList attrs(getOperation()->getDiscardableAttrDictionary());
+  attrs.append(getDimensionAttrName(), getDimensionAttr());
+  if (UnitAttr multiway = getMultiwayAttr())
+    attrs.append(getMultiwayAttrName(), multiway);
+  printer.printOptionalAttrDict(attrs, {getStaticChunkSizesAttrName()});
   printer << " : " << getTarget().getType();
   if (staticChunkSize == ShapedType::kDynamic)
     printer << ", " << getDynamicChunkSizes().getType();
@@ -4460,6 +4472,14 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
 
   // If rank <= 1, do nothing
   if (target.getNumLoops() <= 1) {
+    results.push_back(target);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  // Only broadcasts with a 0-D input are handled; leave anything else
+  // unchanged.
+  if (auto broadcastOp = dyn_cast<linalg::BroadcastOp>(target.getOperation());
+      broadcastOp && broadcastOp.getInput().getType().getRank() != 0) {
     results.push_back(target);
     return DiagnosedSilenceableFailure::success();
   }

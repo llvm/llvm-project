@@ -286,6 +286,9 @@ getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
 
 SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord);
 
+uint32_t getMemSemanticsWithStorageClass(const Triple &TT, uint32_t OrderSem,
+                                         uint32_t StorageClassSem);
+
 SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
                                 SyncScope::ID Id);
 
@@ -511,21 +514,42 @@ inline bool isVector1(Type *Ty) {
   return FVTy && FVTy->getNumElements() == 1;
 }
 
+// We define this predicate out of line to avoid having to include all OpTypes.
+bool isVectorType(SPIRVTypeInst SPVTy);
+
+// Per spec: "Vector types must be parameterized only with 2, 3, or
+// 4 components, plus any additional sizes enabled by capabilities.", and
+// we always enable the Vector16 capability.
+inline bool requiresLongVectorEXT(unsigned NumComponents) {
+  return NumComponents != 2 && NumComponents != 3 && NumComponents != 4 &&
+         NumComponents != 8 && NumComponents != 16;
+}
+
+inline bool isLongVectorEXT(const Type *Ty) {
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return requiresLongVectorEXT(FVTy->getNumElements());
+  return false;
+}
+
 // Modify an LLVM type to conform with future transformations in IRTranslator.
 // At the moment use cases comprise only a <1 x Type> vector. To extend when/if
 // needed.
-inline Type *normalizeType(Type *Ty) {
+inline Type *normalizeType(Type *Ty, bool CanUseAnyVectorRank) {
+  if (CanUseAnyVectorRank)
+    return Ty;
+
   auto *FVTy = dyn_cast<FixedVectorType>(Ty);
   if (!FVTy || FVTy->getNumElements() != 1)
     return Ty;
   // If it's a <1 x Type> vector type, replace it by the element type, because
   // it's not a legal vector type in LLT and IRTranslator will represent it as
   // the scalar eventually.
-  return normalizeType(FVTy->getElementType());
+  return normalizeType(FVTy->getElementType(), CanUseAnyVectorRank);
 }
 
-inline PoisonValue *getNormalizedPoisonValue(Type *Ty) {
-  return PoisonValue::get(normalizeType(Ty));
+inline PoisonValue *getNormalizedPoisonValue(Type *Ty,
+                                             bool CanUseAnyVectorRank) {
+  return PoisonValue::get(normalizeType(Ty, CanUseAnyVectorRank));
 }
 
 inline MetadataAsValue *buildMD(Value *Arg) {

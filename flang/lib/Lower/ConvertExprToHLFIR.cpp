@@ -402,11 +402,116 @@ private:
 
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::CoarrayRef &coarrayRef) {
-    TODO(getLoc(), "coarray: lowering a reference to a coarray object");
+    PartInfo partInfo;
+    mlir::Type resultType = visit(coarrayRef, partInfo);
+    return genDesignate(resultType, partInfo, coarrayRef);
   }
 
-  mlir::Type visit(const Fortran::evaluate::CoarrayRef &, PartInfo &) {
-    TODO(getLoc(), "coarray: lowering a reference to a coarray object");
+  mlir::Type visit(const Fortran::evaluate::CoarrayRef &coarrayRef,
+                   PartInfo &partInfo) {
+    // Coarray is a data entity with corank > 0 that must be scalar
+    // or array.
+    mlir::Type baseType = visit(coarrayRef.base().GetLastSymbol(), partInfo);
+    if (auto seqType = mlir::dyn_cast<fir::SequenceType>(baseType)) {
+      fir::FirOpBuilder &builder = getBuilder();
+      mlir::Location loc = getLoc();
+      mlir::Type idxTy = builder.getIndexType();
+      llvm::SmallVector<std::pair<mlir::Value, mlir::Value>> bounds;
+      auto getBaseBounds = [&](unsigned i) {
+        if (bounds.empty()) {
+          bounds = hlfir::genBounds(loc, builder, partInfo.base.value());
+          assert(!bounds.empty() &&
+                 "failed to compute implicit array section bounds");
+        }
+        return bounds[i];
+      };
+
+      auto frontEndResultShape = Fortran::evaluate::GetShape(
+          converter.getFoldingContext(), coarrayRef);
+      auto tryGettingExtentFromFrontEnd = [&](unsigned dim)
+          -> std::pair<mlir::Value, fir::SequenceType::Extent> {
+        // Use constant extent if possible. The main advantage to do this now
+        // is to get the best FIR array types as possible while lowering.
+        if (frontEndResultShape)
+          if (auto maybeI64 =
+                  Fortran::evaluate::ToInt64(frontEndResultShape->at(dim)))
+            return {builder.createIntegerConstant(loc, idxTy, *maybeI64),
+                    *maybeI64};
+        return {mlir::Value{}, fir::SequenceType::getUnknownExtent()};
+      };
+
+      llvm::SmallVector<mlir::Value> resultExtents;
+      fir::SequenceType::Shape resultTypeShape;
+      bool sawVectorSubscripts = false;
+      if (auto *arrayRef{
+              std::get_if<Fortran::evaluate::ArrayRef>(&coarrayRef.base().u)}) {
+        for (auto subscript : llvm::enumerate(arrayRef->subscript())) {
+          if (const auto *triplet = std::get_if<Fortran::evaluate::Triplet>(
+                  &subscript.value().u)) {
+            mlir::Value lb, ub;
+            if (const auto &lbExpr = triplet->lower())
+              lb = genSubscript(*lbExpr);
+            else
+              lb = getBaseBounds(subscript.index()).first;
+            if (const auto &ubExpr = triplet->upper())
+              ub = genSubscript(*ubExpr);
+            else
+              ub = getBaseBounds(subscript.index()).second;
+            lb = builder.createConvert(loc, idxTy, lb);
+            ub = builder.createConvert(loc, idxTy, ub);
+            mlir::Value stride = genSubscript(triplet->stride());
+            stride = builder.createConvert(loc, idxTy, stride);
+            auto [extentValue, shapeExtent] =
+                tryGettingExtentFromFrontEnd(resultExtents.size());
+            resultTypeShape.push_back(shapeExtent);
+            if (!extentValue)
+              extentValue =
+                  builder.genExtentFromTriplet(loc, lb, ub, stride, idxTy);
+            resultExtents.push_back(extentValue);
+            partInfo.subscripts.emplace_back(
+                hlfir::DesignateOp::Triplet{lb, ub, stride});
+          } else {
+            const auto &expr =
+                std::get<Fortran::evaluate::IndirectSubscriptIntegerExpr>(
+                    subscript.value().u)
+                    .value();
+            hlfir::Entity subscript = genSubscript(expr);
+            partInfo.subscripts.push_back(subscript);
+            if (expr.Rank() > 0) {
+              sawVectorSubscripts = true;
+              auto [extentValue, shapeExtent] =
+                  tryGettingExtentFromFrontEnd(resultExtents.size());
+              resultTypeShape.push_back(shapeExtent);
+              if (!extentValue)
+                extentValue =
+                    hlfir::genExtent(loc, builder, subscript, /*dim=*/0);
+              resultExtents.push_back(extentValue);
+            }
+          }
+        }
+      }
+      assert(resultExtents.size() == resultTypeShape.size() &&
+             "inconsistent hlfir.designate shape");
+
+      // For vector subscripts, create an hlfir.elemental_addr and continue
+      // lowering the designator inside it as if it was addressing an element of
+      // the vector subscripts.
+      if (sawVectorSubscripts)
+        TODO(loc, "coarray: with vector subscripts.");
+
+      mlir::Type resultType = seqType.getEleTy();
+      if (!resultTypeShape.empty()) {
+        // Ranked array section. The result shape comes from the array section
+        // subscripts.
+        resultType = fir::SequenceType::get(resultTypeShape, resultType);
+        assert(!partInfo.resultShape &&
+               "Fortran designator can only have one ranked part");
+        partInfo.resultShape = builder.genShape(loc, resultExtents);
+      }
+      return resultType;
+    } else {
+      return baseType;
+    }
   }
 
   fir::FortranVariableOpInterface

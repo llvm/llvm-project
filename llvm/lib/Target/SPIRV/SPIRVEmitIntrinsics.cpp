@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVEmitIntrinsics.h"
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
@@ -20,7 +19,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -186,6 +184,7 @@ class SPIRVEmitIntrinsicsImpl
   Function *CurrF = nullptr;
   bool TrackConstants = true;
   bool HaveFunPtrs = false;
+  bool CanUseAnyVectorRank = false;
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   SmallPtrSet<Instruction *, 0> AggrStores;
@@ -624,8 +623,9 @@ CallInst *SPIRVEmitIntrinsicsImpl::buildSpvPtrcast(Function *F, Value *Op,
   }
   Type *OpTy = Op->getType();
   SmallVector<Type *, 2> Types = {OpTy, OpTy};
-  SmallVector<Value *, 2> Args = {Op, buildMD(getNormalizedPoisonValue(ElemTy)),
-                                  B.getInt32(getPointerAddressSpace(OpTy))};
+  SmallVector<Value *, 2> Args = {
+      Op, buildMD(getNormalizedPoisonValue(ElemTy, CanUseAnyVectorRank)),
+      B.getInt32(getPointerAddressSpace(OpTy))};
   CallInst *PtrCasted =
       B.CreateIntrinsicWithoutFolding(Intrinsic::spv_ptrcast, {Types}, Args);
   GR->buildAssignPtr(B, ElemTy, PtrCasted);
@@ -1103,7 +1103,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
   // remember the found relationship
   if (Ty && !IgnoreKnownType) {
     // specify nested types if needed, otherwise return unchanged
-    GR->addDeducedElementType(I, normalizeType(Ty));
+    GR->addDeducedElementType(I, normalizeType(Ty, CanUseAnyVectorRank));
   }
 
   return Ty;
@@ -1188,7 +1188,8 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
       }
       if (Ty != OpTy) {
         Type *NewTy = VectorType::get(Ty, VecTy->getElementCount());
-        GR->addDeducedCompositeType(U, normalizeType(NewTy));
+        GR->addDeducedCompositeType(U,
+                                    normalizeType(NewTy, CanUseAnyVectorRank));
         return NewTy;
       }
     }
@@ -1346,7 +1347,7 @@ bool SPIRVEmitIntrinsicsImpl::deduceOperandElementTypeFunctionRet(
   if (KnownElemTy)
     return false;
   if (Type *OpElemTy = GR->findDeducedElementType(Op)) {
-    OpElemTy = normalizeType(OpElemTy);
+    OpElemTy = normalizeType(OpElemTy, CanUseAnyVectorRank);
     GR->addDeducedElementType(F, OpElemTy);
     GR->addReturnType(
         F, TypedPointerType::get(OpElemTy,
@@ -1359,8 +1360,9 @@ bool SPIRVEmitIntrinsicsImpl::deduceOperandElementTypeFunctionRet(
         continue;
       if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(CI)) {
         if (Type *PrevElemTy = GR->findDeducedElementType(CI)) {
-          GR->updateAssignType(AssignCI, CI,
-                               getNormalizedPoisonValue(OpElemTy));
+          GR->updateAssignType(
+              AssignCI, CI,
+              getNormalizedPoisonValue(OpElemTy, CanUseAnyVectorRank));
           propagateElemType(CI, PrevElemTy, VisitedSubst);
         }
       }
@@ -1544,7 +1546,7 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
     Type *Ty = AskTy ? AskTy : GR->findDeducedElementType(Op);
     if (Ty == KnownElemTy)
       continue;
-    Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
+    Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy, CanUseAnyVectorRank);
     Type *OpTy = Op->getType();
     // Do not let a non-pointer element type clobber an already-deduced pointer
     // element type for the same operand.
@@ -1554,7 +1556,8 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
     if (Op->hasUseList() && !WouldClobberPtrWithNonPtr &&
         (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op))) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
-      GR->addDeducedElementType(Op, normalizeType(KnownElemTy));
+      GR->addDeducedElementType(
+          Op, normalizeType(KnownElemTy, CanUseAnyVectorRank));
       // check if KnownElemTy is complete
       if (!Incomplete)
         eraseTodoType(Op);
@@ -2030,10 +2033,19 @@ SPIRVEmitIntrinsicsImpl::visitGetElementPtrInst(GetElementPtrInst &I) {
       Args.push_back(InBounds);
       Args.push_back(ScalarPtr);
       for (Value *Idx : I.indices()) {
-        if (isa<VectorType>(Idx->getType()))
-          Args.push_back(B.CreateExtractElement(Idx, LaneIdx));
-        else
+        if (isa<VectorType>(Idx->getType())) {
+          // We cannot use the builder here as for splat-ed / constant vectors
+          // it will fold to the scalar, and then it becomes impossible to
+          // retrieve / retain the vectorness.
+          auto *EI =
+              ExtractElementInst::Create(Idx, LaneIdx, "", B.GetInsertPoint());
+          if (isVector1(Idx->getType())) // IRTranslator clobbers <1 x T>.
+            Args.push_back(visitExtractElementInst(*EI));
+          else
+            Args.push_back(EI);
+        } else {
           Args.push_back(Idx);
+        }
       }
       Value *ScalarGep = B.CreateIntrinsic(Intrinsic::spv_gep, GepTypes, Args);
       GR->buildAssignPtr(B, LanePointeeTy, ScalarGep);
@@ -2136,7 +2148,7 @@ void SPIRVEmitIntrinsicsImpl::insertAssignPtrTypeTargetExt(
 
   CallInst *AssignCI = GR->findAssignPtrTypeInstr(V);
   if (!AssignCI) {
-    GR->buildAssignType(B, AssignedType, V);
+    GR->buildAssignType(B, AssignedType, V, CanUseAnyVectorRank);
     return;
   }
 
@@ -2156,7 +2168,8 @@ void SPIRVEmitIntrinsicsImpl::insertAssignPtrTypeTargetExt(
 
   // Our previous guess about the type seems to be wrong, let's update
   // inferred type according to a new, more precise type information.
-  GR->updateAssignType(AssignCI, V, getNormalizedPoisonValue(AssignedType));
+  GR->updateAssignType(
+      AssignCI, V, getNormalizedPoisonValue(AssignedType, CanUseAnyVectorRank));
 }
 
 void SPIRVEmitIntrinsicsImpl::replacePointerOperandWithPtrCast(
@@ -2171,7 +2184,8 @@ void SPIRVEmitIntrinsicsImpl::replacePointerOperandWithPtrCast(
     return;
 
   setInsertPointSkippingPhis(B, I);
-  Value *ExpectedElementVal = getNormalizedPoisonValue(ExpectedElementType);
+  Value *ExpectedElementVal =
+      getNormalizedPoisonValue(ExpectedElementType, CanUseAnyVectorRank);
   MetadataAsValue *VMD = buildMD(ExpectedElementVal);
   unsigned AddressSpace = getPointerAddressSpace(Pointer->getType());
   bool FirstPtrCastOrAssignPtrType = true;
@@ -2345,7 +2359,8 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
       if (!ElemTy) {
         ElemTy = getPointeeTypeByCallInst(DemangledName, CalledF, OpIdx);
         if (ElemTy) {
-          GR->addDeducedElementType(CalledArg, normalizeType(ElemTy));
+          GR->addDeducedElementType(CalledArg,
+                                    normalizeType(ElemTy, CanUseAnyVectorRank));
         } else {
           for (User *U : CalledArg->users()) {
             if (Instruction *Inst = dyn_cast<Instruction>(U)) {
@@ -2399,7 +2414,7 @@ Instruction *
 SPIRVEmitIntrinsicsImpl::visitInsertElementInst(InsertElementInst &I) {
   // If it's a <1 x Type> vector type, don't modify it. It's not a legal vector
   // type in LLT and IRTranslator will replace it by the scalar.
-  if (isVector1(I.getType()))
+  if (isVector1(I.getType()) && !CanUseAnyVectorRank)
     return &I;
 
   SmallVector<Type *, 4> Types = {I.getType(), I.getOperand(0)->getType(),
@@ -2418,7 +2433,7 @@ Instruction *
 SPIRVEmitIntrinsicsImpl::visitExtractElementInst(ExtractElementInst &I) {
   // If it's a <1 x Type> vector type, don't modify it. It's not a legal vector
   // type in LLT and IRTranslator will replace it by the scalar.
-  if (isVector1(I.getVectorOperandType()))
+  if (isVector1(I.getVectorOperandType()) && !CanUseAnyVectorRank)
     return &I;
 
   IRBuilder<> B(I.getParent());
@@ -2606,18 +2621,21 @@ SPIRVEmitIntrinsicsImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Value *> Args(I.operands());
+  const Triple &TT = TM.getTargetTriple();
   Args.push_back(B.getInt32(static_cast<uint32_t>(
-      getMemScope(TM.getTargetTriple(), I.getContext(), I.getSyncScopeID()))));
+      getMemScope(TT, I.getContext(), I.getSyncScopeID()))));
   // Per SPIR-V spec atomic ops must combine the ordering bits with the
   // storage-class bit.
   const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
   unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
-  Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())) | ScSem));
-  Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())) | ScSem));
+  Args.push_back(B.getInt32(getMemSemanticsWithStorageClass(
+      TT, static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())),
+      ScSem)));
+  Args.push_back(B.getInt32(getMemSemanticsWithStorageClass(
+      TT, static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())),
+      ScSem)));
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(
       Intrinsic::spv_cmpxchg, {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
@@ -2877,7 +2895,8 @@ void SPIRVEmitIntrinsicsImpl::insertAssignTypeIntrs(Instruction *I,
         switch (ResIt->second) {
         case WellKnownTypes::Event:
           GR->buildAssignType(
-              B, TargetExtType::get(I->getContext(), "spirv.Event"), I);
+              B, TargetExtType::get(I->getContext(), "spirv.Event"), I,
+              CanUseAnyVectorRank);
           break;
         }
       }
@@ -2925,10 +2944,11 @@ void SPIRVEmitIntrinsicsImpl::insertAssignTypeIntrs(Instruction *I,
     } else if (auto It = AggrConstTypes.find(I); It != AggrConstTypes.end())
       TypeToAssign = It->second;
     TypeToAssign = restoreMutatedType(GR, I, TypeToAssign);
-    GR->buildAssignType(B, TypeToAssign, I);
+    GR->buildAssignType(B, TypeToAssign, I, CanUseAnyVectorRank);
   }
   for (const auto &Op : I->operands()) {
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op) ||
+        isVector1(Op->getType()) || // <1 x T> gets clobbered ty IRTranslator.
         // Check GetElementPtrConstantExpr case.
         (isa<ConstantExpr>(Op) &&
          (isa<GEPOperator>(Op) ||
@@ -2954,11 +2974,12 @@ void SPIRVEmitIntrinsicsImpl::insertAssignTypeIntrs(Instruction *I,
           if (OpTy->isTargetExtTy()) {
             // We need to do this in order to be consistent with how target ext
             // types are handled in `processInstrAfterVisit`
-            OpTyVal = getNormalizedPoisonValue(OpTy);
+            OpTyVal = getNormalizedPoisonValue(OpTy, CanUseAnyVectorRank);
           }
-          CallInst *AssignCI =
-              buildIntrWithMD(Intrinsic::spv_assign_type, {OpTy},
-                              getNormalizedPoisonValue(OpTy), OpTyVal, {}, B);
+          CallInst *AssignCI = buildIntrWithMD(
+              Intrinsic::spv_assign_type, {OpTy},
+              getNormalizedPoisonValue(OpTy, CanUseAnyVectorRank), OpTyVal, {},
+              B);
           GR->addAssignPtrTypeInstr(OpTyVal, AssignCI);
         }
       }
@@ -3272,7 +3293,7 @@ void SPIRVEmitIntrinsicsImpl::processInstrAfterVisit(Instruction *I,
     if (OpTy->isTargetExtTy()) {
       // Since this value is replaced by poison, we need to do the same in
       // `insertAssignTypeIntrs`.
-      Value *OpTyVal = getNormalizedPoisonValue(OpTy);
+      Value *OpTyVal = getNormalizedPoisonValue(OpTy, CanUseAnyVectorRank);
       NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
                               {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
     }
@@ -3280,7 +3301,8 @@ void SPIRVEmitIntrinsicsImpl::processInstrAfterVisit(Instruction *I,
         OpElemTy != IntegerType::getInt8Ty(I->getContext())) {
       SmallVector<Type *, 2> Types = {OpTy, OpTy};
       SmallVector<Value *, 2> Args = {
-          NewOp, buildMD(getNormalizedPoisonValue(OpElemTy)),
+          NewOp,
+          buildMD(getNormalizedPoisonValue(OpElemTy, CanUseAnyVectorRank)),
           B.getInt32(getPointerAddressSpace(OpTy))};
       CallInst *PtrCasted = B.CreateIntrinsicWithoutFolding(
           Intrinsic::spv_ptrcast, {Types}, Args);
@@ -3427,7 +3449,9 @@ void SPIRVEmitIntrinsicsImpl::processParamTypes(Function *F, IRBuilder<> &B) {
     if (!ElemTy && (ElemTy = deduceFunParamElementType(F, OpIdx)) != nullptr) {
       if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(Arg)) {
         DenseSet<std::pair<Value *, Value *>> VisitedSubst;
-        GR->updateAssignType(AssignCI, Arg, getNormalizedPoisonValue(ElemTy));
+        GR->updateAssignType(
+            AssignCI, Arg,
+            getNormalizedPoisonValue(ElemTy, CanUseAnyVectorRank));
         propagateElemType(Arg, IntegerType::getInt8Ty(F->getContext()),
                           VisitedSubst);
       } else {
@@ -3481,7 +3505,8 @@ bool SPIRVEmitIntrinsicsImpl::processFunctionPointers(Module &M) {
           continue;
         if (II->getIntrinsicID() == Intrinsic::spv_assign_ptr_type ||
             II->getIntrinsicID() == Intrinsic::spv_ptrcast) {
-          GR->updateAssignType(II, &F, getNormalizedPoisonValue(FPElemTy));
+          GR->updateAssignType(
+              II, &F, getNormalizedPoisonValue(FPElemTy, CanUseAnyVectorRank));
           break;
         }
       }
@@ -3498,7 +3523,8 @@ bool SPIRVEmitIntrinsicsImpl::processFunctionPointers(Module &M) {
   for (Function *F : Worklist) {
     SmallVector<Value *> Args;
     for (const auto &Arg : F->args())
-      Args.push_back(getNormalizedPoisonValue(Arg.getType()));
+      Args.push_back(
+          getNormalizedPoisonValue(Arg.getType(), CanUseAnyVectorRank));
     IRB.CreateCall(F, Args);
   }
   IRB.CreateRetVoid();
@@ -3529,10 +3555,11 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
             GR->buildAssignPtr(B, ElemTy, Arg);
           }
         } else if (isaGEP(Param)) {
-          replaceUsesOfWithSpvPtrcast(Param, normalizeType(ElemTy), CI,
-                                      Ptrcasts);
+          replaceUsesOfWithSpvPtrcast(
+              Param, normalizeType(ElemTy, CanUseAnyVectorRank), CI, Ptrcasts);
         } else if (isa<Instruction>(Param)) {
-          GR->addDeducedElementType(Param, normalizeType(ElemTy));
+          GR->addDeducedElementType(Param,
+                                    normalizeType(ElemTy, CanUseAnyVectorRank));
           // insertAssignTypeIntrs() will complete buildAssignPtr()
         } else {
           B.SetInsertPoint(CI->getParent()
@@ -3548,7 +3575,7 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
         if (!RefF || !isPointerTy(RefF->getReturnType()) ||
             GR->findDeducedElementType(RefF))
           continue;
-        ElemTy = normalizeType(ElemTy);
+        ElemTy = normalizeType(ElemTy, CanUseAnyVectorRank);
         GR->addDeducedElementType(RefF, ElemTy);
         GR->addReturnType(
             RefF, TypedPointerType::get(
@@ -3653,6 +3680,8 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     HaveFunPtrs =
         ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
 
+  CanUseAnyVectorRank =
+      ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
   CurrF = &Func;
   IRBuilder<> B(Func.getContext());
   AggrConsts.clear();
@@ -3679,8 +3708,9 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
       continue;
 
     if (SGEP) {
-      GR->addDeducedElementType(SGEP,
-                                normalizeType(SGEP->getResultElementType()));
+      GR->addDeducedElementType(
+          SGEP,
+          normalizeType(SGEP->getResultElementType(), CanUseAnyVectorRank));
       continue;
     }
 
@@ -3691,7 +3721,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
       GEP = NewGEP;
     }
     if (Type *GepTy = getGEPType(GEP))
-      GR->addDeducedElementType(GEP, normalizeType(GepTy));
+      GR->addDeducedElementType(GEP, normalizeType(GepTy, CanUseAnyVectorRank));
   }
   // Remove dead instructions that were simplified and replaced.
   for (auto *I : DeadInsts) {

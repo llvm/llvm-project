@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 std::array data = [] {
   std::uniform_real_distribution<double> distribution;
@@ -30,7 +31,7 @@ std::array data = [] {
   return result;
 }();
 
-static void BM_sprintf(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_sprintf(benchmark::State& state) {
   std::array<char, 100> output;
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {
@@ -39,7 +40,7 @@ static void BM_sprintf(benchmark::State& state) {
     }
 }
 
-static void BM_to_string(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_to_string(benchmark::State& state) {
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {
       std::string s = std::to_string(value);
@@ -47,7 +48,7 @@ static void BM_to_string(benchmark::State& state) {
     }
 }
 
-static void BM_to_chars(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_to_chars(benchmark::State& state) {
   std::array<char, 100> output;
 
   while (state.KeepRunningBatch(data.size()))
@@ -57,7 +58,7 @@ static void BM_to_chars(benchmark::State& state) {
     }
 }
 
-static void BM_to_chars_as_string(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_to_chars_as_string(benchmark::State& state) {
   std::array<char, 100> output;
 
   while (state.KeepRunningBatch(data.size()))
@@ -68,7 +69,7 @@ static void BM_to_chars_as_string(benchmark::State& state) {
     }
 }
 
-static void BM_format(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_format(benchmark::State& state) {
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {
       std::string s = std::format("{}", value);
@@ -77,7 +78,7 @@ static void BM_format(benchmark::State& state) {
 }
 
 template <class C>
-static void BM_format_to_back_inserter(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_format_to_back_inserter(benchmark::State& state) {
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {
       C c;
@@ -87,7 +88,7 @@ static void BM_format_to_back_inserter(benchmark::State& state) {
 }
 
 template <class F>
-static void BM_format_to_iterator(benchmark::State& state, F&& f) {
+static TEST_ALIGN_BENCHMARK void BM_format_to_iterator(benchmark::State& state, F&& f) {
   auto output = f();
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {

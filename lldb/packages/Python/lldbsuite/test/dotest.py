@@ -316,7 +316,8 @@ def parseOptionsAndInitTestdirs():
         configuration.libcxx_include_target_dir = None
         configuration.libcxx_library_dir = None
 
-    configuration.cmake_build_type = args.cmake_build_type.lower()
+    if args.cmake_build_type:
+        configuration.cmake_build_type = args.cmake_build_type.lower()
 
     if args.channels:
         lldbtest_config.channels = args.channels
