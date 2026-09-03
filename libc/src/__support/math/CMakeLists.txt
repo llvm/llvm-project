@@ -899,8 +899,8 @@ add_header_library(
   HDRS
     fmaximumf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
 )
 
@@ -1175,8 +1175,8 @@ add_header_library(
   HDRS
     fminimumf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
 )
 
@@ -2453,6 +2453,8 @@ add_header_library(
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.cpu_features
   FLAGS
@@ -2543,9 +2545,10 @@ add_header_library(
     roundf.h
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.config
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.cpu_features
   FLAGS
@@ -2765,7 +2768,7 @@ add_header_library(
   HDRS
     copysignf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
@@ -3246,7 +3249,7 @@ add_header_library(
   HDRS
     fabsf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )

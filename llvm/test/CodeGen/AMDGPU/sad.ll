@@ -1661,15 +1661,16 @@ define amdgpu_kernel void @s_sad_u32_i8_pat2(ptr addrspace(1) %out, i8 zeroext %
 ; GFX12-5-GISEL-NEXT:    s_lshr_b32 s3, s2, 8
 ; GFX12-5-GISEL-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX12-5-GISEL-NEXT:    s_and_b32 s5, s3, 0xff
-; GFX12-5-GISEL-NEXT:    s_lshr_b32 s6, s2, 16
+; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s4, s5
 ; GFX12-5-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s5, s2, s3
-; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s2, s3, s2
+; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s3, s3, s2
 ; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s2, s5, s2
+; GFX12-5-GISEL-NEXT:    s_cselect_b32 s3, s5, s3
+; GFX12-5-GISEL-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-5-GISEL-NEXT:    s_add_co_i32 s2, s2, s6
+; GFX12-5-GISEL-NEXT:    s_add_co_i32 s2, s3, s2
 ; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-5-GISEL-NEXT:    global_store_b8 v1, v0, s[0:1]
 ; GFX12-5-GISEL-NEXT:    s_endpgm

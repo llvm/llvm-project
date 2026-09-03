@@ -2629,7 +2629,7 @@ static bool isOmpLoopBody(const Fortran::lower::pft::Evaluation &eval,
   if (!loop)
     return false;
 
-  unsigned version = semaCtx.langOptions().OpenMPVersion;
+  llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
   auto [depth, _] =
       semantics::omp::GetAffectedNestDepthWithReason(loop->BeginDir(), version);
   int64_t n = depth.value.value_or(1);

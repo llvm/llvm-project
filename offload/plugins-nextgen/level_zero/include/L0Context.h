@@ -13,9 +13,12 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
 
+#include "APIHelpers.h"
+#include "L0Compat.h"
 #include "L0Event.h"
 #include "L0Memory.h"
 #include "PerThreadTable.h"
+#include "level_zero/ze_api.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -30,6 +33,61 @@ public:
   const StagingBufferTy &getStagingBuffer() const { return StagingBuffer; }
 
   Error deinit() { return StagingBuffer.clear(); }
+};
+
+// Helper for managing Level Zero APIs.
+// It provides two interfaces - by default it tries to call the function
+// directly - either through dlopen or directly linked (see L0DynWrapper.cpp).
+// It is also possible to call through an internal function pointer, which
+// can be populated using `loadExperimental` using
+// `zeDriverGetExtensionFunctionAddress`.
+// `addFallbackFunction`. It was implemented in order to support different
+// versions of level zero software stack and different kinds of drivers.
+template <auto Fn, auto UnsupportedValue = ZE_RESULT_ERROR_UNSUPPORTED_FEATURE>
+class ZeDispatcher {
+public:
+  constexpr ZeDispatcher() = default;
+
+  [[nodiscard]]
+  bool available() const {
+    if (FuncPtr != nullptr)
+      return true;
+
+    return api_helper::canCall<Fn>();
+  }
+
+  explicit operator bool() const { return available(); }
+
+  template <typename... Args>
+  decltype(auto) operator()(Args &&...ArgsList) const {
+    // Need to cast the type to avoid mismatch of return type deduction
+    using ReturnTy = std::invoke_result_t<decltype(Fn), Args...>;
+    if (FuncPtr != nullptr)
+      return FuncPtr(std::forward<Args>(ArgsList)...);
+
+    if (!api_helper::canCall<Fn>())
+      return static_cast<ReturnTy>(UnsupportedValue);
+
+    return Fn(std::forward<Args>(ArgsList)...);
+  }
+
+  bool loadExperimental(ze_driver_handle_t zeDriver, const char *FuncName) {
+    assert(!api_helper::canCall<Fn>() &&
+           "ZeDispatcher::loadExperimental called without "
+           "ZeDispatcher::available check!");
+
+    ze_result_t Result = ZE_RESULT_SUCCESS;
+    CALL_ZE_RET(Result, zeDriverGetExtensionFunctionAddress, zeDriver, FuncName,
+                reinterpret_cast<void **>(&FuncPtr));
+
+    if (Result != ZE_RESULT_SUCCESS || FuncPtr == nullptr)
+      return false;
+
+    return true;
+  }
+
+private:
+  decltype(Fn) FuncPtr = nullptr;
 };
 
 struct L0ContextTLSTableTy
@@ -145,21 +203,13 @@ public:
   const MemAllocatorTy &getHostMemAllocator() const { return HostMemAllocator; }
   MemAllocatorTy &getHostMemAllocator() { return HostMemAllocator; }
 
-  /// Level Zero extension function pointer for kernel argument size query.
-  ze_result_t(ZE_APICALL *zexKernelGetArgumentSize)(
-      ze_kernel_handle_t hKernel, uint32_t argIndex,
-      uint32_t *pArgSize) = nullptr;
+  std::atomic<bool> AppendLaunchKernelWithArgsSupported = true;
 
-  /// Level Zero extension function pointer for host function callbacks.
-  ze_result_t(ZE_APICALL *zeCommandListAppendHostFunction)(
-      ze_command_list_handle_t hCommandList, void *pfnHostFunction,
-      void *pUserData, void *pReserved, ze_event_handle_t hSignalEvent,
-      uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) = nullptr;
-
-  /// Level Zero extension function pointer for querying the driver's default
-  /// ze_context, when the extension is supported.
-  ze_context_handle_t(ZE_APICALL *zeDriverGetDefaultContext)(
-      ze_driver_handle_t hDriver) = nullptr;
+  ZeDispatcher<zeCommandListAppendLaunchKernelWithArguments>
+      LaunchKernelWithArguments;
+  ZeDispatcher<zexKernelGetArgumentSize> KernelGetArgumentSize;
+  ZeDispatcher<zeCommandListAppendHostFunction> CommandListAppendHostFunction;
+  ZeDispatcher<zeDriverGetDefaultContext, nullptr> DriverGetDefaultContext;
 };
 
 } // namespace llvm::omp::target::plugin
