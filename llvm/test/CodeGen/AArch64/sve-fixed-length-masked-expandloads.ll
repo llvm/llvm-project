@@ -192,30 +192,17 @@ define void @masked_load_v8f32(ptr %ap, ptr %bp, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    umov w9, v0.b[1]
-; CHECK-NEXT:    umov w10, v0.b[2]
-; CHECK-NEXT:    and w8, w8, #0x1
-; CHECK-NEXT:    bfi w8, w9, #1, #1
-; CHECK-NEXT:    umov w9, v0.b[3]
-; CHECK-NEXT:    bfi w8, w10, #2, #1
-; CHECK-NEXT:    umov w10, v0.b[4]
-; CHECK-NEXT:    bfi w8, w9, #3, #1
-; CHECK-NEXT:    umov w9, v0.b[5]
-; CHECK-NEXT:    bfi w8, w10, #4, #1
-; CHECK-NEXT:    umov w10, v0.b[6]
-; CHECK-NEXT:    bfi w8, w9, #5, #1
-; CHECK-NEXT:    umov w9, v0.b[7]
-; CHECK-NEXT:    bfi w8, w10, #6, #1
-; CHECK-NEXT:    orr w9, w8, w9, lsl #7
-; CHECK-NEXT:    and w8, w9, #0xff
-; CHECK-NEXT:    tbz w9, #0, .LBB3_2
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tbz w8, #0, .LBB3_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load
 ; CHECK-NEXT:    ldr s0, [x0], #4
 ; CHECK-NEXT:    stp xzr, xzr, [sp, #16]
@@ -360,9 +347,8 @@ define void @masked_load_v16f32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
-; VBITS_GE_256-NEXT:    umov w9, v0.h[0]
 ; VBITS_GE_256-NEXT:    umov w8, v0.h[0]
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB4_2
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB4_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ldr s0, [x0], #4
 ; VBITS_GE_256-NEXT:    stp xzr, xzr, [sp, #16]
@@ -554,54 +540,20 @@ define void @masked_load_v16f32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    .cfi_offset w30, -8
 ; VBITS_GE_512-NEXT:    .cfi_offset w29, -16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI4_0
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
 ; VBITS_GE_512-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    umov w11, v0.b[7]
-; VBITS_GE_512-NEXT:    umov w12, v0.b[8]
-; VBITS_GE_512-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_512-NEXT:    umov w14, v0.b[4]
-; VBITS_GE_512-NEXT:    umov w15, v0.b[10]
-; VBITS_GE_512-NEXT:    umov w16, v0.b[5]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[9]
-; VBITS_GE_512-NEXT:    ubfiz w11, w11, #7, #1
-; VBITS_GE_512-NEXT:    ubfiz w12, w12, #8, #1
-; VBITS_GE_512-NEXT:    ubfiz w15, w15, #10, #1
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[11]
-; VBITS_GE_512-NEXT:    orr w11, w11, w12
-; VBITS_GE_512-NEXT:    umov w12, v0.b[13]
-; VBITS_GE_512-NEXT:    bfi w8, w13, #3, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[12]
-; VBITS_GE_512-NEXT:    ubfiz w9, w9, #9, #1
-; VBITS_GE_512-NEXT:    bfi w8, w14, #4, #1
-; VBITS_GE_512-NEXT:    umov w14, v0.b[14]
-; VBITS_GE_512-NEXT:    orr w9, w11, w9
-; VBITS_GE_512-NEXT:    umov w11, v0.b[6]
-; VBITS_GE_512-NEXT:    ubfiz w10, w10, #11, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w15
-; VBITS_GE_512-NEXT:    ubfiz w13, w13, #12, #1
-; VBITS_GE_512-NEXT:    bfi w8, w16, #5, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    ubfiz w10, w12, #13, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w13
-; VBITS_GE_512-NEXT:    ubfiz w12, w14, #14, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[15]
-; VBITS_GE_512-NEXT:    bfi w8, w11, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    orr w9, w9, w12
-; VBITS_GE_512-NEXT:    orr w8, w8, w9
-; VBITS_GE_512-NEXT:    orr w9, w8, w13, lsl #15
-; VBITS_GE_512-NEXT:    and w8, w9, #0xffff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB4_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    umov w8, v0.h[0]
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB4_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ldr s0, [x0], #4
 ; VBITS_GE_512-NEXT:    stp xzr, xzr, [sp, #48]
@@ -787,51 +739,36 @@ define void @masked_load_v16f32(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; CHECK-EXPAND-LABEL: masked_load_v16f32:
 ; CHECK-EXPAND:       // %bb.0:
-; CHECK-EXPAND-NEXT:    sub sp, sp, #16
-; CHECK-EXPAND-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl8
+; CHECK-EXPAND-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-EXPAND-NEXT:    ptrue p3.s
 ; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; CHECK-EXPAND-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-EXPAND-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
+; CHECK-EXPAND-NEXT:    mov x8, #8 // =0x8
+; CHECK-EXPAND-NEXT:    ld1w { z2.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-EXPAND-NEXT:    ld1w { z3.s }, p0/z, [x1, x8, lsl #2]
 ; CHECK-EXPAND-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-EXPAND-NEXT:    cntp x11, p1, p1.s
+; CHECK-EXPAND-NEXT:    fcmeq p2.s, p0/z, z2.s, z3.s
 ; CHECK-EXPAND-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-EXPAND-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-EXPAND-NEXT:    umov w8, v0.b[0]
-; CHECK-EXPAND-NEXT:    umov w9, v0.b[1]
-; CHECK-EXPAND-NEXT:    umov w10, v0.b[2]
-; CHECK-EXPAND-NEXT:    umov w11, v0.b[3]
-; CHECK-EXPAND-NEXT:    and w8, w8, #0x1
-; CHECK-EXPAND-NEXT:    bfi w8, w9, #1, #1
-; CHECK-EXPAND-NEXT:    umov w9, v0.b[4]
-; CHECK-EXPAND-NEXT:    bfi w8, w10, #2, #1
-; CHECK-EXPAND-NEXT:    umov w10, v0.b[5]
-; CHECK-EXPAND-NEXT:    bfi w8, w11, #3, #1
-; CHECK-EXPAND-NEXT:    mov x11, #8 // =0x8
-; CHECK-EXPAND-NEXT:    ld1w { z1.s }, p0/z, [x1, x11, lsl #2]
-; CHECK-EXPAND-NEXT:    ld1w { z2.s }, p0/z, [x0, x11, lsl #2]
-; CHECK-EXPAND-NEXT:    bfi w8, w9, #4, #1
-; CHECK-EXPAND-NEXT:    umov w9, v0.b[6]
-; CHECK-EXPAND-NEXT:    bfi w8, w10, #5, #1
-; CHECK-EXPAND-NEXT:    umov w10, v0.b[7]
-; CHECK-EXPAND-NEXT:    fcmeq p2.s, p0/z, z2.s, z1.s
-; CHECK-EXPAND-NEXT:    bfi w8, w9, #6, #1
-; CHECK-EXPAND-NEXT:    orr w8, w8, w10, lsl #7
-; CHECK-EXPAND-NEXT:    cntp x10, p1, p1.s
-; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.s
-; CHECK-EXPAND-NEXT:    and w8, w8, #0xff
-; CHECK-EXPAND-NEXT:    fmov s0, w8
-; CHECK-EXPAND-NEXT:    whilelo p4.s, xzr, x10
-; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
-; CHECK-EXPAND-NEXT:    whilelo p3.s, xzr, x9
+; CHECK-EXPAND-NEXT:    whilelo p4.s, xzr, x11
+; CHECK-EXPAND-NEXT:    cntp x10, p2, p2.s
+; CHECK-EXPAND-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-EXPAND-NEXT:    ld1w { z1.s }, p4/z, [x0]
-; CHECK-EXPAND-NEXT:    fmov w8, s0
+; CHECK-EXPAND-NEXT:    addv h0, v0.8h
 ; CHECK-EXPAND-NEXT:    expand z1.s, p1, z1.s
-; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p3/z, [x0, x8, lsl #2]
+; CHECK-EXPAND-NEXT:    fmov w9, s0
+; CHECK-EXPAND-NEXT:    and w9, w9, #0xff
+; CHECK-EXPAND-NEXT:    fmov s0, w9
+; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
+; CHECK-EXPAND-NEXT:    whilelo p3.s, xzr, x10
+; CHECK-EXPAND-NEXT:    fmov w9, s0
+; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p3/z, [x0, x9, lsl #2]
 ; CHECK-EXPAND-NEXT:    st1w { z1.s }, p0, [x2]
 ; CHECK-EXPAND-NEXT:    expand z0.s, p2, z0.s
-; CHECK-EXPAND-NEXT:    st1w { z0.s }, p0, [x2, x11, lsl #2]
-; CHECK-EXPAND-NEXT:    add sp, sp, #16
+; CHECK-EXPAND-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
 ; CHECK-EXPAND-NEXT:    ret
   %a = load <16 x float>, ptr %ap
   %b = load <16 x float>, ptr %bp
@@ -5238,74 +5175,37 @@ define void @masked_load_v32i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; CHECK-EXPAND-LABEL: masked_load_v32i16:
 ; CHECK-EXPAND:       // %bb.0:
-; CHECK-EXPAND-NEXT:    sub sp, sp, #16
-; CHECK-EXPAND-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-EXPAND-NEXT:    ptrue p0.h, vl16
+; CHECK-EXPAND-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-EXPAND-NEXT:    ptrue p3.s
 ; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-EXPAND-NEXT:    cmpeq p1.h, p0/z, z0.h, z1.h
+; CHECK-EXPAND-NEXT:    ldr q1, [x8, :lo12:.LCPI8_0]
+; CHECK-EXPAND-NEXT:    mov x8, #16 // =0x10
+; CHECK-EXPAND-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
 ; CHECK-EXPAND-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-EXPAND-NEXT:    cntp x11, p1, p1.h
 ; CHECK-EXPAND-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-EXPAND-NEXT:    umov w8, v0.b[0]
-; CHECK-EXPAND-NEXT:    umov w9, v0.b[1]
-; CHECK-EXPAND-NEXT:    umov w10, v0.b[7]
-; CHECK-EXPAND-NEXT:    umov w11, v0.b[8]
-; CHECK-EXPAND-NEXT:    umov w12, v0.b[2]
-; CHECK-EXPAND-NEXT:    umov w13, v0.b[9]
-; CHECK-EXPAND-NEXT:    umov w14, v0.b[10]
-; CHECK-EXPAND-NEXT:    umov w15, v0.b[3]
-; CHECK-EXPAND-NEXT:    umov w16, v0.b[4]
-; CHECK-EXPAND-NEXT:    and w8, w8, #0x1
-; CHECK-EXPAND-NEXT:    ubfiz w10, w10, #7, #1
-; CHECK-EXPAND-NEXT:    bfi w8, w9, #1, #1
-; CHECK-EXPAND-NEXT:    umov w9, v0.b[11]
-; CHECK-EXPAND-NEXT:    ubfiz w11, w11, #8, #1
-; CHECK-EXPAND-NEXT:    ubfiz w13, w13, #9, #1
-; CHECK-EXPAND-NEXT:    ubfiz w14, w14, #10, #1
-; CHECK-EXPAND-NEXT:    bfi w8, w12, #2, #1
-; CHECK-EXPAND-NEXT:    orr w10, w10, w11
-; CHECK-EXPAND-NEXT:    umov w11, v0.b[12]
-; CHECK-EXPAND-NEXT:    umov w12, v0.b[5]
-; CHECK-EXPAND-NEXT:    orr w10, w10, w13
-; CHECK-EXPAND-NEXT:    umov w13, v0.b[13]
-; CHECK-EXPAND-NEXT:    bfi w8, w15, #3, #1
-; CHECK-EXPAND-NEXT:    umov w15, v0.b[14]
-; CHECK-EXPAND-NEXT:    ubfiz w9, w9, #11, #1
-; CHECK-EXPAND-NEXT:    orr w10, w10, w14
-; CHECK-EXPAND-NEXT:    mov x14, #16 // =0x10
-; CHECK-EXPAND-NEXT:    bfi w8, w16, #4, #1
-; CHECK-EXPAND-NEXT:    umov w16, v0.b[6]
-; CHECK-EXPAND-NEXT:    orr w9, w10, w9
-; CHECK-EXPAND-NEXT:    ubfiz w10, w11, #12, #1
-; CHECK-EXPAND-NEXT:    ubfiz w11, w13, #13, #1
-; CHECK-EXPAND-NEXT:    ld1h { z1.h }, p0/z, [x1, x14, lsl #1]
-; CHECK-EXPAND-NEXT:    bfi w8, w12, #5, #1
-; CHECK-EXPAND-NEXT:    ubfiz w12, w15, #14, #1
-; CHECK-EXPAND-NEXT:    ld1h { z2.h }, p0/z, [x0, x14, lsl #1]
-; CHECK-EXPAND-NEXT:    orr w9, w9, w10
-; CHECK-EXPAND-NEXT:    umov w10, v0.b[15]
-; CHECK-EXPAND-NEXT:    orr w9, w9, w11
-; CHECK-EXPAND-NEXT:    bfi w8, w16, #6, #1
-; CHECK-EXPAND-NEXT:    orr w9, w9, w12
-; CHECK-EXPAND-NEXT:    cmpeq p2.h, p0/z, z2.h, z1.h
-; CHECK-EXPAND-NEXT:    orr w8, w8, w9
-; CHECK-EXPAND-NEXT:    orr w8, w8, w10, lsl #15
-; CHECK-EXPAND-NEXT:    cntp x10, p1, p1.h
-; CHECK-EXPAND-NEXT:    and w8, w8, #0xffff
-; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.h
-; CHECK-EXPAND-NEXT:    fmov s0, w8
-; CHECK-EXPAND-NEXT:    whilelo p4.h, xzr, x10
-; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
-; CHECK-EXPAND-NEXT:    whilelo p3.h, xzr, x9
+; CHECK-EXPAND-NEXT:    whilelo p4.h, xzr, x11
+; CHECK-EXPAND-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-EXPAND-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
+; CHECK-EXPAND-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-EXPAND-NEXT:    cmpeq p2.h, p0/z, z1.h, z2.h
 ; CHECK-EXPAND-NEXT:    ld1h { z1.h }, p4/z, [x0]
-; CHECK-EXPAND-NEXT:    fmov w8, s0
+; CHECK-EXPAND-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; CHECK-EXPAND-NEXT:    expand z1.h, p1, z1.h
-; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p3/z, [x0, x8, lsl #1]
+; CHECK-EXPAND-NEXT:    cntp x10, p2, p2.h
+; CHECK-EXPAND-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-EXPAND-NEXT:    umov w9, v0.h[0]
+; CHECK-EXPAND-NEXT:    fmov s0, w9
+; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
+; CHECK-EXPAND-NEXT:    whilelo p3.h, xzr, x10
+; CHECK-EXPAND-NEXT:    fmov w9, s0
+; CHECK-EXPAND-NEXT:    ld1h { z0.h }, p3/z, [x0, x9, lsl #1]
 ; CHECK-EXPAND-NEXT:    st1h { z1.h }, p0, [x2]
 ; CHECK-EXPAND-NEXT:    expand z0.h, p2, z0.h
-; CHECK-EXPAND-NEXT:    st1h { z0.h }, p0, [x2, x14, lsl #1]
-; CHECK-EXPAND-NEXT:    add sp, sp, #16
+; CHECK-EXPAND-NEXT:    st1h { z0.h }, p0, [x2, x8, lsl #1]
 ; CHECK-EXPAND-NEXT:    ret
   %a = load <32 x i16>, ptr %ap
   %b = load <32 x i16>, ptr %bp
@@ -5318,12 +5218,10 @@ define void @masked_load_v32i16(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
-; VBITS_GE_256-NEXT:    adrp x10, .LCPI9_1
-; VBITS_GE_256-NEXT:    add x10, x10, :lo12:.LCPI9_1
+; VBITS_GE_256-NEXT:    adrp x9, .LCPI9_1
+; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI9_1
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -5344,10 +5242,9 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
-; VBITS_GE_256-NEXT:    umov w9, v0.h[0]
 ; VBITS_GE_256-NEXT:    umov w8, v0.h[0]
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x10]
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB9_2
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x9]
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB9_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rw { z2.s }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    mov z1.d, z0.d
@@ -5404,7 +5301,6 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB9_20: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -5511,66 +5407,30 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_v16i32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI9_0
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z0.s, z1.s
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
 ; VBITS_GE_512-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    umov w11, v0.b[7]
-; VBITS_GE_512-NEXT:    umov w12, v0.b[8]
-; VBITS_GE_512-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_512-NEXT:    umov w14, v0.b[4]
-; VBITS_GE_512-NEXT:    umov w15, v0.b[10]
-; VBITS_GE_512-NEXT:    umov w16, v0.b[5]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[9]
-; VBITS_GE_512-NEXT:    ubfiz w11, w11, #7, #1
-; VBITS_GE_512-NEXT:    ubfiz w12, w12, #8, #1
-; VBITS_GE_512-NEXT:    ubfiz w15, w15, #10, #1
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[11]
-; VBITS_GE_512-NEXT:    orr w11, w11, w12
-; VBITS_GE_512-NEXT:    umov w12, v0.b[13]
-; VBITS_GE_512-NEXT:    bfi w8, w13, #3, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[12]
-; VBITS_GE_512-NEXT:    ubfiz w9, w9, #9, #1
-; VBITS_GE_512-NEXT:    bfi w8, w14, #4, #1
-; VBITS_GE_512-NEXT:    umov w14, v0.b[14]
-; VBITS_GE_512-NEXT:    orr w9, w11, w9
-; VBITS_GE_512-NEXT:    umov w11, v0.b[6]
-; VBITS_GE_512-NEXT:    ubfiz w10, w10, #11, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w15
-; VBITS_GE_512-NEXT:    ubfiz w13, w13, #12, #1
-; VBITS_GE_512-NEXT:    bfi w8, w16, #5, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    ubfiz w10, w12, #13, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w13
-; VBITS_GE_512-NEXT:    ubfiz w12, w14, #14, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[15]
-; VBITS_GE_512-NEXT:    bfi w8, w11, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    orr w9, w9, w12
-; VBITS_GE_512-NEXT:    orr w8, w8, w9
-; VBITS_GE_512-NEXT:    orr w9, w8, w13, lsl #15
-; VBITS_GE_512-NEXT:    and w8, w9, #0xffff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB9_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    umov w8, v0.h[0]
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB9_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rw { z0.s }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #4
 ; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB9_3
 ; VBITS_GE_512-NEXT:    b .LBB9_4
 ; VBITS_GE_512-NEXT:  .LBB9_2:
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI9_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI9_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI9_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI9_1
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB9_4
 ; VBITS_GE_512-NEXT:  .LBB9_3: // %cond.load1
@@ -5581,45 +5441,37 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:  .LBB9_4: // %else2
-; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB9_20
+; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB9_19
 ; VBITS_GE_512-NEXT:  // %bb.5: // %else6
-; VBITS_GE_512-NEXT:    tbnz w8, #3, .LBB9_21
+; VBITS_GE_512-NEXT:    tbnz w8, #3, .LBB9_20
 ; VBITS_GE_512-NEXT:  .LBB9_6: // %else10
-; VBITS_GE_512-NEXT:    tbnz w8, #4, .LBB9_22
+; VBITS_GE_512-NEXT:    tbnz w8, #4, .LBB9_21
 ; VBITS_GE_512-NEXT:  .LBB9_7: // %else14
-; VBITS_GE_512-NEXT:    tbnz w8, #5, .LBB9_23
+; VBITS_GE_512-NEXT:    tbnz w8, #5, .LBB9_22
 ; VBITS_GE_512-NEXT:  .LBB9_8: // %else18
-; VBITS_GE_512-NEXT:    tbnz w8, #6, .LBB9_24
+; VBITS_GE_512-NEXT:    tbnz w8, #6, .LBB9_23
 ; VBITS_GE_512-NEXT:  .LBB9_9: // %else22
-; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB9_25
+; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB9_24
 ; VBITS_GE_512-NEXT:  .LBB9_10: // %else26
-; VBITS_GE_512-NEXT:    tbnz w8, #8, .LBB9_26
+; VBITS_GE_512-NEXT:    tbnz w8, #8, .LBB9_25
 ; VBITS_GE_512-NEXT:  .LBB9_11: // %else30
-; VBITS_GE_512-NEXT:    tbnz w8, #9, .LBB9_27
+; VBITS_GE_512-NEXT:    tbnz w8, #9, .LBB9_26
 ; VBITS_GE_512-NEXT:  .LBB9_12: // %else34
-; VBITS_GE_512-NEXT:    tbnz w8, #10, .LBB9_28
+; VBITS_GE_512-NEXT:    tbnz w8, #10, .LBB9_27
 ; VBITS_GE_512-NEXT:  .LBB9_13: // %else38
-; VBITS_GE_512-NEXT:    tbnz w8, #11, .LBB9_29
+; VBITS_GE_512-NEXT:    tbnz w8, #11, .LBB9_28
 ; VBITS_GE_512-NEXT:  .LBB9_14: // %else42
-; VBITS_GE_512-NEXT:    tbnz w8, #12, .LBB9_30
+; VBITS_GE_512-NEXT:    tbnz w8, #12, .LBB9_29
 ; VBITS_GE_512-NEXT:  .LBB9_15: // %else46
-; VBITS_GE_512-NEXT:    tbnz w8, #13, .LBB9_31
+; VBITS_GE_512-NEXT:    tbnz w8, #13, .LBB9_30
 ; VBITS_GE_512-NEXT:  .LBB9_16: // %else50
-; VBITS_GE_512-NEXT:    tbnz w8, #14, .LBB9_32
+; VBITS_GE_512-NEXT:    tbnz w8, #14, .LBB9_31
 ; VBITS_GE_512-NEXT:  .LBB9_17: // %else54
-; VBITS_GE_512-NEXT:    tbz w8, #15, .LBB9_19
-; VBITS_GE_512-NEXT:  .LBB9_18: // %cond.load57
-; VBITS_GE_512-NEXT:    mov w8, #15 // =0xf
-; VBITS_GE_512-NEXT:    index z1.s, #0, #1
-; VBITS_GE_512-NEXT:    mov z2.s, w8
-; VBITS_GE_512-NEXT:    ldr w8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
-; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w8
-; VBITS_GE_512-NEXT:  .LBB9_19: // %else58
+; VBITS_GE_512-NEXT:    tbnz w8, #15, .LBB9_32
+; VBITS_GE_512-NEXT:  .LBB9_18: // %else58
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
-; VBITS_GE_512-NEXT:  .LBB9_20: // %cond.load5
+; VBITS_GE_512-NEXT:  .LBB9_19: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5627,7 +5479,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #3, .LBB9_6
-; VBITS_GE_512-NEXT:  .LBB9_21: // %cond.load9
+; VBITS_GE_512-NEXT:  .LBB9_20: // %cond.load9
 ; VBITS_GE_512-NEXT:    mov w9, #3 // =0x3
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5635,7 +5487,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #4, .LBB9_7
-; VBITS_GE_512-NEXT:  .LBB9_22: // %cond.load13
+; VBITS_GE_512-NEXT:  .LBB9_21: // %cond.load13
 ; VBITS_GE_512-NEXT:    mov w9, #4 // =0x4
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5643,7 +5495,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #5, .LBB9_8
-; VBITS_GE_512-NEXT:  .LBB9_23: // %cond.load17
+; VBITS_GE_512-NEXT:  .LBB9_22: // %cond.load17
 ; VBITS_GE_512-NEXT:    mov w9, #5 // =0x5
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5651,7 +5503,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #6, .LBB9_9
-; VBITS_GE_512-NEXT:  .LBB9_24: // %cond.load21
+; VBITS_GE_512-NEXT:  .LBB9_23: // %cond.load21
 ; VBITS_GE_512-NEXT:    mov w9, #6 // =0x6
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5659,7 +5511,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #7, .LBB9_10
-; VBITS_GE_512-NEXT:  .LBB9_25: // %cond.load25
+; VBITS_GE_512-NEXT:  .LBB9_24: // %cond.load25
 ; VBITS_GE_512-NEXT:    mov w9, #7 // =0x7
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5667,7 +5519,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #8, .LBB9_11
-; VBITS_GE_512-NEXT:  .LBB9_26: // %cond.load29
+; VBITS_GE_512-NEXT:  .LBB9_25: // %cond.load29
 ; VBITS_GE_512-NEXT:    mov w9, #8 // =0x8
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5675,7 +5527,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #9, .LBB9_12
-; VBITS_GE_512-NEXT:  .LBB9_27: // %cond.load33
+; VBITS_GE_512-NEXT:  .LBB9_26: // %cond.load33
 ; VBITS_GE_512-NEXT:    mov w9, #9 // =0x9
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5683,7 +5535,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #10, .LBB9_13
-; VBITS_GE_512-NEXT:  .LBB9_28: // %cond.load37
+; VBITS_GE_512-NEXT:  .LBB9_27: // %cond.load37
 ; VBITS_GE_512-NEXT:    mov w9, #10 // =0xa
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5691,7 +5543,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #11, .LBB9_14
-; VBITS_GE_512-NEXT:  .LBB9_29: // %cond.load41
+; VBITS_GE_512-NEXT:  .LBB9_28: // %cond.load41
 ; VBITS_GE_512-NEXT:    mov w9, #11 // =0xb
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5699,7 +5551,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #12, .LBB9_15
-; VBITS_GE_512-NEXT:  .LBB9_30: // %cond.load45
+; VBITS_GE_512-NEXT:  .LBB9_29: // %cond.load45
 ; VBITS_GE_512-NEXT:    mov w9, #12 // =0xc
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5707,7 +5559,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #13, .LBB9_16
-; VBITS_GE_512-NEXT:  .LBB9_31: // %cond.load49
+; VBITS_GE_512-NEXT:  .LBB9_30: // %cond.load49
 ; VBITS_GE_512-NEXT:    mov w9, #13 // =0xd
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
@@ -5715,63 +5567,56 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
 ; VBITS_GE_512-NEXT:    tbz w8, #14, .LBB9_17
-; VBITS_GE_512-NEXT:  .LBB9_32: // %cond.load53
+; VBITS_GE_512-NEXT:  .LBB9_31: // %cond.load53
 ; VBITS_GE_512-NEXT:    mov w9, #14 // =0xe
 ; VBITS_GE_512-NEXT:    index z1.s, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.s, w9
 ; VBITS_GE_512-NEXT:    ldr w9, [x0], #4
 ; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w9
-; VBITS_GE_512-NEXT:    tbnz w8, #15, .LBB9_18
-; VBITS_GE_512-NEXT:    b .LBB9_19
+; VBITS_GE_512-NEXT:    tbz w8, #15, .LBB9_18
+; VBITS_GE_512-NEXT:  .LBB9_32: // %cond.load57
+; VBITS_GE_512-NEXT:    mov w8, #15 // =0xf
+; VBITS_GE_512-NEXT:    index z1.s, #0, #1
+; VBITS_GE_512-NEXT:    mov z2.s, w8
+; VBITS_GE_512-NEXT:    ldr w8, [x0]
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p1/z, z1.s, z2.s
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, w8
+; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
+; VBITS_GE_512-NEXT:    ret
 ;
 ; CHECK-EXPAND-LABEL: masked_load_v16i32:
 ; CHECK-EXPAND:       // %bb.0:
-; CHECK-EXPAND-NEXT:    sub sp, sp, #16
-; CHECK-EXPAND-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-EXPAND-NEXT:    ptrue p0.s, vl8
+; CHECK-EXPAND-NEXT:    adrp x8, .LCPI9_0
 ; CHECK-EXPAND-NEXT:    ptrue p3.s
 ; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; CHECK-EXPAND-NEXT:    cmpeq p1.s, p0/z, z0.s, z1.s
+; CHECK-EXPAND-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
+; CHECK-EXPAND-NEXT:    mov x8, #8 // =0x8
+; CHECK-EXPAND-NEXT:    ld1w { z2.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-EXPAND-NEXT:    ld1w { z3.s }, p0/z, [x1, x8, lsl #2]
 ; CHECK-EXPAND-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-EXPAND-NEXT:    cmpeq p2.s, p0/z, z2.s, z3.s
+; CHECK-EXPAND-NEXT:    cntp x11, p1, p1.s
 ; CHECK-EXPAND-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-EXPAND-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-EXPAND-NEXT:    umov w8, v0.b[0]
-; CHECK-EXPAND-NEXT:    umov w9, v0.b[1]
-; CHECK-EXPAND-NEXT:    umov w10, v0.b[2]
-; CHECK-EXPAND-NEXT:    umov w11, v0.b[3]
-; CHECK-EXPAND-NEXT:    and w8, w8, #0x1
-; CHECK-EXPAND-NEXT:    bfi w8, w9, #1, #1
-; CHECK-EXPAND-NEXT:    umov w9, v0.b[4]
-; CHECK-EXPAND-NEXT:    bfi w8, w10, #2, #1
-; CHECK-EXPAND-NEXT:    umov w10, v0.b[5]
-; CHECK-EXPAND-NEXT:    bfi w8, w11, #3, #1
-; CHECK-EXPAND-NEXT:    mov x11, #8 // =0x8
-; CHECK-EXPAND-NEXT:    ld1w { z1.s }, p0/z, [x1, x11, lsl #2]
-; CHECK-EXPAND-NEXT:    ld1w { z2.s }, p0/z, [x0, x11, lsl #2]
-; CHECK-EXPAND-NEXT:    bfi w8, w9, #4, #1
-; CHECK-EXPAND-NEXT:    umov w9, v0.b[6]
-; CHECK-EXPAND-NEXT:    bfi w8, w10, #5, #1
-; CHECK-EXPAND-NEXT:    umov w10, v0.b[7]
-; CHECK-EXPAND-NEXT:    cmpeq p2.s, p0/z, z2.s, z1.s
-; CHECK-EXPAND-NEXT:    bfi w8, w9, #6, #1
-; CHECK-EXPAND-NEXT:    orr w8, w8, w10, lsl #7
-; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.s
-; CHECK-EXPAND-NEXT:    cntp x10, p1, p1.s
-; CHECK-EXPAND-NEXT:    and w8, w8, #0xff
-; CHECK-EXPAND-NEXT:    fmov s0, w8
-; CHECK-EXPAND-NEXT:    whilelo p4.s, xzr, x10
-; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
-; CHECK-EXPAND-NEXT:    whilelo p3.s, xzr, x9
-; CHECK-EXPAND-NEXT:    fmov w8, s0
+; CHECK-EXPAND-NEXT:    cntp x10, p2, p2.s
+; CHECK-EXPAND-NEXT:    whilelo p4.s, xzr, x11
+; CHECK-EXPAND-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-EXPAND-NEXT:    ld1w { z1.s }, p4/z, [x0]
-; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p3/z, [x0, x8, lsl #2]
+; CHECK-EXPAND-NEXT:    addv h0, v0.8h
 ; CHECK-EXPAND-NEXT:    expand z1.s, p1, z1.s
+; CHECK-EXPAND-NEXT:    fmov w9, s0
+; CHECK-EXPAND-NEXT:    and w9, w9, #0xff
+; CHECK-EXPAND-NEXT:    fmov s0, w9
+; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
+; CHECK-EXPAND-NEXT:    whilelo p3.s, xzr, x10
+; CHECK-EXPAND-NEXT:    fmov w9, s0
+; CHECK-EXPAND-NEXT:    ld1w { z0.s }, p3/z, [x0, x9, lsl #2]
 ; CHECK-EXPAND-NEXT:    st1w { z1.s }, p0, [x2]
 ; CHECK-EXPAND-NEXT:    expand z0.s, p2, z0.s
-; CHECK-EXPAND-NEXT:    st1w { z0.s }, p0, [x2, x11, lsl #2]
-; CHECK-EXPAND-NEXT:    add sp, sp, #16
+; CHECK-EXPAND-NEXT:    st1w { z0.s }, p0, [x2, x8, lsl #2]
 ; CHECK-EXPAND-NEXT:    ret
   %a = load <16 x i32>, ptr %ap
   %b = load <16 x i32>, ptr %bp
@@ -5784,14 +5629,13 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI10_0
 ; VBITS_GE_256-NEXT:    cmpeq p1.d, p0/z, z0.d, z2.d
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p0/z, z1.d, z3.d
 ; VBITS_GE_256-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
@@ -5802,28 +5646,14 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    adrp x8, .LCPI10_0
-; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI10_0
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI10_0]
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI10_1
+; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI10_1
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h1, v0.8h
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x8]
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB10_2
+; VBITS_GE_256-NEXT:    fmov w8, s1
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB10_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rd { z2.d }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    mov z1.d, z0.d
@@ -5864,7 +5694,6 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB10_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -5907,43 +5736,28 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_v8i64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI10_0
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, z1.d
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI10_0]
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p1.d
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB10_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB10_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rd { z0.d }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #8
 ; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB10_3
 ; VBITS_GE_512-NEXT:    b .LBB10_4
 ; VBITS_GE_512-NEXT:  .LBB10_2:
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI10_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI10_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI10_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI10_1
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB10_4
 ; VBITS_GE_512-NEXT:  .LBB10_3: // %cond.load1
@@ -5954,29 +5768,21 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:  .LBB10_4: // %else2
-; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB10_12
+; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB10_11
 ; VBITS_GE_512-NEXT:  // %bb.5: // %else6
-; VBITS_GE_512-NEXT:    tbnz w8, #3, .LBB10_13
+; VBITS_GE_512-NEXT:    tbnz w8, #3, .LBB10_12
 ; VBITS_GE_512-NEXT:  .LBB10_6: // %else10
-; VBITS_GE_512-NEXT:    tbnz w8, #4, .LBB10_14
+; VBITS_GE_512-NEXT:    tbnz w8, #4, .LBB10_13
 ; VBITS_GE_512-NEXT:  .LBB10_7: // %else14
-; VBITS_GE_512-NEXT:    tbnz w8, #5, .LBB10_15
+; VBITS_GE_512-NEXT:    tbnz w8, #5, .LBB10_14
 ; VBITS_GE_512-NEXT:  .LBB10_8: // %else18
-; VBITS_GE_512-NEXT:    tbnz w8, #6, .LBB10_16
+; VBITS_GE_512-NEXT:    tbnz w8, #6, .LBB10_15
 ; VBITS_GE_512-NEXT:  .LBB10_9: // %else22
-; VBITS_GE_512-NEXT:    tbz w8, #7, .LBB10_11
-; VBITS_GE_512-NEXT:  .LBB10_10: // %cond.load25
-; VBITS_GE_512-NEXT:    mov w8, #7 // =0x7
-; VBITS_GE_512-NEXT:    index z1.d, #0, #1
-; VBITS_GE_512-NEXT:    mov z2.d, x8
-; VBITS_GE_512-NEXT:    ldr x8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x8
-; VBITS_GE_512-NEXT:  .LBB10_11: // %else26
+; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB10_16
+; VBITS_GE_512-NEXT:  .LBB10_10: // %else26
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
-; VBITS_GE_512-NEXT:  .LBB10_12: // %cond.load5
+; VBITS_GE_512-NEXT:  .LBB10_11: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
@@ -5984,7 +5790,7 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #3, .LBB10_6
-; VBITS_GE_512-NEXT:  .LBB10_13: // %cond.load9
+; VBITS_GE_512-NEXT:  .LBB10_12: // %cond.load9
 ; VBITS_GE_512-NEXT:    mov w9, #3 // =0x3
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
@@ -5992,7 +5798,7 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #4, .LBB10_7
-; VBITS_GE_512-NEXT:  .LBB10_14: // %cond.load13
+; VBITS_GE_512-NEXT:  .LBB10_13: // %cond.load13
 ; VBITS_GE_512-NEXT:    mov w9, #4 // =0x4
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
@@ -6000,7 +5806,7 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #5, .LBB10_8
-; VBITS_GE_512-NEXT:  .LBB10_15: // %cond.load17
+; VBITS_GE_512-NEXT:  .LBB10_14: // %cond.load17
 ; VBITS_GE_512-NEXT:    mov w9, #5 // =0x5
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
@@ -6008,55 +5814,56 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #6, .LBB10_9
-; VBITS_GE_512-NEXT:  .LBB10_16: // %cond.load21
+; VBITS_GE_512-NEXT:  .LBB10_15: // %cond.load21
 ; VBITS_GE_512-NEXT:    mov w9, #6 // =0x6
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    mov z2.d, x9
 ; VBITS_GE_512-NEXT:    ldr x9, [x0], #8
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
-; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB10_10
-; VBITS_GE_512-NEXT:    b .LBB10_11
+; VBITS_GE_512-NEXT:    tbz w8, #7, .LBB10_10
+; VBITS_GE_512-NEXT:  .LBB10_16: // %cond.load25
+; VBITS_GE_512-NEXT:    mov w8, #7 // =0x7
+; VBITS_GE_512-NEXT:    index z1.d, #0, #1
+; VBITS_GE_512-NEXT:    mov z2.d, x8
+; VBITS_GE_512-NEXT:    ldr x8, [x0]
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x8
+; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_512-NEXT:    ret
 ;
 ; CHECK-EXPAND-LABEL: masked_load_v8i64:
 ; CHECK-EXPAND:       // %bb.0:
-; CHECK-EXPAND-NEXT:    sub sp, sp, #16
-; CHECK-EXPAND-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
-; CHECK-EXPAND-NEXT:    mov x10, #4 // =0x4
+; CHECK-EXPAND-NEXT:    adrp x8, .LCPI10_0
 ; CHECK-EXPAND-NEXT:    ptrue p3.s
 ; CHECK-EXPAND-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    ld1d { z2.d }, p0/z, [x0, x10, lsl #3]
 ; CHECK-EXPAND-NEXT:    cmpeq p1.d, p0/z, z0.d, z1.d
-; CHECK-EXPAND-NEXT:    ld1d { z1.d }, p0/z, [x1, x10, lsl #3]
-; CHECK-EXPAND-NEXT:    cmpeq p2.d, p0/z, z2.d, z1.d
+; CHECK-EXPAND-NEXT:    ldr q1, [x8, :lo12:.LCPI10_0]
+; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
+; CHECK-EXPAND-NEXT:    ld1d { z2.d }, p0/z, [x0, x8, lsl #3]
+; CHECK-EXPAND-NEXT:    ld1d { z3.d }, p0/z, [x1, x8, lsl #3]
 ; CHECK-EXPAND-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-EXPAND-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-EXPAND-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-EXPAND-NEXT:    umov w8, v0.h[0]
-; CHECK-EXPAND-NEXT:    umov w9, v0.h[1]
-; CHECK-EXPAND-NEXT:    umov w11, v0.h[2]
-; CHECK-EXPAND-NEXT:    and w8, w8, #0x1
-; CHECK-EXPAND-NEXT:    bfi w8, w9, #1, #1
-; CHECK-EXPAND-NEXT:    umov w9, v0.h[3]
-; CHECK-EXPAND-NEXT:    bfi w8, w11, #2, #1
+; CHECK-EXPAND-NEXT:    cmpeq p2.d, p0/z, z2.d, z3.d
 ; CHECK-EXPAND-NEXT:    cntp x11, p1, p1.d
-; CHECK-EXPAND-NEXT:    orr w8, w8, w9, lsl #3
-; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.d
-; CHECK-EXPAND-NEXT:    and w8, w8, #0xf
+; CHECK-EXPAND-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-EXPAND-NEXT:    cntp x10, p2, p2.d
 ; CHECK-EXPAND-NEXT:    whilelo p4.d, xzr, x11
-; CHECK-EXPAND-NEXT:    fmov s0, w8
+; CHECK-EXPAND-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-EXPAND-NEXT:    ld1d { z1.d }, p4/z, [x0]
-; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
-; CHECK-EXPAND-NEXT:    whilelo p3.d, xzr, x9
-; CHECK-EXPAND-NEXT:    fmov w8, s0
+; CHECK-EXPAND-NEXT:    addv s0, v0.4s
 ; CHECK-EXPAND-NEXT:    expand z1.d, p1, z1.d
-; CHECK-EXPAND-NEXT:    ld1d { z0.d }, p3/z, [x0, x8, lsl #3]
+; CHECK-EXPAND-NEXT:    fmov w9, s0
+; CHECK-EXPAND-NEXT:    and w9, w9, #0xf
+; CHECK-EXPAND-NEXT:    fmov s0, w9
+; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
+; CHECK-EXPAND-NEXT:    whilelo p3.d, xzr, x10
+; CHECK-EXPAND-NEXT:    fmov w9, s0
+; CHECK-EXPAND-NEXT:    ld1d { z0.d }, p3/z, [x0, x9, lsl #3]
 ; CHECK-EXPAND-NEXT:    st1d { z1.d }, p0, [x2]
 ; CHECK-EXPAND-NEXT:    expand z0.d, p2, z0.d
-; CHECK-EXPAND-NEXT:    st1d { z0.d }, p0, [x2, x10, lsl #3]
-; CHECK-EXPAND-NEXT:    add sp, sp, #16
+; CHECK-EXPAND-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
 ; CHECK-EXPAND-NEXT:    ret
   %a = load <8 x i64>, ptr %ap
   %b = load <8 x i64>, ptr %bp
@@ -6069,14 +5876,13 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_passthru_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI11_0
 ; VBITS_GE_256-NEXT:    cmpeq p1.d, p0/z, z2.d, z1.d
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p0/z, z3.d, z0.d
 ; VBITS_GE_256-NEXT:    mov z2.d, p1/z, #-1 // =0xffffffffffffffff
@@ -6087,25 +5893,11 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    splice z3.s, p1, z3.s, z2.s
 ; VBITS_GE_256-NEXT:    ptrue p1.d, vl1
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z3.h, z3.h
-; VBITS_GE_256-NEXT:    uzp1 z2.b, z2.b, z2.b
-; VBITS_GE_256-NEXT:    umov w8, v2.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v2.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v2.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v2.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v2.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v2.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v2.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v2.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbnz w9, #0, .LBB11_10
+; VBITS_GE_256-NEXT:    ldr q3, [x8, :lo12:.LCPI11_0]
+; VBITS_GE_256-NEXT:    and v2.16b, v2.16b, v3.16b
+; VBITS_GE_256-NEXT:    addv h2, v2.8h
+; VBITS_GE_256-NEXT:    fmov w8, s2
+; VBITS_GE_256-NEXT:    tbnz w8, #0, .LBB11_10
 ; VBITS_GE_256-NEXT:  // %bb.1: // %else
 ; VBITS_GE_256-NEXT:    tbnz w8, #1, .LBB11_11
 ; VBITS_GE_256-NEXT:  .LBB11_2: // %else2
@@ -6132,7 +5924,6 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB11_10: // %cond.load
 ; VBITS_GE_256-NEXT:    ldr x9, [x0], #8
@@ -6191,66 +5982,42 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_passthru_v8i64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI11_0
+; VBITS_GE_512-NEXT:    ldr q2, [x8, :lo12:.LCPI11_0]
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
 ; VBITS_GE_512-NEXT:    mov z1.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_512-NEXT:    uzp1 z1.h, z1.h, z1.h
-; VBITS_GE_512-NEXT:    uzp1 z1.b, z1.b, z1.b
-; VBITS_GE_512-NEXT:    umov w8, v1.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v1.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v1.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v1.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v1.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v1.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v1.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v1.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbnz w9, #0, .LBB11_10
+; VBITS_GE_512-NEXT:    and v1.16b, v1.16b, v2.16b
+; VBITS_GE_512-NEXT:    addv h1, v1.8h
+; VBITS_GE_512-NEXT:    fmov w8, s1
+; VBITS_GE_512-NEXT:    tbnz w8, #0, .LBB11_9
 ; VBITS_GE_512-NEXT:  // %bb.1: // %else
-; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB11_11
+; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB11_10
 ; VBITS_GE_512-NEXT:  .LBB11_2: // %else2
-; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB11_12
+; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB11_11
 ; VBITS_GE_512-NEXT:  .LBB11_3: // %else6
-; VBITS_GE_512-NEXT:    tbnz w8, #3, .LBB11_13
+; VBITS_GE_512-NEXT:    tbnz w8, #3, .LBB11_12
 ; VBITS_GE_512-NEXT:  .LBB11_4: // %else10
-; VBITS_GE_512-NEXT:    tbnz w8, #4, .LBB11_14
+; VBITS_GE_512-NEXT:    tbnz w8, #4, .LBB11_13
 ; VBITS_GE_512-NEXT:  .LBB11_5: // %else14
-; VBITS_GE_512-NEXT:    tbnz w8, #5, .LBB11_15
+; VBITS_GE_512-NEXT:    tbnz w8, #5, .LBB11_14
 ; VBITS_GE_512-NEXT:  .LBB11_6: // %else18
-; VBITS_GE_512-NEXT:    tbnz w8, #6, .LBB11_16
+; VBITS_GE_512-NEXT:    tbnz w8, #6, .LBB11_15
 ; VBITS_GE_512-NEXT:  .LBB11_7: // %else22
-; VBITS_GE_512-NEXT:    tbz w8, #7, .LBB11_9
-; VBITS_GE_512-NEXT:  .LBB11_8: // %cond.load25
-; VBITS_GE_512-NEXT:    mov w8, #7 // =0x7
-; VBITS_GE_512-NEXT:    index z1.d, #0, #1
-; VBITS_GE_512-NEXT:    ptrue p1.d
-; VBITS_GE_512-NEXT:    mov z2.d, x8
-; VBITS_GE_512-NEXT:    ldr x8, [x0]
-; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x8
-; VBITS_GE_512-NEXT:  .LBB11_9: // %else26
+; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB11_16
+; VBITS_GE_512-NEXT:  .LBB11_8: // %else26
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
-; VBITS_GE_512-NEXT:  .LBB11_10: // %cond.load
+; VBITS_GE_512-NEXT:  .LBB11_9: // %cond.load
 ; VBITS_GE_512-NEXT:    ldr x9, [x0], #8
 ; VBITS_GE_512-NEXT:    ptrue p1.d, vl1
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB11_2
-; VBITS_GE_512-NEXT:  .LBB11_11: // %cond.load1
+; VBITS_GE_512-NEXT:  .LBB11_10: // %cond.load1
 ; VBITS_GE_512-NEXT:    mov w9, #1 // =0x1
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6259,7 +6026,7 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #2, .LBB11_3
-; VBITS_GE_512-NEXT:  .LBB11_12: // %cond.load5
+; VBITS_GE_512-NEXT:  .LBB11_11: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6268,7 +6035,7 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #3, .LBB11_4
-; VBITS_GE_512-NEXT:  .LBB11_13: // %cond.load9
+; VBITS_GE_512-NEXT:  .LBB11_12: // %cond.load9
 ; VBITS_GE_512-NEXT:    mov w9, #3 // =0x3
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6277,7 +6044,7 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #4, .LBB11_5
-; VBITS_GE_512-NEXT:  .LBB11_14: // %cond.load13
+; VBITS_GE_512-NEXT:  .LBB11_13: // %cond.load13
 ; VBITS_GE_512-NEXT:    mov w9, #4 // =0x4
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6286,7 +6053,7 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #5, .LBB11_6
-; VBITS_GE_512-NEXT:  .LBB11_15: // %cond.load17
+; VBITS_GE_512-NEXT:  .LBB11_14: // %cond.load17
 ; VBITS_GE_512-NEXT:    mov w9, #5 // =0x5
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6295,7 +6062,7 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
 ; VBITS_GE_512-NEXT:    tbz w8, #6, .LBB11_7
-; VBITS_GE_512-NEXT:  .LBB11_16: // %cond.load21
+; VBITS_GE_512-NEXT:  .LBB11_15: // %cond.load21
 ; VBITS_GE_512-NEXT:    mov w9, #6 // =0x6
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6303,50 +6070,52 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ldr x9, [x0], #8
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x9
-; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB11_8
-; VBITS_GE_512-NEXT:    b .LBB11_9
+; VBITS_GE_512-NEXT:    tbz w8, #7, .LBB11_8
+; VBITS_GE_512-NEXT:  .LBB11_16: // %cond.load25
+; VBITS_GE_512-NEXT:    mov w8, #7 // =0x7
+; VBITS_GE_512-NEXT:    index z1.d, #0, #1
+; VBITS_GE_512-NEXT:    ptrue p1.d
+; VBITS_GE_512-NEXT:    mov z2.d, x8
+; VBITS_GE_512-NEXT:    ldr x8, [x0]
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, x8
+; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_512-NEXT:    ret
 ;
 ; CHECK-EXPAND-LABEL: masked_load_passthru_v8i64:
 ; CHECK-EXPAND:       // %bb.0:
-; CHECK-EXPAND-NEXT:    sub sp, sp, #16
-; CHECK-EXPAND-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
-; CHECK-EXPAND-NEXT:    mov x10, #4 // =0x4
+; CHECK-EXPAND-NEXT:    adrp x8, .LCPI11_0
+; CHECK-EXPAND-NEXT:    ldr q2, [x8, :lo12:.LCPI11_0]
+; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
 ; CHECK-EXPAND-NEXT:    ptrue p3.s
 ; CHECK-EXPAND-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    ld1d { z2.d }, p0/z, [x1, x10, lsl #3]
-; CHECK-EXPAND-NEXT:    ld1d { z3.d }, p0/z, [x0, x10, lsl #3]
+; CHECK-EXPAND-NEXT:    ld1d { z3.d }, p0/z, [x0, x8, lsl #3]
 ; CHECK-EXPAND-NEXT:    cmpeq p1.d, p0/z, z0.d, z1.d
-; CHECK-EXPAND-NEXT:    cmpeq p2.d, p0/z, z3.d, z2.d
 ; CHECK-EXPAND-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-EXPAND-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-EXPAND-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-EXPAND-NEXT:    umov w8, v0.h[0]
-; CHECK-EXPAND-NEXT:    umov w9, v0.h[1]
-; CHECK-EXPAND-NEXT:    umov w11, v0.h[2]
-; CHECK-EXPAND-NEXT:    and w8, w8, #0x1
-; CHECK-EXPAND-NEXT:    bfi w8, w9, #1, #1
-; CHECK-EXPAND-NEXT:    umov w9, v0.h[3]
-; CHECK-EXPAND-NEXT:    bfi w8, w11, #2, #1
 ; CHECK-EXPAND-NEXT:    cntp x11, p1, p1.d
-; CHECK-EXPAND-NEXT:    orr w8, w8, w9, lsl #3
-; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.d
-; CHECK-EXPAND-NEXT:    and w8, w8, #0xf
+; CHECK-EXPAND-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-EXPAND-NEXT:    whilelo p4.d, xzr, x11
-; CHECK-EXPAND-NEXT:    fmov s0, w8
+; CHECK-EXPAND-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-EXPAND-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
+; CHECK-EXPAND-NEXT:    addv s0, v0.4s
+; CHECK-EXPAND-NEXT:    cmpeq p2.d, p0/z, z3.d, z2.d
 ; CHECK-EXPAND-NEXT:    ld1d { z3.d }, p4/z, [x0]
-; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
-; CHECK-EXPAND-NEXT:    whilelo p3.d, xzr, x9
-; CHECK-EXPAND-NEXT:    fmov w8, s0
+; CHECK-EXPAND-NEXT:    fmov w9, s0
 ; CHECK-EXPAND-NEXT:    expand z3.d, p1, z3.d
+; CHECK-EXPAND-NEXT:    cntp x10, p2, p2.d
 ; CHECK-EXPAND-NEXT:    mov z1.d, p1/m, z3.d
-; CHECK-EXPAND-NEXT:    ld1d { z0.d }, p3/z, [x0, x8, lsl #3]
+; CHECK-EXPAND-NEXT:    and w9, w9, #0xf
+; CHECK-EXPAND-NEXT:    fmov s0, w9
+; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
+; CHECK-EXPAND-NEXT:    whilelo p3.d, xzr, x10
+; CHECK-EXPAND-NEXT:    fmov w9, s0
+; CHECK-EXPAND-NEXT:    ld1d { z0.d }, p3/z, [x0, x9, lsl #3]
 ; CHECK-EXPAND-NEXT:    st1d { z1.d }, p0, [x2]
 ; CHECK-EXPAND-NEXT:    expand z0.d, p2, z0.d
 ; CHECK-EXPAND-NEXT:    sel z0.d, p2, z0.d, z2.d
-; CHECK-EXPAND-NEXT:    st1d { z0.d }, p0, [x2, x10, lsl #3]
-; CHECK-EXPAND-NEXT:    add sp, sp, #16
+; CHECK-EXPAND-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
 ; CHECK-EXPAND-NEXT:    ret
   %a = load <8 x i64>, ptr %ap
   %b = load <8 x i64>, ptr %bp
@@ -6359,14 +6128,13 @@ define void @masked_load_passthru_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_passthru_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI12_0
 ; VBITS_GE_256-NEXT:    fcmeq p1.d, p0/z, z2.d, z1.d
 ; VBITS_GE_256-NEXT:    fcmeq p2.d, p0/z, z3.d, z0.d
 ; VBITS_GE_256-NEXT:    mov z2.d, p1/z, #-1 // =0xffffffffffffffff
@@ -6376,25 +6144,11 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z3.s, z3.s, z3.s
 ; VBITS_GE_256-NEXT:    splice z3.s, p1, z3.s, z2.s
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z3.h, z3.h
-; VBITS_GE_256-NEXT:    uzp1 z2.b, z2.b, z2.b
-; VBITS_GE_256-NEXT:    umov w8, v2.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v2.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v2.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v2.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v2.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v2.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v2.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v2.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbnz w9, #0, .LBB12_10
+; VBITS_GE_256-NEXT:    ldr q3, [x8, :lo12:.LCPI12_0]
+; VBITS_GE_256-NEXT:    and v2.16b, v2.16b, v3.16b
+; VBITS_GE_256-NEXT:    addv h2, v2.8h
+; VBITS_GE_256-NEXT:    fmov w8, s2
+; VBITS_GE_256-NEXT:    tbnz w8, #0, .LBB12_10
 ; VBITS_GE_256-NEXT:  // %bb.1: // %else
 ; VBITS_GE_256-NEXT:    tbnz w8, #1, .LBB12_11
 ; VBITS_GE_256-NEXT:  .LBB12_2: // %else2
@@ -6421,7 +6175,6 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB12_10: // %cond.load
 ; VBITS_GE_256-NEXT:    ldr d2, [x0], #8
@@ -6482,66 +6235,42 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_passthru_v8f64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI12_0
+; VBITS_GE_512-NEXT:    ldr q2, [x8, :lo12:.LCPI12_0]
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    fcmeq p1.d, p0/z, z1.d, z0.d
 ; VBITS_GE_512-NEXT:    mov z1.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_512-NEXT:    uzp1 z1.h, z1.h, z1.h
-; VBITS_GE_512-NEXT:    uzp1 z1.b, z1.b, z1.b
-; VBITS_GE_512-NEXT:    umov w8, v1.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v1.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v1.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v1.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v1.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v1.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v1.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v1.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbnz w9, #0, .LBB12_10
+; VBITS_GE_512-NEXT:    and v1.16b, v1.16b, v2.16b
+; VBITS_GE_512-NEXT:    addv h1, v1.8h
+; VBITS_GE_512-NEXT:    fmov w8, s1
+; VBITS_GE_512-NEXT:    tbnz w8, #0, .LBB12_9
 ; VBITS_GE_512-NEXT:  // %bb.1: // %else
-; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB12_11
+; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB12_10
 ; VBITS_GE_512-NEXT:  .LBB12_2: // %else2
-; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB12_12
+; VBITS_GE_512-NEXT:    tbnz w8, #2, .LBB12_11
 ; VBITS_GE_512-NEXT:  .LBB12_3: // %else6
-; VBITS_GE_512-NEXT:    tbnz w8, #3, .LBB12_13
+; VBITS_GE_512-NEXT:    tbnz w8, #3, .LBB12_12
 ; VBITS_GE_512-NEXT:  .LBB12_4: // %else10
-; VBITS_GE_512-NEXT:    tbnz w8, #4, .LBB12_14
+; VBITS_GE_512-NEXT:    tbnz w8, #4, .LBB12_13
 ; VBITS_GE_512-NEXT:  .LBB12_5: // %else14
-; VBITS_GE_512-NEXT:    tbnz w8, #5, .LBB12_15
+; VBITS_GE_512-NEXT:    tbnz w8, #5, .LBB12_14
 ; VBITS_GE_512-NEXT:  .LBB12_6: // %else18
-; VBITS_GE_512-NEXT:    tbnz w8, #6, .LBB12_16
+; VBITS_GE_512-NEXT:    tbnz w8, #6, .LBB12_15
 ; VBITS_GE_512-NEXT:  .LBB12_7: // %else22
-; VBITS_GE_512-NEXT:    tbz w8, #7, .LBB12_9
-; VBITS_GE_512-NEXT:  .LBB12_8: // %cond.load25
-; VBITS_GE_512-NEXT:    mov w8, #7 // =0x7
-; VBITS_GE_512-NEXT:    index z1.d, #0, #1
-; VBITS_GE_512-NEXT:    ptrue p1.d
-; VBITS_GE_512-NEXT:    mov z2.d, x8
-; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
-; VBITS_GE_512-NEXT:    ldr d1, [x0]
-; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
-; VBITS_GE_512-NEXT:  .LBB12_9: // %else26
+; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB12_16
+; VBITS_GE_512-NEXT:  .LBB12_8: // %else26
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
-; VBITS_GE_512-NEXT:  .LBB12_10: // %cond.load
+; VBITS_GE_512-NEXT:  .LBB12_9: // %cond.load
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
 ; VBITS_GE_512-NEXT:    ptrue p1.d, vl1
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/m, z1.d
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB12_2
-; VBITS_GE_512-NEXT:  .LBB12_11: // %cond.load1
+; VBITS_GE_512-NEXT:  .LBB12_10: // %cond.load1
 ; VBITS_GE_512-NEXT:    mov w9, #1 // =0x1
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6550,7 +6279,7 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbz w8, #2, .LBB12_3
-; VBITS_GE_512-NEXT:  .LBB12_12: // %cond.load5
+; VBITS_GE_512-NEXT:  .LBB12_11: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6559,7 +6288,7 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbz w8, #3, .LBB12_4
-; VBITS_GE_512-NEXT:  .LBB12_13: // %cond.load9
+; VBITS_GE_512-NEXT:  .LBB12_12: // %cond.load9
 ; VBITS_GE_512-NEXT:    mov w9, #3 // =0x3
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6568,7 +6297,7 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbz w8, #4, .LBB12_5
-; VBITS_GE_512-NEXT:  .LBB12_14: // %cond.load13
+; VBITS_GE_512-NEXT:  .LBB12_13: // %cond.load13
 ; VBITS_GE_512-NEXT:    mov w9, #4 // =0x4
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6577,7 +6306,7 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbz w8, #5, .LBB12_6
-; VBITS_GE_512-NEXT:  .LBB12_15: // %cond.load17
+; VBITS_GE_512-NEXT:  .LBB12_14: // %cond.load17
 ; VBITS_GE_512-NEXT:    mov w9, #5 // =0x5
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6586,7 +6315,7 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    tbz w8, #6, .LBB12_7
-; VBITS_GE_512-NEXT:  .LBB12_16: // %cond.load21
+; VBITS_GE_512-NEXT:  .LBB12_15: // %cond.load21
 ; VBITS_GE_512-NEXT:    mov w9, #6 // =0x6
 ; VBITS_GE_512-NEXT:    index z1.d, #0, #1
 ; VBITS_GE_512-NEXT:    ptrue p1.d
@@ -6594,50 +6323,52 @@ define void @masked_load_passthru_v8f64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    ldr d1, [x0], #8
 ; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
-; VBITS_GE_512-NEXT:    tbnz w8, #7, .LBB12_8
-; VBITS_GE_512-NEXT:    b .LBB12_9
+; VBITS_GE_512-NEXT:    tbz w8, #7, .LBB12_8
+; VBITS_GE_512-NEXT:  .LBB12_16: // %cond.load25
+; VBITS_GE_512-NEXT:    mov w8, #7 // =0x7
+; VBITS_GE_512-NEXT:    index z1.d, #0, #1
+; VBITS_GE_512-NEXT:    ptrue p1.d
+; VBITS_GE_512-NEXT:    mov z2.d, x8
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p1/z, z1.d, z2.d
+; VBITS_GE_512-NEXT:    ldr d1, [x0]
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
+; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
+; VBITS_GE_512-NEXT:    ret
 ;
 ; CHECK-EXPAND-LABEL: masked_load_passthru_v8f64:
 ; CHECK-EXPAND:       // %bb.0:
-; CHECK-EXPAND-NEXT:    sub sp, sp, #16
-; CHECK-EXPAND-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-EXPAND-NEXT:    ptrue p0.d, vl4
-; CHECK-EXPAND-NEXT:    mov x10, #4 // =0x4
+; CHECK-EXPAND-NEXT:    adrp x8, .LCPI12_0
+; CHECK-EXPAND-NEXT:    ldr q2, [x8, :lo12:.LCPI12_0]
+; CHECK-EXPAND-NEXT:    mov x8, #4 // =0x4
 ; CHECK-EXPAND-NEXT:    ptrue p3.s
 ; CHECK-EXPAND-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-EXPAND-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-EXPAND-NEXT:    ld1d { z2.d }, p0/z, [x1, x10, lsl #3]
-; CHECK-EXPAND-NEXT:    ld1d { z3.d }, p0/z, [x0, x10, lsl #3]
+; CHECK-EXPAND-NEXT:    ld1d { z3.d }, p0/z, [x0, x8, lsl #3]
 ; CHECK-EXPAND-NEXT:    fcmeq p1.d, p0/z, z0.d, z1.d
-; CHECK-EXPAND-NEXT:    fcmeq p2.d, p0/z, z3.d, z2.d
 ; CHECK-EXPAND-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-EXPAND-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-EXPAND-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-EXPAND-NEXT:    umov w8, v0.h[0]
-; CHECK-EXPAND-NEXT:    umov w9, v0.h[1]
-; CHECK-EXPAND-NEXT:    umov w11, v0.h[2]
-; CHECK-EXPAND-NEXT:    and w8, w8, #0x1
-; CHECK-EXPAND-NEXT:    bfi w8, w9, #1, #1
-; CHECK-EXPAND-NEXT:    umov w9, v0.h[3]
-; CHECK-EXPAND-NEXT:    bfi w8, w11, #2, #1
 ; CHECK-EXPAND-NEXT:    cntp x11, p1, p1.d
-; CHECK-EXPAND-NEXT:    orr w8, w8, w9, lsl #3
-; CHECK-EXPAND-NEXT:    cntp x9, p2, p2.d
-; CHECK-EXPAND-NEXT:    and w8, w8, #0xf
+; CHECK-EXPAND-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-EXPAND-NEXT:    whilelo p4.d, xzr, x11
-; CHECK-EXPAND-NEXT:    fmov s0, w8
+; CHECK-EXPAND-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-EXPAND-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
+; CHECK-EXPAND-NEXT:    addv s0, v0.4s
+; CHECK-EXPAND-NEXT:    fcmeq p2.d, p0/z, z3.d, z2.d
 ; CHECK-EXPAND-NEXT:    ld1d { z3.d }, p4/z, [x0]
-; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
-; CHECK-EXPAND-NEXT:    whilelo p3.d, xzr, x9
-; CHECK-EXPAND-NEXT:    fmov w8, s0
+; CHECK-EXPAND-NEXT:    fmov w9, s0
 ; CHECK-EXPAND-NEXT:    expand z3.d, p1, z3.d
+; CHECK-EXPAND-NEXT:    cntp x10, p2, p2.d
 ; CHECK-EXPAND-NEXT:    mov z1.d, p1/m, z3.d
-; CHECK-EXPAND-NEXT:    ld1d { z0.d }, p3/z, [x0, x8, lsl #3]
+; CHECK-EXPAND-NEXT:    and w9, w9, #0xf
+; CHECK-EXPAND-NEXT:    fmov s0, w9
+; CHECK-EXPAND-NEXT:    cnt z0.s, p3/z, z0.s
+; CHECK-EXPAND-NEXT:    whilelo p3.d, xzr, x10
+; CHECK-EXPAND-NEXT:    fmov w9, s0
+; CHECK-EXPAND-NEXT:    ld1d { z0.d }, p3/z, [x0, x9, lsl #3]
 ; CHECK-EXPAND-NEXT:    st1d { z1.d }, p0, [x2]
 ; CHECK-EXPAND-NEXT:    expand z0.d, p2, z0.d
 ; CHECK-EXPAND-NEXT:    sel z0.d, p2, z0.d, z2.d
-; CHECK-EXPAND-NEXT:    st1d { z0.d }, p0, [x2, x10, lsl #3]
-; CHECK-EXPAND-NEXT:    add sp, sp, #16
+; CHECK-EXPAND-NEXT:    st1d { z0.d }, p0, [x2, x8, lsl #3]
 ; CHECK-EXPAND-NEXT:    ret
   %a = load <8 x double>, ptr %ap
   %b = load <8 x double>, ptr %bp
@@ -7987,64 +7718,28 @@ define void @masked_load_sext_v8i8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v16i16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p1.h, vl16
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI16_0
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x1]
 ; VBITS_GE_256-NEXT:    cmpeq p0.h, p1/z, z0.h, #0
 ; VBITS_GE_256-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_256-NEXT:    ptrue p0.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    umov w11, v0.b[7]
-; VBITS_GE_256-NEXT:    umov w12, v0.b[8]
-; VBITS_GE_256-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_256-NEXT:    umov w14, v0.b[4]
-; VBITS_GE_256-NEXT:    umov w15, v0.b[10]
-; VBITS_GE_256-NEXT:    umov w16, v0.b[5]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[9]
-; VBITS_GE_256-NEXT:    ubfiz w11, w11, #7, #1
-; VBITS_GE_256-NEXT:    ubfiz w12, w12, #8, #1
-; VBITS_GE_256-NEXT:    ubfiz w15, w15, #10, #1
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[11]
-; VBITS_GE_256-NEXT:    orr w11, w11, w12
-; VBITS_GE_256-NEXT:    umov w12, v0.b[13]
-; VBITS_GE_256-NEXT:    bfi w8, w13, #3, #1
-; VBITS_GE_256-NEXT:    umov w13, v0.b[12]
-; VBITS_GE_256-NEXT:    ubfiz w9, w9, #9, #1
-; VBITS_GE_256-NEXT:    bfi w8, w14, #4, #1
-; VBITS_GE_256-NEXT:    umov w14, v0.b[14]
-; VBITS_GE_256-NEXT:    orr w9, w11, w9
-; VBITS_GE_256-NEXT:    umov w11, v0.b[6]
-; VBITS_GE_256-NEXT:    ubfiz w10, w10, #11, #1
-; VBITS_GE_256-NEXT:    orr w9, w9, w15
-; VBITS_GE_256-NEXT:    ubfiz w13, w13, #12, #1
-; VBITS_GE_256-NEXT:    bfi w8, w16, #5, #1
-; VBITS_GE_256-NEXT:    orr w9, w9, w10
-; VBITS_GE_256-NEXT:    ubfiz w10, w12, #13, #1
-; VBITS_GE_256-NEXT:    orr w9, w9, w13
-; VBITS_GE_256-NEXT:    ubfiz w12, w14, #14, #1
-; VBITS_GE_256-NEXT:    umov w13, v0.b[15]
-; VBITS_GE_256-NEXT:    bfi w8, w11, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w9, w10
-; VBITS_GE_256-NEXT:    orr w9, w9, w12
-; VBITS_GE_256-NEXT:    orr w8, w8, w9
-; VBITS_GE_256-NEXT:    orr w9, w8, w13, lsl #15
-; VBITS_GE_256-NEXT:    and w8, w9, #0xffff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB16_2
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_256-NEXT:    umov w8, v0.h[0]
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB16_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rh { z0.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #2
 ; VBITS_GE_256-NEXT:    tbnz w8, #1, .LBB16_3
 ; VBITS_GE_256-NEXT:    b .LBB16_4
 ; VBITS_GE_256-NEXT:  .LBB16_2:
-; VBITS_GE_256-NEXT:    adrp x9, .LCPI16_0
-; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI16_0
+; VBITS_GE_256-NEXT:    adrp x9, .LCPI16_1
+; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI16_1
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x9]
 ; VBITS_GE_256-NEXT:    tbz w8, #1, .LBB16_4
 ; VBITS_GE_256-NEXT:  .LBB16_3: // %cond.load1
@@ -8098,7 +7793,6 @@ define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB16_20: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -8208,64 +7902,28 @@ define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v16i16i32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p1.h, vl16
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI16_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p1/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p0.h, p1/z, z0.h, #0
 ; VBITS_GE_512-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p0.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    umov w11, v0.b[7]
-; VBITS_GE_512-NEXT:    umov w12, v0.b[8]
-; VBITS_GE_512-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_512-NEXT:    umov w14, v0.b[4]
-; VBITS_GE_512-NEXT:    umov w15, v0.b[10]
-; VBITS_GE_512-NEXT:    umov w16, v0.b[5]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[9]
-; VBITS_GE_512-NEXT:    ubfiz w11, w11, #7, #1
-; VBITS_GE_512-NEXT:    ubfiz w12, w12, #8, #1
-; VBITS_GE_512-NEXT:    ubfiz w15, w15, #10, #1
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[11]
-; VBITS_GE_512-NEXT:    orr w11, w11, w12
-; VBITS_GE_512-NEXT:    umov w12, v0.b[13]
-; VBITS_GE_512-NEXT:    bfi w8, w13, #3, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[12]
-; VBITS_GE_512-NEXT:    ubfiz w9, w9, #9, #1
-; VBITS_GE_512-NEXT:    bfi w8, w14, #4, #1
-; VBITS_GE_512-NEXT:    umov w14, v0.b[14]
-; VBITS_GE_512-NEXT:    orr w9, w11, w9
-; VBITS_GE_512-NEXT:    umov w11, v0.b[6]
-; VBITS_GE_512-NEXT:    ubfiz w10, w10, #11, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w15
-; VBITS_GE_512-NEXT:    ubfiz w13, w13, #12, #1
-; VBITS_GE_512-NEXT:    bfi w8, w16, #5, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    ubfiz w10, w12, #13, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w13
-; VBITS_GE_512-NEXT:    ubfiz w12, w14, #14, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[15]
-; VBITS_GE_512-NEXT:    bfi w8, w11, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    orr w9, w9, w12
-; VBITS_GE_512-NEXT:    orr w8, w8, w9
-; VBITS_GE_512-NEXT:    orr w9, w8, w13, lsl #15
-; VBITS_GE_512-NEXT:    and w8, w9, #0xffff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB16_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    umov w8, v0.h[0]
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB16_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rh { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #2
 ; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB16_3
 ; VBITS_GE_512-NEXT:    b .LBB16_4
 ; VBITS_GE_512-NEXT:  .LBB16_2:
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI16_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI16_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI16_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI16_1
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p1/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB16_4
 ; VBITS_GE_512-NEXT:  .LBB16_3: // %cond.load1
@@ -8314,7 +7972,6 @@ define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB16_20: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -8598,41 +8255,26 @@ define void @masked_load_sext_v8i16i64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v8i32i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p1.s, vl8
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI18_0
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI18_0]
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x1]
 ; VBITS_GE_256-NEXT:    cmpeq p0.s, p1/z, z0.s, #0
 ; VBITS_GE_256-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_256-NEXT:    ptrue p0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB18_2
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB18_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #4
 ; VBITS_GE_256-NEXT:    tbnz w8, #1, .LBB18_3
 ; VBITS_GE_256-NEXT:    b .LBB18_4
 ; VBITS_GE_256-NEXT:  .LBB18_2:
-; VBITS_GE_256-NEXT:    adrp x9, .LCPI18_0
-; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI18_0
+; VBITS_GE_256-NEXT:    adrp x9, .LCPI18_1
+; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI18_1
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x9]
 ; VBITS_GE_256-NEXT:    tbz w8, #1, .LBB18_4
 ; VBITS_GE_256-NEXT:  .LBB18_3: // %cond.load1
@@ -8670,7 +8312,6 @@ define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB18_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -8716,41 +8357,26 @@ define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v8i32i64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p1.s, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI18_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI18_0]
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p1/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p0.s, p1/z, z0.s, #0
 ; VBITS_GE_512-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB18_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB18_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #4
 ; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB18_3
 ; VBITS_GE_512-NEXT:    b .LBB18_4
 ; VBITS_GE_512-NEXT:  .LBB18_2:
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI18_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI18_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI18_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI18_1
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p1/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB18_4
 ; VBITS_GE_512-NEXT:  .LBB18_3: // %cond.load1
@@ -8783,7 +8409,6 @@ define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB18_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -10193,64 +9818,28 @@ define void @masked_load_zext_v8i8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v16i16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p1.h, vl16
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI22_0
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI22_0]
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x1]
 ; VBITS_GE_256-NEXT:    cmpeq p0.h, p1/z, z0.h, #0
 ; VBITS_GE_256-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_256-NEXT:    ptrue p0.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    umov w11, v0.b[7]
-; VBITS_GE_256-NEXT:    umov w12, v0.b[8]
-; VBITS_GE_256-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_256-NEXT:    umov w14, v0.b[4]
-; VBITS_GE_256-NEXT:    umov w15, v0.b[10]
-; VBITS_GE_256-NEXT:    umov w16, v0.b[5]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[9]
-; VBITS_GE_256-NEXT:    ubfiz w11, w11, #7, #1
-; VBITS_GE_256-NEXT:    ubfiz w12, w12, #8, #1
-; VBITS_GE_256-NEXT:    ubfiz w15, w15, #10, #1
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[11]
-; VBITS_GE_256-NEXT:    orr w11, w11, w12
-; VBITS_GE_256-NEXT:    umov w12, v0.b[13]
-; VBITS_GE_256-NEXT:    bfi w8, w13, #3, #1
-; VBITS_GE_256-NEXT:    umov w13, v0.b[12]
-; VBITS_GE_256-NEXT:    ubfiz w9, w9, #9, #1
-; VBITS_GE_256-NEXT:    bfi w8, w14, #4, #1
-; VBITS_GE_256-NEXT:    umov w14, v0.b[14]
-; VBITS_GE_256-NEXT:    orr w9, w11, w9
-; VBITS_GE_256-NEXT:    umov w11, v0.b[6]
-; VBITS_GE_256-NEXT:    ubfiz w10, w10, #11, #1
-; VBITS_GE_256-NEXT:    orr w9, w9, w15
-; VBITS_GE_256-NEXT:    ubfiz w13, w13, #12, #1
-; VBITS_GE_256-NEXT:    bfi w8, w16, #5, #1
-; VBITS_GE_256-NEXT:    orr w9, w9, w10
-; VBITS_GE_256-NEXT:    ubfiz w10, w12, #13, #1
-; VBITS_GE_256-NEXT:    orr w9, w9, w13
-; VBITS_GE_256-NEXT:    ubfiz w12, w14, #14, #1
-; VBITS_GE_256-NEXT:    umov w13, v0.b[15]
-; VBITS_GE_256-NEXT:    bfi w8, w11, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w9, w10
-; VBITS_GE_256-NEXT:    orr w9, w9, w12
-; VBITS_GE_256-NEXT:    orr w8, w8, w9
-; VBITS_GE_256-NEXT:    orr w9, w8, w13, lsl #15
-; VBITS_GE_256-NEXT:    and w8, w9, #0xffff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB22_2
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_256-NEXT:    umov w8, v0.h[0]
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB22_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rh { z0.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #2
 ; VBITS_GE_256-NEXT:    tbnz w8, #1, .LBB22_3
 ; VBITS_GE_256-NEXT:    b .LBB22_4
 ; VBITS_GE_256-NEXT:  .LBB22_2:
-; VBITS_GE_256-NEXT:    adrp x9, .LCPI22_0
-; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI22_0
+; VBITS_GE_256-NEXT:    adrp x9, .LCPI22_1
+; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI22_1
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x9]
 ; VBITS_GE_256-NEXT:    tbz w8, #1, .LBB22_4
 ; VBITS_GE_256-NEXT:  .LBB22_3: // %cond.load1
@@ -10304,7 +9893,6 @@ define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB22_20: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -10414,64 +10002,28 @@ define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v16i16i32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p1.h, vl16
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI22_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI22_0]
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p1/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p0.h, p1/z, z0.h, #0
 ; VBITS_GE_512-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p0.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    umov w11, v0.b[7]
-; VBITS_GE_512-NEXT:    umov w12, v0.b[8]
-; VBITS_GE_512-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_512-NEXT:    umov w14, v0.b[4]
-; VBITS_GE_512-NEXT:    umov w15, v0.b[10]
-; VBITS_GE_512-NEXT:    umov w16, v0.b[5]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[9]
-; VBITS_GE_512-NEXT:    ubfiz w11, w11, #7, #1
-; VBITS_GE_512-NEXT:    ubfiz w12, w12, #8, #1
-; VBITS_GE_512-NEXT:    ubfiz w15, w15, #10, #1
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[11]
-; VBITS_GE_512-NEXT:    orr w11, w11, w12
-; VBITS_GE_512-NEXT:    umov w12, v0.b[13]
-; VBITS_GE_512-NEXT:    bfi w8, w13, #3, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[12]
-; VBITS_GE_512-NEXT:    ubfiz w9, w9, #9, #1
-; VBITS_GE_512-NEXT:    bfi w8, w14, #4, #1
-; VBITS_GE_512-NEXT:    umov w14, v0.b[14]
-; VBITS_GE_512-NEXT:    orr w9, w11, w9
-; VBITS_GE_512-NEXT:    umov w11, v0.b[6]
-; VBITS_GE_512-NEXT:    ubfiz w10, w10, #11, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w15
-; VBITS_GE_512-NEXT:    ubfiz w13, w13, #12, #1
-; VBITS_GE_512-NEXT:    bfi w8, w16, #5, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    ubfiz w10, w12, #13, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w13
-; VBITS_GE_512-NEXT:    ubfiz w12, w14, #14, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[15]
-; VBITS_GE_512-NEXT:    bfi w8, w11, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    orr w9, w9, w12
-; VBITS_GE_512-NEXT:    orr w8, w8, w9
-; VBITS_GE_512-NEXT:    orr w9, w8, w13, lsl #15
-; VBITS_GE_512-NEXT:    and w8, w9, #0xffff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB22_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    umov w8, v0.h[0]
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB22_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rh { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #2
 ; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB22_3
 ; VBITS_GE_512-NEXT:    b .LBB22_4
 ; VBITS_GE_512-NEXT:  .LBB22_2:
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI22_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI22_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI22_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI22_1
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p1/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB22_4
 ; VBITS_GE_512-NEXT:  .LBB22_3: // %cond.load1
@@ -10520,7 +10072,6 @@ define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB22_20: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -10804,41 +10355,26 @@ define void @masked_load_zext_v8i16i64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v8i32i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p1.s, vl8
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI24_0
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI24_0]
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x1]
 ; VBITS_GE_256-NEXT:    cmpeq p0.s, p1/z, z0.s, #0
 ; VBITS_GE_256-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_256-NEXT:    ptrue p0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB24_2
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB24_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #4
 ; VBITS_GE_256-NEXT:    tbnz w8, #1, .LBB24_3
 ; VBITS_GE_256-NEXT:    b .LBB24_4
 ; VBITS_GE_256-NEXT:  .LBB24_2:
-; VBITS_GE_256-NEXT:    adrp x9, .LCPI24_0
-; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI24_0
+; VBITS_GE_256-NEXT:    adrp x9, .LCPI24_1
+; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI24_1
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x9]
 ; VBITS_GE_256-NEXT:    tbz w8, #1, .LBB24_4
 ; VBITS_GE_256-NEXT:  .LBB24_3: // %cond.load1
@@ -10876,7 +10412,6 @@ define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB24_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -10922,41 +10457,26 @@ define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v8i32i64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p1.s, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI24_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI24_0]
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p1/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p0.s, p1/z, z0.s, #0
 ; VBITS_GE_512-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB24_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB24_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #4
 ; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB24_3
 ; VBITS_GE_512-NEXT:    b .LBB24_4
 ; VBITS_GE_512-NEXT:  .LBB24_2:
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI24_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI24_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI24_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI24_1
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p1/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB24_4
 ; VBITS_GE_512-NEXT:  .LBB24_3: // %cond.load1
@@ -10989,7 +10509,6 @@ define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB24_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -11994,8 +11513,6 @@ define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v16i8i32_m32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1, x8, lsl #2]
@@ -12015,9 +11532,8 @@ define void @masked_load_sext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
-; VBITS_GE_256-NEXT:    umov w9, v0.h[0]
 ; VBITS_GE_256-NEXT:    umov w8, v0.h[0]
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB26_2
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB26_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ldrb w9, [x0], #1
 ; VBITS_GE_256-NEXT:    fmov s0, w9
@@ -12067,7 +11583,6 @@ define void @masked_load_sext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB26_20: // %cond.load5
 ; VBITS_GE_256-NEXT:    ld1 { v0.b }[2], [x0], #1
@@ -12112,56 +11627,20 @@ define void @masked_load_sext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v16i8i32_m32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI26_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI26_0]
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
 ; VBITS_GE_512-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    umov w11, v0.b[7]
-; VBITS_GE_512-NEXT:    umov w12, v0.b[8]
-; VBITS_GE_512-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_512-NEXT:    umov w14, v0.b[4]
-; VBITS_GE_512-NEXT:    umov w15, v0.b[10]
-; VBITS_GE_512-NEXT:    umov w16, v0.b[5]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[9]
-; VBITS_GE_512-NEXT:    ubfiz w11, w11, #7, #1
-; VBITS_GE_512-NEXT:    ubfiz w12, w12, #8, #1
-; VBITS_GE_512-NEXT:    ubfiz w15, w15, #10, #1
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[11]
-; VBITS_GE_512-NEXT:    orr w11, w11, w12
-; VBITS_GE_512-NEXT:    umov w12, v0.b[13]
-; VBITS_GE_512-NEXT:    bfi w8, w13, #3, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[12]
-; VBITS_GE_512-NEXT:    ubfiz w9, w9, #9, #1
-; VBITS_GE_512-NEXT:    bfi w8, w14, #4, #1
-; VBITS_GE_512-NEXT:    umov w14, v0.b[14]
-; VBITS_GE_512-NEXT:    orr w9, w11, w9
-; VBITS_GE_512-NEXT:    umov w11, v0.b[6]
-; VBITS_GE_512-NEXT:    ubfiz w10, w10, #11, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w15
-; VBITS_GE_512-NEXT:    ubfiz w13, w13, #12, #1
-; VBITS_GE_512-NEXT:    bfi w8, w16, #5, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    ubfiz w10, w12, #13, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w13
-; VBITS_GE_512-NEXT:    ubfiz w12, w14, #14, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[15]
-; VBITS_GE_512-NEXT:    bfi w8, w11, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    orr w9, w9, w12
-; VBITS_GE_512-NEXT:    orr w8, w8, w9
-; VBITS_GE_512-NEXT:    orr w9, w8, w13, lsl #15
-; VBITS_GE_512-NEXT:    and w8, w9, #0xffff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB26_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    umov w8, v0.h[0]
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB26_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ldrb w9, [x0], #1
 ; VBITS_GE_512-NEXT:    fmov s0, w9
@@ -12206,7 +11685,6 @@ define void @masked_load_sext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    sunpklo z0.h, z0.b
 ; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB26_20: // %cond.load5
 ; VBITS_GE_512-NEXT:    ld1 { v0.b }[2], [x0], #1
@@ -12289,12 +11767,11 @@ define void @masked_load_sext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v8i8i64_m64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI27_0
 ; VBITS_GE_256-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p0/z, z1.d, #0
 ; VBITS_GE_256-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
@@ -12304,25 +11781,11 @@ define void @masked_load_sext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB27_2
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI27_0]
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB27_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ldrb w9, [x0], #1
 ; VBITS_GE_256-NEXT:    fmov s0, w9
@@ -12357,7 +11820,6 @@ define void @masked_load_sext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB27_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    ld1 { v0.b }[2], [x0], #1
@@ -12378,33 +11840,18 @@ define void @masked_load_sext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v8i8i64_m64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI27_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI27_0]
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB27_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB27_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ldrb w9, [x0], #1
 ; VBITS_GE_512-NEXT:    fmov s0, w9
@@ -12434,7 +11881,6 @@ define void @masked_load_sext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB27_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    ld1 { v0.b }[2], [x0], #1
@@ -12495,8 +11941,6 @@ define void @masked_load_sext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v16i16i32_m32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1, x8, lsl #2]
@@ -12517,9 +11961,8 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
-; VBITS_GE_256-NEXT:    umov w9, v0.h[0]
 ; VBITS_GE_256-NEXT:    umov w8, v0.h[0]
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB28_2
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB28_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rh { z0.h }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #2
@@ -12581,7 +12024,6 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB28_20: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -12691,57 +12133,21 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v16i16i32_m32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI28_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI28_0]
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
 ; VBITS_GE_512-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p1.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    umov w11, v0.b[7]
-; VBITS_GE_512-NEXT:    umov w12, v0.b[8]
-; VBITS_GE_512-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_512-NEXT:    umov w14, v0.b[4]
-; VBITS_GE_512-NEXT:    umov w15, v0.b[10]
-; VBITS_GE_512-NEXT:    umov w16, v0.b[5]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[9]
-; VBITS_GE_512-NEXT:    ubfiz w11, w11, #7, #1
-; VBITS_GE_512-NEXT:    ubfiz w12, w12, #8, #1
-; VBITS_GE_512-NEXT:    ubfiz w15, w15, #10, #1
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[11]
-; VBITS_GE_512-NEXT:    orr w11, w11, w12
-; VBITS_GE_512-NEXT:    umov w12, v0.b[13]
-; VBITS_GE_512-NEXT:    bfi w8, w13, #3, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[12]
-; VBITS_GE_512-NEXT:    ubfiz w9, w9, #9, #1
-; VBITS_GE_512-NEXT:    bfi w8, w14, #4, #1
-; VBITS_GE_512-NEXT:    umov w14, v0.b[14]
-; VBITS_GE_512-NEXT:    orr w9, w11, w9
-; VBITS_GE_512-NEXT:    umov w11, v0.b[6]
-; VBITS_GE_512-NEXT:    ubfiz w10, w10, #11, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w15
-; VBITS_GE_512-NEXT:    ubfiz w13, w13, #12, #1
-; VBITS_GE_512-NEXT:    bfi w8, w16, #5, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    ubfiz w10, w12, #13, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w13
-; VBITS_GE_512-NEXT:    ubfiz w12, w14, #14, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[15]
-; VBITS_GE_512-NEXT:    bfi w8, w11, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    orr w9, w9, w12
-; VBITS_GE_512-NEXT:    orr w8, w8, w9
-; VBITS_GE_512-NEXT:    orr w9, w8, w13, lsl #15
-; VBITS_GE_512-NEXT:    and w8, w9, #0xffff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB28_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    umov w8, v0.h[0]
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB28_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rh { z0.h }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #2
@@ -12749,8 +12155,8 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    b .LBB28_4
 ; VBITS_GE_512-NEXT:  .LBB28_2:
 ; VBITS_GE_512-NEXT:    ptrue p2.h, vl16
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI28_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI28_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI28_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI28_1
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p2/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB28_4
 ; VBITS_GE_512-NEXT:  .LBB28_3: // %cond.load1
@@ -12798,7 +12204,6 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:  .LBB28_19: // %else58
 ; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB28_20: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -12946,12 +12351,11 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v8i16i64_m64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI29_0
 ; VBITS_GE_256-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p0/z, z1.d, #0
 ; VBITS_GE_256-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
@@ -12961,25 +12365,11 @@ define void @masked_load_sext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB29_2
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI29_0]
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB29_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ldrh w9, [x0], #2
 ; VBITS_GE_256-NEXT:    fmov s0, w9
@@ -13013,7 +12403,6 @@ define void @masked_load_sext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB29_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    ld1 { v0.h }[2], [x0], #2
@@ -13034,33 +12423,18 @@ define void @masked_load_sext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v8i16i64_m64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI29_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI29_0]
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB29_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB29_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ldrh w9, [x0], #2
 ; VBITS_GE_512-NEXT:    fmov s0, w9
@@ -13089,7 +12463,6 @@ define void @masked_load_sext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB29_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    ld1 { v0.h }[2], [x0], #2
@@ -13148,12 +12521,11 @@ define void @masked_load_sext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_v8i32i64_m64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI30_0
 ; VBITS_GE_256-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p0/z, z1.d, #0
 ; VBITS_GE_256-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
@@ -13164,25 +12536,11 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB30_2
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI30_0]
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB30_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rw { z0.s }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #4
@@ -13190,8 +12548,8 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    b .LBB30_4
 ; VBITS_GE_256-NEXT:  .LBB30_2:
 ; VBITS_GE_256-NEXT:    ptrue p2.s, vl8
-; VBITS_GE_256-NEXT:    adrp x9, .LCPI30_0
-; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI30_0
+; VBITS_GE_256-NEXT:    adrp x9, .LCPI30_1
+; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI30_1
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p2/z, [x9]
 ; VBITS_GE_256-NEXT:    tbz w8, #1, .LBB30_4
 ; VBITS_GE_256-NEXT:  .LBB30_3: // %cond.load1
@@ -13228,7 +12586,6 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB30_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -13274,34 +12631,19 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_v8i32i64_m64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI30_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI30_0]
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB30_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB30_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rw { z0.s }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #4
@@ -13309,8 +12651,8 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    b .LBB30_4
 ; VBITS_GE_512-NEXT:  .LBB30_2:
 ; VBITS_GE_512-NEXT:    ptrue p2.s, vl8
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI30_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI30_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI30_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI30_1
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p2/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB30_4
 ; VBITS_GE_512-NEXT:  .LBB30_3: // %cond.load1
@@ -13342,7 +12684,6 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:  .LBB30_11: // %else26
 ; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB30_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -14356,8 +13697,6 @@ define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v16i8i32_m32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1, x8, lsl #2]
@@ -14377,9 +13716,8 @@ define void @masked_load_zext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
-; VBITS_GE_256-NEXT:    umov w9, v0.h[0]
 ; VBITS_GE_256-NEXT:    umov w8, v0.h[0]
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB32_2
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB32_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ldrb w9, [x0], #1
 ; VBITS_GE_256-NEXT:    fmov s0, w9
@@ -14429,7 +13767,6 @@ define void @masked_load_zext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB32_20: // %cond.load5
 ; VBITS_GE_256-NEXT:    ld1 { v0.b }[2], [x0], #1
@@ -14474,56 +13811,20 @@ define void @masked_load_zext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v16i8i32_m32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI32_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI32_0]
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
 ; VBITS_GE_512-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    umov w11, v0.b[7]
-; VBITS_GE_512-NEXT:    umov w12, v0.b[8]
-; VBITS_GE_512-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_512-NEXT:    umov w14, v0.b[4]
-; VBITS_GE_512-NEXT:    umov w15, v0.b[10]
-; VBITS_GE_512-NEXT:    umov w16, v0.b[5]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[9]
-; VBITS_GE_512-NEXT:    ubfiz w11, w11, #7, #1
-; VBITS_GE_512-NEXT:    ubfiz w12, w12, #8, #1
-; VBITS_GE_512-NEXT:    ubfiz w15, w15, #10, #1
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[11]
-; VBITS_GE_512-NEXT:    orr w11, w11, w12
-; VBITS_GE_512-NEXT:    umov w12, v0.b[13]
-; VBITS_GE_512-NEXT:    bfi w8, w13, #3, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[12]
-; VBITS_GE_512-NEXT:    ubfiz w9, w9, #9, #1
-; VBITS_GE_512-NEXT:    bfi w8, w14, #4, #1
-; VBITS_GE_512-NEXT:    umov w14, v0.b[14]
-; VBITS_GE_512-NEXT:    orr w9, w11, w9
-; VBITS_GE_512-NEXT:    umov w11, v0.b[6]
-; VBITS_GE_512-NEXT:    ubfiz w10, w10, #11, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w15
-; VBITS_GE_512-NEXT:    ubfiz w13, w13, #12, #1
-; VBITS_GE_512-NEXT:    bfi w8, w16, #5, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    ubfiz w10, w12, #13, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w13
-; VBITS_GE_512-NEXT:    ubfiz w12, w14, #14, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[15]
-; VBITS_GE_512-NEXT:    bfi w8, w11, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    orr w9, w9, w12
-; VBITS_GE_512-NEXT:    orr w8, w8, w9
-; VBITS_GE_512-NEXT:    orr w9, w8, w13, lsl #15
-; VBITS_GE_512-NEXT:    and w8, w9, #0xffff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB32_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    umov w8, v0.h[0]
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB32_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ldrb w9, [x0], #1
 ; VBITS_GE_512-NEXT:    fmov s0, w9
@@ -14568,7 +13869,6 @@ define void @masked_load_zext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    uunpklo z0.h, z0.b
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB32_20: // %cond.load5
 ; VBITS_GE_512-NEXT:    ld1 { v0.b }[2], [x0], #1
@@ -14651,12 +13951,11 @@ define void @masked_load_zext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v8i8i64_m64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI33_0
 ; VBITS_GE_256-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p0/z, z1.d, #0
 ; VBITS_GE_256-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
@@ -14666,25 +13965,11 @@ define void @masked_load_zext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB33_2
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI33_0]
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB33_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ldrb w9, [x0], #1
 ; VBITS_GE_256-NEXT:    fmov s0, w9
@@ -14719,7 +14004,6 @@ define void @masked_load_zext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB33_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    ld1 { v0.b }[2], [x0], #1
@@ -14740,33 +14024,18 @@ define void @masked_load_zext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v8i8i64_m64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI33_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI33_0]
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB33_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB33_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ldrb w9, [x0], #1
 ; VBITS_GE_512-NEXT:    fmov s0, w9
@@ -14796,7 +14065,6 @@ define void @masked_load_zext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB33_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    ld1 { v0.b }[2], [x0], #1
@@ -14857,8 +14125,6 @@ define void @masked_load_zext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v16i16i32_m32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1, x8, lsl #2]
@@ -14879,9 +14145,8 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
 ; VBITS_GE_256-NEXT:    addp v0.16b, v0.16b, v0.16b
-; VBITS_GE_256-NEXT:    umov w9, v0.h[0]
 ; VBITS_GE_256-NEXT:    umov w8, v0.h[0]
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB34_2
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB34_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rh { z0.h }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #2
@@ -14943,7 +14208,6 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x2, x8, lsl #2]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB34_20: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -15053,57 +14317,21 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v16i16i32_m32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI34_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI34_0]
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
 ; VBITS_GE_512-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p1.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    umov w11, v0.b[7]
-; VBITS_GE_512-NEXT:    umov w12, v0.b[8]
-; VBITS_GE_512-NEXT:    umov w13, v0.b[3]
-; VBITS_GE_512-NEXT:    umov w14, v0.b[4]
-; VBITS_GE_512-NEXT:    umov w15, v0.b[10]
-; VBITS_GE_512-NEXT:    umov w16, v0.b[5]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[9]
-; VBITS_GE_512-NEXT:    ubfiz w11, w11, #7, #1
-; VBITS_GE_512-NEXT:    ubfiz w12, w12, #8, #1
-; VBITS_GE_512-NEXT:    ubfiz w15, w15, #10, #1
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[11]
-; VBITS_GE_512-NEXT:    orr w11, w11, w12
-; VBITS_GE_512-NEXT:    umov w12, v0.b[13]
-; VBITS_GE_512-NEXT:    bfi w8, w13, #3, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[12]
-; VBITS_GE_512-NEXT:    ubfiz w9, w9, #9, #1
-; VBITS_GE_512-NEXT:    bfi w8, w14, #4, #1
-; VBITS_GE_512-NEXT:    umov w14, v0.b[14]
-; VBITS_GE_512-NEXT:    orr w9, w11, w9
-; VBITS_GE_512-NEXT:    umov w11, v0.b[6]
-; VBITS_GE_512-NEXT:    ubfiz w10, w10, #11, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w15
-; VBITS_GE_512-NEXT:    ubfiz w13, w13, #12, #1
-; VBITS_GE_512-NEXT:    bfi w8, w16, #5, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    ubfiz w10, w12, #13, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w13
-; VBITS_GE_512-NEXT:    ubfiz w12, w14, #14, #1
-; VBITS_GE_512-NEXT:    umov w13, v0.b[15]
-; VBITS_GE_512-NEXT:    bfi w8, w11, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w9, w10
-; VBITS_GE_512-NEXT:    orr w9, w9, w12
-; VBITS_GE_512-NEXT:    orr w8, w8, w9
-; VBITS_GE_512-NEXT:    orr w9, w8, w13, lsl #15
-; VBITS_GE_512-NEXT:    and w8, w9, #0xffff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB34_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    addp v0.16b, v0.16b, v0.16b
+; VBITS_GE_512-NEXT:    umov w8, v0.h[0]
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB34_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rh { z0.h }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #2
@@ -15111,8 +14339,8 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    b .LBB34_4
 ; VBITS_GE_512-NEXT:  .LBB34_2:
 ; VBITS_GE_512-NEXT:    ptrue p2.h, vl16
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI34_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI34_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI34_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI34_1
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p2/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB34_4
 ; VBITS_GE_512-NEXT:  .LBB34_3: // %cond.load1
@@ -15160,7 +14388,6 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:  .LBB34_19: // %else58
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB34_20: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -15308,12 +14535,11 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v8i16i64_m64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI35_0
 ; VBITS_GE_256-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p0/z, z1.d, #0
 ; VBITS_GE_256-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
@@ -15323,25 +14549,11 @@ define void @masked_load_zext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB35_2
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI35_0]
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB35_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ldrh w9, [x0], #2
 ; VBITS_GE_256-NEXT:    fmov s0, w9
@@ -15375,7 +14587,6 @@ define void @masked_load_zext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB35_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    ld1 { v0.h }[2], [x0], #2
@@ -15396,33 +14607,18 @@ define void @masked_load_zext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v8i16i64_m64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI35_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI35_0]
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB35_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB35_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ldrh w9, [x0], #2
 ; VBITS_GE_512-NEXT:    fmov s0, w9
@@ -15451,7 +14647,6 @@ define void @masked_load_zext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB35_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    ld1 { v0.h }[2], [x0], #2
@@ -15510,12 +14705,11 @@ define void @masked_load_zext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_v8i32i64_m64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI36_0
 ; VBITS_GE_256-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_256-NEXT:    cmpeq p2.d, p0/z, z1.d, #0
 ; VBITS_GE_256-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
@@ -15526,25 +14720,11 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p1.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB36_2
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI36_0]
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB36_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rw { z0.s }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #4
@@ -15552,8 +14732,8 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    b .LBB36_4
 ; VBITS_GE_256-NEXT:  .LBB36_2:
 ; VBITS_GE_256-NEXT:    ptrue p2.s, vl8
-; VBITS_GE_256-NEXT:    adrp x9, .LCPI36_0
-; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI36_0
+; VBITS_GE_256-NEXT:    adrp x9, .LCPI36_1
+; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI36_1
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p2/z, [x9]
 ; VBITS_GE_256-NEXT:    tbz w8, #1, .LBB36_4
 ; VBITS_GE_256-NEXT:  .LBB36_3: // %cond.load1
@@ -15590,7 +14770,6 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB36_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -15636,34 +14815,19 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_v8i32i64_m64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI36_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI36_0]
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p1.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB36_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB36_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rw { z0.s }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #4
@@ -15671,8 +14835,8 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    b .LBB36_4
 ; VBITS_GE_512-NEXT:  .LBB36_2:
 ; VBITS_GE_512-NEXT:    ptrue p2.s, vl8
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI36_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI36_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI36_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI36_1
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p2/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB36_4
 ; VBITS_GE_512-NEXT:  .LBB36_3: // %cond.load1
@@ -15704,7 +14868,6 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:  .LBB36_11: // %else26
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB36_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -26062,41 +25225,26 @@ define void @masked_load_zext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_sext_ugt_v8i32i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p1.s, vl8
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI49_0
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI49_0]
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x1]
 ; VBITS_GE_256-NEXT:    cmpne p0.s, p1/z, z0.s, #0
 ; VBITS_GE_256-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_256-NEXT:    ptrue p0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB49_2
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB49_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #4
 ; VBITS_GE_256-NEXT:    tbnz w8, #1, .LBB49_3
 ; VBITS_GE_256-NEXT:    b .LBB49_4
 ; VBITS_GE_256-NEXT:  .LBB49_2:
-; VBITS_GE_256-NEXT:    adrp x9, .LCPI49_0
-; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI49_0
+; VBITS_GE_256-NEXT:    adrp x9, .LCPI49_1
+; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI49_1
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x9]
 ; VBITS_GE_256-NEXT:    tbz w8, #1, .LBB49_4
 ; VBITS_GE_256-NEXT:  .LBB49_3: // %cond.load1
@@ -26134,7 +25282,6 @@ define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB49_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -26180,41 +25327,26 @@ define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_sext_ugt_v8i32i64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p1.s, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI49_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI49_0]
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p1/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpne p0.s, p1/z, z0.s, #0
 ; VBITS_GE_512-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB49_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB49_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #4
 ; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB49_3
 ; VBITS_GE_512-NEXT:    b .LBB49_4
 ; VBITS_GE_512-NEXT:  .LBB49_2:
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI49_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI49_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI49_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI49_1
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p1/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB49_4
 ; VBITS_GE_512-NEXT:  .LBB49_3: // %cond.load1
@@ -26247,7 +25379,6 @@ define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB49_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
@@ -26320,41 +25451,26 @@ define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: masked_load_zext_sgt_v8i32i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    sub sp, sp, #16
-; VBITS_GE_256-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_256-NEXT:    ptrue p1.s, vl8
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI50_0
+; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI50_0]
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x1]
 ; VBITS_GE_256-NEXT:    cmpgt p0.s, p1/z, z0.s, #0
 ; VBITS_GE_256-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_256-NEXT:    ptrue p0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_256-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_256-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_256-NEXT:    and w8, w8, #0x1
-; VBITS_GE_256-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_256-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_256-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_256-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_256-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_256-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_256-NEXT:    and w8, w9, #0xff
-; VBITS_GE_256-NEXT:    tbz w9, #0, .LBB50_2
+; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
+; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB50_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_256-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #4
 ; VBITS_GE_256-NEXT:    tbnz w8, #1, .LBB50_3
 ; VBITS_GE_256-NEXT:    b .LBB50_4
 ; VBITS_GE_256-NEXT:  .LBB50_2:
-; VBITS_GE_256-NEXT:    adrp x9, .LCPI50_0
-; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI50_0
+; VBITS_GE_256-NEXT:    adrp x9, .LCPI50_1
+; VBITS_GE_256-NEXT:    add x9, x9, :lo12:.LCPI50_1
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x9]
 ; VBITS_GE_256-NEXT:    tbz w8, #1, .LBB50_4
 ; VBITS_GE_256-NEXT:  .LBB50_3: // %cond.load1
@@ -26392,7 +25508,6 @@ define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x2, x8, lsl #3]
-; VBITS_GE_256-NEXT:    add sp, sp, #16
 ; VBITS_GE_256-NEXT:    ret
 ; VBITS_GE_256-NEXT:  .LBB50_12: // %cond.load5
 ; VBITS_GE_256-NEXT:    mov w9, #2 // =0x2
@@ -26438,41 +25553,26 @@ define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ;
 ; VBITS_GE_512-LABEL: masked_load_zext_sgt_v8i32i64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    sub sp, sp, #16
-; VBITS_GE_512-NEXT:    .cfi_def_cfa_offset 16
 ; VBITS_GE_512-NEXT:    ptrue p1.s, vl8
+; VBITS_GE_512-NEXT:    adrp x8, .LCPI50_0
+; VBITS_GE_512-NEXT:    ldr q1, [x8, :lo12:.LCPI50_0]
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p1/z, [x1]
 ; VBITS_GE_512-NEXT:    cmpgt p0.s, p1/z, z0.s, #0
 ; VBITS_GE_512-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    ptrue p0.s
 ; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_512-NEXT:    umov w8, v0.b[0]
-; VBITS_GE_512-NEXT:    umov w9, v0.b[1]
-; VBITS_GE_512-NEXT:    umov w10, v0.b[2]
-; VBITS_GE_512-NEXT:    and w8, w8, #0x1
-; VBITS_GE_512-NEXT:    bfi w8, w9, #1, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[3]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #2, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[4]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #3, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[5]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #4, #1
-; VBITS_GE_512-NEXT:    umov w10, v0.b[6]
-; VBITS_GE_512-NEXT:    bfi w8, w9, #5, #1
-; VBITS_GE_512-NEXT:    umov w9, v0.b[7]
-; VBITS_GE_512-NEXT:    bfi w8, w10, #6, #1
-; VBITS_GE_512-NEXT:    orr w9, w8, w9, lsl #7
-; VBITS_GE_512-NEXT:    and w8, w9, #0xff
-; VBITS_GE_512-NEXT:    tbz w9, #0, .LBB50_2
+; VBITS_GE_512-NEXT:    and v0.16b, v0.16b, v1.16b
+; VBITS_GE_512-NEXT:    addv h0, v0.8h
+; VBITS_GE_512-NEXT:    fmov w8, s0
+; VBITS_GE_512-NEXT:    tbz w8, #0, .LBB50_2
 ; VBITS_GE_512-NEXT:  // %bb.1: // %cond.load
 ; VBITS_GE_512-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    add x0, x0, #4
 ; VBITS_GE_512-NEXT:    tbnz w8, #1, .LBB50_3
 ; VBITS_GE_512-NEXT:    b .LBB50_4
 ; VBITS_GE_512-NEXT:  .LBB50_2:
-; VBITS_GE_512-NEXT:    adrp x9, .LCPI50_0
-; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI50_0
+; VBITS_GE_512-NEXT:    adrp x9, .LCPI50_1
+; VBITS_GE_512-NEXT:    add x9, x9, :lo12:.LCPI50_1
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p1/z, [x9]
 ; VBITS_GE_512-NEXT:    tbz w8, #1, .LBB50_4
 ; VBITS_GE_512-NEXT:  .LBB50_3: // %cond.load1
@@ -26505,7 +25605,6 @@ define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
-; VBITS_GE_512-NEXT:    add sp, sp, #16
 ; VBITS_GE_512-NEXT:    ret
 ; VBITS_GE_512-NEXT:  .LBB50_12: // %cond.load5
 ; VBITS_GE_512-NEXT:    mov w9, #2 // =0x2
