@@ -2074,6 +2074,30 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
   ASSERT_EQ(Tokens.size(), 27u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown); // Not CtorDtorDeclName.
   EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ObjCBlockLParen);
+
+  Tokens = annotate("id p = ^NSArray<NSString *> *() {\n"
+                    "  return nil;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_ObjCBlockLBrace);
+
+  Tokens = annotate("id p = ^NSArray<NSArray<NSString *> *> *(int) {\n"
+                    "  return nil;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_ObjCBlockLBrace);
+
+  Tokens = annotate("id p = ^id<Proto>(int x) {\n"
+                    "  return nil;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_ObjCBlockLBrace);
+
+  Tokens = annotate("id p = ^NSDictionary<NSString *, NSString *> *(int x) {\n"
+                    "  return nil;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_ObjCBlockLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCMethodExpr) {
