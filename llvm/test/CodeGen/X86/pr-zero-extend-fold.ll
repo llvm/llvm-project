@@ -24,14 +24,15 @@ define i64 @i(i64 %j) {
 ; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %for.body
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    movl $2863311531, %ecx # imm = 0xAAAAAAAB
-; CHECK-NEXT:    imulq %rdi, %rcx
-; CHECK-NEXT:    shrq $34, %rcx
-; CHECK-NEXT:    addl %ecx, %ecx
-; CHECK-NEXT:    leal (%rcx,%rcx,2), %ecx
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    subl %ecx, %edx
-; CHECK-NEXT:    jmpq *.LJTI0_0(,%rdx,8)
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    orl $0, %ecx
+; CHECK-NEXT:    movl $2863311531, %edx # imm = 0xAAAAAAAB
+; CHECK-NEXT:    imulq %rcx, %rdx
+; CHECK-NEXT:    shrq $34, %rdx
+; CHECK-NEXT:    addl %edx, %edx
+; CHECK-NEXT:    leal (%rdx,%rdx,2), %edx
+; CHECK-NEXT:    subl %edx, %ecx
+; CHECK-NEXT:    jmpq *.LJTI0_0(,%rcx,8)
 ; CHECK-NEXT:  .LBB0_4: # %common.ret
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq

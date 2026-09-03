@@ -6061,7 +6061,21 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
 
   if (!Modified) {
     // Modify the instruction.
-    if (ImmVal == 0 && canConvert2Copy(NewOpc) &&
+    bool SafeToConvert = true;
+    if (Subtarget.is64Bit() && (NewOpc == X86::ADD32ri || NewOpc == X86::SUB32ri ||
+                                NewOpc == X86::OR32ri || NewOpc == X86::XOR32ri)) {
+      Register DefReg = UseMI.getOperand(0).getReg();
+      if (DefReg.isVirtual()) {
+        for (MachineInstr &User : MRI->use_nodbg_instructions(DefReg)) {
+          if (User.getOpcode() == TargetOpcode::SUBREG_TO_REG) {
+            SafeToConvert = false;
+            break;
+          }
+        }
+      }
+    }
+
+    if (ImmVal == 0 && canConvert2Copy(NewOpc) && SafeToConvert &&
         UseMI.registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr)) {
       //          %100 = add %101, 0
       //    ==>
