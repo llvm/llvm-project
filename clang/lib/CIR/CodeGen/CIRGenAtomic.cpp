@@ -893,19 +893,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     break;
 
   case AtomicExpr::AO__opencl_atomic_init:
-
-
-
-
-
-
-
-
-
-
-
-
-
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
     return;
   }
