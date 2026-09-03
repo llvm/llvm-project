@@ -552,8 +552,9 @@ mlir::intrange::inferAnd(ArrayRef<ConstantIntRanges> argRanges) {
   auto andi = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a & b;
   };
-  return minMaxBy(andi, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
-                  /*isSigned=*/false);
+  std::array<APInt, 2> lhsBounds = {std::move(lhsZeros), std::move(lhsOnes)};
+  std::array<APInt, 2> rhsBounds = {std::move(rhsZeros), std::move(rhsOnes)};
+  return minMaxBy(andi, lhsBounds, rhsBounds, /*isSigned=*/false);
 }
 
 ConstantIntRanges
@@ -563,8 +564,9 @@ mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
   auto ori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a | b;
   };
-  return minMaxBy(ori, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
-                  /*isSigned=*/false);
+  std::array<APInt, 2> lhsBounds = {std::move(lhsZeros), std::move(lhsOnes)};
+  std::array<APInt, 2> rhsBounds = {std::move(rhsZeros), std::move(rhsOnes)};
+  return minMaxBy(ori, lhsBounds, rhsBounds, /*isSigned=*/false);
 }
 
 /// Get bitmask of all bits which can change while iterating in
