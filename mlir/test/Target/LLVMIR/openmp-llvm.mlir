@@ -4079,7 +4079,7 @@ llvm.func @omp_task_if(%boolexpr: i1) {
 
 // -----
 
-module attributes {omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>} {}
+module attributes {omp.requires = #omp.clause_requires<reverse_offload|unified_shared_memory>} {}
 
 // -----
 

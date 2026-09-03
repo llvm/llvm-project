@@ -3769,7 +3769,8 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove,
                         AnyRegion:$dealloc_region);
 
   let assemblyFormat = [{
-    $locality_specifier_type ($sym_visibility^)? $sym_name `:` $type
+    ` ` `{` `type` `=` enum($locality_specifier_type) `}`
+      ($sym_visibility^)? $sym_name `:` $type
       (`init` $init_region^)?
       (`copy` $copy_region^)?
       (`dealloc` $dealloc_region^)?
