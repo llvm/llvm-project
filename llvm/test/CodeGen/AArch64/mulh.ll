@@ -437,6 +437,138 @@ define <1 x i64> @umulh_v1i64(<1 x i64> %x, <1 x i64> %y) nounwind {
   ret <1 x i64> %r
 }
 
+define <16 x i8> @smulh_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
+; CHECK-LABEL: smulh_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smull2 v2.8h, v0.16b, v1.16b
+; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %r = call <16 x i8> @llvm.smulh(<16 x i8> %x, <16 x i8> %y)
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @umulh_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
+; CHECK-LABEL: umulh_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull2 v2.8h, v0.16b, v1.16b
+; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %r = call <16 x i8> @llvm.umulh(<16 x i8> %x, <16 x i8> %y)
+  ret <16 x i8> %r
+}
+
+define <8 x i16> @smulh_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
+; CHECK-LABEL: smulh_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smull2 v2.4s, v0.8h, v1.8h
+; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    ret
+  %r = call <8 x i16> @llvm.smulh(<8 x i16> %x, <8 x i16> %y)
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @umulh_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
+; CHECK-LABEL: umulh_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull2 v2.4s, v0.8h, v1.8h
+; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    ret
+  %r = call <8 x i16> @llvm.umulh(<8 x i16> %x, <8 x i16> %y)
+  ret <8 x i16> %r
+}
+
+define <4 x i32> @smulh_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
+; CHECK-LABEL: smulh_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smull2 v2.2d, v0.4s, v1.4s
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ret
+  %r = call <4 x i32> @llvm.smulh(<4 x i32> %x, <4 x i32> %y)
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @umulh_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
+; CHECK-LABEL: umulh_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ret
+  %r = call <4 x i32> @llvm.umulh(<4 x i32> %x, <4 x i32> %y)
+  ret <4 x i32> %r
+}
+
+define <2 x i64> @smulh_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
+; CHECK-SD-LABEL: smulh_v2i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov x10, d1
+; CHECK-SD-NEXT:    fmov x11, d0
+; CHECK-SD-NEXT:    mov x8, v1.d[1]
+; CHECK-SD-NEXT:    mov x9, v0.d[1]
+; CHECK-SD-NEXT:    smulh x10, x11, x10
+; CHECK-SD-NEXT:    smulh x8, x9, x8
+; CHECK-SD-NEXT:    fmov d0, x10
+; CHECK-SD-NEXT:    mov v0.d[1], x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: smulh_v2i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    mov d3, v1.d[1]
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    umulh x10, x8, x9
+; CHECK-GI-NEXT:    fmov x11, d2
+; CHECK-GI-NEXT:    fmov x12, d3
+; CHECK-GI-NEXT:    asr x13, x9, #63
+; CHECK-GI-NEXT:    umulh x14, x11, x12
+; CHECK-GI-NEXT:    madd x10, x8, x13, x10
+; CHECK-GI-NEXT:    asr x13, x12, #63
+; CHECK-GI-NEXT:    asr x8, x8, #63
+; CHECK-GI-NEXT:    madd x13, x11, x13, x14
+; CHECK-GI-NEXT:    asr x11, x11, #63
+; CHECK-GI-NEXT:    madd x8, x8, x9, x10
+; CHECK-GI-NEXT:    madd x9, x11, x12, x13
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    mov v0.d[1], x9
+; CHECK-GI-NEXT:    ret
+  %r = call <2 x i64> @llvm.smulh(<2 x i64> %x, <2 x i64> %y)
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @umulh_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
+; CHECK-SD-LABEL: umulh_v2i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov x10, d1
+; CHECK-SD-NEXT:    fmov x11, d0
+; CHECK-SD-NEXT:    mov x8, v1.d[1]
+; CHECK-SD-NEXT:    mov x9, v0.d[1]
+; CHECK-SD-NEXT:    umulh x10, x11, x10
+; CHECK-SD-NEXT:    umulh x8, x9, x8
+; CHECK-SD-NEXT:    fmov d0, x10
+; CHECK-SD-NEXT:    mov v0.d[1], x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: umulh_v2i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov x10, d0
+; CHECK-GI-NEXT:    fmov x11, d1
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    mov x9, v1.d[1]
+; CHECK-GI-NEXT:    umulh x10, x10, x11
+; CHECK-GI-NEXT:    umulh x8, x8, x9
+; CHECK-GI-NEXT:    fmov d0, x10
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    ret
+  %r = call <2 x i64> @llvm.umulh(<2 x i64> %x, <2 x i64> %y)
+  ret <2 x i64> %r
+}
+
 define <3 x i32> @smulh_v3i32(<3 x i32> %x, <3 x i32> %y) nounwind {
 ; CHECK-SD-LABEL: smulh_v3i32:
 ; CHECK-SD:       // %bb.0:
