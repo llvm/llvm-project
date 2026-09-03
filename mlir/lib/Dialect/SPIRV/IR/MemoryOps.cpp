@@ -196,6 +196,35 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
            << memAccessAttr;
   }
 
+  // MakePointerAvailable applies to writes through the pointer, so it is
+  // invalid for Load (which only reads through it).
+  if (isa<LoadOp>(op) &&
+      spirv::bitEnumContainsAll(memAccess.getValue(),
+                                spirv::MemoryAccess::MakePointerAvailable)) {
+    return memoryOp.emitOpError(
+        "not compatible with memory operand 'MakePointerAvailable'");
+  }
+
+  // MakePointerVisible applies to reads through the pointer, so it is invalid
+  // for Store and for the Target operand of CopyMemory, both of which only
+  // write through it.
+  if (isa<StoreOp, CopyMemoryOp>(op) &&
+      spirv::bitEnumContainsAll(memAccess.getValue(),
+                                spirv::MemoryAccess::MakePointerVisible)) {
+    return memoryOp.emitOpError(
+        "not compatible with memory operand 'MakePointerVisible'");
+  }
+
+  if (spirv::bitEnumContainsAny(memAccess.getValue(),
+                                spirv::MemoryAccess::MakePointerAvailable |
+                                    spirv::MemoryAccess::MakePointerVisible) &&
+      !spirv::bitEnumContainsAll(memAccess.getValue(),
+                                 spirv::MemoryAccess::NonPrivatePointer)) {
+    return memoryOp.emitOpError(
+        "memory operand 'MakePointerAvailable' or 'MakePointerVisible' "
+        "requires 'NonPrivatePointer' to also be specified");
+  }
+
   if (spirv::bitEnumContainsAll(memAccess.getValue(),
                                 spirv::MemoryAccess::Aligned)) {
     if (!memoryOp.getAlignmentAttr()) {
@@ -237,6 +266,23 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
   if (!memAccess) {
     return memoryOp.emitOpError("invalid memory access specifier: ")
            << memAccess;
+  }
+
+  // The source mask applies to the read through the source pointer, so it
+  // cannot include MakePointerAvailable, which applies to writes.
+  if (spirv::bitEnumContainsAll(memAccess.getValue(),
+                                spirv::MemoryAccess::MakePointerAvailable)) {
+    return memoryOp.emitOpError(
+        "not compatible with memory operand 'MakePointerAvailable'");
+  }
+
+  if (spirv::bitEnumContainsAll(memAccess.getValue(),
+                                spirv::MemoryAccess::MakePointerVisible) &&
+      !spirv::bitEnumContainsAll(memAccess.getValue(),
+                                 spirv::MemoryAccess::NonPrivatePointer)) {
+    return memoryOp.emitOpError(
+        "memory operand 'MakePointerAvailable' or 'MakePointerVisible' "
+        "requires 'NonPrivatePointer' to also be specified");
   }
 
   if (spirv::bitEnumContainsAll(memAccess.getValue(),
@@ -547,14 +593,6 @@ LogicalResult CopyMemoryOp::verify() {
 
   if (failed(verifyMemoryAccessAttribute(*this)))
     return failure();
-
-  // TODO - According to the spec:
-  //
-  // If two masks are present, the first applies to Target and cannot include
-  // MakePointerVisible, and the second applies to Source and cannot include
-  // MakePointerAvailable.
-  //
-  // Add such verification here.
 
   return verifySourceMemoryAccessAttribute(*this);
 }
