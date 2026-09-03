@@ -3183,6 +3183,10 @@ static bool IsOpenMPAggregate(const Symbol &symbol) {
     return false;
 
   const auto *type{symbol.GetType()};
+  // Symbols without a declared type (e.g. a derived-type name) are not
+  // variables and belong to no defaultmap category.
+  if (!type)
+    return false;
   // OpenMP categorizes Fortran characters as aggregates.
   if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
     return true;
@@ -3206,6 +3210,8 @@ static bool IsOpenMPScalar(const Symbol &symbol) {
       IsAllocatable(symbol))
     return false;
   const auto *type{symbol.GetType()};
+  if (!type)
+    return false;
   if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
       (type->category() ==
               Fortran::semantics::DeclTypeSpec::Category::Numeric ||
