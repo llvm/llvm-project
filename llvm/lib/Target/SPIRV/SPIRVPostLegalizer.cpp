@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
@@ -197,7 +196,7 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     case TargetOpcode::G_FSQRT:
     case TargetOpcode::COPY:
     case TargetOpcode::G_STRICT_FMA:
-    case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_INTRINSIC_TRUNC:
       ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
       break;
     case TargetOpcode::G_LOAD:
