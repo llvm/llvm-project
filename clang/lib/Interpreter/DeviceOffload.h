@@ -14,8 +14,15 @@
 #define LLVM_CLANG_LIB_INTERPRETER_DEVICE_OFFLOAD_H
 
 #include "IncrementalParser.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
+
+#include <memory>
+
+namespace llvm {
+class TargetMachine;
+} // namespace llvm
 
 namespace clang {
 struct PartialTranslationUnit;
@@ -23,6 +30,32 @@ class CompilerInstance;
 class CodeGenOptions;
 class TargetOptions;
 class IncrementalAction;
+
+class IncrementalHIPDeviceParser : public IncrementalParser {
+
+public:
+  IncrementalHIPDeviceParser(
+      CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+      IncrementalAction *DeviceAct,
+      llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
+      llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
+
+  llvm::Error optimize();
+
+  llvm::Expected<llvm::StringRef> GenerateHSACO();
+
+  llvm::Error GenerateOffloadBundle();
+
+  ~IncrementalHIPDeviceParser();
+
+protected:
+  llvm::SmallVector<char, 1024> HSACOContent;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
+  CodeGenOptions &CodeGenOpts; // Host opts, intentionally a reference.
+  const CodeGenOptions &DeviceCodeGenOpts;
+  const TargetOptions &TargetOpts;
+  std::unique_ptr<llvm::TargetMachine> TM;
+};
 
 class IncrementalCUDADeviceParser : public IncrementalParser {
 
@@ -48,6 +81,7 @@ protected:
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
   CodeGenOptions &CodeGenOpts; // Intentionally a reference.
   const TargetOptions &TargetOpts;
+  std::unique_ptr<llvm::TargetMachine> TM;
 };
 
 } // namespace clang
