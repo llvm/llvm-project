@@ -8,8 +8,11 @@
 
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -263,6 +266,101 @@ static Value padOperand(OpBuilder &builder, TilingInterface opToPad,
                                paddingValue, /*nofold=*/false, dynDims);
 }
 
+/// Returns true if `mul` and `add` are a pair for which `0 * x = 0` and
+/// `0 + x = x`. Zero is then a valid padding value for the operands of a
+/// contraction with such a body: `mul` turns a padded zero into a zero, and
+/// adding that zero leaves the accumulated value unchanged.
+///
+/// Do not grow this list just to match `isaContractionOpInterface`, since not
+/// every contraction can be zero-padded: a `max`/`+` body needs `-inf`.
+static bool isZeroNeutralContractionPair(Operation *mul, Operation *add) {
+  if (isa<arith::MulFOp>(mul) && isa<arith::AddFOp>(add))
+    return true;
+  if (isa<arith::MulIOp>(mul) && isa<arith::AddIOp>(add))
+    return true;
+  if (isa<complex::MulOp>(mul) && isa<complex::AddOp>(add))
+    return true;
+  if (isa<arith::AndIOp>(mul) && isa<arith::OrIOp>(add) &&
+      mul->getResult(0).getType().isInteger(1))
+    return true;
+  return false;
+}
+
+/// Infers a semantics-preserving padding value for every operand of `toPad`
+/// (indexed by operand number). Operands that are reduced are padded with the
+/// neutral element of their reduction combiner (e.g. `-inf` for `maximumf`, `1`
+/// for `mulf`); every other operand is padded with the zero value of its
+/// element type.
+///
+/// Inference is conservative: it returns failure when a semantics-preserving
+/// value cannot be determined (a non-LinalgOp reduction, or a reduction whose
+/// neutral element is unknown), letting callers set `options.paddingValues`
+/// explicitly instead.
+static FailureOr<SmallVector<Attribute>>
+inferPaddingValues(OpBuilder &builder, TilingInterface toPad) {
+  Operation *op = toPad.getOperation();
+
+  // Padding acts on operands; default each to the zero of its element type.
+  SmallVector<Attribute> paddingValues;
+  for (Type t : op->getOperandTypes())
+    paddingValues.push_back(builder.getZeroAttr(getElementTypeOrSelf(t)));
+
+  // No reduction: padded elements are never combined, so zero is always safe.
+  SmallVector<utils::IteratorType> iterTypes = toPad.getLoopIteratorTypes();
+  if (!llvm::is_contained(iterTypes, utils::IteratorType::reduction))
+    return paddingValues;
+
+  // A reduction's neutral element requires inspecting the combiner, which is
+  // only possible for a LinalgOp; fail conservatively otherwise.
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
+  if (!linalgOp)
+    return failure();
+
+  // Keep the default zero for a contraction: the multiply maps a padded zero to
+  // zero, and accumulating a zero changes nothing.
+  if (linalg::detail::isContractionBody(*linalgOp.getBlock(),
+                                        isZeroNeutralContractionPair))
+    return paddingValues;
+
+  // Only a single reduction has an unambiguous per-operand neutral.
+  if (linalgOp.getNumDpsInits() != 1)
+    return failure();
+  SmallVector<Operation *> combiners;
+  if (!matchReduction(linalgOp.getRegionOutputArgs(), 0, combiners))
+    return failure();
+  Operation *combiner = combiners.front();
+  std::optional<TypedAttr> neutral = arith::getNeutralElement(combiner);
+  if (!neutral)
+    return failure();
+
+  if (auto floatNeutral = dyn_cast<FloatAttr>(*neutral);
+      floatNeutral && floatNeutral.getValue().isNaN()) {
+    auto fastMath = dyn_cast<arith::ArithFastMathInterface>(combiner);
+    if (fastMath &&
+        arith::bitEnumContainsAny(fastMath.getFastMathFlagsAttr().getValue(),
+                                  arith::FastMathFlags::nnan))
+      return failure();
+  }
+
+  for (OpOperand *input : linalgOp.getDpsInputOperands()) {
+    // Only operands indexed along a reduction dim need a neutral.
+    AffineMap map = linalgOp.getMatchingIndexingMap(input);
+    bool reduced = llvm::any_of(llvm::enumerate(iterTypes), [&](auto it) {
+      return it.value() == utils::IteratorType::reduction &&
+             map.isFunctionOfDim(it.index());
+    });
+    if (!reduced)
+      continue;
+    // A reduced operand must feed the combiner directly to use its neutral; an
+    // indirect one (e.g. via a math.exp) has no valid pad value -> fail.
+    if (!llvm::is_contained(linalgOp.getMatchingBlockArgument(input).getUsers(),
+                            combiner))
+      return failure();
+    paddingValues[input->getOperandNumber()] = *neutral;
+  }
+  return paddingValues;
+}
+
 FailureOr<PadTilingInterfaceResult> linalg::rewriteAsPaddedOp(
     OpBuilder &builder, TilingInterface toPad,
     PadTilingInterfaceOptions options,
@@ -272,14 +370,14 @@ FailureOr<PadTilingInterfaceResult> linalg::rewriteAsPaddedOp(
   Location loc = toPad.getLoc();
 
   // Allow inference of pad values if they are not explicitly specified.
-  // TODO: be mindful about the value depending on the actual operation.
   if (options.paddingValues.empty()) {
-    SmallVector<Type> types(toPad->getOperandTypes());
-    llvm::append_range(types, toPad->getResultTypes());
-    for (Type t : types) {
-      options.paddingValues.push_back(
-          builder.getZeroAttr(getElementTypeOrSelf(t)));
+    FailureOr<SmallVector<Attribute>> inferred =
+        inferPaddingValues(builder, toPad);
+    if (failed(inferred)) {
+      LLVM_DEBUG(DBGS() << "Could not infer pad values: FAIL\n");
+      return failure();
     }
+    options.paddingValues = std::move(*inferred);
   }
 
   if (llvm::any_of(toPad->getOperands(),
