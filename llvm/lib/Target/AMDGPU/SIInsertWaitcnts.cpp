@@ -121,12 +121,13 @@ static const unsigned
         AMDGPU::S_WAIT_KMCNT,     AMDGPU::S_WAIT_XCNT,
         AMDGPU::S_WAIT_ASYNCCNT,  AMDGPU::S_WAIT_TENSORCNT};
 
-// ASYNCMARK and WAIT_ASYNCMARK are meta instructions that emit no hardware
-// code but still need to be processed by this pass for async vmcnt tracking.
+// Meta instructions that emit no hardware code, but still need to be
+// processed by this pass for counter tracking.
 static bool isNonWaitcntMetaInst(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::ASYNCMARK:
   case AMDGPU::WAIT_ASYNCMARK:
+  case AMDGPU::WAIT_LDS_RELEASE_MARK:
     return false;
   default:
     return MI.isMetaInstruction();
@@ -641,17 +642,17 @@ public:
 
   void setPendingLDSMem() { LastLDSMem = ScoreUBs[AMDGPU::DS_CNT]; }
 
-  bool hasPendingLDSMemAtFence() const {
-    return LastLDSMemAtFence > ScoreLBs[AMDGPU::DS_CNT] &&
-           LastLDSMemAtFence <= ScoreUBs[AMDGPU::DS_CNT];
+  bool hasPendingLDSMemAtReleaseMark() const {
+    return LastLDSMemAtReleaseMark > ScoreLBs[AMDGPU::DS_CNT] &&
+           LastLDSMemAtReleaseMark <= ScoreUBs[AMDGPU::DS_CNT];
   }
 
-  void setPendingLDSMemAtFence() { LastLDSMemAtFence = LastLDSMem; }
+  void setPendingLDSMemAtReleaseMark() { LastLDSMemAtReleaseMark = LastLDSMem; }
 
-  void clearPendingLDSMemAtFence() { LastLDSMemAtFence = 0; }
+  void clearPendingLDSMemAtReleaseMark() { LastLDSMemAtReleaseMark = 0; }
 
-  unsigned getPendingLDSMemAtFenceWait() const {
-    return std::min(getScoreUB(AMDGPU::DS_CNT) - LastLDSMemAtFence,
+  unsigned getPendingLDSMemAtReleaseMarkWait() const {
+    return std::min(getScoreUB(AMDGPU::DS_CNT) - LastLDSMemAtReleaseMark,
                     getLimit(AMDGPU::DS_CNT) - 1);
   }
 
@@ -777,8 +778,8 @@ private:
   unsigned LastGDS = 0;
   // Remember the last LDS memory access.
   unsigned LastLDSMem = 0;
-  // Remember the last LDS memory access at an lds_before_direct marker.
-  unsigned LastLDSMemAtFence = 0;
+  // Remember the last LDS memory access at an WAIT_LDS_RELEASE_MARK.
+  unsigned LastLDSMemAtReleaseMark = 0;
 
   // The score tracking logic is fragmented as follows:
   // - VMem: VGPR RegUnits and LDS DMA IDs, see the VMEMID encoding.
@@ -1746,7 +1747,7 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
       // possibility in an articial MIR test since such a situation cannot be
       // recreated by running the memory legalizer.
       II.eraseFromParent();
-    } else if (Opcode == AMDGPU::S_WAITCNT_lds_before_direct) {
+    } else if (Opcode == AMDGPU::WAIT_LDS_RELEASE_MARK) {
       // Wait is emitted at the next LDS DMA write, so no work to do here.
       assert(ST.hasVMemToLDSLoad());
       II.eraseFromParent();
@@ -2041,7 +2042,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
           Modified = true;
         }
       }
-    } else if (Opcode == AMDGPU::S_WAITCNT_lds_before_direct) {
+    } else if (Opcode == AMDGPU::WAIT_LDS_RELEASE_MARK) {
       // Architectures higher than GFX10 do not have non-async direct loads to
       // LDS, so no work required here yet.
       assert(ST.hasAsyncMark());
@@ -2481,9 +2482,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       // add s_waitcnt on exp_cnt to guarantee the WAR order.
 
       if (TII.mayWriteLDSThroughDMA(MI) &&
-          ScoreBrackets.hasPendingLDSMemAtFence()) {
-        Wait.add(AMDGPU::DS_CNT, ScoreBrackets.getPendingLDSMemAtFenceWait());
-        ScoreBrackets.clearPendingLDSMemAtFence();
+          ScoreBrackets.hasPendingLDSMemAtReleaseMark()) {
+        Wait.add(AMDGPU::DS_CNT,
+                 ScoreBrackets.getPendingLDSMemAtReleaseMarkWait());
+        ScoreBrackets.clearPendingLDSMemAtReleaseMark();
       }
 
       for (const MachineMemOperand *Memop : MI.memoperands()) {
@@ -2952,7 +2954,8 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
       StrictDom |= mergeScore(M, LastFlatDsCnt, Other.LastFlatDsCnt);
       StrictDom |= mergeScore(M, LastGDS, Other.LastGDS);
       StrictDom |= mergeScore(M, LastLDSMem, Other.LastLDSMem);
-      StrictDom |= mergeScore(M, LastLDSMemAtFence, Other.LastLDSMemAtFence);
+      StrictDom |=
+          mergeScore(M, LastLDSMemAtReleaseMark, Other.LastLDSMemAtReleaseMark);
     }
 
     if (T == AMDGPU::KM_CNT) {
@@ -3003,8 +3006,8 @@ static bool isWaitInstr(MachineInstr &Inst) {
          Opcode == AMDGPU::S_WAIT_LOADCNT_DSCNT ||
          Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT ||
          Opcode == AMDGPU::S_WAITCNT_lds_direct ||
-         Opcode == AMDGPU::S_WAITCNT_lds_before_direct ||
          Opcode == AMDGPU::WAIT_ASYNCMARK ||
+         Opcode == AMDGPU::WAIT_LDS_RELEASE_MARK ||
          AMDGPU::counterTypeForInstr(Opcode).has_value();
 }
 
@@ -3150,9 +3153,9 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     // the memory legalizer.
     if (isWaitInstr(Inst) ||
         (IsExpertMode && Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
-      if (Inst.getOpcode() == AMDGPU::S_WAITCNT_lds_before_direct &&
+      if (Inst.getOpcode() == AMDGPU::WAIT_LDS_RELEASE_MARK &&
           ScoreBrackets.hasPendingLDSMem())
-        ScoreBrackets.setPendingLDSMemAtFence();
+        ScoreBrackets.setPendingLDSMemAtReleaseMark();
       if (!OldWaitcntInstr)
         OldWaitcntInstr = &Inst;
       continue;
