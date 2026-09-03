@@ -206,6 +206,11 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
 
+  - Added the {option}`TypedefInheritAnonTagConfig`, which checks a
+    typedef or type alias that provides the only name of an otherwise unnamed
+    tag, such as `typedef enum {} MyEnum;`, against the style configured for
+    that tag kind instead of the typedef or type alias style.
+    
   - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
     the new `LambdaCapture` options. Simple, non-init captures continue to follow
     the naming style of the variable they capture.

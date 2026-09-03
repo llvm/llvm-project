@@ -279,7 +279,8 @@ class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = 
     void $cppClass::inferResultRanges(
         ArrayRef<::mlir::ConstantIntRanges> argRanges,
         SetIntRangeFn setResultRanges) {
-        nvvmInferResultRanges(getOperation(), getResult(), argRanges, setResultRanges);
+        nvvmInferResultRanges(getRange(), getResult(), argRanges,
+                              setResultRanges);
     }
 
     // Verify the range attribute satisfies LLVM ConstantRange constructor requirements.

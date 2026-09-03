@@ -127,6 +127,14 @@ acc.loop vector(%i64value: i64, %i64value: i64) {
 
 // -----
 
+func.func @acc_routine_bind() {
+  return
+}
+// expected-error@+1 {{expected symbol reference or string attribute}}
+acc.routine @acc_routine_bind_rout func(@acc_routine_bind) bind(42 : i64)
+
+// -----
+
 func.func @acc_routine_parallelism() -> () {
   return
 }

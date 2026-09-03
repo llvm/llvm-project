@@ -639,7 +639,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                               invOp.getOpBundleTags(), moduleTranslation);
     ArrayRef<llvm::Value *> operandsRef(operands);
     llvm::InvokeInst *result;
-    if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee")) {
+    if (auto attr = invOp.getCalleeAttr()) {
       if (llvm::Function *function =
               moduleTranslation.lookupFunction(attr.getValue())) {
         result = builder.CreateInvoke(

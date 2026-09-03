@@ -4825,22 +4825,6 @@ def floop_interchange : Flag<["-"], "floop-interchange">, Group<f_Group>,
   HelpText<"Enable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fno_loop_interchange: Flag<["-"], "fno-loop-interchange">, Group<f_Group>,
   HelpText<"Disable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
-defm enable_new_pm_codegen
-    : BoolFOption<"enable-new-pm-codegen", CodeGenOpts<"EnableNewPMCodeGen">, DefaultFalse,
-                  NegFlag<SetFalse, [], [CC1Option],
-                          "Do not use the NewPM for the Codegen Pipeline">,
-                  PosFlag<SetTrue, [], [CC1Option],
-                          "Use the NewPM for the Codegen Pipeline">>,
-      DocBrief<
-          [{When enabled, use the NewPM to drive the Codegen pipeline.}]>;
-def enable_new_pm_codegen : Joined<["-"], "fenable-new-pm-codegen=">,
-    Group<f_Group>,
-    Visibility<[CC1Option]>,
-    HelpText<"When enabled, use the NewPM to drive the CodeGen pipeline.">,
-    Values<"auto,force-on,force-disable">,
-    NormalizedValuesScope<"CodeGenOptions::NewPMEnablementLevel">,
-    NormalizedValues<["Auto","ForceEnable","ForceDisable"]>,
-    MarshallingInfoEnum<CodeGenOpts<"EnableNewPMCodeGen">, "Auto">;
 defm experimental_loop_fusion
     : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
                     "Enable the loop fusion pass",
@@ -6441,6 +6425,9 @@ def mno_fix_r5900 : Flag<["-"], "mno-fix-r5900">,
                     HelpText<"Disable R5900 short loop erratum fix">;
 def mcompact_branches_EQ : Joined<["-"], "mcompact-branches=">,
                            Group<m_mips_Features_Group>;
+foreach i = {1-31} in
+  def ffixed_#i : Flag<["-"], "ffixed-"#i>, Group<m_Group>,
+    HelpText<"Reserve the MIPS GPR "#i#" register (MIPS only)">;
 } // let Flags = [TargetSpecific]
 def mbranch_likely : Flag<["-"], "mbranch-likely">, Group<m_Group>,
   IgnoredGCCCompat;

@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/struct_passwd.h"
 #include "src/__support/File/file.h"
 #include "src/__support/libc_errno.h"

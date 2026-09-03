@@ -35,8 +35,8 @@ elseif(ORC_RT_LOG_BACKEND STREQUAL "os_log")
 endif()
 
 # System implementations are composed, not merely selected: a target gets one
-# source list per capability it has. POSIX systems share posix/, and add their
-# OS-specific list on top; Windows shares nothing with them.
+# source list per capability it has. POSIX systems share sys/posix/, and add
+# their OS-specific list on top; Windows shares nothing with them.
 #
 # A file belongs in a shared list only if it is uniform across every member of
 # it. Where a function needs an OS conditional, it moves down into the
@@ -45,24 +45,24 @@ endif()
 # support/sys/CacheControl.h).
 
 set(ORC_RT_POSIX_SOURCES
-  posix/DynamicLibrary.cpp
-  posix/Errno.cpp
-  posix/Memory.cpp
+  sys/posix/DynamicLibrary.cpp
+  sys/posix/Errno.cpp
+  sys/posix/Memory.cpp
 )
 
 set(ORC_RT_DARWIN_SOURCES
-  darwin/CPUFeatures.cpp
-  darwin/TargetTriple.cpp
+  sys/darwin/CPUFeatures.cpp
+  sys/darwin/TargetTriple.cpp
 )
 
 set(ORC_RT_LINUX_SOURCES
-  linux/CPUFeatures.cpp
-  linux/TargetTriple.cpp
+  sys/linux/CPUFeatures.cpp
+  sys/linux/TargetTriple.cpp
 )
 
 set(ORC_RT_WINDOWS_SOURCES
-  windows/CPUFeatures.cpp
-  windows/TargetTriple.cpp
+  sys/windows/CPUFeatures.cpp
+  sys/windows/TargetTriple.cpp
 )
 
 if (APPLE)
@@ -74,7 +74,7 @@ elseif (WIN32)
 else()
   message(WARNING
     "orc-rt: no system implementation for ${CMAKE_SYSTEM_NAME}; "
-    "add an orc-rt/lib/bedrock/<system>/ directory and compose it above")
+    "add an orc-rt/lib/bedrock/sys/<system>/ directory and compose it above")
 endif()
 
 add_library(orc-rt-bedrock STATIC ${ORC_RT_SOURCES})

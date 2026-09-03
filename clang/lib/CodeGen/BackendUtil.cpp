@@ -43,6 +43,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
@@ -193,14 +194,6 @@ class EmitAssemblyHelper {
   void RunCodegenPipeline(BackendAction Action,
                           std::unique_ptr<raw_pwrite_stream> &OS,
                           std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
-  void RunCodegenPipelineLegacy(BackendAction Action,
-                                std::unique_ptr<raw_pwrite_stream> &OS,
-                                std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
-                                CodeGenFileType CGFT);
-  void RunCodegenPipelineNewPM(BackendAction Action,
-                               std::unique_ptr<raw_pwrite_stream> &OS,
-                               std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
-                               CodeGenFileType CGFT);
   void TimeCodegenPasses(llvm::function_ref<void()> RunPasses);
 
   /// Check whether we should emit a module summary for regular LTO.
@@ -1246,89 +1239,13 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       return;
   }
 
-  if (CodeGenOpts.getEnableNewPMCodeGen() ==
-          CodeGenOptions::NewPMEnablementLevel::ForceEnable ||
-      (CodeGenOpts.getEnableNewPMCodeGen() ==
-           CodeGenOptions::NewPMEnablementLevel::Auto &&
-       TM->shouldDefaultToNewPM())) {
-    RunCodegenPipelineNewPM(Action, OS, DwoOS, CGFT);
-  } else {
-    RunCodegenPipelineLegacy(Action, OS, DwoOS, CGFT);
-  }
-}
-
-void EmitAssemblyHelper::RunCodegenPipelineLegacy(
-    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
-    std::unique_ptr<llvm::ToolOutputFile> &DwoOS, CodeGenFileType CGFT) {
-  // We still use the legacy PM to run the codegen pipeline since the new PM
-  // does not work with the codegen pipeline.
-  // FIXME: make the new PM work with the codegen pipeline.
-  legacy::PassManager CodeGenPasses;
-
-  CodeGenPasses.add(
-      createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
-  // Add LibraryInfo.
-  std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      llvm::driver::createTLII(TargetTriple, CodeGenOpts.getVecLib()));
-  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
-
-  const llvm::TargetOptions &Options = TM->Options;
-  CodeGenPasses.add(
-      new RuntimeLibraryInfoWrapper(Options.ExceptionModel, Options.EABIVersion,
-                                    Options.MCOptions.ABIName, Options.VecLib));
-
-  if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
-                              DwoOS ? &DwoOS->os() : nullptr, CGFT,
-                              /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
-    Diags.Report(diag::err_fe_unable_to_interface_with_target);
-    return;
-  }
-
-  // If -print-pipeline-passes is requested, don't run the legacy pass manager.
-  // FIXME: when codegen is switched to use the new pass manager, it should also
-  // emit pass names here.
-  if (PrintPipelinePasses) {
-    return;
-  }
-
-  TimeCodegenPasses([&] { CodeGenPasses.run(*TheModule); });
-}
-
-void EmitAssemblyHelper::RunCodegenPipelineNewPM(
-    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
-    std::unique_ptr<llvm::ToolOutputFile> &DwoOS, CodeGenFileType CGFT) {
-  ModulePassManager MPM;
-  MachineFunctionAnalysisManager MFAM;
-  LoopAnalysisManager LAM;
-  FunctionAnalysisManager FAM;
-  CGSCCAnalysisManager CGAM;
-  ModuleAnalysisManager MAM;
-  CGPassBuilderOption Opt = getCGPassBuilderOption();
-  Opt.DisableVerify = !CodeGenOpts.VerifyModule;
-  MachineModuleInfo MMI(TM.get());
-  PassInstrumentationCallbacks PIC;
-  PipelineTuningOptions PTOptions;
-  TargetMachine *TMPointer = TM.get();
-  PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC,
-                 CI.getVirtualFileSystemPtr());
-  PB.registerModuleAnalyses(MAM);
-  PB.registerCGSCCAnalyses(CGAM);
-  PB.registerFunctionAnalyses(FAM);
-  PB.registerLoopAnalyses(LAM);
-  PB.registerMachineFunctionAnalyses(MFAM);
-  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-
-  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
-
-  Error BuildPipelineError =
-      TM->buildCodeGenPipeline(MPM, MAM, *OS, DwoOS ? &DwoOS->os() : nullptr,
-                               CGFT, Opt, MMI.getContext(), &PIC);
-  if (BuildPipelineError) {
-    Diags.Report(diag::err_fe_unable_to_interface_with_target);
-    return;
-  }
-
-  TimeCodegenPasses([&] { MPM.run(*TheModule, MAM); });
+  TimeCodegenPasses([&]() {
+    Error CodeGenError = runCodeGenPipeline(
+        *TM, *TheModule, *OS, DwoOS, CGFT, PrintPipelinePasses.has_value(),
+        !CodeGenOpts.VerifyModule, CI.getVirtualFileSystemPtr());
+    if (CodeGenError)
+      Diags.Report(diag::err_fe_unable_to_interface_with_target);
+  });
 }
 
 void EmitAssemblyHelper::TimeCodegenPasses(

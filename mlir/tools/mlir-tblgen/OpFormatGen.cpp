@@ -2272,6 +2272,13 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
 void OperationFormat::genParserOperandTypeResolution(
     Operator &op, MethodBody &body,
     function_ref<void(TypeResolution &, StringRef)> emitTypeResolver) {
+  // Fixed-length parser variables are represented as ArrayRefs to scalar
+  // storage. Coverity does not track the explicit length and reports the
+  // resolveOperands calls as ARRAY_VS_SINGLETON.
+  auto emitArrayVsSingletonSuppression = [&] {
+    body << "  // coverity[ARRAY_VS_SINGLETON]\n";
+  };
+
   // Early exit if there are no operands.
   if (op.getNumOperands() == 0)
     return;
@@ -2281,6 +2288,7 @@ void OperationFormat::genParserOperandTypeResolution(
   if (allOperandTypes) {
     // If `operands` was specified, use the full operand list directly.
     if (allOperands) {
+      emitArrayVsSingletonSuppression();
       body << "  if (parser.resolveOperands(allOperands, allOperandTypes, "
               "allOperandLoc, result.operands))\n"
               "    return ::mlir::failure();\n";
@@ -2289,6 +2297,7 @@ void OperationFormat::genParserOperandTypeResolution(
 
     // Otherwise, use llvm::concat to merge the disjoint operand lists together.
     // llvm::concat does not allow the case of a single range, so guard it here.
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(";
     if (op.getNumOperands() > 1) {
       body << "::llvm::concat<const ::mlir::OpAsmParser::UnresolvedOperand>(";
@@ -2306,6 +2315,7 @@ void OperationFormat::genParserOperandTypeResolution(
 
   // Handle the case where all operands are grouped together with "operands".
   if (allOperands) {
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(allOperands, ";
 
     // Group all of the operand types together to perform the resolution all at
@@ -2341,6 +2351,7 @@ void OperationFormat::genParserOperandTypeResolution(
         operand.isOptional() && !operandType.isDirectlyParsed();
     if (guardOptionalOperand)
       body << "  if (!" << operand.name << "Operands.empty()) {\n";
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(" << operand.name << "Operands, ";
 
     // Resolve the type of this operand.

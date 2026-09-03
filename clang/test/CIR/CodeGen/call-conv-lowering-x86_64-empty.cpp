@@ -87,12 +87,14 @@ int takeNoUniqueOne(NoUniqueOne v, int k) { return k; }
 int takeUnnamedBits(UnnamedBits v, int k) { return k; }
 
 // CIR: cir.func {{.*}}@_Z15takeUnnamedBits11UnnamedBitsi(%arg0: !s32i {{.*}}) -> (!s32i
-// LLVM: define dso_local noundef i32 @_Z15takeUnnamedBits11UnnamedBitsi(i32 noundef %{{[^,]+}})
+// LLVM-CIR: define dso_local noundef i32 @_Z15takeUnnamedBits11UnnamedBitsi(i32 noundef %{{[^,]+}})
+// LLVM-OGCG: define dso_local noundef i32 @_Z15takeUnnamedBits11UnnamedBitsi(i8 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 int takeReserved(Reserved v, int k) { return k; }
 
 // CIR: cir.func {{.*}}@_Z12takeReserved8Reservedi(%arg0: !s32i {{.*}}) -> (!s32i
-// LLVM: define dso_local noundef i32 @_Z12takeReserved8Reservedi(i32 noundef %{{[^,]+}})
+// LLVM-CIR: define dso_local noundef i32 @_Z12takeReserved8Reservedi(i32 noundef %{{[^,]+}})
+// LLVM-OGCG: define dso_local noundef i32 @_Z12takeReserved8Reservedi(i32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // A byte of real data keeps its register.
 int takeOneByte(OneByte v, int k) { return k; }
@@ -164,7 +166,8 @@ Big32 retBig32() { return Big32{}; }
 int takeUBits(UBits v, int k) { return k; }
 
 // CIR: cir.func {{.*}}@_Z9takeUBits5UBitsi(%arg0: !s32i {{.*}}) -> (!s32i
-// LLVM: define dso_local noundef i32 @_Z9takeUBits5UBitsi(i32 noundef %{{[^,]+}})
+// LLVM-CIR: define dso_local noundef i32 @_Z9takeUBits5UBitsi(i32 noundef %{{[^,]+}})
+// LLVM-OGCG: define dso_local noundef i32 @_Z9takeUBits5UBitsi(i8 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 int takeUNone(UNone v, int k) { return k; }
 

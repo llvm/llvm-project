@@ -1503,26 +1503,15 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), FunD);
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LPT.D, FnScope);
-  } else {
-    if (Tok.is(tok::colon))
-      ParseConstructorInitializer(LPT.D);
-    else
-      Actions.ActOnDefaultCtorInitializers(LPT.D);
+  assert(
+      (!isa<FunctionTemplateDecl>(LPT.D) ||
+       cast<FunctionTemplateDecl>(LPT.D)->getTemplateParameters()->getDepth() ==
+           TemplateParameterDepth - 1) &&
+      "TemplateParameterDepth should be greater than the depth of "
+      "current template being instantiated!");
 
-    if (Tok.is(tok::l_brace)) {
-      assert((!isa<FunctionTemplateDecl>(LPT.D) ||
-              cast<FunctionTemplateDecl>(LPT.D)
-                      ->getTemplateParameters()
-                      ->getDepth() == TemplateParameterDepth - 1) &&
-             "TemplateParameterDepth should be greater than the depth of "
-             "current template being instantiated!");
-      ParseFunctionStatementBody(LPT.D, FnScope);
-      Actions.UnmarkAsLateParsedTemplate(FunD);
-    } else
-      Actions.ActOnFinishFunctionBody(LPT.D, nullptr);
-  }
+  ParseFunctionBody(LPT.D, FnScope);
+  Actions.UnmarkAsLateParsedTemplate(FunD);
 }
 
 void Parser::LexTemplateFunctionForLateParsing(CachedTokens &Toks) {

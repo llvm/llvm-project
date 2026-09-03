@@ -8,10 +8,12 @@
 
 #include "lldb/ValueObject/DILEval.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
@@ -42,6 +44,17 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       name, addr, exe_ctx,
       valobj.GetCompilerType().GetArrayElementType(&ctx).GetPointerType(),
       /* do_deref */ false);
+}
+
+static llvm::Expected<lldb::LanguageType>
+GetSourceLanguageFromCU(StackFrame &ctx) {
+  SymbolContext symbol_context =
+      ctx.GetSymbolContext(lldb::eSymbolContextCompUnit);
+  if (!symbol_context.comp_unit)
+    return llvm::createStringErrorV("no compile unit for frame: {}",
+                                    ctx.GetFunctionName());
+
+  return symbol_context.comp_unit->GetLanguage();
 }
 
 static llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx) {
@@ -338,6 +351,20 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
   return nullptr;
 }
 
+lldb::ValueObjectSP LookupPersistentIdentifier(llvm::StringRef name_ref,
+                                               StackFrame &stack_frame,
+                                               lldb::TargetSP target_sp,
+                                               lldb::LanguageType language) {
+  if (name_ref.starts_with("$")) {
+    if (auto *state =
+            target_sp->GetPersistentExpressionStateForLanguage(language))
+      if (auto var_sp = state->GetVariable(name_ref))
+        if (auto valobj_sp = var_sp->GetValueObject())
+          return valobj_sp;
+  }
+  return nullptr;
+}
+
 lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
                                      StackFrame &stack_frame,
                                      lldb::DynamicValueType use_dynamic) {
@@ -473,6 +500,14 @@ Interpreter::Visit(const IdentifierNode &node) {
 
   if (!identifier)
     identifier = LookupEnumValue(node.GetName(), m_stack_frame);
+
+  if (!identifier && node.GetName()[0] == '$') {
+    auto language = GetSourceLanguageFromCU(m_stack_frame);
+    if (!language)
+      return language.takeError();
+    identifier = LookupPersistentIdentifier(node.GetName(), m_stack_frame,
+                                            m_target, language.get());
+  }
 
   if (!identifier && node.GetName() == "nullptr") {
     // If we got a "nullptr" identifier, and there is no defined variable with

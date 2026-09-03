@@ -450,7 +450,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     bool isKernel() {
       if (getKernel())
         return true;
-      return (*this)->getAttrOfType<UnitAttr>(
+      return (*this)->getDiscardableAttrOfType<UnitAttr>(
           GPUDialect::getKernelFuncAttrName()) != nullptr;
     }
 

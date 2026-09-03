@@ -37,6 +37,7 @@
 #include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__pstl/cpu_algos/fill.h>
+#include <__pstl/cpu_algos/find_end.h>
 #include <__pstl/cpu_algos/find_if.h>
 #include <__pstl/cpu_algos/for_each.h>
 #include <__pstl/cpu_algos/merge.h>
@@ -362,6 +363,10 @@ struct __cpu_traits<__libdispatch_backend_tag> {
 };
 
 // Mandatory implementations of the computational basis
+template <class _ExecutionPolicy>
+struct __find_end<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_find_end<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
 template <class _ExecutionPolicy>
 struct __find_if<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_find_if<__libdispatch_backend_tag, _ExecutionPolicy> {};

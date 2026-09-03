@@ -513,8 +513,8 @@ struct LowerGpuOpsToNVVMOpsPass final
 
     // Request C wrapper emission.
     for (auto func : m.getOps<func::FuncOp>()) {
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(&getContext()));
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(&getContext()));
     }
 
     // Customize the bitwidth used for the device side index computations.

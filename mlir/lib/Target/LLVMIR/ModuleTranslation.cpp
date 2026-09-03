@@ -950,9 +950,11 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   SmallVector<llvm::OperandBundleDef> opBundles;
   size_t numOpBundleOperands = 0;
   auto opBundleSizesAttr = cast_if_present<DenseI32ArrayAttr>(
-      intrOp->getAttr(LLVMDialect::getOpBundleSizesAttrName()));
+      intrOp->getInherentAttr(LLVMDialect::getOpBundleSizesAttrName())
+          .value_or(Attribute{}));
   auto opBundleTagsAttr = cast_if_present<ArrayAttr>(
-      intrOp->getAttr(LLVMDialect::getOpBundleTagsAttrName()));
+      intrOp->getInherentAttr(LLVMDialect::getOpBundleTagsAttrName())
+          .value_or(Attribute{}));
 
   if (opBundleSizesAttr && opBundleTagsAttr) {
     ArrayRef<int> opBundleSizes = opBundleSizesAttr.asArrayRef();
@@ -983,7 +985,7 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   SmallVector<llvm::Value *> args(immArgPositions.size() + operands.size());
   for (auto [immArgPos, immArgName] :
        llvm::zip(immArgPositions, immArgAttrNames)) {
-    Attribute attr = intrOp->getAttr(immArgName);
+    Attribute attr = intrOp->getInherentAttr(immArgName).value_or(Attribute{});
     if (auto intrinsicIntegerAttr =
             dyn_cast<LLVM::IntrinsicIntegerAttrInterface>(attr))
       attr = intrinsicIntegerAttr.getIntegerAttr();
@@ -2500,7 +2502,7 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
 }
 
 LogicalResult ModuleTranslation::createIdentMetadata() {
-  if (auto attr = mlirModule->getAttrOfType<StringAttr>(
+  if (auto attr = mlirModule->getDiscardableAttrOfType<StringAttr>(
           LLVMDialect::getIdentAttrName())) {
     StringRef ident = attr;
     llvm::LLVMContext &ctx = llvmModule->getContext();
@@ -2514,7 +2516,7 @@ LogicalResult ModuleTranslation::createIdentMetadata() {
 }
 
 LogicalResult ModuleTranslation::createCommandlineMetadata() {
-  if (auto attr = mlirModule->getAttrOfType<StringAttr>(
+  if (auto attr = mlirModule->getDiscardableAttrOfType<StringAttr>(
           LLVMDialect::getCommandlineAttrName())) {
     StringRef cmdLine = attr;
     llvm::LLVMContext &ctx = llvmModule->getContext();

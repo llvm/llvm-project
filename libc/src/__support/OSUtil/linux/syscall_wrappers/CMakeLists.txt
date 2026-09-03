@@ -27,6 +27,18 @@ add_header_library(
 )
 
 add_header_library(
+  getpid
+  HDRS
+    getpid.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
   sched_getaffinity
   HDRS
     sched_getaffinity.h

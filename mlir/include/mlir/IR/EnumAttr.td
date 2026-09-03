@@ -571,6 +571,22 @@ class EnumAttr<Dialect dialect, EnumInfo enumInfo, string name = "",
   let assemblyFormat = "$value";
 }
 
+// An EnumAttr used as a parameter of another attribute or type. This retains
+// the EnumAttr definition so that declarative assembly format directives can
+// format its underlying enum value directly.
+class EnumAttrParameter<EnumAttr enumAttr, string desc = "">
+    : AttrParameter<enumAttr.cppNamespace # "::" # enumAttr.cppClassName,
+                    desc> {
+  EnumAttr attr = enumAttr;
+  Dialect dialect = enumAttr.dialect;
+}
+
+// An optional EnumAttr parameter.
+class OptionalEnumAttrParameter<EnumAttr enumAttr, string desc = "">
+    : EnumAttrParameter<enumAttr, desc> {
+  let defaultValue = cppStorageType # "()";
+}
+
 // A property wrapping by a C++ enum. This class will automatically create bytecode
 // serialization logic for the given enum, as well as arranging for parser and
 // printer calls.

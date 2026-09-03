@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_SERIAL_H
 #define _LIBCPP___PSTL_BACKENDS_SERIAL_H
 
+#include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
 #include <__algorithm/merge.h>
@@ -49,6 +50,21 @@ namespace __pstl {
 //       often be more efficient than the "default backend"'s implementation
 //       if we end up running serially anyways.
 //
+
+template <class _ExecutionPolicy>
+struct __find_end<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _BinaryPredicate __pred) const noexcept {
+    return std::find_end(
+        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__pred));
+  }
+};
 
 template <class _ExecutionPolicy>
 struct __find_if<__serial_backend_tag, _ExecutionPolicy> {
