@@ -110,57 +110,10 @@ namespace llvm {
 ///
 /// The result indicates whether the node existed in the folding set.
 
-class FoldingSetNodeID;
 class StringRef;
+template <typename T, typename Enable = void> struct FoldingSetTrait;
 
 //===----------------------------------------------------------------------===//
-
-/// This class provides default implementations for FoldingSetTrait
-/// implementations.
-template <typename T> struct DefaultFoldingSetTrait {
-  struct ContextStorage {};
-
-  static void Profile(const T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
-  static void Profile(T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
-
-  // Equals - Test if the profile for X would match ID, using TempID
-  // to compute a temporary ID if necessary. The default implementation
-  // just calls Profile and does a regular comparison. Implementations
-  // can override this to provide more efficient implementations.
-  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
-                            FoldingSetNodeID &TempID);
-};
-
-/// This trait class is used to define behavior of how to "profile" (in the
-/// FoldingSet parlance) an object of a given type.
-/// The default behavior is to invoke a 'Profile' method on an object, but
-/// through template specialization the behavior can be tailored for specific
-/// types.  Combined with the FoldingSetNodeWrapper class, one can add objects
-/// to FoldingSets that were not originally designed to have that behavior.
-template <typename T, typename Enable = void>
-struct FoldingSetTrait : public DefaultFoldingSetTrait<T> {};
-
-/// Like DefaultFoldingSetTrait, but for ContextualFoldingSets.
-template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
-  struct ContextStorage {
-    Ctx Context;
-    explicit ContextStorage(Ctx Context) : Context(Context) {}
-    Ctx getContext() const { return Context; }
-  };
-
-  static void Profile(T &X, FoldingSetNodeID &ID, Ctx Context) {
-    X.Profile(ID, Context);
-  }
-
-  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
-                            FoldingSetNodeID &TempID, Ctx Context);
-};
-
-/// Like FoldingSetTrait, but for ContextualFoldingSets.
-template <typename T, typename Ctx>
-struct ContextualFoldingSetTrait : DefaultContextualFoldingSetTrait<T, Ctx> {};
-
-//===--------------------------------------------------------------------===//
 /// This class describes a reference to an interned FoldingSetNodeID, which can
 /// be a useful to store node id data rather than using plain FoldingSetNodeIDs,
 /// since the 32-element SmallVector is often much larger than necessary, and
@@ -193,20 +146,23 @@ public:
         reinterpret_cast<const uint8_t *>(Data), sizeof(unsigned) * Size));
   }
 
-  bool operator==(FoldingSetNodeIDRef RHS) const {
-    return Size == RHS.Size &&
-           memcmp(Data, RHS.Data, Size * sizeof(*Data)) == 0;
-  }
-
-  bool operator!=(FoldingSetNodeIDRef RHS) const { return !(*this == RHS); }
-
-  /// Used to compare the "ordering" of two nodes as defined by the
-  /// profiled bits and their ordering defined by memcmp().
-  LLVM_ABI bool operator<(FoldingSetNodeIDRef) const;
-
   const unsigned *getData() const { return Data; }
   size_t getSize() const { return Size; }
 };
+
+inline bool operator==(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
+  return LHS.getSize() == RHS.getSize() &&
+         memcmp(LHS.getData(), RHS.getData(),
+                LHS.getSize() * sizeof(*LHS.getData())) == 0;
+}
+
+inline bool operator!=(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
+  return !(LHS == RHS);
+}
+
+/// Used to compare the "ordering" of two nodes as defined by the
+/// profiled bits and their ordering defined by memcmp().
+LLVM_ABI bool operator<(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS);
 
 //===--------------------------------------------------------------------===//
 /// This class is used to gather all the unique data bits of a node.  When all
@@ -271,29 +227,68 @@ public:
   // on-disk serialization.
   unsigned computeStableHash() const { return getRef().computeStableHash(); }
 
-  /// operator== - Used to compare two nodes to each other.
-  bool operator==(const FoldingSetNodeID &RHS) const {
-    return *this == FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
-  }
-  bool operator==(const FoldingSetNodeIDRef RHS) const {
-    return FoldingSetNodeIDRef(Bits.data(), Bits.size()) == RHS;
-  }
-
-  bool operator!=(const FoldingSetNodeID &RHS) const { return !(*this == RHS); }
-  bool operator!=(const FoldingSetNodeIDRef RHS) const {
-    return !(*this == RHS);
-  }
-
-  /// Used to compare the "ordering" of two nodes as defined by the
-  /// profiled bits and their ordering defined by memcmp().
-  LLVM_ABI bool operator<(const FoldingSetNodeID &RHS) const;
-  LLVM_ABI bool operator<(const FoldingSetNodeIDRef RHS) const;
+  operator FoldingSetNodeIDRef() const { return {Bits.data(), Bits.size()}; }
 
   /// Copy this node's data to a memory region allocated from the
   /// given allocator and return a FoldingSetNodeIDRef describing the
   /// interned data.
   LLVM_ABI FoldingSetNodeIDRef Intern(BumpPtrAllocator &Allocator) const;
 };
+
+//===----------------------------------------------------------------------===//
+
+/// This class provides default implementations for FoldingSetTrait
+/// implementations.
+template <typename T> struct DefaultFoldingSetTrait {
+  struct ContextStorage {};
+
+  static void Profile(const T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
+  static void Profile(T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
+
+  // Equals - Test if the profile for X would match ID, using TempID
+  // to compute a temporary ID if necessary. The default implementation
+  // just calls Profile and does a regular comparison. Implementations
+  // can override this to provide more efficient implementations.
+  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
+                            FoldingSetNodeID &TempID) {
+    FoldingSetTrait<T>::Profile(X, TempID);
+    return TempID == ID;
+  }
+};
+
+/// This trait class is used to define behavior of how to "profile" (in the
+/// FoldingSet parlance) an object of a given type.
+/// The default behavior is to invoke a 'Profile' method on an object, but
+/// through template specialization the behavior can be tailored for specific
+/// types.  Combined with the FoldingSetNodeWrapper class, one can add objects
+/// to FoldingSets that were not originally designed to have that behavior.
+template <typename T, typename Enable>
+struct FoldingSetTrait : public DefaultFoldingSetTrait<T> {};
+
+template <typename T, typename Ctx> struct ContextualFoldingSetTrait;
+
+/// Like DefaultFoldingSetTrait, but for ContextualFoldingSets.
+template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
+  struct ContextStorage {
+    Ctx Context;
+    explicit ContextStorage(Ctx Context) : Context(Context) {}
+    Ctx getContext() const { return Context; }
+  };
+
+  static void Profile(T &X, FoldingSetNodeID &ID, Ctx Context) {
+    X.Profile(ID, Context);
+  }
+
+  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
+                            FoldingSetNodeID &TempID, Ctx Context) {
+    ContextualFoldingSetTrait<T, Ctx>::Profile(X, TempID, Context);
+    return TempID == ID;
+  }
+};
+
+/// Like FoldingSetTrait, but for ContextualFoldingSets.
+template <typename T, typename Ctx>
+struct ContextualFoldingSetTrait : DefaultContextualFoldingSetTrait<T, Ctx> {};
 
 /// Insertion token: a failed lookup fills it in, the matching insert consumes
 /// it.
@@ -419,21 +414,6 @@ protected:
 // Convenience type to hide the implementation of the folding set.
 using FoldingSetNode = FoldingSetBase::Node;
 template <class T> class FoldingSetIterator;
-
-// Definitions of FoldingSetTrait and ContextualFoldingSetTrait functions, which
-// require the definition of FoldingSetNodeID.
-template <typename T>
-inline bool DefaultFoldingSetTrait<T>::Equals(T &X, const FoldingSetNodeID &ID,
-                                              FoldingSetNodeID &TempID) {
-  FoldingSetTrait<T>::Profile(X, TempID);
-  return TempID == ID;
-}
-template <typename T, typename Ctx>
-inline bool DefaultContextualFoldingSetTrait<T, Ctx>::Equals(
-    T &X, const FoldingSetNodeID &ID, FoldingSetNodeID &TempID, Ctx Context) {
-  ContextualFoldingSetTrait<T, Ctx>::Profile(X, TempID, Context);
-  return TempID == ID;
-}
 
 //===----------------------------------------------------------------------===//
 /// An implementation detail that lets us share code between FoldingSet and

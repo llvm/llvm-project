@@ -4556,7 +4556,6 @@ cc_library(
     name = "OrcTargetProcess",
     srcs = glob([
         "lib/ExecutionEngine/Orc/TargetProcess/*.cpp",
-        "lib/ExecutionEngine/Orc/TargetProcess/*.h",
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/TargetProcess/*.h",
