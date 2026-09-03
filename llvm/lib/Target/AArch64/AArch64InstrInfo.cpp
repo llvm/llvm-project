@@ -11787,7 +11787,7 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
   if (AFL.getArgumentStackToRestore(MF, MBB)) {
     Builder.addReg(AArch64::X17, RegState::ImplicitDefine);
     Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
-    if (Subtarget.hasPAuthLR())
+    if (AFI->branchProtectionPAuthLR())
       Builder.addReg(AArch64::X15, RegState::ImplicitDefine);
     return;
   }

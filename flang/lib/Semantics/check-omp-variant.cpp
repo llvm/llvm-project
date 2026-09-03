@@ -187,13 +187,11 @@ void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
-  OmpVerifyModifiers(
-      x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
   // Record this WHEN clause's context selector so the variant directive it
   // controls can be paired with it for static-applicability matching. A
   // well-formed WHEN clause has exactly one modifier, its context selector;
   // pair it only in that case, which also makes front() safe. Any other count
-  // is malformed and already diagnosed by OmpVerifyModifiers above.
+  // is malformed and already diagnosed by VerifyModifiers.
   if (const auto &modifiers{std::get<0>(x.v.t)};
       modifiers && modifiers->size() == 1) {
     currentWhenSelector_ =

@@ -306,7 +306,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
   if (!A.isReadablePointerType() || !B.isReadablePointerType())
     return false;
-  if (A.isDummy() || B.isDummy())
+
+  if (A.isDummy() || B.isDummy() || A.isUnknownSizeArray() ||
+      B.isUnknownSizeArray())
     return false;
 
   bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||

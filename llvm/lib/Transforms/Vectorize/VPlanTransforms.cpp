@@ -935,7 +935,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
 
   if (!match(WideIV, m_CanonicalWidenIV())) {
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPIRValue *Start = WideIV->getStartValue();
+    VPValue *Start = WideIV->getStartValue();
     VPValue *Step = WideIV->getStepValue();
     EndValue = B.createDerivedIV(
         ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
@@ -956,7 +956,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
   if (WideIntOrFp && WideIntOrFp->getTruncInst())
     return nullptr;
 
-  VPIRValue *Start = WideIV->getStartValue();
+  VPValue *Start = WideIV->getStartValue();
   VPValue *Step = WideIV->getStepValue();
   const InductionDescriptor &ID = WideIV->getInductionDescriptor();
   VPValue *EndValue = VectorTC;
@@ -1209,6 +1209,13 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
 
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return X;
+
+  // (x && y) | !x -> !x || y
+  if (CanCreateNewRecipe &&
+      match(Def,
+            m_c_BinaryOr(m_OneUse(m_LogicalAnd(m_VPValue(X), m_VPValue(Y))),
+                         m_VPValue(Z, m_Not(m_Deferred(X))))))
+    return Builder.createLogicalOr(Z, Y);
 
   // select c, false, true -> not c
   VPValue *C;
