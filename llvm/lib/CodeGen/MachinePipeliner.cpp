@@ -1589,7 +1589,7 @@ class HighRegisterPressureDetector {
 
   DenseMap<MachineInstr *, RegisterOperands> ROMap;
 
-  using Instr2LastUsesTy = DenseMap<MachineInstr *, SmallDenseSet<Register, 4>>;
+  using Instr2LastUsesTy = DenseMap<MachineInstr *, SmallSet<VirtRegOrUnit, 4>>;
 
 public:
   using OrderedInstsTy = std::vector<MachineInstr *>;
@@ -1609,12 +1609,8 @@ private:
     }
   }
 
-  void dumpPSet(Register Reg) const {
-    dbgs() << "Reg=" << printReg(Reg, TRI, 0, &MRI) << " PSet=";
-    // FIXME: The static_cast is a bug compensating bugs in the callers.
-    VirtRegOrUnit VRegOrUnit =
-        Reg.isVirtual() ? VirtRegOrUnit(Reg)
-                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+  void dumpPSet(VirtRegOrUnit VRegOrUnit) const {
+    dbgs() << "Reg=" << printVRegOrUnit(VRegOrUnit, TRI) << " PSet=";
     for (auto PSetIter = MRI.getPressureSets(VRegOrUnit); PSetIter.isValid();
          ++PSetIter) {
       dbgs() << *PSetIter << ' ';
@@ -1623,11 +1619,7 @@ private:
   }
 
   void increaseRegisterPressure(std::vector<unsigned> &Pressure,
-                                Register Reg) const {
-    // FIXME: The static_cast is a bug compensating bugs in the callers.
-    VirtRegOrUnit VRegOrUnit =
-        Reg.isVirtual() ? VirtRegOrUnit(Reg)
-                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+                                VirtRegOrUnit VRegOrUnit) const {
     auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter)
@@ -1635,8 +1627,8 @@ private:
   }
 
   void decreaseRegisterPressure(std::vector<unsigned> &Pressure,
-                                Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(VirtRegOrUnit(Reg));
+                                VirtRegOrUnit VRegOrUnit) const {
+    auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter) {
       auto &P = Pressure[*PSetIter];
@@ -1646,13 +1638,15 @@ private:
     }
   }
 
-  // Return true if Reg is reserved one, for example, stack pointer
-  bool isReservedRegister(Register Reg) const {
-    return Reg.isPhysical() && MRI.isReserved(Reg.asMCReg());
+  /// Return true if \p VRegOrUnit is reserved one, for example, stack pointer
+  bool isReservedRegUnit(VirtRegOrUnit VRegOrUnit) const {
+    return !VRegOrUnit.isVirtualReg() &&
+           MRI.isReservedRegUnit(VRegOrUnit.asMCRegUnit());
   }
 
-  bool isDefinedInThisLoop(Register Reg) const {
-    return Reg.isVirtual() && MRI.getDefBlock(Reg) == OrigMBB;
+  bool isDefinedInThisLoop(VirtRegOrUnit VRegOrUnit) const {
+    return VRegOrUnit.isVirtualReg() &&
+           MRI.getDefBlock(VRegOrUnit.asVirtualReg()) == OrigMBB;
   }
 
   // Search for live-in variables. They are factored into the register pressure
@@ -1664,21 +1658,18 @@ private:
   //     a[i] += b[i] + c;
   // \endcode
   void computeLiveIn() {
-    DenseSet<Register> Used;
+    SmallSet<VirtRegOrUnit, 8> Used;
     for (auto &MI : *OrigMBB) {
       if (MI.isDebugInstr())
         continue;
       for (auto &Use : ROMap[&MI].Uses) {
-        // FIXME: The static_cast is a bug.
-        Register Reg =
-            Use.VRegOrUnit.isVirtualReg()
-                ? Use.VRegOrUnit.asVirtualReg()
-                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
+        VirtRegOrUnit Reg = Use.VRegOrUnit;
         // Ignore the variable that appears only on one side of phi instruction
         // because it's used only at the first iteration.
-        if (MI.isPHI() && Reg != getLoopPhiReg(MI, OrigMBB))
+        if (MI.isPHI() && Reg.isVirtualReg() &&
+            Reg.asVirtualReg() != getLoopPhiReg(MI, OrigMBB))
           continue;
-        if (isReservedRegister(Reg))
+        if (isReservedRegUnit(Reg))
           continue;
         if (isDefinedInThisLoop(Reg))
           continue;
@@ -1713,24 +1704,18 @@ private:
     // Following virtual register will be ignored
     //   - live-in one
     //   - defined but not used in the loop (potentially live-out)
-    DenseSet<Register> TargetRegs;
-    const auto UpdateTargetRegs = [this, &TargetRegs](Register Reg) {
+    SmallSet<VirtRegOrUnit, 8> TargetRegs;
+    const auto UpdateTargetRegs = [this, &TargetRegs](VirtRegOrUnit Reg) {
       if (isDefinedInThisLoop(Reg))
         TargetRegs.insert(Reg);
     };
     for (MachineInstr *MI : OrderedInsts) {
       if (MI->isPHI()) {
         Register Reg = getLoopPhiReg(*MI, OrigMBB);
-        UpdateTargetRegs(Reg);
+        UpdateTargetRegs(VirtRegOrUnit(Reg));
       } else {
-        for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
-          // FIXME: The static_cast is a bug.
-          Register Reg = Use.VRegOrUnit.isVirtualReg()
-                             ? Use.VRegOrUnit.asVirtualReg()
-                             : Register(static_cast<unsigned>(
-                                   Use.VRegOrUnit.asMCRegUnit()));
-          UpdateTargetRegs(Reg);
-        }
+        for (auto &Use : ROMap.find(MI)->getSecond().Uses)
+          UpdateTargetRegs(Use.VRegOrUnit);
       }
     }
 
@@ -1738,14 +1723,10 @@ private:
       return Stages[MI] + MI->isPHI();
     };
 
-    DenseMap<Register, MachineInstr *> LastUseMI;
+    std::map<VirtRegOrUnit, MachineInstr *> LastUseMI;
     for (MachineInstr *MI : llvm::reverse(OrderedInsts)) {
       for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
-        // FIXME: The static_cast is a bug.
-        Register Reg =
-            Use.VRegOrUnit.isVirtualReg()
-                ? Use.VRegOrUnit.asVirtualReg()
-                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
+        VirtRegOrUnit Reg = Use.VRegOrUnit;
         if (!TargetRegs.contains(Reg))
           continue;
         auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
@@ -1780,7 +1761,7 @@ private:
   computeMaxSetPressure(const OrderedInstsTy &OrderedInsts,
                         Instr2StageTy &Stages,
                         const unsigned StageCount) const {
-    using RegSetTy = SmallDenseSet<Register, 16>;
+    using RegSetTy = SmallSet<VirtRegOrUnit, 16>;
 
     // Indexed by #Iter. To treat "local" variables of each stage separately, we
     // manage the liveness of the registers independently by iterations.
@@ -1799,34 +1780,29 @@ private:
     });
 
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
-                                                   VirtRegOrUnit VRegOrUnit) {
-      // FIXME: The static_cast is a bug.
-      Register Reg =
-          VRegOrUnit.isVirtualReg()
-              ? VRegOrUnit.asVirtualReg()
-              : Register(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()));
-      if (!Reg.isValid() || isReservedRegister(Reg))
+                                                   VirtRegOrUnit Reg) {
+      if (isReservedRegUnit(Reg))
         return;
 
       bool Inserted = RegSet.insert(Reg).second;
       if (!Inserted)
         return;
 
-      LLVM_DEBUG(dbgs() << "insert " << printReg(Reg, TRI, 0, &MRI) << "\n");
+      LLVM_DEBUG(dbgs() << "insert " << printVRegOrUnit(Reg, TRI) << "\n");
       increaseRegisterPressure(CurSetPressure, Reg);
       LLVM_DEBUG(dumpPSet(Reg));
     };
 
     const auto EraseReg = [this, &CurSetPressure](RegSetTy &RegSet,
-                                                  Register Reg) {
-      if (!Reg.isValid() || isReservedRegister(Reg))
+                                                  VirtRegOrUnit Reg) {
+      if (isReservedRegUnit(Reg))
         return;
 
       // live-in register
       if (!RegSet.contains(Reg))
         return;
 
-      LLVM_DEBUG(dbgs() << "erase " << printReg(Reg, TRI, 0, &MRI) << "\n");
+      LLVM_DEBUG(dbgs() << "erase " << printVRegOrUnit(Reg, TRI) << "\n");
       RegSet.erase(Reg);
       decreaseRegisterPressure(CurSetPressure, Reg);
       LLVM_DEBUG(dumpPSet(Reg));
