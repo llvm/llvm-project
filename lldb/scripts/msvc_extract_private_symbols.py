@@ -13,17 +13,15 @@ import subprocess
 import sys
 
 
-def extract_symbols(nm_path: str, lib: str):
+def extract_symbols(
+    nm_path: str, lib: str, regex: re.Pattern[str], nm_flags: list[str]
+):
     """Extract all of the private lldb symbols from the given path to llvm-nm and
     library to extract from."""
 
-    # Matches mangled symbols containing 'lldb_private'.
-    lldb_sym_re = r"[0-9a-zA-Z]* [BT] (?P<symbol>[?]+[^?].*lldb_private.*)"
-
-    # '-g' means we only get global symbols.
     # '-p' do not waste time sorting the symbols.
     process = subprocess.Popen(
-        [nm_path, "-g", "-p", lib],
+        [nm_path, "-p", lib] + nm_flags,
         bufsize=1,
         stdout=subprocess.PIPE,
         stdin=subprocess.PIPE,
@@ -33,7 +31,7 @@ def extract_symbols(nm_path: str, lib: str):
 
     lldb_symbols = set()
     for line in process.stdout:
-        match = re.match(lldb_sym_re, line)
+        match = re.match(regex, line)
         if match:
             symbol = match.group("symbol")
             assert (
@@ -49,6 +47,28 @@ def extract_symbols(nm_path: str, lib: str):
     return lldb_symbols
 
 
+def extract_exports(nm_path: str, lib: str):
+    # Matches mangled symbols containing 'lldb_private'.
+    regex = re.compile(r"[0-9a-zA-Z]* [BT] (?P<symbol>[?]+[^?].*lldb_private.*)")
+    # '-g': Only get the global symbols
+    return extract_symbols(nm_path, lib, regex, ["-g"])
+
+
+def extract_undef(nm_path: str, lib: str):
+    # Matches mangled symbols containing 'lldb_private' or 'llvm'.
+    regex_undef = re.compile(r"^0* +U (?P<symbol>[?]+[^?].*(?:lldb_private|llvm).*)")
+    regex_global = re.compile(
+        r"[0-9a-zA-Z]* [BT] (?P<symbol>[?]+[^?].*(?:lldb_private|llvm).*)"
+    )
+    # '-u': Only get the undefined symbols
+    undef = extract_symbols(nm_path, lib, regex_undef, ["-u"])
+    # '-g': Only get the global symbols
+    globals = extract_symbols(nm_path, lib, regex_global, ["-g"])
+    # If this is a static library, only return symbols undefined in all object
+    # files.
+    return undef - globals
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate LLDB dll exports")
     parser.add_argument(
@@ -56,41 +76,53 @@ def main():
     )
     parser.add_argument("--nm", help="Path to the llvm-nm executable.")
     parser.add_argument(
-        "libs",
+        "--libs",
         metavar="lib",
         type=str,
         nargs="+",
-        help="The libraries to extract symbols from.",
+        help="Libraries to extract exported symbols from.",
+    )
+    parser.add_argument(
+        "--consuming-libs",
+        metavar="lib",
+        type=str,
+        nargs="*",
+        help="Libraries to extract undefined symbols from.",
     )
     args = parser.parse_args()
 
     # Get the list of libraries to extract symbols from
     libs = list()
-    for lib in args.libs:
-        # When invoked by cmake the arguments are the cmake target names of the
-        # libraries, so we need to add .lib/.a to the end and maybe lib to the
-        # start to get the filename. Also allow objects.
-        suffixes = [".lib", ".a", ".obj", ".o"]
-        if not any([lib.endswith(s) for s in suffixes]):
-            for suffix in suffixes:
-                if os.path.exists(lib + suffix):
-                    lib = lib + suffix
-                    break
-                if os.path.exists("lib" + lib + suffix):
-                    lib = "lib" + lib + suffix
-                    break
-        if not any([lib.endswith(s) for s in suffixes]):
-            print(
-                "Unknown extension type for library argument: " + lib, file=sys.stderr
-            )
-            exit(1)
-        libs.append(lib)
+    for input_libs, is_consuming in ((args.libs, False), (args.consuming_libs, True)):
+        for lib in input_libs:
+            # When invoked by cmake the arguments are the cmake target names of the
+            # libraries, so we need to add .lib/.a to the end and maybe lib to the
+            # start to get the filename. Also allow objects.
+            suffixes = [".lib", ".a", ".obj", ".o"]
+            if not any([lib.endswith(s) for s in suffixes]):
+                for suffix in suffixes:
+                    if os.path.exists(lib + suffix):
+                        lib = lib + suffix
+                        break
+                    if os.path.exists("lib" + lib + suffix):
+                        lib = "lib" + lib + suffix
+                        break
+            if not any([lib.endswith(s) for s in suffixes]):
+                print(
+                    "Unknown extension type for library argument: " + lib,
+                    file=sys.stderr,
+                )
+                exit(1)
+            libs.append((lib, is_consuming))
 
     # Extract symbols from the input libraries.
     symbols = set()
-    for lib in libs:
-        for sym in list(extract_symbols(args.nm, lib)):
-            symbols.add(sym)
+    for lib, is_consuming in libs:
+        symbols |= (
+            extract_undef(args.nm, lib)
+            if is_consuming
+            else extract_exports(args.nm, lib)
+        )
 
     # Write out the symbols to the output file.
     with open(args.o, "w", newline="") as f:
