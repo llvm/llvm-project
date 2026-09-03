@@ -9,8 +9,8 @@ define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soff
 ; GFX8-NEXT:    s_mov_b32 s1, s3
 ; GFX8-NEXT:    s_mov_b32 s2, s4
 ; GFX8-NEXT:    s_mov_b32 s3, s5
-; GFX8-NEXT:    v_mov_b32_e32 v0, 0x3fff000
-; GFX8-NEXT:    buffer_load_dword v0, v0, s[0:3], 16 offen offset:4092
+; GFX8-NEXT:    s_mov_b32 s4, 0x3fff010
+; GFX8-NEXT:    buffer_load_dword v0, off, s[0:3], s4 offset:4092
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -20,13 +20,12 @@ define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soff
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0x3800000
 ; GFX1250-NEXT:    s_mov_b32 s0, s2
 ; GFX1250-NEXT:    s_mov_b32 s1, s3
 ; GFX1250-NEXT:    s_mov_b32 s2, s4
 ; GFX1250-NEXT:    s_mov_b32 s3, s5
-; GFX1250-NEXT:    s_mov_b32 s4, 16
-; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], s4 offen offset:8388604
+; GFX1250-NEXT:    s_mov_b32 s4, 0x3800010
+; GFX1250-NEXT:    buffer_load_b32 v0, off, s[0:3], s4 offset:8388604
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 67108860, i32 16, i32 0)
@@ -67,13 +66,13 @@ define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soff
 define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__or67108860_soffset16(ptr addrspace(8) inreg %rsrc, i32 %voffset.base) {
 ; GFX8-LABEL: raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__or67108860_soffset16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xfc000000, v0
 ; GFX8-NEXT:    s_mov_b32 s0, s2
 ; GFX8-NEXT:    s_mov_b32 s1, s3
 ; GFX8-NEXT:    s_mov_b32 s2, s4
 ; GFX8-NEXT:    s_mov_b32 s3, s5
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0x3fff000, v0
-; GFX8-NEXT:    buffer_load_dword v0, v0, s[0:3], 16 offen offset:4092
+; GFX8-NEXT:    v_and_b32_e32 v0, 0xfc000000, v0
+; GFX8-NEXT:    s_mov_b32 s4, 0x3fff010
+; GFX8-NEXT:    buffer_load_dword v0, v0, s[0:3], s4 offen offset:4092
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -88,8 +87,7 @@ define amdgpu_ps float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__or6710
 ; GFX1250-NEXT:    s_mov_b32 s1, s3
 ; GFX1250-NEXT:    s_mov_b32 s2, s4
 ; GFX1250-NEXT:    s_mov_b32 s3, s5
-; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 0x3800000, v0
-; GFX1250-NEXT:    s_mov_b32 s4, 16
+; GFX1250-NEXT:    s_mov_b32 s4, 0x3800010
 ; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], s4 offen offset:8388604
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
