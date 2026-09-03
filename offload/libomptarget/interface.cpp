@@ -585,10 +585,13 @@ EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
       MapComponentInfoTy(Base, Begin, Size, Type, Name));
 }
 
+extern "C" void __ol_tgt_setInfoFlag(uint32_t NewInfoLevel);
 EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
   assert(PM && "Runtime not initialized");
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
+  // Notify the liboffload runtime about the new info level.
+  __ol_tgt_setInfoFlag(NewInfoLevel);
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {

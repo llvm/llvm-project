@@ -29,9 +29,9 @@
 #ifdef OMPT_SUPPORT
 namespace llvm::omp::target {
 namespace ompt {
-bool Initialized = false;
-ompt_get_callback_t lookupCallbackByCode = nullptr;
-ompt_function_lookup_t lookupCallbackByName = nullptr;
+LLVM_ATTRIBUTE_WEAK bool Initialized = false;
+LLVM_ATTRIBUTE_WEAK ompt_get_callback_t lookupCallbackByCode = nullptr;
+LLVM_ATTRIBUTE_WEAK ompt_function_lookup_t lookupCallbackByName = nullptr;
 } // namespace ompt
 } // namespace llvm::omp::target
 #endif
@@ -1477,6 +1477,12 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
     *IsQueueWorkCompleted = true;
   }
   return Error::success();
+}
+
+// Temporary helpers to help transition of libomptarget to liboffload
+extern "C" void __ol_tgt_setInfoFlag(uint32_t NewInfoLevel) {
+  std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
+  InfoLevel.store(NewInfoLevel);
 }
 
 } // namespace offload
