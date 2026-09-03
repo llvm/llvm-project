@@ -21,6 +21,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
@@ -105,10 +106,22 @@ LIBC_INLINE float16 log10p1f16(float16 x) {
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
       float xf = x;
-      return fputil::cast<float16>(
+      float r =
           xf * fputil::polyeval(xf, 0x1.bcb7b2p-2f, -0x1.bcb4cp-3f,
-                                0x1.2875bcp-3f, -0x1.c2946ep-4f,
-                                0x1.69da2p-4f));
+                                0x1.2875bcp-3f, -0x1.c2946ep-4f, 0x1.69da2p-4f);
+      float16 result = fputil::DyadicFloat<32>(r).template as<float16, false>();
+
+      if (LIBC_UNLIKELY(static_cast<float>(result) != r)) {
+        int excepts = FE_INEXACT;
+        FPBits result_bits(result);
+        if (result_bits.is_zero() || result_bits.is_subnormal()) {
+          fputil::set_errno_if_required(ERANGE);
+          excepts |= FE_UNDERFLOW;
+        }
+        fputil::raise_except_if_required(excepts);
+      }
+
+      return result;
     }
   }
 

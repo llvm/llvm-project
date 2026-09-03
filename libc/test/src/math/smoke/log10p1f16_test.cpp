@@ -8,6 +8,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/math/log10p1f16.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -45,4 +46,16 @@ TEST_F(LlvmLibcLog10p1f16Test, SpecialNumbers) {
       aNaN,
       LIBC_NAMESPACE::log10p1f16(LIBC_NAMESPACE::fputil::cast<float16>(-2.0)));
   EXPECT_MATH_ERRNO(EDOM);
+}
+
+TEST_F(LlvmLibcLog10p1f16Test, NoSpuriousUnderflow) {
+  constexpr uint16_t INPUT = 0x089BU;    // x = 0x1.26cp-13
+  constexpr uint16_t EXPECTED = 0x0400U; // y = 0x1p-14
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  EXPECT_FP_EQ(FPBits(EXPECTED).get_val(),
+               LIBC_NAMESPACE::log10p1f16(FPBits(INPUT).get_val()));
+  EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_UNDERFLOW), 0);
+  EXPECT_MATH_ERRNO(0);
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 }
