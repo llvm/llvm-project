@@ -11802,7 +11802,7 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
     // If we may have to check LR at this point, we need a scratch register -
     // try to pick a free one among X16 and X17.
     Register ScratchRegForCheckVA =
-        LiveRegs.available(MRI, AArch64::X16) ? AArch64::X16 : AArch64::X17;
+        RS.isRegUsed(AArch64::X16) ? AArch64::X17 : AArch64::X16;
     ImplicitDefs.push_back(ScratchRegForCheckVA);
   }
 
