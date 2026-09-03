@@ -1,0 +1,28 @@
+on:
+  push:
+
+jobs:
+  wix-test:
+    runs-on: windows-11-arm
+    steps:
+      - shell: bash
+        run: |
+          dotnet tool install --global wix
+          choco install wixtoolset
+          #which candle.exe
+      - run: echo "${env:WIX}bin"
+      #- run: echo   "C:\Program Files (x86)\WiX Toolset v3.14\bin" >> $env:GITHUB_PATH
+      - run: echo "${env:WIX}bin" >> $env:GITHUB_PATH
+      - run: Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName >> $env:GITHUB_PATH
+      - shell: bash
+        run: |
+          which candle.exe
+      - shell: bash
+        run: |
+          echo "int main(int argc, char **argv) { }" > test.c
+          echo "cmake_minimum_required(VERSION 3.20.0)" > CMakeLists.txt
+          echo "add_executable(test test.c)" >> CMakeLists.txt
+          echo "include(CPack)" >> CMakeLists.txt
+          cmake -G Ninja -S . -B build -DCPACK_GENERATOR=WIX
+          ninja -C build package
+
