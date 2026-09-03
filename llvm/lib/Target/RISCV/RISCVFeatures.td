@@ -1305,14 +1305,6 @@ def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
 // Vendor extensions
 //===----------------------------------------------------------------------===//
 
-// Ventana Extensions
-
-def FeatureVendorXVentanaCondOps
-    : RISCVExtension<1, 0, "Ventana Conditional Ops">;
-def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()">,
-                               AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
-                                   "'XVentanaCondOps' (Ventana Conditional Ops)">;
-
 // T-Head Extensions
 
 def FeatureVendorXTHeadBa

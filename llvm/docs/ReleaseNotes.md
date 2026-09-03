@@ -218,6 +218,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
 * Removes veyron-v1 processor definition and tuning model.
+* Removes support for the `Ventana Conditional Operations` extension.
 
 ### Changes to the WebAssembly Backend
 

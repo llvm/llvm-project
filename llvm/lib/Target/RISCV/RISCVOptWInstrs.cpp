@@ -358,8 +358,6 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
 
       case RISCV::CZERO_EQZ:
       case RISCV::CZERO_NEZ:
-      case RISCV::VT_MASKC:
-      case RISCV::VT_MASKCN:
         if (OpIdx != 1)
           return false;
         Worklist.emplace_back(UserMI, Bits);
@@ -648,8 +646,6 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
 
     case RISCV::CZERO_EQZ:
     case RISCV::CZERO_NEZ:
-    case RISCV::VT_MASKC:
-    case RISCV::VT_MASKCN:
       // Instructions return zero or operand 1. Result is sign extended if
       // operand 1 is sign extended.
       if (!AddRegToWorkList(MI->getOperand(1).getReg()))

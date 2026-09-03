@@ -83,7 +83,6 @@
 // CHECK-NOT: __riscv_v_intrinsic {{.*$}}
 // CHECK-NOT: __riscv_v_min_vlen {{.*$}}
 // CHECK-NOT: __riscv_vector {{.*$}}
-// CHECK-NOT: __riscv_xventanacondops {{.*$}}
 // CHECK-NOT: __riscv_za128rs {{.*$}}
 // CHECK-NOT: __riscv_za64rs {{.*$}}
 // CHECK-NOT: __riscv_zaamo {{.*$}}
@@ -571,14 +570,6 @@
 // CHECK-V-EXT: __riscv_v_intrinsic 1000000{{$}}
 // CHECK-V-EXT: __riscv_v_min_vlen 128
 // CHECK-V-EXT: __riscv_vector 1
-
-// RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN:   -march=rv32ixventanacondops -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XVENTANACONDOPS-EXT %s
-// RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN:   -march=rv64ixventanacondops -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-XVENTANACONDOPS-EXT %s
-// CHECK-XVENTANACONDOPS-EXT: __riscv_xventanacondops 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32iza128rs -E -dM %s \

@@ -462,10 +462,6 @@ The current vendor extensions supported are:
 
 : LLVM implements [version 1.0.0 of the THeadV-family custom instructions specification](https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.0/xthead-2022-12-04-2.2.0.pdf) by T-HEAD of Alibaba. All instructions are prefixed with `th.` as described in the specification, and the riscv-toolchain-convention document linked above.
 
-`XVentanaCondOps`
-
-: LLVM implements [version 1.0.0 of the VTx-family custom instructions specification](https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf) by Ventana Micro Systems. All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above. These instructions are only available for riscv64 at this time.
-
 `Xsfmm*`
 
 : LLVM implements [version 0.6 of the Xsfmm Family of Attached Matrix Extensions Specification](https://www.sifive.com/document-file/xsfmm-matrix-extensions-specification) by SiFive. All instructions are prefixed with `sf.` as described in the specification.
