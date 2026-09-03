@@ -821,6 +821,24 @@ void Instruction::andIRFlags(const Value *V) {
     }
 }
 
+void Instruction::intersectIRAttributes(const Instruction *I) {
+  assert(I->getOpcode() == getOpcode() &&
+         "Intersecting attributes between different operations is unsupported");
+
+  // TODO: Should we intersect metadata here too?
+  andIRFlags(I);
+
+  if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
+    Align Common =
+        std::min(getLoadStoreAlignment(this), getLoadStoreAlignment(I));
+    assert(isAligned(Common, getLoadStoreAlignment(this).value()) &&
+           isAligned(Common, getLoadStoreAlignment(I).value()) &&
+           "Common alignment doesn't satisfy alignment constraints?");
+
+    setLoadStoreAlignment(this, Common);
+  }
+}
+
 const char *Instruction::getOpcodeName(unsigned OpCode) {
   switch (OpCode) {
   // Terminators
