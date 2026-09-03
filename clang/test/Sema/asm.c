@@ -404,3 +404,17 @@ void test20(char x) {
   asm ("fabs" : "=t" (d): "0" (v)); // expected-error {{unsupported inline asm: input with type 'int2' (vector of 2 'int' values) matching output with type 'double'}}
   asm ("fabs" : "=t" (v): "0" (d)); // expected-error {{unsupported inline asm: input with type 'double' matching output with type 'int2' (vector of 2 'int' values)}}
 }
+
+void test20()
+{
+  double f00 = 0.0; 
+  double f01 = 0.0; 
+  double f10 = 0.0; 
+  double f11 = 0.0;
+  int mem;
+  asm volatile ("" : "+f" (f00), "+f" (f01), "+f" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+f" (f01), "+f" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+r" (f01), "+f" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+r" (f01), "+r" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+r" (f01), "+r" (f10), "+r" (f11), "+m" (mem) :: "memory"); // no-error
+}
