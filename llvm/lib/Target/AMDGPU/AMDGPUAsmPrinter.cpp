@@ -1421,7 +1421,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.LDSSize = MFI->getLDSSize();
 
-  unsigned LDSGranularityBytes = getLdsDwGranularity(STM) * 4;
+  unsigned LDSGranularityBytes =
+      AMDGPU::getLDSAllocGranule(STM.getTargetID().getGPUKind());
   ProgInfo.LDSBlocks =
       alignTo(ProgInfo.LDSSize, LDSGranularityBytes) / LDSGranularityBytes;
 
@@ -1660,8 +1661,8 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
 
   MD->updateHwStageMaximum(
       CC, ".lds_size",
-      (unsigned)(CurrentProgramInfo.LdsSize * getLdsDwGranularity(ST) *
-                 sizeof(uint32_t)));
+      (unsigned)(CurrentProgramInfo.LdsSize *
+                 AMDGPU::getLDSAllocGranule(ST.getTargetID().getGPUKind())));
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type

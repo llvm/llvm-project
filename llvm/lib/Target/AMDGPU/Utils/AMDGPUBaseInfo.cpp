@@ -3724,20 +3724,6 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
   return hasAny64BitVGPROperands(OpDesc, MII, ST);
 }
 
-unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
-    return 64;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
-    return 128;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
-    return 256;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
-    return 320;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
-    return 512;
-  return 64; // In sync with getAddressableLocalMemorySize
-}
-
 bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_PK_ADD_F32_gfx1250:
