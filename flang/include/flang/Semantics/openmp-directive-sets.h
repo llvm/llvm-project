@@ -108,24 +108,31 @@ static const llvm::omp::DirectiveSet topSimdSet{
     Directive::OMPD_simd,
 };
 
+// Composite/combined SIMD constructs: SIMD paired with a worksharing or
+// loop-partitioning component (do, distribute, taskloop). For these, the
+// loop iteration variable follows the worksharing rule (private), not the
+// pure-SIMD rule (linear/lastprivate).
+static const llvm::omp::DirectiveSet compositeSimdSet{
+    Directive::OMPD_distribute_parallel_do_simd,
+    Directive::OMPD_distribute_simd,
+    Directive::OMPD_do_simd,
+    Directive::OMPD_masked_taskloop_simd,
+    Directive::OMPD_master_taskloop_simd,
+    Directive::OMPD_parallel_do_simd,
+    Directive::OMPD_parallel_masked_taskloop_simd,
+    Directive::OMPD_parallel_master_taskloop_simd,
+    Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_simd,
+    Directive::OMPD_taskloop_simd,
+    Directive::OMPD_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_simd,
+};
+
 static const llvm::omp::DirectiveSet allSimdSet{
     llvm::omp::DirectiveSet{
-        Directive::OMPD_distribute_parallel_do_simd,
-        Directive::OMPD_distribute_simd,
-        Directive::OMPD_do_simd,
-        Directive::OMPD_masked_taskloop_simd,
-        Directive::OMPD_master_taskloop_simd,
-        Directive::OMPD_parallel_do_simd,
-        Directive::OMPD_parallel_masked_taskloop_simd,
-        Directive::OMPD_parallel_master_taskloop_simd,
-        Directive::OMPD_target_parallel_do_simd,
         Directive::OMPD_target_simd,
-        Directive::OMPD_target_teams_distribute_parallel_do_simd,
-        Directive::OMPD_target_teams_distribute_simd,
-        Directive::OMPD_taskloop_simd,
-        Directive::OMPD_teams_distribute_parallel_do_simd,
-        Directive::OMPD_teams_distribute_simd,
-    } | topSimdSet,
+    } | topSimdSet | compositeSimdSet,
 };
 
 static const llvm::omp::DirectiveSet topTargetSet{
