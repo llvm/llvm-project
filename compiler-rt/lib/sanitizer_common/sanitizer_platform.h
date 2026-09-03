@@ -39,10 +39,26 @@
 #  define SANITIZER_AIX 0
 #endif
 
-#if defined(__GLIBC__)
+// uClibc-ng defines __GLIBC__ for glibc source-level compatibility but
+// is not glibc; the glibc code paths (e.g. fstab.h / obstack.h /
+// netrom/netrom.h includes, struct __res_state internals,
+// __libc_stack_end, NPTL internals) do not work against it.  Advertise
+// it honestly via the uClibc-ng-specific __UCLIBC__ macro instead.
+#if defined(__GLIBC__) && !defined(__UCLIBC__)
 #  define SANITIZER_GLIBC 1
 #else
 #  define SANITIZER_GLIBC 0
+#endif
+
+#if defined(__UCLIBC__)
+#  if __UCLIBC_MAJOR__ < 1 ||                            \
+      (__UCLIBC_MAJOR__ == 1 && __UCLIBC_MINOR__ == 0 && \
+       __UCLIBC_SUBLEVEL__ < 58)
+#    error "libsanitizer requires uClibc-ng >= 1.0.58"
+#  endif
+#  define SANITIZER_UCLIBC 1
+#else
+#  define SANITIZER_UCLIBC 0
 #endif
 
 #if defined(__FreeBSD__)
