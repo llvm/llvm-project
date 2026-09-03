@@ -942,3 +942,126 @@ define void @udiv_v16i16_zext_i8(ptr %dst, ptr %x, ptr %y) nounwind {
   store <16 x i8> %t, ptr %dst
   ret void
 }
+
+define <8 x i8> @masked_sdiv_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i1> %m) nounwind {
+; FAST-LABEL: masked_sdiv_v8i8:
+; FAST:       # %bb.0:
+; FAST-NEXT:    vpmovsxbw %xmm1, %xmm1
+; FAST-NEXT:    vcvtw2ph %xmm1, %xmm1
+; FAST-NEXT:    vpmovsxbw %xmm0, %xmm0
+; FAST-NEXT:    vcvtw2ph %xmm0, %xmm0
+; FAST-NEXT:    vdivph %xmm1, %xmm0, %xmm0
+; FAST-NEXT:    vcvttph2w %xmm0, %xmm0
+; FAST-NEXT:    vpmovwb %xmm0, %xmm0
+; FAST-NEXT:    retq
+;
+; NOFAST-LABEL: masked_sdiv_v8i8:
+; NOFAST:       # %bb.0:
+; NOFAST-NEXT:    vpmovsxbd %xmm1, %ymm1
+; NOFAST-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; NOFAST-NEXT:    vpmovsxbd %xmm0, %ymm0
+; NOFAST-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; NOFAST-NEXT:    vdivps %ymm1, %ymm0, %ymm0
+; NOFAST-NEXT:    vcvttps2dq %ymm0, %ymm0
+; NOFAST-NEXT:    vpmovdw %ymm0, %xmm0
+; NOFAST-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; NOFAST-NEXT:    vzeroupper
+; NOFAST-NEXT:    retq
+  %q = call <8 x i8> @llvm.masked.sdiv(<8 x i8> %a, <8 x i8> %b, <8 x i1> %m)
+  ret <8 x i8> %q
+}
+
+define <8 x i8> @masked_udiv_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i1> %m) nounwind {
+; FAST-LABEL: masked_udiv_v8i8:
+; FAST:       # %bb.0:
+; FAST-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; FAST-NEXT:    vcvtw2ph %xmm1, %xmm1
+; FAST-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; FAST-NEXT:    vcvtw2ph %xmm0, %xmm0
+; FAST-NEXT:    vdivph %xmm1, %xmm0, %xmm0
+; FAST-NEXT:    vcvttph2uw %xmm0, %xmm0
+; FAST-NEXT:    vpmovwb %xmm0, %xmm0
+; FAST-NEXT:    retq
+;
+; NOFAST-LABEL: masked_udiv_v8i8:
+; NOFAST:       # %bb.0:
+; NOFAST-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; NOFAST-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; NOFAST-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; NOFAST-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; NOFAST-NEXT:    vdivps %ymm1, %ymm0, %ymm0
+; NOFAST-NEXT:    vcvttps2dq %ymm0, %ymm0
+; NOFAST-NEXT:    vpmovdw %ymm0, %xmm0
+; NOFAST-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; NOFAST-NEXT:    vzeroupper
+; NOFAST-NEXT:    retq
+  %q = call <8 x i8> @llvm.masked.udiv(<8 x i8> %a, <8 x i8> %b, <8 x i1> %m)
+  ret <8 x i8> %q
+}
+
+define <8 x i8> @masked_srem_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i1> %m) nounwind {
+; FAST-LABEL: masked_srem_v8i8:
+; FAST:       # %bb.0:
+; FAST-NEXT:    vpmovsxbw %xmm1, %xmm2
+; FAST-NEXT:    vcvtw2ph %xmm2, %xmm2
+; FAST-NEXT:    vpmovsxbw %xmm0, %xmm3
+; FAST-NEXT:    vcvtw2ph %xmm3, %xmm3
+; FAST-NEXT:    vdivph %xmm2, %xmm3, %xmm2
+; FAST-NEXT:    vcvttph2w %xmm2, %xmm2
+; FAST-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; FAST-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
+; FAST-NEXT:    vpmovwb %xmm1, %xmm1
+; FAST-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; FAST-NEXT:    retq
+;
+; NOFAST-LABEL: masked_srem_v8i8:
+; NOFAST:       # %bb.0:
+; NOFAST-NEXT:    vpmovsxbd %xmm1, %ymm2
+; NOFAST-NEXT:    vcvtdq2ps %ymm2, %ymm2
+; NOFAST-NEXT:    vpmovsxbd %xmm0, %ymm3
+; NOFAST-NEXT:    vcvtdq2ps %ymm3, %ymm3
+; NOFAST-NEXT:    vdivps %ymm2, %ymm3, %ymm2
+; NOFAST-NEXT:    vcvttps2dq %ymm2, %ymm2
+; NOFAST-NEXT:    vpmovdw %ymm2, %xmm2
+; NOFAST-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; NOFAST-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
+; NOFAST-NEXT:    vpmovwb %xmm1, %xmm1
+; NOFAST-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; NOFAST-NEXT:    vzeroupper
+; NOFAST-NEXT:    retq
+  %r = call <8 x i8> @llvm.masked.srem(<8 x i8> %a, <8 x i8> %b, <8 x i1> %m)
+  ret <8 x i8> %r
+}
+
+define <8 x i8> @masked_urem_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i1> %m) nounwind {
+; FAST-LABEL: masked_urem_v8i8:
+; FAST:       # %bb.0:
+; FAST-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; FAST-NEXT:    vcvtw2ph %xmm1, %xmm2
+; FAST-NEXT:    vpmovzxbw {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; FAST-NEXT:    vcvtw2ph %xmm3, %xmm3
+; FAST-NEXT:    vdivph %xmm2, %xmm3, %xmm2
+; FAST-NEXT:    vcvttph2uw %xmm2, %xmm2
+; FAST-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
+; FAST-NEXT:    vpmovwb %xmm1, %xmm1
+; FAST-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; FAST-NEXT:    retq
+;
+; NOFAST-LABEL: masked_urem_v8i8:
+; NOFAST:       # %bb.0:
+; NOFAST-NEXT:    vpmovzxbd {{.*#+}} ymm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; NOFAST-NEXT:    vcvtdq2ps %ymm2, %ymm2
+; NOFAST-NEXT:    vpmovzxbd {{.*#+}} ymm3 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; NOFAST-NEXT:    vcvtdq2ps %ymm3, %ymm3
+; NOFAST-NEXT:    vdivps %ymm2, %ymm3, %ymm2
+; NOFAST-NEXT:    vcvttps2dq %ymm2, %ymm2
+; NOFAST-NEXT:    vpmovdw %ymm2, %xmm2
+; NOFAST-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; NOFAST-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
+; NOFAST-NEXT:    vpmovwb %xmm1, %xmm1
+; NOFAST-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; NOFAST-NEXT:    vzeroupper
+; NOFAST-NEXT:    retq
+  %r = call <8 x i8> @llvm.masked.urem(<8 x i8> %a, <8 x i8> %b, <8 x i1> %m)
+  ret <8 x i8> %r
+}
