@@ -3020,7 +3020,7 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
 
 std::optional<std::pair<SVal, QualType>>
 ExprEngine::resolveAsLambdaCapturedVar(const Expr *Ex, const ValueDecl *VD,
-                                       ExplodedNode *Pred) const {
+                                       const ExplodedNode *Pred) const {
   ProgramStateRef State = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 

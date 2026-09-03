@@ -687,7 +687,7 @@ private:
   /// enclosing method has an implicit or explicit object parameter.
   std::optional<std::pair<SVal, QualType>>
   resolveAsLambdaCapturedVar(const Expr *Ex, const ValueDecl *VD,
-                             ExplodedNode *Pred) const;
+                             const ExplodedNode *Pred) const;
 
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,
