@@ -563,10 +563,30 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       llvm::PointerType::get(LLVMContext, DL.getAllocaAddrSpace());
   GlobalsInt8PtrTy =
       llvm::PointerType::get(LLVMContext, DL.getDefaultGlobalsAddressSpace());
+  VTableComponentPtrTy = GlobalsInt8PtrTy;
   ProgramPtrTy =
       llvm::PointerType::get(LLVMContext, DL.getProgramAddressSpace());
   ConstGlobalsPtrTy = llvm::PointerType::get(
       LLVMContext, C.getTargetAddressSpace(GetGlobalConstantAddressSpace()));
+
+  // A vtable slot holds the address of a function, and functions live in the
+  // program address space, so materialising a vtable needs an addrspacecast
+  // from the program address space into the address space the components live
+  // in. SPIR-V only permits a cast into the generic address space, so unless
+  // the two already agree, or the program address space is the generic one, a
+  // vtable emitted in the default globals address space produces a module that
+  // no SPIR-V consumer accepts. Emit the components as generic pointers in
+  // that case; casting the globals-address-space RTTI components into the
+  // generic address space is the permitted direction. Logical SPIR-V has no
+  // generic address space, and no virtual functions either, so leave it alone.
+  if ((getTriple().isSPIR() || getTriple().isSPIRV()) &&
+      !getTriple().isSPIRVLogical()) {
+    unsigned GenericAS = C.getTargetAddressSpace(LangAS::opencl_generic);
+    unsigned ProgramAS = DL.getProgramAddressSpace();
+    if (ProgramAS != DL.getDefaultGlobalsAddressSpace() &&
+        ProgramAS != GenericAS)
+      VTableComponentPtrTy = llvm::PointerType::get(LLVMContext, GenericAS);
+  }
 
   // Build C++20 Module initializers.
   // TODO: Add Microsoft here once we know the mangling required for the

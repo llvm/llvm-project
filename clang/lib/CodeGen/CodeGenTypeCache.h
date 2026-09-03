@@ -72,6 +72,11 @@ struct CodeGenTypeCache {
     llvm::PointerType *GlobalsInt8PtrTy;
   };
 
+  /// void* in the address space that C++ vtable components live in. This is
+  /// the default globals address space except on targets where casting a
+  /// function into that address space is not representable.
+  llvm::PointerType *VTableComponentPtrTy;
+
   /// Pointer in program address space
   llvm::PointerType *ProgramPtrTy;
 
