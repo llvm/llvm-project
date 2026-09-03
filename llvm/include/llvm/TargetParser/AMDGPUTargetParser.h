@@ -226,6 +226,10 @@ getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getLDSBankCount(GPUKind AK);
 LLVM_ABI unsigned getLDSBankCount(Triple::SubArchType SubArch);
 
+/// \returns LDS allocation granularity in bytes.
+LLVM_ABI unsigned getLDSAllocGranule(GPUKind AK);
+LLVM_ABI unsigned getLDSAllocGranule(Triple::SubArchType SubArch);
+
 /// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
 /// functional block in full-SIMD mode, half of them otherwise.
 constexpr unsigned getNumWorkGroupSIMDs(bool FullSIMDMode) {

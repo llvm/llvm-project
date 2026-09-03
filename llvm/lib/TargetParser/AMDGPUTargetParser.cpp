@@ -470,6 +470,34 @@ unsigned AMDGPU::getLDSBankCount(Triple::SubArchType SubArch) {
   return getLDSBankCount(getGPUKindFromSubArch(SubArch));
 }
 
+unsigned AMDGPU::getLDSAllocGranule(GPUKind AK) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  if (Features.none())
+    return 256;
+  assert((Features.test(FEAT_ADDRESSABLELOCALMEMORYSIZE32768) ||
+          Features.test(FEAT_ADDRESSABLELOCALMEMORYSIZE65536) ||
+          Features.test(FEAT_ADDRESSABLELOCALMEMORYSIZE163840) ||
+          Features.test(FEAT_ADDRESSABLELOCALMEMORYSIZE196608) ||
+          Features.test(FEAT_ADDRESSABLELOCALMEMORYSIZE327680)) &&
+         "missing addressable LDS size feature");
+  if (Features.test(FEAT_ADDRESSABLELOCALMEMORYSIZE32768))
+    return 256;
+  if (Features.test(FEAT_ADDRESSABLELOCALMEMORYSIZE65536))
+    return 512;
+  if (Features.test(FEAT_ADDRESSABLELOCALMEMORYSIZE196608))
+    return 1024;
+  if (Features.test(FEAT_ADDRESSABLELOCALMEMORYSIZE163840))
+    return 1280;
+  if (Features.test(FEAT_ADDRESSABLELOCALMEMORYSIZE327680))
+    return 2048;
+
+  return 256;
+}
+
+unsigned AMDGPU::getLDSAllocGranule(Triple::SubArchType SubArch) {
+  return getLDSAllocGranule(getGPUKindFromSubArch(SubArch));
+}
+
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->MaxWavesPerEU : 10;
