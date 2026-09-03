@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___FLAT_MAP_FLAT_MAP_H
 #define _LIBCPP___FLAT_MAP_FLAT_MAP_H
 
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/min.h>
@@ -17,7 +18,6 @@
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_inplace_merge.h>
 #include <__algorithm/ranges_sort.h>
-#include <__algorithm/ranges_unique.h>
 #include <__algorithm/remove_if.h>
 #include <__algorithm/upper_bound.h>
 #include <__assert>
@@ -938,13 +938,32 @@ private:
     return ranges::adjacent_find(__key_container, __greater_or_equal_to) == ranges::end(__key_container);
   }
 
+  template <class _Iter, class _Sent>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _Iter __deduplicate_sorted(_Iter __first, _Sent __last) {
+    __first = ranges::adjacent_find(__first, __last, [this](const auto& __x, const auto& __y) -> bool {
+      return !__compare_(std::get<0>(__x), std::get<0>(__y));
+    });
+    if (__first == __last) {
+      return __first;
+    }
+
+    _Iter __i = __first;
+    for (++__i; ++__i != __last;) {
+      // Since the range is sorted, *__first < *__i means *__i starts a new run of equivalent keys.
+      if (__compare_(std::get<0>(*__first), std::get<0>(*__i))) {
+        *++__first = _IterOps<_RangeAlgPolicy>::__iter_move(__i);
+      }
+    }
+    return ++__first;
+  }
+
   // This function is only used in constructors. So there is not exception handling in this function.
   // If the function exits via an exception, there will be no flat_map object constructed, thus, there
   // is no invariant state to preserve
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __sort_and_unique() {
     auto __zv = ranges::views::zip(__containers_.keys, __containers_.values);
     ranges::sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
-    auto __dup_start = ranges::unique(__zv, __key_equiv(__compare_)).begin();
+    auto __dup_start = __deduplicate_sorted(__zv.begin(), __zv.end());
     auto __dist      = ranges::distance(__zv.begin(), __dup_start);
     __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
     __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
@@ -979,7 +998,7 @@ private:
       }
       ranges::inplace_merge(__zv.begin(), __zv.begin() + __append_start_offset, __end, __compare_key);
 
-      auto __dup_start = ranges::unique(__zv, __key_equiv(__compare_)).begin();
+      auto __dup_start = __deduplicate_sorted(__zv.begin(), __zv.end());
       auto __dist      = ranges::distance(__zv.begin(), __dup_start);
       __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
       __containers_.values.erase(__containers_.values.begin() + __dist, __containers_.values.end());
@@ -1135,14 +1154,6 @@ private:
   containers __containers_;
   _LIBCPP_NO_UNIQUE_ADDRESS key_compare __compare_;
 
-  struct __key_equiv {
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __key_equiv(key_compare __c) : __comp_(__c) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
-    operator()(const_reference __x, const_reference __y) const {
-      return !__comp_(std::get<0>(__x), std::get<0>(__y)) && !__comp_(std::get<0>(__y), std::get<0>(__x));
-    }
-    key_compare __comp_;
-  };
 };
 
 template <class _KeyContainer, class _MappedContainer, class _Compare = less<typename _KeyContainer::value_type>>
