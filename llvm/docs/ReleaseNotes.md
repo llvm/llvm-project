@@ -52,6 +52,14 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* LLVM now assigns persistent print IDs to metadata nodes. This keeps metadata
+  IDs stable across repeated debug and pass output, but can change their
+  numbering and ordering compared with earlier releases. Standalone metadata
+  printing now uses numbered definitions such as `!1 = !DIFile(...)` instead
+  of pointer-based forms such as `<0x...> = !DIFile(...)`. Tools and tests that
+  compare such output may need updating. Final assembly output is still
+  renumbered into canonical order.
+
 * Added `llvm.vector.reduce.fmaximumnum` and `llvm.vector.reduce.fminimumnum`
   intrinsics, the reduction variants of `llvm.maximumnum` and
   `llvm.minimumnum`. 
