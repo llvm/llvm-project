@@ -1127,6 +1127,13 @@ math_test(name = "log10")
 
 math_test(name = "log10f")
 
+math_test(
+    name = "log10bf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_test(name = "log1p")
 
 math_test(name = "log1pf")
