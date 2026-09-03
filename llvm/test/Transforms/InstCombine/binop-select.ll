@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i32)
+declare void @use_i8(i8)
 declare void @use_f32(float)
 declare void @use_v2f16(<2 x half>)
 declare void @use_v2i8(<2 x i8>)
@@ -543,6 +544,82 @@ define i8 @commonArgWithAdd0(i1 %arg0) {
   %v2 = add i8 %v1, %v0
   %v3 = or i8 %v2, 16
   ret i8 %v3
+}
+
+define i8 @commonArgWithOrShl0(i8 %x) {
+; CHECK-LABEL: @commonArgWithOrShl0(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 -123, i8 9
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 5, i8 9
+  %shift = shl i8 %x, 7
+  %result = or i8 %sel, %shift
+  ret i8 %result
+}
+
+define i8 @commonArgWithOrShl1(i8 %x, i8 %y) {
+; CHECK-LABEL: @commonArgWithOrShl1(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 0
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 0
+  %shift = shl i8 %x, 7
+  %result = or i8 %sel, %shift
+  ret i8 %result
+}
+
+define i16 @commonArgWithOrShlEqZext(i8 %x, i16 %y) {
+; CHECK-LABEL: @commonArgWithOrShlEqZext(
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[MASKED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = or i16 [[Y:%.*]], -32768
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i16 0, i16 [[TMP1]]
+; CHECK-NEXT:    ret i16 [[RESULT]]
+;
+  %masked = and i8 %x, 1
+  %cond = icmp eq i8 %masked, 0
+  %sel = select i1 %cond, i16 0, i16 %y
+  %wide = zext i8 %x to i16
+  %shift = shl i16 %wide, 15
+  %result = or i16 %sel, %shift
+  ret i16 %result
+}
+
+define i8 @commonArgWithOrShlTrunc(i16 %x, i8 %y) {
+; CHECK-LABEL: @commonArgWithOrShlTrunc(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i16 [[X:%.*]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 0
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i16 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 0
+  %narrow = trunc i16 %x to i8
+  %shift = shl i8 %narrow, 7
+  %result = or i8 %sel, %shift
+  ret i8 %result
+}
+
+define i8 @commonArgWithOrShlMultiUse(i8 %x, i8 %y) {
+; CHECK-LABEL: @commonArgWithOrShlMultiUse(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 0
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[X]], 7
+; CHECK-NEXT:    call void @use_i8(i8 [[SHIFT]])
+; CHECK-NEXT:    [[RESULT:%.*]] = or i8 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 0
+  %shift = shl i8 %x, 7
+  call void @use_i8(i8 %shift)
+  %result = or i8 %sel, %shift
+  ret i8 %result
 }
 
 define i32 @OrSelectIcmpZero(i32 %a, i32 %b) {

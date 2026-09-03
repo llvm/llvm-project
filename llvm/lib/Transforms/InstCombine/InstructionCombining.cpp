@@ -45,6 +45,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -1746,6 +1747,32 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
   return createSelectInstWithUnknownProfile(X, TVal, FVal);
 }
 
+// If SI's condition determines bit 0 of X and Op is
+// shl (zext/trunc/self X), BW - 1, return Op's known value on the given
+// select arm.
+static Constant *getShiftedLsbValueForSelectArm(Value *Op, SelectInst *SI,
+                                                bool IsTrueArm) {
+  auto BitTest =
+      decomposeBitTest(SI->getCondition(), /*LookThroughTrunc=*/true,
+                       /*AllowNonZeroC=*/false, /*DecomposeAnd=*/true);
+  if (!BitTest || !BitTest->Mask.isOne())
+    return nullptr;
+
+  Type *Ty = Op->getType();
+  if (!Ty->isIntegerTy())
+    return nullptr;
+
+  unsigned BitWidth = Ty->getIntegerBitWidth();
+  if (!match(Op, m_Shl(m_ZExtOrTruncOrSelf(m_Specific(BitTest->X)),
+                       m_SpecificInt(BitWidth - 1))))
+    return nullptr;
+
+  bool BitSetOnTrue = BitTest->Pred == ICmpInst::ICMP_NE;
+  return IsTrueArm == BitSetOnTrue
+             ? ConstantInt::get(Ty, APInt::getSignMask(BitWidth))
+             : ConstantInt::getNullValue(Ty);
+}
+
 static Value *simplifyOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
                                                  bool IsTrueArm) {
   SmallVector<Value *> Ops;
@@ -1762,6 +1789,9 @@ static Value *simplifyOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
     } else if (match(Op, m_ZExt(m_Specific(SI->getCondition())))) {
       V = IsTrueArm ? ConstantInt::get(Op->getType(), 1)
                     : ConstantInt::getNullValue(Op->getType());
+    } else if (Constant *C =
+                   getShiftedLsbValueForSelectArm(Op, SI, IsTrueArm)) {
+      V = C;
     } else {
       V = Op;
     }
@@ -1772,9 +1802,13 @@ static Value *simplifyOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
 }
 
 static Value *foldOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
-                                             Value *NewOp, InstCombiner &IC) {
+                                             Value *NewOp, bool IsTrueArm,
+                                             InstCombiner &IC) {
   Instruction *Clone = I.clone();
   Clone->replaceUsesOfWith(SI, NewOp);
+  for (Use &U : Clone->operands())
+    if (Constant *C = getShiftedLsbValueForSelectArm(U, SI, IsTrueArm))
+      U.set(C);
   Clone->dropUBImplyingAttrsAndMetadata();
   IC.InsertNewInstBefore(Clone, I.getIterator());
   return Clone;
@@ -1831,9 +1865,11 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
 
   // Create an instruction for the arm that did not fold.
   if (!NewTV)
-    NewTV = foldOperationIntoSelectOperand(Op, SI, TV, *this);
+    NewTV =
+        foldOperationIntoSelectOperand(Op, SI, TV, /*IsTrueArm=*/true, *this);
   if (!NewFV)
-    NewFV = foldOperationIntoSelectOperand(Op, SI, FV, *this);
+    NewFV =
+        foldOperationIntoSelectOperand(Op, SI, FV, /*IsTrueArm=*/false, *this);
 
   SelectInst *NewSel = SelectInst::Create(SI->getCondition(), NewTV, NewFV);
 
@@ -2319,19 +2355,26 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
 }
 
 Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
-  auto TryFoldOperand = [&](unsigned OpIdx,
-                            bool IsOtherParamConst) -> Instruction * {
-    if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(OpIdx)))
-      return FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst);
-    if (auto *PN = dyn_cast<PHINode>(I.getOperand(OpIdx)))
+  auto TryFoldOperand = [&](Value *Op, Value *OtherOp) -> Instruction * {
+    if (auto *Sel = dyn_cast<SelectInst>(Op)) {
+      // A shifted LSB determined by the condition is constant on each select
+      // arm. If the shift has one use, folding makes it dead, so one-arm
+      // folding is profitable.
+      bool IsProfitableToFoldOneArm =
+          OtherOp->hasOneUse() &&
+          getShiftedLsbValueForSelectArm(OtherOp, Sel, /*IsTrueArm=*/true);
+      return FoldOpIntoSelect(I, Sel, /*FoldWithMultiUse=*/false,
+                              !isa<Constant>(OtherOp) &&
+                                  !IsProfitableToFoldOneArm);
+    }
+    if (auto *PN = dyn_cast<PHINode>(Op))
       return foldOpIntoPhi(I, PN);
     return nullptr;
   };
 
-  if (Instruction *NewI =
-          TryFoldOperand(/*OpIdx=*/0, isa<Constant>(I.getOperand(1))))
+  if (Instruction *NewI = TryFoldOperand(I.getOperand(0), I.getOperand(1)))
     return NewI;
-  return TryFoldOperand(/*OpIdx=*/1, isa<Constant>(I.getOperand(0)));
+  return TryFoldOperand(I.getOperand(1), I.getOperand(0));
 }
 
 static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
