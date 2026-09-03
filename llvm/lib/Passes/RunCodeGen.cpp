@@ -31,11 +31,12 @@ static cl::opt<cl::boolOrDefault>
                         "option will default to what the target prefers."),
                cl::init(cl::boolOrDefault::BOU_UNSET));
 
-static Error
-runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
-                         std::unique_ptr<ToolOutputFile> &DwoOS,
-                         CodeGenFileType CGFT, bool PrintPipelinePasses,
-                         bool DisableVerify) {
+static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
+                                      raw_pwrite_stream &OS,
+                                      std::unique_ptr<ToolOutputFile> &DwoOS,
+                                      CodeGenFileType CGFT,
+                                      bool PrintPipelinePasses,
+                                      bool DisableVerify) {
   legacy::PassManager CodeGenPasses;
   CodeGenPasses.add(
       createTargetTransformInfoWrapperPass(TM.getTargetIRAnalysis()));
@@ -56,11 +57,11 @@ runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
   return Error::success();
 }
 
-static Error
-runCodeGenPipelineNewPM(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
-                        std::unique_ptr<ToolOutputFile> &DwoOS,
-                        CodeGenFileType CGFT, bool DisableVerify,
-                        IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
+                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<ToolOutputFile> &DwoOS,
+                                     CodeGenFileType CGFT, bool DisableVerify,
+                                     IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   ModulePassManager MPM;
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
