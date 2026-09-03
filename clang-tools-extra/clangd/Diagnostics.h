@@ -154,15 +154,18 @@ public:
       DiagnosticsEngine::Level, const clang::Diagnostic &)>;
   using DiagCallback =
       std::function<void(const clang::Diagnostic &, clangd::Diag &)>;
+  using DiagFinalizer = std::function<void(Diag &)>;
   /// If set, possibly adds fixes for diagnostics using \p Fixer.
   void contributeFixes(DiagFixer Fixer) { this->Fixer = Fixer; }
   /// If set, this allows the client of this class to adjust the level of
   /// diagnostics, such as promoting warnings to errors, or ignoring
   /// diagnostics.
   void setLevelAdjuster(LevelAdjuster Adjuster) { this->Adjuster = Adjuster; }
-  /// Invokes a callback every time a diagnostics is completely formed. Handler
-  /// of the callback can also mutate the diagnostic.
+  /// Invokes a callback when a main diagnostic is first formed, before notes
+  /// and fixes are attached. The callback can mutate the diagnostic.
   void setDiagCallback(DiagCallback CB) { DiagCB = std::move(CB); }
+  /// Invokes a callback after notes and fixes have been attached.
+  void setDiagFinalizer(DiagFinalizer F) { Finalizer = std::move(F); }
 
 private:
   void flushLastDiag();
@@ -170,6 +173,7 @@ private:
   DiagFixer Fixer = nullptr;
   LevelAdjuster Adjuster = nullptr;
   DiagCallback DiagCB = nullptr;
+  DiagFinalizer Finalizer = nullptr;
   std::vector<Diag> Output;
   std::optional<LangOptions> LangOpts;
   std::optional<Diag> LastDiag;

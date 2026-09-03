@@ -108,15 +108,30 @@ public:
     /// Listeners are destroyed once the AST is built.
     virtual ~ASTListener() = default;
 
+    /// Called before every AST build, after the Preprocessor and ASTConsumer
+    /// are set up, but before clangd installs its include and macro collectors.
+    /// Modules should only use this when their PPCallbacks must observe
+    /// preamble events replayed during a main-file build.
+    virtual void beforePPCallbacks(CompilerInstance &CI) {}
+
     /// Called before every AST build, both for main file and preamble. The call
     /// happens immediately before FrontendAction::Execute(), with Preprocessor
     /// set up already and after BeginSourceFile() on main file was called.
     virtual void beforeExecute(CompilerInstance &CI) {}
 
+    /// Called after FrontendAction::Execute() for a main-file build, once
+    /// clangd has collected tokens and restricted the AST traversal scope.
+    /// The preprocessor has not received EndSourceFile() yet.
+    virtual void afterExecute(CompilerInstance &CI) {}
+
     /// Called everytime a diagnostic is encountered. Modules can use this
     /// modify the final diagnostic, or store some information to surface code
     /// actions later on.
     virtual void sawDiagnostic(const clang::Diagnostic &, clangd::Diag &) {}
+
+    /// Called after a diagnostic is fully assembled, including notes and
+    /// fixes, and before it is returned to the caller.
+    virtual void finalizeDiagnostic(clangd::Diag &) {}
   };
   /// Can be called asynchronously before building an AST.
   virtual std::unique_ptr<ASTListener> astListeners() { return nullptr; }

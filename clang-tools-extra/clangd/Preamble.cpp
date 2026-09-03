@@ -90,9 +90,11 @@ class CppFilePreambleCallbacks : public PreambleCallbacks {
 public:
   CppFilePreambleCallbacks(
       PathRef File, PreambleBuildStats *Stats, bool ParseForwardingFunctions,
+      std::function<void(CompilerInstance &)> BeforePPCallbacks,
       std::function<void(CompilerInstance &)> BeforeExecuteCallback)
       : File(File), Stats(Stats),
         ParseForwardingFunctions(ParseForwardingFunctions),
+        BeforePPCallbacks(std::move(BeforePPCallbacks)),
         BeforeExecuteCallback(std::move(BeforeExecuteCallback)) {}
 
   IncludeStructure takeIncludes() { return std::move(Includes); }
@@ -152,6 +154,8 @@ public:
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
     PP = &CI.getPreprocessor();
+    if (BeforePPCallbacks)
+      BeforePPCallbacks(CI);
     Includes.collect(CI);
     Pragmas.record(CI);
     if (BeforeExecuteCallback)
@@ -204,6 +208,7 @@ private:
   const Preprocessor *PP = nullptr;
   PreambleBuildStats *Stats;
   bool ParseForwardingFunctions;
+  std::function<void(CompilerInstance &)> BeforePPCallbacks;
   std::function<void(CompilerInstance &)> BeforeExecuteCallback;
   std::optional<CapturedASTCtx> CapturedCtx;
 };
@@ -596,6 +601,10 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
         for (const auto &L : ASTListeners)
           L->sawDiagnostic(D, Diag);
       });
+  PreambleDiagnostics.setDiagFinalizer([&ASTListeners](clangd::Diag &Diag) {
+    for (const auto &L : ASTListeners)
+      L->finalizeDiagnostic(Diag);
+  });
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
       CompilerInstance::createDiagnostics(*VFS, CI.getDiagnosticOpts(),
@@ -624,6 +633,10 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
   CppFilePreambleCallbacks CapturedInfo(
       FileName, Stats, Inputs.Opts.PreambleParseForwardingFunctions,
+      [&ASTListeners](CompilerInstance &CI) {
+        for (const auto &L : ASTListeners)
+          L->beforePPCallbacks(CI);
+      },
       [&ASTListeners](CompilerInstance &CI) {
         for (const auto &L : ASTListeners)
           L->beforeExecute(CI);
