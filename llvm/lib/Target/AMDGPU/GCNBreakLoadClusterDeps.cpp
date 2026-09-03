@@ -275,11 +275,13 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   LRU.addLiveOuts(MBB);
   for (MachineBasicBlock::reverse_iterator LiveRIt = MBB.rbegin();
        &*LiveRIt != &*KillerIns; ++LiveRIt)
-    LRU.stepBackward(*LiveRIt);
+    if (!LiveRIt->isDebugInstr()) // debug instructions must not affect liveness
+      LRU.stepBackward(*LiveRIt);
   for (MachineBasicBlock::reverse_iterator AccumIt =
            KillerIns->getReverseIterator();
        &*AccumIt != DefToRename; ++AccumIt)
-    LRU.accumulate(*AccumIt);
+    if (!AccumIt->isDebugInstr())
+      LRU.accumulate(*AccumIt);
 
   // Iterate over registers in physical register class
   const TargetRegisterClass &DefinedRegClass =
