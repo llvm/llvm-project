@@ -33,6 +33,7 @@
 ; CHECK-EP: Running pass: NoOpModulePass
 ; CHECK-O: Running pass: CrossDSOCFIPass
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
+; CHECK-O-NEXT: Running pass: ObjCConstantIvarOffsetPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}Module
