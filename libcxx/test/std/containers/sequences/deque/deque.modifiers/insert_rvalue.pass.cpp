@@ -107,7 +107,7 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 
 TEST_CONSTEXPR_CXX26 bool test_constexpr() {
   std::deque<int> d = {1, 3};
-  auto it           = d.insert(d.begin() + 1, 2); 
+  auto it           = d.insert(d.begin() + 1, 2);
   assert(*it == 2);
   assert((d == std::deque<int>{1, 2, 3}));
   return true;
