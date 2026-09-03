@@ -24,11 +24,11 @@
 // and backported to 3.8 point release (don't know the exact version).
 // TODO: remove LLDB_USE_LIBEDIT_READLINE_COMPACT_MODULE when
 // LLDB_MINIMUM_PYTHON_VERSION is greater than 3.8.
-#if PY_VERSION_HEX < 0x03090000
+#if PY_VERSION_HEX < 0x03090000 || LLDB_ENABLE_PYTHON_LIMITED_API
 #define LLDB_USE_LIBEDIT_READLINE_COMPAT_MODULE 1
 
 PyMODINIT_FUNC initlldb_readline(void);
-#endif // PY_VERSION_HEX < 0x03090000
+#endif // PY_VERSION_HEX < 0x03090000 || LLDB_ENABLE_PYTHON_LIMITED_API
 
 #endif
 
