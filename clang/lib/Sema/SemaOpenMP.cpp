@@ -26607,6 +26607,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPXBareClause(SourceLocation StartLoc,
 OMPClause *SemaOpenMP::ActOnOpenMPHoldsClause(Expr *E, SourceLocation StartLoc,
                                               SourceLocation LParenLoc,
                                               SourceLocation EndLoc) {
+  if (E->HasSideEffects(getASTContext()))
+    Diag(E->getBeginLoc(), diag::warn_assume_side_effects)
+        << "holds" << E->getSourceRange();
   return new (getASTContext()) OMPHoldsClause(E, StartLoc, LParenLoc, EndLoc);
 }
 

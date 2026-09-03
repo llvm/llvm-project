@@ -9,23 +9,34 @@
 #include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/CGPassBuilderOption.h"
 
 using namespace llvm;
 
-static cl::opt<cl::boolOrDefault> ForceNewPM(
-    "force-new-pm-codegen",
-    cl::desc("Whether to force the NewPM on/off. Not setting the option "),
-    cl::init(cl::boolOrDefault::BOU_UNSET));
+static cl::opt<cl::boolOrDefault>
+    ForceNewPM("force-new-pm-codegen",
+               cl::desc("Whether to force the NewPM on/off. Not setting the "
+                        "option will default to what the target prefers."),
+               cl::init(cl::boolOrDefault::BOU_UNSET));
 
-static Error
-runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
-                         std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
-                         CodeGenFileType CGFT, bool PrintPipelinePasses,
-                         bool DisableVerify) {
+static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
+                                      raw_pwrite_stream &OS,
+                                      std::unique_ptr<ToolOutputFile> &DwoOS,
+                                      CodeGenFileType CGFT,
+                                      bool PrintPipelinePasses,
+                                      bool DisableVerify) {
   legacy::PassManager CodeGenPasses;
   CodeGenPasses.add(
       createTargetTransformInfoWrapperPass(TM.getTargetIRAnalysis()));
@@ -46,11 +57,11 @@ runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
   return Error::success();
 }
 
-static Error
-runCodeGenPipelineNewPM(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
-                        std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
-                        CodeGenFileType CGFT, bool DisableVerify,
-                        IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
+                                     raw_pwrite_stream &OS,
+                                     std::unique_ptr<ToolOutputFile> &DwoOS,
+                                     CodeGenFileType CGFT, bool DisableVerify,
+                                     IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   ModulePassManager MPM;
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
