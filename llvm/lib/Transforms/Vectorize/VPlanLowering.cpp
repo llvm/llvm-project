@@ -142,7 +142,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 //   branch-on-cond %Negated
 //
 static VPActiveLaneMaskPHIRecipe *
-addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
+addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan, bool IVUpdateMayOverflow) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   VPValue *StartV = Plan.getZero(TopRegion->getCanonicalIVType());
@@ -171,12 +171,19 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   auto *HeaderVPBB = TopRegion->getEntryBasicBlock();
   LaneMaskPhi->insertBefore(*HeaderVPBB, HeaderVPBB->begin());
 
+  VPValue *IncrementValue = CanonicalIVIncrement;
+  if (IVUpdateMayOverflow) {
+    IncrementValue = TopRegion->getCanonicalIV();
+    TC = Builder.createNaryOp(VPInstruction::CalculateTripCountMinusVF,
+                              {TC, &Plan.getVFxUF()}, DL);
+  }
+
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
   VPRecipeBase *OriginalTerminator = EB->getTerminator();
   Builder.setInsertPoint(OriginalTerminator);
   auto *ALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
-                                   {CanonicalIVIncrement, TC, ALMMultiplier},
+                                   {IncrementValue, TC, ALMMultiplier},
                                    DL, "active.lane.mask.next");
   ALM = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
                              {ALM, Plan.getConstantInt(64, 0)}, DL,
@@ -192,14 +199,15 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
 }
 
 void VPlanTransforms::materializeHeaderMask(
-    VPlan &Plan, bool UseActiveLaneMask, bool UseActiveLaneMaskForControlFlow) {
+    VPlan &Plan, bool UseActiveLaneMask, bool UseActiveLaneMaskForControlFlow,
+    bool IVUpdateMayOverflow) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPValue *HeaderMask = LoopRegion->getUsedHeaderMask();
   if (!HeaderMask)
     return;
 
   if (UseActiveLaneMaskForControlFlow) {
-    HeaderMask->replaceAllUsesWith(addVPLaneMaskPhiAndUpdateExitBranch(Plan));
+    HeaderMask->replaceAllUsesWith(addVPLaneMaskPhiAndUpdateExitBranch(Plan, IVUpdateMayOverflow));
     return;
   }
 
