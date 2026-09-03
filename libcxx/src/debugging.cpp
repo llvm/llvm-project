@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/overridable_function.h"
-
 #include <__assert>
 #include <__config>
 #include <csignal>
@@ -51,8 +49,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-// `breakpoint()` implementation
-
 void __breakpoint() noexcept {
 #if defined(_WIN32)
   DebugBreak();
@@ -61,9 +57,7 @@ void __breakpoint() noexcept {
 #endif // defined(_WIN32)
 }
 
-// `is_debugger_present()` implementation
-
-OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
+[[__gnu__::__weak__]] bool is_debugger_present() noexcept {
 #if defined(_WIN32)
 
   return IsDebuggerPresent();
@@ -98,10 +92,6 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
   return false;
 
 #elif defined(__APPLE__) || defined(__FreeBSD__)
-
-  // Returns true if the current process is being debugged (either
-  // running under the debugger or has a debugger attached post facto).
-
   // Technical Q&A QA1361: Detecting the Debugger
   // https://developer.apple.com/library/archive/qa/qa1361/_index.html
 
@@ -123,7 +113,7 @@ OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
     return false;
   }
 
-  // If the process is being debugged if the 'P_TRACED' flag is set.
+  // The process is being debugged if the 'P_TRACED' flag is set.
   // https://github.com/freebsd/freebsd-src/blob/7f3184ba797452703904d33377dada5f0f8eae96/sys/sys/proc.h#L822
 
 #  if defined(__FreeBSD__)
