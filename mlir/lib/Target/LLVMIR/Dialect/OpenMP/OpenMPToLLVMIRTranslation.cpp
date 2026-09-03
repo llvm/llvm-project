@@ -5703,10 +5703,18 @@ static llvm::AtomicRMWInst::BinOp convertBinOpToAtomic(Operation &op) {
       .Case([&](LLVM::AndOp) { return llvm::AtomicRMWInst::BinOp::And; })
       .Case([&](LLVM::OrOp) { return llvm::AtomicRMWInst::BinOp::Or; })
       .Case([&](LLVM::XOrOp) { return llvm::AtomicRMWInst::BinOp::Xor; })
+      .Case([&](LLVM::SMaxOp) { return llvm::AtomicRMWInst::BinOp::Max; })
+      .Case([&](LLVM::SMinOp) { return llvm::AtomicRMWInst::BinOp::Min; })
       .Case([&](LLVM::UMaxOp) { return llvm::AtomicRMWInst::BinOp::UMax; })
       .Case([&](LLVM::UMinOp) { return llvm::AtomicRMWInst::BinOp::UMin; })
       .Case([&](LLVM::FAddOp) { return llvm::AtomicRMWInst::BinOp::FAdd; })
       .Case([&](LLVM::FSubOp) { return llvm::AtomicRMWInst::BinOp::FSub; })
+      .Case([&](LLVM::MaxNumOp) { return llvm::AtomicRMWInst::BinOp::FMax; })
+      .Case([&](LLVM::MinNumOp) { return llvm::AtomicRMWInst::BinOp::FMin; })
+      .Case(
+          [&](LLVM::MaximumOp) { return llvm::AtomicRMWInst::BinOp::FMaximum; })
+      .Case(
+          [&](LLVM::MinimumOp) { return llvm::AtomicRMWInst::BinOp::FMinimum; })
       .Default(llvm::AtomicRMWInst::BinOp::BAD_BINOP);
 }
 
