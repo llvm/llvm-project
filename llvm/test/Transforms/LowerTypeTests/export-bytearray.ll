@@ -1,13 +1,10 @@
-; RUN: rm -rf %t && split-file %s %t
 ; RUN: opt -mtriple=x86_64-unknown-linux -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%t/summary.ll -lowertypetests-write-summary=%t/out.summary %t/main.ll | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t/out.summary %s | FileCheck --check-prefixes=CHECK,X86 %s
 ; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86 %s < %t/out.summary
 
 ; RUN: opt -mtriple=aarch64-unknown-linux -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%t/summary.ll -lowertypetests-write-summary=%t/out.summary %t/main.ll | FileCheck --check-prefixes=CHECK,ARM %s
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t/out.summary %s | FileCheck --check-prefixes=CHECK,ARM %s
 ; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-ARM %s < %t/out.summary
-
-;--- main.ll
 
 @foo = constant [2048 x i8] zeroinitializer, !type !0, !type !1, !type !2, !type !3
 
@@ -65,6 +62,5 @@
 ; SUMMARY-ARM-NEXT:   InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
 
-;--- summary.ll
 ^0 = module: (path: "use.o", hash: (0, 0, 0, 0, 0))
 ^1 = gv: (guid: 42, summaries: (function: (module: ^0, flags: (live: 1), insts: 1, typeIdInfo: (typeTests: (14276520915468743435, 15427464259790519041)))))
