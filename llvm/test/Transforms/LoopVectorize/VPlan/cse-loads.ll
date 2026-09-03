@@ -541,12 +541,12 @@ define void @no_cse_across_noalias_store(ptr %a, ptr %b) {
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<%index>
-; CHECK-NEXT:    WIDEN ir<%x> = load ir<%gep.a> (!alias.scope !13, !noalias !16)
+; CHECK-NEXT:    WIDEN ir<%x> = load ir<%gep.a> (!alias.scope ![[SCOPE:[0-9]+]], !noalias ![[NOALIAS:[0-9]+]])
 ; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
-; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%x> (!alias.scope !16, !noalias !13)
-; CHECK-NEXT:    WIDEN ir<%y> = load ir<%gep.a> (!alias.scope !13, !noalias !16)
+; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%x> (!alias.scope ![[NOALIAS]], !noalias ![[SCOPE]])
+; CHECK-NEXT:    WIDEN ir<%y> = load ir<%gep.a> (!alias.scope ![[SCOPE]], !noalias ![[NOALIAS]])
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%x>, ir<%y>
-; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%sum> (!alias.scope !16, !noalias !13)
+; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%sum> (!alias.scope ![[NOALIAS]], !noalias ![[SCOPE]])
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
 ; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = icmp eq vp<%index.next>, ir<1024>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP1]]>
@@ -588,10 +588,10 @@ define void @no_cse_across_store_without_scopes(ptr noalias %a, ptr noalias %b) 
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<%index>
-; CHECK-NEXT:    WIDEN ir<%x> = load ir<%gep.a> (!alias.scope !13, !noalias !16)
+; CHECK-NEXT:    WIDEN ir<%x> = load ir<%gep.a> (!alias.scope ![[SCOPE2:[0-9]+]], !noalias ![[NOALIAS2:[0-9]+]])
 ; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%x>
-; CHECK-NEXT:    WIDEN ir<%y> = load ir<%gep.a> (!alias.scope !13, !noalias !16)
+; CHECK-NEXT:    WIDEN ir<%y> = load ir<%gep.a> (!alias.scope ![[SCOPE2]], !noalias ![[NOALIAS2]])
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%x>, ir<%y>
 ; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%sum>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
