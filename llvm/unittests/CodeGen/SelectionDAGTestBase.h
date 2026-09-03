@@ -62,17 +62,17 @@ protected:
     AliasedG = M->getNamedAlias("g_alias");
     ASSERT_TRUE(AliasedG && "Could not get alias g_alias!");
 
-    MachineModuleInfo MMI(TM.get());
+    MMI = std::make_unique<MachineModuleInfo>(TM.get());
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           MMI.getContext(), 0);
+                                           MMI->getContext(), 0);
 
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)
       reportFatalUsageError("Failed to create SelectionDAG?");
     OptimizationRemarkEmitter ORE(F);
     DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-              MMI, nullptr);
+              *MMI, nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
@@ -85,6 +85,7 @@ protected:
 
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
+  std::unique_ptr<MachineModuleInfo> MMI;
   std::unique_ptr<Module> M;
   Function *F;
   GlobalVariable *G;
