@@ -126,7 +126,7 @@ public:
   unsigned getNumVirtualBases() const { return VirtualBases.size(); }
   const Base *getVirtualBase(unsigned I) const { return &VirtualBases[I]; }
   /// Returns a virtual base descriptor.
-  const Base *getVirtualBase(const RecordDecl *RD) const;
+  const Base *findVirtualBase(const RecordDecl *RD) const;
 
   void dump(llvm::raw_ostream &OS, unsigned Indentation = 0,
             unsigned Offset = 0) const;
@@ -152,8 +152,6 @@ private:
 
   /// Mapping from declarations to bases.
   llvm::DenseMap<const RecordDecl *, const Base *> BaseMap;
-  /// Mapping from declarations to virtual bases.
-  llvm::DenseMap<const RecordDecl *, Base *> VirtualBaseMap;
   /// Size of the structure.
   unsigned BaseSize;
   /// Size of all virtual bases.
