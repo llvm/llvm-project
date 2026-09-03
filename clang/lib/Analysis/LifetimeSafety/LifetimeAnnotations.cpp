@@ -136,30 +136,26 @@ getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
       Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
     if (I == 0) {
       // For the 'this' argument, the attribute is on the method itself.
-      if (const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(Method))
-        return LifetimeBoundParamInfo{Method,
-                                      /*IsInferred=*/Attr->isImplicit()};
-      if (isNormalAssignmentOperator(Method) ||
+      if (implicitObjectParamIsLifetimeBound(Method) ||
           shouldTrackImplicitObjectArg(*Args[0], Method,
                                        /*RunningUnderLifetimeSafety=*/true))
-        return LifetimeBoundParamInfo{Method, /*IsInferred=*/true};
+        return LifetimeBoundParamInfo(Method);
       return std::nullopt;
     }
     if ((I - 1) < Method->getNumParams())
       // For explicit arguments, find the corresponding parameter declaration.
       PVD = Method->getParamDecl(I - 1);
   } else if (I == 0 && shouldTrackFirstArgument(FD)) {
-    return LifetimeBoundParamInfo{FD->getParamDecl(I), /*IsInferred=*/true};
+    return LifetimeBoundParamInfo(FD->getParamDecl(I));
   } else if (I == 1 && shouldTrackSecondArgument(FD)) {
-    return LifetimeBoundParamInfo{FD->getParamDecl(I), /*IsInferred=*/true};
+    return LifetimeBoundParamInfo(FD->getParamDecl(I));
   } else if (I < FD->getNumParams()) {
     // For free functions or static methods.
     PVD = FD->getParamDecl(I);
   }
 
-  if (PVD)
-    if (const auto *Attr = PVD->getAttr<clang::LifetimeBoundAttr>())
-      return LifetimeBoundParamInfo{PVD, /*IsInferred=*/Attr->isImplicit()};
+  if (PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
+    return LifetimeBoundParamInfo(PVD);
 
   return std::nullopt;
 }

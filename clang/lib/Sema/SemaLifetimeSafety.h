@@ -694,20 +694,24 @@ private:
           getTrackingInfoForCallArg(CurrExpr, LastExpr);
       LastExpr = CurrExpr;
       if (ParamInfo) {
-        LifetimeBoundParam Param = ParamInfo->Param;
-        bool IsImplicitObject = isa<const CXXMethodDecl *>(Param);
+        bool IsImplicitObject = isa<const CXXMethodDecl *>(*ParamInfo);
+        bool IsInferred = true;
         std::string ParamName;
         if (!IsImplicitObject) {
-          const auto *ParamDecl = cast<const ParmVarDecl *>(Param);
-          ParamName = ParamDecl->getIdentifier()
-                          ? "'" + ParamDecl->getNameAsString() + "'"
+          const auto *Param = cast<const ParmVarDecl *>(*ParamInfo);
+          if (const auto *Attr = Param->getAttr<LifetimeBoundAttr>())
+            IsInferred = Attr->isImplicit();
+          ParamName = Param->getIdentifier()
+                          ? "'" + Param->getNameAsString() + "'"
                           : "'<unnamed>'";
+        } else if (const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(
+                       cast<const CXXMethodDecl *>(*ParamInfo))) {
+          IsInferred = Attr->isImplicit();
         }
         S.Diag(CurrExpr->getBeginLoc(),
                diag::note_lifetime_safety_aliases_storage_lifetimebound)
             << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
-            << IssueStr << IsImplicitObject << ParamName
-            << ParamInfo->IsInferred;
+            << IssueStr << IsImplicitObject << ParamName << IsInferred;
       } else
         S.Diag(CurrExpr->getBeginLoc(),
                diag::note_lifetime_safety_aliases_storage)

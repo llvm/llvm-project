@@ -63,14 +63,8 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 
-using LifetimeBoundParam =
+using LifetimeBoundParamInfo =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
-
-/// Describes why a parameter is tracked as lifetimebound-like.
-struct LifetimeBoundParamInfo {
-  LifetimeBoundParam Param;
-  bool IsInferred = false;
-};
 
 /// Stores the callee and normalized arguments for a function call.
 struct FunctionCallInfo {
