@@ -1086,6 +1086,11 @@ extern omp_allocator_handle_t const llvm_omp_target_device_mem_alloc;
 extern omp_allocator_handle_t const kmp_max_mem_alloc;
 extern omp_allocator_handle_t __kmp_def_allocator;
 
+typedef enum omp_access_t {
+  omp_access_cgroup = 0,
+  omp_access_pteam = 1
+} omp_access_t;
+
 // end of duplicate type definitions from omp.h
 #endif
 
