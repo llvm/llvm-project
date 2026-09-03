@@ -112,21 +112,25 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
-  if (Tok.is(tok::annot_cxxscope)) {
-    assert(!LastII && "want last identifier but have already annotated scope");
-    assert(!MayBePseudoDestructor && "unexpected annot_cxxscope");
-    Actions.RestoreNestedNameSpecifierAnnotation(Tok.getAnnotationValue(),
-                                                 Tok.getAnnotationRange(),
-                                                 SS);
-    ConsumeAnnotationToken();
-    return false;
-  }
-
   // Has to happen before any "return false"s in this function.
   bool CheckForDestructor = false;
   if (MayBePseudoDestructor && *MayBePseudoDestructor) {
     CheckForDestructor = true;
     *MayBePseudoDestructor = false;
+  }
+
+  if (Tok.is(tok::annot_cxxscope)) {
+    assert(!LastII && "want last identifier but have already annotated scope");
+    if (CheckForDestructor && Tok.is(tok::tilde)) {
+      *MayBePseudoDestructor = true;
+      return false;
+    }
+
+    Actions.RestoreNestedNameSpecifierAnnotation(Tok.getAnnotationValue(),
+                                                 Tok.getAnnotationRange(),
+                                                 SS);
+    ConsumeAnnotationToken();
+    return false;
   }
 
   if (LastII)
