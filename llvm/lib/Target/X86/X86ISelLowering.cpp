@@ -51435,12 +51435,15 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   if (!UseExactFPDiv && (!Subtarget.hasDQI() || !Subtarget.useAVX512Regs()))
     return SDValue();
 
-  // Widen a non-power-of-two lane count to get a machine type, but only
-  // while it still fits one divide. Two chains lose to a chain plus a scalar.
+  // Widen a non-power-of-two lane count to get a machine type, but only while
+  // the divide and, for strict FP16, the result conversion fit in one zmm.
   unsigned NumElts = VT.getVectorNumElements();
   bool Needs512 = IsStrict || !UseExactFPDiv;
   if (Needs512 && !isPowerOf2_32(NumElts)) {
-    if (NextPowerOf2(NumElts) * FPSclVT.getSizeInBits() > 512)
+    unsigned MaxWidenedElts = 512 / FPSclVT.getSizeInBits();
+    if (IsStrict && FPSclVT == MVT::f16 && EltBits <= 16)
+      MaxWidenedElts = std::min(MaxWidenedElts, 512 / 16);
+    if (NextPowerOf2(NumElts) > MaxWidenedElts)
       return SDValue();
     Dividend = DAG.WidenVector(Dividend, DL);
     Divisor = DAG.WidenVector(Divisor, DL);

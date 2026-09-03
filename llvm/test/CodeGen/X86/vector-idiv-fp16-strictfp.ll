@@ -236,3 +236,89 @@ define <16 x i32> @sdiv_v16i32_narrow_strictfp(<16 x i32> %a, <16 x i32> %b) nou
   %q = sdiv <16 x i32> %aa, %bb
   ret <16 x i32> %q
 }
+
+define void @udiv_v15i8_strictfp(<15 x i8> %a, <15 x i8> %b, ptr %p) nounwind strictfp {
+; FAST-LABEL: udiv_v15i8_strictfp:
+; FAST:       # %bb.0:
+; FAST-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; FAST-NEXT:    vcvtw2ph %ymm1, %ymm1
+; FAST-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; FAST-NEXT:    vcvtw2ph %ymm0, %ymm0
+; FAST-NEXT:    vdivph {rn-sae}, %zmm1, %zmm0, %zmm0
+; FAST-NEXT:    vcvttph2uw {sae}, %zmm0, %zmm0
+; FAST-NEXT:    vpmovwb %ymm0, %xmm0
+; FAST-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
+; FAST-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
+; FAST-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
+; FAST-NEXT:    vmovq %xmm0, (%rdi)
+; FAST-NEXT:    vzeroupper
+; FAST-NEXT:    retq
+;
+; NOFAST-LABEL: udiv_v15i8_strictfp:
+; NOFAST:       # %bb.0:
+; NOFAST-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; NOFAST-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; NOFAST-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; NOFAST-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; NOFAST-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm0
+; NOFAST-NEXT:    vcvttps2udq {sae}, %zmm0, %zmm0
+; NOFAST-NEXT:    vpmovdb %zmm0, %xmm0
+; NOFAST-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
+; NOFAST-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
+; NOFAST-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
+; NOFAST-NEXT:    vmovq %xmm0, (%rdi)
+; NOFAST-NEXT:    vzeroupper
+; NOFAST-NEXT:    retq
+  %q = udiv <15 x i8> %a, %b
+  store <15 x i8> %q, ptr %p
+  ret void
+}
+
+define void @sdiv_v17i32_narrow_strictfp(ptr %ap, ptr %bp, ptr %p) nounwind strictfp {
+; FAST-LABEL: sdiv_v17i32_narrow_strictfp:
+; FAST:       # %bb.0:
+; FAST-NEXT:    movq %rdx, %rcx
+; FAST-NEXT:    movl 64(%rdi), %eax
+; FAST-NEXT:    movl 64(%rsi), %r8d
+; FAST-NEXT:    vpsrad $22, (%rdi), %zmm0
+; FAST-NEXT:    vpsrad $22, (%rsi), %zmm1
+; FAST-NEXT:    vcvtdq2ph %zmm1, %ymm1
+; FAST-NEXT:    vcvtdq2ph %zmm0, %ymm0
+; FAST-NEXT:    vdivph {rn-sae}, %zmm1, %zmm0, %zmm0
+; FAST-NEXT:    vcvttph2dq {sae}, %ymm0, %zmm0
+; FAST-NEXT:    sarl $22, %eax
+; FAST-NEXT:    sarl $22, %r8d
+; FAST-NEXT:    cltd
+; FAST-NEXT:    idivl %r8d
+; FAST-NEXT:    movl %eax, 64(%rcx)
+; FAST-NEXT:    vmovaps %zmm0, (%rcx)
+; FAST-NEXT:    vzeroupper
+; FAST-NEXT:    retq
+;
+; NOFAST-LABEL: sdiv_v17i32_narrow_strictfp:
+; NOFAST:       # %bb.0:
+; NOFAST-NEXT:    movq %rdx, %rcx
+; NOFAST-NEXT:    movl 64(%rdi), %eax
+; NOFAST-NEXT:    movl 64(%rsi), %r8d
+; NOFAST-NEXT:    vpsrad $22, (%rdi), %zmm0
+; NOFAST-NEXT:    vpsrad $22, (%rsi), %zmm1
+; NOFAST-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; NOFAST-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; NOFAST-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm0
+; NOFAST-NEXT:    vcvttps2dq {sae}, %zmm0, %zmm0
+; NOFAST-NEXT:    sarl $22, %eax
+; NOFAST-NEXT:    sarl $22, %r8d
+; NOFAST-NEXT:    cltd
+; NOFAST-NEXT:    idivl %r8d
+; NOFAST-NEXT:    movl %eax, 64(%rcx)
+; NOFAST-NEXT:    vmovaps %zmm0, (%rcx)
+; NOFAST-NEXT:    vzeroupper
+; NOFAST-NEXT:    retq
+  %a = load <17 x i32>, ptr %ap
+  %b = load <17 x i32>, ptr %bp
+  %aa = ashr <17 x i32> %a, splat (i32 22)
+  %bb = ashr <17 x i32> %b, splat (i32 22)
+  %q = sdiv <17 x i32> %aa, %bb
+  store <17 x i32> %q, ptr %p
+  ret void
+}
