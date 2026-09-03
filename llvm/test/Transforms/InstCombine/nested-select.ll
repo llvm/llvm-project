@@ -33,11 +33,8 @@ define i8 @orcond(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval, i8 %inner
 
 define i8 @correlated_poison_blocking_conditions(i1 %a, i1 %b, i8 %t, i8 %f, i8 %x) {
 ; CHECK-LABEL: @correlated_poison_blocking_conditions(
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[A1:%.*]], i1 [[B1:%.*]], i1 false
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A1]], true
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B1]]
-; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B]], i8 [[T:%.*]], i8 [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[A]], i8 [[MUX]], i8 [[F:%.*]]
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B:%.*]], i8 [[T:%.*]], i8 [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[A:%.*]], i8 [[MUX]], i8 [[F:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %and = select i1 %a, i1 %b, i1 false
@@ -52,11 +49,8 @@ define i8 @correlated_poison_blocking_conditions(i1 %a, i1 %b, i8 %t, i8 %f, i8 
 
 define i8 @correlated_poison_blocking_conditions_noncanonical_guard(i1 %a, i1 %b, i8 %t, i8 %f, i8 %x) {
 ; CHECK-LABEL: @correlated_poison_blocking_conditions_noncanonical_guard(
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[A1:%.*]], i1 [[B1:%.*]], i1 false
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A1]], true
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B1]]
-; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B]], i8 [[T:%.*]], i8 [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[A]], i8 [[MUX]], i8 [[F:%.*]]
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B:%.*]], i8 [[T:%.*]], i8 [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[A:%.*]], i8 [[MUX]], i8 [[F:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %and = select i1 %a, i1 %b, i1 false
@@ -68,11 +62,8 @@ define i8 @correlated_poison_blocking_conditions_noncanonical_guard(i1 %a, i1 %b
 
 define <2 x i8> @correlated_poison_blocking_conditions_vec(<2 x i1> %a, <2 x i1> %b, <2 x i8> %t, <2 x i8> %f, <2 x i8> %x) {
 ; CHECK-LABEL: @correlated_poison_blocking_conditions_vec(
-; CHECK-NEXT:    [[B:%.*]] = select <2 x i1> [[A1:%.*]], <2 x i1> [[B1:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A1]], splat (i1 true)
-; CHECK-NEXT:    [[A:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> splat (i1 true), <2 x i1> [[B1]]
-; CHECK-NEXT:    [[MUX:%.*]] = select <2 x i1> [[B]], <2 x i8> [[T:%.*]], <2 x i8> [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[A]], <2 x i8> [[MUX]], <2 x i8> [[F:%.*]]
+; CHECK-NEXT:    [[MUX:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> [[T:%.*]], <2 x i8> [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[A:%.*]], <2 x i8> [[MUX]], <2 x i8> [[F:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %and = select <2 x i1> %a, <2 x i1> %b, <2 x i1> zeroinitializer
@@ -89,11 +80,10 @@ define <2 x i8> @correlated_poison_blocking_conditions_vec(<2 x i1> %a, <2 x i1>
 define i8 @correlated_poison_blocking_conditions_mux_multiuse(i1 %a, i1 %b, i8 %t, i8 %f, i8 %x) {
 ; CHECK-LABEL: @correlated_poison_blocking_conditions_mux_multiuse(
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A]], true
-; CHECK-NEXT:    [[GUARD:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B]]
 ; CHECK-NEXT:    [[OLD_MUX:%.*]] = select i1 [[AND]], i8 [[T:%.*]], i8 [[F:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[OLD_MUX]])
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[GUARD]], i8 [[OLD_MUX]], i8 [[X:%.*]]
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B]], i8 [[T]], i8 [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[A]], i8 [[MUX]], i8 [[F]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %and = select i1 %a, i1 %b, i1 false
@@ -235,11 +225,8 @@ define <2 x i8> @correlated_conditions_poison_in_not(<2 x i1> %a, <2 x i1> %b, <
 
 define float @correlated_poison_blocking_conditions_fmf(i1 %a, i1 %b, float %t, float %f, float %x) {
 ; CHECK-LABEL: @correlated_poison_blocking_conditions_fmf(
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A1:%.*]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A1]], true
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B]]
-; CHECK-NEXT:    [[MUX:%.*]] = select ninf i1 [[AND]], float [[T:%.*]], float [[F1:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = select nnan i1 [[A]], float [[MUX]], float [[F:%.*]]
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B:%.*]], float [[T:%.*]], float [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select nnan i1 [[A:%.*]], float [[MUX]], float [[F:%.*]]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %and = select i1 %a, i1 %b, i1 false

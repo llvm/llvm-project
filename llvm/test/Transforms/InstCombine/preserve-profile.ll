@@ -86,11 +86,8 @@ define i32 @add_zext_zext_i1(i1 %a) !prof !0 {
 define i32 @correlated_poison_blocking_selects(i1 %a, i1 %b, i32 %t, i32 %f, i32 %x) !prof !0 {
 ; CHECK-LABEL: define i32 @correlated_poison_blocking_selects(
 ; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]], i32 [[T:%.*]], i32 [[F:%.*]], i32 [[X:%.*]]) !prof [[PROF0]] {
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A]], i1 [[B]], i1 false
-; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A]], true
-; CHECK-NEXT:    [[GUARD:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B]]
-; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[AND]], i32 [[T]], i32 [[F]], !prof [[PROF1]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[GUARD]], i32 [[MUX]], i32 [[X]], !prof [[PROF1]]
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B]], i32 [[T]], i32 [[X]], !prof [[PROF2]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[A]], i32 [[MUX]], i32 [[F]], !prof [[PROF2]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = select i1 %a, i1 %b, i1 false
