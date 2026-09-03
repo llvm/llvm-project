@@ -92,6 +92,11 @@ def CIR_CUDAVarRegistrationInfoAttr : CIR_Attr<"CUDAVarRegistrationInfo", "cu.va
     "bool":$isManaged
   );
 
+  // Not expressible as a declarative assemblyFormat. The three flags print as
+  // presence-only keywords and parse in any order, whereas an optional group
+  // anchored on a `bool` parameter parses and prints a value, so `extern`
+  // would have to spell `extern true`. struct(params) round-trips but costs
+  // the compact syntax.
   let hasCustomAssemblyFormat = 1;
 }
 
