@@ -532,6 +532,9 @@ include(HandleLibcxxFlags)
 
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
+  # Required for __ext_vector_type__ comparisons to produce element-wise masks, not scalar bools (=xl default).
+  # Appended directly to LIBCXX_COMPILE_FLAGS so it applies only to the library sources, not the test suite.
+  list(APPEND LIBCXX_COMPILE_FLAGS "-faltivec-src-compat=mixed")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
 
