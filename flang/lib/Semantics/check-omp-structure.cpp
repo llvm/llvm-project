@@ -5122,8 +5122,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
       // A depend clause on a taskwait construct must not have
       // mutexinoutset as dependence-type.
       context_.Say(GetContext().clauseSource,
-          "A DEPEND clause on a TASKWAIT construct must not have %s as dependence type"_err_en_US,
-          "MUTEXINOUTSET");
+          "A DEPEND clause on a TASKWAIT construct must not have MUTEXINOUTSET as dependence type"_err_en_US);
     }
   }
   if (taskDep) {
