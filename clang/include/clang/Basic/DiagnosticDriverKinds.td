@@ -189,6 +189,9 @@ def warn_openmp_spec_incomplete : Warning<
   "the specification for OpenMP version %0 is still under development; "
   "the syntax and semantics of new features may be subject to change">,
   InGroup<ExperimentalOption>;
+def warn_openmp_default_allocate_experimental
+    : Warning<"-fopenmp-default-allocate= is an experimental feature">,
+      InGroup<ExperimentalOption>;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<

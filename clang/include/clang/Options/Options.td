@@ -4183,6 +4183,10 @@ def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>,
   "Some stack unwinding cases, such as profilers and sanitizers, may prefer specifying -fno-omit-frame-pointer. "
   "On many targets, -O1 and higher omit the frame pointer by default. "
   "-m[no-]omit-leaf-frame-pointer takes precedence for leaf functions">;
+def fopenmp_default_allocate_EQ : Joined<["-"], "fopenmp-default-allocate=">,
+  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Set default allocator for OpenMP offloading (=target or =host)">,
+  Values<"target,host">;
 def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>,
   Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,

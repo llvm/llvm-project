@@ -971,6 +971,19 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                                     clang::options::OPT_fno_save_main_program,
                                     false));
 
+  // -fopenmp-default-allocate={target,host}
+  if (const auto *arg =
+          args.getLastArg(clang::options::OPT_fopenmp_default_allocate_EQ)) {
+    llvm::StringRef val = arg->getValue();
+    if (val == "target") {
+      opts.features.Enable(
+          Fortran::common::LanguageFeature::OpenMPDefaultAllocator);
+    } else if (val != "host") {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getAsString(args) << val;
+    }
+  }
+
   if (args.hasArg(clang::options::OPT_falternative_parameter_statement)) {
     opts.features.Enable(Fortran::common::LanguageFeature::OldStyleParameter);
   }
