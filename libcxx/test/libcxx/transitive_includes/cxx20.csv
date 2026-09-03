@@ -11,6 +11,7 @@ algorithm iosfwd
 algorithm limits
 algorithm optional
 algorithm ratio
+algorithm stdexcept
 algorithm tuple
 algorithm version
 any cstdint

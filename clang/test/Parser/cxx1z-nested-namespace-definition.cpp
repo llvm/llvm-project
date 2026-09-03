@@ -14,7 +14,7 @@ namespace foo1::foo2::foo3 {
 }
 
 #ifndef FIXIT
-inline namespace goo::bar { // expected-error {{nested namespace definition cannot be 'inline'}} expected-warning 0-1{{C++11 feature}}
+inline namespace goo::bar { // expected-error {{nested namespace definition cannot be 'inline'}} expected-warning 0-1{{C++11 extension}}
   int n;
 }
 

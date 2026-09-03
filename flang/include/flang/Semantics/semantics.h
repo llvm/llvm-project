@@ -377,6 +377,10 @@ public:
   // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
   ProgramTree &SaveProgramTree(ProgramTree &&);
 
+  const std::list<parser::Program> &GetModFileParseTrees() {
+    return modFileParseTrees_;
+  }
+
   // Label analysis classifies every labeled statement, and only some of those
   // classifications may be named by a statement that branches.  Lowering needs
   // the same distinction when it records the targets of a branch, so the

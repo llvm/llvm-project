@@ -1082,7 +1082,8 @@ void MmaOp::print(OpAsmPrinter &p) {
                                          getLayoutBAttrName(),
                                          getMultiplicandAPtxTypeAttrName(),
                                          getMultiplicandBPtxTypeAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print the types of the operands and result.
   p << " : " << "(";
@@ -1575,7 +1576,8 @@ void MmaSpOp::print(OpAsmPrinter &p) {
                           getMultiplicandAPtxTypeAttrName(),
                           getMultiplicandBPtxTypeAttrName(),
                           getOrderedMetadataAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict((*this)->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
   p << " : ";
   p << "(";
   for (int i = 0; i < 3; ++i) {
@@ -2165,7 +2167,8 @@ void MmaBlockScaleOp::print(OpAsmPrinter &p) {
                           getMultiplicandBPtxTypeAttrName(),
                           getScaleVecSizeAttrName(),
                           getBlockScaleFormatAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print type signature
   p << " : (";
@@ -2423,7 +2426,8 @@ void MmaSpBlockScaleOp::print(OpAsmPrinter &p) {
                           getOrderedMetadataAttrName(),
                           getScaleVecSizeAttrName(),
                           getBlockScaleFormatAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print type signature
   p << " : (";
@@ -5625,6 +5629,9 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
+  // TODO: Add support for PZO modifier
+  args.push_back(builder.getInt1(false));
+
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
     return {rndRNIds[idx], std::move(args)};
@@ -5672,6 +5679,9 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
   args.push_back(mt.lookupValue(op.getSrcLo()));
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
+
+  // TODO: Add support for PZO modifier
+  args.push_back(builder.getInt1(false));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -5811,12 +5821,13 @@ LogicalResult Tcgen05StOp::verify() {
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
 /// have ConstantRangeAttr.
-static void nvvmInferResultRanges(Operation *op, Value result,
+static void nvvmInferResultRanges(std::optional<LLVM::ConstantRangeAttr> range,
+                                  Value result,
                                   ArrayRef<::mlir::ConstantIntRanges> argRanges,
                                   SetIntRangeFn setResultRanges) {
-  if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
-    setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
-                             rangeAttr.getLower(), rangeAttr.getUpper()});
+  if (range) {
+    setResultRanges(result, {range->getLower(), range->getUpper(),
+                             range->getLower(), range->getUpper()});
   } else {
     setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
   }
@@ -6725,6 +6736,129 @@ mlir::NVVM::IDArgPair Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.decompress_b functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMADecompressBOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<Tcgen05MMADecompressBOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  const bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+  args.push_back(mt.lookupValue(thisOp.getDecompressBMetadata()));
+
+  llvm::Value *DisableOutputLane =
+      mt.lookupValue(thisOp.getDisableOutputLane());
+  bool hasDisableOutputLane = DisableOutputLane != nullptr;
+
+  NVVM::CTAGroupKind ctaGroup = thisOp.getCtaGroup();
+
+  using namespace llvm::Intrinsic;
+  ID intrinsicID = not_intrinsic;
+
+  if (hasDisableOutputLane) {
+    if (ctaGroup == NVVM::CTAGroupKind::CTA_1) {
+      intrinsicID =
+          isATensor
+              ? nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b
+              : nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b;
+    } else if (ctaGroup == NVVM::CTAGroupKind::CTA_2) {
+      intrinsicID =
+          isATensor
+              ? nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b
+              : nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b;
+    } else {
+      llvm_unreachable("Unknown ctaGroup for tcgen05.mma.decompress_b");
+    }
+  } else {
+    intrinsicID = isATensor ? nvvm_tcgen05_mma_tensor_f8f6f4_decompress_b
+                            : nvvm_tcgen05_mma_shared_f8f6f4_decompress_b;
+  }
+
+  assert(intrinsicID != not_intrinsic &&
+         "Invalid intrinsic for Tcgen05MMADecompressBOp.");
+
+  if (hasDisableOutputLane)
+    args.push_back(DisableOutputLane);
+  else
+    args.push_back(
+        builder.getInt32(static_cast<unsigned>(getNVVMCtaGroupKind(ctaGroup))));
+
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpA())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
+  return {intrinsicID, args};
+}
+
+LogicalResult Tcgen05MMADecompressBOp::verify() {
+  mlir::Value disableOutputLane = getDisableOutputLane();
+
+  if (disableOutputLane) {
+    NVVM::CTAGroupKind ctaGroup = getCtaGroup();
+
+    mlir::VectorType disableOutputLaneType =
+        cast<mlir::VectorType>(disableOutputLane.getType());
+    if ((ctaGroup == NVVM::CTAGroupKind::CTA_1 &&
+         disableOutputLaneType.getNumElements() != 4) ||
+        (ctaGroup == NVVM::CTAGroupKind::CTA_2 &&
+         disableOutputLaneType.getNumElements() != 8))
+      return emitOpError() << "Disable Output Lane of length "
+                           << disableOutputLaneType.getNumElements()
+                           << " is incompatible with CtaGroupAttr";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.block_scale.decompress_b functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMABlockScaleDecompressBOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<Tcgen05MMABlockScaleDecompressBOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  const bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+  args.push_back(mt.lookupValue(thisOp.getScaleA()));
+  args.push_back(mt.lookupValue(thisOp.getScaleB()));
+  args.push_back(mt.lookupValue(thisOp.getDecompressBMetadata()));
+  args.push_back(builder.getInt32(
+      static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpA())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
+  llvm::Intrinsic::ID intrinsicID =
+      isATensor
+          ? llvm::Intrinsic::
+                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32_decompress_b
+          : llvm::Intrinsic::
+                nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32_decompress_b;
+
+  return {intrinsicID, args};
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM tcgen05.ld.red functions
 //===----------------------------------------------------------------------===//
 
@@ -6877,8 +7011,8 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   }
   // blocksareclusters must be used along with reqntid and cluster_dim
   if (attrName == NVVMDialect::getBlocksAreClustersAttrName()) {
-    if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
-        !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
+    if (!op->hasDiscardableAttr(NVVMDialect::getReqntidAttrName()) ||
+        !op->hasDiscardableAttr(NVVMDialect::getClusterDimAttrName())) {
       return op->emitError()
              << "'" << attrName << "' attribute must be used along with " << "'"
              << NVVMDialect::getReqntidAttrName() << "' and " << "'"
@@ -6897,7 +7031,7 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
   if (!funcOp)
     return success();
 
-  bool isKernel = op->hasAttr(NVVMDialect::getKernelFuncAttrName());
+  bool isKernel = op->hasDiscardableAttr(NVVMDialect::getKernelFuncAttrName());
   StringAttr attrName = argAttr.getName();
   if (attrName == NVVM::NVVMDialect::getGridConstantAttrName()) {
     if (!isKernel) {

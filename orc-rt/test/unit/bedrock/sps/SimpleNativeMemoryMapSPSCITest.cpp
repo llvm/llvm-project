@@ -13,9 +13,9 @@
 #include "orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
-#include "orc-rt/support/SPSAllocAction.h"
-#include "orc-rt/support/SPSMemoryFlags.h"
-#include "orc-rt/support/SPSWrapperFunction.h"
+#include "orc-rt/support/sps/SPSAllocAction.h"
+#include "orc-rt/support/sps/SPSMemoryFlags.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "AllocActionTestUtils.h"
 #include "CommonTestUtils.h"

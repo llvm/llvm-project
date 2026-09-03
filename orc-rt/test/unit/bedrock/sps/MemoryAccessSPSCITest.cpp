@@ -12,7 +12,7 @@
 
 #include "orc-rt/bedrock/sps/MemoryAccessSPSCI.h"
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
-#include "orc-rt/support/SPSWrapperFunction.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "DirectCaller.h"
 #include "gtest/gtest.h"

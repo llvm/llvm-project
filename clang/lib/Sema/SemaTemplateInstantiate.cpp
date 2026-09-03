@@ -3158,7 +3158,7 @@ bool Sema::SubstTypeConstraint(
   }
   return AttachTypeConstraint(
       TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
-      TC->getNamedConcept().getAsTemplateDecl(),
+      TC->getNamedConcept(),
       /*FoundDecl=*/TC->getConceptReference()->getFoundDecl(), &InstArgs, Inst,
       Inst->isParameterPack()
           ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
@@ -4649,14 +4649,22 @@ ExprResult Sema::SubstConceptTemplateArguments(
       TemplateTemplateParmDecl *TTP = E->getParameter();
       unsigned Depth = TTP->getDepth();
       unsigned Pos = TTP->getPosition();
-      ConceptDecl *ResolvedConcept = nullptr;
+      if (!MLTAL.hasTemplateArgument(Depth, Pos))
+        return E;
 
-      if (MLTAL.hasTemplateArgument(Depth, Pos)) {
-        TemplateArgument Arg = MLTAL(Depth, Pos);
-        assert(Arg.getKind() == TemplateArgument::Template);
-        ResolvedConcept =
-            dyn_cast<ConceptDecl>(Arg.getAsTemplate().getAsTemplateDecl());
+      TemplateArgument Arg = MLTAL(Depth, Pos);
+      if (PackIndexingTemplateStorage *PI =
+              E->getTemplateName().getAsPackIndexingTemplate()) {
+        UnsignedOrNone Index = PI->getSelectedIndex();
+        if (Arg.getKind() != TemplateArgument::Pack || !Index ||
+            *Index >= Arg.pack_size())
+          return E;
+        Arg = Arg.getPackAsArray()[*Index];
       }
+      if (Arg.getKind() != TemplateArgument::Template)
+        return E;
+      ConceptDecl *ResolvedConcept = dyn_cast_if_present<ConceptDecl>(
+          Arg.getAsTemplate().getAsTemplateDecl());
       if (!ResolvedConcept)
         return E;
 

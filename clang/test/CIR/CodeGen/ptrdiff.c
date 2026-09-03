@@ -17,10 +17,13 @@ int addrcmp(const void* a, const void* b) {
   // LLVM-NOT: sdiv
   // LLVM: trunc i64 %[[SUB]] to i32
 
-  // TODO: Fix inconsistency with LLVM (ptrtoint vs ptrtoaddr)
+  // TODO: Fix inconsistency with LLVM (ptrtoint vs ptrtoaddr).
+  // Classic-codegen seems to have temporarily reverted that
+  // difference, but we should leave the TODO to make sure we
+  // don't lose it next time it comes back.
   // OGCG-LABEL: define dso_local i32 @addrcmp(
-  // OGCG: %[[PTR_A:.*]] = ptrtoaddr ptr {{.*}} to i64
-  // OGCG: %[[PTR_B:.*]] = ptrtoaddr ptr {{.*}} to i64
+  // OGCG: %[[PTR_A:.*]] = ptrtoint ptr {{.*}} to i64
+  // OGCG: %[[PTR_B:.*]] = ptrtoint ptr {{.*}} to i64
   // OGCG: %[[SUB:.*]] = sub i64 %[[PTR_A]], %[[PTR_B]]
   // OGCG-NOT: sdiv
   // OGCG: trunc i64 %[[SUB]] to i32
@@ -42,10 +45,13 @@ unsigned long long test_ptr_diff(int *a, int* b) {
   // LLVM: %[[RETLOAD:.*]] = load i64, ptr %[[RETADDR]], align
   // LLVM: ret i64 %[[RETLOAD]]
 
-  // TODO: Fix inconsistency with LLVM (ptrtoint vs ptrtoaddr)
+  // TODO: Fix inconsistency with LLVM (ptrtoint vs ptrtoaddr).
+  // Classic-codegen seems to have temporarily reverted that
+  // difference, but we should leave the TODO to make sure we
+  // don't lose it next time it comes back.
   // OGCG-LABEL: define dso_local i64 @test_ptr_diff(
-  // OGCG: %[[IA:.*]] = ptrtoaddr ptr %{{.*}} to i64
-  // OGCG: %[[IB:.*]] = ptrtoaddr ptr %{{.*}} to i64
+  // OGCG: %[[IA:.*]] = ptrtoint ptr %{{.*}} to i64
+  // OGCG: %[[IB:.*]] = ptrtoint ptr %{{.*}} to i64
   // OGCG: %[[SUB:.*]] = sub i64 %[[IA]], %[[IB]]
   // OGCG: %[[Q:.*]] = sdiv exact i64 %[[SUB]], 4
   // OGCG: ret i64 %[[Q]]
