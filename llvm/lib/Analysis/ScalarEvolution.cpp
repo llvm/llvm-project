@@ -10166,7 +10166,7 @@ SCEVUse ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
     // expression has no loop-variant portions.
     for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
       SCEVUse OpAtScope = getSCEVAtScope(AddRec->getOperand(i), L);
-      if (OpAtScope == AddRec->getOperand(i).getPointer())
+      if (OpAtScope == AddRec->getOperand(i))
         continue;
 
       // Okay, at least one of these operands is loop variant but might be
