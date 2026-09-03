@@ -152,7 +152,8 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
   int input[] = {1, 2, 3};
   std::deque<int> d;
   d.assign(input, input + 3);
-  assert((d == std::deque<int>{1, 2, 3}));
+  assert(d.size() == 3);
+  assert(std::equal(d.begin(), d.end(), std::begin(input));
 
   test_iterators();
 

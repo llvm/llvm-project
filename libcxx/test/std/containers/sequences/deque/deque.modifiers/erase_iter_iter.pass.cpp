@@ -136,10 +136,14 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 }
 
 TEST_CONSTEXPR_CXX26 bool test_constexpr() {
-  std::deque<int> d = {1, 2, 3, 4};
-  auto it           = d.erase(d.begin() + 1, d.begin() + 3);
+  const int src_array[] = {1, 2, 3, 4};
+  const int dst_array[] = {1, 4};
+
+  std::deque<int> d(std::begin(src_array), std::end(src_array));
+  auto it = d.erase(d.begin() + 1, d.begin() + 3);
   assert(*it == 4);
-  assert((d == std::deque<int>{1, 4}));
+  assert(d.size() == 2);
+  assert(std::equal(d.begin(), d.end(), std::begin(dst_array)));
   return true;
 }
 

@@ -124,7 +124,7 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
       assert(n == 0);
   }
   {
-    std::deque<int> d(3, std::allocator<int>());
+    std::deque<int> d(7, std::allocator<int>());
     for (int n : d)
       assert(n == 7);
   }

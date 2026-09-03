@@ -11,12 +11,14 @@
 // template <class T, class A>
 //   void swap(deque<T, A>& x, deque<T, A>& y); // constexpr since C++26
 
-#include "asan_testing.h"
-#include <deque>
+#include <algorithm>
 #include <cassert>
-#include "test_macros.h"
-#include "test_allocator.h"
+#include <deque>
+
+#include "asan_testing.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
+#include "test_macros.h"
 
 template <class C>
 TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
@@ -117,11 +119,17 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 }
 
 TEST_CONSTEXPR_CXX26 bool test_constexpr() {
-  std::deque<int> a = {1, 2};
-  std::deque<int> b = {3};
+  const int src_array_a[] = {1, 2};
+  const int src_array_b[] = {3};
+
+  std::deque<int> a(std::begin(src_array_a), std::end(src_array_a));
+  std::deque<int> b(std::begin(src_array_b), std::end(src_array_b));
   swap(a, b);
-  assert((a == std::deque<int>{3}));
-  assert((b == std::deque<int>{1, 2}));
+  assert(a.size() == 1);
+  assert(b.size() == 2);
+  assert(std::equal(a.begin(), a.end(), std::begin(src_array_b)));
+  assert(std::equal(b.begin(), b.end(), std::begin(src_array_a)));
+
   return true;
 }
 

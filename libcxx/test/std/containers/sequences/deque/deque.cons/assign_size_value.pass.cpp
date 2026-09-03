@@ -78,9 +78,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  const int dst_array[] = {7, 7, 7};
+
   std::deque<int> d;
   d.assign(3, 7);
-  assert((d == std::deque<int>{7, 7, 7}));
+  assert(d.size() == 3);
+  assert(std::equal(d.begin(), d.end(), std::begin(dst_array)));
+
   return true;
 }
 

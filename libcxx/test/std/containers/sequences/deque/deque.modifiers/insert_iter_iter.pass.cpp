@@ -19,16 +19,17 @@
 // template <class InputIterator>
 //   iterator insert (const_iterator p, InputIterator f, InputIterator l); // constexpr since C++26
 
-#include "asan_testing.h"
-#include <deque>
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <deque>
 
+#include "asan_testing.h"
+#include "test_allocator.h"
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "MoveOnly.h"
-#include "test_allocator.h"
 #include "min_allocator.h"
+#include "MoveOnly.h"
 
 template <class C>
 TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
@@ -274,11 +275,16 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 }
 
 TEST_CONSTEXPR_CXX26 bool test_constexpr() {
-  int input[]       = {2, 3};
-  std::deque<int> d = {1, 4};
-  auto it           = d.insert(d.begin() + 1, input, input + 2);
+  const int src_array[] = {1, 4};
+  const int dst_array[] = {1, 2, 3, 4};
+  const int input[]     = {2, 3};
+
+  std::deque<int> d(std::begin(src_array), std::end(src_array));
+  auto it = d.insert(d.begin() + 1, input, input + 2);
   assert(*it == 2);
-  assert((d == std::deque<int>{1, 2, 3, 4}));
+  assert(d.size() == 4);
+  assert(std::equal(d.begin(), d.end(), std::begin(dst_array)));
+
   return true;
 }
 

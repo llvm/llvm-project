@@ -12,12 +12,14 @@
 // void pop_back();                     // constexpr since C++26
 // void pop_front();                    // constexpr since C++26
 
-#include "asan_testing.h"
-#include <deque>
+#include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <deque>
 
-#include "test_macros.h"
+#include "asan_testing.h"
 #include "min_allocator.h"
+#include "test_macros.h"
 
 template <class C>
 TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
@@ -70,10 +72,15 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 }
 
 TEST_CONSTEXPR_CXX26 bool test_constexpr() {
-  std::deque<int> d;
-  int value = 1;
+  const int dst_array[]      = {158, 650, 43, -605, 8420, 481, 78, -27, 580, 7036, 873};
+  const std::size_t dst_size = sizeof(dst_array) / sizeof(dst_array[0]);
+
+  std::deque<int> d(std::begin(dst_array), std::end(dst_array) - 1);
+  int value = dst_array[dst_size - 1];
   d.push_back(value);
-  assert((d == std::deque<int>{1}));
+  assert(d.size() == dst_size);
+  assert(std::equal(d.begin(), std::end(), std::begin(dst_array)));
+
   return true;
 }
 

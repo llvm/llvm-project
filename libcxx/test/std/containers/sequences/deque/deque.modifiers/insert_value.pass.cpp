@@ -10,13 +10,14 @@
 
 // iterator insert (const_iterator p, const value_type& v); // constexpr since C++26
 
-#include "asan_testing.h"
-#include <deque>
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <deque>
 
-#include "test_macros.h"
+#include "asan_testing.h"
 #include "min_allocator.h"
+#include "test_macros.h"
 
 template <class C>
 TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
@@ -130,11 +131,16 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 }
 
 TEST_CONSTEXPR_CXX26 bool test_constexpr() {
-  std::deque<int> d = {1, 3};
-  int value         = 2;
-  auto it           = d.insert(d.begin() + 1, value);
+  const int src_array[] = {1, 3};
+  const int dst_array[] = {1, 2, 3};
+
+  std::deque<int> d(std::begin(src_array), std::end(src_array));
+  int value = 2;
+  auto it   = d.insert(d.begin() + 1, value);
   assert(*it == 2);
-  assert((d == std::deque<int>{1, 2, 3}));
+  assert(d.size() == 3);
+  assert(std::equal(d.begin(), d.end(), std::begin(src_array)));
+
   return true;
 }
 
