@@ -106,11 +106,7 @@ define i64 @reuse_mul_splat_const(i64 %x, i64 %y) {
 ; CHECK-NEXT:    slli a3, a2, 32
 ; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    mul a0, a0, a2
-; CHECK-NEXT:    lui a2, 1044464
-; CHECK-NEXT:    addi a2, a2, -257
-; CHECK-NEXT:    slli a3, a2, 32
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    sub a1, a1, a2
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    ret
   %mul = mul i64 %x, 72340172838076673
@@ -128,15 +124,11 @@ define i64 @reuse_neg_const_chain(i64 %ctrl, i8 zeroext %h) {
 ; CHECK-NEXT:    slli a3, a2, 32
 ; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    mul a1, a1, a2
-; CHECK-NEXT:    lui a2, 1044464
-; CHECK-NEXT:    addi a2, a2, -257
 ; CHECK-NEXT:    lui a3, %hi(.LCPI7_0)
-; CHECK-NEXT:    slli a4, a2, 32
 ; CHECK-NEXT:    ld a3, %lo(.LCPI7_0)(a3)
 ; CHECK-NEXT:    xor a0, a1, a0
-; CHECK-NEXT:    add a2, a2, a4
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    andn a0, a2, a0
+; CHECK-NEXT:    sub a1, a0, a2
+; CHECK-NEXT:    andn a0, a1, a0
 ; CHECK-NEXT:    and a0, a0, a3
 ; CHECK-NEXT:    ret
   %conv = zext i8 %h to i64
