@@ -165,27 +165,24 @@ define <16 x i32> @umulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umull2 v2.8h, v0.16b, v1.16b
 ; CHECK-NEXT:    umull v3.8h, v0.8b, v1.8b
-; CHECK-NEXT:    mul v6.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mul v7.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    uzp2 v2.16b, v3.16b, v2.16b
-; CHECK-NEXT:    str q6, [x0]
+; CHECK-NEXT:    str q7, [x0]
 ; CHECK-NEXT:    cmtst v2.16b, v2.16b, v2.16b
-; CHECK-NEXT:    mov d3, v2.d[1]
-; CHECK-NEXT:    zip1 v4.8b, v2.8b, v0.8b
-; CHECK-NEXT:    zip2 v2.8b, v2.8b, v0.8b
-; CHECK-NEXT:    zip1 v5.8b, v3.8b, v0.8b
-; CHECK-NEXT:    zip2 v3.8b, v3.8b, v0.8b
-; CHECK-NEXT:    ushll v4.4s, v4.4h, #0
+; CHECK-NEXT:    ushll v3.8h, v2.8b, #0
+; CHECK-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NEXT:    ushll v4.4s, v3.4h, #0
+; CHECK-NEXT:    ushll2 v5.4s, v2.8h, #0
+; CHECK-NEXT:    ushll2 v3.4s, v3.8h, #0
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    shl v4.4s, v4.4s, #31
-; CHECK-NEXT:    ushll v5.4s, v5.4h, #0
-; CHECK-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-NEXT:    shl v5.4s, v5.4s, #31
+; CHECK-NEXT:    shl v6.4s, v3.4s, #31
 ; CHECK-NEXT:    shl v2.4s, v2.4s, #31
 ; CHECK-NEXT:    cmlt v0.4s, v4.4s, #0
-; CHECK-NEXT:    shl v5.4s, v5.4s, #31
-; CHECK-NEXT:    shl v3.4s, v3.4s, #31
-; CHECK-NEXT:    cmlt v1.4s, v2.4s, #0
-; CHECK-NEXT:    cmlt v2.4s, v5.4s, #0
-; CHECK-NEXT:    cmlt v3.4s, v3.4s, #0
+; CHECK-NEXT:    cmlt v3.4s, v5.4s, #0
+; CHECK-NEXT:    cmlt v1.4s, v6.4s, #0
+; CHECK-NEXT:    cmlt v2.4s, v2.4s, #0
 ; CHECK-NEXT:    ret
   %t = call {<16 x i8>, <16 x i1>} @llvm.umul.with.overflow.v16i8(<16 x i8> %a0, <16 x i8> %a1)
   %val = extractvalue {<16 x i8>, <16 x i1>} %t, 0
@@ -204,15 +201,12 @@ define <8 x i32> @umulo_v8i16(<8 x i16> %a0, <8 x i16> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    uzp2 v2.8h, v3.8h, v2.8h
 ; CHECK-NEXT:    str q4, [x0]
 ; CHECK-NEXT:    cmtst v2.8h, v2.8h, v2.8h
-; CHECK-NEXT:    xtn v2.8b, v2.8h
-; CHECK-NEXT:    zip1 v3.8b, v2.8b, v0.8b
-; CHECK-NEXT:    zip2 v2.8b, v2.8b, v0.8b
-; CHECK-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-NEXT:    ushll2 v3.4s, v2.8h, #0
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    shl v3.4s, v3.4s, #31
 ; CHECK-NEXT:    shl v2.4s, v2.4s, #31
-; CHECK-NEXT:    cmlt v0.4s, v3.4s, #0
-; CHECK-NEXT:    cmlt v1.4s, v2.4s, #0
+; CHECK-NEXT:    cmlt v1.4s, v3.4s, #0
+; CHECK-NEXT:    cmlt v0.4s, v2.4s, #0
 ; CHECK-NEXT:    ret
   %t = call {<8 x i16>, <8 x i1>} @llvm.umul.with.overflow.v8i16(<8 x i16> %a0, <8 x i16> %a1)
   %val = extractvalue {<8 x i16>, <8 x i1>} %t, 0

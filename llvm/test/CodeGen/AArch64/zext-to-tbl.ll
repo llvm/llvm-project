@@ -1262,44 +1262,54 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldr x9, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    ubfx x12, x9, #48, #4
-; CHECK-NEXT:    ubfx x10, x9, #52, #4
-; CHECK-NEXT:    ubfx x13, x9, #32, #4
-; CHECK-NEXT:    ubfx w15, w9, #16, #4
+; CHECK-NEXT:    ubfx x10, x9, #32, #4
+; CHECK-NEXT:    and w12, w9, #0xf
 ; CHECK-NEXT:    ubfx x11, x9, #36, #4
-; CHECK-NEXT:    ubfx w14, w9, #20, #4
-; CHECK-NEXT:    fmov s0, w12
-; CHECK-NEXT:    fmov s1, w13
-; CHECK-NEXT:    ubfx w12, w9, #4, #4
-; CHECK-NEXT:    fmov s2, w15
-; CHECK-NEXT:    mov.h v0[1], w10
-; CHECK-NEXT:    and w10, w9, #0xf
-; CHECK-NEXT:    mov.h v1[1], w11
-; CHECK-NEXT:    fmov s3, w10
+; CHECK-NEXT:    fmov s1, w12
+; CHECK-NEXT:    fmov s0, w10
+; CHECK-NEXT:    ubfx w10, w9, #4, #4
+; CHECK-NEXT:    mov.b v1[1], w10
+; CHECK-NEXT:    ubfx w10, w9, #8, #4
+; CHECK-NEXT:    mov.b v0[1], w11
+; CHECK-NEXT:    ubfx x11, x9, #40, #4
+; CHECK-NEXT:    mov.b v1[2], w10
+; CHECK-NEXT:    ubfx w10, w9, #12, #4
+; CHECK-NEXT:    mov.b v0[2], w11
+; CHECK-NEXT:    ubfx x11, x9, #44, #4
+; CHECK-NEXT:    mov.b v1[3], w10
+; CHECK-NEXT:    ubfx w10, w9, #16, #4
+; CHECK-NEXT:    mov.b v0[3], w11
+; CHECK-NEXT:    ubfx x11, x9, #48, #4
+; CHECK-NEXT:    mov.b v1[4], w10
+; CHECK-NEXT:    ubfx w10, w9, #20, #4
+; CHECK-NEXT:    mov.b v0[4], w11
+; CHECK-NEXT:    ubfx x11, x9, #52, #4
+; CHECK-NEXT:    mov.b v1[5], w10
+; CHECK-NEXT:    ubfx w10, w9, #24, #4
+; CHECK-NEXT:    mov.b v0[5], w11
 ; CHECK-NEXT:    ubfx x11, x9, #56, #4
-; CHECK-NEXT:    mov.h v2[1], w14
-; CHECK-NEXT:    ubfx x10, x9, #40, #4
-; CHECK-NEXT:    mov.h v3[1], w12
-; CHECK-NEXT:    ubfx w12, w9, #24, #4
-; CHECK-NEXT:    mov.h v0[2], w11
-; CHECK-NEXT:    ubfx w11, w9, #8, #4
-; CHECK-NEXT:    mov.h v1[2], w10
-; CHECK-NEXT:    lsr x10, x9, #60
-; CHECK-NEXT:    mov.h v2[2], w12
-; CHECK-NEXT:    ubfx x12, x9, #44, #4
-; CHECK-NEXT:    mov.h v3[2], w11
-; CHECK-NEXT:    lsr w11, w9, #28
-; CHECK-NEXT:    ubfx w9, w9, #12, #4
-; CHECK-NEXT:    mov.h v0[3], w10
-; CHECK-NEXT:    mov.h v1[3], w12
-; CHECK-NEXT:    mov.h v2[3], w11
-; CHECK-NEXT:    mov.h v3[3], w9
-; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    mov.b v1[6], w10
+; CHECK-NEXT:    mov.b v0[6], w11
+; CHECK-NEXT:    lsr x11, x9, #60
+; CHECK-NEXT:    lsr w9, w9, #28
+; CHECK-NEXT:    mov.b v1[7], w9
+; CHECK-NEXT:    mov.b v0[7], w11
+; CHECK-NEXT:    ushll.8h v1, v1, #0
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    mov d3, v1[1]
+; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q1
+; CHECK-NEXT:    mov d2, v0[1]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    bic.4h v1, #255, lsl #8
+; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    bic.4h v3, #255, lsl #8
 ; CHECK-NEXT:    ushll.4s v1, v1, #0
-; CHECK-NEXT:    ushll.4s v2, v2, #0
+; CHECK-NEXT:    bic.4h v2, #255, lsl #8
+; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    ushll.4s v3, v3, #0
-; CHECK-NEXT:    stp q1, q0, [x1, #32]
-; CHECK-NEXT:    stp q3, q2, [x1], #64
+; CHECK-NEXT:    ushll.4s v2, v2, #0
+; CHECK-NEXT:    stp q0, q2, [x1, #32]
+; CHECK-NEXT:    stp q1, q3, [x1], #64
 ; CHECK-NEXT:    b.ne LBB13_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -1312,51 +1322,60 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    ldr x9, [x0, x8]
 ; CHECK-BE-NEXT:    add x8, x8, #16
 ; CHECK-BE-NEXT:    cmp x8, #128
-; CHECK-BE-NEXT:    lsr x13, x9, #60
-; CHECK-BE-NEXT:    ubfx w12, w9, #12, #4
-; CHECK-BE-NEXT:    lsr w14, w9, #28
-; CHECK-BE-NEXT:    ubfx x16, x9, #56, #4
-; CHECK-BE-NEXT:    ubfx x17, x9, #44, #4
-; CHECK-BE-NEXT:    ubfx w10, w9, #8, #4
-; CHECK-BE-NEXT:    fmov s0, w13
-; CHECK-BE-NEXT:    fmov s1, w12
-; CHECK-BE-NEXT:    fmov s2, w14
+; CHECK-BE-NEXT:    lsr w10, w9, #28
+; CHECK-BE-NEXT:    lsr x12, x9, #60
 ; CHECK-BE-NEXT:    ubfx w11, w9, #24, #4
-; CHECK-BE-NEXT:    fmov s3, w17
-; CHECK-BE-NEXT:    ubfx x15, x9, #40, #4
-; CHECK-BE-NEXT:    ubfx w12, w9, #20, #4
-; CHECK-BE-NEXT:    ubfx x13, x9, #36, #4
-; CHECK-BE-NEXT:    mov v0.h[1], w16
-; CHECK-BE-NEXT:    mov v1.h[1], w10
-; CHECK-BE-NEXT:    mov v2.h[1], w11
+; CHECK-BE-NEXT:    ubfx x13, x9, #56, #4
+; CHECK-BE-NEXT:    fmov s0, w10
+; CHECK-BE-NEXT:    fmov s1, w12
+; CHECK-BE-NEXT:    ubfx w10, w9, #20, #4
+; CHECK-BE-NEXT:    mov v0.b[1], w11
+; CHECK-BE-NEXT:    mov v1.b[1], w13
 ; CHECK-BE-NEXT:    ubfx x11, x9, #52, #4
+; CHECK-BE-NEXT:    mov v0.b[2], w10
+; CHECK-BE-NEXT:    mov v1.b[2], w11
+; CHECK-BE-NEXT:    ubfx w10, w9, #16, #4
+; CHECK-BE-NEXT:    ubfx x11, x9, #48, #4
+; CHECK-BE-NEXT:    mov v0.b[3], w10
+; CHECK-BE-NEXT:    mov v1.b[3], w11
+; CHECK-BE-NEXT:    ubfx w10, w9, #12, #4
+; CHECK-BE-NEXT:    ubfx x11, x9, #44, #4
+; CHECK-BE-NEXT:    mov v0.b[4], w10
+; CHECK-BE-NEXT:    mov v1.b[4], w11
+; CHECK-BE-NEXT:    ubfx w10, w9, #8, #4
+; CHECK-BE-NEXT:    ubfx x11, x9, #40, #4
+; CHECK-BE-NEXT:    mov v0.b[5], w10
+; CHECK-BE-NEXT:    mov v1.b[5], w11
 ; CHECK-BE-NEXT:    ubfx w10, w9, #4, #4
-; CHECK-BE-NEXT:    mov v3.h[1], w15
-; CHECK-BE-NEXT:    mov v0.h[2], w11
-; CHECK-BE-NEXT:    mov v1.h[2], w10
-; CHECK-BE-NEXT:    ubfx x10, x9, #48, #4
-; CHECK-BE-NEXT:    mov v2.h[2], w12
-; CHECK-BE-NEXT:    mov v3.h[2], w13
-; CHECK-BE-NEXT:    and w11, w9, #0xf
-; CHECK-BE-NEXT:    ubfx w12, w9, #16, #4
+; CHECK-BE-NEXT:    ubfx x11, x9, #36, #4
+; CHECK-BE-NEXT:    mov v0.b[6], w10
+; CHECK-BE-NEXT:    mov v1.b[6], w11
+; CHECK-BE-NEXT:    and w10, w9, #0xf
 ; CHECK-BE-NEXT:    ubfx x9, x9, #32, #4
-; CHECK-BE-NEXT:    mov v0.h[3], w10
-; CHECK-BE-NEXT:    mov v1.h[3], w11
-; CHECK-BE-NEXT:    mov v2.h[3], w12
-; CHECK-BE-NEXT:    mov v3.h[3], w9
-; CHECK-BE-NEXT:    add x9, x1, #48
+; CHECK-BE-NEXT:    mov v0.b[7], w10
+; CHECK-BE-NEXT:    mov v1.b[7], w9
+; CHECK-BE-NEXT:    add x9, x1, #32
+; CHECK-BE-NEXT:    add x10, x1, #48
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-BE-NEXT:    mov d2, v0.d[1]
+; CHECK-BE-NEXT:    mov d3, v1.d[1]
+; CHECK-BE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BE-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-BE-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-BE-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-BE-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-BE-NEXT:    bic v3.4h, #255, lsl #8
+; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-BE-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-BE-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-BE-NEXT:    ushll v3.4s, v3.4h, #0
-; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-BE-NEXT:    st1 { v1.4s }, [x9]
-; CHECK-BE-NEXT:    add x9, x1, #32
-; CHECK-BE-NEXT:    st1 { v2.4s }, [x9]
+; CHECK-BE-NEXT:    st1 { v0.4s }, [x9]
 ; CHECK-BE-NEXT:    add x9, x1, #16
-; CHECK-BE-NEXT:    st1 { v3.4s }, [x9]
-; CHECK-BE-NEXT:    st1 { v0.4s }, [x1]
+; CHECK-BE-NEXT:    st1 { v1.4s }, [x1]
 ; CHECK-BE-NEXT:    add x1, x1, #64
+; CHECK-BE-NEXT:    st1 { v2.4s }, [x10]
+; CHECK-BE-NEXT:    st1 { v3.4s }, [x9]
 ; CHECK-BE-NEXT:    b.ne .LBB13_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
