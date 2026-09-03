@@ -76,20 +76,18 @@ private:
     alignas(pointer) uintptr_t __data_;
   };
 
-  size_t __count() const { return __data_ & __CountMask; }
+  size_t __count() const noexcept { return __data_ & __CountMask; }
 
-  _Ptr __current() const { return reinterpret_cast<pointer>(__data_ & __PtrMask); }
+  _Ptr __current() const noexcept { return reinterpret_cast<pointer>(__data_ & __PtrMask); }
 
-  void __increment(size_t __n) {
+  void __increment(size_t __n) noexcept {
     __ptr += __n;
     __data_ += __n;
   }
 
   explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __data_(reinterpret_cast<uintptr_t>(__p)) {
-    if !consteval {
-      _LIBCPP_ASSERT_INTERNAL((reinterpret_cast<uintptr_t>(__p) & __CountMask) == 0,
-                              "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
-    }
+    _LIBCPP_ASSERT_INTERNAL((reinterpret_cast<uintptr_t>(__p) & __CountMask) == 0,
+                            "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
   }
 
   template <class _Ptr2, class, size_t _RangeCapacity2>
@@ -109,31 +107,25 @@ public:
       : __data_(__y.__data_) {}
 
   [[nodiscard]] reference operator*() const noexcept {
-    if !consteval {
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          __count() != _RangeCapacity,
-          "__static_packed_bounded_iterator::operator*: Attempt to dereference an iterator at the end");
-    }
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __count() != _RangeCapacity,
+        "__static_packed_bounded_iterator::operator*: Attempt to dereference an iterator at the end");
 
     return *__current();
   }
 
   pointer operator->() const noexcept {
-    if !consteval {
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          __count() != _RangeCapacity,
-          "__static_packed_bounded_iterator::operator->: Attempt to dereference an iterator at the end");
-    }
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __count() != _RangeCapacity,
+        "__static_packed_bounded_iterator::operator->: Attempt to dereference an iterator at the end");
 
     return __current();
   }
 
   __static_packed_bounded_iterator& operator++() noexcept {
-    if !consteval {
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          __count() != _RangeCapacity,
-          "__static_packed_bounded_iterator::operator++: Attempt to advance an iterator past the end");
-    }
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __count() != _RangeCapacity,
+        "__static_packed_bounded_iterator::operator++: Attempt to advance an iterator past the end");
 
     __increment(1);
 
@@ -147,11 +139,8 @@ public:
   }
 
   __static_packed_bounded_iterator& operator--() noexcept {
-    if !consteval {
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          __count() != 0u,
-          "__static_packed_bounded_iterator::operator--: Attempt to rewind an iterator past the start");
-    }
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __count() != 0u, "__static_packed_bounded_iterator::operator--: Attempt to rewind an iterator past the start");
 
     __increment(-1);
 
@@ -165,16 +154,14 @@ public:
   }
 
   __static_packed_bounded_iterator& operator+=(difference_type __n) noexcept {
-    if !consteval {
-      if (__n < 0) {
-        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-            __count() >= static_cast<size_t>(-__n),
-            "__static_packed_bounded_iterator::operator+=: Attempt to rewind an iterator past the start");
-      } else {
-        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-            static_cast<size_t>(__count() + __n) <= _RangeCapacity,
-            "__static_packed_bounded_iterator::operator+=: Attempt to advance an iterator past the end");
-      }
+    if (__n < 0) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __count() >= static_cast<size_t>(-__n),
+          "__static_packed_bounded_iterator::operator+=: Attempt to rewind an iterator past the start");
+    } else {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          static_cast<size_t>(__count() + __n) <= _RangeCapacity,
+          "__static_packed_bounded_iterator::operator+=: Attempt to advance an iterator past the end");
     }
 
     __increment(__n);
@@ -183,16 +170,14 @@ public:
   }
 
   __static_packed_bounded_iterator& operator-=(difference_type __n) noexcept {
-    if !consteval {
-      if (__n > 0) {
-        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-            __count() >= static_cast<size_t>(__n),
-            "__static_packed_bounded_iterator::operator-=: Attempt to rewind an iterator past the start");
-      } else {
-        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-            static_cast<size_t>(__count() - __n) <= _RangeCapacity,
-            "__static_packed_bounded_iterator::operator-=: Attempt to advance an iterator past the end");
-      }
+    if (__n > 0) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __count() >= static_cast<size_t>(__n),
+          "__static_packed_bounded_iterator::operator-=: Attempt to rewind an iterator past the start");
+    } else {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          static_cast<size_t>(__count() - __n) <= _RangeCapacity,
+          "__static_packed_bounded_iterator::operator-=: Attempt to advance an iterator past the end");
     }
 
     __increment(-__n);
@@ -201,16 +186,14 @@ public:
   }
 
   [[nodiscard]] reference operator[](difference_type __n) const noexcept {
-    if !consteval {
-      if (__n < 0) {
-        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-            __count() >= static_cast<size_t>(-__n),
-            "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator past the start");
-      } else {
-        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-            static_cast<size_t>(__count() + __n) < _RangeCapacity,
-            "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator at or past the end");
-      }
+    if (__n < 0) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __count() >= static_cast<size_t>(-__n),
+          "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator past the start");
+    } else {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          static_cast<size_t>(__count() + __n) < _RangeCapacity,
+          "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator at or past the end");
     }
     return *(*this + __n);
   }
