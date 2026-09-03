@@ -21,9 +21,7 @@
 namespace llvm {
 namespace bolt {
 
-namespace {
-
-bool isValidControlTransferAUIPC(const MCInst &Inst) {
+static bool isValidControlTransferAUIPC(const MCInst &Inst) {
   if (Inst.getOpcode() != RISCV::AUIPC ||
       MCPlus::getNumPrimeOperands(Inst) != 2)
     return false;
@@ -33,7 +31,7 @@ bool isValidControlTransferAUIPC(const MCInst &Inst) {
          Inst.getOperand(1).isImm();
 }
 
-bool isValidControlTransferJALR(const MCInst &Inst) {
+static bool isValidControlTransferJALR(const MCInst &Inst) {
   if (Inst.getOpcode() != RISCV::JALR || MCPlus::getNumPrimeOperands(Inst) != 3)
     return false;
 
@@ -41,7 +39,8 @@ bool isValidControlTransferJALR(const MCInst &Inst) {
          Inst.getOperand(2).isImm();
 }
 
-bool isLinkerResolvedControlTransfer(const MCInst &AUIPC, const MCInst &JALR) {
+static bool isLinkerResolvedControlTransfer(const MCInst &AUIPC,
+                                            const MCInst &JALR) {
   if (!isValidControlTransferAUIPC(AUIPC) || !isValidControlTransferJALR(JALR))
     return false;
 
@@ -53,15 +52,13 @@ bool isLinkerResolvedControlTransfer(const MCInst &AUIPC, const MCInst &JALR) {
   return Link == RISCV::X0 || Link == Base;
 }
 
-int64_t getLinkerResolvedControlTransferOffset(const MCInst &AUIPC,
-                                               const MCInst &JALR) {
+static int64_t getLinkerResolvedControlTransferOffset(const MCInst &AUIPC,
+                                                      const MCInst &JALR) {
   // The symbolic AUIPC decoder passes the sign-extended 20-bit U-immediate
   // already shifted left by 12. JALR adds its sign-extended 12-bit immediate
   // and clears target bit zero.
   return (AUIPC.getOperand(1).getImm() + JALR.getOperand(2).getImm()) & ~1LL;
 }
-
-} // namespace
 
 RISCVMCSymbolizer::RISCVMCSymbolizer(BinaryFunction &Function,
                                      bool CreateNewSymbols)
@@ -136,7 +133,6 @@ bool RISCVMCSymbolizer::trySymbolizeLinkerResolvedControlTransfer(
   // callee.
   if (Inst.getOpcode() != RISCV::AUIPC || !CreateNewSymbols ||
       !BC.TheTriple->isRISCV64() || InstOffset + 8 > Function.getSize() ||
-      Function.isDataInCodeAt(InstOffset + 4) ||
       Function.getRelocationInRange(InstOffset, InstOffset + 8))
     return false;
 

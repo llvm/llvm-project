@@ -945,11 +945,6 @@ public:
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;
 
-  /// Return true if data embedded in the function starts at \p Offset.
-  bool isDataInCodeAt(uint64_t Offset) const {
-    return getSizeOfDataInCodeAt(Offset) != 0;
-  }
-
   BinaryFunction &updateState(BinaryFunction::State State) {
     CurrentState = State;
     return *this;
