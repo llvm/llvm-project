@@ -498,6 +498,34 @@ AMDGPU::getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch) {
   return getBufferResourceNumRecordsWidth(getGPUKindFromSubArch(SubArch));
 }
 
+unsigned AMDGPU::getLDSAllocGranule(GPUKind AK) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  if (Features.none())
+    return 256;
+  assert((Features.test(FEAT_LDS_ALLOC_GRANULARITY_256) ||
+          Features.test(FEAT_LDS_ALLOC_GRANULARITY_512) ||
+          Features.test(FEAT_LDS_ALLOC_GRANULARITY_1024) ||
+          Features.test(FEAT_LDS_ALLOC_GRANULARITY_1280) ||
+          Features.test(FEAT_LDS_ALLOC_GRANULARITY_2048)) &&
+         "missing LDS allocation granularity feature");
+  if (Features.test(FEAT_LDS_ALLOC_GRANULARITY_256))
+    return 256;
+  if (Features.test(FEAT_LDS_ALLOC_GRANULARITY_512))
+    return 512;
+  if (Features.test(FEAT_LDS_ALLOC_GRANULARITY_1024))
+    return 1024;
+  if (Features.test(FEAT_LDS_ALLOC_GRANULARITY_1280))
+    return 1280;
+  if (Features.test(FEAT_LDS_ALLOC_GRANULARITY_2048))
+    return 2048;
+
+  return 256;
+}
+
+unsigned AMDGPU::getLDSAllocGranule(Triple::SubArchType SubArch) {
+  return getLDSAllocGranule(getGPUKindFromSubArch(SubArch));
+}
+
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->MaxWavesPerEU : 10;

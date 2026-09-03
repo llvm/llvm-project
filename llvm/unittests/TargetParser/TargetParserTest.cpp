@@ -3303,6 +3303,22 @@ TEST(TargetParserTest, testAMDGPUgetBufferResourceNumRecordsWidth) {
   }
 }
 
+TEST(TargetParserTest, testAMDGPUgetLDSAllocGranule) {
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(AMDGPU::GK_GFX600), 256u);
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(AMDGPU::GK_GFX900), 512u);
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(AMDGPU::GK_GFX950), 1280u);
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(AMDGPU::GK_GFX1310), 1024u);
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(AMDGPU::GK_GFX1250), 2048u);
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(AMDGPU::GK_GFX9_4_GENERIC), 1280u);
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(AMDGPU::GK_NONE), 256u);
+
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(Triple::AMDGPUSubArch600), 256u);
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(Triple::AMDGPUSubArch900), 512u);
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(Triple::AMDGPUSubArch950), 1280u);
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(Triple::AMDGPUSubArch1310), 1024u);
+  EXPECT_EQ(AMDGPU::getLDSAllocGranule(Triple::AMDGPUSubArch1250), 2048u);
+}
+
 TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(true), 4u);
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);
