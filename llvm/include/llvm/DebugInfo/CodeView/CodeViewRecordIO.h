@@ -33,6 +33,7 @@ class CodeViewRecordStreamer {
 public:
   virtual void emitBytes(StringRef Data) = 0;
   virtual void emitIntValue(uint64_t Value, unsigned Size) = 0;
+  virtual void emitAPSIntValue(const APSInt &Value, unsigned ByteSize) = 0;
   virtual void emitBinaryData(StringRef Data) = 0;
   virtual void AddComment(const Twine &T) = 0;
   virtual void AddRawComment(const Twine &T) = 0;
@@ -98,19 +99,25 @@ public:
     return Error::success();
   }
 
-  template <typename T> Error mapInteger(T &Value, const Twine &Comment = "") {
+  template <typename T>
+  Error mapWriteInteger(const T &Value, const Twine &Comment = "") {
     if (isStreaming()) {
       emitComment(Comment);
-      Streamer->emitIntValue((int)Value, sizeof(T));
+      Streamer->emitIntValue(Value, sizeof(T));
       incrStreamedLen(sizeof(T));
       return Error::success();
     }
 
-    if (isWriting())
-      return Writer->writeInteger(Value);
-
-    return Reader->readInteger(Value);
+    return Writer->writeInteger(Value);
   }
+
+  template <typename T> Error mapInteger(T &Value, const Twine &Comment = "") {
+    if (isReading())
+      return Reader->readInteger(Value);
+    return mapWriteInteger(Value, Comment);
+  }
+
+  Error mapWriteInt128(const APSInt &Value, const Twine &Comment = "");
 
   template <typename T> Error mapEnum(T &Value, const Twine &Comment = "") {
     if (!isStreaming() && sizeof(Value) > maxFieldLength())
@@ -218,12 +225,10 @@ public:
   }
 
 private:
-  void emitEncodedSignedInteger(const int64_t &Value,
-                                const Twine &Comment = "");
-  void emitEncodedUnsignedInteger(const uint64_t &Value,
-                                  const Twine &Comment = "");
-  Error writeEncodedSignedInteger(const int64_t &Value);
-  Error writeEncodedUnsignedInteger(const uint64_t &Value);
+  Error mapWriteEncodedSignedInteger(const APSInt &Value,
+                                     const Twine &Comment = "");
+  Error mapWriteEncodedUnsignedInteger(const APSInt &Value,
+                                       const Twine &Comment = "");
 
   void incrStreamedLen(const uint64_t &Len) {
     if (isStreaming())

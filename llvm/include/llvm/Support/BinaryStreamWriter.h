@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_BINARYSTREAMWRITER_H
 #define LLVM_SUPPORT_BINARYSTREAMWRITER_H
 
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
@@ -64,6 +65,15 @@ public:
     llvm::support::endian::write<T>(Buffer, Value, Stream.getEndian());
     return writeBytes(Buffer);
   }
+
+  /// Write \p Value as a 128 bit integer (possibly truncated).
+  ///
+  /// \p Value is expected to be in native endian as it is byte swapped if
+  /// needed.
+  ///
+  /// \returns a success error code if the data was successfully written,
+  /// otherwise returns an appropriate error code.
+  LLVM_ABI Error writeInt128(const APSInt &Value);
 
   /// Similar to writeInteger
   template <typename T> Error writeEnum(T Num) {
