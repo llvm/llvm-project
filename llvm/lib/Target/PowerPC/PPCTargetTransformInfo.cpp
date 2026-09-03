@@ -1168,6 +1168,8 @@ InstructionCost PPCTTIImpl::getPartialReductionCost(
     TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
 
+  if (!getST()->hasAltivec())
+    return Invalid;
   if (Opcode != Instruction::Add)
     return Invalid;
   if (BinOp && BinOp.value() != Instruction::Mul)
@@ -1181,17 +1183,21 @@ InstructionCost PPCTTIImpl::getPartialReductionCost(
 
   Type *ATy = VectorType::get(InputTypeA, VF);
   EVT AVT = TLI->getValueType(DL, ATy, true);
-  if (AVT != MVT::v16i8 && AVT != MVT::v8i16)
-    return Invalid;
 
-  // For v16i8 PPC has vmsumubm zext/zext and vmsummbm sext/zext
-  // For v8i16 PPC has vmsumuhm zext/zext and vmsumshm sext/sext
   if (OpAExtend != TTI::PR_SignExtend && OpAExtend != TTI::PR_ZeroExtend)
     return Invalid;
-  if (OpAExtend != OpBExtend) {
-    if (AVT != MVT::v16i8 || OpBExtend != TTI::PR_ZeroExtend)
+  if (OpBExtend != TTI::PR_SignExtend && OpBExtend != TTI::PR_ZeroExtend)
+    return Invalid;
+
+  if (AVT == MVT::v16i8) {
+    // For v16i8 PPC supports vmsumubm (zext/zext) and vmsummbm (sext/zext)
+    if (OpBExtend != TTI::PR_ZeroExtend)
       return Invalid;
-  } else if (AVT == MVT::v16i8 && OpAExtend == TTI::PR_SignExtend) {
+  } else if (AVT == MVT::v8i16) {
+    // For v8i16 PPC supports vmsumuhm (zext/zext) and vmsumshm (sext/sext)
+    if (OpAExtend != OpBExtend)
+      return Invalid;
+  } else {
     return Invalid;
   }
 
