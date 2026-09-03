@@ -6987,7 +6987,17 @@ def FPClassTestEnum
   FPClass_Sub, FPClass_Zero, FPClass_PosFin, FPClass_NegFin, FPClass_Fin,
   FPClass_Pos, FPClass_Neg, FPClass_All]> {
   let printBitEnumPrimaryGroups = 1;
+
+  // I32BitEnumAttr turns this on for backwards compatibility, which makes the
+  // operation printer quote every value that is not a single bit. Turning it
+  // off, together with the `enum` directive on cir.is_fp_class, gets a
+  // separator-aware parser and printer that spell every value unquoted.
+  let printBitEnumQuoted = 0;
+
+  let genSpecializedAttr = 0;
 }
+
+def CIR_FPClassTestAttr : CIR_EnumAttr<FPClassTestEnum, "fp_class">;
 
 def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
   let summary = "Corresponding to the `__builtin_fpclassify` builtin function in clang";
@@ -7015,10 +7025,10 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
   }];
 
   let arguments = (ins CIR_AnyFloatType:$src,
-                       FPClassTestEnum:$flags);
+                       CIR_FPClassTestAttr:$flags);
   let results = (outs CIR_BoolType:$result);
   let assemblyFormat = [{
-    $src `,` $flags `:` functional-type($src, $result) attr-dict
+    $src `,` enum($flags) `:` functional-type($src, $result) attr-dict
   }];
 }
 
