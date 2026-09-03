@@ -22,7 +22,7 @@ target triple = "x86_64-unknown-linux"
 
 ;--- summary.ll
 ^0 = module: (path: "test.o", hash: (0, 0, 0, 0, 0))
-^1 = gv: (guid: 42,                   summaries: (function: (module: ^0, flags: (live: 1), insts: 1, refs: (^2), typeIdInfo: (typeTests: (14276520915468743435)))))
+^1 = gv: (guid: 42,                   summaries: (function: (module: ^0, flags: (live: 1), insts: 1, refs: (^2, ^3), typeIdInfo: (typeTests: (14276520915468743435)))))
 ^2 = gv: (guid: 16594175687743574550, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
 ^3 = gv: (guid: 2415377257478301385,  summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
 ^4 = gv: (guid: 1062103744896965210,  summaries: (alias:    (module: ^0, flags: (linkage: weak, live: 1), aliasee: ^2)))

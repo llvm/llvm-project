@@ -27,6 +27,9 @@ class TestStrictPropertiesFormat_Op<string fmt, list<Trait> traits = []>
 // custom
 //===----------------------------------------------------------------------===//
 
+// CHECK-LABEL: AttrDictContextOperand::parse
+// CHECK: // coverity[ARRAY_VS_SINGLETON]
+// CHECK-NEXT: if (parser.resolveOperands(
 // CHECK-LABEL: AttrDictContextOperand::print
 // CHECK: _odsPrinter.printOptionalAttrDict(_odsAttrs.getDictionary((*this)->getContext()).getValue(), elidedAttrs);
 def AttrDictContextOperand : TestFormat_Op<[{
