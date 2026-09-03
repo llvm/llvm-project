@@ -215,6 +215,17 @@ public:
       exportSarifResult(Error, Loc);
   }
 
+  CharSourceRange getNoteRange(const tooling::DiagnosticMessage &Note) {
+    if (!Note.Ranges.empty())
+      return getRange(Note.Ranges.front());
+
+    tooling::FileByteRange FBR;
+    FBR.FilePath = Note.FilePath;
+    FBR.FileOffset = Note.FileOffset;
+    FBR.Length = 1;
+    return getRange(FBR);
+  }
+
   SmallVector<ThreadFlow, 8> createThreadFlows(const ClangTidyError &Error) {
     SmallVector<ThreadFlow, 8> Flows;
     if (!StringRef(Error.DiagnosticName).starts_with("clang-analyzer-"))
@@ -222,28 +233,11 @@ public:
 
     Flows.reserve(Error.Notes.size());
     for (const tooling::DiagnosticMessage &Note : Error.Notes) {
-      tooling::FileByteRange FBR;
-      if (Note.Ranges.empty()) {
-        FBR.FilePath = Note.FilePath;
-        FBR.FileOffset = Note.FileOffset;
-        FBR.Length = 1;
-      } else {
-        FBR = Note.Ranges.front();
-      }
-      const CharSourceRange Range = getRange(FBR);
-      Flows.push_back(
-          ThreadFlow::create().setRange(Range).setMessage(Note.Message));
+      Flows.push_back(ThreadFlow::create()
+                          .setRange(getNoteRange(Note))
+                          .setMessage(Note.Message));
     }
     return Flows;
-  }
-
-  static std::string buildClangTidyHelpURI(StringRef Name) {
-    const auto [Module, Check] = Name.starts_with("clang-analyzer-")
-                                     ? Name.rsplit('-')
-                                     : Name.split('-');
-    return llvm::formatv(
-        "https://clang.llvm.org/extra/clang-tidy/checks/{0}/{1}.html", Module,
-        Check);
   }
 
   void exportSarifResult(const ClangTidyError &Error,
@@ -262,24 +256,27 @@ public:
 
     if (Inserted) {
       const StringRef Name = Error.DiagnosticName;
-      SarifRule Rule =
-          SarifRule::create().setRuleId(Name).setName(Name).setDescription(
-              Error.Message.Message);
-      if (!Name.starts_with("clang-diagnostic"))
-        Rule = Rule.setHelpURI(buildClangTidyHelpURI(Name));
-
+      SarifRule Rule = SarifRule::create().setRuleId(Name).setName(Name);
       Rule = addDiagnosticLevelToRule(Rule, EffectiveLevel);
       if (SarifWriter)
         RuleIndex = SarifWriter->createRule(Rule);
     }
 
-    const SarifResult Result =
+    SarifResult Result =
         SarifResult::create(RuleIndex)
             .setDiagnosticMessage(Error.Message.Message)
             .setDiagnosticLevel(getSarifResultLevel(EffectiveLevel))
-            .setThreadFlows(createThreadFlows(Error))
             .addLocations(getResultRanges(Error, Loc));
 
+    if (StringRef(Error.DiagnosticName).starts_with("clang-analyzer-")) {
+      Result = Result.setThreadFlows(createThreadFlows(Error));
+    } else {
+      for (const tooling::DiagnosticMessage &Note : Error.Notes) {
+        const CharSourceRange Range = getNoteRange(Note);
+        if (Range.isValid())
+          Result = Result.addRelatedLocations(Range, Note.Message);
+      }
+    }
     if (SarifWriter)
       SarifWriter->appendResult(Result);
   }

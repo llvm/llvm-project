@@ -1,5 +1,5 @@
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t-input.cpp
-// RUN: clang-tidy %t-input.cpp -checks='-*,clang-analyzer*' -export-sarif=%t.sarif > %t.msg 2>&1
+// RUN: clang-tidy %t-input.cpp -checks='-*,clang-analyzer*' -sarif-export=%t.sarif > %t.msg 2>&1
 // RUN: FileCheck -input-file=%t.msg -check-prefix=CHECK-MESSAGES %s -implicit-check-not='{{warning|error|note}}:'
 // RUN: FileCheck -input-file=%t.sarif -check-prefix=CHECK-SARIF %s
 void f() {
@@ -20,7 +20,7 @@ void f() {
 //CHECK-SARIF-NEXT:           "length": {{[0-9]+}},
 //CHECK-SARIF-NEXT:           "location": {
 //CHECK-SARIF-NEXT:             "index": 0,
-//CHECK-SARIF-NEXT:             "uri": "{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:             "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:           },
 //CHECK-SARIF-NEXT:           "mimeType": "text/plain",
 //CHECK-SARIF-NEXT:           "roles": [
@@ -45,7 +45,7 @@ void f() {
 //CHECK-SARIF-NEXT:                         "physicalLocation": {
 //CHECK-SARIF-NEXT:                           "artifactLocation": {
 //CHECK-SARIF-NEXT:                             "index": 0,
-//CHECK-SARIF-NEXT:                             "uri": "{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                             "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                           },
 //CHECK-SARIF-NEXT:                           "region": {
 //CHECK-SARIF-NEXT:                             "endColumn": 11,
@@ -65,7 +65,7 @@ void f() {
 //CHECK-SARIF-NEXT:                         "physicalLocation": {
 //CHECK-SARIF-NEXT:                           "artifactLocation": {
 //CHECK-SARIF-NEXT:                             "index": 0,
-//CHECK-SARIF-NEXT:                              "uri": "{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                             "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                           },
 //CHECK-SARIF-NEXT:                           "region": {
 //CHECK-SARIF-NEXT:                             "endColumn": 7,
@@ -75,8 +75,8 @@ void f() {
 //CHECK-SARIF-NEXT:                           }
 //CHECK-SARIF-NEXT:                         }
 //CHECK-SARIF-NEXT:                       }
-//CHECK-SARIF-NEXT:                     }                      
-//CHECK-SARIF-NEXT:                   ]        
+//CHECK-SARIF-NEXT:                     }
+//CHECK-SARIF-NEXT:                   ]
 //CHECK-SARIF-NEXT:                 }
 //CHECK-SARIF-NEXT:               ]
 //CHECK-SARIF-NEXT:             }
@@ -87,7 +87,7 @@ void f() {
 //CHECK-SARIF-NEXT:               "physicalLocation": {
 //CHECK-SARIF-NEXT:                 "artifactLocation": {
 //CHECK-SARIF-NEXT:                   "index": 0,
-//CHECK-SARIF-NEXT:                   "uri": "{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                 },
 //CHECK-SARIF-NEXT:                 "region": {
 //CHECK-SARIF-NEXT:                   "endColumn": 7,
@@ -118,10 +118,6 @@ void f() {
 //CHECK-SARIF-NEXT:                 "level": "warning",
 //CHECK-SARIF-NEXT:                 "rank": -1
 //CHECK-SARIF-NEXT:               },
-//CHECK-SARIF-NEXT:               "fullDescription": {
-//CHECK-SARIF-NEXT:                 "text": "Dereference of null pointer (loaded from variable 'ptr')"
-//CHECK-SARIF-NEXT:               },
-//CHECK-SARIF-NEXT:               "helpUri": "https://clang.llvm.org/extra/clang-tidy/checks/clang-analyzer/core.NullDereference.html",
 //CHECK-SARIF-NEXT:               "id": "clang-analyzer-core.NullDereference",
 //CHECK-SARIF-NEXT:               "name": "clang-analyzer-core.NullDereference"
 //CHECK-SARIF-NEXT:             }
@@ -133,4 +129,3 @@ void f() {
 //CHECK-SARIF-NEXT:   ],
 //CHECK-SARIF-NEXT:   "version": "{{.*}}"
 //CHECK-SARIF-NEXT: }
-
