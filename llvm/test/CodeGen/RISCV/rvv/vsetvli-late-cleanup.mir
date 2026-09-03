@@ -23,6 +23,7 @@
   define void @keep_across_vtype_clobber() { ret void }
   define void @keep_vl_producer() { ret void }
   define void @remove_consecutive_configs() { ret void }
+  define void @keep_debug_numbered_config() { ret void }
   define void @cleanup_after_mcp() { ret void }
   define void @keep_at_block_boundary() { ret void }
 ...
@@ -158,6 +159,19 @@ body: |
     ; CHECK: dead $x0 = PseudoVSETIVLI 1, 192
     dead $x0 = PseudoVSETIVLI 3, 194, implicit-def $vl, implicit-def $vtype
     dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET
+...
+
+---
+name: keep_debug_numbered_config
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: keep_debug_numbered_config
+    ; CHECK: dead $x0 = PseudoVSETIVLI 2, 193{{.*}}debug-instr-number 1
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 192
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype, debug-instr-number 1
     dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
     PseudoRET
 ...

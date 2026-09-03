@@ -99,8 +99,8 @@ bool RISCVVSETVLICleanupImpl::cleanupBlock(MachineBasicBlock &MBB,
     // A non-X0 scalar result is observable unless liveness marks it dead.
     const MachineOperand &Result = MI.getOperand(0);
     bool HasLiveScalarResult = Result.getReg() != RISCV::X0 && !Result.isDead();
-    if (NextConfig && !HasLiveScalarResult && !Used.usedVL() &&
-        !Used.usedVTYPE()) {
+    if (NextConfig && !HasLiveScalarResult && !MI.isBundled() &&
+        !MI.peekDebugInstrNum() && !Used.usedVL() && !Used.usedVTYPE()) {
       MI.eraseFromParent();
       ++NumRemovedVSETVLI;
       Changed = true;
