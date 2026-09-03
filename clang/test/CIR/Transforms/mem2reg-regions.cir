@@ -47,8 +47,10 @@ module {
     cir.return
   }
 
-  // A store inside a region would have to leave the operation through a result,
-  // which cir.if does not have, so the slot is left alone.
+  // A store inside a region would have to leave through a result, which cir.if
+  // does not have, so the slot is left alone. After cir-hoist-allocas this is
+  // the `if (c) { int x = 42; use(x); }` shape: slot outside, init store
+  // inside.
   // CHECK-LABEL: cir.func @store_in_if
   cir.func @store_in_if(%cond: !cir.bool) {
     // CHECK: cir.alloca
@@ -65,6 +67,52 @@ module {
     }
     %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.call @use(%3) : (!s32i) -> ()
+    cir.return
+  }
+
+  // hasValueStores is per slot. A store to one slot must not prevent promoting
+  // another slot that is only loaded in the same region.
+  // CHECK-LABEL: cir.func @store_one_load_other
+  cir.func @store_one_load_other(%cond: !cir.bool) {
+    // CHECK: %[[A:.*]] = cir.alloca "a"
+    // CHECK-NOT: cir.alloca "b"
+    // CHECK: %[[BVAL:.*]] = cir.const #cir.int<2>
+    // CHECK: cir.if
+    // CHECK: cir.store %{{.*}}, %[[A]]
+    // CHECK: cir.call @use(%[[BVAL]])
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    %1 = cir.alloca "b" align(4) : !cir.ptr<!s32i>
+    %2 = cir.const #cir.int<1> : !s32i
+    cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+    %3 = cir.const #cir.int<2> : !s32i
+    cir.store %3, %1 : !s32i, !cir.ptr<!s32i>
+    cir.if %cond {
+      %4 = cir.const #cir.int<3> : !s32i
+      cir.store %4, %0 : !s32i, !cir.ptr<!s32i>
+      %5 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%5) : (!s32i) -> ()
+      cir.yield
+    }
+    %6 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.call @use(%6) : (!s32i) -> ()
+    cir.return
+  }
+
+  // A load with no store ahead of the region takes the default-value path:
+  // mem2reg materializes cir.const #cir.undef immediately before the op.
+  // CHECK-LABEL: cir.func @load_uninitialized_in_if
+  cir.func @load_uninitialized_in_if(%cond: !cir.bool) {
+    // CHECK-NOT: cir.alloca
+    // CHECK: %[[UNDEF:.*]] = cir.const #cir.undef
+    // CHECK: cir.if
+    // CHECK-NOT: cir.load
+    // CHECK: cir.call @use(%[[UNDEF]])
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    cir.if %cond {
+      %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%1) : (!s32i) -> ()
+      cir.yield
+    }
     cir.return
   }
 
@@ -122,6 +170,72 @@ module {
     }
     %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.call @use(%3) : (!s32i) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @load_in_ternary
+  cir.func @load_in_ternary(%cond: !cir.bool) {
+    // CHECK-NOT: cir.alloca
+    // CHECK: %[[CONST:.*]] = cir.const #cir.int<9>
+    // CHECK: cir.ternary
+    // CHECK-NOT: cir.load
+    // CHECK: cir.call @use(%[[CONST]])
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<9> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.ternary(%cond, true {
+      %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%3) : (!s32i) -> ()
+      cir.yield %3 : !s32i
+    }, false {
+      %4 = cir.const #cir.int<0> : !s32i
+      cir.yield %4 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @load_in_both_ternary_regions
+  cir.func @load_in_both_ternary_regions(%cond: !cir.bool) {
+    // CHECK-NOT: cir.alloca
+    // CHECK: %[[CONST:.*]] = cir.const #cir.int<11>
+    // CHECK: cir.ternary
+    // CHECK: cir.call @use(%[[CONST]])
+    // CHECK: cir.call @use(%[[CONST]])
+    // CHECK-NOT: cir.load
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<11> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.ternary(%cond, true {
+      %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%3) : (!s32i) -> ()
+      cir.yield %3 : !s32i
+    }, false {
+      %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+      cir.call @use(%4) : (!s32i) -> ()
+      cir.yield %4 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @store_in_ternary
+  cir.func @store_in_ternary(%cond: !cir.bool) {
+    // CHECK: cir.alloca
+    // CHECK: cir.ternary
+    // CHECK: cir.store
+    // CHECK: cir.load
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<1> : !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.ternary(%cond, true {
+      %3 = cir.const #cir.int<2> : !s32i
+      cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
+      cir.yield %3 : !s32i
+    }, false {
+      %4 = cir.const #cir.int<0> : !s32i
+      cir.yield %4 : !s32i
+    }) : (!cir.bool) -> !s32i
+    %5 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.call @use(%5) : (!s32i) -> ()
     cir.return
   }
 

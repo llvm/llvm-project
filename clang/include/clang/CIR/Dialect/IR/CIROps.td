@@ -3233,6 +3233,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 //===----------------------------------------------------------------------===//
 
 def CIR_TernaryOp : CIR_RegionBranchOpBase<"ternary", [
+  DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
