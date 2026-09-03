@@ -22,8 +22,8 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @reduction_sum_single(
@@ -49,8 +49,8 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-INTERLEAVED:       [[MIDDLE_BLOCK]]:
 ; CHECK-INTERLEAVED-NEXT:    [[SUM_0_LCSSA:%.*]] = add i32 [[TMP5]], [[TMP3]]
-; CHECK-INTERLEAVED-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-INTERLEAVED:       [[__CRIT_EDGE:.*:]]
+; CHECK-INTERLEAVED-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK-INTERLEAVED:       [[DOT_CRIT_EDGE]]:
 ; CHECK-INTERLEAVED-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:
@@ -98,8 +98,8 @@ define i32 @reduction_sum(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[TMP7]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @reduction_sum(
@@ -140,8 +140,8 @@ define i32 @reduction_sum(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-INTERLEAVED:       [[MIDDLE_BLOCK]]:
 ; CHECK-INTERLEAVED-NEXT:    [[SUM_0_LCSSA:%.*]] = add i32 [[TMP15]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-INTERLEAVED:       [[__CRIT_EDGE:.*:]]
+; CHECK-INTERLEAVED-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK-INTERLEAVED:       [[DOT_CRIT_EDGE]]:
 ; CHECK-INTERLEAVED-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:
@@ -188,8 +188,8 @@ define i32 @reduction_sum_const(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @reduction_sum_const(
@@ -219,8 +219,8 @@ define i32 @reduction_sum_const(ptr noalias nocapture %A) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-INTERLEAVED:       [[MIDDLE_BLOCK]]:
 ; CHECK-INTERLEAVED-NEXT:    [[SUM_0_LCSSA:%.*]] = add i32 [[TMP7]], [[TMP6]]
-; CHECK-INTERLEAVED-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-INTERLEAVED:       [[__CRIT_EDGE:.*:]]
+; CHECK-INTERLEAVED-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK-INTERLEAVED:       [[DOT_CRIT_EDGE]]:
 ; CHECK-INTERLEAVED-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:
@@ -269,8 +269,8 @@ define i32 @reduction_prod(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[TMP7]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @reduction_prod(
@@ -311,8 +311,8 @@ define i32 @reduction_prod(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-INTERLEAVED:       [[MIDDLE_BLOCK]]:
 ; CHECK-INTERLEAVED-NEXT:    [[PROD_0_LCSSA:%.*]] = mul i32 [[TMP15]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-INTERLEAVED:       [[__CRIT_EDGE:.*:]]
+; CHECK-INTERLEAVED-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK-INTERLEAVED:       [[DOT_CRIT_EDGE]]:
 ; CHECK-INTERLEAVED-NEXT:    ret i32 [[PROD_0_LCSSA]]
 ;
 entry:
@@ -364,8 +364,8 @@ define i32 @reduction_mix(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @reduction_mix(
@@ -404,8 +404,8 @@ define i32 @reduction_mix(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-INTERLEAVED:       [[MIDDLE_BLOCK]]:
 ; CHECK-INTERLEAVED-NEXT:    [[SUM_0_LCSSA:%.*]] = add i32 [[TMP13]], [[TMP10]]
-; CHECK-INTERLEAVED-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-INTERLEAVED:       [[__CRIT_EDGE:.*:]]
+; CHECK-INTERLEAVED-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK-INTERLEAVED:       [[DOT_CRIT_EDGE]]:
 ; CHECK-INTERLEAVED-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:
@@ -454,8 +454,8 @@ define i32 @reduction_mul(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @reduction_mul(
@@ -489,8 +489,8 @@ define i32 @reduction_mul(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-INTERLEAVED:       [[MIDDLE_BLOCK]]:
 ; CHECK-INTERLEAVED-NEXT:    [[SUM_0_LCSSA:%.*]] = mul i32 [[TMP11]], [[TMP9]]
-; CHECK-INTERLEAVED-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-INTERLEAVED:       [[__CRIT_EDGE:.*:]]
+; CHECK-INTERLEAVED-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK-INTERLEAVED:       [[DOT_CRIT_EDGE]]:
 ; CHECK-INTERLEAVED-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:
@@ -1212,7 +1212,7 @@ define i32 @reduction_sum_multiuse(ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK-SAME: ptr noalias captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  [[_LR_PH1:.*]]:
 ; CHECK-NEXT:    br label %[[DOTLR_PH:.*]]
-; CHECK:       [[_LR_PH:.*:]]
+; CHECK:       [[DOTLR_PH]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH1]] ]
 ; CHECK-NEXT:    [[SUM_02:%.*]] = phi i32 [ [[L10:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH1]] ]
 ; CHECK-NEXT:    [[L2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
@@ -1236,7 +1236,7 @@ define i32 @reduction_sum_multiuse(ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK-INTERLEAVED-SAME: ptr noalias captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]]) {
 ; CHECK-INTERLEAVED-NEXT:  [[_LR_PH1:.*]]:
 ; CHECK-INTERLEAVED-NEXT:    br label %[[DOTLR_PH:.*]]
-; CHECK-INTERLEAVED:       [[_LR_PH:.*:]]
+; CHECK-INTERLEAVED:       [[DOTLR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH1]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[SUM_02:%.*]] = phi i32 [ [[L10:%.*]], %[[DOTLR_PH]] ], [ 0, %[[_LR_PH1]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[L2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
@@ -1308,8 +1308,8 @@ define i32 @reduction_predicated(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[TMP7]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @reduction_predicated(
@@ -1350,8 +1350,8 @@ define i32 @reduction_predicated(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-INTERLEAVED:       [[MIDDLE_BLOCK]]:
 ; CHECK-INTERLEAVED-NEXT:    [[SUM_0_LCSSA:%.*]] = add i32 [[TMP15]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-INTERLEAVED:       [[__CRIT_EDGE:.*:]]
+; CHECK-INTERLEAVED-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK-INTERLEAVED:       [[DOT_CRIT_EDGE]]:
 ; CHECK-INTERLEAVED-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:
@@ -1401,8 +1401,8 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[TMP4]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP7]] to i32
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = trunc i32 [[TMP8]] to i8
 ; CHECK-NEXT:    ret i8 [[SUM_0_LCSSA]]
 ;
@@ -1437,8 +1437,8 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add <4 x i8> [[TMP9]], [[TMP8]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[BIN_RDX]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP13]] to i32
-; CHECK-INTERLEAVED-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-INTERLEAVED:       [[__CRIT_EDGE:.*:]]
+; CHECK-INTERLEAVED-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK-INTERLEAVED:       [[DOT_CRIT_EDGE]]:
 ; CHECK-INTERLEAVED-NEXT:    [[SUM_0_LCSSA:%.*]] = trunc i32 [[TMP14]] to i8
 ; CHECK-INTERLEAVED-NEXT:    ret i8 [[SUM_0_LCSSA]]
 ;
@@ -1487,8 +1487,8 @@ define i8 @reduction_and_trunc(ptr noalias nocapture %A) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> [[TMP4]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i8 [[TMP7]] to i32
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = trunc i32 [[TMP8]] to i8
 ; CHECK-NEXT:    ret i8 [[SUM_0_LCSSA]]
 ;
@@ -1523,8 +1523,8 @@ define i8 @reduction_and_trunc(ptr noalias nocapture %A) {
 ; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = and <4 x i8> [[TMP9]], [[TMP8]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> [[BIN_RDX]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP13]] to i32
-; CHECK-INTERLEAVED-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-INTERLEAVED:       [[__CRIT_EDGE:.*:]]
+; CHECK-INTERLEAVED-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK-INTERLEAVED:       [[DOT_CRIT_EDGE]]:
 ; CHECK-INTERLEAVED-NEXT:    [[SUM_0_LCSSA:%.*]] = trunc i32 [[TMP14]] to i8
 ; CHECK-INTERLEAVED-NEXT:    ret i8 [[SUM_0_LCSSA]]
 ;
