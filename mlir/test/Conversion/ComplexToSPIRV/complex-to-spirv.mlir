@@ -268,3 +268,29 @@ func.func @complex_angle_opencl(%arg: complex<f32>) -> f32 {
 //       CHECK:   spirv.CL.atan2
 
 }
+
+// -----
+
+func.func @complex_sign(%arg: complex<f32>) -> complex<f32> {
+  %sign = complex.sign %arg : complex<f32>
+  return %sign : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_sign
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[RESQ:.+]] = spirv.FMul %[[RE]], %[[RE]] : f32
+//       CHECK:   %[[IMSQ:.+]] = spirv.FMul %[[IM]], %[[IM]] : f32
+//       CHECK:   %[[SUM:.+]] = spirv.FAdd %[[RESQ]], %[[IMSQ]] : f32
+//       CHECK:   %[[ABS:.+]] = spirv.GL.Sqrt %[[SUM]] : f32
+//       CHECK:   %[[SIGNRE:.+]] = spirv.FDiv %[[RE]], %[[ABS]] : f32
+//       CHECK:   %[[SIGNIM:.+]] = spirv.FDiv %[[IM]], %[[ABS]] : f32
+//       CHECK:   %[[ZERO:.+]] = spirv.Constant 0.000000e+00 : f32
+//       CHECK:   %[[REZ:.+]] = spirv.FOrdEqual %[[RE]], %[[ZERO]] : f32
+//       CHECK:   %[[IMZ:.+]] = spirv.FOrdEqual %[[IM]], %[[ZERO]] : f32
+//       CHECK:   %[[ISZERO:.+]] = spirv.LogicalAnd %[[REZ]], %[[IMZ]] : i1
+//       CHECK:   %[[SELRE:.+]] = spirv.Select %[[ISZERO]], %[[RE]], %[[SIGNRE]] : i1, f32
+//       CHECK:   %[[SELIM:.+]] = spirv.Select %[[ISZERO]], %[[IM]], %[[SIGNIM]] : i1, f32
+//       CHECK:   %[[RESULT:.+]] = spirv.CompositeConstruct %[[SELRE]], %[[SELIM]] : (f32, f32) -> vector<2xf32>
