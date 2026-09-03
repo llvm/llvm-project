@@ -311,7 +311,6 @@ set(gpu_files
   __clang_gpu_device_functions.h
   __clang_gpu_intrinsics.h
   __clang_gpu_runtime_wrapper.h
-  __clang_gpu_device_virtual_trap.h
   )
 
 set(gpu_hip_wrapper_files

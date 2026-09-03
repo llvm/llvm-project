@@ -32,7 +32,22 @@
   #define nullptr NULL;
 #endif
 
-#include <__clang_gpu_device_virtual_trap.h>
+#ifdef __cplusplus
+extern "C" {
+  __attribute__((__visibility__("default")))
+  __attribute__((weak))
+  __attribute__((noreturn))
+  __device__ void __cxa_pure_virtual(void) {
+    __builtin_trap();
+  }
+  __attribute__((__visibility__("default")))
+  __attribute__((weak))
+  __attribute__((noreturn))
+  __device__ void __cxa_deleted_virtual(void) {
+    __builtin_trap();
+  }
+}
+#endif //__cplusplus
 
 #if !defined(__HIPCC_RTC__)
 #if __has_include("hip/hip_version.h")
