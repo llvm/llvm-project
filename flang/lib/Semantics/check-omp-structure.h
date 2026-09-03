@@ -55,16 +55,18 @@ struct LoopSequence;
 }
 
 // Support classes for verifying syntactic properties.
-template <typename ElemTy> struct AppliedElement {
+template <typename ElemTy, typename SetsSetTy> struct AppliedElement {
   parser::omp::WithSource<ElemTy> id;
+  SetsSetTy sets;
 };
 
-template <typename ElemTy> struct AppliedElementInfo {
-  using ElementTy = AppliedElement<ElemTy>;
+template <typename ElemTy, typename SetsSetTy> struct AppliedElementInfo {
+  using ElementTy = AppliedElement<ElemTy, SetsSetTy>;
   llvm::SmallVector<ElementTy> elements;
 };
 
-using AppliedModifierInfo = AppliedElementInfo<llvm::omp::Modifier>;
+using AppliedModifierInfo =
+    AppliedElementInfo<llvm::omp::Modifier, llvm::omp::ModifierSets>;
 using AppliedModifier = AppliedModifierInfo::ElementTy;
 
 // Mapping from 'Symbol' to 'Source' to keep track of the variables

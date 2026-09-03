@@ -43,13 +43,25 @@ static llvm::omp::Modifiers getElements(
   return cdesc.getModifiers(version);
 }
 
+static llvm::omp::Modifiers getElements(
+    const llvm::omp::descriptor::ModifierSet &sdesc,
+    llvm::omp::Version version) {
+  return sdesc.getModifiers(version);
+}
+
+static llvm::omp::ModifierSets getSets(
+    const llvm::omp::descriptor::Clause &cdesc, llvm::omp::Version version) {
+  return cdesc.getModifierSets(version);
+}
+
 template < //
-    typename ElemTy, typename OwnerTy,
+    typename ElemTy, typename SetsSetTy, typename OwnerTy,
     typename ResultTy = llvm::DenseMap<ElemTy,
         std::pair<parser::CharBlock, llvm::directive::VersionRange>>>
-static ResultTy VerifyVersions(const AppliedElementInfo<ElemTy> &info,
-    OwnerTy ownerId, llvm::omp::Version version) {
-  using AppliedElementTy = AppliedElement<ElemTy>;
+static ResultTy VerifyVersions(
+    const AppliedElementInfo<ElemTy, SetsSetTy> &info, OwnerTy ownerId,
+    llvm::omp::Version version) {
+  using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
   ResultTy result;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
@@ -78,36 +90,44 @@ static ResultTy VerifyVersions(const AppliedElementInfo<ElemTy> &info,
 }
 
 template < //
-    typename ElemTy, typename OwnerTy,
+    typename ElemTy, typename SetsSetTy, typename OwnerTy,
     typename ElemSetTy = typename SetTypeFor<ElemTy>::type,
-    typename ResultTy = ElemSetTy>
-static ResultTy VerifyRequired(const AppliedElementInfo<ElemTy> &info,
-    OwnerTy ownerId, llvm::omp::Version version) {
-  using AppliedElementTy = AppliedElement<ElemTy>;
+    typename ResultTy = std::pair<ElemSetTy, SetsSetTy>>
+static ResultTy VerifyRequired(
+    const AppliedElementInfo<ElemTy, SetsSetTy> &info, OwnerTy ownerId,
+    llvm::omp::Version version) {
+  using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
   ResultTy required;
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
 
   for (auto e : getElements(odesc, version)) {
     auto &edesc{llvm::omp::getDescriptor(e)};
     if (edesc.getProperties(version).test(llvm::omp::Property::Required)) {
-      required.set(e);
+      required.first.set(e);
+    }
+  }
+  for (auto s : getSets(odesc, version)) {
+    auto &sdesc{llvm::omp::getDescriptor(s)};
+    if (sdesc.getProperties(version).test(llvm::omp::Property::Required)) {
+      required.second.set(s);
     }
   }
 
   for (const AppliedElementTy &elem : info.elements) {
-    required.reset(elem.id.value);
+    required.first.reset(elem.id.value);
+    required.second &= ~elem.sets;
   }
 
   return required;
 }
 
 template < //
-    typename ElemTy, typename OwnerTy,
+    typename ElemTy, typename SetsSetTy, typename OwnerTy,
     typename ResultTy =
         llvm::DenseMap<ElemTy, std::pair<parser::CharBlock, parser::CharBlock>>>
-static ResultTy VerifyUnique(const AppliedElementInfo<ElemTy> &info,
+static ResultTy VerifyUnique(const AppliedElementInfo<ElemTy, SetsSetTy> &info,
     OwnerTy ownerId, llvm::omp::Version version) {
-  using AppliedElementTy = AppliedElement<ElemTy>;
+  using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
   using ElemSetTy = typename SetTypeFor<ElemTy>::type;
   ElemSetTy unique;
 
@@ -119,6 +139,12 @@ static ResultTy VerifyUnique(const AppliedElementInfo<ElemTy> &info,
     // Exclusive modifiers should have the "unique" property present as well.
     if (edesc.getProperties(version).test(llvm::omp::Property::Unique)) {
       unique.set(e);
+    }
+  }
+  for (auto s : getSets(odesc, version)) {
+    auto &sdesc{llvm::omp::getDescriptor(s)};
+    if (sdesc.getProperties(version).test(llvm::omp::Property::Unique)) {
+      unique |= getElements(sdesc, version);
     }
   }
 
@@ -141,12 +167,13 @@ static ResultTy VerifyUnique(const AppliedElementInfo<ElemTy> &info,
 }
 
 template < //
-    typename ElemTy, typename OwnerTy,
+    typename ElemTy, typename SetsSetTy, typename OwnerTy,
     typename ResultTy = llvm::DenseMap<ElemTy,
         std::tuple<ElemTy, parser::CharBlock, parser::CharBlock>>>
-static ResultTy VerifyExclusive(const AppliedElementInfo<ElemTy> &info,
-    OwnerTy ownerId, llvm::omp::Version version) {
-  using AppliedElementTy = AppliedElement<ElemTy>;
+static ResultTy VerifyExclusive(
+    const AppliedElementInfo<ElemTy, SetsSetTy> &info, OwnerTy ownerId,
+    llvm::omp::Version version) {
+  using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
   ResultTy result;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
@@ -179,16 +206,57 @@ static ResultTy VerifyExclusive(const AppliedElementInfo<ElemTy> &info,
 }
 
 template < //
-    typename ElemTy, typename OwnerTy,
+    typename ElemTy, typename SetsSetTy, typename OwnerTy,
+    typename ResultTy = llvm::DenseMap<ElemTy,
+        std::tuple<ElemTy, parser::CharBlock, parser::CharBlock>>>
+static ResultTy VerifyMutuallyExclusive(
+    const AppliedElementInfo<ElemTy, SetsSetTy> &info, OwnerTy ownerId,
+    llvm::omp::Version version) {
+  using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
+  using SetTy = typename SetsSetTy::value_type;
+
+  ResultTy result;
+
+  auto &odesc{llvm::omp::getDescriptor(ownerId)};
+  auto elements{getElements(odesc, version)};
+
+  llvm::DenseMap<SetTy, const AppliedElementTy *> exclusive;
+  for (const AppliedElementTy &elem : info.elements) {
+    if (!elements.test(elem.id.value)) {
+      // Skip invalid elements.
+      continue;
+    }
+    for (auto s : elem.sets) {
+      auto &sdesc{llvm::omp::getDescriptor(s)};
+      if (!sdesc.getProperties(version).test(llvm::omp::Property::Exclusive)) {
+        continue;
+      }
+      auto [where, inserted]{exclusive.insert({s, &elem})};
+      if (!inserted) {
+        const AppliedElementTy *prev{where->second};
+        if (prev->id.value != elem.id.value) {
+          result.insert({elem.id.value,
+              {prev->id.value, elem.id.source, prev->id.source}});
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+template < //
+    typename ElemTy, typename SetsSetTy, typename OwnerTy,
     typename ResultTy = llvm::DenseMap<ElemTy, parser::CharBlock>>
-static ResultTy VerifyUltimate(const AppliedElementInfo<ElemTy> &info,
-    OwnerTy ownerId, llvm::omp::Version version, bool last = true) {
+static ResultTy VerifyUltimate(
+    const AppliedElementInfo<ElemTy, SetsSetTy> &info, OwnerTy ownerId,
+    llvm::omp::Version version, bool last = true) {
   ResultTy result;
   if (info.elements.empty()) {
     return result;
   }
 
-  using AppliedElementTy = AppliedElement<ElemTy>;
+  using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
   using ElemSetTy = typename SetTypeFor<ElemTy>::type;
   ElemSetTy ultimate;
 
@@ -199,6 +267,12 @@ static ResultTy VerifyUltimate(const AppliedElementInfo<ElemTy> &info,
     auto &edesc{llvm::omp::getDescriptor(e)};
     if (edesc.getProperties(version).test(llvm::omp::Property::Ultimate)) {
       ultimate.set(e);
+    }
+  }
+  for (auto s : getSets(odesc, version)) {
+    auto &sdesc{llvm::omp::getDescriptor(s)};
+    if (sdesc.getProperties(version).test(llvm::omp::Property::Ultimate)) {
+      ultimate |= getElements(sdesc, version);
     }
   }
 
@@ -259,13 +333,27 @@ bool OmpStructureChecker::VerifyModifierRequired(
 
   auto result = VerifyRequired(info, clause.value, version);
 
-  for (llvm::omp::Modifier m : result) {
+  for (llvm::omp::Modifier m : result.first) {
     auto &mdesc{llvm::omp::getDescriptor(m)};
     context_.Say(clause.source, "'%s' modifier is required"_err_en_US,
         mdesc.getName().str());
   }
+  for (llvm::omp::ModifierSet s : result.second) {
+    auto &sdesc{llvm::omp::getDescriptor(s)};
+    // If the group is required, at least one modifier from that group must
+    // be present.
+    if (llvm::omp::isModifierGroup(s)) {
+      context_.Say(clause.source,
+          "modifier from '%s' modifier group is required"_err_en_US,
+          sdesc.getName().str());
+    } else {
+      context_.Say(clause.source,
+          "modifier from the modifier set on %s clause is required"_err_en_US,
+          GetUpperName(clause.value, version));
+    }
+  }
 
-  return result.empty();
+  return result.first.empty() && result.second.empty();
 }
 
 bool OmpStructureChecker::VerifyModifierUnique(
@@ -289,9 +377,9 @@ bool OmpStructureChecker::VerifyModifierExclusive(
     WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
-  auto result = VerifyExclusive(info, clause.value, version);
+  auto resultExcl = VerifyExclusive(info, clause.value, version);
 
-  for (auto [id, wrong] : result) {
+  for (auto [id, wrong] : resultExcl) {
     auto [otherId, source, otherSource] = wrong;
     context_
         .Say(source,
@@ -301,7 +389,19 @@ bool OmpStructureChecker::VerifyModifierExclusive(
             llvm::omp::getDescriptor(otherId).getName().str());
   }
 
-  return result.empty();
+  auto resultMut = VerifyMutuallyExclusive(info, clause.value, version);
+
+  for (auto [id, wrong] : resultMut) {
+    auto [otherId, source, otherSource] = wrong;
+    auto thisName{llvm::omp::getDescriptor(id).getName().str()};
+    context_
+        .Say(otherSource,
+            "The '%s' and '%s' modifiers are mutually exclusive"_err_en_US,
+            llvm::omp::getDescriptor(otherId).getName().str(), thisName)
+        .Attach(source, "'%s' modifier specified here"_en_US, thisName);
+  }
+
+  return resultExcl.empty() && resultMut.empty();
 }
 
 bool OmpStructureChecker::VerifyModifierUltimate(
@@ -334,6 +434,12 @@ AppliedModifierInfo GetAppliedModifiers(llvm::omp::Clause clauseId,
           [&](auto &&t) {
             auto &am{info.elements.emplace_back(AppliedModifier{})};
             am.id = WithSource{t.Id, m.source};
+            for (auto s : cdesc.getModifierSets(version)) {
+              auto &sdesc{llvm::omp::getDescriptor(s)};
+              if (sdesc.getModifiers(version).test(am.id.value)) {
+                am.sets.set(s);
+              }
+            }
           },
           m.u);
     }
