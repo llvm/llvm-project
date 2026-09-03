@@ -149,8 +149,9 @@ public:
   initializeHiddenVirtualInheritanceMembers(CIRGenFunction &cgf,
                                             const CXXRecordDecl *rd) override {
     if (rd->getNumVBases())
-      cgf.cgm.errorNYI(rd->getSourceRange(),
-                       "initializeHiddenVirtualInheritanceMembers: vbptr stores");
+      cgf.cgm.errorNYI(
+          rd->getSourceRange(),
+          "initializeHiddenVirtualInheritanceMembers: vbptr stores");
   }
 
   mlir::Value
@@ -206,9 +207,7 @@ public:
     return true;
   }
 
-  bool requiresArrayCookie(const CXXNewExpr *e) override {
-    return false;
-  }
+  bool requiresArrayCookie(const CXXNewExpr *e) override { return false; }
 
   CharUnits getArrayCookieSizeImpl(QualType elementType) override {
     return CharUnits::Zero();
@@ -221,9 +220,7 @@ public:
     return newPtr;
   }
 
-  bool shouldTypeidBeNullChecked(QualType srcTy) override {
-    return false;
-  }
+  bool shouldTypeidBeNullChecked(QualType srcTy) override { return false; }
 
   mlir::Value emitTypeid(CIRGenFunction &cgf, QualType srcTy, Address thisPtr,
                          mlir::Type typeInfoPtrTy) override {
@@ -250,7 +247,7 @@ public:
   }
 
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
-                                         QualType ty) override {
+                                          QualType ty) override {
     cgm.errorNYI(loc, "getAddrOfRTTIDescriptor: MSVC ABI");
     return nullptr;
   }
