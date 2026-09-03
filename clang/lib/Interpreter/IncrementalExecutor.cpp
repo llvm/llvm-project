@@ -419,11 +419,7 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
       JITBuilder->setPlatformSetUp(
           llvm::orc::ExecutorNativePlatform(OrcRuntimePath));
     } else {
-      LLVM_DEBUG({
-        llvm::dbgs() << "OrcRuntime not found, running JIT without native "
-                        "platform support "
-                     << "and some features may not work.\n";
-      });
+      LLVM_DEBUG({ llvm::dbgs() << "OrcRuntime library not found.\n"; });
     }
     // TODO: Switch to native TLS once clang-repl can adopt the ORC runtime
     // (which provides __emutls_get_address and supports the full TLS
