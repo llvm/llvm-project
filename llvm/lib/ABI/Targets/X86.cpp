@@ -557,9 +557,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Field.OffsetInBits;
       bool BitField = Field.IsBitField;
 
-      // Ignore zero-length bit-fields. Other unnamed bit-fields are real
-      // storage and classify like named ones, matching GCC.
-      if (BitField && Field.BitFieldWidth == 0)
+      if (BitField && Field.IsUnnamedBitfield)
         continue;
 
       if (Size > 128 &&
