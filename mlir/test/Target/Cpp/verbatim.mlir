@@ -22,7 +22,7 @@ emitc.verbatim "typedef float f32;"
 
 emitc.func @func(%arg: f32) {
   // CHECK: void func(float [[V0:[^ ]*]]) {
-  %a = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.array<3x7xi32>
+  %a = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<3x7xi32>
   // CHECK: int32_t [[A:[^ ]*]][3][7];
 
   emitc.verbatim "{}" args %arg : f32
