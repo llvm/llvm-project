@@ -3912,14 +3912,9 @@ void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      uint64_t Stride;
       VPValue *StoredValue = nullptr;
-      auto m_ConstantStrideVecPtr =
-          m_VecPtr(m_VPValue(), m_ConstantInt(Stride));
-      if ((!match(&R, m_WidenLoad(m_ConstantStrideVecPtr)) &&
-           !match(&R, m_WidenStore(m_ConstantStrideVecPtr,
-                                   m_VPValue(StoredValue)))) ||
-          Stride != 1)
+      if (!match(&R, m_WidenLoad(m_VPValue())) &&
+          !match(&R, m_WidenStore(m_VPValue(), m_VPValue(StoredValue))))
         continue;
 
       auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
