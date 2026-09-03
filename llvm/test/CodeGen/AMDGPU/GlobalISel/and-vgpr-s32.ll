@@ -2,9 +2,6 @@
 ; RUN: llc -O2 -global-isel -mtriple=amdgpu9.50-amd-amdhsa -verify-machineinstrs -filetype=null %s
 ; RUN: llc -O2 -global-isel -mtriple=amdgpu9.0a-amd-amdhsa -verify-machineinstrs -filetype=null %s
 
-; Make sure lowering the divergent low-bit test does not leave an untyped
-; VGPR G_AND for instruction selection.
-
 define amdgpu_kernel void @and_vgpr_s32(i32 %lane.bit) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
