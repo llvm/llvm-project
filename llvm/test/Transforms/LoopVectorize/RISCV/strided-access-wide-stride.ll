@@ -81,8 +81,8 @@ define void @stride_zext_exceeds_i32_max(ptr noalias readonly %src, ptr noalias 
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ [[TMP2]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 16, i1 true)
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 3000000000
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP5]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 3000000000
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr nuw i8, ptr [[TMP5]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP9]], i64 3000000000, <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> [[TMP10]], <vscale x 16 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP6]], [[INDEX]]
