@@ -317,3 +317,35 @@ subroutine f23(n, a)
     end do
   end do
 end subroutine
+
+! An actual TARGET hides enclosing constructs from a nested selector.
+subroutine f24(n, a)
+  integer :: n, a(n), i
+  !$omp parallel
+    !$omp target
+      !$omp metadirective &
+      !$omp& when(construct={parallel, target}: &
+      !$omp& simd collapse(2)) default(nothing)
+      do i = 1, n
+        a(i) = i
+      end do
+    !$omp end target
+  !$omp end parallel
+end subroutine
+
+! A selected TARGET also hides enclosing constructs from a nested selector.
+subroutine f25(n, a)
+  integer :: n, a(n), i
+  !$omp parallel
+    !$omp begin metadirective &
+    !$omp& when(implementation={vendor(llvm)}: target) &
+    !$omp& default(nothing)
+      !$omp metadirective &
+      !$omp& when(construct={parallel, target}: &
+      !$omp& simd collapse(2)) default(nothing)
+      do i = 1, n
+        a(i) = i
+      end do
+    !$omp end metadirective
+  !$omp end parallel
+end subroutine
