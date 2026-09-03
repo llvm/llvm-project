@@ -2756,10 +2756,8 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
                                Values.Ordered);
   assert((isOpenMPWorksharingDirective(DKind) || (DKind == OMPD_loop)) &&
          "Expected loop-based or sections-based directive.");
-  llvm::Value *UpdatedLocation = emitUpdateLocation(CGF, Loc,
-                                             isOpenMPLoopDirective(DKind)
-                                                 ? OMP_IDENT_WORK_LOOP
-                                                 : OMP_IDENT_WORK_SECTIONS);
+  llvm::Value *UpdatedLocation =
+      emitUpdateLocation(CGF, Loc, OMP_IDENT_WORK_LOOP);
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::FunctionCallee StaticInitFunction =
       OMPBuilder.createForStaticInitFunction(Values.IVSize, Values.IVSigned,
@@ -2803,9 +2801,7 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
                          isOpenMPDistributeDirective(DKind) ||
                                  (DKind == OMPD_target_teams_loop)
                              ? OMP_IDENT_WORK_DISTRIBUTE
-                         : isOpenMPLoopDirective(DKind)
-                             ? OMP_IDENT_WORK_LOOP
-                             : OMP_IDENT_WORK_SECTIONS),
+                             : OMP_IDENT_WORK_LOOP),
       getThreadID(CGF, Loc)};
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   if (isOpenMPDistributeDirective(DKind) &&
