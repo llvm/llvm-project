@@ -1,6 +1,8 @@
 ! LLVM IR-level regression test for volatile byte-fill stores.
 ! Verifies that volatile locals produce "store volatile" in LLVM IR for
-! every byte written by the -finit-local= byte-fill paths.
+! every byte written by the -finit-local= byte-fill paths: derived-type
+! record fill, real(10) allocation-gap fill, integer array element fill,
+! and both the compile-time-length and runtime-length CHARACTER byte loops.
 !
 ! At -O2 a non-volatile fill of a volatile variable can be eliminated
 ! entirely.  These checks confirm the stores carry the volatile flag.
@@ -27,10 +29,10 @@ subroutine test_volatile_derived(oa)
   oa = v%a
 end subroutine
 
-! HEX-LABEL: define {{.*}}@_QPtest_volatile_derived
+! HEX-LABEL: define {{.*}}@{{.*}}test_volatile_derived{{.*}}(
 ! HEX:        store volatile i8
 
-! ZERO-LABEL: define {{.*}}@_QPtest_volatile_derived
+! ZERO-LABEL: define {{.*}}@{{.*}}test_volatile_derived{{.*}}(
 ! ZERO:        store volatile i8
 
 ! ---------------------------------------------------------------------------
@@ -43,10 +45,10 @@ subroutine test_volatile_real10(res)
   res = x
 end subroutine
 
-! HEX-LABEL: define {{.*}}@_QPtest_volatile_real10
+! HEX-LABEL: define {{.*}}@{{.*}}test_volatile_real10{{.*}}(
 ! HEX:        store volatile i8
 
-! ZERO-LABEL: define {{.*}}@_QPtest_volatile_real10
+! ZERO-LABEL: define {{.*}}@{{.*}}test_volatile_real10{{.*}}(
 ! ZERO:        store volatile i8
 
 ! ---------------------------------------------------------------------------
@@ -58,8 +60,43 @@ subroutine test_volatile_array(res)
   res = x(1)
 end subroutine
 
-! HEX-LABEL: define {{.*}}@_QPtest_volatile_array
+! HEX-LABEL: define {{.*}}@{{.*}}test_volatile_array{{.*}}(
 ! HEX:        store volatile i32
 
-! ZERO-LABEL: define {{.*}}@_QPtest_volatile_array
+! ZERO-LABEL: define {{.*}}@{{.*}}test_volatile_array{{.*}}(
 ! ZERO:        store volatile i32
+
+! ---------------------------------------------------------------------------
+! Volatile fixed-length CHARACTER local -- compile-time-length byte-fill loop.
+! hex: loop over nLen bytes -> store volatile i8.
+! zero: fir.zero_bits store -> store volatile i8 0.
+! ---------------------------------------------------------------------------
+subroutine test_volatile_char_fixed(res)
+  character(10), volatile :: x
+  character(10) :: res
+  res = x
+end subroutine
+
+! HEX-LABEL: define {{.*}}@{{.*}}test_volatile_char_fixed{{.*}}(
+! HEX:        store volatile i8
+
+! ZERO-LABEL: define {{.*}}@{{.*}}test_volatile_char_fixed{{.*}}(
+! ZERO:        store volatile i8
+
+! ---------------------------------------------------------------------------
+! Volatile runtime-length CHARACTER local -- dynamic-length byte-fill loop.
+! hex: loop over rtLen bytes -> store volatile i8.
+! zero: loop over rtLen bytes -> store volatile i8 0.
+! ---------------------------------------------------------------------------
+subroutine test_volatile_char_runtime(res, n)
+  integer, intent(in) :: n
+  character(n), volatile :: x
+  character(n) :: res
+  res = x
+end subroutine
+
+! HEX-LABEL: define {{.*}}@{{.*}}test_volatile_char_runtime{{.*}}(
+! HEX:        store volatile i8
+
+! ZERO-LABEL: define {{.*}}@{{.*}}test_volatile_char_runtime{{.*}}(
+! ZERO:        store volatile i8

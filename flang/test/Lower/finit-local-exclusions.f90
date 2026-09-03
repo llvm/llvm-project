@@ -51,12 +51,16 @@ end program
 ! ---------------------------------------------------------------------------
 subroutine test_runtime_array(res, n)
   integer, intent(in) :: n
+  integer :: ctrl
   integer :: x(n)
   integer :: res
-  res = x(1)
+  res = x(1) + ctrl
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_runtime_array
+! CHECK:       hlfir.declare {{.*}} "_QFtest_runtime_arrayEctrl"
+! CHECK:       arith.constant -1431655766 : i32
 ! CHECK:       hlfir.declare {{.*}} "_QFtest_runtime_arrayEx"
+! CHECK-NOT:   arith.constant -1431655766 : i32
 ! CHECK-NOT:   fir.do_loop
 ! CHECK:       return
 
@@ -65,12 +69,17 @@ end subroutine
 !    Static CHARACTER scalars are initialized; arrays are silently skipped.
 ! ---------------------------------------------------------------------------
 subroutine test_char_array(res)
+  integer :: ctrl
   character(4) :: x(3)
   character(4) :: res
   res = x(1)
+  ctrl = 0
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_char_array
+! CHECK:       hlfir.declare {{.*}} "_QFtest_char_arrayEctrl"
+! CHECK:       arith.constant -1431655766 : i32
 ! CHECK:       hlfir.declare {{.*}} "_QFtest_char_arrayEx"
+! CHECK-NOT:   arith.constant -1431655766 : i32
 ! CHECK-NOT:   fir.do_loop
 ! CHECK:       return
 
@@ -82,11 +91,15 @@ subroutine test_pointer_comp(res)
   type t
     integer, pointer :: p
   end type
+  integer :: ctrl
   type(t) :: x
   integer :: res
-  res = 0
+  res = ctrl
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_pointer_comp
+! CHECK:       hlfir.declare {{.*}} "_QFtest_pointer_compEctrl"
+! CHECK:       arith.constant -1431655766 : i32
 ! CHECK:       hlfir.declare {{.*}} "_QFtest_pointer_compEx"
+! CHECK-NOT:   arith.constant -1431655766 : i32
 ! CHECK-NOT:   fir.do_loop
 ! CHECK:       return

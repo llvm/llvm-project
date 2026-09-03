@@ -1440,8 +1440,13 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   // width matches the actual allocation size.
   // The caller stores it via a bitcasted address to preserve the bit pattern
   // (fir.convert from integer to !fir.logical normalizes nonzero -> true).
+  // A sub-byte mapping (e.g. --kind-mapping=l4:1) is not supported: the
+  // APInt::getSplat precondition requires the destination width >= 8.
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
-    return makeIntCst(builder.getKindMap().getLogicalBitsize(logTy.getFKind()));
+    unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
+    if (bits < 8)
+      TODO(loc, "-finit-local= with a sub-byte LOGICAL kind mapping");
+    return makeIntCst(bits);
   }
   // All types that pass shouldInitLocal and reach genInitLocalStore are
   // handled explicitly above (integer, float, complex, logical) or are
@@ -1474,10 +1479,9 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
     if (mode == Fortran::lower::InitLocalKind::Hex) {
       // Loop over every byte of the character storage. For kind=1 each
       // code unit is one byte; for kind=2/4 (UTF-16/32) each code unit is
-      // kind bytes wide. We use a kind=1 singleton as the view element so
-      // fir.coordinate_of advances exactly one byte per step, and iterate
-      // nUnits * kindBytes times to cover all bytes.  Use KindMapping to
-      // get the true byte width under any --kind-mapping override.
+      // kind bytes wide. We iterate nUnits * kindBytes times to cover all
+      // bytes.  Use KindMapping to get the true byte width under any
+      // --kind-mapping override.
       int64_t nUnits = charTy.hasConstantLen() ? charTy.getLen() : 0;
       int64_t kindBytes =
           builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
@@ -1485,14 +1489,13 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
       if (nBytes > 0) {
         mlir::Type idxTy = builder.getIndexType();
         mlir::Type i8Ty = builder.getIntegerType(8);
-        // Use a kind=1 singleton so fir.coordinate_of strides by 1 byte.
-        fir::CharacterType byteTy =
-            fir::CharacterType::getSingleton(builder.getContext(), 1);
-        mlir::Type byteSeqTy = fir::SequenceType::get(
-            {fir::SequenceType::getUnknownExtent()}, byteTy);
+        // Use an i8 sequence so fir.coordinate_of strides by exactly 1 byte,
+        // regardless of any --kind-mapping override for character kind 1.
+        mlir::Type i8SeqTy = fir::SequenceType::get(
+            {fir::SequenceType::getUnknownExtent()}, i8Ty);
         bool addrVolatile1 = fir::isa_volatile_type(addr.getType());
         mlir::Value byteBase = builder.createConvertWithVolatileCast(
-            loc, builder.getRefType(byteSeqTy, addrVolatile1), addr);
+            loc, builder.getRefType(i8SeqTy, addrVolatile1), addr);
         mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
         mlir::Value last =
             builder.createIntegerConstant(loc, idxTy, nBytes - 1);
@@ -1504,15 +1507,12 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
         builder.setInsertionPointToStart(loop.getBody());
         mlir::Value iv = loop.getInductionVar();
         bool byteVolatile1 = fir::isa_volatile_type(byteBase.getType());
-        mlir::Value byteAddr =
-            fir::CoordinateOp::create(builder, loc,
-                                      builder.getRefType(byteTy, byteVolatile1),
-                                      byteBase, mlir::ValueRange{iv});
+        mlir::Value byteAddr = fir::CoordinateOp::create(
+            builder, loc, builder.getRefType(i8Ty, byteVolatile1), byteBase,
+            mlir::ValueRange{iv});
         mlir::Value pat = builder.createIntegerConstant(
             loc, i8Ty, static_cast<int64_t>(hexByte));
-        mlir::Value i8Addr = builder.createConvertWithVolatileCast(
-            loc, builder.getRefType(i8Ty, byteVolatile1), byteAddr);
-        fir::StoreOp::create(builder, loc, pat, i8Addr);
+        fir::StoreOp::create(builder, loc, pat, byteAddr);
       }
       return;
     }
@@ -1657,9 +1657,8 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
             mlir::Type rank1SeqTy = fir::SequenceType::get(
                 {fir::SequenceType::getUnknownExtent()}, eleTy);
             bool rank1Volatile = fir::isa_volatile_type(addr.getType());
-            mlir::Value rank1Addr =
-                builder.createConvertWithVolatileCast(
-                    loc, builder.getRefType(rank1SeqTy, rank1Volatile), addr);
+            mlir::Value rank1Addr = builder.createConvertWithVolatileCast(
+                loc, builder.getRefType(rank1SeqTy, rank1Volatile), addr);
             mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
             mlir::Value last =
                 builder.createIntegerConstant(loc, idxTy, totalElems - 1);
@@ -1741,7 +1740,6 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       // For kind>1 (UTF-16/32) the runtime length is in code units; multiply
       // by the kind byte width to get the total byte count.  Use KindMapping
       // so a --kind-mapping override is respected.
-      // Use a kind=1 singleton so fir.coordinate_of advances 1 byte per step.
       int64_t kindBytes =
           builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
       if (kindBytes > 1) {
@@ -1757,19 +1755,21 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointToStart(loop.getBody());
       mlir::Value iv = loop.getInductionVar();
-      fir::CharacterType byteTy =
-          fir::CharacterType::getSingleton(builder.getContext(), 1);
-      mlir::Type byteSeqTy = fir::SequenceType::get(
-          {fir::SequenceType::getUnknownExtent()}, byteTy);
+      // Use an i8 sequence so fir.coordinate_of strides by exactly 1 byte,
+      // regardless of any --kind-mapping override for character kind 1.
+      mlir::Type i8Ty = builder.getIntegerType(8);
+      mlir::Type i8SeqTy =
+          fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
       bool baseVolatile = fir::isa_volatile_type(base.getType());
       mlir::Value byteBase = builder.createConvertWithVolatileCast(
-          loc, builder.getRefType(byteSeqTy, baseVolatile), base);
+          loc, builder.getRefType(i8SeqTy, baseVolatile), base);
       bool byteVolatile4 = fir::isa_volatile_type(byteBase.getType());
-      mlir::Value byteAddr =
-          fir::CoordinateOp::create(builder, loc,
-                                    builder.getRefType(byteTy, byteVolatile4),
-                                    byteBase, mlir::ValueRange{iv});
-      genInitLocalStore(builder, loc, byteTy, byteAddr, mode, hexByte);
+      mlir::Value byteAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(i8Ty, byteVolatile4), byteBase,
+          mlir::ValueRange{iv});
+      mlir::Value pat = builder.createIntegerConstant(
+          loc, i8Ty, static_cast<int64_t>(hexByte));
+      fir::StoreOp::create(builder, loc, pat, byteAddr);
       return;
     }
   }
