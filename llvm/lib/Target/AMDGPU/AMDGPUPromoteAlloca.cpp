@@ -901,27 +901,6 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
   return I;
 }
 
-/// Peel nested aggregates down to a single uniform element type, multiplying
-/// NumElems by the element count of each layer peeled.
-static Type *peelAggregateToElementType(Type *Ty, uint64_t &NumElems) {
-  while (true) {
-    if (auto *ArrayTy = dyn_cast<ArrayType>(Ty)) {
-      NumElems *= ArrayTy->getNumElements();
-      Ty = ArrayTy->getElementType();
-      continue;
-    }
-
-    auto *StructTy = dyn_cast<StructType>(Ty);
-    if (!StructTy || !StructTy->containsHomogeneousTypes())
-      break;
-
-    NumElems *= StructTy->getNumElements();
-    Ty = StructTy->getElementType(0);
-  }
-
-  return Ty;
-}
-
 FixedVectorType *
 AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   if (DisablePromoteAllocaToVector) {
@@ -930,9 +909,13 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   }
 
   auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
-  if (AllocaTy->isAggregateType()) {
+  if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
     uint64_t NumElems = 1;
-    Type *ElemTy = peelAggregateToElementType(AllocaTy, NumElems);
+    Type *ElemTy;
+    do {
+      NumElems *= ArrayTy->getNumElements();
+      ElemTy = ArrayTy->getElementType();
+    } while ((ArrayTy = dyn_cast<ArrayType>(ElemTy)));
 
     // Check for array of vectors
     auto *InnerVectorTy = dyn_cast<FixedVectorType>(ElemTy);
