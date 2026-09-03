@@ -41,6 +41,33 @@ entry:
   ret <2 x i32> %masked_load
 }
 
+; The align attribute on a masked store is not proof of an access (the mask
+; may be all-false), so it must not be used to infer the alignment of other
+; accesses to the same pointer.
+define void @store_attr_does_not_seed_store(<2 x i1> %mask, <2 x i32> %val, ptr %ptr) {
+; CHECK-LABEL: define void @store_attr_does_not_seed_store(
+; CHECK-SAME: <2 x i1> [[MASK:%.*]], <2 x i32> [[VAL:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[VAL]], ptr align 64 [[PTR]], <2 x i1> [[MASK]])
+; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.masked.store.v2i32.p0(<2 x i32> %val, ptr %ptr, i32 64, <2 x i1> %mask)
+  store i32 0, ptr %ptr
+  ret void
+}
+
+define <2 x i32> @load_attr_does_not_seed_load(<2 x i1> %mask, ptr %ptr) {
+; CHECK-LABEL: define <2 x i32> @load_attr_does_not_seed_load(
+; CHECK-SAME: <2 x i1> [[MASK:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 64 [[PTR]], <2 x i1> [[MASK]], <2 x i32> poison)
+; CHECK-NEXT:    [[V:%.*]] = load <2 x i32>, ptr [[PTR]], align 8
+; CHECK-NEXT:    ret <2 x i32> [[V]]
+;
+  %masked_load = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %ptr, i32 64, <2 x i1> %mask, <2 x i32> poison)
+  %v = load <2 x i32>, ptr %ptr
+  ret <2 x i32> %v
+}
+
 declare void @llvm.assume(i1)
 declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
 declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)
