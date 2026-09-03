@@ -4112,8 +4112,7 @@ OpFoldResult LLVM::ShlOp::fold(FoldAdaptor adaptor) {
   if (!rhs)
     return {};
 
-  if (rhs.getValue().getZExtValue() >=
-      getLhs().getType().getIntOrFloatBitWidth())
+  if (rhs.getValue().uge(getLhs().getType().getIntOrFloatBitWidth()))
     return {}; // TODO: Fold into poison.
 
   auto lhs = dyn_cast_or_null<IntegerAttr>(adaptor.getLhs());
