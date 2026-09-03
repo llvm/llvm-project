@@ -3,7 +3,8 @@
 ! whose element type contains a nested derived-type component. Verify that
 ! a nested derived type with no allocatable members does not require an
 ! implicit mapper and converts successfully, while a nested derived type
-! with allocatable members properly generates implicit mappers.
+! with allocatable members properly generates implicit mappers (including
+! when the nested component is an array of records).
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s
@@ -15,12 +16,13 @@ module nested_alloc_mod
   end type
 
   type :: outer_alloc_t
-    type(inner_alloc_t) :: inner
+    type(inner_alloc_t) :: inner(2)
   end type
 end module nested_alloc_mod
 
-! CHECK-DAG: omp.declare_mapper @[[INNER_MAPPER:.*inner_alloc_t.*]] : !fir.type<{{.*}}inner_alloc_t{{.*}}>
-! CHECK-DAG: omp.declare_mapper @[[OUTER_MAPPER:.*outer_alloc_t.*]] : !fir.type<{{.*}}outer_alloc_t{{.*}}>
+! CHECK: omp.declare_mapper @[[INNER_MAPPER:.*inner_alloc_t.*]] : !fir.type<{{.*}}inner_alloc_t{{.*}}>
+! CHECK: omp.declare_mapper @[[OUTER_MAPPER:.*outer_alloc_t.*]] : !fir.type<{{.*}}outer_alloc_t{{.*}}> {
+! CHECK:   omp.map.info {{.*}} mapper(@[[INNER_MAPPER]])
 
 subroutine nested_derived()
   implicit none
@@ -43,6 +45,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @{{.*}}nested_derived()
 ! CHECK:   %[[ARR_A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "{{.*}}a"}
+! CHECK-NOT: mapper(
 ! CHECK:   omp.map.info var_ptr(%[[ARR_A]]#1 : {{.*}}) map_clauses(implicit, tofrom) capture(ByRef) {{.*}} name("{{.*}}a")
 ! CHECK:   omp.target
 ! CHECK:   omp.teams
@@ -59,11 +62,10 @@ subroutine nested_derived_alloc()
   integer :: i
 
   do concurrent (i = 1:4)
-    a(1)%inner%values = [1.0, 2.0]
+    a(1)%inner(1)%values = [1.0, 2.0]
   end do
 end subroutine
 
 ! CHECK-LABEL: func.func @{{.*}}nested_derived_alloc()
 ! CHECK:   %[[ARR_ALLOC:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "{{.*}}a"}
 ! CHECK:   omp.map.info var_ptr(%[[ARR_ALLOC]]#1 : {{.*}}) map_clauses(implicit, tofrom) capture(ByRef) mapper(@[[OUTER_MAPPER]]) {{.*}} name("{{.*}}a")
-

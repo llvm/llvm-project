@@ -548,6 +548,23 @@ private:
         /*dataExvIsAssumedSize=*/false, rawAddr.getLoc());
   }
 
+  static bool recordHasAllocatableMember(fir::RecordType recordType) {
+    for (auto [fieldName, fieldType] : recordType.getTypeList()) {
+      if (fir::isPointerType(fir::unwrapRefType(fieldType)))
+        continue;
+
+      if (fir::isAllocatableType(fieldType))
+        return true;
+
+      if (auto nestedRec = mlir::dyn_cast<fir::RecordType>(
+              fir::getFortranElementType(fieldType)))
+        if (recordHasAllocatableMember(nestedRec))
+          return true;
+    }
+
+    return false;
+  }
+
   mlir::omp::MapInfoOp
   genMapInfoOpForLiveIn(fir::FirOpBuilder &builder, mlir::Value liveIn,
                         bool isReductionVar = false) const {
@@ -599,11 +616,11 @@ private:
     fir::RecordType recordType = mlir::dyn_cast<fir::RecordType>(
         fir::getDerivedType(fir::unwrapRefType(eleType)));
 
-    bool requiresImplcitMapper =
-        recordType && fir::isRecordWithAllocatableMember(recordType);
+    bool requiresImplicitMapper =
+        recordType && recordHasAllocatableMember(recordType);
 
     mlir::FlatSymbolRefAttr mapperId;
-    if (requiresImplcitMapper) {
+    if (requiresImplicitMapper) {
       std::string mapperIdName =
           Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
               recordType);
