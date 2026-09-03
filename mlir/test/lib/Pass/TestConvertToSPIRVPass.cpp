@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ArithToSPIRV/ArithToSPIRV.h"
+#include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRV.h"
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
 #include "mlir/Conversion/IndexToSPIRV/IndexToSPIRV.h"
+#include "mlir/Conversion/MathToSPIRV/MathToSPIRV.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
 #include "mlir/Conversion/UBToSPIRV/UBToSPIRV.h"
@@ -53,10 +55,12 @@ void populateConvertToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                     RewritePatternSet &patterns) {
   arith::populateCeilFloorDivExpandOpsPatterns(patterns);
   arith::populateArithToSPIRVPatterns(typeConverter, patterns);
+  cf::populateControlFlowToSPIRVPatterns(typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
   populateFuncToSPIRVPatterns(typeConverter, patterns);
   populateGPUToSPIRVPatterns(typeConverter, patterns);
   index::populateIndexToSPIRVPatterns(typeConverter, patterns);
+  populateMathToSPIRVPatterns(typeConverter, patterns);
   populateMemRefToSPIRVPatterns(typeConverter, patterns);
   populateVectorToSPIRVPatterns(typeConverter, patterns);
   populateSCFToSPIRVPatterns(typeConverter, scfToSPIRVContext, patterns);
