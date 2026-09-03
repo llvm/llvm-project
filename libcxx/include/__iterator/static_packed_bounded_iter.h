@@ -14,6 +14,7 @@
 #include <__bit/countr.h>
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
+#include <__concepts/convertible_to.h>
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__iterator/concepts.h>
@@ -33,10 +34,16 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 26
 
 // static_packed_bounded_iter is a bounded, contiguous iterator that is aware of its container's (compile-time) maximum
-// capacity. It packs the bottom bits of the base pointer with an offset that tracks the iterator's current position.
-// To retrieve the current pointer, we mask off the bottom bits to get the base pointer, and add its offset.
-// This only applies if the container's maximum range can fit inside the representable range of those bottom
-// bits, so (2 ^ available_bits) - 1
+// capacity.
+//
+// It packs the bottom bits of the pointer with an offset that tracks the iterator's current position, while
+// also incrementing/decrementing the pointer. This is to minimize the amount of instructions required to retrieve the
+// pointer, at the cost of an additional add instruction when updating.
+//
+// To retrieve the current pointer, we mask off the bottom bits and return the correctly-aligned pointer.
+//
+// This iterator requires that its container's maximum range can fit inside the representable range of
+// the available bottom bits, so (2 ^ available_bits) - 1
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -65,29 +72,20 @@ private:
   static constexpr uintptr_t __PtrMask   = ~__CountMask;
 
   union {
-    pointer __ptr_;
+    _Ptr __ptr;
     alignas(pointer) uintptr_t __data_;
   };
 
   size_t __count() const { return __data_ & __CountMask; }
 
-  _Ptr __current() const {
-    if consteval {
-      return __ptr_;
-    } else {
-      return reinterpret_cast<pointer>(__data_ & __PtrMask) + __count();
-    }
+  _Ptr __current() const { return reinterpret_cast<pointer>(__data_ & __PtrMask); }
+
+  void __increment(size_t __n) {
+    __ptr += __n;
+    __data_ += __n;
   }
 
-  void __increment(difference_type __n) {
-    if consteval {
-      __ptr_ += __n;
-    } else {
-      __data_ += __n;
-    }
-  }
-
-  explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __ptr_(__p) {
+  explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __data_(reinterpret_cast<uintptr_t>(__p)) {
     if !consteval {
       _LIBCPP_ASSERT_INTERNAL((reinterpret_cast<uintptr_t>(__p) & __CountMask) == 0,
                               "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
@@ -106,10 +104,9 @@ public:
     requires is_default_constructible_v<_Ptr>
   = default;
 
-  template <class _Ptr2, class _Tag2>
-    requires is_convertible_v<_Ptr2, _Ptr>
+  template <convertible_to<_Ptr> _Ptr2, class _Tag2>
   __static_packed_bounded_iterator(const __static_packed_bounded_iterator<_Ptr2, _Tag2, _RangeCapacity>& __y)
-      : __ptr_(__y.__ptr_) {}
+      : __data_(__y.__data_) {}
 
   [[nodiscard]] reference operator*() const noexcept {
     if !consteval {
