@@ -811,7 +811,8 @@ SmallVector<mlir::NamedAttribute> buildSretSlotAttrs(mlir::OpBuilder &builder,
   // it, and once the CIR `!cir.ptr<retTy>` lowers to an opaque LLVM `ptr` the
   // pointee type can no longer be recovered from the pointer.
   attrs.push_back(
-      builder.getNamedAttr("llvm.sret", mlir::TypeAttr::get(retTy)));
+      builder.getNamedAttr(mlir::LLVM::LLVMDialect::getStructRetAttrName(),
+                           mlir::TypeAttr::get(retTy)));
   attrs.push_back(
       builder.getNamedAttr("llvm.align", builder.getI64IntegerAttr(align)));
   if (withNoalias)
@@ -821,6 +822,18 @@ SmallVector<mlir::NamedAttribute> buildSretSlotAttrs(mlir::OpBuilder &builder,
   attrs.push_back(
       builder.getNamedAttr("llvm.dead_on_unwind", builder.getUnitAttr()));
   return attrs;
+}
+
+/// Carry \p call's attributes over to the rewritten \p newCall, leaving
+/// attributes already on \p newCall, such as its callee, alone.
+///
+/// side_effect is set explicitly because it is a DefaultValuedAttr: a fresh
+/// call already carries `all`, so the copy sees it as present and skips it.
+void carryCallAttrs(cir::CallOp call, cir::CallOp newCall) {
+  for (mlir::NamedAttribute attr : call->getAttrs())
+    if (!newCall->hasAttr(attr.getName()))
+      newCall->setAttr(attr.getName(), attr.getValue());
+  newCall.setSideEffect(call.getSideEffect());
 }
 
 /// Prepend the sret slot's attrs at position 0 of newCall's arg_attrs.
@@ -937,9 +950,7 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   prependIndirectCallee(call, sretArgs, sretVoidTy, builder);
   auto newCall = cir::CallOp::create(
       builder, call.getLoc(), call.getCalleeAttr(), sretVoidTy, sretArgs);
-  for (mlir::NamedAttribute attr : call->getAttrs())
-    if (!newCall->hasAttr(attr.getName()))
-      newCall->setAttr(attr.getName(), attr.getValue());
+  carryCallAttrs(call, newCall);
 
   // Shape the per-argument attrs exactly as the non-sret path does
   // (signext / zeroext for Extend, drop Ignore slots, byval / align for
@@ -1300,9 +1311,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   prependIndirectCallee(call, newArgs, callRetTy, builder);
   auto newCall = cir::CallOp::create(builder, call.getLoc(),
                                      call.getCalleeAttr(), callRetTy, newArgs);
-  for (mlir::NamedAttribute attr : call->getAttrs())
-    if (!newCall->hasAttr(attr.getName()))
-      newCall->setAttr(attr.getName(), attr.getValue());
+  carryCallAttrs(call, newCall);
 
   // Direct return with coercion: the new call returns the coerced type;
   // emit a coercion back to the original type for the call's existing uses.
