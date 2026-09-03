@@ -260,12 +260,13 @@ public:
     PreallocSlab = MB;
     UsePreallocation = true;
     SlabSize = Size;
+    SlabStart = CurrentSlabOffset = (uintptr_t)MB.base();
   }
 
   uint8_t *allocateFromSlab(uintptr_t Size, unsigned Alignment, bool isCode,
                             StringRef SectionName, unsigned SectionID) {
     Size = alignTo(Size, Alignment);
-    if (CurrentSlabOffset + Size > SlabSize)
+    if (CurrentSlabOffset + Size > SlabStart + SlabSize)
       report_fatal_error("Can't allocate enough memory. Tune --preallocate");
 
     uintptr_t OldSlabOffset = CurrentSlabOffset;
@@ -283,6 +284,7 @@ private:
   sys::MemoryBlock PreallocSlab;
   bool UsePreallocation = false;
   uintptr_t SlabSize = 0;
+  uintptr_t SlabStart = 0;
   uintptr_t CurrentSlabOffset = 0;
   SectionIDMap *SecIDMap = nullptr;
 #if defined(__x86_64__) && defined(__ELF__) && defined(__linux__)
