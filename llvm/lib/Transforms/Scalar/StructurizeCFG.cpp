@@ -1227,6 +1227,19 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   CondBrInst *Br = CondBrInst::Create(BoolPoison, Next, LoopStart, LoopEnd);
   Br->setDebugLoc(DL);
   LoopConds.push_back(Br);
+
+  if (BasicBlock *Header = Node->getEntry(); LoopStart != Header) {
+    // The backedge now targets the prefix block, so re-key the header's
+    // predicates under it: insertConditions() looks them up by block.
+    auto It = LoopPreds.find(Header);
+    assert(It != LoopPreds.end() && !It->second.empty() &&
+           "loop header has no gathered loop predicates");
+    BBPredicates HeaderPreds = std::move(It->second);
+    LoopPreds.erase(It);
+    LoopPreds[LoopStart] = std::move(HeaderPreds);
+    Predicates[Header][LoopEnd] = {BoolTrue, std::nullopt};
+  }
+
   addPhiValues(LoopEnd, LoopStart);
   setPrevNode(Next);
 }
