@@ -12,7 +12,7 @@
 
 // template <class InputIterator, class OutputIterator>
 //   OutputIterator
-//   move_backward(InputIterator first, InputIterator last, OutputIterator result);
+//   move_backward(InputIterator first, InputIterator last, OutputIterator result); // constexpr since C++20
 
 #include "asan_testing.h"
 #include <deque>
@@ -78,7 +78,11 @@ TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
 TEST_CONSTEXPR_CXX26 bool tests() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
+#if TEST_STD_VER >= 26
+    int N = TEST_IS_CONSTANT_EVALUATED ? 2 : sizeof(rng) / sizeof(rng[0]);
+#else
     const int N = sizeof(rng) / sizeof(rng[0]);
+#endif
     for (int i = 0; i < N; ++i)
       for (int j = 0; j < N; ++j)
         testN<std::deque<int> >(rng[i], rng[j]);
@@ -86,7 +90,11 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 #if TEST_STD_VER >= 11
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
+#  if TEST_STD_VER >= 26
+    int N = TEST_IS_CONSTANT_EVALUATED ? 3 : sizeof(rng) / sizeof(rng[0]);
+#  else
     const int N = sizeof(rng) / sizeof(rng[0]);
+#  endif
     for (int i = 0; i < N; ++i)
       for (int j = 0; j < N; ++j)
         testN<std::deque<int, min_allocator<int> > >(rng[i], rng[j]);
