@@ -14,10 +14,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_POSIX_FADVISE_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_POSIX_FADVISE_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/bit.h"
-#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/CPP/limits.h"
+#include "src/__support/OSUtil/linux/syscall.h" // syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -29,7 +31,6 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> posix_fadvise(int fd, off_t offset, off_t len,
                                        int advice) {
-  int ret;
   if constexpr (sizeof(long) == sizeof(uint32_t) &&
                 sizeof(off_t) == sizeof(uint64_t)) {
     uint64_t offset_bits = cpp::bit_cast<uint64_t>(offset);
@@ -43,30 +44,29 @@ LIBC_INLINE ErrorOr<int> posix_fadvise(int fd, off_t offset, off_t len,
 #endif
 
 #if defined(SYS_fadvise64_64)
-    ret = syscall_impl<int>(SYS_fadvise64_64, fd, offset_low, offset_high,
-                            len_low, len_high, advice);
+    return syscall_checked<int>(SYS_fadvise64_64, fd, offset_low, offset_high,
+                                len_low, len_high, advice);
 #elif defined(SYS_arm_fadvise64_64)
-    ret = syscall_impl<int>(SYS_arm_fadvise64_64, fd, advice, offset_low,
-                            offset_high, len_low, len_high);
+    return syscall_checked<int>(SYS_arm_fadvise64_64, fd, advice, offset_low,
+                                offset_high, len_low, len_high);
 #elif defined(SYS_fadvise64)
-    ret = syscall_impl<int>(SYS_fadvise64, fd, offset_low, offset_high,
-                            static_cast<size_t>(len), advice);
+    if (len < 0 ||
+        static_cast<uint64_t>(len) > cpp::numeric_limits<size_t>::max())
+      return Error(EINVAL);
+    return syscall_checked<int>(SYS_fadvise64, fd, offset_low, offset_high,
+                                static_cast<size_t>(len), advice);
 #else
 #error "fadvise64 syscall not available."
 #endif
   } else {
 #if defined(SYS_fadvise64)
-    ret = syscall_impl<int>(SYS_fadvise64, fd, offset, len, advice);
+    return syscall_checked<int>(SYS_fadvise64, fd, offset, len, advice);
 #elif defined(SYS_fadvise64_64)
-    ret = syscall_impl<int>(SYS_fadvise64_64, fd, offset, len, advice);
+    return syscall_checked<int>(SYS_fadvise64_64, fd, offset, len, advice);
 #else
 #error "fadvise64 syscall not available."
 #endif
   }
-
-  if (ret < 0)
-    return Error(-ret);
-  return 0;
 }
 
 } // namespace linux_syscalls

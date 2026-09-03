@@ -450,10 +450,12 @@ add_header_library(
   HDRS
     posix_fadvise.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.hdr.types.off_t
     libc.include.sys_syscall
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or

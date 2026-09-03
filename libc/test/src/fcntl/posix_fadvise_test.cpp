@@ -14,6 +14,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h"
+#include "src/__support/CPP/scope.h"
 #include "src/fcntl/creat.h"
 #include "src/fcntl/posix_fadvise.h"
 #include "src/unistd/close.h"
@@ -34,7 +35,10 @@ TEST_F(LlvmLibcPosixFadviseTest, ValidFile) {
   constexpr const char *TEST_FILE = "testdata/posix_fadvise.test";
   int fd = LIBC_NAMESPACE::creat(TEST_FILE, S_IRWXU);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(LIBC_NAMESPACE::unlink(TEST_FILE), 0);
+  LIBC_NAMESPACE::cpp::scope_exit cleanup([&] {
+    EXPECT_EQ(LIBC_NAMESPACE::close(fd), 0);
+    EXPECT_EQ(LIBC_NAMESPACE::unlink(TEST_FILE), 0);
+  });
 
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(fd, 0, 0, POSIX_FADV_NORMAL), 0);
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM), 0);
@@ -48,27 +52,23 @@ TEST_F(LlvmLibcPosixFadviseTest, ValidFile) {
 
   // Invalid advice
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(fd, 0, 0, -1), EINVAL);
-  ASSERT_ERRNO_SUCCESS();
 
   // Negative len
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(fd, 0, -1, POSIX_FADV_NORMAL),
             EINVAL);
-  ASSERT_ERRNO_SUCCESS();
-
-  EXPECT_EQ(LIBC_NAMESPACE::close(fd), 0);
 }
 
 TEST_F(LlvmLibcPosixFadviseTest, Pipe) {
   int pipefd[2];
   ASSERT_EQ(LIBC_NAMESPACE::pipe(pipefd), 0);
+  LIBC_NAMESPACE::cpp::scope_exit cleanup([&] {
+    EXPECT_EQ(LIBC_NAMESPACE::close(pipefd[0]), 0);
+    EXPECT_EQ(LIBC_NAMESPACE::close(pipefd[1]), 0);
+  });
 
   // fadvise on a pipe should return ESPIPE
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(pipefd[0], 0, 0, POSIX_FADV_NORMAL),
             ESPIPE);
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(pipefd[1], 0, 0, POSIX_FADV_NORMAL),
             ESPIPE);
-  ASSERT_ERRNO_SUCCESS();
-
-  EXPECT_EQ(LIBC_NAMESPACE::close(pipefd[0]), 0);
-  EXPECT_EQ(LIBC_NAMESPACE::close(pipefd[1]), 0);
 }

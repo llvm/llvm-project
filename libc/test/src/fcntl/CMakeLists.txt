@@ -73,5 +73,6 @@ add_libc_test(
     libc.src.unistd.close
     libc.src.unistd.pipe
     libc.src.unistd.unlink
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
 )
