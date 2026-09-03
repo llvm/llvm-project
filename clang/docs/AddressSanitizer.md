@@ -212,7 +212,7 @@ When running AddressSanitizer with integrated {doc}`LeakSanitizer` or {doc}`Unde
 - `__asan_default_options()`, `__lsan_default_options()`, and `__ubsan_default_options()` are all evaluated independently by the runtime.
 - The environment variables `ASAN_OPTIONS`, `LSAN_OPTIONS`, and `UBSAN_OPTIONS` are also parsed independently.
 
-LSan and UBSan flags should be passed via their own environment variables (`LSAN_OPTIONS`, `UBSAN_OPTIONS`) or default option hooks (`__lsan_default_options()`, `__ubsan_default_options()`) rather than packed into `ASAN_OPTIONS`.
+LSan and UBSan flags should be passed via their own environment variables (`LSAN_OPTIONS`, `UBSAN_OPTIONS`) or default option hooks (`__lsan_default_options()`, `__ubsan_default_options()`) rather than packed into `ASAN_OPTIONS` or `__asan_default_options()`.
 
 ## Issue Suppression
 
@@ -261,7 +261,8 @@ the `__asan_default_suppressions` function in your source code:
 #include <sanitizer/asan_interface.h>
 
 extern "C" const char *__asan_default_suppressions() {
-  return "interceptor_via_lib:NameOfTheLibraryToSuppress\n";
+  return "interceptor_via_lib:NameOfTheLibraryToSuppress\n"
+         "interceptor_name:memcpy\n";
 }
 ```
 

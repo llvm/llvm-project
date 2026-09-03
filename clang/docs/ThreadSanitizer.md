@@ -283,7 +283,7 @@ Default options can also be specified at compile/link time by defining
 #include <sanitizer/tsan_interface.h>
 
 extern "C" const char *__tsan_default_options() {
-  return "report_atomic_races=0";
+  return "report_atomic_races=0:halt_on_error=1";
 }
 ```
 
