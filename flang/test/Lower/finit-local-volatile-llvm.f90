@@ -81,7 +81,7 @@ end subroutine
 ! HEX:        store volatile i8
 
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_volatile_char_fixed{{.*}}(
-! ZERO:        store volatile i8
+! ZERO:        store volatile [10 x i8] zeroinitializer
 
 ! ---------------------------------------------------------------------------
 ! Volatile runtime-length CHARACTER local -- dynamic-length byte-fill loop.
