@@ -27925,6 +27925,9 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   if (auto *IEI = dyn_cast<InsertElementInst>(V))
     return getVectorElementSize(IEI->getOperand(1));
 
+  if (auto *IVI = dyn_cast<InsertValueInst>(V))
+    return getVectorElementSize(IVI->getOperand(1));
+
   auto E = InstrElementSize.find(V);
   if (E != InstrElementSize.end())
     return E->second;
