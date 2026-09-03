@@ -1466,7 +1466,7 @@ struct multi_subscripts {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test_return_bdos_of_multiple_indices(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[IDX1:%.*]], i32 noundef [[IDX2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[IDX1]], 42
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[IDX1]], 43
 // SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP0]], label %[[CONT1:.*]], label %[[HANDLER_OUT_OF_BOUNDS:.*]], !prof [[PROF7]], !nosanitize [[META6]]
 // SANITIZE-WITH-ATTR:       [[HANDLER_OUT_OF_BOUNDS]]:
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX1]] to i64, !nosanitize [[META6]]
@@ -1485,7 +1485,7 @@ struct multi_subscripts {
 // SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i64 @test_return_bdos_of_multiple_indices(
 // SANITIZE-WITHOUT-ATTR-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[IDX1:%.*]], i32 noundef [[IDX2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
-// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[IDX1]], 42
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[IDX1]], 43
 // SANITIZE-WITHOUT-ATTR-NEXT:    br i1 [[TMP0]], label %[[CONT1:.*]], label %[[HANDLER_OUT_OF_BOUNDS:.*]], !prof [[PROF10]], !nosanitize [[META9]]
 // SANITIZE-WITHOUT-ATTR:       [[HANDLER_OUT_OF_BOUNDS]]:
 // SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX1]] to i64, !nosanitize [[META9]]
