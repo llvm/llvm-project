@@ -30,6 +30,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -72,6 +73,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -114,10 +116,11 @@ static cl::opt<PassSummaryAction> ClSummaryAction(
                           "Export typeid resolutions to summary and globals")),
     cl::Hidden);
 
-static cl::opt<std::string> ClReadSummary(
-    "lowertypetests-read-summary",
-    cl::desc("Read summary from given YAML file before running pass"),
-    cl::Hidden);
+static cl::opt<std::string>
+    ClReadSummary("lowertypetests-read-summary",
+                  cl::desc("Read summary from given textual assembly or YAML "
+                           "file before running pass"),
+                  cl::Hidden);
 
 static cl::opt<std::string> ClWriteSummary(
     "lowertypetests-write-summary",
@@ -196,32 +199,67 @@ BitSetInfo BitSetBuilder::build() {
 }
 
 void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
+  assert(Fragments.front().empty());
+
   // Create a new fragment to hold the layout for F.
   Fragments.emplace_back();
   std::vector<uint64_t> &Fragment = Fragments.back();
   uint64_t FragmentIndex = Fragments.size() - 1;
 
+  std::vector<std::vector<uint64_t>> SubFragments;
   for (auto ObjIndex : F) {
     uint64_t OldFragmentIndex = FragmentMap[ObjIndex];
     if (OldFragmentIndex == 0) {
       // We haven't seen this object index before, so just add it to the current
       // fragment.
-      Fragment.push_back(ObjIndex);
-    } else {
+      SubFragments.push_back({ObjIndex});
+    } else if (!Fragments[OldFragmentIndex].empty()) {
       // This index belongs to an existing fragment. Copy the elements of the
       // old fragment into this one and clear the old fragment. We don't update
       // the fragment map just yet, this ensures that any further references to
       // indices from the old fragment in this fragment do not insert any more
       // indices.
-      std::vector<uint64_t> &OldFragment = Fragments[OldFragmentIndex];
-      llvm::append_range(Fragment, OldFragment);
-      OldFragment.clear();
+      SubFragments.push_back(std::move(Fragments[OldFragmentIndex]));
     }
   }
+
+  if (Less) {
+    llvm::stable_sort(SubFragments,
+                      [&](const std::vector<uint64_t> &A,
+                          const std::vector<uint64_t> &B) {
+                        return Less(A.back(), B.back());
+                      });
+  }
+
+  for (auto &SF : SubFragments)
+    llvm::append_range(Fragment, std::move(SF));
 
   // Update the fragment map to point our object indices to this fragment.
   for (uint64_t ObjIndex : Fragment)
     FragmentMap[ObjIndex] = FragmentIndex;
+}
+
+const std::vector<uint64_t> &GlobalLayoutBuilder::build() {
+  if (Less) {
+    // If multiple root fragments remain (e.g. disjoint signatures with no
+    // generalized type), order them so the one containing the hottest function
+    // is placed last.
+    llvm::erase_if(Fragments, [](const std::vector<uint64_t> &F) {
+      return F.empty();
+    });
+    llvm::stable_sort(Fragments,
+                      [&](const std::vector<uint64_t> &FA,
+                          const std::vector<uint64_t> &FB) {
+                        return Less(FA.back(), FB.back());
+                      });
+  }
+
+  std::vector<uint64_t> Layout;
+  Layout.reserve(FragmentMap.size());
+  for (auto &&F : Fragments)
+    llvm::append_range(Layout, std::move(F));
+  Fragments = {std::move(Layout)};
+  return Fragments.front();
 }
 
 void ByteArrayBuilder::allocate(const std::set<uint64_t> &Bits,
@@ -1928,25 +1966,92 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     return O1.size() < O2.size();
   });
 
+  bool IsGlobalSet =
+      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
+
+  struct HotnessScore {
+    CalleeInfo::HotnessType Tier = CalleeInfo::HotnessType::Unknown;
+    uint64_t Count = 0;
+
+    bool operator<(const HotnessScore &Other) const {
+      if (Tier != Other.Tier)
+        return toLayoutRank(Tier) < toLayoutRank(Other.Tier);
+      return Count < Other.Count;
+    }
+
+    static CalleeInfo::HotnessType maxHotness(CalleeInfo::HotnessType A,
+                                              CalleeInfo::HotnessType B) {
+      return toLayoutRank(A) < toLayoutRank(B) ? B : A;
+    }
+
+  private:
+    static int toLayoutRank(CalleeInfo::HotnessType HT) {
+      if (HT == CalleeInfo::HotnessType::Cold)
+        return -1;
+      return static_cast<int>(HT);
+    }
+  };
+
+  std::vector<HotnessScore> GTMHotness;
+  if (!IsGlobalSet) {
+    const auto *Index = ImportSummary ? ImportSummary : ExportSummary;
+    GTMHotness.resize(Globals.size());
+    for (unsigned I = 0; I != Globals.size(); ++I) {
+      GlobalTypeMember *GTM = Globals[I];
+      auto *TargetF = cast<Function>(GTM->getGlobal());
+
+      CalleeInfo::HotnessType Tier = CalleeInfo::HotnessType::Unknown;
+      if (TargetF->hasFnAttribute(Attribute::Cold))
+        Tier = CalleeInfo::HotnessType::Cold;
+      else if (TargetF->hasFnAttribute(Attribute::Hot))
+        Tier = CalleeInfo::HotnessType::Hot;
+
+      uint64_t Count = TargetF->getEntryCount().value_or(0);
+
+      if (Index) {
+        if (ValueInfo VI = Index->getValueInfo(TargetF->getGUIDOrFallback())) {
+          for (const auto &GVS : VI.getSummaryList()) {
+            if (auto *FS = dyn_cast<FunctionSummary>(GVS.get())) {
+              bool FirstEdge = true;
+              for (const auto &Edge : FS->calls()) {
+                CalleeInfo::HotnessType EdgeTier = Edge.second.getHotness();
+                if (FirstEdge) {
+                  Tier = EdgeTier;
+                  FirstEdge = false;
+                } else {
+                  Tier = HotnessScore::maxHotness(Tier, EdgeTier);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      GTMHotness[I] = HotnessScore{Tier, Count};
+    }
+  }
+
+  auto Less = [&](uint64_t A, uint64_t B) {
+    return GTMHotness[A] < GTMHotness[B];
+  };
+
   // Create a GlobalLayoutBuilder and provide it with index sets as layout
   // fragments. The GlobalLayoutBuilder tries to lay out members of fragments as
   // close together as possible.
-  GlobalLayoutBuilder GLB(Globals.size());
+  GlobalLayoutBuilder GLB(
+      Globals.size(),
+      !IsGlobalSet ? function_ref<bool(uint64_t, uint64_t)>(Less) : nullptr);
   for (auto &&MemSet : TypeMembers)
     GLB.addFragment(MemSet);
 
   // Build a vector of globals with the computed layout.
-  bool IsGlobalSet =
-      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
   std::vector<GlobalTypeMember *> OrderedGTMs(Globals.size());
   auto OGTMI = OrderedGTMs.begin();
-  for (auto &&F : GLB.Fragments) {
-    for (auto &&Offset : F) {
-      if (IsGlobalSet != isa<GlobalVariable>(Globals[Offset]->getGlobal()))
-        report_fatal_error("Type identifier may not contain both global "
-                           "variables and functions");
-      *OGTMI++ = Globals[Offset];
-    }
+  for (uint64_t Offset : GLB.build()) {
+    if (IsGlobalSet != isa<GlobalVariable>(Globals[Offset]->getGlobal()))
+      report_fatal_error("Type identifier may not contain both global "
+                         "variables and functions");
+    *OGTMI++ = Globals[Offset];
   }
 
   // Build the bitsets from this disjoint set.
@@ -1994,7 +2099,7 @@ LowerTypeTestsModule::LowerTypeTestsModule(
 }
 
 bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
-  ModuleSummaryIndex Summary(/*HaveGVs=*/false);
+  std::unique_ptr<ModuleSummaryIndex> Summary;
 
   // Handle the command-line summary arguments. This code is for testing
   // purposes only, so we handle errors directly.
@@ -2003,17 +2108,33 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
                           ": ");
     auto ReadSummaryFile = ExitOnErr(errorOrToExpected(
         MemoryBuffer::getFile(ClReadSummary, /*IsText=*/true)));
-
-    yaml::Input In(ReadSummaryFile->getBuffer());
-    In >> Summary;
-    ExitOnErr(errorCodeToError(In.error()));
+    // TODO: Convert the rest of tests (some YAML features are missing from
+    // textual summary assembly) and remove YAML from this file.
+    if (ReadSummaryFile->getBuffer().starts_with("---")) {
+      Summary = std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
+      yaml::Input In(ReadSummaryFile->getBuffer());
+      In >> *Summary;
+      ExitOnErr(errorCodeToError(In.error()));
+    } else {
+      SMDiagnostic Err;
+      Summary =
+          parseSummaryIndexAssembly(ReadSummaryFile->getMemBufferRef(), Err);
+      if (!Summary) {
+        Err.print(ClReadSummary.c_str(), errs());
+        report_fatal_error("Failed to parse summary index assembly");
+      }
+    }
+  } else {
+    Summary = std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
   }
 
   bool Changed =
       LowerTypeTestsModule(
           M, AM,
-          ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
-          ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr)
+          ClSummaryAction == PassSummaryAction::Export ? Summary.get()
+                                                       : nullptr,
+          ClSummaryAction == PassSummaryAction::Import ? Summary.get()
+                                                       : nullptr)
           .lower();
 
   if (!ClWriteSummary.empty()) {
@@ -2024,7 +2145,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
     ExitOnErr(errorCodeToError(EC));
 
     yaml::Output Out(OS);
-    Out << Summary;
+    Out << *Summary;
   }
 
   return Changed;
