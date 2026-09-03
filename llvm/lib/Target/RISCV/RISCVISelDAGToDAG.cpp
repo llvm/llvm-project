@@ -559,7 +559,7 @@ void RISCVDAGToDAGISel::selectXSfmmVSET(SDNode *Node) {
 }
 
 bool RISCVDAGToDAGISel::tryPExtNarrowUnsigned(SDNode *Node) {
-  using namespace SDPatternMatch;
+  using namespace llvm::SDPatternMatch;
 
   EVT VT = Node->getValueType(0);
   SDLoc DL(Node);
