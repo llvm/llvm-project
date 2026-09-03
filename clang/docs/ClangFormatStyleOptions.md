@@ -127,7 +127,7 @@ disable formatting for all of the lines that match the regular expression.
 ## Configuring Style in Code
 
 When using `clang::format::reformat(...)` functions, the format is specified
-by supplying the [clang::format::FormatStyle](https://clang.llvm.org/doxygen/structclang_1_1format_1_1FormatStyle.html)
+by supplying the [clang::format::FormatStyle](https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Format/Format.h)
 structure.
 
 ## Configurable Format Style Options
