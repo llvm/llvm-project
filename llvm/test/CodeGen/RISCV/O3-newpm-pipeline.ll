@@ -97,6 +97,7 @@
 ; CHECK-NEXT:     xray-instrumentation
 ; CHECK-NEXT:     patchable-function
 ; CHECK-NEXT:     machine-cp
+; CHECK-NEXT:     riscv-vsetvli-cleanup
 ; CHECK-NEXT:     branch-relaxation
 ; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses

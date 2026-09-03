@@ -158,6 +158,7 @@ void RISCVCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // outlined functions are removed erroneously.
   if (getOptLevel() >= CodeGenOptLevel::Default) {
     addMachineFunctionPass(MachineCopyPropagationPass(true), PMW);
+    addMachineFunctionPass(RISCVVSETVLICleanupPass(), PMW);
     // TODO: RISCVLateBranchOptPass
   }
   // The IndirectBranchTrackingPass inserts lpad and could have changed the

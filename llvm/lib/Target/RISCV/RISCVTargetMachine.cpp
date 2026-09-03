@@ -138,6 +138,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVVectorPeepholeLegacyPass(*PR);
   initializeRISCVVLOptimizerLegacyPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
+  initializeRISCVVSETVLICleanupLegacyPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
@@ -572,8 +573,10 @@ void RISCVPassConfig::addPreEmitPass() {
   // currently leads to incorrect code-gen, where copies to registers within
   // outlined functions are removed erroneously.
   if (TM->getOptLevel() >= CodeGenOptLevel::Default &&
-      EnableRISCVCopyPropagation)
+      EnableRISCVCopyPropagation) {
     addPass(createMachineCopyPropagationPass(true));
+    addPass(createRISCVVSETVLICleanupLegacyPass());
+  }
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(createRISCVLateBranchOptPass());
   // The IndirectBranchTrackingPass inserts lpad and could have changed the

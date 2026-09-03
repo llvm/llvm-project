@@ -22,7 +22,6 @@ entry:
 define <vscale x 1 x i8> @intrinsic_viota_mask_m_nxv1i8_nxv1i1(<vscale x 1 x i8> %0, <vscale x 1 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv1i8_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -54,7 +53,6 @@ entry:
 define <vscale x 2 x i8> @intrinsic_viota_mask_m_nxv2i8_nxv2i1(<vscale x 2 x i8> %0, <vscale x 2 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv2i8_nxv2i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -86,7 +84,6 @@ entry:
 define <vscale x 4 x i8> @intrinsic_viota_mask_m_nxv4i8_nxv4i1(<vscale x 4 x i8> %0, <vscale x 4 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv4i8_nxv4i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -118,7 +115,6 @@ entry:
 define <vscale x 8 x i8> @intrinsic_viota_mask_m_nxv8i8_nxv8i1(<vscale x 8 x i8> %0, <vscale x 8 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv8i8_nxv8i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -150,7 +146,6 @@ entry:
 define <vscale x 16 x i8> @intrinsic_viota_mask_m_nxv16i8_nxv16i1(<vscale x 16 x i8> %0, <vscale x 16 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv16i8_nxv16i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -182,7 +177,6 @@ entry:
 define <vscale x 32 x i8> @intrinsic_viota_mask_m_nxv32i8_nxv32i1(<vscale x 32 x i8> %0, <vscale x 32 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv32i8_nxv32i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -214,7 +208,6 @@ entry:
 define <vscale x 64 x i8> @intrinsic_viota_mask_m_nxv64i8_nxv64i1(<vscale x 64 x i8> %0, <vscale x 64 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv64i8_nxv64i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -246,7 +239,6 @@ entry:
 define <vscale x 1 x i16> @intrinsic_viota_mask_m_nxv1i16_nxv1i1(<vscale x 1 x i16> %0, <vscale x 1 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv1i16_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -278,7 +270,6 @@ entry:
 define <vscale x 2 x i16> @intrinsic_viota_mask_m_nxv2i16_nxv2i1(<vscale x 2 x i16> %0, <vscale x 2 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv2i16_nxv2i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -310,7 +301,6 @@ entry:
 define <vscale x 4 x i16> @intrinsic_viota_mask_m_nxv4i16_nxv4i1(<vscale x 4 x i16> %0, <vscale x 4 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv4i16_nxv4i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -342,7 +332,6 @@ entry:
 define <vscale x 8 x i16> @intrinsic_viota_mask_m_nxv8i16_nxv8i1(<vscale x 8 x i16> %0, <vscale x 8 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv8i16_nxv8i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -374,7 +363,6 @@ entry:
 define <vscale x 16 x i16> @intrinsic_viota_mask_m_nxv16i16_nxv16i1(<vscale x 16 x i16> %0, <vscale x 16 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv16i16_nxv16i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -406,7 +394,6 @@ entry:
 define <vscale x 32 x i16> @intrinsic_viota_mask_m_nxv32i16_nxv32i1(<vscale x 32 x i16> %0, <vscale x 32 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv32i16_nxv32i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -438,7 +425,6 @@ entry:
 define <vscale x 1 x i32> @intrinsic_viota_mask_m_nxv1i32_nxv1i1(<vscale x 1 x i32> %0, <vscale x 1 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv1i32_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -470,7 +456,6 @@ entry:
 define <vscale x 2 x i32> @intrinsic_viota_mask_m_nxv2i32_nxv2i1(<vscale x 2 x i32> %0, <vscale x 2 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv2i32_nxv2i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -502,7 +487,6 @@ entry:
 define <vscale x 4 x i32> @intrinsic_viota_mask_m_nxv4i32_nxv4i1(<vscale x 4 x i32> %0, <vscale x 4 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv4i32_nxv4i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -534,7 +518,6 @@ entry:
 define <vscale x 8 x i32> @intrinsic_viota_mask_m_nxv8i32_nxv8i1(<vscale x 8 x i32> %0, <vscale x 8 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv8i32_nxv8i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -566,7 +549,6 @@ entry:
 define <vscale x 16 x i32> @intrinsic_viota_mask_m_nxv16i32_nxv16i1(<vscale x 16 x i32> %0, <vscale x 16 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv16i32_nxv16i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -598,7 +580,6 @@ entry:
 define <vscale x 1 x i64> @intrinsic_viota_mask_m_nxv1i64_nxv1i1(<vscale x 1 x i64> %0, <vscale x 1 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv1i64_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -630,7 +611,6 @@ entry:
 define <vscale x 2 x i64> @intrinsic_viota_mask_m_nxv2i64_nxv2i1(<vscale x 2 x i64> %0, <vscale x 2 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv2i64_nxv2i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -662,7 +642,6 @@ entry:
 define <vscale x 4 x i64> @intrinsic_viota_mask_m_nxv4i64_nxv4i1(<vscale x 4 x i64> %0, <vscale x 4 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv4i64_nxv4i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
@@ -694,7 +673,6 @@ entry:
 define <vscale x 8 x i64> @intrinsic_viota_mask_m_nxv8i64_nxv8i1(<vscale x 8 x i64> %0, <vscale x 8 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_viota_mask_m_nxv8i64_nxv8i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, mu
 ; CHECK-NEXT:    viota.m v8, v0, v0.t
 ; CHECK-NEXT:    ret
