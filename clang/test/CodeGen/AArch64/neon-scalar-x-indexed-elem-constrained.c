@@ -258,4 +258,3 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 float64x1_t test_vfms_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
   return vfms_laneq_f64(a, b, v, 0);
 }
-
