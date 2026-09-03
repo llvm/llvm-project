@@ -532,269 +532,179 @@ define amdgpu_kernel void @test_clmul_i32(ptr addrspace(1) %out, ptr addrspace(1
 define amdgpu_kernel void @test_clmulr_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: test_clmulr_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s10, s2
-; SI-NEXT:    s_mov_b32 s11, s3
+; SI-NEXT:    s_mov_b32 s6, s2
+; SI-NEXT:    s_mov_b32 s7, s3
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s8, s6
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
-; SI-NEXT:    s_mov_b32 s7, 0
-; SI-NEXT:    s_mov_b32 s21, s7
-; SI-NEXT:    s_mov_b32 s0, s4
-; SI-NEXT:    s_mov_b32 s1, s5
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    s_mov_b32 s15, s7
-; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    s_mov_b32 s13, s7
-; SI-NEXT:    s_mov_b32 s17, s7
-; SI-NEXT:    s_mov_b32 s19, s7
-; SI-NEXT:    s_mov_b32 s23, s7
-; SI-NEXT:    s_mov_b32 s25, s7
-; SI-NEXT:    s_mov_b32 s27, s7
-; SI-NEXT:    s_mov_b32 s29, s7
-; SI-NEXT:    s_mov_b32 s31, s7
-; SI-NEXT:    s_mov_b32 s35, s7
-; SI-NEXT:    s_mov_b32 s37, s7
-; SI-NEXT:    s_mov_b32 s39, s7
-; SI-NEXT:    s_mov_b32 s41, s7
-; SI-NEXT:    s_mov_b32 s43, s7
+; SI-NEXT:    s_mov_b32 s4, s10
+; SI-NEXT:    s_mov_b32 s5, s11
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s0, s8
+; SI-NEXT:    s_mov_b32 s1, s9
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_readfirstlane_b32 s33, v1
-; SI-NEXT:    s_and_b32 s20, s33, 2
-; SI-NEXT:    v_readfirstlane_b32 s6, v0
-; SI-NEXT:    s_bfe_i32 s8, s33, 0x10000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[20:21], s[20:21], 0
-; SI-NEXT:    s_lshl_b64 s[4:5], s[6:7], 1
-; SI-NEXT:    s_and_b32 s8, s8, s6
-; SI-NEXT:    s_and_b64 s[20:21], s[20:21], exec
-; SI-NEXT:    s_cselect_b32 s21, 0, s5
-; SI-NEXT:    s_cselect_b32 s20, 0, s4
-; SI-NEXT:    s_and_b32 s14, s33, 4
-; SI-NEXT:    s_xor_b64 s[20:21], s[8:9], s[20:21]
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[14:15], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 2
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s15, 0, s15
-; SI-NEXT:    s_cselect_b32 s14, 0, s14
-; SI-NEXT:    s_and_b32 s10, s33, 8
-; SI-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[10:11], 0
-; SI-NEXT:    s_xor_b64 s[14:15], s[20:21], s[14:15]
-; SI-NEXT:    s_lshl_b64 s[20:21], s[6:7], 3
-; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
-; SI-NEXT:    s_cselect_b32 s11, 0, s21
-; SI-NEXT:    s_cselect_b32 s10, 0, s20
-; SI-NEXT:    s_and_b32 s12, s33, 16
-; SI-NEXT:    v_cmp_eq_u64_e64 s[12:13], s[12:13], 0
-; SI-NEXT:    s_lshl_b64 s[20:21], s[6:7], 4
-; SI-NEXT:    s_xor_b64 s[10:11], s[14:15], s[10:11]
-; SI-NEXT:    s_and_b64 s[12:13], s[12:13], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s21
-; SI-NEXT:    s_cselect_b32 s12, 0, s20
-; SI-NEXT:    s_and_b32 s16, s33, 32
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[16:17], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 5
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s18, s33, 64
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[18:19], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 6
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s22, s33, 0x80
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[22:23], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 7
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s24, s33, 0x100
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[24:25], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 8
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s26, s33, 0x200
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[26:27], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 9
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s28, s33, 0x400
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[28:29], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 10
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s30, s33, 0x800
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[30:31], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 11
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s34, s33, 0x1000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[34:35], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 12
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s36, s33, 0x2000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[36:37], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 13
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s38, s33, 0x4000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[38:39], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 14
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s40, s33, 0x8000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[40:41], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 15
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s42, s33, 0x10000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[42:43], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 16
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_mov_b32 s5, s7
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s4, s33, 0x20000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[4:5], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 17
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    s_cselect_b32 s5, 0, s15
-; SI-NEXT:    s_cselect_b32 s4, 0, s14
-; SI-NEXT:    s_and_b32 s8, s33, 0x40000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 18
-; SI-NEXT:    s_xor_b64 s[4:5], s[10:11], s[4:5]
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s13
-; SI-NEXT:    s_cselect_b32 s8, 0, s12
-; SI-NEXT:    s_and_b32 s10, s33, 0x80000
-; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[10:11], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 19
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x100000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 20
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x200000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 21
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x400000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 22
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x800000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 23
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x1000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 24
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x2000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 25
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x4000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 26
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x8000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 27
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x10000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 28
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x20000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 29
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 2.0
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 30
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_lshl_b64 s[6:7], s[6:7], 31
-; SI-NEXT:    s_cmp_gt_i32 s33, -1
-; SI-NEXT:    s_cselect_b32 s7, 0, s7
-; SI-NEXT:    s_cselect_b32 s6, 0, s6
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[6:7]
+; SI-NEXT:    v_readfirstlane_b32 s6, v1
+; SI-NEXT:    v_readfirstlane_b32 s4, v0
+; SI-NEXT:    s_bitcmp1_b32 s6, 0
+; SI-NEXT:    s_cselect_b32 s9, 0, 0
+; SI-NEXT:    s_cselect_b32 s8, s4, 0
+; SI-NEXT:    s_lshl_b64 s[10:11], s[4:5], 1
+; SI-NEXT:    s_bitcmp1_b32 s6, 1
+; SI-NEXT:    s_cselect_b32 s11, s11, 0
+; SI-NEXT:    s_cselect_b32 s10, s10, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 2
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 2
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 3
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 3
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 4
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 4
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 5
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 5
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 6
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 6
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 7
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 7
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 8
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 8
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 9
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 9
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 10
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 10
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 11
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 11
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 12
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 12
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 13
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 13
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 14
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 14
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 15
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 15
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 16
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 16
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 17
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 17
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 18
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 18
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 19
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 19
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 20
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 20
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 21
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 21
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 22
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 22
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 23
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 23
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 24
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 24
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 25
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 25
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 26
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 26
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 27
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 27
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 28
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 28
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 29
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 29
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 30
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 30
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[4:5], s[4:5], 31
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 31
+; SI-NEXT:    s_cselect_b32 s5, s5, 0
+; SI-NEXT:    s_cselect_b32 s4, s4, 0
+; SI-NEXT:    s_xor_b64 s[4:5], s[8:9], s[4:5]
 ; SI-NEXT:    s_lshr_b64 s[4:5], s[4:5], 31
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -802,228 +712,178 @@ define amdgpu_kernel void @test_clmulr_i32(ptr addrspace(1) %out, ptr addrspace(
 ;
 ; VI-LABEL: test_clmulr_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s10, s2
-; VI-NEXT:    s_mov_b32 s11, s3
+; VI-NEXT:    s_mov_b32 s6, s2
+; VI-NEXT:    s_mov_b32 s7, s3
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s8, s6
-; VI-NEXT:    s_mov_b32 s9, s7
-; VI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
-; VI-NEXT:    s_mov_b32 s0, s4
-; VI-NEXT:    s_mov_b32 s7, 0
-; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_mov_b32 s11, s7
-; VI-NEXT:    s_mov_b32 s9, s7
-; VI-NEXT:    s_mov_b32 s13, s7
-; VI-NEXT:    s_mov_b32 s15, s7
-; VI-NEXT:    s_mov_b32 s17, s7
-; VI-NEXT:    s_mov_b32 s19, s7
-; VI-NEXT:    s_mov_b32 s21, s7
-; VI-NEXT:    s_mov_b32 s23, s7
-; VI-NEXT:    s_mov_b32 s25, s7
-; VI-NEXT:    s_mov_b32 s27, s7
-; VI-NEXT:    s_mov_b32 s29, s7
-; VI-NEXT:    s_mov_b32 s31, s7
-; VI-NEXT:    s_mov_b32 s35, s7
-; VI-NEXT:    s_mov_b32 s37, s7
-; VI-NEXT:    s_mov_b32 s39, s7
-; VI-NEXT:    s_mov_b32 s41, s7
-; VI-NEXT:    s_mov_b32 s43, s7
-; VI-NEXT:    s_mov_b32 s45, s7
-; VI-NEXT:    s_mov_b32 s47, s7
+; VI-NEXT:    s_mov_b32 s4, s10
+; VI-NEXT:    s_mov_b32 s5, s11
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; VI-NEXT:    s_mov_b32 s5, 0
+; VI-NEXT:    s_mov_b32 s0, s8
+; VI-NEXT:    s_mov_b32 s1, s9
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s4, v1
-; VI-NEXT:    v_readfirstlane_b32 s6, v0
-; VI-NEXT:    s_bfe_i32 s5, s4, 0x10000
-; VI-NEXT:    s_lshl_b64 s[48:49], s[6:7], 1
-; VI-NEXT:    s_and_b32 s10, s4, 2
-; VI-NEXT:    s_and_b32 s8, s5, s6
-; VI-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s49
-; VI-NEXT:    s_cselect_b32 s10, 0, s48
-; VI-NEXT:    s_lshl_b64 s[48:49], s[6:7], 2
-; VI-NEXT:    s_and_b32 s12, s4, 4
+; VI-NEXT:    v_readfirstlane_b32 s6, v1
+; VI-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-NEXT:    s_bitcmp1_b32 s6, 0
+; VI-NEXT:    s_cselect_b32 s9, 0, 0
+; VI-NEXT:    s_cselect_b32 s8, s4, 0
+; VI-NEXT:    s_lshl_b64 s[10:11], s[4:5], 1
+; VI-NEXT:    s_bitcmp1_b32 s6, 1
+; VI-NEXT:    s_cselect_b32 s11, s11, 0
+; VI-NEXT:    s_cselect_b32 s10, s10, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 2
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s49
-; VI-NEXT:    s_cselect_b32 s10, 0, s48
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 3
-; VI-NEXT:    s_and_b32 s14, s4, 8
+; VI-NEXT:    s_bitcmp1_b32 s6, 2
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 3
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[14:15], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 4
-; VI-NEXT:    s_and_b32 s16, s4, 16
+; VI-NEXT:    s_bitcmp1_b32 s6, 3
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 4
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[16:17], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 5
-; VI-NEXT:    s_and_b32 s18, s4, 32
+; VI-NEXT:    s_bitcmp1_b32 s6, 4
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 5
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[18:19], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 6
-; VI-NEXT:    s_and_b32 s20, s4, 64
+; VI-NEXT:    s_bitcmp1_b32 s6, 5
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 6
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[20:21], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 7
-; VI-NEXT:    s_and_b32 s22, s4, 0x80
+; VI-NEXT:    s_bitcmp1_b32 s6, 6
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 7
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[22:23], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 8
-; VI-NEXT:    s_and_b32 s24, s4, 0x100
+; VI-NEXT:    s_bitcmp1_b32 s6, 7
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 8
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[24:25], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 9
-; VI-NEXT:    s_and_b32 s26, s4, 0x200
+; VI-NEXT:    s_bitcmp1_b32 s6, 8
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 9
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[26:27], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 10
-; VI-NEXT:    s_and_b32 s28, s4, 0x400
+; VI-NEXT:    s_bitcmp1_b32 s6, 9
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 10
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[28:29], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 11
-; VI-NEXT:    s_and_b32 s30, s4, 0x800
+; VI-NEXT:    s_bitcmp1_b32 s6, 10
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 11
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[30:31], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 12
-; VI-NEXT:    s_and_b32 s34, s4, 0x1000
+; VI-NEXT:    s_bitcmp1_b32 s6, 11
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 12
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[34:35], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 13
-; VI-NEXT:    s_and_b32 s36, s4, 0x2000
+; VI-NEXT:    s_bitcmp1_b32 s6, 12
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 13
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[36:37], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 14
-; VI-NEXT:    s_and_b32 s38, s4, 0x4000
+; VI-NEXT:    s_bitcmp1_b32 s6, 13
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 14
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[38:39], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 15
-; VI-NEXT:    s_and_b32 s40, s4, 0x8000
+; VI-NEXT:    s_bitcmp1_b32 s6, 14
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 15
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[40:41], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 16
-; VI-NEXT:    s_and_b32 s42, s4, 0x10000
+; VI-NEXT:    s_bitcmp1_b32 s6, 15
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 16
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[42:43], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 17
-; VI-NEXT:    s_and_b32 s44, s4, 0x20000
+; VI-NEXT:    s_bitcmp1_b32 s6, 16
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 17
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[44:45], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 18
-; VI-NEXT:    s_and_b32 s46, s4, 0x40000
+; VI-NEXT:    s_bitcmp1_b32 s6, 17
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 18
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[46:47], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 19
+; VI-NEXT:    s_bitcmp1_b32 s6, 18
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 19
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_and_b32 s10, s4, 0x80000
-; VI-NEXT:    s_mov_b32 s11, s7
-; VI-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
+; VI-NEXT:    s_bitcmp1_b32 s6, 19
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 20
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 20
-; VI-NEXT:    s_and_b32 s12, s4, 0x100000
-; VI-NEXT:    s_mov_b32 s13, s7
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 20
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 21
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 21
-; VI-NEXT:    s_and_b32 s12, s4, 0x200000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 21
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 22
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 22
-; VI-NEXT:    s_and_b32 s12, s4, 0x400000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 22
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 23
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 23
-; VI-NEXT:    s_and_b32 s12, s4, 0x800000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 23
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 24
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 24
-; VI-NEXT:    s_and_b32 s12, s4, 0x1000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 24
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 25
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 25
-; VI-NEXT:    s_and_b32 s12, s4, 0x2000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 25
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 26
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 26
-; VI-NEXT:    s_and_b32 s12, s4, 0x4000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 26
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 27
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 27
-; VI-NEXT:    s_and_b32 s12, s4, 0x8000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 27
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 28
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 28
-; VI-NEXT:    s_and_b32 s12, s4, 0x10000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 28
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 29
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 29
-; VI-NEXT:    s_and_b32 s12, s4, 0x20000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 29
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 30
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 30
-; VI-NEXT:    s_and_b32 s12, s4, 2.0
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 30
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[4:5], s[4:5], 31
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[6:7], s[6:7], 31
-; VI-NEXT:    s_cmp_gt_i32 s4, -1
-; VI-NEXT:    s_cselect_b32 s5, 0, s7
-; VI-NEXT:    s_cselect_b32 s4, 0, s6
+; VI-NEXT:    s_bitcmp1_b32 s6, 31
+; VI-NEXT:    s_cselect_b32 s5, s5, 0
+; VI-NEXT:    s_cselect_b32 s4, s4, 0
 ; VI-NEXT:    s_xor_b64 s[4:5], s[8:9], s[4:5]
 ; VI-NEXT:    s_lshr_b64 s[4:5], s[4:5], 31
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
@@ -1041,220 +901,170 @@ define amdgpu_kernel void @test_clmulr_i32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9-NEXT:    s_mov_b32 s4, s10
 ; GFX9-NEXT:    s_mov_b32 s5, s11
 ; GFX9-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
-; GFX9-NEXT:    s_mov_b32 s0, s8
 ; GFX9-NEXT:    s_mov_b32 s5, 0
-; GFX9-NEXT:    s_mov_b32 s11, s5
-; GFX9-NEXT:    s_mov_b32 s7, s5
-; GFX9-NEXT:    s_mov_b32 s13, s5
-; GFX9-NEXT:    s_mov_b32 s15, s5
-; GFX9-NEXT:    s_mov_b32 s17, s5
-; GFX9-NEXT:    s_mov_b32 s19, s5
-; GFX9-NEXT:    s_mov_b32 s21, s5
-; GFX9-NEXT:    s_mov_b32 s23, s5
-; GFX9-NEXT:    s_mov_b32 s25, s5
-; GFX9-NEXT:    s_mov_b32 s27, s5
-; GFX9-NEXT:    s_mov_b32 s29, s5
-; GFX9-NEXT:    s_mov_b32 s31, s5
-; GFX9-NEXT:    s_mov_b32 s35, s5
-; GFX9-NEXT:    s_mov_b32 s37, s5
-; GFX9-NEXT:    s_mov_b32 s39, s5
-; GFX9-NEXT:    s_mov_b32 s41, s5
-; GFX9-NEXT:    s_mov_b32 s43, s5
-; GFX9-NEXT:    s_mov_b32 s45, s5
-; GFX9-NEXT:    s_mov_b32 s47, s5
+; GFX9-NEXT:    s_mov_b32 s0, s8
 ; GFX9-NEXT:    s_mov_b32 s1, s9
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_readfirstlane_b32 s8, v1
+; GFX9-NEXT:    v_readfirstlane_b32 s6, v1
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX9-NEXT:    s_bfe_i32 s6, s8, 0x10000
-; GFX9-NEXT:    s_lshl_b64 s[48:49], s[4:5], 1
-; GFX9-NEXT:    s_and_b32 s10, s8, 2
-; GFX9-NEXT:    s_and_b32 s6, s6, s4
-; GFX9-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s49
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s48
-; GFX9-NEXT:    s_lshl_b64 s[48:49], s[4:5], 2
-; GFX9-NEXT:    s_and_b32 s12, s8, 4
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s49
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s48
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 0
+; GFX9-NEXT:    s_cselect_b32 s9, 0, 0
+; GFX9-NEXT:    s_cselect_b32 s8, s4, 0
+; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 1
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 1
+; GFX9-NEXT:    s_cselect_b32 s11, s11, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s10, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 2
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 2
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 3
-; GFX9-NEXT:    s_and_b32 s14, s8, 8
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[14:15], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 3
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 4
-; GFX9-NEXT:    s_and_b32 s16, s8, 16
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[16:17], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 4
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 5
-; GFX9-NEXT:    s_and_b32 s18, s8, 32
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[18:19], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 5
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 6
-; GFX9-NEXT:    s_and_b32 s20, s8, 64
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[20:21], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 6
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 7
-; GFX9-NEXT:    s_and_b32 s22, s8, 0x80
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[22:23], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 7
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 8
-; GFX9-NEXT:    s_and_b32 s24, s8, 0x100
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[24:25], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 8
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 9
-; GFX9-NEXT:    s_and_b32 s26, s8, 0x200
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[26:27], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 9
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 10
-; GFX9-NEXT:    s_and_b32 s28, s8, 0x400
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[28:29], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 10
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 11
-; GFX9-NEXT:    s_and_b32 s30, s8, 0x800
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[30:31], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 11
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 12
-; GFX9-NEXT:    s_and_b32 s34, s8, 0x1000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[34:35], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 12
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 13
-; GFX9-NEXT:    s_and_b32 s36, s8, 0x2000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[36:37], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 13
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 14
-; GFX9-NEXT:    s_and_b32 s38, s8, 0x4000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[38:39], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 14
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 15
-; GFX9-NEXT:    s_and_b32 s40, s8, 0x8000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[40:41], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 15
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 16
-; GFX9-NEXT:    s_and_b32 s42, s8, 0x10000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[42:43], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 16
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 17
-; GFX9-NEXT:    s_and_b32 s44, s8, 0x20000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[44:45], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 17
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 18
-; GFX9-NEXT:    s_and_b32 s46, s8, 0x40000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[46:47], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 18
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 19
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_and_b32 s10, s8, 0x80000
-; GFX9-NEXT:    s_mov_b32 s11, s5
-; GFX9-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 20
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x100000
-; GFX9-NEXT:    s_mov_b32 s13, s5
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 21
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x200000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 22
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x400000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 23
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x800000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 24
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x1000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 25
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x2000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 26
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x4000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 27
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x8000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 28
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x10000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 29
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x20000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 30
-; GFX9-NEXT:    s_and_b32 s12, s8, 2.0
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 19
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 20
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 20
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 21
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 21
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 22
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 22
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 23
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 23
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 24
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 24
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 25
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 25
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 26
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 26
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 27
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 27
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 28
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 28
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 29
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 29
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 30
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 30
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[4:5], s[4:5], 31
-; GFX9-NEXT:    s_cmp_gt_i32 s8, -1
-; GFX9-NEXT:    s_cselect_b32 s5, 0, s5
-; GFX9-NEXT:    s_cselect_b32 s4, 0, s4
-; GFX9-NEXT:    s_xor_b64 s[4:5], s[6:7], s[4:5]
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 31
+; GFX9-NEXT:    s_cselect_b32 s5, s5, 0
+; GFX9-NEXT:    s_cselect_b32 s4, s4, 0
+; GFX9-NEXT:    s_xor_b64 s[4:5], s[8:9], s[4:5]
 ; GFX9-NEXT:    s_lshr_b64 s[4:5], s[4:5], 31
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -1272,200 +1082,168 @@ define amdgpu_kernel void @test_clmulr_i32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:    s_mov_b32 s9, s3
 ; GFX10-NEXT:    s_mov_b32 s3, 0
 ; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_mov_b32 s11, s3
-; GFX10-NEXT:    s_mov_b32 s9, s3
+; GFX10-NEXT:    s_mov_b32 s5, s1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX10-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX10-NEXT:    s_bfe_i32 s5, s4, 0x10000
-; GFX10-NEXT:    s_and_b32 s10, s4, 2
-; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 1
-; GFX10-NEXT:    s_and_b32 s8, s5, s2
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_mov_b32 s5, s1
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s13
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s12
-; GFX10-NEXT:    s_and_b32 s10, s4, 4
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 2
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 8
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 3
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 16
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 4
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 32
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 5
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 64
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 6
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x80
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 7
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x100
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 8
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x200
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 9
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x400
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 10
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x800
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 11
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x1000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 12
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x2000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 13
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x4000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 14
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x8000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 15
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x10000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 16
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x20000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 17
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x40000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 18
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x80000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 19
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x100000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 20
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x200000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 21
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x400000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 22
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x800000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 23
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x1000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 24
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x2000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 25
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x4000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 26
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x8000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 27
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x10000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 28
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x20000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 29
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 2.0
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 30
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s11, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s10, 0, s14
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 0
+; GFX10-NEXT:    s_cselect_b32 s9, 0, 0
+; GFX10-NEXT:    s_cselect_b32 s8, s2, 0
+; GFX10-NEXT:    s_lshl_b64 s[10:11], s[2:3], 1
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 1
+; GFX10-NEXT:    s_cselect_b32 s11, s11, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s10, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 2
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 2
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 3
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 3
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 4
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 4
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 5
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 5
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 6
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 6
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 7
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 7
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 8
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 8
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 9
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 9
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 10
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 10
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 11
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 11
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 12
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 12
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 13
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 13
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 14
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 14
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 15
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 15
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 16
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 16
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 17
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 17
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 18
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 18
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 19
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 19
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 20
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 20
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 21
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 21
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 22
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 22
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 23
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 23
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 24
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 24
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 25
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 25
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 26
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 26
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 27
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 27
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 28
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 28
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 29
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 29
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 30
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 30
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX10-NEXT:    s_lshl_b64 s[2:3], s[2:3], 31
 ; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; GFX10-NEXT:    s_cmp_gt_i32 s4, -1
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 31
 ; GFX10-NEXT:    s_mov_b32 s4, s0
-; GFX10-NEXT:    s_cselect_b32 s3, 0, s3
-; GFX10-NEXT:    s_cselect_b32 s2, 0, s2
+; GFX10-NEXT:    s_cselect_b32 s3, s3, 0
+; GFX10-NEXT:    s_cselect_b32 s2, s2, 0
 ; GFX10-NEXT:    s_xor_b64 s[2:3], s[8:9], s[2:3]
 ; GFX10-NEXT:    s_lshr_b64 s[2:3], s[2:3], 31
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -1484,199 +1262,168 @@ define amdgpu_kernel void @test_clmulr_i32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    s_mov_b32 s9, s3
 ; GFX11-NEXT:    s_mov_b32 s3, 0
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[8:11], 0
-; GFX11-NEXT:    s_mov_b32 s11, s3
-; GFX11-NEXT:    s_mov_b32 s9, s3
+; GFX11-NEXT:    s_mov_b32 s5, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX11-NEXT:    s_bfe_i32 s5, s4, 0x10000
-; GFX11-NEXT:    s_and_b32 s10, s4, 2
-; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 1
-; GFX11-NEXT:    s_and_b32 s8, s5, s2
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_mov_b32 s5, s1
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s13
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s12
-; GFX11-NEXT:    s_and_b32 s10, s4, 4
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 2
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 8
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 3
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 16
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 4
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 32
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 5
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 64
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 6
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x80
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 7
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x100
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 8
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x200
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 9
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x400
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 10
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x800
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 11
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x1000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 12
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x2000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 13
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x4000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 14
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x8000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 15
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x10000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 16
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x20000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 17
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x40000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 18
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x80000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 19
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x100000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 20
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x200000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 21
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x400000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 22
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x800000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 23
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x1000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 24
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x2000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 25
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x4000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 26
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x8000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 27
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x10000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 28
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x20000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 29
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 2.0
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 30
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s11, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s10, 0, s14
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 0
+; GFX11-NEXT:    s_cselect_b32 s9, 0, 0
+; GFX11-NEXT:    s_cselect_b32 s8, s2, 0
+; GFX11-NEXT:    s_lshl_b64 s[10:11], s[2:3], 1
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 1
+; GFX11-NEXT:    s_cselect_b32 s11, s11, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s10, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 2
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 2
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 3
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 3
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 4
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 4
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 5
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 5
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 6
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 6
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 7
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 7
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 8
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 8
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 9
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 9
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 10
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 10
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 11
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 11
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 12
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 12
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 13
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 13
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 14
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 14
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 15
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 15
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 16
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 16
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 17
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 17
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 18
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 18
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 19
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 19
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 20
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 20
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 21
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 21
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 22
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 22
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 23
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 23
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 24
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 24
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 25
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 25
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 26
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 26
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 27
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 27
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 28
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 28
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 29
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 29
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 30
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 30
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX11-NEXT:    s_lshl_b64 s[2:3], s[2:3], 31
 ; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; GFX11-NEXT:    s_cmp_gt_i32 s4, -1
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 31
 ; GFX11-NEXT:    s_mov_b32 s4, s0
-; GFX11-NEXT:    s_cselect_b32 s3, 0, s3
-; GFX11-NEXT:    s_cselect_b32 s2, 0, s2
+; GFX11-NEXT:    s_cselect_b32 s3, s3, 0
+; GFX11-NEXT:    s_cselect_b32 s2, s2, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b64 s[2:3], s[8:9], s[2:3]
 ; GFX11-NEXT:    s_lshr_b64 s[2:3], s[2:3], 31
@@ -2014,497 +1761,357 @@ define amdgpu_kernel void @test_clmulr_i32(ptr addrspace(1) %out, ptr addrspace(
 define amdgpu_kernel void @test_clmulh_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: test_clmulh_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s10, s2
-; SI-NEXT:    s_mov_b32 s11, s3
+; SI-NEXT:    s_mov_b32 s6, s2
+; SI-NEXT:    s_mov_b32 s7, s3
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s8, s6
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
-; SI-NEXT:    s_mov_b32 s7, 0
-; SI-NEXT:    s_mov_b32 s21, s7
-; SI-NEXT:    s_mov_b32 s0, s4
-; SI-NEXT:    s_mov_b32 s1, s5
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    s_mov_b32 s15, s7
-; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    s_mov_b32 s13, s7
-; SI-NEXT:    s_mov_b32 s17, s7
-; SI-NEXT:    s_mov_b32 s19, s7
-; SI-NEXT:    s_mov_b32 s23, s7
-; SI-NEXT:    s_mov_b32 s25, s7
-; SI-NEXT:    s_mov_b32 s27, s7
-; SI-NEXT:    s_mov_b32 s29, s7
-; SI-NEXT:    s_mov_b32 s31, s7
-; SI-NEXT:    s_mov_b32 s35, s7
-; SI-NEXT:    s_mov_b32 s37, s7
-; SI-NEXT:    s_mov_b32 s39, s7
-; SI-NEXT:    s_mov_b32 s41, s7
-; SI-NEXT:    s_mov_b32 s43, s7
+; SI-NEXT:    s_mov_b32 s4, s10
+; SI-NEXT:    s_mov_b32 s5, s11
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_mov_b32 s5, 0
+; SI-NEXT:    s_mov_b32 s0, s8
+; SI-NEXT:    s_mov_b32 s1, s9
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_readfirstlane_b32 s33, v1
-; SI-NEXT:    s_and_b32 s20, s33, 2
-; SI-NEXT:    v_readfirstlane_b32 s6, v0
-; SI-NEXT:    s_bfe_i32 s8, s33, 0x10000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[20:21], s[20:21], 0
-; SI-NEXT:    s_lshl_b64 s[4:5], s[6:7], 1
-; SI-NEXT:    s_and_b32 s8, s8, s6
-; SI-NEXT:    s_and_b64 s[20:21], s[20:21], exec
-; SI-NEXT:    s_cselect_b32 s21, 0, s5
-; SI-NEXT:    s_cselect_b32 s20, 0, s4
-; SI-NEXT:    s_and_b32 s14, s33, 4
-; SI-NEXT:    s_xor_b64 s[20:21], s[8:9], s[20:21]
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[14:15], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 2
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s15, 0, s15
-; SI-NEXT:    s_cselect_b32 s14, 0, s14
-; SI-NEXT:    s_and_b32 s10, s33, 8
-; SI-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[10:11], 0
-; SI-NEXT:    s_xor_b64 s[14:15], s[20:21], s[14:15]
-; SI-NEXT:    s_lshl_b64 s[20:21], s[6:7], 3
-; SI-NEXT:    s_and_b64 s[10:11], s[10:11], exec
-; SI-NEXT:    s_cselect_b32 s11, 0, s21
-; SI-NEXT:    s_cselect_b32 s10, 0, s20
-; SI-NEXT:    s_and_b32 s12, s33, 16
-; SI-NEXT:    v_cmp_eq_u64_e64 s[12:13], s[12:13], 0
-; SI-NEXT:    s_lshl_b64 s[20:21], s[6:7], 4
-; SI-NEXT:    s_xor_b64 s[10:11], s[14:15], s[10:11]
-; SI-NEXT:    s_and_b64 s[12:13], s[12:13], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s21
-; SI-NEXT:    s_cselect_b32 s12, 0, s20
-; SI-NEXT:    s_and_b32 s16, s33, 32
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[16:17], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 5
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s18, s33, 64
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[18:19], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 6
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s22, s33, 0x80
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[22:23], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 7
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s24, s33, 0x100
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[24:25], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 8
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s26, s33, 0x200
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[26:27], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 9
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s28, s33, 0x400
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[28:29], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 10
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s30, s33, 0x800
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[30:31], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 11
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s34, s33, 0x1000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[34:35], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 12
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s36, s33, 0x2000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[36:37], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 13
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s38, s33, 0x4000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[38:39], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 14
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s40, s33, 0x8000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[40:41], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 15
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s42, s33, 0x10000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[16:17], s[42:43], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 16
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[12:13], s[16:17], exec
-; SI-NEXT:    s_mov_b32 s5, s7
-; SI-NEXT:    s_cselect_b32 s13, 0, s15
-; SI-NEXT:    s_cselect_b32 s12, 0, s14
-; SI-NEXT:    s_and_b32 s4, s33, 0x20000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[4:5], 0
-; SI-NEXT:    s_lshl_b64 s[14:15], s[6:7], 17
-; SI-NEXT:    s_xor_b64 s[10:11], s[10:11], s[12:13]
-; SI-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    s_cselect_b32 s5, 0, s15
-; SI-NEXT:    s_cselect_b32 s4, 0, s14
-; SI-NEXT:    s_and_b32 s8, s33, 0x40000
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 18
-; SI-NEXT:    s_xor_b64 s[4:5], s[10:11], s[4:5]
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s13
-; SI-NEXT:    s_cselect_b32 s8, 0, s12
-; SI-NEXT:    s_and_b32 s10, s33, 0x80000
-; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[10:11], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 19
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x100000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 20
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x200000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 21
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x400000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 22
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x800000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 23
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x1000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 24
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x2000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 25
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x4000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 26
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x8000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 27
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x10000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 28
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 0x20000000
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 29
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_and_b32 s8, s33, 2.0
-; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[8:9], 0
-; SI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 30
-; SI-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; SI-NEXT:    s_cselect_b32 s9, 0, s11
-; SI-NEXT:    s_cselect_b32 s8, 0, s10
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[8:9]
-; SI-NEXT:    s_lshl_b64 s[6:7], s[6:7], 31
-; SI-NEXT:    s_cmp_gt_i32 s33, -1
-; SI-NEXT:    s_cselect_b32 s7, 0, s7
-; SI-NEXT:    s_cselect_b32 s6, 0, s6
-; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], s[6:7]
+; SI-NEXT:    v_readfirstlane_b32 s6, v1
+; SI-NEXT:    v_readfirstlane_b32 s4, v0
+; SI-NEXT:    s_bitcmp1_b32 s6, 0
+; SI-NEXT:    s_cselect_b32 s9, 0, 0
+; SI-NEXT:    s_cselect_b32 s8, s4, 0
+; SI-NEXT:    s_lshl_b64 s[10:11], s[4:5], 1
+; SI-NEXT:    s_bitcmp1_b32 s6, 1
+; SI-NEXT:    s_cselect_b32 s11, s11, 0
+; SI-NEXT:    s_cselect_b32 s10, s10, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 2
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 2
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 3
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 3
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 4
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 4
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 5
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 5
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 6
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 6
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 7
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 7
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 8
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 8
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 9
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 9
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 10
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 10
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 11
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 11
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 12
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 12
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 13
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 13
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 14
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 14
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 15
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 15
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 16
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 16
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 17
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 17
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 18
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 18
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 19
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 19
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 20
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 20
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 21
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 21
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 22
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 22
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 23
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 23
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 24
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 24
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 25
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 25
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 26
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 26
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 27
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 27
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 28
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 28
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 29
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 29
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 30
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 30
+; SI-NEXT:    s_cselect_b32 s11, s13, 0
+; SI-NEXT:    s_cselect_b32 s10, s12, 0
+; SI-NEXT:    s_lshl_b64 s[4:5], s[4:5], 31
+; SI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; SI-NEXT:    s_bitcmp1_b32 s6, 31
+; SI-NEXT:    s_cselect_b32 s5, s5, 0
+; SI-NEXT:    s_cselect_b32 s4, s4, 0
+; SI-NEXT:    s_xor_b64 s[4:5], s[8:9], s[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v0, s5
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: test_clmulh_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s10, s2
-; VI-NEXT:    s_mov_b32 s11, s3
+; VI-NEXT:    s_mov_b32 s6, s2
+; VI-NEXT:    s_mov_b32 s7, s3
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_mov_b32 s8, s6
-; VI-NEXT:    s_mov_b32 s9, s7
-; VI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
-; VI-NEXT:    s_mov_b32 s0, s4
-; VI-NEXT:    s_mov_b32 s7, 0
-; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_mov_b32 s11, s7
-; VI-NEXT:    s_mov_b32 s9, s7
-; VI-NEXT:    s_mov_b32 s13, s7
-; VI-NEXT:    s_mov_b32 s15, s7
-; VI-NEXT:    s_mov_b32 s17, s7
-; VI-NEXT:    s_mov_b32 s19, s7
-; VI-NEXT:    s_mov_b32 s21, s7
-; VI-NEXT:    s_mov_b32 s23, s7
-; VI-NEXT:    s_mov_b32 s25, s7
-; VI-NEXT:    s_mov_b32 s27, s7
-; VI-NEXT:    s_mov_b32 s29, s7
-; VI-NEXT:    s_mov_b32 s31, s7
-; VI-NEXT:    s_mov_b32 s35, s7
-; VI-NEXT:    s_mov_b32 s37, s7
-; VI-NEXT:    s_mov_b32 s39, s7
-; VI-NEXT:    s_mov_b32 s41, s7
-; VI-NEXT:    s_mov_b32 s43, s7
-; VI-NEXT:    s_mov_b32 s45, s7
-; VI-NEXT:    s_mov_b32 s47, s7
+; VI-NEXT:    s_mov_b32 s4, s10
+; VI-NEXT:    s_mov_b32 s5, s11
+; VI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; VI-NEXT:    s_mov_b32 s5, 0
+; VI-NEXT:    s_mov_b32 s0, s8
+; VI-NEXT:    s_mov_b32 s1, s9
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s4, v1
-; VI-NEXT:    v_readfirstlane_b32 s6, v0
-; VI-NEXT:    s_bfe_i32 s5, s4, 0x10000
-; VI-NEXT:    s_lshl_b64 s[48:49], s[6:7], 1
-; VI-NEXT:    s_and_b32 s10, s4, 2
-; VI-NEXT:    s_and_b32 s8, s5, s6
-; VI-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s49
-; VI-NEXT:    s_cselect_b32 s10, 0, s48
-; VI-NEXT:    s_lshl_b64 s[48:49], s[6:7], 2
-; VI-NEXT:    s_and_b32 s12, s4, 4
+; VI-NEXT:    v_readfirstlane_b32 s6, v1
+; VI-NEXT:    v_readfirstlane_b32 s4, v0
+; VI-NEXT:    s_bitcmp1_b32 s6, 0
+; VI-NEXT:    s_cselect_b32 s9, 0, 0
+; VI-NEXT:    s_cselect_b32 s8, s4, 0
+; VI-NEXT:    s_lshl_b64 s[10:11], s[4:5], 1
+; VI-NEXT:    s_bitcmp1_b32 s6, 1
+; VI-NEXT:    s_cselect_b32 s11, s11, 0
+; VI-NEXT:    s_cselect_b32 s10, s10, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 2
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s49
-; VI-NEXT:    s_cselect_b32 s10, 0, s48
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 3
-; VI-NEXT:    s_and_b32 s14, s4, 8
+; VI-NEXT:    s_bitcmp1_b32 s6, 2
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 3
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[14:15], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 4
-; VI-NEXT:    s_and_b32 s16, s4, 16
+; VI-NEXT:    s_bitcmp1_b32 s6, 3
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 4
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[16:17], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 5
-; VI-NEXT:    s_and_b32 s18, s4, 32
+; VI-NEXT:    s_bitcmp1_b32 s6, 4
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 5
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[18:19], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 6
-; VI-NEXT:    s_and_b32 s20, s4, 64
+; VI-NEXT:    s_bitcmp1_b32 s6, 5
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 6
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[20:21], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 7
-; VI-NEXT:    s_and_b32 s22, s4, 0x80
+; VI-NEXT:    s_bitcmp1_b32 s6, 6
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 7
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[22:23], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 8
-; VI-NEXT:    s_and_b32 s24, s4, 0x100
+; VI-NEXT:    s_bitcmp1_b32 s6, 7
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 8
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[24:25], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 9
-; VI-NEXT:    s_and_b32 s26, s4, 0x200
+; VI-NEXT:    s_bitcmp1_b32 s6, 8
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 9
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[26:27], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 10
-; VI-NEXT:    s_and_b32 s28, s4, 0x400
+; VI-NEXT:    s_bitcmp1_b32 s6, 9
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 10
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[28:29], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 11
-; VI-NEXT:    s_and_b32 s30, s4, 0x800
+; VI-NEXT:    s_bitcmp1_b32 s6, 10
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 11
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[30:31], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 12
-; VI-NEXT:    s_and_b32 s34, s4, 0x1000
+; VI-NEXT:    s_bitcmp1_b32 s6, 11
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 12
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[34:35], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 13
-; VI-NEXT:    s_and_b32 s36, s4, 0x2000
+; VI-NEXT:    s_bitcmp1_b32 s6, 12
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 13
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[36:37], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 14
-; VI-NEXT:    s_and_b32 s38, s4, 0x4000
+; VI-NEXT:    s_bitcmp1_b32 s6, 13
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 14
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[38:39], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 15
-; VI-NEXT:    s_and_b32 s40, s4, 0x8000
+; VI-NEXT:    s_bitcmp1_b32 s6, 14
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 15
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[40:41], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 16
-; VI-NEXT:    s_and_b32 s42, s4, 0x10000
+; VI-NEXT:    s_bitcmp1_b32 s6, 15
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 16
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[42:43], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 17
-; VI-NEXT:    s_and_b32 s44, s4, 0x20000
+; VI-NEXT:    s_bitcmp1_b32 s6, 16
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 17
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[44:45], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 18
-; VI-NEXT:    s_and_b32 s46, s4, 0x40000
+; VI-NEXT:    s_bitcmp1_b32 s6, 17
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 18
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_cmp_eq_u64 s[46:47], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
-; VI-NEXT:    s_lshl_b64 s[12:13], s[6:7], 19
+; VI-NEXT:    s_bitcmp1_b32 s6, 18
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 19
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_and_b32 s10, s4, 0x80000
-; VI-NEXT:    s_mov_b32 s11, s7
-; VI-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s13
-; VI-NEXT:    s_cselect_b32 s10, 0, s12
+; VI-NEXT:    s_bitcmp1_b32 s6, 19
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 20
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 20
-; VI-NEXT:    s_and_b32 s12, s4, 0x100000
-; VI-NEXT:    s_mov_b32 s13, s7
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 20
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 21
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 21
-; VI-NEXT:    s_and_b32 s12, s4, 0x200000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 21
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 22
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 22
-; VI-NEXT:    s_and_b32 s12, s4, 0x400000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 22
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 23
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 23
-; VI-NEXT:    s_and_b32 s12, s4, 0x800000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 23
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 24
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 24
-; VI-NEXT:    s_and_b32 s12, s4, 0x1000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 24
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 25
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 25
-; VI-NEXT:    s_and_b32 s12, s4, 0x2000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 25
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 26
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 26
-; VI-NEXT:    s_and_b32 s12, s4, 0x4000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 26
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 27
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 27
-; VI-NEXT:    s_and_b32 s12, s4, 0x8000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 27
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 28
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 28
-; VI-NEXT:    s_and_b32 s12, s4, 0x10000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 28
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 29
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 29
-; VI-NEXT:    s_and_b32 s12, s4, 0x20000000
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 29
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[12:13], s[4:5], 30
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[10:11], s[6:7], 30
-; VI-NEXT:    s_and_b32 s12, s4, 2.0
-; VI-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; VI-NEXT:    s_cselect_b32 s11, 0, s11
-; VI-NEXT:    s_cselect_b32 s10, 0, s10
+; VI-NEXT:    s_bitcmp1_b32 s6, 30
+; VI-NEXT:    s_cselect_b32 s11, s13, 0
+; VI-NEXT:    s_cselect_b32 s10, s12, 0
+; VI-NEXT:    s_lshl_b64 s[4:5], s[4:5], 31
 ; VI-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; VI-NEXT:    s_lshl_b64 s[6:7], s[6:7], 31
-; VI-NEXT:    s_cmp_gt_i32 s4, -1
-; VI-NEXT:    s_cselect_b32 s5, 0, s7
-; VI-NEXT:    s_cselect_b32 s4, 0, s6
+; VI-NEXT:    s_bitcmp1_b32 s6, 31
+; VI-NEXT:    s_cselect_b32 s5, s5, 0
+; VI-NEXT:    s_cselect_b32 s4, s4, 0
 ; VI-NEXT:    s_xor_b64 s[4:5], s[8:9], s[4:5]
 ; VI-NEXT:    v_mov_b32_e32 v0, s5
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -2521,220 +2128,170 @@ define amdgpu_kernel void @test_clmulh_i32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9-NEXT:    s_mov_b32 s4, s10
 ; GFX9-NEXT:    s_mov_b32 s5, s11
 ; GFX9-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
-; GFX9-NEXT:    s_mov_b32 s0, s8
 ; GFX9-NEXT:    s_mov_b32 s5, 0
-; GFX9-NEXT:    s_mov_b32 s11, s5
-; GFX9-NEXT:    s_mov_b32 s7, s5
-; GFX9-NEXT:    s_mov_b32 s13, s5
-; GFX9-NEXT:    s_mov_b32 s15, s5
-; GFX9-NEXT:    s_mov_b32 s17, s5
-; GFX9-NEXT:    s_mov_b32 s19, s5
-; GFX9-NEXT:    s_mov_b32 s21, s5
-; GFX9-NEXT:    s_mov_b32 s23, s5
-; GFX9-NEXT:    s_mov_b32 s25, s5
-; GFX9-NEXT:    s_mov_b32 s27, s5
-; GFX9-NEXT:    s_mov_b32 s29, s5
-; GFX9-NEXT:    s_mov_b32 s31, s5
-; GFX9-NEXT:    s_mov_b32 s35, s5
-; GFX9-NEXT:    s_mov_b32 s37, s5
-; GFX9-NEXT:    s_mov_b32 s39, s5
-; GFX9-NEXT:    s_mov_b32 s41, s5
-; GFX9-NEXT:    s_mov_b32 s43, s5
-; GFX9-NEXT:    s_mov_b32 s45, s5
-; GFX9-NEXT:    s_mov_b32 s47, s5
+; GFX9-NEXT:    s_mov_b32 s0, s8
 ; GFX9-NEXT:    s_mov_b32 s1, s9
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_readfirstlane_b32 s8, v1
+; GFX9-NEXT:    v_readfirstlane_b32 s6, v1
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX9-NEXT:    s_bfe_i32 s6, s8, 0x10000
-; GFX9-NEXT:    s_lshl_b64 s[48:49], s[4:5], 1
-; GFX9-NEXT:    s_and_b32 s10, s8, 2
-; GFX9-NEXT:    s_and_b32 s6, s6, s4
-; GFX9-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s49
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s48
-; GFX9-NEXT:    s_lshl_b64 s[48:49], s[4:5], 2
-; GFX9-NEXT:    s_and_b32 s12, s8, 4
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s49
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s48
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 0
+; GFX9-NEXT:    s_cselect_b32 s9, 0, 0
+; GFX9-NEXT:    s_cselect_b32 s8, s4, 0
+; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 1
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 1
+; GFX9-NEXT:    s_cselect_b32 s11, s11, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s10, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 2
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 2
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 3
-; GFX9-NEXT:    s_and_b32 s14, s8, 8
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[14:15], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 3
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 4
-; GFX9-NEXT:    s_and_b32 s16, s8, 16
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[16:17], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 4
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 5
-; GFX9-NEXT:    s_and_b32 s18, s8, 32
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[18:19], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 5
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 6
-; GFX9-NEXT:    s_and_b32 s20, s8, 64
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[20:21], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 6
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 7
-; GFX9-NEXT:    s_and_b32 s22, s8, 0x80
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[22:23], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 7
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 8
-; GFX9-NEXT:    s_and_b32 s24, s8, 0x100
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[24:25], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 8
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 9
-; GFX9-NEXT:    s_and_b32 s26, s8, 0x200
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[26:27], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 9
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 10
-; GFX9-NEXT:    s_and_b32 s28, s8, 0x400
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[28:29], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 10
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 11
-; GFX9-NEXT:    s_and_b32 s30, s8, 0x800
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[30:31], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 11
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 12
-; GFX9-NEXT:    s_and_b32 s34, s8, 0x1000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[34:35], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 12
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 13
-; GFX9-NEXT:    s_and_b32 s36, s8, 0x2000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[36:37], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 13
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 14
-; GFX9-NEXT:    s_and_b32 s38, s8, 0x4000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[38:39], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 14
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 15
-; GFX9-NEXT:    s_and_b32 s40, s8, 0x8000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[40:41], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 15
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 16
-; GFX9-NEXT:    s_and_b32 s42, s8, 0x10000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[42:43], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 16
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 17
-; GFX9-NEXT:    s_and_b32 s44, s8, 0x20000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[44:45], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 17
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 18
-; GFX9-NEXT:    s_and_b32 s46, s8, 0x40000
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_cmp_eq_u64 s[46:47], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 18
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 19
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_and_b32 s10, s8, 0x80000
-; GFX9-NEXT:    s_mov_b32 s11, s5
-; GFX9-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s13
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s12
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 20
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x100000
-; GFX9-NEXT:    s_mov_b32 s13, s5
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 21
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x200000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 22
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x400000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 23
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x800000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 24
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x1000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 25
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x2000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 26
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x4000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 27
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x8000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 28
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x10000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 29
-; GFX9-NEXT:    s_and_b32 s12, s8, 0x20000000
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
-; GFX9-NEXT:    s_lshl_b64 s[10:11], s[4:5], 30
-; GFX9-NEXT:    s_and_b32 s12, s8, 2.0
-; GFX9-NEXT:    s_cmp_eq_u64 s[12:13], 0
-; GFX9-NEXT:    s_cselect_b32 s11, 0, s11
-; GFX9-NEXT:    s_cselect_b32 s10, 0, s10
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[6:7], s[10:11]
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 19
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 20
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 20
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 21
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 21
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 22
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 22
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 23
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 23
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 24
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 24
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 25
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 25
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 26
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 26
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 27
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 27
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 28
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 28
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 29
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 29
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX9-NEXT:    s_lshl_b64 s[12:13], s[4:5], 30
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 30
+; GFX9-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX9-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX9-NEXT:    s_lshl_b64 s[4:5], s[4:5], 31
-; GFX9-NEXT:    s_cmp_gt_i32 s8, -1
-; GFX9-NEXT:    s_cselect_b32 s5, 0, s5
-; GFX9-NEXT:    s_cselect_b32 s4, 0, s4
-; GFX9-NEXT:    s_xor_b64 s[4:5], s[6:7], s[4:5]
+; GFX9-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 31
+; GFX9-NEXT:    s_cselect_b32 s5, s5, 0
+; GFX9-NEXT:    s_cselect_b32 s4, s4, 0
+; GFX9-NEXT:    s_xor_b64 s[4:5], s[8:9], s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
@@ -2751,200 +2308,168 @@ define amdgpu_kernel void @test_clmulh_i32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:    s_mov_b32 s9, s3
 ; GFX10-NEXT:    s_mov_b32 s3, 0
 ; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
-; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
-; GFX10-NEXT:    s_mov_b32 s11, s3
-; GFX10-NEXT:    s_mov_b32 s9, s3
+; GFX10-NEXT:    s_mov_b32 s5, s1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX10-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX10-NEXT:    s_bfe_i32 s5, s4, 0x10000
-; GFX10-NEXT:    s_and_b32 s10, s4, 2
-; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 1
-; GFX10-NEXT:    s_and_b32 s8, s5, s2
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_mov_b32 s5, s1
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s13
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s12
-; GFX10-NEXT:    s_and_b32 s10, s4, 4
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 2
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 8
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 3
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 16
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 4
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 32
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 5
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 64
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 6
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x80
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 7
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x100
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 8
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x200
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 9
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x400
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 10
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x800
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 11
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x1000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 12
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x2000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 13
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x4000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 14
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x8000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 15
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x10000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 16
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x20000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 17
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x40000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 18
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x80000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 19
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x100000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 20
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x200000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 21
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x400000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 22
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x800000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 23
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x1000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 24
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x2000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 25
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x4000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 26
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x8000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 27
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x10000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 28
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 0x20000000
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 29
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX10-NEXT:    s_and_b32 s10, s4, 2.0
-; GFX10-NEXT:    s_lshl_b64 s[14:15], s[2:3], 30
-; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX10-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX10-NEXT:    s_cselect_b32 s11, 0, s15
-; GFX10-NEXT:    s_cselect_b32 s10, 0, s14
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 0
+; GFX10-NEXT:    s_cselect_b32 s9, 0, 0
+; GFX10-NEXT:    s_cselect_b32 s8, s2, 0
+; GFX10-NEXT:    s_lshl_b64 s[10:11], s[2:3], 1
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 1
+; GFX10-NEXT:    s_cselect_b32 s11, s11, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s10, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 2
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 2
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 3
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 3
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 4
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 4
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 5
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 5
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 6
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 6
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 7
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 7
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 8
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 8
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 9
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 9
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 10
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 10
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 11
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 11
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 12
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 12
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 13
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 13
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 14
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 14
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 15
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 15
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 16
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 16
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 17
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 17
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 18
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 18
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 19
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 19
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 20
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 20
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 21
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 21
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 22
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 22
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 23
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 23
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 24
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 24
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 25
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 25
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 26
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 26
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 27
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 27
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 28
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 28
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 29
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 29
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX10-NEXT:    s_lshl_b64 s[12:13], s[2:3], 30
+; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 30
+; GFX10-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX10-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX10-NEXT:    s_lshl_b64 s[2:3], s[2:3], 31
 ; GFX10-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; GFX10-NEXT:    s_cmp_gt_i32 s4, -1
+; GFX10-NEXT:    s_bitcmp1_b32 s4, 31
 ; GFX10-NEXT:    s_mov_b32 s4, s0
-; GFX10-NEXT:    s_cselect_b32 s3, 0, s3
-; GFX10-NEXT:    s_cselect_b32 s2, 0, s2
+; GFX10-NEXT:    s_cselect_b32 s3, s3, 0
+; GFX10-NEXT:    s_cselect_b32 s2, s2, 0
 ; GFX10-NEXT:    s_xor_b64 s[2:3], s[8:9], s[2:3]
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -2962,199 +2487,168 @@ define amdgpu_kernel void @test_clmulh_i32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    s_mov_b32 s9, s3
 ; GFX11-NEXT:    s_mov_b32 s3, 0
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[8:11], 0
-; GFX11-NEXT:    s_mov_b32 s11, s3
-; GFX11-NEXT:    s_mov_b32 s9, s3
+; GFX11-NEXT:    s_mov_b32 s5, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX11-NEXT:    s_bfe_i32 s5, s4, 0x10000
-; GFX11-NEXT:    s_and_b32 s10, s4, 2
-; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 1
-; GFX11-NEXT:    s_and_b32 s8, s5, s2
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_mov_b32 s5, s1
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s13
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s12
-; GFX11-NEXT:    s_and_b32 s10, s4, 4
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 2
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 8
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 3
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 16
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 4
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 32
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 5
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 64
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 6
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x80
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 7
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x100
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 8
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x200
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 9
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x400
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 10
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x800
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 11
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x1000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 12
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x2000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 13
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x4000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 14
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x8000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 15
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x10000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 16
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x20000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 17
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x40000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 18
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x80000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 19
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x100000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 20
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x200000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 21
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x400000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 22
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x800000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 23
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x1000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 24
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x2000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 25
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x4000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 26
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x8000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 27
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x10000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 28
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 0x20000000
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 29
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s13, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s12, 0, s14
-; GFX11-NEXT:    s_and_b32 s10, s4, 2.0
-; GFX11-NEXT:    s_lshl_b64 s[14:15], s[2:3], 30
-; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[12:13]
-; GFX11-NEXT:    s_cmp_eq_u64 s[10:11], 0
-; GFX11-NEXT:    s_cselect_b32 s11, 0, s15
-; GFX11-NEXT:    s_cselect_b32 s10, 0, s14
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 0
+; GFX11-NEXT:    s_cselect_b32 s9, 0, 0
+; GFX11-NEXT:    s_cselect_b32 s8, s2, 0
+; GFX11-NEXT:    s_lshl_b64 s[10:11], s[2:3], 1
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 1
+; GFX11-NEXT:    s_cselect_b32 s11, s11, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s10, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 2
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 2
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 3
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 3
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 4
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 4
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 5
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 5
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 6
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 6
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 7
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 7
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 8
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 8
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 9
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 9
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 10
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 10
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 11
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 11
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 12
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 12
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 13
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 13
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 14
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 14
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 15
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 15
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 16
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 16
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 17
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 17
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 18
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 18
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 19
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 19
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 20
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 20
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 21
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 21
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 22
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 22
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 23
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 23
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 24
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 24
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 25
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 25
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 26
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 26
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 27
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 27
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 28
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 28
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 29
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 29
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
+; GFX11-NEXT:    s_lshl_b64 s[12:13], s[2:3], 30
+; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 30
+; GFX11-NEXT:    s_cselect_b32 s11, s13, 0
+; GFX11-NEXT:    s_cselect_b32 s10, s12, 0
 ; GFX11-NEXT:    s_lshl_b64 s[2:3], s[2:3], 31
 ; GFX11-NEXT:    s_xor_b64 s[8:9], s[8:9], s[10:11]
-; GFX11-NEXT:    s_cmp_gt_i32 s4, -1
+; GFX11-NEXT:    s_bitcmp1_b32 s4, 31
 ; GFX11-NEXT:    s_mov_b32 s4, s0
-; GFX11-NEXT:    s_cselect_b32 s3, 0, s3
-; GFX11-NEXT:    s_cselect_b32 s2, 0, s2
+; GFX11-NEXT:    s_cselect_b32 s3, s3, 0
+; GFX11-NEXT:    s_cselect_b32 s2, s2, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b64 s[2:3], s[8:9], s[2:3]
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s3
