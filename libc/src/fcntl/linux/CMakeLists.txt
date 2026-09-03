@@ -48,3 +48,18 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  posix_fadvise
+  SRCS
+    posix_fadvise.cpp
+  HDRS
+    ../posix_fadvise.h
+  DEPENDS
+    libc.hdr.types.off_t
+    libc.hdr.stdint_proxy
+    libc.include.sys_syscall
+    libc.src.__support.CPP.bit
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+)
