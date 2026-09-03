@@ -6489,7 +6489,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // Determining the offsets below builds SCEVs for every pointer, which is
   // expensive. Bail out if the target does not support any strided accesses at
   // all.
-  if (none_of(seq_inclusive<unsigned>(1, Sz), [&](unsigned NumOffsets) {
+  if (none_of(seq<unsigned>(1, Sz), [&](unsigned NumOffsets) {
         return Sz % NumOffsets == 0 &&
                IsLegalStridedTy(GetStridedTy(NumOffsets));
       }))
