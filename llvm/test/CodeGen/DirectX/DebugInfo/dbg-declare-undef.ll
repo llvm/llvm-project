@@ -1,10 +1,10 @@
-; RUN: llc %s -o - | FileCheck %s
+; RUN: opt -S -passes=dxil-debug-info %s -o - | FileCheck %s
 
 target triple = "dxil-pc-shadermodel6.3-library"
 
 ; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.dbg.declare(metadata ptr poison,
+; CHECK:         tail call void @llvm.dbg.declare(metadata ptr %0,
 ; CHECK:         ret void
 ; CHECK-NEXT:  }
 
