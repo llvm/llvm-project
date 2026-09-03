@@ -7944,10 +7944,11 @@ TEST_F(OpenMPIRBuilderTest, CreateIteratorLoop) {
     F->setName("func.unterminated");
     IRBuilder<> Builder(BB);
 
-    auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    auto BodyGenCB = [&](InsertPointTy BodyIP,
+                         Value *LinearIV) -> Expected<InsertPointTy> {
       Builder.restoreIP(BodyIP);
       Builder.CreateAdd(LinearIV, Builder.getInt64(1));
-      return Error::success();
+      return Builder.saveIP();
     };
 
     OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
@@ -7975,10 +7976,11 @@ TEST_F(OpenMPIRBuilderTest, CreateIteratorLoop) {
         BasicBlock::Create(Builder.getContext(), "orig.succ", F2);
     Builder.CreateBr(OrigSucc);
 
-    auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    auto BodyGenCB = [&](InsertPointTy BodyIP,
+                         Value *LinearIV) -> Expected<InsertPointTy> {
       Builder.restoreIP(BodyIP);
       Builder.CreateAdd(LinearIV, Builder.getInt64(1));
-      return Error::success();
+      return Builder.saveIP();
     };
 
     OpenMPIRBuilder::LocationDescription Loc(InsertPointTy(BB2, BB2->end()),
@@ -8008,7 +8010,8 @@ TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopInvalidLoopBody) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
-  auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+  auto BodyGenCB = [&](InsertPointTy BodyIP,
+                       Value *LinearIV) -> Expected<InsertPointTy> {
     Builder.restoreIP(BodyIP);
     Builder.CreateAdd(LinearIV, Builder.getInt64(1));
     BasicBlock *BadDest =
@@ -8016,7 +8019,7 @@ TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopInvalidLoopBody) {
     Builder.CreateBr(BadDest);
     Builder.SetInsertPoint(BadDest);
     Builder.CreateUnreachable();
-    return Error::success();
+    return Builder.saveIP();
   };
 
   OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);

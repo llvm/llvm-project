@@ -2046,13 +2046,125 @@ bool ClauseProcessor::processMap(
       }
     }
 
-    if (iterator)
-      TODO(currentLocation,
-           "Support for iterator modifiers is not implemented yet");
     TodoLocators(currentLocation, objects);
 
-    processMapObjects(stmtCtx, clauseLocation,
-                      std::get<omp::ObjectList>(clause.t), mapTypeBits,
+    llvm::SmallVector<IteratorRange> iteratorRanges;
+    llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;
+    collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
+
+    // Objects that reference an iterator induction variable are expanded at
+    // runtime via `omp.iterator`/`map_iterated`; the rest go through the
+    // regular static map-info path below.
+    omp::ObjectList staticObjects;
+    if (!iterator) {
+      staticObjects = objects;
+    } else {
+      fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+      for (const omp::Object &object : objects) {
+        if (!hasIteratorIVReference(object, ivSyms)) {
+          staticObjects.push_back(object);
+          continue;
+        }
+
+        // The per-iteration `omp.map.info` this produces lives inside the
+        // `omp.iterator` body and cannot be attached as a `members` operand
+        // of some other (parent) MapInfoOp built outside that region, since
+        // only the aggregated `!omp.iterated<T>` handle escapes the region.
+        // We still register the parent with `parentMemberIndices` (with no
+        // child attached) so `insertChildMapInfoIntoParent` synthesizes the
+        // usual partial/"storage" map for the parent object (e.g. the
+        // `declare mapper` association variable itself); the iterator-driven
+        // child map is emitted separately into `result.mapIterated`, mirroring
+        // how `map_vars`/`members` (static) and `map_iterated` (runtime
+        // expanded) already coexist as sibling operands on the owning op.
+        bool hasParentObj = object.sym()->owner().IsDerivedType();
+        mlir::Value baseAddr;
+        if (hasParentObj) {
+          omp::ObjectList objectList = gatherObjectsOf(object, semaCtx);
+          assert(!objectList.empty() &&
+                 "could not find parent objects of derived type member");
+          if (isMemberOrParentAllocatableOrPointer(object, semaCtx))
+            TODO(currentLocation,
+                 "Iterator modifier on this derived-type member in a map "
+                 "clause is not implemented yet");
+
+          omp::Object baseObject = objectList[0];
+          parentMemberIndices.emplace(baseObject, OmpMapParentAndMemberData{});
+
+          // `objectList` includes an extra entry for the subscripted
+          // reference itself (e.g. [v, v%a, v%a(i)]) on top of one entry per
+          // derived-type level walked, so only a single record-field
+          // placement index means this is a single-level, non-nested member.
+          llvm::SmallVector<int64_t> memberIndices;
+          generateMemberPlacementIndices(object, memberIndices, semaCtx);
+          if (memberIndices.size() != 1)
+            TODO(currentLocation,
+                 "Iterator modifier on a nested derived-type member in a map "
+                 "clause is not implemented yet");
+
+          fir::factory::AddrAndBoundsInfo parentInfo =
+              Fortran::lower::getDataOperandBaseAddr(
+                  converter, firOpBuilder, *baseObject.sym(), clauseLocation,
+                  /*unwrapFirBox=*/false);
+          auto recordType = mlir::dyn_cast<fir::RecordType>(
+              fir::unwrapPassByRefType(parentInfo.addr.getType()));
+          if (!recordType)
+            TODO(currentLocation,
+                 "Iterator modifier on this derived-type member in a map "
+                 "clause is not implemented yet");
+
+          mlir::Type fieldTy = recordType.getType(memberIndices[0]);
+          fir::IntOrValue idxConst = mlir::IntegerAttr::get(
+              firOpBuilder.getI32Type(), memberIndices[0]);
+          baseAddr = fir::CoordinateOp::create(
+              firOpBuilder, clauseLocation, firOpBuilder.getRefType(fieldTy),
+              parentInfo.addr, llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
+        } else {
+          fir::factory::AddrAndBoundsInfo info =
+              Fortran::lower::getDataOperandBaseAddr(
+                  converter, firOpBuilder, *object.sym(), clauseLocation,
+                  /*unwrapFirBox=*/false);
+          baseAddr = info.addr;
+        }
+        hlfir::Entity entity{baseAddr};
+
+        mlir::Type elemRefTy =
+            fir::ReferenceType::get(entity.getFortranElementType());
+        mlir::Type iterTy = mlir::omp::IteratedType::get(
+            &converter.getMLIRContext(), elemRefTy);
+        mlir::FlatSymbolRefAttr mapperId =
+            resolveMapperId(converter, clauseLocation, object, mapperIdName,
+                            mapTypeBits, directive, hasParentObj);
+        std::string objName = object.sym()->name().ToString();
+
+        mlir::Value iterHandle = buildIteratorOp(
+            converter, clauseLocation, iterTy, iteratorRanges,
+            [&](fir::FirOpBuilder &builder, mlir::Location loc,
+                llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
+              lower::StatementContext iterStmtCtx;
+              std::optional<llvm::SmallVector<mlir::Value>> loweredIndices =
+                  getIteratorElementIndices(converter, object, iterStmtCtx,
+                                            loc);
+              if (!loweredIndices)
+                TODO(loc, "object type not supported by iterator modifier");
+
+              mlir::Value iteratedAddr = genIteratorCoordinate(
+                  converter, entity, *loweredIndices, loc);
+              auto location = mlir::NameLoc::get(
+                  mlir::StringAttr::get(builder.getContext(), objName),
+                  iteratedAddr.getLoc());
+              return utils::openmp::createMapInfoOp(
+                  builder, location, iteratedAddr,
+                  /*varPtrPtr=*/mlir::Value{}, objName, /*bounds=*/{},
+                  /*members=*/{}, /*membersIndex=*/mlir::ArrayAttr{},
+                  mapTypeBits, mlir::omp::VariableCaptureKind::ByRef,
+                  iteratedAddr.getType(), /*partialMap=*/false, mapperId);
+            });
+        result.mapIterated.push_back(iterHandle);
+      }
+    }
+
+    processMapObjects(stmtCtx, clauseLocation, staticObjects, mapTypeBits,
                       parentMemberIndices, result.mapVars, *ptrMapObjects,
                       mapperIdName, /*isMotionModifier=*/false, directive);
   };

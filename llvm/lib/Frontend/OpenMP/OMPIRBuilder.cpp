@@ -10676,86 +10676,81 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   Value *ShiftedPreviousSize =
       Builder.CreateShl(PreviousSize, Builder.getInt64(getFlagMemberOffset()));
 
-  // Fill up the runtime mapper handle for all components.
-  for (unsigned I = 0; I < Info->BasePointers.size(); ++I) {
-    Value *CurBaseArg = Info->BasePointers[I];
-    Value *CurBeginArg = Info->Pointers[I];
-    Value *CurSizeArg = Info->Sizes[I];
-    Value *CurNameArg = Info->Names.size()
-                            ? Info->Names[I]
-                            : Constant::getNullValue(Builder.getPtrTy());
-
-    Value *OriMapType = Builder.getInt64(
-        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-            Info->Types[I]));
-    auto RawType =
-        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-            Info->Types[I]);
+  // Emits a single mapper sub-component: computes the MEMBER_OF-adjusted map
+  // type, applies map-type-modifier propagation, and pushes it either via a
+  // child mapper function or __tgt_push_mapper_component. Returns the last
+  // basic block emitted, so callers can update the outer per-array-element
+  // loop's PHI incoming block.
+  //
+  // Add MEMBER_OF (ShiftedPreviousSize) to group this sub-map with the
+  // current array element (N = __tgt_mapper_num_components() at loop body
+  // start).
+  //
+  // Example 1:
+  //   struct S { int x; int *p; };
+  //
+  //   mapper:  #pragma omp declare mapper(id: S s) map(s.x, s.p[0:10])
+  //   use:     S arr[2]; ... map(arr)
+  //   entries per element:
+  //
+  //     &arr[i],      &arr[i].x,    sizeof(int),    MEMBER_OF(N)|TO|FROM
+  //     &arr[i].p[0], &arr[i].p[0], 10*sizeof(int), TO|FROM        (*)
+  //     &arr[i].p,    &arr[i].p[0], sizeof(int*),   ATTACH         (**)
+  //
+  // Example 2:
+  //   struct S1 { int x; int y; };
+  //   struct S2 { int z; S1 *s1p; };
+  //
+  //   mapper:  #pragma omp declare mapper(S2 s2) map(s2.z, s2.s1p->x,
+  //                                                  s2.s1p->y)
+  //   use:     S2 arr[2]; ... map(arr)
+  //   entries per element:
+  //
+  //     &arr[i],        &arr[i].z,      sizeof(int), MEMBER_OF(N)|TO|FROM
+  //     &arr[i].s1p[0], &arr[i].s1p->x, sizeof(s1p->x..y), ALLOC (*)
+  //     &arr[i].s1p[0], &arr[i].s1p->x, 4, MEMBER_OF(N+2)|TO|FROM (*)(***)
+  //     &arr[i].s1p[0], &arr[i].s1p->y, 4, MEMBER_OF(N+2)|TO|FROM (*)(***)
+  //     &arr[i].s1p,    &arr[i].s1p->x, sizeof(ptr), ATTACH (**)
+  //
+  //     x/y carry inner MEMBER_OF(2)
+  //          which is shifted by N to become MEMBER_OF(N+2).
+  //
+  //     HasAttachPtr is set on all of the s1p entries except the ATTACH one:
+  //     the combined ALLOC entry for the s1p->x..y block, and the individual
+  //     x/y entries that are MEMBER_OF that block, all describe storage
+  //     reached through the attach ptr arr[i].s1p.
+  //
+  // Entries of the following kinds do NOT receive a new outer MEMBER_OF
+  // linking them to the parent struct:
+  //
+  //   * (*) Entries with HasAttachPtr: they represent pointee data that
+  //     occupies a different storage block than the struct being mapped, so
+  //     they are not a member of it. They may still be MEMBER_OF an entry
+  //     within that pointee block, in which case those pre-existing bits are
+  //     shifted -- see (***).
+  //   * (**) ATTACH entries: they are not a member of anything — they just
+  //     link a ptr to its ptee.
+  //   * All entries when PreserveMemberOfFlags is set (the Flang/MLIR path):
+  //     its pre-shaped entries already carry their final MEMBER_OF bits.
+  //     TODO: set HasAttachPtr from Flang for entries whose storage is the
+  //     pointee's (e.g. s%p(0:10)) and drop PreserveMemberOfFlags in favor of
+  //     it.
+  //
+  // (***) If such an entry already has its own MEMBER_OF bits (e.g. the
+  // s1p->x/y entries above), those bits are still shifted by N.
+  auto pushComponent = [&](Value *CurBaseArg, Value *CurBeginArg,
+                           Value *CurSizeArg, Value *CurNameArg,
+                           uint64_t RawType, bool HasAttachPtrFlag,
+                           Function *ChildMapperFn) -> BasicBlock * {
+    Value *OriMapType = Builder.getInt64(RawType);
     constexpr uint64_t MemberOfMask =
         static_cast<uint64_t>(OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF);
     constexpr uint64_t AttachBit =
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
 
-    // Add MEMBER_OF (ShiftedPreviousSize) to group this sub-map with the
-    // current array element (N = __tgt_mapper_num_components() at loop body
-    // start).
-    //
-    // Example 1:
-    //   struct S { int x; int *p; };
-    //
-    //   mapper:  #pragma omp declare mapper(id: S s) map(s.x, s.p[0:10])
-    //   use:     S arr[2]; ... map(arr)
-    //   entries per element:
-    //
-    //     &arr[i],      &arr[i].x,    sizeof(int),    MEMBER_OF(N)|TO|FROM
-    //     &arr[i].p[0], &arr[i].p[0], 10*sizeof(int), TO|FROM        (*)
-    //     &arr[i].p,    &arr[i].p[0], sizeof(int*),   ATTACH         (**)
-    //
-    // Example 2:
-    //   struct S1 { int x; int y; };
-    //   struct S2 { int z; S1 *s1p; };
-    //
-    //   mapper:  #pragma omp declare mapper(S2 s2) map(s2.z, s2.s1p->x,
-    //                                                  s2.s1p->y)
-    //   use:     S2 arr[2]; ... map(arr)
-    //   entries per element:
-    //
-    //     &arr[i],        &arr[i].z,      sizeof(int), MEMBER_OF(N)|TO|FROM
-    //     &arr[i].s1p[0], &arr[i].s1p->x, sizeof(s1p->x..y), ALLOC (*)
-    //     &arr[i].s1p[0], &arr[i].s1p->x, 4, MEMBER_OF(N+2)|TO|FROM (*)(***)
-    //     &arr[i].s1p[0], &arr[i].s1p->y, 4, MEMBER_OF(N+2)|TO|FROM (*)(***)
-    //     &arr[i].s1p,    &arr[i].s1p->x, sizeof(ptr), ATTACH (**)
-    //
-    //     x/y carry inner MEMBER_OF(2)
-    //          which is shifted by N to become MEMBER_OF(N+2).
-    //
-    //     HasAttachPtr is set on all of the s1p entries except the ATTACH one:
-    //     the combined ALLOC entry for the s1p->x..y block, and the individual
-    //     x/y entries that are MEMBER_OF that block, all describe storage
-    //     reached through the attach ptr arr[i].s1p.
-    //
-    // Entries of the following kinds do NOT receive a new outer MEMBER_OF
-    // linking them to the parent struct:
-    //
-    //   * (*) Entries with HasAttachPtr: they represent pointee data that
-    //     occupies a different storage block than the struct being mapped, so
-    //     they are not a member of it. They may still be MEMBER_OF an entry
-    //     within that pointee block, in which case those pre-existing bits are
-    //     shifted -- see (***).
-    //   * (**) ATTACH entries: they are not a member of anything — they just
-    //     link a ptr to its ptee.
-    //   * All entries when PreserveMemberOfFlags is set (the Flang/MLIR path):
-    //     its pre-shaped entries already carry their final MEMBER_OF bits.
-    //     TODO: set HasAttachPtr from Flang for entries whose storage is the
-    //     pointee's (e.g. s%p(0:10)) and drop PreserveMemberOfFlags in favor of
-    //     it.
-    //
-    // (***) If such an entry already has its own MEMBER_OF bits (e.g. the
-    // s1p->x/y entries above), those bits are still shifted by N.
     Value *MemberMapType;
-    if (PreserveMemberOfFlags || (RawType & AttachBit) ||
-        Info->HasAttachPtr[I]) {
+    if (PreserveMemberOfFlags || (RawType & AttachBit) || HasAttachPtrFlag) {
       if (RawType & MemberOfMask)
         MemberMapType = Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
       else
@@ -10832,7 +10827,6 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
                 OpenMPOffloadMappingFlags::OMP_MAP_TO)));
     // In case of tofrom, do nothing.
     emitBlock(EndBB, MapperFn);
-    LastBB = EndBB;
     PHINode *CurMapType =
         Builder.CreatePHI(Builder.getInt64Ty(), 4, "omp.maptype");
     CurMapType->addIncoming(AllocMapType, AllocBB);
@@ -10880,7 +10874,7 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
             OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
             OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
             OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
-    if (PropagatePresentToPointee && Info->HasAttachPtr[I])
+    if (PropagatePresentToPointee && HasAttachPtrFlag)
       ModifierBits |=
           static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
               OpenMPOffloadMappingFlags::OMP_MAP_PRESENT);
@@ -10897,13 +10891,9 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
 
     Value *OffloadingArgs[] = {MapperHandle, CurBaseArg,   CurBeginArg,
                                CurSizeArg,   FinalMapType, CurNameArg};
-
-    auto ChildMapperFn = CustomMapperCB(I);
-    if (!ChildMapperFn)
-      return ChildMapperFn.takeError();
-    if (*ChildMapperFn) {
+    if (ChildMapperFn) {
       // Call the corresponding mapper function.
-      createRuntimeFunctionCall(*ChildMapperFn, OffloadingArgs)
+      createRuntimeFunctionCall(ChildMapperFn, OffloadingArgs)
           ->setDoesNotThrow();
     } else {
       // Call the runtime API __tgt_push_mapper_component to fill up the runtime
@@ -10912,6 +10902,48 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
           getOrCreateRuntimeFunction(M, OMPRTL___tgt_push_mapper_component),
           OffloadingArgs);
     }
+    return EndBB;
+  };
+
+  // Fill up the runtime mapper handle for all statically-known components.
+  for (unsigned I = 0; I < Info->BasePointers.size(); ++I) {
+    Value *CurNameArg = Info->Names.size()
+                            ? Info->Names[I]
+                            : Constant::getNullValue(Builder.getPtrTy());
+    Expected<Function *> ChildMapperFn = CustomMapperCB(I);
+    if (!ChildMapperFn)
+      return ChildMapperFn.takeError();
+    LastBB = pushComponent(
+        Info->BasePointers[I], Info->Pointers[I], Info->Sizes[I], CurNameArg,
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            Info->Types[I]),
+        Info->HasAttachPtr[I], *ChildMapperFn);
+  }
+
+  // Fill up the runtime mapper handle for components whose count is only
+  // known at runtime (produced by an `iterator` modifier on the mapper's own
+  // map clause): push each one individually, from inside a generated loop,
+  // via the same __tgt_push_mapper_component call used above.
+  for (MapInfosTy::DynamicSegment &Seg : Info->DynamicSegments) {
+    LocationDescription Loc(Builder);
+    auto BodyGen = [&](InsertPointTy BodyIP,
+                       Value *LinearIV) -> Expected<InsertPointTy> {
+      Builder.restoreIP(BodyIP);
+      SmallVector<Value *, 3> Entry = Seg.GenEntry(Builder, LinearIV);
+      BasicBlock *EndBB = pushComponent(
+          Entry[0], Entry[1], Entry[2],
+          Constant::getNullValue(Builder.getPtrTy()),
+          static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+              Seg.Type),
+          Seg.HasAttachPtr, /*ChildMapperFn=*/nullptr);
+      return InsertPointTy(EndBB, EndBB->end());
+    };
+    InsertPointOrErrorTy AfterIP =
+        createIteratorLoop(Loc, Seg.Count, BodyGen, "mapper.iterator");
+    if (!AfterIP)
+      return AfterIP.takeError();
+    Builder.restoreIP(*AfterIP);
+    LastBB = Builder.GetInsertBlock();
   }
 
   // Update the pointer to point to the next element that needs to be mapped,
@@ -12827,11 +12859,17 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
     T->eraseFromParent();
 
   InsertPointTy BodyIP = CLI->getBodyIP();
-  if (llvm::Error Err = BodyGen(BodyIP, CLI->getIndVar()))
-    return Err;
+  llvm::Expected<InsertPointTy> BodyEndIPOrErr =
+      BodyGen(BodyIP, CLI->getIndVar());
+  if (!BodyEndIPOrErr)
+    return BodyEndIPOrErr.takeError();
 
-  // Body must either fallthrough to the latch or branch directly to it.
-  if (Instruction *BodyTerminator = CLI->getBody()->getTerminatorOrNull()) {
+  // BodyGen reports where it actually left off (it may use an IRBuilder
+  // distinct from this OpenMPIRBuilder's own Builder, and may have emitted
+  // additional basic blocks beyond CLI->getBody()), so check/terminate that
+  // block rather than CLI->getBody() itself.
+  BasicBlock *BodyEndBB = BodyEndIPOrErr->getBlock();
+  if (Instruction *BodyTerminator = BodyEndBB->getTerminatorOrNull()) {
     auto *BodyBr = dyn_cast<UncondBrInst>(BodyTerminator);
     if (!BodyBr || BodyBr->getSuccessor() != CLI->getLatch()) {
       return make_error<StringError>(
@@ -12841,7 +12879,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
     }
   } else {
     // Ensure we end the loop body by jumping to the latch.
-    Builder.SetInsertPoint(CLI->getBody());
+    Builder.SetInsertPoint(BodyEndBB, BodyEndIPOrErr->getPoint());
     Builder.CreateBr(CLI->getLatch());
   }
 

@@ -1275,7 +1275,6 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
   auto &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Symbol *sym = object.sym();
   assert(sym && "expected symbol for iterator-dependent object");
-  fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*sym);
   mlir::Value one =
       builder.createIntegerConstant(loc, builder.getIndexType(), 1);
   llvm::SmallVector<mlir::Value> indices;
@@ -1294,6 +1293,10 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
         // Get lower bound if not provided by user.
         // For example: !$omp task affinity(iterator(i = 1:n, j = 1:m) : a(:i+1,
         // j+2))
+        // Only looked up here (not for a top-level symbol like a derived-type
+        // member, which has no standalone symbol map entry) since it is only
+        // needed for this triplet-without-lower-bound case.
+        fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*sym);
         idx = fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
       } else {
         idx = fir::getBase(

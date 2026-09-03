@@ -532,6 +532,34 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("map/motion clause with iterator modifier");
   };
 
+  // `declare_mapper.info` supports the simple case emitted by Flang's
+  // lowering: a single-dimension iterator whose body directly yields one
+  // bounds-free, member-free omp.map.info. Anything else still falls back to
+  // the generic (not yet implemented) diagnostic above.
+  auto checkDeclareMapperMap = [&todo](omp::DeclareMapperInfoOp op,
+                                       LogicalResult &result) {
+    for (Value iterVal : op.getMapIterated()) {
+      auto itersOp = iterVal.getDefiningOp<omp::IteratorOp>();
+      bool supported = itersOp && itersOp.getLoopLowerBounds().size() == 1;
+      if (supported) {
+        auto yieldOp =
+            dyn_cast<omp::YieldOp>(itersOp.getRegion().front().getTerminator());
+        supported = yieldOp && yieldOp.getResults().size() == 1;
+        if (supported) {
+          auto mapInfoOp =
+              yieldOp.getResults()[0].getDefiningOp<omp::MapInfoOp>();
+          supported = mapInfoOp && !mapInfoOp.getVarPtrPtr() &&
+                      mapInfoOp.getBounds().empty() &&
+                      mapInfoOp.getMembers().empty();
+        }
+      }
+      if (!supported) {
+        result = todo("map/motion clause with iterator modifier");
+        return;
+      }
+    }
+  };
+
   auto checkDynGroupprivate = [&todo](auto op, LogicalResult &result) {
     if (op.getDynGroupprivateSize())
       result = todo("dyn_groupprivate");
@@ -620,7 +648,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkThreadLimit(op, result);
       })
       .Case([&](omp::TargetDataOp op) { checkMap(op, result); })
-      .Case([&](omp::DeclareMapperInfoOp op) { checkMap(op, result); })
+      .Case([&](omp::DeclareMapperInfoOp op) {
+        checkDeclareMapperMap(op, result);
+      })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
         // checked above.
@@ -2988,7 +3018,8 @@ fillIteratorLoop(mlir::omp::IteratorOp itersOp, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::LocationDescription loc(builder);
 
   auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy bodyIP,
-                     llvm::Value *linearIV) -> llvm::Error {
+                     llvm::Value *linearIV)
+      -> llvm::Expected<llvm::OpenMPIRBuilder::InsertPointTy> {
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     builder.restoreIP(bodyIP);
 
@@ -3009,7 +3040,7 @@ fillIteratorLoop(mlir::omp::IteratorOp itersOp, llvm::IRBuilderBase &builder,
     // clear them to avoid stale entries in ModuleTranslation.
     moduleTranslation.forgetMapping(itersRegion);
 
-    return llvm::Error::success();
+    return builder.saveIP();
   };
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
@@ -8311,9 +8342,60 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
     genMapInfos(builder, moduleTranslation, dl, combinedInfo, mapData,
                 targetDirective);
 
-    // Drop the mapping that is no longer necessary so that the same region
-    // can be processed multiple times.
-    moduleTranslation.forgetMapping(declMapperOp.getRegion());
+    // Components produced by an `iterator` modifier on the mapper's own map
+    // clause: their count is only known at runtime, so they are recorded as
+    // dynamic segments and pushed one at a time (via
+    // __tgt_push_mapper_component) from a generated loop, mirroring how the
+    // depend/affinity clauses already handle iterator-produced entries.
+    for (mlir::Value iterVal : declMapperInfoOp.getMapIterated()) {
+      auto itersOp = iterVal.getDefiningOp<mlir::omp::IteratorOp>();
+      assert(itersOp && "map_iterated value must be defined by omp.iterator");
+      mlir::Block &iteratorRegionBlock = itersOp.getRegion().front();
+      auto yieldOp =
+          cast<mlir::omp::YieldOp>(iteratorRegionBlock.getTerminator());
+      auto mapInfoOp =
+          yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
+      assert(mapInfoOp && "expected an omp.map.info in the map_iterated body");
+
+      llvm::Value *sizeVal =
+          builder.getInt64(dl.getTypeSize(mapInfoOp.getVarPtrType()));
+      llvm::omp::OpenMPOffloadMappingFlags mapType =
+          convertClauseMapFlags(mapInfoOp.getMapType());
+      bool hasAttachPtr =
+          (mapType & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) !=
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+
+      IteratorInfo iterInfo(itersOp, moduleTranslation, builder);
+      llvm::Value *count = iterInfo.getTotalTrips();
+
+      combinedInfo.DynamicSegments.push_back(
+          MapInfosTy::DynamicSegment{count, {}, mapType, hasAttachPtr});
+      MapInfosTy::DynamicSegment &seg = combinedInfo.DynamicSegments.back();
+      // Capture `iterInfo` by value: it already holds the lb/ub/step/trip
+      // llvm::Value*s looked up while `declMapperOp`'s region mapping was
+      // still valid. GenEntry runs later (from within
+      // OpenMPIRBuilder::createIteratorLoop), after the mapping for that
+      // region has been dropped below via forgetMapping, so re-deriving a
+      // fresh IteratorInfo from `itersOp` at that point would fail to find
+      // the lb/ub/step values in the (already cleared) ModuleTranslation
+      // value map.
+      seg.GenEntry = [&moduleTranslation, itersOp, mapInfoOp, sizeVal,
+                      iterInfo](llvm::IRBuilderBase &b,
+                                llvm::Value *linearIV) mutable
+          -> llvm::SmallVector<llvm::Value *, 3> {
+        mlir::Block &iteratorRegionBlock = itersOp.getRegion().front();
+        if (failed(convertIteratorRegion(
+                linearIV, iterInfo, iteratorRegionBlock, b, moduleTranslation)))
+          return {};
+        // `mapInfoOp` (the omp.yield operand) has no translated value of its
+        // own; its runtime address is its var_ptr operand.
+        llvm::Value *addr =
+            moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
+        moduleTranslation.forgetMapping(itersOp.getRegion());
+        return {addr, addr, sizeVal};
+      };
+    }
+
     return combinedInfo;
   };
 
@@ -8327,6 +8409,11 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
   llvm::Expected<llvm::Function *> newFn = ompBuilder->emitUserDefinedMapper(
       genMapInfoCB, varType, mapperFuncName, customMapperCB,
       /*PreserveMemberOfFlags=*/true);
+  // Only now that emitUserDefinedMapper has fully finished (including running
+  // any iterator-produced DynamicSegment::GenEntry callbacks, which look up
+  // values defined in declMapperOp's region) is it safe to drop the mapping,
+  // so that the same region can be processed multiple times.
+  moduleTranslation.forgetMapping(declMapperOp.getRegion());
   if (!newFn)
     return newFn.takeError();
   if ([[maybe_unused]] llvm::Function *mappedFunc =

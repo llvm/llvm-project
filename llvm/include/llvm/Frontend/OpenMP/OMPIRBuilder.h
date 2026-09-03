@@ -29,6 +29,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
+#include <functional>
 #include <map>
 #include <optional>
 
@@ -3015,6 +3016,28 @@ public:
     MapHasAttachPtrArrayTy HasAttachPtr;
     StructNonContiguousInfo NonContigInfo;
 
+    /// Represents a group of mapper sub-components produced by an `iterator`
+    /// modifier on a `declare mapper`'s map clause: the component count is
+    /// only known at runtime, so these are pushed one at a time via
+    /// __tgt_push_mapper_component from inside a generated loop, rather than
+    /// being added to the arrays above. Only consumed by
+    /// emitUserDefinedMapper; emitOffloadingArrays ignores this field.
+    struct DynamicSegment {
+      /// Runtime (i64) trip count for this segment.
+      Value *Count = nullptr;
+      /// Emits the code computing one iteration's (BasePointer, Pointer,
+      /// Size) triple, given the loop's linear induction variable (0-based,
+      /// i64). Owning (not function_ref): the callable is typically a
+      /// lambda temporary assigned in after construction, which would
+      /// otherwise dangle by the time this is invoked.
+      std::function<SmallVector<Value *, 3>(IRBuilderBase &, Value *)> GenEntry;
+      /// Map type/HasAttachPtr, constant across the segment.
+      omp::OpenMPOffloadMappingFlags Type =
+          omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+      bool HasAttachPtr = false;
+    };
+    SmallVector<DynamicSegment, 0> DynamicSegments;
+
     /// Append arrays in \a CurInfo.
     void append(MapInfosTy &CurInfo) {
       BasePointers.append(CurInfo.BasePointers.begin(),
@@ -3035,6 +3058,8 @@ public:
                                   CurInfo.NonContigInfo.Counts.end());
       NonContigInfo.Strides.append(CurInfo.NonContigInfo.Strides.begin(),
                                    CurInfo.NonContigInfo.Strides.end());
+      DynamicSegments.append(CurInfo.DynamicSegments.begin(),
+                             CurInfo.DynamicSegments.end());
     }
   };
   using MapInfosOrErrorTy = Expected<MapInfosTy &>;
@@ -4253,7 +4278,7 @@ public:
   getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                               std::optional<unsigned> AddressSpace = {});
 
-  using IteratorBodyGenTy = llvm::function_ref<llvm::Error(
+  using IteratorBodyGenTy = llvm::function_ref<llvm::Expected<InsertPointTy>(
       InsertPointTy BodyIP, llvm::Value *LinearIV)>;
 
   /// Create a canonical iterator loop at the current insertion point.
@@ -4273,9 +4298,13 @@ public:
   ///  - The skeleton’s unconditional branch from the loop body is removed
   ///    before invoking \p BodyGen.
   ///  - \p BodyGen may freely emit instructions and temporarily introduce
-  ///    control flow.
-  ///  - If the loop body does not end with a terminator after \p BodyGen
-  ///    returns, a branch to the latch is inserted to restore canonical form.
+  ///    control flow, possibly using an IRBuilder distinct from this
+  ///    OpenMPIRBuilder's own \p Builder; it must therefore report where it
+  ///    left off by returning that final insertion point, rather than relying
+  ///    on any builder's current cursor.
+  ///  - If the returned insertion point's block does not end with a
+  ///    terminator after \p BodyGen returns, a branch to the latch is
+  ///    inserted there to restore canonical form.
   ///
   /// \param Loc The location where the iterator modifier was encountered.
   /// \param TripCount Number of loop iterations.
