@@ -71,6 +71,7 @@ from ctypes import (
     byref,
     c_char_p,
     c_int,
+    c_long,
     c_longlong,
     c_uint,
     c_ulong,
@@ -4117,8 +4118,8 @@ class PrintingPolicy(ClangObject):
 translation_unit_includes_callback = CFUNCTYPE(
     None, c_object_p, POINTER(SourceLocation), c_uint, py_object
 )
-cursor_visit_callback = CFUNCTYPE(c_int, Cursor, Cursor, py_object)
-fields_visit_callback = CFUNCTYPE(c_int, Cursor, py_object)
+cursor_visit_callback = CFUNCTYPE(c_long, Cursor, Cursor, py_object)
+fields_visit_callback = CFUNCTYPE(c_long, Cursor, py_object)
 
 # Functions strictly alphabetical order.
 FUNCTION_LIST: list[LibFunc] = [
