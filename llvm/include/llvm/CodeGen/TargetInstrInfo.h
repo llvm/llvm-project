@@ -1062,6 +1062,11 @@ public:
     /// convertToCCMP(). Both in-tree targets stash the two parsed condition
     /// codes (Head->CmpBB and CmpBB->Tail) here.
     int64_t TargetData[2] = {};
+    /// Expected code-size delta, in instructions, of the conversion; filled by
+    /// canConvertToCCMP() and consulted by the generic pass only under MinSize.
+    /// Negative means the conversion shrinks code. Targets that do not model it
+    /// leave it at 0.
+    int CodeSizeDelta = 0;
   };
 
   /// Return the physical flag/status register clobbered by conditional-compare
@@ -1108,14 +1113,6 @@ public:
                 const DebugLoc &HeadTermDL, ArrayRef<MachineOperand> HeadCond,
                 const CCmpConvInfo &Info, MachineRegisterInfo &MRI) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::convertToCCMP!");
-  }
-
-  /// Return the expected code-size delta (in number of instructions) of
-  /// converting the candidate described by Info into a conditional compare.
-  /// Used by the MinSize heuristic. Defaults to 0 (no size change assumed).
-  virtual int getCCMPCodeSizeDelta(const CCmpConvInfo &Info,
-                                   ArrayRef<MachineOperand> HeadCond) const {
-    return 0;
   }
 
   /// Given an instruction marked as `isSelect = true`, attempt to optimize MI

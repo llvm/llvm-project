@@ -87,7 +87,7 @@ STATISTIC(NumImmRangeRejs, "Number of ccmps rejected (Imm out of range)");
 STATISTIC(NumLiveDstRejs, "Number of ccmps rejected (Cmp dest live)");
 STATISTIC(NumMultNZCVUses, "Number of ccmps rejected (NZCV used)");
 STATISTIC(NumUnknNZCVDefs, "Number of ccmps rejected (NZCV def unknown)");
-STATISTIC(NumCompBranches, "Number of cbz/cbnz branches converted");
+STATISTIC(NumCompBranches, "Number of cb/cbz/cbnz branches converted");
 
 static cl::opt<unsigned>
     CBDisplacementBits("aarch64-cb-offset-bits", cl::Hidden, cl::init(9),
@@ -1422,11 +1422,25 @@ static MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB,
   // The terminator must be controlled by the flags.
   if (!I->readsRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
     switch (I->getOpcode()) {
+      // These can be converted into a ccmp against #0.
     case AArch64::CBZW:
     case AArch64::CBZX:
     case AArch64::CBNZW:
     case AArch64::CBNZX:
-      // These can be converted into a ccmp against #0.
+    // These can be converted into a ccmp against a register.
+    case AArch64::CBWPrr:
+    case AArch64::CBXPrr:
+      return &*I;
+    // CB encodes a uimm6, ccmp wants a uimm5 so we have to check if the
+    // immediate fits.
+    case AArch64::CBWPri:
+    case AArch64::CBXPri:
+      assert(I->getOperand(2).isImm() && "Expected immediate operand");
+      if (!isUInt<5>(I->getOperand(2).getImm())) {
+        LLVM_DEBUG(dbgs() << "Immediate out of range for ccmp: " << *I);
+        ++NumImmRangeRejs;
+        return nullptr;
+      }
       return &*I;
     }
     ++NumCmpTermRejs;
@@ -1527,6 +1541,47 @@ bool AArch64InstrInfo::canConvertToCCMP(
   Info.CmpMI = CmpMI;
   Info.TargetData[HeadCCIdx] = HeadCmpBBCC;
   Info.TargetData[TailCCIdx] = CmpBBTailCC;
+
+  // Estimate the code-size delta of the conversion for the MinSize heuristic.
+  int Delta = 0;
+  // If the Head terminator is one of the cb / cbz / cbnz branches with a
+  // built-in compare, we need to insert an explicit compare instruction in
+  // its place (see convertToCCMP), so the conversion grows the code by one
+  // instruction.
+  if (HeadCond[0].getImm() == -1) {
+    switch (HeadCond[1].getImm()) {
+    case AArch64::CBZW:
+    case AArch64::CBNZW:
+    case AArch64::CBZX:
+    case AArch64::CBNZX:
+    case AArch64::CBWPri:
+    case AArch64::CBXPri:
+    case AArch64::CBWPrr:
+    case AArch64::CBXPrr:
+      Delta = 1;
+      break;
+    default:
+      llvm_unreachable("Cannot convert Head branch");
+    }
+  }
+  // If CmpMI is one of the cb / cbz / cbnz branches with a built-in compare,
+  // it is turned into a compare instruction in Head, so no instruction is
+  // saved. Otherwise, the CmpBB branch is removed, saving one instruction.
+  switch (CmpMI->getOpcode()) {
+  default:
+    --Delta;
+    break;
+  case AArch64::CBZW:
+  case AArch64::CBNZW:
+  case AArch64::CBZX:
+  case AArch64::CBNZX:
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
+    break;
+  }
+  Info.CodeSizeDelta = Delta;
   return true;
 }
 
@@ -1540,11 +1595,12 @@ MachineInstr *AArch64InstrInfo::convertToCCMP(
   auto CmpBBTailCC =
       static_cast<AArch64CC::CondCode>(Info.TargetData[TailCCIdx]);
 
-  // If the Head terminator was one of the cbz / cbnz branches with built-in
-  // compare, we need to insert an explicit compare instruction in its place.
+  // If the Head terminator was one of the cb / cbz / cbnz branches with
+  // built-in compare, we need to insert an explicit compare instruction in
+  // its place.
   if (HeadCond[0].getImm() == -1) {
     ++NumCompBranches;
-    TII->insertCmpForCondBr(*Head, Head->end(), TermDL, HeadCond);
+    insertCmpForCondBr(Head, SpliceLoc, HeadTermDL, HeadCond);
   }
 
   // Now replace CmpMI with a ccmp instruction that also considers the incoming
@@ -1667,47 +1723,12 @@ MachineInstr *AArch64InstrInfo::convertToCCMP(
       CC = static_cast<AArch64CC::CondCode>(CmpMI->getOperand(0).getImm());
       break;
     }
-    MachineBasicBlock *BrTarget = TII->getBranchDestBlock(*CmpMI);
-    BuildMI(*Head, CmpMI, CmpMI->getDebugLoc(), TII->get(AArch64::Bcc))
+    MachineBasicBlock *BrTarget = getBranchDestBlock(*CmpMI);
+    BuildMI(Head, CmpMI, CmpMI->getDebugLoc(), get(AArch64::Bcc))
         .addImm(CC)
         .addMBB(BrTarget);
+  }
   return MIB;
-}
-
-int AArch64InstrInfo::getCCMPCodeSizeDelta(
-    const CCmpConvInfo &Info, ArrayRef<MachineOperand> HeadCond) const {
-  int delta = 0;
-  // If the Head terminator was one of the cbz / tbz branches with built-in
-  // compare, we need to insert an explicit compare instruction in its place
-  // plus a branch instruction.
-  if (HeadCond[0].getImm() == -1) {
-    switch (HeadCond[1].getImm()) {
-    case AArch64::CBZW:
-    case AArch64::CBNZW:
-    case AArch64::CBZX:
-    case AArch64::CBNZX:
-      // Therefore delta += 1
-      delta = 1;
-      break;
-    default:
-      llvm_unreachable("Cannot convert Head branch");
-    }
-  }
-  // If the Cmp terminator was one of the cbz / tbz branches with
-  // built-in compare, it will be turned into a compare instruction
-  // into Head, but we do not save any instruction.
-  // Otherwise, we save the branch instruction.
-  switch (Info.CmpMI->getOpcode()) {
-  default:
-    --delta;
-    break;
-  case AArch64::CBZW:
-  case AArch64::CBNZW:
-  case AArch64::CBZX:
-  case AArch64::CBNZX:
-    break;
-  }
-  return delta;
 }
 
 // Return true if Imm can be loaded into a register by a "cheap" sequence of

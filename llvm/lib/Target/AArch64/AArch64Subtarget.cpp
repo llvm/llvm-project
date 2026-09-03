@@ -571,14 +571,6 @@ bool AArch64Subtarget::enableEarlyIfConversion() const {
 
 bool AArch64Subtarget::enableCCMPFormation() const { return EnableCCMP; }
 
-TargetSubtargetInfo::CCmpConvHeuristics
-AArch64Subtarget::getCCmpConvHeuristics() const {
-  CCmpConvHeuristics H;
-  // AArch64 converts freely when minimizing code size.
-  H.UseCodeSizeDeltaOnMinSize = true;
-  return H;
-}
-
 bool AArch64Subtarget::supportsAddressTopByteIgnored() const {
   if (!UseAddressTopByteIgnored)
     return false;
