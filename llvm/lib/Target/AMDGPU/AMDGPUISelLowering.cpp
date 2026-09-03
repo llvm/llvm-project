@@ -5220,10 +5220,14 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   if (!shouldFoldFNegIntoSrc(N, N0))
     return SDValue();
 
+  bool MayIgnoreSignedZeroForAllUses =
+      N0->getFlags().hasNoSignedZeros() ||
+      (N0.hasOneUse() && N->getFlags().hasNoSignedZeros());
+
   SDLoc SL(N);
   switch (Opc) {
   case ISD::FADD: {
-    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
+    if (!MayIgnoreSignedZeroForAllUses)
       return SDValue();
 
     // (fneg (fadd x, y)) -> (fadd (fneg x), (fneg y))
@@ -5271,7 +5275,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMA:
   case ISD::FMAD: {
     // TODO: handle llvm.amdgcn.fma.legacy
-    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
+    if (!MayIgnoreSignedZeroForAllUses)
       return SDValue();
 
     // (fneg (fma x, y, z)) -> (fma x, (fneg y), (fneg z))
