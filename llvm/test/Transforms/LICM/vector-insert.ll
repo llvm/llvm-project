@@ -12,14 +12,14 @@ define <16 x i1> @iss195497(ptr %1, <16 x ptr> %2, ptr %store, ptr %scevgep90, <
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x ptr> [[TMP4]], <8 x ptr> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x ptr> [[TMP3]], <4 x ptr> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <16 x ptr> poison, ptr [[SCEVGEP90]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <16 x ptr> [[TMP14]], <16 x ptr> [[TMP8]], <16 x i32> <i32 poison, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <16 x ptr> [[TMP15]], <16 x ptr> [[TMP9]], <16 x i32> <i32 poison, i32 1, i32 poison, i32 poison, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <16 x ptr> [[TMP16]], <16 x ptr> [[TMP10]], <16 x i32> <i32 poison, i32 1, i32 16, i32 17, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ [[CNT_NEW:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[SCEVGEP89:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[CNT]]
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x ptr> [[TMP14]], ptr [[SCEVGEP89]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <16 x ptr> [[TMP15]], <16 x ptr> [[TMP8]], <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <16 x ptr> [[TMP16]], <16 x ptr> [[TMP9]], <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <16 x ptr> [[TMP17]], <16 x ptr> [[TMP10]], <16 x i32> <i32 0, i32 1, i32 16, i32 17, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <16 x ptr> [[TMP17]], ptr [[SCEVGEP89]], i64 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp ult <16 x ptr> [[TMP1]], [[TMP18]]
 ; CHECK-NEXT:    [[STORE_GEP:%.*]] = getelementptr <16 x i1>, ptr [[STORE]], i64 [[CNT]]
 ; CHECK-NEXT:    store volatile <16 x i1> [[TMP19]], ptr [[STORE_GEP]], align 2
@@ -569,4 +569,194 @@ loop:
   br i1 %done, label %exit, label %loop
 exit:
   ret <vscale x 4 x i32> %outer
+}
+
+; Positive: hoist an invariant insert past a single shufflevector in the chain.
+define <4 x i32> @hoist_insert_past_shuffle(ptr %base, i32 %inv, i32 %n) {
+; CHECK-LABEL: define <4 x i32> @hoist_insert_past_shuffle(
+; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[RES1:%.*]] = insertelement <4 x i32> poison, i32 [[INV]], i32 1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV]]
+; CHECK-NEXT:    [[VARVEC:%.*]] = load <4 x i32>, ptr [[IDX]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[RES1]], <4 x i32> [[VARVEC]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    store <4 x i32> [[RES]], ptr [[IDX]], align 16
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi <4 x i32> [ [[RES]], %[[LOOP]] ]
+; CHECK-NEXT:    ret <4 x i32> [[RES_LCSSA]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = getelementptr inbounds i32, ptr %base, i32 %iv
+  %var = load i32, ptr %idx, align 4
+  %varvec = load <4 x i32>, ptr %idx, align 4
+  %s0 = shufflevector <4 x i32> poison, <4 x i32> %varvec, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %res = insertelement <4 x i32> %s0, i32 %inv, i32 1
+  store <4 x i32> %res, ptr %idx, align 16
+  %iv.next = add i32 %iv, 1
+  %done = icmp eq i32 %iv, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  ret <4 x i32> %res
+}
+
+; Negative: don't hoist since the shuffle and insert both modify the same lane
+define <4 x i32> @no_hoist_insert_past_shuffle_shared_lane(ptr %base, i32 %inv, i32 %n) {
+; CHECK-LABEL: define <4 x i32> @no_hoist_insert_past_shuffle_shared_lane(
+; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV]]
+; CHECK-NEXT:    [[VARVEC:%.*]] = load <4 x i32>, ptr [[IDX]], align 4
+; CHECK-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> poison, <4 x i32> [[VARVEC]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <4 x i32> [[S0]], i32 [[INV]], i32 1
+; CHECK-NEXT:    store <4 x i32> [[RES]], ptr [[IDX]], align 16
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi <4 x i32> [ [[RES]], %[[LOOP]] ]
+; CHECK-NEXT:    ret <4 x i32> [[RES_LCSSA]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = getelementptr inbounds i32, ptr %base, i32 %iv
+  %var = load i32, ptr %idx, align 4
+  %varvec = load <4 x i32>, ptr %idx, align 4
+  %s0 = shufflevector <4 x i32> poison, <4 x i32> %varvec, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  %res = insertelement <4 x i32> %s0, i32 %inv, i32 1
+  store <4 x i32> %res, ptr %idx, align 16
+  %iv.next = add i32 %iv, 1
+  %done = icmp eq i32 %iv, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  ret <4 x i32> %res
+}
+
+; Positive recursive case: hoist insert past a mixed chain of shuffle/insert/shuffle.
+define <4 x i32> @hoist_insert_past_mixed_recursive_chain(ptr %base, i32 %inv, i32 %n) {
+; CHECK-LABEL: define <4 x i32> @hoist_insert_past_mixed_recursive_chain(
+; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <4 x i32> poison, i32 [[INV]], i32 3
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV]]
+; CHECK-NEXT:    [[VAR:%.*]] = load i32, ptr [[IDX]], align 4
+; CHECK-NEXT:    [[VARVEC:%.*]] = load <4 x i32>, ptr [[IDX]], align 4
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x i32> [[RES]], i32 [[VAR]], i32 0
+; CHECK-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[I0]], <4 x i32> [[VARVEC]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x i32> [[S0]], i32 [[VAR]], i32 1
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[I1]], <4 x i32> [[VARVEC]], <4 x i32> <i32 0, i32 7, i32 2, i32 3>
+; CHECK-NEXT:    store <4 x i32> [[S1]], ptr [[IDX]], align 16
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi <4 x i32> [ [[S1]], %[[LOOP]] ]
+; CHECK-NEXT:    ret <4 x i32> [[RES_LCSSA]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = getelementptr inbounds i32, ptr %base, i32 %iv
+  %var = load i32, ptr %idx, align 4
+  %varvec = load <4 x i32>, ptr %idx, align 4
+  %i0 = insertelement <4 x i32> poison, i32 %var, i32 0
+  %s0 = shufflevector <4 x i32> %i0, <4 x i32> %varvec, <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+  %i1 = insertelement <4 x i32> %s0, i32 %var, i32 1
+  %s1 = shufflevector <4 x i32> %i1, <4 x i32> %varvec, <4 x i32> <i32 0, i32 7, i32 2, i32 3>
+  %res = insertelement <4 x i32> %s1, i32 %inv, i32 3
+  store <4 x i32> %res, ptr %idx, align 16
+  %iv.next = add i32 %iv, 1
+  %done = icmp eq i32 %iv, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  ret <4 x i32> %res
+}
+
+; Positive: shuffle has a poison mask in the lane that the insert uses
+; must make sure that the poison is replace with identity mask
+define <4 x i32> @hoist_insert_past_shuffle_with_poison(ptr %base, i32 %inv, i32 %n) {
+; CHECK-LABEL: define <4 x i32> @hoist_insert_past_shuffle_with_poison(
+; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <4 x i32> poison, i32 [[INV]], i32 1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV]]
+; CHECK-NEXT:    [[VARVEC:%.*]] = load <4 x i32>, ptr [[IDX]], align 4
+; CHECK-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[RES]], <4 x i32> [[VARVEC]], <4 x i32> <i32 poison, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    store <4 x i32> [[S0]], ptr [[IDX]], align 16
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi <4 x i32> [ [[S0]], %[[LOOP]] ]
+; CHECK-NEXT:    ret <4 x i32> [[RES_LCSSA]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = getelementptr inbounds i32, ptr %base, i32 %iv
+  %var = load i32, ptr %idx, align 4
+  %varvec = load <4 x i32>, ptr %idx, align 4
+  %s0 = shufflevector <4 x i32> poison, <4 x i32> %varvec, <4 x i32> <i32 poison, i32 poison, i32 6, i32 7>
+  %res = insertelement <4 x i32> %s0, i32 %inv, i32 1
+  store <4 x i32> %res, ptr %idx, align 16
+  %iv.next = add i32 %iv, 1
+  %done = icmp eq i32 %iv, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  ret <4 x i32> %res
+}
+
+; Negative: do not walk through non-build-vector instructions in the operand chain.
+define <4 x i32> @no_hoist_past_non_build_chain(ptr %base, i32 %inv, i32 %n) {
+; CHECK-LABEL: define <4 x i32> @no_hoist_past_non_build_chain(
+; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds <4 x i32>, ptr [[BASE]], i32 [[IV]]
+; CHECK-NEXT:    [[V:%.*]] = load <4 x i32>, ptr [[IDX]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = insertelement <4 x i32> [[V]], i32 [[INV]], i32 1
+; CHECK-NEXT:    store <4 x i32> [[RES]], ptr [[IDX]], align 16
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi <4 x i32> [ [[RES]], %[[LOOP]] ]
+; CHECK-NEXT:    ret <4 x i32> [[RES_LCSSA]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = getelementptr inbounds <4 x i32>, ptr %base, i32 %iv
+  %v = load <4 x i32>, ptr %idx, align 16
+  %res = insertelement <4 x i32> %v, i32 %inv, i32 1
+  store <4 x i32> %res, ptr %idx, align 16
+  %iv.next = add i32 %iv, 1
+  %done = icmp eq i32 %iv, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  ret <4 x i32> %res
 }
