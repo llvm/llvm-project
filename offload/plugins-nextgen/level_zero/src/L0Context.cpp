@@ -17,7 +17,7 @@ namespace llvm::omp::target::plugin {
 
 L0ContextTy::L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
                          int32_t DriverId)
-    : Plugin(Plugin), zeDriver(zeDriver) {}
+    : Plugin(Plugin), zeDriver(zeDriver), DriverId(DriverId) {}
 
 L0ContextTy::~L0ContextTy() = default;
 

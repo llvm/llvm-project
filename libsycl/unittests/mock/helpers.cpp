@@ -109,6 +109,11 @@ void mock::MockLiboffload::initDefault() {
           assignAs<ol_device_type_t>(PropValue, OL_DEVICE_TYPE_GPU);
           return OL_SUCCESS;
         }
+        case OL_DEVICE_INFO_DRIVER_ID: {
+          EXPECT_EQ(PropSize, sizeof(uint32_t));
+          assignAs<uint32_t>(PropValue, 0);
+          return OL_SUCCESS;
+        }
         default:
           ADD_FAILURE();
           return makeEmptyStrError(OL_ERRC_UNIMPLEMENTED);
@@ -128,6 +133,10 @@ void mock::MockLiboffload::initDefault() {
         }
         case OL_DEVICE_INFO_TYPE: {
           *PropSizeRet = sizeof(ol_device_type_t);
+          return OL_SUCCESS;
+        }
+        case OL_DEVICE_INFO_DRIVER_ID: {
+          *PropSizeRet = sizeof(uint32_t);
           return OL_SUCCESS;
         }
         default:

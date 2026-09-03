@@ -961,6 +961,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
 
+  virtual uint32_t getDriverId() const { return 0; }
+
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
 
