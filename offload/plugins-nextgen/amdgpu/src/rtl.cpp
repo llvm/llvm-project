@@ -10,12 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <deque>
 #include <functional>
+#include <map>
 #include <mutex>
 #include <string>
 #include <system_error>
@@ -46,7 +49,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -448,6 +453,144 @@ private:
   /// is used by the memory pool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED
   /// should always be set.
   size_t PoolAllocationAlignment;
+};
+
+/// Class that implements shared (managed) allocations on top of the HSA shared
+/// virtual memory (SVM) interface.
+///
+/// SVM allocations are backed by ordinary system memory that is made
+/// accessible to all the kernel agents. With XNACK enabled, the driver
+/// migrates the pages between the host and the devices on demand; otherwise
+/// they remain resident in system memory.
+struct AMDGPUSVMManagerTy {
+  /// Determine whether the SVM interface can be used for shared allocations.
+  void init() {
+    if (!OMPX_UseSVM)
+      return;
+
+    bool SVMSupported = false;
+    if (hsa_system_get_info(HSA_AMD_SYSTEM_INFO_SVM_SUPPORTED, &SVMSupported) !=
+        HSA_STATUS_SUCCESS)
+      return;
+
+    Supported = SVMSupported;
+    PageSize = llvm::sys::Process::getPageSizeEstimate();
+  }
+
+  /// Release the allocations that are still live.
+  Error deinit() {
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    Error Err = Plugin::success();
+    for (auto &Allocation : Allocations)
+      if (std::error_code EC =
+              llvm::sys::Memory::releaseMappedMemory(Allocation.second))
+        Err = joinErrors(std::move(Err),
+                         Plugin::error(ErrorCode::UNKNOWN,
+                                       "error releasing SVM memory: %s",
+                                       EC.message().c_str()));
+
+    Allocations.clear();
+    return Err;
+  }
+
+  /// Whether new SVM allocations can be created.
+  bool isSupported() const { return Supported; }
+
+  /// Allocate system memory and make it accessible to all the \p Agents.
+  /// Returns a null pointer if the request cannot be served, either because
+  /// the requested alignment is too large or because the driver rejected the
+  /// allocation.
+  Expected<void *> allocate(size_t Size, size_t Alignment,
+                            ArrayRef<hsa_agent_t> Agents) {
+    // A concurrent allocation may have disabled the SVM interface.
+    if (!Supported)
+      return nullptr;
+
+    // Mapped memory is only page aligned.
+    if (Alignment > PageSize)
+      return nullptr;
+
+    std::error_code EC;
+    llvm::sys::MemoryBlock Block = llvm::sys::Memory::allocateMappedMemory(
+        Size, /*NearBlock=*/nullptr,
+        llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE, EC);
+    if (EC)
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "error allocating SVM memory: %s",
+                           EC.message().c_str());
+
+    // Give all the kernel agents access to the allocation. Accesses may incur
+    // a page fault and the migration of the memory to the accessing agent.
+    llvm::SmallVector<hsa_amd_svm_attribute_pair_t> Attrs;
+    for (hsa_agent_t Agent : Agents)
+      Attrs.push_back({HSA_AMD_SVM_ATTRIB_AGENT_ACCESSIBLE, Agent.handle});
+
+    hsa_status_t Status = hsa_amd_svm_attributes_set(
+        Block.base(), Block.allocatedSize(), Attrs.data(), Attrs.size());
+    if (auto Err =
+            Plugin::check(Status, "error in hsa_amd_svm_attributes_set: %s"))
+      return Err;
+
+    std::lock_guard<std::mutex> Lock(Mutex);
+    Allocations[reinterpret_cast<uintptr_t>(Block.base())] = Block;
+    return Block.base();
+  }
+
+  /// Release the SVM allocation starting at \p Ptr. Returns whether \p Ptr is
+  /// an SVM allocation.
+  Expected<bool> deallocate(void *Ptr) {
+    llvm::sys::MemoryBlock Block;
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      auto It = Allocations.find(reinterpret_cast<uintptr_t>(Ptr));
+      if (It == Allocations.end())
+        return false;
+      Block = It->second;
+      Allocations.erase(It);
+    }
+
+    if (std::error_code EC = llvm::sys::Memory::releaseMappedMemory(Block))
+      return Plugin::error(ErrorCode::UNKNOWN, "error releasing SVM memory: %s",
+                           EC.message().c_str());
+    return true;
+  }
+
+  /// Whether the \p Size bytes starting at \p Ptr are within an SVM
+  /// allocation. Allocations stay live after the SVM interface is disabled, so
+  /// this must not check Supported.
+  bool contains(const void *Ptr, size_t Size = 1) const {
+    const uintptr_t Addr = reinterpret_cast<uintptr_t>(Ptr);
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    // Find the allocation with the largest base address not above Addr.
+    auto It = Allocations.upper_bound(Addr);
+    if (It == Allocations.begin())
+      return false;
+    --It;
+
+    const size_t Offset = Addr - It->first;
+    const size_t AllocatedSize = It->second.allocatedSize();
+    return Offset < AllocatedSize && Size <= AllocatedSize - Offset;
+  }
+
+private:
+  /// Whether the user allows serving shared allocations through SVM.
+  BoolEnvar OMPX_UseSVM =
+      BoolEnvar("LIBOMPTARGET_AMDGPU_SHARED_ALLOC_SVM", true);
+
+  /// Whether new SVM allocations can be created. Cleared if the driver rejects
+  /// one.
+  std::atomic<bool> Supported = false;
+
+  /// The granularity of the mapped memory allocations.
+  size_t PageSize = 0;
+
+  /// The live SVM allocations, indexed by their base address.
+  std::map<uintptr_t, llvm::sys::MemoryBlock> Allocations;
+
+  /// Mutex for safe access to the allocations.
+  mutable std::mutex Mutex;
 };
 
 /// Class that implements a memory manager that gets memory from a specific
@@ -2702,6 +2845,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return AMDImage;
   }
 
+  /// Get the plugin's manager of the shared (managed) SVM allocations.
+  AMDGPUSVMManagerTy &getSVMManager();
+
   /// Allocate memory on the device or related to the device.
   Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
                             size_t Alignment) override;
@@ -2721,6 +2867,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
     case TARGET_ALLOC_SHARED:
+      // Shared allocations are SVM allocations or memory pool allocations when
+      // SVM cannot serve them.
+      auto WasSVMAllocOrErr = getSVMManager().deallocate(TgtPtr);
+      if (!WasSVMAllocOrErr)
+        return WasSVMAllocOrErr.takeError();
+      if (*WasSVMAllocOrErr)
+        return Plugin::success();
+
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
     }
@@ -3030,9 +3184,63 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  /// Fill \p TgtPtr with the given pattern on the host. Requires \p TgtPtr to
+  /// be host accessible.
+  Error dataFillHostImpl(void *TgtPtr, const void *PatternPtr,
+                         int64_t PatternSize, int64_t Size,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) {
+    struct HostFillArgsTy {
+      void *Dst;
+      llvm::SmallVector<char, 8> Pattern;
+      int64_t NumTimes;
+    };
+    auto Args = std::make_unique<HostFillArgsTy>(HostFillArgsTy{
+        TgtPtr,
+        {reinterpret_cast<const char *>(PatternPtr),
+         reinterpret_cast<const char *>(PatternPtr) + PatternSize},
+        Size / PatternSize});
+
+    auto Fill = [](void *Data) {
+      std::unique_ptr<HostFillArgsTy> Args(static_cast<HostFillArgsTy *>(Data));
+      auto *Dst = reinterpret_cast<char *>(Args->Dst);
+      if (Args->Pattern.size() == 1) {
+        std::memset(Dst, Args->Pattern.front(), Args->NumTimes);
+      } else {
+        for (int64_t I = 0; I < Args->NumTimes; ++I)
+          Dst = std::copy(Args->Pattern.begin(), Args->Pattern.end(), Dst);
+      }
+    };
+
+    // Defer the fill until all the previously enqueued operations completed.
+    auto HasPendingWorkOrErr = hasPendingWorkImpl(AsyncInfoWrapper);
+    if (!HasPendingWorkOrErr)
+      return HasPendingWorkOrErr.takeError();
+
+    if (*HasPendingWorkOrErr) {
+      AMDGPUStreamTy *Stream = nullptr;
+      if (auto Err = getStream(AsyncInfoWrapper, Stream))
+        return Err;
+
+      if (auto Err = Stream->pushHostCallback(Fill, Args.get()))
+        return Err;
+
+      Args.release();
+      return Plugin::success();
+    }
+
+    Fill(Args.release());
+    return Plugin::success();
+  }
+
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    // hsa_amd_memory_fill only operates on memory allocated by the HSA
+    // runtime. SVM allocations are host accessible, so fill them on the host.
+    if (getSVMManager().contains(TgtPtr, Size))
+      return dataFillHostImpl(TgtPtr, PatternPtr, PatternSize, Size,
+                              AsyncInfoWrapper);
+
     // Fast case, where we can use the 4 byte hsa_amd_memory_fill
     if (Size % 4 == 0 &&
         (PatternSize == 4 || PatternSize == 2 || PatternSize == 1)) {
@@ -3050,7 +3258,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         llvm_unreachable("Invalid pattern size");
       }
 
-      if (hasPendingWorkImpl(AsyncInfoWrapper)) {
+      auto HasPendingWorkOrErr = hasPendingWorkImpl(AsyncInfoWrapper);
+      if (!HasPendingWorkOrErr)
+        return HasPendingWorkOrErr.takeError();
+
+      if (*HasPendingWorkOrErr) {
         AMDGPUStreamTy *Stream = nullptr;
         if (auto Err = getStream(AsyncInfoWrapper, Stream))
           return Err;
@@ -3060,14 +3272,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
           uint32_t Pattern;
           int64_t Size;
         };
-        auto *Args = new MemFillArgsTy{TgtPtr, Pattern, Size / 4};
+        auto Args = std::make_unique<MemFillArgsTy>(
+            MemFillArgsTy{TgtPtr, Pattern, Size / 4});
         auto Fill = [](void *Data) {
-          MemFillArgsTy *Args = reinterpret_cast<MemFillArgsTy *>(Data);
-          assert(Args && "Invalid arguments");
+          std::unique_ptr<MemFillArgsTy> Args(
+              static_cast<MemFillArgsTy *>(Data));
 
           auto Status =
               hsa_amd_memory_fill(Args->Dst, Args->Pattern, Args->Size);
-          delete Args;
           auto Err =
               Plugin::check(Status, "error in hsa_amd_memory_fill: %s\n");
           if (Err) {
@@ -3078,7 +3290,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
         // hsa_amd_memory_fill doesn't signal completion using a signal, so use
         // the existing host callback logic to handle that instead
-        return Stream->pushHostCallback(Fill, Args);
+        if (auto Err = Stream->pushHostCallback(Fill, Args.get()))
+          return Err;
+
+        Args.release();
+        return Plugin::success();
       }
       // If there is no pending work, do the fill synchronously
       auto Status = hsa_amd_memory_fill(TgtPtr, Pattern, Size / 4);
@@ -3489,6 +3705,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) override {
+    // SVM allocations are accessible by all the kernel agents but are not
+    // tracked by the HSA runtime since they're allocated via mmap.
+    if (getSVMManager().contains(Ptr, Size))
+      return true;
+
     hsa_amd_pointer_info_t Info;
     Info.size = sizeof(hsa_amd_pointer_info_t);
 
@@ -4066,6 +4287,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (auto Err = HostDevice->init())
       return std::move(Err);
 
+    SVMManager.init();
+
     return NumDevices;
   }
 
@@ -4080,9 +4303,12 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       if (auto Err = HostDevice->deinit())
         return Err;
 
+    Error Err = SVMManager.deinit();
+
     // Finalize the HSA runtime.
     hsa_status_t Status = hsa_shut_down();
-    return Plugin::check(Status, "error in hsa_shut_down: %s");
+    return joinErrors(std::move(Err),
+                      Plugin::check(Status, "error in hsa_shut_down: %s"));
   }
 
   /// Creates an AMDGPU device.
@@ -4152,6 +4378,11 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   const llvm::SmallVector<hsa_agent_t> &getKernelAgents() const {
     return KernelAgents;
   }
+
+  /// Get the manager of the shared (managed) SVM allocations. A single manager
+  /// serves all the devices because SVM allocations are accessible by all the
+  /// agents.
+  AMDGPUSVMManagerTy &getSVMManager() { return SVMManager; }
 
   /// Create an HSA signal for the RPC doorbell and return the fields needed
   /// for the GPU to fire interrupts that wake the server thread.
@@ -4293,6 +4524,9 @@ private:
 
   /// The device representing all HSA host agents.
   AMDHostDeviceTy *HostDevice;
+
+  /// The manager of the shared (managed) SVM allocations.
+  AMDGPUSVMManagerTy SVMManager;
 };
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
@@ -4498,11 +4732,30 @@ Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
   return Ptr;
 }
 
+AMDGPUSVMManagerTy &AMDGPUDeviceTy::getSVMManager() {
+  return static_cast<AMDGPUPluginTy &>(Plugin).getSVMManager();
+}
+
 Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
                                           TargetAllocTy Kind,
                                           size_t Alignment) {
   if (Size == 0)
     return nullptr;
+
+  auto &AMDGPUPlugin = static_cast<AMDGPUPluginTy &>(Plugin);
+
+  // Shared (managed) allocations use the SVM interface, which lets the driver
+  // migrate the memory between the host and the devices. Requests that SVM
+  // cannot serve fall back to the fine-grained host memory pool below.
+  auto &SVMManager = AMDGPUPlugin.getSVMManager();
+  if (Kind == TARGET_ALLOC_SHARED && SVMManager.isSupported()) {
+    auto AllocOrErr =
+        SVMManager.allocate(Size, Alignment, AMDGPUPlugin.getKernelAgents());
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+    if (*AllocOrErr)
+      return *AllocOrErr;
+  }
 
   // Find the correct memory pool.
   AMDGPUMemoryPoolTy *MemoryPool = nullptr;
@@ -4533,10 +4786,9 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
     // necessary for host or shared allocations Also enabled for device memory
     // to allow device to device memcpy
     llvm::SmallVector<hsa_agent_t> Agents;
-    llvm::copy_if(static_cast<AMDGPUPluginTy &>(Plugin).getKernelAgents(),
-                  std::back_inserter(Agents), [&](hsa_agent_t Agent) {
-                    return MemoryPool->canAccess(Agent);
-                  });
+    llvm::copy_if(
+        AMDGPUPlugin.getKernelAgents(), std::back_inserter(Agents),
+        [&](hsa_agent_t Agent) { return MemoryPool->canAccess(Agent); });
 
     // Enable all valid kernel agents to access the buffer.
     if (auto Err = MemoryPool->enableAccess(Alloc, Size, Agents))

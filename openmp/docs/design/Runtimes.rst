@@ -1399,6 +1399,7 @@ There are several environment variables to change the behavior of the plugins:
 * ``LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES``
 * ``LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS``
 * ``LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT``
+* ``LIBOMPTARGET_AMDGPU_SHARED_ALLOC_SVM``
 
 The environment variables ``LIBOMPTARGET_STACK_SIZE`` and
 ``LIBOMPTARGET_HEAP_SIZE`` are described in
@@ -1498,6 +1499,18 @@ This environment variable controls the timeout hint in microseconds for the
 HSA wait state within the AMDGPU plugin. For the duration of this value
 the HSA runtime may busy wait. This can reduce overall latency.
 The default value is ``2000000``.
+
+LIBOMPTARGET_AMDGPU_SHARED_ALLOC_SVM
+""""""""""""""""""""""""""""""""""""
+
+This environment variable controls whether shared (managed) allocations, e.g.,
+the ones performed by ``omp_target_alloc_shared``, are served through the HSA
+shared virtual memory (SVM) interface in the AMDGPU plugin. SVM allocations are
+backed by ordinary system memory that the driver can migrate between the host
+and the devices on demand, which greatly improves the device access bandwidth on
+systems with XNACK enabled. If SVM is disabled, or if it is not supported by the
+driver, shared allocations are served from a fine-grained host memory pool and
+therefore remain resident on the host. The default value is ``true``.
 
 .. _remote_offloading_plugin:
 

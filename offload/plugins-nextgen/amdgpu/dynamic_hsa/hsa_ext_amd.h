@@ -125,6 +125,21 @@ hsa_status_t hsa_amd_memory_unlock(void* host_ptr);
 
 hsa_status_t hsa_amd_memory_fill(void *ptr, uint32_t value, size_t count);
 
+typedef enum hsa_amd_svm_attribute_s {
+  HSA_AMD_SVM_ATTRIB_GLOBAL_FLAG = 0,
+  HSA_AMD_SVM_ATTRIB_AGENT_ACCESSIBLE = 0x200,
+} hsa_amd_svm_attribute_t;
+
+typedef struct hsa_amd_svm_attribute_pair_s {
+  uint64_t attribute;
+  uint64_t value;
+} hsa_amd_svm_attribute_pair_t;
+
+hsa_status_t
+hsa_amd_svm_attributes_set(void *ptr, size_t size,
+                           hsa_amd_svm_attribute_pair_t *attribute_list,
+                           size_t attribute_count);
+
 typedef enum hsa_amd_event_type_s {
   HSA_AMD_GPU_MEMORY_FAULT_EVENT = 0,
 } hsa_amd_event_type_t;
