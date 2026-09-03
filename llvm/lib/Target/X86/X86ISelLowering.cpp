@@ -22831,6 +22831,17 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(X86ISD::VFPEXT, DL, VT, Res);
 }
 
+/// VCVTNEPS2BF16 always flushes input and output denormals to zero. Since f32
+/// and bf16 have the same exponent range, a normal f32 cannot produce a bf16
+/// denormal. The instruction is therefore valid when f32 input denormals are
+/// flushed while preserving their sign.
+static bool canUseCVTNEPS2BF16(const X86Subtarget &Subtarget,
+                               const SelectionDAG &DAG) {
+  return ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
+          Subtarget.hasAVXNECONVERT()) &&
+         DAG.getDenormalMode(MVT::f32).Input == DenormalMode::PreserveSign;
+}
+
 SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
 
@@ -22885,9 +22896,7 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (VT.getScalarType() == MVT::bf16) {
-    if (SVT.getScalarType() == MVT::f32 &&
-        ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
-         Subtarget.hasAVXNECONVERT()))
+    if (SVT.getScalarType() == MVT::f32 && canUseCVTNEPS2BF16(Subtarget, DAG))
       return Op;
     return SDValue();
   }
@@ -23028,8 +23037,7 @@ SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
   SDLoc DL(Op);
 
   MVT SVT = Op.getOperand(0).getSimpleValueType();
-  if (SVT == MVT::f32 && ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
-                          Subtarget.hasAVXNECONVERT())) {
+  if (SVT == MVT::f32 && canUseCVTNEPS2BF16(Subtarget, DAG)) {
     SDValue Res;
     Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, Op.getOperand(0));
     Res = DAG.getNode(X86ISD::CVTNEPS2BF16, DL, MVT::v8bf16, Res);
