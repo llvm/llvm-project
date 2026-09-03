@@ -39,6 +39,32 @@ class SettingsCommandTestCase(TestBase):
             ],
         )
 
+    def test_fork_debug_mode_setting(self):
+        """Test the `target.process.fork-debug-mode` setting."""
+        # Defaults to 'detach', preserving lldb's traditional fork behavior.
+        self.expect(
+            "settings show target.process.fork-debug-mode",
+            substrs=["target.process.fork-debug-mode (enum) = detach"],
+        )
+
+        self.runCmd("settings set target.process.fork-debug-mode create-target")
+        self.expect(
+            "settings show target.process.fork-debug-mode",
+            substrs=["target.process.fork-debug-mode (enum) = create-target"],
+        )
+
+        self.expect(
+            "settings set target.process.fork-debug-mode bogus-value",
+            error=True,
+            substrs=["invalid enumeration value"],
+        )
+
+        self.runCmd("settings clear target.process.fork-debug-mode")
+        self.expect(
+            "settings show target.process.fork-debug-mode",
+            substrs=["target.process.fork-debug-mode (enum) = detach"],
+        )
+
     def test_set_interpreter_repeat_prev_command(self):
         """Test the `interpreter.repeat-previous-command` setting."""
         self.build()

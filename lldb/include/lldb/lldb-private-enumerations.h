@@ -189,6 +189,13 @@ enum FollowForkMode {
   eFollowChild,  // Follow child process
 };
 
+// What happens to the process that follow-fork-mode does not continue
+// tracing.
+enum ForkDebugMode {
+  eForkDebugDetach,       // Detach it, as lldb has always done
+  eForkDebugCreateTarget, // Create a new Target/Process for it
+};
+
 // Result enums for when reading multiple lines from IOHandlers
 enum class LineStatus {
   Success, // The line that was just edited if good and should be added to the

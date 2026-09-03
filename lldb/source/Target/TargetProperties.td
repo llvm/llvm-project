@@ -318,6 +318,15 @@ let Definition = "process", Path = "target.process" in {
     DefaultEnumValue<"eFollowParent">,
     EnumValues<"OptionEnumValues(g_follow_fork_mode_values)">,
     Desc<"Debugger's behavior upon fork or vfork.">;
+  def ForkDebugMode: Property<"fork-debug-mode", "Enum">,
+    DefaultEnumValue<"eForkDebugDetach">,
+    EnumValues<"OptionEnumValues(g_fork_debug_mode_values)">,
+    Desc<"Controls what happens to the process that follow-fork-mode does "
+         "not continue tracing. 'detach' (the default) simply detaches it, "
+         "as lldb has always done. 'create-target' instead creates a new "
+         "Target for it and broadcasts a Target::eBroadcastBitNewTargetCreated "
+         "event, which front ends such as lldb-dap can use to open a new "
+         "debug session for it automatically.">;
   def TrackMemoryCacheChanges: Property<"track-memory-cache-changes", "Boolean">,
     DefaultTrue,
     Desc<"If true, memory cache modifications (which happen often during expressions evaluation) will bump process state ID (and invalidate all synthetic children). Disabling this option helps to avoid synthetic children reevaluation when pretty printers heavily use expressions. The downside of disabled setting is that convenience variables won't reevaluate synthetic children automatically.">;
