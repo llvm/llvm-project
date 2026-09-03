@@ -229,6 +229,41 @@ static Value *createWhileLO(IRBuilder<> &Builder, unsigned ElementSizeInBits,
       WhileLO, {Start, End, Builder.getInt32(VectorScale)}, "pac.mask");
 }
 
+/// If \p UserI is an extractelement use of the original loop mask, attempt to
+/// rewrite it to `extractelement(pext(count, 0), idx)` if the extract index is
+/// known to be within the first mask section (which means pext index = 0). If
+/// the user of the extract is a branch and the source of the mask is a whilelo,
+/// this form can be optimized into checking the status flags.
+static bool tryRewriteExtractElement(Instruction &UserI,
+                                     const MaskRewriteCandidate &C,
+                                     Value *Count) {
+  auto *EEI = dyn_cast<ExtractElementInst>(&UserI);
+  if (!EEI)
+    return false;
+
+  ElementCount LegalEC = getSVEElementCount(C.ElementSizeInBits);
+  auto *Idx = dyn_cast<ConstantInt>(EEI->getIndexOperand());
+  if (!Idx || Idx->getValue().uge(LegalEC.getKnownMinValue()))
+    return false;
+
+  IRBuilder<> Builder(EEI);
+  Builder.SetCurrentDebugLocation(EEI->getDebugLoc());
+
+  Module *M = EEI->getModule();
+  FunctionCallee PExt = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::aarch64_sve_pext,
+      {VectorType::get(Builder.getInt1Ty(), LegalEC)});
+  auto *ExtractMask =
+      Builder.CreateCall(PExt, {Count, Builder.getInt32(0)}, "pac.pext");
+
+  Value *Extracted = Builder.CreateExtractElement(
+      ExtractMask, EEI->getIndexOperand(), EEI->getName() + ".pac");
+
+  EEI->replaceAllUsesWith(Extracted);
+  EEI->eraseFromParent();
+  return true;
+}
+
 class AArch64PredicateAsCounterLoopRewrites : public LoopPass {
 public:
   static char ID;
@@ -428,6 +463,10 @@ bool AArch64PredicateAsCounterLoopRewrites::rewriteCandidate(
 
     Value *WideMask = nullptr;
     for (Use *U : UsesToRewrite) {
+      auto *UserI = cast<Instruction>(U->getUser());
+      if (tryRewriteExtractElement(*UserI, C, Count))
+        continue;
+
       if (!WideMask) {
         BasicBlock::iterator InsertPt = OldMask->getIterator();
         if (isa<PHINode>(OldMask))
