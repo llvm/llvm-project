@@ -227,7 +227,8 @@ static uint32_t getLit16IntEncoding(uint32_t Val, const MCSubtargetInfo &STI) {
 }
 
 static uint32_t getLit64Encoding(const MCInstrDesc &Desc, uint64_t Val,
-                                 const MCSubtargetInfo &STI, bool IsFP) {
+                                 const MCSubtargetInfo &STI, bool IsFP,
+                                 std::optional<bool> IsSigned = std::nullopt) {
   uint32_t IntImm = getIntInlineImmEncoding(static_cast<int64_t>(Val));
   if (IntImm != 0)
     return IntImm;
@@ -262,14 +263,23 @@ static uint32_t getLit64Encoding(const MCInstrDesc &Desc, uint64_t Val,
 
   // The rest part needs to align with AMDGPUInstPrinter::printLiteral64.
 
-  bool CanUse64BitLiterals = STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-                             !SIInstrFlags::isVOP3Like(Desc);
+  if (!STI.hasFeature(AMDGPU::Feature64BitLiterals) ||
+      SIInstrFlags::isVOP3Like(Desc))
+    return 255;
+
+  bool Needs64BitLiteral;
   if (IsFP) {
-    return CanUse64BitLiterals && Lo_32(Val) ? 254 : 255;
+    Needs64BitLiteral = Lo_32(Val) != 0;
+  } else if (IsSigned.has_value()) {
+    // For signed operands, check if value fits in signed 32-bit range.
+    // For unsigned operands, check if value fits in unsigned 32-bit range.
+    Needs64BitLiteral = *IsSigned ? !isInt<32>(Val) : !isUInt<32>(Val);
+  } else {
+    // If signedness is unknown, conservatively require both.
+    Needs64BitLiteral = !isInt<32>(Val) && !isUInt<32>(Val);
   }
 
-  return CanUse64BitLiterals && (!isInt<32>(Val) || !isUInt<32>(Val)) ? 254
-                                                                      : 255;
+  return Needs64BitLiteral ? 254 : 255;
 }
 
 std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
@@ -311,7 +321,12 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
 
-  case AMDGPU::OPERAND_REG_IMM_INT64:
+  case AMDGPU::OPERAND_REG_IMM_I64:
+    return getLit64Encoding(Desc, static_cast<uint64_t>(Imm), STI, false,
+                            /*IsSigned=*/true);
+  case AMDGPU::OPERAND_REG_IMM_U64:
+    return getLit64Encoding(Desc, static_cast<uint64_t>(Imm), STI, false,
+                            /*IsSigned=*/false);
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_IMM_V2INT64:
     return getLit64Encoding(Desc, static_cast<uint64_t>(Imm), STI, false);

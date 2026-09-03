@@ -50,6 +50,16 @@ def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
 }
 
+// Signed variant for V_MAD_I64_I32 - src2 uses signed 64-bit operand
+def VOP3b_I64_I1_I32_I32_I64_Signed : VOPProfile<[i64, i32, i32, i64]> {
+  let HasClamp = 1;
+
+  let IsSingle = 1;
+  let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
+  let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
+  let Src2RC64 = VSrc_i64;
+}
+
 let HasExt64BitDPP = 1 in {
 def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
 def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64> {
@@ -71,6 +81,20 @@ def VOP3b_I64_I1_I32_I32_I64_DPP : VOPProfile<[i64, i32, i32, i64]> {
   let AsmVOP3DPP8 = getAsmVOP3DPP8<Asm64>.ret;
 }
 
+// Signed DPP variant for V_MAD_I64_I32 - src2 uses signed 64-bit operand
+def VOP3b_I64_I1_I32_I32_I64_Signed_DPP : VOPProfile<[i64, i32, i32, i64]> {
+  let HasClamp = 1;
+
+  let IsSingle = 1;
+  let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
+  let OutsVOP3DPP = Outs64;
+  let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
+  let AsmVOP3DPP = getAsmVOP3DPP<Asm64>.ret;
+  let AsmVOP3DPP16 = getAsmVOP3DPP16<Asm64>.ret;
+  let AsmVOP3DPP8 = getAsmVOP3DPP8<Asm64>.ret;
+  let Src2RC64 = VSrc_i64;
+}
+
 class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
@@ -84,8 +108,14 @@ def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32> {
   let HasExt64BitDPP = 1;
 }
 def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
+def VOP_I64_I64_I64_Signed_DPP : VOP3_Profile<VOP_I64_I64_I64_Signed>;
 def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
   let HasClamp = 1;
+}
+// Signed variant for V_MAD_NC_I64_I32 - src2 uses signed 64-bit operand
+def VOP_I32_I32_I64_Signed_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
+  let HasClamp = 1;
+  let Src2RC64 = VSrc_i64;
 }
 } // End HasExt64BitDPP = 1;
 
@@ -193,7 +223,7 @@ let SchedRW = [WriteIntMul] in {
     defm V_MAD_U32 : VOP3Inst <"v_mad_u32", V_MAD_U32_PROF>;
   let SubtargetPredicate = HasMadNC64_32Insts in {
     defm V_MAD_NC_U64_U32 : VOP3Inst<"v_mad_nc_u64_u32", VOP_I32_I32_I64_DPP>;
-    defm V_MAD_NC_I64_I32 : VOP3Inst<"v_mad_nc_i64_i32", VOP_I32_I32_I64_DPP>;
+    defm V_MAD_NC_I64_I32 : VOP3Inst<"v_mad_nc_i64_i32", VOP_I32_I32_I64_Signed_DPP>;
   }
 }
 
@@ -233,9 +263,9 @@ defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, f
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0, AddedComplexity = 1
 
 let SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd] in {
-defm V_MAX_I64 : VOP3Inst <"v_max_i64", VOP_I64_I64_I64_DPP, smax>;
+defm V_MAX_I64 : VOP3Inst <"v_max_i64", VOP_I64_I64_I64_Signed_DPP, smax>;
 defm V_MAX_U64 : VOP3Inst <"v_max_u64", VOP_I64_I64_I64_DPP, umax>;
-defm V_MIN_I64 : VOP3Inst <"v_min_i64", VOP_I64_I64_I64_DPP, smin>;
+defm V_MIN_I64 : VOP3Inst <"v_min_i64", VOP_I64_I64_I64_Signed_DPP, smin>;
 defm V_MIN_U64 : VOP3Inst <"v_min_u64", VOP_I64_I64_I64_DPP, umin>;
 } // End SubtargetPredicate = HasMinMaxI64Insts, SchedRW = [WriteDoubleAdd]
 
@@ -380,12 +410,12 @@ let SchedRW = [Write64Bit] in {
   let SubtargetPredicate = isGFX6GFX7, IsDPMACCInstruction = 1 in {
   defm V_LSHL_B64 : VOP3Inst <"v_lshl_b64", VOP3_Profile<VOP_I64_I64_I32>, cshl_64>;
   defm V_LSHR_B64 : VOP3Inst <"v_lshr_b64", VOP3_Profile<VOP_I64_I64_I32>, csrl_64>;
-  defm V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32>, csra_64>;
+  defm V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32_Signed>, csra_64>;
   } // End SubtargetPredicate = isGFX6GFX7
 
   let SubtargetPredicate = isGFX8Plus in {
   defm V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshr_rev_64>;
-  defm V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, cashr_rev_64>;
+  defm V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64_Signed>, cashr_rev_64>;
   } // End SubtargetPredicate = isGFX8Plus
 
   let SubtargetPredicate = isGFX8GFX9GFX10GFX11 in {
@@ -434,12 +464,12 @@ let SubtargetPredicate = HasMqsadInsts in
 let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALUDummy] in {
   let SubtargetPredicate = isGFX7Plus in {
     defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [NotHasMADIntraFwdBug]>;
-    defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [NotHasMADIntraFwdBug]>;
+    defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64_Signed_DPP, null_frag, [NotHasMADIntraFwdBug]>;
   }
   let SubtargetPredicate = isGFX11Only, OtherPredicates = [HasMADIntraFwdBug],
       Constraints = "@earlyclobber $vdst" in {
     defm V_MAD_U64_U32_gfx11 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
-    defm V_MAD_I64_I32_gfx11 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
+    defm V_MAD_I64_I32_gfx11 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64_Signed>;
   }
 } // End isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU]
 
@@ -983,13 +1013,13 @@ def : GCNPat<
 let SubtargetPredicate = HasLshlAddU64Inst in {
 def : GCNPat<
   (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
-  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)
+  (V_LSHL_ADD_U64_e64 VSrc_u64:$src0, VSrc_b32:$src1, VSrc_u64:$src2)
 >;
 
 def : GCNPat <
   // (ptradd z, (shl x, y)) or (ptradd (shl x, y), z) -> ((x << y) + z)
   (ThreeOpFrag<shl_0_to_4, ptradd_commutative> i64:$src0, i32:$src1, i64:$src2),
-  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)>;
+  (V_LSHL_ADD_U64_e64 VSrc_u64:$src0, VSrc_b32:$src1, VSrc_u64:$src2)>;
 } // End SubtargetPredicate = HasLshlAddU64Inst
 
 let SubtargetPredicate = HasAddMinMaxInsts in {
