@@ -15050,6 +15050,10 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
                                          Fn->getSourceRange(), ULE->getName(),
                                          *CandidateSet, FDecl, Args);
 
+    if (completeFunctionType(SemaRef, FDecl, Fn->getBeginLoc(),
+                             /*Complain=*/true))
+      return ExprError();
+
     // We emitted an error for the unavailable/deleted function call but keep
     // the call in the AST.
     ExprResult Res =

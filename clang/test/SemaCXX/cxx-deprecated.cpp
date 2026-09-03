@@ -41,8 +41,10 @@ namespace GH98164 {
 template <int>
 auto b() = delete; // #b
 
-decltype(b<0>()) x;
-// expected-error@-1 {{call to deleted function 'b'}}
+decltype(b<0>()) x; // #x
+// expected-error@#x {{call to deleted function 'b'}}
 //   expected-note@#b {{candidate function [with $0 = 0] has been explicitly deleted}}
+// expected-error@#x {{function 'b<0>' with deduced return type cannot be used before it is defined}}
+//   expected-note@#b {{'b<0>' declared here}}
 } // namespace GH98164
 } // namespace cxx20_concept
