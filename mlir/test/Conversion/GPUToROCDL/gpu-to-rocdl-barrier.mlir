@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx950' --mlir-print-local-scope | FileCheck %s --check-prefixes=CHECK,GFX9
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx1201' --mlir-print-local-scope | FileCheck %s --check-prefixes=CHECK,GFX12
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='triple=amdgpu9.50-amd-amdhsa' --mlir-print-local-scope | FileCheck %s --check-prefixes=CHECK,GFX9
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='triple=amdgpu12.01-amd-amdhsa' --mlir-print-local-scope | FileCheck %s --check-prefixes=CHECK,GFX12
 
 gpu.module @test_module {
 // CHECK-LABEL: func @barrier_default()

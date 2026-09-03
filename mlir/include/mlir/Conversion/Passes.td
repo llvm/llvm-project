@@ -130,9 +130,15 @@ def ConvertAMDGPUToROCDLPass : Pass<"convert-amdgpu-to-rocdl"> {
     "LLVM::LLVMDialect",
     "ROCDL::ROCDLDialect",
   ];
-  let options = [Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"gfx000\"",
-                        "Chipset that these operations will run on">];
+  let options = [
+    Option<"triple", "triple", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target triple (e.g. amdgpu9.42-amd-amdhsa) or GPU name (e.g. gfx942). Defaults to an invalid target so that one must be given explicitly">,
+    Option<"chip", "chip", "std::string", /*default=*/"\"\"",
+           "Target GPU, if not given by the triple (e.g. gfx942)">,
+    Option<"features", "features", "std::string", /*default=*/"\"\"",
+           "Target features (e.g. +wavefrontsize64)">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -150,9 +156,13 @@ def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
   let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
 
   let options = [
-    Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"gfx000\"",
-                        "Chipset that these operations will run on">,
+    Option<"triple", "triple", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target triple (e.g. amdgpu9.42-amd-amdhsa) or GPU name (e.g. gfx942). Defaults to an invalid target so that one must be given explicitly">,
+    Option<"chip", "chip", "std::string", /*default=*/"\"\"",
+           "Target GPU, if not given by the triple (e.g. gfx942)">,
+    Option<"features", "features", "std::string", /*default=*/"\"\"",
+           "Target features (e.g. +wavefrontsize64)">,
     Option<"saturateFP8Truncf", "saturate-fp8-truncf", "bool",
            /*default=*/"false",
            "Use saturating truncation for 8-bit float types">,
@@ -690,9 +700,13 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
     "memref::MemRefDialect",
   ];
   let options = [
-    Option<"chipset", "chipset", "std::string",
-           /*default=*/"\"gfx000\"",
-           "Chipset that these operations will run on">,
+    Option<"triple", "triple", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target triple (e.g. amdgpu9.42-amd-amdhsa) or GPU name (e.g. gfx942). Defaults to an invalid target so that one must be given explicitly">,
+    Option<"chip", "chip", "std::string", /*default=*/"\"\"",
+           "Target GPU, if not given by the triple (e.g. gfx942)">,
+    Option<"features", "features", "std::string", /*default=*/"\"\"",
+           "Target features (e.g. +wavefrontsize64)">,
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/ "0",
            "Bitwidth of the index type, 0 to use size of machine word">,
@@ -857,9 +871,9 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
   let description = [{
     This pass converts supported Math ops to ROCDL library calls.
 
-    The chipset option specifies the target AMDGPU architecture. If the chipset
-    is empty, none of the chipset-dependent patterns are added, and the pass
-    will not attempt to parse the chipset.
+    The triple option specifies the target AMDGPU architecture. If it is empty,
+    none of the target-dependent patterns are added and the pass does not
+    resolve a target; a chip or feature list without a triple is rejected.
   }];
   let dependentDialects = [
     "arith::ArithDialect",
@@ -867,9 +881,15 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
     "ROCDL::ROCDLDialect",
     "vector::VectorDialect",
   ];
-  let options = [Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"\"",
-                        "Chipset that these operations will run on">];
+  let options = [
+    Option<"triple", "triple", "std::string", /*default=*/"\"\"",
+           "Target triple (e.g. amdgpu9.42-amd-amdhsa) or GPU name (e.g. gfx942). "
+           "If empty, no target-dependent patterns are added">,
+    Option<"chip", "chip", "std::string", /*default=*/"\"\"",
+           "Target GPU, if not given by the triple (e.g. gfx942)">,
+    Option<"features", "features", "std::string", /*default=*/"\"\"",
+           "Target features (e.g. +wavefrontsize64)">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//

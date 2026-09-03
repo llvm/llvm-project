@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1100 | FileCheck %s
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu11.00-amd-amdhsa | FileCheck %s
 
 // CHECK-LABEL: @dot_fdot2_f16_f16
 func.func @dot_fdot2_f16_f16(%a: vector<2xf16>, %b: vector<2xf16>, %c: f16) -> f16 {

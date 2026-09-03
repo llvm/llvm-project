@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='runtime=HIP' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='triple=amdgpu9.42-amd-amdhsa runtime=HIP' -split-input-file | FileCheck %s
 
 // CHECK-LABEL: gpu.module @test_module
 gpu.module @test_module {

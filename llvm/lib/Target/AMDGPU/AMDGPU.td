@@ -3211,8 +3211,9 @@ def AMDGPUFrontendVisibleFeatures {
   Feature16BitInsts, FeatureAddMinMaxInsts, FeatureAshrPkInsts,
   FeatureAsyncLoadToLDSInsts, FeatureAsyncStoreFromLDSInsts, FeatureAsynccnt,
   FeatureAtomicBufferGlobalPkAddF16Insts, FeatureAtomicBufferPkAddBF16Inst, FeatureAtomicDsPkAdd16Insts,
-  FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts, FeatureAtomicFaddRtnInsts,
-  FeatureAtomicFlatPkAdd16Insts, FeatureAtomicGlobalPkAddBF16Inst, FeatureBF16ConversionInsts,
+  FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts, FeatureAtomicFaddNoRtnInsts,
+  FeatureAtomicFaddRtnInsts, FeatureAtomicFlatPkAdd16Insts, FeatureAtomicGlobalPkAddBF16Inst,
+  FeatureBF16ConversionInsts,
   FeatureBF16PackedInsts, FeatureBF16TransInsts, FeatureBF8ConversionScaleInsts,
   FeatureBVHRayTracingInsts, FeatureBitOp3Insts, FeatureCIInsts,
   FeatureClusters, FeatureCubeInsts, FeatureCvtPkNormVOP2Insts,
@@ -3230,9 +3231,10 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureGFX1250Insts, FeatureGFX1251GEMMInsts, FeatureGFX12Insts,
   FeatureGFX13Insts, FeatureGFX8Insts, FeatureGFX90AInsts,
   FeatureGFX940Insts, FeatureGFX950Insts, FeatureGFX9Insts,
-  FeatureGWS, FeatureImageInsts, FeatureLerpInst,
-  FeatureMAIInsts, FeatureMcastLoadInsts, FeatureMqsadInsts,
-  FeatureMqsadPkInsts, FeatureMsadInsts, FeaturePermlane16Swap,
+  FeatureGWS, FeatureImageInsts, FeatureLdsBarrierArriveAtomic,
+  FeatureLerpInst, FeatureMAIInsts, FeatureMcastLoadInsts,
+  FeatureMqsadInsts, FeatureMqsadPkInsts, FeatureMsadInsts,
+  FeatureOCPFP8ConversionInsts, FeaturePermlane16Insts, FeaturePermlane16Swap,
   FeaturePermlane32Swap, FeaturePkAddMinMaxInsts, FeaturePrngInst,
   FeatureQsadInsts, FeatureSMemRealTime, FeatureSMemTimeInst,
   FeatureSWMMACGfx1200Insts, FeatureSWMMACGfx1250Insts, FeatureSWakeupBarrier,
@@ -3244,7 +3246,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
-  FeatureAGPRAlloc, Feature1536VGPRs,
+  FeatureAGPRAlloc, Feature1536VGPRs, FeatureBackOffBarrier
   ];
 }
 

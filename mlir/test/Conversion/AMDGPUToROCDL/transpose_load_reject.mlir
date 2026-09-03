@@ -1,4 +1,4 @@
-// RUN: not mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=chipset=gfx950 2>&1 | FileCheck %s
+// RUN: not mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=triple=amdgpu9.50-amd-amdhsa 2>&1 | FileCheck %s
 
 // -----
 

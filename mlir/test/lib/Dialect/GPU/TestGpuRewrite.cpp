@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
@@ -91,12 +90,19 @@ struct TestGpuSubgroupReduceLoweringPass
                                                /*maxShuffleBitwidth=*/32,
                                                PatternBenefit(3));
     if (expandToShuffles) {
-      auto maybeChipset = amdgpu::Chipset::parse(target);
-      if (succeeded(maybeChipset)) {
+      // No target means "shuffles only". A target that is given but not
+      // recognized used to be swallowed here, silently dropping the DPP
+      // patterns instead of reporting the typo.
+      if (!target.empty()) {
+        FailureOr<ROCDL::TargetInfo> targetInfo =
+            ROCDL::TargetInfo::get(target, /*chip=*/"", /*features=*/"",
+                                   [&] { return getOperation()->emitError(); });
+        if (failed(targetInfo))
+          return signalPassFailure();
         populateGpuLowerSubgroupReduceToDPPPatterns(
-            patterns, /*subgroupSize=*/64, *maybeChipset, PatternBenefit(2));
+            patterns, /*subgroupSize=*/64, *targetInfo, PatternBenefit(2));
         populateGpuLowerClusteredSubgroupReduceToDPPPatterns(
-            patterns, /*subgroupSize=*/64, *maybeChipset, PatternBenefit(2));
+            patterns, /*subgroupSize=*/64, *targetInfo, PatternBenefit(2));
       }
       populateGpuLowerSubgroupReduceToShufflePatterns(
           patterns, /*subgroupSize=*/32, /*shuffleBitwidth=*/32);

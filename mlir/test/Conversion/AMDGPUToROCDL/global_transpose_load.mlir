@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s --split-input-file --verify-diagnostics -convert-amdgpu-to-rocdl=chipset=gfx1201 | FileCheck %s
-// RUN: mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=chipset=gfx1250 | FileCheck %s --check-prefixes=CHECK,CHECK-GFX1250
-// RUN: not mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=chipset=gfx942 2>&1 | FileCheck %s --check-prefix=CHECK-OLD
+// RUN: mlir-opt %s --split-input-file --verify-diagnostics -convert-amdgpu-to-rocdl=triple=amdgpu12.01-amd-amdhsa | FileCheck %s
+// RUN: mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=triple=amdgpu12.50-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,CHECK-GFX1250
+// RUN: not mlir-opt %s --split-input-file -convert-amdgpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa 2>&1 | FileCheck %s --check-prefix=CHECK-OLD
 
 // CHECK-LABEL: func @global_transpose_load_8xf16
 func.func @global_transpose_load_8xf16(%i : index, %j : index,

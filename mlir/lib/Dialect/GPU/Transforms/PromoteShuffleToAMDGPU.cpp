@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -23,8 +23,6 @@
 using namespace mlir;
 
 namespace {
-
-constexpr amdgpu::Chipset kGfx950 = amdgpu::Chipset(9, 5, 0);
 
 /// Try to promote `gpu.shuffle` to `amdgpu.swizzle_bitmode`, width must be 64
 /// and offset must be a constant integer in the range [0, 31].
@@ -100,10 +98,10 @@ struct PromoteShuffleToPermlanePattern
 } // namespace
 
 void mlir::populateGpuPromoteShuffleToAMDGPUPatterns(
-    RewritePatternSet &patterns, std::optional<amdgpu::Chipset> maybeChipset) {
+    RewritePatternSet &patterns, std::optional<ROCDL::TargetInfo> target) {
   patterns.add<PromoteShuffleToSwizzlePattern>(patterns.getContext(),
                                                /*benefit*/ 1);
-  if (maybeChipset && *maybeChipset >= kGfx950)
+  if (target && target->has(llvm::AMDGPU::FEAT_PERMLANE32_SWAP))
     patterns.add<PromoteShuffleToPermlanePattern>(patterns.getContext(),
                                                   /*benefit*/ 2);
 }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1200 --split-input-file --verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=triple=amdgpu12.00-amd-amdhsa --split-input-file --verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: @rocdl.swmmac
 func.func @rocdl.swmmac(

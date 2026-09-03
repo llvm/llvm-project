@@ -61,11 +61,16 @@ def ApplyGPUToROCDLConversionPatternsOp : Op<Transform_Dialect,
   let description = [{
     Collects patterns that convert GPU dialect ops to ROCDL dialect ops. These
     patterns require an "LLVMTypeConverter".
+
+    `triple` names the target, either as a triple ("amdgpu9.42-amd-amdhsa") or
+    as a bare GPU name ("gfx942", "gfx9-4-generic"). `chip` plays the `-mcpu`
+    role and must be compatible with the triple; `features` is a `-mattr`-style
+    comma-separated list of "+feature"/"-feature" modifiers.
   }];
-  let arguments = (ins StrAttr:$chipset);
-  let assemblyFormat = [{
-    `chipset` `=` $chipset attr-dict
-  }];
+  let arguments = (ins StrAttr:$triple,
+                       OptionalAttr<StrAttr>:$chip,
+                       OptionalAttr<StrAttr>:$features);
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -330,11 +335,17 @@ def ApplyGPUPromoteShuffleToAMDGPUPatternsOp : Op<Transform_Dialect,
   let description = [{
     Collects patterns that are tryin to promote `gpu.shuffle`s to specialized
     AMDGPU intrinsics.
+
+    `triple` names the target, either as a triple ("amdgpu9.50-amd-amdhsa") or
+    as a bare GPU name ("gfx950"). Omitting it collects only the patterns that
+    hold on every target. `chip` and `features` play the `-mcpu` and `-mattr`
+    roles and may only be given alongside a `triple`.
   }];
-  let arguments = (ins OptionalAttr<StrAttr>:$chipset);
-  let assemblyFormat = [{
-    (`chipset` `=` $chipset^)? attr-dict
-  }];
+  let arguments = (ins OptionalAttr<StrAttr>:$triple,
+                       OptionalAttr<StrAttr>:$chip,
+                       OptionalAttr<StrAttr>:$features);
+  let assemblyFormat = "prop-dict attr-dict";
+  let hasVerifier = 1;
 }
 
 

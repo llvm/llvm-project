@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_H_
 
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 
@@ -29,7 +29,7 @@ namespace amdgpu {
 
 void populateAmdgpuEmulateAtomicsPatterns(ConversionTarget &target,
                                           RewritePatternSet &patterns,
-                                          Chipset chipset,
+                                          const ROCDL::TargetInfo &targetInfo,
                                           PatternBenefit benefit = 1);
 
 void populateAmdgpuResolveStridedMetadataPatterns(RewritePatternSet &patterns,

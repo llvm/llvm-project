@@ -9,6 +9,7 @@
 #define MLIR_DIALECT_AMDGPU_UTILS_CHIPSET_H_
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/Support/Compiler.h"
 #include <tuple>
 
 namespace mlir::amdgpu {
@@ -19,6 +20,10 @@ namespace mlir::amdgpu {
 ///   gfx942  --> major = 9, minor = 0x4, stepping = 0x2
 ///   gfx90a  --> major = 9, minor = 0x0, stepping = 0xa
 ///   gfx1103 --> major = 11, minor = 0x0, stepping = 0x3
+///
+/// \deprecated Use `mlir::ROCDL::TargetInfo` instead, and rely on target
+/// features rather than about version numbers. Will be removed after one
+/// release.
 struct Chipset {
   unsigned majorVersion = 0;    // The major version (decimal).
   unsigned minorVersion = 0;    // The minor version (hexadecimal).
@@ -30,6 +35,9 @@ struct Chipset {
 
   /// Parses the chipset version string and returns the chipset on success, and
   /// failure otherwise.
+  ///
+  /// \deprecated Use `ROCDL::TargetInfo::get`.
+  LLVM_DEPRECATED("use ROCDL::TargetInfo::get instead", "")
   static FailureOr<Chipset> parse(StringRef name);
 
   std::tuple<unsigned, unsigned, unsigned> asTuple() const {
@@ -49,6 +57,10 @@ struct Chipset {
 #undef DEFINE_COMP_OPERATOR
 };
 
+/// \deprecated Test `llvm::AMDGPU::FEAT_OCP_FP8_CONVERSION_INSTS` on a
+/// `ROCDL::TargetInfo` instead. This misses gfx11.7, which does have the OCP
+/// fp8 conversions.
+LLVM_DEPRECATED("test FEAT_OCP_FP8_CONVERSION_INSTS on a ROCDL::TargetInfo", "")
 inline bool hasOcpFp8(const Chipset &chipset) {
   return (chipset.majorVersion == 9 && chipset.minorVersion >= 5) ||
          chipset.majorVersion >= 12;

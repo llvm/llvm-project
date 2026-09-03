@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx950' -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='triple=amdgpu9.50-amd-amdhsa' -split-input-file -verify-diagnostics
 
 // -----
 

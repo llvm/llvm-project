@@ -1,9 +1,9 @@
 // RUN: mlir-opt --split-input-file %s \
-// RUN: --pass-pipeline='builtin.module(func.func(convert-arith-to-amdgpu{chipset=gfx950 saturate-fp8-truncf=true}))' \
+// RUN: --pass-pipeline='builtin.module(func.func(convert-arith-to-amdgpu{triple=amdgpu9.50-amd-amdhsa saturate-fp8-truncf=true}))' \
 // RUN: | FileCheck %s
 
 // RUN: mlir-opt --split-input-file %s \
-// RUN: --pass-pipeline='builtin.module(func.func(convert-arith-to-amdgpu{chipset=gfx1200 saturate-fp8-truncf=true}))' \
+// RUN: --pass-pipeline='builtin.module(func.func(convert-arith-to-amdgpu{triple=amdgpu12.00-amd-amdhsa saturate-fp8-truncf=true}))' \
 // RUN: | FileCheck %s
 
 // CHECK-LABEL: func.func @scalar_trunc

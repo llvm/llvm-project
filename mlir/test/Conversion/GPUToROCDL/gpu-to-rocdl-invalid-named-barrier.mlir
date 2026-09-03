@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx1100' -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='triple=amdgpu11.00-amd-amdhsa' -split-input-file -verify-diagnostics
 
 gpu.module @test_module {
   func.func @initialize_named_barrier_pre_gfx12(%count : i32) {

@@ -40,6 +40,28 @@ namespace {
 //===----------------------------------------------------------------------===//
 // Common pipeline
 //===----------------------------------------------------------------------===//
+/// The pipeline's `wave64` option and the wavefront-size target features say
+/// the same thing, so fold the former into the latter before handing them to
+/// the conversion passes. Only a GPU that runs at either size can honour the
+/// choice; on one that pins the size, naming the other is an error, and naming
+/// the same one is noise. A size the caller spelled out wins.
+static std::string
+resolveFeatures(const mlir::gpu::GPUToROCDLPipelineOptions &options) {
+  std::string features = options.features;
+  if (StringRef(features).contains("wavefrontsize"))
+    return features;
+
+  FailureOr<ROCDL::TargetInfo> target =
+      ROCDL::TargetInfo::get(options.triple, options.chip, options.features);
+  if (failed(target) || !target->supportsBothWavefrontSizes())
+    return features;
+
+  if (!features.empty())
+    features += ",";
+  features += options.wave64 ? "+wavefrontsize64" : "+wavefrontsize32";
+  return features;
+}
+
 void buildCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToROCDLPipelineOptions &options) {
   // Lower AMDGPU dialect ops (e.g. amdgpu.lds_barrier, amdgpu.dpp,
@@ -47,7 +69,9 @@ void buildCommonPassPipeline(
   // still live in unout-lined `gpu.launch` bodies. Mirrors the way NVVM's
   // pipeline runs `convert-nvgpu-to-nvvm` before kernel outlining.
   ConvertAMDGPUToROCDLPassOptions amdgpuToROCDLOpt;
-  amdgpuToROCDLOpt.chipset = options.chip;
+  amdgpuToROCDLOpt.triple = options.triple;
+  amdgpuToROCDLOpt.chip = options.chip;
+  amdgpuToROCDLOpt.features = resolveFeatures(options);
   pm.addPass(createConvertAMDGPUToROCDLPass(amdgpuToROCDLOpt));
 
   pm.addPass(createGpuKernelOutliningPass());
@@ -80,7 +104,9 @@ void buildCommonPassPipeline(
 void buildGpuPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToROCDLPipelineOptions &options) {
   ConvertGpuOpsToROCDLOpsOptions opt;
-  opt.chipset = options.chip;
+  opt.triple = options.triple;
+  opt.chip = options.chip;
+  opt.features = resolveFeatures(options);
   opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
   opt.indexBitwidth = options.indexBitWidth;
   // Always declare HIP as the runtime so that gpu.printf etc. lower to the

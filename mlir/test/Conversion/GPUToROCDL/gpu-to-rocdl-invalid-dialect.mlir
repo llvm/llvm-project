@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl='allowed-dialects=test' -verify-diagnostics
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='triple=amdgpu9.42-amd-amdhsa allowed-dialects=test' -verify-diagnostics
 
 // expected-error @+1 {{dialect does not implement ConvertToLLVMPatternInterface: test}}
 gpu.module @test_module_1 {

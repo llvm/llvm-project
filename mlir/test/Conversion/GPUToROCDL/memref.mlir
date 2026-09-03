@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -convert-gpu-to-rocdl -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-rocdl=triple=amdgpu9.42-amd-amdhsa -split-input-file | FileCheck %s
 // RUN: mlir-opt %s \
-// RUN:   -convert-gpu-to-rocdl='use-bare-ptr-memref-call-conv=true' \
+// RUN:   -convert-gpu-to-rocdl='triple=amdgpu9.42-amd-amdhsa use-bare-ptr-memref-call-conv=true' \
 // RUN:   -split-input-file \
 // RUN: | FileCheck %s --check-prefix=BARE
 
