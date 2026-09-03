@@ -125,6 +125,8 @@ namespace GH218323 {
 template <auto V> struct W {
   static constexpr auto value = V;
   template <class T> auto f(T) -> W<value(T::value)>; // #gh218323-f
+  template <class T> auto g(T) -> W<int(T::type)>; // #gh218323-g
+  template <class T> auto h(T) -> W<value(T::type)>; // #gh218323-h
 };
 template struct W<42>;
 
@@ -136,9 +138,14 @@ template <auto V> struct WPtr {
 template struct WPtr<42>;
 
 struct HasValue { static constexpr int value = 1; };
+struct HasAlias { using type = int; };
 void use(W<42> w) {
   w.f(HasValue{}); // expected-error {{no matching member function for call to 'f'}}
                    // expected-note@#gh218323-f {{candidate template ignored: substitution failure [with T = HasValue]: called object type 'int' is not a function or function pointer}}
+  w.g(HasAlias{}); // expected-error {{no matching member function for call to 'g'}}
+                   // expected-note@#gh218323-g {{candidate template ignored: substitution failure [with T = HasAlias]: missing 'typename' prior to dependent type name 'GH218323::HasAlias::type'}}
+  w.h(HasAlias{}); // expected-error {{no matching member function for call to 'h'}}
+                   // expected-note@#gh218323-h {{candidate template ignored: substitution failure [with T = HasAlias]: missing 'typename' prior to dependent type name 'GH218323::HasAlias::type'}}
 }
 
 template <auto V>
