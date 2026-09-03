@@ -1526,7 +1526,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
     EnterDtorCleanups(Dtor, Dtor_Base);
 
     // Initialize the vtable pointers before entering the body.
-    if (!CodeGenUtils::CanSkipVTablePointerInitialization(getContext(), Dtor)) {
+    if (!CodeGenUtils::canSkipVTablePointerInitialization(getContext(), Dtor)) {
       // Insert the llvm.launder.invariant.group intrinsic before initializing
       // the vptrs to cancel any previous assumptions we might have made.
       if (CGM.getCodeGenOpts().StrictVTablePointers &&
@@ -1896,7 +1896,7 @@ public:
     if (isEmptyFieldForLayout(Context, Field))
       return;
     unsigned FieldIndex = Field->getFieldIndex();
-    if (CodeGenUtils::FieldHasTrivialDestructorBody(Context, Field)) {
+    if (CodeGenUtils::fieldHasTrivialDestructorBody(Context, Field)) {
       if (!StartIndex)
         StartIndex = FieldIndex;
     } else if (StartIndex) {

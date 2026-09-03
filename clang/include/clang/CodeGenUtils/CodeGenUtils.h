@@ -14,10 +14,10 @@
 namespace clang::CodeGenUtils {
 /// Check whether we need to initialize any vtable pointers before calling this
 /// destructor.
-bool CanSkipVTablePointerInitialization(ASTContext &Ctx,
+bool canSkipVTablePointerInitialization(ASTContext &Ctx,
                                         const CXXDestructorDecl *Dtor);
 
-bool FieldHasTrivialDestructorBody(ASTContext &Context, const FieldDecl *Field);
+bool fieldHasTrivialDestructorBody(ASTContext &Context, const FieldDecl *Field);
 
 /// Determines whether the language options require us to model
 /// unwind exceptions.  We treat -fexceptions as mandating this

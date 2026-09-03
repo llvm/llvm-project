@@ -11,7 +11,7 @@
 
 namespace clang::CodeGenUtils {
 static bool
-HasTrivialDestructorBody(ASTContext &Context,
+hasTrivialDestructorBody(ASTContext &Context,
                          const CXXRecordDecl *BaseClassDecl,
                          const CXXRecordDecl *MostDerivedClassDecl) {
   // If the destructor is trivial we don't have to check anything else.
@@ -23,7 +23,7 @@ HasTrivialDestructorBody(ASTContext &Context,
 
   // Check fields.
   for (const auto *Field : BaseClassDecl->fields())
-    if (!FieldHasTrivialDestructorBody(Context, Field))
+    if (!fieldHasTrivialDestructorBody(Context, Field))
       return false;
 
   // Check non-virtual bases.
@@ -32,7 +32,7 @@ HasTrivialDestructorBody(ASTContext &Context,
       continue;
 
     const auto *NonVirtualBase = I.getType()->castAsCXXRecordDecl();
-    if (!HasTrivialDestructorBody(Context, NonVirtualBase,
+    if (!hasTrivialDestructorBody(Context, NonVirtualBase,
                                   MostDerivedClassDecl))
       return false;
   }
@@ -41,7 +41,7 @@ HasTrivialDestructorBody(ASTContext &Context,
     // Check virtual bases.
     for (const auto &I : BaseClassDecl->vbases()) {
       const auto *VirtualBase = I.getType()->castAsCXXRecordDecl();
-      if (!HasTrivialDestructorBody(Context, VirtualBase, MostDerivedClassDecl))
+      if (!hasTrivialDestructorBody(Context, VirtualBase, MostDerivedClassDecl))
         return false;
     }
   }
@@ -49,7 +49,7 @@ HasTrivialDestructorBody(ASTContext &Context,
   return true;
 }
 
-bool FieldHasTrivialDestructorBody(ASTContext &Context,
+bool fieldHasTrivialDestructorBody(ASTContext &Context,
                                    const FieldDecl *Field) {
   QualType FieldBaseElementType = Context.getBaseElementType(Field->getType());
 
@@ -61,12 +61,12 @@ bool FieldHasTrivialDestructorBody(ASTContext &Context,
   if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
     return true;
 
-  return HasTrivialDestructorBody(Context, FieldClassDecl, FieldClassDecl);
+  return hasTrivialDestructorBody(Context, FieldClassDecl, FieldClassDecl);
 }
 
 /// Check whether we need to initialize any vtable pointers before calling this
 /// destructor.
-bool CanSkipVTablePointerInitialization(ASTContext &Ctx,
+bool canSkipVTablePointerInitialization(ASTContext &Ctx,
                                         const CXXDestructorDecl *Dtor) {
   const CXXRecordDecl *ClassDecl = Dtor->getParent();
   if (!ClassDecl->isDynamicClass())
@@ -82,7 +82,7 @@ bool CanSkipVTablePointerInitialization(ASTContext &Ctx,
 
   // Check the fields.
   for (const auto *Field : ClassDecl->fields())
-    if (!FieldHasTrivialDestructorBody(Ctx, Field))
+    if (fieldHasTrivialDestructorBody(Ctx, Field))
       return false;
 
   return true;
