@@ -660,6 +660,8 @@ def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
   HelpText<"Codegen optimization level for LTO">;
 def lto_partitions: JJ<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
+def lto_partitions_uses_thinlto_cache: F<"lto-partition-uses-thinlto-cache">,
+  HelpText<"Cache LTO codegen partitions using the thinLTO cache to speed up incremental builds">;
 def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
   HelpText<"Perform context sensitive PGO instrumentation">;
 def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,

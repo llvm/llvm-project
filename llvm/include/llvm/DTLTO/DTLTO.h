@@ -92,9 +92,13 @@ public:
   /// The Cache parameter is optional. If supplied, it will be used to cache
   /// native object files and add them to the link.
   ///
+  /// If \p CacheLTOPartitions is true, \p Cache will also be used to cache the
+  /// parallel LTO codegen partitions.
+  ///
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
-  virtual Error run(AddStreamFn AddStream, FileCache Cache = {}) override;
+  virtual Error run(AddStreamFn AddStream, FileCache Cache = {},
+                    bool CacheLTOPartitions = false) override;
 
   /// Wait for LTO cleanup. Clients may call this after run() once subsequent
   /// linking work that can overlap with cleanup is complete. Cleanup may emit
