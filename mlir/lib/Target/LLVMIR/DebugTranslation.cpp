@@ -608,6 +608,15 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   if (isa<UnknownLoc>(loc))
     return nullptr;
 
+  // Compiler-generated instructions with no source position carry line number
+  // 0.
+  if (isa<ArtificialLoc>(loc)) {
+    if (!scope)
+      return nullptr;
+    return llvm::DILocation::get(llvmCtx, /*Line=*/0, /*Col=*/0, scope,
+                                 const_cast<llvm::DILocation *>(inlinedAt));
+  }
+
   // Check for a cached instance.
   auto existingIt = locationToLoc.find(std::make_tuple(loc, scope, inlinedAt));
   if (existingIt != locationToLoc.end())

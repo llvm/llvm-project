@@ -253,6 +253,7 @@ public:
   /// Cached Attribute Instances.
   BoolAttr falseAttr, trueAttr;
   UnitAttr unitAttr;
+  ArtificialLoc artificialLocAttr;
   UnknownLoc unknownLocAttr;
   DictionaryAttr emptyDictionaryAttr;
   StringAttr emptyStringAttr;
@@ -346,6 +347,8 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
   //// Attributes.
   //// Note: These must be registered after the types as they may generate one
   //// of the above types internally.
+  /// Artificial Location Attribute (compiler-generated, DWARF line=0).
+  impl->artificialLocAttr = AttributeUniquer::get<ArtificialLoc>(this);
   /// Unknown Location Attribute.
   impl->unknownLocAttr = AttributeUniquer::get<UnknownLoc>(this);
   /// Bool Attributes.
@@ -1257,6 +1260,10 @@ BoolAttr BoolAttr::get(MLIRContext *context, bool value) {
 
 UnitAttr UnitAttr::get(MLIRContext *context) {
   return context->getImpl().unitAttr;
+}
+
+ArtificialLoc ArtificialLoc::get(MLIRContext *context) {
+  return context->getImpl().artificialLocAttr;
 }
 
 UnknownLoc UnknownLoc::get(MLIRContext *context) {
