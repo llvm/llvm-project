@@ -156,7 +156,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
           // Avoid incorrect replacement of self-referential values.
           if (CanBeSimplified && BO != BO->getOperand(0)) {
             clearAssumptionsOfUsers(BO, DB);
-            BO->replaceAllUsesWith(BO->getOperand(0));
+            BO->replaceNonMetadataUsesWith(BO->getOperand(0));
             Worklist.push_back(BO);
             ++NumSimplified;
             Changed = true;
