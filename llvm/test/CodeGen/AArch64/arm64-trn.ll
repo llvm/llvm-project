@@ -497,3 +497,27 @@ define <8 x i8> @vtrnDi8_poison(<8 x i8> %a) {
   %ret = xor <8 x i8> %tmp3, %tmp4
   ret <8 x i8> %ret
 }
+
+define <8 x i16> @vtrnQi8_poison(<8 x i16> %a) {
+; CHECKLE-LABEL: vtrnQi8_poison:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    trn1 v1.8h, v0.8h, v0.8h
+; CHECKLE-NEXT:    trn2 v0.8h, v0.8h, v0.8h
+; CHECKLE-NEXT:    eor v0.16b, v1.16b, v0.16b
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrnQi8_poison:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.8h, v0.8h
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    trn1 v1.8h, v0.8h, v0.8h
+; CHECKBE-NEXT:    trn2 v0.8h, v0.8h, v0.8h
+; CHECKBE-NEXT:    eor v0.16b, v1.16b, v0.16b
+; CHECKBE-NEXT:    rev64 v0.8h, v0.8h
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    ret
+  %tmp3 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  %tmp4 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+  %ret = xor <8 x i16> %tmp3, %tmp4
+  ret <8 x i16> %ret
+}
