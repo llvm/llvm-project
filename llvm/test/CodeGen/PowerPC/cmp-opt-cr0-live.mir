@@ -1,0 +1,44 @@
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -run-pass=peephole-opt \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+#
+# optimizeCompareInstr must not convert the RLWINM into a record-form andi.
+# while CR0, set by the earlier ANDI_rec, is still read by the later
+# COPY $cr0gt. Doing so swaps the condition bits of the two flag tests.
+
+---
+name:            cr0_live_across_candidate
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r3
+
+    ; CHECK-LABEL: name: cr0_live_across_candidate
+    ; CHECK:      %1:gprc = ANDI_rec %0, 1, implicit-def $cr0
+    ; CHECK-NEXT: %2:crbitrc = COPY $cr0eq
+    ; CHECK-NEXT: %3:gprc = RLWINM %0, 0, 30, 30
+    ; CHECK-NEXT: %4:crrc = CMPWI killed %3, 0
+    ; CHECK-NEXT: %5:crbitrc = COPY %4.sub_eq
+    ; CHECK-NEXT: %6:crbitrc = COPY $cr0gt
+    ; CHECK-NOT:  ANDI_rec %0, 2
+    %0:gprc = COPY $r3
+    %1:gprc = ANDI_rec %0, 1, implicit-def $cr0
+    %2:crbitrc = COPY $cr0eq
+    %3:gprc = RLWINM %0, 0, 30, 30
+    %4:crrc = CMPWI killed %3, 0
+    %5:crbitrc = COPY %4.sub_eq
+    %6:crbitrc = COPY $cr0gt
+    %7:crbitrc = CRAND %2, %5
+    %8:crbitrc = CRAND %7, %6
+    BC %8, %bb.2
+    B %bb.1
+
+  bb.1:
+    %9:gprc = LI 1
+    $r3 = COPY %9
+    BLR8 implicit $lr8, implicit $rm, implicit $r3
+
+  bb.2:
+    %10:gprc = LI 0
+    $r3 = COPY %10
+    BLR8 implicit $lr8, implicit $rm, implicit $r3
+...
