@@ -90,7 +90,7 @@ public:
     return ranges::size(__base_);
   }
 
-# if _LIBCPP_STD_VER >= 26
+#  if _LIBCPP_STD_VER >= 26
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint()
     requires approximately_sized_range<_View>
@@ -104,7 +104,7 @@ public:
     return ranges::reserve_hint(__base_);
   }
 
-# endif // _LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 };
 
 template <class _Range>
