@@ -124,7 +124,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
           Demanded.countl_zero() >= (DestBitSize - SrcBitSize)) {
         clearAssumptionsOfUsers(SE, DB);
         IRBuilder<> Builder(SE);
-        I.replaceAllUsesWith(
+        I.replaceNonMetadataUsesWith(
             Builder.CreateZExt(SE->getOperand(0), DstTy, SE->getName()));
         Worklist.push_back(SE);
         Changed = true;
