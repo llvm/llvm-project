@@ -61,9 +61,9 @@ attributes(global) subroutine test_global_local()
   n = 42
 end subroutine
 ! CHECK-LABEL: func.func @{{.*}}test_global_local
-! CHECK: %[[N:.*]]:2 = hlfir.declare {{.*}}"_QFtest_global_localEn"
-! CHECK: fir.zero_bits i32
-! CHECK: fir.store %{{.*}} to %[[N]]#0 : !fir.ref<i32>
+! CHECK:       %[[N:.*]]:2 = hlfir.declare {{.*}}"_QFtest_global_localEn"
+! CHECK-NEXT:  %[[NZ:.*]] = fir.zero_bits i32
+! CHECK-NEXT:  fir.store %[[NZ]] to %[[N]]#0 : !fir.ref<i32>
 
 ! An explicit 'device' local in an attributes(host,device) routine is
 ! allocated via cuf.alloc (not fir.alloca) because cuf::isCUDADeviceContext

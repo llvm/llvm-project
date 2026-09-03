@@ -1283,8 +1283,8 @@ getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
 /// DataLayoutTypeInterface, so any record containing a vector component would
 /// crash record-size calculation. Excluding such records at eligibility time
 /// avoids the crash.
-static bool containsVectorComponent(
-    const Fortran::semantics::DerivedTypeSpec &derived) {
+static bool
+containsVectorComponent(const Fortran::semantics::DerivedTypeSpec &derived) {
   if (derived.IsVectorType())
     return true;
   const Fortran::semantics::Scope *scope = derived.GetScope();
@@ -1323,6 +1323,15 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
     return false;
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   if (Fortran::semantics::IsDummy(sym))
+    return false;
+  // Function result variables own the return-value storage and must not be
+  // pre-initialized: the function body is responsible for setting the result.
+  if (sym.IsFuncResult())
+    return false;
+  // Main-program locals have implicit SAVE semantics (Fortran 2018 8.5.16p4).
+  // IsSaved() does not catch this case because the SAVE attribute is implicit
+  // rather than explicit, so check the enclosing scope kind directly.
+  if (sym.owner().kind() == Fortran::semantics::Scope::Kind::MainProgram)
     return false;
   if (Fortran::semantics::IsSaved(sym))
     return false;
@@ -1418,11 +1427,14 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
     return mlir::complex::CreateOp::create(builder, loc, cplxTy, partVal,
                                            partVal);
   }
-  // LOGICAL(k) has a fixed size of k bytes. Return the raw integer splat;
-  // the caller stores it via a bitcasted address to preserve the bit pattern
+  // LOGICAL(k) has a fixed size of k bytes under the default kind mapping,
+  // but a non-default mapping (e.g. --kind-mapping=l4:8) may map LOGICAL(4)
+  // to a single byte.  Use KindMapping::getLogicalBitsize so the constant
+  // width matches the actual allocation size.
+  // The caller stores it via a bitcasted address to preserve the bit pattern
   // (fir.convert from integer to !fir.logical normalizes nonzero -> true).
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
-    return makeIntCst(logTy.getFKind() * 8);
+    return makeIntCst(builder.getKindMap().getLogicalBitsize(logTy.getFKind()));
   }
   // All types that pass shouldInitLocal and reach genInitLocalStore are
   // handled explicitly above (integer, float, complex, logical) or are
@@ -1454,9 +1466,11 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
       // code unit is one byte; for kind=2/4 (UTF-16/32) each code unit is
       // kind bytes wide. We use a kind=1 singleton as the view element so
       // fir.coordinate_of advances exactly one byte per step, and iterate
-      // nUnits * kind times to cover all bytes.
+      // nUnits * kindBytes times to cover all bytes.  Use KindMapping to
+      // get the true byte width under any --kind-mapping override.
       int64_t nUnits = charTy.hasConstantLen() ? charTy.getLen() : 0;
-      int64_t kindBytes = charTy.getFKind();
+      int64_t kindBytes =
+          builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
       int64_t nBytes = nUnits * kindBytes;
       if (nBytes > 0) {
         mlir::Type idxTy = builder.getIndexType();
@@ -1466,9 +1480,8 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
             fir::CharacterType::getSingleton(builder.getContext(), 1);
         mlir::Type byteSeqTy = fir::SequenceType::get(
             {fir::SequenceType::getUnknownExtent()}, byteTy);
-        mlir::Value byteBase =
-            builder.createConvertWithVolatileCast(
-                loc, builder.getRefType(byteSeqTy), addr);
+        mlir::Value byteBase = builder.createConvertWithVolatileCast(
+            loc, builder.getRefType(byteSeqTy), addr);
         mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
         mlir::Value last =
             builder.createIntegerConstant(loc, idxTy, nBytes - 1);
@@ -1499,9 +1512,8 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Type i8Ty = builder.getIntegerType(8);
     mlir::Type i8SeqTy =
         fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
-    mlir::Value byteBase =
-        builder.createConvertWithVolatileCast(
-            loc, builder.getRefType(i8SeqTy), addr);
+    mlir::Value byteBase = builder.createConvertWithVolatileCast(
+        loc, builder.getRefType(i8SeqTy), addr);
     mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
     mlir::Value last = builder.createIntegerConstant(
         loc, idxTy, static_cast<int64_t>(nBytes) - 1);
@@ -1547,7 +1559,8 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
   // logical true).
   if (mode == Fortran::lower::InitLocalKind::Hex &&
       mlir::isa<fir::LogicalType>(ty)) {
-    unsigned bits = mlir::cast<fir::LogicalType>(ty).getFKind() * 8;
+    auto logTy = mlir::cast<fir::LogicalType>(ty);
+    unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
     mlir::Type intRefTy = builder.getRefType(builder.getIntegerType(bits));
     mlir::Value intAddr = builder.createConvert(loc, intRefTy, addr);
     fir::StoreOp::create(builder, loc, val, intAddr);
@@ -1650,9 +1663,8 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
               mlir::Type i8Ty = builder.getIntegerType(8);
               mlir::Type i8SeqTy = fir::SequenceType::get(
                   {fir::SequenceType::getUnknownExtent()}, i8Ty);
-              mlir::Value byteBase =
-                  builder.createConvertWithVolatileCast(
-                      loc, builder.getRefType(i8SeqTy), addr);
+              mlir::Value byteBase = builder.createConvertWithVolatileCast(
+                  loc, builder.getRefType(i8SeqTy), addr);
               mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
               mlir::Value last = builder.createIntegerConstant(
                   loc, idxTy, static_cast<int64_t>(byteSize) - 1);
@@ -1700,9 +1712,11 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
       mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
       // For kind>1 (UTF-16/32) the runtime length is in code units; multiply
-      // by kind to get the total byte count before computing the loop bound.
+      // by the kind byte width to get the total byte count.  Use KindMapping
+      // so a --kind-mapping override is respected.
       // Use a kind=1 singleton so fir.coordinate_of advances 1 byte per step.
-      int64_t kindBytes = charTy.getFKind();
+      int64_t kindBytes =
+          builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
       if (kindBytes > 1) {
         mlir::Value kindCst =
             builder.createIntegerConstant(loc, idxTy, kindBytes);
@@ -1720,9 +1734,8 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
           fir::CharacterType::getSingleton(builder.getContext(), 1);
       mlir::Type byteSeqTy = fir::SequenceType::get(
           {fir::SequenceType::getUnknownExtent()}, byteTy);
-      mlir::Value byteBase =
-          builder.createConvertWithVolatileCast(
-              loc, builder.getRefType(byteSeqTy), base);
+      mlir::Value byteBase = builder.createConvertWithVolatileCast(
+          loc, builder.getRefType(byteSeqTy), base);
       mlir::Value byteAddr =
           fir::CoordinateOp::create(builder, loc, builder.getRefType(byteTy),
                                     byteBase, mlir::ValueRange{iv});
