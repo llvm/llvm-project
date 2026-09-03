@@ -444,10 +444,6 @@ public:
   LLVM_ABI bool matchCombineUnmergeZExtToZExt(MachineInstr &MI) const;
   LLVM_ABI void applyCombineUnmergeZExtToZExt(MachineInstr &MI) const;
 
-  /// Transform fp_instr(cst) to constant result of the fp operation.
-  LLVM_ABI void applyCombineConstantFoldFpUnary(MachineInstr &MI,
-                                                const ConstantFP *Cst) const;
-
   /// Constant fold a unary integer op (G_CTLZ, G_CTTZ, G_CTPOP and their
   /// _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) when the operand is
   /// a scalar constant or a G_BUILD_VECTOR of constants.
@@ -781,19 +777,23 @@ public:
 
   /// Do constant folding when opportunities are exposed after MIR building.
   LLVM_ABI bool matchConstantFoldCastOp(MachineInstr &MI,
-                                        APInt &MatchInfo) const;
+                                        BuildFnTy &MatchInfo) const;
 
   /// Do constant folding when opportunities are exposed after MIR building.
   LLVM_ABI bool matchConstantFoldBinOp(MachineInstr &MI,
-                                       APInt &MatchInfo) const;
+                                       BuildFnTy &MatchInfo) const;
 
   /// Do constant FP folding when opportunities are exposed after MIR building.
   LLVM_ABI bool matchConstantFoldFPBinOp(MachineInstr &MI,
-                                         ConstantFP *&MatchInfo) const;
+                                         BuildFnTy &MatchInfo) const;
+
+  /// Constant fold a unary FP operation when the source is constant.
+  LLVM_ABI bool matchConstantFoldFPUnary(MachineInstr &MI,
+                                         BuildFnTy &MatchInfo) const;
 
   /// Constant fold G_FMA/G_FMAD.
   LLVM_ABI bool matchConstantFoldFMA(MachineInstr &MI,
-                                     ConstantFP *&MatchInfo) const;
+                                     BuildFnTy &MatchInfo) const;
 
   /// \returns true if it is possible to narrow the width of a scalar binop
   /// feeding a G_AND instruction \p MI.
