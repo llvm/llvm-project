@@ -810,10 +810,17 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(DSEPass());
   FPM.addPass(MoveAutoInitPass());
 
-  FPM.addPass(createFunctionToLoopPassAdaptor(
-      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-               /*AllowSpeculation=*/true),
-      /*UseMemorySSA=*/true));
+  {
+    LoopPassManager LPM;
+    LPM.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
+                         /*AllowSpeculation=*/true));
+    // LICM can hoist a loop-invariant exit condition into the preheader;
+    // trivial unswitching then hoists the invariant exit branch out of the
+    // loop.
+    LPM.addPass(SimpleLoopUnswitchPass(/*NonTrivial=*/false, /*Trivial=*/true));
+    FPM.addPass(
+        createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/true));
+  }
 
   FPM.addPass(CoroElidePass());
 
