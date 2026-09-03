@@ -5126,6 +5126,8 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
       uint64_t SelectFalseWeight;
       bool SelectHasBranchWeights =
           extractBranchWeights(*Select, SelectTrueWeight, SelectFalseWeight);
+      if (Negate)
+        std::swap(SelectTrueWeight, SelectFalseWeight);
       if (SwitchHasBranchWeights && SelectHasBranchWeights &&
           !ProfcheckDisableMetadataFixes) {
         // Update the branch weights of the switch by multiplying all of them by

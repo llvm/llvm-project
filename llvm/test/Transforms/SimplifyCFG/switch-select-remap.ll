@@ -126,14 +126,14 @@ bb4:
 ; Same remap expressed with icmp ne / select(cond, %x, 6). The remapped value 6
 ; maps to a real (non-default) case, so switching on %x needs a new explicit
 ; case for 4 pointing to bb2, same as test_remap_add_case but via the NE arm.
-define void @test_remap_ne_add_case(i8 %x) {
+define void @test_remap_ne_add_case(i8 %x) !prof !0 {
 ; CHECK-LABEL: define void @test_remap_ne_add_case(
-; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:    switch i8 [[X]], label %[[BB1:.*]] [
 ; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
 ; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
 ; CHECK-NEXT:      i8 4, label %[[BB2]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    ], !prof [[PROF4:![0-9]+]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -145,11 +145,11 @@ define void @test_remap_ne_add_case(i8 %x) {
 ; CHECK-NEXT:    unreachable
 ;
   %cmp = icmp ne i8 %x, 4
-  %key = select i1 %cmp, i8 %x, i8 6
+  %key = select i1 %cmp, i8 %x, i8 6, !prof !1
   switch i8 %key, label %bb1 [
   i8 6, label %bb2
   i8 10, label %bb3
-  ]
+  ], !prof !2
 
 bb1:
   call void @func1()
@@ -470,4 +470,5 @@ declare void @use(i32)
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 15, i32 21, i32 33, i32 46}
 ; CHECK: [[PROF2]] = !{!"unknown", !"simplifycfg"}
 ; CHECK: [[PROF3]] = !{!"branch_weights", i32 5, i32 7, i32 11, i32 13}
+; CHECK: [[PROF4]] = !{!"branch_weights", i32 10, i32 14, i32 22, i32 69}
 ;.
