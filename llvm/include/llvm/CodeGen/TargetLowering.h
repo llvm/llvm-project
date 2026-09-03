@@ -1780,7 +1780,6 @@ public:
   LegalizeAction getVectorInterleaveAction(unsigned Opc, unsigned Factor,
                                            EVT VT) const {
     assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
-    assert(Factor >= 2 && Factor <= 8);
     VectorInterleaveActionKey Key = {Opc, Factor, VT.getSimpleVT().SimpleTy};
     auto It = VectorInterleaveActions.find(Key);
     return It != VectorInterleaveActions.end() ? It->second : Expand;
@@ -2906,9 +2905,6 @@ protected:
   void setVectorInterleaveAction(unsigned Opc, unsigned Factor, MVT VT,
                                  LegalizeAction Action) {
     assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
-    assert(Factor >= 2 && Factor <= 8);
-    assert((Action == Legal || Action == Custom || Action == Expand) &&
-           "Unsupported vector interleave action");
     VectorInterleaveActionKey Key = {Opc, Factor, VT.SimpleTy};
     VectorInterleaveActions[Key] = Action;
   }
