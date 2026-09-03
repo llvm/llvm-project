@@ -360,11 +360,24 @@ TEST_F(FormatterBytecodeTest, IntegerSignednessOps) {
     ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
   }
   {
-    // Mismatched bit widths are still rejected, regardless of signedness.
+    // Mismatched bit widths are allowed for arithmetic: the narrower
+    // operand is sign-extended to match the wider one, and the result is
+    // at the wider width, mirroring C's usual arithmetic conversions.
     DataStack data;
-    data.Push(llvm::APSInt(llvm::APInt(32, 5), /*isUnsigned=*/false));
-    data.Push(llvm::APSInt(llvm::APInt(64, 1), /*isUnsigned=*/true));
-    ASSERT_FALSE(Interpret({op_plus}, data));
+    data.Push(llvm::APSInt::get(-1).trunc(32));
+    data.Push(llvm::APSInt::get(1));
+    ASSERT_TRUE(Interpret({op_plus}, data));
+    llvm::APSInt result = data.Pop<llvm::APSInt>();
+    ASSERT_EQ(result.getBitWidth(), 64u);
+    ASSERT_EQ(result, llvm::APSInt::get(0));
+  }
+  {
+    // Same for comparisons.
+    DataStack data;
+    data.Push(llvm::APSInt::get(-1).trunc(32));
+    data.Push(llvm::APSInt::get(1));
+    ASSERT_TRUE(Interpret({op_lt}, data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
   }
   {
     // Bitwise ops, unlike arithmetic, don't care about the tag at all: they
@@ -379,11 +392,17 @@ TEST_F(FormatterBytecodeTest, IntegerSignednessOps) {
     ASSERT_EQ(result, llvm::APSInt::get(1));
   }
   {
-    // Bit width still has to match for bitwise ops.
+    // Mismatched widths implicitly zero-extend the narrower operand by
+    // default: an 8-bit -1 (0xFF) widens to 0x00FF, not 0xFFFF, since a
+    // bitwise op has no basis for assuming anything about the bits above
+    // what it was given.
     DataStack data;
-    data.Push(llvm::APSInt(llvm::APInt(32, 5), /*isUnsigned=*/false));
-    data.Push(llvm::APSInt(llvm::APInt(64, 1), /*isUnsigned=*/true));
-    ASSERT_FALSE(Interpret({op_and}, data));
+    data.Push(llvm::APSInt::get(-1).trunc(8));
+    data.Push(llvm::APSInt(llvm::APInt(16, 0x0100), /*isUnsigned=*/false));
+    ASSERT_TRUE(Interpret({op_and}, data));
+    llvm::APSInt result = data.Pop<llvm::APSInt>();
+    ASSERT_EQ(result.getBitWidth(), 16u);
+    ASSERT_EQ(result, llvm::APSInt(llvm::APInt(16, 0), /*isUnsigned=*/false));
   }
 }
 

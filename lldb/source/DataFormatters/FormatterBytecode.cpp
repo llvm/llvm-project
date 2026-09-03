@@ -317,6 +317,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       if (auto *ap = std::get_if<llvm::APSInt>(&cond))
         truthy = !ap->isZero();
       else if (auto *u = std::get_if<uint64_t>(&cond))
+        // Deprecated.
         truthy = *u != 0;
       else
         return error("expected Integer or UInt");
@@ -336,6 +337,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       if (auto *ap = std::get_if<llvm::APSInt>(&cond))
         truthy = !ap->isZero();
       else if (auto *u = std::get_if<uint64_t>(&cond))
+        // Deprecated.
         truthy = *u != 0;
       else
         return error("expected Integer or UInt");
@@ -409,21 +411,21 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       TYPE_CHECK(Integer);                                                     \
       llvm::APSInt rhs = std::get<llvm::APSInt>(y);                            \
       llvm::APSInt lhs = data.Pop<llvm::APSInt>();                             \
-      if (lhs.getBitWidth() != rhs.getBitWidth())                              \
-        return error("bit width mismatch");                                    \
-      if (lhs.isUnsigned() != rhs.isUnsigned())                                \
-        return error("signedness mismatch");                                   \
+      if (lhs.isUnsigned() || rhs.isUnsigned())                                \
+        return error("unsupported unsigned value");                            \
+      unsigned width = std::max(lhs.getBitWidth(), rhs.getBitWidth());         \
+      lhs = lhs.extend(width);                                                 \
+      rhs = rhs.extend(width);                                                 \
       if (CHECK_ZERO && rhs.isZero())                                          \
         return error(#OP " by zero");                                          \
-      data.Push(WrapAPSIntResult(lhs OP rhs, lhs.getBitWidth(),                \
-                                 lhs.isUnsigned()));                          \
+      data.Push(WrapAPSIntResult(lhs OP rhs, width, lhs.isUnsigned()));       \
     } else                                                                     \
       return error("unsupported data types");                                  \
   }
 #define BINOP(OP) BINOP_IMPL(OP, false)
 #define BINOP_CHECKZERO(OP) BINOP_IMPL(OP, true)
 
-// Comparision operations.
+// Comparison operations.
 #define CMPOP(OP)                                                              \
   {                                                                            \
     TYPE_CHECK(Any, Any);                                                      \
@@ -438,19 +440,20 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       TYPE_CHECK(Integer);                                                     \
       llvm::APSInt rhs = std::get<llvm::APSInt>(y);                            \
       llvm::APSInt lhs = data.Pop<llvm::APSInt>();                             \
-      if (lhs.getBitWidth() != rhs.getBitWidth())                              \
-        return error("bit width mismatch");                                    \
-      if (lhs.isUnsigned() != rhs.isUnsigned())                                \
-        return error("signedness mismatch");                                   \
-      data.Push(WrapAPSIntResult(lhs OP rhs, lhs.getBitWidth(),                \
-                                 lhs.isUnsigned()));                          \
+      if (lhs.isUnsigned() || rhs.isUnsigned())                                \
+        return error("unsupported unsigned value");                            \
+      unsigned width = std::max(lhs.getBitWidth(), rhs.getBitWidth());         \
+      lhs = lhs.extend(width);                                                 \
+      rhs = rhs.extend(width);                                                 \
+      data.Push(WrapAPSIntResult(lhs OP rhs, width, lhs.isUnsigned()));       \
     } else                                                                     \
       return error("unsupported data types");                                  \
   }
 
 // Bitwise operations use an Integer's underlying bit pattern, not its
 // mathematical value (ie signed-ness is ignored). This means >> is always a
-// logical (zero-filling) shift, never an arithmetic shift.
+// logical (zero-filling) shift, never an arithmetic shift. Mismatched bit
+// widths are implicitly zero-extended (not sign-extended).
 #define BITOP(OP)                                                              \
   {                                                                            \
     TYPE_CHECK(Any, Any);                                                      \
@@ -465,10 +468,10 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       TYPE_CHECK(Integer);                                                     \
       llvm::APSInt rhs = std::get<llvm::APSInt>(y);                            \
       llvm::APSInt lhs = data.Pop<llvm::APSInt>();                             \
-      if (lhs.getBitWidth() != rhs.getBitWidth())                              \
-        return error("bit width mismatch");                                    \
-      llvm::APInt bits = static_cast<const llvm::APInt &>(lhs)                 \
-          OP static_cast<const llvm::APInt &>(rhs);                            \
+      unsigned width = std::max(lhs.getBitWidth(), rhs.getBitWidth());         \
+      llvm::APInt lhs_bits = static_cast<const llvm::APInt &>(lhs).zext(width);\
+      llvm::APInt rhs_bits = static_cast<const llvm::APInt &>(rhs).zext(width);\
+      llvm::APInt bits = lhs_bits OP rhs_bits;                                 \
       data.Push(llvm::APSInt(std::move(bits), /*isUnsigned=*/false));          \
     } else                                                                     \
       return error("unsupported data types");                                  \

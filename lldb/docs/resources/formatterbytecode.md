@@ -103,9 +103,9 @@ These manipulate the control stack and program counter. Both `if` and `ifelse` e
 
 ### Arithmetic, logic, and comparison operations
 
-Every `Integer` value on the data stack is signed. `+`, `-`, `*`, `/`, `%`, `=`, `!=`, `<`, `>`, `=<`, `>=` are defined for `Integer` (and deprecated `Int`/`UInt`) operate on the operands' mathematical values.
+Every `Integer` value on the data stack is signed. `+`, `-`, `*`, `/`, `%`, `=`, `!=`, `<`, `>`, `=<`, `>=` are defined for `Integer` (and deprecated `Int`/`UInt`) and operate on the operands' mathematical values.
 
-`<<`, `>>`, `&`, `|`, `^`, `~` are bitwise operations and operate on an `Integer`'s underlying two's complement bit pattern rather than its mathematical value. Because a bitwise operation never treats its operands as having a sign, `>>` is always a logical (zero-filling) shift, not an arithmetic shift.
+`<<`, `>>`, `&`, `|`, `^`, `~` are bitwise operations and operate on an `Integer`'s underlying two's complement bit pattern rather than its mathematical value. Because a bitwise operation never treats its operands as having a sign, `>>` is always a logical (zero-filling) shift, not an arithmetic shift, and a negative operand is not an error.
 
 ```{eval-rst}
 ========  ==========  ===========================

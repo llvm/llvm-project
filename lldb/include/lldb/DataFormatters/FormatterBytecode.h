@@ -20,8 +20,8 @@ namespace FormatterBytecode {
 enum DataType : uint8_t {
   Any,
   String,
-  Int,  // Deprecated: use Integer.
-  UInt, // Deprecated: use Integer.
+  Int,  ///< Deprecated: use Integer.
+  UInt, ///< Deprecated: use Integer.
   Object,
   Type,
   Selector,
