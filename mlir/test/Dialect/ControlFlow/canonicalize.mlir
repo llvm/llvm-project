@@ -687,6 +687,33 @@ func.func @no_merge_self_arg_loop(%step: i1) -> i1 {
   return %result : i1
 }
 
+// -----
+
+// Verify that a block is not merged into its sole predecessor when a branch
+// operand only derives from a block argument of the destination: substituting
+// %next for %iv would define %next in terms of itself. Folding the constant
+// compare is what leaves ^latch as ^header's only predecessor.
+
+// CHECK-LABEL: @no_merge_derived_arg_loop
+//  CHECK-NEXT:   return
+func.func @no_merge_derived_arg_loop() {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %c2 = arith.constant 2 : i32
+  %enter = arith.cmpi sgt, %c2, %c0 : i32
+  cf.cond_br %enter, ^exit, ^header(%c2 : i32)
+^header(%iv: i32):
+  %done = arith.cmpi eq, %iv, %c2 : i32
+  cf.cond_br %done, ^exit, ^latch
+^latch:
+  %next = arith.addi %iv, %c1 : i32
+  cf.br ^header(%next : i32)
+^exit:
+  return
+}
+
+// -----
+
 // Verify that block arguments are replaced with a uniform incoming value
 // when all predecessors pass the same SSA value
 
