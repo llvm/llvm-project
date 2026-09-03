@@ -132,6 +132,34 @@ define ptr @assume_pointers_equality_maybe_different_provenance_5(ptr %x) {
   ret ptr %gep
 }
 
+@g_outer = internal global ptr @g_inner
+@g_inner = external global ptr
+
+; FIXME: This is a miscompilation.
+define ptr @assume_pointers_equality_maybe_different_provenance_6(ptr %p) {
+; CHECK-LABEL: define ptr @assume_pointers_equality_maybe_different_provenance_6(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], @g_inner
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret ptr poison
+;
+entry:
+  %cmp = icmp eq ptr %p, @g_inner
+  br i1 %cmp, label %if, label %else
+
+if:
+  store ptr %p, ptr @g_outer, align 8
+  ret ptr null
+
+else:
+  %res = load ptr, ptr @g_outer, align 8
+  ret ptr %res
+}
+
 define i1 @assume_pointers_equality_can_replace_valid(ptr %x, ptr %y) {
 ; CHECK-LABEL: define i1 @assume_pointers_equality_can_replace_valid(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
