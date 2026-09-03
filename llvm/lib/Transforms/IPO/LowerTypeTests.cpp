@@ -2013,8 +2013,10 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
   bool Changed =
       LowerTypeTestsModule(
           M, AM,
-          ClSummaryAction == PassSummaryAction::Export ? Summary.get() : nullptr,
-          ClSummaryAction == PassSummaryAction::Import ? Summary.get() : nullptr)
+          ClSummaryAction == PassSummaryAction::Export ? Summary.get()
+                                                       : nullptr,
+          ClSummaryAction == PassSummaryAction::Import ? Summary.get()
+                                                       : nullptr)
           .lower();
 
   if (!ClWriteSummary.empty()) {
