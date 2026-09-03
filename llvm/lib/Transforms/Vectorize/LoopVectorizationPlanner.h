@@ -406,10 +406,10 @@ public:
   }
 
   /// Convert \p Current to \p Start + \p Current * \p Step.
-  VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
-                                     FPMathOperator *FPBinOp, VPValue *Start,
-                                     VPValue *Current, VPValue *Step,
-                                     const VPIRFlags::WrapFlagsTy &Flags = {}) {
+  VPDerivedIVRecipe *
+  createDerivedIV(InductionDescriptor::InductionKind Kind,
+                  FPMathOperator *FPBinOp, VPValue *Start, VPValue *Current,
+                  VPValue *Step, const VPIRFlags::BinOpGEPFlagsTy Flags = {}) {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
