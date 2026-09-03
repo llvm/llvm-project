@@ -14,6 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/CFGuardLongjmp.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -31,34 +32,7 @@ using namespace llvm;
 STATISTIC(CFGuardLongjmpTargets,
           "Number of Control Flow Guard longjmp targets");
 
-namespace {
-
-/// MachineFunction pass to insert a symbol after each call to _setjmp and store
-/// this in the MachineFunction's LongjmpTargets vector.
-class CFGuardLongjmp : public MachineFunctionPass {
-public:
-  static char ID;
-
-  CFGuardLongjmp() : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override {
-    return "Control Flow Guard longjmp targets";
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-};
-
-} // end anonymous namespace
-
-char CFGuardLongjmp::ID = 0;
-
-INITIALIZE_PASS(CFGuardLongjmp, "CFGuardLongjmp",
-                "Insert symbols at valid longjmp targets for /guard:cf", false,
-                false)
-FunctionPass *llvm::createCFGuardLongjmpPass() { return new CFGuardLongjmp(); }
-
-bool CFGuardLongjmp::runOnMachineFunction(MachineFunction &MF) {
-
+static bool runCFGuardLongjmp(MachineFunction &MF) {
   // Skip modules for which the cfguard flag is not set.
   if (MF.getFunction().getParent()->getControlFlowGuardMode() ==
       ControlFlowGuardMode::Disabled)
@@ -117,4 +91,48 @@ bool CFGuardLongjmp::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return true;
+}
+
+namespace {
+
+/// MachineFunction pass to insert a symbol after each call to _setjmp and store
+/// this in the MachineFunction's LongjmpTargets vector.
+class CFGuardLongjmpLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  CFGuardLongjmpLegacy() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "Control Flow Guard longjmp targets";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return runCFGuardLongjmp(MF);
+  }
+};
+
+} // end anonymous namespace
+
+char CFGuardLongjmpLegacy::ID = 0;
+
+INITIALIZE_PASS(CFGuardLongjmpLegacy, "CFGuardLongjmp",
+                "Insert symbols at valid longjmp targets for /guard:cf", false,
+                false)
+FunctionPass *llvm::createCFGuardLongjmpLegacy() {
+  return new CFGuardLongjmpLegacy();
+}
+
+PreservedAnalyses
+CFGuardLongjmpPass::run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM) {
+  if (!runCFGuardLongjmp(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
