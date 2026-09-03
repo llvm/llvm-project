@@ -180,8 +180,7 @@ define <2 x i1> @or_ne_noundef_fail_reuse(<2 x i8> %x, <2 x i8> noundef %y) {
 
 define i1 @or_slt_intmin(i8 %x) {
 ; CHECK-LABEL: @or_slt_intmin(
-; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[XN1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xn1 = or i8 %x, 128
@@ -191,10 +190,7 @@ define i1 @or_slt_intmin(i8 %x) {
 
 define <2 x i1> @or_slt_intmin_2(<2 x i8> %xx, <2 x i8> %z) {
 ; CHECK-LABEL: @or_slt_intmin_2(
-; CHECK-NEXT:    [[X:%.*]] = add <2 x i8> [[XX:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[XN1:%.*]] = or <2 x i8> [[X]], splat (i8 -128)
-; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[X]], [[XN1]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x = add <2 x i8> %xx, %z
   %xn1 = or <2 x i8> %x, <i8 128, i8 128>
@@ -208,8 +204,7 @@ define i1 @or_sle_intmin_indirect_2(i8 %xx, i8 %C, i8 %z) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[NEG:%.*]], label [[POS:%.*]]
 ; CHECK:       neg:
 ; CHECK-NEXT:    [[X:%.*]] = add i8 [[XX:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X]], -128
-; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[X]], [[XN1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ; CHECK:       pos:
 ; CHECK-NEXT:    call void @barrier()
@@ -231,8 +226,7 @@ pos:
 
 define i1 @or_sge_intmin(i8 %x) {
 ; CHECK-LABEL: @or_sge_intmin(
-; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[R:%.*]] = icmp sge i8 [[XN1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xn1 = or i8 %x, 128
@@ -245,9 +239,7 @@ define i1 @or_sgt_intmin_indirect(i8 %x, i8 %C) {
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i8 [[C:%.*]], -128
 ; CHECK-NEXT:    br i1 [[C_NOT]], label [[NEG:%.*]], label [[POS:%.*]]
 ; CHECK:       neg:
-; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[XN1]], [[X]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       pos:
 ; CHECK-NEXT:    call void @barrier()
 ; CHECK-NEXT:    ret i1 false
@@ -268,14 +260,31 @@ pos:
 define <2 x i1> @or_sgt_intmin_2(<2 x i8> %xx, <2 x i8> %z) {
 ; CHECK-LABEL: @or_sgt_intmin_2(
 ; CHECK-NEXT:    [[X:%.*]] = add <2 x i8> [[XX:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[XN1:%.*]] = or <2 x i8> [[X]], splat (i8 -128)
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[X]], [[XN1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[X]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %x = add <2 x i8> %xx, %z
   %xn1 = or <2 x i8> %x, <i8 128, i8 128>
   %r = icmp sgt <2 x i8> %x, %xn1
   ret <2 x i1> %r
+}
+
+define i1 @or_sge_intmin_rhs(i8 %x) {
+; CHECK-LABEL: @or_sge_intmin_rhs(
+; CHECK-NEXT:    ret i1 true
+;
+  %xn1 = or i8 %x, -128
+  %r = icmp sge i8 %x, %xn1
+  ret i1 %r
+}
+
+define i1 @or_sle_intmin_lhs(i8 %x) {
+; CHECK-LABEL: @or_sle_intmin_lhs(
+; CHECK-NEXT:    ret i1 true
+;
+  %xn1 = or i8 %x, -128
+  %r = icmp sle i8 %xn1, %x
+  ret i1 %r
 }
 
 define i1 @or_simplify_ule(i8 %y_in, i8 %rhs_in, i1 %c) {
