@@ -64,6 +64,10 @@ static NVVM::ShflKind convertShflKind(gpu::ShuffleMode mode) {
   llvm_unreachable("unknown shuffle mode");
 }
 
+static bool isSupportedNvvmShflPayloadType(Type type) {
+  return type.isInteger(32) || isa<Float32Type>(type);
+}
+
 static std::optional<NVVM::ReductionKind>
 convertToNVVMReductionKind(gpu::AllReduceOperation mode) {
   switch (mode) {
@@ -245,6 +249,57 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     } else {
       rewriter.replaceOp(op, {shfl, nullptr});
     }
+    return success();
+  }
+};
+
+struct GPUSubgroupBroadcastOpLowering
+    : public ConvertOpToLLVMPattern<gpu::SubgroupBroadcastOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto i32Type = rewriter.getI32Type();
+    Location loc = op.getLoc();
+    Value fullMask = LLVM::ConstantOp::create(rewriter, loc, i32Type, -1);
+    Value maskAndClamp = LLVM::ConstantOp::create(rewriter, loc, i32Type, 31);
+    auto voteKind = NVVM::VoteSyncKindAttr::get(rewriter.getContext(),
+                                                NVVM::VoteSyncKind::ballot);
+    Value activeMask = NVVM::VoteSyncOp::create(
+        rewriter, loc, i32Type, fullMask,
+        LLVM::ConstantOp::create(rewriter, loc, rewriter.getI1Type(), true),
+        voteKind);
+
+    Value lane = adaptor.getLane();
+    if (adaptor.getBroadcastType() == gpu::BroadcastType::first_active_lane)
+      lane = LLVM::CountTrailingZerosOp::create(rewriter, loc, i32Type,
+                                                activeMask, false);
+
+    auto emitBroadcast = [&](Value payload) {
+      return NVVM::ShflOp::create(rewriter, loc, payload.getType(), activeMask,
+                                  payload, lane, maskAndClamp,
+                                  NVVM::ShflKind::idx, /*return*/ nullptr);
+    };
+
+    Value src = adaptor.getSrc();
+    if (isSupportedNvvmShflPayloadType(src.getType())) {
+      rewriter.replaceOp(op, emitBroadcast(src));
+      return success();
+    }
+
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32Type, decomposed,
+                                    /*permitVariablySizedScalars=*/true)))
+      return rewriter.notifyMatchFailure(op,
+                                         "unexpected decomposition failure");
+
+    SmallVector<Value> results;
+    results.reserve(decomposed.size());
+    for (Value v : decomposed)
+      results.push_back(emitBroadcast(v));
+    rewriter.replaceOp(op, LLVM::composeValue(rewriter, loc, results,
+                                              adaptor.getSrc().getType()));
     return success();
   }
 };
@@ -667,7 +722,8 @@ void mlir::populateGpuToNVVMConversionPatterns(
       gpu::GridDimOp, NVVM::GridDimXOp, NVVM::GridDimYOp, NVVM::GridDimZOp>>(
       converter, IndexKind::Grid, IntrType::Dim, benefit);
   patterns.add<GPULaneIdOpToNVVM, GPUBallotOpToNVVM, GPUShuffleOpLowering,
-               GPUReturnOpLowering>(converter, benefit);
+               GPUSubgroupBroadcastOpLowering, GPUReturnOpLowering>(converter,
+                                                                    benefit);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
       converter, NVVM::kSharedMemoryAlignmentBit, benefit);
