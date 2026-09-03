@@ -9,11 +9,12 @@
 # ==------------------------------------------------------------------------==#
 
 """
-Standalone file for generating whole-codebase statement, branch, and MC/DC coverage reports.
+Standalone file for generating whole-codebase statement, branch, and MC/DC
+coverage reports.
 
-This script parses full-codebase `llvm-cov export` JSON files, aggregates metrics
-across all top-level LLVM-libc directories (e.g. `src/ctype`, `src/math`, `src/string`),
-and outputs Markdown summary tables for CI step summaries.
+This script parses full-codebase `llvm-cov export` JSON files, aggregates
+metrics across all top-level LLVM-libc directories (e.g. `src/ctype`, `src/math`,
+`src/string`), and outputs Markdown summary tables for CI step summaries.
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ DEFAULT_REPOSITORY = "llvm/llvm-project"
 
 @dataclass
 class DirectoryCoverageMetrics:
-    """Encapsulates coverage metrics and boolean decision counts for a directory or whole codebase."""
+    """Encapsulates coverage metrics and boolean decision counts for a directory."""
 
     name: str = ""
     lines_cov: int = 0
@@ -60,7 +61,9 @@ class DirectoryCoverageMetrics:
     @property
     def decisions_pct(self) -> float:
         """Percentage of fully verified boolean decisions."""
-        return (self.decisions_full / self.decisions_tot * 100.0) if self.decisions_tot > 0 else 0.0
+        if self.decisions_tot == 0:
+            return 0.0
+        return self.decisions_full / self.decisions_tot * 100.0
 
     @property
     def missed_lines(self) -> int:
@@ -72,7 +75,9 @@ class DirectoryCoverageMetrics:
 class FullCoverageSummary:
     """Encapsulates global and directory-level coverage statistics across LLVM-libc."""
 
-    global_stats: DirectoryCoverageMetrics = field(default_factory=DirectoryCoverageMetrics)
+    global_stats: DirectoryCoverageMetrics = field(
+        default_factory=DirectoryCoverageMetrics
+    )
     directories: Dict[str, DirectoryCoverageMetrics] = field(default_factory=dict)
     dashboard_url: str = ""
 
@@ -83,7 +88,7 @@ class FullCoverageSummary:
 
 
 def resolve_dashboard_url(has_mcdc: bool) -> str:
-    """Resolves the live dashboard URL if explicitly configured via environment variable."""
+    """Resolves live dashboard URL if configured via environment variable."""
     pages_url = os.environ.get("COVERAGE_DASHBOARD_URL", "").strip()
     if not pages_url:
         return ""
@@ -93,7 +98,9 @@ def resolve_dashboard_url(has_mcdc: bool) -> str:
     return pages_url
 
 
-def extract_full_coverage_statistics(cov_data: dict) -> Optional[FullCoverageSummary]:
+def extract_full_coverage_statistics(
+    cov_data: dict,
+) -> Optional[FullCoverageSummary]:
     """Extracts global and per-directory metrics from llvm-cov export JSON data."""
     if "data" not in cov_data or not cov_data["data"]:
         return None
@@ -129,7 +136,9 @@ def extract_full_coverage_statistics(cov_data: dict) -> Optional[FullCoverageSum
         mcdc_records = item.get("mcdc_records", [])
         file_decisions_tot = len(mcdc_records)
         file_decisions_full = sum(
-            1 for rec in mcdc_records if len(rec) >= 10 and isinstance(rec[9], list) and all(rec[9])
+            1
+            for rec in mcdc_records
+            if len(rec) >= 10 and isinstance(rec[9], list) and all(rec[9])
         )
 
         global_metrics.lines_cov += line_cov
@@ -177,23 +186,31 @@ def format_overview_callout(summary: FullCoverageSummary) -> str:
 
     if summary.has_mcdc:
         lines.append(
-            f"### Overall Codebase Coverage: **{g.line_pct:.2f}% Line** | **{g.mcdc_pct:.2f}% MC/DC**"
+            f"### Overall Codebase Coverage: **{g.line_pct:.2f}% Line**"
+            f" | **{g.mcdc_pct:.2f}% MC/DC**"
         )
         lines.append(
-            f"Tested **{g.lines_cov:,} / {g.lines_tot:,}** executable lines and **{g.mcdc_cov:,} / {g.mcdc_tot:,}** boolean conditions across **{g.decisions_tot:,}** decisions."
+            f"Tested **{g.lines_cov:,} / {g.lines_tot:,}** executable lines "
+            f"and **{g.mcdc_cov:,} / {g.mcdc_tot:,}** boolean conditions "
+            f"across **{g.decisions_tot:,}** decisions."
         )
     else:
         lines.append(f"### Overall Codebase Coverage: **{g.line_pct:.2f}%**")
         lines.append(
-            f"Tested **{g.lines_cov:,} / {g.lines_tot:,}** executable lines across all LLVM-libc directories."
+            f"Tested **{g.lines_cov:,} / {g.lines_tot:,}** executable lines "
+            "across all LLVM-libc directories."
         )
 
     lines.append("")
     if summary.dashboard_url:
-        lines.append(f"- **Coverage Dashboard:** [{summary.dashboard_url}]({summary.dashboard_url})")
+        lines.append(
+            f"- **Coverage Dashboard:** "
+            f"[{summary.dashboard_url}]({summary.dashboard_url})"
+        )
     else:
         lines.append(
-            "- **HTML Coverage Report:** Available for download under the **Artifacts** section of this workflow run."
+            "- **HTML Coverage Report:** Available for download under the "
+            "**Artifacts** section of this workflow run."
         )
     return "\n".join(lines)
 
@@ -209,17 +226,21 @@ def format_global_summary_table(summary: FullCoverageSummary) -> str:
 
     if summary.has_mcdc:
         lines.append(
-            f"| **MC/DC Condition Independence** | {g.mcdc_cov:,} | {g.mcdc_tot:,} | **{g.mcdc_pct:.2f}%** |"
+            f"| **MC/DC Condition Independence** | {g.mcdc_cov:,} | "
+            f"{g.mcdc_tot:,} | **{g.mcdc_pct:.2f}%** |"
         )
         lines.append(
-            f"| **Fully Verified Decisions** | {g.decisions_full:,} | {g.decisions_tot:,} | **{g.decisions_pct:.2f}%** |"
+            f"| **Fully Verified Decisions** | {g.decisions_full:,} | "
+            f"{g.decisions_tot:,} | **{g.decisions_pct:.2f}%** |"
         )
 
     lines.append(
-        f"| **Executable Lines** | {g.lines_cov:,} | {g.lines_tot:,} | **{g.line_pct:.2f}%** |"
+        f"| **Executable Lines** | {g.lines_cov:,} | {g.lines_tot:,} | "
+        f"**{g.line_pct:.2f}%** |"
     )
     lines.append(
-        f"| **Functions** | {g.func_cov:,} | {g.func_tot:,} | **{g.func_pct:.2f}%** |"
+        f"| **Functions** | {g.func_cov:,} | {g.func_tot:,} | "
+        f"**{g.func_pct:.2f}%** |"
     )
     return "\n".join(lines)
 
@@ -231,12 +252,14 @@ def format_directory_breakdown_table(summary: FullCoverageSummary) -> str:
 
     if has_mcdc:
         lines.append(
-            "| Directory | MC/DC Conditions | Decisions (Verified / Total) | Line Coverage | Function Coverage | Executable Lines | Missed Lines |"
+            "| Directory | MC/DC Conditions | Decisions (Verified / Total) | "
+            "Line Coverage | Function Coverage | Executable Lines | Missed Lines |"
         )
         lines.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: |")
     else:
         lines.append(
-            "| Directory | Line Coverage | Function Coverage | Executable Lines | Missed Lines |"
+            "| Directory | Line Coverage | Function Coverage | "
+            "Executable Lines | Missed Lines |"
         )
         lines.append("| :--- | :---: | :---: | :---: | :---: |")
 
@@ -254,11 +277,15 @@ def format_directory_breakdown_table(summary: FullCoverageSummary) -> str:
                 else "N/A"
             )
             lines.append(
-                f"| `libc/{dir_name}` | {mc_cell} | {dec_cell} | **{data.line_pct:.2f}%** | {data.func_pct:.2f}% | {data.lines_tot:,} | {data.missed_lines:,} |"
+                f"| `libc/{dir_name}` | {mc_cell} | {dec_cell} | "
+                f"**{data.line_pct:.2f}%** | {data.func_pct:.2f}% | "
+                f"{data.lines_tot:,} | {data.missed_lines:,} |"
             )
         else:
             lines.append(
-                f"| `libc/{dir_name}` | **{data.line_pct:.2f}%** | {data.func_pct:.2f}% | {data.lines_tot:,} | {data.missed_lines:,} |"
+                f"| `libc/{dir_name}` | **{data.line_pct:.2f}%** | "
+                f"{data.func_pct:.2f}% | {data.lines_tot:,} | "
+                f"{data.missed_lines:,} |"
             )
 
     return "\n".join(lines)
@@ -291,6 +318,18 @@ def main() -> None:
     """Parses command-line arguments and triggers report generation."""
     parser = argparse.ArgumentParser(description="LLVM-libc Codebase Coverage Analyzer")
     parser.add_argument("json_file", help="Path to llvm-cov export JSON file")
+    parser.add_argument(
+        "commit_sha",
+        nargs="?",
+        default="",
+        help="Commit SHA under evaluation",
+    )
+    parser.add_argument(
+        "branch_ref",
+        nargs="?",
+        default="",
+        help="Branch reference under evaluation",
+    )
 
     args, _ = parser.parse_known_args()
 
@@ -298,7 +337,9 @@ def main() -> None:
         with open(args.json_file, "r", encoding="utf-8") as f:
             cov_data = json.load(f)
     except Exception as err:
-        sys.stderr.write(f"Error: Failed to parse coverage JSON from '{args.json_file}': {err}\n")
+        sys.stderr.write(
+            f"Error: Failed to parse coverage JSON from '{args.json_file}': {err}\n"
+        )
         sys.exit(1)
 
     render_full_report(cov_data)

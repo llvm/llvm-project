@@ -6,19 +6,21 @@
 #
 # ==-------------------------------------------------------------------------==#
 
-import unittest
 import json
+import unittest
+
 from diff_coverage import (
-    DiffParser,
-    DiffHunk,
-    is_executable_line,
     CoverageJSONParser,
-    calculate_patch_statistics,
-    format_status_banner,
-    format_breakdown_table,
+    DiffHunk,
+    DiffParser,
+    FilePatchMetrics,
     PatchCoverageSummary,
-    FilePatchMetrics
+    calculate_patch_statistics,
+    format_breakdown_table,
+    format_status_banner,
+    is_executable_line,
 )
+
 
 class TestExecutableLineHeuristics(unittest.TestCase):
     def test_heuristics_matrix(self):
@@ -41,6 +43,7 @@ class TestExecutableLineHeuristics(unittest.TestCase):
             with self.subTest(msg=description, input_string=input_string):
                 self.assertEqual(is_executable_line(input_string), expected)
 
+
 class TestDiffParser(unittest.TestCase):
     def test_parse_diff_hunks_and_lines(self):
         mock_diff = (
@@ -57,13 +60,14 @@ class TestDiffParser(unittest.TestCase):
         self.assertIn("src/math/sin.cpp", hunks_dict)
         hunks = hunks_dict["src/math/sin.cpp"]
         self.assertEqual(len(hunks), 1)
-        
+
         hunk = hunks[0]
         self.assertEqual(hunk.header, "@@ -10,3 +10,4 @@")
         added_lines = [line for line in hunk.lines if line[0] == "+"]
         self.assertEqual(len(added_lines), 2)
         self.assertEqual(added_lines[0], ("+", "added_line_1();", 11))
         self.assertEqual(added_lines[1], ("+", "added_line_2();", 12))
+
 
 class TestSegmentIntersection(unittest.TestCase):
     def test_calculate_patch_statistics_exact_match(self):
@@ -76,26 +80,27 @@ class TestSegmentIntersection(unittest.TestCase):
             "+return 0;\n"
         )
         mock_json = {
-            "data": [{
-                "files": [{
-                    "filename": "/workspace/src/math/sin.cpp",
-                    "segments": [
-                        [10, 0, 1, 1, 1],
-                        [11, 0, 1, 1, 1]
-                    ],
-                    "branches": []
-                }]
-            }]
+            "data": [
+                {
+                    "files": [
+                        {
+                            "filename": "/workspace/src/math/sin.cpp",
+                            "segments": [[10, 0, 1, 1, 1], [11, 0, 1, 1, 1]],
+                            "branches": [],
+                        }
+                    ]
+                }
+            ]
         }
-        
+
         diff_files = DiffParser.parse(mock_diff)
         coverage_matrix = CoverageJSONParser.extract_patch_matrix(mock_json, diff_files)
         summary = calculate_patch_statistics(diff_files, coverage_matrix)
-        
+
         self.assertEqual(summary.total_lines, 1)
         self.assertEqual(summary.total_covered_lines, 1)
         self.assertEqual(summary.total_missed_lines, 0)
-        
+
     def test_calculate_patch_statistics_missed_line(self):
         mock_diff = (
             "diff --git a/src/math/sin.cpp b/src/math/sin.cpp\n"
@@ -106,25 +111,27 @@ class TestSegmentIntersection(unittest.TestCase):
             "+return 0;\n"
         )
         mock_json = {
-            "data": [{
-                "files": [{
-                    "filename": "/workspace/src/math/sin.cpp",
-                    "segments": [
-                        [10, 0, 1, 1, 1],
-                        [11, 0, 0, 1, 1]
-                    ],
-                    "branches": []
-                }]
-            }]
+            "data": [
+                {
+                    "files": [
+                        {
+                            "filename": "/workspace/src/math/sin.cpp",
+                            "segments": [[10, 0, 1, 1, 1], [11, 0, 0, 1, 1]],
+                            "branches": [],
+                        }
+                    ]
+                }
+            ]
         }
-        
+
         diff_files = DiffParser.parse(mock_diff)
         coverage_matrix = CoverageJSONParser.extract_patch_matrix(mock_json, diff_files)
         summary = calculate_patch_statistics(diff_files, coverage_matrix)
-        
+
         self.assertEqual(summary.total_lines, 1)
         self.assertEqual(summary.total_covered_lines, 0)
         self.assertEqual(summary.total_missed_lines, 1)
+
 
 class TestPatchReportRendering(unittest.TestCase):
     def test_format_status_banner(self):
@@ -133,27 +140,28 @@ class TestPatchReportRendering(unittest.TestCase):
             total_missed_lines=50,
             total_mcdc_total_conditions=10,
             total_mcdc_covered_conditions=5,
-            files={}
+            files={},
         )
         banner = format_status_banner(summary)
         self.assertIn("### Patch Coverage:", banner)
         self.assertIn("50.00% Line", banner)
-        
+
     def test_format_breakdown_table(self):
         file_stat = FilePatchMetrics(
             file_path="src/math/sin.cpp",
             covered_lines={10, 11},
             missed_lines=set(),
-            added_lines={10, 11}
+            added_lines={10, 11},
         )
         summary = PatchCoverageSummary(
             total_covered_lines=2,
             total_missed_lines=0,
-            files={"src/math/sin.cpp": file_stat}
+            files={"src/math/sin.cpp": file_stat},
         )
         report = format_breakdown_table(summary)
         self.assertIn("[`src/math/sin.cpp`]", report)
         self.assertIn("**100.00%**", report)
+
 
 class TestDiffParserEdgeCases(unittest.TestCase):
     def test_deleted_file(self):
@@ -184,20 +192,28 @@ class TestDiffParserEdgeCases(unittest.TestCase):
         added_lines = [line for line in hunks[0].lines if line[0] == "+"]
         self.assertEqual(len(added_lines), 1)
 
+
 class TestPathResolution(unittest.TestCase):
     def test_fuzzy_path_matching(self):
         diff_files = {"libc/src/math/sin.cpp": []}
         mock_json = {
-            "data": [{
-                "files": [{
-                    "filename": "/home/runner/work/llvm-project/libc/src/math/sin.cpp",
-                    "segments": [[10, 0, 1, 1, 1]],
-                    "mcdc_records": []
-                }]
-            }]
+            "data": [
+                {
+                    "files": [
+                        {
+                            "filename": (
+                                "/home/runner/work/llvm-project/libc/src/math/sin.cpp"
+                            ),
+                            "segments": [[10, 0, 1, 1, 1]],
+                            "mcdc_records": [],
+                        }
+                    ]
+                }
+            ]
         }
         coverage_matrix = CoverageJSONParser.extract_patch_matrix(mock_json, diff_files)
         self.assertIn("libc/src/math/sin.cpp", coverage_matrix)
+
 
 class TestZeroStateBoundaries(unittest.TestCase):
     def test_empty_json_data(self):
@@ -217,10 +233,17 @@ class TestZeroStateBoundaries(unittest.TestCase):
             "+// Just a comment\n"
         )
         diff_files = DiffParser.parse(mock_diff)
-        coverage_matrix = {"src/math/sin.cpp": {"covered": set(), "missed": set(), "mcdc_decisions": []}}
+        coverage_matrix = {
+            "src/math/sin.cpp": {
+                "covered": set(),
+                "missed": set(),
+                "mcdc_decisions": [],
+            }
+        }
         summary = calculate_patch_statistics(diff_files, coverage_matrix)
         self.assertEqual(summary.total_lines, 0)
         self.assertEqual(summary.line_coverage_percentage, 0.0)
+
 
 class TestMCDCIntersection(unittest.TestCase):
     def test_mcdc_boolean_extraction(self):
@@ -233,24 +256,27 @@ class TestMCDCIntersection(unittest.TestCase):
             "+if (a && b) { return 0; }\n"
         )
         mock_json = {
-            "data": [{
-                "files": [{
-                    "filename": "/workspace/src/math/sin.cpp",
-                    "segments": [
-                        [11, 0, 1, 1, 1]
-                    ],
-                    "mcdc_records": [
-                        [11, 4, 11, 14, 0, 0, 0, 0, 0, [True, False]]
+            "data": [
+                {
+                    "files": [
+                        {
+                            "filename": "/workspace/src/math/sin.cpp",
+                            "segments": [[11, 0, 1, 1, 1]],
+                            "mcdc_records": [
+                                [11, 4, 11, 14, 0, 0, 0, 0, 0, [True, False]]
+                            ],
+                        }
                     ]
-                }]
-            }]
+                }
+            ]
         }
         diff_files = DiffParser.parse(mock_diff)
         coverage_matrix = CoverageJSONParser.extract_patch_matrix(mock_json, diff_files)
         summary = calculate_patch_statistics(diff_files, coverage_matrix)
-        
+
         self.assertEqual(summary.total_mcdc_total_conditions, 2)
         self.assertEqual(summary.total_mcdc_covered_conditions, 1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

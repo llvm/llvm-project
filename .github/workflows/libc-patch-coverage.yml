@@ -49,21 +49,19 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:8fee4c9ce5a1fd095686593cd36e032c48a31b6ae575378c82accd1d86a08d59
-      options: >-
-        --privileged
     defaults:
       run:
         shell: bash
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 2
         persist-credentials: false
 
     - name: Setup Compiler Cache (sccache)
-      uses: hendrikmuhs/ccache-action@v1.2.23
+      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
         max-size: 1G
         key: libc_coverage_unified_v2_x86_64
@@ -71,9 +69,6 @@ jobs:
 
     - name: Configure CMake
       run: |
-        echo "=== [STAGE 1/4] Starting CMake Configuration at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
-        START_TIME=$(date +%s)
-
         export CMAKE_FLAGS="
           -G Ninja
           -S runtimes
@@ -93,9 +88,6 @@ jobs:
         "
         cmake $CMAKE_FLAGS
 
-        END_TIME=$(date +%s)
-        echo "=== [STAGE 1/4] CMake Configuration Completed in $((END_TIME - START_TIME))s ==="
-
     - name: Build and Run Targeted Tests
       env:
         EVENT_NAME: ${{ github.event_name }}
@@ -109,9 +101,6 @@ jobs:
         BRANCH_REF: ${{ github.ref_name }}
         REPO_NAME: ${{ github.repository }}
       run: |
-        echo "=== [STAGE 2/4] Starting Targeted Test Discovery at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
-        START_TIME=$(date +%s)
-
         # Ensure upstream llvm-project remote is configured
         git remote add upstream https://github.com/llvm/llvm-project.git 2>/dev/null || true
 
@@ -124,6 +113,16 @@ jobs:
           BASE_REPO="${PR_BASE_REPO:-llvm/llvm-project}"
           HEAD_REPO="${PR_HEAD_REPO:-$REPO_NAME}"
           git fetch upstream "$BASE_SHA" --depth=1 2>/dev/null || git fetch origin "$BASE_SHA" --depth=1 2>/dev/null || git fetch origin "$BASE_REF" --depth=1 2>/dev/null || true
+          DIFF_BASE="$BASE_SHA"
+        elif [ "$BRANCH_REF" != "main" ]; then
+          # For feature branches, compare against main merge-base
+          git fetch origin main --depth=100 2>/dev/null || true
+          BASE_SHA=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD~1 2>/dev/null || echo "HEAD~1")
+          HEAD_SHA="$COMMIT_SHA"
+          BASE_REF="main"
+          HEAD_REF="$BRANCH_REF"
+          BASE_REPO="llvm/llvm-project"
+          HEAD_REPO="$REPO_NAME"
           DIFF_BASE="$BASE_SHA"
         else
           # For direct pushes, compare the pushed commit against its parent (HEAD~1)
@@ -219,13 +218,9 @@ jobs:
           cat coverage_report.md >> $GITHUB_STEP_SUMMARY
         fi
 
-        END_TIME=$(date +%s)
-        echo "=== [STAGE 2/4] Targeted Tests Completed in $((END_TIME - START_TIME))s ==="
-
     - name: Merge Profiles
       if: env.TARGETS != ''
       run: |
-        echo "=== [STAGE 3/4] Merging Raw Profiles at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
         find . -name "libc_cov_*.profraw" > profraw_list.txt
         NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
         echo "[LOG] Discovered $NUM_PROFS raw profile data files."
@@ -239,11 +234,10 @@ jobs:
     - name: Extract Executables and Generate Summary
       if: env.TARGETS != ''
       run: |
-        echo "=== [STAGE 4/4] Generating Coverage Report at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
         EXECUTABLES=($(find build-cov -type f -executable -name "*__build__"))
         OBJECTS=("${EXECUTABLES[@]:1}")
         OBJECTS=("${OBJECTS[@]/#/-object=}")
-        
+
         echo "[LOG] Discovered ${#EXECUTABLES[@]} instrumented binaries for llvm-cov export."
 
         if [ ! -f libc_full.profdata ]; then
@@ -287,7 +281,7 @@ jobs:
 
     - name: Post or Update Sticky PR Comment
       if: always() && github.event_name == 'pull_request'
-      uses: actions/github-script@v7
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
@@ -314,7 +308,7 @@ jobs:
             // Parse metrics from reportContent for history table entry
             const headSha = context.payload.pull_request.head.sha.substring(0, 7);
             const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
-            
+
             const summaryMatch = reportContent.match(/\|\s*\*\*Total \(Patch\)\*\*\s*\|\s*\*\*([0-9.]+)%\*\*\s*\|\s*([0-9]+)\s*\/\s*([0-9]+)\s*\|\s*\*\*([0-9]+)\*\*/);
             const pct = summaryMatch ? summaryMatch[1] + '%' : '100.00%';
             const totalLines = summaryMatch ? summaryMatch[3] : 'N/A';

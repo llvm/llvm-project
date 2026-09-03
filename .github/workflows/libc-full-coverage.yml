@@ -35,19 +35,18 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:8fee4c9ce5a1fd095686593cd36e032c48a31b6ae575378c82accd1d86a08d59
-      options: --privileged
     defaults:
       run:
         shell: bash
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         fetch-depth: 1
         persist-credentials: false
 
     - name: Setup Compiler Cache (sccache)
-      uses: hendrikmuhs/ccache-action@v1.2.23
+      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
         max-size: 1G
         key: libc_coverage_unified_v2_x86_64
@@ -55,9 +54,6 @@ jobs:
 
     - name: Configure CMake
       run: |
-        echo "=== [STAGE 1/4] Starting CMake Configuration at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
-        START_TIME=$(date +%s)
-
         export CMAKE_FLAGS="
           -G Ninja
           -S runtimes
@@ -77,23 +73,13 @@ jobs:
         "
         cmake $CMAKE_FLAGS
 
-        END_TIME=$(date +%s)
-        echo "=== [STAGE 1/4] CMake Configuration Completed in $((END_TIME - START_TIME))s ==="
-
     - name: Run Full Codebase Unit Tests
       run: |
-        echo "=== [STAGE 2/4] Running Full Unit Test Suite at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
-        START_TIME=$(date +%s)
-
         export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
         ninja -k 0 -C build-cov libc-unit-tests || true
 
-        END_TIME=$(date +%s)
-        echo "=== [STAGE 2/4] libc-unit-tests Completed in $((END_TIME - START_TIME))s ==="
-
     - name: Merge Profiles
       run: |
-        echo "=== [STAGE 3/4] Merging Raw Profiles at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
         find . -name "libc_cov_*.profraw" > profraw_list.txt
         NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
         echo "[LOG] Discovered $NUM_PROFS raw profile data files."
@@ -109,7 +95,6 @@ jobs:
         COMMIT_SHA: ${{ github.sha }}
         BRANCH_REF: ${{ github.ref_name }}
       run: |
-        echo "=== [STAGE 4/4] Generating Full Codebase Coverage Reports at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
         EXECUTABLES=($(find build-cov -type f -executable -name "*__build__"))
         OBJECTS=("${EXECUTABLES[@]:1}")
         OBJECTS=("${OBJECTS[@]/#/-object=}")
@@ -140,8 +125,14 @@ jobs:
         PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/codebase_coverage.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" >> $GITHUB_STEP_SUMMARY
         echo "[LOG] Post-commit summary report written to GITHUB_STEP_SUMMARY."
 
+    - name: Fallback Failure Summary
+      if: failure() && !hashFiles('coverage.json')
+      run: |
+        echo "### LLVM-libc Coverage Report" >> $GITHUB_STEP_SUMMARY
+        echo "Workflow run encountered an error before coverage reports could be generated. Inspect job logs for details." >> $GITHUB_STEP_SUMMARY
+
     - name: Upload HTML Coverage Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: libc-coverage-html
         path: coverage_html/
