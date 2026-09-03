@@ -125,9 +125,12 @@ public:
   /// in the error message.
   /// \param Loc -- The SourceLocation of the Unlock
   /// \param LocPreviousUnlock -- If valid, the location of a previous Unlock.
+  /// \param MaybeHeld -- The capability is try-held: acquired by a
+  /// try-acquire whose result was not checked, so it is only possibly held.
   virtual void handleUnmatchedUnlock(StringRef Kind, Name LockName,
                                      SourceLocation Loc,
-                                     SourceLocation LocPreviousUnlock) {}
+                                     SourceLocation LocPreviousUnlock,
+                                     bool MaybeHeld) {}
 
   /// Warn about an unlock function call that attempts to unlock a lock with
   /// the incorrect lock kind. For instance, a shared lock being unlocked
@@ -150,9 +153,11 @@ public:
   /// in the error message.
   /// \param LocLocked -- The location of the first lock expression.
   /// \param LocDoubleLock -- The location of the second lock expression.
+  /// \param MaybeHeld -- The first acquisition was a try-acquire whose result
+  /// was not checked, so the capability is only possibly held.
   virtual void handleDoubleLock(StringRef Kind, Name LockName,
                                 SourceLocation LocLocked,
-                                SourceLocation LocDoubleLock) {}
+                                SourceLocation LocDoubleLock, bool MaybeHeld) {}
 
   /// Warn about situations where a mutex is sometimes held and sometimes not.
   /// The three situations are:
@@ -244,8 +249,11 @@ public:
   /// \param LockName -- A StringRef name for the lock expression, to be printed
   /// in the error message.
   /// \param Loc -- The location of the function call.
+  /// \param MaybeHeld -- The capability is try-held: acquired by a
+  /// try-acquire whose result was not checked, so it is only possibly held.
   virtual void handleFunExcludesLock(StringRef Kind, Name FunName,
-                                     Name LockName, SourceLocation Loc) {}
+                                     Name LockName, SourceLocation Loc,
+                                     bool MaybeHeld) {}
 
   /// Warn when an actual underlying mutex of a scoped lockable does not match
   /// the expected.

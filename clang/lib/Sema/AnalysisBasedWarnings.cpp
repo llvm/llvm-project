@@ -2042,11 +2042,12 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
   }
 
   void handleUnmatchedUnlock(StringRef Kind, Name LockName, SourceLocation Loc,
-                             SourceLocation LocPreviousUnlock) override {
+                             SourceLocation LocPreviousUnlock,
+                             bool MaybeHeld) override {
     if (Loc.isInvalid())
       Loc = FunLocation;
     PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_unlock_but_no_lock)
-                                         << Kind << LockName);
+                                         << Kind << LockName << MaybeHeld);
     Warnings.emplace_back(std::move(Warning),
                           makeUnlockedHereNote(LocPreviousUnlock, Kind));
   }
@@ -2065,11 +2066,12 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
   }
 
   void handleDoubleLock(StringRef Kind, Name LockName, SourceLocation LocLocked,
-                        SourceLocation LocDoubleLock) override {
+                        SourceLocation LocDoubleLock, bool MaybeHeld) override {
     if (LocDoubleLock.isInvalid())
       LocDoubleLock = FunLocation;
     PartialDiagnosticAt Warning(LocDoubleLock, S.PDiag(diag::warn_double_lock)
-                                                   << Kind << LockName);
+                                                   << Kind << LockName
+                                                   << MaybeHeld);
     Warnings.emplace_back(std::move(Warning),
                           makeLockedHereNote(LocLocked, Kind));
   }
@@ -2292,9 +2294,10 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
   }
 
   void handleFunExcludesLock(StringRef Kind, Name FunName, Name LockName,
-                             SourceLocation Loc) override {
+                             SourceLocation Loc, bool MaybeHeld) override {
     PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_fun_excludes_mutex)
-                                         << Kind << FunName << LockName);
+                                         << Kind << FunName << LockName
+                                         << MaybeHeld);
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
