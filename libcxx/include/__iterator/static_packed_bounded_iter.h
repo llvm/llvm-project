@@ -80,7 +80,7 @@ private:
 
   _Ptr __current() const noexcept { return reinterpret_cast<pointer>(__data_ & __PtrMask); }
 
-  void __increment(size_t __n) noexcept {
+  void __increment(difference_type __n) noexcept {
     __ptr += __n;
     __data_ += __n;
   }
