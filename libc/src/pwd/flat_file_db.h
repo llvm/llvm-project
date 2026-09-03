@@ -172,7 +172,8 @@ public:
     return Error(EINVAL);
   }
 
-  // Searches for a record matching a given predicate.
+  // Searches for a record matching a given predicate. Returns true if the
+  // entry was found, false if it's missing, or an Error if lookup failed.
   LIBC_INLINE ErrorOr<bool> lookup(Matcher matcher, EntryType *entry,
                                    cpp::span<char> buffer) {
     if (!entry)
