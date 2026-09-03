@@ -2667,6 +2667,27 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
       else
         New->setTypeSourceInfo(OldTD->getTypeSourceInfo());
 
+      // An anonymous enum is recognized as a redeclaration only when its
+      // typedef name gets merged, at which point the new enum and its
+      // enumerators already have a distinct canonical type. Link the enum
+      // declarations, but also retype the new enumerators because
+      // setPreviousDecl() does not update QualTypes built before the merge;
+      // otherwise the merged typedef and its enumerators disagree on the type
+      // (GH213299).
+      //
+      // FIXME: The global module restriction only limits the impact of this
+      // change; relax it if the issue shows up in other contexts.
+      if (Module *M = OldTag->getOwningModule(); M && M->isGlobalModule()) {
+        if (auto *NewEnum = dyn_cast<EnumDecl>(NewTag)) {
+          if (auto *OldEnum = dyn_cast<EnumDecl>(OldTag)) {
+            NewEnum->setPreviousDecl(OldEnum);
+            QualType EnumType = Context.getCanonicalTagType(OldEnum);
+            for (auto *ECD : NewEnum->enumerators())
+              ECD->setType(EnumType);
+          }
+        }
+      }
+
       // Make the old tag definition visible.
       makeMergedDefinitionVisible(Hidden);
 
@@ -3455,26 +3476,7 @@ static void propagateAttributes(ParmVarDecl *To, const ParmVarDecl *From,
 /// mergeParamDeclAttributes - Copy attributes from the old parameter
 /// to the new one.
 static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
-                                     const ParmVarDecl *oldDecl,
-                                     Sema &S) {
-  // C++11 [dcl.attr.depend]p2:
-  //   The first declaration of a function shall specify the
-  //   carries_dependency attribute for its declarator-id if any declaration
-  //   of the function specifies the carries_dependency attribute.
-  const CarriesDependencyAttr *CDA = newDecl->getAttr<CarriesDependencyAttr>();
-  if (CDA && !oldDecl->hasAttr<CarriesDependencyAttr>()) {
-    S.Diag(CDA->getLocation(),
-           diag::err_carries_dependency_missing_on_first_decl) << 1/*Param*/;
-    // Find the first declaration of the parameter.
-    // FIXME: Should we build redeclaration chains for function parameters?
-    const FunctionDecl *FirstFD =
-      cast<FunctionDecl>(oldDecl->getDeclContext())->getFirstDecl();
-    const ParmVarDecl *FirstVD =
-      FirstFD->getParamDecl(oldDecl->getFunctionScopeIndex());
-    S.Diag(FirstVD->getLocation(),
-           diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
-  }
-
+                                     const ParmVarDecl *oldDecl, Sema &S) {
   propagateAttributes(
       newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;
@@ -4230,18 +4232,6 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
             << NRA;
         Diag(Old->getLocation(), diag::note_previous_declaration);
       }
-
-    // C++11 [dcl.attr.depend]p2:
-    //   The first declaration of a function shall specify the
-    //   carries_dependency attribute for its declarator-id if any declaration
-    //   of the function specifies the carries_dependency attribute.
-    const CarriesDependencyAttr *CDA = New->getAttr<CarriesDependencyAttr>();
-    if (CDA && !Old->hasAttr<CarriesDependencyAttr>()) {
-      Diag(CDA->getLocation(),
-           diag::err_carries_dependency_missing_on_first_decl) << 0/*Function*/;
-      Diag(Old->getFirstDecl()->getLocation(),
-           diag::note_carries_dependency_missing_first_decl) << 0/*Function*/;
-    }
 
     // SYCL 2020 section 5.10.1, "SYCL functions and member functions linkage":
     //   When a function is declared with SYCL_EXTERNAL, that macro must be
@@ -5051,7 +5041,8 @@ void Sema::notePreviousDefinition(const NamedDecl *Old, SourceLocation New) {
 }
 
 bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
-  if (!hasVisibleDefinition(Old) &&
+  if ((!hasVisibleDefinition(Old) ||
+       isFromSameSingleIncludeHeader(Old, New->getLocation())) &&
       (New->getFormalLinkage() == Linkage::Internal || New->isInline() ||
        isa<VarTemplateSpecializationDecl>(New) ||
        New->getDescribedVarTemplate() ||
@@ -6584,6 +6575,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
         if (DC->isRecord())
           return nullptr;
 
+        D.setInvalidType();
+      } else if (CurContext->isRecord() && !CurContext->Equals(DC)) {
         D.setInvalidType();
       }
     }
@@ -16334,7 +16327,9 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
     return;
 
   bool DefinitionVisible = false;
-  if (SkipBody && isRedefinitionAllowedFor(Definition, DefinitionVisible) &&
+  if (SkipBody &&
+      isRedefinitionAllowedFor(Definition, FD->getLocation(),
+                               DefinitionVisible) &&
       (Definition->getFormalLinkage() == Linkage::Internal ||
        Definition->isInlined() || Definition->getDescribedFunctionTemplate() ||
        !Definition->getTemplateParameterLists().empty())) {
@@ -18506,7 +18501,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   }
 
   if (getLangOpts().CPlusPlus && Name && DC && StdNamespace &&
-      DC->Equals(getStdNamespace())) {
+      DC->getRedeclContext()->Equals(getStdNamespace())) {
     if (Name->isStr("bad_alloc")) {
       // This is a declaration of or a reference to "std::bad_alloc".
       isStdBadAlloc = true;
@@ -18811,9 +18806,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                 // check in C11 6.2.7/1 (or 6.1.2.6/1 in C89).
                 NamedDecl *Hidden = nullptr;
                 bool HiddenDefVisible = false;
-                if (SkipBody &&
-                    (isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible) ||
-                     getLangOpts().C23)) {
+                if (SkipBody && (isRedefinitionAllowedFor(Def, NameLoc, &Hidden,
+                                                          HiddenDefVisible) ||
+                                 getLangOpts().C23)) {
                   // There is a definition of this tag, but it is not visible.
                   // We explicitly make use of C++'s one definition rule here,
                   // and assume that this definition is identical to the hidden
@@ -21512,8 +21507,9 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
 }
 
-bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
-                                    bool &Visible) {
+bool Sema::isRedefinitionAllowedFor(NamedDecl *D,
+                                    SourceLocation NewDefinitionLoc,
+                                    NamedDecl **Suggested, bool &Visible) {
   Visible = hasVisibleDefinition(D, Suggested);
   // Accoding to [basic.def.odr]p16, it is not allowed to have duplicated definition
   // for declaratins which is attached to named modules.
@@ -21523,6 +21519,8 @@ bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
       D->isInNamedModule())
     return false;
   // The redefinition of D in the **current** TU is allowed if D is invisible or
-  // D is defined in the global module of other module units.
-  return D->isInAnotherModuleUnit() || !Visible;
+  // D is defined in the global module of other module units or D is defined in
+  // the same header in a different module.
+  return D->isInAnotherModuleUnit() || !Visible ||
+         isFromSameSingleIncludeHeader(D, NewDefinitionLoc);
 }

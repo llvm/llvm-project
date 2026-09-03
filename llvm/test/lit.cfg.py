@@ -656,6 +656,10 @@ def have_ld_plugin_support(ld_executable, name):
     ):
         return False
 
+    # CMake was not able to find the linker executable.
+    if ld_executable.endswith("NOTFOUND"):
+        return False
+
     ld_cmd = subprocess.Popen(
         [ld_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )

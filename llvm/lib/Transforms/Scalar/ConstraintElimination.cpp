@@ -101,7 +101,7 @@ struct FactOrCheck {
     InstFact,      /// A fact that holds after Inst executed (e.g. an assume or
                    /// min/mix intrinsic.
     InstCheck,     /// An instruction to simplify (e.g. an overflow math
-                   /// intrinsics).
+                   /// intrinsics) or whose flags may be strengthened.
     UseCheck       /// An use of a compare instruction to simplify.
   };
 
@@ -146,8 +146,8 @@ struct FactOrCheck {
     return FactOrCheck(DTN, U);
   }
 
-  static FactOrCheck getCheck(DomTreeNode *DTN, CallInst *CI) {
-    return FactOrCheck(EntryTy::InstCheck, DTN, CI);
+  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *I) {
+    return FactOrCheck(EntryTy::InstCheck, DTN, I);
   }
 
   bool isCheck() const {
@@ -1109,13 +1109,12 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (&BB == Latch && !IncStep)
     return;
 
-  BasicBlock *InLoopSucc = nullptr;
-  if (Pred == CmpInst::ICMP_NE)
-    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(0);
-  else if (Pred == CmpInst::ICMP_EQ)
-    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(1);
-  else
-    return;
+  bool ContinueOnTrue =
+      Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
+  CmpInst::Predicate ContinuePred =
+      ContinueOnTrue ? Pred.dropSameSign() : CmpInst::getInversePredicate(Pred);
+  BasicBlock *InLoopSucc = cast<CondBrInst>(BB.getTerminator())
+                               ->getSuccessor(ContinueOnTrue ? 0 : 1);
 
   if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
     return;
@@ -1125,6 +1124,23 @@ void State::addInfoForInductions(BasicBlock &BB) {
     return;
 
   auto [StartValue, Backedge] = getStartAndBackedgeValue(*PN, LoopPred);
+  DomTreeNode *DTN = DT.getNode(InLoopSucc);
+
+  if (ICmpInst::isRelational(ContinuePred)) {
+    if (A != Backedge)
+      return;
+
+    // The latch condition ensures ContinuePred holds in the header on each
+    // iteration other than the first. Together with a precondition on the start
+    // value (StartValue ContinuePred B), we can add B as bound of PN.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
+
+    // A relational latch steps past B rather than landing on it, so none of the
+    // reasoning below applies.
+    return;
+  }
+
   const APInt *StepOffset = nullptr;
   const SCEV *StartSCEV = nullptr;
   if (match(Backedge, m_c_Add(m_Specific(PN), m_APInt(StepOffset)))) {
@@ -1137,8 +1153,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
                                    m_SpecificLoop(L))))
       return;
   }
-
-  DomTreeNode *DTN = DT.getNode(InLoopSucc);
 
   // If we looked through `PN + C`, only derive facts when that add is
   // really the induction's post-increment or post-decrement.
@@ -1195,55 +1209,42 @@ void State::addInfoForInductions(BasicBlock &BB) {
       return;
   }
 
-  Value *LowerBound = StartValue;
-  bool LowerBoundNUW = true, LowerBoundNSW = true;
-  if (IncStep) {
-    auto *StartC = dyn_cast<ConstantInt>(StartValue);
-    if (!StartC)
-      return;
-    bool UOverflow = false, SOverflow = false;
-    APInt Sum = StartC->getValue().uadd_ov(*StepOffset, UOverflow);
-    (void)StartC->getValue().sadd_ov(*StepOffset, SOverflow);
-    LowerBound = ConstantInt::get(StartValue->getType(), Sum);
-    LowerBoundNUW = !UOverflow;
-    LowerBoundNSW = !SOverflow;
-  }
+  // We already established that B - Start is a multiple of Step above. The loop
+  // exits once the compared value reaches B, that is at PN == B when comparing
+  // the phi, and at PN + Step == B for a post-increment. Together with the
+  // added precondition StartValue <= B for the former and the strict
+  // StartValue < B for the latter (which implies StartValue + Step <= B),
+  // neither PN nor the increment can wrap.
+  CmpInst::Predicate UPrecond = IncStep ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE;
+  ConditionTy StartBeforeBoundUnsigned = {UPrecond, StartValue, B};
+  ConditionTy StartBeforeBoundSigned = {ICmpInst::getSignedPredicate(UPrecond),
+                                        StartValue, B};
 
-  // AR may wrap. Add PN >= StartValue conditional on LowerBound <= B, which
-  // guarantees that the loop exits before wrapping in combination with the
-  // restrictions on B and the step above.
-  ConditionTy StartBeforeBoundULE = {CmpInst::ICMP_ULE, LowerBound, B};
-  ConditionTy StartBeforeBoundSLE = {CmpInst::ICMP_SLE, LowerBound, B};
-  if (!Info.Unsigned && LowerBoundNUW)
+  // Add PN >= StartValue, as the loop exits before wrapping.
+  if (!Info.Unsigned)
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundULE));
-  if (!Info.Signed && LowerBoundNSW)
+        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundUnsigned));
+  if (!Info.Signed)
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSLE));
-
-  if (LowerBoundNSW)
-    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
-                                                     B, StartBeforeBoundSLE));
-
-  if (!LowerBoundNUW)
-    return;
-
-  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_ULT, PN,
-                                                   B, StartBeforeBoundULE));
+        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSigned));
+  // Add PN < B, as the loop exits once the compared value reaches B.
+  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
+                                                   B, StartBeforeBoundSigned));
+  WorkList.push_back(FactOrCheck::getConditionFact(
+      DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
 
   // Try to add condition from the header or latch to the dedicated exit
   // blocks. When exiting either with EQ or NE, we know that the induction value
   // must be u<= B, as other exits may only exit earlier.
   assert(!StepOffset->isNegative() && "induction must be increasing");
-  assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
-         "unsupported predicate");
+  assert(ContinuePred == CmpInst::ICMP_NE && "unsupported predicate");
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
     // Bail out on non-dedicated exits.
     if (DT.dominates(&BB, EB)) {
       WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, StartBeforeBoundULE));
+          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, StartBeforeBoundUnsigned));
     }
   }
 }
@@ -1289,6 +1290,118 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   A = Index;
   B = ConstantInt::get(Index->getType(), MaxIndex);
   return true;
+}
+
+/// Returns true if \p I is a candidate whose poison-generating flags may be
+/// strengthened using the constraint systems.
+static bool canStrengthenFlags(Instruction *I) {
+  auto *BO = dyn_cast<BinaryOperator>(I);
+  if (!BO || !BO->getType()->isIntegerTy())
+    return false;
+
+  switch (BO->getOpcode()) {
+  case Instruction::Sub:
+    // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
+    // canonicalized to Add.
+    return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+  case Instruction::Mul:
+  case Instruction::Shl:
+    if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
+      return false;
+    // With a constant second operand, we can use bounds on the first operand to
+    // refine no-wrap flags. Independently, nuw can be added for nsw if the
+    // operands are non-negative.
+    return isa<ConstantInt>(BO->getOperand(1)) || BO->hasNoSignedWrap();
+  default:
+    return false;
+  }
+}
+
+/// Returns true if \p Info implies that \p Op is in \p R, interpreting \p R as
+/// a signed range if \p Signed is set and as an unsigned range otherwise.
+static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
+                            const ConstantRange &R, bool Signed) {
+  if (R.isEmptySet() || (Signed ? R.isSignWrappedSet() : R.isWrappedSet()))
+    return false;
+
+  if (R.isFullSet())
+    return true;
+
+  unsigned BitWidth = R.getBitWidth();
+  APInt Min = Signed ? R.getSignedMin() : R.getUnsignedMin();
+  APInt Max = Signed ? R.getSignedMax() : R.getUnsignedMax();
+  APInt MinVal = Signed ? APInt::getSignedMinValue(BitWidth)
+                        : APInt::getMinValue(BitWidth);
+  APInt MaxVal = Signed ? APInt::getSignedMaxValue(BitWidth)
+                        : APInt::getMaxValue(BitWidth);
+  Type *Ty = Op->getType();
+  if (Min != MinVal &&
+      !Info.doesHold(Signed ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE, Op,
+                     ConstantInt::get(Ty, Min)))
+    return false;
+  if (Max != MaxVal &&
+      !Info.doesHold(Signed ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE, Op,
+                     ConstantInt::get(Ty, Max)))
+    return false;
+  return true;
+}
+
+/// Try to strengthen \p I's poison generating flags using \p Info. Returns
+/// true if \p I was modified.
+static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
+                                 SmallVectorImpl<Instruction *> &ToRemove) {
+  assert(canStrengthenFlags(I) && "not a candidate for flag strengthening");
+
+  using OBO = OverflowingBinaryOperator;
+  Value *Op0 = I->getOperand(0), *Op1 = I->getOperand(1);
+  switch (I->getOpcode()) {
+  case Instruction::Sub: {
+    // Op0 - Op1 does not wrap unsigned, if Op0 >=u Op1.
+    if (!Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1))
+      return false;
+    LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+    I->setHasNoUnsignedWrap();
+    return true;
+  }
+  case Instruction::Mul:
+  case Instruction::Shl: {
+    auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
+    bool Changed = false;
+    // For a constant Op1, the ranges of Op0 for which the operation does not
+    // wrap are known exactly; check if the systems imply one of them.
+    if (auto *C = dyn_cast<ConstantInt>(Op1)) {
+      ConstantRange Other(C->getValue());
+      if (!I->hasNoUnsignedWrap() &&
+          doesHoldInRange(Info, Op0,
+                          ConstantRange::makeGuaranteedNoWrapRegion(
+                              Opcode, Other, OBO::NoUnsignedWrap),
+                          /*Signed=*/false)) {
+        LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+        I->setHasNoUnsignedWrap();
+        Changed = true;
+      }
+      if (!I->hasNoSignedWrap() &&
+          doesHoldInRange(Info, Op0,
+                          ConstantRange::makeGuaranteedNoWrapRegion(
+                              Opcode, Other, OBO::NoSignedWrap),
+                          /*Signed=*/true)) {
+        LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
+        I->setHasNoSignedWrap();
+        Changed = true;
+      }
+    }
+    if (!I->hasNoUnsignedWrap() && I->hasNoSignedWrap() &&
+        Info.isKnownNonNegative(Op0) &&
+        (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1))) {
+      LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+      I->setHasNoUnsignedWrap();
+      Changed = true;
+    }
+    return Changed;
+  }
+  default:
+    return false;
+  }
 }
 
 void State::addInfoFor(BasicBlock &BB) {
@@ -1372,12 +1485,12 @@ void State::addInfoFor(BasicBlock &BB) {
     case Intrinsic::umax:
     case Intrinsic::smin:
     case Intrinsic::smax:
+    case Intrinsic::usub_sat:
       // TODO: handle llvm.abs as well
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       [[fallthrough]];
     case Intrinsic::uadd_sat:
-    case Intrinsic::usub_sat:
       // TODO: Check if it is possible to instead only added the min/max facts
       // when simplifying uses of the min/max intrinsics.
       if (!isGuaranteedNotToBePoison(&I))
@@ -1403,6 +1516,11 @@ void State::addInfoFor(BasicBlock &BB) {
           isGuaranteedNotToBePoison(BO))
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
+
+    // Queue instructions whose flags may be strengthened based on the facts
+    // that hold on entry to BB.
+    if (canStrengthenFlags(&I))
+      WorkList.push_back(FactOrCheck::getCheck(DT.getNode(&BB), &I));
 
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
@@ -1808,6 +1926,25 @@ static bool checkAndReplaceCmp(CmpIntrinsic *I, ConstraintInfo &Info,
   return false;
 }
 
+/// Try to replace \p USub by a plain subtract, if \p Info proves it cannot
+/// saturate. Returns true if \p USub was replaced.
+static bool checkAndReplaceUSubSat(SaturatingInst *USub, ConstraintInfo &Info,
+                                   SmallVectorImpl<Instruction *> &ToRemove) {
+  // usub.sat(A, B) is A - B exactly when A >=u B.
+  Value *A = USub->getLHS();
+  Value *B = USub->getRHS();
+  if (!checkCondition(CmpInst::ICMP_UGE, A, B, USub, Info).value_or(false))
+    return false;
+
+  IRBuilder<> Builder(USub);
+  Value *Sub = Builder.CreateSub(A, B, "", /*HasNUW=*/true,
+                                 /*HasNSW=*/Info.isKnownNonNegative(A));
+  USub->replaceAllUsesWith(Sub);
+  Sub->takeName(USub);
+  ToRemove.push_back(USub);
+  return true;
+}
+
 static void
 removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      Module *ReproducerModule,
@@ -2158,6 +2295,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       Instruction *Inst = CB.getInstructionToSimplify();
       if (!Inst)
         continue;
+      if (canStrengthenFlags(Inst)) {
+        Changed |= tryToStrengthenFlags(Inst, Info, ToRemove);
+        continue;
+      }
       LLVM_DEBUG(dbgs() << "Processing condition to simplify: " << *Inst
                         << "\n");
       if (auto *II = dyn_cast<WithOverflowInst>(Inst)) {
@@ -2177,6 +2318,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         Changed |= checkAndReplaceMinMax(MinMax, Info, ToRemove);
       } else if (auto *CmpIntr = dyn_cast<CmpIntrinsic>(Inst)) {
         Changed |= checkAndReplaceCmp(CmpIntr, Info, ToRemove);
+      } else if (match(Inst, m_Intrinsic<Intrinsic::usub_sat>())) {
+        Changed |=
+            checkAndReplaceUSubSat(cast<SaturatingInst>(Inst), Info, ToRemove);
       }
       continue;
     }

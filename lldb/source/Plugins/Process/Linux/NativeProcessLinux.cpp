@@ -82,6 +82,13 @@
 #define PTRACE_SETREGSET 0x4205
 #endif
 
+// glibc declares ptrace taking enum __ptrace_request (which requires a cast in
+// C++), whereas bionic and musl declare it taking int and do not define
+// __ptrace_request.
+#ifndef __GLIBC__
+typedef int __ptrace_request;
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
@@ -396,7 +403,10 @@ void NativeProcessLinux::Manager::SigchldHandler() {
     // vice-versa. This means that if the child event arrives first, it may not
     // be handled by any process (because it doesn't know the thread belongs to
     // it).
-    bool handled = llvm::any_of(m_processes, [&](NativeProcessLinux *process) {
+    // The loop below may modify m_processes (create or delete entries), so
+    // operate on a temporary copy.
+    auto processes = llvm::to_vector(m_processes);
+    bool handled = llvm::any_of(processes, [&](NativeProcessLinux *process) {
       return process->TryHandleWaitStatus(pid, status);
     });
     if (!handled) {

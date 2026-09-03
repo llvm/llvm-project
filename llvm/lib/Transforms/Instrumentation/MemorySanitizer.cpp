@@ -2609,6 +2609,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void visitPtrToAddrInst(PtrToAddrInst &I) {
+    IRBuilder<> IRB(&I);
+    setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
+                                    "_msprop_ptrtoaddr"));
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   void visitIntToPtrInst(IntToPtrInst &I) {
     IRBuilder<> IRB(&I);
     setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
@@ -5088,6 +5095,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  void handleModfOrSincos(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *ArgShadow = getShadow(&I, 0);
+    Value *Shadow = PoisonValue::get(getShadowTy(&I));
+    Shadow = IRB.CreateInsertValue(Shadow, ArgShadow, 0);
+    Shadow = IRB.CreateInsertValue(Shadow, ArgShadow, 1);
+    setShadow(&I, Shadow);
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   Value *extractLowerShadow(IRBuilder<> &IRB, Value *V) {
     assert(isa<FixedVectorType>(V->getType()));
     assert(cast<FixedVectorType>(V->getType())->getNumElements() > 0);
@@ -5871,6 +5888,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::umul_with_overflow:
     case Intrinsic::smul_with_overflow:
       handleArithmeticWithOverflow(I);
+      break;
+    case Intrinsic::modf:
+    case Intrinsic::sincos:
+    case Intrinsic::sincospi:
+      handleModfOrSincos(I);
       break;
     case Intrinsic::abs:
       handleAbsIntrinsic(I);

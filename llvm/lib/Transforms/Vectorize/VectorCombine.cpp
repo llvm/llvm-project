@@ -2246,7 +2246,9 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
                     << "\n  LoadExtractCost: " << OriginalCost
                     << " vs ScalarizedCost: " << ScalarizedCost << "\n");
 
-  if (ScalarizedCost >= OriginalCost)
+  if (ScalarizedCost > OriginalCost)
+    return false;
+  if (ScalarizedCost == OriginalCost && !LI->hasOneUse())
     return false;
 
   // Ensure we add the load back to the worklist BEFORE its users so they can
@@ -2297,6 +2299,9 @@ bool VectorCombine::scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy,
   InstructionCost OriginalCost =
       TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
                           LI->getPointerAddressSpace(), CostKind);
+
+  if (!isa<FixedVectorType>(VecTy))
+    return false;
 
   Type *TargetScalarType = nullptr;
   unsigned VecBitWidth = DL->getTypeSizeInBits(VecTy);
@@ -6151,11 +6156,13 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       return false;
 
     unsigned ChainOperand = CurrentUses.front()->getOperandNo();
-    if (any_of(CurrentUses, [&](Use *U) {
-          auto *Inst = cast<Instruction>(U->getUser());
-          return Inst != FirstInst && (U->getOperandNo() != ChainOperand ||
-                                       !FirstInst->isSameOperationAs(Inst));
-        }))
+    bool MismatchedUse = any_of(CurrentUses, [&](Use *U) {
+      auto *Inst = cast<Instruction>(U->getUser());
+      return Inst != FirstInst && (U->getOperandNo() != ChainOperand ||
+                                   !FirstInst->isSameOperationAs(
+                                       Inst, Instruction::CompareCallTargets));
+    });
+    if (MismatchedUse)
       return false;
 
     auto GetSplatOrScalar = [](Value *V) {

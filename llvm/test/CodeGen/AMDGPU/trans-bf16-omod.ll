@@ -315,4 +315,104 @@ define amdgpu_ps void @v_tanh_bf16_mul4(bfloat %in, ptr addrspace(1) %out) #0 {
   ret void
 }
 
+; Output denormals enabled for every type: no omod folding.
+define amdgpu_ps void @v_cos_bf16_mul2_denorm_ieee(bfloat %in, ptr addrspace(1) %out) #1 {
+; SDAG-FAKE16-LABEL: v_cos_bf16_mul2_denorm_ieee:
+; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG-FAKE16-NEXT:    v_nop
+; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; SDAG-FAKE16-NEXT:    v_cos_bf16_e32 v0, v0
+; SDAG-FAKE16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; SDAG-FAKE16-NEXT:    v_pk_add_bf16 v0, v0, v0
+; SDAG-FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
+; SDAG-FAKE16-NEXT:    s_endpgm
+;
+; SDAG-REAL16-LABEL: v_cos_bf16_mul2_denorm_ieee:
+; SDAG-REAL16:       ; %bb.0:
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG-REAL16-NEXT:    v_nop
+; SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; SDAG-REAL16-NEXT:    v_cos_bf16_e32 v0.l, v0.l
+; SDAG-REAL16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; SDAG-REAL16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; SDAG-REAL16-NEXT:    v_pk_add_bf16 v0, v0, v0
+; SDAG-REAL16-NEXT:    global_store_b16 v[2:3], v0, off
+; SDAG-REAL16-NEXT:    s_endpgm
+  %cos = call bfloat @llvm.amdgcn.cos.bf16(bfloat %in)
+  %mul2 = fmul nsz bfloat %cos, 2.0
+  store bfloat %mul2, ptr addrspace(1) %out
+  ret void
+}
+
+; Only f32 output denormals are flushed. bf16 follows the default mode, which
+; is IEEE here, so there is still no omod folding.
+define amdgpu_ps void @v_cos_bf16_mul2_f32_denorm_flush(bfloat %in, ptr addrspace(1) %out) #2 {
+; SDAG-FAKE16-LABEL: v_cos_bf16_mul2_f32_denorm_flush:
+; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG-FAKE16-NEXT:    v_nop
+; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; SDAG-FAKE16-NEXT:    v_cos_bf16_e32 v0, v0
+; SDAG-FAKE16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; SDAG-FAKE16-NEXT:    v_pk_add_bf16 v0, v0, v0
+; SDAG-FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
+; SDAG-FAKE16-NEXT:    s_endpgm
+;
+; SDAG-REAL16-LABEL: v_cos_bf16_mul2_f32_denorm_flush:
+; SDAG-REAL16:       ; %bb.0:
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG-REAL16-NEXT:    v_nop
+; SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; SDAG-REAL16-NEXT:    v_cos_bf16_e32 v0.l, v0.l
+; SDAG-REAL16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; SDAG-REAL16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; SDAG-REAL16-NEXT:    v_pk_add_bf16 v0, v0, v0
+; SDAG-REAL16-NEXT:    global_store_b16 v[2:3], v0, off
+; SDAG-REAL16-NEXT:    s_endpgm
+  %cos = call bfloat @llvm.amdgcn.cos.bf16(bfloat %in)
+  %mul2 = fmul nsz bfloat %cos, 2.0
+  store bfloat %mul2, ptr addrspace(1) %out
+  ret void
+}
+
+; The default mode flushes output denormals, so bf16 does too, even though f32
+; is IEEE: omod folding applies.
+define amdgpu_ps void @v_cos_bf16_mul2_default_denorm_flush(bfloat %in, ptr addrspace(1) %out) #3 {
+; SDAG-FAKE16-LABEL: v_cos_bf16_mul2_default_denorm_flush:
+; SDAG-FAKE16:       ; %bb.0:
+; SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG-FAKE16-NEXT:    v_nop
+; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; SDAG-FAKE16-NEXT:    v_cos_bf16_e64 v0, v0 mul:2
+; SDAG-FAKE16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; SDAG-FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
+; SDAG-FAKE16-NEXT:    s_endpgm
+;
+; SDAG-REAL16-LABEL: v_cos_bf16_mul2_default_denorm_flush:
+; SDAG-REAL16:       ; %bb.0:
+; SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG-REAL16-NEXT:    v_nop
+; SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; SDAG-REAL16-NEXT:    v_cos_bf16_e64 v0.l, v0.l mul:2
+; SDAG-REAL16-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
+; SDAG-REAL16-NEXT:    global_store_b16 v[2:3], v0, off
+; SDAG-REAL16-NEXT:    s_endpgm
+  %cos = call bfloat @llvm.amdgcn.cos.bf16(bfloat %in)
+  %mul2 = fmul nsz bfloat %cos, 2.0
+  store bfloat %mul2, ptr addrspace(1) %out
+  ret void
+}
+
 attributes #0 = { nounwind denormal_fpenv(preservesign) }
+attributes #1 = { nounwind denormal_fpenv(ieee) }
+attributes #2 = { nounwind denormal_fpenv(ieee, float: preservesign) }
+attributes #3 = { nounwind denormal_fpenv(preservesign, float: ieee) }

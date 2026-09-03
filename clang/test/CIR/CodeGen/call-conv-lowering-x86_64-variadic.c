@@ -201,14 +201,14 @@ int call_wide_char(Pair2 p, WideChar w) { return vf(p, w); }
 // declared parameter.
 int ell_bitint17(Pair2 p, _BitInt(17) b) { return vf(p, b); }
 
-// CIR-LABEL: cir.func {{.*}}@ell_bitint17(%arg0: !u64i loc({{.+}}), %arg1: !cir.int<s, 17, bitint> {llvm.signext} loc({{.+}})) -> !s32i
+// CIR-LABEL: cir.func {{.*}}@ell_bitint17(%arg0: !u64i loc({{.+}}), %arg1: !cir.int<s, 17, bitint> {llvm.noundef, llvm.signext} loc({{.+}})) -> !s32i
 // CIR:         cir.store %arg1, %[[BSLOT:[0-9]+]] : !cir.int<s, 17, bitint>, !cir.ptr<!cir.int<s, 17, bitint>>
 // CIR:         %[[BV:[0-9]+]] = cir.load align(4) %[[BSLOT]] : !cir.ptr<!cir.int<s, 17, bitint>>, !cir.int<s, 17, bitint>
 // CIR:         %[[PV:[0-9]+]] = cir.load %{{[0-9]+}} : !cir.ptr<!u64i>, !u64i
-// CIR:         cir.call @vf(%[[PV]], %[[BV]]) : (!u64i, !cir.int<s, 17, bitint> {llvm.signext}) -> !s32i
+// CIR:         cir.call @vf(%[[PV]], %[[BV]]) : (!u64i, !cir.int<s, 17, bitint> {llvm.noundef, llvm.signext}) -> !s32i
 
 // LLVM-CIR-LABEL: define dso_local i32 @ell_bitint17(
-// LLVM-CIR-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i17 signext %[[B:[0-9a-zA-Z._]+]])
+// LLVM-CIR-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i17 noundef signext %[[B:[0-9a-zA-Z._]+]])
 // LLVM-OGCG-LABEL: define dso_local i32 @ell_bitint17(
 // LLVM-OGCG-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i17 noundef signext %[[B:[0-9a-zA-Z._]+]])
 // LLVM:         %[[EXT:[0-9a-zA-Z._]+]] = sext i17 %[[B]] to i32
@@ -216,7 +216,7 @@ int ell_bitint17(Pair2 p, _BitInt(17) b) { return vf(p, b); }
 // LLVM:         %[[RE:[0-9a-zA-Z._]+]] = load i32, ptr %[[BSLOT]], align 4
 // LLVM:         %[[TR:[0-9a-zA-Z._]+]] = trunc i32 %[[RE]] to i17
 // LLVM:         %[[PV:[0-9a-zA-Z._]+]] = load i64, ptr %{{[0-9a-zA-Z._]+}}, align
-// LLVM-CIR:     call i32 (i64, ...) @vf(i64 %[[PV]], i17 signext %[[TR]])
+// LLVM-CIR:     call i32 (i64, ...) @vf(i64 %[[PV]], i17 noundef signext %[[TR]])
 // LLVM-OGCG:    call i32 (i64, ...) @vf(i64 %[[PV]], i17 noundef signext %[[TR]])
 
 // A width between 33 and 63 widens to one register.
