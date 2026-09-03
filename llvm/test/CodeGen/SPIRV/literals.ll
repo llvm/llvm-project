@@ -28,9 +28,9 @@ entry:
   %hexf = alloca float, align 4
   store float 0x37D5C73200000000, ptr %hexf, align 4
   %inf = alloca float, align 4
-  store float 0x7FF0000000000000, ptr %inf, align 4
+  store float +inf, ptr %inf, align 4
   %ninf = alloca float, align 4
-  store float 0xFFF0000000000000, ptr %ninf, align 4
+  store float -inf, ptr %ninf, align 4
   %nan = alloca float, align 4
   store float 0x7FF8000000000000, ptr %nan, align 4
   %nnan = alloca float, align 4

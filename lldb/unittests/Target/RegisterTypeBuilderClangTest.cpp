@@ -14,6 +14,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/RegisterType.h"
@@ -39,10 +40,14 @@ protected:
     std::call_once(TestUtilities::g_debugger_initialize_flag,
                    []() { Debugger::Initialize(nullptr); });
     ArchSpec host_arch("x86_64-pc-linux");
+    m_default_arch = Target::GetDefaultArchitecture();
+    Target::SetDefaultArchitecture(host_arch);
     Platform::SetHostPlatform(
         platform_linux::PlatformLinux::CreateInstance(true, &host_arch));
     m_debugger_sp = Debugger::CreateInstance();
   }
+
+  void TearDown() override { Target::SetDefaultArchitecture(m_default_arch); }
 
   static RegisterInfo MakeRegisterInfo(const RegisterType &type,
                                        uint32_t byte_size) {
@@ -54,6 +59,7 @@ protected:
   }
 
   DebuggerSP m_debugger_sp;
+  ArchSpec m_default_arch;
 };
 
 TEST_F(RegisterTypeBuilderClangTest, ReusesCachedType) {
