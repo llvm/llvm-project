@@ -1642,15 +1642,7 @@ std::string VPSlotTracker::getName(const Value *V) {
 }
 
 void VPSlotTracker::printMetadataAsOperand(raw_ostream &O, const MDNode *N) {
-  // Use the module slot if \p N has already been numbered.
-  if (int Slot = getOrCreateMST(M, /*F=*/nullptr).getMetadataSlot(N);
-      Slot != -1) {
-    O << '!' << Slot;
-    return;
-  }
-  // Otherwise manually number metadata not attached to the module yet.
-  O << "!tmp"
-    << MetadataTmpIds.try_emplace(N, MetadataTmpIds.size()).first->second;
+  N->printAsOperand(O, getOrCreateMST(M, /*F=*/nullptr), M);
 }
 
 std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {

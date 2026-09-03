@@ -2026,24 +2026,24 @@ define hidden void @scale_uv_row_down2(ptr nocapture noundef readonly %0, i32 no
 ; CHECK:  LV: Scalar loop costs: 10.
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%10>
 ; CHECK:    ir<%11> = load from index 0
-; CHECK:    ir<%13> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%13> = load from index 1 (!alias.scope !53)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%11> to index 0
-; CHECK:    store ir<%13> to index 1 (!alias.scope !tmp1, !noalias !tmp0)
+; CHECK:    store ir<%13> to index 1 (!alias.scope !54, !noalias !53)
 ; CHECK:  Cost for VF 4: 37 (Estimated cost per lane: 9.25)
 ; CHECK:  Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%10>
 ; CHECK:    ir<%11> = load from index 0
-; CHECK:    ir<%13> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%13> = load from index 1 (!alias.scope !53)
 ; CHECK:  Cost of 7 for VF 8: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%11> to index 0
-; CHECK:    store ir<%13> to index 1 (!alias.scope !tmp1, !noalias !tmp0)
+; CHECK:    store ir<%13> to index 1 (!alias.scope !54, !noalias !53)
 ; CHECK:  Cost for VF 8: 41 (Estimated cost per lane: 5.13)
 ; CHECK:  Cost of 68 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%10>
 ; CHECK:    ir<%11> = load from index 0
-; CHECK:    ir<%13> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%13> = load from index 1 (!alias.scope !53)
 ; CHECK:  Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%11> to index 0
-; CHECK:    store ir<%13> to index 1 (!alias.scope !tmp1, !noalias !tmp0)
+; CHECK:    store ir<%13> to index 1 (!alias.scope !54, !noalias !53)
 ; CHECK:  Cost for VF 16: 82 (Estimated cost per lane: 5.13)
 ; CHECK:  LV: Selecting VF: 8.
 ;
@@ -2074,58 +2074,58 @@ define hidden void @scale_uv_row_down2(ptr nocapture noundef readonly %0, i32 no
 define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i32 noundef %1, ptr nocapture noundef writeonly %2, i32 noundef %3) {
 ; CHECK-LABEL: 'scale_uv_row_down2_box'
 ; CHECK:  LV: Scalar loop costs: 26.
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%14> = load vp<%next.gep>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%17> = load ir<%16>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%20> = load ir<%19>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%23> = load ir<%22>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%30>, vp<%next.gep>.1
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%32> = load ir<%31>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%35> = load ir<%34>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%38> = load ir<%37>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%41> = load ir<%40>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%48>, ir<%49>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%14> = load vp<%next.gep> (!alias.scope !63)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%17> = load ir<%16> (!alias.scope !63)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%20> = load ir<%19> (!alias.scope !64)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%23> = load ir<%22> (!alias.scope !64)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%30>, vp<%next.gep>.1 (!alias.scope !65, !noalias !62)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%32> = load ir<%31> (!alias.scope !63)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%35> = load ir<%34> (!alias.scope !63)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%38> = load ir<%37> (!alias.scope !64)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%41> = load ir<%40> (!alias.scope !64)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%48>, ir<%49> (!alias.scope !65, !noalias !62)
 ; CHECK:  Cost for VF 2: 82 (Estimated cost per lane: 41)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%14> = load from index 0
 ; CHECK:    ir<%32> = load from index 1
 ; CHECK:    ir<%17> = load from index 2
-; CHECK:    ir<%35> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%35> = load from index 3 (!alias.scope !63)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%19>
 ; CHECK:    ir<%20> = load from index 0
 ; CHECK:    ir<%38> = load from index 1
 ; CHECK:    ir<%23> = load from index 2
-; CHECK:    ir<%41> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%41> = load from index 3 (!alias.scope !64)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%30> to index 0
-; CHECK:    store ir<%48> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%48> to index 1 (!alias.scope !65, !noalias !62)
 ; CHECK:  Cost for VF 4: 75 (Estimated cost per lane: 18.8)
 ; CHECK:  Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%14> = load from index 0
 ; CHECK:    ir<%32> = load from index 1
 ; CHECK:    ir<%17> = load from index 2
-; CHECK:    ir<%35> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%35> = load from index 3 (!alias.scope !63)
 ; CHECK:  Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%19>
 ; CHECK:    ir<%20> = load from index 0
 ; CHECK:    ir<%38> = load from index 1
 ; CHECK:    ir<%23> = load from index 2
-; CHECK:    ir<%41> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%41> = load from index 3 (!alias.scope !64)
 ; CHECK:  Cost of 7 for VF 8: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%30> to index 0
-; CHECK:    store ir<%48> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%48> to index 1 (!alias.scope !65, !noalias !62)
 ; CHECK:  Cost for VF 8: 91 (Estimated cost per lane: 11.4)
 ; CHECK:  Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%14> = load from index 0
 ; CHECK:    ir<%32> = load from index 1
 ; CHECK:    ir<%17> = load from index 2
-; CHECK:    ir<%35> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%35> = load from index 3 (!alias.scope !63)
 ; CHECK:  Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%19>
 ; CHECK:    ir<%20> = load from index 0
 ; CHECK:    ir<%38> = load from index 1
 ; CHECK:    ir<%23> = load from index 2
-; CHECK:    ir<%41> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%41> = load from index 3 (!alias.scope !64)
 ; CHECK:  Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%30> to index 0
-; CHECK:    store ir<%48> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%48> to index 1 (!alias.scope !65, !noalias !62)
 ; CHECK:  Cost for VF 16: 324 (Estimated cost per lane: 20.3)
 ; CHECK:  LV: Selecting VF: 8.
 ;
@@ -2193,39 +2193,39 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
 define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0, i32 noundef %1, ptr nocapture noundef writeonly %2, i32 noundef %3) {
 ; CHECK-LABEL: 'scale_uv_row_down2_linear'
 ; CHECK:  LV: Scalar loop costs: 18.
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%10> = load vp<%next.gep>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%13> = load ir<%12>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%18>, vp<%next.gep>.1
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%20> = load ir<%19>
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%23> = load ir<%22>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%28>, ir<%29>
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%10> = load vp<%next.gep> (!alias.scope !72)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%13> = load ir<%12> (!alias.scope !72)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%18>, vp<%next.gep>.1 (!alias.scope !73, !noalias !72)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%20> = load ir<%19> (!alias.scope !72)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%23> = load ir<%22> (!alias.scope !72)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%28>, ir<%29> (!alias.scope !73, !noalias !72)
 ; CHECK:  Cost for VF 2: 54 (Estimated cost per lane: 27)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%20> = load from index 1
 ; CHECK:    ir<%13> = load from index 2
-; CHECK:    ir<%23> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%23> = load from index 3 (!alias.scope !72)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%18> to index 0
-; CHECK:    store ir<%28> to index 1 (!alias.scope !tmp1, !noalias !tmp0)
+; CHECK:    store ir<%28> to index 1 (!alias.scope !73, !noalias !72)
 ; CHECK:  Cost for VF 4: 49 (Estimated cost per lane: 12.3)
 ; CHECK:  Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%20> = load from index 1
 ; CHECK:    ir<%13> = load from index 2
-; CHECK:    ir<%23> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%23> = load from index 3 (!alias.scope !72)
 ; CHECK:  Cost of 7 for VF 8: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%18> to index 0
-; CHECK:    store ir<%28> to index 1 (!alias.scope !tmp1, !noalias !tmp0)
+; CHECK:    store ir<%28> to index 1 (!alias.scope !73, !noalias !72)
 ; CHECK:  Cost for VF 8: 57 (Estimated cost per lane: 7.13)
 ; CHECK:  Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:    ir<%10> = load from index 0
 ; CHECK:    ir<%20> = load from index 1
 ; CHECK:    ir<%13> = load from index 2
-; CHECK:    ir<%23> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%23> = load from index 3 (!alias.scope !72)
 ; CHECK:  Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 2, vp<%next.gep>.1
 ; CHECK:    store ir<%18> to index 0
-; CHECK:    store ir<%28> to index 1 (!alias.scope !tmp1, !noalias !tmp0)
+; CHECK:    store ir<%28> to index 1 (!alias.scope !73, !noalias !72)
 ; CHECK:  Cost for VF 16: 176 (Estimated cost per lane: 11)
 ; CHECK:  LV: Selecting VF: 8.
 ;
@@ -2273,23 +2273,23 @@ define hidden void @two_floats_same_op(ptr noundef readonly captures(none) %a, p
 ; CHECK:  LV: Scalar loop costs: 14.
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !82)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !83)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx3>
 ; CHECK:    store ir<%mul> to index 0
-; CHECK:    store ir<%mul8> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%mul8> to index 1 (!alias.scope !84, !noalias !81)
 ; CHECK:  Cost for VF 2: 29 (Estimated cost per lane: 14.5)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !82)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !83)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx3>
 ; CHECK:    store ir<%mul> to index 0
-; CHECK:    store ir<%mul8> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%mul8> to index 1 (!alias.scope !84, !noalias !81)
 ; CHECK:  Cost for VF 4: 26 (Estimated cost per lane: 6.5)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -2326,23 +2326,23 @@ define hidden void @two_floats_vary_op(ptr noundef readonly captures(none) %a, p
 ; CHECK:  LV: Scalar loop costs: 14.
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !93)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !94)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx3>
 ; CHECK:    store ir<%add> to index 0
-; CHECK:    store ir<%sub> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%sub> to index 1 (!alias.scope !95, !noalias !92)
 ; CHECK:  Cost for VF 2: 29 (Estimated cost per lane: 14.5)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !93)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !94)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx3>
 ; CHECK:    store ir<%add> to index 0
-; CHECK:    store ir<%sub> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%sub> to index 1 (!alias.scope !95, !noalias !92)
 ; CHECK:  Cost for VF 4: 26 (Estimated cost per lane: 6.5)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -2377,23 +2377,23 @@ for.body:
 define hidden void @two_bytes_two_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: 'two_bytes_two_floats_same_op'
 ; CHECK:  LV: Scalar loop costs: 18.
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%0> = load ir<%arrayidx> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%1> = load ir<%arrayidx1> (!alias.scope !tmp1)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%2> = load ir<%y> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%3> = load ir<%y9> (!alias.scope !tmp1)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%0> = load ir<%arrayidx> (!alias.scope !104)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%1> = load ir<%arrayidx1> (!alias.scope !105)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%2> = load ir<%y> (!alias.scope !104)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%3> = load ir<%y9> (!alias.scope !105)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
-; CHECK:    store ir<%mul11> to index 1
+; CHECK:    store ir<%mul11> to index 1 (!alias.scope !106, !noalias !103)
 ; CHECK:  Cost for VF 2: 52 (Estimated cost per lane: 26)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !104)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !105)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
-; CHECK:    store ir<%mul11> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%mul11> to index 1 (!alias.scope !106, !noalias !103)
 ; CHECK:  Cost for VF 4: 48 (Estimated cost per lane: 12)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -2432,23 +2432,23 @@ for.body:
 define hidden void @two_bytes_two_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: 'two_bytes_two_floats_vary_op'
 ; CHECK:  LV: Scalar loop costs: 18.
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%0> = load ir<%arrayidx> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%1> = load ir<%arrayidx1> (!alias.scope !tmp1)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%2> = load ir<%y> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%3> = load ir<%y9> (!alias.scope !tmp1)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%0> = load ir<%arrayidx> (!alias.scope !115)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%1> = load ir<%arrayidx1> (!alias.scope !116)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%2> = load ir<%y> (!alias.scope !115)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%3> = load ir<%y9> (!alias.scope !116)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx4>
 ; CHECK:    store ir<%add> to index 0
-; CHECK:    store ir<%sub> to index 1
+; CHECK:    store ir<%sub> to index 1 (!alias.scope !117, !noalias !114)
 ; CHECK:  Cost for VF 2: 52 (Estimated cost per lane: 26)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !115)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !116)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx4>
 ; CHECK:    store ir<%add> to index 0
-; CHECK:    store ir<%sub> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%sub> to index 1 (!alias.scope !117, !noalias !114)
 ; CHECK:  Cost for VF 4: 48 (Estimated cost per lane: 12)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -2489,22 +2489,22 @@ define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(n
 ; CHECK:  LV: Scalar loop costs: 16.
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !126)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv>, ir<%arrayidx3>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv9>, ir<%y11>
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !127)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv>, ir<%arrayidx3> (!alias.scope !128, !noalias !125)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv9>, ir<%y11> (!alias.scope !128, !noalias !125)
 ; CHECK:  Cost for VF 2: 47 (Estimated cost per lane: 23.5)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !126)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !127)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
-; CHECK:    store ir<%conv9> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv9> to index 1 (!alias.scope !128, !noalias !125)
 ; CHECK:  Cost for VF 4: 43 (Estimated cost per lane: 10.8)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -2543,22 +2543,22 @@ define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(n
 ; CHECK:  LV: Scalar loop costs: 16.
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !137)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv>, ir<%arrayidx3>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv8>, ir<%y10>
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !138)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv>, ir<%arrayidx3> (!alias.scope !139, !noalias !136)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv8>, ir<%y10> (!alias.scope !139, !noalias !136)
 ; CHECK:  Cost for VF 2: 47 (Estimated cost per lane: 23.5)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !137)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !138)
 ; CHECK:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
-; CHECK:    store ir<%conv8> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv8> to index 1 (!alias.scope !139, !noalias !136)
 ; CHECK:  Cost for VF 4: 43 (Estimated cost per lane: 10.8)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -2597,23 +2597,23 @@ define hidden void @two_shorts_two_floats_same_op(ptr noundef readonly captures(
 ; CHECK:  LV: Scalar loop costs: 18.
 ; CHECK:  Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !148)
 ; CHECK:  Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !149)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
-; CHECK:    store ir<%mul11> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%mul11> to index 1 (!alias.scope !150, !noalias !147)
 ; CHECK:  Cost for VF 2: 45 (Estimated cost per lane: 22.5)
 ; CHECK:  Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !148)
 ; CHECK:  Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !149)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
-; CHECK:    store ir<%mul11> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%mul11> to index 1 (!alias.scope !150, !noalias !147)
 ; CHECK:  Cost for VF 4: 36 (Estimated cost per lane: 9)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -2654,23 +2654,23 @@ define hidden void @two_shorts_two_floats_vary_op(ptr noundef readonly captures(
 ; CHECK:  LV: Scalar loop costs: 18.
 ; CHECK:  Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !159)
 ; CHECK:  Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !160)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx4>
 ; CHECK:    store ir<%add> to index 0
-; CHECK:    store ir<%sub> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%sub> to index 1 (!alias.scope !161, !noalias !158)
 ; CHECK:  Cost for VF 2: 45 (Estimated cost per lane: 22.5)
 ; CHECK:  Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !159)
 ; CHECK:  Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !160)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx4>
 ; CHECK:    store ir<%add> to index 0
-; CHECK:    store ir<%sub> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%sub> to index 1 (!alias.scope !161, !noalias !158)
 ; CHECK:  Cost for VF 4: 36 (Estimated cost per lane: 9)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -2711,23 +2711,23 @@ define hidden void @two_floats_two_shorts_same_op(ptr noundef readonly captures(
 ; CHECK:  LV: Scalar loop costs: 16.
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !170)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !171)
 ; CHECK:  Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
-; CHECK:    store ir<%conv9> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv9> to index 1 (!alias.scope !172, !noalias !169)
 ; CHECK:  Cost for VF 2: 41 (Estimated cost per lane: 20.5)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !170)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !171)
 ; CHECK:  Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
-; CHECK:    store ir<%conv9> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv9> to index 1 (!alias.scope !172, !noalias !169)
 ; CHECK:  Cost for VF 4: 35 (Estimated cost per lane: 8.75)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -2766,23 +2766,23 @@ define hidden void @two_floats_two_shorts_vary_op(ptr noundef readonly captures(
 ; CHECK:  LV: Scalar loop costs: 16.
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !181)
 ; CHECK:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !182)
 ; CHECK:  Cost of 11 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
-; CHECK:    store ir<%conv8> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv8> to index 1 (!alias.scope !183, !noalias !180)
 ; CHECK:  Cost for VF 2: 41 (Estimated cost per lane: 20.5)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
-; CHECK:    ir<%2> = load from index 1 (!alias.scope !tmp0)
+; CHECK:    ir<%2> = load from index 1 (!alias.scope !181)
 ; CHECK:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
-; CHECK:    ir<%3> = load from index 1 (!alias.scope !tmp1)
+; CHECK:    ir<%3> = load from index 1 (!alias.scope !182)
 ; CHECK:  Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
-; CHECK:    store ir<%conv8> to index 1 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv8> to index 1 (!alias.scope !183, !noalias !180)
 ; CHECK:  Cost for VF 4: 35 (Estimated cost per lane: 8.75)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -2823,17 +2823,17 @@ define hidden void @four_floats_same_op(ptr noundef readonly captures(none) %a, 
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !192)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !193)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx3>
 ; CHECK:    store ir<%mul> to index 0
 ; CHECK:    store ir<%mul8> to index 1
 ; CHECK:    store ir<%mul14> to index 2
-; CHECK:    store ir<%mul20> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%mul20> to index 3 (!alias.scope !194, !noalias !191)
 ; CHECK:  Cost for VF 2: 54 (Estimated cost per lane: 27)
 ; CHECK:  Cost for VF 4: 12 (Estimated cost per lane: 3)
 ; CHECK:  LV: Selecting VF: 4.
@@ -2887,33 +2887,33 @@ define hidden void @four_floats_vary_op(ptr noundef readonly captures(none) %a, 
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !203)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !204)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx3>
 ; CHECK:    store ir<%add> to index 0
 ; CHECK:    store ir<%sub> to index 1
 ; CHECK:    store ir<%mul> to index 2
-; CHECK:    store ir<%div> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%div> to index 3 (!alias.scope !205, !noalias !202)
 ; CHECK:  Cost for VF 2: 54 (Estimated cost per lane: 27)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !203)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !204)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx3>
 ; CHECK:    store ir<%add> to index 0
 ; CHECK:    store ir<%sub> to index 1
 ; CHECK:    store ir<%mul> to index 2
-; CHECK:    store ir<%div> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%div> to index 3 (!alias.scope !205, !noalias !202)
 ; CHECK:  Cost for VF 4: 120 (Estimated cost per lane: 30)
 ; CHECK:  LV: Selecting VF: 1.
 ;
@@ -2962,35 +2962,35 @@ for.body:
 define hidden void @four_bytes_four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: 'four_bytes_four_floats_same_op'
 ; CHECK:  LV: Scalar loop costs: 32.
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%0> = load ir<%arrayidx> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%1> = load ir<%arrayidx1> (!alias.scope !tmp1)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%2> = load ir<%y> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%3> = load ir<%y9> (!alias.scope !tmp1)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%4> = load ir<%z> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%5> = load ir<%z17> (!alias.scope !tmp1)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%6> = load ir<%w> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%7> = load ir<%w25> (!alias.scope !tmp1)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%0> = load ir<%arrayidx> (!alias.scope !211)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%1> = load ir<%arrayidx1> (!alias.scope !212)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%2> = load ir<%y> (!alias.scope !211)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%3> = load ir<%y9> (!alias.scope !212)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%4> = load ir<%z> (!alias.scope !211)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%5> = load ir<%z17> (!alias.scope !212)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%6> = load ir<%w> (!alias.scope !211)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%7> = load ir<%w25> (!alias.scope !212)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
 ; CHECK:    store ir<%mul11> to index 1
 ; CHECK:    store ir<%mul19> to index 2
-; CHECK:    store ir<%mul27> to index 3
+; CHECK:    store ir<%mul27> to index 3 (!alias.scope !213, !noalias !210)
 ; CHECK:  Cost for VF 2: 99 (Estimated cost per lane: 49.5)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !211)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !212)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
 ; CHECK:    store ir<%mul11> to index 1
 ; CHECK:    store ir<%mul19> to index 2
-; CHECK:    store ir<%mul27> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%mul27> to index 3 (!alias.scope !213, !noalias !210)
 ; CHECK:  Cost for VF 4: 108 (Estimated cost per lane: 27)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -3047,35 +3047,35 @@ for.body:
 define hidden void @four_bytes_four_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: 'four_bytes_four_floats_vary_op'
 ; CHECK:  LV: Scalar loop costs: 32.
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%0> = load ir<%arrayidx> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%1> = load ir<%arrayidx1> (!alias.scope !tmp1)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%2> = load ir<%y> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%3> = load ir<%y9> (!alias.scope !tmp1)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%4> = load ir<%z> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%5> = load ir<%z16> (!alias.scope !tmp1)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%6> = load ir<%w> (!alias.scope !tmp0)
-; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%7> = load ir<%w23> (!alias.scope !tmp1)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%0> = load ir<%arrayidx> (!alias.scope !222)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%1> = load ir<%arrayidx1> (!alias.scope !223)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%2> = load ir<%y> (!alias.scope !222)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%3> = load ir<%y9> (!alias.scope !223)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%4> = load ir<%z> (!alias.scope !222)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%5> = load ir<%z16> (!alias.scope !223)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%6> = load ir<%w> (!alias.scope !222)
+; CHECK:  Cost of 6 for VF 2: REPLICATE ir<%7> = load ir<%w23> (!alias.scope !223)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
 ; CHECK:    store ir<%add> to index 1
 ; CHECK:    store ir<%div> to index 2
-; CHECK:    store ir<%sub> to index 3
+; CHECK:    store ir<%sub> to index 3 (!alias.scope !224, !noalias !221)
 ; CHECK:  Cost for VF 2: 99 (Estimated cost per lane: 49.5)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !222)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !223)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
 ; CHECK:    store ir<%add> to index 1
 ; CHECK:    store ir<%div> to index 2
-; CHECK:    store ir<%sub> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%sub> to index 3 (!alias.scope !224, !noalias !221)
 ; CHECK:  Cost for VF 4: 108 (Estimated cost per lane: 27)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -3136,32 +3136,32 @@ define hidden void @four_floats_four_bytes_same_op(ptr noundef readonly captures
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !233)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv>, ir<%arrayidx3>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv9>, ir<%y11>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv16>, ir<%z18>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv23>, ir<%w25>
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !234)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv>, ir<%arrayidx3> (!alias.scope !235, !noalias !232)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv9>, ir<%y11> (!alias.scope !235, !noalias !232)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv16>, ir<%z18> (!alias.scope !235, !noalias !232)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv23>, ir<%w25> (!alias.scope !235, !noalias !232)
 ; CHECK:  Cost for VF 2: 89 (Estimated cost per lane: 44.5)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !233)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !234)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
 ; CHECK:    store ir<%conv9> to index 1
 ; CHECK:    store ir<%conv16> to index 2
-; CHECK:    store ir<%conv23> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv23> to index 3 (!alias.scope !235, !noalias !232)
 ; CHECK:  Cost for VF 4: 126 (Estimated cost per lane: 31.5)
 ; CHECK:  LV: Selecting VF: 1.
 ;
@@ -3218,32 +3218,32 @@ define hidden void @four_floats_four_bytes_vary_op(ptr noundef readonly captures
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !241)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv>, ir<%arrayidx3>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv8>, ir<%y10>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv14>, ir<%z16>
-; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv20>, ir<%w22>
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !242)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv>, ir<%arrayidx3> (!alias.scope !243, !noalias !240)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv8>, ir<%y10> (!alias.scope !243, !noalias !240)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv14>, ir<%z16> (!alias.scope !243, !noalias !240)
+; CHECK:  Cost of 6 for VF 2: REPLICATE store ir<%conv20>, ir<%w22> (!alias.scope !243, !noalias !240)
 ; CHECK:  Cost for VF 2: 89 (Estimated cost per lane: 44.5)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !241)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !242)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
 ; CHECK:    store ir<%conv8> to index 1
 ; CHECK:    store ir<%conv14> to index 2
-; CHECK:    store ir<%conv20> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv20> to index 3 (!alias.scope !243, !noalias !240)
 ; CHECK:  Cost for VF 4: 126 (Estimated cost per lane: 31.5)
 ; CHECK:  LV: Selecting VF: 1.
 ;
@@ -3300,33 +3300,33 @@ define hidden void @four_shorts_four_floats_same_op(ptr noundef readonly capture
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !249)
 ; CHECK:  Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !250)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
 ; CHECK:    store ir<%mul11> to index 1
 ; CHECK:    store ir<%mul19> to index 2
-; CHECK:    store ir<%mul27> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%mul27> to index 3 (!alias.scope !251, !noalias !248)
 ; CHECK:  Cost for VF 2: 78 (Estimated cost per lane: 39)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !249)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !250)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
 ; CHECK:    store ir<%mul11> to index 1
 ; CHECK:    store ir<%mul19> to index 2
-; CHECK:    store ir<%mul27> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%mul27> to index 3 (!alias.scope !251, !noalias !248)
 ; CHECK:  Cost for VF 4: 100 (Estimated cost per lane: 25)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -3387,33 +3387,33 @@ define hidden void @four_shorts_four_floats_vary_op(ptr noundef readonly capture
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !260)
 ; CHECK:  Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !261)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
 ; CHECK:    store ir<%add> to index 1
 ; CHECK:    store ir<%div> to index 2
-; CHECK:    store ir<%sub> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%sub> to index 3 (!alias.scope !262, !noalias !259)
 ; CHECK:  Cost for VF 2: 78 (Estimated cost per lane: 39)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !260)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !261)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx4>
 ; CHECK:    store ir<%mul> to index 0
 ; CHECK:    store ir<%add> to index 1
 ; CHECK:    store ir<%div> to index 2
-; CHECK:    store ir<%sub> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%sub> to index 3 (!alias.scope !262, !noalias !259)
 ; CHECK:  Cost for VF 4: 100 (Estimated cost per lane: 25)
 ; CHECK:  LV: Selecting VF: 4.
 ;
@@ -3474,33 +3474,33 @@ define hidden void @four_floats_four_shorts_same_op(ptr noundef readonly capture
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !271)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !272)
 ; CHECK:  Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
 ; CHECK:    store ir<%conv9> to index 1
 ; CHECK:    store ir<%conv16> to index 2
-; CHECK:    store ir<%conv23> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv23> to index 3 (!alias.scope !273, !noalias !270)
 ; CHECK:  Cost for VF 2: 74 (Estimated cost per lane: 37)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !271)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !272)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
 ; CHECK:    store ir<%conv9> to index 1
 ; CHECK:    store ir<%conv16> to index 2
-; CHECK:    store ir<%conv23> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv23> to index 3 (!alias.scope !273, !noalias !270)
 ; CHECK:  Cost for VF 4: 118 (Estimated cost per lane: 29.5)
 ; CHECK:  LV: Selecting VF: 1.
 ;
@@ -3557,33 +3557,33 @@ define hidden void @four_floats_four_shorts_vary_op(ptr noundef readonly capture
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !279)
 ; CHECK:  Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !280)
 ; CHECK:  Cost of 18 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
 ; CHECK:    store ir<%conv8> to index 1
 ; CHECK:    store ir<%conv14> to index 2
-; CHECK:    store ir<%conv20> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv20> to index 3 (!alias.scope !281, !noalias !278)
 ; CHECK:  Cost for VF 2: 74 (Estimated cost per lane: 37)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx>
 ; CHECK:    ir<%0> = load from index 0
 ; CHECK:    ir<%2> = load from index 1
 ; CHECK:    ir<%4> = load from index 2
-; CHECK:    ir<%6> = load from index 3 (!alias.scope !tmp0)
+; CHECK:    ir<%6> = load from index 3 (!alias.scope !279)
 ; CHECK:  Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx1>
 ; CHECK:    ir<%1> = load from index 0
 ; CHECK:    ir<%3> = load from index 1
 ; CHECK:    ir<%5> = load from index 2
-; CHECK:    ir<%7> = load from index 3 (!alias.scope !tmp1)
+; CHECK:    ir<%7> = load from index 3 (!alias.scope !280)
 ; CHECK:  Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4, ir<%arrayidx3>
 ; CHECK:    store ir<%conv> to index 0
 ; CHECK:    store ir<%conv8> to index 1
 ; CHECK:    store ir<%conv14> to index 2
-; CHECK:    store ir<%conv20> to index 3 (!alias.scope !tmp2, !noalias !tmp3)
+; CHECK:    store ir<%conv20> to index 3 (!alias.scope !281, !noalias !278)
 ; CHECK:  Cost for VF 4: 118 (Estimated cost per lane: 29.5)
 ; CHECK:  LV: Selecting VF: 1.
 ;

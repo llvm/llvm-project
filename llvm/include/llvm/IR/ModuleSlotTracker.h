@@ -106,11 +106,6 @@ public:
   /// Return -1 if the value is not in the function's SlotTracker.
   int getLocalSlot(const Value *V);
 
-  /// Return the slot number of metadata node \p N.
-  ///
-  /// Return -1 if \p N has not been assigned a slot.
-  int getMetadataSlot(const MDNode *N);
-
   void setProcessHook(
       std::function<void(AbstractSlotTrackerStorage *, const Module *)>);
   void setProcessHook(

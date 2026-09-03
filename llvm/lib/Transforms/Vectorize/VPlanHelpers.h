@@ -430,16 +430,13 @@ class VPSlotTracker {
   /// Cached Module pointer for printing metadata.
   const Module *M = nullptr;
 
-  /// Temporary ids for metadata nodes referenced by recipes that have no module
-  /// slot (e.g. alias.scope/noalias added by loop versioning).
-  DenseMap<const MDNode *, unsigned> MetadataTmpIds;
-
   void assignName(const VPValue *V);
   LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
 
-  /// Lazily create the ModuleSlotTracker for module \p Mod.
+  /// Lazily create the ModuleSlotTracker for module \p Mod and incorporate
+  /// \p F, if non-null.
   ModuleSlotTracker &getOrCreateMST(const Module *Mod, const Function *F);
 
 public:
