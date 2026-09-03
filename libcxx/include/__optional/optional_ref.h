@@ -106,7 +106,7 @@ private:
   template <class _That>
   _LIBCPP_HIDE_FROM_ABI constexpr void __construct_from(_That&& __opt) {
     if (__opt.has_value())
-      __construct(std::forward<_That>(__opt).__get());
+      __construct(std::forward<_That>(__opt).operator*());
   }
 
   static constexpr bool __has_iterator_ = requires { typename __optional_ref_iterator_base<_Tp&>::iterator; };
@@ -189,8 +189,6 @@ public:
 
   constexpr ~optional() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get() const noexcept { return *__value_; }
-
   _LIBCPP_HIDE_FROM_ABI constexpr optional& operator=(nullopt_t) noexcept {
     reset();
     return *this;
@@ -203,7 +201,7 @@ public:
   constexpr _Tp& emplace(_Up&& __u) noexcept(is_nothrow_constructible_v<_Tp&, _Up>) {
     this->__construct(std::forward<_Up>(__u));
 
-    return this->__get();
+    return *__value_;
   }
 
   constexpr void swap(optional& __rhs) noexcept { std::swap(this->__value_, __rhs.__value_); }
@@ -216,7 +214,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
-    return this->__get();
+    return *__value_;
   }
 
   constexpr explicit operator bool() const noexcept { return has_value(); }
@@ -226,7 +224,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() const {
     if (!this->has_value())
       std::__throw_bad_optional_access();
-    return this->__get();
+    return *__value_;
   }
 
   template <class _Up = remove_cv_t<_Tp>>
@@ -235,7 +233,7 @@ public:
     using _XTp = remove_cv_t<_Tp>;
     static_assert(is_constructible_v<_XTp, _Tp&>, "optional<T&>::value_or: remove_cv_t<T> must be constructible");
     static_assert(is_convertible_v<_Up, _XTp>, "optional<T&>::value_or: U must be convertible to remove_cv_t<T>");
-    return this->has_value() ? this->__get() : static_cast<_XTp>(std::forward<_Up>(__v));
+    return this->has_value() ? *__value_ : static_cast<_XTp>(std::forward<_Up>(__v));
   }
 
   template <class _Func>
