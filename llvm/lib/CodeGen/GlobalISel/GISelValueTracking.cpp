@@ -2736,6 +2736,36 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     return computeNumSignBits(SrcReg, DemandedSrcElts, Depth + 1);
   }
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    FirstAnswer = TyBits;
+    Register Src = MI.getOperand(1).getReg();
+    Register Sub = MI.getOperand(2).getReg();
+    LLT SrcTy = MRI.getType(Src);
+    uint64_t Idx = MI.getOperand(3).getImm();
+
+    if (SrcTy.isScalableVector()) {
+      FirstAnswer = computeNumSignBits(Sub, Depth + 1);
+      FirstAnswer = std::min(FirstAnswer, computeNumSignBits(Src, Depth + 1));
+      break;
+    }
+    unsigned NumSubElts = MRI.getType(Sub).getNumElements();
+    APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+    APInt DemandedSrcElts = DemandedElts;
+    DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
+    // Only query the operands that contribute demanded elements, and take the
+    // minimum over them.
+    if (!!DemandedSubElts) {
+      FirstAnswer = computeNumSignBits(Sub, DemandedSubElts, Depth + 1);
+      // If we don't know any bits, early out.
+      if (FirstAnswer == 1)
+        break;
+    }
+    if (!!DemandedSrcElts) {
+      unsigned SrcAnswer = computeNumSignBits(Src, DemandedSrcElts, Depth + 1);
+      FirstAnswer = std::min(FirstAnswer, SrcAnswer);
+    }
+    break;
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     // Collect the minimum number of sign bits that are shared by every vector
     // element referenced by the shuffle.
