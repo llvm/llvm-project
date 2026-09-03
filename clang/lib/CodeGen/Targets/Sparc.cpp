@@ -206,6 +206,7 @@ private:
     SmallVector<llvm::Type*, 8> Elems;
     uint64_t Size;
     bool InReg;
+    SmallVector<std::pair<uint64_t, uint64_t>, 1> IntegerOnlyRanges;
 
     CoerceBuilder(llvm::LLVMContext &c, const llvm::DataLayout &dl)
       : Context(c), DL(dl), Size(0), InReg(false) {}
@@ -240,6 +241,12 @@ private:
     void addFloat(uint64_t Offset, llvm::Type *Ty, unsigned Bits) {
       // Unaligned floats are treated as integers.
       if (Offset % Bits)
+        return;
+      // Packeds structs, structs containing packed fields, and unions
+      // must be passed via integer registers, they cannot use FPRs.
+      if (llvm::any_of(IntegerOnlyRanges, [Offset](auto Range) {
+            return Range.first <= Offset && Offset < Range.second;
+          }))
         return;
       // The InReg flag is only required if there are any floats < 64 bits.
       if (Bits < 64)
@@ -296,6 +303,34 @@ private:
   };
 };
 } // end anonymous namespace
+
+/// Collect the bit ranges must be passed in GPRs (i.e. cannot use FPRs).
+static void
+collectIntegerOnlyRanges(ASTContext &Ctx, const RecordDecl *RD, uint64_t Base,
+                         SmallVectorImpl<std::pair<uint64_t, uint64_t>> &Out) {
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+
+  // - A union is always passed in integer registers.
+  // - A struct that is packed is always passed in integer registers.
+  // - A struct that has packed fields is always passed in integer registers.
+  if (RD->isUnion() || RD->hasAttr<PackedAttr>() ||
+      llvm::any_of(RD->fields(), [](const FieldDecl *FD) {
+        return FD->hasAttr<PackedAttr>();
+      })) {
+    Out.emplace_back(Base, Base + Ctx.toBits(Layout.getSize()));
+    return;
+  }
+
+  // Recurse into the fields. This function is only ever called on values that
+  // fit in registers, so the recursion should not be a problem.
+  for (const FieldDecl *FD : RD->fields()) {
+    if (const auto *FieldRD = FD->getType()->getAsRecordDecl()) {
+      collectIntegerOnlyRanges(
+          Ctx, FieldRD->getDefinitionOrSelf(),
+          Base + Layout.getFieldOffset(FD->getFieldIndex()), Out);
+    }
+  }
+}
 
 ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
                                         unsigned &RegOffset) const {
@@ -391,7 +426,15 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   }
 
   CoerceBuilder CB(VMContext, getDataLayout());
+
+  // Collect the ranges that must be passed via integer registers, and cannot be
+  // promoted to use FPRs.
+  if (const auto *RD = Ty->getAsRecordDecl())
+    collectIntegerOnlyRanges(Context, RD->getDefinitionOrSelf(), /*Base=*/0,
+                             CB.IntegerOnlyRanges);
+
   CB.addStruct(0, StrTy);
+
   // All structs, even empty ones, should take up a register argument slot,
   // so pin the minimum struct size to one bit.
   CB.pad(llvm::alignTo(

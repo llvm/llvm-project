@@ -86,6 +86,14 @@ features cannot lower the translation-unit ABI level;
   narrower than a slot, rather than left-justified the way a small struct is.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
 
+- On SPARC64, a struct declared with `__attribute__((packed))`, or having a field
+  declared with it, is now passed and returned entirely in integer registers,
+  matching GCC. Clang previously used FPRs. (#GH39500)
+
+- On SPARC64, a union is now always passed and returned in integer registers,
+  matching GCC, which only promotes a struct to floating point registers. Clang
+  previously could use FPRs. (#GH214840)
+
 - On MIPS, a `_Complex` value with an integer element type is now returned packed
   into a single integer register when it fits in one, matching GCC. A `_Complex char` or
   `_Complex short`, and on N32/N64 also a `_Complex int`, is no longer returned
