@@ -19,7 +19,8 @@ namespace LIBC_NAMESPACE_DECL {
 // There might be potential for compiler optimization.
 LLVM_LIBC_FUNCTION(size_t, strlen, (const char *src)) {
   LIBC_CRASH_ON_NULLPTR(src);
-  return internal::string_length(src);
+  const size_t length = internal::string_length(src);
+  return length;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
