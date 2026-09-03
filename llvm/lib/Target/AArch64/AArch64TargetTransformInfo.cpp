@@ -872,6 +872,23 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::pdep:
+  case Intrinsic::pext: {
+    unsigned BW = RetTy->getScalarSizeInBits();
+    if (!RetTy->isVectorTy() && ST->isSVEBitPermAvailable() && BW <= 64) {
+      Type *VecTy = VectorType::get(RetTy, 64 / BW, false);
+      InstructionCost Cost =
+          getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
+                             nullptr, nullptr) +
+          getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
+                             nullptr, nullptr) +
+          1 +
+          getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind, 0,
+                             nullptr, nullptr);
+      return Cost;
+    }
+    break;
+  }
   case Intrinsic::ctpop: {
     auto LT = getTypeLegalizationCost(RetTy);
     MVT MTy = LT.second;
