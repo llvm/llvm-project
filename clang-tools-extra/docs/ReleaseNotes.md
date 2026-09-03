@@ -113,6 +113,12 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
+- New {doc}`performance-substr-self-assignment
+  <clang-tidy/checks/performance/substr-self-assignment>` check.
+
+  Finds cases where a string variable is assigned the result of calling
+  `substr()` on itself.
+
 - New {doc}`portability-avoid-pragma-comment
   <clang-tidy/checks/portability/avoid-pragma-comment>` check.
 

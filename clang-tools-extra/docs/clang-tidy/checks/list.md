@@ -368,6 +368,7 @@ readability/*
 | {doc}`performance-noexcept-swap <performance/noexcept-swap>` | Yes |
 | {doc}`performance-prefer-single-char-overloads <performance/prefer-single-char-overloads>` | Yes |
 | {doc}`performance-string-view-conversions <performance/string-view-conversions>` | Yes |
+| {doc}`performance-substr-self-assignment <performance/substr-self-assignment>` | Yes |
 | {doc}`performance-trivially-destructible <performance/trivially-destructible>` | Yes |
 | {doc}`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>` | Yes |
 | {doc}`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>` | Yes |
