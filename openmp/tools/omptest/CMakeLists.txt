@@ -139,7 +139,10 @@ target_include_directories(omptest PUBLIC
 target_compile_features(omptest PRIVATE cxx_std_17)
 
 # Perform package configuration.
-set(OMPTEST_CONFIG_INSTALL_DIR "${OPENMP_INSTALL_LIBDIR}/cmake/openmp/omptest")
+# Keep the config at a target-independent path so consumers can find it
+# without knowing the host triple.
+set(OMPTEST_CONFIG_INSTALL_DIR
+    "lib${LLVM_LIBDIR_SUFFIX}/cmake/openmp/omptest")
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/omptest-config.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/omptest-config.cmake
