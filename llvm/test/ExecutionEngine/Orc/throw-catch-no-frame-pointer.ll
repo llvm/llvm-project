@@ -1,4 +1,8 @@
 ; REQUIRES: system-darwin && host-unwind-supports-jit
+;
+; Unwinding through JIT'd frames is not yet supported on arm64e.
+; UNSUPPORTED: host-jit-triple={{arm64e-.*}}
+;
 ; RUN: lli -jit-kind=orc %s
 ;
 ; Check that we can throw exceptions from no-fp functions. On systems that
