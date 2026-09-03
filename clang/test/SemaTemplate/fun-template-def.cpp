@@ -127,6 +127,7 @@ template <auto V> struct W {
   template <class T> auto f(T) -> W<value(T::value)>; // #gh218323-f
   template <class T> auto g(T) -> W<int(T::type)>; // #gh218323-g
   template <class T> auto h(T) -> W<value(T::type)>; // #gh218323-h
+  template <class... Ts> auto p(Ts...) -> W<value(Ts::value...)>;
 };
 template struct W<42>;
 
@@ -148,24 +149,16 @@ void use(W<42> w) {
                    // expected-note@#gh218323-h {{candidate template ignored: substitution failure [with T = HasAlias]: missing 'typename' prior to dependent type name 'GH218323::HasAlias::type'}}
 }
 
-template <auto V>
-struct ConstantWrapper {
+template <auto V> struct WTypename { // #gh218323-WTypename
   static constexpr auto value = V;
-  template <class... Ts>
-  constexpr auto operator()(Ts... args) const -> ConstantWrapper<value(Ts::value...)> {
-    return {};
-  }
+  template <class T> auto f(T) -> WTypename<int(typename T::type)>; // expected-error {{template argument for non-type template parameter is treated as function type 'int (typename T::type)'}}
+                                                                    // expected-note@#gh218323-WTypename {{template parameter is declared here}}
+  template <class T> auto g(T) -> WTypename<typename T::type(value)>;
 };
-
-struct Plus {
-  template <class T, class U>
-  constexpr auto operator()(T&& t, U&& u) const -> decltype(static_cast<T&&>(t) + static_cast<U&&>(u)) {
-    return static_cast<T&&>(t) + static_cast<U&&>(u);
-  }
-};
-
-constexpr auto cwv = ConstantWrapper<Plus{}>{}(ConstantWrapper<42>{}, ConstantWrapper<17>{});
-static_assert(cwv.value == 59, "");
+template struct WTypename<42>;
+void use_typename(WTypename<42> w) {
+  w.g(HasAlias{});
+}
 }
 
 #endif
