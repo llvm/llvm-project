@@ -366,6 +366,34 @@ def TestSimpleEnumAttr : EnumAttr<Test_Dialect, TestSimpleEnum, "simple_enum"> {
 def TestArrayOfEnums : ArrayOfAttr<Test_Dialect, "ArrayOfEnums",
     "array_of_enums", "SimpleEnumAttr">;
 
+def TestStructEnumAttr
+    : EnumAttr<Test_Dialect, TestStructEnum, "struct_enum_value"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def TestAttrEnumAttrStruct : Test_Attr<"TestAttrEnumAttrStruct"> {
+  let parameters = (ins
+    EnumAttrParameter<TestStructEnumAttr>:$required,
+    OptionalEnumAttrParameter<TestStructEnumAttr>:$optional
+  );
+  let mnemonic = "enum_attr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def TestStructBitEnumAttr
+    : EnumAttr<Test_Dialect, TestStructBitEnum, "struct_bit_enum_value"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def TestAttrBitEnumAttrStruct : Test_Attr<"TestAttrBitEnumAttrStruct"> {
+  let parameters = (ins
+    EnumAttrParameter<TestStructBitEnumAttr>:$flags,
+    "int64_t":$count
+  );
+  let mnemonic = "bit_enum_attr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 // Test custom directive as optional group anchor.
 def TestCustomAnchor : Test_Attr<"TestCustomAnchor"> {
   let parameters = (ins "int":$a, OptionalParameter<"std::optional<int>">:$b);

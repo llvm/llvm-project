@@ -3898,7 +3898,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
+          #omp.declaretarget<device_type = nohost, capture_clause = to>
       } {
     llvm.return
   }
@@ -3907,7 +3907,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     llvm.return
   }
@@ -3920,7 +3920,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>
+          #omp.declaretarget<device_type = nohost, capture_clause = enter>
       } {
     llvm.return
   }
@@ -3929,7 +3929,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (enter)>
+          #omp.declaretarget<device_type = host, capture_clause = enter>
       } {
     llvm.return
   }
@@ -3942,7 +3942,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
+          #omp.declaretarget<device_type = nohost, capture_clause = to>
       } {
     llvm.return
   }
@@ -3951,7 +3951,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     llvm.return
   }
@@ -3964,7 +3964,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>
+          #omp.declaretarget<device_type = nohost, capture_clause = enter>
       } {
     llvm.return
   }
@@ -3973,7 +3973,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (enter)>
+          #omp.declaretarget<device_type = host, capture_clause = enter>
       } {
     llvm.return
   }
@@ -4251,7 +4251,7 @@ llvm.mlir.global internal @any() : i32
 llvm.mlir.global internal @host() : i32
 llvm.mlir.global internal @nohost() : i32
 llvm.func @omp_groupprivate_device() attributes {
-    omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
+    omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %2 = omp.groupprivate @any device_type(any) : !llvm.ptr
   llvm.store %0, %2 : i32, !llvm.ptr
