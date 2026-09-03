@@ -123,7 +123,6 @@ template <typename T, typename Enable = void> struct FoldingSetTrait;
 class FoldingSetNodeIDRef : public ArrayRef<unsigned> {
 public:
   using ArrayRef<unsigned>::ArrayRef;
-  FoldingSetNodeIDRef() = default;
 
   static constexpr unsigned NotAHash = 0;
 
