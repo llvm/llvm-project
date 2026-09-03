@@ -421,6 +421,9 @@ VALUE_CODEGENOPT(InlineMaxStackSize, 32, UINT_MAX, Benign)
 // Vector functions library to use.
 ENUM_CODEGENOPT(VecLib, VectorLibrary, 4, VectorLibrary::NoLibrary, Benign)
 
+// Fast math functions library to use.
+ENUM_CODEGENOPT(FastLib, FastLibrary, 1, NoFastLibrary, Benign)
+
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel, Benign)
 

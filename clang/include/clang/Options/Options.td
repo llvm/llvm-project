@@ -4019,6 +4019,13 @@ def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
     NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML", "SLEEF",
                       "Darwin_libsystem_m", "ArmPL", "AMDLIBM", "NoLibrary"]>,
     MarshallingInfoEnum<CodeGenOpts<"VecLib">, "NoLibrary">;
+def ffastlib : Joined<["-"], "ffastlib=">, Group<f_Group>,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Use the given fast math functions library.">,
+    Values<"AMDLIBM,none">,
+    NormalizedValuesScope<"CodeGenOptions">,
+    NormalizedValues<["AMDLIBM", "NoFastLibrary"]>,
+    MarshallingInfoEnum<CodeGenOpts<"FastLib">, "NoFastLibrary">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["none"]>;
 def fno_implicit_module_maps : Flag <["-"], "fno-implicit-module-maps">, Group<f_Group>;

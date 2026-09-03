@@ -483,6 +483,12 @@ public:
 
 FunctionPass *createX86ArgumentStackSlotLegacyPass();
 
+/// This pass rewrites math library calls to their fast library entry points
+/// under fast-math semantics when a fast math library is selected.
+FunctionPass *createX86GenFastCallsPass();
+void initializeX86GenFastCallsPass(PassRegistry &);
+extern char &X86GenFastCallsID;
+
 void initializeCompressEVEXLegacyPass(PassRegistry &);
 void initializeX86FixupBWInstLegacyPass(PassRegistry &);
 void initializeFixupLEAsLegacyPass(PassRegistry &);

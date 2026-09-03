@@ -1155,6 +1155,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
           Twine(PluginOptPrefix) + "-vector-library=" + OptVal.value()));
   }
 
+  // Pass fast math library arguments to LTO.
+  if (Arg *ArgFastLib = Args.getLastArg(options::OPT_ffastlib)) {
+    StringRef Name = ArgFastLib->getValue();
+    if (Name == "AMDLIBM")
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + "-fast-library=" + Name));
+  }
+
   // Try to pass driver level flags relevant to LTO code generation down to
   // the plugin.
 

@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=x86_64-- -O2 -debug-pass=Structure < %s -o /dev/null 2>&1 \
 ; RUN:   | grep -v 'Verify generated machine code' | FileCheck %s
 ; RUN: llc -mtriple=x86_64-- -O3 -debug-pass=Structure < %s -o /dev/null 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck %s
+; RUN:   | grep -v 'Verify generated machine code' | FileCheck %s --check-prefixes=CHECK,O3
 ; RUN: llc -mtriple=x86_64-- -O3 -debug-pass=Structure < %s -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=FPM
 
@@ -95,6 +95,9 @@
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       X86 Domain Reassignment Pass
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
+; O3-NEXT:          Machine Optimization Remark Emitter
+; O3-NEXT:          X86 Generate Fast Library Calls
+; O3-NEXT:          Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Early Tail Duplication
 ; CHECK-NEXT:       Optimize machine instruction PHIs
 ; CHECK-NEXT:       Slot index numbering
