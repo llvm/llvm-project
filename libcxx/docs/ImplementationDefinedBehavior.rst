@@ -76,6 +76,28 @@ Libc++ does not initialize the pointers to null pointers. It resizes the buffer
 to its capacity and uses that size. This means the SSO buffer of
 ``std::string`` is used as initial output buffer.
 
+`[debugging.utility] <https://eel.is/c++draft/debugging#lib:is_debugger_present>`_ is_debugger_present
+------------------------------------------------------------------------------------------------------
+
+Libc++ implements `std::is_debugger_present()` differently depending on the host platform:
+
+- Linux: ``/proc/self/status`` is read for the ``TracerPid`` entry, and returns true if it is not equal to 0.
+  Do note that this will return true, if an executable is run under a utility that traces a process, but isn't
+  necessarily a debugger, e.g. ``strace``.
+
+- Darwin & FreeBSD: ``sysctl`` is called to retrieve the current process information and check if the ``P_TRACED``
+  flag is set in the returned info.
+  On Darwin, ``kinfo_proc::kp_proc.p_flag`` is checked.
+  On FreeBSD, ``kinfo_proc::ki_flag`` is checked.
+
+- AIX: Reads the file ``/proc/{current_pid}/status`` (subtituting current_pid for the process' PID) into a
+  ``pstatus_t`` structure, then checks if the ``STRC`` flag is set in ``pstatus_t::pr_flag``.
+
+- Windows: Calls ``IsDebuggerPresent()``.
+
+It is also defined as a weak symbol in the library to allow it to be replaceable, as per the standard, so a user may
+redefine it with their own implementation.
+
 
 Listed in the index of implementation-defined behavior
 ======================================================
