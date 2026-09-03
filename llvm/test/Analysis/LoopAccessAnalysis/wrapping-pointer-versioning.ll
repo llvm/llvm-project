@@ -221,9 +221,10 @@ for.end:                                          ; preds = %for.body
 define void @f4(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-LABEL: 'f4'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Forward:
+; CHECK-NEXT:        IndirectUnsafe:
 ; CHECK-NEXT:            %loadA = load i16, ptr %arrayidxA, align 2 ->
 ; CHECK-NEXT:            store i16 %add, ptr %arrayidxA, align 2
 ; CHECK-EMPTY:
@@ -232,13 +233,8 @@ define void @f4(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nsuw>
-; CHECK-NEXT:      {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,8589934588}<%for.body> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
-; CHECK-NEXT:        ((2 * (sext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64))<nsw> + %a)
-; CHECK-NEXT:        --> {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,8589934588}<%for.body>
 ;
 entry:
   %TruncN = trunc i64 %N to i32
@@ -281,9 +277,10 @@ for.end:                                          ; preds = %for.body
 define void @f5(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-LABEL: 'f5'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Forward:
+; CHECK-NEXT:        IndirectUnsafe:
 ; CHECK-NEXT:            %loadA = load i16, ptr %arrayidxA, align 2 ->
 ; CHECK-NEXT:            store i16 %add, ptr %arrayidxA, align 2
 ; CHECK-EMPTY:
@@ -292,12 +289,8 @@ define void @f5(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nsuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %arrayidxA = getelementptr inbounds i16, ptr %a, i32 %mul:
-; CHECK-NEXT:        ((2 * (sext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64))<nsw> + %a)
-; CHECK-NEXT:        --> {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,8589934588}<%for.body>
 ;
 entry:
   %TruncN = trunc i64 %N to i32

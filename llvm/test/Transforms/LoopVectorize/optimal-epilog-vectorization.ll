@@ -147,15 +147,7 @@ define signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[TMP3]], [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -163,21 +155,52 @@ define signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END4:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[N]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[OFFSET_IDX]], -1
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[N]]
-; CHECK-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP11]] to i64
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i32> [[VEC_IND]], splat (i32 -1)
+; CHECK-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[TMP3]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i32> [[TMP4]] to <8 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i64> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 -7
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP15]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i64> [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x i64> [[TMP5]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i64> [[TMP5]], i64 3
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP37]]
+; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <8 x i64> [[TMP5]], i64 4
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP39]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i64> [[TMP5]], i64 5
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x i64> [[TMP5]], i64 6
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i64> [[TMP5]], i64 7
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP22:%.*]] = load float, ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = load float, ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP42:%.*]] = load float, ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP46:%.*]] = load float, ptr [[TMP38]], align 4
+; CHECK-NEXT:    [[TMP47:%.*]] = load float, ptr [[TMP15]], align 4
+; CHECK-NEXT:    [[TMP27:%.*]] = load float, ptr [[TMP40]], align 4
+; CHECK-NEXT:    [[TMP28:%.*]] = load float, ptr [[TMP41]], align 4
+; CHECK-NEXT:    [[TMP61:%.*]] = load float, ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <8 x float> poison, float [[TMP22]], i64 0
+; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <8 x float> [[TMP30]], float [[TMP23]], i64 1
+; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <8 x float> [[TMP62]], float [[TMP42]], i64 2
+; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <8 x float> [[TMP63]], float [[TMP46]], i64 3
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <8 x float> [[TMP64]], float [[TMP47]], i64 4
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <8 x float> [[TMP34]], float [[TMP27]], i64 5
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <8 x float> [[TMP35]], float [[TMP28]], i64 6
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = insertelement <8 x float> [[TMP36]], float [[TMP61]], i64 7
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <8 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <8 x float> [[TMP14]], <8 x float> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    store <8 x float> [[TMP16]], ptr [[TMP17]], align 4
+; CHECK-NEXT:    store <8 x float> [[TMP14]], ptr [[TMP17]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -188,36 +211,55 @@ define signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n) {
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF2]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC3]] to i32
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[N]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x i32> poison, i32 [[BC_RESUME_VAL]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT5]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add nuw nsw <4 x i32> [[BROADCAST_SPLAT6]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX8:%.*]] = trunc i64 [[INDEX7]] to i32
-; CHECK-NEXT:    [[TMP22:%.*]] = xor i32 [[OFFSET_IDX8]], -1
-; CHECK-NEXT:    [[TMP23:%.*]] = add i32 [[TMP22]], [[N]]
-; CHECK-NEXT:    [[TMP24:%.*]] = sext i32 [[TMP23]] to i64
+; CHECK-NEXT:    [[VEC_IND8:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT10:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP43:%.*]] = xor <4 x i32> [[VEC_IND8]], splat (i32 -1)
+; CHECK-NEXT:    [[TMP44:%.*]] = add <4 x i32> [[TMP43]], [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    [[TMP45:%.*]] = sext <4 x i32> [[TMP44]] to <4 x i64>
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP45]], i64 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP24]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds float, ptr [[TMP25]], i64 -3
-; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP27]], align 4
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i64> [[TMP45]], i64 1
+; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP48]]
+; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <4 x i64> [[TMP45]], i64 2
+; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP50]]
+; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i64> [[TMP45]], i64 3
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP52]]
+; CHECK-NEXT:    [[TMP54:%.*]] = load float, ptr [[TMP25]], align 4
+; CHECK-NEXT:    [[TMP55:%.*]] = load float, ptr [[TMP49]], align 4
+; CHECK-NEXT:    [[TMP56:%.*]] = load float, ptr [[TMP51]], align 4
+; CHECK-NEXT:    [[TMP57:%.*]] = load float, ptr [[TMP53]], align 4
+; CHECK-NEXT:    [[TMP58:%.*]] = insertelement <4 x float> poison, float [[TMP54]], i64 0
+; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <4 x float> [[TMP58]], float [[TMP55]], i64 1
+; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <4 x float> [[TMP59]], float [[TMP56]], i64 2
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = insertelement <4 x float> [[TMP60]], float [[TMP57]], i64 3
 ; CHECK-NEXT:    [[TMP26:%.*]] = fadd fast <4 x float> [[WIDE_LOAD9]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <4 x float> [[TMP26]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX7]]
-; CHECK-NEXT:    store <4 x float> [[TMP28]], ptr [[TMP29]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP26]], ptr [[TMP29]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX7]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT10]] = add nuw nsw <4 x i32> [[VEC_IND8]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP31]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label %[[FOR_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i32 [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL12:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i32 [ [[IND_END]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL8]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[I_014:%.*]] = phi i32 [ [[BC_RESUME_VAL9]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL12]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_014:%.*]] = phi i32 [ [[BC_RESUME_VAL13]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP32:%.*]] = xor i32 [[I_014]], -1
 ; CHECK-NEXT:    [[SUB2:%.*]] = add i32 [[TMP32]], [[N]]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[SUB2]] to i64
@@ -918,7 +960,7 @@ exit:
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}

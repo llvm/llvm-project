@@ -15215,7 +15215,9 @@ public:
       // flag. Add the nsuw flag as an assumption that we could make.
       const SCEV *Step = AR->getStepRecurrence(SE);
       Type *Ty = Expr->getType();
-      if (addOverflowAssumption(AR, SCEVWrapPredicate::IncrementNSUW))
+      // An nsuw predicate with a known-negative step is not useful in practice.
+      if (!SE.isKnownNegative(Step) &&
+          addOverflowAssumption(AR, SCEVWrapPredicate::IncrementNSUW))
         return SE.getAddRecExpr(SE.getSignExtendExpr(AR->getStart(), Ty),
                                 SE.getZeroExtendExpr(Step, Ty), L,
                                 AR->getNoWrapFlags());

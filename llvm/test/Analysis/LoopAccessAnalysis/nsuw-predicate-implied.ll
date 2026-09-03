@@ -281,33 +281,15 @@ exit:
 define void @wrap_check_iv.3_does_not_imply_iv.2_due_to_negative_step(i32 noundef %N, ptr %dst, ptr %src) {
 ; CHECK-LABEL: 'wrap_check_iv.3_does_not_imply_iv.2_due_to_negative_step'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %dst High: (4 + (17179869180 * (zext i32 (-1 + %N) to i64)) + %dst))
-; CHECK-NEXT:            Member: {%dst,+,17179869180}<%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
-; CHECK-NEXT:            Member: {%src,+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,-1}<%loop> Added Flags: <nsuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
-; CHECK-NEXT:        ((4 * (sext i32 {0,+,2}<%loop> to i64))<nsw> + %src)
-; CHECK-NEXT:        --> {%src,+,8}<nw><%loop>
-; CHECK-NEXT:      [PSE] %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3:
-; CHECK-NEXT:        ((4 * (sext i32 {0,+,-1}<%loop> to i64))<nsw> + %dst)
-; CHECK-NEXT:        --> {%dst,+,17179869180}<%loop>
 ;
 entry:
   br label %loop
