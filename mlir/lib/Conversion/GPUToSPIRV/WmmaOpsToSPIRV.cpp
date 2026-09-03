@@ -219,6 +219,21 @@ struct WmmaInsertOpToSPIRVLowering final
     if (!coopType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
+    Type elementType =
+        cast<spirv::CooperativeMatrixType>(coopType).getElementType();
+    if (value.getType() != elementType) {
+      Type valueType = value.getType();
+      if (!gpu::SubgroupMmaInsertThreadLocalOp::canBitcastToMatrixElement(
+              valueType, elementType))
+        return rewriter.notifyMatchFailure(
+            op, "expected a signless integer value and a matching-width "
+                "signed or unsigned matrix element");
+
+      // Allow signless integers into signed/unsigned matrix by bitcasting.
+      value =
+          spirv::BitcastOp::create(rewriter, op.getLoc(), elementType, value);
+    }
+
     SmallVector<int32_t> intValues;
     for (Value val : op.getIndices()) {
       if (auto constOp = val.getDefiningOp<arith::ConstantIndexOp>()) {

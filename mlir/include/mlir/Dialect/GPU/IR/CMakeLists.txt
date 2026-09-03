@@ -12,6 +12,10 @@ mlir_tablegen(ParallelLoopMapperEnums.cpp.inc -gen-enum-defs)
 add_mlir_dialect_tablegen_target(MLIRParallelLoopMapperEnumsGen)
 
 set(LLVM_TARGET_DEFINITIONS GPUOps.td)
+mlir_tablegen(GPUTypeConstraints.h.inc -gen-type-constraint-decls)
+mlir_tablegen(GPUTypeConstraints.cpp.inc -gen-type-constraint-defs)
+add_mlir_dialect_tablegen_target(MLIRGPUTypeConstraintsIncGen)
+
 mlir_tablegen(GPUOpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(GPUOpsEnums.cpp.inc -gen-enum-defs)
 add_mlir_dialect_tablegen_target(MLIRGPUOpsEnumsGen)
