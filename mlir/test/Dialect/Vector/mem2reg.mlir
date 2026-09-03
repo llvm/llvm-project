@@ -81,24 +81,6 @@ func.func @negative_nonzero_index(%pad: f32) -> vector<4xf32> {
   return %r : vector<4xf32>
 }
 
-// -----
-
-// A masked transfer only touches part of the buffer: must NOT be promoted.
-
-// CHECK-LABEL: func.func @negative_masked
-//        CHECK:   memref.alloca
-//        CHECK:   vector.transfer_write
-//        CHECK:   vector.transfer_read
-func.func @negative_masked(%pad: f32, %m: vector<4xi1>) -> vector<4xf32> {
-  %c0 = arith.constant 0 : index
-  %cst = arith.constant dense<1.0> : vector<4xf32>
-  %a = memref.alloca() : memref<4xf32>
-  vector.transfer_write %cst, %a[%c0], %m {in_bounds = [true]} : vector<4xf32>, memref<4xf32>
-  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<4xf32>, vector<4xf32>
-  return %r : vector<4xf32>
-}
-
-// -----
 
 // A partial (out-of-bounds) transfer must NOT be promoted.
 
@@ -460,24 +442,6 @@ func.func @negative_subview_rank_reducing(%v: vector<4xf32>, %init: vector<2x4xf
   return %r : vector<2x4xf32>
 }
 
-// -----
-
-// A masked write into the subview is not a whole-sub-region access: not promoted.
-
-// CHECK-LABEL: func.func @negative_subview_masked
-//        CHECK:   memref.alloca
-//        CHECK:   memref.subview
-func.func @negative_subview_masked(%v: vector<4xf32>, %init: vector<8xf32>, %pad: f32, %m: vector<4xi1>) -> vector<8xf32> {
-  %c0 = arith.constant 0 : index
-  %a = memref.alloca() : memref<8xf32>
-  vector.transfer_write %init, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
-  %sv = memref.subview %a[2] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 2>>
-  vector.transfer_write %v, %sv[%c0], %m {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1], offset: 2>>
-  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
-  return %r : vector<8xf32>
-}
-
-// -----
 
 // A prefetching software-pipelined loop. The stage buffer double-buffers the
 // prefetched tile: the prefetch of the next tile is skipped on the last iteration.
@@ -606,4 +570,61 @@ func.func @gemm_k_early_exit(%A: memref<4x16xf32>, %B: memref<16x4xf32>,
   %sum = arith.addf %cval, %dval : vector<4x4xf32>
   vector.transfer_write %sum, %C[%c0, %c0] {in_bounds = [true, true]} : vector<4x4xf32>, memref<4x4xf32>
   return
+}
+
+// -----
+
+// A masked whole-buffer read promotes to select(mask, reachingDef, padding).
+// CHECK-LABEL: func.func @masked_read(
+// CHECK-SAME:      %[[V:.*]]: vector<8xf32>, %[[M:.*]]: vector<8xi1>, %[[PAD:.*]]: f32
+// CHECK-NOT:     memref.alloca
+// CHECK:         %[[PS:.*]] = vector.broadcast %[[PAD]] : f32 to vector<8xf32>
+// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[V]], %[[PS]]
+// CHECK:         return %[[SEL]]
+func.func @masked_read(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%c0], %pad, %m {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
+  return %r : vector<8xf32>
+}
+
+// -----
+
+// A masked whole-buffer write composes select(mask, stored, reachingDef); a
+// later read observes that composed value.
+// CHECK-LABEL: func.func @masked_write(
+// CHECK-SAME:      %[[V:.*]]: vector<8xf32>, %[[W:.*]]: vector<8xf32>, %[[M:.*]]: vector<8xi1>
+// CHECK-NOT:     memref.alloca
+// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[W]], %[[V]]
+// CHECK:         return %[[SEL]]
+func.func @masked_write(%v: vector<8xf32>, %w: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  vector.transfer_write %w, %a[%c0], %m {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
+  return %r : vector<8xf32>
+}
+
+// -----
+
+// A masked write into a static subview composes through the subview aliaser:
+// the region is projected out (extract_strided_slice), the mask selects the
+// stored value, and the result is inserted back (insert_strided_slice).
+// CHECK-LABEL: func.func @masked_write_static_subview(
+// CHECK-SAME:      %[[V:.*]]: vector<4xf32>, %[[INIT:.*]]: vector<8xf32>, %{{.*}}: f32, %[[M:.*]]: vector<4xi1>
+// CHECK-NOT:     memref.alloca
+// CHECK:         %[[EX:.*]] = vector.extract_strided_slice %[[INIT]] {offsets = [2], sizes = [4]
+// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[V]], %[[EX]]
+// CHECK:         %[[INS:.*]] = vector.insert_strided_slice %[[SEL]], %[[INIT]] {offsets = [2]
+// CHECK:         return %[[INS]]
+func.func @masked_write_static_subview(%v: vector<4xf32>, %init: vector<8xf32>, %pad: f32, %m: vector<4xi1>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %init, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %sv = memref.subview %a[2] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 2>>
+  vector.transfer_write %v, %sv[%c0], %m {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1], offset: 2>>
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
+  return %r : vector<8xf32>
 }
