@@ -46,8 +46,7 @@ struct deque_test {
   }
 };
 
-/*TEST_CONSTEXPR_CXX26*/
-void test_deque_and_join_view_iterators() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
+TEST_CONSTEXPR_CXX26 void test_deque_and_join_view_iterators() {
   {                                         // Verify that segmented deque iterators work properly
     int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
     for (const int size : sizes) {
