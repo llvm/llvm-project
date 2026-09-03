@@ -7796,7 +7796,8 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
 
     // Internal-linkage functions in different global module fragments denote
     // different entities, even if they otherwise have the same name and type.
-    if (FuncX->getFormalLinkage() == Linkage::Internal &&
+    if (getLangOpts().ModulesUniqueGMFInternalLinkage &&
+        FuncX->getFormalLinkage() == Linkage::Internal &&
         FuncY->getFormalLinkage() == Linkage::Internal &&
         FuncX->isFromGlobalModule() && FuncY->isFromGlobalModule() &&
         FuncX->getOwningModule() != FuncY->getOwningModule())

@@ -2764,18 +2764,6 @@ static std::string getMangledNameImpl(CIRGenModule &cgm, GlobalDecl gd,
   return std::string(out.str());
 }
 
-static bool areDistinctInternalGlobalModuleEntities(GlobalDecl gd,
-                                                    GlobalDecl otherGd) {
-  const auto *fd = dyn_cast_or_null<FunctionDecl>(gd.getDecl());
-  const auto *otherFd = dyn_cast_or_null<FunctionDecl>(otherGd.getDecl());
-  if (!fd || !otherFd || fd->getFormalLinkage() != Linkage::Internal ||
-      otherFd->getFormalLinkage() != Linkage::Internal ||
-      !fd->isFromGlobalModule() || !otherFd->isFromGlobalModule())
-    return false;
-
-  return fd->getOwningModule() != otherFd->getOwningModule();
-}
-
 static FunctionDecl *
 createOpenACCBindTempFunction(ASTContext &ctx, const IdentifierInfo *bindName,
                               const FunctionDecl *protoFunc) {
@@ -2869,15 +2857,6 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
   std::string mangledName = getMangledNameImpl(*this, gd, nd);
 
   auto result = manglings.insert(std::make_pair(mangledName, gd));
-  if (!result.second &&
-      areDistinctInternalGlobalModuleEntities(gd, result.first->second)) {
-    unsigned discriminator = 1;
-    do {
-      std::string uniqueName =
-          (Twine(mangledName) + "." + Twine(discriminator++)).str();
-      result = manglings.insert(std::make_pair(uniqueName, gd));
-    } while (!result.second);
-  }
   return mangledDeclNames[canonicalGd] = result.first->first();
 }
 
