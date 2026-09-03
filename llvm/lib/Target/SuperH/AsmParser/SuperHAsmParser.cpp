@@ -516,11 +516,8 @@ ParseStatus SuperHAsmParser::tryParseRegRelative(MCRegister &BaseReg, MCRegister
     return ParseStatus::Success;
   }
 
-  AsmToken Buf[2];
-  getLexer().peekTokens(Buf);
-
   // Parse "@(" sequence
-  if (Buf[0].isNot(AsmToken::At) && Buf[1].isNot(AsmToken::LParen)) {
+  if (getTok().isNot(AsmToken::At) || getLexer().peekTok().isNot(AsmToken::LParen)) {
     return ParseStatus::NoMatch;
   }
   Parser.Lex();
