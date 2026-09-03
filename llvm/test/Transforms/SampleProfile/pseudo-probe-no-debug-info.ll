@@ -25,12 +25,12 @@
 ; MIR-LABEL: name: caller
 ; MIR-NOT: PSEUDO_PROBE {{.*}}, 2, 2
 
-; After middle and inner are inlined, inner's probe has a valid middle-to-inner
-; edge followed by the invalid DWARF-only caller-to-middle edge. Preserve the
-; valid inner edge and truncate the inline tree at the invalid outer edge.
+; After middle and inner are inlined, the caller-to-middle edge has no probe
+; identity. Keep that edge as reserved probe zero so the decoder can reset the
+; unavailable context without promoting the inlinees to top-level probe groups.
 ; ASM-LABEL: caller:
-; ASM: .pseudoprobe 13491010695890359370 1 0 0 caller
-; ASM: .pseudoprobe 4738244524459464682 1 0 0 @ 13491010695890359370:2 caller
+; ASM: .pseudoprobe 13491010695890359370 1 0 0 @ 16677772384402303968:0 caller
+; ASM: .pseudoprobe 4738244524459464682 1 0 0 @ 16677772384402303968:0 @ 13491010695890359370:2 caller
 
 @a = common global i32 0, align 4
 @b = common global i32 0, align 4
