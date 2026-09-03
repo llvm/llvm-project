@@ -1,4 +1,5 @@
 ; RUN: opt -S -passes=dxil-debug-info %s -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-COMMENT
 
 target triple = "dxil-pc-shadermodel6.3-library"
 
@@ -6,6 +7,7 @@ target triple = "dxil-pc-shadermodel6.3-library"
 ; and other debug info is still present.
 ; CHECK: define void @foo(i32 %i)
 ; CHECK-NEXT: entry:
+; CHECK-COMMENT-NEXT:   ; DXIL: to be replaced with: {{.*}} @llvm.dbg.value
 ; CHECK-NEXT:   tail call void @llvm.dbg.value
 ; CHECK-NOT: call void @llvm.dbg.label
 ; CHECK: retainedNodes: ![[RETAINED:[0-9]+]]
