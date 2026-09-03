@@ -1096,6 +1096,8 @@ public:
     return 1;
   }
 
+  bool shouldInterleaveToReduceStalls() const override { return false; }
+
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
