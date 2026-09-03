@@ -29,6 +29,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -373,15 +374,22 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
 
     if (MI->getOpcode() == AMDGPU::ASYNCMARK) {
-      if (isVerbose())
-        OutStreamer->emitRawComment(" asyncmark");
+      if (isVerbose()) {
+        OutStreamer->emitRawComment(" asyncmark(" +
+                                    Twine(AMDGPU::AsyncStage::getStageName(
+                                        MI->getOperand(0).getImm())) +
+                                    ")");
+      }
       return;
     }
 
     if (MI->getOpcode() == AMDGPU::WAIT_ASYNCMARK) {
       if (isVerbose()) {
         OutStreamer->emitRawComment(" wait_asyncmark(" +
-                                    Twine(MI->getOperand(0).getImm()) + ")");
+                                    Twine(MI->getOperand(0).getImm()) + ", " +
+                                    Twine(AMDGPU::AsyncStage::getStageName(
+                                        MI->getOperand(1).getImm())) +
+                                    ")");
       }
       return;
     }

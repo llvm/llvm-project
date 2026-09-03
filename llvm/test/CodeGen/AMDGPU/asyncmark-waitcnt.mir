@@ -17,9 +17,9 @@ body:             |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; CHECK-NEXT: ASYNCMARK
+    ; CHECK-NEXT: ASYNCMARK 16
     ; CHECK-NEXT: S_ENDPGM 0
     S_WAITCNT_soft 0
-    ASYNCMARK
+    ASYNCMARK 16
     S_ENDPGM 0
 ...

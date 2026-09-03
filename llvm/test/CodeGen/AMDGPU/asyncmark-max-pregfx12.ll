@@ -10,26 +10,26 @@
 ; Loop body: 18 markers
 
 ; CHECK-LABEL: test_loop_exceeds_max_first_iteration:
-; CHECK: ; wait_asyncmark(3)
+; CHECK: ; wait_asyncmark(3, ALL)
 ; CHECK-NEXT: s_waitcnt vmcnt(3)
 
 define void @test_loop_exceeds_max_first_iteration(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 %n, ptr addrspace(1) %out) {
 entry:
   ; Preloop: 5 async LDS DMA operations
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   br label %loop_header
 
@@ -42,49 +42,49 @@ loop_header:
 loop_body:
   ; Loop body with 18 async operations
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   br label %loop_header
 
 exit:
-  call void @llvm.amdgcn.wait.asyncmark(i16 3)
+  call void @llvm.amdgcn.wait.asyncmark(i16 3, i32 16)
   %lds_val = load i32, ptr addrspace(3) %lds
   store i32 %lds_val, ptr addrspace(1) %out
   ret void
@@ -95,26 +95,26 @@ exit:
 ; Loop body: 5 markers
 
 ; CHECK-LABEL: test_loop_needs_more_iterations:
-; CHECK: ; wait_asyncmark(3)
+; CHECK: ; wait_asyncmark(3, ALL)
 ; CHECK-NEXT: s_waitcnt vmcnt(3)
 
 define void @test_loop_needs_more_iterations(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 %n, ptr addrspace(1) %out) {
 entry:
   ; Preloop: 5 async LDS DMA operations
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   br label %loop_header
 
@@ -127,20 +127,20 @@ loop_header:
 loop_body:
   ; Loop body with 5 async operations
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   br label %loop_header
 
 exit:
-  call void @llvm.amdgcn.wait.asyncmark(i16 3)
+  call void @llvm.amdgcn.wait.asyncmark(i16 3, i32 16)
   %lds_val = load i32, ptr addrspace(3) %lds
   store i32 %lds_val, ptr addrspace(1) %out
   ret void
@@ -149,7 +149,7 @@ exit:
 ; Merge exceeds MaxAsyncMarkers
 
 ; CHECK-LABEL: max_when_merged:
-; CHECK: ; wait_asyncmark(17)
+; CHECK: ; wait_asyncmark(17, ALL)
 ; CHECK-NEXT: s_waitcnt vmcnt(15)
 
 define void @max_when_merged(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 %n, ptr addrspace(1) %out) {
@@ -160,68 +160,68 @@ entry:
 then:
   ; 5 async operations
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   br label %endif
 
 else:
   ; 18 async operations
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   br label %endif
 
 endif:
-  call void @llvm.amdgcn.wait.asyncmark(i16 17)
+  call void @llvm.amdgcn.wait.asyncmark(i16 17, i32 16)
   %lds_val = load i32, ptr addrspace(3) %lds
   store i32 %lds_val, ptr addrspace(1) %out
   ret void
@@ -230,52 +230,52 @@ endif:
 ; Straightline exceeds MaxAsyncMarkers
 
 ; CHECK-LABEL: no_max_in_straightline:
-; CHECK: ; wait_asyncmark(17)
+; CHECK: ; wait_asyncmark(17, ALL)
 ; CHECK-NEXT: s_waitcnt vmcnt(17)
 
 define void @no_max_in_straightline(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 %n, ptr addrspace(1) %out) {
   ; 18 async operations
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %in, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
-  call void @llvm.amdgcn.wait.asyncmark(i16 17)
+  call void @llvm.amdgcn.wait.asyncmark(i16 17, i32 16)
   %lds_val = load i32, ptr addrspace(3) %lds
   store i32 %lds_val, ptr addrspace(1) %out
   ret void

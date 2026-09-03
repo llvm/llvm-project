@@ -13,7 +13,7 @@ define void @code_barrier(ptr addrspace(1) %foo, ptr addrspace(3) %lds, ptr addr
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    ds_read_b32 v0, v2
-; SDAG-NEXT:    ; wait_asyncmark(0)
+; SDAG-NEXT:    ; wait_asyncmark(0, ALL)
 ; SDAG-NEXT:    ds_read_b32 v1, v2 offset:4
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_add_u32_e32 v0, v0, v1
@@ -25,7 +25,7 @@ define void @code_barrier(ptr addrspace(1) %foo, ptr addrspace(3) %lds, ptr addr
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    ds_read_b32 v0, v2
-; GISEL-NEXT:    ; wait_asyncmark(0)
+; GISEL-NEXT:    ; wait_asyncmark(0, ALL)
 ; GISEL-NEXT:    ds_read_b32 v1, v2 offset:4
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_add_u32_e32 v0, v0, v1
@@ -34,7 +34,7 @@ define void @code_barrier(ptr addrspace(1) %foo, ptr addrspace(3) %lds, ptr addr
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %lds_gep1 = getelementptr i32, ptr addrspace(3) %lds, i32 1
   %val1 = load i32, ptr addrspace(3) %lds
-  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 16)
   %val2 = load i32, ptr addrspace(3) %lds_gep1
   %sum = add i32 %val1, %val2
   store i32 %sum, ptr addrspace(3) %out
@@ -58,18 +58,18 @@ define void @interleaved_global_and_dma(ptr addrspace(1) %foo, ptr addrspace(3) 
 ; SDAG-NEXT:    ; wave barrier
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    global_load_dword v[3:4], off lds
-; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; asyncmark(ALL)
 ; SDAG-NEXT:    global_load_dword v0, v[0:1], off
 ; SDAG-NEXT:    ; wave barrier
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    global_load_dword v[3:4], off lds
 ; SDAG-NEXT:    ; wave barrier
 ; SDAG-NEXT:    global_load_dword v1, v[3:4], off
-; SDAG-NEXT:    ; asyncmark
-; SDAG-NEXT:    ; wait_asyncmark(1)
+; SDAG-NEXT:    ; asyncmark(ALL)
+; SDAG-NEXT:    ; wait_asyncmark(1, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(3)
 ; SDAG-NEXT:    ds_read_b32 v3, v2
-; SDAG-NEXT:    ; wait_asyncmark(0)
+; SDAG-NEXT:    ; wait_asyncmark(0, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    ds_read_b32 v2, v2
 ; SDAG-NEXT:    v_add_u32_e32 v4, v8, v7
@@ -91,18 +91,18 @@ define void @interleaved_global_and_dma(ptr addrspace(1) %foo, ptr addrspace(3) 
 ; GISEL-NEXT:    ; wave barrier
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    global_load_dword v[3:4], off lds
-; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; asyncmark(ALL)
 ; GISEL-NEXT:    global_load_dword v0, v[0:1], off
 ; GISEL-NEXT:    ; wave barrier
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    global_load_dword v[3:4], off lds
 ; GISEL-NEXT:    ; wave barrier
 ; GISEL-NEXT:    global_load_dword v1, v[3:4], off
-; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    ; wait_asyncmark(1)
+; GISEL-NEXT:    ; asyncmark(ALL)
+; GISEL-NEXT:    ; wait_asyncmark(1, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(3)
 ; GISEL-NEXT:    ds_read_b32 v3, v2
-; GISEL-NEXT:    ; wait_asyncmark(0)
+; GISEL-NEXT:    ; wait_asyncmark(0, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    ds_read_b32 v2, v2
 ; GISEL-NEXT:    v_add_u32_e32 v4, v8, v7
@@ -119,7 +119,7 @@ entry:
   %foo_v1 = load i32, ptr addrspace(1) %foo
   call void @llvm.amdgcn.wave.barrier()
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %bar, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   ; Second batch: global load, async global-to-LDS, global load
   %foo_v2 = load i32, ptr addrspace(1) %foo
@@ -127,16 +127,16 @@ entry:
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %bar, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
   call void @llvm.amdgcn.wave.barrier()
   %bar_v12 = load i32, ptr addrspace(1) %bar
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   ; Wait for first async mark and read from LDS
   ; This results in vmcnt(3) corresponding to the second batch.
-  call void @llvm.amdgcn.wait.asyncmark(i16 1)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 16)
   %lds_val21 = load i32, ptr addrspace(3) %lds
 
   ; Wait for the next lds dma
   ; This results in vmcnt(1), corresponding to %bar_v12. Could have been combined with the lgkmcnt(1) for %lds_val21.
-  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 16)
   %lds_val22 = load i32, ptr addrspace(3) %lds
   %sum1 = add i32 %foo_v1, %bar_v11
   %sum2 = add i32 %sum1, %lds_val21
@@ -160,7 +160,7 @@ define void @interleaved_buffer_and_dma(ptr addrspace(8) inreg %buf, ptr addrspa
 ; SDAG-NEXT:    v_mov_b32_e32 v8, 0x54
 ; SDAG-NEXT:    ; wave barrier
 ; SDAG-NEXT:    buffer_load_dword v8, s[16:19], 0 offen lds
-; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; asyncmark(ALL)
 ; SDAG-NEXT:    global_load_dword v0, v[0:1], off
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0x58
 ; SDAG-NEXT:    ; wave barrier
@@ -168,11 +168,11 @@ define void @interleaved_buffer_and_dma(ptr addrspace(8) inreg %buf, ptr addrspa
 ; SDAG-NEXT:    ; wave barrier
 ; SDAG-NEXT:    global_load_dword v1, v[2:3], off
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s20
-; SDAG-NEXT:    ; asyncmark
-; SDAG-NEXT:    ; wait_asyncmark(1)
+; SDAG-NEXT:    ; asyncmark(ALL)
+; SDAG-NEXT:    ; wait_asyncmark(1, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(3)
 ; SDAG-NEXT:    ds_read_b32 v3, v2
-; SDAG-NEXT:    ; wait_asyncmark(0)
+; SDAG-NEXT:    ; wait_asyncmark(0, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    ds_read_b32 v2, v2
 ; SDAG-NEXT:    v_add_u32_e32 v6, v7, v6
@@ -193,7 +193,7 @@ define void @interleaved_buffer_and_dma(ptr addrspace(8) inreg %buf, ptr addrspa
 ; GISEL-NEXT:    v_mov_b32_e32 v8, 0x54
 ; GISEL-NEXT:    ; wave barrier
 ; GISEL-NEXT:    buffer_load_dword v8, s[16:19], 0 offen lds
-; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; asyncmark(ALL)
 ; GISEL-NEXT:    global_load_dword v0, v[0:1], off
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x58
 ; GISEL-NEXT:    ; wave barrier
@@ -201,11 +201,11 @@ define void @interleaved_buffer_and_dma(ptr addrspace(8) inreg %buf, ptr addrspa
 ; GISEL-NEXT:    ; wave barrier
 ; GISEL-NEXT:    global_load_dword v1, v[2:3], off
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s20
-; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    ; wait_asyncmark(1)
+; GISEL-NEXT:    ; asyncmark(ALL)
+; GISEL-NEXT:    ; wait_asyncmark(1, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(3)
 ; GISEL-NEXT:    ds_read_b32 v3, v2
-; GISEL-NEXT:    ; wait_asyncmark(0)
+; GISEL-NEXT:    ; wait_asyncmark(0, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    ds_read_b32 v2, v2
 ; GISEL-NEXT:    v_add_u32_e32 v6, v7, v6
@@ -222,7 +222,7 @@ entry:
   %foo_v1 = load i32, ptr addrspace(1) %foo
   call void @llvm.amdgcn.wave.barrier()
   call void @llvm.amdgcn.raw.ptr.buffer.load.async.lds(ptr addrspace(8) %buf, ptr addrspace(3) %lds, i32 4, i32 84, i32 0, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   ; Second batch: global load, async global-to-LDS, global load.
   %foo_v2 = load i32, ptr addrspace(1) %foo
@@ -230,16 +230,16 @@ entry:
   call void @llvm.amdgcn.raw.ptr.buffer.load.async.lds(ptr addrspace(8) %buf, ptr addrspace(3) %lds, i32 4, i32 88, i32 0, i32 0, i32 0)
   call void @llvm.amdgcn.wave.barrier()
   %bar_v12 = load i32, ptr addrspace(1) %bar
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   ; Wait for first async mark and read from LDS.
   ; This results in vmcnt(3) corresponding to the second batch.
-  call void @llvm.amdgcn.wait.asyncmark(i16 1)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 16)
   %lds_val21 = load i32, ptr addrspace(3) %lds
 
   ; Wait for the next lds dma.
   ; This results in vmcnt(1) because the last global load is not async.
-  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 16)
   %lds_val22 = load i32, ptr addrspace(3) %lds
   %sum1 = add i32 %foo_v1, %bar_v11
   %sum2 = add i32 %sum1, %lds_val21
@@ -264,7 +264,7 @@ define void @fence_with_asyncmark(ptr addrspace(8) inreg %buf, ptr addrspace(1) 
 ; SDAG-NEXT:    ; wave barrier
 ; SDAG-NEXT:    buffer_load_dword v8, s[16:19], 0 offen lds
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; asyncmark(ALL)
 ; SDAG-NEXT:    global_load_dword v0, v[0:1], off
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0x58
 ; SDAG-NEXT:    ; wave barrier
@@ -272,10 +272,10 @@ define void @fence_with_asyncmark(ptr addrspace(8) inreg %buf, ptr addrspace(1) 
 ; SDAG-NEXT:    ; wave barrier
 ; SDAG-NEXT:    global_load_dword v1, v[2:3], off
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s20
-; SDAG-NEXT:    ; asyncmark
-; SDAG-NEXT:    ; wait_asyncmark(1)
+; SDAG-NEXT:    ; asyncmark(ALL)
+; SDAG-NEXT:    ; wait_asyncmark(1, ALL)
 ; SDAG-NEXT:    ds_read_b32 v3, v2
-; SDAG-NEXT:    ; wait_asyncmark(0)
+; SDAG-NEXT:    ; wait_asyncmark(0, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    ds_read_b32 v2, v2
 ; SDAG-NEXT:    v_add_u32_e32 v6, v7, v6
@@ -297,7 +297,7 @@ define void @fence_with_asyncmark(ptr addrspace(8) inreg %buf, ptr addrspace(1) 
 ; GISEL-NEXT:    ; wave barrier
 ; GISEL-NEXT:    buffer_load_dword v8, s[16:19], 0 offen lds
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; asyncmark(ALL)
 ; GISEL-NEXT:    global_load_dword v0, v[0:1], off
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x58
 ; GISEL-NEXT:    ; wave barrier
@@ -305,10 +305,10 @@ define void @fence_with_asyncmark(ptr addrspace(8) inreg %buf, ptr addrspace(1) 
 ; GISEL-NEXT:    ; wave barrier
 ; GISEL-NEXT:    global_load_dword v1, v[2:3], off
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s20
-; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    ; wait_asyncmark(1)
+; GISEL-NEXT:    ; asyncmark(ALL)
+; GISEL-NEXT:    ; wait_asyncmark(1, ALL)
 ; GISEL-NEXT:    ds_read_b32 v3, v2
-; GISEL-NEXT:    ; wait_asyncmark(0)
+; GISEL-NEXT:    ; wait_asyncmark(0, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    ds_read_b32 v2, v2
 ; GISEL-NEXT:    v_add_u32_e32 v6, v7, v6
@@ -326,7 +326,7 @@ entry:
   call void @llvm.amdgcn.wave.barrier()
   call void @llvm.amdgcn.raw.ptr.buffer.load.async.lds(ptr addrspace(8) %buf, ptr addrspace(3) %lds, i32 4, i32 84, i32 0, i32 0, i32 0)
   fence release
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   ; Second batch: global load, async global-to-LDS, global load.
   %foo_v2 = load i32, ptr addrspace(1) %foo
@@ -334,16 +334,16 @@ entry:
   call void @llvm.amdgcn.raw.ptr.buffer.load.async.lds(ptr addrspace(8) %buf, ptr addrspace(3) %lds, i32 4, i32 88, i32 0, i32 0, i32 0)
   call void @llvm.amdgcn.wave.barrier()
   %bar_v12 = load i32, ptr addrspace(1) %bar
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   ; Wait for first async mark and read from LDS.
   ; This results in vmcnt(3) corresponding to the second batch.
-  call void @llvm.amdgcn.wait.asyncmark(i16 1)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 16)
   %lds_val21 = load i32, ptr addrspace(3) %lds
 
   ; Wait for the next lds dma.
   ; This results in vmcnt(1) because the last global load is not async.
-  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 16)
   %lds_val22 = load i32, ptr addrspace(3) %lds
   %sum1 = add i32 %foo_v1, %bar_v11
   %sum2 = add i32 %sum1, %lds_val21
@@ -368,20 +368,20 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; SDAG-NEXT:    s_mov_b32 m0, s4
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
-; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; asyncmark(ALL)
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
 ; SDAG-NEXT:    v_mov_b32_e32 v5, 0
 ; SDAG-NEXT:    s_mov_b32 s6, 2
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0
-; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; asyncmark(ALL)
 ; SDAG-NEXT:  .LBB4_1: ; %loop_body
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_readfirstlane_b32 s7, v2
 ; SDAG-NEXT:    s_mov_b32 m0, s7
 ; SDAG-NEXT:    s_add_i32 s6, s6, 1
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
-; SDAG-NEXT:    ; asyncmark
-; SDAG-NEXT:    ; wait_asyncmark(2)
+; SDAG-NEXT:    ; asyncmark(ALL)
+; SDAG-NEXT:    ; wait_asyncmark(2, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; SDAG-NEXT:    ds_read_b32 v6, v2
 ; SDAG-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v7
@@ -392,10 +392,10 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; SDAG-NEXT:    s_cbranch_execnz .LBB4_1
 ; SDAG-NEXT:  ; %bb.2: ; %epilog
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SDAG-NEXT:    ; wait_asyncmark(1)
+; SDAG-NEXT:    ; wait_asyncmark(1, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    ds_read_b32 v0, v2
-; SDAG-NEXT:    ; wait_asyncmark(0)
+; SDAG-NEXT:    ; wait_asyncmark(0, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_add_u32_e32 v0, v5, v0
 ; SDAG-NEXT:    global_store_dword v[3:4], v0, off
@@ -409,21 +409,21 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; GISEL-NEXT:    s_mov_b32 m0, s4
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
-; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; asyncmark(ALL)
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
 ; GISEL-NEXT:    s_mov_b32 s7, 0
 ; GISEL-NEXT:    s_mov_b32 s6, 2
 ; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_mov_b32_e32 v5, s7
-; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; asyncmark(ALL)
 ; GISEL-NEXT:  .LBB4_1: ; %loop_body
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    v_readfirstlane_b32 s7, v2
 ; GISEL-NEXT:    s_mov_b32 m0, s7
 ; GISEL-NEXT:    s_add_i32 s6, s6, 1
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
-; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    ; wait_asyncmark(2)
+; GISEL-NEXT:    ; asyncmark(ALL)
+; GISEL-NEXT:    ; wait_asyncmark(2, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GISEL-NEXT:    ds_read_b32 v6, v2
 ; GISEL-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v7
@@ -434,10 +434,10 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; GISEL-NEXT:    s_cbranch_execnz .LBB4_1
 ; GISEL-NEXT:  ; %bb.2: ; %epilog
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GISEL-NEXT:    ; wait_asyncmark(1)
+; GISEL-NEXT:    ; wait_asyncmark(1, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    ds_read_b32 v0, v2
-; GISEL-NEXT:    ; wait_asyncmark(0)
+; GISEL-NEXT:    ; wait_asyncmark(0, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_add_u32_e32 v0, v5, v0
 ; GISEL-NEXT:    global_store_dword v[3:4], v0, off
@@ -446,11 +446,11 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 prolog:
   ; Load first iteration
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   ; Load second iteration
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   br label %loop_body
 
@@ -460,10 +460,10 @@ loop_body:
 
   ; Load next iteration
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   ; Wait for iteration i-2 and process
-  call void @llvm.amdgcn.wait.asyncmark(i16 2)
+  call void @llvm.amdgcn.wait.asyncmark(i16 2, i32 16)
   %lds_idx = sub i32 %i, 2
   %lds_val = load i32, ptr addrspace(3) %lds
 
@@ -475,11 +475,11 @@ loop_body:
 
 epilog:
   ; Process remaining iterations
-  call void @llvm.amdgcn.wait.asyncmark(i16 1)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 16)
   %lds_val_n_2 = load i32, ptr addrspace(3) %lds
   %sum_e2 = add i32 %sum_i, %lds_val_n_2
 
-  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 16)
   %lds_val_n_1 = load i32, ptr addrspace(3) %lds
   %sum_e1 = add i32 %sum_e2, %lds_val_n_1
   store i32 %sum_e2, ptr addrspace(1) %bar
@@ -500,12 +500,12 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; SDAG-NEXT:    global_load_dword v14, v[3:4], off
 ; SDAG-NEXT:    s_mov_b32 s6, 2
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
-; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; asyncmark(ALL)
 ; SDAG-NEXT:    global_load_dword v8, v[0:1], off
 ; SDAG-NEXT:    global_load_dword v9, v[3:4], off
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
-; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; asyncmark(ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; SDAG-NEXT:    v_mov_b32_e32 v13, v8
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
@@ -527,17 +527,17 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; SDAG-NEXT:    v_mov_b32_e32 v10, v8
 ; SDAG-NEXT:    v_mov_b32_e32 v14, v9
 ; SDAG-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; SDAG-NEXT:    ; asyncmark
-; SDAG-NEXT:    ; wait_asyncmark(2)
+; SDAG-NEXT:    ; asyncmark(ALL)
+; SDAG-NEXT:    ; wait_asyncmark(2, ALL)
 ; SDAG-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; SDAG-NEXT:    s_cbranch_execnz .LBB5_1
 ; SDAG-NEXT:  ; %bb.2: ; %epilog
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SDAG-NEXT:    ds_read_b32 v0, v2
-; SDAG-NEXT:    ; wait_asyncmark(1)
+; SDAG-NEXT:    ; wait_asyncmark(1, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(3)
 ; SDAG-NEXT:    ds_read_b32 v1, v2
-; SDAG-NEXT:    ; wait_asyncmark(0)
+; SDAG-NEXT:    ; wait_asyncmark(0, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    ds_read_b32 v2, v2
 ; SDAG-NEXT:    v_add_u32_e32 v3, v17, v16
@@ -561,12 +561,12 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; GISEL-NEXT:    global_load_dword v14, v[3:4], off
 ; GISEL-NEXT:    s_mov_b32 s6, 2
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
-; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; asyncmark(ALL)
 ; GISEL-NEXT:    global_load_dword v8, v[0:1], off
 ; GISEL-NEXT:    global_load_dword v9, v[3:4], off
 ; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
-; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; asyncmark(ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GISEL-NEXT:    v_mov_b32_e32 v13, v8
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
@@ -588,17 +588,17 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; GISEL-NEXT:    v_mov_b32_e32 v10, v8
 ; GISEL-NEXT:    v_mov_b32_e32 v14, v9
 ; GISEL-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    ; wait_asyncmark(2)
+; GISEL-NEXT:    ; asyncmark(ALL)
+; GISEL-NEXT:    ; wait_asyncmark(2, ALL)
 ; GISEL-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GISEL-NEXT:    s_cbranch_execnz .LBB5_1
 ; GISEL-NEXT:  ; %bb.2: ; %epilog
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GISEL-NEXT:    ds_read_b32 v0, v2
-; GISEL-NEXT:    ; wait_asyncmark(1)
+; GISEL-NEXT:    ; wait_asyncmark(1, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(3)
 ; GISEL-NEXT:    ds_read_b32 v1, v2
-; GISEL-NEXT:    ; wait_asyncmark(0)
+; GISEL-NEXT:    ; wait_asyncmark(0, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    ds_read_b32 v2, v2
 ; GISEL-NEXT:    v_add_u32_e32 v3, v17, v16
@@ -617,13 +617,13 @@ prolog:
   %v0 = load i32, ptr addrspace(1) %foo
   %g0 = load i32, ptr addrspace(1) %bar
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   ; Load second iteration
   %v1 = load i32, ptr addrspace(1) %foo
   %g1 = load i32, ptr addrspace(1) %bar
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   br label %loop_body
 
@@ -646,10 +646,10 @@ loop_body:
   %cur_v = load i32, ptr addrspace(1) %foo
   %cur_g = load i32, ptr addrspace(1) %bar
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %foo, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
 
   ; Wait for iteration i-2 and process
-  call void @llvm.amdgcn.wait.asyncmark(i16 2)
+  call void @llvm.amdgcn.wait.asyncmark(i16 2, i32 16)
   %lds_idx = sub i32 %i, 2
   %lds_val = load i32, ptr addrspace(3) %lds
 
@@ -662,13 +662,13 @@ loop_body:
 
 epilog:
   ; Process remaining iterations
-  call void @llvm.amdgcn.wait.asyncmark(i16 1)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 16)
   %lds_val_n_2 = load i32, ptr addrspace(3) %lds
   %sum_e0 = add i32 %sum, %g1_phi
   %sum_e1 = add i32 %v1_phi, %sum_e0
   %sum_e2 = add i32 %sum_e1, %lds_val_n_2
 
-  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 16)
   %lds_val_n_1 = load i32, ptr addrspace(3) %lds
   %sum_e3 = add i32 %cur_v, %cur_g
   %sum_e4 = add i32 %sum_e3, %lds_val_n_1
@@ -689,9 +689,9 @@ define void @consecutive_asyncmarks(ptr addrspace(1) %bar, ptr addrspace(3) %lds
 ; SDAG-NEXT:    s_mov_b32 m0, s4
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
-; SDAG-NEXT:    ; asyncmark
-; SDAG-NEXT:    ; asyncmark
-; SDAG-NEXT:    ; wait_asyncmark(0)
+; SDAG-NEXT:    ; asyncmark(ALL)
+; SDAG-NEXT:    ; asyncmark(ALL)
+; SDAG-NEXT:    ; wait_asyncmark(0, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    ds_read_b32 v0, v2
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -706,9 +706,9 @@ define void @consecutive_asyncmarks(ptr addrspace(1) %bar, ptr addrspace(3) %lds
 ; GISEL-NEXT:    s_mov_b32 m0, s4
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
-; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    ; wait_asyncmark(0)
+; GISEL-NEXT:    ; asyncmark(ALL)
+; GISEL-NEXT:    ; asyncmark(ALL)
+; GISEL-NEXT:    ; wait_asyncmark(0, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    ds_read_b32 v0, v2
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -717,9 +717,9 @@ define void @consecutive_asyncmarks(ptr addrspace(1) %bar, ptr addrspace(3) %lds
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %bar, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
-  call void @llvm.amdgcn.asyncmark()
-  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  call void @llvm.amdgcn.asyncmark(i32 16)
+  call void @llvm.amdgcn.asyncmark(i32 16)
+  call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 16)
   %val = load i32, ptr addrspace(3) %lds
   store i32 %val, ptr addrspace(1) %out
   ret void
@@ -739,12 +739,12 @@ define void @consecutive_asyncmarks_wait1(ptr addrspace(1) %bar, ptr addrspace(3
 ; SDAG-NEXT:    v_readfirstlane_b32 s4, v5
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
 ; SDAG-NEXT:    s_mov_b32 m0, s4
-; SDAG-NEXT:    ; asyncmark
-; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; asyncmark(ALL)
+; SDAG-NEXT:    ; asyncmark(ALL)
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
-; SDAG-NEXT:    ; asyncmark
-; SDAG-NEXT:    ; wait_asyncmark(1)
+; SDAG-NEXT:    ; asyncmark(ALL)
+; SDAG-NEXT:    ; wait_asyncmark(1, ALL)
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    ds_read_b32 v0, v2
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -761,12 +761,12 @@ define void @consecutive_asyncmarks_wait1(ptr addrspace(1) %bar, ptr addrspace(3
 ; GISEL-NEXT:    v_readfirstlane_b32 s4, v5
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
 ; GISEL-NEXT:    s_mov_b32 m0, s4
-; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; asyncmark(ALL)
+; GISEL-NEXT:    ; asyncmark(ALL)
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
-; GISEL-NEXT:    ; asyncmark
-; GISEL-NEXT:    ; wait_asyncmark(1)
+; GISEL-NEXT:    ; asyncmark(ALL)
+; GISEL-NEXT:    ; wait_asyncmark(1, ALL)
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    ds_read_b32 v0, v2
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -776,11 +776,11 @@ define void @consecutive_asyncmarks_wait1(ptr addrspace(1) %bar, ptr addrspace(3
 entry:
   %lds_gep1 = getelementptr i32, ptr addrspace(3) %lds, i32 1
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %bar, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
-  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark(i32 16)
+  call void @llvm.amdgcn.asyncmark(i32 16)
   call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %bar, ptr addrspace(3) %lds_gep1, i32 4, i32 0, i32 0)
-  call void @llvm.amdgcn.asyncmark()
-  call void @llvm.amdgcn.wait.asyncmark(i16 1)
+  call void @llvm.amdgcn.asyncmark(i32 16)
+  call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 16)
   %val = load i32, ptr addrspace(3) %lds
   store i32 %val, ptr addrspace(1) %out
   ret void

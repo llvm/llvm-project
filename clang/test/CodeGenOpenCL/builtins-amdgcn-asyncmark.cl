@@ -5,13 +5,40 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu12.50-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 // REQUIRES: amdgpu-registered-target
 
+// The stage argument selects which sequence of marks the builtin acts on, and
+// reaches the intrinsic unchanged. Stage 16 is the catch-all that observes
+// every counter.
+
 // CHECK-LABEL: @test_invocation(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark()
-// CHECK-NEXT:    call void @llvm.amdgcn.wait.asyncmark(i16 0)
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 16)
+// CHECK-NEXT:    call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 16)
 // CHECK-NEXT:    ret void
 //
 void test_invocation() {
-  __builtin_amdgcn_asyncmark();
-  __builtin_amdgcn_wait_asyncmark(0);
+  __builtin_amdgcn_asyncmark(16);
+  __builtin_amdgcn_wait_asyncmark(0, 16);
+}
+
+// Every supported stage is accepted.
+
+// CHECK-LABEL: @test_stages(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 0)
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 1)
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 2)
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 3)
+// CHECK-NEXT:    call void @llvm.amdgcn.asyncmark(i32 5)
+// CHECK-NEXT:    call void @llvm.amdgcn.wait.asyncmark(i16 1, i32 0)
+// CHECK-NEXT:    call void @llvm.amdgcn.wait.asyncmark(i16 2, i32 5)
+// CHECK-NEXT:    ret void
+//
+void test_stages() {
+  __builtin_amdgcn_asyncmark(0);
+  __builtin_amdgcn_asyncmark(1);
+  __builtin_amdgcn_asyncmark(2);
+  __builtin_amdgcn_asyncmark(3);
+  __builtin_amdgcn_asyncmark(5);
+  __builtin_amdgcn_wait_asyncmark(1, 0);
+  __builtin_amdgcn_wait_asyncmark(2, 5);
 }

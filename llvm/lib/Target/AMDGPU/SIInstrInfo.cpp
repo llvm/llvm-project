@@ -33,6 +33,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include <tuple>
@@ -5752,6 +5753,15 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "WRITELANE instruction violates constant bus restriction";
         return false;
       }
+    }
+  }
+
+  if (Opcode == AMDGPU::ASYNCMARK || Opcode == AMDGPU::WAIT_ASYNCMARK) {
+    int64_t Stage = MI.getOperand(MI.getNumExplicitOperands() - 1).getImm();
+    if (Stage < 0 || !AMDGPU::AsyncStage::isValidStage(Stage) ||
+        AMDGPU::AsyncStage::isReservedStage(Stage)) {
+      ErrInfo = "invalid asyncmark stage";
+      return false;
     }
   }
 

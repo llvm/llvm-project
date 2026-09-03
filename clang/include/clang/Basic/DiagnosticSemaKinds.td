@@ -14333,6 +14333,9 @@ def err_amdgcn_dmask_has_too_many_bits_set
     : Error<"dmask argument cannot have more bits set than there are elements "
             "in return type">;
 
+def err_amdgcn_asyncmark_stage_reserved
+    : Error<"asyncmark stage %0 is reserved">;
+
 def warn_amdgpu_s_wait_event_mask_no_effect_target :
   Warning<"event mask has no effect for target">,
   InGroup<DiagGroup<"amdgpu-wait-event-mask">>;

@@ -2923,12 +2923,18 @@ def int_amdgcn_pops_exiting_wave_id :
 
 // Sets a marker in the stream of async requests. Modelled as InaccessibleMem.
 def int_amdgcn_asyncmark : ClangBuiltin<"__builtin_amdgcn_asyncmark">,
-  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+  Intrinsic<[], [llvm_i32_ty],
+            [ImmArg<ArgIndex<0>>, RangeSet<ArgIndex<0>, [[0, 3], [5, 5], [16, 16]]>,
+             IntrNoMem, IntrHasSideEffects]>;
 
-// Waits until the Nth previous marker is completed, if it exists.
+// Waits until the Nth previous marker of the given stage is completed, if it
+// exists.
 def int_amdgcn_wait_asyncmark :
     ClangBuiltin<"__builtin_amdgcn_wait_asyncmark">,
-    Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+    Intrinsic<[], [llvm_i16_ty, llvm_i32_ty],
+              [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+               RangeSet<ArgIndex<1>, [[0, 3], [5, 5], [16, 16]]>,
+               IntrNoMem, IntrHasSideEffects]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
