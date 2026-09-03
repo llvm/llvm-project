@@ -196,25 +196,9 @@ int v4() { return __builtin_cpu_supports("x86-64-v4"); }
 // CHECK-PPC-NEXT:    store i32 [[SUB27]], ptr [[RETVAL]], align 4
 // CHECK-PPC-NEXT:    br label [[RETURN]]
 // CHECK-PPC:       if.end:
-// CHECK-PPC-NEXT:    br label [[IF_END28:%.*]]
-// CHECK-PPC:       if.end28:
-// CHECK-PPC-NEXT:    br label [[IF_END29:%.*]]
-// CHECK-PPC:       if.end29:
-// CHECK-PPC-NEXT:    br label [[IF_END30:%.*]]
-// CHECK-PPC:       if.end30:
-// CHECK-PPC-NEXT:    br label [[IF_END31:%.*]]
-// CHECK-PPC:       if.end31:
-// CHECK-PPC-NEXT:    br label [[IF_END32:%.*]]
-// CHECK-PPC:       if.end32:
-// CHECK-PPC-NEXT:    br label [[IF_END33:%.*]]
-// CHECK-PPC:       if.end33:
-// CHECK-PPC-NEXT:    br label [[IF_END34:%.*]]
-// CHECK-PPC:       if.end34:
-// CHECK-PPC-NEXT:    br label [[IF_END35:%.*]]
-// CHECK-PPC:       if.end35:
 // CHECK-PPC-NEXT:    [[TMP21:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-PPC-NEXT:    [[ADD36:%.*]] = add nsw i32 [[TMP21]], 5
-// CHECK-PPC-NEXT:    store i32 [[ADD36]], ptr [[RETVAL]], align 4
+// CHECK-PPC-NEXT:    [[ADD28:%.*]] = add nsw i32 [[TMP21]], 5
+// CHECK-PPC-NEXT:    store i32 [[ADD28]], ptr [[RETVAL]], align 4
 // CHECK-PPC-NEXT:    br label [[RETURN]]
 // CHECK-PPC:       return:
 // CHECK-PPC-NEXT:    [[TMP22:%.*]] = load i32, ptr [[RETVAL]], align 4
@@ -283,12 +267,6 @@ int test_ppc(int a) {
 // CHECK-RV32-NEXT:    store i32 13, ptr [[RETVAL]], align 4
 // CHECK-RV32-NEXT:    br label [[RETURN]]
 // CHECK-RV32:       if.end:
-// CHECK-RV32-NEXT:    br label [[IF_END6:%.*]]
-// CHECK-RV32:       if.end6:
-// CHECK-RV32-NEXT:    br label [[IF_END7:%.*]]
-// CHECK-RV32:       if.end7:
-// CHECK-RV32-NEXT:    br label [[IF_END8:%.*]]
-// CHECK-RV32:       if.end8:
 // CHECK-RV32-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-RV32-NEXT:    br label [[RETURN]]
 // CHECK-RV32:       return:
@@ -334,12 +312,6 @@ int test_ppc(int a) {
 // CHECK-RV64-NEXT:    store i32 13, ptr [[RETVAL]], align 4
 // CHECK-RV64-NEXT:    br label [[RETURN]]
 // CHECK-RV64:       if.end:
-// CHECK-RV64-NEXT:    br label [[IF_END6:%.*]]
-// CHECK-RV64:       if.end6:
-// CHECK-RV64-NEXT:    br label [[IF_END7:%.*]]
-// CHECK-RV64:       if.end7:
-// CHECK-RV64-NEXT:    br label [[IF_END8:%.*]]
-// CHECK-RV64:       if.end8:
 // CHECK-RV64-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-RV64-NEXT:    br label [[RETURN]]
 // CHECK-RV64:       return:
