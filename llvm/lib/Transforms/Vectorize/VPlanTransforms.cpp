@@ -246,16 +246,41 @@ public:
   }
 };
 
+static VPValue *getAddressOperand(VPRecipeBase &R) {
+  auto *Rep = dyn_cast<VPReplicateRecipe>(&R);
+  // TODO: support more memory operation.
+  if (!Rep)
+    return nullptr;
+  if (Rep->getOpcode() == Instruction::Load)
+    return Rep->getOperand(0);
+  if (Rep->getOpcode() == Instruction::Store)
+    return Rep->getOperand(1);
+  return nullptr;
+}
+
+static bool isNoAliasViaUnderlyingObject(VPValue *PtrA, VPValue *PtrB,
+                                         VPlan *Plan) {
+  auto *ObjA =
+      dyn_cast_if_present<VPIRValue>(vputils::getUnderlyingObject(PtrA, Plan));
+  auto *ObjB =
+      dyn_cast_if_present<VPIRValue>(vputils::getUnderlyingObject(PtrB, Plan));
+  if (!ObjA || !ObjB || ObjA == ObjB)
+    return false;
+  Value *ValA = ObjA->getValue();
+  Value *ValB = ObjB->getValue();
+  return (isa<Argument>(ValA) && isIdentifiedFunctionLocal(ValB)) ||
+         (isa<Argument>(ValB) && isIdentifiedFunctionLocal(ValA));
+}
+
 /// Check if a memory operation doesn't alias with memory operations using
 /// scoped noalias metadata, in blocks in the single-successor chain between \p
 /// FirstBB and \p LastBB. If \p SinkInfo is std::nullopt, only recipes that may
 /// write to memory are checked (for load hoisting). Otherwise recipes that both
 /// read and write memory are checked, and SCEV is used to prove no-alias
 /// between the group leader and other replicate recipes (for store sinking).
-static bool
-canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
-                               VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
-                               std::optional<SinkStoreInfo> SinkInfo = {}) {
+static bool canHoistOrSinkWithNoAliasCheck(
+    const MemoryLocation &MemLoc, VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
+    std::optional<SinkStoreInfo> SinkInfo = {}, VPValue *Ptr = nullptr) {
   bool CheckReads = SinkInfo.has_value();
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
@@ -265,6 +290,11 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
 
       // Skip recipes that don't need checking.
       if (!R.mayWriteToMemory() && !(CheckReads && R.mayReadFromMemory()))
+        continue;
+
+      auto *Addr = getAddressOperand(R);
+      if (Ptr && Addr &&
+          isNoAliasViaUnderlyingObject(Ptr, Addr, FirstBB->getPlan()))
         continue;
 
       auto Loc = vputils::getMemoryLocation(R);
@@ -2313,7 +2343,8 @@ static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
               : std::nullopt;
 
   return !MemLoc ||
-         !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo);
+         !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo,
+                                         getAddressOperand(R));
 }
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.

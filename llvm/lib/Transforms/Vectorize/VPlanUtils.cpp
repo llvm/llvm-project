@@ -19,6 +19,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
@@ -124,6 +125,22 @@ GEPNoWrapFlags vputils::getGEPFlagsForPtr(VPValue *Ptr) {
     Ptr = PtrVPI->getOperand(0);
   }
   return GEPNoWrapFlags::none();
+}
+
+VPValue *vputils::getUnderlyingObject(VPValue *V, VPlan *Plan) {
+  if (auto *IRV = dyn_cast<VPIRValue>(V))
+    return Plan->getOrAddLiveIn(llvm::getUnderlyingObject(IRV->getValue()));
+
+  auto *R = V->getDefiningRecipe();
+  if (!R)
+    return V;
+
+  if (auto *Rep = dyn_cast<VPReplicateRecipe>(R)) {
+    if (Rep->getOpcode() != Instruction::GetElementPtr)
+      return V;
+    return getUnderlyingObject(Rep->getOperand(0), Plan);
+  }
+  return V;
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,

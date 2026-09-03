@@ -172,6 +172,11 @@ VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
 /// mirroring Value::stripPointerCasts.
 GEPNoWrapFlags getGEPFlagsForPtr(VPValue *Ptr);
 
+/// Return the underlying object live-in for \p V, looking through
+/// pointer-preserving VPlan recipes. Returns \p V itself if no underlying
+/// object can be determined.
+VPValue *getUnderlyingObject(VPValue *V, VPlan *Plan);
+
 /// Returns true if \p V is used as part of the address of another load or
 /// store.
 bool isUsedByLoadStoreAddress(const VPValue *V);
