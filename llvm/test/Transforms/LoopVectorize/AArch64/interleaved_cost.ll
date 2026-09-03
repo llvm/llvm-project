@@ -130,6 +130,183 @@ for.end:
   ret void
 }
 
+%i8.3 = type {i8, i8, i8}
+define void @i8_factor_3(ptr %data, i64 %n) {
+; VF_2-LABEL: 'i8_factor_3'
+; VF_4-LABEL: 'i8_factor_3'
+; VF_8-LABEL: 'i8_factor_3'
+; VF_8:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+; VF_16-LABEL: 'i8_factor_3'
+; VF_16:  Cost of 3 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 3 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 3 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 3 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+  %tmp0 = getelementptr inbounds %i8.3, ptr %data, i64 %i, i32 0
+  %tmp1 = getelementptr inbounds %i8.3, ptr %data, i64 %i, i32 1
+  %tmp2 = getelementptr inbounds %i8.3, ptr %data, i64 %i, i32 2
+  %tmp3 = load i8, ptr %tmp0, align 1
+  %tmp4 = load i8, ptr %tmp1, align 1
+  %tmp5 = load i8, ptr %tmp2, align 1
+  store i8 %tmp3, ptr %tmp0, align 1
+  store i8 %tmp4, ptr %tmp1, align 1
+  store i8 %tmp5, ptr %tmp2, align 1
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+%i16.3 = type {i16, i16, i16}
+define void @i16_factor_3(ptr %data, i64 %n) {
+; VF_2-LABEL: 'i16_factor_3'
+; VF_4-LABEL: 'i16_factor_3'
+; VF_4:  Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_4:  Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_4:  Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_4:  Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+; VF_8-LABEL: 'i16_factor_3'
+; VF_8:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+; VF_16-LABEL: 'i16_factor_3'
+; VF_16:  Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 6 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+  %tmp0 = getelementptr inbounds %i16.3, ptr %data, i64 %i, i32 0
+  %tmp1 = getelementptr inbounds %i16.3, ptr %data, i64 %i, i32 1
+  %tmp2 = getelementptr inbounds %i16.3, ptr %data, i64 %i, i32 2
+  %tmp3 = load i16, ptr %tmp0, align 2
+  %tmp4 = load i16, ptr %tmp1, align 2
+  %tmp5 = load i16, ptr %tmp2, align 2
+  store i16 %tmp3, ptr %tmp0, align 2
+  store i16 %tmp4, ptr %tmp1, align 2
+  store i16 %tmp5, ptr %tmp2, align 2
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+%i32.3 = type {i32, i32, i32}
+define void @i32_factor_3(ptr %data, i64 %n) {
+; VF_2-LABEL: 'i32_factor_3'
+; VF_2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+; VF_4-LABEL: 'i32_factor_3'
+; VF_4:  Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_4:  Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_4:  Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_4:  Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+; VF_8-LABEL: 'i32_factor_3'
+; VF_8:  Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+; VF_16-LABEL: 'i32_factor_3'
+; VF_16:  Cost of 12 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 12 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 12 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 12 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+  %tmp0 = getelementptr inbounds %i32.3, ptr %data, i64 %i, i32 0
+  %tmp1 = getelementptr inbounds %i32.3, ptr %data, i64 %i, i32 1
+  %tmp2 = getelementptr inbounds %i32.3, ptr %data, i64 %i, i32 2
+  %tmp3 = load i32, ptr %tmp0, align 4
+  %tmp4 = load i32, ptr %tmp1, align 4
+  %tmp5 = load i32, ptr %tmp2, align 4
+  store i32 %tmp3, ptr %tmp0, align 4
+  store i32 %tmp4, ptr %tmp1, align 4
+  store i32 %tmp5, ptr %tmp2, align 4
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+%i64.3 = type {i64, i64, i64}
+define void @i64_factor_3(ptr %data, i64 %n) {
+; VF_2-LABEL: 'i64_factor_3'
+; VF_2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+; VF_4-LABEL: 'i64_factor_3'
+; VF_4:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_4:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_4:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_4:  Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+; VF_8-LABEL: 'i64_factor_3'
+; VF_8:  Cost of 12 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 12 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 12 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_8:  Cost of 12 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+; VF_16-LABEL: 'i64_factor_3'
+; VF_16:  Cost of 24 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 24 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 24 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+; VF_16:  Cost of 24 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%tmp0>
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+  %tmp0 = getelementptr inbounds %i64.3, ptr %data, i64 %i, i32 0
+  %tmp1 = getelementptr inbounds %i64.3, ptr %data, i64 %i, i32 1
+  %tmp2 = getelementptr inbounds %i64.3, ptr %data, i64 %i, i32 2
+  %tmp3 = load i64, ptr %tmp0, align 8
+  %tmp4 = load i64, ptr %tmp1, align 8
+  %tmp5 = load i64, ptr %tmp2, align 8
+  store i64 %tmp3, ptr %tmp0, align 8
+  store i64 %tmp4, ptr %tmp1, align 8
+  store i64 %tmp5, ptr %tmp2, align 8
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
 %i64.8 = type {i64, i64, i64, i64, i64, i64, i64, i64}
 define void @i64_factor_8(ptr %data, i64 %n) {
 entry:

@@ -39,6 +39,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -6353,7 +6354,8 @@ void CGOpenMPRuntime::computeMinAndMaxThreadsAndTeams(
   int32_t &MaxTeamsVal = Attrs.MaxTeams.front();
   int32_t &MaxThreadsVal = Attrs.MaxThreads.front();
 
-  getNumTeamsExprForTargetDirective(CGF, D, Attrs.MinTeams, MaxTeamsVal);
+  getNumTeamsExprForTargetDirective(CGF, D, Attrs.MinTeams.front(),
+                                    MaxTeamsVal);
   getNumThreadsExprForTargetDirective(CGF, D, MaxThreadsVal,
                                       /*UpperBoundOnly=*/true);
 
@@ -6371,12 +6373,14 @@ void CGOpenMPRuntime::computeMinAndMaxThreadsAndTeams(
       else
         continue;
 
-      Attrs.MinThreads = std::max(Attrs.MinThreads, AttrMinThreadsVal);
+      Attrs.MinThreads.front() =
+          std::max(Attrs.MinThreads.front(), AttrMinThreadsVal);
       if (AttrMaxThreadsVal > 0)
         MaxThreadsVal = MaxThreadsVal > 0
                             ? std::min(MaxThreadsVal, AttrMaxThreadsVal)
                             : AttrMaxThreadsVal;
-      Attrs.MinTeams = std::max(Attrs.MinTeams, AttrMinBlocksVal);
+      Attrs.MinTeams.front() =
+          std::max(Attrs.MinTeams.front(), AttrMinBlocksVal);
       if (AttrMaxBlocksVal > 0)
         MaxTeamsVal = MaxTeamsVal > 0 ? std::min(MaxTeamsVal, AttrMaxBlocksVal)
                                       : AttrMaxBlocksVal;
@@ -6645,6 +6649,20 @@ llvm::Value *CGOpenMPRuntime::emitNumTeamsForTargetDirective(
   return llvm::ConstantInt::getSigned(CGF.Int32Ty, MinNT);
 }
 
+/// Merge the thread count upper bound \p Val into \p UpperBound.
+///
+/// \p UpperBound is -1 while no thread limiting clause has been seen, 0 once
+/// one has been seen whose value is not known at compile time, and otherwise
+/// the smallest constant bound found so far.
+///
+/// Thread limiting clauses compose by taking the minimum, so a constant bound
+/// stays valid whatever the clauses that are not compile time constants
+/// evaluate to. That makes it correct to replace the 0 marker with \p Val, and
+/// necessary to keep a clause from raising a smaller bound found earlier.
+static void mergeThreadCountUpperBound(int32_t &UpperBound, int32_t Val) {
+  UpperBound = UpperBound > 0 ? std::min(UpperBound, Val) : Val;
+}
+
 /// Check for a num threads constant value (stored in \p DefaultVal), or
 /// expression (stored in \p E). If the value is conditional (via an if-clause),
 /// store the condition in \p CondVal. If \p E, and \p CondVal respectively, are
@@ -6705,14 +6723,11 @@ static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
       CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
       const auto *NumThreadsClause =
           Dir->getSingleClause<OMPNumThreadsClause>();
-      const Expr *NTExpr = NumThreadsClause->getNumThreads();
+      const Expr *NTExpr = NumThreadsClause->getNumThreads().front();
       if (NTExpr->isIntegerConstantExpr(CGF.getContext()))
         if (auto Constant = NTExpr->getIntegerConstantExpr(CGF.getContext()))
-          UpperBound =
-              UpperBound
-                  ? Constant->getZExtValue()
-                  : std::min(UpperBound,
-                             static_cast<int32_t>(Constant->getZExtValue()));
+          mergeThreadCountUpperBound(
+              UpperBound, static_cast<int32_t>(Constant->getZExtValue()));
       // If we haven't found a upper bound, remember we saw a thread limiting
       // clause.
       if (UpperBound == -1)
@@ -6756,9 +6771,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
   auto CheckForConstExpr = [&](const Expr *E, const Expr **EPtr) {
     if (E->isIntegerConstantExpr(CGF.getContext())) {
       if (auto Constant = E->getIntegerConstantExpr(CGF.getContext()))
-        UpperBound = UpperBound ? Constant->getZExtValue()
-                                : std::min(UpperBound,
-                                           int32_t(Constant->getZExtValue()));
+        mergeThreadCountUpperBound(
+            UpperBound, static_cast<int32_t>(Constant->getZExtValue()));
     }
     // If we haven't found a upper bound, remember we saw a thread limiting
     // clause.
@@ -6813,6 +6827,17 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
       if (isOpenMPTeamsDirective(Dir->getDirectiveKind()) &&
           !isOpenMPDistributeDirective(Dir->getDirectiveKind())) {
         CS = Dir->getInnermostCapturedStmt();
+        // Now that the 'teams' level has been peeled off, the remainder is
+        // shaped like a 'target teams' region, so pick up the num_threads of
+        // the directive nested in it the same way the OMPD_target_teams case
+        // below does. Without this the upper bound of a construct written as
+        // 'target' / 'teams' / 'distribute parallel for' would stay at the
+        // default, while every combined spelling of the same construct honors
+        // the clause. Only the bound is taken here: passing null for the
+        // expression and the condition keeps this from emitting anything, so
+        // the value the host passes to the kernel launch is left as it was.
+        getNumThreads(CGF, CS, /*E=*/nullptr, UpperBound, UpperBoundOnly,
+                      /*CondVal=*/nullptr);
         const Stmt *Child = CGOpenMPRuntime::getSingleCompoundChild(
             CGF.getContext(), CS->getCapturedStmt());
         Dir = dyn_cast_or_null<OMPExecutableDirective>(Child);
@@ -6891,8 +6916,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
     if (D.hasClausesOfKind<OMPNumThreadsClause>()) {
       CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
       const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
-      CheckForConstExpr(NumThreadsClause->getNumThreads(), nullptr);
-      return NumThreadsClause->getNumThreads();
+      CheckForConstExpr(NumThreadsClause->getNumThreads().front(), nullptr);
+      return NumThreadsClause->getNumThreads().front();
     }
     return NT;
   }
@@ -11074,8 +11099,8 @@ static void emitTargetCallKernelLaunch(
 
     llvm::OpenMPIRBuilder::TargetKernelArgs Args(
         NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
-        DynCGroupMem, HasNoWait, /*StrictBlocksAndThreads=*/IsBare,
-        DynCGroupMemFallback);
+        DynCGroupMem, HasNoWait, /*StrictBlocks=*/IsBare,
+        /*StrictThreads=*/IsBare, DynCGroupMemFallback);
 
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
         cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(

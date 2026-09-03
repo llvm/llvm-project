@@ -78,7 +78,7 @@ func.func @cc_int_failonly(%x: !fir.ref<i32>, %e: !fir.ref<i32>, %d: !fir.ref<i3
       omp.yield(%s : i32)
     }
     omp.atomic.read %v = %x : !fir.ref<i32>, !fir.ref<i32>, i32
-  } {fail_only}
+  } fail_only
   return
 }
 
@@ -88,7 +88,7 @@ func.func @cc_int_failonly(%x: !fir.ref<i32>, %e: !fir.ref<i32>, %d: !fir.ref<i3
 // CHECK:        llvm.icmp "eq"
 // CHECK:      }
 // CHECK:      omp.atomic.read %{{.*}} = %{{.*}} : !llvm.ptr, !llvm.ptr, i32
-// CHECK:    } {fail_only}
+// CHECK:    } fail_only
 
 // -----
 
@@ -162,7 +162,7 @@ func.func @cc_real_failonly(%x: !fir.ref<f32>, %e: !fir.ref<f32>, %d: !fir.ref<f
       omp.yield(%s : f32)
     }
     omp.atomic.read %v = %x : !fir.ref<f32>, !fir.ref<f32>, f32
-  } {fail_only}
+  } fail_only
   return
 }
 
@@ -172,7 +172,7 @@ func.func @cc_real_failonly(%x: !fir.ref<f32>, %e: !fir.ref<f32>, %d: !fir.ref<f
 // CHECK:        llvm.fcmp "oeq"
 // CHECK:      }
 // CHECK:      omp.atomic.read %{{.*}} = %{{.*}} : !llvm.ptr, !llvm.ptr, f32
-// CHECK:    } {fail_only}
+// CHECK:    } fail_only
 
 // -----
 
@@ -253,7 +253,7 @@ func.func @cc_complex_failonly(%x: !fir.ref<complex<f32>>, %e: !fir.ref<complex<
       omp.yield(%s : complex<f32>)
     }
     omp.atomic.read %v = %x : !fir.ref<complex<f32>>, !fir.ref<complex<f32>>, complex<f32>
-  } {fail_only}
+  } fail_only
   return
 }
 
@@ -264,7 +264,7 @@ func.func @cc_complex_failonly(%x: !fir.ref<complex<f32>>, %e: !fir.ref<complex<
 // CHECK:        llvm.and
 // CHECK:      }
 // CHECK:      omp.atomic.read %{{.*}} = %{{.*}} : !llvm.ptr, !llvm.ptr, !llvm.struct<(f32, f32)>
-// CHECK:    } {fail_only}
+// CHECK:    } fail_only
 
 // -----
 
@@ -329,7 +329,7 @@ func.func @cc_weak(%x: !fir.ref<i32>, %e: !fir.ref<i32>, %d: !fir.ref<i32>, %v: 
       %c = arith.cmpi eq, %xval, %eval : i32
       %s = arith.select %c, %dval, %xval : i32
       omp.yield(%s : i32)
-    } {weak}
+    } weak
   }
   return
 }
@@ -339,5 +339,5 @@ func.func @cc_weak(%x: !fir.ref<i32>, %e: !fir.ref<i32>, %d: !fir.ref<i32>, %v: 
 // CHECK:      omp.atomic.read %{{.*}} = %{{.*}} : !llvm.ptr, !llvm.ptr, i32
 // CHECK:      omp.atomic.compare %{{.*}} : !llvm.ptr {
 // CHECK:        llvm.icmp "eq"
-// CHECK:      } {weak}
+// CHECK:      } weak
 // CHECK:    }
