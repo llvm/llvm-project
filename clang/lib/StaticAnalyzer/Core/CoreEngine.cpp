@@ -161,7 +161,7 @@ bool CoreEngine::ExecuteWorkList(const StackFrame *SF, unsigned MaxSteps,
     return MaxSteps - Steps;
   };
   const unsigned STUSteps = ProcessWList(MaxSteps);
-  notExploredAllSTUPaths = WList->hasWork();
+  exploredAllSTUPaths = WList->hasWork();
 
   if (CTUWList) {
     NumSTUSteps += STUSteps;
