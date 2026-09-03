@@ -31,6 +31,7 @@
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -1984,26 +1985,36 @@ LowerTypeTestsModule::LowerTypeTestsModule(
 }
 
 bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
-  ModuleSummaryIndex Summary(/*HaveGVs=*/false);
+  std::unique_ptr<ModuleSummaryIndex> Summary;
 
   // Handle the command-line summary arguments. This code is for testing
   // purposes only, so we handle errors directly.
   if (!ClReadSummary.empty()) {
     ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
                           ": ");
-    auto ReadSummaryFile = ExitOnErr(errorOrToExpected(
-        MemoryBuffer::getFile(ClReadSummary, /*IsText=*/true)));
-
-    yaml::Input In(ReadSummaryFile->getBuffer());
-    In >> Summary;
-    ExitOnErr(errorCodeToError(In.error()));
+    auto ReadSummaryFile =
+        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ClReadSummary)));
+    if (Expected<std::unique_ptr<ModuleSummaryIndex>> SummaryOrErr =
+            getModuleSummaryIndex(*ReadSummaryFile)) {
+      Summary = std::move(*SummaryOrErr);
+    } else {
+      // Try YAML if we've failed with bitcode.
+      consumeError(SummaryOrErr.takeError());
+      Summary = std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
+      yaml::Input In(ReadSummaryFile->getBuffer());
+      In >> *Summary;
+      ExitOnErr(errorCodeToError(In.error()));
+    }
   }
+
+  if (!Summary)
+    Summary = std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
 
   bool Changed =
       LowerTypeTestsModule(
           M, AM,
-          ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
-          ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr)
+          ClSummaryAction == PassSummaryAction::Export ? Summary.get() : nullptr,
+          ClSummaryAction == PassSummaryAction::Import ? Summary.get() : nullptr)
           .lower();
 
   if (!ClWriteSummary.empty()) {
@@ -2014,7 +2025,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
     ExitOnErr(errorCodeToError(EC));
 
     yaml::Output Out(OS);
-    Out << Summary;
+    Out << *Summary;
   }
 
   return Changed;
