@@ -30,7 +30,8 @@ module attributes {
     cir.return
   }
 
-  // CHECK: error: 'cir.call' op byref argument that is not a load of an alloca is not yet implemented in CallConvLowering
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
   // CHECK-NEXT: cir.call @takes_big_byref(%novalue)
 
 }
@@ -68,7 +69,8 @@ module attributes {
     cir.return
   }
 
-  // CHECK: error: 'cir.call' op byref argument that is not a load of an alloca is not yet implemented in CallConvLowering
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
   // CHECK-NEXT: cir.call @takes_big_byref(%volatileload)
 
 }
@@ -107,7 +109,8 @@ module attributes {
     cir.return
   }
 
-  // CHECK: error: 'cir.call' op byref argument that is not a load of an alloca is not yet implemented in CallConvLowering
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
   // CHECK-NEXT: cir.call @takes_big_byref(%atomicload)
 
 }
@@ -149,7 +152,172 @@ module attributes {
     cir.return
   }
 
-  // CHECK: error: 'cir.call' op byref argument that is not a load of an alloca is not yet implemented in CallConvLowering
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
   // CHECK-NEXT: cir.call @takes_big_byref(%memberload)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_byref16(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg_align16 }
+
+  // A slot stating less alignment than the callee is told the argument has.
+  // Raising it would not survive a slot that stands in for a parameter, so it
+  // is reported rather than forwarded under an alignment the callee may rely
+  // on.
+  cir.func @caller_byref_underaligned(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %underaligned = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref16(%underaligned) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref16(%underaligned)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#sret_return = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A return slot holds the object the caller reads after the call, not one it
+  // destroys, so it is not forwardable even though it becomes a pointer
+  // parameter carrying llvm.align.
+  cir.func @caller_byref_from_sret_slot() -> !rec_Big
+      attributes { test_classify = #sret_return } {
+    %ret = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %ret : !rec_Big, !cir.ptr<!rec_Big>
+    %retslot = cir.load %ret : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref(%retslot) : (!rec_Big) -> ()
+    %r = cir.load %ret : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %r : !rec_Big
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref(%retslot)
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A byval parameter is the callee's own copy, which nothing else destroys,
+  // so handing it on as byref would give the inner callee an object with the
+  // wrong owner.  Its pointer carries llvm.align too, so llvm.byref is what
+  // separates the two.
+  cir.func @caller_byref_from_byval_param(%byvalparam: !rec_Big)
+      attributes { test_classify = #byval_arg } {
+    cir.call @takes_big_byref(%byvalparam) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref(%byvalparam)
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg_align8 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#byref_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A byref parameter states less alignment than the callee it is handed to
+  // is told about, so it cannot stand in for that argument.
+  cir.func @caller_byref_param_underaligned(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg_align8 } {
+    %spill = cir.alloca "arg0" align(16) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %paramload = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref16(%paramload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref16(%paramload)
+
+  cir.func private @takes_big_byref16(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg_align16 }
 
 }
