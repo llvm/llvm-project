@@ -3352,19 +3352,25 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
       if (const auto *OldAbiTagAttr = ComparedOld->getAttr<AbiTagAttr>()) {
         bool Diff = NewAbiTagAttr->tags_size() != OldAbiTagAttr->tags_size();
         if (!Diff)
-          Diff = !llvm::all_of(NewAbiTagAttr->tags(), [OldAbiTagAttr](StringRef NewTag) {
-            return llvm::is_contained(OldAbiTagAttr->tags(), NewTag);
-          });
+          Diff = !llvm::all_of(
+              NewAbiTagAttr->tags(), [OldAbiTagAttr](StringRef NewTag) {
+                return llvm::is_contained(OldAbiTagAttr->tags(), NewTag);
+              });
         if (Diff) {
-          Diag(NewAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored_different) << llvm::join(NewAbiTagAttr->tags(), ", ") << true << llvm::join(OldAbiTagAttr->tags(), ", ");
+          Diag(NewAbiTagAttr->getLocation(),
+               diag::warn_abi_tag_ignored_different)
+              << llvm::join(NewAbiTagAttr->tags(), ", ") << true
+              << llvm::join(OldAbiTagAttr->tags(), ", ");
           Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
         }
       } else {
-        Diag(NewAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored_different) << llvm::join(NewAbiTagAttr->tags(), ", ") << false;
+        Diag(NewAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored_different)
+            << llvm::join(NewAbiTagAttr->tags(), ", ") << false;
         Diag(ComparedOld->getLocation(), diag::note_previous_declaration);
       }
     } else if (const auto *OldAbiTagAttr = ComparedOld->getAttr<AbiTagAttr>()) {
-      Diag(New->getLocation(), diag::warn_abi_tag_ignored_missing) << llvm::join(OldAbiTagAttr->tags(), ", ");
+      Diag(New->getLocation(), diag::warn_abi_tag_ignored_missing)
+          << llvm::join(OldAbiTagAttr->tags(), ", ");
       Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
     }
   } else {
@@ -3374,11 +3380,13 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
         for (const auto &NewTag : NewAbiTagAttr->tags()) {
           if (!llvm::is_contained(OldAbiTagAttr->tags(), NewTag)) {
             if (isa<NamespaceDecl>(New)) {
-              Diag(NewAbiTagAttr->getLocation(), diag::warn_abi_tag_ignored_different) << NewTag << true << llvm::join(OldAbiTagAttr->tags(), ", ");
+              Diag(NewAbiTagAttr->getLocation(),
+                   diag::warn_abi_tag_ignored_different)
+                  << NewTag << true << llvm::join(OldAbiTagAttr->tags(), ", ");
             } else {
               Diag(NewAbiTagAttr->getLocation(),
                    diag::err_new_abi_tag_on_redeclaration)
-              << NewTag;
+                  << NewTag;
             }
             Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
           }
