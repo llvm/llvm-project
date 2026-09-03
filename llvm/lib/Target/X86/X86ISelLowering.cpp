@@ -24383,9 +24383,37 @@ static bool cheapX86FSETCC_SSE(ISD::CondCode SetCCOpcode) {
 /// Turns an ISD::CondCode into a value suitable for SSE floating-point mask
 /// CMPs.
 static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
-                                   SDValue &Op1, bool &IsAlwaysSignaling) {
+                                   SDValue &Op1, bool &IsAlwaysSignaling,
+                                   bool NoNaNs = false) {
   unsigned SSECC;
   bool Swap = false;
+
+  if (NoNaNs) {
+    // Under NoNaNs, ordered and unordered comparisons are semantically
+    // equivalent. Map ordered comparisons to their unordered counterparts
+    // (and vice-versa) to avoid operand swapping in translateX86FSETCC,
+    // preserving memory folding opportunities for constants.
+    // Both SETOGT/SETOGE and SETGT/SETGE (non-O forms) are handled as DAG
+    // combines or lowering may produce non-ordered condition codes.
+    switch (SetCCOpcode) {
+    case ISD::SETOGT:
+    case ISD::SETGT:
+      SetCCOpcode = ISD::SETUGT;
+      break;
+    case ISD::SETOGE:
+    case ISD::SETGE:
+      SetCCOpcode = ISD::SETUGE;
+      break;
+    case ISD::SETULE:
+      SetCCOpcode = ISD::SETLE;
+      break;
+    case ISD::SETULT:
+      SetCCOpcode = ISD::SETLT;
+      break;
+    default:
+      break;
+    }
+  }
 
   // SSE Condition code mapping:
   //  0 - EQ
@@ -24676,7 +24704,10 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
 
     SDValue Cmp;
     bool IsAlwaysSignaling;
-    unsigned SSECC = translateX86FSETCC(Cond, Op0, Op1, IsAlwaysSignaling);
+    bool NoNaNs = Op->getFlags().hasNoNaNs() ||
+                  (DAG.isKnownNeverNaN(Op0) && DAG.isKnownNeverNaN(Op1));
+    unsigned SSECC =
+        translateX86FSETCC(Cond, Op0, Op1, IsAlwaysSignaling, NoNaNs);
     if ((Cond == ISD::SETO || Cond == ISD::SETUO) && Op0 != Op1) {
       if (DAG.isKnownNeverNaN(Op1))
         Op1 = Op0;
@@ -25790,10 +25821,13 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (Cond.getOpcode() == ISD::SETCC && isScalarFPTypeInSSEReg(VT) &&
       VT == Cond.getOperand(0).getSimpleValueType() && Cond->hasOneUse()) {
     SDValue CondOp0 = Cond.getOperand(0), CondOp1 = Cond.getOperand(1);
-    bool IsAlwaysSignaling;
+    bool IsAlwaysSignaling = false;
+    bool NoNaNs =
+        Cond->getFlags().hasNoNaNs() ||
+        (DAG.isKnownNeverNaN(CondOp0) && DAG.isKnownNeverNaN(CondOp1));
     unsigned SSECC =
         translateX86FSETCC(cast<CondCodeSDNode>(Cond.getOperand(2))->get(),
-                           CondOp0, CondOp1, IsAlwaysSignaling);
+                           CondOp0, CondOp1, IsAlwaysSignaling, NoNaNs);
 
     if (Subtarget.hasAVX512()) {
       SDValue Cmp =
