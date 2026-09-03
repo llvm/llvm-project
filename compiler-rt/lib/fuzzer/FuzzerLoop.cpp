@@ -683,9 +683,6 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
     return; // mallocs==frees, a leak is unlikely.
   if (!Options.DetectLeaks)
     return;
-  if (!DuringInitialCorpusExecution &&
-      TotalNumberOfRuns >= Options.MaxNumberOfRuns)
-    return;
   if (!&(EF->__lsan_enable) || !&(EF->__lsan_disable) ||
       !(EF->__lsan_do_recoverable_leak_check))
     return; // No lsan.
@@ -694,6 +691,10 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
   EF->__lsan_disable();
   ExecuteCallback(Data, Size);
   EF->__lsan_enable();
+  // The above is a verification run, and not a fuzzing run, without the
+  // correction the number of runs would exceed -runs.
+  // See https://github.com/llvm/llvm-project/issues/66331
+  TotalNumberOfRuns--;
   if (!HasMoreMallocsThanFrees)
     return; // a leak is unlikely.
   if (NumberOfLeakDetectionAttempts++ > 1000) {
