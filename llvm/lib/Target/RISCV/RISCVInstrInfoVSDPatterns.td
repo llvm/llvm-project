@@ -1254,6 +1254,10 @@ foreach mti = AllMasks in {
     def : Pat<(mti.Mask rvv_vmnot_op:$rs),
               (!cast<Instruction>("PseudoVMNAND_MM_"#mti.BX)
                    VR:$rs, VR:$rs, mti.AVL, mti.Log2SEW)>;
+
+    def : Pat<(mti.Mask (mask_beforefirst VR:$vs2)),
+              (!cast<Instruction>("PseudoVMSBF_M_"#mti.BX)
+                   VR:$vs2, mti.AVL, mti.Log2SEW)>;
   }
 }
 

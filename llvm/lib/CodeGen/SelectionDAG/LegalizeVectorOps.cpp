@@ -29,6 +29,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -135,6 +136,7 @@ class VectorLegalizer {
   SDValue ExpandVP_MERGE(SDNode *Node);
   SDValue ExpandVP_REM(SDNode *Node);
   SDValue ExpandLOOP_DEPENDENCE_MASK(SDNode *N);
+  SDValue ExpandMASK_BEFOREFIRST(SDNode *N);
   SDValue ExpandMaskedBinOp(SDNode *N);
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
@@ -481,6 +483,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UCMP:
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::MASK_BEFOREFIRST:
   case ISD::MASKED_UDIV:
   case ISD::MASKED_SDIV:
   case ISD::MASKED_UREM:
@@ -1316,6 +1319,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
     Results.push_back(ExpandLOOP_DEPENDENCE_MASK(Node));
     return;
+  case ISD::MASK_BEFOREFIRST:
+    Results.push_back(ExpandMASK_BEFOREFIRST(Node));
+    return;
 
   case ISD::FADD:
   case ISD::FMUL:
@@ -1737,6 +1743,40 @@ SDValue VectorLegalizer::ExpandVP_REM(SDNode *Node) {
 
 SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   return TLI.expandLoopDependenceMask(N, DAG);
+}
+
+SDValue VectorLegalizer::ExpandMASK_BEFOREFIRST(SDNode *N) {
+  // Expand to (setcc ult (step-vector), (cttz_elts x))
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // Try to expand via get_active_lane_mask if supported.
+  EVT BoolVT = VT.changeVectorElementType(*DAG.getContext(), MVT::i1);
+  EVT VecIdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+  if (!TLI.shouldExpandGetActiveLaneMask(BoolVT, VecIdxVT)) {
+    // Perform cttz_elts in bool VT to get the custom target lowering.
+    SDValue CttzElts =
+        DAG.getNode(ISD::CTTZ_ELTS, DL, VecIdxVT,
+                    DAG.getNode(ISD::TRUNCATE, DL, BoolVT, N->getOperand(0)));
+    return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT,
+                       DAG.getConstant(0, DL, VecIdxVT), CttzElts);
+  }
+
+  // Compute the type for the cttz_elts.
+  ConstantRange VScaleRange(1, /*isFullSet=*/true); // Fixed length default.
+  if (VT.isScalableVector())
+    VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
+  uint64_t EltWidth = TLI.getBitWidthForCttzElements(
+      EVT(TLI.getVectorIdxTy(DAG.getDataLayout())), VT.getVectorElementCount(),
+      /*ZeroIsPoison=*/false, &VScaleRange);
+
+  EVT EltVT = EVT::getIntegerVT(*DAG.getContext(), EltWidth);
+  EVT CttzEltsVT =
+      EVT::getVectorVT(*DAG.getContext(), EltVT, VT.getVectorElementCount());
+  SDValue CttzElts = DAG.getSplatVector(
+      CttzEltsVT, DL, DAG.getNode(ISD::CTTZ_ELTS, DL, EltVT, N->getOperand(0)));
+  SDValue StepVector = DAG.getStepVector(DL, CttzEltsVT);
+  return DAG.getSetCC(DL, VT, StepVector, CttzElts, ISD::CondCode::SETULT);
 }
 
 SDValue VectorLegalizer::ExpandMaskedBinOp(SDNode *N) {
