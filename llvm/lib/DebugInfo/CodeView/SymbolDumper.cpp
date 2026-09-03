@@ -706,6 +706,16 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   return Error::success();
 }
 
+Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
+                                           AssociationSym &Assoc) {
+  W.printEnum("AssociationKind", static_cast<uint16_t>(Assoc.AssociationKind),
+              getAssociationKindNames());
+  W.printHex("Offset", Assoc.CodeOffset);
+  W.printHex("Segment", Assoc.Segment);
+
+  return Error::success();
+}
+
 Error CVSymbolDumperImpl::visitUnknownSymbol(CVSymbol &CVR) {
   W.printNumber("Length", CVR.length());
   return Error::success();

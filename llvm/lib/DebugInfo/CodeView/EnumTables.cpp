@@ -622,5 +622,15 @@ EnumStrings<uint16_t> getJumpTableEntrySizeNames() {
   return JumpTableEntrySizeNames;
 }
 
+EnumStrings<uint16_t> getAssociationKindNames() {
+  constexpr EnumStringDef<uint16_t> AssociationKindNameDefs[] = {
+      CV_ENUM_CLASS_ENT(AssociationKind, None),
+      CV_ENUM_CLASS_ENT(AssociationKind, Coroutine),
+  };
+  static constexpr auto AssociationKindNames =
+      BUILD_ENUM_STRINGS(AssociationKindNameDefs);
+  return AssociationKindNames;
+}
+
 } // end namespace codeview
 } // end namespace llvm

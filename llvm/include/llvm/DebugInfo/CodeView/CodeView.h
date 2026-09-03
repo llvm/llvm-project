@@ -619,6 +619,15 @@ enum class JumpTableEntrySize : uint16_t {
   Int8ShiftLeft = 9,
   Int16ShiftLeft = 10,
 };
+
+/// Type of associated symbol in S_ASSOCIATION.
+///
+/// From `CV_AssociationKind_e` (cvconst.h).
+enum class AssociationKind : uint16_t {
+  None,
+  /// Associated symbol is the primary coroutine function.
+  Coroutine,
+};
 }
 }
 
