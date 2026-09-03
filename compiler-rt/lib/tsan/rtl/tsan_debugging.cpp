@@ -189,6 +189,46 @@ int __tsan_get_report_unique_tid(void *report, uptr idx, int *tid) {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_describe_mop(void* report, uptr idx, char* out, uptr outlen) {
+  const ReportDesc* rep = (ReportDesc*)report;
+  CHECK_LT(idx, rep->mops.Size());
+  InternalScopedString s;
+  DescribeMop(rep->mops[idx], /*first=*/idx == 0, s);
+  internal_strlcpy(out, s.data(), outlen);
+  return 1;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_describe_loc(void* report, uptr idx, char* out, uptr outlen) {
+  const ReportDesc* rep = (ReportDesc*)report;
+  CHECK_LT(idx, rep->locs.Size());
+  InternalScopedString s;
+  bool stack_follows = DescribeLocation(rep->locs[idx], s);
+  internal_strlcpy(out, s.data(), outlen);
+  return stack_follows ? 1 : 0;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_describe_mutex(void* report, uptr idx, char* out, uptr outlen) {
+  const ReportDesc* rep = (ReportDesc*)report;
+  CHECK_LT(idx, rep->mutexes.Size());
+  InternalScopedString s;
+  DescribeMutex(rep->mutexes[idx], s);
+  internal_strlcpy(out, s.data(), outlen);
+  return 1;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __tsan_describe_thread(void* report, uptr idx, char* out, uptr outlen) {
+  const ReportDesc* rep = (ReportDesc*)report;
+  CHECK_LT(idx, rep->threads.Size());
+  InternalScopedString s;
+  bool stack_follows = DescribeThread(rep->threads[idx], s);
+  internal_strlcpy(out, s.data(), outlen);
+  return stack_follows ? 1 : 0;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 const char *__tsan_locate_address(uptr addr, char *name, uptr name_size,
                                   uptr *region_address_ptr,
                                   uptr *region_size_ptr) {
