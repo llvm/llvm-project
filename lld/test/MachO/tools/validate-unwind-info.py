@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Validate compact unwind info by cross checking the llvm-objdump
 reports of the input object file vs final linked output.
