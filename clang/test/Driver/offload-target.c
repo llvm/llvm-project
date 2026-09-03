@@ -1,6 +1,6 @@
 // RUN: %clang -### -fsycl --offload-targets=spirv64 -nogpuinc -x c++ %s -ccc-print-bindings 2>&1 \
 // RUN: | FileCheck %s -check-prefix=SYCL
-// SYCL: "spirv64" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[SYCL_BC:.+]]"
+// SYCL: "spirv64-unknown-unknown" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[SYCL_BC:.+]]"
 
 // RUN: %clang -### --offload-targets=amdgcn-amd-amdhsa -nogpulib -nogpuinc -x hip %s -ccc-print-bindings 2>&1 \
 // RUN: | FileCheck %s -check-prefix=HIP

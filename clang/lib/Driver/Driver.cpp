@@ -1119,7 +1119,14 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     std::vector<std::string> ArgValues =
         C.getInputArgs().getAllArgValues(options::OPT_offload_targets_EQ);
     for (llvm::StringRef Target : ArgValues) {
-      Triples.insert(ToolChain::normalizeOffloadTriple(Target));
+      llvm::Triple T(ToolChain::normalizeOffloadTriple(Target));
+      if (T.isSPIRV() && Kinds.contains(Action::OFK_SYCL)) {
+        if (T.getVendor() == llvm::Triple::UnknownVendor)
+          T.setVendor(llvm::Triple::UnknownVendor);
+        if (T.getOS() == llvm::Triple::UnknownOS)
+          T.setOS(llvm::Triple::UnknownOS);
+      }
+      Triples.insert(T);
     }
 
     if (ArgValues.empty())
