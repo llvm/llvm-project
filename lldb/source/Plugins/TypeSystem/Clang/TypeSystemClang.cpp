@@ -121,7 +121,7 @@ TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
          language == eLanguageTypeD ||
          // Open Dylan compiler debug info is designed to be Clang-compatible
          language == eLanguageTypeDylan ||
-         // Use Clang for Julia until there is a propoer language plugin for it
+         // Use Clang for Julia until there is a proper language plugin for it
          language == eLanguageTypeJulia;
 }
 
