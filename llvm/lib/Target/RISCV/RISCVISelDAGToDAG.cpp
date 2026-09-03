@@ -18,6 +18,7 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -559,7 +560,7 @@ void RISCVDAGToDAGISel::selectXSfmmVSET(SDNode *Node) {
 }
 
 bool RISCVDAGToDAGISel::tryPExtNarrowUnsigned(SDNode *Node) {
-  using namespace llvm::SDPatternMatch;
+  using namespace SDPatternMatch;
 
   EVT VT = Node->getValueType(0);
   SDLoc DL(Node);
