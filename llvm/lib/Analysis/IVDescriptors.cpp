@@ -1729,8 +1729,8 @@ bool MonotonicDescriptor::isMonotonicPHI(PHINode *HeaderPHI, const Loop *L,
   // Ensure the only users of the backedge PHI are outside the loop or the
   // header PHI.
   for (User *U : BackedgePHI->users()) {
-    auto *UI = dyn_cast<Instruction>(U);
-    if (UI && UI != HeaderPHI && L->contains(UI))
+    auto *UI = cast<Instruction>(U);
+    if (UI != HeaderPHI && L->contains(UI))
       return false;
   }
 
