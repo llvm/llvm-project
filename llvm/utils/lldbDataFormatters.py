@@ -145,6 +145,7 @@ class SmallVectorSynthProvider:
         assert self.type_size != 0
 
 
+# [SNIP-ArrayRef-Synth]
 class ArrayRefSynthProvider:
     """Provider for llvm::ArrayRef"""
 
@@ -182,6 +183,7 @@ class ArrayRefSynthProvider:
         self.data_type = self.data.GetType().GetPointeeType()
         self.type_size = self.data_type.GetByteSize()
         assert self.type_size != 0
+        # [/SNIP-ArrayRef-Synth]
 
 
 def SmallStringSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
@@ -197,6 +199,7 @@ def SmallStringSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
     return res
 
 
+# [SNIP-StringRef-Summary]
 def StringRefSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
     data_pointer = valobj.GetChildMemberWithName("Data")
     length = valobj.GetChildMemberWithName("Length").unsigned
@@ -216,6 +219,7 @@ def StringRefSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
     # Use the builtin summary for its support of max-string-summary-length and
     # display of non-printable bytes.
     return char_array.summary
+    # [/SNIP-StringRef-Summary]
 
 
 def ConstStringSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
