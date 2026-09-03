@@ -228,6 +228,7 @@ static Value *createWhileLO(IRBuilder<> &Builder, unsigned ElementSizeInBits,
   return Builder.CreateCall(
       WhileLO, {Start, End, Builder.getInt32(VectorScale)}, "pac.mask");
 }
+
 class AArch64PredicateAsCounterLoopRewrites : public LoopPass {
 public:
   static char ID;
