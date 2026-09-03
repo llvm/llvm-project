@@ -332,6 +332,12 @@ struct MCSeqBlockDesc {
   /// is terminated by a zero in the same way.
   uint32_t SubRegSlopes;
 
+  /// The distance from the first register unit of one register of the block to
+  /// the first register unit of the next. The remaining units of each register
+  /// sit the same way relative to its first, so the units of the first
+  /// register and this distance describe the units of them all.
+  uint16_t RegUnitStride;
+
   /// Every series of register that contains the registers of the block, in
   /// MCRegisterInfo::SeqSuperRegSeries, in the order they are to be listed in.
   uint32_t FirstSuperRegSeries;
@@ -974,11 +980,23 @@ public:
 
   MCRegUnitIterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
     assert(Reg.isPhysical());
+
+    // Registers of a sequence block have no register units of their own, so
+    // walk the first register's list and shift each unit along. The units of
+    // one register of a block sit the same way as those of the previous one,
+    // only starting RegUnitStride further on.
+    MCRegister Described = Reg;
+    unsigned Moved = 0;
+    if (const MCSeqBlockDesc *Block = MCRI->getSeqBlockOf(Reg)) {
+      Described = Block->FirstReg;
+      Moved = (Reg.id() - Block->FirstReg) * Block->RegUnitStride;
+    }
+
     // Decode the RegUnits MCRegisterDesc field.
-    unsigned RU = MCRI->get(Reg).RegUnits;
+    unsigned RU = MCRI->get(Described).RegUnits;
     unsigned FirstRU = RU & ((1u << RegUnitBits) - 1);
     unsigned Offset = RU >> RegUnitBits;
-    I.init(FirstRU, MCRI->DiffLists + Offset);
+    I.init(FirstRU + Moved, MCRI->DiffLists + Offset);
     Val = MCRegUnit(*I);
   }
 

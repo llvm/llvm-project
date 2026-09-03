@@ -176,11 +176,16 @@ def : RegisterSequence<[R2, R5]>;
 
 // The blocks as the register info sees them: the first register, how many
 // there are, how many members apart they begin, where the distances above
-// start, and which of the series above are theirs.
+// start, how far the first register unit moves from one of them to the next,
+// and which of the series above are theirs.
+//
+// A pair holds the units of two plain registers and a quad those of four, so
+// the units move two along from one pair to the next and four from one quad to
+// the next.
 // CHECK:      extern const MCSeqBlockDesc TestTargetSeqBlocks[]
-// CHECK-NEXT: { R_64_SEQ, 4, 2, {{[0-9]+}}, 0, 2 },
-// CHECK-NEXT: { R_128_SEQ, 2, 4, 46, 2, 0 },
-// CHECK-NEXT: { T_64_SEQ, 3, 2, {{[0-9]+}}, 2, 0 },
+// CHECK-NEXT: { R_64_SEQ, 4, 2, {{[0-9]+}}, 2, 0, 2 },
+// CHECK-NEXT: { R_128_SEQ, 2, 4, 46, 4, 2, 0 },
+// CHECK-NEXT: { T_64_SEQ, 3, 2, {{[0-9]+}}, 2, 2, 0 },
 
 // Having no enumerators of their own, registers of a block are referred to by
 // the one that reserves the block and how far into it they sit. Here, the four

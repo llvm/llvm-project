@@ -1388,11 +1388,48 @@ void CodeGenRegBank::computeSeqBlocks() {
       });
     };
 
-    // Take the run as far as both hold, and no further.
+    // Every register must have its register units laid out as the first does,
+    // so that the units of the first register and how far the first of them
+    // moves from one register of the block to the next describe them all.
+    unsigned RegUnitStride = 0;
+    auto UnitsLieAlike = [&](unsigned Index) {
+      const CodeGenRegister::RegUnitList &Units =
+          Run[Index]->getNativeRegUnits();
+      const CodeGenRegister::RegUnitList &FirstUnits =
+          Run[0]->getNativeRegUnits();
+      if (Units.count() != FirstUnits.count() || Units.empty())
+        return false;
+
+      // The second register of the run is what the distance is read from;
+      // there is nothing to compare it against yet.
+      int64_t Moved = int64_t(Units.find_first()) - FirstUnits.find_first();
+      if (Index == 1) {
+        // Units that stay put would leave the registers of the block sharing
+        // them, which is not expected of a sequence.
+        if (Moved <= 0)
+          return false;
+        RegUnitStride = Moved;
+      } else if (Moved != int64_t(Index) * RegUnitStride) {
+        return false;
+      }
+
+      // The rest of the units must lie the same way in both, so that walking
+      // the first register's and carrying each along arrives at these.
+      auto U = Units.begin();
+      auto FirstU = FirstUnits.begin();
+      for (; U != Units.end(); ++U, ++FirstU) {
+        if (int64_t(*U) != int64_t(*FirstU) + Moved)
+          return false;
+      }
+      return true;
+    };
+
+    // Take the run as far as all of them hold, and no further.
     if (First.MemberIndex == 0 && Step != 0) {
       FirstSubRegs = getSubRegsInOrder(*Run[0], *this);
       unsigned Count = 1;
-      while (Count < Run.size() && TilesSequence(Count) && MovesInStep(Count))
+      while (Count < Run.size() && TilesSequence(Count) && MovesInStep(Count) &&
+             UnitsLieAlike(Count))
         ++Count;
       Run.resize(Count);
     } else {
@@ -1402,8 +1439,12 @@ void CodeGenRegBank::computeSeqBlocks() {
     if (Run.size() >= 2) {
       unsigned BlockIndex = SeqBlocks.size();
       SeqBlocks.push_back({SeqRegOrigins.at(Run.front()->TheDef).BlockName,
-                           Run.front(), unsigned(Run.size()), Step,
-                           std::move(Slopes)});
+                           Run.front(),
+                           unsigned(Run.size()),
+                           Step,
+                           std::move(Slopes),
+                           {},
+                           RegUnitStride});
       for (const auto &[Index, Reg] : enumerate(Run))
         SeqBlockMembers.try_emplace(Reg->TheDef,
                                     SeqBlockPos{BlockIndex, unsigned(Index)});

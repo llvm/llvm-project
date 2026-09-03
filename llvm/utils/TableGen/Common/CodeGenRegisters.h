@@ -419,6 +419,13 @@ struct CodeGenRegisterSequenceBlock {
   /// Every series of register the registers of the block are contained by, in
   /// the order they are to be named in.
   std::vector<SuperRegSeries> SuperRegSeries;
+
+  /// How far the first register unit of one register of the block is from the
+  /// first register unit of the one before it, the rest of their units lying
+  /// the same way in each: the registers of a block are alike but for how far
+  /// along their sequence they sit, and their units are laid out alike too, so
+  /// the units of the first register and this distance describe them all.
+  unsigned RegUnitStride = 0;
 };
 
 /// Where a register sits among the registers of the block it belongs to.

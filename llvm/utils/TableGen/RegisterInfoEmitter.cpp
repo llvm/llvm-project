@@ -1086,8 +1086,12 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     if (!GetSeqBlockMember(Reg).first)
       DiffSeqs.add(SuperRegLists[i]);
 
+    // The registers of a block walk the first register's register units and
+    // carry each of them along, so only that one's list goes in the table.
     const SparseBitVector<> &RUs = Reg.getNativeRegUnits();
-    DiffSeqs.add(diffEncode(RegUnitLists[i], RUs));
+    diffEncode(RegUnitLists[i], RUs);
+    if (auto [Block, Index] = GetSeqBlockMember(Reg); !Block || Index == 0)
+      DiffSeqs.add(RegUnitLists[i]);
 
     const auto &RUMasks = Reg.getRegUnitLaneMasks();
     MaskVec &LaneMaskVec = RegUnitLaneMasks[i];
@@ -1148,6 +1152,23 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
                     }) &&
              "Super-registers of a block register are not the ones the block "
              "says contain it.");
+
+      // And its register units, which are those of the first register carried
+      // as far along as this one sits. Blocks are formed no further than this
+      // holds, so it holds by construction.
+      const CodeGenRegister::RegUnitList &Units = Reg.getNativeRegUnits();
+      const CodeGenRegister::RegUnitList &FirstUnits =
+          Block.FirstReg->getNativeRegUnits();
+      unsigned Moved = Index * Block.RegUnitStride;
+      auto U = Units.begin();
+      auto FirstU = FirstUnits.begin();
+      for (; U != Units.end() && FirstU != FirstUnits.end(); ++U, ++FirstU)
+        assert(*U == *FirstU + Moved &&
+               "Register units of a block register are not where the block "
+               "says.");
+      assert(U == Units.end() && FirstU == FirstUnits.end() &&
+             "A block register has a different number of register units than "
+             "the first register of its block.");
     }
 #endif
   }
@@ -1208,6 +1229,11 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     // of, so that they list none of their own.
     unsigned SuperRegs = DiffSeqs.get(Block ? DiffVec() : SuperRegLists[i]);
 
+    // Their register units likewise: the list is the first register's, and
+    // what tells them apart is the unit it is walked from, which is theirs.
+    if (Block)
+      Offset = DiffSeqs.get(RegUnitLists[Block->FirstReg->EnumValue - 1]);
+
     OS << "  { " << RegStrings.get(Reg.getName().str()) << ", " << SubRegs
        << ", " << SuperRegs << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i])
        << ", " << (Offset << RegUnitBits | FirstRU) << ", "
@@ -1245,7 +1271,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       DiffVec Slopes(Block.SubRegSlopes);
       OS << "  { " << getRegName(Block.FirstReg->TheDef) << ", " << Block.Count
          << ", " << Block.Step << ", " << DiffSeqs.get(Slopes) << ", "
-         << FirstSeries << ", " << Block.SuperRegSeries.size() << " },\n";
+         << Block.RegUnitStride << ", " << FirstSeries << ", "
+         << Block.SuperRegSeries.size() << " },\n";
       FirstSeries += Block.SuperRegSeries.size();
     }
     OS << "};\n\n";
