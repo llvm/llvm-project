@@ -59,6 +59,7 @@
 
 #include "SILoadStoreOptimizer.h"
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -68,6 +69,11 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "si-load-store-opt"
+
+static cl::opt<cl::boolOrDefault> PreserveDSReadLatencyHiding(
+    "amdgpu-preserve-ds-read-latency-hiding", cl::Hidden,
+    cl::desc("Do not combine a DS_READ pair in a self-loop when doing so would "
+             "make every MFMA/WMMA in the loop wait on a single load"));
 
 namespace {
 enum InstClassEnum {
@@ -211,6 +217,9 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   AliasAnalysis *AA = nullptr;
   bool OptimizeAgain;
+  DenseMap<const MachineBasicBlock *, unsigned> NumMFMAOrWMMAInBlock;
+
+  bool PreserveLatencyHiding = false;
 
   bool canSwapInstructions(const DenseSet<Register> &ARegDefs,
                            const DenseSet<Register> &ARegUses,
@@ -231,6 +240,13 @@ private:
   const TargetRegisterClass *getDataRegClass(const MachineInstr &MI) const;
 
   CombineInfo *checkAndPrepareMerge(CombineInfo &CI, CombineInfo &Paired);
+
+  void
+  collectMFMAOrWMMAUsers(const MachineInstr &MI,
+                         SmallPtrSetImpl<const MachineInstr *> &Users) const;
+  unsigned getNumMFMAOrWMMA(const MachineBasicBlock &MBB);
+  bool combinePreventsLatencyHiding(const CombineInfo &CI,
+                                    const CombineInfo &Paired);
 
   void copyToDestRegs(CombineInfo &CI, CombineInfo &Paired,
                       MachineBasicBlock::iterator InsertBefore,
@@ -1270,6 +1286,102 @@ SILoadStoreOptimizer::getDataRegClass(const MachineInstr &MI) const {
   return nullptr;
 }
 
+/// Collect all MFMA/WMMA instructions that transitively use a DS_READ result.
+void SILoadStoreOptimizer::collectMFMAOrWMMAUsers(
+    const MachineInstr &MI,
+    SmallPtrSetImpl<const MachineInstr *> &Users) const {
+  const MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+  if (!Dst || !Dst->isReg())
+    return;
+
+  const MachineBasicBlock *MBB = MI.getParent();
+  SmallVector<Register, 16> Worklist(1, Dst->getReg());
+  SmallPtrSet<const MachineInstr *, 32> Visited;
+
+  while (!Worklist.empty()) {
+    Register Reg = Worklist.pop_back_val();
+
+    for (const MachineInstr &UseMI : MRI->use_nodbg_instructions(Reg)) {
+      if (UseMI.getParent() != MBB || !Visited.insert(&UseMI).second)
+        continue;
+
+      bool IsMFMAOrWMMA = SIInstrInfo::isMFMAorWMMA(UseMI);
+      if (!IsMFMAOrWMMA && !UseMI.isCopy() && !UseMI.isRegSequence() &&
+          !UseMI.isExtractSubreg() && !UseMI.isInsertSubreg() &&
+          !UseMI.isSubregToReg() && !UseMI.isPHI())
+        continue;
+
+      if (IsMFMAOrWMMA)
+        Users.insert(&UseMI);
+
+      // Anything chained off an MFMA/WMMA result waits on this DS_READ too.
+      // Operand 0 of each opcode accepted above is a register def.
+      Register Def = UseMI.getOperand(0).getReg();
+      if (Def.isVirtual())
+        Worklist.push_back(Def);
+    }
+  }
+}
+
+unsigned SILoadStoreOptimizer::getNumMFMAOrWMMA(const MachineBasicBlock &MBB) {
+  auto [It, Inserted] = NumMFMAOrWMMAInBlock.try_emplace(&MBB);
+  if (Inserted)
+    It->second = count_if(MBB, [](const MachineInstr &MI) {
+      return SIInstrInfo::isMFMAorWMMA(MI);
+    });
+  return It->second;
+}
+
+/// Check if combining two DS_READ instructions would block MFMA/WMMA latency
+/// hiding in a single-block loop. This occurs when:
+/// 1. The loads are in a single-block loop (MBB has itself as a successor)
+/// 2. Both loads feed MFMA/WMMA instructions in that block
+/// 3. They do not feed exactly the same ones, so combining adds a dependence
+///    instead of only costing an LDS issue
+/// 4. Together they feed ALL MFMA/WMMA in the block, so after combining there
+///    is nothing left that could issue while the load is in flight
+///
+/// In such cases, keeping the loads separate lets the MFMA/WMMA fed by the
+/// first load run while the second is still in flight. Condition 4 is
+/// all-or-nothing by design: one independent MFMA/WMMA is enough to hide the
+/// load behind, so a partial condition would decline combines it cannot pay
+/// for.
+bool SILoadStoreOptimizer::combinePreventsLatencyHiding(
+    const CombineInfo &CI, const CombineInfo &Paired) {
+  if (!PreserveLatencyHiding || CI.InstClass != DS_READ)
+    return false;
+
+  const MachineBasicBlock *MBB = CI.I->getParent();
+  if (!MBB->isSuccessor(MBB))
+    return false;
+
+  unsigned NumMFMAOrWMMA = getNumMFMAOrWMMA(*MBB);
+  if (NumMFMAOrWMMA == 0)
+    return false;
+
+  SmallPtrSet<const MachineInstr *, 32> Users;
+  collectMFMAOrWMMAUsers(*CI.I, Users);
+  if (Users.empty())
+    return false;
+
+  SmallPtrSet<const MachineInstr *, 32> PairedUsers;
+  collectMFMAOrWMMAUsers(*Paired.I, PairedUsers);
+  if (PairedUsers.empty())
+    return false;
+
+  if (Users == PairedUsers)
+    return false;
+
+  Users.insert_range(PairedUsers);
+  if (Users.size() != NumMFMAOrWMMA)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Not combining, all " << NumMFMAOrWMMA
+                    << " MFMA/WMMA would depend on the combined load: " << *CI.I
+                    << "  and: " << *Paired.I);
+  return true;
+}
+
 /// This function assumes that CI comes before Paired in a basic block. Return
 /// an insertion point for the merged instruction or nullptr on failure.
 SILoadStoreOptimizer::CombineInfo *
@@ -1294,6 +1406,9 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
     if (!widthsFit(*STM, CI, Paired) || !offsetsCanBeCombined(CI, *STM, Paired))
       return nullptr;
   }
+
+  if (combinePreventsLatencyHiding(CI, Paired))
+    return nullptr;
 
   DenseSet<Register> RegDefs;
   DenseSet<Register> RegUses;
@@ -2878,6 +2993,16 @@ bool SILoadStoreOptimizer::run(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
 
   MRI = &MF.getRegInfo();
+
+  // This is only profitable if the scheduler keeps the two loads apart, so that
+  // one of them can still be outstanding when the MFMA/WMMA that consume the
+  // other issue. The coexec strategy does that; the other pre-RA schedulers add
+  // createLoadClusterDAGMutation(), which groups the pair back together.
+  PreserveLatencyHiding =
+      PreserveDSReadLatencyHiding == cl::boolOrDefault::BOU_UNSET
+          ? !STM->enableSIScheduler() &&
+                AMDGPU::getSchedStrategy(MF.getFunction()) == "coexec"
+          : PreserveDSReadLatencyHiding == cl::boolOrDefault::BOU_TRUE;
 
   LLVM_DEBUG(dbgs() << "Running SILoadStoreOptimizer\n");
 
