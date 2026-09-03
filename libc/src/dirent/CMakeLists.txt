@@ -50,6 +50,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  scandir
+  SRCS
+    scandir.cpp
+  HDRS
+    scandir.h
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   fdopendir
   SRCS
     fdopendir.cpp
