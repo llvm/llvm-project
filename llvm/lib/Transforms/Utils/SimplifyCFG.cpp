@@ -5098,8 +5098,6 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
   BasicBlock *BB = SI->getParent();
 
   if (OldDest != DestFork) {
-    // Case list is changing so we should drop stale profile weights.
-    SI->setMetadata(LLVMContext::MD_prof, nullptr);
     if (!IsDefault)
       OldDest->removePredecessor(BB);
     if (IsDefault)
@@ -5116,6 +5114,35 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
           successors(SI), [&](BasicBlock *Succ) { return Succ == OldDest; });
       if (DTU && !OldDestStillTargeted)
         DTU->applyUpdates({{DominatorTree::Delete, BB, OldDest}});
+    }
+
+    // Update the profile information on the switch if we had a profile
+    // for both it and the select instruction. We only need to do this
+    // in the case where we add a case to the switch.
+    if (IsDefault) {
+      SmallVector<uint32_t> SwitchWeights;
+      bool SwitchHasBranchWeights = extractBranchWeights(*SI, SwitchWeights);
+      SmallVector<uint32_t> SelectWeights;
+      bool SelectHasBranchWeights =
+          extractBranchWeights(*Select, SelectWeights);
+      if (SwitchHasBranchWeights && SelectHasBranchWeights &&
+          !ProfcheckDisableMetadataFixes) {
+        // Update the branch weights of the switch by multiplying all of them by
+        // the weight of the false branch of the select. Then add the new switch
+        // case at the end by multiplying the weight of the true branch of the
+        // select by the total weight of the switch.
+        uint64_t SwitchTotalWeight = sum_of(SwitchWeights, uint64_t{0});
+        SmallVector<uint64_t> NewSwitchWeights;
+        NewSwitchWeights.reserve(SwitchWeights.size() + 1);
+        for (uint32_t SwitchWeight : SwitchWeights)
+          NewSwitchWeights.push_back(SwitchWeight * SelectWeights[1]);
+        NewSwitchWeights.push_back(SwitchTotalWeight * SelectWeights[0]);
+        setFittedBranchWeights(*SI, NewSwitchWeights, false);
+      } else if (SwitchHasBranchWeights) {
+        // If we only have branch weights on the switch, we cannot reconstruct
+        // branch weights correctly, so mark them as unknown.
+        setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
+      }
     }
   }
 
