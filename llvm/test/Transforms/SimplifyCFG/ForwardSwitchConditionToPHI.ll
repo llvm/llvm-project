@@ -206,15 +206,19 @@ define { i64, i64 } @PR95919(i64 noundef %arg, i64 noundef %arg1) {
 ;
 ; FWD-LABEL: @PR95919(
 ; FWD-NEXT:  bb:
-; FWD-NEXT:    [[SWITCH:%.*]] = icmp ult i64 [[ARG1:%.*]], 2
-; FWD-NEXT:    br i1 [[SWITCH]], label [[BB5:%.*]], label [[BB3:%.*]]
+; FWD-NEXT:    switch i64 [[ARG1:%.*]], label [[BB3:%.*]] [
+; FWD-NEXT:      i64 0, label [[BB5:%.*]]
+; FWD-NEXT:      i64 1, label [[BB2:%.*]]
+; FWD-NEXT:    ]
+; FWD:       bb2:
+; FWD-NEXT:    br label [[BB5]]
 ; FWD:       bb3:
 ; FWD-NEXT:    [[I:%.*]] = udiv i64 [[ARG:%.*]], [[ARG1]]
 ; FWD-NEXT:    [[I4:%.*]] = shl nuw i64 [[I]], 1
 ; FWD-NEXT:    br label [[BB5]]
 ; FWD:       bb5:
-; FWD-NEXT:    [[I6:%.*]] = phi i64 [ [[I4]], [[BB3]] ], [ [[ARG]], [[BB:%.*]] ]
-; FWD-NEXT:    [[I7:%.*]] = phi i64 [ 1, [[BB3]] ], [ [[ARG1]], [[BB]] ]
+; FWD-NEXT:    [[I6:%.*]] = phi i64 [ [[I4]], [[BB3]] ], [ undef, [[BB:%.*]] ], [ [[ARG]], [[BB2]] ]
+; FWD-NEXT:    [[I7:%.*]] = phi i64 [ 1, [[BB3]] ], [ [[ARG1]], [[BB2]] ], [ [[ARG1]], [[BB]] ]
 ; FWD-NEXT:    [[I8:%.*]] = insertvalue { i64, i64 } poison, i64 [[I7]], 0
 ; FWD-NEXT:    [[I9:%.*]] = insertvalue { i64, i64 } [[I8]], i64 [[I6]], 1
 ; FWD-NEXT:    ret { i64, i64 } [[I9]]
@@ -239,4 +243,32 @@ bb5: ; preds = %bb3, %bb2, %bb
   %i8 = insertvalue { i64, i64 } poison, i64 %i7, 0
   %i9 = insertvalue { i64, i64 } %i8, i64 %i6, 1
   ret { i64, i64 } %i9
+}
+
+define i32 @NotPropagatingPoisonToUndef(i8 %cond, i32 %x) {
+; NO_FWD-LABEL: @NotPropagatingPoisonToUndef(
+; NO_FWD-NEXT:  D:
+; NO_FWD-NEXT:    [[COND1:%.*]] = icmp eq i8 [[COND:%.*]], 0
+; NO_FWD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND1]], i32 [[X:%.*]], i32 0
+; NO_FWD-NEXT:    ret i32 [[SPEC_SELECT]]
+;
+; FWD-LABEL: @NotPropagatingPoisonToUndef(
+; FWD-NEXT:  D:
+; FWD-NEXT:    [[COND1:%.*]] = icmp eq i8 [[COND:%.*]], 0
+; FWD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND1]], i32 [[X:%.*]], i32 0
+; FWD-NEXT:    ret i32 [[SPEC_SELECT]]
+;
+  switch i8 %cond, label %A [
+  i8 0, label %B
+  i8 1, label %C
+  ]
+A:
+  br label %D
+B:
+  br label %D
+C:
+  br label %D
+D:
+  %y = phi i32 [ undef, %A ], [ %x, %B ], [ 0, %C ]
+  ret i32 %y
 }
