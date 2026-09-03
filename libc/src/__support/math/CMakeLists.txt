@@ -2453,6 +2453,8 @@ add_header_library(
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.cpu_features
   FLAGS
@@ -2543,9 +2545,10 @@ add_header_library(
     roundf.h
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.config
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.cpu_features
   FLAGS
