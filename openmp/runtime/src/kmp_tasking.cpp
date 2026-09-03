@@ -2881,6 +2881,8 @@ static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
     // __kmp_taskgraph_exec_descr_finish.
     kmp_taskgraph_node_t *node = descr->region->task.node;
     kmp_taskdata_t *current_taskdata = thread->th.th_current_task;
+    if (descr->region->mutexset)
+      __kmp_taskgraph_acquire_locks(gtid, descr->region->owner, descr->region);
     __kmp_omp_tg_task(gtid, node, taskgroup, current_taskdata, false);
     break;
   }
@@ -2934,6 +2936,8 @@ static bool
 __kmp_taskgraph_exec_descr_finish(kmp_int32 gtid, kmp_info_t *thread,
                                   kmp_taskgraph_exec_descr_t *descr) {
   KMP_DEBUG_ASSERT(descr->region->type == TASKGRAPH_REGION_NODE);
+  if (descr->region->mutexset)
+    __kmp_taskgraph_release_locks(gtid, descr->region->owner, descr->region);
   kmp_task_t *task = descr->region->task.node->task;
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
   taskdata->td_flags.started = 0;
@@ -3648,6 +3652,15 @@ static void __kmp_replay_taskgraph(kmp_int32 gtid,
   for (kmp_size_t i = 0; i < taskgraph->num_exec_descrs; i++) {
     assert(exec_descrs[i].indegree >= 0);
     exec_descrs[i].npredecessors = exec_descrs[i].indegree;
+  }
+
+  // Allocate all the mutexes that tasks (or target regions) need within the
+  // taskgraph.
+  if (taskgraph->num_mutexes > 0 && !taskgraph->node_mutexes) {
+    taskgraph->node_mutexes = (kmp_lock_t *)__kmp_thread_malloc(
+        thread, taskgraph->num_mutexes * sizeof(kmp_lock_t));
+    for (kmp_int32 i = 0; i < taskgraph->num_mutexes; i++)
+      __kmp_init_lock(&taskgraph->node_mutexes[i]);
   }
 
   __kmp_taskgraph_exec_descr_start(gtid, thread, taskgraph->exec_descrs,
@@ -6212,6 +6225,7 @@ static void __kmp_taskgraph_reset(kmp_taskgraph_record_t *rec, kmp_int32 gtid,
   rec->num_tasks = 0;
   rec->nodes_allocated = 0;
   rec->num_mutexes = 0;
+  rec->node_mutexes = nullptr;
   rec->exec_descrs = nullptr;
   rec->num_exec_descrs = 0;
   rec->taskgraph_args = nullptr;
@@ -6380,6 +6394,12 @@ static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
 
   if (rec->exec_descrs)
     __kmp_thread_free(thread, rec->exec_descrs);
+
+  if (rec->node_mutexes) {
+    for (int i = 0; i < rec->num_mutexes; i++)
+      __kmp_destroy_lock(&rec->node_mutexes[i]);
+    __kmp_thread_free(thread, rec->node_mutexes);
+  }
 
   if (!keep_rec) {
     __kmp_destroy_lock(&rec->map_lock);

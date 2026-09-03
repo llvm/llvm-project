@@ -2873,6 +2873,7 @@ typedef struct kmp_taskgraph_record {
   kmp_taskgraph_region_t *root = nullptr;
   kmp_taskgraph_region_t *alloc_root = nullptr;
   kmp_taskgraph_region_dep_t *recycled_deps = nullptr;
+  kmp_lock_t *node_mutexes = nullptr;
   kmp_int32 num_mutexes = 0;
   struct kmp_taskgraph_exec_descr *exec_descrs = nullptr;
   kmp_size_t num_exec_descrs = 0;
@@ -4570,6 +4571,12 @@ extern kmp_int32
 __kmp_taskgraph_topological_order(kmp_taskgraph_region_t *region,
                                   kmp_taskgraph_region_t **order_out,
                                   kmp_int32 *outidx);
+extern void __kmp_taskgraph_acquire_locks(kmp_int32 gtid,
+                                          kmp_taskgraph_record_t *taskgraph,
+                                          kmp_taskgraph_region_t *region);
+extern void __kmp_taskgraph_release_locks(kmp_int32 gtid,
+                                          kmp_taskgraph_record_t *taskgraph,
+                                          kmp_taskgraph_region_t *region);
 // True if the user asked for tracing of taskgraph structure and replay via the
 // KMP_TASKGRAPH_TRACE environment variable.
 extern bool __kmp_taskgraph_trace();

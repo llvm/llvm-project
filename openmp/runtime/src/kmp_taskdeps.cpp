@@ -588,6 +588,16 @@ static kmp_int32 __kmp_bitset_popcount(kmp_bitset_t *bitset) {
   return accum;
 }
 
+static bool __kmp_bitset_test(kmp_bitset_t *bitset, kmp_size_t bitnum) {
+  if (!bitset)
+    return false;
+  kmp_size_t chunk = bitnum / (8 * sizeof(kmp_uint64));
+  if (bitnum < bitset->bitsize)
+    return (bitset->bits[chunk] & ((kmp_uint64)1 << (bitnum & 63))) != 0;
+  else
+    return false;
+}
+
 static kmp_int32 __kmp_taskgraph_add_dep(kmp_info_t *thread,
                                          kmp_depnode_t *node,
                                          kmp_depnode_list_t *plist) {
@@ -873,6 +883,24 @@ void taskgraph_deps::mutex_dep(kmp_info_t *thread, kmp_dephash_entry_t *info,
     node->dn.set_membership = __kmp_bitset_alloc(thread, 64);
   }
   __kmp_bitset_set(node->dn.set_membership, info->set_num);
+}
+
+void __kmp_taskgraph_acquire_locks(kmp_int32 gtid,
+                                   kmp_taskgraph_record_t *taskgraph,
+                                   kmp_taskgraph_region_t *region) {
+  for (kmp_int32 i = 0; i < taskgraph->num_mutexes; i++) {
+    if (__kmp_bitset_test(region->mutexset, i))
+      __kmp_acquire_lock(&taskgraph->node_mutexes[i], gtid);
+  }
+}
+
+void __kmp_taskgraph_release_locks(kmp_int32 gtid,
+                                   kmp_taskgraph_record_t *taskgraph,
+                                   kmp_taskgraph_region_t *region) {
+  for (kmp_int32 i = 0; i < taskgraph->num_mutexes; i++) {
+    if (__kmp_bitset_test(region->mutexset, i))
+      __kmp_release_lock(&taskgraph->node_mutexes[i], gtid);
+  }
 }
 #endif
 
@@ -2379,75 +2407,41 @@ static kmp_taskgraph_region_t *__kmp_taskgraph_build_regions(
   return entryregion;
 }
 
+/// Give every container region the union of its children's mutex sets, so that
+/// __kmp_taskgraph_find_exclusive_regions can ask what the members of an
+/// EXCLUSIVE region hold between them.  BITSIZE is the number of mutex sets in
+/// the graph, i.e. the width of the sets built here.
+
 static void __kmp_taskgraph_gather_mutex_sets(kmp_info_t *thread,
                                               kmp_taskgraph_region_t *region,
-                                              const kmp_bitset_t *held) {
+                                              kmp_size_t bitsize) {
   switch (region->type) {
   case TASKGRAPH_REGION_ENTRY:
   case TASKGRAPH_REGION_EXIT:
   case TASKGRAPH_REGION_WAIT:
   KMP_TASKGRAPH_REGION_TARGET_CASES:
-    // Target nodes carry no mutex set and have no children to recurse into.
+  case TASKGRAPH_REGION_NODE:
+    // A task node already carries its recorded set membership; target nodes
+    // carry no mutex set.  Neither has children to recurse into.
     return;
-  case TASKGRAPH_REGION_NODE: {
-#ifdef DEBUG_TASKGRAPH
-    if (region->mutexset && __kmp_bitset_subset_p(held, region->mutexset)) {
-      TGDBG("node is mutually exclusive with held: 0x%llx <: 0x%llx\n",
-            (unsigned long long)region->mutexset->bits[0],
-            (unsigned long long)held->bits[0]);
-    }
-#endif
-    return;
-  }
-  case TASKGRAPH_REGION_SEQUENTIAL: {
-    kmp_bitset_t *seq_held = __kmp_bitset_alloc(thread, held->bitsize);
-    __kmp_bitset_clearall(seq_held);
+  // Every kind of container folds the same way: what its members hold between
+  // them does not depend on how it orders them, only on which of them there
+  // are.
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
+    KMP_DEBUG_ASSERT(!region->mutexset);
+    kmp_bitset_t *combined = __kmp_bitset_alloc(thread, bitsize);
+    __kmp_bitset_clearall(combined);
     for (kmp_int32 child = 0; child < region->inner.num_children; child++) {
       __kmp_taskgraph_gather_mutex_sets(thread, region->inner.children[child],
-                                        held);
+                                        bitsize);
       if (region->inner.children[child]->mutexset)
-        __kmp_bitset_or(seq_held, seq_held,
+        __kmp_bitset_or(combined, combined,
                         region->inner.children[child]->mutexset);
     }
-    region->mutexset = seq_held;
-    return;
-  }
-  case TASKGRAPH_REGION_PARALLEL:
-  case TASKGRAPH_REGION_EXCLUSIVE: {
-    kmp_bitset_t *par_held = __kmp_bitset_alloc(thread, held->bitsize);
-    kmp_bitset_t *conflicts = __kmp_bitset_alloc(thread, held->bitsize);
-    while (true) {
-      __kmp_bitset_clearall(par_held);
-      for (kmp_int32 child = 0; child < region->inner.num_children; child++) {
-        __kmp_bitset_clearall(conflicts);
-        for (kmp_int32 other = 0; other < region->inner.num_children; other++) {
-          if (other != child) {
-            if (!region->inner.children[other]->mutexset)
-              __kmp_taskgraph_gather_mutex_sets(
-                  thread, region->inner.children[other], held);
-            if (region->inner.children[other]->mutexset)
-              __kmp_bitset_or(conflicts, conflicts,
-                              region->inner.children[other]->mutexset);
-          }
-        }
-        __kmp_taskgraph_gather_mutex_sets(thread, region->inner.children[child],
-                                          conflicts);
-        if (region->inner.children[child]->mutexset)
-          __kmp_bitset_or(par_held, par_held,
-                          region->inner.children[child]->mutexset);
-      }
-      if (!region->mutexset) {
-        region->mutexset = par_held;
-      } else if (__kmp_bitset_equal(region->mutexset, par_held)) {
-        TGDBG("par mutexes stabilized, exiting loop\n");
-        break;
-      } else {
-        TGDBG("par mutexes not stable, iterating\n");
-        __kmp_bitset_copy(region->mutexset, par_held);
-        __kmp_bitset_free(thread, par_held);
-      }
-    }
-    __kmp_bitset_free(thread, conflicts);
+    region->mutexset = combined;
     return;
   }
   }
@@ -2703,14 +2697,21 @@ static void __kmp_taskgraph_exclusive_regions(
     kmp_info_t *thread, kmp_taskgraph_record_t *taskgraph,
     kmp_taskgraph_region_t **&alloc_chain, kmp_taskgraph_region_t **region_p,
     kmp_int32 max_mutex) {
-  kmp_bitset_t *top = __kmp_bitset_alloc(thread, max_mutex);
-  __kmp_bitset_clearall(top);
-  __kmp_taskgraph_gather_mutex_sets(thread, *region_p, top);
+  // No dependence in the graph was a mutexinoutset, so no node carries a mutex
+  // set and there is nothing here to do.  The gather would give each container
+  // an empty set only for the strip to free it again; no EXCLUSIVE region can
+  // exist to be rewritten, since one is built only where
+  // __kmp_taskgraph_region_mutex_p holds and that needs a node set; and the
+  // mutex count comes out zero either way.  Skipping is what keeps recording a
+  // wide graph off the gather's per-container walk.
+  if (max_mutex == 0) {
+    taskgraph->num_mutexes = 0;
+    return;
+  }
+  __kmp_taskgraph_gather_mutex_sets(thread, *region_p, max_mutex);
   __kmp_taskgraph_find_exclusive_regions(thread, taskgraph, alloc_chain,
                                          region_p);
-  kmp_int32 num_mutexes = __kmp_taskgraph_strip_mutex_sets(thread, *region_p);
-  taskgraph->num_mutexes = num_mutexes;
-  __kmp_bitset_free(thread, top);
+  taskgraph->num_mutexes = __kmp_taskgraph_strip_mutex_sets(thread, *region_p);
 }
 
 static const char *
