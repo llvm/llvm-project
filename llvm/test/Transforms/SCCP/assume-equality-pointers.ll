@@ -135,7 +135,6 @@ define ptr @assume_pointers_equality_maybe_different_provenance_5(ptr %x) {
 @g_outer = internal global ptr @g_inner
 @g_inner = external global ptr
 
-; FIXME: This is a miscompilation.
 define ptr @assume_pointers_equality_maybe_different_provenance_6(ptr %p) {
 ; CHECK-LABEL: define ptr @assume_pointers_equality_maybe_different_provenance_6(
 ; CHECK-SAME: ptr [[P:%.*]]) {
