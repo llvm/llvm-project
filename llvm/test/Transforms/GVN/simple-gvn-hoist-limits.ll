@@ -49,12 +49,12 @@ define i32 @f(i1 %c, i32 %a, i32 %b, i32 %d) {
 ;
 ; MAX-DEPTH4-LABEL: @f(
 ; MAX-DEPTH4-NEXT:  entry:
+; MAX-DEPTH4-NEXT:    [[D0:%.*]] = add i32 [[D:%.*]], 1
 ; MAX-DEPTH4-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; MAX-DEPTH4:       if.then:
 ; MAX-DEPTH4-NEXT:    [[R0:%.*]] = add i32 [[B:%.*]], 1
 ; MAX-DEPTH4-NEXT:    [[AND0:%.*]] = and i32 [[A:%.*]], 1
 ; MAX-DEPTH4-NEXT:    [[TOBOOL_AND0:%.*]] = icmp eq i32 [[AND0]], 0
-; MAX-DEPTH4-NEXT:    [[D0:%.*]] = add i32 [[D:%.*]], 1
 ; MAX-DEPTH4-NEXT:    [[S0:%.*]] = add i32 [[D0]], [[B]]
 ; MAX-DEPTH4-NEXT:    br i1 [[TOBOOL_AND0]], label [[IF_THEN1:%.*]], label [[IF_ELSE1:%.*]]
 ; MAX-DEPTH4:       if.then1:
@@ -67,8 +67,7 @@ define i32 @f(i1 %c, i32 %a, i32 %b, i32 %d) {
 ; MAX-DEPTH4-NEXT:    [[R1:%.*]] = add i32 [[B]], 2
 ; MAX-DEPTH4-NEXT:    [[AND1:%.*]] = and i32 [[A]], 1
 ; MAX-DEPTH4-NEXT:    [[TOBOOL_AND1:%.*]] = icmp eq i32 [[AND1]], 0
-; MAX-DEPTH4-NEXT:    [[D1:%.*]] = add i32 [[D]], 1
-; MAX-DEPTH4-NEXT:    [[S1:%.*]] = add i32 [[D1]], [[B]]
+; MAX-DEPTH4-NEXT:    [[S1:%.*]] = add i32 [[D0]], [[B]]
 ; MAX-DEPTH4-NEXT:    br i1 [[TOBOOL_AND1]], label [[IF_THEN2:%.*]], label [[IF_ELSE2:%.*]]
 ; MAX-DEPTH4:       if.then2:
 ; MAX-DEPTH4-NEXT:    [[OR2:%.*]] = or i32 [[R1]], 4
@@ -84,13 +83,13 @@ define i32 @f(i1 %c, i32 %a, i32 %b, i32 %d) {
 ;
 ; MAX-DEPTH5-LABEL: @f(
 ; MAX-DEPTH5-NEXT:  entry:
+; MAX-DEPTH5-NEXT:    [[D0:%.*]] = add i32 [[D:%.*]], 1
+; MAX-DEPTH5-NEXT:    [[S0:%.*]] = add i32 [[D0]], [[B:%.*]]
 ; MAX-DEPTH5-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; MAX-DEPTH5:       if.then:
-; MAX-DEPTH5-NEXT:    [[R0:%.*]] = add i32 [[B:%.*]], 1
+; MAX-DEPTH5-NEXT:    [[R0:%.*]] = add i32 [[B]], 1
 ; MAX-DEPTH5-NEXT:    [[AND0:%.*]] = and i32 [[A:%.*]], 1
 ; MAX-DEPTH5-NEXT:    [[TOBOOL_AND0:%.*]] = icmp eq i32 [[AND0]], 0
-; MAX-DEPTH5-NEXT:    [[D0:%.*]] = add i32 [[D:%.*]], 1
-; MAX-DEPTH5-NEXT:    [[S0:%.*]] = add i32 [[D0]], [[B]]
 ; MAX-DEPTH5-NEXT:    br i1 [[TOBOOL_AND0]], label [[IF_THEN1:%.*]], label [[IF_ELSE1:%.*]]
 ; MAX-DEPTH5:       if.then1:
 ; MAX-DEPTH5-NEXT:    [[OR0:%.*]] = or i32 [[R0]], 1
@@ -102,8 +101,6 @@ define i32 @f(i1 %c, i32 %a, i32 %b, i32 %d) {
 ; MAX-DEPTH5-NEXT:    [[R1:%.*]] = add i32 [[B]], 2
 ; MAX-DEPTH5-NEXT:    [[AND1:%.*]] = and i32 [[A]], 1
 ; MAX-DEPTH5-NEXT:    [[TOBOOL_AND1:%.*]] = icmp eq i32 [[AND1]], 0
-; MAX-DEPTH5-NEXT:    [[D1:%.*]] = add i32 [[D]], 1
-; MAX-DEPTH5-NEXT:    [[S1:%.*]] = add i32 [[D1]], [[B]]
 ; MAX-DEPTH5-NEXT:    br i1 [[TOBOOL_AND1]], label [[IF_THEN2:%.*]], label [[IF_ELSE2:%.*]]
 ; MAX-DEPTH5:       if.then2:
 ; MAX-DEPTH5-NEXT:    [[OR2:%.*]] = or i32 [[R1]], 4
@@ -113,7 +110,7 @@ define i32 @f(i1 %c, i32 %a, i32 %b, i32 %d) {
 ; MAX-DEPTH5-NEXT:    br label [[EXIT]]
 ; MAX-DEPTH5:       exit:
 ; MAX-DEPTH5-NEXT:    [[OR:%.*]] = phi i32 [ [[OR0]], [[IF_THEN1]] ], [ [[OR1]], [[IF_ELSE1]] ], [ [[OR2]], [[IF_THEN2]] ], [ [[OR3]], [[IF_ELSE2]] ]
-; MAX-DEPTH5-NEXT:    [[S:%.*]] = phi i32 [ [[S0]], [[IF_THEN1]] ], [ [[S0]], [[IF_ELSE1]] ], [ [[S1]], [[IF_THEN2]] ], [ [[S1]], [[IF_ELSE2]] ]
+; MAX-DEPTH5-NEXT:    [[S:%.*]] = phi i32 [ [[S0]], [[IF_THEN1]] ], [ [[S0]], [[IF_ELSE1]] ], [ [[S0]], [[IF_THEN2]] ], [ [[S0]], [[IF_ELSE2]] ]
 ; MAX-DEPTH5-NEXT:    [[R:%.*]] = add i32 [[OR]], [[S]]
 ; MAX-DEPTH5-NEXT:    ret i32 [[R]]
 ;

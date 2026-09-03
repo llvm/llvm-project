@@ -7,19 +7,16 @@ target triple = "aarch64-unknown-linux"
 define dso_local i32 @everything_hoisted(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @everything_hoisted(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @barrier(i32 [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @barrier(i32 [[A]])
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], [[B]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i32 [[TMP4]], [[C]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP2]], [[IF_THEN]] ], [ [[TMP5]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP2]], [[IF_THEN]] ], [ [[TMP2]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -46,15 +43,14 @@ if.end:
 define dso_local i32 @spec_barrier_short_side(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @spec_barrier_short_side(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @barrier(i32 [[A:%.*]])
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @barrier(i32 [[A]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i32 [[C:%.*]], [[TMP0]]
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 [[C]], [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 [[C]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP5]], 2
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -87,15 +83,14 @@ if.end:
 define dso_local i32 @spec_barrier_long_side(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @spec_barrier_long_side(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i32 [[C:%.*]], [[TMP0]]
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @barrier(i32 [[A]])
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 [[C]], [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 [[C]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP5]], 2
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -127,15 +122,14 @@ if.end:
 define dso_local i32 @no_reorder_across_volatile(i1 %cc, i32 %a, i32 %b, i32 %c, ptr %p) {
 ; CHECK-LABEL: @no_reorder_across_volatile(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i32 [[C:%.*]], [[TMP0]]
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    store volatile i32 0, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[C]], [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[C]], [[TMP0]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP1]], [[IF_THEN]] ], [ [[TMP2]], [[IF_ELSE]] ]
@@ -163,19 +157,16 @@ if.end:
 define dso_local i32 @no_barrier_call(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @no_barrier_call(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
 ; CHECK-NEXT:    call void @will_return()
 ; CHECK-NEXT:    [[TMP0:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[C:%.*]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    call void @will_return()
-; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[A]], [[B]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[C]], [[TMP2]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP1]], [[IF_THEN]] ], [ [[TMP3]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP1]], [[IF_THEN]] ], [ [[TMP1]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -243,19 +234,16 @@ if.end:
 define dso_local i32 @multiple_use(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @multiple_use(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[TMP0]], [[C:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw i32 [[TMP3]], [[C]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP2]], [[IF_THEN]] ], [ [[TMP5]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP2]], [[IF_THEN]] ], [ [[TMP2]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -282,19 +270,16 @@ if.end:
 define dso_local i32 @commutative_ops(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @commutative_ops(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[TMP0]], [[C:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 [[C]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP2]], [[IF_THEN]] ], [ [[TMP5]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP2]], [[IF_THEN]] ], [ [[TMP2]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -378,5 +363,57 @@ if.else:
   ret i32 %1
 }
 
+define dso_local i32 @no_hoist_nomerge(i1 %cc, i32 %x, ptr %p) {
+; CHECK-LABEL: @no_hoist_nomerge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[W:%.*]] = add i32 [[V]], [[X:%.*]]
+; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @cannot_merge()
+; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @cannot_merge()
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+entry:
+  %v = load i32, ptr %p
+  %w = add i32 %v, %x
+  br i1 %cc, label %if.then, label %if.else
+
+if.then:
+  %0 = call i32 @cannot_merge()
+  ret i32 %0
+
+if.else:
+  %1 = call i32 @cannot_merge()
+  ret i32 %1
+}
+
+
+define i32 @no_hoist_bundles(i1 %cc, i32 %x, ptr %p) {
+; CHECK-LABEL: @no_hoist_bundles(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[U:%.*]] = call i32 @will_return(i1 true, i32 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] [ "foo"(i32 [[X]], ptr [[P]]) ]
+; CHECK-NEXT:    ret i32 [[U]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[V:%.*]] = call i32 @will_return(i1 false, i32 [[X]], ptr [[P]]) #[[ATTR0]] [ "bar"(i32 [[X]], ptr [[P]]) ]
+; CHECK-NEXT:    ret i32 [[V]]
+;
+entry:
+  br i1 %cc, label %if.then, label %if.else
+
+if.then:
+  %u = call i32 @will_return(i1 %cc, i32 %x, ptr %p) memory(none) [ "foo"(i32 %x, ptr %p) ]
+  ret i32 %u
+
+if.else:
+  %v = call i32 @will_return(i1 %cc, i32 %x, ptr %p) memory(none) [ "bar"(i32 %x, ptr %p) ]
+  ret i32 %v
+}
+
 declare i32 @barrier(i32) memory(none)
-declare void @will_return() nounwind willreturn
+declare void @will_return(i1, i32, ptr) memory(none) nounwind willreturn
+declare void @cannot_merge() memory(none) nounwind willreturn nomerge
