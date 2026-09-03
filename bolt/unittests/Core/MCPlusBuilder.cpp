@@ -854,7 +854,7 @@ TEST_P(MCPlusBuilderTester, AArch64_Psign_Pauth_variants) {
   ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retab));
 }
 
-TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
+TEST_P(MCPlusBuilderTester, AArch64_isCleanReg) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
@@ -867,7 +867,7 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
                       .addReg(AArch64::X0)
                       .addReg(AArch64::X0)
                       .addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(EORXrs));
+  ASSERT_TRUE(BC->MIB->isCleanReg(EORXrs));
 
   // eor w0, w0, w0
   MCInst EORWrs = MCInstBuilder(AArch64::EORWrs)
@@ -875,7 +875,7 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
                       .addReg(AArch64::W0)
                       .addReg(AArch64::W0)
                       .addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(EORWrs));
+  ASSERT_TRUE(BC->MIB->isCleanReg(EORWrs));
 
   // mov x0, xzr
   MCInst ORRXrs = MCInstBuilder(AArch64::ORRXrs)
@@ -883,7 +883,7 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
                       .addReg(AArch64::XZR)
                       .addReg(AArch64::XZR)
                       .addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(ORRXrs));
+  ASSERT_TRUE(BC->MIB->isCleanReg(ORRXrs));
 
   // mov w0, wzr
   MCInst ORRWrs = MCInstBuilder(AArch64::ORRWrs)
@@ -891,17 +891,17 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
                       .addReg(AArch64::WZR)
                       .addReg(AArch64::WZR)
                       .addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(ORRWrs));
+  ASSERT_TRUE(BC->MIB->isCleanReg(ORRWrs));
 
   // mov x0, #0
   MCInst MOVZXi =
       MCInstBuilder(AArch64::MOVZXi).addReg(AArch64::X0).addImm(0).addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZXi));
+  ASSERT_TRUE(BC->MIB->isCleanReg(MOVZXi));
 
   // mov w0, #0
   MCInst MOVZWi =
       MCInstBuilder(AArch64::MOVZWi).addReg(AArch64::W0).addImm(0).addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZWi));
+  ASSERT_TRUE(BC->MIB->isCleanReg(MOVZWi));
 
   // movz x0, #:abs_g3:symbol
   MCInst MOVZXiWithExpr =
@@ -910,7 +910,7 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
           .addExpr(MCSpecifierExpr::create(BB->getLabel(), AArch64::S_ABS_G3,
                                            *BC->Ctx.get()))
           .addImm(48);
-  ASSERT_FALSE(BC->MIB->isCleanRegXOR(MOVZXiWithExpr));
+  ASSERT_FALSE(BC->MIB->isCleanReg(MOVZXiWithExpr));
 }
 
 #endif // AARCH64_AVAILABLE
@@ -927,33 +927,27 @@ TEST_P(MCPlusBuilderTester, RISCV_NoFlagsRegister) {
   EXPECT_EQ(BC->MIB->getFlagsReg(), RISCV::NoRegister);
 }
 
-TEST_P(MCPlusBuilderTester, RISCV_isCleanRegXOR) {
+TEST_P(MCPlusBuilderTester, RISCV_isCleanReg) {
   if (GetParam() != Triple::riscv64)
     GTEST_SKIP();
+
+  MCInst ADDI =
+      MCInstBuilder(RISCV::ADDI).addReg(RISCV::X5).addReg(RISCV::X0).addImm(0);
+  EXPECT_TRUE(BC->MIB->isCleanReg(ADDI));
+
+  MCInst NonZeroSource =
+      MCInstBuilder(RISCV::ADDI).addReg(RISCV::X5).addReg(RISCV::X6).addImm(0);
+  EXPECT_FALSE(BC->MIB->isCleanReg(NonZeroSource));
+
+  MCInst NonZeroImmediate =
+      MCInstBuilder(RISCV::ADDI).addReg(RISCV::X5).addReg(RISCV::X0).addImm(1);
+  EXPECT_FALSE(BC->MIB->isCleanReg(NonZeroImmediate));
 
   MCInst XOR = MCInstBuilder(RISCV::XOR)
                    .addReg(RISCV::X5)
                    .addReg(RISCV::X6)
                    .addReg(RISCV::X6);
-  EXPECT_TRUE(BC->MIB->isCleanRegXOR(XOR));
-
-  MCInst NonCleanXOR = MCInstBuilder(RISCV::XOR)
-                           .addReg(RISCV::X5)
-                           .addReg(RISCV::X6)
-                           .addReg(RISCV::X7);
-  EXPECT_FALSE(BC->MIB->isCleanRegXOR(NonCleanXOR));
-
-  MCInst CompressedXOR = MCInstBuilder(RISCV::C_XOR)
-                             .addReg(RISCV::X8)
-                             .addReg(RISCV::X8)
-                             .addReg(RISCV::X8);
-  EXPECT_TRUE(BC->MIB->isCleanRegXOR(CompressedXOR));
-
-  MCInst ADD = MCInstBuilder(RISCV::ADD)
-                   .addReg(RISCV::X5)
-                   .addReg(RISCV::X6)
-                   .addReg(RISCV::X6);
-  EXPECT_FALSE(BC->MIB->isCleanRegXOR(ADD));
+  EXPECT_FALSE(BC->MIB->isCleanReg(XOR));
 }
 
 TEST_P(MCPlusBuilderTester, RISCV_ABIRegisterMasks) {

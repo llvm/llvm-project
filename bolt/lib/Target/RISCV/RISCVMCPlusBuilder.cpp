@@ -42,14 +42,10 @@ public:
 
   MCPhysReg getFlagsReg() const override { return RISCV::NoRegister; }
 
-  bool isCleanRegXOR(const MCInst &Inst) const override {
-    switch (Inst.getOpcode()) {
-    case RISCV::XOR:
-    case RISCV::C_XOR:
-      return Inst.getOperand(1).getReg() == Inst.getOperand(2).getReg();
-    default:
-      return false;
-    }
+  bool isCleanReg(const MCInst &Inst) const override {
+    return Inst.getOpcode() == RISCV::ADDI && Inst.getOperand(1).isReg() &&
+           Inst.getOperand(1).getReg() == RISCV::X0 &&
+           Inst.getOperand(2).isImm() && Inst.getOperand(2).getImm() == 0;
   }
 
   BitVector getRegsUsedAsParams() const override {

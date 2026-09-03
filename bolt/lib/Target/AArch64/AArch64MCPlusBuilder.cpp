@@ -2658,7 +2658,7 @@ public:
            isAArch64ExclusiveStore(Inst);
   }
 
-  bool isCleanRegXOR(const MCInst &Inst) const override {
+  bool isCleanReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::EORXrs:
     case AArch64::EORWrs:
