@@ -1930,7 +1930,7 @@ static bool checkAndReplaceCmp(CmpIntrinsic *I, ConstraintInfo &Info,
 /// saturate. Returns true if \p USub was replaced.
 static bool checkAndReplaceUSubSat(SaturatingInst *USub, ConstraintInfo &Info,
                                    SmallVectorImpl<Instruction *> &ToRemove) {
-  // usub.sat(A, B) is max(A - B, 0), so it is A - B exactly when A >=u B.
+  // usub.sat(A, B) is A - B exactly when A >=u B.
   Value *A = USub->getLHS();
   Value *B = USub->getRHS();
   if (!checkCondition(CmpInst::ICMP_UGE, A, B, USub, Info).value_or(false))
