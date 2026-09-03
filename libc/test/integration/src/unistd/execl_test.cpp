@@ -34,7 +34,6 @@ void fork_and_execl_normal_exit(char **envp) {
   ASSERT_TRUE(pid > 0);
   int status;
   pid_t cpid = LIBC_NAMESPACE::waitpid(pid, &status, 0);
-  ASSERT_TRUE(cpid > 0);
   ASSERT_EQ(cpid, pid);
   ASSERT_TRUE(WIFEXITED(status));
 }
@@ -54,7 +53,6 @@ void fork_and_execl_custom_env() {
   ASSERT_TRUE(pid > 0);
   int status;
   pid_t cpid = LIBC_NAMESPACE::waitpid(pid, &status, 0);
-  ASSERT_TRUE(cpid > 0);
   ASSERT_EQ(cpid, pid);
   ASSERT_TRUE(WIFEXITED(status));
 }
@@ -74,7 +72,6 @@ void fork_and_execl_missing_env_fails() {
   ASSERT_TRUE(pid > 0);
   int status;
   pid_t cpid = LIBC_NAMESPACE::waitpid(pid, &status, 0);
-  ASSERT_TRUE(cpid > 0);
   ASSERT_EQ(cpid, pid);
   ASSERT_FALSE(WIFEXITED(status));
   ASSERT_TRUE(WTERMSIG(status) == SIGUSR1);
@@ -90,7 +87,6 @@ void fork_and_execl_signal_exit() {
   ASSERT_TRUE(pid > 0);
   int status;
   pid_t cpid = LIBC_NAMESPACE::waitpid(pid, &status, 0);
-  ASSERT_TRUE(cpid > 0);
   ASSERT_EQ(cpid, pid);
   ASSERT_FALSE(WIFEXITED(status));
   ASSERT_TRUE(WTERMSIG(status) == SIGUSR1);

@@ -25,17 +25,6 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, execl, (const char *path, const char *arg0, ...)) {
-  if (arg0 == nullptr) {
-    char *argv[] = {nullptr};
-    auto ret = linux_syscalls::execve(
-        path, argv, const_cast<char *const *>(LIBC_NAMESPACE::environ));
-    if (!ret) {
-      libc_errno = ret.error();
-      return -1;
-    }
-    return *ret;
-  }
-
   va_list varargs, varargs_copy;
   va_start(varargs, arg0);
   va_copy(varargs_copy, varargs);
