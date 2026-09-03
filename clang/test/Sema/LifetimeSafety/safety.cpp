@@ -1034,7 +1034,7 @@ void lifetimebound_make_unique() {
   {
     MyObj obj;
     ptr = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{local variable 'obj' does not live long enough}} \
-                                                    // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj &>' aliases the storage of local variable 'obj' because parameter 'args' is marked as lifetimebound}}
+                                                    // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj &>' aliases the storage of local variable 'obj' because parameter 'args' is inferred as lifetimebound}}
   }                                                 // tu-note {{local variable 'obj' is destroyed here}}
   (void)ptr;                                        // tu-note {{later used here}}
 }
@@ -1052,7 +1052,7 @@ void non_lifetimebound_make_unique() {
 void lifetimebound_make_unique_temp() {
   std::unique_ptr<LifetimeBoundCtor> ptr = std::make_unique<LifetimeBoundCtor>(MyObj()); // tu-warning {{temporary object does not live long enough}} \
                                                                                          // tu-note {{temporary object is destroyed here}} \
-                                                                                         // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj>' aliases the storage of temporary object because parameter 'args' is marked as lifetimebound}}
+                                                                                         // tu-note {{result of call to 'make_unique<LifetimeBoundCtor, MyObj>' aliases the storage of temporary object because parameter 'args' is inferred as lifetimebound}}
   (void)ptr; // tu-note {{later used here}}
 }
 
@@ -1090,7 +1090,7 @@ void lifetimebound_make_unique_multi_params() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                         // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &>' aliases the storage of local variable 'obj_short' because parameter 'args' is marked as lifetimebound}}
+                                                                         // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &>' aliases the storage of local variable 'obj_short' because parameter 'args' is inferred as lifetimebound}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1101,7 +1101,7 @@ void lifetimebound_make_unique_multi_params2() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                            // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, int>' aliases the storage of local variable 'obj_short' because parameter 'args' is marked as lifetimebound}}
+                                                                            // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, int>' aliases the storage of local variable 'obj_short' because parameter 'args' is inferred as lifetimebound}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1122,7 +1122,7 @@ void lifetimebound_make_unique_multi_params3_1() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short' because parameter 'args' is marked as lifetimebound}}
+                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short' because parameter 'args' is inferred as lifetimebound}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1133,7 +1133,7 @@ void lifetimebound_make_unique_multi_params3_2() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short' because parameter 'args' is marked as lifetimebound}}
+                                                                              // tu-note {{result of call to 'make_unique<MultiLifetimeBoundCtor, MyObj &, MyObj &, double>' aliases the storage of local variable 'obj_short' because parameter 'args' is inferred as lifetimebound}}
   } // tu-note {{local variable 'obj_short' is destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1904,14 +1904,14 @@ void wrong_use_of_move_is_permissive() {
   {
     MyObj a;
     v = std::move(a); // expected-warning {{local variable 'a' does not live long enough}} \
-                      // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a' because parameter 't' is marked as lifetimebound}}
+                      // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a' because parameter 't' is inferred as lifetimebound}}
   }         // expected-note {{local variable 'a' is destroyed here}}
   (void)v;  // expected-note {{later used here}}
   const int* p;
   {
     MyObj a;
     p = std::move(a).getData(); // expected-warning {{local variable 'a' does not live long enough}} \
-                                // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a' because parameter 't' is marked as lifetimebound}} \
+                                // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a' because parameter 't' is inferred as lifetimebound}} \
                                 // expected-note {{result of call to 'getData' aliases the storage of local variable 'a' because the implicit object parameter is marked as lifetimebound}}
   }         // expected-note {{local variable 'a' is destroyed here}}
   (void)p;  // expected-note {{later used here}}
@@ -2250,7 +2250,7 @@ void test() {
   const MyObj* pTMA = mtf.memberA(MyObj()); // expected-warning {{temporary object does not live long enough}} // expected-note {{temporary object is destroyed here}} \
                                             // expected-note {{result of call to 'memberA' aliases the storage of temporary object because parameter 'x' is marked as lifetimebound}}
   const MyObj* pTMB = mtf.memberB(MyObj()); // tu-warning {{temporary object does not live long enough}} // tu-note {{temporary object is destroyed here}} \
-                                            // tu-note {{result of call to 'memberB' aliases the storage of temporary object because parameter 'x' is marked as lifetimebound}}
+                                            // tu-note {{result of call to 'memberB' aliases the storage of temporary object because parameter 'x' is inferred as lifetimebound}}
   const MyObj* pTMC = mtf.memberC(MyObj()); // expected-warning {{temporary object does not live long enough}} // expected-note {{temporary object is destroyed here}} \
                                             // expected-note {{result of call to 'memberC' aliases the storage of temporary object because parameter 'x' is marked as lifetimebound}}
   (void)pTMA; // expected-note {{later used here}}

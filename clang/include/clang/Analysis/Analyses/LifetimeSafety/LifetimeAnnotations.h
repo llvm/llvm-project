@@ -20,7 +20,7 @@ namespace clang {
 class LifetimeBoundAttr;
 } // namespace clang
 
-namespace clang::lifetimes {
+namespace clang ::lifetimes {
 
 // This function is needed because Decl::isInStdNamespace will return false for
 // iterators in some STL implementations due to them being defined in a
@@ -63,12 +63,12 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 
-using LifetimeBoundParamInfo =
+using LifetimeBoundParam =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
 
-/// Describes why an argument is tracked as lifetimebound-like.
-struct LifetimeBoundArgInfo {
-  LifetimeBoundParamInfo Param;
+/// Describes why a parameter is tracked as lifetimebound-like.
+struct LifetimeBoundParamInfo {
+  LifetimeBoundParam Param;
   bool IsInferred = false;
 };
 
@@ -82,13 +82,13 @@ struct FunctionCallInfo {
 
 /// Returns the parameter corresponding to argument I when the argument should
 /// be tracked for lifetime safety.
-std::optional<LifetimeBoundArgInfo>
+std::optional<LifetimeBoundParamInfo>
 getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
                   unsigned I);
 
 /// Returns lifetime safety tracking info for the call argument containing
 /// Source.
-std::optional<LifetimeBoundArgInfo>
+std::optional<LifetimeBoundParamInfo>
 getTrackingInfoForCallArg(const Expr *Call, const Expr *Source);
 
 // Returns true if the implicit object argument (this) of a method call should
