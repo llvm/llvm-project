@@ -145,6 +145,15 @@ public:
     return nullptr;
   }
 
+  /// Check whether \p Die is this unit's root DIE, identified by being the
+  /// output unit DIE rather than by its tag: DWARFContext::compile_units()
+  /// hands a full and a partial compilation unit to the linker on the same
+  /// path, and their roots differ only in that tag.
+  bool isUnitRootDIE(const DIE &Die) const {
+    assert(getOutputUnitDIE() && "no output unit DIE to compare against");
+    return &Die == getOutputUnitDIE();
+  }
+
   dwarf::Tag getTag() const { return OrigUnit.getUnitDIE().getTag(); }
 
   bool hasODR() const { return HasODR; }
