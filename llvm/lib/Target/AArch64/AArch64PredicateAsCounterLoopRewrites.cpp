@@ -419,7 +419,7 @@ bool AArch64PredicateAsCounterLoopRewrites::rewriteCandidate(
   NewPhi->addIncoming(NewNext, C.Latch);
 
   auto RewriteUses = [&](Instruction *OldMask, Value *Count,
-                         function_ref<bool(Use & U)> Predicate = nullptr) {
+                         function_ref<bool(Use &U)> Predicate = nullptr) {
     SmallVector<Use *, 8> UsesToRewrite;
     for (Use &U : OldMask->uses()) {
       if (!Predicate || Predicate(U))
