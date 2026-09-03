@@ -447,8 +447,8 @@ mlir::intrange::inferRemS(ArrayRef<ConstantIntRanges> argRanges) {
         APInt minRem = lhsMin.srem(maxDivisor);
         APInt maxRem = lhsMax.srem(maxDivisor);
         if (minRem.sle(maxRem)) {
-          smin = minRem;
-          smax = maxRem;
+          smin = std::move(minRem);
+          smax = std::move(maxRem);
         }
       }
     }
@@ -478,8 +478,8 @@ mlir::intrange::inferRemU(ArrayRef<ConstantIntRanges> argRanges) {
         APInt minRem = lhsMin.urem(rhsMax);
         APInt maxRem = lhsMax.urem(rhsMax);
         if (minRem.ule(maxRem)) {
-          umin = minRem;
-          umax = maxRem;
+          umin = std::move(minRem);
+          umax = std::move(maxRem);
         }
       }
     }
