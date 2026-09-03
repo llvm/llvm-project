@@ -616,9 +616,6 @@ public:
   void emitExpandAtomicLoad(LoadInst *LI) const override;
   void emitExpandAtomicStore(StoreInst *SI) const override;
 
-  LoadInst *
-  lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
-
   const TargetRegisterClass *getRegClassFor(MVT VT,
                                             bool isDivergent) const override;
   bool requiresUniformRegister(MachineFunction &MF,
