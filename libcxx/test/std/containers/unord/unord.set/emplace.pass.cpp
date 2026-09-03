@@ -76,7 +76,7 @@ int main(int, char**) {
     assert(std::get<1>(res));
     assert(set.begin() == std::get<0>(res));
   }
-  { // Regression test for #220451
+  { // Regression test for https://llvm.org/PR220451.
     // Make sure emplace with multiple arguments doesn't extract the first argument as a key for unordered sets.
     std::unordered_set<std::string> s;
     s.emplace("foo");

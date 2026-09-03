@@ -17,7 +17,6 @@
 
 #include <cassert>
 #include <set>
-#include <string>
 
 #include "../../Emplaceable.h"
 #include "DefaultOnly.h"
@@ -93,15 +92,21 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(std::get<1>(res));
     assert(set.begin() == std::get<0>(res));
   }
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    // Regression test for #220451
+  { // Regression test for https://llvm.org/PR220451.
     // Make sure emplace with multiple arguments doesn't extract the first argument as a key for sets.
-    std::set<std::string> s;
-    s.emplace("foo");
-    auto res = s.emplace(std::string("ofoo"), 1);
+    struct S {
+      const int val;
+      TEST_CONSTEXPR explicit S(int v) : val(v) {}
+      TEST_CONSTEXPR S(const S& s, int offset) : val(s.val + offset) {}
+      TEST_CONSTEXPR bool operator<(const S& other) const { return val < other.val; }
+      TEST_CONSTEXPR bool operator==(const S& other) const { return val == other.val; }
+    };
+    std::set<S> s;
+    s.emplace(2);
+    auto res = s.emplace(S(1), 1);
     assert(!res.second);
     assert(s.size() == 1);
-    assert(*s.begin() == "foo");
+    assert(s.begin()->val == 2);
   }
 
   return true;
