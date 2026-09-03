@@ -202,7 +202,7 @@ std::string normalizeSlashes(StringRef Path) {
   return sys::path::convert_to_slash(Path, sys::path::Style::windows_backslash);
 }
 
-bool parseLine(StringRef LineText, unsigned &Line) {
+bool parseLineNumber(StringRef LineText, unsigned &Line) {
   return !LineText.empty() && !LineText.getAsInteger(10, Line);
 }
 
@@ -210,14 +210,14 @@ PrintLineRange parseLineRange(StringRef RangeText, StringRef FullFilter) {
   auto [FirstText, LastText] = RangeText.split('-');
 
   unsigned First;
-  if (!parseLine(FirstText, First))
+  if (!parseLineNumber(FirstText, First))
     reportBadSourceLocFilter(FullFilter);
 
   if (!RangeText.contains('-'))
     return {First, First};
 
   unsigned Last;
-  if (!parseLine(LastText, Last) || Last < First)
+  if (!parseLineNumber(LastText, Last) || Last < First)
     reportBadSourceLocFilter(FullFilter);
 
   return {First, Last};
@@ -311,6 +311,10 @@ bool llvm::isSourceLocInPrintList(const DebugLoc &Loc) {
 }
 
 bool llvm::isSourceLocFilterEmpty() { return getSourceLocFilters().empty(); }
+
+bool llvm::shouldPrintAllFunctions() {
+  return isSourceLocFilterEmpty() && isFunctionInPrintList("*");
+}
 
 bool llvm::shouldPrintFunction(const Function &F) {
   bool SourceLocFilterEmpty = isSourceLocFilterEmpty();

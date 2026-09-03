@@ -222,8 +222,7 @@ void printIR(raw_ostream &OS, const Function *F) {
 }
 
 void printIR(raw_ostream &OS, const Module *M) {
-  if ((isSourceLocFilterEmpty() && isFunctionInPrintList("*")) ||
-      forcePrintModuleIR()) {
+  if (shouldPrintAllFunctions() || forcePrintModuleIR()) {
     M->print(OS, nullptr);
   } else {
     for (const auto &F : M->functions()) {
@@ -274,8 +273,7 @@ std::string getIRName(IRUnitRef IR) {
 }
 
 bool moduleContainsFilterPrintFunc(const Module &M) {
-  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
-  if (SourceLocFilterEmpty && isFunctionInPrintList("*"))
+  if (shouldPrintAllFunctions())
     return true;
   return any_of(M.functions(),
                 [](const Function &F) { return shouldPrintFunction(F); });

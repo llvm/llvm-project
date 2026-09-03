@@ -683,8 +683,7 @@ namespace {
       };
 
       bool NeedModule = llvm::forcePrintModuleIR();
-      if (isSourceLocFilterEmpty() && isFunctionInPrintList("*") &&
-          NeedModule) {
+      if (shouldPrintAllFunctions() && NeedModule) {
         PrintBannerOnce();
         OS << "\n";
         SCC.getCallGraph().getModule().print(OS, nullptr);
@@ -700,7 +699,7 @@ namespace {
               F->print(OS);
             }
           }
-        } else if (isSourceLocFilterEmpty() && isFunctionInPrintList("*")) {
+        } else if (shouldPrintAllFunctions()) {
           PrintBannerOnce();
           OS << "\nPrinting <null> Function\n";
         }

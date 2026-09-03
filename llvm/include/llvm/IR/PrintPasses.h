@@ -69,6 +69,9 @@ LLVM_ABI bool isFunctionInPrintList(StringRef FunctionName);
 LLVM_ABI bool isSourceLocInPrintList(const DebugLoc &Loc);
 LLVM_ABI bool isSourceLocFilterEmpty();
 
+// Returns true if the print filters allow all functions.
+LLVM_ABI bool shouldPrintAllFunctions();
+
 // Returns true if the function passes the function-name and source-location
 // print filters.
 LLVM_ABI bool shouldPrintFunction(const Function &F);
