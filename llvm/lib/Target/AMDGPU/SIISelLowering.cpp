@@ -1109,6 +1109,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::UMIN,
                        ISD::UMAX,
                        ISD::USUBSAT,
+                       ISD::UADDSAT,
                        ISD::AND,
                        ISD::OR,
                        ISD::XOR,
@@ -7548,6 +7549,12 @@ bool SITargetLowering::isFMADLegal(const SelectionDAG &DAG,
                      getDenormalFPEnv(DAG.getMachineFunction()));
 }
 
+bool SITargetLowering::isFMADLegal(const Function &F, Type *Ty) const {
+  return isFMADLegal(getValueType(F.getDataLayout(), Ty->getScalarType(),
+                                  /*AllowUnknown=*/true),
+                     F.getDenormalFPEnv());
+}
+
 //===----------------------------------------------------------------------===//
 // Custom DAG Lowering Operations
 //===----------------------------------------------------------------------===//
@@ -8903,6 +8910,7 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   case ISD::UMIN:
   case ISD::UMAX:
   case ISD::USUBSAT:
+  case ISD::UADDSAT:
     return ISD::ZERO_EXTEND;
   case ISD::ADD:
   case ISD::SUB:
@@ -8952,7 +8960,7 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
          Opc == ISD::OR || Opc == ISD::XOR || Opc == ISD::MUL ||
          Opc == ISD::SETCC || Opc == ISD::SELECT || Opc == ISD::SMIN ||
          Opc == ISD::SMAX || Opc == ISD::UMIN || Opc == ISD::UMAX ||
-         Opc == ISD::USUBSAT);
+         Opc == ISD::USUBSAT || Opc == ISD::UADDSAT);
 
   EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
                                  : Op->getOperand(0).getValueType();
@@ -8994,7 +9002,12 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
   SDValue NewVal;
   if (Opc == ISD::SELECT)
     NewVal = DAG.getNode(ISD::SELECT, DL, ExtTy, {Op->getOperand(0), LHS, RHS});
-  else
+  else if (Opc == ISD::UADDSAT) {
+    SDValue Sum = DAG.getNode(ISD::ADD, DL, ExtTy, LHS, RHS);
+    SDValue MaxVal = DAG.getConstant(
+        APInt::getMaxValue(OpTy.getScalarSizeInBits()).zext(32), DL, ExtTy);
+    NewVal = DAG.getNode(ISD::UMIN, DL, ExtTy, Sum, MaxVal);
+  } else
     NewVal = DAG.getNode(Opc, DL, ExtTy, {LHS, RHS});
 
   return DAG.getZExtOrTrunc(NewVal, DL, OpTy);
@@ -19011,6 +19024,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UMIN:
   case ISD::UMAX:
   case ISD::USUBSAT:
+  case ISD::UADDSAT:
     if (auto Res = promoteUniformOpToI32(SDValue(N, 0), DCI))
       return Res;
     break;

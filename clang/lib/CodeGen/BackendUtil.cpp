@@ -43,6 +43,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
@@ -1158,7 +1159,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
             *OS, ThinLinkOS ? &ThinLinkOS->os() : nullptr));
       } else if (Action == Backend_EmitLL) {
         MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
-                                    /*EmitLTOSummary=*/true));
+                                    /*EmitLTOSummary=*/true,
+                                    /*ShouldRenumberMetadata=*/true));
       }
     } else {
       // Emit a module summary by default for Regular LTO except for ld64
@@ -1176,7 +1178,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                                       EmitLTOSummary));
       } else if (Action == Backend_EmitLL) {
         MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
-                                    EmitLTOSummary));
+                                    EmitLTOSummary,
+                                    /*ShouldRenumberMetadata=*/true));
       }
     }
 
@@ -1237,8 +1240,8 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   }
 
   TimeCodegenPasses([&]() {
-    Error CodeGenError = TM->runCodeGenPipeline(
-        *TheModule, *OS, DwoOS, CGFT, PrintPipelinePasses.has_value(),
+    Error CodeGenError = runCodeGenPipeline(
+        *TM, *TheModule, *OS, DwoOS, CGFT, PrintPipelinePasses.has_value(),
         !CodeGenOpts.VerifyModule, CI.getVirtualFileSystemPtr());
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);
@@ -1372,6 +1375,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
     break;
   case Backend_EmitLL:
     Conf.PreCodeGenModuleHook = [&](size_t Task, const llvm::Module &Mod) {
+      M->renumberMetadataForAssembly();
       M->print(*OS, nullptr, CGOpts.EmitLLVMUseLists);
       return false;
     };

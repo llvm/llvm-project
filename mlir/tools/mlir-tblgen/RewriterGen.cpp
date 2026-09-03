@@ -430,10 +430,8 @@ void PatternEmitter::emitStaticMatchCall(DagNode tree, StringRef opName) {
   SymbolInfoMap localSymbolMap(loc);
   pattern.collectBoundSymbols(tree, localSymbolMap, /*isSrcPattern=*/true);
 
-  for (const auto &info : localSymbolMap) {
-    auto name = info.first;
-    auto symboInfo = info.second;
-    auto ret = symbolInfoMap.findBoundSymbol(name, symboInfo);
+  for (const auto &[name, symbolInfo] : localSymbolMap) {
+    auto ret = symbolInfoMap.findBoundSymbol(name, symbolInfo);
     os << formatv(", {0}", ret->second.getVarName(name));
   }
 

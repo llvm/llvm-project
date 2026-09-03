@@ -41,4 +41,60 @@ cir.func @begin_catch_inside_catch() {
 // CHECK:   cir.return
 // CHECK: }
 
+// The catch parameter's lifetime-end cleanup has to run after __cxa_end_catch,
+// so it is pushed before cir.begin_catch is emitted and its cir.cleanup.scope
+// ends up wrapping the begin_catch. The lifetime.start marker precedes the
+// scope.
+cir.func @begin_catch_inside_lifetime_cleanup_scope() {
+  cir.scope {
+    %0 = cir.alloca "i" align(4) : !cir.ptr<!s32i>
+    cir.try {
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      cir.lifetime.start %0 : !cir.ptr<!s32i>
+      cir.cleanup.scope {
+        %catch_token, %exception = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+        cir.cleanup.scope {
+          cir.yield
+        } cleanup all {
+          cir.end_catch %catch_token : !cir.catch_token
+          cir.yield
+        }
+        cir.yield
+      } cleanup all {
+        cir.lifetime.end %0 : !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: cir.func @begin_catch_inside_lifetime_cleanup_scope() {
+// CHECK:   cir.scope {
+// CHECK:     %[[I:.*]] = cir.alloca "i" align(4) : !cir.ptr<!s32i>
+// CHECK:     cir.try {
+// CHECK:       cir.yield
+// CHECK:     } catch all (%[[EH_TOKEN:.*]]: !cir.eh_token) {
+// CHECK:       cir.lifetime.start %[[I]] : !cir.ptr<!s32i>
+// CHECK:       cir.cleanup.scope {
+// CHECK:         %[[CATCH_TOKEN:.*]], %[[EXCEPTION:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.cleanup.scope {
+// CHECK:           cir.yield
+// CHECK:         } cleanup all {
+// CHECK:           cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CHECK:           cir.yield
+// CHECK:         }
+// CHECK:         cir.yield
+// CHECK:       } cleanup all {
+// CHECK:         cir.lifetime.end %[[I]] : !cir.ptr<!s32i>
+// CHECK:         cir.yield
+// CHECK:       }
+// CHECK:       cir.yield
+// CHECK:     }
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
 }
