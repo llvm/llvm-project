@@ -40,7 +40,7 @@ static cl::opt<bool>
 
 static cl::opt<bool> RelaxPLT("relax-plt",
                               cl::desc("indicate PLT proximity to hot text"),
-                              cl::init(true), cl::cat(BoltOptCategory));
+                              cl::init(false), cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned long long> MaxClusterSize(
     "max-cluster-size",
