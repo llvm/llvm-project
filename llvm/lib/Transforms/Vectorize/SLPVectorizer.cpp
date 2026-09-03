@@ -19052,9 +19052,21 @@ InstructionCost BoUpSLP::getSpillCost() {
                                             const Loop *SpillLoop) -> bool {
     assert(Gather->isGather());
 
+    Value *LookupValue = nullptr;
+    if (Gather->hasState()) {
+      LookupValue = Gather->getMainOp();
+    } else {
+      auto *It = find_if(Gather->Scalars, [](Value *V) {
+        return !isa<PoisonValue, UndefValue>(V);
+      });
+      if (It == Gather->Scalars.end())
+        return false;
+      LookupValue = *It;
+    }
+
     // Find the real vector entry reused by this perfect-diamond gather.
-    const TreeEntry *SameTE = getSameValuesTreeEntry(
-        Gather->Scalars.front(), Gather->Scalars, /*SameVF=*/true);
+    const TreeEntry *SameTE =
+        getSameValuesTreeEntry(LookupValue, Gather->Scalars, /*SameVF=*/true);
     if (!SameTE || SameTE == Gather || SameTE->State != TreeEntry::Vectorize ||
         ScalarOrPseudoEntries.contains(SameTE) || !SameTE->UserTreeIndex)
       return false;
