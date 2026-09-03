@@ -566,20 +566,21 @@ bool RISCVDAGToDAGISel::tryPExtNarrowUnsigned(SDNode *Node) {
 
   APInt ConstMask;
 
-  // auto m_AddOrSub = [](Value_match N0 = m_Value(), Value_match N1 =
-  // m_Value(),
-  //                      Value_match N2 = m_Value(), Value_match N3 =
-  //                      m_Value()) {
-  //   return m_AnyOf(m_Add(N0, N1), m_Sub(N2, N3));
-  // };
-
   if (sd_match(Node,
                m_And(m_Add(m_Value(), m_Value()), m_ConstInt(ConstMask)))) {
     uint64_t ConstMaskVal = ConstMask.getZExtValue();
     if (ConstMaskVal != 255 && ConstMaskVal != 65535)
       return false;
 
-    uint64_t OpCode = (ConstMaskVal == 255) ? RISCV::PADD_B : RISCV::PADD_H;
+    uint64_t PAddOpcode = (ConstMaskVal == 255) ? RISCV::PADD_B : RISCV::PADD_H;
+    uint64_t MinZeroBits = (ConstMaskVal == 255) ? 24 : 16;
+
+    auto hasEnoughZeroBits = [MinZeroBits](SDNode *Node, SDValue Op) -> bool {
+      VTSDNode *ChainedNode = dyn_cast<VTSDNode>(Op);
+      EVT FromTy = ChainedNode->getVT();
+      EVT ToTy = Node->getValueType(0);
+      return (ToTy.getSizeInBits() - FromTy.getSizeInBits()) >= MinZeroBits;
+    };
 
     std::queue<SDNode *> Worklist;
     Worklist.push(Node->getOperand(0).getNode());
@@ -590,28 +591,45 @@ bool RISCVDAGToDAGISel::tryPExtNarrowUnsigned(SDNode *Node) {
       Worklist.pop();
 
       SDValue N0, N1, N2, N3;
-      SDValue A0, A1;
+      SDValue A0, A1, V0, V1;
       if (sd_match(CurNode, m_Add(m_Add(m_Value(N0), m_Value(N1)),
                                   m_Add(m_Value(N2), m_Value(N3))))) {
+        SDValue Inner0 = CurNode->getOperand(0);
+        SDValue Inner1 = CurNode->getOperand(1);
+        if (!Inner0.hasOneUse() || !Inner1.hasOneUse())
+          return false;
+
         Worklist.push(N3.getNode());
         Worklist.push(N2.getNode());
         Worklist.push(N1.getNode());
         Worklist.push(N0.getNode());
       } else if (sd_match(CurNode, m_Add(m_Add(m_Value(N0), m_Value(N1)),
-                                         m_Node(ISD::AssertZext, m_Value(),
-                                                m_Value())))) {
+                                         m_Node(ISD::AssertZext, m_Value(V1),
+                                                m_Value(A1))))) {
+        SDValue Inner0 = CurNode->getOperand(0);
+        if (!Inner0.hasOneUse())
+          return false;
+
+        if (!hasEnoughZeroBits(V1.getNode(), A1))
+          return false;
+
         Worklist.push(N1.getNode());
         Worklist.push(N0.getNode());
         Worklist.push(CurNode->getOperand(1).getNode());
-      } else if (sd_match(
-                     CurNode,
-                     m_Add(m_Node(ISD::AssertZext, m_Value(A0), m_Value()),
-                           m_Node(ISD::AssertZext, m_Value(A1), m_Value())))) {
+      } else if (sd_match(CurNode, m_Add(m_Node(ISD::AssertZext, m_Value(V0),
+                                                m_Value(A0)),
+                                         m_Node(ISD::AssertZext, m_Value(V1),
+                                                m_Value(A1))))) {
+        if (!hasEnoughZeroBits(V1.getNode(), A1) ||
+            !hasEnoughZeroBits(V0.getNode(), A0))
+          return false;
         Worklist.push(CurNode->getOperand(0).getNode());
         Worklist.push(CurNode->getOperand(1).getNode());
       } else if (sd_match(CurNode,
-                          m_Node(ISD::AssertZext, m_Value(A0), m_Value()))) {
-        Ops.push_back(A0.getNode());
+                          m_Node(ISD::AssertZext, m_Value(V0), m_Value(A1)))) {
+        if (!hasEnoughZeroBits(V0.getNode(), A1))
+          return false;
+        Ops.push_back(V0.getNode());
       }
     }
 
@@ -625,13 +643,14 @@ bool RISCVDAGToDAGISel::tryPExtNarrowUnsigned(SDNode *Node) {
       if (IsFirst) {
         SDNode *Op1 = Ops[Idx++];
         PAddNode =
-            SDValue(CurDAG->getMachineNode(OpCode, DL, VT, SDValue(Op0, 0),
+            SDValue(CurDAG->getMachineNode(PAddOpcode, DL, VT, SDValue(Op0, 0),
                                            SDValue(Op1, 0)),
                     0);
         IsFirst = false;
       } else {
         PAddNode = SDValue(
-            CurDAG->getMachineNode(OpCode, DL, VT, LastOp, SDValue(Op0, 0)), 0);
+            CurDAG->getMachineNode(PAddOpcode, DL, VT, LastOp, SDValue(Op0, 0)),
+            0);
       }
       LastOp = PAddNode;
     }
@@ -1901,8 +1920,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (tryShrinkShlLogicImm(Node))
       return;
 
-    if (Subtarget->hasStdExtP() && tryPExtNarrowUnsigned(Node))
-      return;
+    if (!CurDAG->getMachineFunction().getFunction().hasMinSize())
+      if (Subtarget->hasStdExtP() && tryPExtNarrowUnsigned(Node))
+        return;
 
     break;
   }
