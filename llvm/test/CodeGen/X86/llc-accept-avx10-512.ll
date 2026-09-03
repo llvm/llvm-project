@@ -26,65 +26,12 @@ define <32 x bfloat> @foo_avx10.1(<16 x float> %a, <16 x float> %b) {
 define <8 x i32> @foo_avx10.2(<8 x double> %f) {
 ; CHECK-AVX10_1-LABEL: foo_avx10.2:
 ; CHECK-AVX10_1:       # %bb.0:
-; CHECK-AVX10_1-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
-; CHECK-AVX10_1-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
-; CHECK-AVX10_1-NEXT:    vmovsd {{.*#+}} xmm3 = [-2.147483648E+9,0.0E+0]
-; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm2, %xmm4
-; CHECK-AVX10_1-NEXT:    vmovsd {{.*#+}} xmm5 = [2.147483647E+9,0.0E+0]
-; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm4, %xmm4
-; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm4, %ecx
-; CHECK-AVX10_1-NEXT:    xorl %eax, %eax
-; CHECK-AVX10_1-NEXT:    vucomisd %xmm2, %xmm2
-; CHECK-AVX10_1-NEXT:    cmovpl %eax, %ecx
-; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm1, %xmm2
-; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm2, %xmm2
-; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm2, %edx
-; CHECK-AVX10_1-NEXT:    vucomisd %xmm1, %xmm1
-; CHECK-AVX10_1-NEXT:    cmovpl %eax, %edx
-; CHECK-AVX10_1-NEXT:    vmovd %edx, %xmm1
-; CHECK-AVX10_1-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
-; CHECK-AVX10_1-NEXT:    vextractf32x4 $3, %zmm0, %xmm2
-; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm2, %xmm4
-; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm4, %xmm4
-; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm4, %ecx
-; CHECK-AVX10_1-NEXT:    vucomisd %xmm2, %xmm2
-; CHECK-AVX10_1-NEXT:    cmovpl %eax, %ecx
-; CHECK-AVX10_1-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
-; CHECK-AVX10_1-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
-; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm2, %xmm4
-; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm4, %xmm4
-; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm4, %ecx
-; CHECK-AVX10_1-NEXT:    vucomisd %xmm2, %xmm2
-; CHECK-AVX10_1-NEXT:    cmovpl %eax, %ecx
-; CHECK-AVX10_1-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
-; CHECK-AVX10_1-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm2, %xmm4
-; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm4, %xmm4
-; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm4, %ecx
-; CHECK-AVX10_1-NEXT:    vucomisd %xmm2, %xmm2
-; CHECK-AVX10_1-NEXT:    cmovpl %eax, %ecx
-; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm0, %xmm2
-; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm2, %xmm2
-; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm2, %edx
-; CHECK-AVX10_1-NEXT:    vucomisd %xmm0, %xmm0
-; CHECK-AVX10_1-NEXT:    cmovpl %eax, %edx
-; CHECK-AVX10_1-NEXT:    vmovd %edx, %xmm2
-; CHECK-AVX10_1-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
-; CHECK-AVX10_1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm0, %xmm4
-; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm4, %xmm4
-; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm4, %ecx
-; CHECK-AVX10_1-NEXT:    vucomisd %xmm0, %xmm0
-; CHECK-AVX10_1-NEXT:    cmovpl %eax, %ecx
-; CHECK-AVX10_1-NEXT:    vpinsrd $2, %ecx, %xmm2, %xmm2
-; CHECK-AVX10_1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm0, %xmm3
-; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm3, %xmm3
-; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm3, %ecx
-; CHECK-AVX10_1-NEXT:    vucomisd %xmm0, %xmm0
-; CHECK-AVX10_1-NEXT:    cmovpl %eax, %ecx
-; CHECK-AVX10_1-NEXT:    vpinsrd $3, %ecx, %xmm2, %xmm0
-; CHECK-AVX10_1-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-AVX10_1-NEXT:    vcmpgepd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
+; CHECK-AVX10_1-NEXT:    vcvttpd2dq %zmm0, %ymm1
+; CHECK-AVX10_1-NEXT:    vpbroadcastd {{.*#+}} ymm1 {%k1} = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
+; CHECK-AVX10_1-NEXT:    vcmpunordpd %zmm0, %zmm0, %k0
+; CHECK-AVX10_1-NEXT:    knotb %k0, %k1
+; CHECK-AVX10_1-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1} {z}
 ; CHECK-AVX10_1-NEXT:    retq
 ;
 ; CHECK-AVX10_2-LABEL: foo_avx10.2:
