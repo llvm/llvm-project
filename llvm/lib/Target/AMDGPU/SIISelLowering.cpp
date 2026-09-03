@@ -93,6 +93,12 @@ static unsigned findFirstFreeSGPR(CCState &CCInfo) {
   llvm_unreachable("Cannot allocate sgpr");
 }
 
+// Marked Custom for s_buffer_load alone. The action applies to the whole
+// opcode, so ReplaceNodeResults must not divert other intrinsics returning one
+// of these types.
+static constexpr MVT SBufferLoadOnlyChainTypes[] = {MVT::i1, MVT::i4, MVT::v2i1,
+                                                    MVT::v6i8};
+
 SITargetLowering::SITargetLowering(const TargetMachine &TM,
                                    const GCNSubtarget &STI)
     : AMDGPUTargetLowering(TM, STI, STI), Subtarget(&STI) {
@@ -1018,17 +1024,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
                       MVT::bf16, MVT::v2i16, MVT::v2f16, MVT::v2bf16, MVT::i128,
                       MVT::i8, MVT::i1, MVT::i4, MVT::v2i1, MVT::v3i16,
-                      MVT::v6i8},
+                      MVT::v3f16, MVT::v6i8},
                      Custom);
 
   setOperationAction(ISD::INTRINSIC_W_CHAIN,
                      {MVT::v2f16, MVT::v2i16, MVT::v2bf16, MVT::v3f16,
-                      MVT::v3i16, MVT::v4f16, MVT::v4i16,  MVT::v4bf16,
-                      MVT::v8i16, MVT::v8f16, MVT::v8bf16, MVT::Other,
-                      MVT::f16,   MVT::i16,   MVT::bf16,   MVT::i8,
-                      MVT::i128,  MVT::i1,    MVT::i4,     MVT::v2i1,
-                      MVT::v6i8},
+                      MVT::v3i16, MVT::v4f16, MVT::v4i16, MVT::v4bf16,
+                      MVT::v8i16, MVT::v8f16, MVT::v8bf16, MVT::Other, MVT::f16,
+                      MVT::i16, MVT::bf16, MVT::i8, MVT::i128},
                      Custom);
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, SBufferLoadOnlyChainTypes, Custom);
 
   setOperationAction(ISD::INTRINSIC_VOID,
                      {MVT::Other, MVT::v2i16, MVT::v2f16, MVT::v2bf16,
@@ -8401,8 +8406,6 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
     case Intrinsic::amdgcn_s_buffer_load: {
-      // The i8 lowering that used to live here duplicated lowerSBuffer, which
-      // now covers the illegal result types marked Custom above.
       SDValue Op = SDValue(N, 0);
       EVT VT = Op.getValueType();
       Results.push_back(lowerSBuffer(VT, VT, SDLoc(Op), DAG.getEntryNode(),
@@ -8419,6 +8422,10 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     break;
   }
   case ISD::INTRINSIC_W_CHAIN: {
+    if (N->getConstantOperandVal(1) != Intrinsic::amdgcn_ptr_s_buffer_load &&
+        N->getValueType(0).isSimple() &&
+        is_contained(SBufferLoadOnlyChainTypes, N->getSimpleValueType(0)))
+      break;
     if (SDValue Res = LowerINTRINSIC_W_CHAIN(SDValue(N, 0), DAG)) {
       if (Res.getOpcode() == ISD::MERGE_VALUES) {
         // FIXME: Hacky
@@ -10734,6 +10741,19 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL,
   MachineFunction &MF = DAG.getMachineFunction();
   bool HasChainResult = MMO != nullptr;
 
+  // SBUFFER_LOAD only produces values that fill whole SGPRs, apart from the
+  // subword loads below.
+  bool IsSubwordLoad = (MemVT == MVT::i8 || MemVT == MVT::i16) &&
+                       Subtarget->hasScalarSubwordLoads();
+  if ((!isTypeLegal(VT) || VT.getSizeInBits() % 32 != 0) && !IsSubwordLoad) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        MF.getFunction(), "unsupported s_buffer_load result type",
+        DL.getDebugLoc()));
+    EVT ResultTypes[] = {VT, MVT::Other};
+    return DAG.getErrorMergeValues(
+        ArrayRef(ResultTypes, HasChainResult ? 2 : 1), Chain, DL);
+  }
+
   if (!HasChainResult) {
     const DataLayout &DataLayout = DAG.getDataLayout();
     Align Alignment =
@@ -10744,27 +10764,6 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL,
                                       MachineMemOperand::MODereferenceable |
                                       MachineMemOperand::MOInvariant,
                                   MemVT.getStoreSize(), Alignment);
-  }
-
-  // No SBUFFER_LOAD pattern exists for these widths; a broader
-  // "!isTypeLegal(VT)" check would also swallow i8/i16 and 32-bit-element
-  // vec3 types, which have their own faster lowerings below.
-  if (MemVT == VT && (VT == MVT::i1 || VT == MVT::i4 || VT == MVT::v2i1 ||
-                      VT == MVT::v3i16 || VT == MVT::v6i8 || VT == MVT::i128)) {
-    unsigned Bits = VT.getSizeInBits();
-    EVT CarrierVT = Bits <= 32 ? EVT(MVT::i32)
-                               : EVT::getVectorVT(*DAG.getContext(), MVT::i32,
-                                                  divideCeil(Bits, 32));
-    MachineMemOperand *CarrierMMO =
-        MF.getMachineMemOperand(MMO, 0, CarrierVT.getStoreSize());
-    SDValue CarrierLoad = lowerSBuffer(CarrierVT, CarrierVT, DL, Chain, Rsrc,
-                                       Offset, CachePolicy, DAG, CarrierMMO);
-    EVT NarrowIntVT = EVT::getIntegerVT(*DAG.getContext(), Bits);
-    SDValue Result = DAG.getBitcast(
-        VT, DAG.getBitcastedAnyExtOrTrunc(CarrierLoad, DL, NarrowIntVT));
-    if (HasChainResult)
-      return DAG.getMergeValues({Result, CarrierLoad.getValue(1)}, DL);
-    return Result;
   }
 
   if (!Offset->isDivergent()) {
