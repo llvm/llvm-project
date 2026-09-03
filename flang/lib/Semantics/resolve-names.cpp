@@ -5983,8 +5983,9 @@ Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
         const Symbol &hostUlt{host->GetUltimate()};
         const auto *hostSubp{hostUlt.detailsIf<SubprogramDetails>()};
         if (IsSeparateModuleProcedureInterface(&hostUlt)) {
-          // Use the low-level Warn() call to avoid module-file suppression based on
-          // scope ancestry; InModuleFile() provides the appropriate check here.
+          // Use the low-level Warn() call to avoid module-file suppression
+          // based on scope ancestry; InModuleFile() provides the appropriate
+          // check here.
           context().messages().Warn(/*isInModuleFile=*/InModuleFile(),
               context().languageFeatures(), common::UsageWarning::Portability,
               name.source,
