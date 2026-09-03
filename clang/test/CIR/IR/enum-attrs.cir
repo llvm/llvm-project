@@ -105,6 +105,28 @@ cir.func @asm_flavor_attr() {
                           #cir.asm_flavor<x86_intel>]}
 }
 
+// CHECK-LABEL: cir.func @linkage_attr() {
+cir.func @linkage_attr() {
+  // CHECK: cir.return {cir.test = [#cir.linkage<external>, #cir.linkage<linkonce_odr>, #cir.linkage<cir_private>]}
+  cir.return {cir.test = [#cir.linkage<external>,
+                          #cir.linkage<linkonce_odr>,
+                          #cir.linkage<cir_private>]}
+}
+
+// CHECK-LABEL: cir.func @calling_conv_attr() {
+cir.func @calling_conv_attr() {
+  // CHECK: cir.return {cir.test = [#cir.calling_conv<c>, #cir.calling_conv<ptx_kernel>, #cir.calling_conv<amdgpu_kernel>]}
+  cir.return {cir.test = [#cir.calling_conv<c>, #cir.calling_conv<ptx_kernel>,
+                          #cir.calling_conv<amdgpu_kernel>]}
+}
+
+// CHECK-LABEL: cir.func @side_effect_attr() {
+cir.func @side_effect_attr() {
+  // CHECK: cir.return {cir.test = [#cir.side_effect<all>, #cir.side_effect<pure>, #cir.side_effect<const>]}
+  cir.return {cir.test = [#cir.side_effect<all>, #cir.side_effect<pure>,
+                          #cir.side_effect<const>]}
+}
+
 // The operations themselves keep printing a bare keyword.
 
 // CHECK-LABEL: cir.func @mem_order_sync_scope_ops(%arg0: !cir.ptr<!s32i>) {
@@ -115,5 +137,11 @@ cir.func @mem_order_sync_scope_ops(%arg0: !cir.ptr<!s32i>) {
   cir.atomic.fence syncscope(system) seq_cst
   cir.return
 }
+
+// cir.global's linkage is the one bare keyword that cannot be checked from
+// inside a function.
+
+// CHECK-LABEL: cir.global "private" internal @g = #cir.int<0> : !s32i
+cir.global "private" internal @g = #cir.int<0> : !s32i
 
 }
