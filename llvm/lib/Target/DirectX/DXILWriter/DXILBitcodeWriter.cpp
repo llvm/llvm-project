@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILBitcodeWriter.h"
+#include "DXILDebugInfoMap.h"
 #include "DXILValueEnumerator.h"
-#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -402,8 +402,7 @@ dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
 dxil::BitcodeWriter::~BitcodeWriter() { }
 
 /// Write the specified module to the specified output stream.
-void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out,
-                           const DXILDebugInfoMap &DebugInfo) {
+void dxil::WriteDXILToFile(Module &M, raw_ostream &Out) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256 * 1024);
 
@@ -413,6 +412,7 @@ void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out,
   if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
 
+  DXILDebugInfoMap DebugInfo = collectDXILDebugInfo(M);
   BitcodeWriter Writer(Buffer);
   Writer.writeModule(M, DebugInfo);
 

@@ -59,8 +59,7 @@ public:
 ///
 /// For streams where it matters, the given stream should be in "binary"
 /// mode.
-void WriteDXILToFile(const Module &M, raw_ostream &Out,
-                     const DXILDebugInfoMap &DebugInfo);
+void WriteDXILToFile(Module &M, raw_ostream &Out);
 
 } // namespace dxil
 
