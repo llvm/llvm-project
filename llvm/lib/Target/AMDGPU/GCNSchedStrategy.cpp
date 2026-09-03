@@ -31,6 +31,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -42,6 +43,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <limits>
 
 #define DEBUG_TYPE "machine-scheduler"
 
@@ -1376,6 +1378,122 @@ void RewriteMFMAFormStage::findReachingUses(
   }
 }
 
+/// Identify accumulator chains: groups of MFMAs connected via dst->src2.
+static SmallVector<SmallVector<unsigned, 8>, 16>
+identifyAccChains(ArrayRef<MachineInstr *> Cands, const SIInstrInfo *TII) {
+  DenseMap<Register, unsigned> DstToCand;
+  DenseMap<Register, unsigned> Src2ToCand;
+  for (unsigned I = 0; I < Cands.size(); I++) {
+    DstToCand[Cands[I]->getOperand(0).getReg()] = I;
+    MachineOperand *Src2 =
+        TII->getNamedOperand(*Cands[I], AMDGPU::OpName::src2);
+    if (Src2 && Src2->isReg())
+      Src2ToCand[Src2->getReg()] = I;
+  }
+
+  SmallBitVector Visited(Cands.size());
+  auto WalkForward = [&](unsigned Start) {
+    SmallVector<unsigned, 8> Chain;
+    unsigned Cur = Start;
+    while (!Visited[Cur]) {
+      Visited[Cur] = true;
+      Chain.push_back(Cur);
+      auto It = Src2ToCand.find(Cands[Cur]->getOperand(0).getReg());
+      if (It == Src2ToCand.end() || Visited[It->second])
+        break;
+      Cur = It->second;
+    }
+    return Chain;
+  };
+
+  SmallVector<SmallVector<unsigned, 8>, 16> Chains;
+
+  // Collect linear chains from roots(src2 not produced by a candidate).
+  for (unsigned I = 0; I < Cands.size(); I++) {
+    MachineOperand *Src2 =
+        TII->getNamedOperand(*Cands[I], AMDGPU::OpName::src2);
+    if (Src2 && Src2->isReg() && DstToCand.count(Src2->getReg()))
+      continue;
+    Chains.push_back(WalkForward(I));
+  }
+
+  // Remaining chains should by cyclic. Collect them starting at any unvisited
+  // candidate.
+  for (unsigned I = 0; I < Cands.size(); I++) {
+    if (Visited[I])
+      continue;
+    Chains.push_back(WalkForward(I));
+  }
+
+  return Chains;
+}
+
+int64_t RewriteMFMAFormStage::evaluateChainProbe(
+    int N, ArrayRef<SmallVector<unsigned, 8>> Chains,
+    ArrayRef<MachineInstr *> AllCands) {
+  SmallPtrSet<MachineInstr *, 32> ProbeFilter;
+  for (int I = 0; I < N; ++I) {
+    for (unsigned Idx : Chains[I])
+      ProbeFilter.insert(AllCands[Idx]);
+  }
+
+  std::vector<std::pair<MachineInstr *, unsigned>> RC;
+  DenseMap<MachineBasicBlock *, std::set<Register>> CU;
+  SmallPtrSet<MachineInstr *, 8> CD;
+  Src2NeedsVGPRCache.clear();
+
+  if (!initHeuristics(RC, CU, CD, ProbeFilter))
+    return std::numeric_limits<int64_t>::max();
+
+  LLVM_DEBUG(dbgs() << "RewriteMFMA probe N=" << N << ":\n");
+  return getRewriteCost(RC, CU, CD);
+}
+
+int RewriteMFMAFormStage::findBestChainCount(
+    ArrayRef<SmallVector<unsigned, 8>> Chains,
+    ArrayRef<MachineInstr *> AllCands) {
+  // Start by evaluating all chains.
+  int64_t AllCost = evaluateChainProbe(Chains.size(), Chains, AllCands);
+
+  LLVM_DEBUG(dbgs() << "RewriteMFMA probe: N=" << Chains.size()
+                    << " Cost=" << AllCost << "\n");
+
+  int BestN = AllCost <= 0 ? Chains.size() : 0;
+
+  // Binary search for a good number of chains to convert. Chains are
+  // sorted by length, so we prefer converting the longest ones first as
+  // they provide the most VGPR relief per bridge copy. Converting too
+  // few chains may leave VGPRs over the limit; converting too many may
+  // push AGPRs over the limit. The search tries to find the best
+  // balance. Note: this does not guarantee a globally optimal
+  // solution as that would require evaluating all 2^K subsets of
+  // individual MFMAs. This is an approximation that works well when
+  // longer chains are more profitable. The search tracks the best
+  // cost seen across all probes to handle non-monotonicity.
+  int64_t BestCost = AllCost;
+  int Lo = 1, Hi = (int)Chains.size() - 1;
+
+  while (Lo <= Hi) {
+    int Mid = (Lo + Hi) / 2;
+    int64_t Cost = evaluateChainProbe(Mid, Chains, AllCands);
+
+    LLVM_DEBUG(dbgs() << "RewriteMFMA probe: N=" << Mid << " Cost=" << Cost
+                      << "\n");
+
+    if (Cost < BestCost) {
+      BestCost = Cost;
+      BestN = Mid;
+    }
+
+    if (Cost <= 0)
+      Lo = Mid + 1;
+    else
+      Hi = Mid - 1;
+  }
+
+  return BestN;
+}
+
 bool RewriteMFMAFormStage::initGCNSchedStage() {
   // We only need to run this pass if the architecture supports AGPRs.
   // Additionally, we don't use AGPRs at occupancy levels above 1 so there
@@ -1398,20 +1516,57 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
   TII = ST.getInstrInfo();
   SRI = ST.getRegisterInfo();
 
+  // Collect all convertible MFMAs.
+  SmallVector<MachineInstr *, 32> AllCands;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (isRewriteCandidate(&MI))
+        AllCands.push_back(&MI);
+    }
+  }
+
+  if (AllCands.empty())
+    return false;
+
+  // Identify accumulator chains and sort by size descending. We operate at
+  // chain granularity rather than individual MFMAs because:
+  // 1. It avoids converting MFMAs from different chains that would each need
+  //    separate src2 and dst bridge copies (up to 4 copies for 2 MFMAs from
+  //    2 chains) while only reducing VGPR pressure for 2 instructions.
+  // 2. It reduces the search space from O(N_mfmas) to O(N_chains).
+  //
+  // Longer chains benefit more: each chain requires at most one src2 bridge
+  // copy and one dst bridge copy regardless of length, but reduces VGPR
+  // pressure proportionally to the number of chain members.
+  SmallVector<SmallVector<unsigned, 8>, 16> Chains =
+      identifyAccChains(AllCands, TII);
+  llvm::sort(Chains,
+             [](const auto &A, const auto &B) { return A.size() > B.size(); });
+
+  int BestN = findBestChainCount(Chains, AllCands);
+
+  LLVM_DEBUG(dbgs() << "RewriteMFMA: best N=" << BestN << "\n");
+
+  if (BestN == 0)
+    return false;
+
+  SmallPtrSet<MachineInstr *, 32> FinalFilter;
+  for (int I = 0; I < BestN; ++I)
+    for (unsigned Idx : Chains[I])
+      FinalFilter.insert(AllCands[Idx]);
+
   std::vector<std::pair<MachineInstr *, unsigned>> RewriteCands;
   DenseMap<MachineBasicBlock *, std::set<Register>> CopyForUse;
   SmallPtrSet<MachineInstr *, 8> CopyForDef;
+  Src2NeedsVGPRCache.clear();
 
-  if (!initHeuristics(RewriteCands, CopyForUse, CopyForDef))
+  if (!initHeuristics(RewriteCands, CopyForUse, CopyForDef, FinalFilter))
     return false;
 
-  int64_t Cost = getRewriteCost(RewriteCands, CopyForUse, CopyForDef);
-
-  // If we haven't found the beneficial conditions, prefer the VGPR form which
-  // may result in less cross RC copies.
-  if (Cost > 0)
-    return false;
-
+  // initHeuristics speculatively rewrites opcodes and register classes to
+  // AGPR form for pressure estimation. rewrite() expects VGPR-form opcodes
+  // (it calls getAGPRFormOp to find the AGPR variant), so reset first.
+  resetRewriteCandsToVGPR(RewriteCands);
   return rewrite(RewriteCands);
 }
 
@@ -2390,28 +2545,24 @@ bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
 bool RewriteMFMAFormStage::initHeuristics(
     std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
     DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
-    SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
+    SmallPtrSetImpl<MachineInstr *> &CopyForDef,
+    const SmallPtrSetImpl<MachineInstr *> &RewriteSet) {
   bool Changed = false;
 
-  // Collect the candidate group, its members share AGPR-form operands
-  // post-rewrite, so reaching defs feeding any member don't need bridge copy.
-  SmallPtrSet<MachineInstr *, 16> RewriteSet;
+  // Collect src2 registers from the rewrite set. Members share AGPR-form
+  // operands post-rewrite, so reaching defs feeding any member don't need
+  // a bridge copy.
   DenseSet<Register> CandSrc2Regs;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      if (!isRewriteCandidate(&MI))
-        continue;
-      RewriteSet.insert(&MI);
-      MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-      if (Src2 && Src2->isReg())
-        CandSrc2Regs.insert(Src2->getReg());
-    }
+  for (MachineInstr *MI : RewriteSet) {
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    if (Src2 && Src2->isReg())
+      CandSrc2Regs.insert(Src2->getReg());
   }
 
   // Prepare for the heuristics
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isRewriteCandidate(&MI))
+      if (!RewriteSet.contains(&MI))
         continue;
 
       int ReplacementOp = AMDGPU::getAGPRFormOp(MI.getOpcode());
