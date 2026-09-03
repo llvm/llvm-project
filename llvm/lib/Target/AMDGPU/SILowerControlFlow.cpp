@@ -102,11 +102,12 @@ private:
   void findMaskOperands(MachineInstr &MI, unsigned OpNo,
                         SmallVectorImpl<MachineOperand *> &Src) const;
 
-  void combineMasks(MachineInstr &MI);
+  void combineMasks(MachineInstr &MI, MachineBasicBlock::iterator &OuterNext);
 
   bool removeMBBifRedundant(MachineBasicBlock &MBB);
 
-  MachineBasicBlock *process(MachineInstr &MI);
+  MachineBasicBlock *process(MachineInstr &MI,
+                             MachineBasicBlock::iterator &OuterNext);
 
   // Skip to the next instruction, ignoring debug instructions, and trivial
   // block boundaries (blocks that have one (typically fallthrough) successor,
@@ -599,7 +600,8 @@ void SILowerControlFlow::findMaskOperands(
 // S_AND_B64 x, (S_AND_B64 x, y) => S_AND_B64 x, y
 // S_OR_B64  x, (S_OR_B64  x, y) => S_OR_B64  x, y
 // One of the operands is exec mask.
-void SILowerControlFlow::combineMasks(MachineInstr &MI) {
+void SILowerControlFlow::combineMasks(MachineInstr &MI,
+                                      MachineBasicBlock::iterator &OuterNext) {
   assert(MI.getNumExplicitOperands() == 3);
   SmallVector<MachineOperand *, 2> Src1, Src2;
   findMaskOperands(MI, 1, Src1);
@@ -634,10 +636,32 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI) {
     return;
 
   Register Reg = MI.getOperand(OpToReplace).getReg();
+  MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
+  assert(Def);
   MI.removeOperand(OpToReplace);
   MI.addOperand(*KeepOp);
-  if (MRI->use_empty(Reg))
-    MRI->getUniqueVRegDef(Reg)->eraseFromParent();
+
+  // The fold moves the last use of Reg and of the Def sources onto MI.
+  SmallSet<Register, 4> RecomputeLV;
+  if (LV) {
+    RecomputeLV.insert(Reg);
+    for (const MachineOperand &Op : Def->all_uses())
+      if (Op.getReg().isVirtual())
+        RecomputeLV.insert(Op.getReg());
+  }
+
+  if (MRI->use_empty(Reg)) {
+    if (OuterNext == Def->getIterator())
+      ++OuterNext;
+    Def->eraseFromParent();
+  }
+
+  if (LV) {
+    for (Register R : RecomputeLV) {
+      if (!MRI->def_empty(R)) // Skip Reg if its def was just erased.
+        LV->recomputeForSingleDefVirtReg(R);
+    }
+  }
 }
 
 void SILowerControlFlow::optimizeEndCf() {
@@ -674,7 +698,9 @@ void SILowerControlFlow::optimizeEndCf() {
   }
 }
 
-MachineBasicBlock *SILowerControlFlow::process(MachineInstr &MI) {
+MachineBasicBlock *
+SILowerControlFlow::process(MachineInstr &MI,
+                            MachineBasicBlock::iterator &OuterNext) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineBasicBlock::iterator I(MI);
   MachineInstr *Prev = (I != MBB.begin()) ? &*(std::prev(I)) : nullptr;
@@ -721,7 +747,7 @@ MachineBasicBlock *SILowerControlFlow::process(MachineInstr &MI) {
     case AMDGPU::S_AND_B32:
     case AMDGPU::S_OR_B32:
       // Cleanup bit manipulations on exec mask
-      combineMasks(MaskMI);
+      combineMasks(MaskMI, OuterNext);
       break;
     default:
       I = MBB.end();
@@ -837,7 +863,7 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
       case AMDGPU::SI_WATERFALL_LOOP:
       case AMDGPU::SI_LOOP:
       case AMDGPU::SI_END_CF:
-        SplitMBB = process(MI);
+        SplitMBB = process(MI, Next);
         Changed = true;
         break;
       }
