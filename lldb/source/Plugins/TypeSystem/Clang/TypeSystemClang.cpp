@@ -8799,12 +8799,6 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
                                           lldb::DescriptionLevel level) {
   StreamFile s(stdout, false);
   DumpTypeDescription(type, s, level);
-
-  CompilerType ct(weak_from_this(), type);
-  const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
-  if (std::optional<ClangASTMetadata> metadata = GetMetadata(clang_type)) {
-    metadata->Dump(&s);
-  }
 }
 
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
@@ -8893,7 +8887,24 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     if (buf.size() > 0) {
       s.Write(buf.data(), buf.size());
     }
-}
+
+    if (level == eDescriptionLevelVerbose) {
+      std::optional<ClangASTMetadata> metadata =
+          GetMetadata(qual_type.getTypePtr());
+      if (metadata) {
+        s << "type-metadata = ";
+        metadata->Dump(&s);
+      }
+
+      if (const clang::TagDecl *tag = qual_type->getAsTagDecl())
+        metadata = GetMetadata(tag);
+
+      if (metadata) {
+        s << "decl-metadata = ";
+        metadata->Dump(&s);
+      }
+    }
+  }
 }
 
 void TypeSystemClang::DumpTypeName(const CompilerType &type) {
