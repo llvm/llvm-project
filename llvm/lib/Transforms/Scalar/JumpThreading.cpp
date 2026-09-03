@@ -767,6 +767,34 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
           RHS = PN->getIncomingValue(i);
         }
         Value *Res = simplifyCmpInst(Pred, LHS, RHS, {DL});
+
+        // Even without folding, the compare may be known on this edge if
+        // PredBB's branch tests a condition that implies it -- most usefully
+        // the same compare, when both operands are PHIs. PredBB's false arm
+        // reaches BB, so C is false there; BB re-tests C via the PHIs:
+        //
+        //   PredBB: br (C = icmp <pred> A, B), T, BB   ; BB is the false arm
+        //                                          \
+        //                                           v
+        //   BB: L = phi [A, PredBB], ...   ; L -> A on the PredBB edge
+        //       R = phi [B, PredBB], ...   ; R -> B on the PredBB edge
+        //       br (icmp <pred> L, R)      ; == C, false => thread past it
+        //
+        // Require both operands available on the edge (not defined in BB).
+        if (!Res && isa<ICmpInst>(Cmp) && !CmpType->isVectorTy()) {
+          auto DefinedInBB = [&](Value *V) {
+            auto *VI = dyn_cast<Instruction>(V);
+            return VI && VI->getParent() == BB;
+          };
+          auto *PredBI = dyn_cast<CondBrInst>(PredBB->getTerminator());
+          if (PredBI && !DefinedInBB(LHS) && !DefinedInBB(RHS) &&
+              PredBI->getSuccessor(0) != PredBI->getSuccessor(1))
+            if (std::optional<bool> Implied = isImpliedCondition(
+                    PredBI->getCondition(), Pred, LHS, RHS, DL,
+                    /*LHSIsTrue=*/PredBI->getSuccessor(0) == BB))
+              Res = ConstantInt::getBool(Cmp->getContext(), *Implied);
+        }
+
         if (!Res) {
           if (!isa<Constant>(RHS))
             continue;
