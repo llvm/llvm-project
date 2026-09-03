@@ -300,3 +300,47 @@ body:             |
 
   bb.5:
 ...
+
+# When rewriting a PHI operand, a COPY needed for a register class mismatch
+# must be inserted in the corresponding predecessor, where the PHI use occurs.
+---
+name:            phi_edge_copy
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: phi_edge_copy
+  ; CHECK: bb.4:
+  ; CHECK: [[PHI:%[0-9]+]]:fpr32 = PHI
+  ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY [[PHI]]
+  ; CHECK-NEXT: B %bb.6
+  ; CHECK: bb.6:
+  ; CHECK: %5:gpr32 = PHI [[COPY]], %bb.4, %4, %bb.5, %5, %bb.6
+  ; CHECK-NEXT: $x0 = COPY undef $x0, implicit %5
+  ; CHECK-NEXT: B %bb.6
+  bb.0:
+    $x0 = COPY undef $x0, implicit-def %0:gpr32
+    B %bb.2
+
+  bb.1:
+    $x0 = COPY undef $x0, implicit-def %1:gpr32
+
+  bb.2:
+    %2:gpr32 = PHI %1, %bb.1, %0, %bb.0
+    B %bb.4
+
+  bb.3:
+    B %bb.3
+
+  bb.4:
+    %3:fpr32 = PHI %2, %bb.2
+    $x0 = COPY undef $x0, implicit %3:fpr32
+    B %bb.6
+
+  bb.5:
+    %4:gpr32 = IMPLICIT_DEF
+    B %bb.6
+
+  bb.6:
+    %5:gpr32 = PHI %2, %bb.4, %4, %bb.5, %5, %bb.6
+    $x0 = COPY undef $x0, implicit %5:gpr32
+    B %bb.6
+...

@@ -229,8 +229,9 @@ MachineBasicBlock *findCorrespondingPred(const MachineInstr *MI,
 void MachineSSAUpdater::RewriteUse(MachineOperand &U) {
   MachineInstr *UseMI = U.getParent();
   Register NewVR;
+  MachineBasicBlock *SourceBB = nullptr;
   if (UseMI->isPHI()) {
-    MachineBasicBlock *SourceBB = findCorrespondingPred(UseMI, &U);
+    SourceBB = findCorrespondingPred(UseMI, &U);
     NewVR = GetValueAtEndOfBlockInternal(SourceBB);
   } else {
     NewVR = GetValueInMiddleOfBlock(UseMI->getParent());
@@ -243,10 +244,11 @@ void MachineSSAUpdater::RewriteUse(MachineOperand &U) {
     const TargetRegisterClass *UseRC =
         dyn_cast_or_null<const TargetRegisterClass *>(RegAttrs.RCOrRB);
     if (UseRC && !MRI->constrainRegClass(NewVR, UseRC)) {
-      MachineBasicBlock *UseBB = UseMI->getParent();
+      MachineBasicBlock *CopyBB = SourceBB ? SourceBB : UseMI->getParent();
+      MachineBasicBlock::iterator InsertPt =
+          SourceBB ? CopyBB->getFirstTerminator() : CopyBB->getFirstNonPHI();
       MachineInstr *InsertedCopy =
-          InsertNewDef(TargetOpcode::COPY, UseBB, UseBB->getFirstNonPHI(),
-                       RegAttrs, MRI, TII)
+          InsertNewDef(TargetOpcode::COPY, CopyBB, InsertPt, RegAttrs, MRI, TII)
               .addReg(NewVR);
       NewVR = InsertedCopy->getOperand(0).getReg();
       LLVM_DEBUG(dbgs() << "  Inserted COPY: " << *InsertedCopy);
