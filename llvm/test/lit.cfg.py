@@ -760,6 +760,25 @@ def host_unwind_supports_jit():
 if host_unwind_supports_jit():
     config.available_features.add("host-unwind-supports-jit")
 
+
+# The triple that lli's JIT will target. This can be more specific than either
+# the host or the default target triple: e.g. an arm64e build of lli reports
+# arm64e-apple-darwin, while both CMake triples describe the machine as arm64.
+def host_jit_triple():
+    lli = lit.util.which("lli", config.llvm_tools_dir)
+    if not lli:
+        return None
+    try:
+        return subprocess.check_output([lli, "-host-jit-triple"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        lit_config.warning("could not determine host JIT triple from lli")
+        return None
+
+
+config.host_jit_triple = host_jit_triple()
+if config.host_jit_triple:
+    config.available_features.add("host-jit-triple=" + config.host_jit_triple)
+
 # Ask llvm-config about asserts
 llvm_config.feature_config(
     [
