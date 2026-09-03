@@ -12076,9 +12076,10 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
   AddPragmaAttributes(DeclRegionScope, Namespc);
   ProcessAPINotes(Namespc);
 
-  // FIXME: Should we be merging attributes?
   if (const VisibilityAttr *Attr = Namespc->getAttr<VisibilityAttr>())
     PushNamespaceVisibilityAttr(Attr, Loc);
+  if (PrevNS)
+    mergeDeclAttributes(Namespc, PrevNS);
 
   if (IsStd)
     StdNamespace = Namespc;
