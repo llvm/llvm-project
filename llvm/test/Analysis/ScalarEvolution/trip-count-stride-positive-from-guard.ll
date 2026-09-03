@@ -4,15 +4,13 @@
 ; howManyLessThans: prove a symbolic stride is positive from a guard dominating
 ; the loop, so the backedge-taken count becomes computable.
 
-declare void @llvm.trap()
-
-; Positive: `if (s <= 0) trap` dominates the loop, so on the loop path s > 0.
+; Positive: an assume dominating the loop establishes s > 0 on the loop path.
 ; The stride is refined to (1 smax %s) via the loop guards, which is positive,
-; so the backedge-taken count is computable despite the trapping exit.
+; so the backedge-taken count of this multi-exit loop is computable.
 define void @pos_stride_guard(i32 %n, i32 %s, i32 %bound, ptr %p) {
 ; CHECK-LABEL: 'pos_stride_guard'
 ; CHECK-NEXT:  Classifying expressions for: @pos_stride_guard
-; CHECK-NEXT:    %i = phi i32 [ 0, %ph ], [ %i.next, %latch ]
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
 ; CHECK-NEXT:    --> {0,+,%s}<nsw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %addr = getelementptr i32, ptr %p, i32 %i
 ; CHECK-NEXT:    --> {%p,+,(4 * (sext i32 %s to i64))<nsw>}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
@@ -28,32 +26,27 @@ define void @pos_stride_guard(i32 %n, i32 %s, i32 %bound, ptr %p) {
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
 ;
 entry:
-  %sle0 = icmp sle i32 %s, 0
-  br i1 %sle0, label %trapg, label %ph
-trapg:
-  call void @llvm.trap()
-  unreachable
-ph:
+  %sgt = icmp sgt i32 %s, 0
+  call void @llvm.assume(i1 %sgt)
   br label %loop
+
 loop:
-  %i = phi i32 [ 0, %ph ], [ %i.next, %latch ]
+  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
   %oob = icmp sgt i32 %i, %bound
-  br i1 %oob, label %trap, label %latch
-trap:
-  call void @llvm.trap()
-  unreachable
+  br i1 %oob, label %exit, label %latch
+
 latch:
   %addr = getelementptr i32, ptr %p, i32 %i
   store i32 0, ptr %addr
   %i.next = add nsw i32 %i, %s
   %cmp = icmp slt i32 %i.next, %n
   br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
 
-; Negative: no dominating stride guard, so the stride's sign is unknown and the
-; multi-exit (trapping) loop's backedge-taken count stays unpredictable.
+; same as above without precondition showing stride is positive.
 define void @no_guard(i32 %n, i32 %s, i32 %bound, ptr %p) {
 ; CHECK-LABEL: 'no_guard'
 ; CHECK-NEXT:  Classifying expressions for: @no_guard
@@ -74,19 +67,19 @@ define void @no_guard(i32 %n, i32 %s, i32 %bound, ptr %p) {
 ;
 entry:
   br label %loop
+
 loop:
   %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
   %oob = icmp sgt i32 %i, %bound
-  br i1 %oob, label %trap, label %latch
-trap:
-  call void @llvm.trap()
-  unreachable
+  br i1 %oob, label %exit, label %latch
+
 latch:
   %addr = getelementptr i32, ptr %p, i32 %i
   store i32 0, ptr %addr
   %i.next = add nsw i32 %i, %s
   %cmp = icmp slt i32 %i.next, %n
   br i1 %cmp, label %loop, label %exit
+
 exit:
   ret void
 }
