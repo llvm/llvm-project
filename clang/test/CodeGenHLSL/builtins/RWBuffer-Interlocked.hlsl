@@ -11,11 +11,11 @@
 // LangAS::hlsl_device branch of the dest-argument address-space check in
 // SemaHLSL and ensures the atomicrmw is emitted on the pointer returned by
 // resource.getpointer for a TypedBuffer (as opposed to the RawBuffer path
-// covered by the ByteAddressBuffer tests). InterlockedMin is called once on
-// a signed buffer and once on an unsigned buffer so that the signed/unsigned
-// atomicrmw selection is pinned to an exactly-named resource handle type
-// (spirv.SignedImage vs spirv.Image). Add new intrinsics here as more
-// InterlockedX operations gain resource support.
+// covered by the ByteAddressBuffer tests). InterlockedMin and InterlockedMax
+// are each called once on a signed buffer and once on an unsigned buffer so
+// that the signed/unsigned atomicrmw selection is pinned to an exactly-named
+// resource handle type (spirv.SignedImage vs spirv.Image). Add new intrinsics
+// here as more InterlockedX operations gain resource support.
 
 RWBuffer<int> Out : register(u0);
 RWBuffer<uint> UOut : register(u1);
@@ -33,6 +33,10 @@ RWBuffer<uint> UOut : register(u1);
 // DXCHECK:  atomicrmw umin ptr %[[PTR5]], i32 1 syncscope("device") monotonic
 // DXCHECK:  %[[PTR6:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
 // DXCHECK:  atomicrmw and ptr %[[PTR6]], i32 1 syncscope("device") monotonic
+// DXCHECK:  %[[PTR7:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
+// DXCHECK:  atomicrmw max ptr %[[PTR7]], i32 1 syncscope("device") monotonic
+// DXCHECK:  %[[PTR8:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_0t.i32(target("dx.TypedBuffer", i32, 1, 0, 0) %{{.*}}, i32 %{{.*}})
+// DXCHECK:  atomicrmw umax ptr %[[PTR8]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR1:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
 // SPVCHECK: atomicrmw add ptr addrspace(11) %[[PTR1]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR2:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
@@ -45,6 +49,10 @@ RWBuffer<uint> UOut : register(u1);
 // SPVCHECK: atomicrmw umin ptr addrspace(11) %[[PTR5]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR6:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
 // SPVCHECK: atomicrmw and ptr addrspace(11) %[[PTR6]], i32 1 syncscope("device") monotonic
+// SPVCHECK: %[[PTR7:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
+// SPVCHECK: atomicrmw max ptr addrspace(11) %[[PTR7]], i32 1 syncscope("device") monotonic
+// SPVCHECK: %[[PTR8:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.Image", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
+// SPVCHECK: atomicrmw umax ptr addrspace(11) %[[PTR8]], i32 1 syncscope("device") monotonic
 [shader("compute")]
 [numthreads(1,1,1)]
 void main(uint3 id : SV_DispatchThreadID) {
@@ -54,4 +62,6 @@ void main(uint3 id : SV_DispatchThreadID) {
   InterlockedMin(Out[id.x], 1);
   InterlockedMin(UOut[id.x], 1u);
   InterlockedAnd(Out[id.x], 1);
+  InterlockedMax(Out[id.x], 1);
+  InterlockedMax(UOut[id.x], 1u);
 }
