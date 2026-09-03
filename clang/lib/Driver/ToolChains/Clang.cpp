@@ -51,6 +51,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TextEncoding.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
@@ -8046,10 +8047,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -finput_charset=UTF-8 is default. Reject others
   if (Arg *inputCharset = Args.getLastArg(options::OPT_finput_charset_EQ)) {
     StringRef value = inputCharset->getValue();
-    if (!value.equals_insensitive("utf-8"))
+    auto encoding = llvm::TextEncodingConverter::getKnownEncoding(value);
+#if CLANG_DEFAULT_INPUT_ENCODING_IBM1047
+    // -finput_charset=IBM-1047 is default
+    bool isValid = encoding && *encoding == llvm::TextEncoding::IBM1047;
+#else
+    bool isValid = encoding && *encoding == llvm::TextEncoding::UTF8;
+#endif
+    if (!isValid)
       D.Diag(diag::err_drv_invalid_value) << inputCharset->getAsString(Args)
                                           << value;
   }
+#if CLANG_DEFAULT_INPUT_ENCODING_IBM1047
+  CmdArgs.push_back("-finput-charset");
+  CmdArgs.push_back("IBM-1047");
+#endif
 
   // -fexec_charset=UTF-8 is default. Reject others
   if (Arg *execCharset = Args.getLastArg(options::OPT_fexec_charset_EQ)) {
