@@ -79,6 +79,7 @@
 ; CHECK-NEXT:     stack-slot-coloring
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     machinelicm
+; CHECK-NEXT:     riscv-post-ra-v0-rewrite
 ; CHECK-NEXT:     remove-redundant-debug-values
 ; CHECK-NEXT:     fixup-statepoint-caller-saved
 ; CHECK-NEXT:     postra-machine-sink

@@ -388,8 +388,7 @@ define <vscale x 64 x i8> @select_nxv64i8(i1 zeroext %c, <vscale x 64 x i8> %a, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v24, a0
-; CHECK-NEXT:    vmsne.vi v7, v24, 0
-; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vmsne.vi v0, v24, 0
 ; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <vscale x 64 x i8> %a, <vscale x 64 x i8> %b
@@ -403,8 +402,7 @@ define <vscale x 64 x i8> @selectcc_nxv64i8(i8 signext %a, i8 signext %b, <vscal
 ; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v24, a0
-; CHECK-NEXT:    vmsne.vi v7, v24, 0
-; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vmsne.vi v0, v24, 0
 ; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i8 %a, %b

@@ -106,8 +106,7 @@ define void @deinterleave5_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
-; CHECK-NEXT:    vmv.v.i v9, 10
-; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -153,8 +152,7 @@ define void @deinterleave6_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 5, v0.t
-; CHECK-NEXT:    vmv.v.i v10, 4
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 4
 ; CHECK-NEXT:    vrgather.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -200,8 +198,7 @@ define void @deinterleave7_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 6, v0.t
-; CHECK-NEXT:    vmv.v.i v10, 4
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 4
 ; CHECK-NEXT:    vrgather.vi v8, v9, 6, v0.t
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -292,8 +289,7 @@ define void @deinterleave7_0_i64(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 6, v0.t
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 4
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vmv.v.i v0, 4
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; CHECK-NEXT:    vrgather.vi v8, v16, 6, v0.t
 ; CHECK-NEXT:    vse64.v v8, (a1)
@@ -337,8 +333,7 @@ define void @deinterleave7_0_i32_subvec(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 6, v0.t
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 4
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 4
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vrgather.vi v8, v12, 6, v0.t
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma

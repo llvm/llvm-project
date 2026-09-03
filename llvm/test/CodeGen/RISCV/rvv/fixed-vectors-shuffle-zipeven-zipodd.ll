@@ -8,8 +8,7 @@ define <4 x i32> @zipeven_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: zipeven_v4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 10
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
 ;
@@ -28,8 +27,7 @@ define <4 x i32> @zipeven_v4i32_swapped(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: zipeven_v4i32_swapped:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 10
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -49,8 +47,7 @@ define <4 x i64> @zipeven_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: zipeven_v4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 10
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v8, v10, 1, v0.t
 ; CHECK-NEXT:    ret
@@ -70,8 +67,7 @@ define <4 x half> @zipeven_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-LABEL: zipeven_v4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 10
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
 ;
@@ -90,8 +86,7 @@ define <4 x bfloat> @zipeven_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-LABEL: zipeven_v4bf16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 10
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
 ;
@@ -110,8 +105,7 @@ define <4 x float> @zipeven_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: zipeven_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 10
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
 ;
@@ -130,8 +124,7 @@ define <4 x double> @zipeven_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: zipeven_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 10
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; CHECK-NEXT:    vslideup.vi v8, v10, 1, v0.t
 ; CHECK-NEXT:    ret
@@ -152,8 +145,7 @@ define <4 x i32> @zipodd_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: zipodd_v4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 5
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -173,8 +165,7 @@ define <4 x i32> @zipodd_v4i32_swapped(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: zipodd_v4i32_swapped:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 5
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
 ;
@@ -229,8 +220,7 @@ define <4 x i32> @zipodd_v4i32_both(<4 x i32> %a) {
 ; CHECK-LABEL: zipodd_v4i32_both:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v9, 5
-; CHECK-NEXT:    vmv.v.v v0, v9
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    ret
 ;
@@ -249,8 +239,7 @@ define <4 x i32> @zipeven_v4i32_both(<4 x i32> %a) {
 ; CHECK-LABEL: zipeven_v4i32_both:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v9, 10
-; CHECK-NEXT:    vmv.v.v v0, v9
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
@@ -288,8 +277,7 @@ define <4 x i32> @zipodd_v4i32_partial(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: zipodd_v4i32_partial:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 5
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -310,8 +298,7 @@ define <8 x i32> @zipeven_v8i32(<8 x i32> %v1, <8 x i32> %v2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 170
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslideup.vi v8, v10, 1, v0.t
 ; CHECK-NEXT:    ret
 ;
@@ -330,8 +317,7 @@ define <8 x i32> @zipodd_v8i32(<8 x i32> %v1, <8 x i32> %v2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 85
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -352,8 +338,7 @@ define <16 x i64> @zipeven_v16i64(<16 x i64> %v1, <16 x i64> %v2) {
 ; CHECK-NEXT:    lui a0, 11
 ; CHECK-NEXT:    addi a0, a0, -1366
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; CHECK-NEXT:    vmv.s.x v24, a0
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslideup.vi v8, v16, 1, v0.t
 ; CHECK-NEXT:    ret
 ;
@@ -373,8 +358,7 @@ define <16 x i64> @zipodd_v16i64(<16 x i64> %v1, <16 x i64> %v2) {
 ; CHECK-NEXT:    lui a0, 5
 ; CHECK-NEXT:    addi a0, a0, 1365
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; CHECK-NEXT:    vmv.s.x v24, a0
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -394,8 +378,7 @@ define <8 x i32> @zipeven_v8i32_as_v4i64(<8 x i32> %v1, <8 x i32> %v2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 204
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslideup.vi v8, v10, 2, v0.t
 ; CHECK-NEXT:    ret
 ;
@@ -414,8 +397,7 @@ define <8 x i32> @zipodd_v8i32_as_v4i64(<8 x i32> %v1, <8 x i32> %v2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 51
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret

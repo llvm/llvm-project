@@ -110,8 +110,7 @@ define <vscale x 64 x i8> @smulo_nxv64i8(<vscale x 64 x i8> %x, <vscale x 64 x i
 ; CHECK-NEXT:    vmul.vv v24, v8, v16
 ; CHECK-NEXT:    vmulh.vv v8, v8, v16
 ; CHECK-NEXT:    vsra.vi v16, v24, 7
-; CHECK-NEXT:    vmsne.vv v7, v8, v16
-; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vmsne.vv v0, v8, v16
 ; CHECK-NEXT:    vmerge.vim v8, v24, 0, v0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 64 x i8>, <vscale x 64 x i1> } @llvm.smul.with.overflow.nxv64i8(<vscale x 64 x i8> %x, <vscale x 64 x i8> %y)
@@ -213,8 +212,7 @@ define <vscale x 32 x i16> @smulo_nxv32i16(<vscale x 32 x i16> %x, <vscale x 32 
 ; CHECK-NEXT:    vmul.vv v24, v8, v16
 ; CHECK-NEXT:    vmulh.vv v8, v8, v16
 ; CHECK-NEXT:    vsra.vi v16, v24, 15
-; CHECK-NEXT:    vmsne.vv v7, v8, v16
-; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vmsne.vv v0, v8, v16
 ; CHECK-NEXT:    vmerge.vim v8, v24, 0, v0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 32 x i16>, <vscale x 32 x i1> } @llvm.smul.with.overflow.nxv32i16(<vscale x 32 x i16> %x, <vscale x 32 x i16> %y)
@@ -299,8 +297,7 @@ define <vscale x 16 x i32> @smulo_nxv16i32(<vscale x 16 x i32> %x, <vscale x 16 
 ; CHECK-NEXT:    vmul.vv v24, v8, v16
 ; CHECK-NEXT:    vmulh.vv v8, v8, v16
 ; CHECK-NEXT:    vsra.vi v16, v24, 31
-; CHECK-NEXT:    vmsne.vv v7, v8, v16
-; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vmsne.vv v0, v8, v16
 ; CHECK-NEXT:    vmerge.vim v8, v24, 0, v0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 16 x i32>, <vscale x 16 x i1> } @llvm.smul.with.overflow.nxv16i32(<vscale x 16 x i32> %x, <vscale x 16 x i32> %y)
@@ -372,8 +369,7 @@ define <vscale x 8 x i64> @smulo_nxv8i64(<vscale x 8 x i64> %x, <vscale x 8 x i6
 ; CHECK-NEXT:    vmulh.vv v8, v8, v16
 ; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    vsra.vx v16, v24, a0
-; CHECK-NEXT:    vmsne.vv v7, v8, v16
-; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vmsne.vv v0, v8, v16
 ; CHECK-NEXT:    vmerge.vim v8, v24, 0, v0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 8 x i64>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i64(<vscale x 8 x i64> %x, <vscale x 8 x i64> %y)

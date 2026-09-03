@@ -16,8 +16,7 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>} @vector_deinterleave_load_nxv16i
 ; CHECK-NEXT:    vlm.v v12, (a0)
 ; CHECK-NEXT:    srli a1, a1, 2
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v10, v12, a1
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vslidedown.vx v0, v12, a1
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v12

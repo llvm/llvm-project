@@ -187,8 +187,7 @@ define <16 x i16> @shuffle_shuffle_first_multi_shuffle(<16 x i16> %op0, <16 x i1
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vrgather.vv v14, v10, v8
 ; CHECK-NEXT:    li a0, 128
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v12, v10, 0, v0.t
 ; CHECK-NEXT:    vslideup.vi v12, v14, 8
 ; CHECK-NEXT:    vmv.v.v v8, v12

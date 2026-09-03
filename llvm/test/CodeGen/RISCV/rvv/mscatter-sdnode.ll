@@ -1916,8 +1916,7 @@ define void @mscatter_baseidx_nxv16i8_nxv16f64(<vscale x 8 x double> %val0, <vsc
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    srli a1, a1, 3
 ; RV64-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v8, v7, a1
-; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vslidedown.vx v0, v7, a1
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
@@ -1985,8 +1984,7 @@ define void @mscatter_baseidx_nxv16i16_nxv16f64(<vscale x 8 x double> %val0, <vs
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    srli a1, a1, 3
 ; RV64-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v8, v7, a1
-; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vslidedown.vx v0, v7, a1
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16

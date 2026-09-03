@@ -125,8 +125,7 @@ define <vscale x 32 x half> @round_nxv32f16(<vscale x 32 x half> %x) strictfp {
 ; CHECK-LABEL: round_nxv32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
-; CHECK-NEXT:    vmfne.vv v16, v8, v8
-; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    vfabs.v v16, v8
 ; CHECK-NEXT:    li a0, 25
@@ -237,8 +236,7 @@ define <vscale x 16 x float> @round_nxv16f32(<vscale x 16 x float> %x) strictfp 
 ; CHECK-LABEL: round_nxv16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
-; CHECK-NEXT:    vmfne.vv v16, v8, v8
-; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    vfabs.v v16, v8
 ; CHECK-NEXT:    lui a0, 307200
@@ -383,8 +381,7 @@ define <vscale x 8 x double> @round_nxv8f64(<vscale x 8 x double> %x) strictfp {
 ; RV32-LABEL: round_nxv8f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
-; RV32-NEXT:    vmfne.vv v16, v8, v8
-; RV32-NEXT:    vmv1r.v v0, v16
+; RV32-NEXT:    vmfne.vv v0, v8, v8
 ; RV32-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV32-NEXT:    vfabs.v v16, v8
 ; RV32-NEXT:    lui a0, %hi(.LCPI14_0)
@@ -402,8 +399,7 @@ define <vscale x 8 x double> @round_nxv8f64(<vscale x 8 x double> %x) strictfp {
 ; RV64-LABEL: round_nxv8f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
-; RV64-NEXT:    vmfne.vv v16, v8, v8
-; RV64-NEXT:    vmv1r.v v0, v16
+; RV64-NEXT:    vmfne.vv v0, v8, v8
 ; RV64-NEXT:    vfadd.vv v8, v8, v8, v0.t
 ; RV64-NEXT:    vfabs.v v16, v8
 ; RV64-NEXT:    li a0, 1075

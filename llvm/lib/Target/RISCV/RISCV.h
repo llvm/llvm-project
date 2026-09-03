@@ -171,6 +171,20 @@ public:
 FunctionPass *createRISCVVSETVLICleanupLegacyPass();
 void initializeRISCVVSETVLICleanupLegacyPass(PassRegistry &);
 
+class RISCVPostRAV0RewritePass
+    : public OptionalPassInfoMixin<RISCVPostRAV0RewritePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs().setTracksLiveness();
+  }
+};
+
+FunctionPass *createRISCVPostRAV0RewritePass();
+void initializeRISCVPostRAV0RewriteLegacyPass(PassRegistry &);
+
 FunctionPass *createRISCVInsertReadWriteCSRPass();
 void initializeRISCVInsertReadWriteCSRPass(PassRegistry &);
 

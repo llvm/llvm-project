@@ -320,8 +320,7 @@ define <vscale x 32 x i8> @vpgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8
 ; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v9
 ; RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v9, v13, a4
-; RV64-NEXT:    vmv1r.v v0, v9
+; RV64-NEXT:    vslidedown.vx v0, v13, a4
 ; RV64-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
 ; RV64-NEXT:    vluxei64.v v9, (a0), v16, v0.t
 ; RV64-NEXT:    bltu a1, a2, .LBB12_6

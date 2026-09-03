@@ -229,8 +229,7 @@ define <4 x i32> @select_addsub_v4i32_constmask(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: select_addsub_v4i32_constmask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 5
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    vrsub.vi v9, v9, 0, v0.t
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -244,8 +243,7 @@ define <4 x i32> @select_addsub_v4i32_constmask2(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: select_addsub_v4i32_constmask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 10
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0, v0.t
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
 ; CHECK-NEXT:    ret
@@ -260,8 +258,7 @@ define <4 x i32> @select_addsub_v4i32_as_shuffle(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: select_addsub_v4i32_as_shuffle:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 5
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    vrsub.vi v9, v9, 0, v0.t
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -276,8 +273,7 @@ define <4 x i32> @select_addsub_v4i32_as_shuffle2(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: select_addsub_v4i32_as_shuffle2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v10, 10
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0, v0.t
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
 ; CHECK-NEXT:    ret

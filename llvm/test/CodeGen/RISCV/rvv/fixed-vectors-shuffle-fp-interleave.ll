@@ -254,8 +254,7 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; V128-NEXT:    vzext.vf2 v8, v0
 ; V128-NEXT:    lui a1, 699051
 ; V128-NEXT:    addi a1, a1, -1366
-; V128-NEXT:    vmv.s.x v20, a1
-; V128-NEXT:    vmv1r.v v0, v20
+; V128-NEXT:    vmv.s.x v0, a1
 ; V128-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; V128-NEXT:    vmerge.vvm v24, v8, v24, v0
 ; V128-NEXT:    addi a0, sp, 16

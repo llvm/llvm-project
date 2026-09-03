@@ -594,8 +594,7 @@ define void @vselect_vx_v32f16(half %a, ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vlm.v v12, (a1)
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret
@@ -614,8 +613,7 @@ define void @vselect_vfpzero_v32f16(ptr %b, ptr %cc, ptr %z) {
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vlm.v v12, (a1)
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    vse16.v v8, (a2)
 ; CHECK-NEXT:    ret

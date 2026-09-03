@@ -435,8 +435,7 @@ define <8 x i1> @fcmp_ord_vv_v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> %m, 
 ; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; ZVFH-NEXT:    vmfeq.vv v9, v9, v9
 ; ZVFH-NEXT:    vmv.v.v v0, v9
-; ZVFH-NEXT:    vmfeq.vv v9, v8, v8, v0.t
-; ZVFH-NEXT:    vmv.v.v v0, v9
+; ZVFH-NEXT:    vmfeq.vv v0, v8, v8, v0.t
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: fcmp_ord_vv_v8f16:
@@ -462,8 +461,7 @@ define <8 x i1> @fcmp_ord_vf_v8f16(<8 x half> %va, half %b, <8 x i1> %m, i32 zer
 ; ZVFH-NEXT:    vfmv.v.f v9, fa0
 ; ZVFH-NEXT:    vmfeq.vf v9, v9, fa0
 ; ZVFH-NEXT:    vmv.v.v v0, v9
-; ZVFH-NEXT:    vmfeq.vv v9, v8, v8, v0.t
-; ZVFH-NEXT:    vmv.v.v v0, v9
+; ZVFH-NEXT:    vmfeq.vv v0, v8, v8, v0.t
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: fcmp_ord_vf_v8f16:
@@ -493,8 +491,7 @@ define <8 x i1> @fcmp_ord_vf_swap_v8f16(<8 x half> %va, half %b, <8 x i1> %m, i3
 ; ZVFH-NEXT:    vfmv.v.f v9, fa0
 ; ZVFH-NEXT:    vmfeq.vv v8, v8, v8
 ; ZVFH-NEXT:    vmv.v.v v0, v8
-; ZVFH-NEXT:    vmfeq.vf v8, v9, fa0, v0.t
-; ZVFH-NEXT:    vmv.v.v v0, v8
+; ZVFH-NEXT:    vmfeq.vf v0, v9, fa0, v0.t
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: fcmp_ord_vf_swap_v8f16:

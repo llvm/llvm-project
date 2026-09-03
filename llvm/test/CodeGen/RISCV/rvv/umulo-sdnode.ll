@@ -103,8 +103,7 @@ define <vscale x 64 x i8> @umulo_nxv64i8(<vscale x 64 x i8> %x, <vscale x 64 x i
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmulhu.vv v24, v8, v16
 ; CHECK-NEXT:    vmul.vv v8, v8, v16
-; CHECK-NEXT:    vmsne.vi v16, v24, 0
-; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vmsne.vi v0, v24, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 64 x i8>, <vscale x 64 x i1> } @llvm.umul.with.overflow.nxv64i8(<vscale x 64 x i8> %x, <vscale x 64 x i8> %y)
@@ -200,8 +199,7 @@ define <vscale x 32 x i16> @umulo_nxv32i16(<vscale x 32 x i16> %x, <vscale x 32 
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vmulhu.vv v24, v8, v16
 ; CHECK-NEXT:    vmul.vv v8, v8, v16
-; CHECK-NEXT:    vmsne.vi v16, v24, 0
-; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vmsne.vi v0, v24, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 32 x i16>, <vscale x 32 x i1> } @llvm.umul.with.overflow.nxv32i16(<vscale x 32 x i16> %x, <vscale x 32 x i16> %y)
@@ -281,8 +279,7 @@ define <vscale x 16 x i32> @umulo_nxv16i32(<vscale x 16 x i32> %x, <vscale x 16 
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmulhu.vv v24, v8, v16
 ; CHECK-NEXT:    vmul.vv v8, v8, v16
-; CHECK-NEXT:    vmsne.vi v16, v24, 0
-; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vmsne.vi v0, v24, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 16 x i32>, <vscale x 16 x i1> } @llvm.umul.with.overflow.nxv16i32(<vscale x 16 x i32> %x, <vscale x 16 x i32> %y)
@@ -346,8 +343,7 @@ define <vscale x 8 x i64> @umulo_nxv8i64(<vscale x 8 x i64> %x, <vscale x 8 x i6
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmulhu.vv v24, v8, v16
 ; CHECK-NEXT:    vmul.vv v8, v8, v16
-; CHECK-NEXT:    vmsne.vi v16, v24, 0
-; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vmsne.vi v0, v24, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 8 x i64>, <vscale x 8 x i1> } @llvm.umul.with.overflow.nxv8i64(<vscale x 8 x i64> %x, <vscale x 8 x i64> %y)

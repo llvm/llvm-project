@@ -308,8 +308,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_mask(ptr %ptr) {
 ; CHECK-LABEL: vpload_factor3_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 10
-; CHECK-NEXT:    vmv.v.v v0, v8
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vlseg3e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %interleaved.vec = tail call <12 x i32> @llvm.vp.load.v12i32.p0(ptr %ptr, <12 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1>, i32 12)
@@ -327,8 +326,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_poison_shufflemask(ptr 
 ; CHECK-LABEL: vpload_factor3_poison_shufflemask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 10
-; CHECK-NEXT:    vmv.v.v v0, v8
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vlseg3e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %interleaved.vec = tail call <12 x i32> @llvm.vp.load.v12i32.p0(ptr %ptr, <12 x i1> <i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1>, i32 12)
@@ -363,8 +361,7 @@ define {<4 x i32>, <4 x i32>} @vpload_factor3_mask_skip_fields(ptr %ptr) {
 ; CHECK-LABEL: vpload_factor3_mask_skip_fields:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 10
-; CHECK-NEXT:    vmv.v.v v0, v8
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    li a1, 12
 ; CHECK-NEXT:    vlsseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
@@ -439,8 +436,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @gap_mask_vpload_factor4_int
 ; CHECK-LABEL: gap_mask_vpload_factor4_intrinsics:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 5
-; CHECK-NEXT:    vmv.v.v v0, v8
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vlsseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
@@ -460,8 +456,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @gap_mask_single_field_vploa
 ; CHECK-LABEL: gap_mask_single_field_vpload_factor4_intrinsics:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 5
-; CHECK-NEXT:    vmv.v.v v0, v8
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vlse32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
@@ -671,8 +666,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    lui a1, 49164
 ; RV32-NEXT:    addi a1, a1, 12
-; RV32-NEXT:    vmv.s.x v8, a1
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a4, 84
 ; RV32-NEXT:    mul a1, a1, a4
@@ -700,8 +694,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    lui a1, 3
 ; RV32-NEXT:    addi a1, a1, 3
-; RV32-NEXT:    vmv.s.x v8, a1
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a4, 76
 ; RV32-NEXT:    mul a1, a1, a4
@@ -718,8 +711,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    lui a1, 196656
 ; RV32-NEXT:    addi a1, a1, 48
-; RV32-NEXT:    vmv.s.x v8, a1
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a4, 84
 ; RV32-NEXT:    mul a1, a1, a4
@@ -746,8 +738,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    addi a3, a3, 12
-; RV32-NEXT:    vmv.s.x v8, a3
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmv.s.x v0, a3
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a3, 76
 ; RV32-NEXT:    mul a1, a1, a3
@@ -770,8 +761,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    lui a1, 786624
 ; RV32-NEXT:    addi a1, a1, 192
-; RV32-NEXT:    vmv.s.x v8, a1
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a3, 84
 ; RV32-NEXT:    mul a1, a1, a3
@@ -802,8 +792,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; RV32-NEXT:    li a1, 48
-; RV32-NEXT:    vmv.s.x v8, a1
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a3, 68
 ; RV32-NEXT:    mul a1, a1, a3
@@ -822,8 +811,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    lui a1, 768
 ; RV32-NEXT:    addi a1, a1, 768
-; RV32-NEXT:    vmv.s.x v8, a1
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a3, 84
 ; RV32-NEXT:    mul a1, a1, a3
@@ -854,8 +842,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    vmerge.vvm v16, v16, v8, v0
 ; RV32-NEXT:    lui a1, 3073
 ; RV32-NEXT:    addi a1, a1, -1024
-; RV32-NEXT:    vmv.s.x v8, a1
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    li a3, 84
 ; RV32-NEXT:    mul a1, a1, a3
@@ -1082,8 +1069,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vs4r.v v8, (a2) # vscale x 32-byte Folded Spill
 ; RV64-NEXT:    lui a2, 2
 ; RV64-NEXT:    addi a2, a2, 130
-; RV64-NEXT:    vmv.s.x v8, a2
-; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vmv.s.x v0, a2
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    li a3, 74
 ; RV64-NEXT:    mul a2, a2, a3
@@ -1110,8 +1096,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vs8r.v v0, (a2) # vscale x 64-byte Folded Spill
 ; RV64-NEXT:    lui a2, 4
 ; RV64-NEXT:    addi a2, a2, 260
-; RV64-NEXT:    vmv.s.x v8, a2
-; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vmv.s.x v0, a2
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    li a3, 74
 ; RV64-NEXT:    mul a2, a2, a3
@@ -1159,8 +1144,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vs4r.v v20, (a2) # vscale x 32-byte Folded Spill
 ; RV64-NEXT:    lui a2, 8
 ; RV64-NEXT:    addi a2, a2, 520
-; RV64-NEXT:    vmv.s.x v8, a2
-; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vmv.s.x v0, a2
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    li a3, 74
 ; RV64-NEXT:    mul a2, a2, a3
@@ -1213,8 +1197,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    addi a2, a2, 16
 ; RV64-NEXT:    vs4r.v v8, (a2) # vscale x 32-byte Folded Spill
 ; RV64-NEXT:    li a2, 1040
-; RV64-NEXT:    vmv.s.x v8, a2
-; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vmv.s.x v0, a2
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    li a3, 74
 ; RV64-NEXT:    mul a2, a2, a3
@@ -1240,8 +1223,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    addi a2, a2, 16
 ; RV64-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
 ; RV64-NEXT:    addi a1, a1, -2016
-; RV64-NEXT:    vmv.s.x v8, a1
-; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vmv.s.x v0, a1
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    li a2, 74
 ; RV64-NEXT:    mul a1, a1, a2
@@ -1594,8 +1576,7 @@ define void @vpstore_factor3_gap_with_mask(ptr %ptr, <4 x i32> %v0, <4 x i32> %v
 ; CHECK-LABEL: vpstore_factor3_gap_with_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 5
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    li a1, 12
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
@@ -1957,8 +1938,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
 ; RV32-NEXT:    lui a1, 1
 ; RV32-NEXT:    addi a1, a1, -43
 ; RV32-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV32-NEXT:    vmv.s.x v8, a1
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    vle32.v v12, (a0), v0.t
 ; RV32-NEXT:    li a0, 146
 ; RV32-NEXT:    vmv.s.x v8, a0
@@ -1991,8 +1971,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
 ; RV64-NEXT:    lui a1, 1
 ; RV64-NEXT:    addi a1, a1, -43
 ; RV64-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV64-NEXT:    vmv.s.x v8, a1
-; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vmv.s.x v0, a1
 ; RV64-NEXT:    vle32.v v12, (a0), v0.t
 ; RV64-NEXT:    li a0, 146
 ; RV64-NEXT:    vmv.s.x v8, a0
@@ -2156,8 +2135,7 @@ define void @maskedstore_factor4_gap_with_mask(ptr %ptr, <4 x i32> %v0, <4 x i32
 ; CHECK-LABEL: maskedstore_factor4_gap_with_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 5
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vssseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
@@ -2188,8 +2166,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_mask(ptr %ptr) {
 ; CHECK-LABEL: maskedload_factor3_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 5
-; CHECK-NEXT:    vmv.v.v v0, v8
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    vlseg3e32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %interleaved.vec = tail call <12 x i32> @llvm.masked.load.v12i32.p0(ptr %ptr, i32 4, <12 x i1> <i1 1,i1 1,i1 1,i1 0,i1 0,i1 0,i1 1,i1 1,i1 1,i1 0,i1 0,i1 0>, <12 x i32> poison)
@@ -2223,8 +2200,7 @@ define {<4 x i32>, <4 x i32>} @maskedload_factor3_mask_skip_field(ptr %ptr) {
 ; CHECK-LABEL: maskedload_factor3_mask_skip_field:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 5
-; CHECK-NEXT:    vmv.v.v v0, v8
+; CHECK-NEXT:    vmv.v.i v0, 5
 ; CHECK-NEXT:    li a1, 12
 ; CHECK-NEXT:    vlsseg2e32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
@@ -2305,8 +2281,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_invalid_skip_field(
 ; RV32-NEXT:    lui a1, 1
 ; RV32-NEXT:    addi a1, a1, -1171
 ; RV32-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV32-NEXT:    vmv.s.x v8, a1
-; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    vle32.v v12, (a0), v0.t
 ; RV32-NEXT:    li a0, 146
 ; RV32-NEXT:    vmv.s.x v8, a0
@@ -2339,8 +2314,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_invalid_skip_field(
 ; RV64-NEXT:    lui a1, 1
 ; RV64-NEXT:    addi a1, a1, -1171
 ; RV64-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
-; RV64-NEXT:    vmv.s.x v8, a1
-; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vmv.s.x v0, a1
 ; RV64-NEXT:    vle32.v v12, (a0), v0.t
 ; RV64-NEXT:    li a0, 146
 ; RV64-NEXT:    vmv.s.x v8, a0

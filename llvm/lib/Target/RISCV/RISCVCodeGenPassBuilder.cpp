@@ -137,6 +137,7 @@ void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
 
 void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
+    addMachineFunctionPass(RISCVPostRAV0RewritePass(), PMW);
     // TODO: RISCVRedundantCopyEliminationPass
   }
 }

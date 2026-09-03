@@ -450,8 +450,7 @@ define void @extract_v2i1_v64i1_0(ptr %x, ptr %y) {
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; VLS-NEXT:    vmv.v.i v8, 0
 ; VLS-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
-; VLS-NEXT:    vlm.v v9, (a0)
-; VLS-NEXT:    vmv1r.v v0, v9
+; VLS-NEXT:    vlm.v v0, (a0)
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -474,8 +473,7 @@ define void @extract_v2i1_v64i1_2(ptr %x, ptr %y) {
 ; VLA-NEXT:    li a2, 64
 ; VLA-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; VLA-NEXT:    vmv.v.i v8, 0
-; VLA-NEXT:    vlm.v v12, (a0)
-; VLA-NEXT:    vmv1r.v v0, v12
+; VLA-NEXT:    vlm.v v0, (a0)
 ; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLA-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLA-NEXT:    vslidedown.vi v8, v8, 2
@@ -496,8 +494,7 @@ define void @extract_v2i1_v64i1_2(ptr %x, ptr %y) {
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
 ; VLS-NEXT:    vmv.v.i v8, 0
-; VLS-NEXT:    vlm.v v12, (a0)
-; VLS-NEXT:    vmv1r.v v0, v12
+; VLS-NEXT:    vlm.v v0, (a0)
 ; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLS-NEXT:    vslidedown.vi v8, v8, 2
@@ -525,8 +522,7 @@ define void @extract_v2i1_v64i1_42(ptr %x, ptr %y) {
 ; VLA-NEXT:    li a2, 64
 ; VLA-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; VLA-NEXT:    vmv.v.i v8, 0
-; VLA-NEXT:    vlm.v v12, (a0)
-; VLA-NEXT:    vmv1r.v v0, v12
+; VLA-NEXT:    vlm.v v0, (a0)
 ; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLA-NEXT:    li a0, 42
 ; VLA-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
@@ -548,8 +544,7 @@ define void @extract_v2i1_v64i1_42(ptr %x, ptr %y) {
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
 ; VLS-NEXT:    vmv.v.i v8, 0
-; VLS-NEXT:    vlm.v v12, (a0)
-; VLS-NEXT:    vmv1r.v v0, v12
+; VLS-NEXT:    vlm.v v0, (a0)
 ; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLS-NEXT:    vslidedown.vi v8, v10, 10

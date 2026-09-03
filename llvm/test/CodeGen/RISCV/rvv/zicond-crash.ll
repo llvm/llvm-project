@@ -7,9 +7,7 @@ define <vscale x 2 x i1> @vector(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b, <v
 ; CHECK-LABEL: vector:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vmv1r.v v10, v0
-; CHECK-NEXT:    vmseq.vv v10, v8, v9, v0.t
-; CHECK-NEXT:    vmv.v.v v0, v10
+; CHECK-NEXT:    vmseq.vv v0, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %cmp = icmp eq <vscale x 2 x i32> %b, %c
   %and = and <vscale x 2 x i1> %a, %cmp

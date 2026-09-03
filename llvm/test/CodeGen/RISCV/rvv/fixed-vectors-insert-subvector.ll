@@ -564,8 +564,7 @@ define <vscale x 2 x i1> @insert_nxv2i1_v4i1_0(<vscale x 2 x i1> %v, ptr %svp) {
 ; VLS-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; VLS-NEXT:    vmv.v.i v8, 0
 ; VLS-NEXT:    vmerge.vim v9, v8, 1, v0
-; VLS-NEXT:    vlm.v v10, (a0)
-; VLS-NEXT:    vmv1r.v v0, v10
+; VLS-NEXT:    vlm.v v0, (a0)
 ; VLS-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
 ; VLS-NEXT:    vmerge.vim v9, v8, 1, v0
 ; VLS-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
