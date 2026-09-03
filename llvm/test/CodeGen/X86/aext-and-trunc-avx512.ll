@@ -48,8 +48,7 @@ define i32 @mask_and_zext_i8_i32(<8 x i64> %0) {
 ; BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BW-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
 ; BW-NEXT:    kmovd %k0, %eax
-; BW-NEXT:    andb $3, %al
-; BW-NEXT:    movzbl %al, %eax
+; BW-NEXT:    andl $3, %eax
 ; BW-NEXT:    vzeroupper
 ; BW-NEXT:    retq
 ;
@@ -57,8 +56,7 @@ define i32 @mask_and_zext_i8_i32(<8 x i64> %0) {
 ; DQ:       # %bb.0:
 ; DQ-NEXT:    vpmovq2m %zmm0, %k0
 ; DQ-NEXT:    kmovd %k0, %eax
-; DQ-NEXT:    andb $3, %al
-; DQ-NEXT:    movzbl %al, %eax
+; DQ-NEXT:    andl $3, %eax
 ; DQ-NEXT:    vzeroupper
 ; DQ-NEXT:    retq
   %cmp = icmp slt <8 x i64> %0, zeroinitializer
@@ -74,8 +72,7 @@ define i64 @mask_and_zext_i8_i64(<8 x i64> %0) {
 ; BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BW-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
 ; BW-NEXT:    kmovd %k0, %eax
-; BW-NEXT:    andb $5, %al
-; BW-NEXT:    movzbl %al, %eax
+; BW-NEXT:    andl $5, %eax
 ; BW-NEXT:    vzeroupper
 ; BW-NEXT:    retq
 ;
@@ -83,8 +80,7 @@ define i64 @mask_and_zext_i8_i64(<8 x i64> %0) {
 ; DQ:       # %bb.0:
 ; DQ-NEXT:    vpmovq2m %zmm0, %k0
 ; DQ-NEXT:    kmovd %k0, %eax
-; DQ-NEXT:    andb $5, %al
-; DQ-NEXT:    movzbl %al, %eax
+; DQ-NEXT:    andl $5, %eax
 ; DQ-NEXT:    vzeroupper
 ; DQ-NEXT:    retq
   %cmp = icmp slt <8 x i64> %0, zeroinitializer
