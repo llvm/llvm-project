@@ -411,7 +411,6 @@ static Value *MakeHalfType(Function *Intrinsic, unsigned BuiltinID,
       ArgValue = CGF.Builder.CreateBitCast(ArgValue, PTy);
     Args.push_back(ArgValue);
   }
-  Args.append(TrailingArgs.begin(), TrailingArgs.end());
 
   llvm::append_range(Args, TrailingArgs);
   appendDefaultIntrinsicArgs(Args, Intrinsic);
