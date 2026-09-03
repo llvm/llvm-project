@@ -123,7 +123,7 @@ static constexpr uint64_t MinSupportedVersion = 103;
 
 // The default version of the extensible binary profile format written by the
 // compiler. We default to v103 as v104 is reserved for the in-progress on-disk
-// function offset table.
+// hash table.
 static constexpr uint64_t DefaultVersion = 103;
 
 // The first version that permits composite profile sections.
