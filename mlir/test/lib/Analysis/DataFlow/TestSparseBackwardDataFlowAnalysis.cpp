@@ -104,7 +104,7 @@ WrittenToAnalysis::visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
                                   ArrayRef<const WrittenTo *> results) {
   if (auto store = dyn_cast<memref::StoreOp>(op)) {
     SetVector<StringAttr> newWrites;
-    newWrites.insert(op->getAttrOfType<StringAttr>("tag_name"));
+    newWrites.insert(op->getDiscardableAttrOfType<StringAttr>("tag_name"));
     propagateIfChanged(operands[0],
                        operands[0]->getValue().addWrites(newWrites));
     return success();
@@ -148,7 +148,7 @@ void WrittenToAnalysis::visitExternalCall(CallOpInterface call,
 
   for (WrittenTo *lattice : operands) {
     SetVector<StringAttr> newWrites;
-    StringAttr name = call->getAttrOfType<StringAttr>("tag_name");
+    StringAttr name = call->getDiscardableAttrOfType<StringAttr>("tag_name");
     if (!name) {
       name = StringAttr::get(call->getContext(),
                              call.getOperation()->getName().getStringRef());
@@ -194,7 +194,7 @@ struct TestWrittenToPass
 
     raw_ostream &os = llvm::outs();
     op->walk([&](Operation *op) {
-      auto tag = op->getAttrOfType<StringAttr>("tag");
+      auto tag = op->getDiscardableAttrOfType<StringAttr>("tag");
       if (!tag)
         return;
       os << "test_tag: " << tag.getValue() << ":\n";

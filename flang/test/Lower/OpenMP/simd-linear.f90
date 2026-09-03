@@ -22,8 +22,8 @@ subroutine simple_linear
     !$omp simd linear(x)
     do i = 1, 10
     end do
-    !CHECK: } {linear_var_types = [i32]}
-    !IMPLICIT: } {linear_var_types = [i32, i32]}
+    !CHECK: }
+    !IMPLICIT: }
 end subroutine
 
 
@@ -45,8 +45,8 @@ subroutine linear_step
     !$omp simd linear(x:4)
     do i = 1, 10
     end do
-    !CHECK: } {linear_var_types = [i32]}
-    !IMPLICIT: } {linear_var_types = [i32, i32]}
+    !CHECK: }
+    !IMPLICIT: }
 end subroutine
 
 !CHECK: %[[A_alloca:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFlinear_exprEa"}
@@ -77,8 +77,8 @@ subroutine linear_expr
     !$omp simd linear(x:a+4)
     do i = 1, 10
     end do
-    !CHECK: } {linear_var_types = [i32]}
-    !IMPLICIT: } {linear_var_types = [i32, i32]}
+    !CHECK: }
+    !IMPLICIT: }
 end subroutine
 
 
@@ -102,6 +102,6 @@ subroutine non_i32_type
     do i = 1,10
     end do
     !$omp end simd
-    !CHECK: } {linear_var_types = [i64]}
-    !IMPLICIT: } {linear_var_types = [i64, i32]}
+    !CHECK: }
+    !IMPLICIT: }
 end subroutine

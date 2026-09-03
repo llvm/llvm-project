@@ -8,7 +8,7 @@ define i64 @findlast_iv_interleave(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -81,7 +81,7 @@ define i64 @findlast_iv_start5_interleave(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 5, [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -158,7 +158,7 @@ define i64 @findlast_iv_step2_interleave(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -188,18 +188,18 @@ define i64 @findlast_iv_step2_interleave(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i64, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i64, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i64, ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i64> poison, i64 [[TMP20]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x i64> [[TMP24]], i64 [[TMP21]], i32 1
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i64> [[TMP25]], i64 [[TMP22]], i32 2
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i64> [[TMP26]], i64 [[TMP23]], i32 3
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i64> poison, i64 [[TMP20]], i64 0
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x i64> [[TMP24]], i64 [[TMP21]], i64 1
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i64> [[TMP25]], i64 [[TMP22]], i64 2
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i64> [[TMP26]], i64 [[TMP23]], i64 3
 ; CHECK-NEXT:    [[TMP28:%.*]] = load i64, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i64, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[TMP30:%.*]] = load i64, ptr [[TMP18]], align 8
 ; CHECK-NEXT:    [[TMP31:%.*]] = load i64, ptr [[TMP19]], align 8
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i64> poison, i64 [[TMP28]], i32 0
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i64> [[TMP32]], i64 [[TMP29]], i32 1
-; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <4 x i64> [[TMP33]], i64 [[TMP30]], i32 2
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x i64> [[TMP34]], i64 [[TMP31]], i32 3
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i64> poison, i64 [[TMP28]], i64 0
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i64> [[TMP32]], i64 [[TMP29]], i64 1
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <4 x i64> [[TMP33]], i64 [[TMP30]], i64 2
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x i64> [[TMP34]], i64 [[TMP31]], i64 3
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp eq <4 x i64> [[TMP27]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP37:%.*]] = icmp eq <4 x i64> [[TMP35]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP38]] = select <4 x i1> [[TMP36]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
@@ -259,7 +259,7 @@ define i32 @findlast_iv_i32_interleave(ptr %a, i32 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

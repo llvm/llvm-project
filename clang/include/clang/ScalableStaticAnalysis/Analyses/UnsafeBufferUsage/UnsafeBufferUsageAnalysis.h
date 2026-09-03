@@ -54,7 +54,8 @@ struct UnsafeBufferReachableAnalysisResult final : AnalysisResult {
     return AnalysisName(UnsafeBufferReachableAnalysisResultName.str());
   }
 
-  std::map<EntityId, EntityPointerLevelSet> Reachables;
+  /// Whole-program set of pointers (EPLs) reachable from unsafe buffer usage.
+  EntityPointerLevelSet Reachables;
 };
 
 } // namespace clang::ssaf

@@ -286,7 +286,7 @@ static void createNewAliasScopesFromNoAliasParameter(
         continue;
       ssaCopies.insert(ssaCopy);
 
-      if (!ssaCopy->hasAttr(LLVM::LLVMDialect::getNoAliasAttrName()))
+      if (!ssaCopy->hasDiscardableAttr(LLVM::LLVMDialect::getNoAliasAttrName()))
         continue;
       noAliasParams.insert(ssaCopy);
     }

@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=armv8.1-m-eabi -mattr=+mve %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve %s -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: inline assembly requires more registers than available
 define arm_aapcs_vfpcc <4 x i32> @t-constraint-i32-vectors-too-few-regs(<4 x i32> %a, <4 x i32> %b) {

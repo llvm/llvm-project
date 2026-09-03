@@ -296,8 +296,8 @@ multiclass AVX512_maskable_fma<bits<8> O, Format F, X86VectorVTInfo _,
 // load of an all-zeros value if folding it would be beneficial.
 let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
     isPseudo = 1, Predicates = [HasAVX512], SchedRW = [WriteZero] in {
-def AVX512_512_SET0 : I<0, Pseudo, (outs VR512:$dst), (ins), "",
-               [(set VR512:$dst, (v16i32 immAllZerosV))]>;
+def AVX512_128_SET0 : I<0, Pseudo, (outs VR128X:$dst), (ins), "",
+               [(set VR128X:$dst, (v4i32 immAllZerosV))]>;
 def AVX512_512_SETALLONES : I<0, Pseudo, (outs VR512:$dst), (ins), "",
                [(set VR512:$dst, (v16i32 immAllOnesV))]>;
 let AddedComplexity = 1, Predicates = [HasVLX] in {
@@ -306,15 +306,6 @@ let AddedComplexity = 1, Predicates = [HasVLX] in {
   def AVX512_256_SETALLONES : I<0, Pseudo, (outs VR256X:$dst), (ins),
                                 "", [(set VR256X:$dst, (v8i32 immAllOnesV))]>;
 }
-}
-
-let Predicates = [HasAVX512] in {
-def : Pat<(v64i8 immAllZerosV), (AVX512_512_SET0)>;
-def : Pat<(v32i16 immAllZerosV), (AVX512_512_SET0)>;
-def : Pat<(v8i64 immAllZerosV), (AVX512_512_SET0)>;
-def : Pat<(v32f16 immAllZerosV), (AVX512_512_SET0)>;
-def : Pat<(v16f32 immAllZerosV), (AVX512_512_SET0)>;
-def : Pat<(v8f64 immAllZerosV), (AVX512_512_SET0)>;
 }
 
 // Alias instructions that allow VPTERNLOG to be used with a mask to create
@@ -333,14 +324,6 @@ def AVX512_512_SEXT_MASK_64 : I<0, Pseudo, (outs VR512:$dst),
                                            (v8i64 immAllZerosV)))]>;
 }
 
-let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
-    isPseudo = 1, Predicates = [HasAVX512], SchedRW = [WriteZero] in {
-def AVX512_128_SET0 : I<0, Pseudo, (outs VR128X:$dst), (ins), "",
-               [(set VR128X:$dst, (v4i32 immAllZerosV))]>;
-def AVX512_256_SET0 : I<0, Pseudo, (outs VR256X:$dst), (ins), "",
-               [(set VR256X:$dst, (v8i32 immAllZerosV))]>;
-}
-
 let Predicates = [HasAVX512] in {
 def : Pat<(v8i16 immAllZerosV), (AVX512_128_SET0)>;
 def : Pat<(v16i8 immAllZerosV), (AVX512_128_SET0)>;
@@ -348,12 +331,22 @@ def : Pat<(v2i64 immAllZerosV), (AVX512_128_SET0)>;
 def : Pat<(v8f16 immAllZerosV), (AVX512_128_SET0)>;
 def : Pat<(v4f32 immAllZerosV), (AVX512_128_SET0)>;
 def : Pat<(v2f64 immAllZerosV), (AVX512_128_SET0)>;
-def : Pat<(v32i8 immAllZerosV), (AVX512_256_SET0)>;
-def : Pat<(v16i16 immAllZerosV), (AVX512_256_SET0)>;
-def : Pat<(v4i64 immAllZerosV), (AVX512_256_SET0)>;
-def : Pat<(v16f16 immAllZerosV), (AVX512_256_SET0)>;
-def : Pat<(v8f32 immAllZerosV), (AVX512_256_SET0)>;
-def : Pat<(v4f64 immAllZerosV), (AVX512_256_SET0)>;
+
+def : Pat<(v32i8 immAllZerosV),  (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v16i16 immAllZerosV), (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v8i32 immAllZerosV),  (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v4i64 immAllZerosV),  (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v16f16 immAllZerosV), (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v8f32 immAllZerosV),  (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v4f64 immAllZerosV),  (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+
+def : Pat<(v64i8 immAllZerosV),  (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v32i16 immAllZerosV), (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v16i32 immAllZerosV), (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v8i64 immAllZerosV),  (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v32f16 immAllZerosV), (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v16f32 immAllZerosV), (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
+def : Pat<(v8f64 immAllZerosV),  (SUBREG_TO_REG (v4i32 (AVX512_128_SET0)), sub_xmm)>;
 }
 
 // Alias instructions that map fld0 to xorps for sse or vxorps for avx.

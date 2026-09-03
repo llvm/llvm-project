@@ -646,9 +646,8 @@ define i8 @concat_icmp_v8i64_v4i64(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm3
 ; AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqq %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; AVX2-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3],xmm1[4],xmm2[5],xmm1[6],xmm2[7]
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
@@ -891,7 +890,8 @@ define i64 @concat_icmp_v64i8_v32i8(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpcmpltb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpcmpleb %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kmovq %k0, %rax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
