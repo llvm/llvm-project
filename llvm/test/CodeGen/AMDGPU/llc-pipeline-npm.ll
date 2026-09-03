@@ -89,6 +89,7 @@
 ; GCN-O0-NEXT:       fentry-insert
 ; GCN-O0-NEXT:       xray-instrumentation
 ; GCN-O0-NEXT:       si-memory-legalizer
+; GCN-O0-NEXT:       si-waitcnt-branch-padding
 ; GCN-O0-NEXT:       si-insert-waitcnts
 ; GCN-O0-NEXT:       si-mode-register
 ; GCN-O0-NEXT:       si-late-branch-lowering
@@ -273,6 +274,7 @@
 ; GCN-O2-NEXT:       xray-instrumentation
 ; GCN-O2-NEXT:       gcn-create-vopd
 ; GCN-O2-NEXT:       si-memory-legalizer
+; GCN-O2-NEXT:       si-waitcnt-branch-padding
 ; GCN-O2-NEXT:       si-insert-waitcnts
 ; GCN-O2-NEXT:       si-mode-register
 ; GCN-O2-NEXT:       si-insert-hard-clauses
@@ -460,6 +462,7 @@
 ; GCN-O3-NEXT:       xray-instrumentation
 ; GCN-O3-NEXT:       gcn-create-vopd
 ; GCN-O3-NEXT:       si-memory-legalizer
+; GCN-O3-NEXT:       si-waitcnt-branch-padding
 ; GCN-O3-NEXT:       si-insert-waitcnts
 ; GCN-O3-NEXT:       si-mode-register
 ; GCN-O3-NEXT:       si-insert-hard-clauses
