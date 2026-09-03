@@ -315,7 +315,7 @@ std::optional<unsigned> llvm::getMaxVScale(const Function &F,
 std::optional<uint64_t>
 llvm::getMaxRuntimeElementCount(ElementCount EC, const Function &F,
                                 const TargetTransformInfo &TTI) {
-  if (!EC.isScalable())
+  if (EC.isFixed())
     return EC.getFixedValue();
 
   if (std::optional<unsigned> MaxVScale = getMaxVScale(F, TTI))
