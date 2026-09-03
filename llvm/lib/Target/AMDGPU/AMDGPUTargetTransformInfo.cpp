@@ -992,6 +992,19 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
   return BaseT::getCFInstrCost(Opcode, CostKind, I);
 }
 
+InstructionCost GCNTTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
+  // For size and latency cost kinds, return a low cost independent of vector
+  // width to enable SimplifyCFG's speculativelyExecuteBB optimization.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return 1;
+
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
+}
+
 InstructionCost
 GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                        std::optional<FastMathFlags> FMF,
