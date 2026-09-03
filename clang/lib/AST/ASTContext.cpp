@@ -5070,7 +5070,7 @@ QualType ASTContext::getFunctionTypeInternal(
   // structure.
   llvm::FoldingSetNodeID ID;
   FunctionProtoType::Profile(ID, ResultTy, ArgArray.begin(), NumArgs, EPI,
-                             *this, true);
+                             *this);
 
   QualType Canonical;
   bool Unique = false;
