@@ -602,6 +602,10 @@ public:
                                                 unsigned &NumIntermediates,
                                                 MVT &RegisterVT) const override;
 
+  bool preferVectorizedNonPowerOfTwoTypeBreakdown() const override {
+    return true;
+  }
+
   /// True if stack clash protection is enabled for this functions.
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
 
@@ -901,7 +905,8 @@ private:
   bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
   bool getIndexedAddressParts(SDNode *N, SDNode *Op, SDValue &Base,
-                              SDValue &Offset, SelectionDAG &DAG) const;
+                              SDValue &Offset, SelectionDAG &DAG,
+                              ISD::MemIndexedMode AM) const;
   bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
                                  ISD::MemIndexedMode &AM,
                                  SelectionDAG &DAG) const override;

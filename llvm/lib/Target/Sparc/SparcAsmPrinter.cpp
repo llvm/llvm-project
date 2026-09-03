@@ -66,6 +66,7 @@ public:
                        const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
+  void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
 
   void LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
                                  const MCSubtargetInfo &STI);
@@ -415,6 +416,17 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   default:
     llvm_unreachable("<unknown operand type>");
   }
+}
+
+void SparcAsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
+                                         raw_ostream &O) {
+  const unsigned RelType = MO.getTargetFlags();
+  StringRef Specifier = Sparc::getSpecifierName(RelType);
+  if (!Specifier.empty())
+    O << '%' << Specifier << '(';
+  AsmPrinter::PrintSymbolOperand(MO, O);
+  if (!Specifier.empty())
+    O << ')';
 }
 
 void SparcAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,

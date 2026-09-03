@@ -43,14 +43,16 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK);
 
 /// Checks if a pointer is in range.
-bool CheckRange(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK);
-inline bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                       AccessKinds AK) {
-  if (!Ptr.isBlockPointer()) {
-    assert(!Ptr.isOnePastEnd());
+template <typename T>
+bool CheckRange(InterpState &S, CodePtr OpPC, T Ptr, AccessKinds AK) {
+  if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
     return true;
+  if (S.getLangOpts().CPlusPlus) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+        << AK << S.Current->getRange(OpPC);
   }
-  return CheckRange(S, OpPC, Ptr.view(), AK);
+  return false;
 }
 
 /// Checks if a field from which a pointer is going to be derived is valid.
@@ -81,7 +83,8 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
 bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
 
 UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
-                                         unsigned Kind, Pointer &Ptr);
+                                         unsigned Kind, Pointer &Ptr,
+                                         const Expr *E, bool IsDynamic = false);
 
 template <typename T>
 bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {

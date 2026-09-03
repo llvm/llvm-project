@@ -176,7 +176,9 @@ end
 ```
   Note that internally the main program symbol name is all uppercase, unlike
   the names of all other symbols, which are usually all lowercase. This
-  may make a difference in testing/debugging.
+  may make a difference in testing. It is not visible in the debug
+  information, which spells the main program name in lowercase like every
+  other name.
 * A `PROCEDURE()` with no interface name or type may be called as an
   subroutine with an implicit interface, F'2023 15.4.3.6 paragraph 4 and
   C1525 notwithstanding.
@@ -389,6 +391,20 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
   and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
 * Objects in blank COMMON may be initialized.
 * Initialization of COMMON blocks outside of BLOCK DATA subprograms.
+* A named COMMON block may be redundantly initialized (via `DATA`
+  statements or declaration initializers) in more than one program
+  unit, with a portability warning, provided that every appearance
+  that initializes the block does so identically: the same members
+  are initialized to the same values everywhere the block appears. A
+  first initialized appearance that leaves some members uninitialized
+  while a later appearance initializes them (or vice versa) is a
+  conflict, not a duplicate, and remains a hard error, as does any
+  appearance that initializes a shared member to a different value.
+  A member that is only indirectly initialized via an object
+  equivalenced with it, rather than directly by a `DATA` statement or
+  declaration initializer, is conservatively treated as a conflict at
+  every appearance, since the equivalenced objects are not compared
+  for agreement.
 * Multiple specifications of the SAVE attribute on the same object
   are allowed, with a warning.
 * Specific intrinsic functions BABS, IIABS, JIABS, KIABS, ZABS, and CDABS.

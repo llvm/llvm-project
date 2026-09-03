@@ -165,26 +165,13 @@ struct CachingVPExpander {
   /// Lower this VP binary operator to a unpredicated binary operator.
   bool expandPredicationInBinaryOperator(IRBuilder<> &Builder, VPIntrinsic &PI);
 
-  /// Lower this VP int call to a unpredicated int call.
-  bool expandPredicationToIntCall(IRBuilder<> &Builder, VPIntrinsic &PI);
-
-  /// Lower this VP fp call to a unpredicated fp call.
-  bool expandPredicationToFPCall(IRBuilder<> &Builder, VPIntrinsic &PI,
-                                 unsigned UnpredicatedIntrinsicID);
-
   /// Lower this VP reduction to a call to an unpredicated reduction intrinsic.
   bool expandPredicationInReduction(IRBuilder<> &Builder,
                                     VPReductionIntrinsic &PI);
 
-  /// Lower this VP cast operation to a non-VP intrinsic.
-  bool expandPredicationToCastIntrinsic(IRBuilder<> &Builder, VPIntrinsic &VPI);
-
   /// Lower this VP memory operation to a non-VP intrinsic.
   bool expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
                                           VPIntrinsic &VPI);
-
-  /// Lower this VP comparison to a call to an unpredicated comparison.
-  bool expandPredicationInComparison(IRBuilder<> &Builder, VPCmpIntrinsic &PI);
 
   /// Query TTI and expand the vector predication in \p P accordingly.
   bool expandPredication(VPIntrinsic &PI);
@@ -263,75 +250,6 @@ bool CachingVPExpander::expandPredicationInBinaryOperator(IRBuilder<> &Builder,
   return true;
 }
 
-bool CachingVPExpander::expandPredicationToIntCall(IRBuilder<> &Builder,
-                                                   VPIntrinsic &VPI) {
-  std::optional<unsigned> FID = VPI.getFunctionalIntrinsicID();
-  if (!FID)
-    return false;
-  SmallVector<Value *, 2> Argument;
-  for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
-    Argument.push_back(VPI.getOperand(i));
-  }
-  Value *NewOp =
-      Builder.CreateIntrinsic(FID.value(), {VPI.getType()}, Argument);
-  replaceOperation(*NewOp, VPI);
-  return true;
-}
-
-bool CachingVPExpander::expandPredicationToFPCall(
-    IRBuilder<> &Builder, VPIntrinsic &VPI, unsigned UnpredicatedIntrinsicID) {
-  assert((maySpeculateLanes(VPI) || VPI.canIgnoreVectorLengthParam()) &&
-         "Implicitly dropping %evl in non-speculatable operator!");
-
-  switch (UnpredicatedIntrinsicID) {
-  case Intrinsic::fabs:
-  case Intrinsic::copysign:
-  case Intrinsic::sqrt:
-  case Intrinsic::maxnum:
-  case Intrinsic::minnum:
-  case Intrinsic::maximum:
-  case Intrinsic::minimum:
-  case Intrinsic::ceil:
-  case Intrinsic::floor:
-  case Intrinsic::round:
-  case Intrinsic::roundeven:
-  case Intrinsic::trunc:
-  case Intrinsic::rint:
-  case Intrinsic::nearbyint:
-  case Intrinsic::lrint:
-  case Intrinsic::llrint:
-  case Intrinsic::is_fpclass: {
-    SmallVector<Value *, 2> Argument;
-    for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
-      Argument.push_back(VPI.getOperand(i));
-    }
-    Value *NewOp = Builder.CreateIntrinsic(VPI.getType(),
-                                           UnpredicatedIntrinsicID, Argument);
-    replaceOperation(*NewOp, VPI);
-    return true;
-  }
-  case Intrinsic::fma:
-  case Intrinsic::fmuladd:
-  case Intrinsic::experimental_constrained_fma:
-  case Intrinsic::experimental_constrained_fmuladd: {
-    Value *Op0 = VPI.getOperand(0);
-    Value *Op1 = VPI.getOperand(1);
-    Value *Op2 = VPI.getOperand(2);
-    Function *Fn = Intrinsic::getOrInsertDeclaration(
-        VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
-    Value *NewOp;
-    if (Intrinsic::isConstrainedFPIntrinsic(UnpredicatedIntrinsicID))
-      NewOp = Builder.CreateConstrainedFPCall(Fn, {Op0, Op1, Op2});
-    else
-      NewOp = Builder.CreateCall(Fn, {Op0, Op1, Op2});
-    replaceOperation(*NewOp, VPI);
-    return true;
-  }
-  }
-
-  return false;
-}
-
 static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
                                          Type *EltTy) {
   Intrinsic::ID RdxID = *VPI.getFunctionalIntrinsicID();
@@ -400,18 +318,6 @@ bool CachingVPExpander::expandPredicationInReduction(
   return true;
 }
 
-bool CachingVPExpander::expandPredicationToCastIntrinsic(IRBuilder<> &Builder,
-                                                         VPIntrinsic &VPI) {
-  Intrinsic::ID VPID = VPI.getIntrinsicID();
-  unsigned CastOpcode = VPIntrinsic::getFunctionalOpcodeForVP(VPID).value();
-  assert(Instruction::isCast(CastOpcode));
-  Value *CastOp = Builder.CreateCast(Instruction::CastOps(CastOpcode),
-                                     VPI.getOperand(0), VPI.getType());
-
-  replaceOperation(*CastOp, VPI);
-  return true;
-}
-
 bool CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
                                                            VPIntrinsic &VPI) {
   assert(VPI.canIgnoreVectorLengthParam());
@@ -476,24 +382,6 @@ bool CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
   return true;
 }
 
-bool CachingVPExpander::expandPredicationInComparison(IRBuilder<> &Builder,
-                                                      VPCmpIntrinsic &VPI) {
-  assert((maySpeculateLanes(VPI) || VPI.canIgnoreVectorLengthParam()) &&
-         "Implicitly dropping %evl in non-speculatable operator!");
-
-  assert(*VPI.getFunctionalOpcode() == Instruction::ICmp ||
-         *VPI.getFunctionalOpcode() == Instruction::FCmp);
-
-  Value *Op0 = VPI.getOperand(0);
-  Value *Op1 = VPI.getOperand(1);
-  auto Pred = VPI.getPredicate();
-
-  auto *NewCmp = Builder.CreateCmp(Pred, Op0, Op1);
-
-  replaceOperation(*NewCmp, VPI);
-  return true;
-}
-
 bool CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
   LLVM_DEBUG(dbgs() << "Discard EVL parameter in " << VPI << "\n");
 
@@ -532,8 +420,7 @@ bool CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
   // Only VP intrinsics can have an %evl parameter.
   Value *OldMaskParam = VPI.getMaskParam();
   if (!OldMaskParam) {
-    assert((VPI.getIntrinsicID() == Intrinsic::vp_merge ||
-            VPI.getIntrinsicID() == Intrinsic::vp_select) &&
+    assert((VPI.getIntrinsicID() == Intrinsic::vp_merge) &&
            "Unexpected VP intrinsic without mask operand");
     OldMaskParam = VPI.getArgOperand(0);
   }
@@ -549,8 +436,7 @@ bool CachingVPExpander::foldEVLIntoMask(VPIntrinsic &VPI) {
   ElementCount ElemCount = VPI.getStaticVectorLength();
   Value *VLMask = convertEVLToMask(Builder, OldEVLParam, ElemCount);
   Value *NewMaskParam = Builder.CreateAnd(VLMask, OldMaskParam);
-  if (VPI.getIntrinsicID() == Intrinsic::vp_merge ||
-      VPI.getIntrinsicID() == Intrinsic::vp_select)
+  if (VPI.getIntrinsicID() == Intrinsic::vp_merge)
     VPI.setArgOperand(0, NewMaskParam);
   else
     VPI.setMaskParam(NewMaskParam);
@@ -578,21 +464,9 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   if (auto *VPRI = dyn_cast<VPReductionIntrinsic>(&VPI))
     return expandPredicationInReduction(Builder, *VPRI);
 
-  if (auto *VPCmp = dyn_cast<VPCmpIntrinsic>(&VPI))
-    return expandPredicationInComparison(Builder, *VPCmp);
-
-  if (VPCastIntrinsic::isVPCast(VPI.getIntrinsicID()))
-    return expandPredicationToCastIntrinsic(Builder, VPI);
-
   switch (VPI.getIntrinsicID()) {
   default:
     break;
-  case Intrinsic::vp_fneg: {
-    Value *NewNegOp = Builder.CreateFNeg(VPI.getOperand(0));
-    replaceOperation(*NewNegOp, VPI);
-    return NewNegOp;
-  }
-  case Intrinsic::vp_select:
   case Intrinsic::vp_merge: {
     assert(maySpeculateLanes(VPI) || VPI.canIgnoreVectorLengthParam());
     Value *NewSelectOp = Builder.CreateSelect(
@@ -600,54 +474,12 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
     replaceOperation(*NewSelectOp, VPI);
     return NewSelectOp;
   }
-  case Intrinsic::vp_abs:
-  case Intrinsic::vp_smax:
-  case Intrinsic::vp_smin:
-  case Intrinsic::vp_umax:
-  case Intrinsic::vp_umin:
-  case Intrinsic::vp_bswap:
-  case Intrinsic::vp_bitreverse:
-  case Intrinsic::vp_ctpop:
-  case Intrinsic::vp_ctlz:
-  case Intrinsic::vp_cttz:
-  case Intrinsic::vp_sadd_sat:
-  case Intrinsic::vp_uadd_sat:
-  case Intrinsic::vp_ssub_sat:
-  case Intrinsic::vp_usub_sat:
-  case Intrinsic::vp_fshl:
-  case Intrinsic::vp_fshr:
-    return expandPredicationToIntCall(Builder, VPI);
-  case Intrinsic::vp_fabs:
-  case Intrinsic::vp_copysign:
-  case Intrinsic::vp_sqrt:
-  case Intrinsic::vp_maxnum:
-  case Intrinsic::vp_minnum:
-  case Intrinsic::vp_maximum:
-  case Intrinsic::vp_minimum:
-  case Intrinsic::vp_ceil:
-  case Intrinsic::vp_floor:
-  case Intrinsic::vp_round:
-  case Intrinsic::vp_roundeven:
-  case Intrinsic::vp_roundtozero:
-  case Intrinsic::vp_rint:
-  case Intrinsic::vp_nearbyint:
-  case Intrinsic::vp_lrint:
-  case Intrinsic::vp_llrint:
-  case Intrinsic::vp_fma:
-  case Intrinsic::vp_fmuladd:
-  case Intrinsic::vp_is_fpclass:
-    return expandPredicationToFPCall(Builder, VPI,
-                                     VPI.getFunctionalIntrinsicID().value());
   case Intrinsic::vp_load:
   case Intrinsic::vp_store:
   case Intrinsic::vp_gather:
   case Intrinsic::vp_scatter:
     return expandPredicationInMemoryIntrinsic(Builder, VPI);
   }
-
-  if (auto CID = VPI.getConstrainedIntrinsicID())
-    if (expandPredicationToFPCall(Builder, VPI, *CID))
-      return true;
 
   return false;
 }

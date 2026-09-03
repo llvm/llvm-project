@@ -482,7 +482,6 @@ define amdgpu_kernel void @add_v2_v_v_sgpr_splat(ptr addrspace(1) %a, i64 %v) {
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-SDAG-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
 ; GFX1251-SDAG-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX1251-SDAG-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-SDAG-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], s[4:7]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scale_offset

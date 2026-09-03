@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ExecutionEngine/Orc/CallProxies.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/Support/Compiler.h"
@@ -102,11 +103,32 @@ private:
   std::mutex SimpleRemoteEPCMutex;
   std::condition_variable DisconnectCV;
   bool Disconnected = false;
+
+  // Whether either side announced the end of the session. If the transport
+  // reports a disconnection and neither of these is set then the executor went
+  // away without saying so, which is reported as an error: see
+  // handleDisconnect.
+  //
+  // LocalHangup has to be shared state: disconnect() sets it on the calling
+  // thread, while handleDisconnect reads it on the transport's listener thread.
+  //
+  // RemoteHangup is shared state only because the read loop lives in the
+  // transport: the hangup is observed in handleMessage but needed in
+  // handleDisconnect, and the two are separate entry points on the
+  // SimpleRemoteEPCTransportClient interface with no call edge between them.
+  //
+  // TODO: Once the read loop is reshaped into a reactor (mirroring
+  // FDSimpleRemoteCA in the ORC runtime), RemoteHangup should fold into a stop
+  // reason returned from it, leaving only LocalHangup as state -- as
+  // FDSimpleRemoteCA does with ShutdownRequested.
+  bool LocalHangup = false;
+  bool RemoteHangup = false;
+
   Error DisconnectErr = Error::success();
 
   std::unique_ptr<SimpleRemoteEPCTransport> T;
 
-  ExecutorAddr RunAsMainAddr;
+  CallMainProxy CallMain;
 
   uint64_t NextSeqNo = 0;
   PendingCallWrapperResultsMap PendingCallWrapperResults;

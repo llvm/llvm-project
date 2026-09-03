@@ -50,6 +50,9 @@ function(_create_unittest_framework_library fq_target_name)
   endif()
 
   if(LLVM_LIBC_FULL_BUILD)
+    target_include_directories(
+      ${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR}
+    )
     _get_hermetic_test_compile_options(compile_options "" "${TEST_LIB_FLAGS}")
     target_compile_options(${fq_target_name} PRIVATE ${compile_options} -nostdinc++)
   else()
@@ -107,6 +110,7 @@ add_unittest_framework_library(
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.types
+    libc.src.__support.wchar.string_converter
     libc.src.__support.uint128
     ${test_logger_osutil}
 )
@@ -120,6 +124,11 @@ add_unittest_framework_library(
   DEPENDS
     .LibcTest
 )
+
+set(libc_hermetic_test_support_srcs HermeticTestUtils.cpp)
+if(LIBC_TARGET_OS_IS_BAREMETAL AND LIBC_TARGET_ARCHITECTURE_IS_ARM)
+  list(APPEND libc_hermetic_test_support_srcs ArmBaremetalTestUtils.cpp)
+endif()
 
 if(LIBC_TEST_SUBPROCESS_TESTS)
   set(libc_death_test_deps
@@ -158,7 +167,7 @@ endif()
 add_unittest_framework_library(
   HermeticTestUtils
   SRCS
-    HermeticTestUtils.cpp
+    ${libc_hermetic_test_support_srcs}
   DEPENDS
     libc.hdr.stdint_proxy
 )

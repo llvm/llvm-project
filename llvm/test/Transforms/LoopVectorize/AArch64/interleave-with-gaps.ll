@@ -381,8 +381,7 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-NOTF:       [[VECTOR_PH]]:
 ; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NOTF-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
@@ -438,7 +437,7 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP20]] = add <vscale x 4 x i32> [[TMP18]], [[TMP14]]
 ; CHECK-NOTF-NEXT:    [[TMP41]] = add <vscale x 4 x i32> [[TMP37]], [[TMP27]]
 ; CHECK-NOTF-NEXT:    [[TMP42]] = add <vscale x 4 x i32> [[TMP38]], [[TMP30]]
-; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NOTF-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK-NOTF:       [[MIDDLE_BLOCK]]:
@@ -690,10 +689,9 @@ define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-NOTF:       [[VECTOR_PH]]:
 ; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NOTF-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 [[N_MOD_VF]]
+; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 [[TMP1]], i64 [[N_MOD_VF]]
 ; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP5]]
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
@@ -749,7 +747,7 @@ define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP22]] = add <vscale x 4 x i32> [[TMP20]], [[TMP16]]
 ; CHECK-NOTF-NEXT:    [[TMP43]] = add <vscale x 4 x i32> [[TMP39]], [[TMP29]]
 ; CHECK-NOTF-NEXT:    [[TMP44]] = add <vscale x 4 x i32> [[TMP40]], [[TMP32]]
-; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NOTF-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK-NOTF:       [[MIDDLE_BLOCK]]:
@@ -995,8 +993,7 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-NOTF:       [[VECTOR_PH]]:
 ; CHECK-NOTF-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP1]], 4
-; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
+; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1064,7 +1061,7 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP25]] = add <vscale x 4 x i32> [[TMP23]], [[REVERSE8]]
 ; CHECK-NOTF-NEXT:    [[TMP42]] = add <vscale x 4 x i32> [[TMP38]], [[REVERSE16]]
 ; CHECK-NOTF-NEXT:    [[TMP43]] = add <vscale x 4 x i32> [[TMP39]], [[REVERSE21]]
-; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
+; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-NOTF-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK-NOTF:       [[MIDDLE_BLOCK]]:

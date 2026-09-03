@@ -35,17 +35,6 @@ namespace llvm {
 
 class FoldingSetNodeID;
 
-// Provide PointerLikeTypeTraits for clang::Expr*, this default one requires a
-// full definition of Expr, but this file only sees a forward del because of
-// the dependency.
-template <> struct PointerLikeTypeTraits<clang::Expr *> {
-  static inline void *getAsVoidPointer(clang::Expr *P) { return P; }
-  static inline clang::Expr *getFromVoidPointer(void *P) {
-    return static_cast<clang::Expr *>(P);
-  }
-  static constexpr int NumLowBitsAvailable = 2;
-};
-
 } // namespace llvm
 
 namespace clang {
@@ -734,9 +723,6 @@ private:
 
   ASTTemplateArgumentListInfo(const TemplateArgumentListInfo &List);
 
-  // FIXME: Is it ever necessary to copy to another context?
-  ASTTemplateArgumentListInfo(const ASTTemplateArgumentListInfo *List);
-
 public:
   /// The source location of the left angle bracket ('<').
   SourceLocation LAngleLoc;
@@ -766,10 +752,6 @@ public:
 
   static const ASTTemplateArgumentListInfo *
   Create(const ASTContext &C, const TemplateArgumentListInfo &List);
-
-  // FIXME: Is it ever necessary to copy to another context?
-  static const ASTTemplateArgumentListInfo *
-  Create(const ASTContext &C, const ASTTemplateArgumentListInfo *List);
 };
 
 /// Represents an explicit template argument list in C++, e.g.,

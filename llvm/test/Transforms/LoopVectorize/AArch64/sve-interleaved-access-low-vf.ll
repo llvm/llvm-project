@@ -18,8 +18,7 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave(ptr noalias readonly %src, p
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -63,7 +62,7 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave(ptr noalias readonly %src, p
 ; CHECK-NEXT:    [[TMP32]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[TMP31]], <vscale x 2 x double> [[TMP24]])
 ; CHECK-NEXT:    [[TMP33:%.*]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI3]], <vscale x 2 x double> [[TMP25]])
 ; CHECK-NEXT:    [[TMP34]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[TMP33]], <vscale x 2 x double> [[TMP26]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP35]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
