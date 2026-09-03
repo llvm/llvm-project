@@ -7,7 +7,7 @@ import os
 import shutil
 
 from lldbsuite.test import lldbutil
-from lldbsuite.test.decorators import requireWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import ExitedEvent, LaunchArgs, TerminatedEvent
 

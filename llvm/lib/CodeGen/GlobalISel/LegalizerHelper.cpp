@@ -1205,7 +1205,7 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
         Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
         {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
         LocObserver, &MI);
-    if (!Status)
+    if (Status != Legalized)
       return {};
 
     // Compare temp with #0 to get the final result.
@@ -3006,6 +3006,11 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     // don't affect the result) and then truncate the result back to the
     // original type.
     Observer.changingInstr(MI);
+    // The G_ANYEXTs below leave the new high bits unconstrained, so no-wrap and
+    // disjoint claims proved at the narrow width no longer hold. Paths that
+    // widen with value-preserving G_ZEXT/G_SEXT keep their flags.
+    MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap |
+                  MachineInstr::Disjoint);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ANYEXT);
     widenScalarDst(MI, WideTy);
@@ -3031,6 +3036,10 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0) {
+      // Widening the result with G_ANYEXT invalidates the no-wrap flags, as in
+      // the G_ADD/G_SUB/G_MUL case above. TypeIdx 1 widens only the shift
+      // amount, which is value-preserving, so it keeps them.
+      MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
       widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
       widenScalarDst(MI, WideTy);
     } else {
@@ -5058,6 +5067,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_SSHLSAT:
   case G_USHLSAT:
     return lowerShlSat(MI);
+  case G_TRUNC_SSAT_S:
+  case G_TRUNC_USAT_U:
+  case G_TRUNC_SSAT_U:
+    return lowerTruncSat(MI);
   case G_ABS:
     return lowerAbsToAddXor(MI);
   case G_ABDS:
@@ -5113,6 +5126,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   }
   case G_SMULFIX:
   case G_UMULFIX:
+  case G_SMULFIXSAT:
+  case G_UMULFIXSAT:
     return lowerMulfix(MI);
   }
 }
@@ -7068,7 +7083,10 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FPTOSI_SAT:
   case TargetOpcode::G_FPTOUI_SAT:
   case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_UITOFP: {
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_TRUNC_SSAT_S:
+  case TargetOpcode::G_TRUNC_SSAT_U:
+  case TargetOpcode::G_TRUNC_USAT_U: {
     Observer.changingInstr(MI);
     LLT SrcExtTy;
     LLT DstExtTy;
@@ -7537,7 +7555,7 @@ LegalizerHelper::narrowScalarExtract(MachineInstr &MI, unsigned TypeIdx,
     Register SegReg = SrcRegs[i];
     if (ExtractOffset != 0 || SegSize != NarrowSize) {
       // A genuine extract is needed.
-      SegReg = MRI.createGenericVirtualRegister(LLT::scalar(SegSize));
+      SegReg = MRI.createGenericVirtualRegister(LLT::integer(SegSize));
       MIRBuilder.buildExtract(SegReg, SrcRegs[i], ExtractOffset);
     }
 
@@ -8409,64 +8427,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
         MIRBuilder.buildInstr(RevShiftOpc, {DstTy}, {Inner, RevAmt}).getReg(0);
   }
   MIRBuilder.buildOr(Dst, ShVal, RevShiftVal, MachineInstr::Disjoint);
-  MI.eraseFromParent();
-  return Legalized;
-}
-
-// Expand s32 = G_UITOFP s64 using bit operations to an IEEE float
-// representation.
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerU64ToF32BitOps(MachineInstr &MI) {
-  auto [Dst, Src] = MI.getFirst2Regs();
-  const LLT S64 = LLT::scalar(64);
-  const LLT S32 = LLT::scalar(32);
-  const LLT S1 = LLT::scalar(1);
-
-  assert(MRI.getType(Src) == S64 && MRI.getType(Dst) == S32);
-
-  // unsigned cul2f(ulong u) {
-  //   uint lz = clz(u);
-  //   uint e = (u != 0) ? 127U + 63U - lz : 0;
-  //   u = (u << lz) & 0x7fffffffffffffffUL;
-  //   ulong t = u & 0xffffffffffUL;
-  //   uint v = (e << 23) | (uint)(u >> 40);
-  //   uint r = t > 0x8000000000UL ? 1U : (t == 0x8000000000UL ? v & 1U : 0U);
-  //   return as_float(v + r);
-  // }
-
-  auto Zero32 = MIRBuilder.buildConstant(S32, 0);
-  auto Zero64 = MIRBuilder.buildConstant(S64, 0);
-
-  auto LZ = MIRBuilder.buildCTLZ_ZERO_POISON(S32, Src);
-
-  auto K = MIRBuilder.buildConstant(S32, 127U + 63U);
-  auto Sub = MIRBuilder.buildSub(S32, K, LZ);
-
-  auto NotZero = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1, Src, Zero64);
-  auto E = MIRBuilder.buildSelect(S32, NotZero, Sub, Zero32);
-
-  auto Mask0 = MIRBuilder.buildConstant(S64, (-1ULL) >> 1);
-  auto ShlLZ = MIRBuilder.buildShl(S64, Src, LZ);
-
-  auto U = MIRBuilder.buildAnd(S64, ShlLZ, Mask0);
-
-  auto Mask1 = MIRBuilder.buildConstant(S64, 0xffffffffffULL);
-  auto T = MIRBuilder.buildAnd(S64, U, Mask1);
-
-  auto UShl = MIRBuilder.buildLShr(S64, U, MIRBuilder.buildConstant(S64, 40));
-  auto ShlE = MIRBuilder.buildShl(S32, E, MIRBuilder.buildConstant(S32, 23));
-  auto V = MIRBuilder.buildOr(S32, ShlE, MIRBuilder.buildTrunc(S32, UShl));
-
-  auto C = MIRBuilder.buildConstant(S64, 0x8000000000ULL);
-  auto RCmp = MIRBuilder.buildICmp(CmpInst::ICMP_UGT, S1, T, C);
-  auto TCmp = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, S1, T, C);
-  auto One = MIRBuilder.buildConstant(S32, 1);
-
-  auto VTrunc1 = MIRBuilder.buildAnd(S32, V, One);
-  auto Select0 = MIRBuilder.buildSelect(S32, TCmp, VTrunc1, Zero32);
-  auto R = MIRBuilder.buildSelect(S32, RCmp, One, Select0);
-  MIRBuilder.buildAdd(Dst, V, R);
-
   MI.eraseFromParent();
   return Legalized;
 }
@@ -9731,8 +9691,7 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
 
   auto OutPos = MIRBuilder.buildConstant(IdxTy, 0);
 
-  bool HasPassthru =
-      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_IMPLICIT_DEF;
+  bool HasPassthru = !mi_match(Passthru, MRI, m_GImplicitDef());
 
   if (HasPassthru)
     MIRBuilder.buildStore(Passthru, StackPtr, PtrInfo, VecAlign);
@@ -9908,7 +9867,7 @@ LegalizerHelper::lowerExtract(MachineInstr &MI) {
        (SrcTy.isVector() && DstTy == SrcTy.getElementType()))) {
     LLT SrcIntTy = SrcTy;
     if (!SrcTy.isScalar()) {
-      SrcIntTy = LLT::scalar(SrcTy.getSizeInBits());
+      SrcIntTy = LLT::integer(SrcTy.getSizeInBits());
       SrcReg = MIRBuilder.buildCast(SrcIntTy, SrcReg).getReg(0);
     }
 
@@ -10294,6 +10253,39 @@ LegalizerHelper::lowerShlSat(MachineInstr &MI) {
   auto Ov = MIRBuilder.buildICmp(CmpInst::ICMP_NE, BoolTy, LHS, Orig);
   MIRBuilder.buildSelect(Res, Ov, SatVal, Result);
 
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerTruncSat(MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+  unsigned DstSize = DstTy.getScalarSizeInBits();
+  unsigned SrcSize = SrcTy.getScalarSizeInBits();
+
+  if (Opc == TargetOpcode::G_TRUNC_SSAT_S) {
+    auto Max = MIRBuilder.buildConstant(
+        SrcTy, APInt::getSignedMaxValue(DstSize).sext(SrcSize));
+    Src = MIRBuilder.buildSMin(SrcTy, Src, Max).getReg(0);
+    auto Min = MIRBuilder.buildConstant(
+        SrcTy, APInt::getSignedMinValue(DstSize).sext(SrcSize));
+    Src = MIRBuilder.buildSMax(SrcTy, Src, Min).getReg(0);
+  } else if (Opc == TargetOpcode::G_TRUNC_USAT_U) {
+    auto Max = MIRBuilder.buildConstant(
+        SrcTy, APInt::getAllOnes(DstSize).zext(SrcSize));
+    Src = MIRBuilder.buildUMin(SrcTy, Src, Max).getReg(0);
+  } else if (Opc == TargetOpcode::G_TRUNC_SSAT_U) {
+    auto Max = MIRBuilder.buildConstant(
+        SrcTy, APInt::getAllOnes(DstSize).zext(SrcSize));
+    Src = MIRBuilder.buildSMin(SrcTy, Src, Max).getReg(0);
+    auto Min = MIRBuilder.buildConstant(SrcTy, APInt::getZero(SrcSize));
+    Src = MIRBuilder.buildSMax(SrcTy, Src, Min).getReg(0);
+  } else {
+    llvm_unreachable("Expected truncsat opcode!");
+  }
+
+  MIRBuilder.buildTrunc(Dst, Src);
   MI.eraseFromParent();
   return Legalized;
 }
@@ -10934,25 +10926,32 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
-  [[maybe_unused]] unsigned OpCode = MI.getOpcode();
+  unsigned OpCode = MI.getOpcode();
   assert((OpCode == TargetOpcode::G_SMULFIX ||
-          OpCode == TargetOpcode::G_UMULFIX) &&
-         "Operator must be either G_SMULFIX or G_UMULFIX!");
+          OpCode == TargetOpcode::G_UMULFIX ||
+          OpCode == TargetOpcode::G_SMULFIXSAT ||
+          OpCode == TargetOpcode::G_UMULFIXSAT) &&
+         "Operator must be either G_SMULFIX[SAT] or G_UMULFIX[SAT]!");
   auto [Dst, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
   unsigned Scale = MI.getOperand(3).getImm();
 
-  if (Scale == 0) {
+  bool Saturating = (OpCode == TargetOpcode::G_SMULFIXSAT ||
+                     OpCode == TargetOpcode::G_UMULFIXSAT);
+  bool IsSigned = (OpCode == TargetOpcode::G_SMULFIX ||
+                   OpCode == TargetOpcode::G_SMULFIXSAT);
+
+  if (!Saturating && Scale == 0) {
     MIRBuilder.buildMul(Dst, LHS, RHS);
     MI.eraseFromParent();
     return Legalized;
   }
 
-  // TODO: Port other lowerng paths from SelectionDAG.
+  // TODO: Port other lowering paths from SelectionDAG.
   LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
   MachineInstrBuilder ExtLHS{}, ExtRHS{}, Shift{};
-  if (MI.getOpcode() == TargetOpcode::G_SMULFIX) {
+  if (IsSigned) {
     ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
     ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
   } else {
@@ -10961,12 +10960,17 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
   }
 
   auto Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS);
-  if (MI.getOpcode() == TargetOpcode::G_SMULFIX)
+  if (IsSigned)
     Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
   else
     Shift = MIRBuilder.buildLShr(WideTy, Mul, ShiftAmt);
 
-  MIRBuilder.buildTrunc(Dst, Shift);
+  if (!Saturating)
+    MIRBuilder.buildTrunc(Dst, Shift);
+  else if (IsSigned)
+    MIRBuilder.buildTruncSSatS(Dst, Shift);
+  else
+    MIRBuilder.buildTruncUSatU(Dst, Shift);
 
   MI.eraseFromParent();
   return Legalized;
@@ -11085,7 +11089,7 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
     Register Ptr = Dst;
     if (DstOff != 0) {
       auto Offset =
-          MIB.buildConstant(LLT::scalar(PtrTy.getSizeInBits()), DstOff);
+          MIB.buildConstant(LLT::integer(PtrTy.getSizeInBits()), DstOff);
       Ptr = MIB.buildObjectPtrOffset(PtrTy, Dst, Offset).getReg(0);
     }
 
@@ -11259,7 +11263,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
     if (CurrOffset != 0) {
       LLT SrcTy = MRI.getType(Src);
       auto Offset =
-          MIB.buildConstant(LLT::scalar(SrcTy.getSizeInBits()), CurrOffset);
+          MIB.buildConstant(LLT::integer(SrcTy.getSizeInBits()), CurrOffset);
       LoadPtr = MIB.buildObjectPtrOffset(SrcTy, Src, Offset).getReg(0);
     }
     LoadVals.push_back(MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO).getReg(0));
@@ -11289,7 +11293,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
     if (CurrOffset != 0) {
       LLT DstTy = MRI.getType(Dst);
       auto Offset =
-          MIB.buildConstant(LLT::scalar(DstTy.getSizeInBits()), CurrOffset);
+          MIB.buildConstant(LLT::integer(DstTy.getSizeInBits()), CurrOffset);
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LoadVals[I], StorePtr, *StoreMMO);

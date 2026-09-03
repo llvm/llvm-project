@@ -59,8 +59,9 @@ MipsSERegisterInfo::intRegClass(unsigned Size) const {
 /// Get the size of the offset supported by the given load/store/inline asm.
 /// The result includes the effects of any scale factors applied to the
 /// instruction immediate.
-static inline unsigned getLoadStoreOffsetSizeInBits(const unsigned Opcode,
-                                                    MachineOperand MO) {
+static inline unsigned
+getLoadStoreOffsetSizeInBits(const MipsSubtarget &Subtarget,
+                             const unsigned Opcode, const MachineOperand &MO) {
   switch (Opcode) {
   case Mips::LD_B:
   case Mips::ST_B:
@@ -101,10 +102,6 @@ static inline unsigned getLoadStoreOffsetSizeInBits(const unsigned Opcode,
     const InlineAsm::Flag F(MO.getImm());
     switch (F.getMemoryConstraintID()) {
     case InlineAsm::ConstraintCode::ZC: {
-      const MipsSubtarget &Subtarget = MO.getParent()
-                                           ->getParent()
-                                           ->getParent()
-                                           ->getSubtarget<MipsSubtarget>();
       if (Subtarget.inMicroMipsMode())
         return 12;
 
@@ -208,7 +205,8 @@ void MipsSERegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
     // For MSA instructions, this is a 10-bit signed immediate (scaled by
     // element size), otherwise it is a 16-bit signed immediate.
     unsigned OffsetBitSize =
-        getLoadStoreOffsetSizeInBits(MI.getOpcode(), MI.getOperand(OpNo - 1));
+        getLoadStoreOffsetSizeInBits(MF.getSubtarget<MipsSubtarget>(),
+                                     MI.getOpcode(), MI.getOperand(OpNo - 1));
     const Align OffsetAlign(getLoadStoreOffsetAlign(MI.getOpcode()));
     if (OffsetBitSize < 16 && isInt<16>(Offset) &&
         (!isIntN(OffsetBitSize, Offset) || !isAligned(OffsetAlign, Offset))) {

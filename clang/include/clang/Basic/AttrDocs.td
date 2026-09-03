@@ -442,23 +442,6 @@ void maybeundeffunc(int __attribute__((maybe_undef))param);
   }];
 }
 
-def CarriesDependencyDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The `carries_dependency` attribute specifies dependency propagation into and
-out of functions.
-
-When specified on a function or Objective-C method, the `carries_dependency`
-attribute means that the return value carries a dependency out of the function,
-so that the implementation need not constrain ordering upon return from that
-function. Implementations of the function and its caller may choose to preserve
-dependencies instead of emitting memory ordering instructions such as fences.
-
-Note, this attribute does not change the meaning of the program, but may result
-in generation of more efficient code.
-  }];
-}
-
 def CPUSpecificCPUDispatchDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -1466,8 +1449,8 @@ Query for this feature with `__has_attribute(diagnose_if)`.
 def NoSpecializationsDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-`[[clang::no_specializations]]` can be applied to function, class, or variable
-templates which should not be explicitly specialized by users. This is primarily
+``[[clang::no_specializations]]`` can be applied to function, class, or variable
+templates for which neither an explicit specialization nor a partial specialization should be declared by users. This is primarily
 used to diagnose user specializations of standard library type traits.
   }];
 }
@@ -6490,6 +6473,14 @@ with `__has_attribute(swiftcall)`. Query if the target supports the
 calling convention with `__has_extension(swiftcc)`. This implies
 support for the `swift_context`, `swift_error_result`, and
 `swift_indirect_result` attributes.
+
+Since this attribute follows the Swift calling convention, it is
+considered ABI-unstable except on targets where the Swift project
+has declared ABI stability. Users are responsible for ensuring that
+calls and definitions of functions with this attribute are compiled
+with compatible compilers. Note that different operating systems
+on the same architecture may use different ABIs and therefore may
+have different standards for ABI stability.
   }];
 }
 
@@ -6538,6 +6529,14 @@ the following:
 Query for this attribute with `__has_attribute(swiftasynccall)`. Query if
 the target supports the calling convention with
 `__has_extension(swiftasynccc)`.
+
+Since this attribute follows the Swift async calling convention, it is
+considered ABI-unstable except on targets where the Swift project
+has declared ABI stability. Users are responsible for ensuring that
+calls and definitions of functions with this attribute are compiled
+with compatible compilers. Note that different operating systems
+on the same architecture may use different ABIs and therefore may
+have different standards for ABI stability.
   }];
 }
 
@@ -7906,7 +7905,7 @@ def HIPManagedAttrDocs : Documentation {
   let Content = [{
 The `__managed__` attribute can be applied to a global variable declaration in HIP.
 A managed variable is emitted as an undefined global symbol in the device binary and is
-registered by `__hipRegisterManagedVariable` in init functions. The HIP runtime allocates
+registered by `__hipRegisterManagedVar` in init functions. The HIP runtime allocates
 managed memory and uses it to define the symbol when loading the device binary.
 A managed variable can be accessed in both device and host code.
   }];

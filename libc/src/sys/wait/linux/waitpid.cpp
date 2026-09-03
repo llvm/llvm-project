@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/OSUtil/linux/syscall_wrappers/wait4.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/libc_errno.h"
 
 #include "src/__support/macros/config.h"
-#include "src/sys/wait/wait4Impl.h"
 #include "src/sys/wait/waitpid.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, waitpid, (pid_t pid, int *wait_status, int options)) {
-  auto result = internal::wait4impl(pid, wait_status, options, 0);
+  auto result = linux_syscalls::wait4(pid, wait_status, options, nullptr);
   if (!result.has_value()) {
     libc_errno = result.error();
     return -1;

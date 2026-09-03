@@ -474,6 +474,7 @@ LLVMBool LLVMPrintModuleToFile(LLVMModuleRef M, const char *Filename,
     return true;
   }
 
+  unwrap(M)->renumberMetadataForAssembly();
   unwrap(M)->print(dest, nullptr);
 
   dest.close();
@@ -491,6 +492,7 @@ char *LLVMPrintModuleToString(LLVMModuleRef M) {
   std::string buf;
   raw_string_ostream os(buf);
 
+  unwrap(M)->renumberMetadataForAssembly();
   unwrap(M)->print(os, nullptr);
 
   return strdup(buf.c_str());

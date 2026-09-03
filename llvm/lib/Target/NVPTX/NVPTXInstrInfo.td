@@ -57,7 +57,16 @@ def CvtRS_RELU     : PatLeaf<(i32 0x4A)>;
 
 def CvtNONE_SATFINITE  : PatLeaf<(i32 0x80)>;
 def CvtRN_SATFINITE   : PatLeaf<(i32 0x85)>;
+def CvtRZ_SATFINITE   : PatLeaf<(i32 0x86)>;
+def CvtRP_SATFINITE   : PatLeaf<(i32 0x88)>;
 def CvtRN_RELU_SATFINITE : PatLeaf<(i32 0xC5)>;
+
+// Derives the mode constant for one of the modes above with the PZO flag set,
+// so that the PZO variants do not need a PatLeaf of their own.
+class CvtModeWithPZO<PatLeaf mode, int pzo> {
+  int Value = !add(!getdagarg<int>(!head(mode.Fragments), 0),
+                   !mul(pzo, 0x100)); // PTXCvtMode::PZO_FLAG
+}
 
 def CvtMode : Operand<i32> {
   let PrintMethod = "printCvtMode";
@@ -167,6 +176,7 @@ def hasTensormapReplaceSupport : SubtargetPredicate;
 // Checks Rubin family extensions support.
 //  - TMA S2G im2col_w mode support
 //  - tcgen05.commit shared mem A variants.
+//  - conversions involving ue5m3x2
 def hasRubinFamilySupport : PredOr<[SM107f]>;
 
 // Checks tcgen05.shift instruction support.
@@ -174,9 +184,9 @@ def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a]>;
 
 def hasTcgen05MMAScaleInputDImm : PredOr<[SM100f]>;
 def hasTcgen05MMAI8Kind : PredOr<[SM100a, SM110a]>;
-def hasTcgen05MMASparseMxf4 : PredOr<[SM100a, SM103a, SM110a]>;
+def hasTcgen05MMASparseMxf4 : PredOr<[SM100a, SM103a, SM110a, SM107a]>;
 def hasTcgen05MMASparseMxf4nvf4
-  : PredAnd<[PTX87, PredOr<[SM100a, SM103a, SM110a]>]>;
+  : PredAnd<[PTX87, PredOr<[SM100a, SM103a, SM110a, SM107a]>]>;
 def hasTcgen05LdRedSupport : PredAnd<[PTX88, PredOr<[SM103f, SM110f]>]>;
 
 def hasReduxSyncF32 : PredOr<[SM100f]>;
@@ -221,9 +231,6 @@ def hasS2F6X2ConversionSupport
 def hasNarrowFPToBF16x2ConversionSupport
   : PredAnd<[PTX92, PredOr<[SM100f, SM110f, SM120f]>]>;
 
-// Checks support for conversions involving ue5m3x2.
-def hasUE5M3TypeSupport : PredAnd<[PTX94, PredOr<[SM107f]>]>;
-
 def hasTensormapReplaceSwizzleAtomicitySupport
   : PredOr<[PredAnd<[PTX88, PredOr<[SM100f, SM110f, SM120f]>]>,
             PredAnd<[PTX87, PredOr<[SM100a, SM110a, SM120a]>]>]>;
@@ -236,7 +243,9 @@ def hasSetMaxNRegSupport : PredOr<[SM90a, SM100f, SM110f, SM120f]>;
 def hasLdStmatrixBlackwellSupport : PredOr<[SM100f, SM110f, SM120f]>;
 
 def hasConvertWithStochasticRounding
-  : PredAnd<[PTX87, PredOr<[SM100a, SM103a]>]>;
+  : PredAnd<[PTX87, PredOr<[SM100a, SM103a, SM107a]>]>;
+
+def hasConvertWithPZOSupport : PredOr<[hasRubinFamilySupport]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -648,7 +657,7 @@ let hasSideEffects = false in {
     def _f32 :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src), (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:ftz}${mode:relu}${mode:sat}." # ToType # ".f32">,
+                "cvt${mode:base}${mode:ftz}${mode:relu}${mode:sat}${mode:pzo}." # ToType # ".f32">,
       Requires<!if(!eq(ToType, "bf16"),
                    // f32->bf16 was introduced early.
                    [SM80],
@@ -676,7 +685,7 @@ let hasSideEffects = false in {
     def _f32_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src), (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}.satfinite." # ToName # ".f32">;
+                "cvt${mode:base}${mode:relu}.satfinite${mode:pzo}." # ToName # ".f32">;
   }
   defm CVT_bf16 : CVT_FROM_FLOAT_SATFINITE<"bf16", B16>;
   defm CVT_f16 : CVT_FROM_FLOAT_SATFINITE<"f16", B16>;
@@ -694,13 +703,13 @@ let hasSideEffects = false in {
     def _f32 :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}." # FromName # ".f32">,
+                "cvt${mode:base}${mode:relu}${mode:pzo}." # FromName # ".f32">,
     Requires<[SM80]>;
     
     def _f32_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}.satfinite." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}.satfinite${mode:pzo}." # FromName # ".f32">;
   }
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", B32>;
@@ -711,13 +720,13 @@ let hasSideEffects = false in {
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2, B32:$src3),
                 (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}${mode:pzo}." # FromName # ".f32">;
 
     def _f32_rs_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2, B32:$src3),
                 (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}.satfinite." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}.satfinite${mode:pzo}." # FromName # ".f32">;
   }
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_RS<"f16x2", B32>;
@@ -926,16 +935,42 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
   def CVT_f16x2_ue5m3x2 : BasicFlagsNVPTXInst<(outs B32:$dst),
             (ins B16:$src), (ins CvtMode:$mode),
             "cvt${mode:base}.f16x2.ue5m3x2">,
-    Requires<[hasUE5M3TypeSupport]>;
+    Requires<[hasRubinFamilySupport]>;
   def CVT_bf16x2_ue5m3x2 : BasicFlagsNVPTXInst<(outs B32:$dst),
             (ins B16:$src), (ins CvtMode:$mode),
             "cvt${mode:base}${mode:satfinite}.bf16x2.ue5m3x2">,
-    Requires<[hasUE5M3TypeSupport]>;
+    Requires<[hasRubinFamilySupport]>;
   def CVT_bf16x2_ue5m3x2_scale_n2 : BasicFlagsNVPTXInst<(outs B32:$dst),
             (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
             "cvt${mode:base}${mode:satfinite}.scaled::n2::ue8m0.bf16x2.ue5m3x2">,
-    Requires<[hasUE5M3TypeSupport]>;
+    Requires<[hasRubinFamilySupport]>;
 
+  class CVT_TO_UE5M3X2_SCALE_N1<dag ins, string SrcType, string SrcOps>
+      : NVPTXInst<(outs B16:$dst), ins,
+            "{{ \n\t" #
+            ".reg .b8 \t%b8_in; \n\t" #
+            "cvt.u8.u16 \t%b8_in, $scale; \n\t" #
+            "cvt${mode:base}${mode:satfinite}.scaled::n1::ue8m0.ue5m3x2." #
+            SrcType # " \t$dst, " # SrcOps # ", %b8_in; \n\t" #
+            "}}", []>,
+        Requires<[hasRubinFamilySupport]>;
+
+  def CVT_ue5m3x2_f32 : BasicFlagsNVPTXInst<(outs B16:$dst),
+            (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
+            "cvt${mode:base}${mode:satfinite}.ue5m3x2.f32">,
+    Requires<[hasRubinFamilySupport]>;
+  def CVT_ue5m3x2_f32_scale_n1
+      : CVT_TO_UE5M3X2_SCALE_N1<(ins B32:$src1, B32:$src2, B16:$scale, CvtMode:$mode),
+                                "f32", "$src1, $src2">;
+
+  foreach type = ["f16x2", "bf16x2"] in {
+    def CVT_ue5m3x2_ # type : BasicFlagsNVPTXInst<(outs B16:$dst),
+              (ins B32:$src), (ins CvtMode:$mode),
+              "cvt${mode:base}${mode:satfinite}.ue5m3x2." # type>,
+      Requires<[hasRubinFamilySupport]>;
+    def CVT_ue5m3x2_ # type # _scale_n1
+        : CVT_TO_UE5M3X2_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode), type, "$src1">;
+  }
 }
 
 def fpround_oneuse : OneUse1<fpround>;
@@ -1859,11 +1894,17 @@ def to_tjumptable : SDNodeXForm<jumptable, [{
   return CurDAG->getTargetJumpTable(N->getIndex(), N->getValueType(0));
 }]>;
 
+def SDTSymbol : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
+def symbol : SDNode<"NVPTXISD::Symbol", SDTSymbol, []>;
+
 def : Pat<(i32 globaladdr:$dst), (MOV_B32_sym (to_tglobaladdr $dst))>;
 def : Pat<(i64 globaladdr:$dst), (MOV_B64_sym (to_tglobaladdr $dst))>;
 
 def : Pat<(i32 externalsym:$dst), (MOV_B32_sym (to_texternsym $dst))>;
 def : Pat<(i64 externalsym:$dst), (MOV_B64_sym (to_texternsym $dst))>;
+
+def : Pat<(i32 (symbol mcsym:$dst)), (MOV_B32_sym mcsym:$dst)>;
+def : Pat<(i64 (symbol mcsym:$dst)), (MOV_B64_sym mcsym:$dst)>;
 
 //---- Copy Frame Index ----
 def LEA_ADDRi :   NVPTXInst<(outs B32:$dst), (ins ADDR:$addr),
@@ -1906,8 +1947,8 @@ def SDTProxyReg : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
 //   .param .align 16 .b8 param0[1024];
 //   .param .b32 retval0;
 //
-// DeclareArrayParam(Chain, Externalsym, Align, Size, Glue)
-// DeclareScalarParam(Chain, Externalsym, Size, Glue)
+// DeclareArrayParam(Chain, Symbol, Align, Size, Glue)
+// DeclareScalarParam(Chain, Symbol, Size, Glue)
 def declare_array_param :
   SDNode<"NVPTXISD::DeclareArrayParam", SDTDeclareArrayParam,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
@@ -1966,16 +2007,16 @@ def DECLARE_PARAM_scalar :
   NVPTXInst<(outs), (ins i32imm:$a, i32imm:$size),
             ".param .b$size \t$a;">;
 
-def : Pat<(declare_array_param externalsym:$a, imm:$align, imm:$size),
-          (DECLARE_PARAM_array (to_texternsym $a), imm:$align, imm:$size)>;
-def : Pat<(declare_scalar_param externalsym:$a, imm:$size),
-          (DECLARE_PARAM_scalar (to_texternsym $a), imm:$size)>;
+def : Pat<(declare_array_param (symbol mcsym:$a), imm:$align, imm:$size),
+          (DECLARE_PARAM_array mcsym:$a, imm:$align, imm:$size)>;
+def : Pat<(declare_scalar_param (symbol mcsym:$a), imm:$size),
+          (DECLARE_PARAM_scalar mcsym:$a, imm:$size)>;
 
 foreach t = [I32RT, I64RT] in {
   defvar inst_name = "MOV" # t.Size # "_PARAM";
   def inst_name : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src), "mov.b" # t.Size>;
-  def : Pat<(MoveParam (t.Ty externalsym:$src)),
-            (!cast<NVPTXInst>(inst_name) (t.Ty (to_texternsym $src)))>;
+  def : Pat<(MoveParam (t.Ty (symbol mcsym:$src))),
+            (!cast<NVPTXInst>(inst_name) (t.Ty mcsym:$src))>;
 }
 
 multiclass ProxyRegInst<string SzStr, NVPTXRegClass rc> {

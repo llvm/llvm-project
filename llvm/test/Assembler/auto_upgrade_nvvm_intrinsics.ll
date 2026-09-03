@@ -124,6 +124,13 @@ declare void @llvm.nvvm.tcgen05.commit.mc.cg2(ptr, i16)
 declare void @llvm.nvvm.tcgen05.commit.mc.shared.cg1(ptr addrspace(3), i16)
 declare void @llvm.nvvm.tcgen05.commit.mc.shared.cg2(ptr addrspace(3), i16)
 
+declare void @llvm.nvvm.tcgen05.alloc.cg1(ptr, i32)
+declare void @llvm.nvvm.tcgen05.alloc.cg2(ptr, i32)
+declare void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3), i32)
+declare void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3), i32)
+declare void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6), i32)
+declare void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6), i32)
+
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
@@ -500,6 +507,28 @@ define void @nvvm_tcgen05_commit_intrinsics(ptr %bar, ptr addrspace(3) %bar_shar
   call void @llvm.nvvm.tcgen05.commit.cg2(ptr %bar)
   call void @llvm.nvvm.tcgen05.commit.shared.cg1(ptr addrspace(3) %bar_shared)
   call void @llvm.nvvm.tcgen05.commit.shared.cg2(ptr addrspace(3) %bar_shared)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_tcgen05_alloc_intrinsics
+define void @nvvm_tcgen05_alloc_intrinsics(ptr %dst, ptr addrspace(3) %dst_shared, i32 %ncols) {
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg1.p0(ptr %dst, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg2.p0(ptr %dst, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg1.p3(ptr addrspace(3) %dst_shared, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg2.p3(ptr addrspace(3) %dst_shared, i32 %ncols, /* is_exclusive= */ i1 false)
+  call void @llvm.nvvm.tcgen05.alloc.cg1(ptr %dst, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.cg2(ptr %dst, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3) %dst_shared, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3) %dst_shared, i32 %ncols)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_tcgen05_dealloc_intrinsics
+define void @nvvm_tcgen05_dealloc_intrinsics(ptr addrspace(6) %tmem_addr, i32 %ncols) {
+; CHECK: call void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %tmem_addr, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %tmem_addr, i32 %ncols, /* is_exclusive= */ i1 false)
+  call void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %tmem_addr, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %tmem_addr, i32 %ncols)
   ret void
 }
 

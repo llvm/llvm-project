@@ -45,19 +45,28 @@ add_entrypoint_object(
 add_object_library(
   pwd_utils
   HDRS
+    field_tokenizer.h
+    flat_file_db.h
     pwd_utils.h
   SRCS
     pwd_utils.cpp
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.stdio_macros
+    libc.hdr.types.gid_t
+    libc.hdr.types.size_t
     libc.hdr.types.struct_passwd
+    libc.hdr.types.uid_t
     libc.src.string.string_utils
+    libc.src.__support.CPP.functional
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
     libc.src.__support.error_or
     libc.src.__support.str_to_integer
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )

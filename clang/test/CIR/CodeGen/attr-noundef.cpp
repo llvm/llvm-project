@@ -43,7 +43,7 @@ void pass_nocopy(NoCopy e) {}
 // LLVM-LABEL: define {{.*}} void @_ZN13check_structs11pass_nocopyENS_6NoCopyE(
 
 // OGCG: define{{.*}} void @_ZN13check_structs10ret_nocopyEv{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
-// OGCG: define{{.*}} void @_ZN13check_structs11pass_nocopyENS_6NoCopyE{{.*}}(ptr nofree noundef align 4 dead_on_return dereferenceable(4) %
+// OGCG: define{{.*}} void @_ZN13check_structs11pass_nocopyENS_6NoCopyE{{.*}}(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %
 
 struct Huge {
   int a[1024];
@@ -93,7 +93,7 @@ void pass_nocopy(NoCopy e) {}
 // LLVM-LABEL: define {{.*}} void @_ZN12check_unions11pass_nocopyENS_6NoCopyE(
 
 // OGCG: define{{.*}} void @_ZN12check_unions10ret_nocopyEv{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
-// OGCG: define{{.*}} void @_ZN12check_unions11pass_nocopyENS_6NoCopyE{{.*}}(ptr nofree noundef align 4 dead_on_return dereferenceable(4) %
+// OGCG: define{{.*}} void @_ZN12check_unions11pass_nocopyENS_6NoCopyE{{.*}}(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %
 } // namespace check_unions
 
 //************ Passing `this` pointers
@@ -228,8 +228,8 @@ void pass_large_BitInt(_BitInt(127) e) {
 // CIR-LABEL: cir.func {{.*}} @_ZN12check_exotic17pass_large_BitIntEDB127_
 
 // LLVM: define {{.*}} i3 @_ZN12check_exotic10ret_BitIntEv(
-// LLVM: define {{.*}} void @_ZN12check_exotic11pass_BitIntEDB3_(i3 %
-// LLVM: define {{.*}} void @_ZN12check_exotic17pass_large_BitIntEDB127_(i127 %
+// LLVM: define {{.*}} void @_ZN12check_exotic11pass_BitIntEDB3_(i3 noundef %
+// LLVM: define {{.*}} void @_ZN12check_exotic17pass_large_BitIntEDB127_(i127 noundef %
 
 // OGCG: define {{.*}} noundef signext i3 @_ZN12check_exotic10ret_BitIntEv(
 // OGCG: define {{.*}} void @_ZN12check_exotic11pass_BitIntEDB3_(i3 noundef signext %

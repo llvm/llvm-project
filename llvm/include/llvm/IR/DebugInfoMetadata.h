@@ -224,6 +224,7 @@ public:
     case DILocalVariableKind:
     case DILabelKind:
     case DIObjCPropertyKind:
+    case DIPropertyKind:
     case DIImportedEntityKind:
     case DIModuleKind:
     case DIGenericSubrangeKind:
@@ -4019,7 +4020,7 @@ public:
   ///
   /// Results and return value:
   /// - Return false if the result can't be calculated for any reason.
-  /// - \p Result is set to nullopt if the intersect equals \p VarFarg.
+  /// - \p Result is set to nullopt if the intersect equals \p VarFrag.
   /// - \p Result contains a zero-sized fragment if there's no intersect.
   /// - \p OffsetFromLocationInBits is set to the difference between the first
   ///   bit of the variable location and the first bit of the slice. The
@@ -4606,6 +4607,88 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIObjCPropertyKind;
+  }
+};
+
+/// A property of a class or structure.
+///
+/// An entity that is syntactically accessed like a data member, but whose
+/// access is implemented by invoking a user-defined or compiler-generated
+/// accessor.
+///
+/// Currently only the backing storage is modelled, and it must be a data
+/// member holding the property's storage.
+class DIProperty : public DINode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  unsigned Line;
+
+  DIProperty(LLVMContext &C, StorageType Storage, unsigned Line,
+             ArrayRef<Metadata *> Ops);
+  ~DIProperty() = default;
+
+  static DIProperty *getImpl(LLVMContext &Context, StringRef Name, DIFile *File,
+                             unsigned Line, DIType *Type,
+                             DINode *BackingStorage, StorageType Storage,
+                             bool ShouldCreate = true) {
+    return getImpl(Context, getCanonicalMDString(Context, Name), File, Line,
+                   Type, BackingStorage, Storage, ShouldCreate);
+  }
+  LLVM_ABI static DIProperty *getImpl(LLVMContext &Context, MDString *Name,
+                                      Metadata *File, unsigned Line,
+                                      Metadata *Type, Metadata *BackingStorage,
+                                      StorageType Storage,
+                                      bool ShouldCreate = true);
+
+  TempDIProperty cloneImpl() const {
+    return getTemporary(getContext(), getName(), getFile(), getLine(),
+                        getType(), getBackingStorage());
+  }
+
+public:
+  DEFINE_MDNODE_GET(DIProperty,
+                    (StringRef Name, DIFile *File, unsigned Line, DIType *Type,
+                     DINode *BackingStorage),
+                    (Name, File, Line, Type, BackingStorage))
+  DEFINE_MDNODE_GET(DIProperty,
+                    (MDString * Name, Metadata *File, unsigned Line,
+                     Metadata *Type, Metadata *BackingStorage),
+                    (Name, File, Line, Type, BackingStorage))
+
+  TempDIProperty clone() const { return cloneImpl(); }
+
+  unsigned getLine() const { return Line; }
+  StringRef getName() const { return getStringOperand(0); }
+  DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
+  DIType *getType() const { return cast_or_null<DIType>(getRawType()); }
+
+  /// The data member holding the property's backing storage, i.e. the target
+  /// of \c DW_AT_property_forward on this property's
+  /// \c DW_TAG_property_getter child.
+  DINode *getBackingStorage() const {
+    return cast_or_null<DINode>(getRawBackingStorage());
+  }
+
+  StringRef getFilename() const {
+    if (auto *F = getFile())
+      return F->getFilename();
+    return "";
+  }
+
+  StringRef getDirectory() const {
+    if (auto *F = getFile())
+      return F->getDirectory();
+    return "";
+  }
+
+  MDString *getRawName() const { return getOperandAs<MDString>(0); }
+  Metadata *getRawFile() const { return getOperand(1); }
+  Metadata *getRawType() const { return getOperand(2); }
+  Metadata *getRawBackingStorage() const { return getOperand(3); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIPropertyKind;
   }
 };
 

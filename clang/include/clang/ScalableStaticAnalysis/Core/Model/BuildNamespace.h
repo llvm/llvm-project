@@ -105,6 +105,13 @@ public:
   static NestedBuildNamespace
   makeCompilationUnit(llvm::StringRef CompilationId);
 
+  /// Creates a NestedBuildNamespace representing a link unit.
+  ///
+  /// \param LinkUnitId The unique identifier for the link unit.
+  /// \returns A NestedBuildNamespace containing a single LinkUnit
+  ///          BuildNamespace.
+  static NestedBuildNamespace makeLinkUnit(llvm::StringRef LinkUnitId);
+
   /// Creates a new NestedBuildNamespace by appending additional namespace.
   ///
   /// \param Namespace The namespace to append.

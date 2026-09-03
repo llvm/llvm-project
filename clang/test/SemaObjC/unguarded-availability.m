@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -Wunguarded-availability -fblocks -fsyntax-only -verify %s
-// RUN: %clang_cc1 -xobjective-c++ -std=c++11 -DOBJCPP -triple x86_64-apple-macosx10.9 -Wunguarded-availability -fblocks -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -Wunguarded-availability -fblocks -fobjc-exceptions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -xobjective-c++ -std=c++11 -DOBJCPP -triple x86_64-apple-macosx10.9 -Wunguarded-availability -fblocks -fobjc-exceptions -fsyntax-only -verify %s
 
 #define AVAILABLE_10_0  __attribute__((availability(macos, introduced = 10.0)))
 #define AVAILABLE_10_11 __attribute__((availability(macos, introduced = 10.11)))
@@ -72,7 +72,8 @@ void use_typedef(void) {
 }
 
 __attribute__((objc_root_class))
-AVAILABLE_10_11 @interface Class_10_11 { // expected-note{{annotate 'Class_10_11' with an availability attribute to silence}}
+AVAILABLE_10_11 @interface Class_10_11 { // expected-note{{annotate 'Class_10_11' with an availability attribute to silence}} \
+                                           // expected-note {{'Class_10_11' has been marked as being introduced in macOS 10.11 here, but the deployment target is macOS 10.9}}
   int_10_11 foo;
   int_10_12 bar; // expected-warning {{'int_10_12' is only available on macOS 10.12 or newer}}
 }
@@ -406,4 +407,10 @@ AVAILABLE_10_11 // expected-warning{{ignoring availability attribute with destru
 __attribute__((destructor))
 void is_destructor(void) {
   func_10_11(); // expected-warning{{'func_10_11' is only available on macOS 10.11 or newer}} expected-note{{enclose 'func_10_11' in an @available check to silence this warning}}
+}
+
+void test_catch(void) {
+  @try {
+  } @catch (Class_10_11 *e) { // expected-warning {{'Class_10_11' is only available on macOS 10.11 or newer}} expected-note {{enclose 'Class_10_11' in an @available check to silence this warning}}
+  }
 }

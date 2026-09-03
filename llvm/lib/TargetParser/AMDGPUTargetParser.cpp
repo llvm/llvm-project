@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/ADT/Twine.h"
@@ -41,6 +40,10 @@ struct GPUInfo {
   AMDGPUFeatureBitset Features;
   IsaVersion Version;
   StringTable::Offset FamilyName;
+  StringTable::Offset BaseName; // The canonical device name for a variant.
+  uint8_t MaxWavesPerEU;
+  uint32_t MaxHWAddressableLocalMemorySize;
+  uint8_t LDSBankCount;
 };
 
 // Per-GPU data for the R600 GPUKinds.
@@ -166,6 +169,15 @@ StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
 Triple::SubArchType llvm::AMDGPU::getSubArch(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->SubArch : Triple::SubArchType::NoSubArch;
+}
+
+Triple::SubArchType llvm::AMDGPU::getSubArchFromGPUName(StringRef CPU) {
+  return getSubArch(parseArchAMDGCN(CPU));
+}
+
+StringRef llvm::AMDGPU::getBaseArchNameAMDGCN(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? AMDGPUNameStrTab[Info->BaseName] : "";
 }
 
 AMDGPU::GPUKind
@@ -310,7 +322,8 @@ unsigned AMDGPU::getArchAttrAMDGCN(GPUKind AK) {
 }
 
 unsigned AMDGPU::getArchAttrAMDGCN(Triple::SubArchType SubArch) {
-  return getArchAttrAMDGCN(getGPUKindFromSubArch(SubArch));
+  const GPUInfo *Info = getAMDGPUInfo(getGPUKindFromSubArch(SubArch));
+  return Info ? Info->ArchFeatures : FEATURE_NONE;
 }
 
 R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
@@ -381,7 +394,7 @@ unsigned AMDGPU::getTotalNumSGPRs(Triple::SubArchType SubArch) {
 }
 
 unsigned AMDGPU::getAddressableNumSGPRs(GPUKind AK) {
-  if (getArchAttrAMDGCN(AK) & FEATURE_SGPR_INIT_BUG)
+  if (getFeatureBitset(AK).test(FEAT_SGPR_INIT_BUG))
     return FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
   IsaVersion Version = getIsaVersion(getSubArch(AK));
@@ -393,7 +406,7 @@ unsigned AMDGPU::getAddressableNumSGPRs(GPUKind AK) {
 }
 
 unsigned AMDGPU::getAddressableNumSGPRs(Triple::SubArchType SubArch) {
-  if (getArchAttrAMDGCN(SubArch) & FEATURE_SGPR_INIT_BUG)
+  if (getFeatureBitset(getGPUKindFromSubArch(SubArch)).test(FEAT_SGPR_INIT_BUG))
     return FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
   IsaVersion Version = getIsaVersion(SubArch);
@@ -422,6 +435,50 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
   return 8;
 }
 
+unsigned AMDGPU::getVGPRAllocGranule(GPUKind AK, bool IsWave32) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  if (Features.test(FEAT_GFX90A_INSTS))
+    return 8;
+  if (Features.test(FEAT_1536_PHYSICAL_VGPRS))
+    return IsWave32 ? 24 : 12;
+  if (Features.test(FEAT_GFX10_3_INSTS))
+    return IsWave32 ? 16 : 8;
+  return IsWave32 ? 8 : 4;
+}
+
+unsigned AMDGPU::getVGPRAllocGranule(Triple::SubArchType SubArch,
+                                     bool IsWave32) {
+  return getVGPRAllocGranule(getGPUKindFromSubArch(SubArch), IsWave32);
+}
+
+unsigned AMDGPU::getMaxHWAddressableLocalMemorySize(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->MaxHWAddressableLocalMemorySize : 32768;
+}
+
+unsigned
+AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch) {
+  return getMaxHWAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch));
+}
+
+unsigned AMDGPU::getLDSBankCount(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->LDSBankCount : 32;
+}
+
+unsigned AMDGPU::getLDSBankCount(Triple::SubArchType SubArch) {
+  return getLDSBankCount(getGPUKindFromSubArch(SubArch));
+}
+
+unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->MaxWavesPerEU : 10;
+}
+
+unsigned AMDGPU::getMaxWavesPerEU(Triple::SubArchType SubArch) {
+  return getMaxWavesPerEU(getGPUKindFromSubArch(SubArch));
+}
+
 StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   assert(T.isAMDGPU());
   auto ProcKind = T.isAMDGCN() ? parseArchAMDGCN(Arch) : parseArchR600(Arch);
@@ -431,12 +488,25 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   return T.isAMDGCN() ? getArchNameAMDGCN(ProcKind) : getArchNameR600(ProcKind);
 }
 
-// Add each frontend feature in \p Info's bitset to \p Features. With \p
+// Capability features clang queries via the feature bitset but must not
+// serialize into the target-feature string.
+//
+// FIXME: This is hacky, we shouldn't have mismatches between the bitset and
+// feature string map.
+static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
+    FEAT_FAST_FMAF,           FEAT_FAST_DENORMAL_F32,
+    FEAT_SUPPORTS_WAVE32,     FEAT_SUPPORTS_WGP,
+    FEAT_XNACK_SUPPORT,       FEAT_SRAMECC_SUPPORT,
+    FEAT_XNACK_ON_OFF_MODES,  FEAT_APERTURE_REGS,
+    FEAT_GET_DOORBELL_ID,     FEAT_AGPR_ALLOC,
+    FEAT_1536_PHYSICAL_VGPRS, FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY};
+
+// Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
 // Overwrite false, existing entries are kept so user -mattr overrides win.
 static void addGPUFeatures(const GPUInfo &Info, bool Overwrite,
                            StringMap<bool> &Features) {
   SmallVector<StringRef, NUM_FEATURES> Names;
-  getFeatureNames(Info.Features, Names);
+  getFeatureNames(Info.Features & ~FrontendOnlyFeatures, Names);
   for (StringRef Name : Names) {
     if (Overwrite)
       Features[Name] = true;
@@ -596,12 +666,13 @@ static GPUKind getGPUKindFromTargetID(const Triple &TT, StringRef TargetIDStr) {
 static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
                                     TargetIDSetting &XnackSetting,
                                     TargetIDSetting &SramEccSetting) {
-  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
-  XnackSetting = (ArchAttr & FEATURE_XNACK_ON_OFF_MODES)
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(Arch);
+  XnackSetting = Features.test(FEAT_XNACK_ON_OFF_MODES)
                      ? TargetIDSetting::Any
                      : TargetIDSetting::Unsupported;
-  SramEccSetting = (ArchAttr & FEATURE_SRAMECC) ? TargetIDSetting::Any
-                                                : TargetIDSetting::Unsupported;
+  SramEccSetting = Features.test(FEAT_SRAMECC_SUPPORT)
+                       ? TargetIDSetting::Any
+                       : TargetIDSetting::Unsupported;
 
   // The first component is the processor; the rest are feature modifiers of the
   // form "<feature><+|->".
