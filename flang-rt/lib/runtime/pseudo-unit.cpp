@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "unit.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/unit.h"
 
 #if defined(RT_USE_PSEUDO_FILE_UNIT)
 #include <cstdio>

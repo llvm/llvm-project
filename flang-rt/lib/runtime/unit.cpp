@@ -10,7 +10,7 @@
 // RT_USE_PSEUDO_FILE_UNIT=0 and RT_USE_PSEUDO_FILE_UNIT=1.
 //
 //===----------------------------------------------------------------------===//
-#include "unit.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/tools.h"
