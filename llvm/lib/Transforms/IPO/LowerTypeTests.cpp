@@ -556,6 +556,42 @@ class LowerTypeTestsModule {
   unsigned getJumpTableEntrySize(Triple::ArchType JumpTableArch);
   InlineAsm *createJumpTableEntryAsm(Triple::ArchType JumpTableArch);
   void verifyTypeMDNode(GlobalObject *GO, MDNode *Type);
+  class HotnessScore {
+    std::optional<CalleeInfo::HotnessType> Tier;
+    uint64_t Count = 0;
+
+    static int toLayoutRank(CalleeInfo::HotnessType HT) {
+      // Work around HotnessType enum ordering where Unknown is 0 and Cold is 1;
+      // Cold should be ranked below Unknown (unprofiled/default).
+      if (HT == CalleeInfo::HotnessType::Cold)
+        return -1;
+      return static_cast<int>(HT);
+    }
+
+    static CalleeInfo::HotnessType maxHotness(CalleeInfo::HotnessType A,
+                                              CalleeInfo::HotnessType B) {
+      return toLayoutRank(A) < toLayoutRank(B) ? B : A;
+    }
+
+    CalleeInfo::HotnessType getTier() const {
+      return Tier.value_or(CalleeInfo::HotnessType::Unknown);
+    }
+
+  public:
+    HotnessScore(uint64_t Count = 0) : Count(Count) {}
+
+    void add(CalleeInfo::HotnessType EdgeTier, uint64_t EdgeCount = 0) {
+      Tier = Tier ? maxHotness(*Tier, EdgeTier) : EdgeTier;
+      Count = SaturatingAdd(Count, EdgeCount);
+    }
+
+    bool operator<(const HotnessScore &Other) const {
+      if (getTier() != Other.getTier())
+        return toLayoutRank(getTier()) < toLayoutRank(Other.getTier());
+      return Count < Other.Count;
+    }
+  };
+  HotnessScore getFunctionHotness(const Function *F) const;
   void buildBitSetsFromFunctions(ArrayRef<Metadata *> TypeIds,
                                  ArrayRef<GlobalTypeMember *> Functions);
   void buildBitSetsFromFunctionsNative(ArrayRef<Metadata *> TypeIds,
@@ -1927,6 +1963,29 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsWASM(
                      GlobalLayout);
 }
 
+LowerTypeTestsModule::HotnessScore
+LowerTypeTestsModule::getFunctionHotness(const Function *F) const {
+  HotnessScore Score(F->getEntryCount().value_or(0));
+  if (F->hasFnAttribute(Attribute::Cold))
+    Score.add(CalleeInfo::HotnessType::Cold);
+  else if (F->hasFnAttribute(Attribute::Hot))
+    Score.add(CalleeInfo::HotnessType::Hot);
+
+  const auto *Index = ImportSummary ? ImportSummary : ExportSummary;
+  if (Index) {
+    if (ValueInfo VI = Index->getValueInfo(F->getGUIDOrFallback())) {
+      for (const auto &GVS : VI.getSummaryList()) {
+        if (auto *FS = dyn_cast<FunctionSummary>(GVS.get())) {
+          for (const auto &Edge : FS->calls())
+            Score.add(Edge.second.getHotness());
+        }
+      }
+    }
+  }
+
+  return Score;
+}
+
 void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     ArrayRef<Metadata *> TypeIds, ArrayRef<GlobalTypeMember *> Globals,
     ArrayRef<ICallBranchFunnel *> ICallBranchFunnels) {
@@ -1967,71 +2026,28 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
   bool IsGlobalSet =
       Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
 
-  struct HotnessScore {
-    CalleeInfo::HotnessType Tier = CalleeInfo::HotnessType::Unknown;
-    uint64_t Count = 0;
-
-    bool operator<(const HotnessScore &Other) const {
-      if (Tier != Other.Tier)
-        return toLayoutRank(Tier) < toLayoutRank(Other.Tier);
-      return Count < Other.Count;
-    }
-
-    static CalleeInfo::HotnessType maxHotness(CalleeInfo::HotnessType A,
-                                              CalleeInfo::HotnessType B) {
-      return toLayoutRank(A) < toLayoutRank(B) ? B : A;
-    }
-
-  private:
-    static int toLayoutRank(CalleeInfo::HotnessType HT) {
-      if (HT == CalleeInfo::HotnessType::Cold)
-        return -1;
-      return static_cast<int>(HT);
-    }
-  };
-
-  std::vector<HotnessScore> GTMHotness;
-  if (!IsGlobalSet) {
-    const auto *Index = ImportSummary ? ImportSummary : ExportSummary;
-    GTMHotness.resize(Globals.size());
-    for (unsigned I = 0; I != Globals.size(); ++I) {
-      GlobalTypeMember *GTM = Globals[I];
-      auto *TargetF = cast<Function>(GTM->getGlobal());
-
-      CalleeInfo::HotnessType Tier = CalleeInfo::HotnessType::Unknown;
-      if (TargetF->hasFnAttribute(Attribute::Cold))
-        Tier = CalleeInfo::HotnessType::Cold;
-      else if (TargetF->hasFnAttribute(Attribute::Hot))
-        Tier = CalleeInfo::HotnessType::Hot;
-
-      uint64_t Count = TargetF->getEntryCount().value_or(0);
-
-      if (Index) {
-        if (ValueInfo VI = Index->getValueInfo(TargetF->getGUIDOrFallback())) {
-          for (const auto &GVS : VI.getSummaryList()) {
-            if (auto *FS = dyn_cast<FunctionSummary>(GVS.get())) {
-              bool FirstEdge = true;
-              for (const auto &Edge : FS->calls()) {
-                CalleeInfo::HotnessType EdgeTier = Edge.second.getHotness();
-                if (FirstEdge) {
-                  Tier = EdgeTier;
-                  FirstEdge = false;
-                } else {
-                  Tier = HotnessScore::maxHotness(Tier, EdgeTier);
-                }
-              }
-            }
-          }
-        }
-      }
-
-      GTMHotness[I] = HotnessScore{Tier, Count};
-    }
-  }
-
   unique_function<bool(uint64_t, uint64_t)> Less;
   if (!IsGlobalSet) {
-    Less = [&](uint64_t A, uint64_t B) {
+    // Estimated hotness of each jump entry.
+    std::vector<HotnessScore> GTMHotness;
+    GTMHotness.reserve(Globals.size());
+    for (GlobalTypeMember *GTM : Globals)
+      GTMHotness.push_back(
+          getFunctionHotness(cast<Function>(GTM->getGlobal())));
+
+    // Order jump table entries by hotness ascending so that the hottest
+    // entry is placed at the end of the jump table:
+    // 1. Under jump table relaxation (SHT_LLVM_CFI_JUMP_TABLE), the linker
+    //    moves the jump table directly before the target of the last entry
+    //    and deletes its branch so the target function body acts as the
+    //    last entry.
+    // 2. The jump table is placed into the output section of that last
+    //    target. Jump tables are critical to performance; if the last
+    //    entry were a cold function, the jump table would be dragged into a
+    //    cold binary section (such as .text.unlikely). Placing the hottest
+    //    entry at the end ensures the jump table lands in a hot section and
+    //    the hottest callee benefits from fall-through without a branch.
+    Less = [GTMHotness = std::move(GTMHotness)](uint64_t A, uint64_t B) {
       return GTMHotness[A] < GTMHotness[B];
     };
   }

@@ -33,10 +33,10 @@ attributes {
   attr_12 = #test.attr_with_optional_enum<a>,
   // CHECK: #test.attr_with_optional_enum<b>
   attr_13 = #test.attr_with_optional_enum<b>,
-  // CHECK: #test<simple_enum"+">
-  attr_14 = #test<simple_enum "+">,
-  // CHECK: #test<simple_enum"dash-separated-sentence">
-  attr_15 = #test<simple_enum "dash-separated-sentence">,
+  // CHECK: #test.simple_enum<"+">
+  attr_14 = #test.simple_enum<"+">,
+  // CHECK: #test.simple_enum<"dash-separated-sentence">
+  attr_15 = #test.simple_enum<"dash-separated-sentence">,
   // Test that ArrayRefParameter in non-last struct position is wrapped in
   // brackets to avoid ambiguity with the struct-level comma (issue #156623).
   // CHECK: #test.arr_struct<elements = [1, 2, 3], count = 42>
@@ -58,6 +58,10 @@ attributes {
   // CHECK: #test.enum_attr_struct<required = first, optional = second>
   attr_enum_attr_struct =
       #test.enum_attr_struct<optional = second, required = first>,
+  // Default-valued EnumAttr parameters also use their underlying enum syntax.
+  // CHECK: #test.enum_attr_struct<required = first, defaulted = second>
+  attr_enum_attr_struct_defaulted =
+      #test.enum_attr_struct<defaulted = second, required = first>,
   // CHECK: #test.enum_attr_struct<required = third>
   attr_enum_attr_struct_optional =
       #test.enum_attr_struct<required = third>,
