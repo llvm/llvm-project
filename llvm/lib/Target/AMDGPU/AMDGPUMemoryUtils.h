@@ -13,10 +13,10 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 
-struct Align;
 class AAResults;
 class AllocaInst;
 class DataLayout;
@@ -124,6 +124,28 @@ public:
 
   static bool classof(const MDNode *N);
 };
+
+/// Whether the VGPR ("as memory") address space implements a \p MemSize-bit
+/// memory access producing/consuming a \p ValSize-bit value at the given
+/// alignment. Whole-dword accesses (those with a matching V_LOAD_IDX /
+/// V_STORE_IDX pseudo) are supported when dword aligned, as are 8-/16-bit
+/// accesses, including extending loads into a 16- or 32-bit value.
+///
+/// A sub-dword access is implemented as a bit-field extract from (or insert
+/// into) the dword containing it, so it must not straddle a dword boundary. An
+/// 8-bit access never can; a 16-bit one only if it is 2-byte aligned. Requiring
+/// natural alignment covers both, and is what lets the bit offset within the
+/// dword be computed from a possibly dynamic pointer.
+///
+/// A whole-dword access addresses registers by the dword index pointer >> 2,
+/// which discards the low two bits rather than accounting for them, so an
+/// under-aligned one would silently access the containing dword instead of the
+/// bytes asked for.
+///
+/// Lowering diagnoses an access this rejects, so anything deciding to put an
+/// object in this address space has to agree with it.
+bool isVGPRLoadStoreSupported(unsigned MemSize, unsigned ValSize,
+                              Align Alignment);
 
 } // end namespace AMDGPU
 

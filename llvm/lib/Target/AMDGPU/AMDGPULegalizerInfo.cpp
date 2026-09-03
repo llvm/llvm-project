@@ -559,40 +559,6 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(Ty);
 }
 
-// Whether the VGPR ("as memory") load/store lowering handles a MemSize-bit
-// memory access producing/consuming a ValSize-bit value at the given alignment.
-// Whole-dword accesses (those with a matching V_LOAD_IDX/V_STORE_IDX pseudo)
-// are supported when dword aligned, as are 8-/16-bit accesses, including
-// extending loads into a 16- or 32-bit value.
-//
-// A sub-dword access is implemented as a bit-field extract from (or insert
-// into) the dword containing it, so it must not straddle a dword boundary. An
-// 8-bit access never can; a 16-bit one only if it is 2-byte aligned. Requiring
-// natural alignment covers both, and is what lets the bit offset within the
-// dword be computed from a possibly dynamic pointer.
-//
-// A whole-dword access addresses registers by the dword index pointer >> 2,
-// which discards the low two bits rather than accounting for them, so an
-// under-aligned one would silently access the containing dword instead of the
-// bytes asked for.
-static bool isVGPRLoadStoreSupported(unsigned MemSize, unsigned ValSize,
-                                     Align Alignment) {
-  if (MemSize == 8 || MemSize == 16) {
-    if (Alignment < Align(MemSize / 8))
-      return false;
-    if (ValSize == MemSize)
-      return true;
-    if (ValSize > MemSize && (ValSize == 16 || ValSize == 32))
-      return true;
-    return false;
-  }
-  if (MemSize != ValSize)
-    return false;
-  if (Alignment < Align(4))
-    return false;
-  return AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
-}
-
 /// Return true if a load or store of the type should be lowered with a bitcast
 /// to a different type.
 static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
@@ -3573,7 +3539,7 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
   // Dword-aligned whole-dword and naturally aligned 8-/16-bit accesses are
   // implemented. Reject anything else with a diagnostic instead of failing to
   // legalize.
-  if (!isVGPRLoadStoreSupported(MemSize, ValSize, MMO.getAlign())) {
+  if (!AMDGPU::isVGPRLoadStoreSupported(MemSize, ValSize, MMO.getAlign())) {
     const Function &F = B.getMF().getFunction();
     F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,

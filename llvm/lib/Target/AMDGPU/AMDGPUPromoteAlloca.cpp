@@ -37,6 +37,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -87,6 +88,14 @@ static cl::opt<unsigned>
                             "when sorting profitable allocas"),
                    cl::init(4));
 
+// An object in the VGPR ("as memory") address space cannot be spilled, so one
+// that is live across a call has nowhere to go: see analyzePromoteToVGPR.
+// TODO: Enable by default once objects can survive a call.
+static cl::opt<bool>
+    EnablePromoteToVGPR("amdgpu-promote-private",
+                        cl::desc("Enable promoting private objects into VGPRs"),
+                        cl::init(false), cl::Hidden);
+
 // We support vector indices of the form ((A * stride) >> shift) + B
 // VarIndex is A, VarMul is stride, VarShift is shift and ConstIndex is B. All
 // parts are optional.
@@ -121,6 +130,9 @@ struct AllocaAnalysis {
     bool Enable = false;
     SmallVector<User *> Worklist;
   } LDS;
+  struct {
+    bool Enable = false;
+  } VGPR;
 
   explicit AllocaAnalysis(AllocaInst *Alloca) : Alloca(Alloca) {}
 };
@@ -146,6 +158,10 @@ private:
   /// Next free byte offset in the VGPR ("as memory") address space.
   unsigned AllocVGPROffset = 0;
 
+  /// Blocks holding a call an object in the VGPR address space could be live
+  /// across. Empty unless that promotion is enabled; see isLiveAcrossCall.
+  SmallPtrSet<const BasicBlock *, 8> CallBlocks;
+
   std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
   Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
 
@@ -165,6 +181,9 @@ private:
   FixedVectorType *getVectorTypeForAlloca(Type *AllocaTy) const;
   void analyzePromoteToVector(AllocaAnalysis &AA) const;
   void promoteAllocaToVector(AllocaAnalysis &AA);
+  bool isLiveAcrossCall(const AllocaInst *AI) const;
+  void analyzePromoteToVGPR(AllocaAnalysis &AA) const;
+  void promoteAllocaToVGPR(AllocaAnalysis &AA);
   void analyzePromoteToLDS(AllocaAnalysis &AA) const;
   bool tryPromoteAllocaToLDS(AllocaAnalysis &AA, bool SufficientLDS,
                              SetVector<IntrinsicInst *> &DeferredIntrs);
@@ -224,6 +243,33 @@ public:
 private:
   bool NoOpt;
 };
+
+// Whether \p I becomes a call the object would have to survive.
+//
+// An object in the VGPR address space occupies caller-saved registers and
+// cannot be spilled, so one live across a call has nowhere to be and
+// AMDGPUPrivateObjectVGPRs refuses it. Promotion has to predict that refusal
+// exactly: too lax and a working program becomes a failed compile.
+//
+// Nearly every intrinsic lowers to instructions rather than to a call, and
+// counting those would refuse promotion almost everywhere. The two that really
+// do become one have to count - see the switch in
+// AMDGPUCallLowering::lowerCall and the matching cases in SelectionDAGBuilder.
+static bool isCallForLiveness(const Instruction &I) {
+  const auto *CB = dyn_cast<CallBase>(&I);
+  if (!CB)
+    return false;
+  if (const auto *II = dyn_cast<IntrinsicInst>(CB)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::amdgcn_call_whole_wave:
+    case Intrinsic::amdgcn_cs_chain:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return true;
+}
 
 static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
                             const Function &F) {
@@ -400,6 +446,18 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
     return false;
 
   const bool PromoteToLDS = IsLatePass && !NoOpt;
+  const bool PromoteToVGPR = EnablePromoteToVGPR && IsLatePass && !NoOpt;
+
+  // Whether an object could be live across one of these is decided per alloca,
+  // in analyzePromoteToVGPR. Collected once here because the answer is a
+  // property of the function, not of the object.
+  //
+  CallBlocks.clear();
+  if (PromoteToVGPR) {
+    for (const Instruction &I : instructions(F))
+      if (isCallForLiveness(I))
+        CallBlocks.insert(I.getParent());
+  }
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
   MaxVGPRs = IsAMDGCN ? getMaxVGPRs(CurrentLocalMemUsage, TM, F) : 128;
@@ -438,9 +496,11 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
 
       if (collectAllocaUses(AA)) {
         analyzePromoteToVector(AA);
+        if (PromoteToVGPR)
+          analyzePromoteToVGPR(AA);
         if (PromoteToLDS)
           analyzePromoteToLDS(AA);
-        if (AA.Vector.Ty || AA.LDS.Enable) {
+        if (AA.Vector.Ty || AA.LDS.Enable || AA.VGPR.Enable) {
           scoreAlloca(AA);
           Allocas.push_back(std::move(AA));
         }
@@ -480,13 +540,19 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
       continue;
     }
 
-    if (AA.Vector.Ty) {
+    // Vectorization and promotion into the VGPR address space both spend the
+    // same registers, so they draw on the same budget. Vectorization is
+    // preferred where an alloca qualifies for either.
+    if (AA.Vector.Ty || AA.VGPR.Enable) {
       std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(DL);
       assert(Size); // Expected to succeed on non-array alloca.
       const unsigned AllocaCost = Size->getFixedValue() * 8;
       // First, check if we have enough budget to vectorize this alloca.
       if (AllocaCost <= VectorizationBudget) {
-        promoteAllocaToVector(AA);
+        if (AA.Vector.Ty)
+          promoteAllocaToVector(AA);
+        else
+          promoteAllocaToVGPR(AA);
         Changed = true;
         assert((VectorizationBudget - AllocaCost) < VectorizationBudget &&
                "Underflow!");
@@ -1353,6 +1419,238 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   // Alloca should now be dead too.
   assert(AA.Alloca->use_empty());
   AA.Alloca->eraseFromParent();
+}
+
+// Whether a call can execute while \p AI is live.
+//
+// An object in the VGPR ("as memory") address space occupies fixed registers
+// for the whole of its live range. Those registers are caller-saved and the
+// object cannot be spilled, so one that is live across a call has nowhere to
+// be, and AMDGPUPrivateObjectVGPRs diagnoses it. Declining to promote in that
+// case keeps this from turning a working program into an error.
+//
+// The live range is the one that pass will use, not the one the uses imply: an
+// object is live from its lifetime start - or from the alloca, if it has none,
+// since allocateVgprs then inserts a start there - until its lifetime end, or
+// the end of the function. An object with no use after a call is still live
+// across it if nothing ended it, which is why this cannot be answered by
+// looking at uses.
+bool AMDGPUPromoteAllocaImpl::isLiveAcrossCall(const AllocaInst *AI) const {
+  if (CallBlocks.empty())
+    return false;
+
+  const Function &F = *AI->getFunction();
+
+  // Without an explicit start the object is live from the alloca, so a call
+  // anywhere after it counts, and the alloca is in the entry block.
+  bool HaveStart = false;
+  for (const User *U : AI->users()) {
+    const auto *II = dyn_cast<IntrinsicInst>(U);
+    if (II && II->getIntrinsicID() == Intrinsic::lifetime_start) {
+      HaveStart = true;
+      break;
+    }
+  }
+
+  // Live-in state per block, to a fixed point over the CFG. Walking a block
+  // from its live-in state gives its live-out, and a call seen while live is
+  // the answer.
+  DenseMap<const BasicBlock *, bool> LiveIn;
+  SmallVector<const BasicBlock *> Worklist;
+
+  // Walk a block, returning whether the object is live on exit, and reporting
+  // whether a call is reached while it is live.
+  const auto scan = [&](const BasicBlock &BB, bool Live, bool *SawCall) {
+    for (const Instruction &I : BB) {
+      if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        Intrinsic::ID ID = II->getIntrinsicID();
+        if ((ID == Intrinsic::lifetime_start ||
+             ID == Intrinsic::lifetime_end) &&
+            II->getArgOperand(0)->stripPointerCasts() == AI) {
+          Live = ID == Intrinsic::lifetime_start;
+          continue;
+        }
+      }
+      if (!HaveStart && &I == static_cast<const Instruction *>(AI))
+        Live = true;
+      if (Live && SawCall && isCallForLiveness(I))
+        *SawCall = true;
+    }
+    return Live;
+  };
+
+  LiveIn[&F.getEntryBlock()] = false;
+  Worklist.push_back(&F.getEntryBlock());
+  while (!Worklist.empty()) {
+    const BasicBlock *BB = Worklist.pop_back_val();
+    bool Out = scan(*BB, LiveIn[BB], nullptr);
+    for (const BasicBlock *Succ : successors(BB)) {
+      auto It = LiveIn.find(Succ);
+      if (It == LiveIn.end()) {
+        LiveIn[Succ] = Out;
+        Worklist.push_back(Succ);
+      } else if (Out && !It->second) {
+        It->second = true;
+        Worklist.push_back(Succ);
+      }
+    }
+  }
+
+  for (const BasicBlock *BB : CallBlocks) {
+    auto It = LiveIn.find(BB);
+    if (It == LiveIn.end())
+      continue; // unreachable
+    bool SawCall = false;
+    scan(*BB, It->second, &SawCall);
+    if (SawCall)
+      return true;
+  }
+  return false;
+}
+
+// Decide whether an alloca can be moved into the VGPR ("as memory") address
+// space, where it lives in registers rather than in scratch and is reached with
+// an indexed register access instead of a load or store.
+void AMDGPUPromoteAllocaImpl::analyzePromoteToVGPR(AllocaAnalysis &AA) const {
+  if (!IsAMDGCN)
+    return;
+
+  const auto Reject = [&](const Instruction *Inst, Twine Msg) {
+    LLVM_DEBUG(dbgs() << "  Cannot promote alloca to VGPRs: " << Msg << "\n"
+                      << "    " << *Inst << "\n");
+  };
+
+  for (Use *U : AA.Uses) {
+    Instruction *Inst = cast<Instruction>(U->getUser());
+
+    if (getLoadStorePointerOperand(Inst)) {
+      assert(!isa<StoreInst>(Inst) ||
+             U->getOperandNo() == StoreInst::getPointerOperandIndex());
+
+      bool IsSimple = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->isSimple()
+                                          : cast<StoreInst>(Inst)->isSimple();
+      if (!IsSimple)
+        return Reject(Inst, "not a simple load or store");
+
+      // Promoting an access the lowering cannot implement would turn this into
+      // a diagnostic, so ask the lowering rather than guessing.
+      TypeSize AccessSize = DL.getTypeSizeInBits(getLoadStoreType(Inst));
+      if (AccessSize.isScalable())
+        return Reject(Inst, "scalable access");
+
+      // The value and memory sizes are the same here: an extending load of an
+      // object in private memory is a plain load followed by an extend.
+      unsigned Bits = AccessSize.getFixedValue();
+      Align Alignment = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->getAlign()
+                                            : cast<StoreInst>(Inst)->getAlign();
+      if (!AMDGPU::isVGPRLoadStoreSupported(Bits, Bits, Alignment))
+        return Reject(Inst, "unsupported access size or alignment");
+
+      // Be stricter than the lowering about alignment. It derives the dword
+      // index as pointer >> 2, so an access that is not naturally aligned reads
+      // or writes the dword containing it rather than straddling two. Whole
+      // dword accesses are tolerated there without complaint; an object should
+      // not be moved into a place where that starts happening to it.
+      if (Alignment.value() < std::min<uint64_t>(Bits / 8, 4))
+        return Reject(Inst, "insufficiently aligned access");
+
+      continue;
+    }
+
+    // These only compute addresses; collectAllocaUses has already established
+    // that a select or phi does not mix objects.
+    if (isa<GetElementPtrInst, SelectInst, PHINode>(Inst))
+      continue;
+
+    if (auto *MSI = dyn_cast<MemSetInst>(Inst)) {
+      if (!isSupportedMemset(MSI, AA.Alloca, DL))
+        return Reject(MSI, "cannot handle partial memset");
+      continue;
+    }
+
+    if (isa<MemTransferInst>(Inst))
+      return Reject(Inst, "cannot handle mem transfer");
+
+    if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
+      if (Intr->getIntrinsicID() == Intrinsic::objectsize)
+        continue;
+
+      if (isAssumeLikeIntrinsic(Inst)) {
+        if (!Inst->use_empty())
+          return Reject(Inst, "assume-like intrinsic cannot have any users");
+        continue;
+      }
+    }
+
+    // A comparison whose only purpose is to feed an assume.
+    if (isa<ICmpInst>(Inst) && all_of(Inst->users(), [](User *U) {
+          return isAssumeLikeIntrinsic(cast<Instruction>(U));
+        }))
+      continue;
+
+    return Reject(Inst, "unhandled alloca user");
+  }
+
+  // Last, because it is the only check here that walks the function rather than
+  // the alloca's own uses.
+  if (isLiveAcrossCall(AA.Alloca))
+    return Reject(AA.Alloca, "live across a call");
+
+  AA.VGPR.Enable = true;
+}
+
+// Move the alloca into the VGPR ("as memory") address space. Pointers into it
+// are the same size in both address spaces, so the pointers derived from it
+// only need their type changed, and allocateVgprs then gives the object its
+// place in that address space. This mirrors what the LDS promotion below does
+// to the same kind of closed set of derived pointers.
+void AMDGPUPromoteAllocaImpl::promoteAllocaToVGPR(AllocaAnalysis &AA) {
+  LLVM_DEBUG(dbgs() << "Promoting alloca to VGPRs: " << *AA.Alloca << '\n');
+
+  Type *PtrTy = PointerType::get(Mod.getContext(), AMDGPUAS::VGPR);
+  for (Value *Ptr : AA.Pointers) {
+    Ptr->mutateType(PtrTy);
+
+    // A select or phi may pick between a pointer into the object and a null
+    // one, which collectAllocaUses allows. Changing the address space of the
+    // result leaves such a constant behind in the old one, so adjust it too.
+    if (auto *SI = dyn_cast<SelectInst>(Ptr)) {
+      for (unsigned I : {1, 2})
+        if (isa<ConstantPointerNull, ConstantAggregateZero>(SI->getOperand(I)))
+          SI->setOperand(I, Constant::getNullValue(PtrTy));
+    } else if (auto *Phi = dyn_cast<PHINode>(Ptr)) {
+      for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
+        if (isa<ConstantPointerNull, ConstantAggregateZero>(
+                Phi->getIncomingValue(I)))
+          Phi->setIncomingValue(I, Constant::getNullValue(PtrTy));
+    }
+  }
+
+  // An intrinsic overloaded on the pointer type still names the old address
+  // space in its mangled name, which no longer matches the argument it is being
+  // given. Rebuild those, letting the builder derive the name from the types.
+  // The lifetime markers are left alone: allocateVgprs replaces them with the
+  // address-space specific ones below.
+  SmallSetVector<IntrinsicInst *, 4> Rebuild;
+  for (Use *U : AA.Uses) {
+    auto *II = dyn_cast<IntrinsicInst>(U->getUser());
+    if (II && !II->isLifetimeStartOrEnd())
+      Rebuild.insert(II);
+  }
+
+  for (IntrinsicInst *II : Rebuild) {
+    IRBuilder<> B(II);
+    SmallVector<Value *> Args(II->args());
+    Value *New = B.CreateIntrinsic(II->getType(), II->getIntrinsicID(), Args);
+    if (auto *NewCall = dyn_cast<CallInst>(New)) {
+      NewCall->copyMetadata(*II);
+      NewCall->takeName(II);
+    }
+    II->replaceAllUsesWith(New);
+    II->eraseFromParent();
+  }
+
+  allocateVgprs(AA);
 }
 
 std::pair<Value *, Value *>
