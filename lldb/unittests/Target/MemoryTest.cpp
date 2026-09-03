@@ -571,7 +571,7 @@ TEST_F(MemoryTest, TestReadRangesFromCaches) {
     // Only the miss reached the inferior.
     ASSERT_EQ(process->m_reads.size(), 1u);
     EXPECT_EQ(process->m_reads[0].first, 0x17200u);
-    EXPECT_EQ(process->m_reads[0].second, 8);
+    EXPECT_EQ(process->m_reads[0].second, 8u);
   }
 }
 
