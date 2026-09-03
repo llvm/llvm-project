@@ -40,6 +40,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include <utility>
 #include <vector>
 
@@ -168,7 +169,7 @@ const Module *unwrapModule(IRUnitRef IR, bool Force = false) {
   if (const auto *C = dyn_cast<LazyCallGraph::SCC>(IR)) {
     for (const LazyCallGraph::Node &N : *C) {
       const Function &F = N.getFunction();
-      if (Force || (!F.isDeclaration() && isFunctionInPrintList(F.getName()))) {
+      if (Force || isFunctionInPrintList(F.getName())) {
         return F.getParent();
       }
     }
@@ -211,7 +212,7 @@ void printIR(raw_ostream &OS, const Module *M) {
 void printIR(raw_ostream &OS, const LazyCallGraph::SCC *C) {
   for (const LazyCallGraph::Node &N : *C) {
     const Function &F = N.getFunction();
-    if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
+    if (isFunctionInPrintList(F.getName())) {
       F.print(OS);
     }
   }
@@ -321,6 +322,78 @@ void unwrapAndPrint(raw_ostream &OS, IRUnitRef IR) {
     printIR(OS, MF);
     return;
   }
+  llvm_unreachable("Unknown wrapped IR type");
+}
+
+static std::unique_ptr<Module>
+cloneFunctionsIntoNewModule(ArrayRef<const Function *> FunctionsToClone) {
+  if (FunctionsToClone.empty()) {
+    return nullptr;
+  }
+
+  auto &Context = FunctionsToClone.front()->getContext();
+  auto M = std::make_unique<Module>("temp", Context);
+
+  for (auto *F : FunctionsToClone) {
+    SmallVector<ReturnInst *, 8> Returns;
+    ValueToValueMapTy VMap;
+    auto *NewF = cast<Function>(
+        M->getOrInsertFunction(F->getName(), F->getFunctionType()).getCallee());
+
+    auto *NewFArgIt = NewF->arg_begin();
+    for (auto &Arg : F->args()) {
+      auto ArgName = Arg.getName();
+      NewFArgIt->setName(ArgName);
+      VMap[&Arg] = &(*NewFArgIt++);
+    }
+
+    CloneFunctionInto(NewF, F, VMap, CloneFunctionChangeType::DifferentModule,
+                      Returns);
+  }
+
+  return M;
+}
+
+std::optional<std::unique_ptr<Module>> unwrapAndSaveClone(IRUnitRef IR) {
+  if (!shouldPrintIR(IR))
+    return std::nullopt;
+
+  auto *OrigM = unwrapModule(IR);
+
+  if (forcePrintModuleIR()) {
+    return CloneModule(*OrigM);
+  }
+
+  if (isa<Module>(IR)) {
+    return CloneModule(*OrigM);
+  }
+
+  if (const auto *F = dyn_cast<Function>(IR)) {
+    SmallVector<const Function *, 1> FuncsToSave = {F};
+    return cloneFunctionsIntoNewModule(FuncsToSave);
+  }
+
+  if (auto *C = dyn_cast<LazyCallGraph::SCC>(IR)) {
+    SmallVector<const Function *, 8> FuncsToSave;
+
+    for (LazyCallGraph::Node &N : *C) {
+      Function &F = N.getFunction();
+      if (isFunctionInPrintList(F.getName())) {
+        FuncsToSave.push_back(&F);
+      }
+    }
+
+    return cloneFunctionsIntoNewModule(FuncsToSave);
+  }
+
+  if (isa<Loop>(IR)) {
+    return std::nullopt;
+  }
+
+  if (isa<MachineFunction>(IR)) {
+    return std::nullopt;
+  }
+
   llvm_unreachable("Unknown wrapped IR type");
 }
 
@@ -2453,15 +2526,25 @@ StandardInstrumentations::StandardInstrumentations(
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
 
+void PrintCrashIRInstrumentation::printToStream(raw_ostream &OS) {
+  // We always print SavedString.
+  OS << SavedString;
+
+  if (SavedModule) {
+    printIR(OS, SavedModule.get());
+  }
+}
+
 void PrintCrashIRInstrumentation::reportCrashIR() {
   if (!PrintOnCrashPath.empty()) {
     std::error_code EC;
     raw_fd_ostream Out(PrintOnCrashPath, EC);
     if (EC)
       report_fatal_error(errorCodeToError(EC));
-    Out << SavedIR;
+
+    printToStream(Out);
   } else {
-    dbgs() << SavedIR;
+    printToStream(dbgs());
   }
 }
 
@@ -2495,8 +2578,10 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 
   PIC.registerBeforeNonSkippedPassCallback(
       [&PIC, this](StringRef PassID, IRUnitRef IR) {
-        SavedIR.clear();
-        raw_string_ostream OS(SavedIR);
+        SavedString.clear();
+        SavedModule.reset();
+        raw_string_ostream OS(SavedString);
+
         OS << formatv("; *** Dump of {0}IR Before Last Pass {1}",
                       llvm::forcePrintModuleIR() ? "Module " : "", PassID);
         if (!isInteresting(IR, PassID, PIC.getPassNameForClassName(PassID))) {
@@ -2504,7 +2589,15 @@ void PrintCrashIRInstrumentation::registerCallbacks(
           return;
         }
         OS << " Started ***\n";
-        unwrapAndPrint(OS, IR);
+
+        // Cloning a Module is significantly faster than serializing to a string
+        // in most situations.
+        if (auto Module = unwrapAndSaveClone(IR)) {
+          SavedModule = std::move(*Module);
+        } else {
+          // We only rely on SavedString for MachineFunctions & Loops
+          unwrapAndPrint(OS, IR);
+        }
       });
 }
 
