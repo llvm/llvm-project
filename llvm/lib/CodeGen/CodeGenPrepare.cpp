@@ -434,6 +434,7 @@ private:
   bool optimizeLoadExt(LoadInst *Load);
   bool optimizeShiftInst(BinaryOperator *BO);
   bool optimizeFunnelShift(IntrinsicInst *Fsh);
+  bool invertSelectPredicateIfProfitable(SelectInst *SI);
   bool optimizeSelectInst(SelectInst *SI);
   bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
   bool optimizeSwitchType(SwitchInst *SI);
@@ -7717,15 +7718,55 @@ bool CodeGenPrepare::optimizeFunnelShift(IntrinsicInst *Fsh) {
   return true;
 }
 
+/// Invert an integer comparison feeding \p SI and swap the select operands if
+/// the target reports that the inverse predicate is strictly cheaper.
+bool CodeGenPrepare::invertSelectPredicateIfProfitable(SelectInst *SI) {
+  Value *Cond = SI->getCondition();
+
+  // Look through one-use shuffles of the compare result. Inverting a compare
+  // commutes with a shuffle whose second input is poison or undef.
+  while (auto *SVI = dyn_cast<ShuffleVectorInst>(Cond)) {
+    if (!SVI->hasOneUse() || !isa<PoisonValue, UndefValue>(SVI->getOperand(1)))
+      return false;
+    Cond = SVI->getOperand(0);
+  }
+
+  auto *Cmp = dyn_cast<ICmpInst>(Cond);
+  if (!Cmp || !Cmp->hasOneUse())
+    return false;
+
+  Type *ValTy = Cmp->getOperand(0)->getType();
+  Type *CondTy = Cmp->getType();
+  CmpInst::Predicate Pred = Cmp->getPredicate();
+  CmpInst::Predicate InversePred = Cmp->getInversePredicate();
+  TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(Cmp->getOperand(0));
+  TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(Cmp->getOperand(1));
+  InstructionCost Cost =
+      TTI->getCmpSelInstrCost(Instruction::ICmp, ValTy, CondTy, Pred,
+                              TTI::TCK_RecipThroughput, Op1Info, Op2Info, Cmp);
+  InstructionCost InverseCost =
+      TTI->getCmpSelInstrCost(Instruction::ICmp, ValTy, CondTy, InversePred,
+                              TTI::TCK_RecipThroughput, Op1Info, Op2Info, Cmp);
+  if (!Cost.isValid() || !InverseCost.isValid() || InverseCost >= Cost)
+    return false;
+
+  Cmp->setPredicate(InversePred);
+  SI->swapValues();
+  SI->swapProfMetadata();
+  return true;
+}
+
 /// If we have a SelectInst that will likely profit from branch prediction,
 /// turn it into a branch.
 bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
+  bool Changed = invertSelectPredicateIfProfitable(SI);
+
   if (DisableSelectToBranch)
-    return false;
+    return Changed;
 
   // If the SelectOptimize pass is enabled, selects have already been optimized.
   if (!getCGPassBuilderOption().DisableSelectOptimize)
-    return false;
+    return Changed;
 
   // Find all consecutive select instructions that share the same condition.
   SmallVector<SelectInst *, 2> ASI;
@@ -7754,7 +7795,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
 
   // Can we convert the 'select' to CF ?
   if (VectorCond || SI->getMetadata(LLVMContext::MD_unpredictable))
-    return false;
+    return Changed;
 
   TargetLowering::SelectSupportKind SelectKind;
   if (SI->getType()->isVectorTy())
@@ -7765,7 +7806,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   if (TLI->isSelectSupported(SelectKind) &&
       (!isFormingBranchFromSelectProfitable(TTI, TLI, SI) ||
        llvm::shouldOptimizeForSize(SI->getParent(), PSI, BFI)))
-    return false;
+    return Changed;
 
   // Transform a sequence like this:
   //    start:
