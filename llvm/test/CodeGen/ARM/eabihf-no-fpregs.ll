@@ -20,15 +20,15 @@ define void @variadic(...) {
   ret void
 }
 
-; CHECK: error: {{.*}} in function soft_to_hard {{.*}}: call to 'hard_callee' expects a hard-float calling convention, but floating-point registers are unavailable
-; CHECK: error: {{.*}} call to 'hard_callee2' expects a hard-float calling convention, but floating-point registers are unavailable
+; CHECK: error: {{.*}} in function soft_to_hard {{.*}}: 'soft_to_hard' calls 'hard_callee', which expects a hard-float calling convention, but floating-point registers are unavailable
+; CHECK: error: {{.*}} 'soft_to_hard' calls 'hard_callee2', which expects a hard-float calling convention, but floating-point registers are unavailable
 define arm_aapcscc void @soft_to_hard() {
   call arm_aapcs_vfpcc void @hard_callee()
   call arm_aapcs_vfpcc void @hard_callee2()
   ret void
 }
 
-; EABIHF: error: {{.*}} in function soft_to_default_hard {{.*}}: call to 'default_callee' expects a hard-float calling convention, but floating-point registers are unavailable
+; EABIHF: error: {{.*}} in function soft_to_default_hard {{.*}}: 'soft_to_default_hard' calls 'default_callee', which expects a hard-float calling convention, but floating-point registers are unavailable
 define arm_aapcscc void @soft_to_default_hard() {
   call void @default_callee()
   ret void

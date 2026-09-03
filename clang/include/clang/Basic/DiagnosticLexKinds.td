@@ -11,6 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 let Component = "Lex", CategoryName = "Lexical or Preprocessor Issue" in {
+// C23 compatibility with C17 and earlier.
+defm c23_pp_directive : C23Compat<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive is", /*ext_warn*/true>;
+
+// C++23 compatibility with C++20 and earlier.
+defm cxx23_pp_directive : CXX23Compat<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive is">;
+
+// C++26 compatibility with C++23 and earlier.
+defm raw_string_literal_character_set : CXX26Compat<
+  "'%0' in a raw string literal delimiter is", /*ext_warn*/false>;
 
 def null_in_char_or_string : Warning<
   "null character(s) preserved in %select{char|string}0 literal">,
@@ -113,14 +124,6 @@ def err_unterminated_raw_string : Error<
 def warn_cxx98_compat_raw_string_literal : Warning<
   "raw string literals are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-
-def warn_cxx26_compat_raw_string_literal_character_set : Warning<
-  " '%0' in a raw string literal delimiter is incompatible "
-  "with standards before C++2c">,
-  InGroup<CXXPre26Compat>, DefaultIgnore;
-def ext_cxx26_raw_string_literal_character_set : Extension<
-  " '%0' in a raw string literal delimiter is a C++2c extension">,
-  InGroup<CXX26>, DefaultIgnore;
 
 def warn_multichar_character_literal : Warning<
   "multi-character character constant">, InGroup<MultiChar>;
@@ -836,23 +839,6 @@ def ext_pp_line_too_big : Extension<
 def warn_cxx98_compat_pp_line_too_big : Warning<
   "#line number greater than 32767 is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
-
-def warn_c23_compat_pp_directive : Warning<
-  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is incompatible with C standards before C23">,
-  InGroup<CPre23Compat>, DefaultIgnore;
-def ext_c23_pp_directive : ExtWarn<
-  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is a C23 extension">,
-  InGroup<C23>;
-def warn_cxx23_compat_pp_directive : Warning<
-  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is incompatible with C++ standards before C++23">,
-  InGroup<CXXPre23Compat>, DefaultIgnore;
-def ext_cxx23_pp_directive : ExtWarn<
-  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is a C++23 extension">,
-  InGroup<CXX23>;
 
 def err_pp_visibility_non_macro : Error<"no macro named %0">;
 

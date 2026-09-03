@@ -259,8 +259,9 @@ static std::optional<StoreCacheControl> getCacheControl(BlockStoreOp op) {
 }
 
 static std::optional<LoadCacheControl> getCacheControl(LLVM::LoadOp op) {
-  if (op->hasAttr("cache_control")) {
-    auto attr = op->getAttrOfType<xevm::LoadCacheControlAttr>("cache_control");
+  if (op->hasDiscardableAttr("cache_control")) {
+    auto attr = op->getDiscardableAttrOfType<xevm::LoadCacheControlAttr>(
+        "cache_control");
     if (!attr)
       return std::nullopt;
     return std::optional<LoadCacheControl>(attr.getValue());
@@ -269,8 +270,9 @@ static std::optional<LoadCacheControl> getCacheControl(LLVM::LoadOp op) {
 }
 
 static std::optional<StoreCacheControl> getCacheControl(LLVM::StoreOp op) {
-  if (op->hasAttr("cache_control")) {
-    auto attr = op->getAttrOfType<xevm::StoreCacheControlAttr>("cache_control");
+  if (op->hasDiscardableAttr("cache_control")) {
+    auto attr = op->getDiscardableAttrOfType<xevm::StoreCacheControlAttr>(
+        "cache_control");
     if (!attr)
       return std::nullopt;
     return std::optional<StoreCacheControl>(attr.getValue());
@@ -551,7 +553,20 @@ static LLVM::CallOp createDeviceFunctionCall(
     funcOp.setArgAttr(idx, attrName, rewriter.getUnitAttr());
 
   auto callOp = LLVM::CallOp::create(rewriter, loc, funcOp, args);
-  callOp->setAttrs(funcOp->getAttrs());
+  SmallVector<NamedAttribute> discardableAttrs;
+  auto copyAttr = [&](StringAttr name, Attribute attr) {
+    if (callOp->getInherentAttr(name).has_value())
+      callOp->setInherentAttr(name, attr);
+    else
+      discardableAttrs.emplace_back(name, attr);
+  };
+  for (NamedAttribute attr : funcOp->getDiscardableAttrDictionary())
+    copyAttr(attr.getName(), attr.getValue());
+  funcOp->getName().walkInherentAttrs(
+      funcOp, [&](StringRef name, Attribute &attr) {
+        copyAttr(rewriter.getStringAttr(name), attr);
+      });
+  callOp->setDiscardableAttrs(discardableAttrs);
 
   return callOp;
 }
@@ -986,14 +1001,15 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
   LogicalResult
   matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!op->hasAttr("cache_control"))
+    if (!op->hasDiscardableAttr("cache_control"))
       return failure();
 
     auto *moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
     std::optional<ArrayAttr> optCacheControls =
         getCacheControlMetadata(rewriter, op);
     if (!optCacheControls) {
-      rewriter.modifyOpInPlace(op, [&]() { op->removeAttr("cache_control"); });
+      rewriter.modifyOpInPlace(
+          op, [&]() { op->removeDiscardableAttr("cache_control"); });
       return success();
     }
 
@@ -1009,7 +1025,7 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
     // Replace the pointer operand with the annotated one.
     rewriter.modifyOpInPlace(op, [&]() {
       op->setOperand(ptrIdx, annotatedPtr);
-      op->removeAttr("cache_control");
+      op->removeDiscardableAttr("cache_control");
     });
     return success();
   }
@@ -1722,12 +1738,16 @@ private:
 
 // Checks if shufflevector is used as a way to extract a contiguous slice
 // from a vector.
-// - source vector V1 and V2 are the same vector.
+// - source vector V2 is either the same as V1, or a poison/undef value. In
+//   both cases the mask can only meaningfully address elements of V1, which
+//   the mask checks below enforce.
 // - mask size is not greater than the source vector size
 // - mask values represent a sequence of consecutive increasing numbers
 //   that stay in bounds of the source vector when used for indexing.
 static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
-  if (op.getV1() != op.getV2())
+  if (op.getV1() != op.getV2() &&
+      !isa_and_present<LLVM::PoisonOp, LLVM::UndefOp>(
+          op.getV2().getDefiningOp()))
     return false;
   auto maskAttr = op.getMask();
   int64_t maskSize = static_cast<int64_t>(maskAttr.size());
@@ -1735,6 +1755,8 @@ static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
   if (maskSize > sourceSize)
     return false;
   int64_t firstIndex = maskAttr[0];
+  if (firstIndex < 0 || firstIndex >= sourceSize)
+    return false;
   for (int64_t i = 1; i < maskSize; ++i) {
     int64_t index = maskAttr[i];
     if (index != firstIndex + i)
@@ -1941,7 +1963,7 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
       return addrSpace != 3;
     }
     // cache_control attribute should be converted.
-    return !op->hasAttr("cache_control");
+    return !op->hasDiscardableAttr("cache_control");
   });
   target.addIllegalDialect<XeVMDialect>();
   patterns.add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
