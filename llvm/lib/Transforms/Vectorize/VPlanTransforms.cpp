@@ -1210,6 +1210,13 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return X;
 
+  // (x && y) | !x -> !x || y
+  if (CanCreateNewRecipe &&
+      match(Def,
+            m_c_BinaryOr(m_OneUse(m_LogicalAnd(m_VPValue(X), m_VPValue(Y))),
+                         m_VPValue(Z, m_Not(m_Deferred(X))))))
+    return Builder.createLogicalOr(Z, Y);
+
   // select c, false, true -> not c
   VPValue *C;
   if (CanCreateNewRecipe &&

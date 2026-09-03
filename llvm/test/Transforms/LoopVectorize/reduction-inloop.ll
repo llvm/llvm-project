@@ -2320,9 +2320,8 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP43:%.*]] = phi <4 x i32> [ [[TMP36]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP42]], %[[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP44:%.*]] = icmp ne <4 x i32> [[TMP43]], zeroinitializer
-; CHECK-NEXT:    [[TMP39:%.*]] = select <4 x i1> [[TMP19]], <4 x i1> [[TMP44]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[NOT_:%.*]] = xor <4 x i1> [[TMP19]], splat (i1 true)
-; CHECK-NEXT:    [[TMP50:%.*]] = or <4 x i1> [[TMP39]], [[NOT_]]
+; CHECK-NEXT:    [[TMP50:%.*]] = select <4 x i1> [[NOT_]], <4 x i1> splat (i1 true), <4 x i1> [[TMP44]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = select <4 x i1> [[TMP50]], <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP47:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP51]])
 ; CHECK-NEXT:    [[TMP48]] = add i32 [[VEC_PHI]], [[TMP47]]
@@ -2451,12 +2450,10 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP88:%.*]] = phi <4 x i32> [ [[TMP75]], %[[PRED_LOAD_CONTINUE13]] ], [ [[TMP81]], %[[PRED_LOAD_IF14]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP89:%.*]] = icmp ne <4 x i32> [[TMP64]], zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP90:%.*]] = icmp ne <4 x i32> [[TMP88]], zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP78:%.*]] = select <4 x i1> [[TMP39]], <4 x i1> [[TMP89]], <4 x i1> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP84:%.*]] = select <4 x i1> [[TMP40]], <4 x i1> [[TMP90]], <4 x i1> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[NOT_:%.*]] = xor <4 x i1> [[TMP39]], splat (i1 true)
 ; CHECK-INTERLEAVED-NEXT:    [[NOT_18:%.*]] = xor <4 x i1> [[TMP40]], splat (i1 true)
-; CHECK-INTERLEAVED-NEXT:    [[TMP91:%.*]] = or <4 x i1> [[TMP78]], [[NOT_]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP92:%.*]] = or <4 x i1> [[TMP84]], [[NOT_18]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP91:%.*]] = select <4 x i1> [[NOT_]], <4 x i1> splat (i1 true), <4 x i1> [[TMP89]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP92:%.*]] = select <4 x i1> [[NOT_18]], <4 x i1> splat (i1 true), <4 x i1> [[TMP90]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP95:%.*]] = select <4 x i1> [[TMP91]], <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP93:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP95]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP94]] = add i32 [[VEC_PHI]], [[TMP93]]
