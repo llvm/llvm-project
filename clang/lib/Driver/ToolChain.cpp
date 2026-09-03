@@ -1285,6 +1285,14 @@ std::string ToolChain::GetFilePath(const char *Name) const {
   return D.GetFilePath(Name, *this);
 }
 
+std::optional<std::string>
+ToolChain::GetFilePathIfExists(const char *Name) const {
+  std::string Path = D.GetFilePath(Name, *this);
+  if (Path == Name)
+    return std::nullopt;
+  return Path;
+}
+
 std::string ToolChain::GetProgramPath(const char *Name) const {
   return D.GetProgramPath(Name, *this);
 }
