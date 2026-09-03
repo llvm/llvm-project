@@ -1428,32 +1428,24 @@ def : InstRW<[V3AEWrite_3c_1V0], (instregex "^FCVTN(v2|v4)i32",
 // ASIMD FP convert, other, D-form F32 and Q-form F64
 def : InstRW<[V3AEWrite_3c_1V0], (instregex "^FCVT[AMNPZ][SU]v2f(32|64)$",
                                             "^FCVT[AMNPZ][SU]v2i(32|64)_shift$",
-                                            "^FCVT[AMNPZ][SU]v1i64$",
-                                            "^FCVTZ[SU]d$",
+                                            "^FCVT[AMNPZ][SU]v1(f16|i32|i64)$",
+                                            "^FCVTZ[SU][dsh]$",
                                             "^[SU]CVTFv2f(32|64)$",
                                             "^[SU]CVTFv2i(32|64)_shift$",
-                                            "^[SU]CVTFv1i64$",
-                                            "^[SU]CVTFd$")>;
+                                            "^[SU]CVTFv1i(16|32|64)$",
+                                            "^[SU]CVTF[dsh]$")>;
 
 // ASIMD FP convert, other, D-form F16 and Q-form F32
 def : InstRW<[V3AEWrite_4c_2V0], (instregex "^FCVT[AMNPZ][SU]v4f(16|32)$",
                                             "^FCVT[AMNPZ][SU]v4i(16|32)_shift$",
-                                            "^FCVT[AMNPZ][SU]v1i32$",
-                                            "^FCVTZ[SU]s$",
                                             "^[SU]CVTFv4f(16|32)$",
-                                            "^[SU]CVTFv4i(16|32)_shift$",
-                                            "^[SU]CVTFv1i32$",
-                                            "^[SU]CVTFs$")>;
+                                            "^[SU]CVTFv4i(16|32)_shift$")>;
 
 // ASIMD FP convert, other, Q-form F16
 def : InstRW<[V3AEWrite_6c_4V0], (instregex "^FCVT[AMNPZ][SU]v8f16$",
                                             "^FCVT[AMNPZ][SU]v8i16_shift$",
-                                            "^FCVT[AMNPZ][SU]v1f16$",
-                                            "^FCVTZ[SU]h$",
                                             "^[SU]CVTFv8f16$",
-                                            "^[SU]CVTFv8i16_shift$",
-                                            "^[SU]CVTFv1i16$",
-                                            "^[SU]CVTFh$")>;
+                                            "^[SU]CVTFv8i16_shift$")>;
 
 // ASIMD FP divide, D-form, F16
 def : InstRW<[V3AEWrite_9c_1V1_4rc], (instrs FDIVv4f16)>;
