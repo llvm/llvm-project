@@ -17,17 +17,19 @@
 ##   B.cold -> D        HFE: forward long thunk
 ##   D.cold -> D        HFE: shares forward long thunk to D
 ##
-##   normal layout:
-##     cluster 0, .text:      A, B
-##     cluster 1, .text:      C, D
-##     cluster 2, .text.cold: A.cold, B.cold
-##     cluster 3, .text.cold: C.cold, D.cold
+##   normal layout
+##   -------------
+##     cluster 0 (~112MiB), .text:       A, B
+##     cluster 1 (~112MiB), .text:       C, D
+##     cluster 2 (~112MiB), .text.cold:  A.cold, B.cold
+##     cluster 3 (~112MiB), .text.cold:  C.cold, D.cold
 ##
-##   --hot-functions-at-end:
-##     cluster 0: .text.cold A.cold, B.cold
-##     cluster 1: .text.cold C.cold, D.cold
-##     cluster 2: .text A, B
-##     cluster 3: .text C, D
+##   hot-functions-at-end
+##   --------------------
+##     cluster 0 (~112MiB), .text.cold:  A.cold, B.cold
+##     cluster 1 (~112MiB), .text.cold:  C.cold, D.cold
+##     cluster 2 (~112MiB), .text:       A, B
+##     cluster 3 (~112MiB), .text:       C, D
 
 # REQUIRES: system-linux
 
@@ -49,6 +51,18 @@
 # RUN:   %t.hfe.bolt | FileCheck %s --check-prefix=CHECK-HFE-OUTPUT
 
 # CHECK-BOLT: BOLT-INFO: built 4 function fragment cluster(s)
+# CHECK-BOLT-NEXT: BOLT-INFO: cluster: 0
+# CHECK-BOLT-NEXT: BOLT-INFO:   2 fragment(s)
+# CHECK-BOLT-NEXT: BOLT-INFO:   117440576 estimated bytes
+# CHECK-BOLT-NEXT: BOLT-INFO: cluster: 1
+# CHECK-BOLT-NEXT: BOLT-INFO:   2 fragment(s)
+# CHECK-BOLT-NEXT: BOLT-INFO:   117440576 estimated bytes
+# CHECK-BOLT-NEXT: BOLT-INFO: cluster: 2
+# CHECK-BOLT-NEXT: BOLT-INFO:   2 fragment(s)
+# CHECK-BOLT-NEXT: BOLT-INFO:   117440568 estimated bytes
+# CHECK-BOLT-NEXT: BOLT-INFO: cluster: 3
+# CHECK-BOLT-NEXT: BOLT-INFO:   2 fragment(s)
+# CHECK-BOLT-NEXT: BOLT-INFO:   117440576 estimated bytes
 # CHECK-BOLT: BOLT-INFO: relaxed 4 adjacent cluster calls with thunks
 # CHECK-BOLT: BOLT-INFO: relaxed 4 remote cluster calls with thunks
 # CHECK-BOLT: BOLT-INFO: 3 short thunks created
@@ -59,6 +73,18 @@
 # CHECK-BOLT: BOLT-INFO: 16 branch thunks created
 
 # CHECK-BOLT-HFE: BOLT-INFO: built 4 function fragment cluster(s)
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 0
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   2 fragment(s)
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440568 estimated bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 1
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   2 fragment(s)
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440576 estimated bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 2
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   2 fragment(s)
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440576 estimated bytes
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 3
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   2 fragment(s)
+# CHECK-BOLT-HFE-NEXT: BOLT-INFO:   117440576 estimated bytes
 # CHECK-BOLT-HFE: BOLT-INFO: relaxed 5 adjacent cluster calls with thunks
 # CHECK-BOLT-HFE: BOLT-INFO: relaxed 3 remote cluster calls with thunks
 # CHECK-BOLT-HFE: BOLT-INFO: 3 short thunks created
