@@ -153,10 +153,16 @@ FunctionSP CompileUnit::FindFunctionByUID(lldb::user_id_t func_uid) {
 }
 
 lldb::LanguageType CompileUnit::GetLanguage() {
+  ModuleSP module_sp = GetModule();
+  if (!module_sp)
+    return m_language;
+
+  // See GetLineTable() for why this takes the Module's lock.
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
   if (m_language == eLanguageTypeUnknown) {
     if (m_flags.IsClear(flagsParsedLanguage)) {
       m_flags.Set(flagsParsedLanguage);
-      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+      if (SymbolFile *symfile = module_sp->GetSymbolFile())
         m_language = symfile->ParseLanguage(*this);
     }
   }
@@ -164,10 +170,17 @@ lldb::LanguageType CompileUnit::GetLanguage() {
 }
 
 LineTable *CompileUnit::GetLineTable() {
+  ModuleSP module_sp = GetModule();
+  if (!module_sp)
+    return m_line_table_up.get();
+
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
   if (m_line_table_up == nullptr) {
+    // The flag is set before parsing so that a SymbolFile that asks for the
+    // line table while parsing it doesn't recurse forever.
     if (m_flags.IsClear(flagsParsedLineTable)) {
       m_flags.Set(flagsParsedLineTable);
-      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+      if (SymbolFile *symfile = module_sp->GetSymbolFile())
         symfile->ParseLineTable(*this);
     }
   }
@@ -183,10 +196,15 @@ void CompileUnit::SetLineTable(LineTable *line_table) {
 }
 
 DebugMacros *CompileUnit::GetDebugMacros() {
+  ModuleSP module_sp = GetModule();
+  if (!module_sp)
+    return m_debug_macros_sp.get();
+
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
   if (m_debug_macros_sp.get() == nullptr) {
     if (m_flags.IsClear(flagsParsedDebugMacros)) {
       m_flags.Set(flagsParsedDebugMacros);
-      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+      if (SymbolFile *symfile = module_sp->GetSymbolFile())
         symfile->ParseDebugMacros(*this);
     }
   }
@@ -490,9 +508,14 @@ void CompileUnit::ResolveSymbolContext(
 }
 
 bool CompileUnit::GetIsOptimized() {
+  ModuleSP module_sp = GetModule();
+  if (!module_sp)
+    return m_is_optimized == eLazyBoolYes;
+
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
   if (m_is_optimized == eLazyBoolCalculate) {
     m_is_optimized = eLazyBoolNo;
-    if (SymbolFile *symfile = GetModule()->GetSymbolFile()) {
+    if (SymbolFile *symfile = module_sp->GetSymbolFile()) {
       if (symfile->ParseIsOptimized(*this))
         m_is_optimized = eLazyBoolYes;
     }
@@ -505,10 +528,15 @@ void CompileUnit::SetVariableList(VariableListSP &variables) {
 }
 
 const std::vector<SourceModule> &CompileUnit::GetImportedModules() {
+  ModuleSP module_sp = GetModule();
+  if (!module_sp)
+    return m_imported_modules;
+
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
   if (m_imported_modules.empty() &&
       m_flags.IsClear(flagsParsedImportedModules)) {
     m_flags.Set(flagsParsedImportedModules);
-    if (SymbolFile *symfile = GetModule()->GetSymbolFile()) {
+    if (SymbolFile *symfile = module_sp->GetSymbolFile()) {
       SymbolContext sc;
       CalculateSymbolContext(&sc);
       symfile->ParseImportedModules(sc, m_imported_modules);
@@ -526,10 +554,15 @@ bool CompileUnit::ForEachExternalModule(
 }
 
 const SupportFileList &CompileUnit::GetSupportFiles() {
+  ModuleSP module_sp = GetModule();
+  if (!module_sp)
+    return m_support_files;
+
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
   if (m_support_files.GetSize() == 0) {
     if (m_flags.IsClear(flagsParsedSupportFiles)) {
       m_flags.Set(flagsParsedSupportFiles);
-      if (SymbolFile *symfile = GetModule()->GetSymbolFile())
+      if (SymbolFile *symfile = module_sp->GetSymbolFile())
         symfile->ParseSupportFiles(*this, m_support_files);
     }
   }
