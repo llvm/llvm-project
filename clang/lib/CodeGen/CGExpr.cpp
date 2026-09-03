@@ -39,6 +39,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -512,11 +513,6 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
     llvm_unreachable("temporary can't have dynamic storage duration");
   }
   llvm_unreachable("unknown storage duration");
-}
-
-/// Helper method to check if the underlying ABI is AAPCS
-static bool isAAPCS(const TargetInfo &TargetInfo) {
-  return TargetInfo.getABI().starts_with("aapcs");
 }
 
 LValue CodeGenFunction::
@@ -2665,7 +2661,8 @@ RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
       Builder.CreateLoad(Ptr, LV.isVolatileQualified(), "bf.load");
 
   bool UseVolatile = LV.isVolatileQualified() &&
-                     Info.VolatileStorageSize != 0 && isAAPCS(CGM.getTarget());
+                     Info.VolatileStorageSize != 0 &&
+                     CodeGenUtils::isAAPCS(CGM.getTarget());
   const unsigned Offset = UseVolatile ? Info.VolatileOffset : Info.Offset;
   const unsigned StorageSize =
       UseVolatile ? Info.VolatileStorageSize : Info.StorageSize;
@@ -3067,7 +3064,7 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
 
   const bool UseVolatile =
       CGM.getCodeGenOpts().AAPCSBitfieldWidth && Dst.isVolatileQualified() &&
-      Info.VolatileStorageSize != 0 && isAAPCS(CGM.getTarget());
+      Info.VolatileStorageSize != 0 && CodeGenUtils::isAAPCS(CGM.getTarget());
   const unsigned StorageSize =
       UseVolatile ? Info.VolatileStorageSize : Info.StorageSize;
   const unsigned Offset = UseVolatile ? Info.VolatileOffset : Info.Offset;
@@ -3101,7 +3098,7 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
     // with any non-bit-field member, its container must be read exactly once
     // and written exactly once using the access width appropriate to the type
     // of the container. The two accesses are not atomic.
-    if (Dst.isVolatileQualified() && isAAPCS(CGM.getTarget()) &&
+    if (Dst.isVolatileQualified() && CodeGenUtils::isAAPCS(CGM.getTarget()) &&
         CGM.getCodeGenOpts().ForceAAPCSBitfieldLoad)
       Builder.CreateLoad(Ptr, true, "bf.load");
   }
@@ -5801,7 +5798,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
     const CGRecordLayout &RL =
         CGM.getTypes().getCGRecordLayout(field->getParent());
     const CGBitFieldInfo &Info = RL.getBitFieldInfo(field);
-    const bool UseVolatile = isAAPCS(CGM.getTarget()) &&
+    const bool UseVolatile = CodeGenUtils::isAAPCS(CGM.getTarget()) &&
                              CGM.getCodeGenOpts().AAPCSBitfieldWidth &&
                              Info.VolatileStorageSize != 0 &&
                              field->getType()
