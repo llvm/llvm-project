@@ -3464,26 +3464,21 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
       // Determine if the division can be folded into the operands of
       // its operands.
       // TODO: Generalize this to non-constants by using known-bits information.
-      Type *Ty = LHS->getType();
-      unsigned LZ = RHSC->getAPInt().countl_zero();
-      unsigned MaxShiftAmt = getTypeSizeInBits(Ty) - LZ - 1;
-      // For non-power-of-two values, effectively round the value up to the
-      // nearest power of two.
-      if (!RHSC->getAPInt().isPowerOf2())
-        ++MaxShiftAmt;
-      IntegerType *ExtTy =
-        IntegerType::get(getContext(), getTypeSizeInBits(Ty) + MaxShiftAmt);
       if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(LHS))
         if (const SCEVConstant *Step =
             dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this))) {
           // {X,+,N}/C --> {X/C,+,N/C} if safe and N/C can be folded.
           const APInt &StepInt = Step->getAPInt();
           const APInt &DivInt = RHSC->getAPInt();
-          if (!StepInt.urem(DivInt) &&
+          IntegerType *ExtTy = IntegerType::get(
+              getContext(), 2 * getTypeSizeInBits(AR->getType()));
+          bool NoWrap =
+              (!StepInt.urem(DivInt) || !DivInt.urem(StepInt)) &&
               getZeroExtendExpr(AR, ExtTy) ==
-              getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
-                            getZeroExtendExpr(Step, ExtTy),
-                            AR->getLoop(), SCEV::FlagAnyWrap)) {
+                  getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
+                                getZeroExtendExpr(Step, ExtTy), AR->getLoop(),
+                                SCEV::FlagAnyWrap);
+          if (!StepInt.urem(DivInt) && NoWrap) {
             SmallVector<SCEVUse, 4> Operands;
             for (const SCEV *Op : AR->operands())
               Operands.push_back(getUDivExpr(Op, RHS));
@@ -3494,12 +3489,6 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
           const APInt *StartRem;
           if (!DivInt.urem(StepInt) && match(getURemExpr(AR->getStart(), Step),
                                              m_scev_APInt(StartRem))) {
-            bool NoWrap =
-                getZeroExtendExpr(AR, ExtTy) ==
-                getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
-                              getZeroExtendExpr(Step, ExtTy), AR->getLoop(),
-                              SCEV::FlagAnyWrap);
-
             // With N <= C and both N, C as powers-of-2, the transformation
             // {X,+,N}/C => {(X - X%N),+,N}/C preserves division results even
             // if wrapping occurs, as the division results remain equivalent for
