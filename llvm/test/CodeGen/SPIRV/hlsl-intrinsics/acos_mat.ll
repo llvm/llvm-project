@@ -2,14 +2,14 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; CHECK-NOT: OpCapability Vector16
-; CHECK: OpCapability Float16
-; CHECK: %[[#ext:]] = OpExtInstImport "GLSL.std.450"
-; CHECK: %[[#void:]] = OpTypeVoid
-; CHECK: %[[#f32:]] = OpTypeFloat 32
-; CHECK: %[[#vec4f32:]] = OpTypeVector %[[#f32]] 4
-; CHECK: %[[#vec2f32:]] = OpTypeVector %[[#f32]] 2
-; CHECK: %[[#f16:]] = OpTypeFloat 16
-; CHECK: %[[#vec4f16:]] = OpTypeVector %[[#f16]] 4
+; CHECK-DAG: OpCapability Float16
+; CHECK-DAG: %[[#ext:]] = OpExtInstImport "GLSL.std.450"
+; CHECK-DAG: %[[#void:]] = OpTypeVoid
+; CHECK-DAG: %[[#f32:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#vec4f32:]] = OpTypeVector %[[#f32]] 4
+; CHECK-DAG: %[[#vec2f32:]] = OpTypeVector %[[#f32]] 2
+; CHECK-DAG: %[[#f16:]] = OpTypeFloat 16
+; CHECK-DAG: %[[#vec4f16:]] = OpTypeVector %[[#f16]] 4
 
 @wide_f32_6 = internal addrspace(10) global [6 x float] zeroinitializer
 @wide_f16_9 = internal addrspace(10) global [9 x half] zeroinitializer
