@@ -18713,6 +18713,8 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   // Always prefer FMAD to FMA for precision.
   unsigned PreferredFusedOpcode = HasFMAD ? ISD::FMAD : ISD::FMA;
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
+  bool RestrictToLocalContract =
+      TLI.restrictFMAFusionToLocalContract(DAG.getMachineFunction());
 
   auto isFusedOp = [&](SDValue N) {
     unsigned Opcode = N.getOpcode();
@@ -18721,9 +18723,12 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
 
   // Is the node an FMUL and contractable either due to global flags or
   // SDNodeFlags.
-  auto isContractableFMUL = [AllowFusionGlobally](SDValue N) {
+  auto isContractableFMUL = [AllowFusionGlobally,
+                             RestrictToLocalContract](SDValue N) {
     if (N.getOpcode() != ISD::FMUL)
       return false;
+    if (RestrictToLocalContract)
+      return N->getFlags().hasAllowContract();
     return AllowFusionGlobally || N->getFlags().hasAllowContract();
   };
   // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
@@ -18939,12 +18944,17 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   unsigned PreferredFusedOpcode = HasFMAD ? ISD::FMAD : ISD::FMA;
   bool Aggressive = TLI.enableAggressiveFMAFusion(VT);
   bool NoSignedZero = Flags.hasNoSignedZeros();
+  bool RestrictToLocalContract =
+      TLI.restrictFMAFusionToLocalContract(DAG.getMachineFunction());
 
   // Is the node an FMUL and contractable either due to global flags or
   // SDNodeFlags.
-  auto isContractableFMUL = [AllowFusionGlobally](SDValue N) {
+  auto isContractableFMUL = [AllowFusionGlobally,
+                             RestrictToLocalContract](SDValue N) {
     if (N.getOpcode() != ISD::FMUL)
       return false;
+    if (RestrictToLocalContract)
+      return N->getFlags().hasAllowContract();
     return AllowFusionGlobally || N->getFlags().hasAllowContract();
   };
 
