@@ -9779,6 +9779,15 @@ def : Pat<(v1f64 (int_aarch64_neon_vcvtfxu2fp (v1i64 FPR64:$Rn),
 def : Pat<(int_aarch64_neon_vcvtfxs2fp (i32 (bitconvert (f32 FPR32:$Rn))), vecshiftR32:$imm),
           (SCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
 
+def : Pat<(int_aarch64_neon_vcvtfxu2fp
+            (i32 (vector_extract (v16i8 V128:$Rn), (i64 0))),
+            vecshiftR32:$imm),
+          (UCVTFs (EXTRACT_SUBREG V128:$Rn, ssub), vecshiftR32:$imm)>;
+def : Pat<(int_aarch64_neon_vcvtfxu2fp
+            (i32 (vector_extract (v8i16 V128:$Rn), (i64 0))),
+            vecshiftR32:$imm),
+          (UCVTFs (EXTRACT_SUBREG V128:$Rn, ssub), vecshiftR32:$imm)>;
+
 def : Pat<(f32 (int_aarch64_neon_vcvtfxs2fp GPR32:$Rn, vecshiftR32:$imm)),
           (SCVTFSWSri GPR32:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
 def : Pat<(f32 (int_aarch64_neon_vcvtfxu2fp GPR32:$Rn, vecshiftR32:$imm)),

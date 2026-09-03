@@ -43,13 +43,112 @@ define float @do_stuff(<8 x i16> noundef %var_135) {
 ; CHECK-LABEL: do_stuff:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    umaxv.8h h0, v0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    ucvtf s0, w8, #1
+; CHECK-NEXT:    ucvtf s0, s0, #1
 ; CHECK-NEXT:    ret
 entry:
   %vmaxv.i = call i32 @llvm.aarch64.neon.umaxv.i32.v8i16(<8 x i16> %var_135) #2
   %vcvts_n_f32_u32 = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %vmaxv.i, i32 1)
   ret float %vcvts_n_f32_u32
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_umaxv_v8i8(<8 x i8> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_umaxv_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv.8b b0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.umaxv.i32.v8i8(<8 x i8> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_umaxv_v16i8(<16 x i8> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_umaxv_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv.16b b0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.umaxv.i32.v16i8(<16 x i8> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_umaxv_v4i16(<4 x i16> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_umaxv_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv.4h h0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.umaxv.i32.v4i16(<4 x i16> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_umaxv_v8i16(<8 x i16> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_umaxv_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv.8h h0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.umaxv.i32.v8i16(<8 x i16> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_uminv_v8i8(<8 x i8> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_uminv_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv.8b b0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.uminv.i32.v8i8(<8 x i8> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_uminv_v16i8(<16 x i8> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_uminv_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv.16b b0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.uminv.i32.v16i8(<16 x i8> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_uminv_v4i16(<4 x i16> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_uminv_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv.4h h0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.uminv.i32.v4i16(<4 x i16> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_uminv_v8i16(<8 x i16> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_uminv_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv.8h h0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.uminv.i32.v8i16(<8 x i16> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxs2fp_i32_f32_smaxv_v4i32(<4 x i32> %v) {
+; CHECK-LABEL: neon_vcvtfxs2fp_i32_f32_smaxv_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smaxv.4s s0, v0
+; CHECK-NEXT:    scvtf.4s v0, v0, #1
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.smaxv.i32.v4i32(<4 x i32> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxs2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
 }
 
 define float @neon_vcvtfxu2fp_i32_f32_gpr(i32 %a) {
