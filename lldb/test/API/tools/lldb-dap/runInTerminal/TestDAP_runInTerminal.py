@@ -66,6 +66,7 @@ def read_pipe_message(pipe):
 
 
 @skipIfBuildType(["debug"])
+@skipIfWasm  # runInTerminal has the client run the program, and a Wasm module is not executable
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
@@ -186,20 +187,24 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     def test_runInTerminalInvalidTarget(self):
         self.build_and_create_debug_adapter()
         response = self.launch_and_configurationDone(
-            "INVALIDPROGRAM",
+            self.getBuildArtifact("INVALIDPROGRAM"),
             console="integratedTerminal",
             args=["foobar"],
             env=["FOO=bar"],
         )
         self.assertFalse(response["success"])
         self.assertIn(
-            "'INVALIDPROGRAM' does not exist",
+            f"'{self.getBuildArtifact('INVALIDPROGRAM')}' does not exist",
             response["body"]["error"]["format"],
         )
 
     def test_missingArgInRunInTerminalLauncher(self):
         proc = subprocess.run(
-            [self.lldbDAPExec, "--launch-target", "INVALIDPROGRAM"],
+            [
+                self.lldbDAPExec,
+                "--launch-target",
+                self.getBuildArtifact("INVALIDPROGRAM"),
+            ],
             capture_output=True,
             universal_newlines=True,
         )
@@ -216,7 +221,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
                     "--comm-file",
                     comm_file,
                     "--launch-target",
-                    "INVALIDPROGRAM",
+                    self.getBuildArtifact("INVALIDPROGRAM"),
                 ],
                 universal_newlines=True,
                 stderr=subprocess.PIPE,

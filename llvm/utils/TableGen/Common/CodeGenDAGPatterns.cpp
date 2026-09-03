@@ -78,7 +78,7 @@ void MachineValueTypeSet::writeToStream(raw_ostream &OS) const {
 TypeSetByHwMode::TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList) {
   // Take the address space from the first type in the list.
   if (!VTList.empty())
-    AddrSpace = VTList[0].PtrAddrSpace;
+    PtrAddrSpace = VTList[0].PtrAddrSpace;
 
   for (const ValueTypeByHwMode &VVT : VTList)
     insert(VVT);
@@ -98,7 +98,7 @@ ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode(bool SkipEmpty) const {
   assert(isValueTypeByHwMode(true) &&
          "The type set has multiple types for at least one HW mode");
   ValueTypeByHwMode VVT;
-  VVT.PtrAddrSpace = AddrSpace;
+  VVT.PtrAddrSpace = PtrAddrSpace;
 
   for (const auto &I : *this) {
     if (SkipEmpty && I.second.empty())
@@ -188,21 +188,14 @@ bool TypeSetByHwMode::assign_if(const TypeSetByHwMode &VTS, Predicate P) {
 }
 
 void TypeSetByHwMode::writeToStream(raw_ostream &OS) const {
-  SmallVector<unsigned, 4> Modes;
-  Modes.reserve(Map.size());
-
-  for (const auto &I : *this)
-    Modes.push_back(I.first);
-  if (Modes.empty()) {
+  if (Map.empty()) {
     OS << "{}";
     return;
   }
-  array_pod_sort(Modes.begin(), Modes.end());
-
   OS << '{';
-  for (unsigned M : Modes) {
-    OS << ' ' << getModeName(M) << ':';
-    get(M).writeToStream(OS);
+  for (const auto &[Mode, Types] : Map) {
+    OS << ' ' << getModeName(Mode) << ':';
+    Types.writeToStream(OS);
   }
   OS << " }";
 }
@@ -658,10 +651,9 @@ bool TypeInfer::EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
   auto IsSubVec = [](MVT B, MVT P) -> bool {
     if (!B.isVector() || !P.isVector())
       return false;
-    // Logically a <4 x i32> is a valid subvector of <n x 4 x i32>
-    // but until there are obvious use-cases for this, keep the
-    // types separate.
-    if (B.isScalableVector() != P.isScalableVector())
+    // You cannot extract a scalable vector from a fixed length vector.
+    // You cannot insert a scalable vector into a fixed length vector.
+    if (B.isScalableVector() && !P.isScalableVector())
       return false;
     if (B.getVectorElementType() != P.getVectorElementType())
       return false;

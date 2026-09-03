@@ -133,6 +133,20 @@
 // RUN: FileCheck --input-file=%t.err -check-prefix=MCPU-NATIVE %s
 // MCPU-NATIVE-NOT: "-target-cpu" "native"
 
+// -march=native is an alias for -mcpu=native. We cannot check much for it, but
+// it should be replaced by a valid CPU string and never treated as an ISA
+// string.
+// RUN: %clang --target=riscv64 -### -c %s -march=native 2> %t.err || true
+// RUN: FileCheck --input-file=%t.err -check-prefix=MARCH-NATIVE %s
+// MARCH-NATIVE-NOT: "-target-cpu" "native"
+// MARCH-NATIVE-NOT: invalid arch name 'native'
+
+// -mcpu takes priority over -march=native when choosing the target CPU,
+// regardless of the order of the options.
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=native -mcpu=rocket-rv64 | FileCheck -check-prefix=MARCH-NATIVE-MCPU %s
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=rocket-rv64 -march=native | FileCheck -check-prefix=MARCH-NATIVE-MCPU %s
+// MARCH-NATIVE-MCPU: "-target-cpu" "rocket-rv64"
+
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=rocket-rv32 | FileCheck -check-prefix=MTUNE-ROCKET32 %s
 // MTUNE-ROCKET32: "-tune-cpu" "rocket-rv32"
 
@@ -388,6 +402,10 @@
 // MARCH-UNSET: "-target-feature" "+a"
 // MARCH-UNSET: "-target-feature" "+c"
 // MARCH-UNSET-SAME: "-target-abi" "ilp32"
+
+// Invalid -march= is an error even with a valid -mcpu
+// RUN: not %clang --target=riscv32 -### -c %s 2>&1 -march=rv32imc -march=bad -mcpu=sifive-e31 | FileCheck -check-prefix=MARCH-INVALID-MCPU %s
+// MARCH-INVALID-MCPU: invalid arch name 'bad', string must begin with rv32{i,e,g,y}, rv64{i,e,g,y}, or a supported profile name
 
 // Check interaction between -mcpu and mtune, -mtune won't affect arch related
 // target feature, but -mcpu will.

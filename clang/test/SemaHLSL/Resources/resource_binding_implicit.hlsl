@@ -25,10 +25,10 @@ struct S { int x; };
 StructuredBuffer<S> e;
 
 // No warning - __hlsl_resource_t isn't itself a resource object.
-__hlsl_resource_t [[hlsl::resource_class(SRV)]] f;
+__hlsl_resource_t [[hlsl::resource_class("SRV")]] f;
 
 struct CustomSRV {
-  __hlsl_resource_t [[hlsl::resource_class(SRV)]] x;
+  __hlsl_resource_t [[hlsl::resource_class("SRV")]] x;
 };
 // expected-warning@+1 {{resource has implicit register binding}}
 CustomSRV g;

@@ -488,6 +488,10 @@ void IRPromoter::PromoteTree() {
       if ((Op->getType() == ExtTy) || !isa<IntegerType>(Op->getType()))
         continue;
 
+      // Skip the condition operand of select.
+      if (isa<SelectInst>(I) && i == 0)
+        continue;
+
       if (auto *Const = dyn_cast<ConstantInt>(Op)) {
         // For subtract, we only need to zext the constant. We only put it in
         // SafeWrap because SafeWrap.size() is used elsewhere.
@@ -857,6 +861,9 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
       if (auto *I = dyn_cast<Instruction>(V)) {
         // Visit operands of any instruction visited.
         for (auto &U : I->operands()) {
+          // Skip condition of selects.
+          if (isa<SelectInst>(I) && U.getOperandNo() == 0)
+            continue;
           if (!AddLegalInst(U))
             return false;
         }

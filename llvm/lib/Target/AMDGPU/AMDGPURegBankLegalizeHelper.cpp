@@ -18,7 +18,6 @@
 #include "AMDGPURegBankLegalizeRules.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -28,7 +27,7 @@
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
-#define DEBUG_TYPE "amdgpu-regbanklegalize"
+#define DEBUG_TYPE "amdgpu-reg-bank-legalize"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -49,7 +48,7 @@ RegBankLegalizeHelper::RegBankLegalizeHelper(
 bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
   const SetOfRulesForOpcode *RuleSet = RBLRules.getRulesForOpc(MI);
   if (!RuleSet) {
-    reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+    reportGISelFailure(MF, MORE, DEBUG_TYPE,
                        "No AMDGPU RegBankLegalize rules defined for opcode",
                        MI);
     return false;
@@ -57,7 +56,7 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
 
   const RegBankLLTMapping *Mapping = RuleSet->findMappingForMI(MI, MRI, MUI);
   if (!Mapping) {
-    reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+    reportGISelFailure(MF, MORE, DEBUG_TYPE,
                        "AMDGPU RegBankLegalize: none of the rules defined with "
                        "'Any' for MI's opcode matched MI",
                        MI);
@@ -502,7 +501,7 @@ bool RegBankLegalizeHelper::lowerVccExtToSel(MachineInstr &MI) {
       break;
     default:
       reportGISelFailure(
-          MF, MORE, "amdgpu-regbanklegalize",
+          MF, MORE, DEBUG_TYPE,
           "AMDGPU RegBankLegalize: lowerVccExtToSel, Opcode not supported", MI);
       return false;
     }
@@ -510,7 +509,7 @@ bool RegBankLegalizeHelper::lowerVccExtToSel(MachineInstr &MI) {
     B.buildMergeValues(Dst, {Lo.getReg(0), Hi.getReg(0)});
   } else {
     reportGISelFailure(
-        MF, MORE, "amdgpu-regbanklegalize",
+        MF, MORE, DEBUG_TYPE,
         "AMDGPU RegBankLegalize: lowerVccExtToSel, Type not supported", MI);
     return false;
   }
@@ -535,10 +534,12 @@ std::pair<Register, Register> RegBankLegalizeHelper::unpackSExt(Register Reg) {
 }
 
 std::pair<Register, Register> RegBankLegalizeHelper::unpackAExt(Register Reg) {
-  auto PackedI32 = B.buildBitcast(SgprRB_I32, Reg);
-  auto Lo = PackedI32;
-  auto Hi = B.buildLShr(SgprRB_I32, PackedI32, B.buildConstant(SgprRB_I32, 16));
-  return {Lo.getReg(0), Hi.getReg(0)};
+  Register RegI32 = Reg;
+  if (MRI.getType(Reg) != I32)
+    RegI32 = B.buildBitcast(SgprRB_I32, Reg).getReg(0);
+
+  auto Hi = B.buildLShr(SgprRB_I32, RegI32, B.buildConstant(SgprRB_I32, 16));
+  return {RegI32, Hi.getReg(0)};
 }
 
 std::pair<Register, Register>
@@ -575,7 +576,7 @@ bool RegBankLegalizeHelper::lowerUnpackBitShift(MachineInstr &MI) {
   }
   default:
     reportGISelFailure(
-        MF, MORE, "amdgpu-regbanklegalize",
+        MF, MORE, DEBUG_TYPE,
         "AMDGPU RegBankLegalize: lowerUnpackBitShift, case not implemented",
         MI);
     return false;
@@ -612,7 +613,7 @@ bool RegBankLegalizeHelper::lowerUnpackMinMax(MachineInstr &MI) {
   }
   default:
     reportGISelFailure(
-        MF, MORE, "amdgpu-regbanklegalize",
+        MF, MORE, DEBUG_TYPE,
         "AMDGPU RegBankLegalize: lowerUnpackMinMax, case not implemented", MI);
     return false;
   }
@@ -752,7 +753,12 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
 
   if (WidthImm <= 32) {
     // SHRSrc Hi|Lo: ????????|???syyyl -> ????????|ssssyyyl
-    auto Lo = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcLo, Zero, Width});
+    Register Lo = SHRSrcLo;
+    // V_BFE masks its width to 5 bits, so 32 would extract zero bits.
+    if (WidthImm < 32) {
+      Lo =
+          B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcLo, Zero, Width}).getReg(0);
+    }
     MachineInstrBuilder Hi;
     if (Signed) {
       // SHRSrc Hi|Lo: ????????|ssssyyyl -> ssssssss|ssssyyyl
@@ -1079,7 +1085,7 @@ bool RegBankLegalizeHelper::lowerExtrVecEltToSel(MachineInstr &MI) {
     B.buildMergeLikeInstr(Dst, {PrevLo, PrevHi});
   } else {
     reportGISelFailure(
-        MF, MORE, "amdgpu-regbanklegalize",
+        MF, MORE, DEBUG_TYPE,
         "AMDGPU RegBankLegalize: ExtrVecEltToSel unsupported element type", MI);
     return false;
   }
@@ -1176,7 +1182,7 @@ bool RegBankLegalizeHelper::lowerInsVecEltToSel(MachineInstr &MI) {
     B.buildMergeLikeInstr(Dst, Selects);
   } else {
     reportGISelFailure(
-        MF, MORE, "amdgpu-regbanklegalize",
+        MF, MORE, DEBUG_TYPE,
         "AMDGPU RegBankLegalize: InsVecEltToSel unsupported element type", MI);
     return false;
   }
@@ -1458,7 +1464,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       break;
     }
     default:
-      reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+      reportGISelFailure(MF, MORE, DEBUG_TYPE,
                          "AMDGPU RegBankLegalize: Ext32To64, unsuported opcode",
                          MI);
       return false;
@@ -1563,7 +1569,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       else if (Size / 128 == 4)
         splitLoad(MI, {B128, B128, B128, B128});
       else {
-        reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+        reportGISelFailure(MF, MORE, DEBUG_TYPE,
                            "AMDGPU RegBankLegalize: SplitLoad, unsuported type",
                            MI);
         return false;
@@ -1577,7 +1583,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     else if (DstTy == V6S16)
       splitLoad(MI, {V4S16, V2S16}, V2S16);
     else {
-      reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+      reportGISelFailure(MF, MORE, DEBUG_TYPE,
                          "AMDGPU RegBankLegalize: SplitLoad, unsuported type",
                          MI);
       return false;
@@ -1648,7 +1654,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     else if (DstTy == V6S16)
       widenLoad(MI, V8S16, V2S16);
     else {
-      reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+      reportGISelFailure(MF, MORE, DEBUG_TYPE,
                          "AMDGPU RegBankLegalize: WidenLoad, unsuported type",
                          MI);
       return false;
@@ -1686,7 +1692,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     GUnmerge *Unmerge = dyn_cast<GUnmerge>(&MI);
     LLT Ty = MRI.getType(Unmerge->getSourceReg());
     if (Ty.getSizeInBits() % 32 != 0) {
-      reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+      reportGISelFailure(MF, MORE, DEBUG_TYPE,
                          "AMDGPU RegBankLegalize: unmerge not multiple of 32",
                          MI);
       return false;
@@ -2278,13 +2284,13 @@ bool RegBankLegalizeHelper::applyMappingDst(
     }
     case InvalidMapping: {
       reportGISelFailure(
-          MF, MORE, "amdgpu-regbanklegalize",
+          MF, MORE, DEBUG_TYPE,
           "AMDGPU RegBankLegalize: missing fast rule ('Div' or 'Uni') for", MI);
       return false;
     }
     default:
       reportGISelFailure(
-          MF, MORE, "amdgpu-regbanklegalize",
+          MF, MORE, DEBUG_TYPE,
           "AMDGPU RegBankLegalize: applyMappingDst, ID not supported", MI);
       return false;
     }
@@ -2544,7 +2550,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     }
     default:
       reportGISelFailure(
-          MF, MORE, "amdgpu-regbanklegalize",
+          MF, MORE, DEBUG_TYPE,
           "AMDGPU RegBankLegalize: applyMappingSrc, ID not supported", MI);
       return false;
     }

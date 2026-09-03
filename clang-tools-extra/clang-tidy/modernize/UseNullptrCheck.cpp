@@ -55,7 +55,7 @@ void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
       unless(hasImplicitDestinationType(
           qualType(matchers::matchesAnyListedTypeName(IgnoredTypes)))));
 
-  auto IsOrHasDescendant = [](const auto &InnerMatcher) {
+  const auto IsOrHasDescendant = [](const auto &InnerMatcher) {
     return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
   };
 
@@ -470,12 +470,11 @@ private:
 
       // TypeLoc and NestedNameSpecifierLoc are members of the parent map. Skip
       // them and keep going up.
-      if (Loc.isValid()) {
-        if (!expandsFrom(Loc, MacroLoc)) {
-          Result = Parent;
-          return true;
-        }
+      if (Loc.isValid() && !expandsFrom(Loc, MacroLoc)) {
+        Result = Parent;
+        return true;
       }
+
       Start = Parent;
     }
 

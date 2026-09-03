@@ -32,7 +32,6 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterScavenging.h"

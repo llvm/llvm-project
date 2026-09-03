@@ -1,0 +1,18 @@
+VERS1.0 {
+  global:
+    *cuda*;
+    *hip*;
+    llvmLaunchKernel;
+    __llvmPushCallConfiguration;
+    __llvmPopCallConfiguration;
+    __llvmRegisterFunction;
+    __llvmRegisterVar;
+    __llvmRegisterManagedVar;
+    __llvmRegisterSurface;
+    __llvmRegisterTexture;
+    __LLVMOffloadingPerThreadDefaultStream;
+    __tgt_register_lib;
+    __tgt_unregister_lib;
+  local:
+    *;
+};

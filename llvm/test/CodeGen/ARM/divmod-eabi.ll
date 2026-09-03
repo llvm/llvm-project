@@ -6,20 +6,20 @@
 ; Sometimes the checks that the correct registers are used after the libcalls
 ; are different between optimization levels, so we have to separate them.
 ; RUN: llc -mtriple armv7-none-eabi %s -o - | FileCheck %s --check-prefix=EABI
-; RUN: llc -mtriple armv7-none-eabi %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-none-eabi %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=EABI
 ; RUN: llc -mtriple armv7-none-eabihf %s -o - | FileCheck %s --check-prefix=EABI
-; RUN: llc -mtriple armv7-none-eabihf %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-none-eabihf %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=EABI
 ; All "eabi" (Bare, GNU and Android) must lower SREM/UREM to __aeabi_{u,i}divmod
 ; RUN: llc -mtriple armv7-linux-androideabi %s -o - | FileCheck %s --check-prefix=EABI
-; RUN: llc -mtriple armv7-linux-androideabi %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-linux-androideabi %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=EABI
 ; RUN: llc -mtriple armv7-linux-gnueabi %s -o - | FileCheck %s --check-prefix=EABI
-; RUN: llc -mtriple armv7-linux-gnueabi %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-linux-gnueabi %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=EABI
 ; RUN: llc -mtriple armv7-linux-musleabi %s -o - | FileCheck %s --check-prefix=EABI
-; RUN: llc -mtriple armv7-linux-musleabi %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-linux-musleabi %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=EABI
 ; RUN: llc -mtriple armv7-apple-darwin %s -o - | FileCheck %s --check-prefixes=DARWIN
-; RUN: llc -mtriple armv7-apple-darwin %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefix=DARWIN-O0
+; RUN: llc -mtriple armv7-apple-darwin %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefix=DARWIN-O0
 ; RUN: llc -mtriple thumbv7-windows %s -o - | FileCheck %s --check-prefixes=WINDOWS,WINDOWS-DEFAULT
-; RUN: llc -mtriple thumbv7-windows %s -o - -O0 -optimize-regalloc | FileCheck %s --check-prefixes=WINDOWS,WINDOWS-O0
+; RUN: llc -mtriple thumbv7-windows %s -o - -O0 -regalloc=greedy | FileCheck %s --check-prefixes=WINDOWS,WINDOWS-O0
 
 define signext i16 @f16(i16 signext %a, i16 signext %b) {
 ; EABI-LABEL: f16:

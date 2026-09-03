@@ -33,7 +33,7 @@ func.func @directives(%ptr: !llvm.ptr, %v: memref<i32>,
     acc.loop combined(parallel) control(%iv : index) = (%c0 : index)
         to (%c1 : index) step (%c1 : index) {
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.terminator
   }
   // expected-error @+1 {{not yet implemented: OpenACC kernels loop directive}}
@@ -42,7 +42,7 @@ func.func @directives(%ptr: !llvm.ptr, %v: memref<i32>,
     acc.loop combined(kernels) control(%iv : index) = (%c0 : index)
         to (%c1 : index) step (%c1 : index) {
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.terminator
   }
   // expected-error @+1 {{not yet implemented: OpenACC serial loop directive}}
@@ -51,19 +51,19 @@ func.func @directives(%ptr: !llvm.ptr, %v: memref<i32>,
     acc.loop combined(serial) control(%iv : index) = (%c0 : index)
         to (%c1 : index) step (%c1 : index) {
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.terminator
   }
 
   // expected-error @+1 {{not yet implemented: OpenACC data directive}}
   acc.data {
     acc.terminator
-  } attributes {defaultAttr = #acc<defaultvalue none>}
+  } defaultAttr(none)
   // expected-error @+1 {{not yet implemented: OpenACC loop directive}}
   acc.loop control(%iv : index) = (%c0 : index) to (%c1 : index)
       step (%c1 : index) {
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
 
   // expected-error @+1 {{not yet implemented: OpenACC operation acc.copyin}}
   %copyin = acc.copyin varPtr(%ptr : !llvm.ptr) varType(i32) -> !llvm.ptr
@@ -86,7 +86,7 @@ func.func @directives(%ptr: !llvm.ptr, %v: memref<i32>,
   // expected-error @+1 {{not yet implemented: OpenACC shutdown directive}}
   acc.shutdown
   // expected-error @+1 {{not yet implemented: OpenACC set directive}}
-  acc.set attributes {device_type = #acc.device_type<nvidia>}
+  acc.set device_type(#acc.device_type<nvidia>)
   // expected-error @+1 {{not yet implemented: OpenACC wait directive}}
   acc.wait
 

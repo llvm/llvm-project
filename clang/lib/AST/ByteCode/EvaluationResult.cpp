@@ -11,7 +11,7 @@
 #include "Pointer.h"
 #include "Record.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <iterator>
 
 namespace clang {
@@ -148,9 +148,9 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
     return true;
 
   SourceLocation InitLoc;
-  if (const auto *D = dyn_cast<const Decl *>(Source))
+  if (const auto *D = Source.asDecl())
     InitLoc = cast<VarDecl>(D)->getAnyInitializer()->getExprLoc();
-  else if (const auto *E = dyn_cast<const Expr *>(Source))
+  else if (const auto *E = Source.asExpr())
     InitLoc = E->getExprLoc();
 
   if (const Record *R = Ptr.getRecord())
@@ -171,7 +171,8 @@ static bool isOrHasPtr(const Descriptor *D) {
   return false;
 }
 
-static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks,
+static void collectBlocks(PtrView Ptr,
+                          llvm::SmallPtrSet<const Block *, 4> &Blocks,
                           bool IsCompleteClass = true) {
   auto isUsefulPtr = [](const Pointer &P) -> bool {
     return P.isLive() && P.isBlockPointer() && !P.isZero() && !P.isDummy() &&
@@ -244,14 +245,13 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks,
 }
 
 bool EvaluationResult::checkDynamicAllocations(InterpState &S,
-                                               const Context &Ctx,
                                                const Pointer &Ptr,
                                                SourceInfo Info) {
   if (!Ptr.isBlockPointer())
     return true;
   // Collect all blocks that this pointer (transitively) points to and
   // return false if any of them is a dynamic block.
-  llvm::SetVector<const Block *> Blocks;
+  llvm::SmallPtrSet<const Block *, 4> Blocks;
 
   collectBlocks(Ptr.view(), Blocks);
 

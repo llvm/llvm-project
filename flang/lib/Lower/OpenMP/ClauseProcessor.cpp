@@ -94,11 +94,11 @@ getSimdModifier(const omp::clause::Schedule &clause) {
   return mlir::omp::ScheduleModifier::none;
 }
 
-static void
-genAllocateClause(lower::AbstractConverter &converter,
-                  const omp::clause::Allocate &clause,
-                  llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
-                  llvm::SmallVectorImpl<mlir::Value> &allocateOperands) {
+static void genAllocateClause(
+    lower::AbstractConverter &converter, const omp::clause::Allocate &clause,
+    llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
+    llvm::SmallVectorImpl<mlir::Value> &allocateOperands,
+    llvm::SmallVectorImpl<int64_t> &alignments, bool supportAlignment) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
   lower::StatementContext stmtCtx;
@@ -106,20 +106,26 @@ genAllocateClause(lower::AbstractConverter &converter,
   auto &objects = std::get<omp::ObjectList>(clause.t);
 
   using Allocate = omp::clause::Allocate;
-  // ALIGN in this context is unimplemented
-  if (std::get<std::optional<Allocate::AlignModifier>>(clause.t))
+  auto &align = std::get<std::optional<Allocate::AlignModifier>>(clause.t);
+  if (align && !supportAlignment)
     TODO(currentLocation, "OmpAllocateClause ALIGN modifier");
 
-  // Check if allocate clause has allocator specified. If so, add it
-  // to list of allocators, otherwise, add default allocator to
-  // list of allocators.
+  if (align) {
+    if (alignments.empty())
+      alignments.resize(allocateOperands.size(), 0);
+    alignments.append(objects.size(), evaluate::ToInt64(align->v).value());
+  } else if (!alignments.empty()) {
+    alignments.append(objects.size(), 0);
+  }
+
+  // Use a null handle to select the binding task's default allocator.
   using ComplexModifier = Allocate::AllocatorComplexModifier;
   if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
     mlir::Value operand = firOpBuilder.createIntegerConstant(
-        currentLocation, firOpBuilder.getI32Type(), 1);
+        currentLocation, firOpBuilder.getI32Type(), mlir::omp::kNullAllocator);
     allocatorOperands.append(objects.size(), operand);
   }
 
@@ -842,6 +848,10 @@ bool ClauseProcessor::processOrdered(
   return false;
 }
 
+bool ClauseProcessor::processFull() const {
+  return findUniqueClause<omp::clause::Full>() != nullptr;
+}
+
 bool ClauseProcessor::processPartial(std::optional<int64_t> &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Partial>()) {
     if (clause->v.has_value())
@@ -1138,12 +1148,13 @@ bool ClauseProcessor::processAligned(
       });
 }
 
-bool ClauseProcessor::processAllocate(
-    mlir::omp::AllocateClauseOps &result) const {
+bool ClauseProcessor::processAllocate(mlir::omp::AllocateClauseOps &result,
+                                      bool supportAlignment) const {
   return findRepeatableClause<omp::clause::Allocate>(
       [&](const omp::clause::Allocate &clause, const parser::CharBlock &) {
         genAllocateClause(converter, clause, result.allocatorVars,
-                          result.allocateVars);
+                          result.allocateVars, result.allocateAlignments,
+                          supportAlignment);
       });
 }
 
@@ -1712,8 +1723,7 @@ bool ClauseProcessor::processInReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-                inReductionSyms, inReductionObjects, converter.getSymbolMap(),
-                &semaCtx))
+                inReductionSyms, &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.
@@ -1821,7 +1831,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
       std::optional<mlir::omp::LinearModifier> linearMod;
       if (explicitLinearMod)
         linearMod = *explicitLinearMod;
-      else if (semaCtx.langOptions().OpenMPVersion >= 52)
+      else if (semaCtx.langOptions().getOpenMPVersion() >= 52)
         linearMod = isDeclareSimd ? getDeclareSimdDefaultMod(*sym)
                                   : mlir::omp::LinearModifier::val;
 
@@ -1969,10 +1979,10 @@ bool ClauseProcessor::processMap(
     // default value
     Map::MapType type;
     if (directive == llvm::omp::Directive::OMPD_target_enter_data &&
-        semaCtx.langOptions().OpenMPVersion >= 52)
+        semaCtx.langOptions().getOpenMPVersion() >= 52)
       type = mapType.value_or(Map::MapType::To);
     else if (directive == llvm::omp::Directive::OMPD_target_exit_data &&
-             semaCtx.langOptions().OpenMPVersion >= 52)
+             semaCtx.langOptions().getOpenMPVersion() >= 52)
       type = mapType.value_or(Map::MapType::From);
     else
       type = mapType.value_or(Map::MapType::Tofrom);
@@ -2131,8 +2141,7 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms, reductionObjects, converter.getSymbolMap(),
-                &semaCtx, reductionVarCache))
+                reductionSyms, &semaCtx, reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
@@ -2161,8 +2170,7 @@ bool ClauseProcessor::processTaskReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-                taskReductionSyms, taskReductionObjects,
-                converter.getSymbolMap(), &semaCtx))
+                taskReductionSyms, &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,
@@ -2204,6 +2212,15 @@ bool ClauseProcessor::processEnter(
 bool ClauseProcessor::processUseDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<Object> &useDeviceObjects) const {
+  llvm::SmallPtrSet<const semantics::Symbol *, 4> mappedCommonBlocks;
+  findRepeatableClause<omp::clause::Map>(
+      [&](const omp::clause::Map &clause, const parser::CharBlock &) {
+        for (const Object &object : std::get<ObjectList>(clause.t)) {
+          if (object.sym()->has<semantics::CommonBlockDetails>())
+            mappedCommonBlocks.insert(&object.sym()->GetUltimate());
+        }
+      });
+
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   bool clauseFound = findRepeatableClause<omp::clause::UseDeviceAddr>(
       [&](const omp::clause::UseDeviceAddr &clause,
@@ -2211,7 +2228,21 @@ bool ClauseProcessor::processUseDeviceAddr(
         mlir::Location location = converter.genLocation(source);
         mlir::omp::ClauseMapFlags mapTypeBits =
             mlir::omp::ClauseMapFlags::return_param;
-        processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
+        ObjectList objects;
+        // Keep the aggregate only when it pairs with a whole-COMMON map on
+        // this directive; otherwise preserve named-COMMON member equivalence.
+        for (const Object &object : clause.v) {
+          auto *details =
+              object.sym()->detailsIf<semantics::CommonBlockDetails>();
+          if (!details ||
+              mappedCommonBlocks.contains(&object.sym()->GetUltimate())) {
+            objects.push_back(object);
+            continue;
+          }
+          for (const auto &member : details->objects())
+            objects.push_back(Object{&*member, std::nullopt});
+        }
+        processMapObjects(stmtCtx, location, objects, mapTypeBits,
                           parentMemberIndices, result.useDeviceAddrVars,
                           useDeviceObjects);
       });

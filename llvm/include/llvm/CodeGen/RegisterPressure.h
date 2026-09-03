@@ -187,13 +187,27 @@ public:
                                const LiveIntervals &LIS);
 
   /// Use liveness information to find out which uses/defs are partially
-  /// undefined/dead and adjust the VRegMaskOrUnits accordingly.
-  /// If \p AddFlagsMI is given then missing read-undef and dead flags will be
-  /// added to the instruction.
+  /// undefined/dead at \p Pos and adjust the VRegMaskOrUnits accordingly.
   LLVM_ABI void adjustLaneLiveness(const LiveIntervals &LIS,
                                    const MachineRegisterInfo &MRI,
-                                   SlotIndex Pos,
-                                   MachineInstr *AddFlagsMI = nullptr);
+                                   SlotIndex Pos);
+
+  /// Use liveness information to find out which uses/defs are partially
+  /// undefined/dead at the \p MI's position and adjust the VRegMaskOrUnits
+  /// accordingly. Missing read-undef and dead flags are added to \p MI.
+  LLVM_ABI void adjustLaneLiveness(const LiveIntervals &LIS,
+                                   const MachineRegisterInfo &MRI,
+                                   MachineInstr &MI);
+
+private:
+  /// Adjusts the \p Def based on \p LiveAfterDef. The \p Def is removed from
+  /// the Defs vector when no defined lane remains live after the def. Returns a
+  /// pointer to the next definition to process in order in the Defs vector.
+  VRegMaskOrUnit *adjustDef(VRegMaskOrUnit &Def, LaneBitmask LiveAfterDef);
+
+  /// Use liveness information at \p Pos to adjust the lanemask of all uses.
+  void adjustUses(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
+                  SlotIndex Pos);
 };
 
 /// Array of PressureDiffs.

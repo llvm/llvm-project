@@ -23,8 +23,6 @@ let cppNamespace = "::cir" in {
   // that's useful for handling indirect calls and other details.
   def CIRCallOpInterface
       : OpInterface<"CIRCallOpInterface", [CallOpInterface]> {
-    // Currently we don't have any methods defined in CIRCallOpInterface. We'll
-    // add more methods as the upstreaming proceeds.
     let methods = [
       InterfaceMethod<
           "Return the operand at index 'i', accounts for indirect call or "
@@ -35,10 +33,36 @@ let cppNamespace = "::cir" in {
           "Return the number of operands, accounts for indirect call or "
           "exception info",
           "unsigned", "getNumArgOperands", (ins)>,
+      InterfaceMethod<
+          "Return whether the callee is a value resolved at run time rather "
+          "than a symbol named by the op",
+          "bool", "isIndirect", (ins)>,
+      InterfaceMethod<
+          "Return the callee pointer of an indirect call.  Only valid when "
+          "isIndirect() is true",
+          "mlir::Value", "getIndirectCall", (ins)>,
       InterfaceMethod<"Return whether the callee is nothrow",
                       "bool", "getNothrow", (ins)>,
       InterfaceMethod<"Return the side effects of the call operation",
                       "cir::SideEffect", "getSideEffect", (ins)>,
+      InterfaceMethod<[{"Set the inline-kind of a call operation"}],
+                      "void", "setInlineKind", 
+                      (ins "std::optional<cir::InlineKind>":$kind), [{}], 
+                      /*defaultImplementation=*/[{
+                        $_op.setInlineKind(kind);
+                      }]>,
+      InterfaceMethod<[{"Get the inline-kind of a call operation"}],
+                      "std::optional<cir::InlineKind>", "getInlineKind", 
+                      (ins), [{}], 
+                      /*defaultImplementation=*/[{
+                        $_op.getInlineKind();
+                      }]>,
+      InterfaceMethod<[{"Get the inline-kind attribute name"}], 
+                      "mlir::StringAttr", "getInlineKindAttrName",
+                      (ins), [{}],
+                      /*defaultImplementation=*/[{
+                        $_op.getInlineKindAttrName();
+                      }]>,
     ];
   }
 

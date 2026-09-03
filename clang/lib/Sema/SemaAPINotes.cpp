@@ -725,6 +725,14 @@ static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
                   static_cast<const api_notes::FunctionInfo &>(Info), Metadata);
 }
 
+static void addSwiftAttrIfAbsent(Sema &S, Decl *D, StringRef Attribute) {
+  for (const auto *A : D->specific_attrs<SwiftAttrAttr>())
+    if (A->getAttribute() == Attribute)
+      return;
+
+  D->addAttr(SwiftAttrAttr::Create(S.Context, Attribute));
+}
+
 /// Process API notes for a tag.
 static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
                             VersionedInfoMetadata Metadata) {
@@ -746,12 +754,11 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
 
   if (auto Copyable = Info.isSwiftCopyable()) {
     if (!*Copyable)
-      D->addAttr(SwiftAttrAttr::Create(S.Context, "~Copyable"));
+      addSwiftAttrIfAbsent(S, D, "~Copyable");
   }
 
   if (auto Escapable = Info.isSwiftEscapable()) {
-    D->addAttr(SwiftAttrAttr::Create(S.Context,
-                                     *Escapable ? "Escapable" : "~Escapable"));
+    addSwiftAttrIfAbsent(S, D, *Escapable ? "Escapable" : "~Escapable");
   }
 
   if (auto Extensibility = Info.EnumExtensibility) {
@@ -994,13 +1001,6 @@ UnwindTagContext(TagDecl *DC, api_notes::APINotesManager &APINotes) {
   return std::nullopt;
 }
 
-static void stripAPINotesParameterNullability(QualType &ParamType) {
-  while (true) {
-    if (!AttributedType::stripOuterNullability(ParamType))
-      return;
-  }
-}
-
 namespace clang {
 struct APINotesParameterSelector {
   SmallVector<std::string, 4> Parameters;
@@ -1043,7 +1043,8 @@ static std::string getAPINotesParameterSelectorSpelling(
     ParamType = ParamType.getDesugaredType(Context);
 
   ParamType.removeLocalConst();
-  stripAPINotesParameterNullability(ParamType);
+  ParamType.removeLocalVolatile();
+  ParamType = ParamType.stripNullability(Context);
 
   return ParamType.getAsString(Policy);
 }

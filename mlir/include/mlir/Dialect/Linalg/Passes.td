@@ -80,7 +80,6 @@ def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
 def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops">,
                                    Deprecated<"Use 'linalg-morph-ops' instead."> {
   let summary = "Convert named ops into generic ops";
-  let dependentDialects = ["linalg::LinalgDialect"];
 }
 
 def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops">,
@@ -93,7 +92,7 @@ def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops">,
 
 def SimplifyDepthwiseConvPass: Pass<"simplify-depthwise-conv"> {
   let summary = "Simplify depthwise convolution.";
-  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
+  let dependentDialects = ["tensor::TensorDialect"];
 }
 
 def ConvertElementwiseToLinalgPass : Pass<"convert-elementwise-to-linalg", ""> {
@@ -112,7 +111,7 @@ def ConvertLinalgToAffineLoopsPass : Pass<"convert-linalg-to-affine-loops"> {
   let summary = "Lower the operations from the linalg dialect into affine "
                 "loops";
   let dependentDialects = [
-    "affine::AffineDialect", "linalg::LinalgDialect", "memref::MemRefDialect"];
+    "affine::AffineDialect", "memref::MemRefDialect"];
 }
 
 def ConvertLinalgToLoopsPass : Pass<"convert-linalg-to-loops"> {
@@ -125,7 +124,6 @@ def ConvertLinalgToLoopsPass : Pass<"convert-linalg-to-loops"> {
     bufferization.
   }];
   let dependentDialects = [
-    "linalg::LinalgDialect",
     "scf::SCFDialect",
     "affine::AffineDialect"
   ];
@@ -137,7 +135,6 @@ def ConvertLinalgToParallelLoopsPass
                 "loops";
   let dependentDialects = [
     "affine::AffineDialect",
-    "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect"
   ];
@@ -151,7 +148,7 @@ def LinalgFoldUnitExtentDimsPass : Pass<"linalg-fold-unit-extent-dims", ""> {
            "Generate rank-reducing slices instead of reassociative reshapes">
   ];
   let dependentDialects = [
-    "linalg::LinalgDialect", "affine::AffineDialect", "memref::MemRefDialect"
+    "affine::AffineDialect", "memref::MemRefDialect"
   ];
 }
 
@@ -215,7 +212,7 @@ def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
       %res = unpack %res_packed : 4D <MBxNBxmbxnb> -> 2D <MxN>
     ```
   }];
-  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect",
+  let dependentDialects = ["tensor::TensorDialect",
                            "arith::ArithDialect",
                            "vector::VectorDialect"];
   let options = [

@@ -21,6 +21,8 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Template.h"
+#include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
@@ -272,7 +274,163 @@ private:
   mutable const CXXRecordDecl *InstanceContext;
   const CXXRecordDecl *DeclaringClass;
 };
+} // namespace
 
+static CanQual<FunctionProtoType> GetCanonicalFunctionProto(ASTContext &Context,
+                                                            QualType Ty) {
+  return Context.getCanonicalType(Ty)->getAs<FunctionProtoType>();
+}
+
+static CanQual<FunctionProtoType>
+GetCanonicalFunctionProto(ASTContext &Context, const FunctionDecl *FD) {
+  return GetCanonicalFunctionProto(Context, FD->getType());
+}
+
+static const TemplateSpecializationType *
+GetQualifierClassTemplateSpecializationType(ASTContext &Context,
+                                            NestedNameSpecifier NNS) {
+  if (!NNS || NNS.getKind() != NestedNameSpecifier::Kind::Type)
+    return nullptr;
+
+  QualType Ty(NNS.getAsType(), 0);
+  if (const auto *ICNT = Ty->getAs<InjectedClassNameType>())
+    Ty = ICNT->getDecl()->getCanonicalTemplateSpecializationType(Context);
+
+  const auto *TST = Ty->getAsNonAliasTemplateSpecializationType();
+  if (TST && isa_and_nonnull<ClassTemplateDecl>(
+                 TST->getTemplateName().getAsTemplateDecl()))
+    return TST;
+
+  return nullptr;
+}
+
+static FunctionTemplateDecl *TryGetFunctionTemplateDecl(FunctionDecl *FD) {
+  if (auto *FTD = FD->getPrimaryTemplate())
+    return FTD->getCanonicalDecl();
+
+  if (auto *FTD = FD->getDescribedFunctionTemplate())
+    return FTD->getCanonicalDecl();
+
+  if (FunctionDecl *Pattern =
+          FD->getTemplateInstantiationPattern(/*ForDefinition=*/false)) {
+    if (auto *FTD = Pattern->getDescribedFunctionTemplate())
+      return FTD->getCanonicalDecl();
+    if (auto *FTD = Pattern->getPrimaryTemplate())
+      return FTD->getCanonicalDecl();
+  }
+
+  return nullptr;
+}
+
+static ClassTemplateDecl *GetClassTemplatePattern(ClassTemplateDecl *CTD) {
+  while (ClassTemplateDecl *Pattern = CTD->getInstantiatedFromMemberTemplate())
+    CTD = Pattern;
+  return CTD;
+}
+
+static ClassTemplateDecl *GetClassTemplateDecl(CXXRecordDecl *RD) {
+  if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+    return Spec->getSpecializedTemplate();
+  return RD->getDescribedClassTemplate();
+}
+
+static TemplateParameterList *
+SubstTemplateParameterList(Sema &S, TemplateParameterList *TPL, DeclContext *DC,
+                           const MultiLevelTemplateArgumentList &Args) {
+  TemplateParameterList *InstTPL =
+      S.SubstTemplateParams(TPL, DC, Args,
+                            /*EvaluateConstraints=*/false);
+  if (!InstTPL || !TPL->getRequiresClause())
+    return InstTPL;
+
+  ExprResult InstRequiresClause =
+      S.SubstConstraintExprWithoutSatisfaction(TPL->getRequiresClause(), Args);
+  if (!InstRequiresClause.isUsable())
+    return nullptr;
+
+  return TemplateParameterList::Create(
+      S.Context, InstTPL->getTemplateLoc(), InstTPL->getLAngleLoc(),
+      InstTPL->asArray(), InstTPL->getRAngleLoc(), InstRequiresClause.get());
+}
+
+static AccessResult
+DeduceTemplateArguments(Sema &S, FriendTemplateDecl *FTD, DeclContext *DC,
+                        const TemplateSpecializationType *TST,
+                        ArrayRef<TemplateParameterList *> TPLs,
+                        TemplateSpecCandidateSet *FailedTSC,
+                        MultiLevelTemplateArgumentList &DeducedArgs) {
+  const auto *CandidateRD = dyn_cast<CXXRecordDecl>(DC);
+  if (!CandidateRD)
+    return AR_inaccessible;
+
+  ClassTemplateDecl *CandidateCTD = CandidateRD->getDescribedClassTemplate();
+  ArrayRef<TemplateArgument> CandidateArgs;
+  if (CandidateCTD) {
+    CandidateArgs = CandidateCTD->getInjectedTemplateArgs(S.Context);
+  } else {
+    const auto *CandidateSpec =
+        dyn_cast<ClassTemplateSpecializationDecl>(CandidateRD);
+    if (!CandidateSpec)
+      return AR_inaccessible;
+    CandidateCTD = CandidateSpec->getSpecializedTemplate();
+    CandidateArgs = CandidateSpec->getTemplateArgs().asArray();
+  }
+
+  auto *PatternCTD = dyn_cast_if_present<ClassTemplateDecl>(
+      TST->getTemplateName().getAsTemplateDecl());
+  if (!PatternCTD || !declaresSameEntity(GetClassTemplatePattern(CandidateCTD),
+                                         GetClassTemplatePattern(PatternCTD)))
+    return AR_inaccessible;
+
+  if (S.DeduceTemplateArguments(FTD, PatternCTD, CandidateCTD, TPLs,
+                                TST->template_arguments(), CandidateArgs,
+                                FTD->getLocation(), FailedTSC, DeducedArgs))
+    return AR_accessible;
+
+  return CandidateRD->isDependentContext() ? AR_dependent : AR_inaccessible;
+}
+
+class FriendTemplateMatchContext {
+  Sema &S;
+  FriendTemplateDecl *FTD;
+  Sema::InstantiatingTemplate Inst;
+  TemplateDeductionInfo Info;
+  MultiLevelTemplateArgumentList DeducedArgs;
+  Sema::SFINAETrap Trap;
+  LocalInstantiationScope InstantiationScope;
+  AccessResult Result = AR_inaccessible;
+
+public:
+  FriendTemplateMatchContext(Sema &S, FriendTemplateDecl *FTD)
+      : S(S), FTD(FTD), Inst(S, FTD->getLocation(), FTD),
+        Info(FTD->getLocation()), Trap(S, Info), InstantiationScope(S) {}
+
+  AccessResult deduce(DeclContext *DC, const TemplateSpecializationType *TST,
+                      ArrayRef<TemplateParameterList *> TPLs,
+                      TemplateSpecCandidateSet *FailedTSC) {
+    if (Inst.isInvalid())
+      return Result = AR_inaccessible;
+    return Result = DeduceTemplateArguments(S, FTD, DC, TST, TPLs, FailedTSC,
+                                            DeducedArgs);
+  }
+
+  AccessResult getAccessResult() const { return Result; }
+  MultiLevelTemplateArgumentList &getDeducedArgs() { return DeducedArgs; }
+
+  bool hasDeducedArgs() const { return Result == AR_accessible; }
+  bool hasErrorOccurred() const { return Trap.hasErrorOccurred(); }
+};
+
+static bool HasSameFunctionType(Sema &S, QualType FriendType,
+                                QualType ContextType, SourceLocation Loc) {
+  if (!S.Context.hasSameFunctionTypeIgnoringExceptionSpec(FriendType,
+                                                          ContextType))
+    return false;
+
+  const auto *FriendFPT = FriendType->castAs<FunctionProtoType>();
+  const auto *ContextFPT = ContextType->castAs<FunctionProtoType>();
+  return !S.CheckEquivalentExceptionSpec(S.PDiag(), S.PDiag(), FriendFPT, Loc,
+                                         ContextFPT, Loc);
 }
 
 /// Checks whether one class might instantiate to the other.
@@ -284,8 +442,12 @@ static bool MightInstantiateTo(const CXXRecordDecl *From,
 
   const DeclContext *FromDC = From->getDeclContext()->getPrimaryContext();
   const DeclContext *ToDC = To->getDeclContext()->getPrimaryContext();
-  if (FromDC == ToDC) return true;
-  if (FromDC->isFileContext() || ToDC->isFileContext()) return false;
+
+  if (FromDC == ToDC)
+    return true;
+
+  if (FromDC->isFileContext() || ToDC->isFileContext())
+    return false;
 
   // Be conservative.
   return true;
@@ -343,9 +505,7 @@ static AccessResult IsDerivedFromInclusive(const CXXRecordDecl *Derived,
   return OnFailure;
 }
 
-
-static bool MightInstantiateTo(Sema &S, DeclContext *Context,
-                               DeclContext *Friend) {
+static bool MightInstantiateTo(DeclContext *Context, DeclContext *Friend) {
   if (Friend == Context)
     return true;
 
@@ -364,7 +524,7 @@ static bool MightInstantiateTo(Sema &S, DeclContext *Context,
 
 // Asks whether the type in 'context' can ever instantiate to the type
 // in 'friend'.
-static bool MightInstantiateTo(Sema &S, CanQualType Context, CanQualType Friend) {
+static bool MightInstantiateTo(CanQualType Context, CanQualType Friend) {
   if (Friend == Context)
     return true;
 
@@ -375,49 +535,66 @@ static bool MightInstantiateTo(Sema &S, CanQualType Context, CanQualType Friend)
   return true;
 }
 
-static bool MightInstantiateTo(Sema &S,
-                               FunctionDecl *Context,
-                               FunctionDecl *Friend) {
-  if (Context->getDeclName() != Friend->getDeclName())
+static bool MightInstantiateTo(CanQual<FunctionProtoType> Context,
+                               CanQual<FunctionProtoType> Friend) {
+  if (Friend.getQualifiers() != Context.getQualifiers())
     return false;
 
-  if (!MightInstantiateTo(S,
-                          Context->getDeclContext(),
-                          Friend->getDeclContext()))
+  if (Friend->getNumParams() != Context->getNumParams())
     return false;
 
-  CanQual<FunctionProtoType> FriendTy
-    = S.Context.getCanonicalType(Friend->getType())
-         ->getAs<FunctionProtoType>();
-  CanQual<FunctionProtoType> ContextTy
-    = S.Context.getCanonicalType(Context->getType())
-         ->getAs<FunctionProtoType>();
-
-  // There isn't any way that I know of to add qualifiers
-  // during instantiation.
-  if (FriendTy.getQualifiers() != ContextTy.getQualifiers())
+  if (!MightInstantiateTo(Context->getReturnType(), Friend->getReturnType()))
     return false;
 
-  if (FriendTy->getNumParams() != ContextTy->getNumParams())
-    return false;
-
-  if (!MightInstantiateTo(S, ContextTy->getReturnType(),
-                          FriendTy->getReturnType()))
-    return false;
-
-  for (unsigned I = 0, E = FriendTy->getNumParams(); I != E; ++I)
-    if (!MightInstantiateTo(S, ContextTy->getParamType(I),
-                            FriendTy->getParamType(I)))
+  for (unsigned I = 0, E = Friend->getNumParams(); I != E; ++I)
+    if (!MightInstantiateTo(Context->getParamType(I), Friend->getParamType(I)))
       return false;
 
   return true;
 }
 
-static bool MightInstantiateTo(Sema &S,
-                               FunctionTemplateDecl *Context,
+static bool MightInstantiateTo(ASTContext &Ctx, DeclarationName Context,
+                               DeclarationName Friend) {
+  if (Context == Friend)
+    return true;
+
+  if (Context.getNameKind() != Friend.getNameKind())
+    return false;
+
+  switch (Context.getNameKind()) {
+  case DeclarationName::CXXConstructorName:
+  case DeclarationName::CXXDestructorName:
+  case DeclarationName::CXXConversionFunctionName:
+    return MightInstantiateTo(Ctx.getCanonicalType(Context.getCXXNameType()),
+                              Ctx.getCanonicalType(Friend.getCXXNameType()));
+
+  default:
+    return false;
+  }
+}
+
+static bool MightInstantiateTo(ASTContext &Ctx, FunctionDecl *Context,
+                               FunctionDecl *Friend) {
+  if (!MightInstantiateTo(Ctx, Context->getDeclName(), Friend->getDeclName()))
+    return false;
+
+  DeclContext *ContextDC = Context->getDeclContext();
+  DeclContext *FriendDC = Friend->getDeclContext();
+
+  if (!FriendDC->isDependentContext() &&
+      !MightInstantiateTo(ContextDC, FriendDC))
+    return false;
+
+  CanQual<FunctionProtoType> FriendTy = GetCanonicalFunctionProto(Ctx, Friend);
+  CanQual<FunctionProtoType> ContextTy =
+      GetCanonicalFunctionProto(Ctx, Context);
+
+  return MightInstantiateTo(ContextTy, FriendTy);
+}
+
+static bool MightInstantiateTo(ASTContext &Ctx, FunctionTemplateDecl *Context,
                                FunctionTemplateDecl *Friend) {
-  return MightInstantiateTo(S,
-                            Context->getTemplatedDecl(),
+  return MightInstantiateTo(Ctx, Context->getTemplatedDecl(),
                             Friend->getTemplatedDecl());
 }
 
@@ -478,7 +655,7 @@ static AccessResult MatchesFriend(Sema &S,
     }
 
     // It's a match.
-    if (Friend == CTD->getCanonicalDecl())
+    if (declaresSameEntity(Friend, CTD))
       return AR_accessible;
 
     // If the context isn't dependent, it can't be a dependent match.
@@ -492,8 +669,7 @@ static AccessResult MatchesFriend(Sema &S,
 
     // If the class's context can't instantiate to the friend's
     // context, it can't be a dependent match.
-    if (!MightInstantiateTo(S, CTD->getDeclContext(),
-                            Friend->getDeclContext()))
+    if (!MightInstantiateTo(CTD->getDeclContext(), Friend->getDeclContext()))
       continue;
 
     // Otherwise, it's a dependent match.
@@ -515,7 +691,7 @@ static AccessResult MatchesFriend(Sema &S,
     if (Friend == *I)
       return AR_accessible;
 
-    if (EC.isDependent() && MightInstantiateTo(S, *I, Friend))
+    if (EC.isDependent() && MightInstantiateTo(S.Context, *I, Friend))
       OnFailure = AR_dependent;
   }
 
@@ -534,21 +710,390 @@ static AccessResult MatchesFriend(Sema &S,
   for (SmallVectorImpl<FunctionDecl*>::const_iterator
          I = EC.Functions.begin(), E = EC.Functions.end(); I != E; ++I) {
 
-    FunctionTemplateDecl *FTD = (*I)->getPrimaryTemplate();
-    if (!FTD)
-      FTD = (*I)->getDescribedFunctionTemplate();
+    FunctionTemplateDecl *FTD = TryGetFunctionTemplateDecl(*I);
     if (!FTD)
       continue;
-
-    FTD = FTD->getCanonicalDecl();
 
     if (Friend == FTD)
       return AR_accessible;
 
-    if (EC.isDependent() && MightInstantiateTo(S, FTD, Friend))
+    if (EC.isDependent() && MightInstantiateTo(S.Context, FTD, Friend))
       OnFailure = AR_dependent;
   }
 
+  return OnFailure;
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  NamedDecl *ND) {
+  ND = cast<NamedDecl>(ND->getCanonicalDecl());
+  if (ClassTemplateDecl *CTD = dyn_cast<ClassTemplateDecl>(ND))
+    return MatchesFriend(S, EC, CTD);
+
+  if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(ND))
+    return MatchesFriend(S, EC, FTD);
+
+  if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(ND))
+    return MatchesFriend(S, EC, RD);
+
+  assert(isa<FunctionDecl>(ND) && "unknown friend decl kind");
+  return MatchesFriend(S, EC, cast<FunctionDecl>(ND));
+}
+
+static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
+                                  DeclarationName FriendName,
+                                  TagTypeKind FriendTagKind,
+                                  ClassTemplateDecl *ContextCTD,
+                                  const TemplateSpecializationType *FriendTST,
+                                  ArrayRef<TemplateParameterList *> TPLs,
+                                  TemplateParameterList *MemberTPL,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  if (FriendName != ContextCTD->getDeclName())
+    return AR_inaccessible;
+
+  if ((FriendTagKind == TagTypeKind::Union) !=
+      ContextCTD->getTemplatedDecl()->isUnion())
+    return AR_inaccessible;
+
+  DeclContext *ContextDC = ContextCTD->getDeclContext();
+  AccessResult OnFailure =
+      ContextDC->isDependentContext() ? AR_dependent : AR_inaccessible;
+
+  FriendTemplateMatchContext FTMC(S, FTD);
+  AccessResult Result = FTMC.deduce(ContextDC, FriendTST, TPLs, FailedTSC);
+  if (!FTMC.hasDeducedArgs())
+    return Result;
+
+  TemplateParameterList *InstTPL = SubstTemplateParameterList(
+      S, MemberTPL, ContextDC, FTMC.getDeducedArgs());
+  if (!InstTPL || FTMC.hasErrorOccurred())
+    return OnFailure;
+
+  Sema::TemplateCompareNewDeclInfo FriendInfo(
+      ContextDC, FTD->getLexicalDeclContext(), FTD->getLocation());
+  if (S.TemplateParameterListsAreEqual(
+          FriendInfo, InstTPL, ContextCTD, ContextCTD->getTemplateParameters(),
+          /*Complain=*/false, Sema::TPL_TemplateMatch))
+    return AR_accessible;
+  return OnFailure;
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FTD,
+                                  ClassTemplateDecl *FriendCTD,
+                                  NestedNameSpecifier Qualifier,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  const auto *FriendTST =
+      GetQualifierClassTemplateSpecializationType(S.Context, Qualifier);
+  if (!FriendTST)
+    return MatchesFriend(S, EC, FriendCTD);
+
+  ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
+
+  AccessResult OnFailure = AR_inaccessible;
+  for (CXXRecordDecl *ContextRD : EC.Records) {
+    ClassTemplateDecl *ContextCTD = GetClassTemplateDecl(ContextRD);
+    if (!ContextCTD)
+      continue;
+
+    AccessResult Result =
+        MatchesFriend(S, FTD, FriendCTD->getDeclName(),
+                      FriendCTD->getTemplatedDecl()->getTagKind(), ContextCTD,
+                      FriendTST, TPLs.drop_back(), TPLs.back(), FailedTSC);
+    if (Result == AR_accessible)
+      return AR_accessible;
+    if (Result == AR_dependent)
+      OnFailure = AR_dependent;
+  }
+
+  return OnFailure;
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FTD,
+                                  TemplateName FriendTemplate,
+                                  ClassTemplateDecl *FriendCTD,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  NestedNameSpecifier Qualifier = FriendTemplate.getQualifier();
+  if (FriendTemplate.getAsUsingShadowDecl())
+    Qualifier = FriendCTD->getTemplatedDecl()->getQualifier();
+  return MatchesFriend(S, EC, FTD, FriendCTD, Qualifier, FailedTSC);
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FTD,
+                                  ClassTemplateDecl *FriendCTD,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  return MatchesFriend(S, EC, FTD, FriendCTD,
+                       FriendCTD->getTemplatedDecl()->getQualifier(),
+                       FailedTSC);
+}
+
+static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
+                                  FunctionDecl *FriendFD,
+                                  FunctionDecl *ContextFD,
+                                  const TemplateSpecializationType *FriendTST,
+                                  ArrayRef<TemplateParameterList *> TPLs,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  if (!MightInstantiateTo(S.Context, ContextFD->getDeclName(),
+                          FriendFD->getDeclName()))
+    return AR_inaccessible;
+
+  FunctionTemplateDecl *FriendTemplate =
+      FriendFD->getDescribedFunctionTemplate();
+  FunctionTemplateDecl *ContextTemplate = TryGetFunctionTemplateDecl(ContextFD);
+
+  if (FriendTemplate && !ContextTemplate)
+    return AR_inaccessible;
+
+  DeclContext *ContextDC = ContextFD->getDeclContext();
+  AccessResult OnFailure =
+      ContextDC->isDependentContext() ? AR_dependent : AR_inaccessible;
+
+  FriendTemplateMatchContext FTMC(S, FTD);
+  AccessResult Result = FTMC.deduce(ContextDC, FriendTST, TPLs, FailedTSC);
+  if (!FTMC.hasDeducedArgs())
+    return Result;
+
+  Sema::TemplateCompareNewDeclInfo FriendInfo(
+      ContextDC, FTD->getLexicalDeclContext(), FTD->getLocation());
+  if (FriendTemplate) {
+    TemplateParameterList *InstTPL =
+        SubstTemplateParameterList(S, FriendTemplate->getTemplateParameters(),
+                                   ContextDC, FTMC.getDeducedArgs());
+    if (!InstTPL || !S.TemplateParameterListsAreEqual(
+                        FriendInfo, InstTPL, ContextTemplate,
+                        ContextTemplate->getTemplateParameters(),
+                        /*Complain=*/false, Sema::TPL_TemplateMatch))
+      return OnFailure;
+
+    ContextFD = ContextTemplate->getTemplatedDecl();
+  }
+
+  Sema::ContextRAII SavedContext(S, FTD->getDeclContext());
+  QualType InstFriendType =
+      S.SubstType(FriendFD->getType(), FTMC.getDeducedArgs(),
+                  FriendFD->getLocation(), FriendFD->getDeclName());
+  SavedContext.pop();
+  if (InstFriendType.isNull() || FTMC.hasErrorOccurred())
+    return OnFailure;
+
+  if (ContextTemplate && !FriendTemplate) {
+    AccessResult OnSpecializationFailure =
+        ContextFD->isDependentContext() ? AR_dependent : OnFailure;
+    const ASTTemplateArgumentListInfo *ArgsWritten =
+        FriendFD->getTemplateSpecializationArgsAsWritten();
+    TemplateArgumentListInfo InstArgs;
+    if (ArgsWritten) {
+      InstArgs.setLAngleLoc(ArgsWritten->getLAngleLoc());
+      InstArgs.setRAngleLoc(ArgsWritten->getRAngleLoc());
+      if (S.SubstTemplateArguments(ArgsWritten->arguments(),
+                                   FTMC.getDeducedArgs(), InstArgs))
+        return OnSpecializationFailure;
+    }
+
+    FunctionDecl *ContextSpecialization = nullptr;
+    TemplateDeductionInfo FunctionInfo(FTD->getLocation());
+    if (S.DeduceTemplateArguments(
+            ContextTemplate, ArgsWritten ? &InstArgs : nullptr, InstFriendType,
+            ContextSpecialization,
+            FunctionInfo) != TemplateDeductionResult::Success ||
+        !ContextSpecialization || FTMC.hasErrorOccurred() ||
+        !declaresSameEntity(ContextSpecialization, ContextFD))
+      return OnSpecializationFailure;
+
+    ContextFD = ContextSpecialization;
+  }
+
+  if (!HasSameFunctionType(S, InstFriendType, ContextFD->getType(),
+                           FTD->getLocation()) ||
+      FTMC.hasErrorOccurred())
+    return OnFailure;
+
+  if (!FriendTemplate)
+    return AR_accessible;
+
+  AssociatedConstraint FriendRequiresClause =
+      FriendFD->getTrailingRequiresClause();
+  AssociatedConstraint ContextRequiresClause =
+      ContextFD->getTrailingRequiresClause();
+  if (FriendRequiresClause.isNull() != ContextRequiresClause.isNull())
+    return AR_inaccessible;
+
+  if (!FriendRequiresClause)
+    return AR_accessible;
+
+  ExprResult InstFriendRequiresClause =
+      S.SubstConstraintExprWithoutSatisfaction(
+          const_cast<Expr *>(FriendRequiresClause.ConstraintExpr),
+          FTMC.getDeducedArgs());
+
+  if (!InstFriendRequiresClause.isUsable())
+    return OnFailure;
+
+  if (!S.AreConstraintExpressionsEqual(
+          ContextFD, ContextRequiresClause.ConstraintExpr, FriendInfo,
+          InstFriendRequiresClause.get()))
+    return OnFailure;
+  return FTMC.hasErrorOccurred() ? AR_inaccessible : AR_accessible;
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FTD,
+                                  FunctionDecl *FriendFD,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  const auto *FriendTST = GetQualifierClassTemplateSpecializationType(
+      S.Context, FriendFD->getQualifier());
+  if (!FriendTST)
+    return AR_inaccessible;
+
+  ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
+
+  AccessResult OnFailure = AR_inaccessible;
+  for (FunctionDecl *ContextFD : EC.Functions) {
+    AccessResult Result =
+        MatchesFriend(S, FTD, FriendFD, ContextFD, FriendTST, TPLs, FailedTSC);
+    if (Result == AR_accessible)
+      return AR_accessible;
+
+    if (Result == AR_dependent)
+      OnFailure = AR_dependent;
+  }
+  return OnFailure;
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FTD, NamedDecl *Friend,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  TemplateName FriendTemplate = FTD->getFriendTemplateName();
+  if (auto *FriendCTD = dyn_cast_if_present<ClassTemplateDecl>(
+          FriendTemplate.getAsTemplateDecl()))
+    return MatchesFriend(S, EC, FTD, FriendTemplate, FriendCTD, FailedTSC);
+  if (auto *FriendCTD = dyn_cast<ClassTemplateDecl>(Friend))
+    return MatchesFriend(S, EC, FTD, FriendCTD, FailedTSC);
+  if (FunctionDecl *FriendFD = Friend->getAsFunction())
+    return MatchesFriend(S, EC, FTD, FriendFD, FailedTSC);
+  return MatchesFriend(S, EC, Friend);
+}
+
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FTD,
+                                  TypeSourceInfo *FriendTSI,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  QualType FriendType = FriendTSI->getType();
+  if (!FriendType->isDependentType())
+    return MatchesFriend(S, EC, S.Context.getCanonicalType(FriendType));
+
+  AccessResult OnFailure = AR_inaccessible;
+  if (auto FriendTSTL =
+          FriendTSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>()) {
+    const auto *FriendTST = FriendTSTL.getTypePtr();
+    const auto *FriendQTST = GetQualifierClassTemplateSpecializationType(
+        S.Context, FriendTSTL.getQualifierLoc().getNestedNameSpecifier());
+    if (!FriendQTST)
+      return OnFailure;
+
+    ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
+
+    TemplateName FriendTemplate = FriendTST->getTemplateName();
+    DeclarationName FriendName;
+    if (TemplateDecl *TD = FriendTemplate.getAsTemplateDecl())
+      FriendName = TD->getDeclName();
+    else if (DependentTemplateName *DTN =
+                 FriendTemplate.getAsDependentTemplateName())
+      FriendName = DTN->getName().getIdentifier();
+
+    TagTypeKind FriendTagKind =
+        TypeWithKeyword::getTagTypeKindForKeyword(FriendTST->getKeyword());
+
+    for (CXXRecordDecl *ContextRD : EC.Records) {
+      ClassTemplateDecl *ContextCTD = GetClassTemplateDecl(ContextRD);
+      if (!ContextCTD)
+        continue;
+
+      if (FriendName && ContextCTD->getDeclName() != FriendName)
+        continue;
+
+      if ((FriendTagKind == TagTypeKind::Union) !=
+          ContextCTD->getTemplatedDecl()->isUnion())
+        continue;
+
+      FriendTemplateMatchContext FTMC(S, FTD);
+      AccessResult Result =
+          FTMC.deduce(ContextRD->getDeclContext(), FriendQTST, TPLs, FailedTSC);
+      if (!FTMC.hasDeducedArgs()) {
+        if (Result == AR_dependent)
+          OnFailure = AR_dependent;
+        continue;
+      }
+
+      TypeSourceInfo *InstFriendTSI =
+          S.SubstFriendType(FriendTSI, FTMC.getDeducedArgs(),
+                            FTD->getLocation(), DeclarationName());
+      if (InstFriendTSI && !FTMC.hasErrorOccurred() &&
+          S.Context.hasSameType(InstFriendTSI->getType(),
+                                S.Context.getCanonicalTagType(ContextRD)))
+        return AR_accessible;
+
+      if (ContextRD->isDependentContext())
+        OnFailure = AR_dependent;
+    }
+
+    return OnFailure;
+  }
+
+  const auto *FriendDNT = FriendType->getAs<DependentNameType>();
+  if (!FriendDNT)
+    return OnFailure;
+
+  const auto *FriendTST = GetQualifierClassTemplateSpecializationType(
+      S.Context, FriendDNT->getQualifier());
+  if (!FriendTST)
+    return OnFailure;
+
+  ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
+
+  TagTypeKind FriendTagKind =
+      TypeWithKeyword::getTagTypeKindForKeyword(FriendDNT->getKeyword());
+  for (CXXRecordDecl *ContextRD : EC.Records) {
+    if (ContextRD->getDeclName() != FriendDNT->getIdentifier())
+      continue;
+
+    if (ClassTemplateDecl *ContextCTD = GetClassTemplateDecl(ContextRD)) {
+      if (FTD->getFriendTemplateName().isNull()) {
+        if (FailedTSC) {
+          MultiLevelTemplateArgumentList DeducedArgs;
+          DeduceTemplateArguments(S, FTD, ContextCTD->getDeclContext(),
+                                  FriendTST, TPLs, FailedTSC, DeducedArgs);
+        }
+        continue;
+      }
+
+      AccessResult Result = MatchesFriend(
+          S, FTD, FriendDNT->getIdentifier(), FriendTagKind, ContextCTD,
+          FriendTST, TPLs.drop_back(), TPLs.back(), FailedTSC);
+      if (Result == AR_accessible)
+        return AR_accessible;
+      if (Result == AR_dependent)
+        OnFailure = AR_dependent;
+      continue;
+    }
+
+    if (!FTD->getFriendTemplateName().isNull())
+      continue;
+
+    if ((FriendTagKind == TagTypeKind::Union) != ContextRD->isUnion())
+      continue;
+
+    MultiLevelTemplateArgumentList DeducedArgs;
+    AccessResult Result =
+        DeduceTemplateArguments(S, FTD, ContextRD->getDeclContext(), FriendTST,
+                                TPLs, FailedTSC, DeducedArgs);
+    if (Result == AR_accessible)
+      return AR_accessible;
+    if (Result == AR_dependent)
+      OnFailure = AR_dependent;
+  }
   return OnFailure;
 }
 
@@ -557,40 +1102,47 @@ static AccessResult MatchesFriend(Sema &S,
 static AccessResult MatchesFriend(Sema &S,
                                   const EffectiveContext &EC,
                                   FriendDecl *FriendD) {
-  // Whitelist accesses if there's an invalid or unsupported friend
-  // declaration.
-  if (FriendD->isInvalidDecl() || FriendD->isUnsupportedFriend())
+  // Whitelist accesses if there's an invalid friend declaration.
+  if (FriendD->isInvalidDecl())
     return AR_accessible;
+
+  if (NamedDecl *Friend = FriendD->getFriendDecl())
+    return MatchesFriend(S, EC, Friend);
 
   if (TypeSourceInfo *T = FriendD->getFriendType())
     return MatchesFriend(S, EC, T->getType()->getCanonicalTypeUnqualified());
 
-  NamedDecl *Friend
-    = cast<NamedDecl>(FriendD->getFriendDecl()->getCanonicalDecl());
-
-  // FIXME: declarations with dependent or templated scope.
-
-  if (isa<ClassTemplateDecl>(Friend))
-    return MatchesFriend(S, EC, cast<ClassTemplateDecl>(Friend));
-
-  if (isa<FunctionTemplateDecl>(Friend))
-    return MatchesFriend(S, EC, cast<FunctionTemplateDecl>(Friend));
-
-  if (isa<CXXRecordDecl>(Friend))
-    return MatchesFriend(S, EC, cast<CXXRecordDecl>(Friend));
-
-  assert(isa<FunctionDecl>(Friend) && "unknown friend decl kind");
-  return MatchesFriend(S, EC, cast<FunctionDecl>(Friend));
+  return AR_inaccessible;
 }
 
-static AccessResult GetFriendKind(Sema &S,
-                                  const EffectiveContext &EC,
-                                  const CXXRecordDecl *Class) {
+static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
+                                  FriendTemplateDecl *FTD,
+                                  TemplateSpecCandidateSet *FailedTSC) {
+  if (FTD->isInvalidDecl())
+    return AR_accessible;
+
+  if (TypeSourceInfo *TSI = FTD->getFriendType())
+    return MatchesFriend(S, EC, FTD, TSI, FailedTSC);
+
+  NamedDecl *Friend = FTD->getFriendDecl();
+  assert(Friend && "friend template must name a type or declaration");
+  return MatchesFriend(S, EC, FTD, Friend, FailedTSC);
+}
+
+static AccessResult GetFriendKind(Sema &S, const EffectiveContext &EC,
+                                  const CXXRecordDecl *Class,
+                                  TemplateSpecCandidateSet *FailedTSC) {
   AccessResult OnFailure = AR_inaccessible;
 
   // Okay, check friends.
-  for (auto *Friend : Class->friends()) {
-    switch (MatchesFriend(S, EC, Friend)) {
+  for (FriendDecl *Friend : Class->friends()) {
+    AccessResult AR;
+    if (auto *FTD = dyn_cast<FriendTemplateDecl>(Friend))
+      AR = MatchesFriend(S, EC, FTD, FailedTSC);
+    else
+      AR = MatchesFriend(S, EC, Friend);
+
+    switch (AR) {
     case AR_accessible:
       return AR_accessible;
 
@@ -614,6 +1166,7 @@ namespace {
 struct ProtectedFriendContext {
   Sema &S;
   const EffectiveContext &EC;
+  TemplateSpecCandidateSet *FailedTSC;
   const CXXRecordDecl *NamingClass;
   bool CheckDependent;
   bool EverDependent;
@@ -623,18 +1176,19 @@ struct ProtectedFriendContext {
 
   ProtectedFriendContext(Sema &S, const EffectiveContext &EC,
                          const CXXRecordDecl *InstanceContext,
-                         const CXXRecordDecl *NamingClass)
-    : S(S), EC(EC), NamingClass(NamingClass),
-      CheckDependent(InstanceContext->isDependentContext() ||
-                     NamingClass->isDependentContext()),
-      EverDependent(false) {}
+                         const CXXRecordDecl *NamingClass,
+                         TemplateSpecCandidateSet *FailedTSC)
+      : S(S), EC(EC), FailedTSC(FailedTSC), NamingClass(NamingClass),
+        CheckDependent(InstanceContext->isDependentContext() ||
+                       NamingClass->isDependentContext()),
+        EverDependent(false) {}
 
   /// Check classes in the current path for friendship, starting at
   /// the given index.
   bool checkFriendshipAlongPath(unsigned I) {
     assert(I < CurPath.size());
     for (unsigned E = CurPath.size(); I != E; ++I) {
-      switch (GetFriendKind(S, EC, CurPath[I])) {
+      switch (GetFriendKind(S, EC, CurPath[I], FailedTSC)) {
       case AR_accessible:   return true;
       case AR_inaccessible: continue;
       case AR_dependent:    EverDependent = true; continue;
@@ -721,9 +1275,9 @@ struct ProtectedFriendContext {
 ///     because the original target might have been more accessible
 ///     because of crazy subclassing.
 /// So we don't implement that.
-static AccessResult GetProtectedFriendKind(Sema &S, const EffectiveContext &EC,
-                                           const CXXRecordDecl *InstanceContext,
-                                           const CXXRecordDecl *NamingClass) {
+static AccessResult GetProtectedFriendKind(
+    Sema &S, const EffectiveContext &EC, const CXXRecordDecl *InstanceContext,
+    const CXXRecordDecl *NamingClass, TemplateSpecCandidateSet *FailedTSC) {
   assert(InstanceContext == nullptr ||
          InstanceContext->getCanonicalDecl() == InstanceContext);
   assert(NamingClass->getCanonicalDecl() == NamingClass);
@@ -731,19 +1285,20 @@ static AccessResult GetProtectedFriendKind(Sema &S, const EffectiveContext &EC,
   // If we don't have an instance context, our constraints give us
   // that NamingClass <= P <= NamingClass, i.e. P == NamingClass.
   // This is just the usual friendship check.
-  if (!InstanceContext) return GetFriendKind(S, EC, NamingClass);
+  if (!InstanceContext)
+    return GetFriendKind(S, EC, NamingClass, FailedTSC);
 
-  ProtectedFriendContext PRC(S, EC, InstanceContext, NamingClass);
+  ProtectedFriendContext PRC(S, EC, InstanceContext, NamingClass, FailedTSC);
   if (PRC.findFriendship(InstanceContext)) return AR_accessible;
   if (PRC.EverDependent) return AR_dependent;
   return AR_inaccessible;
 }
 
-static AccessResult HasAccess(Sema &S,
-                              const EffectiveContext &EC,
+static AccessResult HasAccess(Sema &S, const EffectiveContext &EC,
                               const CXXRecordDecl *NamingClass,
                               AccessSpecifier Access,
-                              const AccessTarget &Target) {
+                              const AccessTarget &Target,
+                              TemplateSpecCandidateSet *FailedTSC) {
   assert(NamingClass->getCanonicalDecl() == NamingClass &&
          "declaration should be canonicalized before being passed here");
 
@@ -863,7 +1418,8 @@ static AccessResult HasAccess(Sema &S,
       if (!InstanceContext) return AR_dependent;
     }
 
-    switch (GetProtectedFriendKind(S, EC, InstanceContext, NamingClass)) {
+    switch (GetProtectedFriendKind(S, EC, InstanceContext, NamingClass,
+                                   FailedTSC)) {
     case AR_accessible: return AR_accessible;
     case AR_inaccessible: return OnFailure;
     case AR_dependent: return AR_dependent;
@@ -871,7 +1427,7 @@ static AccessResult HasAccess(Sema &S,
     llvm_unreachable("impossible friendship kind");
   }
 
-  switch (GetFriendKind(S, EC, NamingClass)) {
+  switch (GetFriendKind(S, EC, NamingClass, FailedTSC)) {
   case AR_accessible: return AR_accessible;
   case AR_inaccessible: return OnFailure;
   case AR_dependent: return AR_dependent;
@@ -984,7 +1540,8 @@ static CXXBasePath *FindBestPath(Sema &S,
       AccessSpecifier BaseAccess = I->Base->getAccessSpecifier();
       PathAccess = std::max(PathAccess, BaseAccess);
 
-      switch (HasAccess(S, EC, NC, PathAccess, Target)) {
+      switch (HasAccess(S, EC, NC, PathAccess, Target,
+                        /*FailedTSC=*/nullptr)) {
       case AR_inaccessible: break;
       case AR_accessible:
         PathAccess = AS_public;
@@ -1180,7 +1737,8 @@ static void DiagnoseAccessPath(Sema &S,
     accessSoFar = D->getAccess();
     const CXXRecordDecl *declaringClass = entity.getDeclaringClass();
 
-    switch (HasAccess(S, EC, declaringClass, accessSoFar, entity)) {
+    switch (HasAccess(S, EC, declaringClass, accessSoFar, entity,
+                      /*FailedTSC=*/nullptr)) {
     // If the declaration is accessible when named in its declaring
     // class, then we must be constrained by the path.
     case AR_accessible:
@@ -1223,7 +1781,8 @@ static void DiagnoseAccessPath(Sema &S,
       accessSoFar = baseAccess;
     }
 
-    switch (HasAccess(S, EC, derivingClass, accessSoFar, entity)) {
+    switch (HasAccess(S, EC, derivingClass, accessSoFar, entity,
+                      /*FailedTSC=*/nullptr)) {
     case AR_inaccessible: break;
     case AR_accessible:
       accessSoFar = AS_public;
@@ -1327,9 +1886,9 @@ static bool IsMicrosoftUsingDeclarationAccessBug(Sema& S,
 
 /// Determines whether the accessed entity is accessible.  Public members
 /// have been weeded out by this point.
-static AccessResult IsAccessible(Sema &S,
-                                 const EffectiveContext &EC,
-                                 AccessTarget &Entity) {
+static AccessResult IsAccessible(Sema &S, const EffectiveContext &EC,
+                                 AccessTarget &Entity,
+                                 TemplateSpecCandidateSet *FailedTSC) {
   // Determine the actual naming class.
   const CXXRecordDecl *NamingClass = Entity.getEffectiveNamingClass();
 
@@ -1341,7 +1900,8 @@ static AccessResult IsAccessible(Sema &S,
   // which don't require [M4] or [B4]. These are by far the most
   // common forms of privileged access.
   if (UnprivilegedAccess != AS_none) {
-    switch (HasAccess(S, EC, NamingClass, UnprivilegedAccess, Entity)) {
+    switch (
+        HasAccess(S, EC, NamingClass, UnprivilegedAccess, Entity, FailedTSC)) {
     case AR_dependent:
       // This is actually an interesting policy decision.  We don't
       // *have* to delay immediately here: we can do the full access
@@ -1370,7 +1930,7 @@ static AccessResult IsAccessible(Sema &S,
     const CXXRecordDecl *DeclaringClass = Entity.getDeclaringClass();
 
     FinalAccess = Target->getAccess();
-    switch (HasAccess(S, EC, DeclaringClass, FinalAccess, Entity)) {
+    switch (HasAccess(S, EC, DeclaringClass, FinalAccess, Entity, FailedTSC)) {
     case AR_accessible:
       // Target is accessible at EC when named in its declaring class.
       // We can now hill-climb and simply check whether the declaring
@@ -1422,25 +1982,30 @@ static void DelayDependentAccess(Sema &S,
                               Entity.getDiag());
 }
 
-/// Checks access to an entity from the given effective context.
-static AccessResult CheckEffectiveAccess(Sema &S,
-                                         const EffectiveContext &EC,
+static AccessResult CheckEffectiveAccess(Sema &S, const EffectiveContext &EC,
                                          SourceLocation Loc,
-                                         AccessTarget &Entity) {
-  assert(Entity.getAccess() != AS_public && "called for public access!");
+                                         AccessTarget &Entity,
+                                         TemplateSpecCandidateSet *FailedTSC) {
+  assert((Entity.isQuiet() || FailedTSC) &&
+         "non-quiet access check requires a candidate set");
 
-  switch (IsAccessible(S, EC, Entity)) {
+  switch (IsAccessible(S, EC, Entity, FailedTSC)) {
   case AR_dependent:
     DelayDependentAccess(S, EC, Loc, Entity);
     return AR_dependent;
 
-  case AR_inaccessible:
+  case AR_inaccessible: {
     if (S.getLangOpts().MSVCCompat &&
         IsMicrosoftUsingDeclarationAccessBug(S, Loc, Entity))
       return AR_accessible;
-    if (!Entity.isQuiet())
-      DiagnoseBadAccess(S, Loc, EC, Entity);
+
+    if (Entity.isQuiet())
+      return AR_inaccessible;
+
+    DiagnoseBadAccess(S, Loc, EC, Entity);
+    FailedTSC->NoteCandidates(S, Loc);
     return AR_inaccessible;
+  }
 
   case AR_accessible:
     return AR_accessible;
@@ -1448,6 +2013,20 @@ static AccessResult CheckEffectiveAccess(Sema &S,
 
   // silence unnecessary warning
   llvm_unreachable("invalid access result");
+}
+
+static AccessResult CheckEffectiveAccess(Sema &S, const EffectiveContext &EC,
+                                         SourceLocation Loc,
+                                         AccessTarget &Entity) {
+  assert(Entity.getAccess() != AS_public && "called for public access!");
+
+  if (Entity.isQuiet())
+    return CheckEffectiveAccess(S, EC, Loc, Entity, /*FailedTSC=*/nullptr);
+
+  TemplateSpecCandidateSet FailedTSC(
+      Loc, /*ForTakingAddress=*/false,
+      TemplateSpecCandidateSetKind::FriendTemplate);
+  return CheckEffectiveAccess(S, EC, Loc, Entity, &FailedTSC);
 }
 
 static Sema::AccessResult CheckAccess(Sema &S, SourceLocation Loc,
@@ -1675,21 +2254,22 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
   case InitializedEntity::EK_Base:
     PD = PDiag(diag::err_access_base_ctor);
     PD << Entity.isInheritedVirtualBase()
-       << Entity.getBaseSpecifier()->getType() << getSpecialMember(Constructor);
+       << Entity.getBaseSpecifier()->getType()
+       << Constructor->getSpecialMemberKind();
     break;
 
   case InitializedEntity::EK_Member:
   case InitializedEntity::EK_ParenAggInitMember: {
     const FieldDecl *Field = cast<FieldDecl>(Entity.getDecl());
     PD = PDiag(diag::err_access_field_ctor);
-    PD << Field->getType() << getSpecialMember(Constructor);
+    PD << Field->getType() << Constructor->getSpecialMemberKind();
     break;
   }
 
   case InitializedEntity::EK_LambdaCapture: {
     StringRef VarName = Entity.getCapturedVarName();
     PD = PDiag(diag::err_access_lambda_capture);
-    PD << VarName << Entity.getType() << getSpecialMember(Constructor);
+    PD << VarName << Entity.getType() << Constructor->getSpecialMemberKind();
     break;
   }
 
@@ -1943,7 +2523,8 @@ bool Sema::IsSimplyAccessible(NamedDecl *Target, CXXRecordDecl *NamingClass,
     AccessTarget Entity(Context, AccessedEntity::Member, NamingClass,
                         DeclAccessPair::make(Target, AS_none), BaseType);
     EffectiveContext EC(CurContext);
-    return ::IsAccessible(*this, EC, Entity) != ::AR_inaccessible;
+    return ::IsAccessible(*this, EC, Entity, /*FailedTSC=*/nullptr) !=
+           ::AR_inaccessible;
   }
 
   if (ObjCIvarDecl *Ivar = dyn_cast<ObjCIvarDecl>(Target)) {

@@ -1397,7 +1397,7 @@ define void @frem_v4f80(<4 x x86_fp80> %a0, <4 x x86_fp80> %a1, ptr%p3) nounwind
 ; CHECK-LABEL: frem_v4f80:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
@@ -1441,7 +1441,7 @@ define void @frem_v4f80(<4 x x86_fp80> %a0, <4 x x86_fp80> %a1, ptr%p3) nounwind
 ; CHECK-NEXT:    fstpt 10(%rbx)
 ; CHECK-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; CHECK-NEXT:    fstpt (%rbx)
-; CHECK-NEXT:    addq $128, %rsp
+; CHECK-NEXT:    subq $-128, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <4 x x86_fp80> %a0, %a1
