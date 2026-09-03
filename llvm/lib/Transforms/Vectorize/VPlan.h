@@ -4378,6 +4378,17 @@ struct CastInfo<VPWidenMemoryRecipe, const VPRecipeBase *>
           VPWidenMemoryRecipe, const VPRecipeBase *,
           CastInfo<VPWidenMemoryRecipe, VPRecipeBase *>> {};
 
+/// Support casting from VPSingleDefRecipe -> VPWidenMemoryRecipe (loads only).
+template <>
+struct CastInfo<VPWidenMemoryRecipe, VPSingleDefRecipe *>
+    : vpdetail::CastInfoMixinImpl<VPWidenMemoryRecipe, VPWidenLoadRecipe,
+                                  VPWidenLoadEVLRecipe> {};
+template <>
+struct CastInfo<VPWidenMemoryRecipe, const VPSingleDefRecipe *>
+    : public ConstStrippingForwardingCast<
+          VPWidenMemoryRecipe, const VPSingleDefRecipe *,
+          CastInfo<VPWidenMemoryRecipe, VPSingleDefRecipe *>> {};
+
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>

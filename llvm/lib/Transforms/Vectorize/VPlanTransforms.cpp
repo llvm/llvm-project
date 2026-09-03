@@ -2232,7 +2232,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       return hash_combine(Result, SIVSteps->getInductionOpcode());
     // Fold in the separately stored consecutive flag. Alignment is left out and
     // handled by cse.
-    if (auto *Load = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(Def)))
+    if (auto *Load = dyn_cast<VPWidenMemoryRecipe>(Def))
       return hash_combine(Result, Load->isConsecutive());
     return Result;
   }
@@ -2260,9 +2260,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         return false;
     // Compare the separately stored consecutive flag. Alignment is left out and
     // handled by cse.
-    if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(L)))
-      if (LL->isConsecutive() !=
-          cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(R))->isConsecutive())
+    if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(L))
+      if (LL->isConsecutive() != cast<VPWidenMemoryRecipe>(R)->isConsecutive())
         return false;
     // Phi recipes can only be equal if they are in the same VPBB, as they
     // implicitly depend on their predecessors.
@@ -2287,14 +2286,14 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 void VPlanTransforms::cse(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
   DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo> CSEMap;
-  // CSE map for widened loads.
+  // CSE map for widened loads. Must be cleared on recipes that may write to
+  // memory, and at the end of each VPBB.
   DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo>
       LoadCSEMap;
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    LoadCSEMap.clear();
     for (VPRecipeBase &R : *VPBB) {
       if (R.mayWriteToMemory())
         LoadCSEMap.clear();
@@ -2311,8 +2310,8 @@ void VPlanTransforms::cse(VPlan &Plan) {
       if (!VPDT.dominates(V->getParent(), VPBB))
         continue;
       if (IsLoad) {
-        auto *EarlierLoad = cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(V));
-        auto *Load = cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(Def));
+        auto *EarlierLoad = cast<VPWidenMemoryRecipe>(V);
+        auto *Load = cast<VPWidenMemoryRecipe>(Def);
         if (EarlierLoad->getAlign() < Load->getAlign()) {
           // Record Load as the candidate for subsequent loads, as it may be
           // reusable where EarlierLoad is not.
@@ -2327,6 +2326,7 @@ void VPlanTransforms::cse(VPlan &Plan) {
         RFlags->intersectFlags(*cast<VPRecipeWithIRFlags>(Def));
       Def->replaceAllUsesWith(V);
     }
+    LoadCSEMap.clear();
   }
 }
 

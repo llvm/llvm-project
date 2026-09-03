@@ -496,7 +496,7 @@ define void @dup_load_diff_tbaa(ptr noalias %a, ptr noalias %out) {
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:    CLONE ir<%p> = getelementptr inbounds ir<%a>, vp<%index>
-; CHECK-NEXT:    WIDEN ir<%x> = load ir<%p>
+; CHECK-NEXT:    WIDEN ir<%x> = load ir<%p>{{$}}
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%x>, ir<%x>
 ; CHECK-NEXT:    CLONE ir<%po> = getelementptr inbounds ir<%out>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%po>, ir<%sum>
