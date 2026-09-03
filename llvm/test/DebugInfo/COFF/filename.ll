@@ -17,22 +17,25 @@
 ; RUN: sed -e 's|_FILENAME_|C:/abs/path/to/test.cpp|;s|_DIR_|X:/ignored/directory/|' %s > %t
 ; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %s -check-prefixes CHECK,CHECK-WIN-DRV
 ;
-; RUN: sed -e 's|_FILENAME_|./subdir/../test.cpp|;s|_DIR_|C:/ignored/../abs/path/to/|' %s > %t
+; RUN: sed -e 's|_FILENAME_|./skipped_subdir2/../test.cpp|;s|_DIR_|C:/skipped_subdir1/../abs/path/to/|' %s > %t
 ; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %s -check-prefixes CHECK,CHECK-WIN-DRV
 ;
-; RUN: sed -e 's|_FILENAME_|./../test.cpp|;s|_DIR_|C:/abs/path/to/subdir|' %s > %t
+; RUN: sed -e 's|_FILENAME_|./skipped_subdir2//../test.cpp|;s|_DIR_|C:/skipped_subdir1//../abs/path/to/|' %s > %t
 ; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %s -check-prefixes CHECK,CHECK-WIN-DRV
 ;
-; RUN: sed -e 's|_FILENAME_|./../test.cpp|' -e 's|_DIR_|<BSLASH><BSLASH>servername/path/to/subdir/|' -e 's|<BSLASH>|\\\\|g' %s > %t
+; RUN: sed -e 's|_FILENAME_|./../test.cpp|;s|_DIR_|C:/abs/path/to/skipped_subdir|' %s > %t
+; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %s -check-prefixes CHECK,CHECK-WIN-DRV
+;
+; RUN: sed -e 's|_FILENAME_|./../test.cpp|' -e 's|_DIR_|<BSLASH><BSLASH>servername/path/to/skipped_subdir/|' -e 's|<BSLASH>|\\\\|g' %s > %t
 ; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %s -check-prefixes CHECK,CHECK-WIN-UNC
 ;
-; RUN: sed -e 's|_FILENAME_|<BSLASH><BSLASH>servername/path/to/subdir/../test.cpp|' -e 's|_DIR_|X:/ignored/directory|' -e 's|<BSLASH>|\\\\|g' %s > %t
+; RUN: sed -e 's|_FILENAME_|<BSLASH><BSLASH>servername/path/to/skipped_subdir/../test.cpp|' -e 's|_DIR_|X:/ignored/directory|' -e 's|<BSLASH>|\\\\|g' %s > %t
 ; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %s -check-prefixes CHECK,CHECK-WIN-UNC
 ;
-; RUN: sed -e 's|_FILENAME_|./../test.cpp|' -e 's|_DIR_|<BSLASH><BSLASH>\?<BSLASH>C:/long/path/to/subdir/|' -e 's|<BSLASH>|\\\\|g' %s > %t
+; RUN: sed -e 's|_FILENAME_|./../test.cpp|' -e 's|_DIR_|<BSLASH><BSLASH>\?<BSLASH>C:/long/path/to/skipped_subdir/|' -e 's|<BSLASH>|\\\\|g' %s > %t
 ; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %s -check-prefixes CHECK,CHECK-WIN-EXT
 ;
-; RUN: sed -e 's|_FILENAME_|<BSLASH><BSLASH>\?<BSLASH>C:/long/path/to/subdir/../test.cpp|' -e 's|_DIR_|X:/ignored/directory|' -e 's|<BSLASH>|\\\\|g' %s > %t
+; RUN: sed -e 's|_FILENAME_|<BSLASH><BSLASH>\?<BSLASH>C:/long/path/to/skipped_subdir/../test.cpp|' -e 's|_DIR_|X:/ignored/directory|' -e 's|<BSLASH>|\\\\|g' %s > %t
 ; RUN: llc -filetype=obj -o - %t | llvm-readobj --codeview - | FileCheck %s -check-prefixes CHECK,CHECK-WIN-EXT
 
 ; C++ source to regenerate:
