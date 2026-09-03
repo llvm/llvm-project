@@ -273,7 +273,10 @@ public:
     ZS,
     ZT,
 
-    Max = ZT,
+    // AMDGPU-specific constraints
+    RF,
+
+    Max = RF,
   };
 
   // This class is intentionally packed into a 32b value as it is used as a
@@ -530,6 +533,8 @@ public:
       return "ZS";
     case ConstraintCode::ZT:
       return "ZT";
+    case ConstraintCode::RF:
+      return "RF";
     default:
       llvm_unreachable("Unknown memory constraint");
     }
