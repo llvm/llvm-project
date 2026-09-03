@@ -284,7 +284,7 @@ int main()
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41_omp_outlined_omp_outlined
-// IR-GPU-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1]] {
+// IR-GPU-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR3:[0-9]+]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -638,7 +638,7 @@ int main()
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46_omp_outlined_omp_outlined
-// IR-GPU-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1]] {
+// IR-GPU-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR3]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -808,7 +808,7 @@ int main()
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55
-// IR-GPU-SAME: (i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR4:[0-9]+]] {
+// IR-GPU-SAME: (i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR5:[0-9]+]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[NT_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
@@ -1037,7 +1037,7 @@ int main()
 //
 //
 // IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55_omp_outlined_omp_outlined
-// IR-GPU-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1]] {
+// IR-GPU-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR3]] {
 // IR-GPU-NEXT:  entry:
 // IR-GPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -1139,7 +1139,7 @@ int main()
 // IR-GPU-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP16]], 0
 // IR-GPU-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 // IR-GPU:       if.then:
-// IR-GPU-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z17omp_get_num_teamsv() #[[ATTR6:[0-9]+]]
+// IR-GPU-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z17omp_get_num_teamsv() #[[ATTR7:[0-9]+]]
 // IR-GPU-NEXT:    store i32 [[CALL]], ptr [[NT_ADDR_ASCAST]], align 4
 // IR-GPU-NEXT:    br label [[IF_END]]
 // IR-GPU:       if.end:
@@ -1364,7 +1364,7 @@ int main()
 //
 //
 // IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41.omp_outlined.omp_outlined
-// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4:[0-9]+]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1620,7 +1620,7 @@ int main()
 //
 //
 // IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46.omp_outlined.omp_outlined
-// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1920,7 +1920,7 @@ int main()
 //
 //
 // IR-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55.omp_outlined.omp_outlined
-// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2237,7 +2237,7 @@ int main()
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l41.omp_outlined.omp_outlined
-// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4:[0-9]+]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2493,7 +2493,7 @@ int main()
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46.omp_outlined.omp_outlined
-// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2793,7 +2793,7 @@ int main()
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l55.omp_outlined.omp_outlined
-// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[NT:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3169,7 +3169,7 @@ int main()
 //
 //
 // IR-GPU-NESTED-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64_omp_outlined_omp_outlined
-// IR-GPU-NESTED-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1]] {
+// IR-GPU-NESTED-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR3:[0-9]+]] {
 // IR-GPU-NESTED-NEXT:  entry:
 // IR-GPU-NESTED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NESTED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -3313,7 +3313,7 @@ int main()
 // IR-GPU-NESTED-NEXT:    [[TMP26:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // IR-GPU-NESTED-NEXT:    [[MUL35:%.*]] = mul nsw i32 [[TMP25]], [[TMP26]]
 // IR-GPU-NESTED-NEXT:    [[TMP27:%.*]] = load i32, ptr [[J12_ASCAST]], align 4
-// IR-GPU-NESTED-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooi(i32 noundef [[TMP27]]) #[[ATTR5:[0-9]+]]
+// IR-GPU-NESTED-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooi(i32 noundef [[TMP27]]) #[[ATTR6:[0-9]+]]
 // IR-GPU-NESTED-NEXT:    [[ADD36:%.*]] = add nsw i32 [[MUL35]], [[CALL]]
 // IR-GPU-NESTED-NEXT:    [[TMP28:%.*]] = load i32, ptr [[I11_ASCAST]], align 4
 // IR-GPU-NESTED-NEXT:    [[IDXPROM37:%.*]] = sext i32 [[TMP28]] to i64
@@ -3512,7 +3512,7 @@ int main()
 //
 //
 // IR-NESTED-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64.omp_outlined.omp_outlined
-// IR-NESTED-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-NESTED-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4:[0-9]+]] {
 // IR-NESTED-NEXT:  entry:
 // IR-NESTED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-NESTED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3844,7 +3844,7 @@ int main()
 //
 //
 // IR-PCH-NESTED-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64.omp_outlined.omp_outlined
-// IR-PCH-NESTED-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR2]] {
+// IR-PCH-NESTED-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4:[0-9]+]] {
 // IR-PCH-NESTED-NEXT:  entry:
 // IR-PCH-NESTED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NESTED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

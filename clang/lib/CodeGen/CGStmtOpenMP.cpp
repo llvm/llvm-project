@@ -632,7 +632,6 @@ static llvm::Function *emitOutlinedFunctionPrologue(
 
   if (CD->isNothrow())
     F->setDoesNotThrow();
-  F->setDoesNotRecurse();
 
   // Always inline the outlined function if optimizations are enabled.
   if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
@@ -745,7 +744,6 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
   if (CD->isNothrow())
     F->setDoesNotThrow();
-  F->setDoesNotRecurse();
 
   CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, Args, Loc, Loc);
   Address ContextAddr = CGF.GetAddrOfLocalVar(CD->getContextParam());
