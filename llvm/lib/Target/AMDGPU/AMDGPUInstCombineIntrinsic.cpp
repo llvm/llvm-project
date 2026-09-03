@@ -1582,8 +1582,19 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     const APFloat *ConstSrc1 = nullptr;
     const APFloat *ConstSrc2 = nullptr;
 
+    SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&II);
+    FastMathFlags FMF = II.getFastMathFlags();
+
+    // Nan rows take precedence over infinity rows: only fold an infinity
+    // constant to min/max when neither other operand can be nan.
+    auto IsFoldableConst = [&](const APFloat *C, Value *OtherA, Value *OtherB) {
+      return C->isNaN() || (C->isInfinity() &&
+                            (FMF.noNaNs() || isKnownNeverNaN(OtherA, SQ)) &&
+                            (FMF.noNaNs() || isKnownNeverNaN(OtherB, SQ)));
+    };
+
     if ((match(Src0, m_APFloat(ConstSrc0)) &&
-         (ConstSrc0->isNaN() || ConstSrc0->isInfinity())) ||
+         IsFoldableConst(ConstSrc0, Src1, Src2)) ||
         isa<UndefValue>(Src0)) {
       const bool IsPosInfinity = ConstSrc0 && ConstSrc0->isPosInfinity();
       switch (fpenvIEEEMode(II)) {
@@ -1603,7 +1614,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         break;
       }
     } else if ((match(Src1, m_APFloat(ConstSrc1)) &&
-                (ConstSrc1->isNaN() || ConstSrc1->isInfinity())) ||
+                IsFoldableConst(ConstSrc1, Src0, Src2)) ||
                isa<UndefValue>(Src1)) {
       const bool IsPosInfinity = ConstSrc1 && ConstSrc1->isPosInfinity();
       switch (fpenvIEEEMode(II)) {
@@ -1623,7 +1634,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         break;
       }
     } else if ((match(Src2, m_APFloat(ConstSrc2)) &&
-                (ConstSrc2->isNaN() || ConstSrc2->isInfinity())) ||
+                IsFoldableConst(ConstSrc2, Src0, Src1)) ||
                isa<UndefValue>(Src2)) {
       switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
@@ -1663,7 +1674,18 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       Swap = true;
     }
 
-    if (isa<Constant>(Src1) && !isa<Constant>(Src2)) {
+    // Under ieee=1, an snan in src0/src1 selects src2 but an snan in src2
+    // yields qnan, so src2 can't swap in freely; ieee=0 is symmetric.
+    bool NoOperandCanBeSNan =
+        FMF.noNaNs() ||
+        (computeKnownFPClass(Src0, fcSNan, SQ).isKnownNever(fcSNan) &&
+         computeKnownFPClass(Src1, fcSNan, SQ).isKnownNever(fcSNan) &&
+         computeKnownFPClass(Src2, fcSNan, SQ).isKnownNever(fcSNan));
+    bool SafeToMoveConstantToSrc2 =
+        fpenvIEEEMode(II) == KnownIEEEMode::Off || NoOperandCanBeSNan;
+
+    if (isa<Constant>(Src1) && !isa<Constant>(Src2) &&
+        SafeToMoveConstantToSrc2) {
       std::swap(Src1, Src2);
       Swap = true;
     }

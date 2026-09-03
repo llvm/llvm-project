@@ -45,10 +45,15 @@ define float @fmed3_canonicalize_c0_x_c1_f32(float %x) #1 {
 }
 
 define float @fmed3_canonicalize_c0_c1_x_f32(float %x) #1 {
-; CHECK-LABEL: define float @fmed3_canonicalize_c0_c1_x_f32(
-; CHECK-SAME: float [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float 0.000000e+00, float 1.000000e+00)
-; CHECK-NEXT:    ret float [[MED3]]
+; IEEE1-LABEL: define float @fmed3_canonicalize_c0_c1_x_f32(
+; IEEE1-SAME: float [[X:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float 0.000000e+00, float 1.000000e+00, float [[X]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_canonicalize_c0_c1_x_f32(
+; IEEE0-SAME: float [[X:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float 0.000000e+00, float 1.000000e+00)
+; IEEE0-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float %x)
   ret float %med3
@@ -65,22 +70,58 @@ define float @fmed3_canonicalize_x_y_c_f32(float %x, float %y) #1 {
 }
 
 define float @fmed3_canonicalize_x_c_y_f32(float %x, float %y) #1 {
-; CHECK-LABEL: define float @fmed3_canonicalize_x_c_y_f32(
-; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[MED3]]
+; IEEE1-LABEL: define float @fmed3_canonicalize_x_c_y_f32(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float 1.000000e+00, float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_canonicalize_x_c_y_f32(
+; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float 1.000000e+00)
+; IEEE0-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 1.0, float %y)
   ret float %med3
 }
 
 define float @fmed3_canonicalize_c_x_y_f32(float %x, float %y) #1 {
-; CHECK-LABEL: define float @fmed3_canonicalize_c_x_y_f32(
-; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[MED3]]
+; IEEE1-LABEL: define float @fmed3_canonicalize_c_x_y_f32(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float 1.000000e+00, float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_canonicalize_c_x_y_f32(
+; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float 1.000000e+00)
+; IEEE0-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float 1.0, float %x, float %y)
+  ret float %med3
+}
+
+; With ieee=1, fmed3(%x, 1.0, snan) is qnan but fmed3(%x, snan, 1.0) is 1.0; nnan makes the swap safe.
+define float @fmed3_canonicalize_x_c_y_nnan_f32(float %x, float %y) #1 {
+; CHECK-LABEL: define float @fmed3_canonicalize_x_c_y_nnan_f32(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[MED3:%.*]] = call nnan float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[MED3]]
+;
+  %med3 = call nnan float @llvm.amdgcn.fmed3.f32(float %x, float 1.0, float %y)
+  ret float %med3
+}
+
+; sitofp results can never be nan.
+define float @fmed3_canonicalize_x_c_y_not_snan_f32(i32 %x, i32 %y) #1 {
+; CHECK-LABEL: define float @fmed3_canonicalize_x_c_y_not_snan_f32(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[X_CVT:%.*]] = sitofp i32 [[X]] to float
+; CHECK-NEXT:    [[Y_CVT:%.*]] = sitofp i32 [[Y]] to float
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X_CVT]], float [[Y_CVT]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[MED3]]
+;
+  %x.cvt = sitofp i32 %x to float
+  %y.cvt = sitofp i32 %y to float
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x.cvt, float 1.0, float %y.cvt)
   ret float %med3
 }
 
@@ -559,12 +600,12 @@ define float @fmed3_neg2_3_snan1_f32(float %x, float %y) #1 {
 define float @fmed3_inf_x_y_f32(float %x, float %y) #1 {
 ; IEEE1-LABEL: define float @fmed3_inf_x_y_f32(
 ; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float +inf, float [[Y]])
 ; IEEE1-NEXT:    ret float [[MED3]]
 ;
 ; IEEE0-LABEL: define float @fmed3_inf_x_y_f32(
 ; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float +inf)
 ; IEEE0-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF0000000000000, float %x, float %y)
@@ -574,12 +615,12 @@ define float @fmed3_inf_x_y_f32(float %x, float %y) #1 {
 define float @fmed3_x_inf_y_f32(float %x, float %y) #1 {
 ; IEEE1-LABEL: define float @fmed3_x_inf_y_f32(
 ; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float +inf, float [[Y]])
 ; IEEE1-NEXT:    ret float [[MED3]]
 ;
 ; IEEE0-LABEL: define float @fmed3_x_inf_y_f32(
 ; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float +inf)
 ; IEEE0-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0x7FF0000000000000, float %y)
@@ -587,15 +628,10 @@ define float @fmed3_x_inf_y_f32(float %x, float %y) #1 {
 }
 
 define float @fmed3_x_y_inf_f32(float %x, float %y) #1 {
-; IEEE1-LABEL: define float @fmed3_x_y_inf_f32(
-; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
-; IEEE1-NEXT:    ret float [[MED3]]
-;
-; IEEE0-LABEL: define float @fmed3_x_y_inf_f32(
-; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
-; IEEE0-NEXT:    ret float [[MED3]]
+; CHECK-LABEL: define float @fmed3_x_y_inf_f32(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float +inf)
+; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF0000000000000)
   ret float %med3
@@ -604,12 +640,12 @@ define float @fmed3_x_y_inf_f32(float %x, float %y) #1 {
 define float @fmed3_ninf_x_y_f32(float %x, float %y) #1 {
 ; IEEE1-LABEL: define float @fmed3_ninf_x_y_f32(
 ; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float -inf, float [[Y]])
 ; IEEE1-NEXT:    ret float [[MED3]]
 ;
 ; IEEE0-LABEL: define float @fmed3_ninf_x_y_f32(
 ; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float -inf)
 ; IEEE0-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float 0xFFF0000000000000, float %x, float %y)
@@ -619,12 +655,12 @@ define float @fmed3_ninf_x_y_f32(float %x, float %y) #1 {
 define float @fmed3_x_ninf_y_f32(float %x, float %y) #1 {
 ; IEEE1-LABEL: define float @fmed3_x_ninf_y_f32(
 ; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float -inf, float [[Y]])
 ; IEEE1-NEXT:    ret float [[MED3]]
 ;
 ; IEEE0-LABEL: define float @fmed3_x_ninf_y_f32(
 ; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
-; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float -inf)
 ; IEEE0-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0xFFF0000000000000, float %y)
@@ -632,15 +668,129 @@ define float @fmed3_x_ninf_y_f32(float %x, float %y) #1 {
 }
 
 define float @fmed3_x_y_ninf_f32(float %x, float %y) #1 {
-; IEEE1-LABEL: define float @fmed3_x_y_ninf_f32(
-; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; CHECK-LABEL: define float @fmed3_x_y_ninf_f32(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float -inf)
+; CHECK-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0xFFF0000000000000)
+  ret float %med3
+}
+
+; Infinity folds above only fire when the other operands can't be nan:
+; fmed3(qnan, x, -inf) is -inf, not minnum(qnan, x) = x.
+
+define float @fmed3_inf_x_y_nofpclass_nan_f32(float nofpclass(nan) %x, float nofpclass(nan) %y) #1 {
+; IEEE1-LABEL: define float @fmed3_inf_x_y_nofpclass_nan_f32(
+; IEEE1-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_inf_x_y_nofpclass_nan_f32(
+; IEEE0-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF0000000000000, float %x, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_inf_y_nofpclass_nan_f32(float nofpclass(nan) %x, float nofpclass(nan) %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_inf_y_nofpclass_nan_f32(
+; IEEE1-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_x_inf_y_nofpclass_nan_f32(
+; IEEE0-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0x7FF0000000000000, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_y_inf_nofpclass_nan_f32(float nofpclass(nan) %x, float nofpclass(nan) %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_y_inf_nofpclass_nan_f32(
+; IEEE1-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_x_y_inf_nofpclass_nan_f32(
+; IEEE0-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF0000000000000)
+  ret float %med3
+}
+
+define float @fmed3_ninf_x_y_nofpclass_nan_f32(float nofpclass(nan) %x, float nofpclass(nan) %y) #1 {
+; IEEE1-LABEL: define float @fmed3_ninf_x_y_nofpclass_nan_f32(
+; IEEE1-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
 ; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
 ; IEEE1-NEXT:    ret float [[MED3]]
 ;
-; IEEE0-LABEL: define float @fmed3_x_y_ninf_f32(
-; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-LABEL: define float @fmed3_ninf_x_y_nofpclass_nan_f32(
+; IEEE0-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
 ; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
 ; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0xFFF0000000000000, float %x, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_ninf_y_nofpclass_nan_f32(float nofpclass(nan) %x, float nofpclass(nan) %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_ninf_y_nofpclass_nan_f32(
+; IEEE1-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_x_ninf_y_nofpclass_nan_f32(
+; IEEE0-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0xFFF0000000000000, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_y_ninf_nofpclass_nan_f32(float nofpclass(nan) %x, float nofpclass(nan) %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_y_ninf_nofpclass_nan_f32(
+; IEEE1-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_x_y_ninf_nofpclass_nan_f32(
+; IEEE0-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0xFFF0000000000000)
+  ret float %med3
+}
+
+define float @fmed3_x_y_ninf_nnan_f32(float %x, float %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_y_ninf_nnan_f32(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call nnan float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_x_y_ninf_nnan_f32(
+; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call nnan float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call nnan float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0xFFF0000000000000)
+  ret float %med3
+}
+
+; One possibly-nan operand is enough to block the fold.
+define float @fmed3_x_y_ninf_nofpclass_nan_one_operand_f32(float nofpclass(nan) %x, float %y) #1 {
+; CHECK-LABEL: define float @fmed3_x_y_ninf_nofpclass_nan_one_operand_f32(
+; CHECK-SAME: float nofpclass(nan) [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[X]], float [[Y]], float -inf)
+; CHECK-NEXT:    ret float [[MED3]]
 ;
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0xFFF0000000000000)
   ret float %med3
