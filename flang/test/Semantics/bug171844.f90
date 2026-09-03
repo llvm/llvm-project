@@ -7,33 +7,33 @@
 real a(2)
 
 if (.false.) then
-  !CHECK-WARNING::11:12: warning: subscript 3 is greater than upper bound 2 for dimension 1 of array [-Wbad-value-in-dead-code]
+  !CHECK-WARNING: warning: subscript 3 is greater than upper bound 2 for dimension 1 of array [-Wbad-value-in-dead-code]
   print *, a(3)
 end if
 
 if (.true.) then
-  !CHECK::16:12: error: subscript 0 is less than lower bound 1 for dimension 1 of array
+  !CHECK: error: subscript 0 is less than lower bound 1 for dimension 1 of array
   print *, a(0)
 else
-  !CHECK-WARNING::19:12: warning: subscript 0 is less than lower bound 1 for dimension 1 of array [-Wbad-value-in-dead-code]
+  !CHECK-WARNING: warning: subscript 0 is less than lower bound 1 for dimension 1 of array [-Wbad-value-in-dead-code]
   print *, a(0)
 end if
 
 if (.false.) then
 else if (.true.) then
-  !CHECK::25:12: error: subscript 0 is less than lower bound 1 for dimension 1 of array
+  !CHECK: error: subscript 0 is less than lower bound 1 for dimension 1 of array
   print *, a(0)
 else
-  !CHECK-WARNING::28:12: warning: subscript 0 is less than lower bound 1 for dimension 1 of array [-Wbad-value-in-dead-code]
+  !CHECK-WARNING: warning: subscript 0 is less than lower bound 1 for dimension 1 of array [-Wbad-value-in-dead-code]
   print *, a(0)
 end if
 
 if (.true.) then
 else if (.true.) then
-  !CHECK-WARNING::34:12: warning: subscript -1 is less than lower bound 1 for dimension 1 of array [-Wbad-value-in-dead-code]
+  !CHECK-WARNING: warning: subscript -1 is less than lower bound 1 for dimension 1 of array [-Wbad-value-in-dead-code]
   print *, a(-1)
 else
-  !CHECK-WARNING::37:12: warning: subscript 3 is greater than upper bound 2 for dimension 1 of array [-Wbad-value-in-dead-code]
+  !CHECK-WARNING: warning: subscript 3 is greater than upper bound 2 for dimension 1 of array [-Wbad-value-in-dead-code]
   print *, a(3)
 end if
 
