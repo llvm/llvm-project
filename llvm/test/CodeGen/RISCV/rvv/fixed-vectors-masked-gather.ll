@@ -13911,10 +13911,9 @@ define <4 x i32> @mgather_narrow_edge_case(ptr %base) {
 ; RV32-LABEL: mgather_narrow_edge_case:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 5
+; RV32-NEXT:    vmv.v.i v0, 5
 ; RV32-NEXT:    li a1, -512
 ; RV32-NEXT:    vmv.v.x v9, a1
-; RV32-NEXT:    vmv.v.v v0, v8
 ; RV32-NEXT:    vmerge.vim v8, v9, 0, v0
 ; RV32-NEXT:    vluxei32.v v8, (a0), v8
 ; RV32-NEXT:    ret
@@ -14008,12 +14007,11 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 ; RV32-NEXT:    lbu a0, 0(a0)
 ; RV32-NEXT:    slli a3, a3, 8
 ; RV32-NEXT:    or a3, a3, a4
-; RV32-NEXT:    vmv.v.i v10, 15
+; RV32-NEXT:    vmv.v.i v0, 15
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32-NEXT:    slli a1, a1, 8
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    vslide1down.vx v9, v9, a0
-; RV32-NEXT:    vmv.v.v v0, v10
 ; RV32-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -14084,12 +14082,11 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 ; RV64V-NEXT:    lbu a2, 0(t3)
 ; RV64V-NEXT:    slli a3, a3, 8
 ; RV64V-NEXT:    or a0, a3, a0
-; RV64V-NEXT:    vmv.v.i v10, 15
+; RV64V-NEXT:    vmv.v.i v0, 15
 ; RV64V-NEXT:    vslide1down.vx v11, v8, a0
 ; RV64V-NEXT:    slli a1, a1, 8
 ; RV64V-NEXT:    or a1, a1, a2
 ; RV64V-NEXT:    vslide1down.vx v8, v9, a1
-; RV64V-NEXT:    vmv.v.v v0, v10
 ; RV64V-NEXT:    vslidedown.vi v8, v11, 4, v0.t
 ; RV64V-NEXT:    addi sp, s0, -128
 ; RV64V-NEXT:    .cfi_def_cfa sp, 128

@@ -1003,9 +1003,8 @@ define <512 x i8> @buildvec_not_vid_v512i8_indices_overflow_2() vscale_range(16,
 ; RV64V-LABEL: buildvec_not_vid_v512i8_indices_overflow_2:
 ; RV64V:       # %bb.0:
 ; RV64V-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
-; RV64V-NEXT:    vmv.v.i v8, 3
+; RV64V-NEXT:    vmv.v.i v0, 3
 ; RV64V-NEXT:    vmv.v.i v12, 0
-; RV64V-NEXT:    vmv.v.v v0, v8
 ; RV64V-NEXT:    vmerge.vim v13, v12, -1, v0
 ; RV64V-NEXT:    li a0, 512
 ; RV64V-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
@@ -1030,9 +1029,8 @@ define <512 x i8> @buildvec_not_vid_v512i8_indices_overflow_2() vscale_range(16,
 ; RV64ZVE32-LABEL: buildvec_not_vid_v512i8_indices_overflow_2:
 ; RV64ZVE32:       # %bb.0:
 ; RV64ZVE32-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
-; RV64ZVE32-NEXT:    vmv.v.i v8, 15
+; RV64ZVE32-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32-NEXT:    vmv.v.i v12, 0
-; RV64ZVE32-NEXT:    vmv.v.v v0, v8
 ; RV64ZVE32-NEXT:    vmerge.vim v13, v12, -1, v0
 ; RV64ZVE32-NEXT:    li a0, 512
 ; RV64ZVE32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
@@ -2962,12 +2960,11 @@ define <8 x i8> @buildvec_v8i8_pack(i8 %e1, i8 %e2, i8 %e3, i8 %e4, i8 %e5, i8 %
 ; RV32-ONLY-NEXT:    vmv.v.x v9, a0
 ; RV32-ONLY-NEXT:    vslide1down.vx v8, v8, a5
 ; RV32-ONLY-NEXT:    vslide1down.vx v9, v9, a1
-; RV32-ONLY-NEXT:    vmv.v.i v10, 15
+; RV32-ONLY-NEXT:    vmv.v.i v0, 15
 ; RV32-ONLY-NEXT:    vslide1down.vx v8, v8, a6
 ; RV32-ONLY-NEXT:    vslide1down.vx v9, v9, a2
 ; RV32-ONLY-NEXT:    vslide1down.vx v8, v8, a7
 ; RV32-ONLY-NEXT:    vslide1down.vx v9, v9, a3
-; RV32-ONLY-NEXT:    vmv1r.v v0, v10
 ; RV32-ONLY-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; RV32-ONLY-NEXT:    ret
 ;
@@ -3016,12 +3013,11 @@ define <8 x i8> @buildvec_v8i8_pack(i8 %e1, i8 %e2, i8 %e3, i8 %e4, i8 %e5, i8 %
 ; RV64V-ONLY-NEXT:    vmv.v.x v9, a0
 ; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a5
 ; RV64V-ONLY-NEXT:    vslide1down.vx v9, v9, a1
-; RV64V-ONLY-NEXT:    vmv.v.i v10, 15
+; RV64V-ONLY-NEXT:    vmv.v.i v0, 15
 ; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a6
 ; RV64V-ONLY-NEXT:    vslide1down.vx v9, v9, a2
 ; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a7
 ; RV64V-ONLY-NEXT:    vslide1down.vx v9, v9, a3
-; RV64V-ONLY-NEXT:    vmv1r.v v0, v10
 ; RV64V-ONLY-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; RV64V-ONLY-NEXT:    ret
 ;
@@ -3072,12 +3068,11 @@ define <8 x i8> @buildvec_v8i8_pack(i8 %e1, i8 %e2, i8 %e3, i8 %e4, i8 %e5, i8 %
 ; RV64ZVE32-NEXT:    vmv.v.x v9, a0
 ; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a5
 ; RV64ZVE32-NEXT:    vslide1down.vx v9, v9, a1
-; RV64ZVE32-NEXT:    vmv.v.i v10, 15
+; RV64ZVE32-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a6
 ; RV64ZVE32-NEXT:    vslide1down.vx v9, v9, a2
 ; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a7
 ; RV64ZVE32-NEXT:    vslide1down.vx v9, v9, a3
-; RV64ZVE32-NEXT:    vmv1r.v v0, v10
 ; RV64ZVE32-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; RV64ZVE32-NEXT:    ret
   %v1 = insertelement <8 x i8> poison, i8 %e1, i32 0

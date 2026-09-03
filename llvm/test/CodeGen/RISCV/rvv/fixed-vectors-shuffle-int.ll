@@ -92,9 +92,8 @@ define <4 x i16> @vrgather_shuffle_xv_v4i16(<4 x i16> %x) {
 ; CHECK-NEXT:    vmv.v.i v0, 8
 ; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    vslideup.vi v9, v8, 2, v0.t
-; CHECK-NEXT:    vmv.v.i v8, 12
+; CHECK-NEXT:    vmv.v.i v0, 12
 ; CHECK-NEXT:    vmv.v.i v10, 5
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v9, v0
 ; CHECK-NEXT:    ret
   %s = shufflevector <4 x i16> <i16 5, i16 5, i16 5, i16 5>, <4 x i16> %x, <4 x i32> <i32 0, i32 3, i32 6, i32 5>
@@ -107,9 +106,8 @@ define <4 x i16> @vrgather_shuffle_vx_v4i16(<4 x i16> %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v0, 2
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2, v0.t
-; CHECK-NEXT:    vmv.v.i v9, 3
+; CHECK-NEXT:    vmv.v.i v0, 3
 ; CHECK-NEXT:    vmv.v.i v10, 5
-; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
   %s = shufflevector <4 x i16> %x, <4 x i16> <i16 5, i16 5, i16 5, i16 5>, <4 x i32> <i32 0, i32 3, i32 6, i32 5>
@@ -155,10 +153,9 @@ define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v8, 2
 ; RV32-NEXT:    li a0, 164
-; RV32-NEXT:    vmv.s.x v9, a0
+; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    li a0, 5
 ; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vmv.v.v v0, v9
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v16, v12, v8, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v16
@@ -356,9 +353,8 @@ define <8 x i8> @splat_ve2_we0(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 66
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.s.x v11, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v10, v8, 2
-; CHECK-NEXT:    vmv1r.v v0, v11
 ; CHECK-NEXT:    vrgather.vi v10, v9, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -664,9 +660,8 @@ define <8 x i8> @merge_non_contiguous_slideup_slidedown(<8 x i8> %v, <8 x i8> %w
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, -22
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 2, i32 8, i32 4, i32 10, i32 6, i32 12, i32 13, i32 14>
@@ -970,9 +965,8 @@ define <8 x i32> @shuffle_repeat3_singlesrc_e32(<8 x i32> %v) {
 ; CHECK-LABEL: shuffle_repeat3_singlesrc_e32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 7
+; CHECK-NEXT:    vmv.v.i v0, 7
 ; CHECK-NEXT:    vmv.v.i v10, 1
-; CHECK-NEXT:    vmv.v.v v0, v9
 ; CHECK-NEXT:    vmerge.vim v9, v10, 0, v0
 ; CHECK-NEXT:    li a0, 192
 ; CHECK-NEXT:    vmv.s.x v0, a0
@@ -1341,9 +1335,8 @@ define <4 x i16> @vmerge_2(<4 x i16> %x) {
 ; CHECK-LABEL: vmerge_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 9
+; CHECK-NEXT:    vmv.v.i v0, 9
 ; CHECK-NEXT:    vmv.v.i v10, 5
-; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
    %s = shufflevector <4 x i16> %x, <4 x i16> <i16 poison, i16 5, i16 5, i16 poison>, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
@@ -1427,9 +1420,8 @@ define <8 x i8> @identity_splat0(<8 x i8> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 25
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vrgather.vi v9, v8, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1442,9 +1434,8 @@ define <8 x i8> @identity_splat2(<8 x i8> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 28
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vrgather.vi v9, v8, 2, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret

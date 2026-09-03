@@ -332,9 +332,8 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV32-NEXT:    addi a0, a0, 128
 ; RV32-NEXT:    vle8.v v16, (a0)
 ; RV32-NEXT:    vmerge.vim v24, v8, 1, v0
-; RV32-NEXT:    vmseq.vi v7, v16, 0
+; RV32-NEXT:    vmseq.vi v0, v16, 0
 ; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    vmv1r.v v0, v7
 ; RV32-NEXT:    vse8.v v24, (a0)
 ; RV32-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV32-NEXT:    zext.b a1, a1
@@ -363,9 +362,8 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV64-NEXT:    addi a0, a0, 128
 ; RV64-NEXT:    vle8.v v16, (a0)
 ; RV64-NEXT:    vmerge.vim v24, v8, 1, v0
-; RV64-NEXT:    vmseq.vi v7, v16, 0
+; RV64-NEXT:    vmseq.vi v0, v16, 0
 ; RV64-NEXT:    mv a0, sp
-; RV64-NEXT:    vmv1r.v v0, v7
 ; RV64-NEXT:    vse8.v v24, (a0)
 ; RV64-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64-NEXT:    zext.b a1, a1
@@ -394,9 +392,8 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV32ZBS-NEXT:    addi a0, a0, 128
 ; RV32ZBS-NEXT:    vle8.v v16, (a0)
 ; RV32ZBS-NEXT:    vmerge.vim v24, v8, 1, v0
-; RV32ZBS-NEXT:    vmseq.vi v7, v16, 0
+; RV32ZBS-NEXT:    vmseq.vi v0, v16, 0
 ; RV32ZBS-NEXT:    mv a0, sp
-; RV32ZBS-NEXT:    vmv1r.v v0, v7
 ; RV32ZBS-NEXT:    vse8.v v24, (a0)
 ; RV32ZBS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV32ZBS-NEXT:    zext.b a1, a1
@@ -425,9 +422,8 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    addi a0, a0, 128
 ; RV64ZBS-NEXT:    vle8.v v16, (a0)
 ; RV64ZBS-NEXT:    vmerge.vim v24, v8, 1, v0
-; RV64ZBS-NEXT:    vmseq.vi v7, v16, 0
+; RV64ZBS-NEXT:    vmseq.vi v0, v16, 0
 ; RV64ZBS-NEXT:    mv a0, sp
-; RV64ZBS-NEXT:    vmv1r.v v0, v7
 ; RV64ZBS-NEXT:    vse8.v v24, (a0)
 ; RV64ZBS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64ZBS-NEXT:    zext.b a1, a1

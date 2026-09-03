@@ -109,9 +109,8 @@ define i1 @extractelt_nxv64i1(ptr %x, i64 %idx) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmseq.vi v16, v8, 0
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8

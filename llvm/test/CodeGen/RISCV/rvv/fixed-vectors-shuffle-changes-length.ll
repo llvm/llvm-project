@@ -81,9 +81,8 @@ define <4 x i32> @v4i32_v8i32(<8 x i32>) {
 ; CHECK-LABEL: v4i32_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v11, 8
+; CHECK-NEXT:    vmv.v.i v0, 8
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vmv.v.v v0, v11
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1, v0.t
 ; CHECK-NEXT:    vmv.v.i v11, 5
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma

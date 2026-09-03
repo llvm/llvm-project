@@ -220,9 +220,8 @@ define void @deinterleave7_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v10, v9, 4
 ; CHECK-NEXT:    vslideup.vi v10, v9, 1, v0.t
-; CHECK-NEXT:    vmv.v.i v9, 6
+; CHECK-NEXT:    vmv.v.i v0, 6
 ; CHECK-NEXT:    vrgather.vi v11, v8, 1
-; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vvm v8, v11, v10, v0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret

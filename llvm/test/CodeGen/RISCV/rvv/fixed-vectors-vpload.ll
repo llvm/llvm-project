@@ -356,11 +356,10 @@ define <33 x double> @vpload_v33f64(ptr %ptr, <33 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:  .LBB32_2:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v24, 2
+; CHECK-NEXT:    vslidedown.vi v0, v24, 2
 ; CHECK-NEXT:    addi a5, a3, -16
 ; CHECK-NEXT:    sltu a3, a3, a5
 ; CHECK-NEXT:    addi a4, a2, -32
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    sltu a6, a2, a4
 ; CHECK-NEXT:    addi a7, a3, -1
 ; CHECK-NEXT:    addi a6, a6, -1

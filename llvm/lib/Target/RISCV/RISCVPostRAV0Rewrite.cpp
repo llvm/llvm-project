@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // After register allocation, remove two narrowly proven classes of copies to
-// V0.  The first retargets a safe adjacent mask producer directly to V0:
+// V0.  The first retargets a safe same-block mask producer directly to V0:
 //
 //   D = safe mask-producing instruction
 //   V0 = COPY killed D
@@ -44,6 +44,11 @@ STATISTIC(NumV0ProducersRetargeted,
 STATISTIC(NumV0CompareChainsRewritten,
           "Number of post-RA masked-compare V0 chains rewritten");
 
+// Bound each backwards producer search so the pass remains O(N * K) per MBB.
+// The frozen corpus that motivated this transform needed at most five
+// intervening instructions.
+static constexpr unsigned MaxProducerSearchInstructions = 5;
+
 namespace {
 
 class RISCVPostRAV0RewriteImpl {
@@ -55,6 +60,9 @@ class RISCVPostRAV0RewriteImpl {
   bool tryRetargetProducer(MachineBasicBlock::instr_iterator Producer,
                            MachineBasicBlock::instr_iterator Copy,
                            const LivePhysRegs &LiveAfterCopy) const;
+  MachineBasicBlock::instr_iterator
+  findProducer(MachineBasicBlock &MBB, MachineBasicBlock::instr_iterator Copy,
+               Register Dst) const;
   bool tryRewriteCompareChain(MachineBasicBlock::instr_iterator Save,
                               MachineBasicBlock::instr_iterator Body,
                               MachineBasicBlock::instr_iterator Restore,
@@ -287,6 +295,59 @@ bool RISCVPostRAV0RewriteImpl::tryRetargetProducer(
   return true;
 }
 
+static bool hasRegMask(const MachineInstr &MI) {
+  for (const MachineOperand &MO : MI.operands())
+    if (MO.isRegMask())
+      return true;
+  return false;
+}
+
+static bool isStructurallyTransparent(const MachineInstr &MI) {
+  return !MI.isDebugInstr() && !MI.isMetaInstruction() && !MI.isPosition() &&
+         !MI.isPseudoProbe() && !MI.isBundled() && !MI.peekDebugInstrNum() &&
+         !MI.getFlag(MachineInstr::LRSplit) &&
+         MI.getFlags() == MachineInstr::NoFlags && !MI.getAsmPrinterFlags() &&
+         MI.memoperands_empty() && !MI.getPreInstrSymbol() &&
+         !MI.getPostInstrSymbol() && !MI.getHeapAllocMarker() &&
+         !MI.getPCSections() && !MI.getMMRAMetadata() && !MI.getCFIType() &&
+         !MI.getDeactivationSymbol() && !MI.isCall() && !MI.isInlineAsm() &&
+         !MI.isTerminator() && !MI.isBarrier() && !MI.isConvergent() &&
+         !MI.mayLoadOrStore() && !MI.mayRaiseFPException() &&
+         !MI.hasUnmodeledSideEffects() && !hasRegMask(MI);
+}
+
+MachineBasicBlock::instr_iterator
+RISCVPostRAV0RewriteImpl::findProducer(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::instr_iterator Copy,
+                                       Register Dst) const {
+  bool CopyUsesVL = hasImplicitUse(*Copy, RISCV::VL);
+  bool CopyUsesVType = hasImplicitUse(*Copy, RISCV::VTYPE);
+  auto I = Copy;
+  unsigned NumIntervening = 0;
+
+  while (I != MBB.instr_begin()) {
+    --I;
+    MachineInstr &MI = *I;
+    if (MI.isDebugInstr())
+      continue;
+
+    // This is the closest D definition. Let tryRetargetProducer validate the
+    // producer itself; all other instructions in the bounded window must be
+    // structurally plain and transparent to D and V0.
+    if (MI.modifiesRegister(Dst, TRI))
+      return I;
+    if (NumIntervening == MaxProducerSearchInstructions ||
+        !isStructurallyTransparent(MI) || MI.readsRegister(Dst, TRI) ||
+        MI.readsRegister(RISCV::V0, TRI) ||
+        MI.modifiesRegister(RISCV::V0, TRI) ||
+        (CopyUsesVL && MI.modifiesRegister(RISCV::VL, TRI)) ||
+        (CopyUsesVType && MI.modifiesRegister(RISCV::VTYPE, TRI)))
+      return MBB.instr_end();
+    ++NumIntervening;
+  }
+  return MBB.instr_end();
+}
+
 bool RISCVPostRAV0RewriteImpl::tryRewriteCompareChain(
     MachineBasicBlock::instr_iterator Save,
     MachineBasicBlock::instr_iterator Body,
@@ -387,48 +448,51 @@ bool RISCVPostRAV0RewriteImpl::tryRewriteCompareChain(
 
 bool RISCVPostRAV0RewriteImpl::rewriteBlock(MachineBasicBlock &MBB) const {
   bool Changed = false;
-  bool LocalChange;
-  do {
-    LocalChange = false;
-    LivePhysRegs Live(*TRI);
-    Live.addLiveOuts(MBB);
+  LivePhysRegs Live(*TRI);
+  Live.addLiveOuts(MBB);
 
-    // Restart after every rewrite so erased copies cannot invalidate the
-    // reverse scan and newly adjacent candidates are reconsidered.
-    for (auto I = MBB.instr_rbegin(), E = MBB.instr_rend(); I != E; ++I) {
-      MachineInstr &MI = *I;
-      if (MI.isDebugInstr())
-        continue;
-      if (MI.isBundledWithPred())
-        continue;
+  // Use an exclusive forward iterator as the reverse-scan cursor. When the
+  // current COPY is erased, it remains valid and Live is already exactly the
+  // live set after the new preceding instruction. This avoids rescanning the
+  // block after each rewrite.
+  for (auto I = MBB.instr_end(); I != MBB.instr_begin();) {
+    auto Current = std::prev(I);
+    MachineInstr &MI = *Current;
+    if (MI.isDebugInstr() || MI.isBundledWithPred()) {
+      I = Current;
+      continue;
+    }
 
-      if (isStructurallyPlainCopy(MI) &&
-          MI.getOperand(0).getReg() == RISCV::V0) {
-        MachineBasicBlock::instr_iterator Restore(MI);
-        if (Restore != MBB.instr_begin()) {
-          auto Previous = prev_nodbg(Restore, MBB.instr_begin(),
-                                     /*SkipPseudoOp=*/false);
-          if (tryRetargetProducer(Previous, Restore, Live)) {
-            LocalChange = true;
-            Changed = true;
-            break;
-          }
-
-          if (Previous != MBB.instr_begin()) {
-            auto Save = prev_nodbg(Previous, MBB.instr_begin(),
+    if (isStructurallyPlainCopy(MI) && MI.getOperand(0).getReg() == RISCV::V0) {
+      MachineBasicBlock::instr_iterator Restore(MI);
+      if (Restore != MBB.instr_begin()) {
+        auto Previous = prev_nodbg(Restore, MBB.instr_begin(),
                                    /*SkipPseudoOp=*/false);
-            if (tryRewriteCompareChain(Save, Previous, Restore, Live)) {
-              LocalChange = true;
-              Changed = true;
-              break;
-            }
+        Register Dst = Restore->getOperand(1).getReg();
+        auto Producer = Dst.isPhysical() && Dst != RISCV::V0 &&
+                                RISCV::VRRegClass.contains(Dst)
+                            ? findProducer(MBB, Restore, Dst)
+                            : MBB.instr_end();
+        if (Producer != MBB.instr_end() &&
+            tryRetargetProducer(Producer, Restore, Live)) {
+          Changed = true;
+          continue;
+        }
+
+        if (Previous != MBB.instr_begin()) {
+          auto Save = prev_nodbg(Previous, MBB.instr_begin(),
+                                 /*SkipPseudoOp=*/false);
+          if (tryRewriteCompareChain(Save, Previous, Restore, Live)) {
+            Changed = true;
+            continue;
           }
         }
       }
-
-      Live.stepBackward(MI);
     }
-  } while (LocalChange);
+
+    Live.stepBackward(MI);
+    I = Current;
+  }
 
   return Changed;
 }

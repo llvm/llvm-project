@@ -90,12 +90,11 @@ define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V512-LABEL: interleave_v2i64:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; V512-NEXT:    vmv.v.i v10, 10
+; V512-NEXT:    vmv.v.i v0, 10
 ; V512-NEXT:    vslideup.vi v11, v9, 1
 ; V512-NEXT:    vmv1r.v v12, v8
 ; V512-NEXT:    vslideup.vi v11, v9, 2
 ; V512-NEXT:    vslideup.vi v12, v8, 1
-; V512-NEXT:    vmv.v.v v0, v10
 ; V512-NEXT:    vmerge.vvm v8, v12, v11, v0
 ; V512-NEXT:    ret
 ;
@@ -241,9 +240,8 @@ define <4 x i32> @interleave_v4i32_offset_1(<4 x i32> %x, <4 x i32> %y) {
 ; V128-LABEL: interleave_v4i32_offset_1:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; V128-NEXT:    vmv.v.i v10, 8
+; V128-NEXT:    vmv.v.i v0, 8
 ; V128-NEXT:    vmv1r.v v11, v9
-; V128-NEXT:    vmv.v.v v0, v10
 ; V128-NEXT:    vslideup.vi v11, v9, 1, v0.t
 ; V128-NEXT:    vmv.v.i v9, 10
 ; V128-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -256,9 +254,8 @@ define <4 x i32> @interleave_v4i32_offset_1(<4 x i32> %x, <4 x i32> %y) {
 ; V512-LABEL: interleave_v4i32_offset_1:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, mu
-; V512-NEXT:    vmv.v.i v10, 8
+; V512-NEXT:    vmv.v.i v0, 8
 ; V512-NEXT:    vmv1r.v v11, v9
-; V512-NEXT:    vmv1r.v v0, v10
 ; V512-NEXT:    vslideup.vi v11, v9, 1, v0.t
 ; V512-NEXT:    vmv.v.i v9, 10
 ; V512-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -271,9 +268,8 @@ define <4 x i32> @interleave_v4i32_offset_1(<4 x i32> %x, <4 x i32> %y) {
 ; ZVZIP-LABEL: interleave_v4i32_offset_1:
 ; ZVZIP:       # %bb.0:
 ; ZVZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; ZVZIP-NEXT:    vmv.v.i v10, 8
+; ZVZIP-NEXT:    vmv.v.i v0, 8
 ; ZVZIP-NEXT:    vmv1r.v v11, v9
-; ZVZIP-NEXT:    vmv.v.v v0, v10
 ; ZVZIP-NEXT:    vslideup.vi v11, v9, 1, v0.t
 ; ZVZIP-NEXT:    vmv.v.i v9, 10
 ; ZVZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma

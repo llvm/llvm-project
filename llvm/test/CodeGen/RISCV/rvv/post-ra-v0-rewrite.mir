@@ -96,9 +96,9 @@ body: |
     liveins: $v8, $x10
 
     ; CHECK-LABEL: name: nonadjacent_scalar
-    ; CHECK: renamable $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
     ; CHECK-NEXT: dead $x11 = ADDI
-    ; CHECK-NEXT: $v0 = COPY killed renamable $v10
+    ; CHECK-NOT: $v0 = COPY
     renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
     dead $x11 = ADDI killed $x10, 1
     $v0 = COPY killed renamable $v10
@@ -114,9 +114,9 @@ body: |
     liveins: $v8, $v11, $v12, $vl, $vtype
 
     ; CHECK-LABEL: name: nonadjacent_vset_read
-    ; CHECK: renamable $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
     ; CHECK-NEXT: dead renamable $v13 = PseudoVADD_VV_M1
-    ; CHECK-NEXT: $v0 = COPY killed renamable $v10
+    ; CHECK-NOT: $v0 = COPY
     renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5, implicit $vl, implicit $vtype
     dead renamable $v13 = PseudoVADD_VV_M1 undef $v13, killed renamable $v11, killed renamable $v12, -1, 5, 0, implicit $vl, implicit $vtype
     $v0 = COPY killed renamable $v10, implicit $vl, implicit $vtype
@@ -132,13 +132,13 @@ body: |
     liveins: $v8
 
     ; CHECK-LABEL: name: nonadjacent_scan_limit
-    ; CHECK: renamable $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
     ; CHECK-NEXT: dead $x11 = ADDI
     ; CHECK-NEXT: dead $x12 = ADDI
     ; CHECK-NEXT: dead $x13 = ADDI
     ; CHECK-NEXT: dead $x14 = ADDI
     ; CHECK-NEXT: dead $x15 = ADDI
-    ; CHECK-NEXT: $v0 = COPY killed renamable $v10
+    ; CHECK-NOT: $v0 = COPY
     renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
     dead $x11 = ADDI $x0, 1
     dead $x12 = ADDI $x0, 2

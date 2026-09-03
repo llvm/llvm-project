@@ -145,9 +145,8 @@ define void @buildvec_merge0_v4f32(ptr %x, float %f) {
 ; CHECK-LABEL: buildvec_merge0_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 6
+; CHECK-NEXT:    vmv.v.i v0, 6
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    lui a1, 262144
 ; CHECK-NEXT:    vmerge.vxm v8, v9, a1, v0
 ; CHECK-NEXT:    vse32.v v8, (a0)

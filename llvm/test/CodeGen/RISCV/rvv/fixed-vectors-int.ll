@@ -1114,11 +1114,10 @@ define void @mulhu_v8i16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v12, (a1)
 ; CHECK-NEXT:    vmulhu.vv v8, v8, v12
 ; CHECK-NEXT:    li a1, 33
-; CHECK-NEXT:    vmv.s.x v12, a1
+; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsub.vv v11, v11, v8
 ; CHECK-NEXT:    vmulhu.vv v9, v11, v9
 ; CHECK-NEXT:    vmv.v.i v11, 3
-; CHECK-NEXT:    vmv.v.v v0, v12
 ; CHECK-NEXT:    vmerge.vim v11, v11, 2, v0
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
 ; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, ma
@@ -1152,9 +1151,8 @@ define void @mulhu_v6i16(ptr %x) {
 ; CHECK-NEXT:    vsub.vv v8, v8, v9
 ; CHECK-NEXT:    li a1, 33
 ; CHECK-NEXT:    vmulhu.vv v8, v8, v10
-; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vmv.v.i v11, 3
-; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vmerge.vim v9, v11, 2, v0
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9
@@ -3204,9 +3202,8 @@ define void @mulhu_v16i16(ptr %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a1, 257
 ; RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV32-NEXT:    vmv.s.x v10, a1
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vmv1r.v v0, v10
 ; RV32-NEXT:    lui a1, 1048568
 ; RV32-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; RV32-NEXT:    lui a1, 4

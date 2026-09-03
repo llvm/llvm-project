@@ -54,12 +54,11 @@ define <4 x double> @interleave_v2f64(<2 x double> %x, <2 x double> %y) {
 ; V512-LABEL: interleave_v2f64:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; V512-NEXT:    vmv.v.i v10, 10
+; V512-NEXT:    vmv.v.i v0, 10
 ; V512-NEXT:    vslideup.vi v11, v9, 1
 ; V512-NEXT:    vmv1r.v v12, v8
 ; V512-NEXT:    vslideup.vi v11, v9, 2
 ; V512-NEXT:    vslideup.vi v12, v8, 1
-; V512-NEXT:    vmv.v.v v0, v10
 ; V512-NEXT:    vmerge.vvm v8, v12, v11, v0
 ; V512-NEXT:    ret
   %a = shufflevector <2 x double> %x, <2 x double> %y, <4 x i32> <i32 0, i32 2, i32 1, i32 3>

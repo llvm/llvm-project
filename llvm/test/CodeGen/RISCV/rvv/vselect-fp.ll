@@ -476,9 +476,8 @@ define <vscale x 16 x double> @vselect_combine_regression(<vscale x 16 x i64> %v
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vmv8r.v v24, v16
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vmseq.vi v7, v8, 0
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    vmseq.vi v0, v24, 0
 ; CHECK-NEXT:    csrr a1, vlenb

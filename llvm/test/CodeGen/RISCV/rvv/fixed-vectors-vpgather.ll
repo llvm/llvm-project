@@ -2011,9 +2011,8 @@ define <32 x double> @vpgather_v32f64(<32 x ptr> %ptrs, <32 x i1> %m, i32 zeroex
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vluxei32.v v24, (zero), v8, v0.t
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v7, 2
+; RV32-NEXT:    vslidedown.vi v0, v7, 2
 ; RV32-NEXT:    addi a1, a0, -16
-; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    sltu a0, a0, a1
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    and a0, a0, a1

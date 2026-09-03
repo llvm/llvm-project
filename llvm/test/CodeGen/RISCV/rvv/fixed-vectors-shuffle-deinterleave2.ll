@@ -1495,9 +1495,8 @@ define <4 x i64> @unzip2a_dual_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; V-LABEL: unzip2a_dual_v4i64:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
-; V-NEXT:    vmv.v.i v10, 8
+; V-NEXT:    vmv.v.i v0, 8
 ; V-NEXT:    vslideup.vi v11, v9, 2
-; V-NEXT:    vmv.v.v v0, v10
 ; V-NEXT:    vslideup.vi v11, v9, 1, v0.t
 ; V-NEXT:    vmv.v.i v0, 2
 ; V-NEXT:    vslidedown.vi v8, v8, 1, v0.t
@@ -1556,9 +1555,8 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; V-NEXT:    vid.v v8
 ; V-NEXT:    vadd.vv v8, v8, v8
 ; V-NEXT:    li a0, -256
-; V-NEXT:    vmv.s.x v9, a0
+; V-NEXT:    vmv.s.x v0, a0
 ; V-NEXT:    vadd.vi v8, v8, -16
-; V-NEXT:    vmv.v.v v0, v9
 ; V-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; V-NEXT:    vrgatherei16.vv v16, v12, v8, v0.t
 ; V-NEXT:    vmv.v.v v8, v16
@@ -1684,9 +1682,8 @@ define <4 x i64> @unzip2a_dual_v4i64_exact(<4 x i64> %a, <4 x i64> %b) vscale_ra
 ; V-LABEL: unzip2a_dual_v4i64_exact:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
-; V-NEXT:    vmv.v.i v10, 8
+; V-NEXT:    vmv.v.i v0, 8
 ; V-NEXT:    vslideup.vi v11, v9, 2
-; V-NEXT:    vmv.v.v v0, v10
 ; V-NEXT:    vslideup.vi v11, v9, 1, v0.t
 ; V-NEXT:    vmv.v.i v0, 2
 ; V-NEXT:    vslidedown.vi v8, v8, 1, v0.t
@@ -1733,9 +1730,8 @@ define <4 x i64> @unzip2a_dual_v4i64_exact_nf2(<4 x i64> %a, <4 x i64> %b) vscal
 ; V-LABEL: unzip2a_dual_v4i64_exact_nf2:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
-; V-NEXT:    vmv.v.i v10, 8
+; V-NEXT:    vmv.v.i v0, 8
 ; V-NEXT:    vslideup.vi v11, v9, 2
-; V-NEXT:    vmv.v.v v0, v10
 ; V-NEXT:    vslideup.vi v11, v9, 1, v0.t
 ; V-NEXT:    vmv.v.i v0, 2
 ; V-NEXT:    vslidedown.vi v8, v8, 1, v0.t
@@ -1913,13 +1909,11 @@ define <4 x i64> @unzip2b_dual_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; V-LABEL: unzip2b_dual_v4i64:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
-; V-NEXT:    vmv.v.i v10, 2
+; V-NEXT:    vmv.v.i v0, 2
 ; V-NEXT:    vslidedown.vi v11, v8, 1
-; V-NEXT:    vmv.v.v v0, v10
 ; V-NEXT:    vslidedown.vi v11, v8, 2, v0.t
-; V-NEXT:    vmv.v.i v8, 4
+; V-NEXT:    vmv.v.i v0, 4
 ; V-NEXT:    vmv1r.v v10, v9
-; V-NEXT:    vmv.v.v v0, v8
 ; V-NEXT:    vslideup.vi v10, v9, 1, v0.t
 ; V-NEXT:    vmv.v.i v0, 12
 ; V-NEXT:    vmerge.vvm v8, v11, v10, v0
@@ -1968,13 +1962,11 @@ define <4 x i64> @unzip2b_dual_v4i64_exact(<4 x i64> %a, <4 x i64> %b) vscale_ra
 ; V-LABEL: unzip2b_dual_v4i64_exact:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
-; V-NEXT:    vmv.v.i v10, 2
+; V-NEXT:    vmv.v.i v0, 2
 ; V-NEXT:    vslidedown.vi v11, v8, 1
-; V-NEXT:    vmv.v.v v0, v10
 ; V-NEXT:    vslidedown.vi v11, v8, 2, v0.t
-; V-NEXT:    vmv.v.i v8, 4
+; V-NEXT:    vmv.v.i v0, 4
 ; V-NEXT:    vmv1r.v v10, v9
-; V-NEXT:    vmv.v.v v0, v8
 ; V-NEXT:    vslideup.vi v10, v9, 1, v0.t
 ; V-NEXT:    vmv.v.i v0, 12
 ; V-NEXT:    vmerge.vvm v8, v11, v10, v0
