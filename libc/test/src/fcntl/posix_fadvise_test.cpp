@@ -48,10 +48,12 @@ TEST_F(LlvmLibcPosixFadviseTest, ValidFile) {
 
   // Invalid advice
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(fd, 0, 0, -1), EINVAL);
+  ASSERT_ERRNO_SUCCESS();
 
   // Negative len
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(fd, 0, -1, POSIX_FADV_NORMAL),
             EINVAL);
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_EQ(LIBC_NAMESPACE::close(fd), 0);
 }
@@ -65,6 +67,7 @@ TEST_F(LlvmLibcPosixFadviseTest, Pipe) {
             ESPIPE);
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(pipefd[1], 0, 0, POSIX_FADV_NORMAL),
             ESPIPE);
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_EQ(LIBC_NAMESPACE::close(pipefd[0]), 0);
   EXPECT_EQ(LIBC_NAMESPACE::close(pipefd[1]), 0);
