@@ -18,6 +18,7 @@
 
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -306,12 +307,20 @@ static bool parseCond(ArrayRef<MachineOperand> Cond, AArch64CC::CondCode &CC) {
     CC = AArch64CC::NE;
     return true;
 
-  // For CB, cond is { -1, Opcode, CC, Op0, Op1, ... }
+  // For CB, cond is { -1, Opcode, CC, Op0, Op1 }
   case AArch64::CBWPri:
   case AArch64::CBXPri:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     assert(Cond.size() == 5 && "Unknown Cond array format");
+    // Pseudos using standard 4bit Arm condition codes.
+    CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
+    return true;
+
+  // For CBB and CBH, cond is { -1, Opcode, CC, Op0, Op1, Ext0, Ext1 }
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
+    assert(Cond.size() == 7 && "Unknown Cond array format");
     // Pseudos using standard 4bit Arm condition codes.
     CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
     return true;
@@ -337,7 +346,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     // CB encodes a uimm6, ccmp wants a uimm5 so we have to check if the
     // immediate fits.
     case AArch64::CBWPri:
-    case AArch64::CBXPri:
+    case AArch64::CBXPri: {
       assert(I->getOperand(2).isImm() && "Expected immediate operand");
       if (!isUInt<5>(I->getOperand(2).getImm())) {
         LLVM_DEBUG(dbgs() << "Immediate out of range for ccmp: " << *I);
@@ -345,6 +354,20 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
         return nullptr;
       }
       return &*I;
+    }
+    // Check if any of the operands would need zero- or sign-extension. If so,
+    // bail out
+    case AArch64::CBBAssertExt:
+    case AArch64::CBHAssertExt: {
+      assert(I->getOperand(4).isImm() && "Expected immediate operand");
+      assert(I->getOperand(5).isImm() && "Expected immediate operand");
+      if (I->getOperand(4).getImm() != AArch64_AM::InvalidShiftExtend ||
+          I->getOperand(5).getImm() != AArch64_AM::InvalidShiftExtend) {
+        LLVM_DEBUG(dbgs() << "Folded extend can't be folded into ccmp: " << *I);
+        return nullptr;
+      }
+      return &*I;
+    }
     }
     ++NumCmpTermRejs;
     LLVM_DEBUG(dbgs() << "Flags not used by terminator: " << *I);
@@ -698,6 +721,8 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
     FirstOp = 1;
     break;
   case AArch64::CBWPrr:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
     Opc = AArch64::CCMPWr;
     FirstOp = 1;
     break;
@@ -744,6 +769,8 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
       break;
     case AArch64::CBWPri:
     case AArch64::CBXPri:
+    case AArch64::CBBAssertExt:
+    case AArch64::CBHAssertExt:
     case AArch64::CBWPrr:
     case AArch64::CBXPrr:
       CC = static_cast<AArch64CC::CondCode>(CmpMI->getOperand(0).getImm());
@@ -780,6 +807,13 @@ int SSACCmpConv::expectedCodeSizeDelta() const {
       // Therefore delta += 1
       delta = 1;
       break;
+    // The cbb / cbh case might need a zero- or sign-extension, costing another
+    // instruction
+    case AArch64::CBBAssertExt:
+    case AArch64::CBHAssertExt:
+      assert(HeadCond[5].isImm() && "Expected immediate operand");
+      delta = (HeadCond[5].getImm() != AArch64_AM::InvalidShiftExtend ? 2 : 1);
+      break;
     default:
       llvm_unreachable("Cannot convert Head branch");
     }
@@ -798,6 +832,8 @@ int SSACCmpConv::expectedCodeSizeDelta() const {
   case AArch64::CBNZX:
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     break;
