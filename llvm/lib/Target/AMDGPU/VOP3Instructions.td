@@ -906,7 +906,7 @@ let True16Predicate = UseFakeTrue16Insts in {
   def : Cvt_PK_F8_F32_Pat<cvt_pk_bf8_f32, Index, V_CVT_PK_BF8_F32_fake16_e64>;
   let OtherPredicates = [HasFP8ConversionInsts, HasFP8E5M3Insts] in {
     def : Cvt_PK_F8_F32_E5M3_Pat<cvt_pk_fp8_f32,                 Index, V_CVT_PK_FP8_F32_gfx1250_fake16_e64, DSTCLAMP.NONE>;
-    def : Cvt_PK_F8_F32_E5M3_Pat<int_amdgcn_cvt_pk_fp8_f32_e5m3, Index, V_CVT_PK_FP8_F32_gfx1250_fake16_e64, DSTCLAMP.ENABLE>;
+    def : Cvt_PK_F8_F32_E5M3_Pat<cvt_pk_fp8_f32_e5m3,            Index, V_CVT_PK_FP8_F32_gfx1250_fake16_e64, DSTCLAMP.ENABLE>;
   }
 }
 }
@@ -916,7 +916,7 @@ defm : Cvt_PK_F8_F32_t16_Pat<cvt_pk_fp8_f32, V_CVT_PK_FP8_F32_t16_e64>;
 defm : Cvt_PK_F8_F32_t16_Pat<cvt_pk_bf8_f32, V_CVT_PK_BF8_F32_t16_e64>;
   let OtherPredicates = [HasFP8ConversionInsts, HasFP8E5M3Insts] in {
     defm : Cvt_PK_F8_F32_E5M3_t16_Pat<cvt_pk_fp8_f32,                 V_CVT_PK_FP8_F32_gfx1250_t16_e64, DSTCLAMP.NONE>;
-    defm : Cvt_PK_F8_F32_E5M3_t16_Pat<int_amdgcn_cvt_pk_fp8_f32_e5m3, V_CVT_PK_FP8_F32_gfx1250_t16_e64, DSTCLAMP.ENABLE>;
+    defm : Cvt_PK_F8_F32_E5M3_t16_Pat<cvt_pk_fp8_f32_e5m3,            V_CVT_PK_FP8_F32_gfx1250_t16_e64, DSTCLAMP.ENABLE>;
   }
 }
 

@@ -189,6 +189,8 @@ required runtime libraries needed by C++ (e.g., for STL) to the linker invocatio
 In this case, one has to explicitly provide the Fortran runtime library
 `flang_rt.runtime`.  An alternative is to use Flang to link.
 In this case, it may be required to explicitly supply C++ runtime libraries.
+Clang with the `--driver-mode=flang` option behaves like Flang for linking.
+In this case, too, C++ runtime libraries may have to be provided explicitly.
 
 On Darwin, the logical root where the system libraries are located (sysroot)
 must be specified. This can be done with the CMake build flag `DEFAULT_SYSROOT`

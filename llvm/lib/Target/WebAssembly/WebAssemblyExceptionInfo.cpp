@@ -1,4 +1,4 @@
-//===--- WebAssemblyExceptionInfo.cpp - Exception Infomation --------------===//
+//===--- WebAssemblyExceptionInfo.cpp - Exception Information -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -98,8 +98,8 @@ void WebAssemblyExceptionInfo::recalculate(
   }
 
   // Add BBs to exceptions' block set. This is a preparation to take out
-  // remaining incorect BBs from exceptions, because we need to iterate over BBs
-  // for each exception.
+  // remaining incorrect BBs from exceptions, because we need to iterate over
+  // BBs for each exception.
   for (auto *DomNode : post_order(&MDT)) {
     MachineBasicBlock *MBB = DomNode->getBlock();
     WebAssemblyException *WE = getExceptionFor(MBB);

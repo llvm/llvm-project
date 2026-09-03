@@ -223,9 +223,11 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
   warnUsage_.set(UsageWarning::IoImpliedDoIndexConflict);
   warnUsage_.set(UsageWarning::BOZLiteralTruncation);
+  warnLanguage_.set(LanguageFeature::PreferIntrinsicModuleUseAssociation);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
   warnLanguage_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
   warnLanguage_.set(LanguageFeature::OpenACCMultipleNamesInRoutine);
+  warnLanguage_.set(LanguageFeature::MultipleCommonBlockInit);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(

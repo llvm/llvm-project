@@ -171,13 +171,16 @@ endif()
 list(APPEND LIBOMPTARGET_PLUGINS_TO_BUILD "host")
 list(REMOVE_DUPLICATES LIBOMPTARGET_PLUGINS_TO_BUILD)
 
-if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)|(riscv64)$"
         AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
     message(STATUS "Not building AMDGPU plugin: only support AMDGPU in "
-                   "Linux x86_64, ppc64le, or aarch64 hosts")
+                   "Linux x86_64, ppc64le, aarch64, or riscv64 hosts")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "amdgpu")
   endif()
+endif()
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
+        AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   if("cuda" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
     message(STATUS "Not building CUDA plugin: only support CUDA in "
                    "Linux x86_64, ppc64le, or aarch64 hosts")
@@ -327,6 +330,16 @@ set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
 set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_LIBRARY_DIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
+
+# If LLVM is dynamically linked we need to add its libraries.
+set(OFFLOAD_INSTALL_RPATH "$ORIGIN")
+if(LLVM_LINK_LLVM_DYLIB)
+  file(RELATIVE_PATH llvm_libdir_relpath
+       "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_INSTALL_LIBDIR}"
+       "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
+  string(REGEX REPLACE "/$" "" llvm_libdir_relpath "${llvm_libdir_relpath}")
+  list(APPEND OFFLOAD_INSTALL_RPATH "$ORIGIN/${llvm_libdir_relpath}")
+endif()
 
 add_subdirectory(tools/offload-tblgen)
 

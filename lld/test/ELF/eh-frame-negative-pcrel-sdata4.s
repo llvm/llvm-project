@@ -25,7 +25,7 @@
 # CHECK-NEXT:   SectionData (
 # CHECK-NEXT:     0000: 10000000 00000000 017A5200 01010101
 # CHECK-NEXT:     0010: 1B000000 0C000000 18000000 E3FFFFFF
-# CHECK-NEXT:     0020: 00000000 00000000
+# CHECK-NEXT:     0020: 01000000 00000000
 
 # CHECK:      Section {
 # CHECK:        Index:
@@ -80,4 +80,4 @@ _start:
   .long 24   # ID
 fde:
   .long _start - fde
-  .long 0
+  .long 1

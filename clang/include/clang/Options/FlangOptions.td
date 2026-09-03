@@ -196,6 +196,9 @@ defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-
 defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-in-routine",
   "Accept multiple names in OpenACC ROUTINE directive (extension)",
   "Do not accept multiple names in OpenACC ROUTINE directive">;
+defm prefer_intrinsic_module_use_association : OptOutFC1FFlag<"prefer-intrinsic-module-use-association",
+  "Resolve a USE association conflict in favor of an intrinsic module generic (extension)",
+  "Diagnose a USE association conflict with an intrinsic module generic">;
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;

@@ -270,3 +270,34 @@ func.func @parallel_num_gangs_1_2_independent(%buf: memref<4xi32>) {
   acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
   return
 }
+
+// -----
+
+// A sized `vector(n)` clause on a loop inside acc.kernels supplies the vector
+// launch width when the construct itself has no vector_length clause.
+
+// CHECK-LABEL: func.func @kernels_loop_sized_vector
+func.func @kernels_loop_sized_vector(%buf: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c32_i32 = arith.constant 32 : i32
+
+  %dev = acc.copyin varPtr(%buf : memref<4xi32>) -> memref<4xi32>
+  // CHECK: %[[VL:.*]] = arith.constant 32 : index
+  // CHECK: acc.kernel_environment
+  // CHECK: %[[PW:.*]] = acc.par_width %[[VL]] par_dim(#acc.par_dim<thread_x>)
+  // CHECK: acc.compute_region launch(%{{.*}} = %[[PW]])
+  // CHECK: scf.parallel
+  // CHECK: acc.par_dims = #acc<par_dims[thread_x]>
+  acc.kernels dataOperands(%dev : memref<4xi32>) {
+    acc.loop vector(%c32_i32 : i32) control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
+      %vi = arith.index_cast %i : index to i32
+      memref.store %vi, %dev[%i] : memref<4xi32>
+      acc.yield
+    } independent
+    acc.terminator
+  }
+  acc.copyout accPtr(%dev : memref<4xi32>) to varPtr(%buf : memref<4xi32>)
+  return
+}

@@ -73,12 +73,12 @@ LogicalResult ExpandDivF16::matchAndRewrite(LLVM::FDivOp op,
   Value refined = LLVM::FMAOp::create(rewriter, loc, err, rcp, approx);
 
   // Use refined value if approx is normal (exponent neither all 0 or all 1).
-  Value mask = LLVM::ConstantOp::create(
-      rewriter, loc, i32Type, rewriter.getUI32IntegerAttr(0x7f800000));
+  Value mask = LLVM::ConstantOp::create(rewriter, loc, i32Type,
+                                        rewriter.getI32IntegerAttr(0x7f800000));
   Value cast = LLVM::BitcastOp::create(rewriter, loc, i32Type, approx);
   Value exp = LLVM::AndOp::create(rewriter, loc, i32Type, cast, mask);
   Value zero = LLVM::ConstantOp::create(rewriter, loc, i32Type,
-                                        rewriter.getUI32IntegerAttr(0));
+                                        rewriter.getI32IntegerAttr(0));
   Value pred = LLVM::OrOp::create(
       rewriter, loc,
       LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::eq, exp, zero),
