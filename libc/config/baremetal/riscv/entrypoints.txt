@@ -981,6 +981,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.diviulr
     libc.src.stdfix.diviuk
     libc.src.stdfix.diviulk
+    libc.src.stdfix.rdivi
+    libc.src.stdfix.lrdivi
+    libc.src.stdfix.kdivi
+    libc.src.stdfix.lkdivi
+    libc.src.stdfix.urdivi
+    libc.src.stdfix.ulrdivi
+    libc.src.stdfix.ukdivi
+    libc.src.stdfix.ulkdivi
   )
 endif()
 

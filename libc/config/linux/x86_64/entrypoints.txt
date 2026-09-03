@@ -1232,6 +1232,13 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
     libc.src.stdfix.rdivi
+    libc.src.stdfix.lrdivi
+    libc.src.stdfix.kdivi
+    libc.src.stdfix.lkdivi
+    libc.src.stdfix.urdivi
+    libc.src.stdfix.ulrdivi
+    libc.src.stdfix.ukdivi
+    libc.src.stdfix.ulkdivi
     libc.src.stdfix.divir
     libc.src.stdfix.divilr
     libc.src.stdfix.divik
