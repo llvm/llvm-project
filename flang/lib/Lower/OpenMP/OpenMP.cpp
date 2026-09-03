@@ -1889,6 +1889,45 @@ static void markDeclareTargetWithDirective(
   }
 }
 
+/// Register \c ctorFunc to run at program startup by creating or extending
+/// the module's \c llvm.mlir.global_ctors.
+static void registerGlobalConstructor(lower::AbstractConverter &converter,
+                                      mlir::LLVM::LLVMFuncOp ctorFunc) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::ModuleOp mod = builder.getModule();
+  mlir::MLIRContext *ctx = mod.getContext();
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  mlir::LLVM::GlobalCtorsOp existing;
+  mod.walk([&](mlir::LLVM::GlobalCtorsOp op) { existing = op; });
+
+  llvm::SmallVector<mlir::Attribute> ctors;
+  llvm::SmallVector<int32_t> priorities;
+  llvm::SmallVector<mlir::Attribute> data;
+  if (existing) {
+    ctors.assign(existing.getCtors().begin(), existing.getCtors().end());
+    for (mlir::Attribute p : existing.getPriorities())
+      priorities.push_back(llvm::cast<mlir::IntegerAttr>(p).getInt());
+    data.assign(existing.getData().begin(), existing.getData().end());
+  }
+
+  ctors.push_back(mlir::FlatSymbolRefAttr::get(ctx, ctorFunc.getSymName()));
+  priorities.push_back(0);
+  data.push_back(mlir::LLVM::ZeroAttr::get(ctx));
+
+  if (existing)
+    builder.setInsertionPoint(existing);
+  else
+    builder.setInsertionPointToEnd(mod.getBody());
+
+  mlir::LLVM::GlobalCtorsOp::create(
+      builder, ctorFunc.getLoc(), builder.getArrayAttr(ctors),
+      builder.getI32ArrayAttr(priorities), builder.getArrayAttr(data));
+
+  if (existing)
+    existing.erase();
+}
+
 //===----------------------------------------------------------------------===//
 // Op body generation helper structures and functions
 //===----------------------------------------------------------------------===//
@@ -2846,27 +2885,26 @@ static void genWsloopClauses(
 //===----------------------------------------------------------------------===//
 // Code generation functions for leaf constructs
 //===----------------------------------------------------------------------===//
-static mlir::omp::AllocateDirOp genAllocateDirOp(
-    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
-    lower::StatementContext &stmtCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ObjectList &objects, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item) {
-  llvm::SmallVector<mlir::Value> operandRange;
-  mlir::omp::AllocateDirOperands clauseOps;
-  genAllocateClauses(converter, semaCtx, stmtCtx, objects, item->clauses, loc,
-                     operandRange, clauseOps);
 
+static mlir::omp::AllocateDirOp
+genAllocateDirOp(lower::AbstractConverter &converter, mlir::Location loc,
+                 llvm::ArrayRef<mlir::Value> operandRange,
+                 const mlir::omp::AllocateDirOperands &clauseOps,
+                 bool genFree) {
   auto allocDirOp = mlir::omp::AllocateDirOp::create(
       converter.getFirOpBuilder(), loc, operandRange, clauseOps.align,
       clauseOps.allocator);
 
-  // Register a cleanup at the Fortran scope exit.
-  fir::FirOpBuilder *builder = &converter.getFirOpBuilder();
-  mlir::Value allocator = clauseOps.allocator;
-  converter.getFctCtx().attachCleanup([builder, loc, operandRange,
-                                       allocator]() {
-    mlir::omp::AllocateFreeOp::create(*builder, loc, operandRange, allocator);
-  });
+  if (genFree) {
+    // Register a cleanup at the Fortran scope exit.
+    fir::FirOpBuilder *builder = &converter.getFirOpBuilder();
+    mlir::Value allocator = clauseOps.allocator;
+    llvm::SmallVector<mlir::Value> operands(operandRange.begin(),
+                                            operandRange.end());
+    converter.getFctCtx().attachCleanup([builder, loc, operands, allocator]() {
+      mlir::omp::AllocateFreeOp::create(*builder, loc, operands, allocator);
+    });
+  }
 
   return allocDirOp;
 }
@@ -5694,27 +5732,69 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAllocateDirective &allocate) {
-  // The allocate directive is lowered as a runtime allocation with a matching
-  // deallocation registered as a cleanup at the exit of the enclosing function
-  // scope. In the case of modules, there is no place in which to emit the
-  // deallocation cleanup when that stage is reached, crashing the compiler
-  // during teardown.
-  if (converter.getCurrentScope().kind() == semantics::Scope::Kind::Module)
-    TODO(converter.genLocation(allocate.source),
-         "OpenMP ALLOCATE directive in unsupported declaration scope");
-
   lower::StatementContext stmtCtx;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   ObjectList objects = makeObjects((allocate.BeginDir().Arguments()), semaCtx);
   const auto &clauseList = (allocate.BeginDir().Clauses());
   List<Clause> clauses = makeClauses(clauseList, semaCtx);
   mlir::Location loc = converter.genLocation(allocate.source);
 
-  ConstructQueue queue{buildConstructQueue(
-      converter.getFirOpBuilder().getModule(), semaCtx, eval, allocate.source,
-      llvm::omp::Directive::OMPD_allocate, clauses)};
+  ConstructQueue queue{
+      buildConstructQueue(builder.getModule(), semaCtx, eval, allocate.source,
+                          llvm::omp::Directive::OMPD_allocate, clauses)};
+  ConstructQueue::const_iterator item = queue.begin();
 
-  genAllocateDirOp(converter, semaCtx, stmtCtx, eval, loc, objects, queue,
-                   queue.begin());
+  // In a module (or submodule) declaration scope the list items are fir.global
+  // variables. There is no enclosing function whose exit could host the runtime
+  // deallocation, and the runtime allocation cannot live in the constant
+  // fir.global initializer, so emit it (without a matching free) into a global
+  // constructor per variable that runs at program startup.
+  // TODO: SAVE variables, COMMON blocks.
+  if (converter.getCurrentScope().kind() == semantics::Scope::Kind::Module) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    mlir::MLIRContext *ctx = builder.getContext();
+
+    for (const Object &object : objects) {
+      const semantics::Symbol &sym = *object.sym();
+      std::string ctorName =
+          converter.mangleName(sym.GetUltimate()) + "_omp_allocate_ctor";
+      builder.setInsertionPointToEnd(builder.getModule().getBody());
+      auto ctorFunc = mlir::LLVM::LLVMFuncOp::create(
+          builder, loc, ctorName,
+          mlir::LLVM::LLVMFunctionType::get(mlir::LLVM::LLVMVoidType::get(ctx),
+                                            {}));
+      ctorFunc.setLinkage(mlir::LLVM::Linkage::Internal);
+      builder.setInsertionPointToStart(ctorFunc.addEntryBlock(builder));
+
+      // Resolve the operand through the existing fir.global.
+      fir::GlobalOp global =
+          builder.getNamedGlobal(converter.mangleName(sym.GetUltimate()));
+      assert(global && "expected a global for a module variable");
+
+      llvm::SmallVector<mlir::Value, 1> operandRange{fir::AddrOfOp::create(
+          builder, loc, global.resultType(), global.getSymbol())};
+
+      // The empty object list leaves genAllocateClauses to only process the
+      // clauses; the addresses were resolved above.
+      mlir::omp::AllocateDirOperands clauseOps;
+      genAllocateClauses(converter, semaCtx, stmtCtx, /*objects=*/ObjectList{},
+                         item->clauses, loc, operandRange, clauseOps);
+      genAllocateDirOp(converter, loc, operandRange, clauseOps,
+                       /*genFree=*/false);
+      mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
+
+      registerGlobalConstructor(converter, ctorFunc);
+    }
+
+    return;
+  }
+
+  llvm::SmallVector<mlir::Value> operandRange;
+  mlir::omp::AllocateDirOperands clauseOps;
+  genAllocateClauses(converter, semaCtx, stmtCtx, objects, item->clauses, loc,
+                     operandRange, clauseOps);
+
+  genAllocateDirOp(converter, loc, operandRange, clauseOps, /*genFree=*/true);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
