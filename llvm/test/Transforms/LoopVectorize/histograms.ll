@@ -130,3 +130,144 @@ loop:
 exit:
   ret void
 }
+
+define void @simple_histogram_uadd_sat(ptr noalias %buckets, ptr readonly %indices) {
+; CHECK-LABEL: define void @simple_histogram_uadd_sat(
+; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[WIDE_LOAD]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> [[TMP6]], ptr [[TMP5]], i64 1
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.uadd.sat.v2p0.i32(<2 x ptr> [[TMP7]], i32 1, <2 x i1> splat (i1 true))
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
+; CHECK:       [[FOR_EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = call i32 @llvm.uadd.sat.i32(i32 %l.bucket, i32 1)
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
+define void @simple_histogram_umax(ptr noalias %buckets, ptr readonly %indices) {
+; CHECK-LABEL: define void @simple_histogram_umax(
+; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[WIDE_LOAD]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> [[TMP6]], ptr [[TMP5]], i64 1
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.umax.v2p0.i32(<2 x ptr> [[TMP7]], i32 120, <2 x i1> splat (i1 true))
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
+; CHECK:       [[FOR_EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = call i32 @llvm.umax.i32(i32 %l.bucket, i32 120)
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
+define void @simple_histogram_umin(ptr noalias %buckets, ptr readonly %indices) {
+; CHECK-LABEL: define void @simple_histogram_umin(
+; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[WIDE_LOAD]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> [[TMP6]], ptr [[TMP5]], i64 1
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.umin.v2p0.i32(<2 x ptr> [[TMP7]], i32 99, <2 x i1> splat (i1 true))
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
+; CHECK:       [[FOR_EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = call i32 @llvm.umin.i32(i32 %l.bucket, i32 99)
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
