@@ -901,6 +901,8 @@ private:
   // have appeared in USE statements; used for C1406 warnings.
   std::set<SourceName> intrinsicUses_;
   std::set<SourceName> nonIntrinsicUses_;
+  std::set<std::pair<const Scope *, const Symbol *>>
+      numericStorageSizeWarnings_;
 
   Symbol &SetAccess(const SourceName &, Attr attr, Symbol * = nullptr);
   // A rename in a USE statement: local => use
@@ -915,6 +917,7 @@ private:
   void AddUseForCommonBlocks();
   void DoAddUse(
       SourceName, SourceName, Symbol &localSymbol, const Symbol &useSymbol);
+  void WarnForNumericStorageSize(SourceName, const Symbol &);
   void AddUse(const GenericSpecInfo &);
   // Record a name appearing as the target of a USE rename clause
   void AddUseRename(SourceName name, SourceName moduleName) {
@@ -4326,6 +4329,28 @@ FindIntrinsicModuleUseAssociationRule(
   return nullptr;
 }
 
+void ModuleVisitor::WarnForNumericStorageSize(
+    SourceName location, const Symbol &useSymbol) {
+  const Symbol &ultimate{useSymbol.GetUltimate()};
+  const Scope &owner{ultimate.owner()};
+  if (ultimate.name() != "numeric_storage_size" || !owner.IsModule() ||
+      !owner.parent().IsIntrinsicModules() || !owner.GetName() ||
+      owner.GetName().value() != "iso_fortran_env") {
+    return;
+  }
+  const auto &defaults{context().defaultKinds()};
+  const auto &targetCharacteristics{context().targetCharacteristics()};
+  auto intBytes{targetCharacteristics.GetByteSize(
+      TypeCategory::Integer, defaults.GetDefaultKind(TypeCategory::Integer))};
+  auto realBytes{targetCharacteristics.GetByteSize(
+      TypeCategory::Real, defaults.GetDefaultKind(TypeCategory::Real))};
+  if (intBytes != realBytes &&
+      numericStorageSizeWarnings_.emplace(&currScope(), &ultimate).second) {
+    context().Warn(common::UsageWarning::FoldingValueChecks, location,
+        "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined when default INTEGER and REAL are not consistent due to compiler options"_warn_en_US);
+  }
+}
+
 void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     Symbol &originalLocal, const Symbol &useSymbol) {
   Symbol *localSymbol{&originalLocal};
@@ -4357,6 +4382,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       localSymbol->implicitAttrs() =
           localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
       localSymbol->flags() = useSymbol.flags();
+      WarnForNumericStorageSize(location, useSymbol);
       return;
     }
   }
