@@ -76,6 +76,19 @@ void c11_load(_Atomic(struct Big) *ptr) {
   // LLVM-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}%[[DEST_SLOT]], ptr {{.*}}%[[TEMP_SLOT]], i64 24, i1 false)
 }
 
+void scoped_load_runtime_scope(struct Big *ptr) {
+  // CIR-LABEL: @scoped_load_runtime_scope
+  // LLVM-LABEL: @scoped_load_runtime_scope
+
+  int get_scope(void);
+
+  // Make sure we don't drop the side effects contained in the scope expression.
+  struct Big b;
+  __scoped_atomic_load(ptr, &b, __ATOMIC_RELAXED, get_scope());
+  // CIR: %{{.+}} = cir.call @get_scope() : () -> !s32i
+  // LLVM: %{{.+}} = call i32 @get_scope()
+}
+
 void store(struct Big *dest, struct Big *val) {
   // CIR-LABEL: @store
   // LLVM-LABEL: @store
