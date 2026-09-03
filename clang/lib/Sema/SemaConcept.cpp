@@ -505,6 +505,25 @@ public:
   }
 
   void VisitConstraint(const NormalizedConstraintWithParamMapping &Constraint) {
+    switch (Constraint.getKind()) {
+    case NormalizedConstraint::ConstraintKind::Atomic:
+      ID.AddPointer(static_cast<const AtomicConstraint &>(Constraint)
+                        .getConstraintExpr());
+      ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
+      break;
+    case NormalizedConstraint::ConstraintKind::ConceptId:
+      ID.AddPointer(
+          static_cast<const ConceptIdConstraint &>(Constraint).getConceptId());
+      ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
+      break;
+    case NormalizedConstraint::ConstraintKind::FoldExpanded:
+      ID.AddPointer(
+          static_cast<const FoldExpandedConstraint &>(Constraint).getPattern());
+      break;
+    case NormalizedConstraint::ConstraintKind::Compound:
+      llvm_unreachable("Cannot hash a compound constraint");
+    }
+
     if (!Constraint.hasParameterMapping()) {
       for (const auto &List : TemplateArgs)
         for (const TemplateArgument &Arg : List.Args)
@@ -547,6 +566,56 @@ class ConstraintSatisfactionChecker {
   // parameter mapping many times, in order to improve substitution performance.
   llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
       CachedTemplateArgs;
+
+private:
+  struct ParameterMappingInstantiationCache {
+    llvm::FoldingSetNodeID ID;
+    ConstraintSatisfactionChecker &Checker;
+    HashParameterMapping H;
+    unsigned PreviousDetailsSize;
+
+    ParameterMappingInstantiationCache(
+        ConstraintSatisfactionChecker &Checker,
+        const NormalizedConstraintWithParamMapping &Constraint,
+        const MultiLevelTemplateArgumentList &MLTAL, UnsignedOrNone PackIndex,
+        UnsignedOrNone PreviousDetailsSize = std::nullopt)
+        : Checker(Checker), H(Checker.S, MLTAL, ID, PackIndex),
+          PreviousDetailsSize(PreviousDetailsSize
+                                  ? *PreviousDetailsSize
+                                  : Checker.Satisfaction.Details.size()) {
+      H.VisitConstraint(Constraint);
+    }
+
+    const UnsubstitutedConstraintSatisfactionCacheResult *available() {
+      auto &Cache = Checker.S.UnsubstitutedConstraintSatisfactionCache;
+      auto Iter = Cache.find(ID);
+      if (Iter == Cache.end())
+        return nullptr;
+      auto &Satisfaction = Checker.Satisfaction;
+      auto &Cached = Iter->second.Satisfaction;
+      Satisfaction.ContainsErrors = Cached.ContainsErrors;
+      Satisfaction.IsSatisfied = Cached.IsSatisfied;
+      Satisfaction.Details.insert(Satisfaction.Details.begin() +
+                                      PreviousDetailsSize,
+                                  Cached.Details.begin(), Cached.Details.end());
+      return &Iter->second;
+    }
+
+    ExprResult cache(ExprResult E) {
+      UnsubstitutedConstraintSatisfactionCacheResult Cache;
+      auto &Satisfaction = Checker.Satisfaction;
+      Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
+      Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
+      Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                        Satisfaction.Details.begin() +
+                                            PreviousDetailsSize,
+                                        Satisfaction.Details.end());
+      Cache.SubstExpr = E;
+      Checker.S.UnsubstitutedConstraintSatisfactionCache.insert(
+          {ID, std::move(Cache)});
+      return E;
+    }
+  };
 
 private:
   template <class Constraint>
@@ -870,37 +939,13 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
-  unsigned Size = Satisfaction.Details.size();
-  llvm::FoldingSetNodeID ID;
-  UnsignedOrNone OuterPackSubstIndex = getOuterPackIndex(Constraint);
+  ParameterMappingInstantiationCache PMCache(*this, Constraint, MLTAL,
+                                             getOuterPackIndex(Constraint));
 
-  ID.AddPointer(Constraint.getConstraintExpr());
-  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
-      .VisitConstraint(Constraint);
+  if (auto *V = PMCache.available())
+    return V->SubstExpr;
 
-  if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
-      Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
-    auto &Cached = Iter->second.Satisfaction;
-    Satisfaction.ContainsErrors = Cached.ContainsErrors;
-    Satisfaction.IsSatisfied = Cached.IsSatisfied;
-    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
-                                Cached.Details.begin(), Cached.Details.end());
-    return Iter->second.SubstExpr;
-  }
-
-  ExprResult E = EvaluateSlow(Constraint, MLTAL);
-
-  UnsubstitutedConstraintSatisfactionCacheResult Cache;
-  Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
-  Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
-                                    Satisfaction.Details.begin() + Size,
-                                    Satisfaction.Details.end());
-  Cache.SubstExpr = E;
-  S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
-
-  return E;
+  return PMCache.cache(EvaluateSlow(Constraint, MLTAL));
 }
 
 UnsignedOrNone
@@ -997,33 +1042,13 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     const FoldExpandedConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
-  llvm::FoldingSetNodeID ID;
-  ID.AddPointer(Constraint.getPattern());
-  HashParameterMapping(S, MLTAL, ID, std::nullopt).VisitConstraint(Constraint);
+  ParameterMappingInstantiationCache PMCache(*this, Constraint, MLTAL,
+                                             /*PackIndex=*/std::nullopt);
 
-  if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
-      Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
+  if (auto *V = PMCache.available())
+    return V->SubstExpr;
 
-    auto &Cached = Iter->second.Satisfaction;
-    Satisfaction.ContainsErrors = Cached.ContainsErrors;
-    Satisfaction.IsSatisfied = Cached.IsSatisfied;
-    Satisfaction.Details.insert(Satisfaction.Details.end(),
-                                Cached.Details.begin(), Cached.Details.end());
-    return Iter->second.SubstExpr;
-  }
-
-  unsigned Size = Satisfaction.Details.size();
-
-  ExprResult E = EvaluateSlow(Constraint, MLTAL);
-  UnsubstitutedConstraintSatisfactionCacheResult Cache;
-  Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
-  Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
-                                    Satisfaction.Details.begin() + Size,
-                                    Satisfaction.Details.end());
-  Cache.SubstExpr = E;
-  S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
-  return E;
+  return PMCache.cache(EvaluateSlow(Constraint, MLTAL));
 }
 
 ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
@@ -1129,36 +1154,13 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (Satisfaction.IsSatisfied)
     return E;
 
-  UnsignedOrNone OuterPackSubstIndex = getOuterPackIndex(Constraint);
-  llvm::FoldingSetNodeID ID;
-  ID.AddPointer(Constraint.getConceptId());
-  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
-  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
-      .VisitConstraint(Constraint);
+  ParameterMappingInstantiationCache PMCache(
+      *this, Constraint, MLTAL, getOuterPackIndex(Constraint), Size);
 
-  if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
-      Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
+  if (auto *V = PMCache.available())
+    return V->SubstExpr;
 
-    auto &Cached = Iter->second.Satisfaction;
-    Satisfaction.ContainsErrors = Cached.ContainsErrors;
-    Satisfaction.IsSatisfied = Cached.IsSatisfied;
-    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
-                                Cached.Details.begin(), Cached.Details.end());
-    return Iter->second.SubstExpr;
-  }
-
-  ExprResult CE = EvaluateSlow(Constraint, MLTAL, Size);
-  if (CE.isInvalid())
-    return E;
-  UnsubstitutedConstraintSatisfactionCacheResult Cache;
-  Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
-  Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
-                                    Satisfaction.Details.begin() + Size,
-                                    Satisfaction.Details.end());
-  Cache.SubstExpr = CE;
-  S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
-  return CE;
+  return PMCache.cache(EvaluateSlow(Constraint, MLTAL, Size));
 }
 
 ExprResult ConstraintSatisfactionChecker::Evaluate(
