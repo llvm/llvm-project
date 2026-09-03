@@ -1044,13 +1044,10 @@ public:
 
   /// Estimate the cost of type-legalization and the legalized type.
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const {
-    auto It = TypeLegalizationCostCache.find(Ty);
-    if (It != TypeLegalizationCostCache.end())
-      return It->second;
-
-    std::pair<InstructionCost, MVT> Result = computeTypeLegalizationCost(Ty);
-    TypeLegalizationCostCache[Ty] = Result;
-    return Result;
+    auto [It, Inserted] = TypeLegalizationCostCache.try_emplace(Ty);
+    if (Inserted)
+      It->second = computeTypeLegalizationCost(Ty);
+    return It->second;
   }
 
 private:
