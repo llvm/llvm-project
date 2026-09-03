@@ -944,6 +944,27 @@ bool ScalarizerVisitor::visitCastInst(CastInst &CI) {
 bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
   std::optional<VectorSplit> DstVS = getVectorSplit(BCI.getDestTy());
   std::optional<VectorSplit> SrcVS = getVectorSplit(BCI.getSrcTy());
+
+  if (!DstVS && SrcVS && BCI.getDestTy()->isIntegerTy() &&
+      !SrcVS->RemainderTy && SrcVS->NumPacked == 1 &&
+      SrcVS->SplitTy->isIntegerTy()) {
+    IRBuilder<> Builder(&BCI);
+    Builder.SetCurrentDebugLocation(BCI.getDebugLoc());
+    Scatterer Op0 = scatter(&BCI, BCI.getOperand(0), *SrcVS);
+    Value *Result = nullptr;
+    unsigned FragmentBits = SrcVS->SplitTy->getPrimitiveSizeInBits();
+    bool IsBigEndian = BCI.getDataLayout().isBigEndian();
+    for (unsigned I = 0; I < SrcVS->NumFragments; ++I) {
+      unsigned FragmentIndex = IsBigEndian ? SrcVS->NumFragments - I - 1 : I;
+      Value *Fragment = Builder.CreateZExtOrTrunc(Op0[I], BCI.getDestTy());
+      if (FragmentIndex)
+        Fragment = Builder.CreateShl(Fragment, FragmentIndex * FragmentBits);
+      Result = Result ? Builder.CreateOr(Result, Fragment) : Fragment;
+    }
+    replaceUses(&BCI, Result);
+    return true;
+  }
+
   if (!DstVS || !SrcVS || DstVS->RemainderTy || SrcVS->RemainderTy)
     return false;
 
