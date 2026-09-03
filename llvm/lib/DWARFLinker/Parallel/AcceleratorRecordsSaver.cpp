@@ -51,7 +51,8 @@ static uint32_t hashFullyQualifiedName(CompileUnit &InputCU, DWARFDie &InputDIE,
     Name = "(anonymous namespace)";
 
   DWARFDie ParentDie = InputDIE.getParent();
-  if (!ParentDie.isValid() || ParentDie.getTag() == dwarf::DW_TAG_compile_unit)
+  if (!ParentDie.isValid() ||
+      CompileUnit::isUnitRootDIE(CU->getDIEIndex(ParentDie)))
     return djbHash(Name ? Name : "", djbHash(ChildRecurseDepth ? "" : "::"));
 
   return djbHash(
@@ -64,6 +65,13 @@ void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
                                    DIE *OutDIE, AttributesInfo &AttrInfo,
                                    TypeEntry *TypeEntry) {
   if (GlobalData.getOptions().AccelTables.empty())
+    return;
+
+  // A unit root's DW_AT_name is the path of a source file rather than an
+  // identifier, so it is never an accelerator record. Index zero is the unit
+  // root whatever tag it carries, which is the invariant a tag comparison
+  // against DW_TAG_compile_unit alone stood in for.
+  if (CompileUnit::isUnitRootDIE(InUnit.getDIEIndex(InputDieEntry)))
     return;
 
   DWARFDie InputDIE = InUnit.getDIE(InputDieEntry);
@@ -156,7 +164,6 @@ void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
       saveNamespaceRecord(InputDieEntry, AttrInfo.Name, OutDIE,
                           InputDieEntry->getTag(), TypeEntry);
   } break;
-  case dwarf::DW_TAG_compile_unit:
   case dwarf::DW_TAG_lexical_block: {
     // Nothing to do.
   } break;
