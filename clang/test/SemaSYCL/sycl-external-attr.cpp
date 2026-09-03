@@ -137,6 +137,11 @@ template void pack(int);
 // expected-warning@+2{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
 template<typename T>
 [[clang::sycl_external]] void tvar(T, ...) {}
+template void tvar(int, ...);
+using TVarFP = void (*)(char, ...);
+[[clang::sycl_external]] TVarFP tvar_implicit_instantiation() {
+  return &tvar<char>;
+}
 
 struct NonCopyable {
   ~NonCopyable() = delete;

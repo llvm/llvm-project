@@ -61,6 +61,7 @@ public:
                                        SourceLocation RParen,
                                        ParsedType ParsedTy);
 
+  void handleSYCLExternalAttr(Decl *D, const ParsedAttr &AL);
   void handleKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL);
 
