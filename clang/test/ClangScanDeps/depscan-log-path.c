@@ -7,6 +7,7 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/empty.json.template        > %t/empty.json
 // RUN: sed -e "s|DIR|%/t|g" %t/inconsistent.json.template > %t/inconsistent.json
+// RUN: sed -e "s|DIR|%/t|g" %t/inconsistent2.json.template > %t/inconsistent2.json
 // RUN: sed -e "s|DIR|%/t|g" %t/consistent.json.template   > %t/consistent.json
 
 // An explicitly empty value is rejected.
@@ -16,6 +17,10 @@
 
 // Different log paths across commands in one scan are rejected.
 // RUN: not clang-scan-deps -compilation-database %t/inconsistent.json \
+// RUN:   -format experimental-full -j 1 2>&1 | FileCheck %s --check-prefix=CONFLICT
+
+// One command with a valid flag, the other does not have a flag in effect.
+// RUN: not clang-scan-deps -compilation-database %t/inconsistent2.json \
 // RUN:   -format experimental-full -j 1 2>&1 | FileCheck %s --check-prefix=CONFLICT
 // CONFLICT: error: '-fdepscan-log-path' set inconsistently within a dependency scan
 
@@ -28,10 +33,6 @@
 // OK: starting scanning command:{{.*}}tu2.c
 // OK: logging_end
 
-// One command with a valid flag, the other does not have a flag in effect.
-// RUN: not clang-scan-deps -compilation-database %t/inconsistent.json \
-// RUN:   -format experimental-full -j 1 2>&1 | FileCheck %s --check-prefix=CONFLICT2
-// CONFLICT2: error: '-fdepscan-log-path' set inconsistently within a dependency scan
 
 //--- empty.json.template
 [{

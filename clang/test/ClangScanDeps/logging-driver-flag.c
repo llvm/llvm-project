@@ -4,8 +4,7 @@
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb-by-name.json.template > %t/cdb-by-name.json
 
-// Translation-unit scanning: logging enabled via the driver command line in
-// computeDependenciesForDriverCommandLine -> buildCompilation.
+// Translation-unit scanning
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
 // RUN:   -format experimental-full -j 1 -o %t/deps.json
 // RUN: FileCheck %s --check-prefix=TU --input-file %t/tu.log
@@ -14,8 +13,7 @@
 // TU: [{{[0-9]+\.[0-9]+}}] {{.*}}: pcm_write: {{.*}}.pcm
 // TU: [{{[0-9]+\.[0-9]+}}] {{.*}}: finished scanning command:{{.*}}tu.c
 
-// By-name scanning: logging enabled via getFirstCC1CommandLine ->
-// buildCompilation.
+// By-name scanning
 // RUN: clang-scan-deps -compilation-database %t/cdb-by-name.json \
 // RUN:   -format experimental-full -j 1 -module-names=A
 // RUN: FileCheck %s --check-prefix=BY-NAME --input-file %t/by-name.log

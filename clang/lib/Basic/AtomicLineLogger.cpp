@@ -118,21 +118,24 @@ AtomicLineLogger::AtomicLineLogger(StringRef LogFilePath) {
   if (LogFilePath.empty())
     return;
   initialize(LogFilePath);
-  EnabledAtConstruction = true;
+  PathSource = LogPathSource::Constructor;
 }
 
 bool AtomicLineLogger::enable(StringRef RequestedLogPath) {
   std::lock_guard<std::mutex> Lock(EnableMtx);
-  if (EnabledAtConstruction)
-    return RequestedLogPath.empty() || RequestedLogPath == LogPath;
-
-  if (!CommittedByFlag) {
-    CommittedByFlag = true;
+  switch (PathSource) {
+  case LogPathSource::None:
+    PathSource = LogPathSource::EnableMethod;
     if (!RequestedLogPath.empty())
       initialize(RequestedLogPath);
     return true;
+  case LogPathSource::Constructor:
+    return RequestedLogPath.empty() || RequestedLogPath == LogPath;
+  case LogPathSource::EnableMethod:
+    return RequestedLogPath == LogPath;
   }
-  return RequestedLogPath == LogPath;
+
+  llvm_unreachable("unhandled LogPathSource");
 }
 
 LogLine AtomicLineLogger::log() {
