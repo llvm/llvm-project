@@ -1,6 +1,5 @@
 ! RUN: %flang -fopenmp-default-allocate=target -S -emit-llvm -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa --offload-arch=gfx90a -o - %s | FileCheck %s --check-prefix=CHECK-OMP
 ! RUN: %flang -fopenmp-default-allocate=target -S -emit-llvm -target amdgcn-- -o - %s | FileCheck %s --check-prefix=CHECK
-!REQUIRES: AFAR
 program main
    implicit none
    !$omp requires unified_shared_memory

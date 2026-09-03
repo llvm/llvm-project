@@ -11,4 +11,3 @@ add_flangrt_library(flang_rt.openmp STATIC SHARED
   omp_util.cpp
   INSTALL_WITH_TOOLCHAIN
 )
-

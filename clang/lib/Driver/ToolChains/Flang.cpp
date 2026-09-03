@@ -1314,7 +1314,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
           Args.getLastArg(options::OPT_fopenmp_default_allocate_EQ)) {
     StringRef Val(A->getValue());
     if (Val != "target" && Val != "host") {
-      D.Diag(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
+      D.Diag(diag::err_drv_invalid_value_with_suggestion)
+          << A->getOption().getName() << Val << "target host";
     } else {
       D.Diag(diag::warn_openmp_default_allocate_experimental);
       CmdArgs.push_back(Args.MakeArgString("-fopenmp-default-allocate=" + Val));

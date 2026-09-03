@@ -955,8 +955,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       opts.features.Enable(
           Fortran::common::LanguageFeature::OpenMPDefaultAllocator);
     } else if (val != "host") {
-      diags.Report(clang::diag::err_drv_invalid_value)
-          << arg->getAsString(args) << val;
+      diags.Report(clang::diag::err_drv_invalid_value_with_suggestion)
+          << arg->getOption().getName() << val << "target host";
     }
   }
 
