@@ -102,20 +102,7 @@ int SBFileSpec::ResolvePath(const char *src_path, char *dst_path,
 
   llvm::SmallString<64> result(src_path);
   FileSystem::Instance().Resolve(result);
-  if (result.empty()) {
-    if (dst_path && dst_len != 0)
-      *dst_path = '\0';
-    return 0;
-  }
-
-  const size_t needed_len = result.size() + 1; // for the NULL byte.
-  if (dst_path && dst_len != 0) {
-    const size_t min_len = std::min(needed_len, dst_len);
-    const size_t copy_len = min_len - 1; // exclude space for NULL byte.
-    std::memcpy(dst_path, result.data(), copy_len);
-    dst_path[copy_len] = '\0';
-  }
-  return needed_len;
+  return FileSpec::CopyToBuffer(result, dst_path, dst_len);
 }
 
 const char *SBFileSpec::GetFilename() const {
