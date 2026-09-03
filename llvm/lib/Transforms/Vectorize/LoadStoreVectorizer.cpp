@@ -1570,8 +1570,12 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
     Safe = CR.getUnsignedMax().ule(Limit);
   }
 
-  if (Safe)
-    return IdxDiff * Stride;
+  if (Safe) {
+    // IdxDiff has the pre-extension index width. Scale it at the pointer index
+    // width so any wrapping matches GEP offset arithmetic.
+    unsigned OffsetBitWidth = DL.getIndexTypeSizeInBits(GEPA->getType());
+    return IdxDiff.sextOrTrunc(OffsetBitWidth) * Stride;
+  }
   return std::nullopt;
 }
 

@@ -13,10 +13,14 @@ define i32 @zext_byte_offset_wraps_to_zero(ptr %base, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[Y]], 1
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[MUL]], [[X]]
 ; CHECK-NEXT:    [[IDX:%.*]] = trunc i32 [[SUM]] to i8
+; CHECK-NEXT:    [[NEXT:%.*]] = add nuw i8 [[IDX]], 64
 ; CHECK-NEXT:    [[EXT0:%.*]] = zext i8 [[IDX]] to i64
+; CHECK-NEXT:    [[EXT1:%.*]] = zext i8 [[NEXT]] to i64
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT0]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P0]], align 4
-; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[TMP1]], [[V1]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %mul = shl i32 %y, 1
@@ -41,11 +45,13 @@ define i32 @zext_byte_offset_wraps_to_adjacent(ptr %base, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[Y]], 1
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[MUL]], [[X]]
 ; CHECK-NEXT:    [[IDX:%.*]] = trunc i32 [[SUM]] to i8
+; CHECK-NEXT:    [[NEXT:%.*]] = add nuw i8 [[IDX]], 65
 ; CHECK-NEXT:    [[EXT1:%.*]] = zext i8 [[IDX]] to i64
+; CHECK-NEXT:    [[EXT2:%.*]] = zext i8 [[NEXT]] to i64
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P1]], align 8
-; CHECK-NEXT:    [[V0:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[V1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT2]]
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[P1]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P2]], align 4
 ; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[V0]], [[V1]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
@@ -103,14 +109,11 @@ define i32 @zext_byte_offset_cancellation(ptr %base, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[Y]], 1
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[MUL]], [[X]]
 ; CHECK-NEXT:    [[IDX:%.*]] = trunc i32 [[SUM]] to i8
-; CHECK-NEXT:    [[NEXT:%.*]] = add nuw i8 [[IDX]], 64
-; CHECK-NEXT:    [[EXT0:%.*]] = zext i8 [[IDX]] to i64
-; CHECK-NEXT:    [[EXT1:%.*]] = zext i8 [[NEXT]] to i64
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT0]]
+; CHECK-NEXT:    [[EXT1:%.*]] = zext i8 [[IDX]] to i64
 ; CHECK-NEXT:    [[P1_BASE:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT1]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P1_BASE]], i64 -252
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[P0]], align 8
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P1_BASE]], align 8
+; CHECK-NEXT:    [[V0:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[V0]], [[V1]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
@@ -137,10 +140,14 @@ define i32 @sext_byte_offset_wraps_to_zero(ptr %base, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[Y]], 1
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[MUL]], [[X]]
 ; CHECK-NEXT:    [[IDX:%.*]] = trunc i32 [[SUM]] to i8
+; CHECK-NEXT:    [[NEXT:%.*]] = add nsw i8 [[IDX]], -64
 ; CHECK-NEXT:    [[EXT0:%.*]] = sext i8 [[IDX]] to i64
+; CHECK-NEXT:    [[EXT1:%.*]] = sext i8 [[NEXT]] to i64
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT0]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXT1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P0]], align 4
-; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[TMP1]], [[V1]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %mul = shl i32 %y, 1
