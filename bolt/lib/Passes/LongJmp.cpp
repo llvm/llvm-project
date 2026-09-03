@@ -1269,19 +1269,22 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
   size_t NumLongThunks = 0;
   size_t NumShortThunksReused = 0;
   size_t NumLongThunksReused = 0;
-  auto createCallThunk = [&](const MCSymbol *TargetSymbol, bool IsShort) {
+  auto createCallThunk = [&](const MCSymbol *TargetSymbol, bool IsShort,
+                             bool IsForward) {
     BinaryFunction *Thunk = nullptr;
+    std::string ThunkName =
+        (Twine("__AArch64_") + (IsForward ? "forward_" : "backward_") +
+         (IsShort ? "short_call_" : "long_call_") + TargetSymbol->getName())
+            .str();
     if (IsShort) {
       ++NumShortThunks;
-      Thunk = BC.createThunkBinaryFunction("__AArch64Thunk_" +
-                                           TargetSymbol->getName().str());
+      Thunk = BC.createThunkBinaryFunction(ThunkName);
       MCInst Inst;
       BC.MIB->createTailCall(Inst, TargetSymbol, BC.Ctx.get());
       Thunk->addBasicBlock()->addInstruction(Inst);
     } else {
       ++NumLongThunks;
-      Thunk = BC.createThunkBinaryFunction("__AArch64ADRPThunk_" +
-                                           TargetSymbol->getName().str());
+      Thunk = BC.createThunkBinaryFunction(ThunkName);
       InstructionListType Instructions;
       BC.MIB->createLongTailCall(Instructions, TargetSymbol, BC.Ctx.get());
       Thunk->addBasicBlock()->addInstructions(Instructions);
@@ -1337,7 +1340,7 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
       }
     }
 
-    BinaryFunction *Thunk = createCallThunk(TargetSymbol, IsShort);
+    BinaryFunction *Thunk = createCallThunk(TargetSymbol, IsShort, IsForward);
 
     FragmentCluster &ThunkCluster = Clusters[SourceCluster];
     Thunk->setCodeSectionName(ThunkCluster.getThunkSectionName(IsForward));
@@ -1445,9 +1448,10 @@ void LongJmpPass::relaxUnconditionalBranches(
   size_t NumBranchThunksReused = 0;
   auto createBranchThunk = [&](const MCSymbol *TargetSymbol,
                                const bool IsForward) {
-    std::string ThunkName = IsForward ? "__AArch64BranchForwardThunk_"
-                                      : "__AArch64BranchBackwardThunk_";
-    ThunkName += std::to_string(NumBranchThunks++);
+    std::string ThunkName =
+        (Twine("__AArch64_") + (IsForward ? "forward_" : "backward_") +
+         "branch_chain_" + Twine(NumBranchThunks++))
+            .str();
 
     BinaryFunction *ThunkBF = BC.createThunkBinaryFunction(ThunkName);
     MCInst Inst;
