@@ -41,16 +41,6 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   }
   KernelPR.MaxThreadGroupSize = KP.maxSubgroupSize * KP.maxNumSubgroups;
 
-  // Query and cache argument sizes if extension is available.
-  auto &Context = L0Device.getL0Context();
-  if (KernelPR.NumKernelArgs > 0 && Context.zexKernelGetArgumentSize) {
-    KernelPR.ArgSizes = std::make_unique<uint32_t[]>(KernelPR.NumKernelArgs);
-    for (uint32_t I = 0; I < KernelPR.NumKernelArgs; I++) {
-      CALL_ZE_RET_ERROR(Context.zexKernelGetArgumentSize, zeKernel, I,
-                        &KernelPR.ArgSizes[I]);
-    }
-  }
-
   return Plugin::success();
 }
 
