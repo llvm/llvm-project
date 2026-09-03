@@ -1275,9 +1275,9 @@ define i4 @bitmask_v4i64(<4 x i64> %v) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    cmeq v1.2d, v1.2d, #0
 ; CHECK-LE-NEXT:    cmeq v0.2d, v0.2d, #0
-; CHECK-LE-NEXT:    adrp x8, .LCPI22_0
+; CHECK-LE-NEXT:    adrp x8, .LCPI23_0
 ; CHECK-LE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI22_0]
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI23_0]
 ; CHECK-LE-NEXT:    bic v0.16b, v1.16b, v0.16b
 ; CHECK-LE-NEXT:    addv s0, v0.4s
 ; CHECK-LE-NEXT:    fmov w0, s0
@@ -1287,8 +1287,8 @@ define i4 @bitmask_v4i64(<4 x i64> %v) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    adrp x8, .LCPI22_0
-; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI22_0
+; CHECK-BE-NEXT:    adrp x8, .LCPI23_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI23_0
 ; CHECK-BE-NEXT:    cmeq v1.2d, v1.2d, #0
 ; CHECK-BE-NEXT:    cmeq v0.2d, v0.2d, #0
 ; CHECK-BE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
@@ -1308,9 +1308,9 @@ define i8 @bitmask_v8i32(<8 x i32> %v) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    cmeq v1.4s, v1.4s, #0
 ; CHECK-LE-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-LE-NEXT:    adrp x8, .LCPI23_0
+; CHECK-LE-NEXT:    adrp x8, .LCPI24_0
 ; CHECK-LE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI23_0]
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI24_0]
 ; CHECK-LE-NEXT:    bic v0.16b, v1.16b, v0.16b
 ; CHECK-LE-NEXT:    addv h0, v0.8h
 ; CHECK-LE-NEXT:    fmov w0, s0
@@ -1320,8 +1320,8 @@ define i8 @bitmask_v8i32(<8 x i32> %v) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
-; CHECK-BE-NEXT:    adrp x8, .LCPI23_0
-; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI23_0
+; CHECK-BE-NEXT:    adrp x8, .LCPI24_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI24_0
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    cmeq v1.4s, v1.4s, #0
@@ -1343,12 +1343,12 @@ define i8 @bitmask_v8i64(<8 x i64> %v) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    cmeq v3.2d, v3.2d, #0
 ; CHECK-LE-NEXT:    cmeq v2.2d, v2.2d, #0
-; CHECK-LE-NEXT:    adrp x8, .LCPI24_0
+; CHECK-LE-NEXT:    adrp x8, .LCPI25_0
 ; CHECK-LE-NEXT:    cmeq v1.2d, v1.2d, #0
 ; CHECK-LE-NEXT:    cmeq v0.2d, v0.2d, #0
 ; CHECK-LE-NEXT:    uzp1 v2.4s, v2.4s, v3.4s
 ; CHECK-LE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI24_0]
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI25_0]
 ; CHECK-LE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-LE-NEXT:    bic v0.16b, v1.16b, v0.16b
 ; CHECK-LE-NEXT:    addv h0, v0.8h
@@ -1359,8 +1359,8 @@ define i8 @bitmask_v8i64(<8 x i64> %v) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    adrp x8, .LCPI24_0
-; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI24_0
+; CHECK-BE-NEXT:    adrp x8, .LCPI25_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI25_0
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    cmeq v3.2d, v3.2d, #0
@@ -1386,12 +1386,12 @@ define i16 @bitmask_v16i32(<16 x i32> %v) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    cmeq v3.4s, v3.4s, #0
 ; CHECK-LE-NEXT:    cmeq v2.4s, v2.4s, #0
-; CHECK-LE-NEXT:    adrp x8, .LCPI25_0
+; CHECK-LE-NEXT:    adrp x8, .LCPI26_0
 ; CHECK-LE-NEXT:    cmeq v1.4s, v1.4s, #0
 ; CHECK-LE-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-LE-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
 ; CHECK-LE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI25_0]
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI26_0]
 ; CHECK-LE-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
 ; CHECK-LE-NEXT:    bic v0.16b, v1.16b, v0.16b
 ; CHECK-LE-NEXT:    addp v0.16b, v0.16b, v0.16b
@@ -1404,8 +1404,8 @@ define i16 @bitmask_v16i32(<16 x i32> %v) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    rev64 v3.4s, v3.4s
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    adrp x8, .LCPI25_0
-; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI25_0
+; CHECK-BE-NEXT:    adrp x8, .LCPI26_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI26_0
 ; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
 ; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
@@ -1439,7 +1439,7 @@ define i16 @bitmask_v16i64(<16 x i64> %v) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    cmeq v7.2d, v7.2d, #0
 ; CHECK-LE-NEXT:    cmeq v6.2d, v6.2d, #0
-; CHECK-LE-NEXT:    adrp x8, .LCPI26_0
+; CHECK-LE-NEXT:    adrp x8, .LCPI27_0
 ; CHECK-LE-NEXT:    cmeq v5.2d, v5.2d, #0
 ; CHECK-LE-NEXT:    cmeq v4.2d, v4.2d, #0
 ; CHECK-LE-NEXT:    cmeq v3.2d, v3.2d, #0
@@ -1455,7 +1455,7 @@ define i16 @bitmask_v16i64(<16 x i64> %v) {
 ; CHECK-LE-NEXT:    mvn v1.16b, v1.16b
 ; CHECK-LE-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-LE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI26_0]
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI27_0]
 ; CHECK-LE-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-LE-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-LE-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -1469,8 +1469,8 @@ define i16 @bitmask_v16i64(<16 x i64> %v) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ext v6.16b, v6.16b, v6.16b, #8
 ; CHECK-BE-NEXT:    ext v7.16b, v7.16b, v7.16b, #8
-; CHECK-BE-NEXT:    adrp x8, .LCPI26_0
-; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI26_0
+; CHECK-BE-NEXT:    adrp x8, .LCPI27_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI27_0
 ; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
 ; CHECK-BE-NEXT:    ext v4.16b, v4.16b, v4.16b, #8
 ; CHECK-BE-NEXT:    ext v5.16b, v5.16b, v5.16b, #8
@@ -1515,9 +1515,9 @@ define i8 @bitmask_v8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    fcmeq v1.4s, v1.4s, v3.4s
 ; CHECK-LE-NEXT:    fcmeq v0.4s, v0.4s, v2.4s
-; CHECK-LE-NEXT:    adrp x8, .LCPI27_0
+; CHECK-LE-NEXT:    adrp x8, .LCPI28_0
 ; CHECK-LE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI27_0]
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI28_0]
 ; CHECK-LE-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-LE-NEXT:    addv h0, v0.8h
 ; CHECK-LE-NEXT:    fmov w0, s0
@@ -1527,8 +1527,8 @@ define i8 @bitmask_v8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    adrp x8, .LCPI27_0
-; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI27_0
+; CHECK-BE-NEXT:    adrp x8, .LCPI28_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI28_0
 ; CHECK-BE-NEXT:    rev64 v3.4s, v3.4s
 ; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
 ; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
@@ -1557,10 +1557,10 @@ define i8 @bitmask_v8i32_sve(<8 x i32> %v) vscale_range(2,2) "target-features"="
 ; CHECK-LE-NEXT:    ptrue p0.s, vl4
 ; CHECK-LE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-LE-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-LE-NEXT:    adrp x8, .LCPI28_0
+; CHECK-LE-NEXT:    adrp x8, .LCPI29_0
 ; CHECK-LE-NEXT:    splice z0.s, p0, z0.s, z1.s
 ; CHECK-LE-NEXT:    ptrue p0.s
-; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI28_0]
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI29_0]
 ; CHECK-LE-NEXT:    cmpne p1.s, p0/z, z0.s, #0
 ; CHECK-LE-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-LE-NEXT:    uzp1 z0.h, z0.h, z0.h
@@ -1573,8 +1573,8 @@ define i8 @bitmask_v8i32_sve(<8 x i32> %v) vscale_range(2,2) "target-features"="
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    adrp x8, .LCPI28_0
-; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI28_0
+; CHECK-BE-NEXT:    adrp x8, .LCPI29_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI29_0
 ; CHECK-BE-NEXT:    ptrue p0.s, vl4
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
