@@ -14,6 +14,8 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/ADT/BreadthFirstIterator.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -67,6 +69,13 @@ public:
 private:
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64InstrInfo *TII = nullptr;
+  const AArch64RegisterInfo *TRI = nullptr;
+
+  bool
+  rewriteProloguesEpilogues(MachineFunction &MF,
+                            ArrayRef<MachineInstr *> PAuthPseudoInstrs) const;
+  bool insertLRChecks(MachineFunction &MF,
+                      ArrayRef<MachineInstr *> PAuthPseudoInstrs) const;
 
   void signLR(MachineFunction &MF, MachineBasicBlock::iterator MBBI) const;
 
@@ -512,12 +521,137 @@ unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
   llvm_unreachable("Unknown AuthCheckMethod enum");
 }
 
+bool AArch64PointerAuthImpl::rewriteProloguesEpilogues(
+    MachineFunction &MF, ArrayRef<MachineInstr *> PAuthPseudoInstrs) const {
+  for (auto *MI : PAuthPseudoInstrs) {
+    switch (MI->getOpcode()) {
+    case AArch64::PAUTH_PROLOGUE:
+      signLR(MF, MI->getIterator());
+      break;
+    case AArch64::PAUTH_EPILOGUE:
+      authenticateLR(MF, MI->getIterator());
+      break;
+    default:
+      llvm_unreachable("Unhandled opcode");
+    }
+  }
+
+  return !PAuthPseudoInstrs.empty();
+}
+
+// Insert PAUTH_CHECK_LR before the tail calls as needed.
+//
+// Currently, if the function creates a stack frame, PAUTH_EPILOGUE is either
+// inserted before every point where the function is exited or at the single
+// point where the function's epilogue was placed due to shrink-wrapping.
+//
+// Putting aside microarchitectural details, there are several possibilities:
+// * checking LR before exiting the function with a regular `ret` (aliased to
+//   `ret lr`) wastes CPU time, but it is still permitted from the correctness
+//   point of view
+// * if every code path leading to the given tail call involves reloading LR
+//   from the stack, then the check can be kept right before the tail call or
+//   moved to the shrink-wrapped PAUTH_EPILOGUE - the number of executed
+//   instructions is the same in both cases, but the latter may help decreasing
+//   the code size
+// * if LR is never spilled to the stack before the given tail call, then the
+//   check can be dropped without any further consequences
+// * if, due to shrink-wrapping optimization, the LR is spilled to the stack
+//   conditionally before the given tail call, then moving the check right after
+//   PAUTH_EPILOGUE would be beneficial both for CPU time and (possibly) the
+//   code size when the function is exited via this particular tail call, but
+//   may hurt regular function `ret`s of the other code paths.
+//
+// To never make things worse and optimize common cases, this functions uses
+// the heuristic equivalent to the following:
+// 1.  Enumerate the set of all PAUTH_EPILOGUE and all tail call instructions.
+// 2.  Remove the tail calls that are not reachable from any PAUTH_EPILOGUE and
+//     PAUTH_EPILOGUEs that have no tail calls reachable from them from the
+//     corresponding sets.
+// 3a. Insert PAUTH_CHECK_LR after each PAUTH_EPILOGUE in the set, if no
+//     regular return instruction is reachable from any of them.
+// 3b. Otherwise insert PAUTH_CHECK_LR before every tail call in the set.
+//
+// Note that no special handling is required for the "sign-return-address"="all"
+// case, as the PAUTH_EPILOGUE pseudo instructions are conservatively placed
+// by PEI right before the function is exited.
+bool AArch64PointerAuthImpl::insertLRChecks(
+    MachineFunction &MF, ArrayRef<MachineInstr *> PAuthPseudoInstrs) const {
+  auto CheckMethod = Subtarget->getAuthenticatedLRCheckMethod(MF);
+  if (CheckMethod == AArch64PAuth::AuthCheckMethod::None)
+    return false;
+
+  bool Modified = false;
+
+  bool ShouldCheckAtEpilogues = true;
+  // The set of PAUTH_EPILOGUE instructions followed by at least one tail call.
+  SmallSet<MachineInstr *, 8> EpiloguesToCheck;
+  // The set of tail calls reachable from at least one PAUTH_EPILOGUE.
+  SmallSet<MachineInstr *, 8> TailCallsToCheck;
+
+  for (MachineInstr *ThisMI : PAuthPseudoInstrs) {
+    if (ThisMI->getOpcode() != AArch64::PAUTH_EPILOGUE)
+      continue;
+
+    MachineBasicBlock *ThisBB = ThisMI->getParent();
+    bool HasReachableTailCalls = false;
+    bool HasReachableReturns = false;
+
+    for (MachineBasicBlock *ReachableBB : breadth_first(ThisBB)) {
+      for (auto &TI : ReachableBB->terminators()) {
+        if (TII->isTailCall(TI)) {
+          TailCallsToCheck.insert(&TI);
+          HasReachableTailCalls = true;
+        } else if (TI.isReturn()) {
+          HasReachableReturns = true;
+        }
+      }
+    }
+
+    if (HasReachableTailCalls)
+      EpiloguesToCheck.insert(ThisMI);
+    if (HasReachableTailCalls && HasReachableReturns)
+      ShouldCheckAtEpilogues = false;
+  }
+
+  auto InsertCheck = [&](MachineBasicBlock::iterator MBBI, Register Scratch,
+                         bool InsertAfter) {
+    MachineBasicBlock *MBB = MBBI->getParent();
+    DebugLoc DL = MBBI->getDebugLoc();
+
+    auto InsertPt = InsertAfter ? std::next(MBBI) : MBBI;
+    BuildMI(*MBB, InsertPt, DL, TII->get(AArch64::PAUTH_CHECK_LR))
+        .addReg(Scratch, RegState::ImplicitDefine);
+    Modified = true;
+  };
+
+  // TODO When optimization for size is requested, we could move the check to
+  //      the shrink-wrapped epilogue unconditionally.
+  if (ShouldCheckAtEpilogues) {
+    for (MachineInstr *MI : EpiloguesToCheck) {
+      Register Scratch =
+          MI->definesRegister(AArch64::X16, TRI) ? AArch64::X16 : AArch64::X17;
+      assert(MI->definesRegister(Scratch, TRI));
+      InsertCheck(MI->getIterator(), Scratch, /*InsertAfter=*/true);
+    }
+  } else {
+    for (MachineInstr *MI : TailCallsToCheck) {
+      Register Scratch =
+          MI->readsRegister(AArch64::X16, TRI) ? AArch64::X17 : AArch64::X16;
+      assert(!MI->readsRegister(Scratch, TRI));
+      InsertCheck(MI->getIterator(), Scratch, /*InsertAfter=*/false);
+    }
+  }
+
+  return Modified;
+}
+
 bool AArch64PointerAuthImpl::run(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
+  TRI = Subtarget->getRegisterInfo();
 
-  SmallVector<MachineBasicBlock::instr_iterator> PAuthPseudoInstrs;
-
+  SmallVector<MachineInstr *> PAuthPseudoInstrs;
   bool Modified = false;
 
   for (auto &MBB : MF) {
@@ -527,26 +661,17 @@ bool AArch64PointerAuthImpl::run(MachineFunction &MF) {
         break;
       case AArch64::PAUTH_PROLOGUE:
       case AArch64::PAUTH_EPILOGUE:
-        PAuthPseudoInstrs.push_back(MI.getIterator());
+        PAuthPseudoInstrs.push_back(&MI);
         break;
       }
     }
   }
 
-  for (auto It : PAuthPseudoInstrs) {
-    switch (It->getOpcode()) {
-    case AArch64::PAUTH_PROLOGUE:
-      signLR(MF, It);
-      break;
-    case AArch64::PAUTH_EPILOGUE:
-      authenticateLR(MF, It);
-      break;
-    default:
-      llvm_unreachable("Unhandled opcode");
-    }
-    It->eraseFromParent();
-    Modified = true;
-  }
+  Modified |= rewriteProloguesEpilogues(MF, PAuthPseudoInstrs);
+  Modified |= insertLRChecks(MF, PAuthPseudoInstrs);
+
+  for (auto *MI : PAuthPseudoInstrs)
+    MI->eraseFromParent();
 
   return Modified;
 }

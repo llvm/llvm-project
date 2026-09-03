@@ -230,18 +230,6 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (auto Size = getLFIInstSizeInBytes(MI))
       return *Size;
 
-  if (!MI.isBundle() && isTailCallReturnInst(MI)) {
-    NumBytes = Desc.getSize() ? Desc.getSize() : 4;
-
-    const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
-    if (!MFI->shouldSignReturnAddress(*MF))
-      return NumBytes;
-
-    auto Method = STI.getAuthenticatedLRCheckMethod(*MF);
-    NumBytes += AArch64PAuth::getCheckerSizeInBytes(Method);
-    return NumBytes;
-  }
-
   // Size should be preferably set in
   // llvm/lib/Target/AArch64/AArch64InstrInfo.td (default case).
   // Specific cases handle instructions of variable sizes
@@ -316,6 +304,15 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     AArch64_IMM::expandMOVImm(MI.getOperand(1).getImm(), BitSize, Insn);
     NumBytes = Insn.size() * 4;
     break;
+  }
+
+  case AArch64::PAUTH_CHECK_LR: {
+    const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
+    if (!MFI->shouldSignReturnAddress(*MF))
+      return 0;
+
+    auto Method = STI.getAuthenticatedLRCheckMethod(*MF);
+    return AArch64PAuth::getCheckerSizeInBytes(Method);
   }
 
   case TargetOpcode::BUNDLE:
@@ -11779,8 +11776,7 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
   MachineBasicBlock::iterator InsertPt = MBB.getFirstTerminator();
   MachineFunction &MF = *MBB.getParent();
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
-  auto &AFL = *static_cast<const AArch64FrameLowering *>(
-      MF.getSubtarget().getFrameLowering());
+  const AArch64FrameLowering &AFL = *Subtarget.getFrameLowering();
 
   SmallVector<Register, 3> ImplicitDefs;
   if (AFL.getArgumentStackToRestore(MF, MBB)) {
@@ -11799,6 +11795,16 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
   RegScavenger RS;
   RS.enterBasicBlockEnd(MBB);
   RS.backward(InsertPt);
+
+  bool MayCheckLR = Subtarget.getAuthenticatedLRCheckMethod(MF) !=
+                    AArch64PAuth::AuthCheckMethod::None;
+  if (ImplicitDefs.empty() && MayCheckLR) {
+    // If we may have to check LR at this point, we need a scratch register -
+    // try to pick a free one among X16 and X17.
+    Register ScratchRegForCheckVA =
+        RS.isRegUsed(AArch64::X16) ? AArch64::X17 : AArch64::X16;
+    ImplicitDefs.push_back(ScratchRegForCheckVA);
+  }
 
   // Find out which scratch registers have to be spilled to other GPRs,
   // mark the rest as unavailable to be spilled-to.
