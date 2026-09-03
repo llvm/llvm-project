@@ -224,7 +224,7 @@ inline bool isTRNMask(ArrayRef<int> M, unsigned NumElts,
 /// isTRN_v_undef_Mask - Special case of isTRNMask for canonical form of
 /// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
 /// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
-static bool isTRN_v_undef_Mask(ArrayRef<int> M, unsigned NumElts,
+inline bool isTRN_v_undef_Mask(ArrayRef<int> M, unsigned NumElts,
                                unsigned &WhichResult) {
   if (NumElts % 2 != 0)
     return false;
