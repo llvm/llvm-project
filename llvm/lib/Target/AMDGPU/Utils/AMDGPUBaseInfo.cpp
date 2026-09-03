@@ -2685,6 +2685,10 @@ bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
          Reg == AMDGPU::SCC;
 }
 
+bool isRsrcIndexReg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getRegClass(AMDGPU::RsrcReg32RegClassID).contains(Reg);
+}
+
 bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
   return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI16;
 }

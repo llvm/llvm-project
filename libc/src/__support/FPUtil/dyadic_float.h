@@ -139,25 +139,21 @@ template <size_t Bits> struct DyadicFloat {
 
   // Used for aligning exponents.  Output might not be normalized.
   LIBC_INLINE constexpr DyadicFloat &shift_left(unsigned shift_length) {
-    if (shift_length < Bits) {
-      exponent -= static_cast<int>(shift_length);
+    exponent -= static_cast<int>(shift_length);
+    if (shift_length < Bits)
       mantissa <<= shift_length;
-    } else {
-      exponent = 0;
+    else
       mantissa = MantissaType(0);
-    }
     return *this;
   }
 
   // Used for aligning exponents.  Output might not be normalized.
   LIBC_INLINE constexpr DyadicFloat &shift_right(unsigned shift_length) {
-    if (shift_length < Bits) {
-      exponent += static_cast<int>(shift_length);
+    exponent += static_cast<int>(shift_length);
+    if (shift_length < Bits)
       mantissa >>= shift_length;
-    } else {
-      exponent = 0;
+    else
       mantissa = MantissaType(0);
-    }
     return *this;
   }
 
