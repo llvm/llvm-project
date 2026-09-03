@@ -19,8 +19,10 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSemExpr.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -197,6 +199,46 @@ public:
   /// returns the offset within the instruction of that relocation.
   virtual std::optional<uint64_t>
   getMemoryOperandRelocationOffset(const MCInst &Inst, uint64_t Size) const;
+
+  /// Return the value \p Inst assigns to \p Reg.
+  ///
+  /// The result is expressed in terms of the register and memory values
+  /// before inst executes. All values used to describe a future step
+  /// are read from the previous state, so the instructions are seen as
+  /// semantically order-independent. For example, on X86 `push %rax` is
+  /// described by
+  ///
+  ///  evaluateDefinedValue(Inst, RSP) == %rsp - 8
+  ///  evaluateStoreAddress(Inst)      == [%rsp - 8]
+  ///  getStoredValue(Inst)            == [%rax]
+  ///
+  /// Returns std::nullopt if Inst does not define Reg, or if the new
+  /// value cannot currently be represented by MCSemExpr. Callers must treat
+  /// std::nullopt as a conservative unknown result.
+  virtual std::optional<MCSemExpr> evaluateDefinedValue(const MCInst &Inst,
+                                                        MCRegister Reg) const {
+    return {};
+  }
+
+  /// Return the memory locations Inst writes to, in terms of the pre-state.
+  ///
+  /// Returns an empty list if Inst stores nothing, or if the addresses
+  /// cannot be represented by MCSemAddrExpr. Similar to evaluateDefinedValue,
+  /// an empty list is a conservative unknown result.
+  virtual std::vector<MCSemAddrExpr>
+  evaluateStoreAddress(const MCInst &Inst) const {
+    return {};
+  }
+
+  /// Return the values Inst stores, in terms of the pre-state.
+  ///
+  /// The result corresponds positionally to evaluateStoreAddress(), i'th
+  /// element is the value written to the i'th location in the StoreAddress
+  /// list, both having the same size. Returns an empty list if \p Inst stores
+  /// nothing, or if the values cannot be represented by MCSemExpr.
+  virtual std::vector<MCSemExpr> getStoredValue(const MCInst &Inst) const {
+    return {};
+  }
 
   /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
   virtual std::vector<std::pair<uint64_t, uint64_t>>
