@@ -28211,7 +28211,7 @@ static SDValue performLegalizedInterleavedStoreCombine(
   // Type legalization splits a wide interleaved store into consecutive legal
   // stores. Combine each group that directly stores all results of a legal
   // VECTOR_INTERLEAVE into a structured store.
-  if (DCI.getDAGCombineLevel() != AfterLegalizeTypes ||
+  if (DCI.getDAGCombineLevel() < AfterLegalizeTypes ||
       !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable())
     return SDValue();
 
@@ -28225,9 +28225,7 @@ static SDValue performLegalizedInterleavedStoreCombine(
     return SDValue();
 
   EVT SubVecTy = Interleave->getValueType(0);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!SubVecTy.isFixedLengthVector() || !TLI.isTypeLegal(SubVecTy) ||
-      (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector()))
+  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
     return SDValue();
 
   SmallVector<StoreSDNode *, 4> Stores(NumParts, nullptr);
@@ -28238,6 +28236,9 @@ static SDValue performLegalizedInterleavedStoreCombine(
       return SDValue();
     Stores[ResNo] = Store;
   }
+
+  if (llvm::is_contained(Stores, nullptr))
+    return SDValue();
 
   StoreSDNode *BaseStore = Stores[0];
   unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
@@ -28256,9 +28257,9 @@ static SDValue performLegalizedInterleavedStoreCombine(
   Ops.append(Interleave->op_begin(), Interleave->op_end());
   Ops.push_back(BaseStore->getBasePtr());
 
-  EVT MemVT = EVT::getVectorVT(
-      *DAG.getContext(), SubVecTy.getVectorElementType(),
-      SubVecTy.getVectorElementCount().multiplyCoefficientBy(NumParts));
+  EVT MemVT =
+      EVT::getVectorVT(*DAG.getContext(), SubVecTy.getVectorElementType(),
+                       SubVecTy.getVectorElementCount() * NumParts);
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO =
       MF.getMachineMemOperand(BaseStore->getMemOperand(), 0, NumParts * Bytes);

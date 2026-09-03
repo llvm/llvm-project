@@ -112,6 +112,29 @@ define void @wide_vector_interleave_st3(ptr %output, ptr %input0, ptr %input1, p
   ret void
 }
 
+define void @wide_vector_interleave_missing_stores(ptr %output, ptr %input0, ptr %input1, ptr %input2) {
+; CHECK-LABEL: wide_vector_interleave_missing_stores:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    ldr q0, [x1, #16]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ldr q1, [x2, #16]
+; CHECK-NEXT:    ldr q2, [x3, #16]
+; CHECK-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x8]
+; CHECK-NEXT:    ldp q1, q0, [sp, #16]
+; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %v0 = load <8 x i32>, ptr %input0, align 4
+  %v1 = load <8 x i32>, ptr %input1, align 4
+  %v2 = load <8 x i32>, ptr %input2, align 4
+  %interleave = call <24 x i32> @llvm.vector.interleave3.v24i32(<8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2)
+  %part = call <8 x i32> @llvm.vector.extract.v8i32.v24i32(<24 x i32> %interleave, i64 16)
+  store <8 x i32> %part, ptr %output, align 4
+  ret void
+}
+
 define void @wide_vector_interleave_st4(ptr %output, ptr %input0, ptr %input1, ptr %input2, ptr %input3) {
 ; CHECK-LABEL: wide_vector_interleave_st4:
 ; CHECK:       // %bb.0:
