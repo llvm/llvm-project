@@ -6520,7 +6520,7 @@ When `#pragma comment(copyright, ...)` appears in a C++20 module interface
 unit, the copyright string is embedded only in the object file compiled from
 that interface unit. Importing TUs do not re-emit the string.
 
-### Preserving Identifying Variables with -mloadtime-comment-vars
+## Preserving Identifying Variables with -mloadtime-comment-vars
 
 The `-mloadtime-comment-vars=` flag accepts a comma-separated list of
 mangled variable names that should be preserved in the final object file as
@@ -6623,7 +6623,7 @@ source.o:
          Built 2026-05-24
 ```
 
-Interaction with `#pragma comment(copyright, ...)`:
+### Interaction with `#pragma comment(copyright, ...)`
 
 The two mechanisms can be used together in the same translation unit. The
 pragma produces a dedicated `__loadtime_comment_str` symbol placed in the
