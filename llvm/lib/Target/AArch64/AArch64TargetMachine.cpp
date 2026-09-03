@@ -759,13 +759,6 @@ void AArch64PassConfig::addCodeGenPrepare() {
 
 bool AArch64PassConfig::addInstSelector() {
   addPass(createAArch64ISelDag(getAArch64TargetMachine(), getOptLevel()));
-
-  // For ELF, cleanup any local-dynamic TLS accesses (i.e. combine as many
-  // references to _TLS_MODULE_BASE_ as possible.
-  if (TM->getTargetTriple().isOSBinFormatELF() &&
-      getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64CleanupLocalDynamicTLSPass());
-
   return false;
 }
 
@@ -809,13 +802,6 @@ bool AArch64PassConfig::addRegBankSelect() {
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelectLegacy(getOptLevel()));
-
-  // For ELF, reuse the _TLS_MODULE_BASE_ calculation across local-dynamic
-  // TLS accesses within a function.
-  if (TM->getTargetTriple().isOSBinFormatELF() &&
-      getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64CleanupLocalDynamicTLSPass());
-
   if (!getAArch64TargetMachine().isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
 
@@ -823,6 +809,12 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
+  // For ELF, cleanup any local-dynamic TLS accesses
+  // (i.e. combine as many references to _TLS_MODULE_BASE_ as possible.
+  if (TM->getTargetTriple().isOSBinFormatELF() &&
+      getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64CleanupLocalDynamicTLSPass());
+
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createMachineSMEABIPass(TM->getOptLevel()));
 
