@@ -120,6 +120,18 @@ static std::string computeLoongArchDataLayout(const Triple &TT) {
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
 
+
+// The Linux m68k target uses the ABI used
+// by Sun Microsystems for the old a.out-based binaries: 16-bit
+// alignment of int/long/pointer.
+//
+// NetBSD/m68k on the other hand uses the SVR4 ABI, which
+// aligns int/long/pointer/objects/stack on 32-bit boundaries.
+//
+// For now we just fix this for NetBSD/m68k.
+//
+// Ref. https://github.com/llvm/llvm-project/issues/199826
+
 static std::string computeM68kDataLayout(const Triple &TT) {
   std::string Ret = "";
   // M68k is Big Endian
@@ -128,22 +140,36 @@ static std::string computeM68kDataLayout(const Triple &TT) {
   // FIXME how to wire it with the used object format?
   Ret += "-m:e";
 
-  // M68k pointers are always 32 bit wide even for 16-bit CPUs.
-  // The ABI only specifies 16-bit alignment.
-  // On at least the 68020+ with a 32-bit bus, there is a performance benefit
-  // to having 32-bit alignment.
-  Ret += "-p:32:16:32";
+  if (! TT.isOSNetBSD()) {
+    // M68k pointers are always 32 bit wide even for 16-bit CPUs.
+    // The ABI only specifies 16-bit alignment.
+    // On at least the 68020+ with a 32-bit bus, there is a performance benefit
+    // to having 32-bit alignment.
+    Ret += "-p:32:16:32";
 
-  // Bytes do not require special alignment, words are word aligned and
-  // long words are word aligned at minimum.
-  Ret += "-i8:8:8-i16:16:16-i32:16:32";
+    // Bytes do not require special alignment, words are word aligned and
+    // long words are word aligned at minimum.
+    Ret += "-i8:8:8-i16:16:16-i32:16:32";
+
+    // The registers can hold 8, 16, 32 bits
+    Ret += "-n8:16:32";
+
+    Ret += "-a:0:16-S16";
+  } else {
+    // NetBSD/m68k aligns long/pointer/stack/objects on 32-bits,
+    // ref. comment above.
+    Ret += "-p:32:32:32";
+    // Bytes do not require special alignment,
+    // 16-bit ints are 16-bit aligned and
+    // 32-bit ints are 32-bit aligned
+    Ret += "-i8:8:8-i16:16:16-i32:32:32";
+    // The registers can hold 8, 16, 32 bits
+    Ret += "-n8:16:32";
+    // object and stack alignment is also 32 bits
+    Ret += "-a:0:32-S32";
+  }
 
   // FIXME no floats at the moment
-
-  // The registers can hold 8, 16, 32 bits
-  Ret += "-n8:16:32";
-
-  Ret += "-a:0:16-S16";
 
   return Ret;
 }
