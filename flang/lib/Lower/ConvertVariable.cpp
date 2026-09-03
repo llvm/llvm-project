@@ -1280,9 +1280,13 @@ getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
 
 /// Returns true if \p derived or any of its components (recursively) is a
 /// PowerPC vector type. fir::VectorType does not implement
-/// DataLayoutTypeInterface, so any record containing a vector component would
-/// crash record-size calculation. Excluding such records at eligibility time
-/// avoids the crash.
+/// DataLayoutTypeInterface. Two pre-fix failure modes existed:
+///   - Direct vector local: silently initialized to zero regardless of mode
+///     (historical behavior); at the current head genByteSplatInit would
+///     hit llvm_unreachable instead.
+///   - Derived-type local with a vector component: crashed in record-size
+///     calculation when DataLayoutTypeInterface was queried.
+/// Excluding both cases at eligibility time avoids both failure modes.
 static bool
 containsVectorComponent(const Fortran::semantics::DerivedTypeSpec &derived) {
   if (derived.IsVectorType())
@@ -1352,10 +1356,13 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
     return false;
   // PowerPC vector types (vector(real(4)) etc.) lower to fir::VectorType
   // which does not implement DataLayoutTypeInterface at the HLFIR level.
-  // Without this guard, a direct vector local would silently fall back to
-  // zero initialization regardless of the requested mode, and a derived-type
-  // local whose component is a vector type would crash record-size
-  // calculation.  Exclude both cases here by walking components recursively.
+  // Without this guard:
+  //   - A direct vector local would hit llvm_unreachable in genByteSplatInit
+  //     (historically it silently fell back to zero before that assert was
+  //     added).
+  //   - A derived-type local with a vector component would crash in
+  //     record-size calculation when DataLayoutTypeInterface was queried.
+  // Exclude both cases by walking components recursively.
   if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
     if (const Fortran::semantics::DerivedTypeSpec *derived =
             declTy->AsDerived())
@@ -1450,6 +1457,9 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
 /// Fixed-length CHARACTER in hex mode: byte-loop over every byte of storage.
 /// LOGICAL stores via a bitcasted integer address to preserve the raw bit
 /// pattern past fir.convert normalization.
+/// All byte-view and coordinate types carry the source address volatility so
+/// that final stores are emitted as "store volatile" when the variable is
+/// volatile.
 static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type ty, mlir::Value addr,
                               Fortran::lower::InitLocalKind mode,
@@ -1480,8 +1490,9 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
             fir::CharacterType::getSingleton(builder.getContext(), 1);
         mlir::Type byteSeqTy = fir::SequenceType::get(
             {fir::SequenceType::getUnknownExtent()}, byteTy);
+        bool addrVolatile1 = fir::isa_volatile_type(addr.getType());
         mlir::Value byteBase = builder.createConvertWithVolatileCast(
-            loc, builder.getRefType(byteSeqTy), addr);
+            loc, builder.getRefType(byteSeqTy, addrVolatile1), addr);
         mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
         mlir::Value last =
             builder.createIntegerConstant(loc, idxTy, nBytes - 1);
@@ -1492,13 +1503,15 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToStart(loop.getBody());
         mlir::Value iv = loop.getInductionVar();
+        bool byteVolatile1 = fir::isa_volatile_type(byteBase.getType());
         mlir::Value byteAddr =
-            fir::CoordinateOp::create(builder, loc, builder.getRefType(byteTy),
+            fir::CoordinateOp::create(builder, loc,
+                                      builder.getRefType(byteTy, byteVolatile1),
                                       byteBase, mlir::ValueRange{iv});
         mlir::Value pat = builder.createIntegerConstant(
             loc, i8Ty, static_cast<int64_t>(hexByte));
-        mlir::Value i8Addr =
-            builder.createConvert(loc, builder.getRefType(i8Ty), byteAddr);
+        mlir::Value i8Addr = builder.createConvertWithVolatileCast(
+            loc, builder.getRefType(i8Ty, byteVolatile1), byteAddr);
         fir::StoreOp::create(builder, loc, pat, i8Addr);
       }
       return;
@@ -1512,8 +1525,9 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Type i8Ty = builder.getIntegerType(8);
     mlir::Type i8SeqTy =
         fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
+    bool addrVolatile2 = fir::isa_volatile_type(addr.getType());
     mlir::Value byteBase = builder.createConvertWithVolatileCast(
-        loc, builder.getRefType(i8SeqTy), addr);
+        loc, builder.getRefType(i8SeqTy, addrVolatile2), addr);
     mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
     mlir::Value last = builder.createIntegerConstant(
         loc, idxTy, static_cast<int64_t>(nBytes) - 1);
@@ -1524,8 +1538,10 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(loop.getBody());
     mlir::Value iv = loop.getInductionVar();
+    bool byteVolatile2 = fir::isa_volatile_type(byteBase.getType());
     mlir::Value byteAddr = fir::CoordinateOp::create(
-        builder, loc, builder.getRefType(i8Ty), byteBase, mlir::ValueRange{iv});
+        builder, loc, builder.getRefType(i8Ty, byteVolatile2), byteBase,
+        mlir::ValueRange{iv});
     int64_t fillByte =
         (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
     mlir::Value pat = builder.createIntegerConstant(loc, i8Ty, fillByte);
@@ -1561,8 +1577,11 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
       mlir::isa<fir::LogicalType>(ty)) {
     auto logTy = mlir::cast<fir::LogicalType>(ty);
     unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
-    mlir::Type intRefTy = builder.getRefType(builder.getIntegerType(bits));
-    mlir::Value intAddr = builder.createConvert(loc, intRefTy, addr);
+    bool logVolatile = fir::isa_volatile_type(addr.getType());
+    mlir::Type intRefTy =
+        builder.getRefType(builder.getIntegerType(bits), logVolatile);
+    mlir::Value intAddr =
+        builder.createConvertWithVolatileCast(loc, intRefTy, addr);
     fir::StoreOp::create(builder, loc, val, intAddr);
   } else {
     fir::StoreOp::create(builder, loc, val, addr);
@@ -1573,8 +1592,11 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Arrays: all modes use a flat fir.do_loop + fir.coordinate_of over a
 /// rank-1 view to avoid both the llvm.mlir.constant crash on non-zero
 /// ArrayAttrs and the quadratic compile time of fir.insert_on_range.
-/// Derived types use a byte-fill loop. PowerPC vector types (direct or as a
-/// derived-type component) are excluded upstream by shouldInitLocal via
+/// Derived types use a byte-fill loop. All byte-view and coordinate types
+/// carry the source address volatility so that stores into volatile variables
+/// are emitted as "store volatile" end-to-end.
+/// PowerPC vector types (direct or as a derived-type component) are excluded
+/// upstream by shouldInitLocal via
 /// containsVectorComponent and never reach this function.
 /// Scalars store directly via genInitLocalStore.
 static void genInitLocal(Fortran::lower::AbstractConverter &converter,
@@ -1634,8 +1656,10 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
             mlir::Type idxTy = builder.getIndexType();
             mlir::Type rank1SeqTy = fir::SequenceType::get(
                 {fir::SequenceType::getUnknownExtent()}, eleTy);
-            mlir::Value rank1Addr = builder.createConvert(
-                loc, builder.getRefType(rank1SeqTy), addr);
+            bool rank1Volatile = fir::isa_volatile_type(addr.getType());
+            mlir::Value rank1Addr =
+                builder.createConvertWithVolatileCast(
+                    loc, builder.getRefType(rank1SeqTy, rank1Volatile), addr);
             mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
             mlir::Value last =
                 builder.createIntegerConstant(loc, idxTy, totalElems - 1);
@@ -1646,9 +1670,10 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
             mlir::OpBuilder::InsertionGuard guard(builder);
             builder.setInsertionPointToStart(loop.getBody());
             mlir::Value iv = loop.getInductionVar();
+            bool elemVolatile = fir::isa_volatile_type(rank1Addr.getType());
             mlir::Value elemAddr = fir::CoordinateOp::create(
-                builder, loc, builder.getRefType(eleTy), rank1Addr,
-                mlir::ValueRange{iv});
+                builder, loc, builder.getRefType(eleTy, elemVolatile),
+                rank1Addr, mlir::ValueRange{iv});
             initAddr(eleTy, elemAddr);
           }
         } else if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
@@ -1663,8 +1688,9 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
               mlir::Type i8Ty = builder.getIntegerType(8);
               mlir::Type i8SeqTy = fir::SequenceType::get(
                   {fir::SequenceType::getUnknownExtent()}, i8Ty);
+              bool addrVolatile3 = fir::isa_volatile_type(addr.getType());
               mlir::Value byteBase = builder.createConvertWithVolatileCast(
-                  loc, builder.getRefType(i8SeqTy), addr);
+                  loc, builder.getRefType(i8SeqTy, addrVolatile3), addr);
               mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
               mlir::Value last = builder.createIntegerConstant(
                   loc, idxTy, static_cast<int64_t>(byteSize) - 1);
@@ -1675,9 +1701,10 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
               mlir::OpBuilder::InsertionGuard guard(builder);
               builder.setInsertionPointToStart(loop.getBody());
               mlir::Value iv = loop.getInductionVar();
+              bool byteVolatile3 = fir::isa_volatile_type(byteBase.getType());
               mlir::Value byteAddr = fir::CoordinateOp::create(
-                  builder, loc, builder.getRefType(i8Ty), byteBase,
-                  mlir::ValueRange{iv});
+                  builder, loc, builder.getRefType(i8Ty, byteVolatile3),
+                  byteBase, mlir::ValueRange{iv});
               int64_t fillByte =
                   (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
               mlir::Value pat =
@@ -1734,10 +1761,13 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
           fir::CharacterType::getSingleton(builder.getContext(), 1);
       mlir::Type byteSeqTy = fir::SequenceType::get(
           {fir::SequenceType::getUnknownExtent()}, byteTy);
+      bool baseVolatile = fir::isa_volatile_type(base.getType());
       mlir::Value byteBase = builder.createConvertWithVolatileCast(
-          loc, builder.getRefType(byteSeqTy), base);
+          loc, builder.getRefType(byteSeqTy, baseVolatile), base);
+      bool byteVolatile4 = fir::isa_volatile_type(byteBase.getType());
       mlir::Value byteAddr =
-          fir::CoordinateOp::create(builder, loc, builder.getRefType(byteTy),
+          fir::CoordinateOp::create(builder, loc,
+                                    builder.getRefType(byteTy, byteVolatile4),
                                     byteBase, mlir::ValueRange{iv});
       genInitLocalStore(builder, loc, byteTy, byteAddr, mode, hexByte);
       return;
