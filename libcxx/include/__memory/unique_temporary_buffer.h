@@ -16,7 +16,6 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/allocator.h>
 #include <__memory/unique_ptr.h>
-#include <__new/allocate.h>
 #include <__new/global_new_delete.h>
 #include <__type_traits/is_constant_evaluated.h>
 
@@ -25,6 +24,14 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+template <class _Tp>
+inline const bool __is_overaligned_for_new = _LIBCPP_ALIGNOF(_Tp) > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+#else
+template <class _Tp>
+inline const bool __is_overaligned_for_new = _LIBCPP_ALIGNOF(_Tp) > _LIBCPP_ALIGNOF(max_align_t);
+#endif
 
 template <class _Tp>
 struct __temporary_buffer_deleter {
@@ -40,7 +47,11 @@ struct __temporary_buffer_deleter {
       return;
     }
 
-    std::__libcpp_deallocate_unsized<_Tp>(__ptr);
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
+    if _LIBCPP_CONSTEXPR (__is_overaligned_for_new<_Tp>)
+      return __builtin_operator_delete(__ptr, static_cast<align_val_t>(_LIBCPP_ALIGNOF(_Tp)));
+#endif
+    return __builtin_operator_delete(__ptr);
   }
 };
 
@@ -64,14 +75,14 @@ __allocate_unique_temporary_buffer(ptrdiff_t __count) {
     __count = __max_count;
   while (__count > 0) {
 #if _LIBCPP_HAS_ALIGNED_ALLOCATION
-    if (__is_overaligned_for_new(_LIBCPP_ALIGNOF(_Tp))) {
+    if _LIBCPP_CONSTEXPR (__is_overaligned_for_new<_Tp>) {
       align_val_t __al = align_val_t(_LIBCPP_ALIGNOF(_Tp));
       __ptr            = static_cast<_Tp*>(::operator new(__count * sizeof(_Tp), __al, nothrow));
     } else {
       __ptr = static_cast<_Tp*>(::operator new(__count * sizeof(_Tp), nothrow));
     }
 #else
-    if (__is_overaligned_for_new(_LIBCPP_ALIGNOF(_Tp))) {
+    if _LIBCPP_CONSTEXPR (__is_overaligned_for_new<_Tp>) {
       // Since aligned operator new is unavailable, constructs an empty buffer rather than one with invalid alignment.
       return __unique_buffer_type();
     }

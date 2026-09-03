@@ -91,7 +91,6 @@ void  operator delete[](void* ptr, void*) noexcept;                     // const
 #else
 #  include <__config>
 #  include <__new/align_val_t.h>
-#  include <__new/allocate.h>
 #  include <__new/exceptions.h>
 #  include <__new/global_new_delete.h>
 #  include <__new/new_handler.h>
