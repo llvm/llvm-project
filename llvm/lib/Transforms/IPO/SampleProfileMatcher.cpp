@@ -386,6 +386,12 @@ void SampleProfileMatcher::runStaleProfileMatching(
       if (Prof == ProfileAnchors.end())
         continue;
       ProfAnchor = Prof->second;
+      if (Callee->getName() != ProfAnchor.stringRef()) {
+        FuncProfileMatchCache[{Callee, ProfAnchor}] = true;
+        FuncToProfileNameMap[Callee] = ProfAnchor;
+        LLVM_DEBUG(dbgs() << "Function:" << Callee->getName()
+                          << " matches profile:" << ProfAnchor << "\n");
+      }
     }
 
     // Conflicting profile previously matched
@@ -412,7 +418,13 @@ void SampleProfileMatcher::runStaleProfileMatching(
       FunctionSamples &NewFS = FlattenedProfiles.create(NewAnchor);
       NewFS.merge(*FSForMatching);
       FuncToProfileNameMap[Callee] = NewAnchor;
+      FuncProfileMatchCache.erase({Callee, ProfAnchor});
       FuncProfileMatchCache[{Callee, NewAnchor}] = true;
+
+      LLVM_DEBUG(dbgs() << "Function:" << Callee->getName()
+                        << " encounters conflicting profile matchings, "
+                           "remapping to new profile:"
+                        << NewAnchor << "\n");
 
       // Update profile in the sample profile reader
       SampleProfileMap &Profiles = Reader.getProfiles();
@@ -1031,12 +1043,8 @@ bool SampleProfileMatcher::functionMatchesProfile(Function &IRFunc,
     return false;
 
   bool Matched = functionMatchesProfileHelper(IRFunc, ProfFunc);
-  FuncProfileMatchCache[{&IRFunc, ProfFunc}] = Matched;
-  if (Matched) {
-    FuncToProfileNameMap[&IRFunc] = ProfFunc;
-    LLVM_DEBUG(dbgs() << "Function:" << IRFunc.getName()
-                      << " matches profile:" << ProfFunc << "\n");
-  }
+  if (!Matched)
+    FuncProfileMatchCache[{&IRFunc, ProfFunc}] = Matched;
 
   return Matched;
 }
