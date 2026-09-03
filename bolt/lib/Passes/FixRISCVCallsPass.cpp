@@ -51,10 +51,12 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
         auto *Target = MIB->getTargetSymbol(*II);
         assert(Target && "Cannot find call target");
 
+        MCInst OldAUIPC = *II;
         MCInst OldCall = *NextII;
         auto L = BC.scopeLock();
 
         MIB->createNoop(*II);
+        MIB->moveAnnotations(std::move(OldAUIPC), *II);
         // Mark the replacement NOP for removal by the later RemoveNops pass.
         MIB->addAnnotation(*II, "NOP", static_cast<uint32_t>(1));
 
