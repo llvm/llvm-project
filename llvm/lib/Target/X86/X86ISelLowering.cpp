@@ -50817,7 +50817,8 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   MVT FPSclVT = MVT::f64;
   EVT FP16VT = VT.changeVectorElementType(*DAG.getContext(), MVT::f16);
   bool FP16VTUsable =
-      DCI.isBeforeLegalize() || DAG.getTargetLoweringInfo().isTypeLegal(FP16VT);
+      Subtarget.hasFP16() && (DCI.isBeforeLegalize() ||
+                              DAG.getTargetLoweringInfo().isTypeLegal(FP16VT));
   if ((EltBits == 8 || BothFitFP(APFloat::IEEEhalf())) &&
       Subtarget.hasFastFP16Div() && FP16VTUsable)
     FPSclVT = MVT::f16;
