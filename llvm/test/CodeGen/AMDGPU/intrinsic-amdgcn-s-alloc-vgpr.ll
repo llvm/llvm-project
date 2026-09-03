@@ -13,15 +13,17 @@ define amdgpu_cs void @test_alloc_vreg_const(ptr addrspace(1) %out) #0 {
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cmp_lg_u32 0, s33
 ; GISEL-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; GISEL-NEXT:    s_alloc_vgpr 45
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; GISEL-NEXT:    s_and_b32 s0, s0, 1
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_alloc_vgpr 0
@@ -34,10 +36,11 @@ define amdgpu_cs void @test_alloc_vreg_const(ptr addrspace(1) %out) #0 {
 ; DAGISEL-NEXT:    v_nop
 ; DAGISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; DAGISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
-; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; DAGISEL-NEXT:    s_cmp_lg_u32 0, s33
 ; DAGISEL-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; DAGISEL-NEXT:    s_alloc_vgpr 45
+; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; DAGISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; DAGISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; DAGISEL-NEXT:    global_store_b32 v[0:1], v2, off
@@ -51,15 +54,17 @@ define amdgpu_cs void @test_alloc_vreg_const(ptr addrspace(1) %out) #0 {
 ; NRBS-NEXT:    v_nop
 ; NRBS-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; NRBS-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
-; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; NRBS-NEXT:    s_cmp_lg_u32 0, s33
 ; NRBS-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; NRBS-NEXT:    s_alloc_vgpr 45
+; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; NRBS-NEXT:    s_cselect_b32 s0, 1, 0
 ; NRBS-NEXT:    s_and_b32 s0, s0, 1
-; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; NRBS-NEXT:    s_cmp_lg_u32 s0, 0
 ; NRBS-NEXT:    s_cselect_b32 s0, 1, 0
+; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; NRBS-NEXT:    v_mov_b32_e32 v2, s0
 ; NRBS-NEXT:    global_store_b32 v[0:1], v2, off
 ; NRBS-NEXT:    s_alloc_vgpr 0
@@ -79,15 +84,17 @@ define amdgpu_cs void @test_alloc_vreg_var(i32 inreg %n, ptr addrspace(1) %out) 
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cmp_lg_u32 0, s33
 ; GISEL-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; GISEL-NEXT:    s_alloc_vgpr s0
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; GISEL-NEXT:    s_and_b32 s0, s0, 1
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_alloc_vgpr 0
@@ -100,10 +107,11 @@ define amdgpu_cs void @test_alloc_vreg_var(i32 inreg %n, ptr addrspace(1) %out) 
 ; DAGISEL-NEXT:    v_nop
 ; DAGISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; DAGISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
-; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; DAGISEL-NEXT:    s_cmp_lg_u32 0, s33
 ; DAGISEL-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; DAGISEL-NEXT:    s_alloc_vgpr s0
+; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; DAGISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; DAGISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; DAGISEL-NEXT:    global_store_b32 v[0:1], v2, off
@@ -117,15 +125,17 @@ define amdgpu_cs void @test_alloc_vreg_var(i32 inreg %n, ptr addrspace(1) %out) 
 ; NRBS-NEXT:    v_nop
 ; NRBS-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; NRBS-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
-; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; NRBS-NEXT:    s_cmp_lg_u32 0, s33
 ; NRBS-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; NRBS-NEXT:    s_alloc_vgpr s0
+; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; NRBS-NEXT:    s_cselect_b32 s0, 1, 0
 ; NRBS-NEXT:    s_and_b32 s0, s0, 1
-; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; NRBS-NEXT:    s_cmp_lg_u32 s0, 0
 ; NRBS-NEXT:    s_cselect_b32 s0, 1, 0
+; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; NRBS-NEXT:    v_mov_b32_e32 v2, s0
 ; NRBS-NEXT:    global_store_b32 v[0:1], v2, off
 ; NRBS-NEXT:    s_alloc_vgpr 0
@@ -148,14 +158,15 @@ define amdgpu_cs void @test_alloc_vreg_vgpr(i32 %n, ptr addrspace(1) %out) #0 {
 ; GISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GISEL-NEXT:    s_cmp_lg_u32 0, s33
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; GISEL-NEXT:    s_alloc_vgpr s0
 ; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_b32 s0, s0, 1
 ; GISEL-NEXT:    s_cmp_lg_u32 s0, 0
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    global_store_b32 v[4:5], v0, off
 ; GISEL-NEXT:    s_alloc_vgpr 0
@@ -171,6 +182,7 @@ define amdgpu_cs void @test_alloc_vreg_vgpr(i32 %n, ptr addrspace(1) %out) #0 {
 ; DAGISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; DAGISEL-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; DAGISEL-NEXT:    s_cmp_lg_u32 0, s33
+; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; DAGISEL-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; DAGISEL-NEXT:    s_alloc_vgpr s0
 ; DAGISEL-NEXT:    s_cselect_b32 s0, 1, 0
@@ -190,14 +202,15 @@ define amdgpu_cs void @test_alloc_vreg_vgpr(i32 %n, ptr addrspace(1) %out) #0 {
 ; NRBS-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; NRBS-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; NRBS-NEXT:    s_cmp_lg_u32 0, s33
+; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; NRBS-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; NRBS-NEXT:    s_alloc_vgpr s0
 ; NRBS-NEXT:    s_cselect_b32 s0, 1, 0
 ; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; NRBS-NEXT:    s_and_b32 s0, s0, 1
 ; NRBS-NEXT:    s_cmp_lg_u32 s0, 0
+; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; NRBS-NEXT:    s_cselect_b32 s0, 1, 0
-; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; NRBS-NEXT:    v_mov_b32_e32 v0, s0
 ; NRBS-NEXT:    global_store_b32 v[4:5], v0, off
 ; NRBS-NEXT:    s_alloc_vgpr 0

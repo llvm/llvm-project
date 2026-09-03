@@ -1036,6 +1036,7 @@ define amdgpu_kernel void @s_usubo_clamp_bit(ptr addrspace(1) %out, ptr addrspac
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_sub_co_u32 v0, s1, s2, s3
 ; GFX11-NEXT:    s_cmp_eq_u32 s2, s3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB8_2
 ; GFX11-NEXT:  ; %bb.1: ; %if
 ; GFX11-NEXT:    s_xor_b32 s0, s1, -1

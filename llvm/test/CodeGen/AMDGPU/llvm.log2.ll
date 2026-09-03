@@ -145,12 +145,12 @@ define amdgpu_kernel void @s_log2_f32(ptr addrspace(1) %out, float %in) {
 ; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x800000, s2
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x42000000, s0
 ; GFX1100-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX1100-SDAG-NEXT:    s_cselect_b32 s3, 32, 0
 ; GFX1100-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1100-SDAG-NEXT:    v_ldexp_f32 v1, s2, s3
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v1, v1
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v0, v1, v0
@@ -165,6 +165,7 @@ define amdgpu_kernel void @s_log2_f32(ptr addrspace(1) %out, float %in) {
 ; GFX1100-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s1, 0x800000, s0
 ; GFX1100-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1100-GISEL-NEXT:    s_lshl_b32 s1, s1, 5
@@ -409,7 +410,6 @@ define amdgpu_kernel void @s_log2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s4, 0x800000, s3
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s5, 0x800000, s2
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x42000000, s4
 ; GFX1100-SDAG-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 0x42000000, s5
@@ -435,6 +435,7 @@ define amdgpu_kernel void @s_log2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s4, 0x800000, s2
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s5, 0x800000, s3
 ; GFX1100-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX1100-GISEL-NEXT:    s_lshl_b32 s6, s6, 5
@@ -442,14 +443,15 @@ define amdgpu_kernel void @s_log2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 ; GFX1100-GISEL-NEXT:    v_ldexp_f32 v0, s2, s6
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s4, 0x42000000, 0
 ; GFX1100-GISEL-NEXT:    s_cmp_lg_u32 s5, 0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s7, 1, 0
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX1100-GISEL-NEXT:    s_lshl_b32 s7, s7, 5
 ; GFX1100-GISEL-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-GISEL-NEXT:    v_ldexp_f32 v1, s3, s7
 ; GFX1100-GISEL-NEXT:    s_cmp_lg_u32 s5, 0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s2, 0x42000000, 0
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_log_f32_e32 v1, v1
 ; GFX1100-GISEL-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-GISEL-NEXT:    v_dual_subrev_f32 v0, s4, v0 :: v_dual_subrev_f32 v1, s2, v1
@@ -769,7 +771,6 @@ define amdgpu_kernel void @s_log2_v3f32(ptr addrspace(1) %out, <3 x float> %in) 
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s3, 0x800000, s2
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s6, 0x800000, s1
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s7, 0x800000, s0
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x42000000, s3
 ; GFX1100-SDAG-NEXT:    s_and_b32 s3, s3, exec_lo
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, s6
@@ -803,6 +804,7 @@ define amdgpu_kernel void @s_log2_v3f32(ptr addrspace(1) %out, <3 x float> %in) 
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s6, 0x800000, s1
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s7, 0x800000, s2
 ; GFX1100-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX1100-GISEL-NEXT:    s_lshl_b32 s8, s8, 5
@@ -810,6 +812,7 @@ define amdgpu_kernel void @s_log2_v3f32(ptr addrspace(1) %out, <3 x float> %in) 
 ; GFX1100-GISEL-NEXT:    v_ldexp_f32 v0, s0, s8
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s3, 0x42000000, 0
 ; GFX1100-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX1100-GISEL-NEXT:    s_lshl_b32 s0, s0, 5
@@ -825,8 +828,8 @@ define amdgpu_kernel void @s_log2_v3f32(ptr addrspace(1) %out, <3 x float> %in) 
 ; GFX1100-GISEL-NEXT:    v_ldexp_f32 v2, s2, s8
 ; GFX1100-GISEL-NEXT:    v_log_f32_e32 v1, v1
 ; GFX1100-GISEL-NEXT:    s_cmp_lg_u32 s7, 0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s2, 0x42000000, 0
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_log_f32_e32 v2, v2
 ; GFX1100-GISEL-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-GISEL-NEXT:    v_dual_subrev_f32 v0, s3, v0 :: v_dual_subrev_f32 v1, s6, v1
@@ -1227,7 +1230,6 @@ define amdgpu_kernel void @s_log2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s7, 0x800000, s2
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s8, 0x800000, s1
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s9, 0x800000, s0
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x42000000, s6
 ; GFX1100-SDAG-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, s7
@@ -1265,6 +1267,7 @@ define amdgpu_kernel void @s_log2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s7, 0x800000, s1
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s9, 0x800000, s2
 ; GFX1100-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX1100-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX1100-GISEL-NEXT:    s_lshl_b32 s8, s8, 5
@@ -1613,11 +1616,10 @@ define float @v_log2_fabs_f32(float %in) {
 ; GFX1100-SDAG:       ; %bb.0:
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x800000, |v0|
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 32, s0
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, s0
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_ldexp_f32 v0, |v0|, v2
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -1627,12 +1629,12 @@ define float @v_log2_fabs_f32(float %in) {
 ; GFX1100-GISEL:       ; %bb.0:
 ; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s0, 0x800000, |v0|
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-GISEL-NEXT:    v_ldexp_f32 v0, |v0|, v1
 ; GFX1100-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, s0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1100-GISEL-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-GISEL-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-GISEL-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -1738,11 +1740,10 @@ define float @v_log2_fneg_fabs_f32(float %in) {
 ; GFX1100-SDAG:       ; %bb.0:
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_cmp_lt_f32_e64 s0, 0x80800000, |v0|
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 32, s0
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, s0
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_ldexp_f32 v0, -|v0|, v2
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -1752,12 +1753,12 @@ define float @v_log2_fneg_fabs_f32(float %in) {
 ; GFX1100-GISEL:       ; %bb.0:
 ; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s0, 0x800000, -|v0|
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-GISEL-NEXT:    v_ldexp_f32 v0, -|v0|, v1
 ; GFX1100-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, s0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1100-GISEL-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-GISEL-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-GISEL-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -1877,12 +1878,12 @@ define float @v_log2_fneg_f32(float %in) {
 ; GFX1100-GISEL:       ; %bb.0:
 ; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s0, 0x800000, -v0
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-GISEL-NEXT:    v_ldexp_f32 v0, -v0, v1
 ; GFX1100-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, s0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1100-GISEL-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-GISEL-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-GISEL-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -2629,11 +2630,10 @@ define float @v_fabs_log2_f32_afn(float %in) {
 ; GFX1100-SDAG:       ; %bb.0:
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x800000, |v0|
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 32, s0
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, s0
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_ldexp_f32 v0, |v0|, v2
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -2643,12 +2643,12 @@ define float @v_fabs_log2_f32_afn(float %in) {
 ; GFX1100-GISEL:       ; %bb.0:
 ; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 s0, 0x800000, |v0|
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-GISEL-NEXT:    v_ldexp_f32 v0, |v0|, v1
 ; GFX1100-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, s0
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1100-GISEL-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-GISEL-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-GISEL-NEXT:    v_sub_f32_e32 v0, v0, v1

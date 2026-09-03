@@ -21,7 +21,7 @@ define amdgpu_kernel void @test_barrier_independent_valu(ptr addrspace(1) %out, 
 ; OPT-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; OPT-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; OPT-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
-; OPT-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; OPT-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; OPT-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; OPT-NEXT:    s_barrier_wait -1
 ; OPT-NEXT:    global_load_b32 v0, v[0:1], off
@@ -44,7 +44,7 @@ define amdgpu_kernel void @test_barrier_independent_valu(ptr addrspace(1) %out, 
 ; NOOPT-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; NOOPT-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; NOOPT-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
-; NOOPT-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; NOOPT-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; NOOPT-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; NOOPT-NEXT:    global_load_b32 v0, v[0:1], off
 ; NOOPT-NEXT:    s_wait_loadcnt 0x0
@@ -125,7 +125,7 @@ define amdgpu_kernel void @test_barrier_multiple(ptr addrspace(1) %out, i32 %siz
 ; OPT-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; OPT-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; OPT-NEXT:    s_barrier_wait -1
-; OPT-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; OPT-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; OPT-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
 ; OPT-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; OPT-NEXT:    global_load_b32 v4, v[0:1], off
@@ -161,7 +161,7 @@ define amdgpu_kernel void @test_barrier_multiple(ptr addrspace(1) %out, i32 %siz
 ; NOOPT-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; NOOPT-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; NOOPT-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
-; NOOPT-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; NOOPT-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; NOOPT-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
 ; NOOPT-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; NOOPT-NEXT:    global_load_b32 v2, v[0:1], off

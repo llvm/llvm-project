@@ -12,6 +12,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push4_pop1(i32 %addr, i32 %data.0, i64 
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v20
 ; CHECK-NEXT:    image_bvh8_intersect_ray v[21:30], [v[2:3], v[4:5], v[31:33], v[8:10], v11], s[0:3]
 ; CHECK-NEXT:    v_cmpx_eq_f32_e32 0, v20
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %if
 ; CHECK-NEXT:    global_load_b64 v[6:7], v[12:13], off
@@ -106,6 +107,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push8_pop1(i32 %addr, i32 %data.0, i64 
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v20
 ; CHECK-NEXT:    image_bvh8_intersect_ray v[21:30], [v[2:3], v[4:5], v[31:33], v[8:10], v11], s[0:3]
 ; CHECK-NEXT:    v_cmpx_eq_f32_e32 0, v20
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %if
 ; CHECK-NEXT:    global_load_b64 v[6:7], v[12:13], off
@@ -208,6 +210,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push8_pop2(i32 %addr, i32 %data.0, i64 
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v20
 ; CHECK-NEXT:    image_bvh8_intersect_ray v[21:30], [v[2:3], v[4:5], v[31:33], v[8:10], v11], s[0:3]
 ; CHECK-NEXT:    v_cmpx_eq_f32_e32 0, v20
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    s_cbranch_execz .LBB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %if
 ; CHECK-NEXT:    global_load_b64 v[6:7], v[12:13], off

@@ -333,6 +333,7 @@ define amdgpu_ps void @tensor_load_to_lds_with_asyncmark(<4 x i32> inreg %D0, <8
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
 ; GFX1250-NEXT:    ; asyncmark
 ; GFX1250-NEXT:    ; wait_asyncmark(0)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    s_wait_tensorcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
@@ -351,6 +352,7 @@ define amdgpu_ps void @tensor_store_from_lds_with_asyncmark(<4 x i32> inreg %D0,
 ; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11]
 ; GFX1250-NEXT:    ; asyncmark
 ; GFX1250-NEXT:    ; wait_asyncmark(0)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    s_wait_tensorcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
   call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
@@ -371,10 +373,12 @@ define amdgpu_ps void @tensor_load_to_lds_two_asyncmarks(<4 x i32> inreg %D0a, <
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
 ; GFX1250-NEXT:    ; asyncmark
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_wait_tensorcnt 0xa
 ; GFX1250-NEXT:    tensor_load_to_lds s[12:15], s[16:23]
 ; GFX1250-NEXT:    ; asyncmark
 ; GFX1250-NEXT:    ; wait_asyncmark(1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    s_wait_tensorcnt 0x1
 ; GFX1250-NEXT:    ds_load_b32 v1, v0
 ; GFX1250-NEXT:    ; wait_asyncmark(0)
@@ -418,6 +422,7 @@ define void @tensor_and_async_lds_with_asyncmark(<4 x i32> inreg %D0, <8 x i32> 
 ; GFX1250-NEXT:    ; asyncmark
 ; GFX1250-NEXT:    ; wait_asyncmark(0)
 ; GFX1250-NEXT:    s_wait_asynccnt 0x0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    s_wait_tensorcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %src, ptr addrspace(3) %dst, i32 0, i32 0)
@@ -461,6 +466,7 @@ define void @tensor_or_async_lds_diamonds(i32 inreg %cond1, i32 inreg %cond2, <4
 ; GFX1250-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB14_4
 ; GFX1250-SDAG-NEXT:  ; %bb.3: ; %t1
 ; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
@@ -478,14 +484,17 @@ define void @tensor_or_async_lds_diamonds(i32 inreg %cond1, i32 inreg %cond2, <4
 ; GFX1250-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB14_8
 ; GFX1250-SDAG-NEXT:  ; %bb.7: ; %t2
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_wait_tensorcnt 0xa
 ; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
 ; GFX1250-SDAG-NEXT:    ; asyncmark
 ; GFX1250-SDAG-NEXT:  .LBB14_8: ; %merge2
 ; GFX1250-SDAG-NEXT:    ; wait_asyncmark(1)
 ; GFX1250-SDAG-NEXT:    s_wait_asynccnt 0x0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    s_wait_tensorcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -516,6 +525,7 @@ define void @tensor_or_async_lds_diamonds(i32 inreg %cond1, i32 inreg %cond2, <4
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s0, 1
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB14_4
 ; GFX1250-GISEL-NEXT:  ; %bb.3: ; %t1
 ; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
@@ -532,14 +542,17 @@ define void @tensor_or_async_lds_diamonds(i32 inreg %cond1, i32 inreg %cond2, <4
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s0, 1
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB14_8
 ; GFX1250-GISEL-NEXT:  ; %bb.7: ; %t2
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_wait_tensorcnt 0xa
 ; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
 ; GFX1250-GISEL-NEXT:    ; asyncmark
 ; GFX1250-GISEL-NEXT:  .LBB14_8: ; %merge2
 ; GFX1250-GISEL-NEXT:    ; wait_asyncmark(1)
 ; GFX1250-GISEL-NEXT:    s_wait_asynccnt 0x0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    s_wait_tensorcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:

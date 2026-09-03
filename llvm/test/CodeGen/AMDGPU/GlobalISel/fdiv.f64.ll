@@ -884,9 +884,10 @@ define <2 x double> @v_fdiv_v2f64(<2 x double> %a, <2 x double> %b) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f64 v[8:9], -v[8:9], v[18:19], v[20:21]
 ; GFX11-NEXT:    v_fma_f64 v[10:11], -v[10:11], v[22:23], v[16:17]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fmas_f64 v[8:9], v[8:9], v[12:13], v[18:19]
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f64 v[10:11], v[10:11], v[14:15], v[22:23]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fixup_f64 v[0:1], v[8:9], v[4:5], v[0:1]
@@ -1117,9 +1118,10 @@ define <2 x double> @v_fdiv_v2f64_ulp25(<2 x double> %a, <2 x double> %b) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f64 v[8:9], -v[8:9], v[18:19], v[20:21]
 ; GFX11-NEXT:    v_fma_f64 v[10:11], -v[10:11], v[22:23], v[16:17]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fmas_f64 v[8:9], v[8:9], v[12:13], v[18:19]
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f64 v[10:11], v[10:11], v[14:15], v[22:23]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fixup_f64 v[0:1], v[8:9], v[4:5], v[0:1]
@@ -1277,9 +1279,10 @@ define <2 x double> @v_rcp_v2f64(<2 x double> %x) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f64 v[4:5], -v[4:5], v[14:15], v[16:17]
 ; GFX11-NEXT:    v_fma_f64 v[6:7], -v[6:7], v[18:19], v[12:13]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fmas_f64 v[4:5], v[4:5], v[8:9], v[14:15]
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f64 v[6:7], v[6:7], v[10:11], v[18:19]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fixup_f64 v[0:1], v[4:5], v[0:1], 1.0
@@ -1437,9 +1440,10 @@ define <2 x double> @v_rcp_v2f64_arcp(<2 x double> %x) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f64 v[4:5], -v[4:5], v[14:15], v[16:17]
 ; GFX11-NEXT:    v_fma_f64 v[6:7], -v[6:7], v[18:19], v[12:13]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fmas_f64 v[4:5], v[4:5], v[8:9], v[14:15]
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f64 v[6:7], v[6:7], v[10:11], v[18:19]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fixup_f64 v[0:1], v[4:5], v[0:1], 1.0
@@ -1664,9 +1668,10 @@ define <2 x double> @v_rcp_v2f64_ulp25(<2 x double> %x) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f64 v[4:5], -v[4:5], v[14:15], v[16:17]
 ; GFX11-NEXT:    v_fma_f64 v[6:7], -v[6:7], v[18:19], v[12:13]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fmas_f64 v[4:5], v[4:5], v[8:9], v[14:15]
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f64 v[6:7], v[6:7], v[10:11], v[18:19]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fixup_f64 v[0:1], v[4:5], v[0:1], 1.0
@@ -1897,9 +1902,10 @@ define <2 x double> @v_fdiv_v2f64_arcp_ulp25(<2 x double> %a, <2 x double> %b) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_fma_f64 v[8:9], -v[8:9], v[18:19], v[20:21]
 ; GFX11-NEXT:    v_fma_f64 v[10:11], -v[10:11], v[22:23], v[16:17]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fmas_f64 v[8:9], v[8:9], v[12:13], v[18:19]
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f64 v[10:11], v[10:11], v[14:15], v[22:23]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fixup_f64 v[0:1], v[8:9], v[4:5], v[0:1]

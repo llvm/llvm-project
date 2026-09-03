@@ -102,59 +102,73 @@ define void @fcmp_f16_uniform(half inreg %a, half inreg %b, ptr %p) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_f16 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-NEXT:    s_cmp_gt_f16 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX12-NEXT:    s_cmp_ge_f16 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-NEXT:    s_cmp_lt_f16 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX12-NEXT:    s_cmp_le_f16 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_f16 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s7, 1, 0
 ; GFX12-NEXT:    s_cmp_o_f16 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX12-NEXT:    s_cmp_nlg_f16 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s9, 1, 0
 ; GFX12-NEXT:    s_cmp_nle_f16 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s10, 1, 0
 ; GFX12-NEXT:    s_cmp_nlt_f16 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s11, 1, 0
 ; GFX12-NEXT:    s_cmp_nge_f16 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s12, 1, 0
 ; GFX12-NEXT:    s_cmp_ngt_f16 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s13, 1, 0
 ; GFX12-NEXT:    s_cmp_neq_f16 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s14, 1, 0
 ; GFX12-NEXT:    s_cmp_u_f16 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s7, 0
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s8, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s7, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s9, 0
 ; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s10, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s9, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s11, 0
 ; GFX12-NEXT:    s_cselect_b32 s10, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s12, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s11, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s13, 0
 ; GFX12-NEXT:    s_cselect_b32 s12, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s14, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s13, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
@@ -487,59 +501,73 @@ define void @fcmp_f32_uniform(float inreg %a, float inreg %b, ptr %p) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_f32 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-NEXT:    s_cmp_gt_f32 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX12-NEXT:    s_cmp_ge_f32 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-NEXT:    s_cmp_lt_f32 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX12-NEXT:    s_cmp_le_f32 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_f32 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s7, 1, 0
 ; GFX12-NEXT:    s_cmp_o_f32 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX12-NEXT:    s_cmp_nlg_f32 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s9, 1, 0
 ; GFX12-NEXT:    s_cmp_nle_f32 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s10, 1, 0
 ; GFX12-NEXT:    s_cmp_nlt_f32 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s11, 1, 0
 ; GFX12-NEXT:    s_cmp_nge_f32 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s12, 1, 0
 ; GFX12-NEXT:    s_cmp_ngt_f32 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s13, 1, 0
 ; GFX12-NEXT:    s_cmp_neq_f32 s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-NEXT:    s_cselect_b32 s14, 1, 0
 ; GFX12-NEXT:    s_cmp_u_f32 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s7, 0
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s8, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s7, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s9, 0
 ; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s10, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s9, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s11, 0
 ; GFX12-NEXT:    s_cselect_b32 s10, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s12, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s11, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s13, 0
 ; GFX12-NEXT:    s_cselect_b32 s12, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s14, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s13, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
@@ -886,59 +914,73 @@ define void @fcmp_f64_uniform(double inreg %a, double inreg %b, ptr %p) {
 ; GFX12-NEXT:    v_cmp_neq_f64_e64 s16, s[0:1], s[2:3]
 ; GFX12-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[2:3]
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s7, 0
 ; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s8, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s9, 0
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s10, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s7, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s11, 0
 ; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s12, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s9, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s13, 0
 ; GFX12-NEXT:    s_cselect_b32 s10, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s14, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s11, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s15, 0
 ; GFX12-NEXT:    s_cselect_b32 s12, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s16, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s13, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s7, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s7, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s8, 0
 ; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s9, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s9, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s10, 0
 ; GFX12-NEXT:    s_cselect_b32 s10, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s11, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s11, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s12, 0
 ; GFX12-NEXT:    s_cselect_b32 s12, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s13, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s13, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-NEXT:    s_cselect_b32 s0, 1, 0

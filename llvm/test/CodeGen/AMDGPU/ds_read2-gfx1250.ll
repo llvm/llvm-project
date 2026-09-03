@@ -546,7 +546,7 @@ define amdgpu_kernel void @simple_read2_f64(ptr addrspace(1) %out) #0 {
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0x1ff8, v0
 ; GFX1250-NEXT:    ds_load_2addr_b64 v[0:3], v4 offset1:8
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
@@ -576,7 +576,7 @@ define amdgpu_kernel void @simple_read2_f64_max_offset(ptr addrspace(1) %out) #0
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0x1ff8, v0
 ; GFX1250-NEXT:    ds_load_2addr_b64 v[0:3], v4 offset1:255
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
@@ -606,7 +606,7 @@ define amdgpu_kernel void @simple_read2_f64_too_far(ptr addrspace(1) %out) #0 {
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_and_b32_e32 v4, 0x1ff8, v0
 ; GFX1250-NEXT:    ds_load_b64 v[0:1], v4
 ; GFX1250-NEXT:    ds_load_b64 v[2:3], v4 offset:2056
@@ -646,6 +646,7 @@ define amdgpu_kernel void @misaligned_read2_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX1250-UNALIGNED-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset0:14 offset1:15
 ; GFX1250-UNALIGNED-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-UNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-UNALIGNED-NEXT:    v_add_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-UNALIGNED-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX1250-UNALIGNED-NEXT:    s_endpgm
@@ -666,6 +667,7 @@ define amdgpu_kernel void @misaligned_read2_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX1250S-UNALIGNED-NEXT:    ds_load_b64 v[2:3], v2 offset:56
 ; GFX1250S-UNALIGNED-NEXT:    s_wait_dscnt 0x0
 ; GFX1250S-UNALIGNED-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250S-UNALIGNED-NEXT:    v_add_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX1250S-UNALIGNED-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX1250S-UNALIGNED-NEXT:    s_endpgm
@@ -791,14 +793,15 @@ define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(ptr addrspace(1) %C, 
 ; GFX1250-UNALIGNED-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1250-UNALIGNED-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_IB_STS2, 6, 4)
 ; GFX1250-UNALIGNED-NEXT:    s_mul_i32 s0, ttmp9, s0
-; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-UNALIGNED-NEXT:    s_add_co_i32 s1, s1, s0
 ; GFX1250-UNALIGNED-NEXT:    s_cmp_eq_u32 s2, 0
 ; GFX1250-UNALIGNED-NEXT:    s_cselect_b32 s0, ttmp9, s1
+; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-UNALIGNED-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-UNALIGNED-NEXT:    s_add_co_i32 s1, s0, 0xc20
 ; GFX1250-UNALIGNED-NEXT:    s_addk_co_i32 s0, 0xc60
+; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-UNALIGNED-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v4, s0
 ; GFX1250-UNALIGNED-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-UNALIGNED-NEXT:    ds_load_2addr_b32 v[2:3], v1 offset1:1
@@ -843,10 +846,11 @@ define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(ptr addrspace(1) %C, 
 ; GFX1250S-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
 ; GFX1250S-UNALIGNED-NEXT:    s_add_co_i32 s1, s1, s0
 ; GFX1250S-UNALIGNED-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250S-UNALIGNED-NEXT:    s_cselect_b32 s0, ttmp9, s1
-; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250S-UNALIGNED-NEXT:    v_and_b32_e32 v8, 0xffc, v0
 ; GFX1250S-UNALIGNED-NEXT:    s_lshl_b32 s0, s0, 2
+; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250S-UNALIGNED-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250S-UNALIGNED-NEXT:    ds_load_b64 v[2:3], v1 offset:3104
 ; GFX1250S-UNALIGNED-NEXT:    ds_load_b64 v[4:5], v1 offset:3168

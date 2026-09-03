@@ -38,9 +38,11 @@ define amdgpu_ps ptr addrspace(4) @v_mov_b64_pseudo_globaladdr(i1 %cond) {
 ; GFX11-NEXT:    v_mov_b32_e32 v0, gv@abs32@lo
 ; GFX11-NEXT:    v_mov_b32_e32 v1, gv@abs32@hi
 ; GFX11-NEXT:  ; %bb.2: ; %join
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog
 entry:
@@ -73,8 +75,8 @@ define amdgpu_ps ptr addrspace(4) @s_mov_b64_imm_pseudo_globaladdr(i1 inreg %con
 ; GFX11-LABEL: s_mov_b64_imm_pseudo_globaladdr:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB1_2

@@ -101,8 +101,8 @@ define i32 @s_fneg_select_i32_1(i32 inreg %cond, i32 inreg %a, i32 inreg %b) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_xor_b32 s1, s1, 0x80000000
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, s1, s2
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = xor i32 %a, u0x80000000
@@ -124,8 +124,8 @@ define i32 @s_fneg_1_fabs_2_select_i32(i32 inreg %cond, i32 %a, i32 %b) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, |v0|, -v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = xor i32 %a, u0x80000000
@@ -360,6 +360,7 @@ define <2 x i32> @s_fneg_select_v2i32_1(<2 x i32> inreg %cond, <2 x i32> inreg %
 ; GFX11-NEXT:    s_mov_b32 s5, s4
 ; GFX11-NEXT:    s_xor_b64 s[2:3], s[2:3], s[4:5]
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, s2, s16
 ; GFX11-NEXT:    s_cmp_eq_u32 s1, 0
 ; GFX11-NEXT:    s_cselect_b32 s1, s3, s17
@@ -395,6 +396,7 @@ define <2 x i32> @s_fneg_fabs_select_v2i32_2(<2 x i32> inreg %cond, <2 x i32> in
 ; GFX11-NEXT:    s_mov_b32 s5, s4
 ; GFX11-NEXT:    s_or_b64 s[2:3], s[2:3], s[4:5]
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, s16, s2
 ; GFX11-NEXT:    s_cmp_eq_u32 s1, 0
 ; GFX11-NEXT:    s_cselect_b32 s1, s17, s3
@@ -591,9 +593,9 @@ define i64 @s_fneg_select_i64_1(i64 inreg %cond, i64 inreg %a, i64 inreg %b) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_xor_b32 s3, s3, 0x80000000
 ; GFX11-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, s2, s16
 ; GFX11-NEXT:    s_cselect_b32 s1, s3, s17
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = xor i64 %a, u0x8000000000000000
@@ -631,9 +633,9 @@ define i64 @s_fneg_select_i64_2(i64 inreg %cond, i64 inreg %a, i64 inreg %b) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_xor_b32 s3, s3, 0x80000000
 ; GFX11-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, s16, s2
 ; GFX11-NEXT:    s_cselect_b32 s1, s17, s3
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = xor i64 %a, u0x8000000000000000
@@ -674,9 +676,9 @@ define i64 @s_fneg_1_fabs_2_select_i64(i64 inreg %cond, i64 inreg %a, i64 inreg 
 ; GFX11-NEXT:    s_xor_b32 s3, s3, 0x80000000
 ; GFX11-NEXT:    s_bitset0_b32 s17, 31
 ; GFX11-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, s2, s16
 ; GFX11-NEXT:    s_cselect_b32 s1, s3, s17
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = xor i64 %a, u0x8000000000000000
@@ -715,9 +717,9 @@ define i64 @s_fabs_select_i64_1(i64 inreg %cond, i64 inreg %a, i64 inreg %b) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_bitset0_b32 s3, 31
 ; GFX11-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, s2, s16
 ; GFX11-NEXT:    s_cselect_b32 s1, s3, s17
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = and i64 %a, u0x7fffffffffffffff
@@ -755,9 +757,9 @@ define i64 @s_fabs_select_i64_2(i64 inreg %cond, i64 inreg %a, i64 inreg %b) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_bitset0_b32 s3, 31
 ; GFX11-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, s16, s2
 ; GFX11-NEXT:    s_cselect_b32 s1, s17, s3
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = and i64 %a, u0x7fffffffffffffff
@@ -795,9 +797,9 @@ define i64 @s_fneg_fabs_select_i64_1(i64 inreg %cond, i64 inreg %a, i64 inreg %b
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_bitset1_b32 s3, 31
 ; GFX11-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, s2, s16
 ; GFX11-NEXT:    s_cselect_b32 s1, s3, s17
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = or i64 %a, u0x8000000000000000
@@ -835,9 +837,9 @@ define i64 @s_fneg_fabs_select_i64_2(i64 inreg %cond, i64 inreg %a, i64 inreg %b
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_bitset1_b32 s3, 31
 ; GFX11-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cselect_b32 s0, s16, s2
 ; GFX11-NEXT:    s_cselect_b32 s1, s17, s3
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = or i64 %a, u0x8000000000000000

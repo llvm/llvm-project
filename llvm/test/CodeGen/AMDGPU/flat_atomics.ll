@@ -186,7 +186,6 @@ define amdgpu_kernel void @atomic_add_i32_max_offset_p1(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-NEXT:    flat_atomic_add_u32 v[0:1], v2
@@ -9247,7 +9246,6 @@ define amdgpu_kernel void @atomic_inc_i32_max_offset_p1(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-NEXT:    flat_atomic_inc_u32 v[0:1], v2
@@ -9987,7 +9985,6 @@ define amdgpu_kernel void @atomic_dec_i32_max_offset_p1(ptr %out, i32 %in) {
 ; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, 0x1000, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, s1, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-NEXT:    flat_atomic_dec_u32 v[0:1], v2

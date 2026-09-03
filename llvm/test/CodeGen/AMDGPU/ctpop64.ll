@@ -535,7 +535,7 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    ; implicit-def: $sgpr2_sgpr3
 ; GFX12-NEXT:  .LBB7_3: ; %Flow
 ; GFX12-NEXT:    s_xor_b32 s6, s6, 1
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB7_5
 ; GFX12-NEXT:  ; %bb.4: ; %if

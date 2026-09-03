@@ -46,8 +46,8 @@ define amdgpu_ps void @s_fneg_f16_salu_use(half inreg %in, i32 inreg %val, ptr a
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_xor_b32 s0, s0, 0x8000
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_endpgm
@@ -102,8 +102,8 @@ define amdgpu_ps void @s_fneg_f32_salu_use(float inreg %in, i32 inreg %val, ptr 
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_xor_b32 s0, s0, 0x80000000
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-NEXT:    s_endpgm
@@ -285,8 +285,8 @@ define amdgpu_ps void @s_fneg_v2f32_salu_use(<2 x float> inreg %in, i32 inreg %v
 ; GFX12-NEXT:    s_xor_b32 s0, s0, 0x80000000
 ; GFX12-NEXT:    s_xor_b32 s1, s1, 0x80000000
 ; GFX12-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX12-NEXT:    s_endpgm

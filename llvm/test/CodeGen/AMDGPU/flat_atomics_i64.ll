@@ -111,9 +111,10 @@ define amdgpu_kernel void @atomic_add_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB0_2
@@ -127,16 +128,16 @@ define amdgpu_kernel void @atomic_add_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB0_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB0_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB0_4: ; %atomicrmw.phi
@@ -271,9 +272,10 @@ define amdgpu_kernel void @atomic_add_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -292,14 +294,15 @@ define amdgpu_kernel void @atomic_add_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB1_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, s4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s5, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB1_5: ; %atomicrmw.end
@@ -435,9 +438,10 @@ define amdgpu_kernel void @atomic_add_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB2_2
@@ -451,16 +455,16 @@ define amdgpu_kernel void @atomic_add_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:  .LBB2_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB2_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB2_4: ; %atomicrmw.phi
@@ -601,9 +605,10 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB3_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -622,14 +627,15 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB3_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, s4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s5, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB3_5: ; %atomicrmw.end
@@ -748,8 +754,8 @@ define amdgpu_kernel void @atomic_add_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB4_2
@@ -763,16 +769,16 @@ define amdgpu_kernel void @atomic_add_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB4_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB4_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB4_4: ; %atomicrmw.phi
@@ -902,9 +908,10 @@ define amdgpu_kernel void @atomic_add_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB5_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -922,14 +929,15 @@ define amdgpu_kernel void @atomic_add_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB5_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, s4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s5, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB5_5: ; %atomicrmw.end
@@ -1059,8 +1067,8 @@ define amdgpu_kernel void @atomic_add_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB6_2
@@ -1074,16 +1082,16 @@ define amdgpu_kernel void @atomic_add_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:  .LBB6_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB6_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB6_4: ; %atomicrmw.phi
@@ -1219,9 +1227,10 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB7_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -1239,14 +1248,15 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB7_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, s4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s5, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB7_5: ; %atomicrmw.end
@@ -1366,9 +1376,10 @@ define amdgpu_kernel void @atomic_and_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB8_2
@@ -1382,11 +1393,12 @@ define amdgpu_kernel void @atomic_and_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB8_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB8_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -1523,9 +1535,10 @@ define amdgpu_kernel void @atomic_and_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB9_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -1544,9 +1557,11 @@ define amdgpu_kernel void @atomic_and_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB9_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -1684,9 +1699,10 @@ define amdgpu_kernel void @atomic_and_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB10_2
@@ -1700,11 +1716,12 @@ define amdgpu_kernel void @atomic_and_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:  .LBB10_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB10_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -1847,9 +1864,10 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB11_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -1868,9 +1886,11 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB11_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -1991,8 +2011,8 @@ define amdgpu_kernel void @atomic_and_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB12_2
@@ -2006,11 +2026,12 @@ define amdgpu_kernel void @atomic_and_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB12_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB12_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -2142,9 +2163,10 @@ define amdgpu_kernel void @atomic_and_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB13_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -2162,9 +2184,11 @@ define amdgpu_kernel void @atomic_and_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB13_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -2296,8 +2320,8 @@ define amdgpu_kernel void @atomic_and_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB14_2
@@ -2311,11 +2335,12 @@ define amdgpu_kernel void @atomic_and_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:  .LBB14_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB14_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -2453,9 +2478,10 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB15_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -2473,9 +2499,11 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB15_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -2601,9 +2629,10 @@ define amdgpu_kernel void @atomic_sub_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB16_2
@@ -2617,16 +2646,16 @@ define amdgpu_kernel void @atomic_sub_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB16_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB16_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v1, null, s3, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB16_4: ; %atomicrmw.phi
@@ -2761,9 +2790,10 @@ define amdgpu_kernel void @atomic_sub_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB17_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -2782,14 +2812,15 @@ define amdgpu_kernel void @atomic_sub_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB17_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, s4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v3, null, s5, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB17_5: ; %atomicrmw.end
@@ -2925,9 +2956,10 @@ define amdgpu_kernel void @atomic_sub_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB18_2
@@ -2941,16 +2973,16 @@ define amdgpu_kernel void @atomic_sub_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:  .LBB18_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB18_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v1, null, s3, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB18_4: ; %atomicrmw.phi
@@ -3091,9 +3123,10 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB19_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -3112,14 +3145,15 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB19_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, s4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v3, null, s5, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB19_5: ; %atomicrmw.end
@@ -3238,8 +3272,8 @@ define amdgpu_kernel void @atomic_sub_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB20_2
@@ -3253,16 +3287,16 @@ define amdgpu_kernel void @atomic_sub_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB20_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB20_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v1, null, s3, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB20_4: ; %atomicrmw.phi
@@ -3392,9 +3426,10 @@ define amdgpu_kernel void @atomic_sub_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB21_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -3412,14 +3447,15 @@ define amdgpu_kernel void @atomic_sub_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB21_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, s4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v3, null, s5, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB21_5: ; %atomicrmw.end
@@ -3549,8 +3585,8 @@ define amdgpu_kernel void @atomic_sub_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB22_2
@@ -3564,16 +3600,16 @@ define amdgpu_kernel void @atomic_sub_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:  .LBB22_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB22_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, s2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v1, null, s3, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB22_4: ; %atomicrmw.phi
@@ -3709,9 +3745,10 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB23_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -3729,14 +3766,15 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB23_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, s4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v3, null, s5, v1, vcc_lo
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB23_5: ; %atomicrmw.end
@@ -3858,9 +3896,10 @@ define amdgpu_kernel void @atomic_max_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB24_2
@@ -3874,11 +3913,12 @@ define amdgpu_kernel void @atomic_max_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB24_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB24_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -4020,9 +4060,10 @@ define amdgpu_kernel void @atomic_max_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB25_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -4041,9 +4082,11 @@ define amdgpu_kernel void @atomic_max_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB25_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -4184,9 +4227,10 @@ define amdgpu_kernel void @atomic_max_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB26_2
@@ -4200,11 +4244,12 @@ define amdgpu_kernel void @atomic_max_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:  .LBB26_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB26_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -4352,9 +4397,10 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB27_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -4373,9 +4419,11 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB27_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -4499,8 +4547,8 @@ define amdgpu_kernel void @atomic_max_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB28_2
@@ -4514,11 +4562,12 @@ define amdgpu_kernel void @atomic_max_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB28_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB28_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -4655,9 +4704,10 @@ define amdgpu_kernel void @atomic_max_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB29_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -4675,9 +4725,11 @@ define amdgpu_kernel void @atomic_max_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB29_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -4812,8 +4864,8 @@ define amdgpu_kernel void @atomic_max_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB30_2
@@ -4827,11 +4879,12 @@ define amdgpu_kernel void @atomic_max_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:  .LBB30_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB30_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -4974,9 +5027,10 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB31_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -4994,9 +5048,11 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB31_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -5123,9 +5179,10 @@ define amdgpu_kernel void @atomic_umax_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB32_2
@@ -5139,11 +5196,12 @@ define amdgpu_kernel void @atomic_umax_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB32_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB32_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -5285,9 +5343,10 @@ define amdgpu_kernel void @atomic_umax_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB33_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -5306,9 +5365,11 @@ define amdgpu_kernel void @atomic_umax_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB33_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -5449,9 +5510,10 @@ define amdgpu_kernel void @atomic_umax_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB34_2
@@ -5465,11 +5527,12 @@ define amdgpu_kernel void @atomic_umax_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GFX12-NEXT:  .LBB34_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB34_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -5617,9 +5680,10 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB35_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -5638,9 +5702,11 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB35_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -5764,8 +5830,8 @@ define amdgpu_kernel void @atomic_umax_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB36_2
@@ -5779,11 +5845,12 @@ define amdgpu_kernel void @atomic_umax_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB36_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB36_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -5920,9 +5987,10 @@ define amdgpu_kernel void @atomic_umax_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB37_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -5940,9 +6008,11 @@ define amdgpu_kernel void @atomic_umax_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB37_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -6077,8 +6147,8 @@ define amdgpu_kernel void @atomic_umax_i64_addr64(ptr %out, i64 %in, i64 %index)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB38_2
@@ -6092,11 +6162,12 @@ define amdgpu_kernel void @atomic_umax_i64_addr64(ptr %out, i64 %in, i64 %index)
 ; GFX12-NEXT:  .LBB38_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB38_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -6239,9 +6310,10 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB39_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -6259,9 +6331,11 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB39_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -6388,9 +6462,10 @@ define amdgpu_kernel void @atomic_min_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB40_2
@@ -6404,11 +6479,12 @@ define amdgpu_kernel void @atomic_min_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB40_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB40_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -6550,9 +6626,10 @@ define amdgpu_kernel void @atomic_min_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB41_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -6571,9 +6648,11 @@ define amdgpu_kernel void @atomic_min_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB41_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -6714,9 +6793,10 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB42_2
@@ -6730,11 +6810,12 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:  .LBB42_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB42_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -6882,9 +6963,10 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB43_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -6903,9 +6985,11 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB43_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -7029,8 +7113,8 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB44_2
@@ -7044,11 +7128,12 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB44_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB44_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -7185,9 +7270,10 @@ define amdgpu_kernel void @atomic_min_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB45_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -7205,9 +7291,11 @@ define amdgpu_kernel void @atomic_min_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB45_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -7342,8 +7430,8 @@ define amdgpu_kernel void @atomic_min_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB46_2
@@ -7357,11 +7445,12 @@ define amdgpu_kernel void @atomic_min_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:  .LBB46_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB46_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -7504,9 +7593,10 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB47_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -7524,9 +7614,11 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB47_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -7653,9 +7745,10 @@ define amdgpu_kernel void @atomic_umin_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB48_2
@@ -7669,11 +7762,12 @@ define amdgpu_kernel void @atomic_umin_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB48_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB48_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -7815,9 +7909,10 @@ define amdgpu_kernel void @atomic_umin_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB49_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -7836,9 +7931,11 @@ define amdgpu_kernel void @atomic_umin_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB49_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -7979,9 +8076,10 @@ define amdgpu_kernel void @atomic_umin_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB50_2
@@ -7995,11 +8093,12 @@ define amdgpu_kernel void @atomic_umin_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GFX12-NEXT:  .LBB50_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB50_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -8147,9 +8246,10 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB51_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -8168,9 +8268,11 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB51_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -8294,8 +8396,8 @@ define amdgpu_kernel void @atomic_umin_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB52_2
@@ -8309,11 +8411,12 @@ define amdgpu_kernel void @atomic_umin_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB52_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB52_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -8450,9 +8553,10 @@ define amdgpu_kernel void @atomic_umin_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB53_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -8470,9 +8574,11 @@ define amdgpu_kernel void @atomic_umin_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB53_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -8607,8 +8713,8 @@ define amdgpu_kernel void @atomic_umin_i64_addr64(ptr %out, i64 %in, i64 %index)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB54_2
@@ -8622,11 +8728,12 @@ define amdgpu_kernel void @atomic_umin_i64_addr64(ptr %out, i64 %in, i64 %index)
 ; GFX12-NEXT:  .LBB54_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB54_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -8769,9 +8876,10 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB55_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -8789,9 +8897,11 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB55_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -8916,9 +9026,10 @@ define amdgpu_kernel void @atomic_or_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB56_2
@@ -8932,11 +9043,12 @@ define amdgpu_kernel void @atomic_or_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB56_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB56_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -9073,9 +9185,10 @@ define amdgpu_kernel void @atomic_or_i64_ret_offset(ptr %out, ptr %out2, i64 %in
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB57_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -9094,9 +9207,11 @@ define amdgpu_kernel void @atomic_or_i64_ret_offset(ptr %out, ptr %out2, i64 %in
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB57_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -9234,9 +9349,10 @@ define amdgpu_kernel void @atomic_or_i64_addr64_offset(ptr %out, i64 %in, i64 %i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB58_2
@@ -9250,11 +9366,12 @@ define amdgpu_kernel void @atomic_or_i64_addr64_offset(ptr %out, i64 %in, i64 %i
 ; GFX12-NEXT:  .LBB58_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB58_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -9397,9 +9514,10 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64_offset(ptr %out, ptr %out2, 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB59_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -9418,9 +9536,11 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64_offset(ptr %out, ptr %out2, 
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB59_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -9541,8 +9661,8 @@ define amdgpu_kernel void @atomic_or_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB60_2
@@ -9556,11 +9676,12 @@ define amdgpu_kernel void @atomic_or_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB60_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB60_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -9692,9 +9813,10 @@ define amdgpu_kernel void @atomic_or_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB61_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -9712,9 +9834,11 @@ define amdgpu_kernel void @atomic_or_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB61_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -9846,8 +9970,8 @@ define amdgpu_kernel void @atomic_or_i64_addr64(ptr %out, i64 %in, i64 %index) {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB62_2
@@ -9861,11 +9985,12 @@ define amdgpu_kernel void @atomic_or_i64_addr64(ptr %out, i64 %in, i64 %index) {
 ; GFX12-NEXT:  .LBB62_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB62_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -10003,9 +10128,10 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64(ptr %out, ptr %out2, i64 %in
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB63_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -10023,9 +10149,11 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64(ptr %out, ptr %out2, i64 %in
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB63_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -10141,9 +10269,10 @@ define amdgpu_kernel void @atomic_xchg_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB64_2
@@ -10157,12 +10286,13 @@ define amdgpu_kernel void @atomic_xchg_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB64_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB64_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB64_4: ; %atomicrmw.phi
@@ -10271,9 +10401,10 @@ define amdgpu_kernel void @atomic_xchg_f64_offset(ptr %out, double %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB65_2
@@ -10287,12 +10418,13 @@ define amdgpu_kernel void @atomic_xchg_f64_offset(ptr %out, double %in) {
 ; GFX12-NEXT:  .LBB65_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB65_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB65_4: ; %atomicrmw.phi
@@ -10401,9 +10533,10 @@ define amdgpu_kernel void @atomic_xchg_pointer_offset(ptr %out, ptr %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB66_2
@@ -10417,12 +10550,13 @@ define amdgpu_kernel void @atomic_xchg_pointer_offset(ptr %out, ptr %in) {
 ; GFX12-NEXT:  .LBB66_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB66_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB66_4: ; %atomicrmw.phi
@@ -10553,9 +10687,10 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB67_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -10574,6 +10709,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB67_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
@@ -10705,9 +10841,10 @@ define amdgpu_kernel void @atomic_xchg_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB68_2
@@ -10721,12 +10858,13 @@ define amdgpu_kernel void @atomic_xchg_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GFX12-NEXT:  .LBB68_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB68_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB68_4: ; %atomicrmw.phi
@@ -10863,9 +11001,10 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB69_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -10884,6 +11023,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB69_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
@@ -10998,8 +11138,8 @@ define amdgpu_kernel void @atomic_xchg_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB70_2
@@ -11013,12 +11153,13 @@ define amdgpu_kernel void @atomic_xchg_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB70_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB70_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB70_4: ; %atomicrmw.phi
@@ -11144,9 +11285,10 @@ define amdgpu_kernel void @atomic_xchg_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB71_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -11164,6 +11306,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB71_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
@@ -11289,8 +11432,8 @@ define amdgpu_kernel void @atomic_xchg_i64_addr64(ptr %out, i64 %in, i64 %index)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB72_2
@@ -11304,12 +11447,13 @@ define amdgpu_kernel void @atomic_xchg_i64_addr64(ptr %out, i64 %in, i64 %index)
 ; GFX12-NEXT:  .LBB72_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB72_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB72_4: ; %atomicrmw.phi
@@ -11441,9 +11585,10 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB73_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -11461,6 +11606,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB73_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
@@ -11586,9 +11732,10 @@ define amdgpu_kernel void @atomic_xor_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB74_2
@@ -11602,11 +11749,12 @@ define amdgpu_kernel void @atomic_xor_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB74_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB74_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -11743,9 +11891,10 @@ define amdgpu_kernel void @atomic_xor_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB75_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -11764,9 +11913,11 @@ define amdgpu_kernel void @atomic_xor_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB75_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -11904,9 +12055,10 @@ define amdgpu_kernel void @atomic_xor_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB76_2
@@ -11920,11 +12072,12 @@ define amdgpu_kernel void @atomic_xor_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:  .LBB76_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB76_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -12067,9 +12220,10 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB77_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -12088,9 +12242,11 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB77_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -12211,8 +12367,8 @@ define amdgpu_kernel void @atomic_xor_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB78_2
@@ -12226,11 +12382,12 @@ define amdgpu_kernel void @atomic_xor_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB78_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB78_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -12362,9 +12519,10 @@ define amdgpu_kernel void @atomic_xor_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB79_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -12382,9 +12540,11 @@ define amdgpu_kernel void @atomic_xor_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB79_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -12516,8 +12676,8 @@ define amdgpu_kernel void @atomic_xor_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB80_2
@@ -12531,11 +12691,12 @@ define amdgpu_kernel void @atomic_xor_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:  .LBB80_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB80_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -12673,9 +12834,10 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB81_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -12693,9 +12855,11 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB81_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -13243,9 +13407,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_offset(ptr %out, i64 %in, i64 %old
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_mov_b32 s6, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB90_2
@@ -13260,11 +13425,12 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_offset(ptr %out, i64 %in, i64 %old
 ; GFX12-NEXT:  .LBB90_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB90_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -13398,9 +13564,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_soffset(ptr %out, i64 %in, i64 %ol
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x11940
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_mov_b32 s6, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB91_2
@@ -13415,11 +13582,12 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_soffset(ptr %out, i64 %in, i64 %ol
 ; GFX12-NEXT:  .LBB91_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB91_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -13561,9 +13729,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(ptr %out, ptr %out2, i6
 ; GFX12-NEXT:    s_mov_b64 s[8:9], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s8, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB92_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -13583,9 +13752,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(ptr %out, ptr %out2, i6
 ; GFX12-NEXT:    s_and_b32 s8, s8, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s8, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB92_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -13728,9 +13899,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64_offset(ptr %out, i64 %in, i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB93_2
@@ -13745,11 +13917,12 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64_offset(ptr %out, i64 %in, i
 ; GFX12-NEXT:  .LBB93_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB93_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -13905,9 +14078,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %o
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[2:3], s[8:9], s[2:3]
 ; GFX12-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s3, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB94_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -13927,9 +14101,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %o
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB94_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s2, s2, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s2
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -14064,8 +14240,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i64(ptr %out, i64 %in, i64 %old) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_mov_b32 s6, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB95_2
@@ -14080,11 +14256,12 @@ define amdgpu_kernel void @atomic_cmpxchg_i64(ptr %out, i64 %in, i64 %old) {
 ; GFX12-NEXT:  .LBB95_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB95_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -14221,9 +14398,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret(ptr %out, ptr %out2, i64 %in, 
 ; GFX12-NEXT:    s_mov_b64 s[8:9], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s8, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB96_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
@@ -14242,9 +14420,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret(ptr %out, ptr %out2, i64 %in, 
 ; GFX12-NEXT:    s_and_b32 s8, s8, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s8, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB96_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -14382,8 +14562,8 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64(ptr %out, i64 %in, i64 %ind
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB97_2
@@ -14398,11 +14578,12 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64(ptr %out, i64 %in, i64 %ind
 ; GFX12-NEXT:  .LBB97_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB97_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -14553,9 +14734,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i6
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[2:3], s[8:9], s[2:3]
 ; GFX12-NEXT:    s_cmp_eq_u32 s3, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB98_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s12 :: v_dual_mov_b32 v1, s13
@@ -14574,9 +14756,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i6
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB98_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[2:3], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s2, s2, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s2
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -15120,9 +15304,10 @@ define amdgpu_kernel void @atomic_inc_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB107_2
@@ -15136,19 +15321,20 @@ define amdgpu_kernel void @atomic_inc_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB107_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB107_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[2:3], v[0:1]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB107_4: ; %atomicrmw.phi
@@ -15287,9 +15473,10 @@ define amdgpu_kernel void @atomic_inc_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB108_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -15308,17 +15495,19 @@ define amdgpu_kernel void @atomic_inc_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB108_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v3, 0, v3 :: v_dual_cndmask_b32 v2, 0, v2
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB108_5: ; %atomicrmw.end
@@ -15458,9 +15647,10 @@ define amdgpu_kernel void @atomic_inc_i64_incr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB109_2
@@ -15474,19 +15664,20 @@ define amdgpu_kernel void @atomic_inc_i64_incr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:  .LBB109_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB109_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[2:3], v[0:1]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB109_4: ; %atomicrmw.phi
@@ -15631,9 +15822,10 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB110_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -15652,17 +15844,19 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB110_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v3, 0, v3 :: v_dual_cndmask_b32 v2, 0, v2
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB110_5: ; %atomicrmw.end
@@ -15785,8 +15979,8 @@ define amdgpu_kernel void @atomic_inc_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB111_2
@@ -15800,19 +15994,20 @@ define amdgpu_kernel void @atomic_inc_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB111_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB111_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[2:3], v[0:1]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB111_4: ; %atomicrmw.phi
@@ -15946,9 +16141,10 @@ define amdgpu_kernel void @atomic_inc_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB112_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -15966,17 +16162,19 @@ define amdgpu_kernel void @atomic_inc_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB112_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v3, 0, v3 :: v_dual_cndmask_b32 v2, 0, v2
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB112_5: ; %atomicrmw.end
@@ -16110,8 +16308,8 @@ define amdgpu_kernel void @atomic_inc_i64_incr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB113_2
@@ -16125,19 +16323,20 @@ define amdgpu_kernel void @atomic_inc_i64_incr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:  .LBB113_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB113_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[2:3], v[0:1]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
 ; GFX12-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX12-NEXT:  .LBB113_4: ; %atomicrmw.phi
@@ -16277,9 +16476,10 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB114_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -16297,17 +16497,19 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB114_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v3, 0, v3 :: v_dual_cndmask_b32 v2, 0, v2
 ; GFX12-NEXT:    scratch_store_b64 off, v[2:3], s0
 ; GFX12-NEXT:  .LBB114_5: ; %atomicrmw.end
@@ -16437,9 +16639,10 @@ define amdgpu_kernel void @atomic_dec_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB115_2
@@ -16453,11 +16656,12 @@ define amdgpu_kernel void @atomic_dec_i64_offset(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB115_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB115_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -16612,9 +16816,10 @@ define amdgpu_kernel void @atomic_dec_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB116_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -16633,9 +16838,11 @@ define amdgpu_kernel void @atomic_dec_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB116_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -16789,9 +16996,10 @@ define amdgpu_kernel void @atomic_dec_i64_decr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB117_2
@@ -16805,11 +17013,12 @@ define amdgpu_kernel void @atomic_dec_i64_decr64_offset(ptr %out, i64 %in, i64 %
 ; GFX12-NEXT:  .LBB117_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB117_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -16970,9 +17179,10 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 32
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB118_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
@@ -16991,9 +17201,11 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB118_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -17130,8 +17342,8 @@ define amdgpu_kernel void @atomic_dec_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB119_2
@@ -17145,11 +17357,12 @@ define amdgpu_kernel void @atomic_dec_i64(ptr %out, i64 %in) {
 ; GFX12-NEXT:  .LBB119_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB119_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -17299,9 +17512,10 @@ define amdgpu_kernel void @atomic_dec_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB120_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -17319,9 +17533,11 @@ define amdgpu_kernel void @atomic_dec_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB120_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -17469,8 +17685,8 @@ define amdgpu_kernel void @atomic_dec_i64_decr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s7
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_mov_b32 s4, -1
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB121_2
@@ -17484,11 +17700,12 @@ define amdgpu_kernel void @atomic_dec_i64_decr64(ptr %out, i64 %in, i64 %index) 
 ; GFX12-NEXT:  .LBB121_2: ; %Flow
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s4, 1
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB121_4
 ; GFX12-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -17644,9 +17861,10 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
 ; GFX12-NEXT:    s_cmp_eq_u32 s1, s9
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB122_2
 ; GFX12-NEXT:  ; %bb.1: ; %atomicrmw.global
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -17664,9 +17882,11 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX12-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_scc1 .LBB122_5
 ; GFX12-NEXT:  ; %bb.4: ; %atomicrmw.private
 ; GFX12-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cselect_b32 s1, s0, -1
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], off, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0

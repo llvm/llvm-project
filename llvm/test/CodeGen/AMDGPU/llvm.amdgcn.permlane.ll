@@ -14175,6 +14175,7 @@ define amdgpu_kernel void @v_permlanex16_convergent(ptr addrspace(1) %out, i32 %
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_permlanex16_b32 v1, v1, s1, s2
 ; GFX11-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_cbranch_execz .LBB142_2
 ; GFX11-NEXT:  ; %bb.1: ; %t
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -14193,6 +14194,7 @@ define amdgpu_kernel void @v_permlanex16_convergent(ptr addrspace(1) %out, i32 %
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_permlanex16_b32 v1, v1, s1, s2
 ; GFX12-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_cbranch_execz .LBB142_2
 ; GFX12-NEXT:  ; %bb.1: ; %t
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
@@ -14209,7 +14211,7 @@ define amdgpu_kernel void @v_permlanex16_convergent(ptr addrspace(1) %out, i32 %
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX13-NEXT:    s_mov_b32 s0, exec_lo
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_permlanex16_b32 v1, v1, s1, s2
 ; GFX13-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX13-NEXT:    s_cbranch_execz .LBB142_2

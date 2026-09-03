@@ -74,6 +74,7 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK-NEXT:    scratch_store_b32 off, v0, vcc_lo
 ; CHECK-NEXT:    scratch_store_b32 off, v0, vcc_hi
 ; CHECK-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

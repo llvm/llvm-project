@@ -910,10 +910,11 @@ define void @mubuf_vgpr_outside_entry(ptr addrspace(8) %i, ptr addrspace(8) %j, 
 ; GFX1100_W32-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX1100_W32-NEXT:  ; %bb.2:
 ; GFX1100_W32-NEXT:    s_mov_b32 exec_lo, s5
+; GFX1100_W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1100_W32-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX1100_W32-NEXT:    s_mov_b32 s5, exec_lo
-; GFX1100_W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100_W32-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX1100_W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100_W32-NEXT:    s_cbranch_execz .LBB2_6
 ; GFX1100_W32-NEXT:  ; %bb.3: ; %bb1
 ; GFX1100_W32-NEXT:    v_mov_b32_e32 v0, s4
@@ -968,10 +969,11 @@ define void @mubuf_vgpr_outside_entry(ptr addrspace(8) %i, ptr addrspace(8) %j, 
 ; GFX1100_W64-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX1100_W64-NEXT:  ; %bb.2:
 ; GFX1100_W64-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX1100_W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1100_W64-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX1100_W64-NEXT:    s_mov_b64 s[6:7], exec
-; GFX1100_W64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100_W64-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX1100_W64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100_W64-NEXT:    s_cbranch_execz .LBB2_6
 ; GFX1100_W64-NEXT:  ; %bb.3: ; %bb1
 ; GFX1100_W64-NEXT:    v_mov_b32_e32 v0, s4

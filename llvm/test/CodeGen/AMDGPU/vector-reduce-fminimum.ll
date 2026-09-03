@@ -2533,7 +2533,7 @@ define double @test_vector_reduce_fminimum_v4double(<4 x double> %v) {
 ; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[2:3], v[6:7]
 ; GFX11-NEXT:    v_min_f64 v[2:3], v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[0:1], v[4:5]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v9, 0x7ff80000, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s0
@@ -2761,7 +2761,7 @@ define double @test_vector_reduce_fminimum_v8double(<8 x double> %v) {
 ; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[6:7], v[4:5]
 ; GFX11-NEXT:    v_min_f64 v[4:5], v[2:3], v[0:1]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[2:3], v[0:1]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v9, 0x7ff80000, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v5, 0x7ff80000, s0
@@ -3184,7 +3184,7 @@ define double @test_vector_reduce_fminimum_v16double(<16 x double> %v) {
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[4:5], v[2:3]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v9, 0x7ff80000, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v8, 0, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
 ; GFX11-NEXT:    v_min_f64 v[4:5], v[2:3], v[0:1]

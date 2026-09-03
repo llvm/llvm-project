@@ -198,9 +198,10 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x4 nv
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_xor_b32 s0, s0, src_flat_scratch_base_hi
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cmp_lt_u32 s0, 0x4000000
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX1250-SDAG-NEXT:  ; %bb.1: ; %bb0
@@ -262,6 +263,7 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u32 s3, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX11-NEXT:  ; %bb.1: ; %bb0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
@@ -279,7 +281,7 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX1250-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s1, src_flat_scratch_base_hi
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cmp_ge_u32 s0, 0x4000000
 ; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX1250-GISEL-NEXT:  ; %bb.1: ; %bb0

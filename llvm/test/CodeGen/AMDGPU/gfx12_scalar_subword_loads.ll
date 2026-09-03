@@ -272,7 +272,7 @@ define amdgpu_ps void @test_s_load_i16_divergent(ptr addrspace(4) inreg %in, i32
 ; DAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; DAG-NEXT:    v_lshlrev_b64_e32 v[3:4], 1, v[3:4]
 ; DAG-NEXT:    v_add_co_u32 v3, vcc_lo, s0, v3
-; DAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; DAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; DAG-NEXT:    v_add_co_ci_u32_e64 v4, null, s1, v4, vcc_lo
 ; DAG-NEXT:    global_load_i16 v0, v[3:4], off offset:32
 ; DAG-NEXT:    s_wait_loadcnt 0x0
@@ -287,7 +287,7 @@ define amdgpu_ps void @test_s_load_i16_divergent(ptr addrspace(4) inreg %in, i32
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 1, v[0:1]
 ; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v5, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v6, v1, vcc_lo
 ; GISEL-NEXT:    global_load_i16 v0, v[0:1], off offset:32
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -388,7 +388,7 @@ define amdgpu_ps void @test_s_load_u16_divergent(ptr addrspace(4) inreg %in, i32
 ; DAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; DAG-NEXT:    v_lshlrev_b64_e32 v[3:4], 1, v[3:4]
 ; DAG-NEXT:    v_add_co_u32 v3, vcc_lo, s0, v3
-; DAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; DAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; DAG-NEXT:    v_add_co_ci_u32_e64 v4, null, s1, v4, vcc_lo
 ; DAG-NEXT:    global_load_u16 v0, v[3:4], off offset:32
 ; DAG-NEXT:    s_wait_loadcnt 0x0
@@ -403,7 +403,7 @@ define amdgpu_ps void @test_s_load_u16_divergent(ptr addrspace(4) inreg %in, i32
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 1, v[0:1]
 ; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v5, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v6, v1, vcc_lo
 ; GISEL-NEXT:    global_load_u16 v0, v[0:1], off offset:32
 ; GISEL-NEXT:    s_wait_loadcnt 0x0

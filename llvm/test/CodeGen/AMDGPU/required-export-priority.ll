@@ -179,6 +179,7 @@ define amdgpu_ps void @test_if_export_f32(i32 %flag, float %x, float %y, float %
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX11-NEXT:  ; %bb.1: ; %exp
 ; GFX11-NEXT:    exp mrt0, v1, v2, v3, v4
@@ -190,6 +191,7 @@ define amdgpu_ps void @test_if_export_f32(i32 %flag, float %x, float %y, float %
 ; GFX1150-NEXT:    s_setprio 2
 ; GFX1150-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1150-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1150-NEXT:  ; %bb.1: ; %exp
 ; GFX1150-NEXT:    exp mrt0, v1, v2, v3, v4
@@ -216,6 +218,7 @@ define amdgpu_ps void @test_if_export_vm_f32(i32 %flag, float %x, float %y, floa
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX11-NEXT:  ; %bb.1: ; %exp
 ; GFX11-NEXT:    exp mrt0, v1, v2, v3, v4
@@ -227,6 +230,7 @@ define amdgpu_ps void @test_if_export_vm_f32(i32 %flag, float %x, float %y, floa
 ; GFX1150-NEXT:    s_setprio 2
 ; GFX1150-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1150-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX1150-NEXT:  ; %bb.1: ; %exp
 ; GFX1150-NEXT:    exp mrt0, v1, v2, v3, v4
@@ -253,6 +257,7 @@ define amdgpu_ps void @test_if_export_done_f32(i32 %flag, float %x, float %y, fl
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_cbranch_execz .LBB11_2
 ; GFX11-NEXT:  ; %bb.1: ; %exp
 ; GFX11-NEXT:    exp mrt0, v1, v2, v3, v4 done
@@ -264,6 +269,7 @@ define amdgpu_ps void @test_if_export_done_f32(i32 %flag, float %x, float %y, fl
 ; GFX1150-NEXT:    s_setprio 2
 ; GFX1150-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1150-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    s_cbranch_execz .LBB11_2
 ; GFX1150-NEXT:  ; %bb.1: ; %exp
 ; GFX1150-NEXT:    exp mrt0, v1, v2, v3, v4 done
@@ -290,6 +296,7 @@ define amdgpu_ps void @test_if_export_vm_done_f32(i32 %flag, float %x, float %y,
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_cbranch_execz .LBB12_2
 ; GFX11-NEXT:  ; %bb.1: ; %exp
 ; GFX11-NEXT:    exp mrt0, v1, v2, v3, v4 done
@@ -301,6 +308,7 @@ define amdgpu_ps void @test_if_export_vm_done_f32(i32 %flag, float %x, float %y,
 ; GFX1150-NEXT:    s_setprio 2
 ; GFX1150-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1150-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    s_cbranch_execz .LBB12_2
 ; GFX1150-NEXT:  ; %bb.1: ; %exp
 ; GFX1150-NEXT:    exp mrt0, v1, v2, v3, v4 done

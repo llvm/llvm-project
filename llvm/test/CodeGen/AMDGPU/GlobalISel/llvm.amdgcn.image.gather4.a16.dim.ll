@@ -80,6 +80,7 @@ define amdgpu_ps <4 x float> @gather4_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg 
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s2, s4
@@ -125,6 +126,7 @@ define amdgpu_ps <4 x float> @gather4_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg 
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s1, s3
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s2, s4
@@ -225,6 +227,7 @@ define amdgpu_ps <4 x float> @gather4_cube(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -272,6 +275,7 @@ define amdgpu_ps <4 x float> @gather4_cube(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -374,6 +378,7 @@ define amdgpu_ps <4 x float> @gather4_2darray(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -421,6 +426,7 @@ define amdgpu_ps <4 x float> @gather4_2darray(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -519,6 +525,7 @@ define amdgpu_ps <4 x float> @gather4_c_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s2, s4
@@ -564,6 +571,7 @@ define amdgpu_ps <4 x float> @gather4_c_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s1, s3
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s2, s4
@@ -664,6 +672,7 @@ define amdgpu_ps <4 x float> @gather4_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -711,6 +720,7 @@ define amdgpu_ps <4 x float> @gather4_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -813,6 +823,7 @@ define amdgpu_ps <4 x float> @gather4_c_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -860,6 +871,7 @@ define amdgpu_ps <4 x float> @gather4_c_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -962,6 +974,7 @@ define amdgpu_ps <4 x float> @gather4_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -1009,6 +1022,7 @@ define amdgpu_ps <4 x float> @gather4_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -1111,6 +1125,7 @@ define amdgpu_ps <4 x float> @gather4_c_b_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -1158,6 +1173,7 @@ define amdgpu_ps <4 x float> @gather4_c_b_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s1, s3
@@ -1262,6 +1278,7 @@ define amdgpu_ps <4 x float> @gather4_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v3, 0xffff, v3
@@ -1311,6 +1328,7 @@ define amdgpu_ps <4 x float> @gather4_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v3, 0xffff, v3
@@ -1417,6 +1435,7 @@ define amdgpu_ps <4 x float> @gather4_c_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v4, 0xffff, v4
@@ -1466,6 +1485,7 @@ define amdgpu_ps <4 x float> @gather4_c_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s0, s2
 ; GFX12-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v4, 0xffff, v4

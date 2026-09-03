@@ -1695,18 +1695,22 @@ define amdgpu_kernel void @v_insertelement_v8bf16_dynamic(ptr addrspace(1) %out,
 ; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 7
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s3, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 4
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s6, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 5
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 2
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s8, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 3
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s9, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 0
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s10, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 1
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s5, -1, 0
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-REAL16-NEXT:    v_cndmask_b16 v5.l, v3.l, s4, s2
@@ -2344,34 +2348,42 @@ define amdgpu_kernel void @v_insertelement_v16bf16_dynamic(ptr addrspace(1) %out
 ; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 7
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s3, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 4
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s6, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 5
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 2
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s8, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 3
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s9, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 0
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s10, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 1
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s11, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 14
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s12, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 15
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s13, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 12
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s14, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 13
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s15, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 10
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s16, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 11
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s17, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 8
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s18, -1, 0
 ; GFX1250-REAL16-NEXT:    s_cmp_eq_u32 s5, 9
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-REAL16-NEXT:    s_cselect_b32 s5, -1, 0
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt 0x1
 ; GFX1250-REAL16-NEXT:    v_cndmask_b16 v11.l, v3.l, s4, s2

@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgpu10.10-mesa-mesa3d -o - %s | FileCheck %s -check-prefix=GFX10
 ; RUN: llc -global-isel -mtriple=amdgpu12.00-amd-amdhsa -o - %s | FileCheck %s -check-prefix=GFX12
 ; ----------------------------------------------------------------------------
-; Case 1: Uniform result — SGPR rsrc + SGPR offset
+; Case 1: Uniform result â€” SGPR rsrc + SGPR offset
 ; ----------------------------------------------------------------------------
 
 ; Case 1a: i32, SGPR rsrc, SGPR offset
@@ -493,9 +493,11 @@ define amdgpu_ps void @s_buffer_load_i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[8:9]
@@ -560,9 +562,11 @@ define amdgpu_ps void @s_buffer_load_v2i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc
 ; GFX12-NEXT:    ; implicit-def: $vgpr6
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_execnz .LBB13_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b64 v0, v[4:5], s[8:9]
@@ -627,9 +631,11 @@ define amdgpu_ps void @s_buffer_load_i96_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    ; implicit-def: $vgpr7
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b96 v0, v[4:6], s[8:9]
@@ -694,9 +700,11 @@ define amdgpu_ps void @s_buffer_load_v4i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc
 ; GFX12-NEXT:    ; implicit-def: $vgpr8
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b128 v0, v[4:7], s[8:9]
@@ -706,7 +714,7 @@ define amdgpu_ps void @s_buffer_load_v4i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc
   ret void
 }
 
-; Case 3e: <8 x i32> (256-bit), VGPR rsrc, SGPR offset → 2x MUBUF + waterfall
+; Case 3e: <8 x i32> (256-bit), VGPR rsrc, SGPR offset â†’ 2x MUBUF + waterfall
 define amdgpu_ps void @s_buffer_load_v8i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i32 inreg %soffset, ptr addrspace(1) inreg %out) {
 ; GFX10-LABEL: s_buffer_load_v8i32_vgpr_rsrc_sgpr_offset:
 ; GFX10:       ; %bb.0:
@@ -767,9 +775,11 @@ define amdgpu_ps void @s_buffer_load_v8i32_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc
 ; GFX12-NEXT:    ; implicit-def: $vgpr12
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    global_store_b128 v0, v[4:7], s[8:9]
@@ -828,7 +838,7 @@ define amdgpu_ps void @s_buffer_load_i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
 ; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
 ; GFX12-NEXT:    buffer_load_b32 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
@@ -838,6 +848,7 @@ define amdgpu_ps void @s_buffer_load_i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    s_cbranch_execnz .LBB17_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s3
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -888,7 +899,7 @@ define amdgpu_ps void @s_buffer_load_v2i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
 ; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_b64 v[5:6], v4, s[4:7], null offen
@@ -899,6 +910,7 @@ define amdgpu_ps void @s_buffer_load_v2i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc
 ; GFX12-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s3
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b64 v0, v[5:6], s[0:1]
@@ -949,7 +961,7 @@ define amdgpu_ps void @s_buffer_load_v4i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
 ; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_load_b128 v[5:8], v4, s[4:7], null offen
@@ -960,6 +972,7 @@ define amdgpu_ps void @s_buffer_load_v4i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc
 ; GFX12-NEXT:    s_cbranch_execnz .LBB19_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s3
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b128 v0, v[5:8], s[0:1]
@@ -969,7 +982,7 @@ define amdgpu_ps void @s_buffer_load_v4i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc
   ret void
 }
 
-; Case 4d: <8 x i32> (256-bit), VGPR rsrc, VGPR offset → 2x MUBUF + waterfall
+; Case 4d: <8 x i32> (256-bit), VGPR rsrc, VGPR offset â†’ 2x MUBUF + waterfall
 define amdgpu_ps void @s_buffer_load_v8i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
 ; GFX10-LABEL: s_buffer_load_v8i32_vgpr_rsrc_vgpr_offset:
 ; GFX10:       ; %bb.0:
@@ -1024,9 +1037,11 @@ define amdgpu_ps void @s_buffer_load_v8i32_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cbranch_execnz .LBB20_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s3
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    global_store_b128 v0, v[5:8], s[0:1]

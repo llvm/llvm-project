@@ -82,10 +82,10 @@ define amdgpu_kernel void @dead_round_and_denorm_writes(ptr addrspace(1) %out, f
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    s_round_mode 0x0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_3)
 ; CHECK-NEXT:    s_denorm_mode 15
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_add_f32 s2, s2, s3
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -101,10 +101,10 @@ define amdgpu_kernel void @dead_round_write_across_denorm_write(ptr addrspace(1)
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    s_denorm_mode 15
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_3)
 ; CHECK-NEXT:    s_round_mode 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_add_f32 s2, s2, s3
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -121,10 +121,10 @@ define amdgpu_kernel void @dead_denorm_write_across_round_write(ptr addrspace(1)
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    s_round_mode 0x0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_3)
 ; CHECK-NEXT:    s_denorm_mode 15
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_add_f32 s2, s2, s3
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -148,6 +148,7 @@ define void @round_write_kept_across_inline_asm(ptr addrspace(1) %out, float %a,
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_round_mode 0x0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_add_f32_e32 v2, v2, v3
 ; CHECK-NEXT:    global_store_b32 v[0:1], v2, off
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -215,8 +216,10 @@ define void @round_write_kept_across_setreg(ptr addrspace(1) %out, float %a, flo
 ; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_round_mode 0x0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 8, 4), 1
 ; CHECK-NEXT:    s_round_mode 0x0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_add_f32_e32 v2, v2, v3
 ; CHECK-NEXT:    global_store_b32 v[0:1], v2, off
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -239,6 +242,7 @@ define void @round_write_kept_across_side_effect(ptr addrspace(1) %out, float %a
 ; CHECK-NEXT:    s_round_mode 0x0
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_round_mode 0xf
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_add_f32_e32 v2, v2, v3
 ; CHECK-NEXT:    global_store_b32 v[0:1], v2, off
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -259,8 +263,8 @@ define void @dead_round_write_then_restore(ptr addrspace(1) %out, float %a, floa
 ; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_round_mode 0xf
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_add_f32_e32 v2, v2, v3
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; CHECK-NEXT:    global_store_b32 v[0:1], v2, off
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -282,9 +286,10 @@ define void @round_write_kept_across_fp_reader(ptr addrspace(1) %out, float %a, 
 ; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_round_mode 0x0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_add_f32_e32 v2, v2, v3
 ; CHECK-NEXT:    s_round_mode 0xf
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; CHECK-NEXT:    global_store_b32 v[0:1], v2, off
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -306,7 +311,7 @@ define void @round_write_live_out(ptr addrspace(1) %out, float %a, float %b, i1 
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_and_b32_e32 v4, 1, v4
 ; CHECK-NEXT:    s_mov_b32 s0, exec_lo
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_cmpx_eq_u32_e32 1, v4
 ; CHECK-NEXT:    s_cbranch_execz .LBB13_2
 ; CHECK-NEXT:  ; %bb.1: ; %then
@@ -315,6 +320,7 @@ define void @round_write_live_out(ptr addrspace(1) %out, float %a, float %b, i1 
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    s_round_mode 0xf
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_add_f32_e32 v2, v2, v3
 ; CHECK-NEXT:    global_store_b32 v[0:1], v2, off
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
