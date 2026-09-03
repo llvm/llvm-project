@@ -2048,6 +2048,120 @@ this) and always check the return value of these calls.
 
 This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
 
+security.UnsafeSymlinkTest (C, C++)
+"""""""""""""""""""""""""""""""""""
+
+Check unsafe detection of symbolic links.
+
+The following code is not a safe way to detect a symbolic link. The file can be
+manipulated asynchronously between the call to ``lstat`` and ``open`` and data
+in ``fs`` may become outdated:
+
+.. code-block:: c
+
+ void handle_file(const char *filename) {
+   struct stat fs;
+   int fd;
+
+   if (lstat(filename, &fs) == -1)
+     return;
+
+   if (!S_ISLNK(fs.st_mode)) {
+     fd = open(filename, O_RDWR); // warning: inaccurate check for symbolic link status of file
+     if (fd == -1)
+       return;
+   }
+   // ...
+ }
+
+The checker produces a warning in similar cases when a file is opened after the
+``stat`` data was obtained for it and presence of symbolic link was checked by
+macro ``S_ISLNK``.
+
+A secure way is to use the ``O_NOFOLLOW`` value in the ``flags`` argument at
+``open``. If this flag is not available on the implementation, the file status
+can be obtained a second time after the ``open`` call. If there is no difference
+between this data and the previously (before open) obtained data, the presence
+of symbolic link can be checked in a safe way.
+
+.. code-block:: c
+
+ void write_nosymlink(const char *filename, const char *buf, size_t size) {
+   struct stat stat1;
+   int fd;
+
+   if (lstat(filename, &stat1) == -1)
+     return;
+
+   fd = open(filename, 1);
+   if (fd == -1)
+     return;
+
+   struct stat stat2;
+   if (fstat(fd, &stat2) == -1) {
+     // error: fstat failed
+     // ...
+     return;
+   }
+
+   if (stat1.st_mode != stat2.st_mode || stat1.st_ino != stat2.st_ino || stat1.st_dev != stat2.st_dev) {
+     // error: file was changed
+     // ...
+     return;
+   }
+
+   if (S_ISLNK(stat1.st_mode)) {
+     // file is a symbolic link
+     // ...
+     return;
+   }
+
+   write(fd, buf, size);
+   // ...
+ }
+
+It is important to compare all fields ``st_mode``, ``st_ino`` and ``st_dev`` of
+the ``stat`` structure. This checker emits additionally a warning if a file
+write or read attempt is made in a similar case when these comparisons are
+incomplete (or missing).
+
+.. code-block:: c
+
+ void write_nosymlink(const char *filename, const char *buf, size_t size) {
+   struct stat stat1;
+   int fd;
+
+   if (lstat(filename, &stat1) == -1)
+     return;
+
+   fd = open(filename, 1);
+   if (fd == -1)
+     return;
+
+   struct stat stat2;
+   if (fstat(fd, &stat2) == -1) {
+     // ...
+     return;
+   }
+
+   if (stat1.st_mode != stat2.st_mode) { // missing comparison of st_ino and st_dev
+     // ...
+     return;
+   }
+
+   if (S_ISLNK(stat1.st_mode)) {
+     // ...
+     return;
+   }
+
+   write(fd, buf, size); // warning: possibly missing check for external change of file before it was opened
+   // ...
+ }
+
+This kind of warning is produced when a ``lstat`` - ``open`` - ``fstat`` call
+sequence is found for the same file before write or read attempt (and the
+comparisons of status data are missing).
+
 .. _security-VAList:
 
 security.VAList (C, C++)

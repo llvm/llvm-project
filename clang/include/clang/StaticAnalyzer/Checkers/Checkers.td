@@ -1007,6 +1007,10 @@ let ParentPackage = Security in {
                  "'setuid(getuid())' (CERT: POS36-C)">,
         Documentation<HasDocumentation>;
 
+  def UnsafeSymlinkTestChecker : Checker<"UnsafeSymlinkTest">,
+                      HelpText<"Check unsafe detection of symbolic links">,
+                      Documentation<HasDocumentation>;
+
   def VAListChecker : Checker<"VAList">,
                       HelpText<"Warn on misuse of va_list objects">,
                       Documentation<HasDocumentation>;
