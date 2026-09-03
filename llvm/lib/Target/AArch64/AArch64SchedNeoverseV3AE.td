@@ -159,11 +159,6 @@ def V3AEWrite_1c_2M : SchedWriteRes<[V3AEUnitM, V3AEUnitM]> {
   let NumMicroOps = 2;
 }
 
-def V3AEWrite_3c_2M : SchedWriteRes<[V3AEUnitM, V3AEUnitM]> {
-  let Latency     = 3;
-  let NumMicroOps = 2;
-}
-
 def V3AEWrite_4c_2M : SchedWriteRes<[V3AEUnitM, V3AEUnitM]> {
   let Latency     = 4;
   let NumMicroOps = 2;
@@ -1891,9 +1886,9 @@ def : InstRW<[V3AEWrite_2or3c_1M], (instrs BRKNS_PPzP, BRKPAS_PPzPP,
                                          BRKPBS_PPzPP)>;
 
 // Loop control, based on GPR
-def : InstRW<[V3AEWrite_3c_2M],
+def : InstRW<[V3AEWrite_2c_1M],
              (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_P(WW|XX)_[BHSD]")>;
-def : InstRW<[V3AEWrite_3c_2M], (instregex "^WHILE(RW|WR)_PXX_[BHSD]")>;
+def : InstRW<[V3AEWrite_2c_1M], (instregex "^WHILE(RW|WR)_PXX_[BHSD]")>;
 
 // Loop terminate
 def : InstRW<[V3AEWrite_1c_2M], (instregex "^CTERM(EQ|NE)_(WW|XX)")>;
