@@ -1,11 +1,12 @@
 ; REQUIRES: x86
-;; Test --lto-obj-path= for regular LTO.
+;; Test --lto-obj-path.
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 ; RUN: mkdir d
 ; RUN: opt 1.ll -o 1.bc
 ; RUN: opt 2.ll -o d/2.bc
 
+;; Test --lto-obj-path= for regular LTO.
 ; RUN: rm -f objpath.o
 ; RUN: ld.lld --lto-obj-path=objpath.o -shared 1.bc d/2.bc -o 3
 ; RUN: llvm-nm 3 | FileCheck %s --check-prefix=NM
