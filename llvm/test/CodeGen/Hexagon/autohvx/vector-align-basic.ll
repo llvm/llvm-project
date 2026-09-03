@@ -9,34 +9,31 @@ define <32 x i32> @f0(ptr %a0, i32 %a1) #0 {
 ; CHECK-NEXT:     [[RADD:[r0-9]+]] = add([[R1:[r0-9]+]],[[R0:[r0-9]+]])
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[RLCPI:[r0-9]+]] = ##.LCPI0_0
+; CHECK-NEXT:     [[R3_2:r[0-9]+:[0-9]+]] = memd([[RADD]]+#128)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[RNEG:[r0-9]+]] = #-1
+; CHECK-NEXT:     [[R5_4:r[0-9]+:[0-9]+]] = memd([[RADD]]+#136)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[RADD136:[r0-9]+]] = add([[RADD]],#136)
+; CHECK-NEXT:     [[R3_2]] = vaddw([[R3_2]],[[R5_4]])
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V1:[v0-9]+]] = vmem([[RLCPI]]+#0)
+; CHECK-NEXT:     [[R4:[r0-9]+]] = #124
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[RADD128:[r0-9]+]] = add([[RADD]],#128)
+; CHECK-NEXT:     [[V0:[v0-9]+]].w = vinsert([[R2:[r0-9]+]])
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[Q0:[q0-9]+]] = vand([[V1]],[[RNEG]])
+; CHECK-NEXT:     memd([[RADD]]+#128) = [[R3_2]]
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V2:[v0-9]+]] = vmemu([[RADD136]]+#0)
+; CHECK-NEXT:     [[V0]] = valign([[V0]],[[V0]],#4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V3:[v0-9]+]] = vmem([[RADD]]+#1)
+; CHECK-NEXT:     [[V0]].w = vinsert([[R3:[r0-9]+]])
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V0:[v0-9]+]].w = vadd([[V3]].w,[[V2]].w)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     if ([[Q0]]) vmem([[RADD128]]+#0) = [[V0]]
+; CHECK-NEXT:     [[V0]] = vror([[V0]],[[R4]])
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
