@@ -827,17 +827,16 @@ Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
 
   KnownBits OldPtrBits{DL->getPointerSizeInBits(OldAddrSpace)};
   KnownBits NewPtrBits{DL->getPointerSizeInBits(NewAddrSpace)};
-  if (!TTI->isNoopAddrSpaceCast(OldAddrSpace, NewAddrSpace)) {
+  bool IsNoopCast = TTI->isNoopAddrSpaceCast(OldAddrSpace, NewAddrSpace);
+  if (!IsNoopCast) {
     std::tie(OldPtrBits, NewPtrBits) =
         TTI->computeKnownBitsAddrSpaceCast(NewAddrSpace, *PtrOpUse.get());
   }
 
-  // If the pointers in both addrspaces have a bitwise representation and if the
-  // representation of the new pointer is smaller (fewer bits) than the old one,
-  // check if the mask is applicable to the ptr in the new addrspace. Any
-  // masking only clearing the low bits will also apply in the new addrspace
-  // Note: checking if the mask clears high bits is not sufficient as those
-  // might have already been 0 in the old ptr.
+  bool KnownNonZero = OldPtrBits.isNonZero();
+
+  // If narrower, check the mask only clears low bits that fit in it.
+  bool MaskFits = true;
   if (OldPtrBits.getBitWidth() > NewPtrBits.getBitWidth()) {
     KnownBits MaskBits =
         computeKnownBits(MaskOp, *DL, /*AssumptionCache=*/nullptr, I);
@@ -846,19 +845,26 @@ Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
     OldPtrBits.One |= ~OldPtrBits.Zero;
     // Check which bits are cleared by the mask in the old ptr.
     KnownBits ClearedBits = KnownBits::sub(OldPtrBits, OldPtrBits & MaskBits);
+    MaskFits =
+        ClearedBits.countMaxActiveBits() <= NewPtrBits.countMaxActiveBits();
+  }
 
-    // If the mask isn't applicable to the new ptr, leave the ptrmask as-is and
-    // insert an addrspacecast after it.
-    if (ClearedBits.countMaxActiveBits() > NewPtrBits.countMaxActiveBits()) {
-      std::optional<BasicBlock::iterator> InsertPoint =
-          I->getInsertionPointAfterDef();
-      assert(InsertPoint && "insertion after ptrmask should be possible");
-      Type *NewPtrType = getPtrOrVecOfPtrsWithNewAS(I->getType(), NewAddrSpace);
-      Instruction *AddrSpaceCast =
-          new AddrSpaceCastInst(I, NewPtrType, "", *InsertPoint);
-      AddrSpaceCast->setDebugLoc(I->getDebugLoc());
-      return AddrSpaceCast;
-    }
+  // Commuting past a non-noop cast is unsound for a maybe-null pointer,
+  // since the cast may not preserve null.
+  if (!IsNoopCast && MaskFits && !KnownNonZero)
+    KnownNonZero =
+        isKnownNonZero(PtrOpUse.get(), SimplifyQuery(*DL, DT, &AC, I));
+  bool CanCommuteWithCast = IsNoopCast || (MaskFits && KnownNonZero);
+
+  if (!CanCommuteWithCast) {
+    std::optional<BasicBlock::iterator> InsertPoint =
+        I->getInsertionPointAfterDef();
+    assert(InsertPoint && "insertion after ptrmask should be possible");
+    Type *NewPtrType = getPtrOrVecOfPtrsWithNewAS(I->getType(), NewAddrSpace);
+    Instruction *AddrSpaceCast =
+        new AddrSpaceCastInst(I, NewPtrType, "", *InsertPoint);
+    AddrSpaceCast->setDebugLoc(I->getDebugLoc());
+    return AddrSpaceCast;
   }
 
   IRBuilder<> B(I);
