@@ -65,8 +65,8 @@ labelD:
   unreachable
 
 labelE:
-  %1 = extractelement <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0xFFF0000000000000>, i64 1
-  %f = extractelement <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0xFFF0000000000000>, i64 2
+  %1 = extractelement <4 x float> <float +inf, float +inf, float +inf, float -inf>, i64 1
+  %f = extractelement <4 x float> <float +inf, float +inf, float +inf, float -inf>, i64 2
   invoke void @funcA()
   to label %labelG unwind label %catch.dispatch
 
@@ -75,8 +75,8 @@ labelF:
   cleanupret from %2 unwind to caller
 
 labelG:
-  %g = extractelement <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0xFFF0000000000000>, i64 0
-  %h = extractelement <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0xFFF0000000000000>, i64 3
+  %g = extractelement <4 x float> <float +inf, float +inf, float +inf, float -inf>, i64 0
+  %h = extractelement <4 x float> <float +inf, float +inf, float +inf, float -inf>, i64 3
   invoke void @funcA()
   to label %labelH unwind label %catch.dispatch
 

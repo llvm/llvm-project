@@ -300,7 +300,7 @@ define float @clamp_zero_to_inf(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.zero = fcmp oeq float %arg, 0.0
-  %select = select i1 %is.zero, float 0x7FF0000000000000, float %arg
+  %select = select i1 %is.zero, float +inf, float %arg
   ret float %select
 }
 
@@ -312,7 +312,7 @@ define float @clamp_zero_to_only_inf(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.zero = fcmp oeq float %arg, 0.0
-  %select = select i1 %is.zero, float %arg, float 0x7FF0000000000000
+  %select = select i1 %is.zero, float %arg, float +inf
   ret float %select
 }
 
