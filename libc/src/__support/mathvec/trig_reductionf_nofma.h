@@ -29,7 +29,7 @@ template <size_t N> struct Reduction {
 
 // Reduces x / pi into k + r, with k as an integer and |r| <= 0.5.
 template <size_t N>
-LIBC_INLINE Reduction<N> fast_reduction(cpp::simd<double, N> x) {
+LIBC_INLINE static Reduction<N> fast_reduction(cpp::simd<double, N> x) {
   constexpr cpp::simd<double, N> inv_pi_hi = 0x1.45f306e000000p-2;
   constexpr cpp::simd<double, N> inv_pi_mid = -0x1.b1bbead000000p-33;
   constexpr cpp::simd<double, N> inv_pi_lo = -0x1.80f62a0b82b00p-63;
@@ -114,7 +114,7 @@ LIBC_INLINE_VAR constexpr double INV_PI_LO[16] = {
 // Reduces non-negative large finite inputs x >= 0x1p49.
 // Decomposes x / pi into k + r, with k as an integer and |r| <= 0.5.
 template <size_t N>
-LIBC_INLINE Reduction<N> large_reduction(cpp::simd<double, N> x) {
+LIBC_INLINE static Reduction<N> large_reduction(cpp::simd<double, N> x) {
   constexpr cpp::simd<double, N> shift = 0x1.8p52;
 
   cpp::simd<uint64_t, N> ix = cpp::bit_cast<cpp::simd<uint64_t, N>>(x);
