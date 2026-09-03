@@ -3209,6 +3209,44 @@ TEST(TargetParserTest, testAMDGPUgetMaxHWAddressableLocalMemorySize) {
             327680u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetBufferResourceNumRecordsWidth) {
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GFX900), 32u);
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GFX1201), 32u);
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GFX1250), 45u);
+
+  // Generic families that agree on resource width behave.
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GFX9_GENERIC),
+            32u);
+
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GENERIC),
+            std::nullopt);
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GENERIC_HSA),
+            std::nullopt);
+
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_NONE),
+            std::nullopt);
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_R600),
+            std::nullopt);
+
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(Triple::NoSubArch),
+            std::nullopt);
+
+  SmallVector<StringRef, 0> AllGPUs;
+  AMDGPU::fillValidArchListAMDGCN(AllGPUs, Triple::NoSubArch);
+  ASSERT_FALSE(AllGPUs.empty());
+  for (StringRef Name : AllGPUs) {
+    AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(Name);
+    std::optional<unsigned> Width =
+        AMDGPU::getBufferResourceNumRecordsWidth(Kind);
+    EXPECT_TRUE(Width.has_value())
+        << "no num_records width for '" << Name << "'";
+    // The two overloads must agree wherever the GPU has a subarch to look up.
+    Triple::SubArchType SubArch = AMDGPU::getSubArch(Kind);
+    EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(SubArch), Width)
+        << "overloads disagree for '" << Name << "'";
+  }
+}
+
 TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(true), 4u);
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);

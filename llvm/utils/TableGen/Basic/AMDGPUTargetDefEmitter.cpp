@@ -622,7 +622,8 @@ emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
     OS << Names.GetOrAddStringOffset(BaseName) << ", "
        << getFeatureValue(R, "MaxWavesPerEU", 10) << ", "
        << getFeatureValue(R, "AddressableLocalMemorySize", 32768) << ", "
-       << getFeatureValue(R, "LDSBankCount", 32) << "},\n";
+       << getFeatureValue(R, "LDSBankCount", 32) << ", "
+       << getFeatureValue(R, "BufferResourceNumRecordsWidth", 0) << "},\n";
   }
   OS << "};\n"
         "#endif // GET_AMDGPU_GPU_TABLE\n\n";
