@@ -620,6 +620,8 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
     // Check if it's profitable to perform this CSE.
     bool DoCSE = true;
     unsigned NumDefs = MI.getNumDefs();
+    SmallVector<std::pair<Register, MachineRegisterInfo::VRegAttrs>, 2>
+        OriginalAttrs;
 
     for (unsigned i = 0, e = MI.getNumOperands(); NumDefs && i != e; ++i) {
       MachineOperand &MO = MI.getOperand(i);
@@ -655,6 +657,7 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
       // Don't perform CSE if the result of the new instruction cannot exist
       // within the constraints (register class, bank, or low-level type) of
       // the old instruction.
+      MachineRegisterInfo::VRegAttrs Attrs = MRI->getVRegAttrs(NewReg);
       if (!MRI->constrainRegAttrs(NewReg, OldReg)) {
         LLVM_DEBUG(
             dbgs() << "*** Not the same register constraints, avoid CSE!\n");
@@ -662,8 +665,16 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
         break;
       }
 
+      OriginalAttrs.emplace_back(NewReg, Attrs);
       CSEPairs.emplace_back(OldReg, NewReg);
       --NumDefs;
+    }
+
+    if (!DoCSE) {
+      for (const auto &[Reg, Attrs] : OriginalAttrs) {
+        MRI->setRegClassOrRegBank(Reg, Attrs.RCOrRB);
+        MRI->setType(Reg, Attrs.Ty);
+      }
     }
 
     // Actually perform the elimination.
