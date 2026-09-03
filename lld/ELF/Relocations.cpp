@@ -757,6 +757,8 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
     return;
   }
   gotPlt.addEntry(sym);
+  if (sym.isPreemptible && ctx.arg.zMarkPlt && type == ctx.target->pltRel)
+    expr = R_PLT;
   rel.addReloc(
       {type, &gotPlt, sym.getGotPltOffset(ctx), isPreemptible, sym, 0, expr});
 }
