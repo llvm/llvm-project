@@ -2476,15 +2476,21 @@ static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
 
 static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
                                       const NamedDecl *ND,
-                                      bool OmitMultiVersionMangling = false) {
+                                      bool OmitMultiVersionMangling = false,
+                                      bool IgnoreAsmLabel = false) {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
   MangleContext &MC = CGM.getCXXABI().getMangleContext();
   if (!CGM.getModuleNameHash().empty())
     MC.needsUniqueInternalLinkageNames();
-  bool ShouldMangle = MC.shouldMangleDeclName(ND);
+  bool ShouldMangle = !IgnoreAsmLabel
+                          ? MC.shouldMangleDeclName(ND)
+                          : MC.shouldMangleDeclNameIgnoringAsmLabel(ND);
   if (ShouldMangle)
-    MC.mangleName(GD.getWithDecl(ND), Out);
+    if (!IgnoreAsmLabel)
+      MC.mangleName(GD.getWithDecl(ND), Out);
+    else
+      MC.mangleNameIgnoringAsmLabel(GD.getWithDecl(ND), Out);
   else {
     IdentifierInfo *II = ND->getIdentifier();
     assert(II && "Attempt to mangle unnamed decl.");
@@ -2676,6 +2682,14 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
   return MangledDeclNames[CanonicalGD] = Result.first->first();
+}
+
+std::string CodeGenModule::getMangledNameIgnoringAsmLabel(GlobalDecl GD,
+                                                          const NamedDecl *ND) {
+  std::string MangledName =
+      getMangledNameImpl(*this, GD, ND, /*OmitMultiVersionMangling=*/false,
+                         /*IgnoreAsmLabel=*/true);
+  return MangledName;
 }
 
 StringRef CodeGenModule::getBlockMangledName(GlobalDecl GD,
@@ -5425,8 +5439,8 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
       IFunc = GI;
     }
 
-    std::string AliasName = getMangledNameImpl(
-        *this, GD, FD, /*OmitMultiVersionMangling=*/true);
+    std::string AliasName =
+        getMangledNameImpl(*this, GD, FD, /*OmitMultiVersionMangling=*/true);
     llvm::Constant *AliasFunc = GetGlobalValue(AliasName);
     if (!AliasFunc) {
       auto *GA = llvm::GlobalAlias::create(DeclTy, AS, Linkage, AliasName,

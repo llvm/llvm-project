@@ -126,6 +126,7 @@ public:
   /// @{
 
   bool shouldMangleDeclName(const NamedDecl *D);
+  bool shouldMangleDeclNameIgnoringAsmLabel(const NamedDecl *D);
   virtual bool shouldMangleCXXName(const NamedDecl *D) = 0;
   virtual bool shouldMangleStringLiteral(const StringLiteral *SL) = 0;
 
@@ -145,6 +146,7 @@ public:
 
   // FIXME: consider replacing raw_ostream & with something like SmallString &.
   void mangleName(GlobalDecl GD, raw_ostream &);
+  void mangleNameIgnoringAsmLabel(GlobalDecl GD, raw_ostream &);
   virtual void mangleCXXName(GlobalDecl GD, raw_ostream &) = 0;
   virtual void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
                            bool ElideOverrideInfo, raw_ostream &) = 0;
