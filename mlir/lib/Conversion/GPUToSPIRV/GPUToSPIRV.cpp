@@ -537,7 +537,8 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
   // Require the shuffle width to be the same as the target's subgroup size,
   // given that for SPIR-V non-uniform subgroup ops, we cannot select
   // participating invocations.
-  auto targetEnv = getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
+  const spirv::TargetEnv &targetEnv =
+      getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
   unsigned subgroupSize =
       targetEnv.getAttr().getResourceLimits().getSubgroupSize();
   IntegerAttr widthAttr;

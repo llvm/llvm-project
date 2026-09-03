@@ -162,6 +162,19 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
 
+  if (JA.getType() == types::TY_SYCL_FATBIN) {
+    // This command is never executed. LinkerWrapper::ConstructJob rewrites it
+    // in place into the clang-linker-wrapper invocation, reusing the executable
+    // as the wrapper's --linker-path=. The device link itself happens when the
+    // wrapper re-invokes the driver with --sycl-link, which re-enters this
+    // function through the OPT_sycl_link branches.
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::None(),
+        Args.MakeArgString(ToolChain.GetProgramPath("clang-sycl-linker")),
+        CmdArgs, Inputs, Output));
+    return;
+  }
+
   // clang-sycl-linker needs the device target triple and architecture to
   // finalize a device image. Emit the values derived from --target/-march=
   // before the linker inputs, so that -triple=/-arch= passed through

@@ -349,8 +349,16 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
   }
 
   BuiltinTypeDeclBuilder B(S, Decl);
-  B.addTextureHandle(T.RC, T.IsROV, IsArray, Dim, SampleCountExpr)
-      .addDefaultHandleConstructor()
+  B.addTextureHandle(T.RC, T.IsROV, IsArray, Dim, SampleCountExpr);
+
+  // The `mips` member holds a second copy of the resource handle.
+  // addCopyConstructor, addCopyAssignmentOperator and
+  // addStaticInitializationFunctions are what initialize that copy, and they
+  // look the member up by name, so it has to exist before they run.
+  if (T.has(TexCap::Mips))
+    B.addMipsMember(Dim);
+
+  B.addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
       .addStaticInitializationFunctions(false);
@@ -363,8 +371,6 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
     B.addRWTextureLoadMethods(Dim, IsArray);
   if (T.has(TexCap::Subscript))
     B.addArraySubscriptOperators(Dim, IsArray);
-  if (T.has(TexCap::Mips))
-    B.addMipsMember(Dim);
 
   if (T.has(TexCap::Sample))
     B.addSampleMethods(Dim, IsArray)
