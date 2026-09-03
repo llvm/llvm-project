@@ -1,0 +1,43 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=peephole-opt -verify-machineinstrs -o - %s | FileCheck %s
+
+# A pair of cross register bank bitcasts feeding a loop carried PHI makes the
+# rewrite map built by findNextSource() cyclic. Check that this is detected
+# instead of sending getNewSource() into infinite recursion (issue #36621).
+
+---
+name:            phi_cycle
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: phi_cycle
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $xmm0, $edi
+
+    %0:gr32 = COPY $edi
+    %1:fr64 = COPY $xmm0
+    %2:gr8 = COPY %0.sub_8bit
+    %3:gr64 = MOVSDto64rr %1
+
+  bb.1:
+    successors: %bb.2(0x00000000), %bb.3(0x80000000)
+
+    ; CHECK: %4:gr64 = PHI %3, %bb.0, [[BACK:%[0-9]+]], %bb.3
+    %4:gr64 = PHI %3, %bb.0, %5, %bb.3
+    TEST8ri %2, 1, implicit-def $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    successors:
+
+  bb.3:
+    successors: %bb.1(0x80000000)
+
+    ; The value tracked from %6 leads back to the PHI, so this one is left
+    ; alone, but %5 is still rewritten into a copy of the PHI.
+    ; CHECK: %6:fr64 = MOV64toSDrr %4
+    ; CHECK-NEXT: [[BACK]]:gr64 = COPY %4
+    %6:fr64 = MOV64toSDrr %4
+    %5:gr64 = MOVSDto64rr %6
+    JMP_1 %bb.1
+...

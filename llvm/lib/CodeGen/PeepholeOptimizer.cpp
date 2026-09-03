@@ -67,6 +67,7 @@
 
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1000,6 +1001,44 @@ bool PeepholeOptimizer::optimizeCondBranch(MachineInstr &MI) {
   return TII->optimizeCondBranch(MI);
 }
 
+/// Check whether the part of \p RewriteMap that is reachable from \p Def
+/// contains a cycle. getNewSource() walks that subgraph and would not
+/// terminate on a cyclic one.
+static bool hasRewriteCycle(RegSubRegPair Def,
+                            const PeepholeOptimizer::RewriteMapTy &RewriteMap) {
+  // Iterative depth first search. Visited holds every pair that has been
+  // pushed on the stack, OnPath only those on the path currently being
+  // explored: reaching one of them again means there is a cycle.
+  SmallDenseSet<RegSubRegPair, 8> Visited, OnPath;
+  SmallVector<std::pair<RegSubRegPair, int>, 8> Stack;
+
+  Visited.insert(Def);
+  OnPath.insert(Def);
+  Stack.emplace_back(Def, 0);
+
+  while (!Stack.empty()) {
+    auto [Node, NextSrcIdx] = Stack.back();
+    auto It = RewriteMap.find(Node);
+    // Pairs that are not keys are the next sources, i.e. the leaves.
+    if (It == RewriteMap.end() || NextSrcIdx == It->second.getNumSources()) {
+      OnPath.erase(Node);
+      Stack.pop_back();
+      continue;
+    }
+
+    ++Stack.back().second;
+    RegSubRegPair Src = It->second.getSrc(NextSrcIdx);
+    if (OnPath.contains(Src))
+      return true;
+    if (Visited.insert(Src).second) {
+      OnPath.insert(Src);
+      Stack.emplace_back(Src, 0);
+    }
+  }
+
+  return false;
+}
+
 /// Try to find a better source value that shares the same register file to
 /// replace \p RegSubReg in an instruction like
 /// `DefRC.DefSubReg = COPY RegSubReg`
@@ -1024,6 +1063,18 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   Register Reg = RegSubReg.Reg;
   RegSubRegPair CurSrcPair = RegSubReg;
   SmallVector<RegSubRegPair, 4> SrcToLook = {CurSrcPair};
+
+  // Callers may share one RewriteMap across several defs of the same
+  // instruction; remember whether it already holds entries from an earlier
+  // call, as the chains built below can link up with them.
+  //
+  // Note the contract this imposes on such callers: a failed call leaves
+  // the entries it already inserted in the map (there is no rollback),
+  // including cycle-forming ones inserted before an early return that the
+  // cycle check below never ran on. A caller sharing a map must therefore
+  // abandon it entirely, rewriting nothing from it, as soon as any
+  // findNextSource call on it returns false.
+  const bool HadSharedEntries = !RewriteMap.empty();
 
   unsigned PHICount = 0;
 
@@ -1133,7 +1184,22 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   }
 
   // If we did not find a more suitable source, there is nothing to optimize.
-  return CurSrcPair.Reg != Reg;
+  if (CurSrcPair.Reg == Reg)
+    return false;
+
+  // RewriteMap may still contain a cycle: a chain ending on a suitable
+  // source or on an already visited entry is not followed any further, even
+  // when the entries from there lead back into a PHI of this same traversal
+  // (e.g. bitcasts of a loop carried PHI). getNewSource() would follow such
+  // a cycle forever. Only PHI entries can create a cycle, so the map only
+  // needs checking when a PHI was traversed or when it holds shared entries.
+  if ((PHICount > 0 || HadSharedEntries) &&
+      hasRewriteCycle(RegSubReg, RewriteMap)) {
+    LLVM_DEBUG(dbgs() << "findNextSource: RewriteMap is cyclic, aborting...\n");
+    return false;
+  }
+
+  return true;
 }
 
 /// Insert a PHI instruction with incoming edges \p SrcRegs that are
@@ -1410,6 +1476,11 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
 
     // If we do not know how to rewrite this definition, there is no point
     // in trying to kill this instruction.
+    //
+    // This must give up on the whole instruction rather than skip this def:
+    // the failed call may have left entries in the shared RewriteMap,
+    // including cycle-forming ones its own cycle check never ran on, so the
+    // map must not be used for rewriting once any call has failed.
     if (!findNextSource(DefRC, Def.SubReg, Def, RewriteMap))
       return false;
 
