@@ -2,11 +2,10 @@
 ; not address-taken when Cross-DSO CFI is used, but not otherwise.
 
 ; RUN: rm -rf %t && split-file %s %t
-; RUN: llvm-as %t/summary.ll -o %t/summary.bc
 ; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%t/summary.bc %t/main.ll | FileCheck --check-prefixes=CHECK,CROSSDSO %s
+; RUN:   -lowertypetests-read-summary=%t/summary.ll %t/main.ll | FileCheck --check-prefixes=CHECK,CROSSDSO %s
 ; RUN: grep -v "llvm.module.flags" %t/main.ll | opt -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%t/summary.bc | FileCheck --check-prefixes=CHECK,NORMAL %s
+; RUN:   -lowertypetests-read-summary=%t/summary.ll | FileCheck --check-prefixes=CHECK,NORMAL %s
 
 ;--- main.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

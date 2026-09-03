@@ -30,9 +30,10 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -117,7 +118,7 @@ static cl::opt<PassSummaryAction> ClSummaryAction(
 
 static cl::opt<std::string> ClReadSummary(
     "lowertypetests-read-summary",
-    cl::desc("Read summary from given YAML file before running pass"),
+    cl::desc("Read summary from given textual assembly or YAML file before running pass"),
     cl::Hidden);
 
 static cl::opt<std::string> ClWriteSummary(
@@ -1992,23 +1993,27 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
   if (!ClReadSummary.empty()) {
     ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
                           ": ");
-    auto ReadSummaryFile =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ClReadSummary)));
-    if (Expected<std::unique_ptr<ModuleSummaryIndex>> SummaryOrErr =
-            getModuleSummaryIndex(*ReadSummaryFile)) {
-      Summary = std::move(*SummaryOrErr);
-    } else {
-      // Try YAML if we've failed with bitcode.
-      consumeError(SummaryOrErr.takeError());
+    auto ReadSummaryFile = ExitOnErr(errorOrToExpected(
+        MemoryBuffer::getFile(ClReadSummary, /*IsText=*/true)));
+    // TODO: Convert the rest of tests (some YAML features are missing from
+    // textual summary assembly) and remove YAML from this file.
+    if (ReadSummaryFile->getBuffer().starts_with("---")) {
       Summary = std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
       yaml::Input In(ReadSummaryFile->getBuffer());
       In >> *Summary;
       ExitOnErr(errorCodeToError(In.error()));
+    } else {
+      SMDiagnostic Err;
+      Summary =
+          parseSummaryIndexAssembly(ReadSummaryFile->getMemBufferRef(), Err);
+      if (!Summary) {
+        Err.print(ClReadSummary.c_str(), errs());
+        report_fatal_error("Failed to parse summary index assembly");
+      }
     }
-  }
-
-  if (!Summary)
+  } else {
     Summary = std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
+  }
 
   bool Changed =
       LowerTypeTestsModule(

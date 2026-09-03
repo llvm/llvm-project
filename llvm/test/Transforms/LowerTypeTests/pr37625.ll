@@ -1,7 +1,6 @@
 ; RUN: rm -rf %t && split-file %s %t
-; RUN: llvm-as %t/summary.ll -o %t/summary.bc
 ; RUN: opt -S %t/main.ll -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%t/summary.bc -lowertypetests-write-summary=%t/out.summary | FileCheck %s
+; RUN:   -lowertypetests-read-summary=%t/summary.ll -lowertypetests-write-summary=%t/out.summary | FileCheck %s
 
 ;--- main.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

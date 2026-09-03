@@ -1,9 +1,8 @@
 ; REQUIRES: arm-registered-target
 
 ; RUN: rm -rf %t && split-file %s %t
-; RUN: llvm-as %t/summary.ll -o %t/summary.bc
 ; RUN: opt -S -mtriple=arm-unknown-linux-gnu -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%t/summary.bc -lowertypetests-write-summary=%t/out.summary %t/main.ll | FileCheck %s
+; RUN:   -lowertypetests-read-summary=%t/summary.ll -lowertypetests-write-summary=%t/out.summary %t/main.ll | FileCheck %s
 
 ;--- main.ll
 target datalayout = "e-p:64:64"

@@ -8,8 +8,7 @@ RUN: llvm-modextract test.bc -n 0 -o test0.bc
 RUN: llvm-modextract test.bc -n 1 -o test1.bc
 
 ;; Check that a CFI jumptable is generated.
-RUN: llvm-as in.ll -o in.bc
-RUN: opt test1.bc -passes=lowertypetests -lowertypetests-read-summary=in.bc \
+RUN: opt test1.bc -passes=lowertypetests -lowertypetests-read-summary=in.ll \
 RUN:   -lowertypetests-summary-action=export -lowertypetests-write-summary=exported.yaml \
 RUN:   -S -o - | FileCheck %s --check-prefix=REGULAR
 REGULAR: @__typeid__ZTSFvvE_global_addr = hidden alias i8, ptr @.cfi.jumptable
