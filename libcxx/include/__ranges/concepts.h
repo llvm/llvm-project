@@ -97,7 +97,7 @@ concept sized_range = approximately_sized_range<_Tp> && requires(_Tp& __t) { ran
 template <class _Tp>
 concept sized_range = range<_Tp> && requires(_Tp& __t) { ranges::size(__t); };
 
-# endif // _LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 
 template <sized_range _Rp>
 using range_size_t = decltype(ranges::size(std::declval<_Rp&>()));
