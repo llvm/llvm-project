@@ -42,8 +42,8 @@ struct MockProcess : Process {
     return false;
   };
 
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
     // No need to read memory in these tests.
     return size;
   }

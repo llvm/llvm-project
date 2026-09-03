@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/StreamString.h"
 #include "gmock/gmock.h"
@@ -499,9 +500,6 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
   // then the flags set itself. There should only be one definition of each
   // enum, even if it is used by multiple fields.
 
-  // In the server we assume that each type has a unqiue address and use
-  // that to deduplicate them. So here we heap allocate them to simulate that.
-
   StreamString strm;
   auto enum_a = std::make_shared<RegisterTypeEnum>(
       "enum_a",
@@ -513,9 +511,9 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
       "enum_c",
       RegisterTypeEnum::Enumerators{RegisterTypeEnum::Enumerator(2, "two")});
 
-  std::unordered_set<const RegisterType *> previously_emitted;
+  std::unordered_set<std::string> previously_emitted;
   // Pretend that enum_c was already emitted for a different flag set.
-  previously_emitted.insert(enum_c.get());
+  previously_emitted.insert(enum_c->GetID());
 
   std::vector<RegisterTypeFlags::Field> fields{
       RegisterTypeFlags::Field("f1", 31, 31, enum_a.get()),
@@ -546,7 +544,7 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
       "enum_d",
       RegisterTypeEnum::Enumerators{RegisterTypeEnum::Enumerator(3, "three")});
   fields.push_back(RegisterTypeFlags::Field("f5", 25, 26, enum_d.get()));
-  auto TestFlags2 = std::make_shared<RegisterTypeFlags>("Test", 4, fields);
+  auto TestFlags2 = std::make_shared<RegisterTypeFlags>("Test2", 4, fields);
 
   strm.Clear();
   TestFlags2->ToXML(strm, previously_emitted);
@@ -554,7 +552,7 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
             "<enum id=\"enum_d\" size=\"4\">\n"
             "  <evalue name=\"three\" value=\"3\"/>\n"
             "</enum>\n"
-            "<flags id=\"Test\" size=\"4\">\n"
+            "<flags id=\"Test2\" size=\"4\">\n"
             "  <field name=\"f1\" start=\"31\" end=\"31\" type=\"enum_a\"/>\n"
             "  <field name=\"f2\" start=\"30\" end=\"30\" type=\"enum_a\"/>\n"
             "  <field name=\"f3\" start=\"29\" end=\"29\" type=\"enum_b\"/>\n"
@@ -566,4 +564,140 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
   strm.Clear();
   TestFlags2->ToXML(strm, previously_emitted);
   ASSERT_EQ(strm.GetString(), "");
+}
+
+TEST(RegisterTypeTest, XMLAttributeEscaping) {
+  RegisterTypeEnum enum_type("enum<>&\"'",
+                             {RegisterTypeEnum::Enumerator(0, "zero")});
+  RegisterTypeFlags flags_type(
+      "flags<>&\"'", 1, {RegisterTypeFlags::Field("field", 0, 0, &enum_type)});
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  flags_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(),
+            "<enum id=\"enum&lt;&gt;&amp;&quot;&apos;\" size=\"1\">\n"
+            "  <evalue name=\"zero\" value=\"0\"/>\n"
+            "</enum>\n"
+            "<flags id=\"flags&lt;&gt;&amp;&quot;&apos;\" size=\"1\">\n"
+            "  <field name=\"field\" start=\"0\" end=\"0\" "
+            "type=\"enum&lt;&gt;&amp;&quot;&apos;\"/>\n"
+            "</flags>\n");
+}
+
+TEST(RegisterTypeTest, XMLDefinitionsAreDeduplicatedByID) {
+  RegisterTypeEnum first("same_id", {RegisterTypeEnum::Enumerator(0, "first")});
+  RegisterTypeEnum second("same_id",
+                          {RegisterTypeEnum::Enumerator(1, "second")});
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  first.ToXML(strm, previously_emitted);
+  second.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(), "<enum id=\"same_id\">\n"
+                              "  <evalue name=\"first\" value=\"0\"/>\n"
+                              "</enum>\n");
+}
+
+TEST(RegisterTypeBuiltinTest, Construction) {
+  RegisterTypeBuiltin type("uint32", eEncodingUint, eFormatHex, 4);
+
+  EXPECT_EQ(type.GetID(), "uint32");
+  EXPECT_EQ(type.GetEncoding(), eEncodingUint);
+  EXPECT_EQ(type.GetFormat(), eFormatHex);
+  ASSERT_TRUE(type.GetByteSize());
+  EXPECT_EQ(*type.GetByteSize(), 4u);
+}
+
+TEST(RegisterTypeBuiltinTest, TargetDependentByteSize) {
+  RegisterTypeBuiltin type("data_ptr", eEncodingUint, eFormatAddressInfo,
+                           std::nullopt);
+
+  EXPECT_FALSE(type.GetByteSize());
+}
+
+TEST(RegisterTypeBuiltinTest, DoesNotSerialize) {
+  RegisterTypeBuiltin builtin("uint8", eEncodingUint, eFormatHex, 1);
+  const RegisterType &type = builtin;
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+
+  type.ToXML(strm, previously_emitted);
+  EXPECT_TRUE(strm.GetString().empty());
+  EXPECT_TRUE(previously_emitted.empty());
+
+  type.ToXMLElement(strm);
+  EXPECT_TRUE(strm.GetString().empty());
+}
+
+TEST(RegisterTypeVectorTest, ConstructionAndXML) {
+  RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector vector_type("v4f", &element_type, 4);
+
+  EXPECT_EQ(vector_type.GetID(), "v4f");
+  EXPECT_EQ(vector_type.GetElementType(), &element_type);
+  EXPECT_EQ(vector_type.GetCount(), 4u);
+  ASSERT_TRUE(vector_type.GetByteSize());
+  EXPECT_EQ(*vector_type.GetByteSize(), 16u);
+  EXPECT_TRUE(vector_type.IsByteSizeCompatible(16));
+  EXPECT_FALSE(vector_type.IsByteSizeCompatible(12));
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  vector_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(),
+            "<vector id=\"v4f\" type=\"ieee_single\" count=\"4\"/>\n");
+}
+
+TEST(RegisterTypeVectorTest, NestedVectorXML) {
+  RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector inner_type("v2f", &element_type, 2);
+  RegisterTypeVector outer_type("v2v2f", &inner_type, 2);
+
+  ASSERT_TRUE(outer_type.GetByteSize());
+  EXPECT_EQ(*outer_type.GetByteSize(), 16u);
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  outer_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(),
+            "<vector id=\"v2f\" type=\"ieee_single\" count=\"2\"/>\n"
+            "<vector id=\"v2v2f\" type=\"v2f\" count=\"2\"/>\n");
+}
+
+TEST(RegisterTypeVectorTest, ByteSizeOverflow) {
+  RegisterTypeBuiltin large_element("large", eEncodingUint, eFormatHex,
+                                    UINT32_MAX);
+  RegisterTypeVector large_vector("large_vector", &large_element, UINT32_MAX);
+  ASSERT_TRUE(large_vector.GetByteSize());
+
+  RegisterTypeVector overflow("overflow", &large_vector, 2);
+  EXPECT_FALSE(overflow.GetByteSize());
+}
+
+TEST(RegisterTypeVectorTest, TargetDependentByteSize) {
+  RegisterTypeBuiltin pointer_type("data_ptr", eEncodingUint,
+                                   eFormatAddressInfo, std::nullopt);
+  RegisterTypeVector inner_type("pointer_pair", &pointer_type, 2);
+  RegisterTypeVector outer_type("pointer_pairs", &inner_type, 3);
+
+  EXPECT_FALSE(inner_type.GetByteSize());
+  EXPECT_TRUE(inner_type.IsByteSizeCompatible(16));
+  EXPECT_FALSE(inner_type.IsByteSizeCompatible(15));
+  EXPECT_TRUE(outer_type.IsByteSizeCompatible(48));
+  EXPECT_FALSE(outer_type.IsByteSizeCompatible(15));
+}
+
+TEST(RegisterTypeVectorTest, XMLAttributeEscaping) {
+  RegisterTypeBuiltin element_type("u<&\"'", eEncodingUint, eFormatHex, 1);
+  RegisterTypeVector vector_type("v<&\"'", &element_type, 4);
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  vector_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(),
+            "<vector id=\"v&lt;&amp;&quot;&apos;\" "
+            "type=\"u&lt;&amp;&quot;&apos;\" count=\"4\"/>\n");
 }

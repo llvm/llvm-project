@@ -5,7 +5,7 @@ add_custom_target(libc_sys_prctl_unittests)
 if(NOT (LIBC_TARGET_ARCHITECTURE_IS_ARM OR
   LIBC_TARGET_ARCHITECTURE_IS_RISCV32 OR
   LIBC_TARGET_ARCHITECTURE_IS_RISCV64))
-  add_libc_unittest(
+  add_libc_test(
     prctl_test
     SUITE
       libc_sys_prctl_unittests

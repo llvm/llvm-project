@@ -273,8 +273,8 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED: %[[LOADA1:.*]] = load float, ptr %a
 ; CHECK-UNORDERED: %[[LOADA2:.*]] = load float, ptr %[[ARRAYIDX]]
 ; CHECK-UNORDERED: vector.ph
-; CHECK-UNORDERED: %[[INS2:.*]] = insertelement <4 x float> splat (float -0.000000e+00), float %[[LOADA2]], i32 0
-; CHECK-UNORDERED: %[[INS1:.*]] = insertelement <4 x float> splat (float -0.000000e+00), float %[[LOADA1]], i32 0
+; CHECK-UNORDERED: %[[INS2:.*]] = insertelement <4 x float> splat (float -0.000000e+00), float %[[LOADA2]], i64 0
+; CHECK-UNORDERED: %[[INS1:.*]] = insertelement <4 x float> splat (float -0.000000e+00), float %[[LOADA1]], i64 0
 ; CHECK-UNORDERED: vector.body
 ; CHECK-UNORDERED: %[[VEC_PHI2:.*]] = phi <4 x float> [ %[[INS2]], %vector.ph ], [ %[[VEC_FADD2:.*]], %vector.body ]
 ; CHECK-UNORDERED: %[[VEC_PHI1:.*]] = phi <4 x float> [ %[[INS1]], %vector.ph ], [ %[[VEC_FADD1:.*]], %vector.body ]

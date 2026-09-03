@@ -224,6 +224,19 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::search(pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: search}}
+    (void)std::search(pol, it, it, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: search}}
+
+    (void)std::search(pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: search}}
+    (void)std::search(pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: search}}
+  }
+
+  {
+    (void)std::search_n(pol, non_fwd, non_fwd, 1, 1);       // expected-error@*:* {{static assertion failed: search_n}}
+    (void)std::search_n(pol, non_fwd, non_fwd, 1, 1, pred); // expected-error@*:* {{static assertion failed: search_n}}
+  }
+
+  {
     (void)std::sort(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: sort}}
     (void)std::sort(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: sort}}
   }
@@ -276,5 +289,20 @@ void f(non_forward_iterator non_fwd,
         pol, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: adjacent_difference}}
     (void)std::adjacent_difference(
         pol, non_fwd, non_fwd, it, func); // expected-error@*:* {{static assertion failed: adjacent_difference}}
+  }
+
+  {
+    std::uninitialized_default_construct(
+        pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_default_construct}}
+    std::uninitialized_default_construct_n(
+        pol, non_fwd, n); // expected-error@*:* {{static assertion failed: uninitialized_default_construct_n}}
+    std::uninitialized_value_construct(
+        pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_value_construct}}
+    std::uninitialized_value_construct_n(
+        pol, non_fwd, n); // expected-error@*:* {{static assertion failed: uninitialized_value_construct_n}}
+    std::uninitialized_fill(
+        pol, non_fwd, non_fwd, val); // expected-error@*:* {{static assertion failed: uninitialized_fill}}
+    std::uninitialized_fill_n(
+        pol, non_fwd, n, val); // expected-error@*:* {{static assertion failed: uninitialized_fill_n}}
   }
 }

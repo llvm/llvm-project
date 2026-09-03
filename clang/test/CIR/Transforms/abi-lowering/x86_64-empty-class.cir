@@ -1,0 +1,268 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_E = !cir.struct<"E" {pad !u8i}>
+!rec_EBlob = !cir.struct<"EBlob" {pad !cir.array<!u8i x 3>}>
+!rec_NTCE = !cir.struct<"NTCE" {pad !u8i}>
+!rec_Byte = !cir.struct<"Byte" {data !u8i}>
+!rec_HasEmpty = !cir.struct<"HasEmpty" {data !s32i, data !rec_E}>
+!rec_HasEmptyFirst = !cir.struct<"HasEmptyFirst" {data !rec_E, data !s32i}>
+!rec_EmptyMem = !cir.struct<"EmptyMem" {data !rec_E}>
+!rec_Base2 = !cir.struct<"Base2" {data !s32i}>
+!rec_D2 = !cir.struct<"D2" {data !rec_EmptyMem, data !rec_Base2}>
+!rec_EMed = !cir.struct<"EMed" {pad !cir.array<!u8i x 16>}>
+!rec_EBig = !cir.struct<"EBig" {pad !cir.array<!u8i x 32>}>
+!rec_EBits = !cir.struct<"EBits" {empty !u8i}>
+!rec_MixPE = !cir.struct<"MixPE" {pad !u8i, empty !u8i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.record_layouts = {
+    E = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 1>,
+    EBlob = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 1>,
+    EmptyMem = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 1>,
+    Byte = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 1>,
+    NTCE = #cir.record_layout<
+      arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
+      record_align = 1>,
+    EMed = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 16>,
+    EBig = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 32>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A C++ empty class is padding alone, so the argument is dropped.
+  cir.func @take_empty(%arg0: !rec_E) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty() {
+  // CHECK-NEXT: cir.return
+  // LLVM: define void @take_empty()
+
+  // Unnamed bit-field storage is marked empty rather than pad, and a record of
+  // nothing else is dropped the same way.  This spelling does not set the pad
+  // flag, so before the marks it was passed as a register of data.
+  cir.func @take_empty_bits(%arg0: !rec_EBits, %arg1: !s32i) -> !s32i {
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_bits(%arg0: !s32i) -> !s32i
+  // LLVM: define i32 @take_empty_bits(i32 %{{[^,)]+}})
+
+  // Emptiness is the absence of a data member, not the presence of a pad one.
+  cir.func @take_mixed_pad_empty(%arg0: !rec_MixPE, %arg1: !s32i) -> !s32i {
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_mixed_pad_empty(%arg0: !s32i) -> !s32i
+  // LLVM: define i32 @take_mixed_pad_empty(i32 %{{[^,)]+}})
+
+  // Several [[no_unique_address]] members widen the padding past a byte.
+  cir.func @take_empty_blob(%arg0: !rec_EBlob) -> !s32i {
+    %0 = cir.const #cir.int<0> : !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_blob() -> !s32i {
+  // LLVM: define i32 @take_empty_blob()
+
+  // An empty return is dropped to void, and the local slot survives.
+  cir.func @ret_empty() -> !rec_E {
+    %0 = cir.alloca "r" align(1) : !cir.ptr<!rec_E>
+    %1 = cir.load %0 : !cir.ptr<!rec_E>, !rec_E
+    cir.return %1 : !rec_E
+  }
+
+  // CHECK: cir.func{{.*}} @ret_empty() {
+  // CHECK: cir.alloca "r" align(1) : !cir.ptr<!rec_E>
+  // CHECK: cir.return{{$}}
+  // LLVM: define void @ret_empty()
+
+  // A remaining real argument shifts down into the first slot.
+  cir.func @take_mixed(%arg0: !rec_E, %arg1: !s32i) -> !s32i {
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_mixed(%arg0: !s32i) -> !s32i
+  // CHECK-NEXT: cir.return %arg0 : !s32i
+  // LLVM: define i32 @take_mixed(i32 %{{.*}})
+
+  // Dropping one from the middle keeps the order of the arguments around it.
+  cir.func @take_middle(%arg0: !s32i, %arg1: !rec_E, %arg2: !u8i) -> !s32i {
+    cir.return %arg0 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_middle(%arg0: !s32i, %arg1: !u8i {llvm.zeroext}) -> !s32i
+  // LLVM: define i32 @take_middle(i32 %{{.*}}, i8 zeroext %{{.*}})
+
+  // A byte-sized record needing no padding is data: the padded flag is the
+  // boundary, not the size.
+  cir.func @take_byte(%arg0: !rec_Byte) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_byte(%arg0: !u8i)
+  // LLVM: define void @take_byte(i8 %{{.*}})
+
+  // An empty member contributes no eightbyte, so only the int is classified.
+  cir.func @take_has_empty(%arg0: !rec_HasEmpty) -> !s32i {
+    %0 = cir.alloca "h" align(4) : !cir.ptr<!rec_HasEmpty>
+    cir.store %arg0, %0 : !rec_HasEmpty, !cir.ptr<!rec_HasEmpty>
+    %1 = cir.get_member %0[0] {name = "x"} : !cir.ptr<!rec_HasEmpty> -> !cir.ptr<!s32i>
+    %2 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_has_empty(%arg0: !s32i) -> !s32i
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_HasEmpty>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_HasEmpty> -> !cir.ptr<!s32i>
+  // CHECK:   cir.store %arg0, %[[CAST]] : !s32i, !cir.ptr<!s32i>
+  // CHECK:   %{{.*}} = cir.load %[[SLOT]] : !cir.ptr<!rec_HasEmpty>, !rec_HasEmpty
+  // LLVM: define i32 @take_has_empty(i32 %{{.*}})
+
+  // The empty member still takes layout space, so the int sits at offset 4 and
+  // the eightbyte spanning both coerces to i64.
+  cir.func @take_has_empty_first(%arg0: !rec_HasEmptyFirst) -> !s32i {
+    %0 = cir.alloca "h" align(4) : !cir.ptr<!rec_HasEmptyFirst>
+    cir.store %arg0, %0 : !rec_HasEmptyFirst, !cir.ptr<!rec_HasEmptyFirst>
+    %1 = cir.get_member %0[1] {name = "x"} : !cir.ptr<!rec_HasEmptyFirst> -> !cir.ptr<!s32i>
+    %2 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_has_empty_first(%arg0: !u64i) -> !s32i
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_HasEmptyFirst>
+  // LLVM: define i32 @take_has_empty_first(i64 %{{.*}})
+
+  // A plain empty member leaves its record non-empty, matching the Itanium
+  // rule, so this one is dropped by composition rather than by the flag: the
+  // member maps to no fields and contributes no eightbyte.
+  cir.func @take_empty_mem(%arg0: !rec_EmptyMem) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_mem() {
+  // CHECK-NEXT: cir.return
+  // LLVM: define void @take_empty_mem()
+
+  // Nested one level deeper, as the first base of a derived record: it adds no
+  // eightbyte, but its byte still places Base2 at offset 4.
+  cir.func @take_d2(%arg0: !rec_D2) -> !s32i {
+    %0 = cir.alloca "d" align(4) : !cir.ptr<!rec_D2>
+    cir.store %arg0, %0 : !rec_D2, !cir.ptr<!rec_D2>
+    %1 = cir.get_member %0[1] {name = "Base2"} : !cir.ptr<!rec_D2> -> !cir.ptr<!rec_Base2>
+    %2 = cir.get_member %1[0] {name = "i"} : !cir.ptr<!rec_Base2> -> !cir.ptr<!s32i>
+    %3 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+    cir.return %3 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_d2(%arg0: !u64i) -> !s32i
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !u64i, !cir.ptr<!u64i>
+  // LLVM: define i32 @take_d2(i64 %{{.*}})
+
+  // Being empty does not override the declared argument-passing kind.
+  cir.func @take_ntc_empty(%arg0: !rec_NTCE) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_ntc_empty(%arg0: !cir.ptr<!rec_NTCE> {llvm.align = 1 : i64, llvm.byref = !rec_NTCE})
+  // LLVM: define void @take_ntc_empty(ptr byref(%struct.NTCE) align 1 %{{.*}})
+
+  // The same record returned goes through sret rather than being dropped.
+  cir.func @ret_ntc_empty() -> !rec_NTCE {
+    %0 = cir.alloca "r" align(1) : !cir.ptr<!rec_NTCE>
+    %1 = cir.load %0 : !cir.ptr<!rec_NTCE>, !rec_NTCE
+    cir.return %1 : !rec_NTCE
+  }
+
+  // CHECK: cir.func{{.*}} @ret_ntc_empty(%arg0: !cir.ptr<!rec_NTCE> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_NTCE, llvm.writable})
+  // LLVM: define void @ret_ntc_empty(ptr dead_on_unwind noalias writable sret(%struct.NTCE) align 1 %{{.*}})
+
+  // At exactly two eightbytes an empty class is still dropped.
+  cir.func @take_empty_med(%arg0: !rec_EMed, %arg1: !s32i) -> !s32i {
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_med(%arg0: !s32i) -> !s32i
+  // LLVM: define i32 @take_empty_med(i32 %{{.*}})
+
+  // Returning one at that size is dropped to void as well.
+  cir.func @ret_empty_med() -> !rec_EMed {
+    %0 = cir.alloca "r" align(16) : !cir.ptr<!rec_EMed>
+    %1 = cir.load %0 : !cir.ptr<!rec_EMed>, !rec_EMed
+    cir.return %1 : !rec_EMed
+  }
+
+  // CHECK: cir.func{{.*}} @ret_empty_med() {
+  // CHECK: cir.return{{$}}
+  // LLVM: define void @ret_empty_med()
+
+  // Past two eightbytes SysV says memory whatever the content, so it is passed
+  // indirectly at its declared alignment.
+  cir.func @take_empty_big(%arg0: !rec_EBig, %arg1: !s32i) -> !s32i {
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_big(%arg0: !cir.ptr<!rec_EBig> {llvm.align = 32 : i64, llvm.byval = !rec_EBig, llvm.noalias, llvm.noundef}, %arg1: !s32i) -> !s32i
+  // LLVM: define i32 @take_empty_big(ptr noalias noundef byval(%struct.EBig) align 32 %{{.*}}, i32 %{{.*}})
+
+  // The same record returned uses sret at that alignment.
+  cir.func @ret_empty_big() -> !rec_EBig {
+    %0 = cir.alloca "r" align(32) : !cir.ptr<!rec_EBig>
+    %1 = cir.load %0 : !cir.ptr<!rec_EBig>, !rec_EBig
+    cir.return %1 : !rec_EBig
+  }
+
+  // CHECK: cir.func{{.*}} @ret_empty_big(%arg0: !cir.ptr<!rec_EBig> {llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_EBig, llvm.writable})
+  // LLVM: define void @ret_empty_big(ptr dead_on_unwind noalias writable sret(%struct.EBig) align 32 %{{.*}})
+
+  // A call site drops the operand as well as the parameter.
+  cir.func @caller(%arg0: !rec_E, %arg1: !s32i) -> !s32i {
+    %0 = cir.call @take_mixed(%arg0, %arg1) : (!rec_E, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @caller(%arg0: !s32i) -> !s32i
+  // CHECK: cir.call @take_mixed(%arg0) : (!s32i) -> !s32i
+  // LLVM: define i32 @caller(i32 %{{.*}})
+
+  // A dropped return leaves the call with no result, so uses of it become
+  // poison rather than dangling.
+  cir.func private @mk_empty() -> !rec_E
+  cir.func @caller_ret_empty() -> !s32i {
+    %0 = cir.call @mk_empty() : () -> !rec_E
+    %1 = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
+    cir.store %0, %1 : !rec_E, !cir.ptr<!rec_E>
+    %2 = cir.const #cir.int<7> : !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @caller_ret_empty() -> !s32i
+  // CHECK:   cir.call @mk_empty() : () -> ()
+  // CHECK:   %[[POISON:.*]] = cir.const #cir.poison : !rec_E
+  // CHECK:   cir.store %[[POISON]], %{{.*}} : !rec_E, !cir.ptr<!rec_E>
+  // LLVM: define i32 @caller_ret_empty()
+  // LLVM:   call void @mk_empty()
+}

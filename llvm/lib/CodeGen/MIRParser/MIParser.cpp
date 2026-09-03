@@ -360,7 +360,7 @@ static void mapValueToSlot(const Value *V, ModuleSlotTracker &MST,
 /// Creates the mapping from slot numbers to function's unnamed IR values.
 static void initSlots2Values(const Function &F,
                              DenseMap<unsigned, const Value *> &Slots2Values) {
-  ModuleSlotTracker MST(F.getParent(), /*ShouldInitializeAllMetadata=*/false);
+  ModuleSlotTracker MST(F.getParent());
   MST.incorporateFunction(F);
   for (const auto &Arg : F.args())
     mapValueToSlot(&Arg, MST, Slots2Values);
@@ -401,7 +401,6 @@ class MIParser {
   MachineFunction &MF;
   SMDiagnostic &Error;
   StringRef Source, CurrentSource;
-  SMRange SourceRange;
   MIToken Token;
   PerFunctionMIParsingState &PFS;
   /// Maps from slot numbers to function's unnamed basic blocks.
@@ -410,8 +409,6 @@ class MIParser {
 public:
   MIParser(PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
            StringRef Source);
-  MIParser(PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
-           StringRef Source, SMRange SourceRange);
 
   /// \p SkipChar gives the number of characters to skip before looking
   /// for the next token.
@@ -437,10 +434,6 @@ public:
   bool parseStandaloneRegister(Register &Reg);
   bool parseStandaloneStackObject(int &FI);
   bool parseStandaloneMDNode(MDNode *&Node);
-  bool parseMachineMetadata();
-  bool parseMDTuple(MDNode *&MD, bool IsDistinct);
-  bool parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts);
-  bool parseMetadata(Metadata *&MD);
 
   bool
   parseBasicBlockDefinition(DenseMap<unsigned, MachineBasicBlock *> &MBBSlots);
@@ -574,10 +567,6 @@ private:
   /// parseStringConstant
   ///   ::= StringConstant
   bool parseStringConstant(std::string &Result);
-
-  /// Map the location in the MI string to the corresponding location specified
-  /// in `SourceRange`.
-  SMLoc mapSMLoc(StringRef::iterator Loc);
 };
 
 } // end anonymous namespace
@@ -586,11 +575,6 @@ MIParser::MIParser(PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
                    StringRef Source)
     : MF(PFS.MF), Error(Error), Source(Source), CurrentSource(Source), PFS(PFS)
 {}
-
-MIParser::MIParser(PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
-                   StringRef Source, SMRange SourceRange)
-    : MF(PFS.MF), Error(Error), Source(Source), CurrentSource(Source),
-      SourceRange(SourceRange), PFS(PFS) {}
 
 void MIParser::lex(unsigned SkipChar) {
   CurrentSource = lexMIToken(
@@ -615,13 +599,6 @@ bool MIParser::error(StringRef::iterator Loc, const Twine &Msg) {
                        Loc - Source.data(), SourceMgr::DK_Error, Msg.str(),
                        Source, {}, {});
   return true;
-}
-
-SMLoc MIParser::mapSMLoc(StringRef::iterator Loc) {
-  assert(SourceRange.isValid() && "Invalid source range");
-  assert(Loc >= Source.data() && Loc <= (Source.data() + Source.size()));
-  return SMLoc::getFromPointer(SourceRange.Start.getPointer() +
-                               (Loc - Source.data()));
 }
 
 typedef function_ref<bool(StringRef::iterator Loc, const Twine &)>
@@ -1338,131 +1315,6 @@ bool MIParser::parseStandaloneMDNode(MDNode *&Node) {
   }
   if (Token.isNot(MIToken::Eof))
     return error("expected end of string after the metadata node");
-  return false;
-}
-
-bool MIParser::parseMachineMetadata() {
-  lex();
-  if (Token.isNot(MIToken::exclaim))
-    return error("expected a metadata node");
-
-  lex();
-  if (Token.isNot(MIToken::IntegerLiteral) || Token.integerValue().isSigned())
-    return error("expected metadata id after '!'");
-  unsigned ID = 0;
-  if (getUnsigned(ID))
-    return true;
-  lex();
-  if (expectAndConsume(MIToken::equal))
-    return true;
-  bool IsDistinct = Token.is(MIToken::kw_distinct);
-  if (IsDistinct)
-    lex();
-  if (Token.isNot(MIToken::exclaim))
-    return error("expected a metadata node");
-  lex();
-
-  MDNode *MD;
-  if (parseMDTuple(MD, IsDistinct))
-    return true;
-
-  auto FI = PFS.MachineForwardRefMDNodes.find(ID);
-  if (FI != PFS.MachineForwardRefMDNodes.end()) {
-    FI->second.first->replaceAllUsesWith(MD);
-    PFS.MachineForwardRefMDNodes.erase(FI);
-
-    assert(PFS.MachineMetadataNodes[ID] == MD && "Tracking VH didn't work");
-  } else {
-    auto [It, Inserted] = PFS.MachineMetadataNodes.try_emplace(ID);
-    if (!Inserted)
-      return error("Metadata id is already used");
-    It->second.reset(MD);
-  }
-
-  return false;
-}
-
-bool MIParser::parseMDTuple(MDNode *&MD, bool IsDistinct) {
-  SmallVector<Metadata *, 16> Elts;
-  if (parseMDNodeVector(Elts))
-    return true;
-  MD = (IsDistinct ? MDTuple::getDistinct
-                   : MDTuple::get)(MF.getFunction().getContext(), Elts);
-  return false;
-}
-
-bool MIParser::parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts) {
-  if (Token.isNot(MIToken::lbrace))
-    return error("expected '{' here");
-  lex();
-
-  if (Token.is(MIToken::rbrace)) {
-    lex();
-    return false;
-  }
-
-  do {
-    Metadata *MD;
-    if (parseMetadata(MD))
-      return true;
-
-    Elts.push_back(MD);
-
-    if (Token.isNot(MIToken::comma))
-      break;
-    lex();
-  } while (true);
-
-  if (Token.isNot(MIToken::rbrace))
-    return error("expected end of metadata node");
-  lex();
-
-  return false;
-}
-
-// ::= !42
-// ::= !"string"
-bool MIParser::parseMetadata(Metadata *&MD) {
-  if (Token.isNot(MIToken::exclaim))
-    return error("expected '!' here");
-  lex();
-
-  if (Token.is(MIToken::StringConstant)) {
-    std::string Str;
-    if (parseStringConstant(Str))
-      return true;
-    MD = MDString::get(MF.getFunction().getContext(), Str);
-    return false;
-  }
-
-  if (Token.isNot(MIToken::IntegerLiteral) || Token.integerValue().isSigned())
-    return error("expected metadata id after '!'");
-
-  SMLoc Loc = mapSMLoc(Token.location());
-
-  unsigned ID = 0;
-  if (getUnsigned(ID))
-    return true;
-  lex();
-
-  auto NodeInfo = PFS.IRSlots.MetadataNodes.find(ID);
-  if (NodeInfo != PFS.IRSlots.MetadataNodes.end()) {
-    MD = NodeInfo->second.get();
-    return false;
-  }
-  // Check machine metadata.
-  NodeInfo = PFS.MachineMetadataNodes.find(ID);
-  if (NodeInfo != PFS.MachineMetadataNodes.end()) {
-    MD = NodeInfo->second.get();
-    return false;
-  }
-  // Forward reference.
-  auto &FwdRef = PFS.MachineForwardRefMDNodes[ID];
-  FwdRef = std::make_pair(
-      MDTuple::getTemporary(MF.getFunction().getContext(), {}), Loc);
-  PFS.MachineMetadataNodes[ID].reset(FwdRef.first.get());
-  MD = FwdRef.first.get();
-
   return false;
 }
 
@@ -3961,7 +3813,7 @@ bool MIParser::parseMMRA(MDNode *&Node) {
 static void initSlots2BasicBlocks(
     const Function &F,
     DenseMap<unsigned, const BasicBlock *> &Slots2BasicBlocks) {
-  ModuleSlotTracker MST(F.getParent(), /*ShouldInitializeAllMetadata=*/false);
+  ModuleSlotTracker MST(F.getParent());
   MST.incorporateFunction(F);
   for (const auto &BB : F) {
     if (BB.hasName())
@@ -4058,11 +3910,6 @@ bool llvm::parsePrefetchTarget(PerFunctionMIParsingState &PFS,
 bool llvm::parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
                        StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneMDNode(Node);
-}
-
-bool llvm::parseMachineMetadata(PerFunctionMIParsingState &PFS, StringRef Src,
-                                SMRange SrcRange, SMDiagnostic &Error) {
-  return MIParser(PFS, Error, Src, SrcRange).parseMachineMetadata();
 }
 
 bool MIRFormatter::parseIRValue(StringRef Src, MachineFunction &MF,

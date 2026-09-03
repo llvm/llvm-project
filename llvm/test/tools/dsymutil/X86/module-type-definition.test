@@ -1,0 +1,70 @@
+# A Clang module compile unit has no relocations, so liveness analysis never
+# reaches the type definitions the module owns, even though its compile unit
+# holds the only copy of them. They must be kept anyway, or everything importing
+# the module is left with only forward declarations. Covered for an ODR
+# language, where the definitions land in the artificial type unit, and a
+# non-ODR one, where they stay under the module in plain DWARF.
+
+RUN: dsymutil --linker parallel -f \
+RUN:     -oso-prepend-path=%p/../Inputs/modules-pruning \
+RUN:     -y %p/dummy-debug-map.map -o - \
+RUN:   | llvm-dwarfdump --debug-info - | FileCheck %s --check-prefix=ODR
+
+ODR:      DW_TAG_compile_unit
+ODR:        DW_AT_name {{.*}}"__artificial_type_unit"
+ODR:        DW_TAG_module
+ODR-NEXT:     DW_AT_name {{.*}}"Outer"
+ODR:          DW_TAG_module
+ODR-NEXT:       DW_AT_name {{.*}}"Template"
+ODR:            DW_TAG_namespace
+ODR-NEXT:         DW_AT_name {{.*}}"M"
+ODR:              DW_TAG_structure_type
+ODR:                DW_AT_name {{.*}}"false_type"
+ODR-NEXT:           DW_AT_byte_size {{.*}}(0x01)
+ODR:                DW_TAG_member
+ODR-NEXT:             DW_AT_name {{.*}}"value"
+ODR:                  DW_AT_const_value {{.*}}(0)
+ODR:              DW_TAG_structure_type
+ODR:                DW_AT_name {{.*}}"true_type"
+ODR-NEXT:           DW_AT_byte_size {{.*}}(0x01)
+ODR:                DW_TAG_member
+ODR-NEXT:             DW_AT_name {{.*}}"value"
+ODR:                  DW_AT_const_value {{.*}}(1)
+
+RUN: dsymutil --linker parallel -f \
+RUN:     -oso-prepend-path=%p/../Inputs/modules \
+RUN:     -y %p/dummy-debug-map.map -o - \
+RUN:   | llvm-dwarfdump --debug-info - | FileCheck %s --check-prefix=NOODR
+
+NOODR:      DW_TAG_module
+NOODR-NEXT:   DW_AT_name {{.*}}"Bar"
+NOODR:        DW_TAG_structure_type
+NOODR-NEXT:     DW_AT_name {{.*}}"Bar"
+NOODR-NEXT:     DW_AT_byte_size {{.*}}(0x04)
+NOODR:          DW_TAG_member
+NOODR-NEXT:       DW_AT_name {{.*}}"value"
+
+NOODR:      DW_TAG_module
+NOODR-NEXT:   DW_AT_name {{.*}}"Foo"
+NOODR:        DW_TAG_typedef
+NOODR-NEXT:     DW_AT_type {{.*}}"Bar::Bar"
+NOODR-NEXT:     DW_AT_name {{.*}}"Bar"
+NOODR:        DW_TAG_structure_type
+NOODR-NEXT:     DW_AT_name {{.*}}"S"
+NOODR-NEXT:     DW_AT_byte_size {{.*}}(0x00)
+NOODR:        DW_TAG_structure_type
+NOODR-NEXT:     DW_AT_name {{.*}}"Foo"
+NOODR-NEXT:     DW_AT_byte_size {{.*}}(0x04)
+NOODR:          DW_TAG_member
+NOODR-NEXT:       DW_AT_name {{.*}}"ivar"
+
+# Without ODR merging there is nothing to redirect the typedef above at the
+# definition kept in the module's own unit, so it still resolves to the forward
+# declaration its importer recorded.
+
+NOODR:      DW_TAG_module
+NOODR-NEXT:   DW_AT_name {{.*}}"Bar"
+NOODR:        DW_TAG_structure_type
+NOODR-NEXT:     DW_AT_name {{.*}}"Bar"
+NOODR-NEXT:     DW_AT_byte_size {{.*}}(0x04)
+NOODR-NEXT:     DW_AT_declaration {{.*}}(true)

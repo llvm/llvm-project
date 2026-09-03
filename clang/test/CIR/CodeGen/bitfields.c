@@ -12,7 +12,7 @@ typedef struct {
   unsigned still_more_bits : 7;
 } A;
 
-// CIR-DAG:  !rec_A = !cir.struct<"A" packed padded {!s8i, !s8i, !s8i, !u16i, !cir.array<!u8i x 3>}>
+// CIR-DAG:  !rec_A = !cir.struct<"A" packed {data !s8i, data !s8i, data !s8i, bitfield !u16i, pad !cir.array<!u8i x 3>}>
 // CIR-DAG:  #bfi_more_bits = #cir.bitfield_info<name = "more_bits", storage_type = !u16i, size = 4, offset = 3, is_signed = false>
 // LLVM-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
 // OGCG-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
@@ -23,7 +23,7 @@ typedef struct {
   int c;
 } D;
 
-// CIR-DAG:  !rec_D = !cir.struct<"D" {!u16i, !s32i}>
+// CIR-DAG:  !rec_D = !cir.struct<"D" {bitfield !u16i, data !s32i}>
 // LLVM-DAG: %struct.D = type { i16, i32 }
 // OGCG-DAG: %struct.D = type { i16, i32 }
 
@@ -36,7 +36,7 @@ typedef struct {
   unsigned f; // type other than int above, not a bitfield
 } S;
 // CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u64i, size = 17, offset = 32, is_signed = true>
-// CIR-DAG:  !rec_S = !cir.struct<"S" {!u64i, !u16i, !u32i}>
+// CIR-DAG:  !rec_S = !cir.struct<"S" {bitfield !u64i, bitfield !u16i, data !u32i}>
 // LLVM-DAG: %struct.S = type { i64, i16, i32 }
 // OGCG-DAG: %struct.S = type { i64, i16, i32 }
 
@@ -45,7 +45,7 @@ typedef struct {
   unsigned b;
 } T;
 
-// CIR-DAG:  !rec_T = !cir.struct<"T" {!u8i, !u32i}>
+// CIR-DAG:  !rec_T = !cir.struct<"T" {bitfield !u8i, data !u32i}>
 // LLVM-DAG: %struct.T = type { i8, i32 }
 // OGCG-DAG: %struct.T = type { i8, i32 }
 
@@ -67,7 +67,7 @@ typedef struct {
     int l: 14;
 } U;
 
-// CIR-DAG:  !rec_U = !cir.struct<"U" packed {!s8i, !s8i, !s8i, !u8i, !u64i}>
+// CIR-DAG:  !rec_U = !cir.struct<"U" packed {data !s8i, data !s8i, data !s8i, bitfield !u8i, bitfield !u64i}>
 // LLVM-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 // OGCG-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 
@@ -77,7 +77,7 @@ typedef struct{
     int c: 30;
 } Clip;
 
-// CIR-DAG: !rec_Clip = !cir.struct<"Clip" {!cir.array<!u8i x 3>, !s8i, !u32i}>
+// CIR-DAG: !rec_Clip = !cir.struct<"Clip" {bitfield !cir.array<!u8i x 3>, data !s8i, bitfield !u32i}>
 // LLVM-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
 // OGCG-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
 
@@ -101,8 +101,8 @@ int load_field(S* s) {
 // CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i
 
 // LLVM: define dso_local i32 @load_field
-// LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
-// LLVM:   [[TMP1:%.*]] = alloca i32, i64 1, align 4
+// LLVM:   [[TMP0:%.*]] = alloca ptr, align 8
+// LLVM:   [[TMP1:%.*]] = alloca i32, align 4
 // LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
 // LLVM:   [[TMP3:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP2]], i32 0, i32 0
 // LLVM:   [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 4
@@ -129,7 +129,7 @@ unsigned int load_field_unsigned(A* s) {
 //CIR:   [[TMP3:%.*]] = cir.get_bitfield align(1) (#bfi_more_bits, [[TMP2]] : !cir.ptr<!u16i>) -> !u32i
 
 //LLVM: define dso_local i32 @load_field_unsigned
-//LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
+//LLVM:   [[TMP0:%.*]] = alloca ptr, align 8
 //LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
 //LLVM:   [[TMP2:%.*]] = getelementptr inbounds nuw %struct.A, ptr [[TMP1]], i32 0, i32 3
 //LLVM:   [[TMP3:%.*]] = load i16, ptr [[TMP2]], align 1
@@ -157,7 +157,7 @@ void store_field() {
 // CIR:   cir.set_bitfield align(4) (#bfi_e, [[TMP2]] : !cir.ptr<!u16i>, [[TMP1]] : !s32i)
 
 // LLVM: define dso_local void @store_field()
-// LLVM:   [[TMP0:%.*]] = alloca %struct.S, i64 1, align 4
+// LLVM:   [[TMP0:%.*]] = alloca %struct.S, align 4
 // LLVM:   [[TMP1:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP0]], i32 0, i32 1
 // LLVM:   [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 4
 // LLVM:   [[TMP3:%.*]] = and i16 [[TMP2]], -32768
@@ -185,7 +185,7 @@ void store_bitfield_to_bitfield() {
 // CIR:   [[TMP4:%.*]] = cir.set_bitfield align(4) (#bfi_a, [[TMP3]] : !cir.ptr<!u64i>, [[TMP2]] : !s32i) -> !s32i
 
 // LLVM: define dso_local void @store_bitfield_to_bitfield()
-// LLVM:  [[TMP0:%.*]] = alloca %struct.S, i64 1, align 4
+// LLVM:  [[TMP0:%.*]] = alloca %struct.S, align 4
 // LLVM:  [[TMP1:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP0]], i32 0, i32 0
 // LLVM:  [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 4
 // LLVM:  [[TMP3:%.*]] = shl i64 [[TMP2]], 15
@@ -236,7 +236,7 @@ void get_volatile(V* v) {
 // CIR:   [[TMP4:%.*]] = cir.set_bitfield align(4) (#bfi_b, [[TMP3]] : !cir.ptr<!u64i>, [[TMP1]] : !s32i) {is_volatile} -> !s32i
 
 // LLVM: define dso_local void @get_volatile
-// LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
+// LLVM:   [[TMP0:%.*]] = alloca ptr, align 8
 // LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
 // LLVM:   [[TMP2:%.*]] = getelementptr inbounds nuw %struct.V, ptr [[TMP1]], i32 0, i32 0
 // LLVM:   [[TMP3:%.*]] = load volatile i64, ptr [[TMP2]], align 4
@@ -263,7 +263,7 @@ void set_volatile(V* v) {
 //CIR:   [[TMP4:%.*]] = cir.set_bitfield align(4) (#bfi_b, [[TMP3]] : !cir.ptr<!u64i>, [[TMP1]] : !s32i) {is_volatile} -> !s32i
 
 // LLVM: define dso_local void @set_volatile
-// LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
+// LLVM:   [[TMP0:%.*]] = alloca ptr, align 8
 // LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
 // LLVM:   [[TMP2:%.*]] = getelementptr inbounds nuw %struct.V, ptr [[TMP1]], i32 0, i32 0
 // LLVM:   [[TMP3:%.*]] = load volatile i64, ptr [[TMP2]], align 4

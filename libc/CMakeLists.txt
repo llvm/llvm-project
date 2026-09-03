@@ -174,9 +174,6 @@ if(LIBC_TARGET_OS_IS_LINUX)
 endif()
 set(LIBC_KERNEL_HEADERS "${kernel_headers}" CACHE STRING "Path to Linux kernel headers")
 
-set(LIBC_ENABLE_UNITTESTS ON)
-set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
-
 set(LIBC_CONFIG_JSON_FILE_LIST "")
 
 if(NOT LIBC_CONFIG_PATH)
@@ -297,13 +294,10 @@ endif()
 
 if(LIBC_TARGET_OS_IS_GPU)
   include(prepare_libc_gpu_build)
-  set(LIBC_ENABLE_UNITTESTS OFF)
   find_program(LIBC_LLVM_LINK llvm-link HINTS ${LLVM_TOOLS_BINARY_DIR})
   if(NOT LIBC_LLVM_LINK)
     message(FATAL_ERROR "llvm-link not found in ${LLVM_TOOLS_BINARY_DIR} or system path")
   endif()
-elseif(LIBC_TARGET_OS_IS_BAREMETAL)
-  set(LIBC_ENABLE_UNITTESTS OFF)
 endif()
 
 include(LLVMLibCCheckMPFR)

@@ -341,6 +341,23 @@ static Cursor maybeLexMachineBasicBlock(Cursor C, MIToken &Token,
   if (C.peek() == '.') {
     C.advance(); // Skip '.'
     ++StringOffset;
+    // The name is quoted if it is not a plain identifier.
+    if (C.peek() == '"') {
+      Cursor R = lexStringConstant(C, ErrorCallback);
+      if (!R) {
+        ErrorCallback(C.location(),
+                      "unable to parse quoted string from opening quote");
+        Token.reset(MIToken::Error, Range.remaining());
+        return Range;
+      }
+      MIToken::TokenKind Kind = IsReference ? MIToken::MachineBasicBlock
+                                            : MIToken::MachineBasicBlockLabel;
+      Token.reset(Kind, Range.upto(R))
+          .setIntegerValue(APSInt(Number))
+          .setOwnedStringValue(
+              unescapeQuotedString(Range.upto(R).drop_front(StringOffset)));
+      return R;
+    }
     while (isIdentifierChar(C.peek()))
       C.advance();
   }

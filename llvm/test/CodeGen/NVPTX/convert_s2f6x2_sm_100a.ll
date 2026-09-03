@@ -19,12 +19,12 @@ define i16 @cvt_s2f6x2_f32_f32_rn_scale(float %f1, float %f2, i16 %scale) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [cvt_s2f6x2_f32_f32_rn_scale_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [cvt_s2f6x2_f32_f32_rn_scale_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [cvt_s2f6x2_f32_f32_rn_scale_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [cvt_s2f6x2_f32_f32_rn_scale_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [cvt_s2f6x2_f32_f32_rn_scale_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [cvt_s2f6x2_f32_f32_rn_scale_param_2];
 ; CHECK-NEXT:    cvt.rn.satfinite.scaled::n2::ue8m0.s2f6x2.f32 %rs2, %r1, %r2, %rs1;
 ; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.nvvm.ff.to.s2f6x2.rn.satfinite.scale.n2.ue8m0(float %f1, float %f2, i16 %scale)
   ret i16 %val
@@ -37,12 +37,12 @@ define i16 @cvt_s2f6x2_f32_f32_rn_relu_scale(float %f1, float %f2, i16 %scale) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [cvt_s2f6x2_f32_f32_rn_relu_scale_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [cvt_s2f6x2_f32_f32_rn_relu_scale_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [cvt_s2f6x2_f32_f32_rn_relu_scale_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [cvt_s2f6x2_f32_f32_rn_relu_scale_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [cvt_s2f6x2_f32_f32_rn_relu_scale_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [cvt_s2f6x2_f32_f32_rn_relu_scale_param_2];
 ; CHECK-NEXT:    cvt.rn.satfinite.relu.scaled::n2::ue8m0.s2f6x2.f32 %rs2, %r1, %r2, %rs1;
 ; CHECK-NEXT:    cvt.u32.u16 %r3, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.nvvm.ff.to.s2f6x2.rn.relu.satfinite.scale.n2.ue8m0(float %f1, float %f2, i16 %scale)
   ret i16 %val
@@ -57,11 +57,11 @@ define i16 @cvt_s2f6x2_bf16x2_rn_scale(<2 x bfloat> %f, i16 %scale) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [cvt_s2f6x2_bf16x2_rn_scale_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs1, [cvt_s2f6x2_bf16x2_rn_scale_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [cvt_s2f6x2_bf16x2_rn_scale_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [cvt_s2f6x2_bf16x2_rn_scale_param_1];
 ; CHECK-NEXT:    cvt.rn.satfinite.scaled::n2::ue8m0.s2f6x2.bf16x2 %rs2, %r1, %rs1;
 ; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.nvvm.bf16x2.to.s2f6x2.rn.satfinite.scale.n2.ue8m0(<2 x bfloat> %f, i16 %scale)
   ret i16 %val
@@ -74,11 +74,11 @@ define i16 @cvt_s2f6x2_bf16x2_rn_relu_scale(<2 x bfloat> %f, i16 %scale) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [cvt_s2f6x2_bf16x2_rn_relu_scale_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs1, [cvt_s2f6x2_bf16x2_rn_relu_scale_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [cvt_s2f6x2_bf16x2_rn_relu_scale_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [cvt_s2f6x2_bf16x2_rn_relu_scale_param_1];
 ; CHECK-NEXT:    cvt.rn.satfinite.relu.scaled::n2::ue8m0.s2f6x2.bf16x2 %rs2, %r1, %rs1;
 ; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.nvvm.bf16x2.to.s2f6x2.rn.relu.satfinite.scale.n2.ue8m0(<2 x bfloat> %f, i16 %scale)
   ret i16 %val
@@ -93,10 +93,10 @@ define <2 x bfloat> @cvt_bf16x2_s2f6x2_rn_scale(i16 %a, i16 %scale) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [cvt_bf16x2_s2f6x2_rn_scale_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs2, [cvt_bf16x2_s2f6x2_rn_scale_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [cvt_bf16x2_s2f6x2_rn_scale_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [cvt_bf16x2_s2f6x2_rn_scale_param_1];
 ; CHECK-NEXT:    cvt.rn.scaled::n2::ue8m0.bf16x2.s2f6x2 %r1, %rs1, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %a, i16 %scale)
   ret <2 x bfloat> %val
@@ -109,10 +109,10 @@ define <2 x bfloat> @cvt_bf16x2_s2f6x2_rn_relu_scale(i16 %a, i16 %scale) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [cvt_bf16x2_s2f6x2_rn_relu_scale_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs2, [cvt_bf16x2_s2f6x2_rn_relu_scale_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [cvt_bf16x2_s2f6x2_rn_relu_scale_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [cvt_bf16x2_s2f6x2_rn_relu_scale_param_1];
 ; CHECK-NEXT:    cvt.rn.relu.scaled::n2::ue8m0.bf16x2.s2f6x2 %r1, %rs1, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.scale.n2.ue8m0(i16 %a, i16 %scale)
   ret <2 x bfloat> %val
@@ -125,10 +125,10 @@ define <2 x bfloat> @cvt_bf16x2_s2f6x2_rn_sf_scale(i16 %a, i16 %scale) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [cvt_bf16x2_s2f6x2_rn_sf_scale_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs2, [cvt_bf16x2_s2f6x2_rn_sf_scale_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [cvt_bf16x2_s2f6x2_rn_sf_scale_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [cvt_bf16x2_s2f6x2_rn_sf_scale_param_1];
 ; CHECK-NEXT:    cvt.rn.satfinite.scaled::n2::ue8m0.bf16x2.s2f6x2 %r1, %rs1, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %a, i16 %scale)
   ret <2 x bfloat> %val
@@ -141,10 +141,10 @@ define <2 x bfloat> @cvt_bf16x2_s2f6x2_rn_relu_sf_scale(i16 %a, i16 %scale) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [cvt_bf16x2_s2f6x2_rn_relu_sf_scale_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs2, [cvt_bf16x2_s2f6x2_rn_relu_sf_scale_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [cvt_bf16x2_s2f6x2_rn_relu_sf_scale_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [cvt_bf16x2_s2f6x2_rn_relu_sf_scale_param_1];
 ; CHECK-NEXT:    cvt.rn.satfinite.relu.scaled::n2::ue8m0.bf16x2.s2f6x2 %r1, %rs1, %rs2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.satfinite.scale.n2.ue8m0(i16 %a, i16 %scale)
   ret <2 x bfloat> %val

@@ -47,9 +47,8 @@ public:
   void add(mlir::ModuleOp module) {
     assert(module->getNumRegions() == 1);
     for (auto &op : module.getBody(0)->getOperations())
-      if (auto symbol = op.getAttrOfType<mlir::StringAttr>(
-              mlir::SymbolTable::getSymbolAttrName()))
-        nextIndex.insert({symbol.getValue(), 0});
+      if (auto symbol = mlir::dyn_cast<mlir::SymbolOpInterface>(&op))
+        nextIndex.insert({symbol.getName(), 0});
   }
 
   /// SymbolCache initializer; initialize from every key that is convertible to

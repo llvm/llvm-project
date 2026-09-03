@@ -254,9 +254,22 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
   return Plugin::success();
 }
 
-LevelZeroPluginContextTy::~LevelZeroPluginContextTy() {
-  if (OwnsZeContext && ZeContext)
-    zeContextDestroy(ZeContext);
+Error LevelZeroPluginContextTy::initAsyncInfoImpl(
+    GenericDeviceTy &Device, AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  auto &L0Device = static_cast<L0DeviceTy &>(Device);
+  auto QueueOrErr = L0Device.getOrCreateQueue(AsyncInfoWrapper, this);
+  return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
+}
+
+Error LevelZeroPluginContextTy::deinit() {
+  if (auto Err = QueueCache.deinit())
+    return Err;
+  if (OwnsZeContext && ZeContext) {
+    CALL_ZE_RET_ERROR(zeContextDestroy, ZeContext);
+    ZeContext = nullptr;
+    OwnsZeContext = false;
+  }
+  return Plugin::success();
 }
 
 Expected<std::unique_ptr<PluginContextTy>>
@@ -292,8 +305,8 @@ LevelZeroPluginTy::createPluginContext(
 
   ze_context_handle_t ZeContext = nullptr;
   bool OwnsZeContext = false;
-  if (IsFullDriver && DriverCtx.zeDriverGetDefaultContext)
-    ZeContext = DriverCtx.zeDriverGetDefaultContext(Driver);
+  if (IsFullDriver && DriverCtx.DriverGetDefaultContext.available())
+    ZeContext = DriverCtx.DriverGetDefaultContext(Driver);
   if (!ZeContext) {
     ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
     CALL_ZE_RET_ERROR(zeContextCreate, Driver, &Desc, &ZeContext);

@@ -9,8 +9,8 @@ define i32 @red_extended_add_incomplete_chain(ptr %start, ptr %end, i32 %offset)
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[START]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[END1]], [[TMP8]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP9]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[END1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -231,8 +231,7 @@ define i32 @invalid_operation_after_exit_value(ptr %src) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 64, [[TMP10]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP10]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -243,7 +242,7 @@ define i32 @invalid_operation_after_exit_value(ptr %src) #0 {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[TMP7]] = add <vscale x 8 x i32> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

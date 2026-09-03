@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -clangir-enable-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fclangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -clangir-enable-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fclangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefixes=LLVM,LLVM-CIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t.ll %s
@@ -13,8 +13,6 @@ typedef struct { __int128 w; char c; } WideChar;
 
 int vf(Pair2 p, ...);
 
-// CIR: cir.func private @vf(!u64i, ...) -> !s32i
-
 int call_scalar(Pair2 p, int a, double d) { return vf(p, a, d); }
 
 // CIR-LABEL: cir.func {{.*}}@call_scalar(%arg0: !u64i loc({{.+}}), %arg1: !s32i {llvm.noundef} loc({{.+}}), %arg2: !cir.double {llvm.noundef} loc({{.+}})) -> !s32i
@@ -24,6 +22,8 @@ int call_scalar(Pair2 p, int a, double d) { return vf(p, a, d); }
 // CIR:         %[[DV:[0-9]+]] = cir.load align(8) %[[DSLOT]] : !cir.ptr<!cir.double>, !cir.double
 // CIR:         %[[PV:[0-9]+]] = cir.load %{{[0-9]+}} : !cir.ptr<!u64i>, !u64i
 // CIR:         cir.call @vf(%[[PV]], %[[AV]], %[[DV]]) : (!u64i, !s32i {llvm.noundef}, !cir.double {llvm.noundef}) -> !s32i
+
+// CIR: cir.func private @vf(!u64i, ...) -> !s32i
 
 // LLVM-LABEL: define dso_local i32 @call_scalar(
 // LLVM-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i32 noundef %[[A:[0-9a-zA-Z._]+]], double noundef %[[D:[0-9a-zA-Z._]+]])
@@ -78,7 +78,7 @@ int call_big(Pair2 p, Big b) { return vf(p, b); }
 // LLVM-CIR-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], ptr noalias noundef byval(%struct.Big) align 8 %[[B:[0-9a-zA-Z._]+]])
 // LLVM-CIR:       %{{[0-9a-zA-Z._]+}} = load %struct.Big, ptr %[[B]], align 8
 // LLVM-CIR:       %[[PV:[0-9a-zA-Z._]+]] = load i64, ptr %{{[0-9a-zA-Z._]+}}, align 8
-// LLVM-CIR-NEXT:  %[[COPY:[0-9a-zA-Z._]+]] = alloca %struct.Big, i64 1, align 8
+// LLVM-CIR-NEXT:  %[[COPY:[0-9a-zA-Z._]+]] = alloca %struct.Big, align 8
 // LLVM-CIR-NEXT:  store %struct.Big %{{[0-9a-zA-Z._]+}}, ptr %[[COPY]], align 8
 // LLVM-CIR-NEXT:  %{{[0-9a-zA-Z._]+}} = call i32 (i64, ...) @vf(i64 %[[PV]], ptr noalias noundef byval(%struct.Big) align 8 %[[COPY]])
 
@@ -121,7 +121,7 @@ int call_exhausted(Pair2 p, long a, long b, long c, long d, Pair16 q) {
 // LLVM:         %[[CV:[0-9a-zA-Z._]+]] = load i64, ptr %[[CS]], align 8
 // LLVM:         %[[DV:[0-9a-zA-Z._]+]] = load i64, ptr %[[DS]], align 8
 // LLVM-CIR:       %[[PV:[0-9a-zA-Z._]+]] = load i64, ptr %{{[0-9a-zA-Z._]+}}, align 8
-// LLVM-CIR-NEXT:  %[[COPY:[0-9a-zA-Z._]+]] = alloca %struct.Pair16, i64 1, align 8
+// LLVM-CIR-NEXT:  %[[COPY:[0-9a-zA-Z._]+]] = alloca %struct.Pair16, align 8
 // LLVM-CIR-NEXT:  store %struct.Pair16 %{{[0-9a-zA-Z._]+}}, ptr %[[COPY]], align 8
 // LLVM-CIR-NEXT:  %{{[0-9a-zA-Z._]+}} = call i32 (i64, ...) @vf(i64 %[[PV]], i64 noundef %[[AV]], i64 noundef %[[BV]], i64 noundef %[[CV]], i64 noundef %[[DV]], ptr noalias noundef byval(%struct.Pair16) align 8 %[[COPY]])
 // LLVM-OGCG:      %[[PV:[0-9a-zA-Z._]+]] = load i64, ptr %{{[0-9a-zA-Z._]+}}, align 4
@@ -188,7 +188,7 @@ int call_wide_char(Pair2 p, WideChar w) { return vf(p, w); }
 // LLVM-CIR-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], ptr noalias noundef byval(%struct.WideChar) align 16 %[[W:[0-9a-zA-Z._]+]])
 // LLVM-CIR:       %{{[0-9a-zA-Z._]+}} = load %struct.WideChar, ptr %[[W]], align 16
 // LLVM-CIR:       %[[PV:[0-9a-zA-Z._]+]] = load i64, ptr %{{[0-9a-zA-Z._]+}}, align 8
-// LLVM-CIR-NEXT:  %[[COPY:[0-9a-zA-Z._]+]] = alloca %struct.WideChar, i64 1, align 16
+// LLVM-CIR-NEXT:  %[[COPY:[0-9a-zA-Z._]+]] = alloca %struct.WideChar, align 16
 // LLVM-CIR-NEXT:  store %struct.WideChar %{{[0-9a-zA-Z._]+}}, ptr %[[COPY]], align 16
 // LLVM-CIR-NEXT:  %{{[0-9a-zA-Z._]+}} = call i32 (i64, ...) @vf(i64 %[[PV]], ptr noalias noundef byval(%struct.WideChar) align 16 %[[COPY]])
 
@@ -201,14 +201,14 @@ int call_wide_char(Pair2 p, WideChar w) { return vf(p, w); }
 // declared parameter.
 int ell_bitint17(Pair2 p, _BitInt(17) b) { return vf(p, b); }
 
-// CIR-LABEL: cir.func {{.*}}@ell_bitint17(%arg0: !u64i loc({{.+}}), %arg1: !cir.int<s, 17, bitint> {llvm.signext} loc({{.+}})) -> !s32i
+// CIR-LABEL: cir.func {{.*}}@ell_bitint17(%arg0: !u64i loc({{.+}}), %arg1: !cir.int<s, 17, bitint> {llvm.noundef, llvm.signext} loc({{.+}})) -> !s32i
 // CIR:         cir.store %arg1, %[[BSLOT:[0-9]+]] : !cir.int<s, 17, bitint>, !cir.ptr<!cir.int<s, 17, bitint>>
 // CIR:         %[[BV:[0-9]+]] = cir.load align(4) %[[BSLOT]] : !cir.ptr<!cir.int<s, 17, bitint>>, !cir.int<s, 17, bitint>
 // CIR:         %[[PV:[0-9]+]] = cir.load %{{[0-9]+}} : !cir.ptr<!u64i>, !u64i
-// CIR:         cir.call @vf(%[[PV]], %[[BV]]) : (!u64i, !cir.int<s, 17, bitint> {llvm.signext}) -> !s32i
+// CIR:         cir.call @vf(%[[PV]], %[[BV]]) : (!u64i, !cir.int<s, 17, bitint> {llvm.noundef, llvm.signext}) -> !s32i
 
 // LLVM-CIR-LABEL: define dso_local i32 @ell_bitint17(
-// LLVM-CIR-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i17 signext %[[B:[0-9a-zA-Z._]+]])
+// LLVM-CIR-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i17 noundef signext %[[B:[0-9a-zA-Z._]+]])
 // LLVM-OGCG-LABEL: define dso_local i32 @ell_bitint17(
 // LLVM-OGCG-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i17 noundef signext %[[B:[0-9a-zA-Z._]+]])
 // LLVM:         %[[EXT:[0-9a-zA-Z._]+]] = sext i17 %[[B]] to i32
@@ -216,7 +216,7 @@ int ell_bitint17(Pair2 p, _BitInt(17) b) { return vf(p, b); }
 // LLVM:         %[[RE:[0-9a-zA-Z._]+]] = load i32, ptr %[[BSLOT]], align 4
 // LLVM:         %[[TR:[0-9a-zA-Z._]+]] = trunc i32 %[[RE]] to i17
 // LLVM:         %[[PV:[0-9a-zA-Z._]+]] = load i64, ptr %{{[0-9a-zA-Z._]+}}, align
-// LLVM-CIR:     call i32 (i64, ...) @vf(i64 %[[PV]], i17 signext %[[TR]])
+// LLVM-CIR:     call i32 (i64, ...) @vf(i64 %[[PV]], i17 noundef signext %[[TR]])
 // LLVM-OGCG:    call i32 (i64, ...) @vf(i64 %[[PV]], i17 noundef signext %[[TR]])
 
 // A width between 33 and 63 widens to one register.

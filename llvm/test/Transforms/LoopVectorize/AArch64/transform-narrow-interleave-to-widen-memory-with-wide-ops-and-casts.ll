@@ -802,8 +802,8 @@ define void @test_2xdouble_mismatching_sitofp_operand_types(ptr noalias %dst, pt
 ; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 [[TMP7]]
 ; VF2-NEXT:    [[TMP10:%.*]] = load i16, ptr [[TMP8]], align 8
 ; VF2-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP9]], align 8
-; VF2-NEXT:    [[TMP12:%.*]] = insertelement <2 x i16> poison, i16 [[TMP10]], i32 0
-; VF2-NEXT:    [[TMP13:%.*]] = insertelement <2 x i16> [[TMP12]], i16 [[TMP11]], i32 1
+; VF2-NEXT:    [[TMP12:%.*]] = insertelement <2 x i16> poison, i16 [[TMP10]], i64 0
+; VF2-NEXT:    [[TMP13:%.*]] = insertelement <2 x i16> [[TMP12]], i16 [[TMP11]], i64 1
 ; VF2-NEXT:    [[TMP14:%.*]] = sitofp <2 x i16> [[TMP13]] to <2 x double>
 ; VF2-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP15]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
