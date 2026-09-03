@@ -82,6 +82,24 @@ RESOURCE Buffer;
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-NEXT: AlwaysInlineAttr
 
+// Heap info constructor
+
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]] 'void (hlsl::__hlsl_heap_resource_info)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} HeapResInfo 'hlsl::__hlsl_heap_resource_info'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '__hlsl_resource_t (*)(__hlsl_resource_t, unsigned int) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromheap' '__hlsl_resource_t (__hlsl_resource_t, unsigned int) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'unsigned int' lvalue .Index
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::__hlsl_heap_resource_info' lvalue ParmVar {{.*}} 'HeapResInfo' 'hlsl::__hlsl_heap_resource_info'
+// CHECK-NEXT: AlwaysInlineAttr
+
 // Static __createFromBinding method
 
 // CHECK: CXXMethodDecl {{.*}} __createFromBinding 'hlsl::[[RESOURCE]] (unsigned int, unsigned int, int, unsigned int, const char *)' static

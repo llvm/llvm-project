@@ -1216,6 +1216,74 @@ BuiltinTypeDeclBuilder::addDefaultHandleConstructor(AccessSpecifier Access) {
       .finalize(Access);
 }
 
+// Adds constructor that takes __hlsl_heap_resource_info:
+// Resource::Resource(__hlsl_heap_resource_info info) {
+//   __handle = __builtin_hlsl_resource_handlefromheap(__handle, info.Index);
+// }
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHeapResourceInfoConstructor(bool HasCounter) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+
+  QualType HeapResInfoType = lookupBuiltinType(
+      SemaRef, "__hlsl_heap_resource_info", Record->getDeclContext());
+  CXXRecordDecl *HeapResInfoDecl = HeapResInfoType->getAsCXXRecordDecl();
+
+  FieldDecl *IndexField = *HeapResInfoDecl->field_begin();
+  assert(IndexField && IndexField->getType() == AST.UnsignedIntTy &&
+         "Index field not as expected");
+
+  auto MB = BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true);
+  MB.addParam("HeapResInfo", HeapResInfoType)
+      .callBuiltin("__builtin_hlsl_resource_handlefromheap", HandleType,
+                   PH::Handle, MB.createMemberExpr(PH::_0, IndexField))
+      .assign(PH::Handle, PH::LastStmt);
+
+  if (HasCounter) {
+    QualType CounterHandleType = getResourceCounterHandleField()->getType();
+    MB.callBuiltin("__builtin_hlsl_resource_counterhandlefromheap",
+                   CounterHandleType, PH::Handle,
+                   MB.createMemberExpr(PH::_0, IndexField))
+        .assign(PH::CounterHandle, PH::LastStmt);
+  }
+
+  return MB.finalize();
+}
+
+// Adds constructor that takes __hlsl_heap_sampler_info:
+// Resource::Resource(__hlsl_heap_sampler_info info) {
+//   __handle = __builtin_hlsl_resource_handlefromheap(__handle, info.Index);
+// }
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHeapSamplerInfoConstructor() {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+
+  QualType HeapResInfoType = lookupBuiltinType(
+      SemaRef, "__hlsl_heap_sampler_info", Record->getDeclContext());
+  CXXRecordDecl *HeapResInfoDecl = HeapResInfoType->getAsCXXRecordDecl();
+
+  FieldDecl *IndexField = *HeapResInfoDecl->field_begin();
+  assert(IndexField && IndexField->getType() == AST.UnsignedIntTy &&
+         "Index field not as expected");
+
+  auto MB = BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true);
+  MB.addParam("HeapResInfo", HeapResInfoType);
+  MB.callBuiltin("__builtin_hlsl_resource_handlefromheap", HandleType,
+                 PH::Handle, MB.createMemberExpr(PH::_0, IndexField))
+      .assign(PH::Handle, PH::LastStmt);
+
+  return MB.finalize();
+}
+
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addStaticInitializationFunctions(bool HasCounter) {
   if (HasCounter) {

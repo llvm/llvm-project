@@ -55,6 +55,7 @@ void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   // Force external decls in the HLSL namespace to load from the PCH.
   (void)HLSLNamespace->getCanonicalDecl()->decls_begin();
   defineTrivialHLSLTypes();
+  defineInternalHLSLTypes();
   defineHLSLTypesWithForwardDeclarations();
   defineHLSLAtomicIntrinsics();
 
@@ -233,6 +234,29 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
   defineHLSLMatrixAlias();
 }
 
+void HLSLExternalSemaSource::defineHeapResourceInfoTypes() {
+  ASTContext &AST = SemaPtr->getASTContext();
+  CXXRecordDecl *ResDecl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
+                                                  "__hlsl_heap_resource_info")
+                               .finalizeForwardDeclaration();
+  if (!ResDecl->isCompleteDefinition())
+    BuiltinTypeDeclBuilder(*SemaPtr, ResDecl)
+        .addMemberVariable("Index", AST.UnsignedIntTy, {})
+        .completeDefinition();
+
+  CXXRecordDecl *SampDecl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace,
+                                                   "__hlsl_heap_sampler_info")
+                                .finalizeForwardDeclaration();
+  if (!SampDecl->isCompleteDefinition())
+    BuiltinTypeDeclBuilder(*SemaPtr, SampDecl)
+        .addMemberVariable("Index", AST.UnsignedIntTy, {})
+        .completeDefinition();
+}
+
+void HLSLExternalSemaSource::defineInternalHLSLTypes() {
+  defineHeapResourceInfoTypes();
+}
+
 /// Set up common members and attributes for buffer types
 static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, bool IsROV,
@@ -242,6 +266,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
+      .addHeapResourceInfoConstructor(HasCounter)
       .addStaticInitializationFunctions(HasCounter);
 }
 
@@ -252,6 +277,7 @@ static BuiltinTypeDeclBuilder setupSamplerType(CXXRecordDecl *Decl, Sema &S) {
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
+      .addHeapSamplerInfoConstructor()
       .addStaticInitializationFunctions(false);
 }
 
@@ -361,6 +387,7 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
   B.addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
+      .addHeapResourceInfoConstructor()
       .addStaticInitializationFunctions(false);
 
   if (T.has(TexCap::Load))
