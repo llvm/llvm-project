@@ -470,12 +470,11 @@ private:
 
       // TypeLoc and NestedNameSpecifierLoc are members of the parent map. Skip
       // them and keep going up.
-      if (Loc.isValid()) {
-        if (!expandsFrom(Loc, MacroLoc)) {
-          Result = Parent;
-          return true;
-        }
+      if (Loc.isValid() && !expandsFrom(Loc, MacroLoc)) {
+        Result = Parent;
+        return true;
       }
+
       Start = Parent;
     }
 

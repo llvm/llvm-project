@@ -46,10 +46,10 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP8]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP8]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP19:%.*]] = load double, ptr [[SRC]], align 8, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[TMP22:%.*]] = load double, ptr [[SRC]], align 8, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[DOTSPLAT]], <i64 0, i64 1, i64 2, i64 3>
@@ -66,10 +66,10 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP20]], i64 3
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP31]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP26]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP33]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP28]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP31]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP26]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP33]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP28]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = or disjoint <4 x i64> [[TMP20]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i64> [[TMP29]], i64 0
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP30]]

@@ -20,10 +20,6 @@
 // RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nogpulib -nostdinc++ %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,CLANG,HIP -DRESOURCE_DIR=%clang-resource-dir %s
 
-// RUN: %clang -fsyntax-only --target=x86_64-unknown-linux-gnu \
-// RUN:   --cuda-gpu-arch=gfx900 -std=c++11 --rocm-path=%S/Inputs/rocm \
-// RUN:   -nogpulib -nohipwrapperinc %s
-
 // RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
 // RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm-invalid -nogpulib %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=NOLIBHIPCXX %s
@@ -75,7 +71,5 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_tree %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTINC %s
 
-// HOSTINC-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// HOSTINC-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // HOSTINC: "-internal-externc-isystem" "{{[^"]*}}Inputs/basic_linux_tree/usr/include"
-
-#include <cuda/std/atomic>

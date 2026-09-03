@@ -255,14 +255,13 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   VariableCategory VC = VariableCategory::Value;
   const QualType VT = Variable->getType();
-  if (VT->isReferenceType()) {
+  if (VT->isReferenceType())
     VC = VariableCategory::Reference;
-  } else if (VT->isPointerType()) {
+  else if (VT->isPointerType())
     VC = VariableCategory::Pointer;
-  } else if (const auto *ArrayT = dyn_cast<ArrayType>(VT)) {
-    if (ArrayT->getElementType()->isPointerType())
-      VC = VariableCategory::Pointer;
-  }
+  else if (const auto *ArrayT = dyn_cast<ArrayType>(VT);
+           ArrayT && ArrayT->getElementType()->isPointerType())
+    VC = VariableCategory::Pointer;
 
   const auto CheckValue = [&]() {
     // Offload const-analysis to utility function.
@@ -339,11 +338,11 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (WarnPointersAsValues && !VT.isConstQualified())
       CheckValue();
     if (WarnPointersAsPointers) {
-      if (const auto *PT = dyn_cast<PointerType>(VT)) {
-        if (!PT->getPointeeType().isConstQualified() &&
-            !PT->getPointeeType()->isFunctionType())
-          CheckPointee();
-      }
+      if (const auto *PT = dyn_cast<PointerType>(VT);
+          PT && !PT->getPointeeType().isConstQualified() &&
+          !PT->getPointeeType()->isFunctionType())
+        CheckPointee();
+
       if (const auto *AT = dyn_cast<ArrayType>(VT)) {
         assert(AT->getElementType()->isPointerType());
         if (!AT->getElementType()->getPointeeType().isConstQualified())

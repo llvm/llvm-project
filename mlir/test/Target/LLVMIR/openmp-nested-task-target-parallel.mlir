@@ -16,10 +16,10 @@ llvm.func @_QQmain() {
 %1 = llvm.alloca %0 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
 %2 = llvm.mlir.constant(1 : i64) : i64
 %3 = llvm.alloca %2 x i32 {bindc_name = "c"} : (i64) -> !llvm.ptr
-%4 = llvm.mlir.constant(10 : index) : i64
-%5 = llvm.mlir.constant(0 : index) : i64
-%6 = llvm.mlir.constant(10000 : index) : i64
-%7 = llvm.mlir.constant(1 : index) : i64
+%4 = llvm.mlir.constant(10 : i64) : i64
+%5 = llvm.mlir.constant(0 : i64) : i64
+%6 = llvm.mlir.constant(10000 : i64) : i64
+%7 = llvm.mlir.constant(1 : i64) : i64
 %8 = llvm.mlir.constant(1 : i64) : i64
 %9 = llvm.mlir.addressof @_QFECchunksz : !llvm.ptr
 %10 = llvm.mlir.constant(1 : i64) : i64
@@ -29,7 +29,7 @@ llvm.br ^bb1(%11, %4 : i32, i64)
 %14 = llvm.icmp "sgt" %13, %5 : i64
 llvm.store %12, %3 : i32, !llvm.ptr
 omp.task private(@_QFEc_firstprivate_i32 %3 -> %arg0 : !llvm.ptr) {
-  %19 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"}
+  %19 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("i") -> !llvm.ptr
   %22 = llvm.mlir.constant(9999 : i32) : i32
   %23 = llvm.mlir.constant(1 : i32) : i32
   %24 = llvm.load %arg0 : !llvm.ptr -> i32

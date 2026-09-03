@@ -15,7 +15,6 @@
 #include "MemberPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
-#include "Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
@@ -24,19 +23,18 @@ using namespace clang;
 using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
-    : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
-      ArgSize(0), Args(nullptr) {}
+    : Caller(nullptr), S(S), Func(nullptr), RetPC(CodePtr()), Args(nullptr),
+      ArgSize(0), Depth(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
-    : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
-      RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())) {
+    : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
+      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize),
+      Depth(Caller ? Caller->Depth + 1 : 0) {
+  assert(Func);
 #ifndef NDEBUG
   FrameOffset = S.Stk.size();
 #endif
-
-  if (!Func)
-    return;
 
   FuncFlags |= Func->hasRVO() * HasRVOFlag;
   FuncFlags |= Func->hasThisPointer() * HasThisFlag;
@@ -50,7 +48,8 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
 
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      new (localBlock(Local.Offset)) Block(S.EvalID, Local.Desc);
+      new (localBlock(Local.Offset))
+          Block(S.EvalID, Local.Desc, Block::InlineDescMD);
       // Note that we are NOT calling invokeCtor() here, since that is done
       // via the InitScope op.
       new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
@@ -161,7 +160,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
   const ASTContext &ASTCtx = S.getASTContext();
   const Expr *CallExpr = Caller->getExpr(getRetOpPC());
-  const FunctionDecl *F = getCallee();
+  const FunctionDecl *F = Func->getDecl();
   auto PrintingPolicy = ASTCtx.getPrintingPolicy();
   PrintingPolicy.SuppressLambdaBody = true;
 
@@ -217,8 +216,9 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
 SourceRange InterpFrame::getCallRange() const {
   if (!Caller->Func) {
-    if (SourceRange NullRange = S.getRange(nullptr, {}); NullRange.isValid())
+    if (SourceRange NullRange = S.getSource({}).getRange(); NullRange.isValid())
       return NullRange;
+
     return S.EvalLocation;
   }
 
@@ -227,7 +227,7 @@ SourceRange InterpFrame::getCallRange() const {
     if (!C->RetPC)
       continue;
     SourceRange CallRange =
-        S.getRange(C->Caller->Func, C->getRetOpPC() - sizeof(uintptr_t));
+        C->Caller->Func->getSource(C->getRetOpPC()).getRange();
     if (CallRange.isValid())
       return CallRange;
   }
@@ -277,6 +277,9 @@ static bool funcHasUsableBody(const Function *F) {
 }
 
 SourceInfo InterpFrame::getSource(CodePtr PC) const {
+  if (!Func)
+    return S.getSource(PC);
+
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
   if (Func && !funcHasUsableBody(Func) && Caller)
@@ -284,32 +287,11 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
 
   // Similarly, if the resulting source location is invalid anyway,
   // point to the caller instead.
-  SourceInfo Result = S.getSource(Func, PC);
+  SourceInfo Result = Func->getSource(PC);
   if (Result.getLoc().isInvalid() && Caller)
     return Caller->getSource(getRetOpPC());
 
   return Result;
-}
-
-const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getExpr(getRetOpPC());
-
-  return S.getExpr(Func, PC);
-}
-
-SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getLocation(getRetOpPC());
-
-  return S.getLocation(Func, PC);
-}
-
-SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getRange(getRetOpPC());
-
-  return S.getRange(Func, PC);
 }
 
 bool InterpFrame::isStdFunction() const {

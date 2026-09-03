@@ -86,10 +86,10 @@ func.func @amx_tile_mulf_f8(
   %tB = x86.amx.tile_load %matB[%idx, %idx] : memref<?x?xf8E5M2> into !x86.amx.tile<16x64xf8E5M2>
   %tA1 = x86.amx.tile_load %matA[%c0, %c0] : memref<?x?xf8E4M3FN> into !x86.amx.tile<16x64xf8E4M3FN>
   %tB1 = x86.amx.tile_load %matB[%c0, %c0] : memref<?x?xf8E5M2> into !x86.amx.tile<16x64xf8E5M2>
-  // CHECK: call x86_amx @llvm.x86.tdpbf8ps.internal
-  // CHECK: call x86_amx @llvm.x86.tdpbhf8ps.internal
-  // CHECK: call x86_amx @llvm.x86.tdphbf8ps.internal
   // CHECK: call x86_amx @llvm.x86.tdphf8ps.internal
+  // CHECK: call x86_amx @llvm.x86.tdphbf8ps.internal
+  // CHECK: call x86_amx @llvm.x86.tdpbhf8ps.internal
+  // CHECK: call x86_amx @llvm.x86.tdpbf8ps.internal
   %tRes = x86.amx.tile_mulf %tA, %tA1, %acc
     : !x86.amx.tile<16x64xf8E4M3FN>, !x86.amx.tile<16x64xf8E4M3FN>, !x86.amx.tile<16x16xf32>
   %tRes1 = x86.amx.tile_mulf %tA, %tB, %acc

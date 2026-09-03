@@ -14,12 +14,11 @@ define i64 @same_exit_block_pre_inc_use1() #1 {
 ; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
 ; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 64, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP2]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 3, [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -33,7 +32,7 @@ define i64 @same_exit_block_pre_inc_use1() #1 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = freeze <vscale x 16 x i1> [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP8]])
-; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], [[TMP2]]
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
@@ -366,8 +365,7 @@ define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[END_CLAMPED]], i32 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[END_CLAMPED]], i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i8 1, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i8 [[TMP5]], 1
@@ -375,7 +373,7 @@ define i32 @diff_exit_block_needs_scev_check(i32 %end) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[N_VEC]] to i8
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

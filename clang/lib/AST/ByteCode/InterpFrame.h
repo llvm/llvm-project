@@ -26,9 +26,6 @@ class Pointer;
 /// Frame storing local variables.
 class InterpFrame final : public Frame {
 public:
-  /// The frame of the previous function.
-  InterpFrame *Caller;
-
   /// Bottom Frame.
   InterpFrame(InterpState &S);
 
@@ -161,9 +158,11 @@ public:
 
   /// Map a location to a source.
   SourceInfo getSource(CodePtr PC) const;
-  const Expr *getExpr(CodePtr PC) const;
-  SourceLocation getLocation(CodePtr PC) const;
-  SourceRange getRange(CodePtr PC) const;
+  const Expr *getExpr(CodePtr PC) const { return getSource(PC).asExpr(); }
+  SourceLocation getLocation(CodePtr PC) const {
+    return getSource(PC).getLoc();
+  }
+  SourceRange getRange(CodePtr PC) const { return getSource(PC).getRange(); }
 
   unsigned getDepth() const { return Depth; }
   unsigned getArgSize() const { return ArgSize; }
@@ -218,23 +217,27 @@ private:
     return reinterpret_cast<InlineDescriptor *>(locals() + Offset);
   }
 
+public:
+  /// The frame of the previous function.
+  InterpFrame *Caller;
+
 private:
   /// Reference to the interpreter state.
   InterpState &S;
-  /// Depth of this frame.
-  unsigned Depth;
   /// Reference to the function being executed.
   const Function *Func;
   /// Return address.
   CodePtr RetPC;
-  /// The size of all the arguments.
-  const unsigned ArgSize;
   /// Pointer to the arguments in the callee's frame.
   char *Args = nullptr;
 #ifndef NDEBUG
   /// Offset on the stack at entry.
   size_t FrameOffset = 0;
 #endif
+  /// The size of all the arguments.
+  const unsigned ArgSize;
+  /// Depth of this frame.
+  unsigned Depth;
 
 public:
   unsigned MSVCConstexprAllowed = 0;

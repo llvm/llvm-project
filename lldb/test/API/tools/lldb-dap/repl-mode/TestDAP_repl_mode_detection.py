@@ -4,7 +4,7 @@ Test lldb-dap repl mode detection
 
 from typing import Optional
 
-from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.lldbtest import *
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 

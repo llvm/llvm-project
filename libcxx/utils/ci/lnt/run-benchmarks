@@ -70,7 +70,7 @@ def main(argv):
     parser = argparse.ArgumentParser(
         prog='run-benchmarks',
         description='Benchmark libc++ at the given commit and produce a LNT JSON report.',
-        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.')
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.')
     parser.add_argument('--benchmark-commit', type=str, required=True,
         help='The SHA representing the version of the library to benchmark.')
     parser.add_argument('--test-suite-commit', type=str, required=True,
@@ -87,6 +87,10 @@ def main(argv):
              "running only a subset of the benchmarks.")
     parser.add_argument('--spec-dir', type=pathlib.Path, required=False,
         help='Optional path to a SPEC installation to use for benchmarking.')
+    parser.add_argument('--cmake-cache', type=pathlib.Path, required=False, default=pathlib.Path(__file__).resolve().parent / 'cmake' / 'generic.cmake',
+        help='Optional path to a CMake cache to use when building the library. Only used when building '
+             'the library, not when running the test suite. Defaults to '
+             'libcxx/utils/ci/lnt/cmake/generic.cmake, which builds the library with optimizations enabled.')
     parser.add_argument('--build-dir', type=pathlib.Path, required=False,
         help='Optional directory in which to keep build artifacts. By default, a temporary directory '
              'is used and the build artifacts are discarded after the run. It is an error to specify '
@@ -135,8 +139,10 @@ def main(argv):
         sys.exit(f'error: output report {args.output} already exists; not overwriting it')
     if args.build_dir is not None and args.build_dir.exists():
         sys.exit(f'error: build directory {args.build_dir} already exists; not overwriting it')
+    if args.cmake_cache is not None and not args.cmake_cache.is_file():
+        sys.exit(f'error: CMake cache {args.cmake_cache} does not exist')
     if shutil.which('lnt') is None:
-        sys.exit('error: cannot find `lnt`; install libcxx/utils/requirements.txt')
+        sys.exit('error: cannot find `lnt`; install libcxx/utils/ci/lnt/requirements.txt')
 
     with contextlib.ExitStack() as stack:
         # The build artifacts are kept in --build-dir when it is given, and stored in a temporary directory
@@ -150,13 +156,15 @@ def main(argv):
         logging.info(f'Storing build artifacts in {artifacts}')
 
         logging.info(f'Building libc++ at commit {args.benchmark_commit}')
+        cmake_args = [f'-DCMAKE_CXX_COMPILER={args.compiler}']
+        if args.cmake_cache is not None:
+            cmake_args += ['-C', args.cmake_cache.resolve()]
         build_cmd = [args.git_repo / 'libcxx/utils/build-at-commit',
                         '--git-repo', args.git_repo,
                         '--install-dir', artifacts / 'libcxx-install',
                         '--tmp-src-dir', artifacts / 'libcxx-src',
                         '--tmp-build-dir', artifacts / 'libcxx-build',
-                        '--commit', args.benchmark_commit,
-                        '--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo', f'-DCMAKE_CXX_COMPILER={args.compiler}']
+                        '--commit', args.benchmark_commit, '--', *cmake_args]
         run(build_cmd, enforce_success=False) # if the build fails, carry on: we'll fail later and submit empty LNT results
 
         logging.info(f'Running benchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
@@ -171,6 +179,7 @@ def main(argv):
                             '--param', f'compiler={args.compiler}',
                             '--param', 'optimization=speed',
                             '--param', 'std=c++26',
+                            '--param', 'enable_werror=False', # older versions of the library trigger new warnings, don't fail
                             artifacts / 'benchmarks/libcxx/test/benchmarks']
         if args.spec_dir is not None:
             cmd += ['--param', f'spec_dir={args.spec_dir}']

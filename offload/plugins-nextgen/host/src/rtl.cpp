@@ -88,18 +88,18 @@ struct GenELF64KernelTy : public GenericKernelTy {
   /// Launch the kernel using the arguments.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
-                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
+                   KernelLaunchArgsTy &LaunchArgs,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
+    if (LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "Incompatible kernel argument version for plugin");
     // Cooperative kernel launch is not supported for host
-    if (KernelArgs.Flags.Cooperative)
+    if (LaunchArgs.Flags.Cooperative)
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "cooperative kernel launch not supported for host");
     // TODO: The data will need to be copied locally if we ever support
     //       asynchronous kernel launches in the host interface.
-    Func(LaunchParams.Args);
+    Func(LaunchArgs.Args);
     return Plugin::success();
   }
 
@@ -182,8 +182,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId) override {
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy * /*Context*/) override {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image = Plugin.allocate<GenELF64DeviceImageTy>();
     new (Image) GenELF64DeviceImageTy(ImageId, *this, std::move(TgtImage));
@@ -328,11 +328,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                        bool *IsQueueWorkCompleted) override {
     if (IsQueueWorkCompleted)
       *IsQueueWorkCompleted = true;
-    return Plugin::success();
-  }
-
-  /// This plugin does not support interoperability
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
   }
 
@@ -487,6 +482,14 @@ public:
   }
 };
 
+struct GenELF64PluginContextTy final : public PluginContextTy {
+  using PluginContextTy::PluginContextTy;
+
+  Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
+    return Plugin::success();
+  }
+};
+
 /// Class implementing the plugin functionalities for GenELF64.
 struct GenELF64PluginTy final : public GenericPluginTy {
   /// Create the GenELF64 plugin.
@@ -510,6 +513,11 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
     return new GenELF64DeviceTy(Plugin, DeviceId, NumDevices);
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<GenELF64PluginContextTy>(*this, Devices);
   }
 
   /// Creates a generic global handler.

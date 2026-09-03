@@ -779,8 +779,9 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
@@ -967,9 +968,16 @@ void StmtPrinter::VisitOMPScanDirective(OMPScanDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
-void StmtPrinter::VisitOMPOrderedDirective(OMPOrderedDirective *Node) {
+void StmtPrinter::VisitOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *Node) {
   Indent() << "#pragma omp ordered";
-  PrintOMPExecutableDirective(Node, Node->hasClausesOfKind<OMPDependClause>());
+  PrintOMPExecutableDirective(Node, true);
+}
+
+void StmtPrinter::VisitOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *Node) {
+  Indent() << "#pragma omp ordered";
+  PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPAtomicDirective(OMPAtomicDirective *Node) {
@@ -1018,16 +1026,18 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancellation point "
            << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancel "
            << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
@@ -2664,6 +2674,12 @@ void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
   assert(false && "not implemented yet");
 }
 
+void StmtPrinter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *Node) {
+  Node->getTemplateName().print(OS, Policy, TemplateName::Qualified::None);
+  printTemplateArgumentList(OS, Node->template_arguments(), Policy,
+                            Node->getParameter()->getTemplateParameters());
+}
+
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(
                                          CXXDependentScopeMemberExpr *Node) {
   if (!Node->isImplicitAccess()) {
@@ -2780,7 +2796,7 @@ void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
   OS << E->getFoundDecl()->getName();
   printTemplateArgumentList(OS, E->getTemplateArgsAsWritten()->arguments(),
                             Policy,
-                            E->getNamedConcept()->getTemplateParameters());
+                            E->getConceptDecl()->getTemplateParameters());
 }
 
 void StmtPrinter::VisitRequiresExpr(RequiresExpr *E) {

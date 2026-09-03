@@ -340,6 +340,6 @@ define float @sqrt_ninf_inf() {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call ninf float @llvm.sqrt.f32(float -inf)
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
-  %sqrt = call ninf float @llvm.sqrt(float 0xfff0000000000000)
+  %sqrt = call ninf float @llvm.sqrt(float -inf)
   ret float %sqrt
 }

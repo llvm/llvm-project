@@ -87,6 +87,10 @@ public:
 
   bool hasDivergentTerminator(const BlockT &B);
 
+  /// Call before erasing \p V, or a later instruction reusing its address
+  /// may be misclassified as uniform.
+  void forgetValue(ConstValueRefT V);
+
   void print(raw_ostream &Out) const;
 
   iterator_range<TemporalDivergenceTuple *> getTemporalDivergenceList() const;

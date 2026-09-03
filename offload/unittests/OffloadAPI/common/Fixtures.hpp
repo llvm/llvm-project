@@ -193,6 +193,14 @@ struct OffloadDeviceTestWithParam
     Device = DeviceParam.Handle;
     if (Device == nullptr)
       GTEST_SKIP() << "No available devices.";
+
+    ASSERT_SUCCESS(olCreateContext(1, &Device, &Context));
+  }
+
+  void TearDown() override {
+    if (Context)
+      olDestroyContext(Context);
+    RETURN_ON_FATAL_FAILURE(OffloadTest::TearDown());
   }
 
   ol_platform_backend_t getPlatformBackend() const {
@@ -212,6 +220,7 @@ struct OffloadDeviceTestWithParam
   const T &getTestParam() { return std::get<1>(getParamTuple()); }
 
   ol_device_handle_t Device = nullptr;
+  ol_context_handle_t Context = nullptr;
 };
 
 // In order to avoid code duplication, the unparameterized versions of fixtures
@@ -252,7 +261,8 @@ struct OffloadProgramTestWithParam : OffloadDeviceTestWithParam<T> {
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary(ProgramName, this->Device,
                                                   DeviceBin));
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
-    ASSERT_SUCCESS(olCreateProgram(this->Device, DeviceBin->getBufferStart(),
+    ASSERT_SUCCESS(olCreateProgram(this->Context, this->Device,
+                                   DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
   }
 
@@ -303,7 +313,7 @@ using OffloadGlobalTest = OffloadGlobalTestWithParam<int>;
 struct OffloadQueueTest : OffloadDeviceTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
-    ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+    ASSERT_SUCCESS(olCreateQueue(Context, Device, &Queue));
   }
 
   void TearDown() override {
@@ -337,7 +347,7 @@ struct LaunchKernelTestBase : OffloadQueueTest {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary(program, Device, DeviceBin));
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
-    ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+    ASSERT_SUCCESS(olCreateProgram(Context, Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
 
     LaunchArgs.Dimensions = 1;

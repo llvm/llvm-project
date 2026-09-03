@@ -651,3 +651,50 @@ bool AArch64Subtarget::isX16X17Safer() const {
 bool AArch64Subtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
 }
+
+/// Returns a MOVK's shifter operand, or 0 otherwise.
+static unsigned getMOVKShiftImm(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  if (Opc != AArch64::MOVKWi && Opc != AArch64::MOVKXi)
+    return 0;
+  return MI.getOperand(3).getImm();
+}
+
+/// \p HasFirst is false when the 1st instruction is a wildcard.
+static bool fusesMOVImmPairImpl(const AArch64Subtarget &ST, bool HasFirst,
+                                unsigned FirstOpc, unsigned FirstShift,
+                                unsigned SecondOpc, unsigned SecondShift) {
+  assert(ST.hasFuseLiterals() && "the subtarget doesn't fuse move immediate");
+
+  // 32 bit immediate.
+  if ((!HasFirst || FirstOpc == AArch64::MOVZWi) &&
+      SecondOpc == AArch64::MOVKWi && SecondShift == 16)
+    return true;
+
+  // Lower half of 64 bit immediate.
+  if ((!HasFirst || FirstOpc == AArch64::MOVZXi) &&
+      SecondOpc == AArch64::MOVKXi && SecondShift == 16)
+    return true;
+
+  // Upper half of 64 bit immediate.
+  if ((!HasFirst || (FirstOpc == AArch64::MOVKXi && FirstShift == 32)) &&
+      SecondOpc == AArch64::MOVKXi && SecondShift == 48)
+    return true;
+
+  return false;
+}
+
+bool AArch64Subtarget::fusesMOVImmPair(unsigned FirstOpc, unsigned FirstShift,
+                                       unsigned SecondOpc,
+                                       unsigned SecondShift) const {
+  return fusesMOVImmPairImpl(*this, /*HasFirst=*/true, FirstOpc, FirstShift,
+                             SecondOpc, SecondShift);
+}
+
+bool AArch64Subtarget::fusesMOVImmPair(const MachineInstr *FirstMI,
+                                       const MachineInstr &SecondMI) const {
+  return fusesMOVImmPairImpl(*this, FirstMI != nullptr,
+                             FirstMI ? FirstMI->getOpcode() : 0,
+                             FirstMI ? getMOVKShiftImm(*FirstMI) : 0,
+                             SecondMI.getOpcode(), getMOVKShiftImm(SecondMI));
+}

@@ -116,7 +116,7 @@ bool Token::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
   case tok::kw__Fract:
   case tok::kw__Sat:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   case tok::kw___auto_type:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
@@ -1284,6 +1284,11 @@ DiagnosticBuilder Lexer::Diag(const char *Loc, unsigned DiagID) const {
   return PP->Diag(getSourceLocation(Loc), DiagID);
 }
 
+DiagnosticBuilder Lexer::DiagCompat(const char *Loc,
+                                    unsigned CompatDiagId) const {
+  return Diag(Loc, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagId));
+}
+
 //===----------------------------------------------------------------------===//
 // Trigraph and Escaped Newline Handling Code.
 //===----------------------------------------------------------------------===//
@@ -2391,9 +2396,7 @@ bool Lexer::LexRawStringLiteral(Token &Result, const char *CurPtr,
     if (!isLexingRawMode() &&
         llvm::is_contained({'$', '@', '`'}, CurPtr[PrefixLen])) {
       const char *Pos = &CurPtr[PrefixLen];
-      Diag(Pos, LangOpts.CPlusPlus26
-                    ? diag::warn_cxx26_compat_raw_string_literal_character_set
-                    : diag::ext_cxx26_raw_string_literal_character_set)
+      DiagCompat(Pos, diag_compat::raw_string_literal_character_set)
           << StringRef(Pos, 1);
     }
     ++PrefixLen;
@@ -3163,6 +3166,7 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
   // If we are returning comments as tokens, return this comment as a token.
   if (inKeepCommentMode()) {
     FormTokenWithChars(Result, CurPtr, tok::comment);
+    IsAtPhysicalStartOfLine = Result.isAtPhysicalStartOfLine();
     return true;
   }
 

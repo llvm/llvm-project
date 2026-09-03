@@ -180,12 +180,8 @@ static const TargetRegisterClass &getRegClassForBank(const RegisterBank &RB) {
 }
 
 const TargetRegisterClass *
-WebAssemblyRegisterInfo::getConstrainedRegClassForOperand(
-    const MachineOperand &MO, const MachineRegisterInfo &MRI) const {
-  assert(MO.isReg());
-
-  Register Reg = MO.getReg();
-
+WebAssemblyRegisterInfo::getConstrainedRegClassForReg(
+    Register Reg, const MachineRegisterInfo &MRI) const {
   if (Reg.isPhysical()) {
     switch (Reg.id()) {
     case WebAssembly::SP32:

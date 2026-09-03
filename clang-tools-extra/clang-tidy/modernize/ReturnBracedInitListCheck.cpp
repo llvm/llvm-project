@@ -116,8 +116,8 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
   // Make sure that the ctor arguments match the declaration.
   for (unsigned I = 0, NumParams = MatchedConstructExpr->getNumArgs();
        I < NumParams; ++I) {
-    if (const auto *VD = dyn_cast<VarDecl>(
-            MatchedConstructExpr->getConstructor()->getParamDecl(I))) {
+    if (const ParmVarDecl *VD =
+            MatchedConstructExpr->getConstructor()->getParamDecl(I)) {
       const auto ArgType = MatchedConstructExpr->getArg(I)->getType();
       const auto ParamType = VD->getType().getNonReferenceType();
       if (ArgType.getCanonicalType().getUnqualifiedType() !=

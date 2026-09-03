@@ -11,11 +11,11 @@ LoopFusion
 
 ## Introduction
 
-```{warning}
+:::{warning}
 This document is not updated frequently, and the list of passes
 is most likely incomplete. It is possible to list passes known by the opt
 tool using `opt -print-passes`.
-```
+:::
 
 This document serves as a high-level summary of the optimization features that
 LLVM provides.  Optimizations are implemented as Passes that traverse some

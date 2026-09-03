@@ -13,7 +13,7 @@ function(collect_object_file_deps target result)
     foreach(dep IN LISTS deps)
       collect_object_file_deps(${dep} dep_targets)
       list(APPEND all_deps ${dep_targets})
-    endforeach(dep)
+    endforeach()
     list(REMOVE_DUPLICATES all_deps)
     set(${result} ${all_deps} PARENT_SCOPE)
     return()
@@ -26,7 +26,7 @@ function(collect_object_file_deps target result)
       get_target_property(aliasee ${entrypoint_target} "DEPS")
       if(NOT aliasee)
         message(FATAL_ERROR
-                "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
+          "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
       endif()
       set(entrypoint_target ${aliasee})
     endif()
@@ -34,7 +34,7 @@ function(collect_object_file_deps target result)
     foreach(dep IN LISTS deps)
       collect_object_file_deps(${dep} dep_targets)
       list(APPEND all_deps ${dep_targets})
-    endforeach(dep)
+    endforeach()
     list(REMOVE_DUPLICATES all_deps)
     set(${result} ${all_deps} PARENT_SCOPE)
     return()
@@ -47,16 +47,16 @@ function(collect_object_file_deps target result)
     set(${result} ${deps} PARENT_SCOPE)
     return()
   endif()
-endfunction(collect_object_file_deps)
+endfunction()
 
 function(get_all_object_file_deps result fq_deps_list)
   set(all_deps "")
   foreach(dep ${fq_deps_list})
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
-            (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})))
+      (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})))
       message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_collection' is "
-                          "not an 'add_entrypoint_object' or 'add_entrypoint_external' target.")
+        "not an 'add_entrypoint_object' or 'add_entrypoint_external' target.")
     endif()
     collect_object_file_deps(${dep} recursive_deps)
     list(APPEND all_deps ${recursive_deps})
@@ -69,13 +69,13 @@ function(get_all_object_file_deps result fq_deps_list)
         get_target_property(aliasee ${entrypoint_target} "DEPS")
         if(NOT aliasee)
           message(FATAL_ERROR
-                  "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
+            "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
         endif()
         set(entrypoint_target ${aliasee})
       endif()
     endif()
     list(APPEND all_deps ${entrypoint_target})
-  endforeach(dep)
+  endforeach()
   list(REMOVE_DUPLICATES all_deps)
   set(${result} ${all_deps} PARENT_SCOPE)
 endfunction()
@@ -106,7 +106,7 @@ function(llvm_link_bitcode target_name)
   )
   add_custom_target(${target_name} ALL DEPENDS ${ARG_OUTPUT})
   set_target_properties(${target_name} PROPERTIES TARGET_FILE ${ARG_OUTPUT})
-endfunction(llvm_link_bitcode)
+endfunction()
 
 # A rule to build a library from a collection of entrypoint objects and bundle
 # it in a single LLVM IR module.
@@ -122,7 +122,7 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
     INPUTS $<TARGET_FILE:${base_target_name}>
     DEPENDS ${base_target_name}
   )
-endfunction(add_bitcode_entrypoint_library)
+endfunction()
 
 # A rule to build a library from a collection of entrypoint objects.
 # Usage:
@@ -143,7 +143,7 @@ function(add_entrypoint_library target_name)
   )
   if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
     message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
-                        "of 'add_entrypoint_object' targets.")
+      "of 'add_entrypoint_object' targets.")
   endif()
 
   get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
@@ -152,15 +152,15 @@ function(add_entrypoint_library target_name)
   set(objects "")
   foreach(dep IN LISTS all_deps)
     list(APPEND objects $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
-  endforeach(dep)
+  endforeach()
 
   add_library(
     ${target_name}
     STATIC
-    ${objects}
+      ${objects}
   )
   set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
-endfunction(add_entrypoint_library)
+endfunction()
 
 set(HDR_LIBRARY_TARGET_TYPE "HDR_LIBRARY")
 
@@ -196,7 +196,7 @@ function(create_header_library fq_target_name)
     # location, not to be linked against.
     set(link_lib "")
     foreach(dep ${ADD_HEADER_DEPENDS})
-      if (NOT dep MATCHES "__copied_hdr__")
+      if(NOT dep MATCHES "__copied_hdr__")
         list(APPEND link_lib ${dep})
       endif()
     endforeach()
@@ -214,7 +214,7 @@ function(create_header_library fq_target_name)
       DEPS "${ADD_HEADER_DEPENDS}"
       FLAGS "${ADD_HEADER_FLAGS}"
   )
-endfunction(create_header_library)
+endfunction()
 
 # Rule to add header only libraries.
 # Usage
@@ -231,4 +231,4 @@ function(add_header_library target_name)
     CREATE_TARGET create_header_library
     ${ARGN}
   )
-endfunction(add_header_library)
+endfunction()

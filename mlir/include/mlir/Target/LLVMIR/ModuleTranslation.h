@@ -416,6 +416,7 @@ private:
                                      llvm::IRBuilderBase &builder,
                                      bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
+  LogicalResult convertFunctionMetadata();
   LogicalResult convertFunctions();
   LogicalResult convertIFuncs();
   LogicalResult convertComdats();
@@ -427,7 +428,18 @@ private:
   /// - Create named global variables that correspond to llvm.mlir.global
   /// definitions, similarly Convert llvm.global_ctors and global_dtors ops.
   /// - Create global alias that correspond to llvm.mlir.alias.
+  /// Global metadata that can reference other global objects (including
+  /// ifuncs) is converted later by `convertGlobalMetadata`.
   LogicalResult convertGlobalsAndAliases();
+
+  /// Attach metadata on LLVM globals after all global objects exist so that
+  /// symbol references (globals, aliases, functions, and ifuncs) can be
+  /// resolved.
+  LogicalResult convertGlobalMetadata();
+  /// Converts a symbol ref to LLVM IR metadata, or fails if unresolved.
+  FailureOr<llvm::Metadata *>
+  convertSymbolRefToMetadata(FlatSymbolRefAttr name,
+                             function_ref<InFlightDiagnostic()> emitError);
   LogicalResult convertOneFunction(LLVMFuncOp func);
   LogicalResult convertBlockImpl(Block &bb, bool ignoreArguments,
                                  llvm::IRBuilderBase &builder,

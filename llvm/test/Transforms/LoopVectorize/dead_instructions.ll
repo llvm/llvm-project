@@ -17,7 +17,7 @@ define i64 @dead_instructions_01(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -44,16 +44,16 @@ define i64 @dead_instructions_01(ptr %a, i64 %n) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP3:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP2]], [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2]] = add i64 [[TMP1]], [[R]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_BODY]], label %[[FOR_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ [[TMP3]], %[[FOR_BODY]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP2]], %[[FOR_BODY]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
 entry:
   br label %for.body

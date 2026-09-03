@@ -14,7 +14,7 @@ THREADS: unsupported instrumentation profile format version
 RUN: not llvm-profdata merge %p/Inputs/ir-basic.proftext %t/coverage.proftext -o /dev/null 2>&1 | FileCheck %s --check-prefix=COVERAGE
 RUN: not llvm-profdata merge %t/coverage.proftext %p/Inputs/ir-basic.proftext -o /dev/null 2>&1 | FileCheck %s --check-prefix=COVERAGE
 RUN: not llvm-profdata merge %p/Inputs/ir-basic.proftext %t/coverage.proftext --num-threads=2 -o /dev/null 2>&1 | FileCheck %s --check-prefix=COVERAGE
-COVERAGE: cannot merge single-byte-coverage profiles with count (non-coverage) profiles
+COVERAGE: cannot merge single-byte and incrementing counter profiles
 
 //--- coverage.proftext
 :ir
