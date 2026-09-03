@@ -45,8 +45,8 @@ void caller(void) {
 //  CHECK-NEXT:   call void @fn_streaming_new_zt0
 
 // CIR-LABEL: @caller()
-// CIR: cir.call @fn() {inline_kind = #cir.inline_kind<always_inline>}
-// CIR: cir.call @fn_streaming_compatible() {inline_kind = #cir.inline_kind<always_inline>}
+// CIR: cir.call @fn() {inline_kind = #cir.inline<always_inline>}
+// CIR: cir.call @fn_streaming_compatible() {inline_kind = #cir.inline<always_inline>}
 // CIR: cir.call @fn_streaming()
 // CIR-NOT: inline_kind
 // CIR: cir.call @fn_locally_streaming()
@@ -75,7 +75,7 @@ FN_ATTR void caller_streaming_compatible(void) __arm_streaming_compatible {
 // CIR-LABEL: @caller_streaming_compatible()
 // CIR: cir.call @fn()
 // CIR-NOT: inline_kind
-// CIR: cir.call @fn_streaming_compatible() {inline_kind = #cir.inline_kind<always_inline>}
+// CIR: cir.call @fn_streaming_compatible() {inline_kind = #cir.inline<always_inline>}
 // CIR: cir.call @fn_streaming()
 // CIR-NOT: inline_kind
 // CIR: cir.call @fn_locally_streaming()
@@ -104,9 +104,9 @@ FN_ATTR void caller_streaming(void) __arm_streaming {
 // CIR-LABEL: @caller_streaming()
 // CIR: cir.call @fn()
 // CIR-NOT: inline_kind
-// CIR: cir.call @fn_streaming_compatible() {inline_kind = #cir.inline_kind<always_inline>}
-// CIR: cir.call @fn_streaming() {inline_kind = #cir.inline_kind<always_inline>}
-// CIR: cir.call @fn_locally_streaming() {inline_kind = #cir.inline_kind<always_inline>}
+// CIR: cir.call @fn_streaming_compatible() {inline_kind = #cir.inline<always_inline>}
+// CIR: cir.call @fn_streaming() {inline_kind = #cir.inline<always_inline>}
+// CIR: cir.call @fn_locally_streaming() {inline_kind = #cir.inline<always_inline>}
 // CIR: cir.call @fn_streaming_new_za()
 // CIR-NOT: inline_kind
 // CIR: cir.call @fn_streaming_new_zt0()
@@ -132,9 +132,9 @@ void caller_locally_streaming(void) {
 // CIR-LABEL: @caller_locally_streaming()
 // CIR: cir.call @fn()
 // CIR-NOT: inline_kind
-// CIR: cir.call @fn_streaming_compatible() {inline_kind = #cir.inline_kind<always_inline>}
-// CIR: cir.call @fn_streaming() {inline_kind = #cir.inline_kind<always_inline>}
-// CIR: cir.call @fn_locally_streaming() {inline_kind = #cir.inline_kind<always_inline>}
+// CIR: cir.call @fn_streaming_compatible() {inline_kind = #cir.inline<always_inline>}
+// CIR: cir.call @fn_streaming() {inline_kind = #cir.inline<always_inline>}
+// CIR: cir.call @fn_locally_streaming() {inline_kind = #cir.inline<always_inline>}
 // CIR: cir.call @fn_streaming_new_za()
 // CIR-NOT: inline_kind
 // CIR: cir.call @fn_streaming_new_zt0()
