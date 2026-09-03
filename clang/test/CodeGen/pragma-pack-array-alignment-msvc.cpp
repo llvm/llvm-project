@@ -1,13 +1,14 @@
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fms-extensions \
-// RUN: -emit-llvm -o - %s | FileCheck %s
+// RUN: -ffreestanding -emit-llvm -o - %s | FileCheck %s
+
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fms-extensions \
-// RUN: -mlong-double-80 -emit-llvm -o - %s | FileCheck %s \
+// RUN: -ffreestanding -mlong-double-80 -emit-llvm -o - %s | FileCheck %s \
 // RUN: --check-prefix=CHECK-FP80
 
 // Test that #pragma pack does not reduce natural type alignment for vector
 // and x86_fp80 types when used as array elements (matching MSVC behavior).
 
-typedef float __m128 __attribute__((__vector_size__(16)));
+#include <xmmintrin.h>
 
 // Simple array-like struct with vector type under pragma pack.
 #pragma pack(push, 8)
@@ -21,7 +22,7 @@ struct array {
 void test_vector_array() {
   // CHECK: %matrix = alloca %struct.array, align 16
   array<__m128, 16> matrix;
-  matrix._Elems[0] = (__m128){};
+  matrix._Elems[0] = _mm_setzero_ps();
 }
 
 // Struct containing vector under pragma pack.
@@ -39,7 +40,7 @@ struct ArrayOfVectorStruct {
 void test_vector_struct() {
   // CHECK: %s = alloca %struct.ArrayOfVectorStruct, align 16
   ArrayOfVectorStruct s;
-  s.elems[0].vec = (__m128){};
+  s.elems[0].vec = _mm_setzero_ps();
 }
 
 // Test x86_fp80 (long double with -mlong-double-80) arrays under pragma pack.
