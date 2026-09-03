@@ -235,6 +235,10 @@ static llvm::cl::opt<bool> enableCUDAInit("fcuda-init",
                                           llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
+    warnOnAllExtensions("pedantic", llvm::cl::desc("warn on all extensions"),
+                        llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
     enableDoConcurrentOffload("fdoconcurrent-offload",
                               llvm::cl::desc("enable do concurrent offload"),
                               llvm::cl::init(false));
@@ -372,6 +376,7 @@ static llvm::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
 
   fir::OpenMPFIRPassPipelineOpts opts;
+  opts.isSimdOnly = false;
   opts.isTargetDevice = enableOpenMPDevice;
   opts.doConcurrentMappingKind =
       llvm::StringSwitch<DoConcurrentMappingKind>(
@@ -542,7 +547,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
                                                    offloadModuleOpts);
     mlir::omp::setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
     if (!integerWrapAround)
-      setOpenMPIntegerWrapAround(mlirModule, false);
+      mlir::omp::setOpenMPIntegerWrapAround(mlirModule, false);
   }
   burnside.lower(parseTree, semanticsContext);
   std::error_code ec;
@@ -694,6 +699,10 @@ int main(int argc, char **argv) {
   }
   if (enableCUDAInit) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDAInit);
+  }
+  if (warnOnAllExtensions) {
+    options.features.WarnOnAllNonstandard();
+    options.features.WarnOnAllUsage();
   }
 
   if (enableDoConcurrentOffload) {

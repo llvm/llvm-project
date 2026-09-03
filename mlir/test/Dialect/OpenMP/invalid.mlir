@@ -887,7 +887,7 @@ func.func @omp_ordered_region3(%x : i32) -> () {
 
 func.func @omp_ordered1(%vec0 : i64) -> () {
   // expected-error @below {{op must be nested inside of a loop}}
-  omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) {doacross_num_loops = 1 : i64}
+  omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) num_loops(1)
   return
 }
 
@@ -897,7 +897,7 @@ func.func @omp_ordered2(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64) -> (
   omp.distribute {
     omp.loop_nest (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
       // expected-error @below {{op must be nested inside of a worksharing, simd or worksharing simd loop}}
-      omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) {doacross_num_loops = 1 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) num_loops(1)
       omp.yield
     }
   }
@@ -910,7 +910,7 @@ func.func @omp_ordered3(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64) -> (
   omp.wsloop {
     omp.loop_nest (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
       // expected-error @below {{the enclosing worksharing-loop region must have an ordered clause}}
-      omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) {doacross_num_loops = 1 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) num_loops(1)
       omp.yield
     }
   }
@@ -923,7 +923,7 @@ func.func @omp_ordered4(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64) -> (
   omp.wsloop ordered(0) {
     omp.loop_nest (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
       // expected-error @below {{the enclosing loop's ordered clause must have a parameter present}}
-      omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) {doacross_num_loops = 1 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) num_loops(1)
       omp.yield
     }
   }
@@ -936,7 +936,7 @@ func.func @omp_ordered5(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64, %vec
   omp.wsloop ordered(1) {
     omp.loop_nest (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
       // expected-error @below {{number of variables in depend clause does not match number of iteration variables in the doacross loop}}
-      omp.ordered depend_type(dependsource) depend_vec(%vec0, %vec1 : i64, i64) {doacross_num_loops = 2 : i64}
+      omp.ordered depend_type(dependsource) depend_vec(%vec0, %vec1 : i64, i64) num_loops(2)
       omp.yield
     }
   }
@@ -1475,7 +1475,7 @@ func.func @omp_atomic_compare_invalid_fail_release(%x: memref<i32>, %e: i32, %d:
     %cmp = llvm.icmp "eq" %xval, %e : i32
     %sel = llvm.select %cmp, %d, %xval : i1, i32
     omp.yield(%sel : i32)
-  } {fail_memory_order = #omp<memoryorderkind release>}
+  } fail_memory_order(release)
   return
 }
 
@@ -1489,7 +1489,7 @@ func.func @omp_atomic_compare_invalid_fail_acq_rel(%x: memref<i32>, %e: i32, %d:
     %cmp = llvm.icmp "eq" %xval, %e : i32
     %sel = llvm.select %cmp, %d, %xval : i1, i32
     omp.yield(%sel : i32)
-  } {fail_memory_order = #omp<memoryorderkind acq_rel>}
+  } fail_memory_order(acq_rel)
   return
 }
 
@@ -2339,7 +2339,7 @@ func.func @omp_task_depend_iterated_no_vars(%data_var: memref<i32>) {
   // expected-error @below {{op unexpected depend iterated values}}
     "omp.task"() ({
       "omp.terminator"() : () -> ()
-    }) {depend_iterated_kinds = [#omp<clause_task_depend(taskdependin)>], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : () -> ()
+    }) {depend_iterated_kinds = [#omp.clause_task_depend<taskdependin>], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : () -> ()
    "func.return"() : () -> ()
 }
 
@@ -2928,7 +2928,7 @@ func.func @omp_threadprivate() {
 // -----
 
 func.func @omp_target(%map1: memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(delete) capture(ByRef) name("") -> memref<?xi32>
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
   omp.target kernel_type(generic) map_entries(%mapv -> %arg0: memref<?xi32>) {
     omp.terminator
@@ -2939,7 +2939,7 @@ func.func @omp_target(%map1: memref<?xi32>) {
 // -----
 
 func.func @omp_target_data(%map1: memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)  map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)  map_clauses(delete) capture(ByRef) name("") -> memref<?xi32>
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
   omp.target_data map_entries(%mapv : memref<?xi32>){}
   return
@@ -2956,7 +2956,7 @@ func.func @omp_target_data() {
 // -----
 
 func.func @omp_target_enter_data(%map1: memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(from) capture(ByRef) name("") -> memref<?xi32>
   // expected-error @below {{to and alloc map types are permitted}}
   omp.target_enter_data map_entries(%mapv : memref<?xi32>){}
   return
@@ -2974,7 +2974,7 @@ func.func @omp_target_enter_data_depend(%a: memref<?xi32>) {
 // -----
 
 func.func @omp_target_exit_data(%map1: memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(to) capture(ByRef) name("") -> memref<?xi32>
   // expected-error @below {{from, release and delete map types are permitted}}
   omp.target_exit_data map_entries(%mapv : memref<?xi32>){}
   return
@@ -2992,7 +2992,7 @@ func.func @omp_target_exit_data_depend(%a: memref<?xi32>) {
 // -----
 
 func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) name("") -> memref<?xi32>
 
   // expected-error @below {{at least one of to or from or attach map types must be specified, other map types are not permitted}}
   omp.target_update map_entries(%mapv : memref<?xi32>)
@@ -3003,7 +3003,7 @@ func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
 // -----
 
 func.func @omp_target_map_must_specify_both_var_ptr_ptr_args(%arg : memref<?xi32>) {
-  %map1 = omp.map.info var_ptr(%arg : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) var_ptr_ptr(%arg : memref<?xi32>, ) -> memref<?xi32> {name = ""}
+  %map1 = omp.map.info var_ptr(%arg : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) var_ptr_ptr(%arg : memref<?xi32>, ) name("") -> memref<?xi32>
 
   // expected-error @below {{if varPtrPtr or varPtrPtrType is specified, then both must be present}}
   omp.target_update map_entries(%map1 : memref<?xi32>)
@@ -3013,7 +3013,7 @@ func.func @omp_target_map_must_specify_both_var_ptr_ptr_args(%arg : memref<?xi32
 // -----
 
 func.func @omp_target_update_invalid_motion_type_2(%map1 : memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(delete) capture(ByRef) name("") -> memref<?xi32>
 
   // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
   omp.target_update map_entries(%mapv : memref<?xi32>)
@@ -3023,7 +3023,7 @@ func.func @omp_target_update_invalid_motion_type_2(%map1 : memref<?xi32>) {
 // -----
 
 func.func @omp_target_update_invalid_motion_modifier(%map1 : memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(always, to) capture(ByRef) name("") -> memref<?xi32>
 
   // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
   omp.target_update map_entries(%mapv : memref<?xi32>)
@@ -3033,7 +3033,7 @@ func.func @omp_target_update_invalid_motion_modifier(%map1 : memref<?xi32>) {
 // -----
 
 func.func @omp_target_update_invalid_motion_modifier_2(%map1 : memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(close, to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(close, to) capture(ByRef) name("") -> memref<?xi32>
 
   // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
   omp.target_update map_entries(%mapv : memref<?xi32>)
@@ -3043,7 +3043,7 @@ func.func @omp_target_update_invalid_motion_modifier_2(%map1 : memref<?xi32>) {
 // -----
 
 func.func @omp_target_update_invalid_motion_modifier_3(%map1 : memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, to) capture(ByRef) name("") -> memref<?xi32>
 
   // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
   omp.target_update map_entries(%mapv : memref<?xi32>)
@@ -3053,7 +3053,7 @@ func.func @omp_target_update_invalid_motion_modifier_3(%map1 : memref<?xi32>) {
 // -----
 
 func.func @omp_target_update_invalid_motion_modifier_4(%map1 : memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, tofrom) capture(ByRef) name("") -> memref<?xi32>
 
   // expected-error @below {{either to or from map types can be specified, not both}}
   omp.target_update map_entries(%mapv : memref<?xi32>)
@@ -3063,8 +3063,8 @@ func.func @omp_target_update_invalid_motion_modifier_4(%map1 : memref<?xi32>) {
 // -----
 
 func.func @omp_target_update_invalid_motion_modifier_5(%map1 : memref<?xi32>) {
-  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
-  %mapv2 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) name("") -> memref<?xi32>
+  %mapv2 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) name("") -> memref<?xi32>
 
   // expected-error @below {{either to or from map types can be specified, not both}}
   omp.target_update map_entries(%mapv, %mapv2 : memref<?xi32>, memref<?xi32>)
@@ -3277,7 +3277,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {kernel_type = #omp<kernel_type(generic)>, depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {kernel_type = #omp.kernel_type<generic>, depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
@@ -3394,9 +3394,12 @@ omp.private {type = private} @allocate_private : i32
 
 func.func @omp_parallel_allocate_empty_map() {
   // expected-error @below {{unexpected allocate private indices without allocate variables}}
-  omp.parallel {
+  "omp.parallel"() <{
+    allocate_private_indices = array<i64>,
+    operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0>
+  }> ({
     omp.terminator
-  } {allocate_private_indices = array<i64>}
+  }) : () -> ()
   return
 }
 
@@ -3404,9 +3407,12 @@ func.func @omp_parallel_allocate_empty_map() {
 
 func.func @omp_parallel_allocate_empty_alignments() {
   // expected-error @below {{unexpected allocate alignments without allocate variables}}
-  omp.parallel {
+  "omp.parallel"() <{
+    allocate_alignments = array<i64>,
+    operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0>
+  }> ({
     omp.terminator
-  } {allocate_alignments = array<i64>}
+  }) : () -> ()
   return
 }
 
@@ -3417,10 +3423,10 @@ omp.private {type = private} @allocate_private : i32
 func.func @omp_parallel_allocate_alignment_size(
     %allocator : i64, %var : !llvm.ptr) {
   // expected-error @below {{expected as many allocate alignments as allocate variables}}
-  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr) allocate_alignments([64, 128]) allocate_private_indices([0])
       private(@allocate_private %var -> %private : !llvm.ptr) {
     omp.terminator
-  } {allocate_alignments = array<i64: 64, 128>, allocate_private_indices = array<i64: 0>}
+  }
   return
 }
 
@@ -3431,10 +3437,10 @@ omp.private {type = private} @allocate_private : i32
 func.func @omp_parallel_allocate_negative_alignment(
     %allocator : i64, %var : !llvm.ptr) {
   // expected-error @below {{expected non-negative allocate alignments}}
-  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr) allocate_alignments([-64]) allocate_private_indices([0])
       private(@allocate_private %var -> %private : !llvm.ptr) {
     omp.terminator
-  } {allocate_alignments = array<i64: -64>, allocate_private_indices = array<i64: 0>}
+  }
   return
 }
 
@@ -3445,10 +3451,10 @@ omp.private {type = private} @allocate_private : i32
 func.func @omp_parallel_allocate_non_power_of_two_alignment(
     %allocator : i64, %var : !llvm.ptr) {
   // expected-error @below {{expected positive allocate alignments to be powers of two}}
-  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr) allocate_alignments([24]) allocate_private_indices([0])
       private(@allocate_private %var -> %private : !llvm.ptr) {
     omp.terminator
-  } {allocate_alignments = array<i64: 24>, allocate_private_indices = array<i64: 0>}
+  }
   return
 }
 
@@ -3471,10 +3477,10 @@ omp.private {type = private} @allocate_private : i32
 
 func.func @omp_parallel_allocate_map_size(%allocator : i64, %var : !llvm.ptr) {
   // expected-error @below {{expected as many allocate private indices as allocate variables}}
-  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr) allocate_private_indices([0, 0])
       private(@allocate_private %var -> %private : !llvm.ptr) {
     omp.terminator
-  } {allocate_private_indices = array<i64: 0, 0>}
+  }
   return
 }
 
@@ -3484,10 +3490,10 @@ omp.private {type = private} @allocate_private : i32
 
 func.func @omp_parallel_allocate_map_range(%allocator : i64, %var : !llvm.ptr) {
   // expected-error @below {{allocate private index is out of range}}
-  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr) allocate_private_indices([1])
       private(@allocate_private %var -> %private : !llvm.ptr) {
     omp.terminator
-  } {allocate_private_indices = array<i64: 1>}
+  }
   return
 }
 
@@ -3500,11 +3506,11 @@ func.func @omp_parallel_allocate_map_duplicate(
     %allocator : i64, %x : !llvm.ptr, %y : !llvm.ptr) {
   // expected-error @below {{allocate private index refers to a private variable more than once}}
   omp.parallel allocate(%allocator : i64 -> %x : !llvm.ptr,
-                        %allocator : i64 -> %y : !llvm.ptr)
+                        %allocator : i64 -> %y : !llvm.ptr) allocate_private_indices([0, 0])
       private(@x_private %x -> %x_private,
               @y_private %y -> %y_private : !llvm.ptr, !llvm.ptr) {
     omp.terminator
-  } {allocate_private_indices = array<i64: 0, 0>}
+  }
   return
 }
 
@@ -3515,10 +3521,10 @@ omp.private {type = private} @allocate_private : i32
 func.func @omp_parallel_allocate_type_mismatch(
     %allocator : i64, %allocate_var : i64, %private_var : !llvm.ptr) {
   // expected-error @below {{type mismatch between allocate variable and private variable at index 0}}
-  omp.parallel allocate(%allocator : i64 -> %allocate_var : i64)
+  omp.parallel allocate(%allocator : i64 -> %allocate_var : i64) allocate_private_indices([0])
       private(@allocate_private %private_var -> %private : !llvm.ptr) {
     omp.terminator
-  } {allocate_private_indices = array<i64: 0>}
+  }
   return
 }
 
@@ -3917,7 +3923,7 @@ func.func @target_private_count_mismatch(%arg0: !llvm.ptr) {
   // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
   "omp.target"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
                          private_syms = [@x.privatizer, @y.privatizer],
-                         kernel_type = #omp<kernel_type(generic)>}> ({
+                         kernel_type = #omp.kernel_type<generic>}> ({
   ^bb0(%arg1 : !llvm.ptr):
     omp.terminator
   }) : (!llvm.ptr) -> ()
@@ -4565,7 +4571,7 @@ func.func @omp_workshare() {
 // -----
 llvm.func @invalid_mapper(%0 : !llvm.ptr) {
   // expected-error @below {{invalid mapper id}}
-  %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(to) capture(ByRef) mapper(@my_mapper) -> !llvm.ptr {name = ""}
+  %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(to) capture(ByRef) mapper(@my_mapper) name("") -> !llvm.ptr
   omp.target_data map_entries(%1 : !llvm.ptr) {
     omp.terminator
   }
@@ -4725,11 +4731,11 @@ func.func @omp_declare_simd_branch() -> () {
 func.func @omp_wsloop_linear_ref(%lb : index, %ub : index, %step : index,
                                   %data_var : memref<i32>, %linear_var : i32) {
   // expected-error @+1 {{'omp.wsloop' op linear modifier 'ref' may only be specified on a declare simd directive}}
-  omp.wsloop linear(ref(%data_var : memref<i32> = %linear_var : i32)) {
+  omp.wsloop linear(ref(%data_var : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  } {linear_var_types = [i32]}
+  }
   return
 }
 
@@ -4738,11 +4744,11 @@ func.func @omp_wsloop_linear_ref(%lb : index, %ub : index, %step : index,
 func.func @omp_wsloop_linear_uval(%lb : index, %ub : index, %step : index,
                                     %data_var : memref<i32>, %linear_var : i32) {
   // expected-error @+1 {{'omp.wsloop' op linear modifier 'uval' may only be specified on a declare simd directive}}
-  omp.wsloop linear(uval(%data_var : memref<i32> = %linear_var : i32)) {
+  omp.wsloop linear(uval(%data_var : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  } {linear_var_types = [i32]}
+  }
   return
 }
 
@@ -4751,11 +4757,11 @@ func.func @omp_wsloop_linear_uval(%lb : index, %ub : index, %step : index,
 func.func @omp_simd_linear_ref(%lb : index, %ub : index, %step : index,
                                 %data_var : memref<i32>, %linear_var : i32) {
   // expected-error @+1 {{'omp.simd' op linear modifier 'ref' may only be specified on a declare simd directive}}
-  omp.simd linear(ref(%data_var : memref<i32> = %linear_var : i32)) {
+  omp.simd linear(ref(%data_var : memref<i32> = %linear_var : i32)) linear_var_types([i32]) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  } {linear_var_types = [i32]}
+  }
   return
 }
 
@@ -4768,7 +4774,7 @@ func.func @omp_wsloop_linear_modifiers_mismatch(%lb : index, %ub : index, %step 
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(val)>],
+  }) {linear_modifiers = [#omp.linear_modifier<val>, #omp.linear_modifier<val>],
       operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (memref<i32>, i32) -> ()
   return
 }
@@ -4782,7 +4788,7 @@ func.func @omp_simd_linear_modifiers_mismatch(%lb : index, %ub : index, %step : 
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(val)>],
+  }) {linear_modifiers = [#omp.linear_modifier<val>, #omp.linear_modifier<val>],
       operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (memref<i32>, i32) -> ()
   return
 }
@@ -4791,7 +4797,7 @@ func.func @omp_simd_linear_modifiers_mismatch(%lb : index, %ub : index, %step : 
 
 func.func @omp_declare_simd_linear_modifiers_mismatch(%iv : i32, %step : i32) {
   // expected-error @below {{'omp.declare_simd' op expected as many linear modifiers as linear variables}}
-  "omp.declare_simd"(%iv, %step) <{linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(ref)>], operandSegmentSizes = array<i32: 0, 1, 1, 0>}> : (i32, i32) -> ()
+  "omp.declare_simd"(%iv, %step) <{linear_modifiers = [#omp.linear_modifier<val>, #omp.linear_modifier<ref>], operandSegmentSizes = array<i32: 0, 1, 1, 0>}> : (i32, i32) -> ()
   return
 }
 
@@ -4924,7 +4930,7 @@ func.func @target_enter_data_map_iterated_invalid_from(%lb : index, %ub : index,
                                                        %st : index,
                                                        %addr : !llvm.ptr) {
   %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error @below {{to and alloc map types are permitted}}
@@ -4938,7 +4944,7 @@ func.func @target_exit_data_map_iterated_invalid_to(%lb : index, %ub : index,
                                                     %st : index,
                                                     %addr : !llvm.ptr) {
   %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error @below {{from, release and delete map types are permitted}}
@@ -4952,7 +4958,7 @@ func.func @target_update_map_iterated_invalid_delete(%lb : index, %ub : index,
                                                      %st : index,
                                                      %addr : !llvm.ptr) {
   %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(delete) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(delete) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
@@ -4965,9 +4971,9 @@ func.func @target_update_map_iterated_invalid_delete(%lb : index, %ub : index,
 func.func @target_update_map_iterated_invalid_conflict(%lb : index, %ub : index,
                                                        %st : index,
                                                        %addr : !llvm.ptr) {
-  %mapv = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+  %mapv = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
   %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error @below {{either to or from map types can be specified, not both}}
@@ -4981,7 +4987,7 @@ func.func @target_data_map_iterated_invalid_delete(%lb : index, %ub : index,
                                                    %st : index,
                                                    %addr : !llvm.ptr) {
   %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(delete) capture(ByRef) -> !llvm.ptr {name = ""}
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(delete) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
@@ -5013,15 +5019,15 @@ omp.declare_mapper @declare_mapper_iterated_yield_not_map_info : !llvm.struct<"m
 
 // -----
 func.func @target_allocmem_invalid_uniq_name(%device : i32) -> () {
-// expected-error @below {{op attribute 'uniq_name' failed to satisfy constraint: string attribute}}
-  %0 = omp.target_allocmem %device : i32, i64 {uniq_name=2}
+// expected-error @below {{integer literal not valid for specified type}}
+  %0 = omp.target_allocmem %device : i32, i64 uniq_name(2)
   return
 }
 
 // -----
 func.func @target_allocmem_invalid_bindc_name(%device : i32) -> () {
-// expected-error @below {{op attribute 'bindc_name' failed to satisfy constraint: string attribute}}
-  %0 = omp.target_allocmem %device : i32, i64 {bindc_name=2}
+// expected-error @below {{integer literal not valid for specified type}}
+  %0 = omp.target_allocmem %device : i32, i64 bindc_name(2)
   return
 }
 

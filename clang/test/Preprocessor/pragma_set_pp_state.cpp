@@ -9,9 +9,24 @@
 #pragma clang __set_pp_state __GLIBCXX__ foo // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
 #pragma clang __set_pp_state __GLIBCXX__ 100000000000000000000000000000 // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
 #pragma clang __set_pp_state __GLIBCXX__ 42.0 // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
+#pragma clang __set_pp_state __GLIBCXX__ 42.0f // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
+#pragma clang __set_pp_state __GLIBCXX__ true // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
+#pragma clang __set_pp_state __GLIBCXX__ false // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
+#pragma clang __set_pp_state __GLIBCXX__ nullptr // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
+#pragma clang __set_pp_state __GLIBCXX__ 'a' // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
+#pragma clang __set_pp_state __GLIBCXX__ "asdfasdf" // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
+#pragma clang __set_pp_state __GLIBCXX__ u'a' // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
+#pragma clang __set_pp_state __GLIBCXX__ u"asdfasdf" // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
+#pragma clang __set_pp_state __GLIBCXX__ 1234_asdf // expected-error {{expected integer after '#pragma clang __set_pp_state __GLIBCXX__'}}
 
 #pragma clang __set_pp_state __GLIBCXX__ 42L
 #pragma clang __set_pp_state __GLIBCXX__ 42
+#pragma clang __set_pp_state __GLIBCXX__ 0x42
+#pragma clang __set_pp_state __GLIBCXX__ 042
+#pragma clang __set_pp_state __GLIBCXX__ 0b10100
+
+#define TWENTY 20
+#pragma clang __set_pp_state __GLIBCXX__ TWENTY
 
 // Check that we treat the identifier after '__set_pp_state' literally.
 #define MACRO __GLIBCXX__

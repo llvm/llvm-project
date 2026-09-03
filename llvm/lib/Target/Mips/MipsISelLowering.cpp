@@ -72,7 +72,6 @@
 #include <cstdint>
 #include <deque>
 #include <iterator>
-#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -4189,7 +4188,7 @@ static std::pair<bool, bool> parsePhysicalReg(StringRef C, StringRef &Prefix,
 EVT MipsTargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
                                             ISD::NodeType) const {
   bool Cond = !Subtarget.isABI_O32() && VT.getSizeInBits() == 32;
-  EVT MinVT = getRegisterType(Cond ? MVT::i64 : MVT::i32);
+  EVT MinVT = getRegisterType(Context, Cond ? MVT::i64 : MVT::i32);
   return VT.bitsLT(MinVT) ? MinVT : VT;
 }
 
@@ -4983,29 +4982,44 @@ int MipsTargetLowering::getCPURegisterIndex(StringRef Name) const {
 Register
 MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                       const MachineFunction &MF) const {
-  // 1. Delete symbol '$'.
-  std::string newRegName = RegName;
-  if (StringRef(RegName).starts_with("$"))
-    newRegName = StringRef(RegName).substr(1);
+  StringRef Name(RegName);
+  Name.consume_front("$");
 
-  // 2. Get register index value.
-  std::smatch matchResult;
-  int regIdx;
-  static const std::regex matchStr("^[0-9]*$");
-  if (std::regex_match(newRegName, matchResult, matchStr))
-    regIdx = std::stoi(newRegName);
-  else {
-    newRegName = StringRef(newRegName).lower();
-    regIdx = getCPURegisterIndex(StringRef(newRegName));
+  unsigned RegIdx;
+  if (Name.getAsInteger(10, RegIdx)) {
+    std::string LowerName = Name.lower();
+    int NamedRegIdx = getCPURegisterIndex(LowerName);
+    if (NamedRegIdx < 0)
+      report_fatal_error(
+          Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
+    RegIdx = NamedRegIdx;
   }
 
-  // 3. Get register.
-  if (regIdx >= 0 && regIdx < 32) {
+  if (RegIdx < 32) {
     const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
-    const MCRegisterClass &RC = Subtarget.isGP64bit()
-                                    ? MRI->getRegClass(Mips::GPR64RegClassID)
-                                    : MRI->getRegClass(Mips::GPR32RegClassID);
-    return RC.getRegister(regIdx);
+    unsigned RegClassID = Mips::GPR32RegClassID;
+    if (VT.isValid()) {
+      if (VT.getSizeInBits() == 64) {
+        if (!Subtarget.isGP64bit())
+          report_fatal_error("64-bit registers not supported on 32-bit target");
+        RegClassID = Mips::GPR64RegClassID;
+      } else if (VT.getSizeInBits() == 32) {
+        RegClassID = Mips::GPR32RegClassID;
+      } else {
+        report_fatal_error(Twine("Invalid register \"" + StringRef(RegName) +
+                                 "\" for " + Twine(VT.getSizeInBits()) +
+                                 "-bit type."));
+      }
+    } else if (Subtarget.isGP64bit()) {
+      RegClassID = Mips::GPR64RegClassID;
+    }
+    const MCRegisterClass &RC = MRI->getRegClass(RegClassID);
+    Register Reg = RC.getRegister(RegIdx);
+    BitVector ReservedRegs = Subtarget.getRegisterInfo()->getReservedRegs(MF);
+    if (!ReservedRegs.test(Reg))
+      reportFatalUsageError(Twine("Trying to obtain non-reserved register \"" +
+                                  StringRef(RegName) + "\"."));
+    return Reg;
   }
 
   report_fatal_error(

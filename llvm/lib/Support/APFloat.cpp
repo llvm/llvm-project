@@ -233,6 +233,70 @@ bool APFloatBase::isRepresentableBy(const fltSemantics &A,
          A.precision <= B.precision;
 }
 
+bool APFloatBase::isLosslesslyConvertibleTo(const fltSemantics &From,
+                                            const fltSemantics &To,
+                                            bool IgnoreNaNs) {
+  if (&From == &To)
+    return true;
+
+  // PPC double-double cannot be described by a conventional exponent range
+  // and precision. In particular, converting it to another semantics drops
+  // its low double, so conservatively reject conversions involving it.
+  if (&From == &semPPCDoubleDouble || &To == &semPPCDoubleDouble)
+    return false;
+
+  if (!isRepresentableBy(From, To))
+    return false;
+
+  if ((From.hasZero && !To.hasZero) ||
+      (From.hasSignedRepr && !To.hasSignedRepr))
+    return false;
+
+  // NegativeZero NaN encoding repurposes the negative-zero bit pattern, so a
+  // conversion to such a format cannot preserve a source negative zero.
+  bool FromHasSignedZero = From.hasZero && From.hasSignedRepr &&
+                           From.nanEncoding != fltNanEncoding::NegativeZero;
+  bool ToHasSignedZero = To.hasZero && To.hasSignedRepr &&
+                         To.nanEncoding != fltNanEncoding::NegativeZero;
+  if (FromHasSignedZero && !ToHasSignedZero)
+    return false;
+
+  // isRepresentableBy compares normalized exponent ranges. Also ensure that
+  // the smallest source value, which may be denormal, is represented exactly
+  // by the destination semantics.
+  APFloat SmallestFrom = APFloat::getSmallest(From);
+  bool LosesInfo = false;
+  (void)SmallestFrom.convert(To, APFloat::rmNearestTiesToEven, &LosesInfo);
+  if (LosesInfo)
+    return false;
+
+  if (From.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
+    return true;
+
+  // Even when NaN representations can be ignored, NaNs must remain NaNs and
+  // infinities must remain infinities. Otherwise the conversion can change
+  // whether an operation with nnan has poison-producing operands.
+  if (IgnoreNaNs) {
+    if (From.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754)
+      return To.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754;
+    return To.nonFiniteBehavior != fltNonfiniteBehavior::FiniteOnly;
+  }
+
+  if (From.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754) {
+    // Converting an IEEE signaling NaN to another semantics quiets it, so the
+    // original value cannot be recovered by converting it back.
+    return false;
+  }
+
+  // NanOnly formats have no signaling NaNs. IEEE semantics can represent
+  // their quiet NaNs; conversions between NanOnly formats are conservatively
+  // accepted only when they use the same NaN encoding.
+  if (To.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754)
+    return true;
+  return To.nonFiniteBehavior == fltNonfiniteBehavior::NanOnly &&
+         From.nanEncoding == To.nanEncoding;
+}
+
 /* A tight upper bound on number of parts required to hold the value
    pow(5, power) is
 
@@ -6066,11 +6130,11 @@ bool APFloatBase::isValidArbitraryFPFormat(StringRef Format) {
 
 const fltSemantics *APFloatBase::getArbitraryFPSemantics(StringRef Format) {
   // TODO: extend to remaining arbitrary FP types: Float8E4M3, Float8E3M4,
-  // Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ, Float8E8M0FNU,
-  // Float8E5M3FNU.
+  // Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ, Float8E8M0FNU.
   return StringSwitch<const fltSemantics *>(Format)
       .Case("Float8E5M2", &semFloat8E5M2)
       .Case("Float8E4M3FN", &semFloat8E4M3FN)
+      .Case("Float8E5M3FNU", &semFloat8E5M3FNU)
       .Case("Float4E2M1FN", &semFloat4E2M1FN)
       .Case("Float6E3M2FN", &semFloat6E3M2FN)
       .Case("Float6E2M3FN", &semFloat6E2M3FN)

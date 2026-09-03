@@ -56,6 +56,7 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
@@ -275,10 +276,12 @@ bool CodeGenAction::beginSourceFileAction() {
     mlir::omp::setOffloadModuleInterfaceAttributes(
         lb.getModule(),
         makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
-    mlir::omp::setOpenMPVersionAttribute(
-        lb.getModule(), ci.getInvocation().getLangOpts().OpenMPVersion);
+    llvm::omp::Version version =
+        ci.getInvocation().getLangOpts().getOpenMPVersion();
+    mlir::omp::setOpenMPVersionAttribute(lb.getModule(),
+                                         static_cast<unsigned>(version));
     if (!ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
-      setOpenMPIntegerWrapAround(lb.getModule(), false);
+      mlir::omp::setOpenMPIntegerWrapAround(lb.getModule(), false);
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
@@ -310,9 +313,9 @@ bool CodeGenAction::beginSourceFileAction() {
   bool isOpenMPEnabled =
       ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP);
-  bool isOpenMPSimd = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   fir::OpenMPFIRPassPipelineOpts opts;
+  opts.isSimdOnly = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   using DoConcurrentMappingKind =
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
@@ -340,7 +343,7 @@ bool CodeGenAction::beginSourceFileAction() {
   // WARNING: This pipeline must be run immediately after the lowering to
   // ensure that the FIR is correct with respect to OpenMP operations/
   // attributes.
-  if (isOpenMPEnabled || isOpenMPSimd)
+  if (isOpenMPEnabled || opts.isSimdOnly)
     fir::createOpenMPFIRPassPipeline(pm, opts);
 
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -908,21 +911,6 @@ static void generateMachineCodeOrAssemblyImpl(
     if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os))
       return;
 
-  // Set-up the pass manager, i.e create an LLVM code-gen pass pipeline.
-  // Currently only the legacy pass manager is supported.
-  // TODO: Switch to the new PM once it's available in the backend.
-  llvm::legacy::PassManager codeGenPasses;
-  codeGenPasses.add(
-      createTargetTransformInfoWrapperPass(tm.getTargetIRAnalysis()));
-
-  llvm::Triple triple(llvmModule.getTargetTriple());
-  llvm::TargetLibraryInfoImpl *tlii =
-      llvm::driver::createTLII(triple, codeGenOpts.getVecLib());
-  codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
-  codeGenPasses.add(new llvm::RuntimeLibraryInfoWrapper(
-      triple, tm.Options.ExceptionModel, tm.Options.FloatABIType,
-      tm.Options.EABIVersion, tm.Options.MCOptions.ABIName, tm.Options.VecLib));
-
   std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
     std::error_code ec;
@@ -934,8 +922,9 @@ static void generateMachineCodeOrAssemblyImpl(
       return;
     }
   }
-  if (tm.addPassesToEmitFile(codeGenPasses, os, dwoOS ? &dwoOS->os() : nullptr,
-                             cgft)) {
+  llvm::Error codeGenError =
+      runCodeGenPipeline(tm, llvmModule, os, dwoOS, cgft);
+  if (codeGenError) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                               "emission of this file type is not supported");
@@ -943,14 +932,8 @@ static void generateMachineCodeOrAssemblyImpl(
     return;
   }
 
-  // Run the passes
-  codeGenPasses.run(llvmModule);
-
   if (dwoOS)
     dwoOS->keep();
-
-  // Cleanup
-  delete tlii;
 }
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
@@ -1040,8 +1023,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
-        triple, targetMachine->Options.ExceptionModel,
-        targetMachine->Options.FloatABIType, targetMachine->Options.EABIVersion,
+        targetMachine->Options.ExceptionModel,
+        targetMachine->Options.EABIVersion,
         targetMachine->Options.MCOptions.ABIName,
         targetMachine->Options.VecLib);
   });
@@ -1092,9 +1075,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
             os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
       }
     } else if (action == BackendActionTy::Backend_EmitLL) {
-      mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
-                                        /*ShouldPreserveUseListOrder=*/false,
-                                        emitSummary));
+      mpm.addPass(llvm::PrintModulePass(
+          os, /*Banner=*/"", /*ShouldPreserveUseListOrder=*/false, emitSummary,
+          /*ShouldRenumberMetadata=*/true));
     }
   }
 

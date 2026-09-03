@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=m68k -global-isel -stop-after=regbankselect < %s | FileCheck %s
+; RUN: llc -mtriple=m68k -global-isel -stop-after=reg-bank-select < %s | FileCheck %s
 
 define i32 @test_add(i32 %x, i32 %y) {
   ; CHECK-LABEL: name: test_add

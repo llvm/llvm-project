@@ -1388,5 +1388,45 @@ TEST(WalkAST, ObjcSelectorCustomGetterClashWithMethod) {
            {"-x", "objective-c"});
 }
 
+TEST(WalkAST, ObjCAtCatchStmt) {
+  testWalk(R"objc(
+    @interface $explicit^CustomException
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      @try {}
+      @catch (^CustomException *e) {}
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-exceptions"});
+}
+
+TEST(WalkAST, ObjCAtSynchronizedStmt) {
+  testWalk(R"objc(
+    @interface $explicit^LockObject
+    + (id)sharedLock;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      @synchronized([^LockObject sharedLock]) {}
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCEncodeExpr) {
+  testWalk(R"objc(
+    struct $explicit^MyStruct { int x; };
+  )objc",
+           R"objc(
+    void test() {
+      const char *enc = @encode(struct ^MyStruct);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
 } // namespace
 } // namespace clang::include_cleaner

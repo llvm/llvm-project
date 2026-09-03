@@ -9,31 +9,23 @@
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 
 namespace llvm::orc {
 
-SimpleRemoteMemoryMapper::SimpleRemoteMemoryMapper(ExecutorProcessControl &EPC,
-                                                   SymbolAddrs SAs)
-    : EPC(EPC), SAs(SAs) {}
+SimpleRemoteMemoryMapper::SimpleRemoteMemoryMapper(ExecutionSession &ES,
+                                                   SimpleMemoryMapBindings B)
+    : ES(ES), B(std::move(B)) {}
 
 void SimpleRemoteMemoryMapper::reserve(size_t NumBytes,
                                        OnReservedFunction OnReserved) {
-  EPC.callSPSWrapperAsync<rt::sps_ci::MemMgrReserve::SPSSig>(
-      SAs.Reserve,
+  B.Reserve(
       [NumBytes, OnReserved = std::move(OnReserved)](
-          Error SerializationErr, Expected<ExecutorAddr> Result) mutable {
-        if (SerializationErr) {
-          cantFail(Result.takeError());
-          return OnReserved(std::move(SerializationErr));
-        }
-
-        if (Result)
-          OnReserved(ExecutorAddrRange(*Result, NumBytes));
-        else
-          OnReserved(Result.takeError());
+          Expected<ExecutorAddr> Result) mutable {
+        if (!Result)
+          return OnReserved(Result.takeError());
+        OnReserved(ExecutorAddrRange(*Result, NumBytes));
       },
-      SAs.Instance, static_cast<uint64_t>(NumBytes));
+      ES, B.Instance, static_cast<uint64_t>(NumBytes));
 }
 
 char *SimpleRemoteMemoryMapper::prepare(jitlink::LinkGraph &G,
@@ -54,51 +46,18 @@ void SimpleRemoteMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
                            Seg.ContentSize + Seg.ZeroFillSize,
                            ArrayRef<char>(Seg.WorkingMem, Seg.ContentSize)});
 
-  EPC.callSPSWrapperAsync<rt::sps_ci::MemMgrInitialize::SPSSig>(
-      SAs.Initialize,
-      [OnInitialized = std::move(OnInitialized)](
-          Error SerializationErr, Expected<ExecutorAddr> Result) mutable {
-        if (SerializationErr) {
-          cantFail(Result.takeError());
-          return OnInitialized(std::move(SerializationErr));
-        }
-
-        OnInitialized(std::move(Result));
-      },
-      SAs.Instance, std::move(FR));
+  B.Initialize(std::move(OnInitialized), ES, B.Instance, std::move(FR));
 }
 
 void SimpleRemoteMemoryMapper::deinitialize(
     ArrayRef<ExecutorAddr> Allocations,
     MemoryMapper::OnDeinitializedFunction OnDeinitialized) {
-  EPC.callSPSWrapperAsync<rt::sps_ci::MemMgrDeinitialize::SPSSig>(
-      SAs.Deinitialize,
-      [OnDeinitialized = std::move(OnDeinitialized)](Error SerializationErr,
-                                                     Error Result) mutable {
-        if (SerializationErr) {
-          cantFail(std::move(Result));
-          return OnDeinitialized(std::move(SerializationErr));
-        }
-
-        OnDeinitialized(std::move(Result));
-      },
-      SAs.Instance, Allocations);
+  B.Deinitialize(std::move(OnDeinitialized), ES, B.Instance, Allocations);
 }
 
 void SimpleRemoteMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
                                        OnReleasedFunction OnReleased) {
-  EPC.callSPSWrapperAsync<rt::sps_ci::MemMgrRelease::SPSSig>(
-      SAs.Release,
-      [OnReleased = std::move(OnReleased)](Error SerializationErr,
-                                           Error Result) mutable {
-        if (SerializationErr) {
-          cantFail(std::move(Result));
-          return OnReleased(std::move(SerializationErr));
-        }
-
-        return OnReleased(std::move(Result));
-      },
-      SAs.Instance, Bases);
+  B.Release(std::move(OnReleased), ES, B.Instance, Bases);
 }
 
 } // namespace llvm::orc

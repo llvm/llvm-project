@@ -15,7 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -53,7 +52,6 @@
 #include <deque>
 #include <iterator>
 #include <limits>
-#include <map>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -996,6 +994,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_LABEL:
       case bitc::METADATA_EXPRESSION:
       case bitc::METADATA_OBJC_PROPERTY:
+      case bitc::METADATA_PROPERTY:
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
       case bitc::METADATA_GENERIC_SUBRANGE:
@@ -2412,6 +2411,20 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                          /*GetterName=*/getMDString(Record[5]),
                          /*SetterName=*/getMDString(Record[4]), Record[6],
                          getDITypeRefOrNull(Record[7]))),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_PROPERTY: {
+    if (Record.size() != 6)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIProperty, (Context, getMDString(Record[1]),
+                                     getMDOrNull(Record[2]), Record[3],
+                                     getDITypeRefOrNull(Record[4]),
+                                     getMDOrNull(Record[5]))),
         NextMetadataNo);
     NextMetadataNo++;
     break;

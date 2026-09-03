@@ -3,11 +3,11 @@
 // Tests that we correctly lower the different variations of reference pointer
 // and attach semantics.
 
-module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.requires = #omp<clause_requires none>, omp.target_triples = ["amdgcn-amd-amdhsa"], omp.version = #omp.version<version = 61>} {
+module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.requires = #omp.clause_requires<none>, omp.target_triples = ["amdgcn-amd-amdhsa"], omp.version = #omp.version<version = 61>} {
   llvm.func @attach_always_(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = ""}
-    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, to) capture(ByRef) members(%map1 : [0] : !llvm.ptr) -> !llvm.ptr {name = "x"}
-    %map3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = "x"}
+    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("") -> !llvm.ptr
+    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, to) capture(ByRef) members(%map1 : [0] : !llvm.ptr) name("x") -> !llvm.ptr
+    %map3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("x") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map2 -> %arg2, %map3 -> %arg3, %map1 -> %arg4 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
@@ -15,8 +15,8 @@ module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.require
   }
 
   llvm.func @attach_never_(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = ""}
-    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, to) capture(ByRef) members(%map1 : [0] : !llvm.ptr) -> !llvm.ptr {name = "x"}
+    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("") -> !llvm.ptr
+    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, to) capture(ByRef) members(%map1 : [0] : !llvm.ptr) name("x") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map2 -> %arg2, %map1 -> %arg3 : !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
@@ -24,9 +24,9 @@ module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.require
   }
 
   llvm.func @attach_auto_(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = ""}
-    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, to) capture(ByRef) members(%map1 : [0] : !llvm.ptr) -> !llvm.ptr {name = "x"}
-    %map3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = "x"}
+    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("") -> !llvm.ptr
+    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, to) capture(ByRef) members(%map1 : [0] : !llvm.ptr) name("x") -> !llvm.ptr
+    %map3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("x") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map2 -> %arg2, %map3 -> %arg3, %map1 -> %arg4 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
@@ -34,9 +34,9 @@ module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.require
   }
 
   llvm.func @ref_ptr_ptee_(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = ""}
-    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptr, ref_ptee) capture(ByRef) members(%map1 : [0] : !llvm.ptr) -> !llvm.ptr {name = "x"}
-    %map3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = "x"}
+    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("") -> !llvm.ptr
+    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptr, ref_ptee) capture(ByRef) members(%map1 : [0] : !llvm.ptr) name("x") -> !llvm.ptr
+    %map3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("x") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map2 -> %arg2, %map3 -> %arg3, %map1 -> %arg4 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
@@ -44,8 +44,8 @@ module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.require
   }
 
   llvm.func @ref_ptr_(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptr) capture(ByRef) -> !llvm.ptr {name = ""}
-    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(attach, ref_ptr) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = "x"}
+    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptr) capture(ByRef) name("") -> !llvm.ptr
+    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(attach, ref_ptr) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("x") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map2 -> %arg2, %map1 -> %arg3 : !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
@@ -53,8 +53,8 @@ module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.require
   }
 
   llvm.func @ref_ptee_(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = ""}
-    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(attach, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = "x"}
+    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("") -> !llvm.ptr
+    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(attach, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("x") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map2 -> %arg2, %map1 -> %arg3 : !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
@@ -62,8 +62,8 @@ module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.require
   }
 
   llvm.func @ref_ptr_ptee_attach_never_(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) -> !llvm.ptr {name = ""}
-    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptr, ref_ptee) capture(ByRef) members(%map1 : [0] : !llvm.ptr) -> !llvm.ptr {name = "x"}
+    %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("") -> !llvm.ptr
+    %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(to, ref_ptr, ref_ptee) capture(ByRef) members(%map1 : [0] : !llvm.ptr) name("x") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map2 -> %arg2, %map1 -> %arg3 : !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }

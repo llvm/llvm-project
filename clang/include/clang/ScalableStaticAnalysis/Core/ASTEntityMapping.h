@@ -10,6 +10,8 @@
 #define LLVM_CLANG_SCALABLESTATICANALYSIS_CORE_ASTENTITYMAPPING_H
 
 #include "clang/AST/Decl.h"
+#include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
+#include "clang/ScalableStaticAnalysis/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityName.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
@@ -41,6 +43,30 @@ std::optional<EntityName> getEntityName(const Decl *D);
 ///
 /// \return An EntityName for the function's return entity.
 std::optional<EntityName> getEntityNameForReturn(const FunctionDecl *FD);
+
+/// Computes the SSAF linkage of a declaration.
+///
+/// \param D The declaration to classify. Must not be null.
+EntityLinkageType getLinkageForDecl(const Decl *D);
+
+/// Returns the EntityName qualified with the build namespaces
+/// it would carry after linking into \p LUNamespace.
+///
+/// \param D The declaration to map. Must not be null.
+/// \param TUNamespace The CompilationUnit namespace of a translation unit.
+/// \param LUNamespace The LinkUnit namespace the translation unit links into.
+/// \return The qualified EntityName if the declaration can be mapped,
+/// std::nullopt otherwise.
+std::optional<EntityName>
+getQualifiedEntityName(const Decl *D, const NestedBuildNamespace &TUNamespace,
+                       const NestedBuildNamespace &LUNamespace);
+
+/// Similar to `getQualifiedEntityName`, but for entities of function return
+/// values.
+std::optional<EntityName>
+getQualifiedEntityNameForReturn(const FunctionDecl *FD,
+                                const NestedBuildNamespace &TUNamespace,
+                                const NestedBuildNamespace &LUNamespace);
 
 } // namespace clang::ssaf
 

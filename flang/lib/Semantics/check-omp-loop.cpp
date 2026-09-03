@@ -235,7 +235,7 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
 
 void OmpStructureChecker::CheckRectangularNest(
     const parser::OmpDirectiveSpecification &spec, const LoopSequence &nest) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   auto depth{GetRectangularNestDepthWithReason(spec, version)};
   if (!depth || *depth.value == 0) {
     return;
@@ -266,7 +266,7 @@ void OmpStructureChecker::CheckNestedConstruct(
     const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   llvm::omp::Directive dir{beginSpec.DirId()};
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   parser::CharBlock beginSource{beginSpec.DirName().source};
 
   // End-directive is not allowed in such cases:
@@ -489,7 +489,7 @@ const parser::Name OmpStructureChecker::GetLoopIndex(
 
 void OmpStructureChecker::CheckIterationVariables(
     const parser::OpenMPLoopConstruct &x) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   auto doLoops{CollectAffectedDoLoops(x, version, &context_)};
   if (!doLoops) {
     return;
@@ -760,9 +760,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Directive dir{GetContext().directive};
-  parser::CharBlock clauseSource{GetContext().clauseSource};
   const parser::OmpLinearModifier *linearMod{nullptr};
 
   SymbolSourceMap symbols;
@@ -773,68 +772,66 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 
   auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
     if (!symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
-      auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
+      auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::LinearModifier)};
       context_.Say(source,
           "The list item '%s' specified without the REF '%s' must be of INTEGER type"_err_en_US,
-          symbol->name(), desc.name.str());
+          symbol->name(), desc.getName().str());
     }
   }};
 
-  if (OmpVerifyModifiers(x.v, llvm::omp::OMPC_linear, clauseSource, context_)) {
-    auto &modifiers{OmpGetModifiers(x.v)};
-    linearMod = OmpGetUniqueModifier<parser::OmpLinearModifier>(modifiers);
-    if (linearMod) {
-      auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
-      parser::CharBlock modSource{OmpGetModifierSource(modifiers, linearMod)};
-      bool valid{true};
+  auto &modifiers{OmpGetModifiers(x.v)};
+  linearMod = OmpGetUniqueModifier<parser::OmpLinearModifier>(modifiers);
+  if (linearMod) {
+    auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::LinearModifier)};
+    parser::CharBlock modSource{OmpGetModifierSource(modifiers, linearMod)};
+    bool valid{true};
 
-      if (version < 52) {
-        // Modifiers on LINEAR are only allowed on DECLARE SIMD
+    if (version < 52) {
+      // Modifiers on LINEAR are only allowed on DECLARE SIMD
+      if (dir != llvm::omp::Directive::OMPD_declare_simd) {
+        context_.Say(modSource,
+            "A modifier may not be specified in a LINEAR clause on the %s directive"_err_en_US,
+            parser::omp::GetUpperName(dir, version));
+        valid = false;
+      }
+    } else {
+      if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
+          linearMod->v == parser::OmpLinearModifier::Value::Uval) {
         if (dir != llvm::omp::Directive::OMPD_declare_simd) {
           context_.Say(modSource,
-              "A modifier may not be specified in a LINEAR clause on the %s directive"_err_en_US,
-              parser::omp::GetUpperName(dir, version));
+              "A REF or UVAL '%s' may not be specified in a LINEAR clause on the %s directive"_err_en_US,
+              desc.getName().str(), parser::omp::GetUpperName(dir, version));
           valid = false;
         }
-      } else {
+      }
+      if (!std::get</*PostModified=*/bool>(x.v.t)) {
+        context_.Say(modSource,
+            "The 'modifier(<list>)' syntax is deprecated in %s, use '<list> : modifier' instead"_warn_en_US,
+            ThisVersion(version));
+      }
+    }
+
+    if (valid) {
+      for (auto &[symbol, source] : symbols) {
+        if (linearMod->v != parser::OmpLinearModifier::Value::Ref) {
+          CheckIntegerNoRef(symbol, source);
+        } else {
+          if (!IsAllocatable(*symbol) && !IsAssumedShape(*symbol) &&
+              !IsPolymorphic(*symbol)) {
+            context_.Say(source,
+                "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
+                symbol->name(), desc.getName().str());
+          }
+        }
         if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
             linearMod->v == parser::OmpLinearModifier::Value::Uval) {
-          if (dir != llvm::omp::Directive::OMPD_declare_simd) {
-            context_.Say(modSource,
-                "A REF or UVAL '%s' may not be specified in a LINEAR clause on the %s directive"_err_en_US,
-                desc.name.str(), parser::omp::GetUpperName(dir, version));
-            valid = false;
+          if (!IsDummy(*symbol) || IsValue(*symbol)) {
+            context_.Say(source,
+                "If the `%s` is REF or UVAL, the list item '%s' must be a dummy argument without the VALUE attribute"_err_en_US,
+                desc.getName().str(), symbol->name());
           }
         }
-        if (!std::get</*PostModified=*/bool>(x.v.t)) {
-          context_.Say(modSource,
-              "The 'modifier(<list>)' syntax is deprecated in %s, use '<list> : modifier' instead"_warn_en_US,
-              ThisVersion(version));
-        }
-      }
-
-      if (valid) {
-        for (auto &[symbol, source] : symbols) {
-          if (linearMod->v != parser::OmpLinearModifier::Value::Ref) {
-            CheckIntegerNoRef(symbol, source);
-          } else {
-            if (!IsAllocatable(*symbol) && !IsAssumedShape(*symbol) &&
-                !IsPolymorphic(*symbol)) {
-              context_.Say(source,
-                  "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
-                  symbol->name(), desc.name.str());
-            }
-          }
-          if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
-              linearMod->v == parser::OmpLinearModifier::Value::Uval) {
-            if (!IsDummy(*symbol) || IsValue(*symbol)) {
-              context_.Say(source,
-                  "If the `%s` is REF or UVAL, the list item '%s' must be a dummy argument without the VALUE attribute"_err_en_US,
-                  desc.name.str(), symbol->name());
-            }
-          }
-        } // for (symbol, source)
-      }
+      } // for (symbol, source)
     }
   }
 
@@ -878,7 +875,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Permutation &c) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Clause clause = llvm::omp::Clause::OMPC_permutation;
   if (c.v.size() < 2)
     context_.Say(GetContext().clauseSource,
@@ -924,7 +921,7 @@ void OmpStructureChecker::Enter(const parser::DoConstruct &x) {
 void OmpStructureChecker::Enter(const parser::OmpLoopModifier &x) {
   DirectiveContext &dirCtx = GetContext();
   llvm::omp::Directive dir{dirCtx.directive};
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   auto &m{std::get<llvm::omp::LoopModifier>(x.t)};
   if (!llvm::omp::isAllowedLoopModifier(dir, m)) {
     llvm::StringRef name = llvm::omp::getLoopModifierName(m);
@@ -959,8 +956,6 @@ void OmpStructureChecker::Enter(const parser::OmpLoopModifier &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Apply &x) {
   EnterDirectiveNest(ApplyNest);
-  OmpVerifyModifiers(
-      x.v, llvm::omp::Clause::OMPC_apply, GetContext().clauseSource, context_);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpClause::Apply &x) {

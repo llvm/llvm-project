@@ -1554,13 +1554,37 @@ defm CC_UImm5NonZero_QC  : SelectCC_GPR_riirr<GPRNoX0, uimm5nonzero>;
 defm CC_SImm16NonZero_QC : SelectCC_GPR_riirr<GPRNoX0, simm16nonzero>;
 defm CC_UImm16NonZero_QC : SelectCC_GPR_riirr<GPRNoX0, uimm16nonzero>;
 
-class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
+// The condition codes supported by QC_BccI/QC_E_BccI, split by the signedness
+// of the immediate they compare against.
+def QCSignedCond : PatLeaf<(cond), [{
+  switch (N->get()) {
+  default:
+    return false;
+  case ISD::SETEQ:
+  case ISD::SETNE:
+  case ISD::SETLT:
+  case ISD::SETGE:
+    return true;
+  }
+}]>;
+
+def QCUnsignedCond : PatLeaf<(cond), [{
+  switch (N->get()) {
+  default:
+    return false;
+  case ISD::SETULT:
+  case ISD::SETUGE:
+    return true;
+  }
+}]>;
+
+class SelectQCbi<PatLeaf Cond, DAGOperand InTyImm, Pseudo OpNode>
     : Pat<(riscv_selectcc (i32 GPRNoX0:$lhs), InTyImm:$Constant, Cond:$cc,
                           (i32 GPRNoX0:$truev), GPRNoX0:$falsev),
           (OpNode GPRNoX0:$lhs, InTyImm:$Constant, (CCtoRISCVCC $cc),
                   GPRNoX0:$truev, GPRNoX0:$falsev)>;
 
-class SelectQCbiSFB<CondCode Cond, DAGOperand InTyImm, SDNodeXForm xform>
+class SelectQCbiSFB<PatLeaf Cond, DAGOperand InTyImm, SDNodeXForm xform>
     : Pat<(riscv_selectcc (i32 GPRNoX0:$lhs), InTyImm:$Constant, Cond:$cc,
                           (i32 GPR:$truev), GPR:$falsev),
           (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (xform $cc), GPRNoX0:$lhs,
@@ -1640,19 +1664,11 @@ def : PatGprNoX0GprNoX0<sshlsat, QC_SHLSAT>;
 
 let Predicates = [HasVendorXqcibi, IsRV32] in {
 let append Predicates = [HasShortForwardBranchIALU] in {
-def : SelectQCbiSFB<SETEQ, simm5nonzero, CCtoQC_BccI>;
-def : SelectQCbiSFB<SETNE, simm5nonzero, CCtoQC_BccI>;
-def : SelectQCbiSFB<SETGE, simm5nonzero, CCtoQC_BccI>;
-def : SelectQCbiSFB<SETLT, simm5nonzero, CCtoQC_BccI>;
-def : SelectQCbiSFB<SETULT, uimm5nonzero, CCtoQC_BccI>;
-def : SelectQCbiSFB<SETUGE, uimm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<QCSignedCond, simm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<QCUnsignedCond, uimm5nonzero, CCtoQC_BccI>;
 
-def : SelectQCbiSFB<SETEQ, simm16nonzero, CCtoQC_E_BccI>;
-def : SelectQCbiSFB<SETGE, simm16nonzero, CCtoQC_E_BccI>;
-def : SelectQCbiSFB<SETLT, simm16nonzero, CCtoQC_E_BccI>;
-def : SelectQCbiSFB<SETNE, simm16nonzero, CCtoQC_E_BccI>;
-def : SelectQCbiSFB<SETULT, uimm16nonzero, CCtoQC_E_BccI>;
-def : SelectQCbiSFB<SETUGE, uimm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<QCSignedCond, simm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<QCUnsignedCond, uimm16nonzero, CCtoQC_E_BccI>;
 } // append Predicates = [HasShortForwardBranchIALU]
 
 /// Branches
@@ -1672,19 +1688,11 @@ def : Bcci48Pat<SETULT, QC_E_BLTUI, uimm16nonzero>;
 def : Bcci48Pat<SETUGE, QC_E_BGEUI, uimm16nonzero>;
 
 let append Predicates = [NoShortForwardBranch] in {
-def : SelectQCbi<SETEQ, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
-def : SelectQCbi<SETNE, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
-def : SelectQCbi<SETLT, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
-def : SelectQCbi<SETGE, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
-def : SelectQCbi<SETULT, uimm5nonzero, Select_GPRNoX0_Using_CC_UImm5NonZero_QC>;
-def : SelectQCbi<SETUGE, uimm5nonzero, Select_GPRNoX0_Using_CC_UImm5NonZero_QC>;
+def : SelectQCbi<QCSignedCond, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
+def : SelectQCbi<QCUnsignedCond, uimm5nonzero, Select_GPRNoX0_Using_CC_UImm5NonZero_QC>;
 
-def : SelectQCbi<SETEQ, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
-def : SelectQCbi<SETNE, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
-def : SelectQCbi<SETLT, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
-def : SelectQCbi<SETGE, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
-def : SelectQCbi<SETULT, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
-def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
+def : SelectQCbi<QCSignedCond, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
+def : SelectQCbi<QCUnsignedCond, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
 } // append Predicates = [NoShortForwardBranch]
 } // Predicates = [HasVendorXqcibi, IsRV32]
 
@@ -1796,13 +1804,6 @@ def : QCILICCIPatInv<SETEQ,  QC_LINEI, simm5>;
 } // Predicates = [HasVendorXqcicli, IsRV32]
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
-// (SELECT X, Y, Z) is canonicalised to `(riscv_selectcc x, 0, NE, y, z)`.
-// These exist to prioritise over the `Select_GPR_Using_CC_GPR` pattern.
-def : Pat<(i32 (riscv_selectcc (i32 GPRNoX0:$rd), (i32 0), SETNE, (i32 GPRNoX0:$rs2), simm5:$simm2)),
-          (QC_SELECTINEI GPRNoX0:$rd, (i32 0), GPRNoX0:$rs2, simm5:$simm2)>;
-def : Pat<(i32 (riscv_selectcc (i32 GPRNoX0:$rd), (i32 0), SETNE, simm5:$simm2, (i32 GPRNoX0:$rs2))),
-          (QC_SELECTIEQI GPRNoX0:$rd, (i32 0), GPRNoX0:$rs2, simm5:$simm2)>;
-
 def : QCISELECTICCIPat<SETEQ,  QC_SELECTIEQI>;
 def : QCISELECTICCIPat<SETNE,  QC_SELECTINEI>;
 

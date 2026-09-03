@@ -1,5 +1,6 @@
 // RUN: %clang %cflags64 -o %t %s
-// RUN: llvm-bolt --print-cfg --print-only=_start -o %t.null %t \
+// RUN: llvm-bolt --check-encoding --print-cfg --print-only=_start \
+// RUN:    -o %t.null %t \
 // RUN:    | FileCheck %s
 
   .data
@@ -22,30 +23,27 @@ _start:
   auipc t0, %got_pcrel_hi(d)
   ld t0, %pcrel_lo(1b)(t0)
 
-/// An unrelated instruction sits between the AUIPC and its load.
-// FIXME: The AUIPC below should also use __BOLT_got_zero+[[GOT]], but BOLT
-// takes the low part from the ADDI instead of from the load that names the
-// AUIPC's label.
-// CHECK-NOT:  __BOLT_got_zero+[[GOT]])
-// CHECK:      addi t2, t2, 0x7ff
-// CHECK-NEXT: ld t1, %pcrel_lo({{\.Ltmp[0-9]+}})(t1)
+/// An unrelated instruction can sit between the AUIPC and its load. The
+/// symbolizer locates the low relocation through its reference to the AUIPC.
+// CHECK:      auipc t1, %pcrel_hi(__BOLT_got_zero+[[GOT]]) # Label: [[HI2:\.Ltmp[0-9]+]]
+// CHECK-NEXT: addi t2, t2, 0x7ff
+// CHECK-NEXT: ld t1, %pcrel_lo([[HI2]])(t1)
 2:
   auipc t1, %got_pcrel_hi(d)
   addi t2, t2, 2047
   ld t1, %pcrel_lo(2b)(t1)
   j .L1
 .L2:
+// CHECK:      ld t1, %pcrel_lo([[HI3:\.Ltmp[0-9]+]])(t1)
+// CHECK-NEXT: j
   ld t1, %pcrel_lo(3f)(t1)
   j .Lexit
 .L1:
   nop
-/// The load lives in another basic block, so nothing follows the AUIPC but
-/// the terminator.
-// FIXME: The AUIPC below should also use __BOLT_got_zero+[[GOT]], but BOLT
-// takes the low part from the jump.
+/// The low relocation can also precede the AUIPC in output basic-block order.
 // CHECK:      nop
-// CHECK-NOT:  __BOLT_got_zero+[[GOT]])
-// CHECK:      j
+// CHECK-NEXT: auipc t1, %pcrel_hi(__BOLT_got_zero+[[GOT]]) # Label: [[HI3]]
+// CHECK-NEXT: j
 3:
   auipc t1, %got_pcrel_hi(d)
   j .L2
