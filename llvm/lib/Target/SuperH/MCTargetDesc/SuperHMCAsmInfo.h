@@ -32,7 +32,7 @@ private:
 
 public:
 	explicit SuperHMCAsmInfo(const Triple &TheTriple,
-                             const MCTargetOptions &Options);
+                           const MCTargetOptions &Options);
 };
 
 namespace SH {
