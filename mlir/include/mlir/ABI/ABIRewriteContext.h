@@ -97,8 +97,7 @@ struct ArgClassification {
            byVal == other.byVal && directOffset == other.directOffset;
   }
 
-  static ArgClassification getDirect(Type coerced = nullptr,
-                                     unsigned offset = 0) {
+  static ArgClassification getDirect(unsigned offset, Type coerced = nullptr) {
     // isPassThrough reads only coercedType, so an offset with no coerced
     // type to read at it would be silently ignored.
     assert((!offset || coerced) &&

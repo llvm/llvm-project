@@ -36,7 +36,7 @@ TEST(ABIRewriteContextTest, MockCanBeConstructedAndDestroyed) {
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationDirect) {
-  auto c = ArgClassification::getDirect();
+  auto c = ArgClassification::getDirect(/*offset=*/0);
   EXPECT_EQ(c.kind, ArgKind::Direct);
   EXPECT_EQ(c.coercedType, nullptr);
   EXPECT_TRUE(c.canFlatten);
@@ -45,7 +45,7 @@ TEST(ABIRewriteContextTest, ArgClassificationDirect) {
 TEST(ABIRewriteContextTest, ArgClassificationDirectWithType) {
   MLIRContext mlirCtx;
   auto i32 = IntegerType::get(&mlirCtx, 32);
-  auto c = ArgClassification::getDirect(i32);
+  auto c = ArgClassification::getDirect(/*offset=*/0, i32);
   EXPECT_EQ(c.kind, ArgKind::Direct);
   EXPECT_EQ(c.coercedType, i32);
 }
@@ -84,8 +84,8 @@ TEST(ABIRewriteContextTest, ArgClassificationExtend) {
 
 TEST(ABIRewriteContextTest, FunctionClassificationHoldsReturnAndArgs) {
   FunctionClassification fc;
-  fc.returnInfo = ArgClassification::getDirect();
-  fc.argInfos.push_back(ArgClassification::getDirect());
+  fc.returnInfo = ArgClassification::getDirect(/*offset=*/0);
+  fc.argInfos.push_back(ArgClassification::getDirect(/*offset=*/0));
   fc.argInfos.push_back(ArgClassification::getIndirect(llvm::Align(8), true));
   fc.argInfos.push_back(ArgClassification::getIgnore());
 

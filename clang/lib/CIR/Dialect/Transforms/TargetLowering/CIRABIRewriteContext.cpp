@@ -325,7 +325,7 @@ mlir::Value emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
                                  mlir::Block *slotBlock,
                                  const mlir::DataLayout &dl,
                                  SmallPtrSetImpl<mlir::Operation *> &createdOps,
-                                 unsigned offset = 0) {
+                                 unsigned offset) {
   mlir::Type srcTy = src.getType();
   assert(srcTy != dstTy &&
          "emitCoercion callers must pre-check that the types differ");
@@ -409,7 +409,7 @@ mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
                          mlir::Block *slotBlock, const mlir::DataLayout &dl,
                          SmallPtrSetImpl<mlir::Operation *> &createdOps,
-                         unsigned offset = 0) {
+                         unsigned offset) {
   mlir::Value dstSlot = emitCoercionToMemory(builder, loc, dstTy, src,
                                              slotBlock, dl, createdOps, offset);
   auto load = cir::LoadOp::create(builder, loc, dstSlot);
@@ -422,7 +422,7 @@ mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
 mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
                          mlir::Block *slotBlock, const mlir::DataLayout &dl,
-                         unsigned offset = 0) {
+                         unsigned offset) {
   SmallPtrSet<mlir::Operation *, 4> ignored;
   return emitCoercion(builder, loc, dstTy, src, slotBlock, dl, ignored, offset);
 }
@@ -693,7 +693,7 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
                "each field is read from slot offset 0 here, so a flattened "
                "coercion cannot honor a direct offset");
         finalVal = emitCoercion(builder, loc, origTy, flatLoaded, &entry, dl,
-                                coercionOps);
+                                coercionOps, /*offset=*/0);
         flattenOps.insert(coercionOps.begin(), coercionOps.end());
       }
 
@@ -1270,8 +1270,9 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
         assert(!ac.directOffset &&
                "each field is read from slot offset 0 here, so a flattened "
                "coercion cannot honor a direct offset");
-        mlir::Value coercedPtr = emitCoercionToMemory(
-            builder, call.getLoc(), flatTy, arg, slotBlock, dl, coercionOps);
+        mlir::Value coercedPtr =
+            emitCoercionToMemory(builder, call.getLoc(), flatTy, arg, slotBlock,
+                                 dl, coercionOps, /*offset=*/0);
         for (auto [f, fieldTy] : llvm::enumerate(flatTy.getMembers())) {
           mlir::Type fieldPtrTy = cir::PointerType::get(fieldTy);
           auto fieldPtr =

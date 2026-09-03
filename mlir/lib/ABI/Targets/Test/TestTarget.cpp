@@ -69,7 +69,7 @@ ArgClassification classifyOne(Type type, const DataLayout &dl) {
       Type i32Ty = IntegerType::get(type.getContext(), ExtendBelowBits);
       return ArgClassification::getExtend(i32Ty, /*signExt=*/intTy.isSigned());
     }
-    return ArgClassification::getDirect();
+    return ArgClassification::getDirect(/*offset=*/0);
   }
 
   if (auto indexTy = dyn_cast<IndexType>(type)) {
@@ -78,11 +78,11 @@ ArgClassification classifyOne(Type type, const DataLayout &dl) {
       Type i32Ty = IntegerType::get(type.getContext(), ExtendBelowBits);
       return ArgClassification::getExtend(i32Ty, /*signExt=*/true);
     }
-    return ArgClassification::getDirect();
+    return ArgClassification::getDirect(/*offset=*/0);
   }
 
   if (isa<FloatType, VectorType, MemRefType>(type))
-    return ArgClassification::getDirect();
+    return ArgClassification::getDirect(/*offset=*/0);
 
   // For dialect-specific types: query DataLayout via
   // DataLayoutTypeInterface.  Types that don't implement the interface
@@ -99,7 +99,7 @@ ArgClassification classifyOne(Type type, const DataLayout &dl) {
 
   uint64_t sizeInBytes = (sizeInBits.getFixedValue() + 7) / 8;
   if (sizeInBytes <= IndirectCutoffBytes)
-    return ArgClassification::getDirect();
+    return ArgClassification::getDirect(/*offset=*/0);
 
   uint64_t alignBytes = dl.getTypeABIAlignment(type);
   return ArgClassification::getIndirect(llvm::Align(alignBytes),
@@ -161,7 +161,7 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     Type coerced;
     if (auto t = argDict.getAs<TypeAttr>("coerced_type"))
       coerced = t.getValue();
-    auto c = ArgClassification::getDirect(coerced);
+    auto c = ArgClassification::getDirect(/*offset=*/0, coerced);
     if (auto cf = argDict.getAs<BoolAttr>("can_flatten"))
       c.canFlatten = cf.getValue();
     return c;
