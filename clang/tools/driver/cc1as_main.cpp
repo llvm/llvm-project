@@ -37,6 +37,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -63,6 +64,9 @@ using namespace clang;
 using namespace clang::options;
 using namespace llvm;
 using namespace llvm::opt;
+
+// Register MC target-option flags so they're reachable via -mllvm.
+static llvm::mc::RegisterMCTargetOptionsFlags MCTargetOptionsFlags;
 
 namespace {
 
@@ -463,7 +467,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(Opts.Triple));
   assert(MRI && "Unable to create target register info!");
 
-  MCTargetOptions MCOptions;
+  // Seed from -mllvm first; clang's own flags below take precedence.
+  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.MCRelaxAll = Opts.RelaxAll;
   MCOptions.EmitDwarfUnwind = Opts.EmitDwarfUnwind;
   MCOptions.EmitCompactUnwindNonCanonical = Opts.EmitCompactUnwindNonCanonical;

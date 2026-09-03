@@ -40,6 +40,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/LTO/LTOBackend.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -101,6 +102,9 @@
 #include <optional>
 using namespace clang;
 using namespace llvm;
+
+// Register MC target-option flags so they're reachable via -mllvm.
+static llvm::mc::RegisterMCTargetOptionsFlags MCTargetOptionsFlags;
 
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
@@ -495,6 +499,9 @@ static bool initTargetOptions(const CompilerInstance &CI,
     Options.SwiftAsyncFramePointer = SwiftAsyncFramePointerMode::Never;
     break;
   }
+
+  // Seed from -mllvm first; clang's own flags below take precedence.
+  Options.MCOptions = llvm::mc::InitMCTargetOptionsFromFlags();
 
   Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
   Options.MCOptions.EmitDwarfUnwind = CodeGenOpts.getEmitDwarfUnwind();
