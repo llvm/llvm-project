@@ -1,11 +1,5 @@
 ; RUN: not opt -passes=verify -S < %s 2>&1 | FileCheck %s
 
-; CHECK: Mask must be a vector of integers.
-define <4 x i32> @mask_not_integer(<4 x i32> %v, <4 x float> %mask) {
-  %res = call <4 x i32> @llvm.vector.shuffle.v4i32.v4f32(<4 x i32> %v, <4 x float> %mask)
-  ret <4 x i32> %res
-}
-
 ; CHECK: Mask and return type must have the same number of elements.
 define <4 x i32> @mask_too_long(<4 x i32> %v, <8 x i8> %mask) {
   %res = call <4 x i32> @llvm.vector.shuffle.v4i32.v8i8(<4 x i32> %v, <8 x i8> %mask)

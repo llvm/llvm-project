@@ -21229,7 +21229,7 @@ VecT compress(VecT vec, VecT mask, VecT passthru) {
 
 (int_vector_shuffle)=
 
-#### '`llvm.vector.shuffle.*`' Intrinsics
+#### '`llvm.vector.shuffle.*`' Intrinsic
 
 ##### Syntax:
 

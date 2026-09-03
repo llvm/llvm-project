@@ -2969,6 +2969,22 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE_VAR(SDNode *N, SDValue &Lo,
     return;
   }
 
+  // Give the half masks the result half's integer element type, so that the
+  // select's condition type matches its value type as targets expect. Indices
+  // are unsigned, so extending them is always fine; truncating them is fine as
+  // long as every in-range index still fits, since out-of-range lanes are
+  // poison anyway.
+  EVT NewMaskVT = HalfVT.changeVectorElementTypeToInteger();
+  unsigned NewMaskEltBits = NewMaskVT.getScalarSizeInBits();
+  if (NewMaskVT != HalfMaskVT &&
+      (NewMaskEltBits >= MaskEltBits ||
+       (!HalfEC.isScalable() &&
+        isUIntN(NewMaskEltBits, 2 * HalfEC.getFixedValue() - 1)))) {
+    MaskLo = DAG.getZExtOrTrunc(MaskLo, DL, NewMaskVT);
+    MaskHi = DAG.getZExtOrTrunc(MaskHi, DL, NewMaskVT);
+    HalfMaskVT = NewMaskVT;
+  }
+
   SDValue HalfElts =
       DAG.getSplat(HalfMaskVT, DL,
                    DAG.getElementCount(DL, HalfMaskVT.getScalarType(), HalfEC));

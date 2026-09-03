@@ -2745,7 +2745,7 @@ def int_vector_splice_right
 
 def int_vector_shuffle:
     DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-              [LLVMMatchType<0>, llvm_anyvector_ty],
+              [LLVMMatchType<0>, llvm_any_vector_int_ty],
               [IntrNoMem, IntrSpeculatable]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
