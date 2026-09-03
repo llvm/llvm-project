@@ -1641,6 +1641,14 @@ public:
   /// Remove the operation from the worklist.
   void notifyOperationReplaced(Operation *op, ValueRange replacement) override;
 
+  /// Pop the next slice to process from the worklist. When
+  /// `tileOrderControlFn` is set, returns the preferred slice according to the
+  /// callback. Otherwise pops from the front (FIFO). The worklist must be
+  /// non-empty.
+  tensor::ExtractSliceOp
+  popNext(const scf::SCFTileAndFuseOptions::TileOrderControlFnTy
+              &tileOrderControlFn);
+
   /// The worklist for this transformation keeps track of the slices to visit
   /// next for fusion.
   std::deque<tensor::ExtractSliceOp> worklist;
@@ -1705,6 +1713,24 @@ void SliceTrackingListener::notifyOperationErased(Operation *op) {
 void SliceTrackingListener::notifyOperationReplaced(Operation *op,
                                                     ValueRange replacement) {
   removeOp(op);
+}
+
+tensor::ExtractSliceOp SliceTrackingListener::popNext(
+    const scf::SCFTileAndFuseOptions::TileOrderControlFnTy
+        &tileOrderControlFn) {
+  assert(!worklist.empty() && "expected non-empty worklist");
+  if (!tileOrderControlFn) {
+    auto slice = worklist.front();
+    worklist.pop_front();
+    return slice;
+  }
+  auto it = llvm::min_element(
+      worklist, [&](tensor::ExtractSliceOp lhs, tensor::ExtractSliceOp rhs) {
+        return tileOrderControlFn(lhs, rhs);
+      });
+  auto slice = *it;
+  worklist.erase(it);
+  return slice;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1814,8 +1840,8 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   }
   OpBuilder::InsertionGuard g(rewriter);
   while (!sliceTracker.worklist.empty()) {
-    auto candidateSlice = sliceTracker.worklist.front();
-    sliceTracker.worklist.pop_front();
+    tensor::ExtractSliceOp candidateSlice =
+        sliceTracker.popNext(options.tileOrderControlFn);
 
     auto [fusableProducer, destinationInitArg] =
         getUntiledProducerFromSliceSource(&candidateSlice.getSourceMutable(),

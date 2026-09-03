@@ -60,11 +60,12 @@ static llvm::SmallDenseSet<Operation *> collectTiledAndFusedOps(Operation *op) {
 /// Apply a tile and fuse transformation to all payload ops and store both the
 /// tiled operation as well as the created tile loops.
 template <typename Range>
-static LogicalResult
-applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
-                      Range &&payloadOps, unsigned numLoops,
-                      scf::SCFTilingOptions tilingOptions,
-                      TransformResults &transformResults) {
+static LogicalResult applyTileAndFuseToAll(
+    RewriterBase &rewriter, Operation *transformOp, Range &&payloadOps,
+    unsigned numLoops, scf::SCFTilingOptions tilingOptions,
+    TransformResults &transformResults,
+    scf::SCFTileAndFuseOptions::TileOrderControlFnTy tileOrderControlFn =
+        nullptr) {
   SmallVector<Operation *> tiledOps;
   SmallVector<SmallVector<Operation *>> loopOps(numLoops);
 
@@ -98,6 +99,7 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
           yieldProducerReplacement};
     };
     tileAndFuseOptions.setFusionControlFn(controlFn);
+    tileAndFuseOptions.setTileOrderControlFn(tileOrderControlFn);
 
     rewriter.setInsertionPoint(target);
     FailureOr<scf::SCFTileAndFuseResult> tiledResults =
@@ -159,10 +161,18 @@ transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
     tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
   }
 
+  scf::SCFTileAndFuseOptions::TileOrderControlFnTy tileOrderControlFn;
+  if (getWorklistPreferLaterProducers()) {
+    tileOrderControlFn = [](tensor::ExtractSliceOp lhs,
+                            tensor::ExtractSliceOp rhs) {
+      return rhs.getOperation()->isBeforeInBlock(lhs.getOperation());
+    };
+  }
+
   LogicalResult result = applyTileAndFuseToAll(
       rewriter, getOperation(), state.getPayloadOps(getTarget()),
       tileSizes.size() - llvm::count(tileSizes, 0), tilingOptions,
-      transformResults);
+      transformResults, tileOrderControlFn);
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
 }

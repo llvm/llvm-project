@@ -312,6 +312,20 @@ struct SCFTileAndFuseOptions {
     return *this;
   }
 
+  /// Comparator used to select the next `tensor.extract_slice` to process from
+  /// the fusion worklist. Returns true if `lhs` should be processed before
+  /// `rhs`. This allows callers to enforce a desired tiling order. For example,
+  /// to process producers in topological order, a producer that is an ancestor
+  /// of another producer in the defining-op chain can be ordered before it.
+  /// By default, the worklist is processed in FIFO order.
+  using TileOrderControlFnTy = std::function<bool(tensor::ExtractSliceOp lhs,
+                                                  tensor::ExtractSliceOp rhs)>;
+  TileOrderControlFnTy tileOrderControlFn = nullptr;
+  SCFTileAndFuseOptions &setTileOrderControlFn(TileOrderControlFnTy controlFn) {
+    tileOrderControlFn = std::move(controlFn);
+    return *this;
+  }
+
   /// An optional set of rewrite patterns to apply to the results of tiling
   /// before fusion. This will track deleted and newly inserted
   /// `tensor.extract_slice` ops and update the worklist.
