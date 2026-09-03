@@ -439,13 +439,10 @@ define i1 @isNotKnownNeverInfinity_fptrunc_round(double %x) {
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_floor_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_floor_ppcf128
+define i1 @isKnownNeverPosInfinity_floor_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_floor_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
-; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], +inf
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %a)
@@ -453,8 +450,22 @@ define i1 @isKnownNeverInfinity_floor_ppcf128(ppc_fp128 %x) {
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_ceil_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_ceil_ppcf128
+define i1 @isKnownNeverNegInfinity_floor_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_floor_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_ceil_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_ceil_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 [[A]])
@@ -467,8 +478,19 @@ define i1 @isKnownNeverInfinity_ceil_ppcf128(ppc_fp128 %x) {
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_rint_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_rint_ppcf128
+define i1 @isKnownNeverNegInfinity_ceil_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_ceil_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_rint_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_rint_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 [[A]])
@@ -481,8 +503,22 @@ define i1 @isKnownNeverInfinity_rint_ppcf128(ppc_fp128 %x) {
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_nearbyint_ppcf128
+define i1 @isKnownNeverNegInfinity_rint_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_rint_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_nearbyint_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 [[A]])
@@ -495,8 +531,22 @@ define i1 @isKnownNeverInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_round_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_round_ppcf128
+define i1 @isKnownNeverNegInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_nearbyint_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_round_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_round_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 [[A]])
@@ -509,8 +559,22 @@ define i1 @isKnownNeverInfinity_round_ppcf128(ppc_fp128 %x) {
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_roundeven_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_roundeven_ppcf128
+define i1 @isKnownNeverNegInfinity_round_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_round_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_roundeven_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_roundeven_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
 ; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 [[A]])
@@ -523,14 +587,39 @@ define i1 @isKnownNeverInfinity_roundeven_ppcf128(ppc_fp128 %x) {
   ret i1 %r
 }
 
-define i1 @isKnownNeverInfinity_trunc_ppcf128(ppc_fp128 %x) {
-; CHECK-LABEL: define i1 @isKnownNeverInfinity_trunc_ppcf128
+define i1 @isKnownNeverNegInfinity_roundeven_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_roundeven_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = fadd ninf ppc_fp128 [[X]], [[X]]
+; CHECK-NEXT:    [[E:%.*]] = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp une ppc_fp128 [[E]], -inf
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverPosInfinity_trunc_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverPosInfinity_trunc_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
 ; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %a)
   %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  ret i1 %r
+}
+
+define i1 @isKnownNeverNegInfinity_trunc_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isKnownNeverNegInfinity_trunc_ppcf128
+; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %a = fadd ninf ppc_fp128 %x, %x
+  %e = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %a)
+  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
   ret i1 %r
 }
 

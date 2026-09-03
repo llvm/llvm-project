@@ -3374,9 +3374,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       const bool IsMultiUnitFPType = EltTy->isMultiUnitFPType();
 
-      const bool IsTrunc = IID == Intrinsic::trunc;
-      Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
-                                            IsMultiUnitFPType, Mode);
+      switch (IID) {
+      case Intrinsic::trunc:
+        Known = KnownFPClass::trunc(KnownSrc, Mode);
+        break;
+      case Intrinsic::floor:
+        Known = KnownFPClass::floor(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      case Intrinsic::ceil:
+        Known = KnownFPClass::ceil(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      default:
+        Known =
+            KnownFPClass::roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      }
 
       Known.knownNot(~DemandedMask);
 
