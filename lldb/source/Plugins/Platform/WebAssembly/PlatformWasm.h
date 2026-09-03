@@ -43,6 +43,16 @@ public:
   lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
                          Target *target, Status &status) override;
 
+  /// Assemble the command line that launches the runtime on \p module_path,
+  /// serving its GDB remote stub on \p port. Extra \p runtime_args precede the
+  /// port argument, so they can carry a subcommand the runtime expects first,
+  /// such as WasmKit's `run`. An empty \p env_arg forwards no environment.
+  static Args
+  MakeRuntimeCommand(llvm::StringRef runtime_path, const Args &runtime_args,
+                     llvm::StringRef port_arg, uint16_t port,
+                     llvm::StringRef env_arg, const Environment &env,
+                     llvm::StringRef module_path, const Args &inferior_args);
+
   Status ConnectRemote(Args &args) override;
 
   void CalculateTrapHandlerSymbolNames() override {}

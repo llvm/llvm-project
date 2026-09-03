@@ -29,6 +29,7 @@ add_lld_library(lldMachO
   BPSectionOrderer.cpp
   SectionPriorities.cpp
   Sections.cpp
+  StripSwiftForceLoad.cpp
   SymbolTable.cpp
   Symbols.cpp
   SyntheticSections.cpp
