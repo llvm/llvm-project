@@ -10,10 +10,12 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 using namespace clang::ast_matchers;
@@ -811,16 +813,18 @@ public:
                   recordType(hasDeclaration(UniquePtrWithCustomDeleter)))),
               hasDeclaration(cxxConstructorDecl(ofClass(IsUniquePtrRecord)))));
 
-    // FIXME: need proper suppurt for conditionalOperator cases
     auto AllowedArguments = anyOf(ignoringParenCasts(cxxNewExpr()),
-                                  ignoringParenCasts(ReleaseCallMatcher),
-                                  ignoringParenCasts(conditionalOperator()));
+                                  ignoringParenCasts(ReleaseCallMatcher));
+
+    auto OptionalCondOp =
+        optionally(ignoringParenCasts(conditionalOperator().bind("cond-op")));
 
     auto SmartPtrConstructorMatcher =
         cxxConstructExpr(
             hasDeclaration(cxxConstructorDecl(ofClass(IsSmartPtrRecord))),
             hasArgument(0, PointerArg), unless(HasCustomDeleter),
-            unless(hasArgument(0, AllowedArguments)))
+            unless(hasArgument(0, AllowedArguments)),
+            hasArgument(0, OptionalCondOp))
             .bind("ctor");
 
     // Matcher for reset() calls
@@ -841,7 +845,8 @@ public:
                 hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
             callee(cxxMethodDecl(ofClass(IsSmartPtrRecord), hasName("reset"))),
             hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
-            unless(hasArgument(0, AllowedArguments)))
+            unless(hasArgument(0, AllowedArguments)),
+            hasArgument(0, OptionalCondOp))
             .bind("reset");
 
     Finder->addMatcher(SmartPtrConstructorMatcher, &Check);
@@ -851,15 +856,54 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override {
     const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
     const auto *Reset = Result.Nodes.getNodeAs<CXXMemberCallExpr>("reset");
+    const auto *Cond = Result.Nodes.getNodeAs<ConditionalOperator>("cond-op");
     const Expr *ConstructorOrMember = Ctor;
     if (!ConstructorOrMember)
       ConstructorOrMember = Reset;
 
     if (ConstructorOrMember)
-      Check.emitDiagnostic(*Result.Context, ConstructorOrMember);
+      checkInternal(*Result.Context, ConstructorOrMember, Cond);
   }
 
   bool isStrictMode() override { return true; }
+
+private:
+  void checkInternal(ASTContext &Context, const Expr *ConstructorOrMember,
+                     const ConditionalOperator *Cond) {
+    if (Cond && validateConditionalOperator(Context, Cond))
+      return;
+    Check.emitDiagnostic(Context, ConstructorOrMember);
+  }
+
+  bool validateConditionalOperator(ASTContext &Context,
+                                   const ConditionalOperator *Cond) {
+    assert(Cond);
+
+    static const auto ReleaseCallMatcher =
+        cxxMemberCallExpr(callee(cxxMethodDecl(hasName("release"))));
+
+    static const StatementMatcher Matcher =
+        anyOf(integerLiteral(equals(0)), cxxNullPtrLiteralExpr(), cxxNewExpr(),
+              ReleaseCallMatcher);
+
+    auto isValidExpr = [&](const Expr *E) -> bool {
+      if (!E)
+        return false;
+
+      E = E->IgnoreParenCasts();
+
+      // Если это вложенный тернарный оператор - проверяем рекурсивно
+      if (const auto *NestedCond = dyn_cast<ConditionalOperator>(E))
+        return validateConditionalOperator(Context, NestedCond);
+
+      // Иначе проверяем через матчер
+      const auto Matches = match(Matcher, *E, Context);
+      return !Matches.empty();
+    };
+
+    return isValidExpr(Cond->getTrueExpr()) &&
+           isValidExpr(Cond->getFalseExpr());
+  }
 };
 
 static std::unique_ptr<SmartPtrInitializationCheckImpl>

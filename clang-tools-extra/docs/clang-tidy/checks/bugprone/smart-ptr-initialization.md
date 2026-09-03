@@ -65,14 +65,6 @@ This check only supports smart pointers with shared and unique ownership
 semantics. Smart pointers with different semantics, such as
 `boost::scoped_ptr`, cannot be used with the current version of this check.
 
-This check unable to catch relevant cases inside a ternary operator:
-
-   ```cpp
-   std::shared_ptr<A> a(flag ? nullptr : &getA());
-   ```
-
-The warning will never be shown with the current version of this check.
-
 ## References
 
 - [CERT C++ MEM56-CPP](https://wiki.sei.cmu.edu/confluence/display/cplusplus/MEM56-CPP.+Do+not+store+an+already-owned+pointer+value+in+an+unrelated+smart+pointer)
