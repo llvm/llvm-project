@@ -9430,10 +9430,21 @@ static bool isArithmeticArgumentPromotion(Sema &S,
   QualType To = ICE->getType();
   // It's an integer promotion if the destination type is the promoted
   // source type.
-  if (ICE->getCastKind() == CK_IntegralCast &&
-      S.Context.isPromotableIntegerType(From) &&
-      S.Context.getPromotedIntegerType(From) == To)
-    return true;
+  if (ICE->getCastKind() == CK_IntegralCast) {
+    if (S.Context.isPromotableIntegerType(From) &&
+        S.Context.getPromotedIntegerType(From) == To)
+      return true;
+    if (const auto *SubExpr = ICE->getSubExpr()) {
+      QualType Promoted =
+          S.Context.isPromotableBitField(const_cast<Expr *>(SubExpr));
+      if (!Promoted.isNull() && Promoted == To) {
+        QualType FromSigned = S.Context.getCorrespondingSignedType(From);
+        QualType ToSigned = S.Context.getCorrespondingSignedType(To);
+        if (S.Context.getIntegerTypeOrder(FromSigned, ToSigned) <= 0)
+          return true;
+      }
+    }
+  }
   // Look through vector types, since we do default argument promotion for
   // those in OpenCL.
   if (const auto *VecTy = From->getAs<ExtVectorType>())
