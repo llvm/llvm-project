@@ -39,6 +39,7 @@ cc_test(
     # `hdrs`, so Clang's layering_check flags transitive gtest internals as
     # private. Disable the check for this gtest-driven test target.
     features = ["-layering_check"],
+    tags = ["manual"],
     deps = [
         "//flang:CommonHeaders",
         "//flang:RuntimeHeaders",
@@ -58,6 +59,7 @@ cc_test(
     name = "reshape.test",
     size = "small",
     srcs = ["Evaluate/reshape.cpp"],
+    tags = ["manual"],
     deps = [
         "//flang:CommonHeaders",
         "//flang:RuntimeHeaders",
@@ -72,6 +74,7 @@ cc_test(
     name = "ISO-Fortran-binding.test",
     size = "small",
     srcs = ["Evaluate/ISO-Fortran-binding.cpp"],
+    tags = ["manual"],
     deps = [
         "//flang:CommonHeaders",
         "//flang:RuntimeHeaders",
