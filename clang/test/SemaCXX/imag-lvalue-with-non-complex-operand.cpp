@@ -22,7 +22,8 @@ _Complex float baz()
 {
   float f;
   __real__ f = 0;
-  __imag__ }      // expected-error {{expected expression}}
+  __imag__
+} // expected-error {{expected expression}}
 
 
 typedef float C;

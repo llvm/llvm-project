@@ -306,7 +306,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
       if (isa<ObjCPropertyRefExpr>(Op))
         return Cl::CL_SubObjCPropertySetting;
 
-      // _Imag with non-complex operand is not a valid l-value
+      // _Imag with non-complex operand is not a valid l-value.
       if (UnaryOp->getOpcode() == UO_Imag && !Op->getType()->isAnyComplexType())
         return Cl::CL_PRValue;
 
