@@ -79,8 +79,7 @@ void *aligned_alloc_host(size_t alignment, size_t numBytes,
 
 void *malloc_host(std::size_t numBytes, const context &syclContext,
                   const property_list &propList) {
-  return aligned_alloc_host(alignof(std::max_align_t), numBytes, syclContext,
-                            propList);
+  return aligned_alloc_host(0, numBytes, syclContext, propList);
 }
 
 void *malloc_host(std::size_t numBytes, const queue &syclQueue,
@@ -154,12 +153,22 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 
   void *Ptr{};
   auto OLDevice = detail::getSyclObjImpl(syclDevice)->getOLHandle();
-  auto Result = kind == usm::alloc::host
-                    ? detail::callNoCheck(olMemAllocAlignedHost, OLDevice,
-                                          numBytes, alignment, &Ptr)
-                    : detail::callNoCheck(olMemAllocAligned, OLDevice,
-                                          detail::getOlAllocType(kind),
-                                          numBytes, alignment, &Ptr);
+
+  ol_result_t Result;
+  if (alignment == 0) {
+    Result =
+        kind == usm::alloc::host
+            ? detail::callNoCheck(olMemAllocHost, OLDevice, numBytes, &Ptr)
+            : detail::callNoCheck(olMemAlloc, OLDevice,
+                                  detail::getOlAllocType(kind), numBytes, &Ptr);
+  } else {
+    Result = kind == usm::alloc::host
+                 ? detail::callNoCheck(olMemAllocAlignedHost, OLDevice,
+                                       numBytes, alignment, &Ptr)
+                 : detail::callNoCheck(olMemAllocAligned, OLDevice,
+                                       detail::getOlAllocType(kind), numBytes,
+                                       alignment, &Ptr);
+  }
   return detail::isFailed(Result) ? nullptr : Ptr;
 }
 
@@ -173,8 +182,7 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 void *malloc(std::size_t numBytes, const device &syclDevice,
              const context &syclContext, usm::alloc kind,
              const property_list &propList) {
-  return aligned_alloc(alignof(std::max_align_t), numBytes, syclDevice,
-                       syclContext, kind, propList);
+  return aligned_alloc(0, numBytes, syclDevice, syclContext, kind, propList);
 }
 
 void *malloc(std::size_t numBytes, const queue &syclQueue, usm::alloc kind,

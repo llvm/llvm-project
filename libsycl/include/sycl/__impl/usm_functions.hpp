@@ -47,8 +47,7 @@ void *aligned_alloc_device(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates device USM with specified alignment.
 ///
-/// \param alignment the minimum alignment of the allocated memory; the actual
-/// alignment used is at least alignof(T).
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param count the number of elements of type T to allocate.
 /// \param syclDevice the device to use for the allocation.
 /// \param syclContext a context containing syclDevice or its parent device if
@@ -84,8 +83,7 @@ void *aligned_alloc_device(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates device USM with specified alignment.
 ///
-/// \param alignment the minimum alignment of the allocated memory; the actual
-/// alignment used is at least alignof(T).
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param count the number of elements of type T to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param propList the list of properties for the allocation.
@@ -185,8 +183,7 @@ void *aligned_alloc_host(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates host USM with specified alignment.
 ///
-/// \param alignment the minimum alignment of the allocated memory; the actual
-/// alignment used is at least alignof(T).
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param count the number of elements of type T to allocate.
 /// \param syclContext the context that should have access to the allocated
 /// memory.
@@ -221,8 +218,7 @@ void *aligned_alloc_host(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates host USM with specified alignment.
 ///
-/// \param alignment the minimum alignment of the allocated memory; the actual
-/// alignment used is at least alignof(T).
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param count the number of elements of type T to allocate.
 /// \param syclQueue queue that provides the context.
 /// \param propList the list of properties for the allocation.
@@ -312,8 +308,7 @@ void *aligned_alloc_shared(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates shared USM with specified alignment.
 ///
-/// \param alignment the minimum alignment of the allocated memory; the actual
-/// alignment used is at least alignof(T).
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param count the number of elements of type T to allocate.
 /// \param syclDevice the device to use for the allocation.
 /// \param syclContext a context containing syclDevice or its parent device if
@@ -349,8 +344,7 @@ void *aligned_alloc_shared(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates shared USM with specified alignment.
 ///
-/// \param alignment the minimum alignment of the allocated memory; the actual
-/// alignment used is at least alignof(T).
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param count the number of elements of type T to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param propList the list of properties for the allocation.
@@ -449,8 +443,7 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates USM of type `kind` with specified alignment.
 ///
-/// \param alignment the minimum alignment of the allocated memory; the actual
-/// alignment used is at least alignof(T).
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param count the number of elements of type T to allocate.
 /// \param syclDevice the device to use for the allocation. The syclDevice
 /// parameter is ignored if kind is usm::alloc::host.
@@ -491,8 +484,7 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 
 /// Allocates USM of type `kind` with specified alignment.
 ///
-/// \param alignment the minimum alignment of the allocated memory; the actual
-/// alignment used is at least alignof(T).
+/// \param alignment the minimum alignment of the allocated memory.
 /// \param count the number of elements of type T to allocate.
 /// \param syclQueue a queue that provides the device and context.
 /// \param kind the type of memory to allocate.
