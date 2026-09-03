@@ -42,10 +42,9 @@ define <4 x double> @shuffle_fv_v4f64(<4 x double> %x) {
 ; RV32-LABEL: shuffle_fv_v4f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:    vmv.v.i v10, 9
+; RV32-NEXT:    vmv.v.i v0, 9
 ; RV32-NEXT:    lui a0, %hi(.LCPI3_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI3_0)(a0)
-; RV32-NEXT:    vmv1r.v v0, v10
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vfmerge.vfm v8, v8, fa5, v0
 ; RV32-NEXT:    ret
@@ -67,10 +66,9 @@ define <4 x double> @shuffle_vf_v4f64(<4 x double> %x) {
 ; RV32-LABEL: shuffle_vf_v4f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:    vmv.v.i v10, 6
+; RV32-NEXT:    vmv.v.i v0, 6
 ; RV32-NEXT:    lui a0, %hi(.LCPI4_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI4_0)(a0)
-; RV32-NEXT:    vmv1r.v v0, v10
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vfmerge.vfm v8, v8, fa5, v0
 ; RV32-NEXT:    ret
@@ -104,10 +102,9 @@ define <4 x double> @vfmerge_constant_v4f64(<4 x double> %x) {
 ; RV32-LABEL: vfmerge_constant_v4f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:    vmv.v.i v10, 6
+; RV32-NEXT:    vmv.v.i v0, 6
 ; RV32-NEXT:    lui a0, %hi(.LCPI6_0)
 ; RV32-NEXT:    fld fa5, %lo(.LCPI6_0)(a0)
-; RV32-NEXT:    vmv1r.v v0, v10
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vfmerge.vfm v8, v8, fa5, v0
 ; RV32-NEXT:    ret
@@ -523,11 +520,10 @@ define <16 x float> @shuffle_disjoint_lanes_one_identity(<16 x float> %v, <16 x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, -272
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.s.x v18, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI35_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI35_0)
 ; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    vmv1r.v v0, v18
 ; CHECK-NEXT:    vrgatherei16.vv v8, v12, v16, v0.t
 ; CHECK-NEXT:    ret
   %out = shufflevector <16 x float> %v, <16 x float> %w, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 26, i32 30, i32 22, i32 20, i32 8, i32 31, i32 29, i32 28, i32 27, i32 23, i32 25, i32 22>
@@ -540,12 +536,11 @@ define <16 x float> @shuffle_disjoint_lanes_one_broadcast(<16 x float> %v, <16 x
 ; CHECK-NEXT:    lui a0, 15
 ; CHECK-NEXT:    addi a0, a0, 240
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.s.x v20, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v16, v8, 7
 ; CHECK-NEXT:    lui a0, %hi(.LCPI36_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI36_0)
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vmv1r.v v0, v20
 ; CHECK-NEXT:    vrgatherei16.vv v16, v12, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -559,12 +554,11 @@ define <16 x float> @shuffle_disjoint_lanes_one_splat(float %v, <16 x float> %w)
 ; CHECK-NEXT:    lui a0, 15
 ; CHECK-NEXT:    addi a0, a0, 240
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
-; CHECK-NEXT:    vmv.s.x v18, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vfmv.v.f v12, fa0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI37_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI37_0)
 ; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    vmv1r.v v0, v18
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret

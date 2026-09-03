@@ -11,9 +11,8 @@ define void @deinterleave3_0_i8(ptr %in, ptr %out) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 73
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -36,9 +35,8 @@ define void @deinterleave3_8_i8(ptr %in, ptr %out) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 146
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -99,9 +97,8 @@ define void @deinterleave5_0_i8(ptr %in, ptr %out) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 33
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vmv.v.v v0, v8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu

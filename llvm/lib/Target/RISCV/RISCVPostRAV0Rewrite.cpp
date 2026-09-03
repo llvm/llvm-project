@@ -310,16 +310,17 @@ static bool hasRegMask(const MachineInstr &MI) {
 }
 
 static bool isStructurallyTransparent(const MachineInstr &MI) {
+  bool IsSafeLoad = MI.mayLoad() && !MI.mayStore() && !MI.hasOrderedMemoryRef();
   return !MI.isDebugInstr() && !MI.isMetaInstruction() && !MI.isPosition() &&
          !MI.isPseudoProbe() && !MI.isBundled() && !MI.peekDebugInstrNum() &&
          !MI.getFlag(MachineInstr::LRSplit) &&
          MI.getFlags() == MachineInstr::NoFlags && !MI.getAsmPrinterFlags() &&
-         MI.memoperands_empty() && !MI.getPreInstrSymbol() &&
+         (MI.memoperands_empty() || IsSafeLoad) && !MI.getPreInstrSymbol() &&
          !MI.getPostInstrSymbol() && !MI.getHeapAllocMarker() &&
          !MI.getPCSections() && !MI.getMMRAMetadata() && !MI.getCFIType() &&
          !MI.getDeactivationSymbol() && !MI.isCall() && !MI.isInlineAsm() &&
          !MI.isTerminator() && !MI.isBarrier() && !MI.isConvergent() &&
-         !MI.mayLoadOrStore() && !MI.mayRaiseFPException() &&
+         (!MI.mayLoadOrStore() || IsSafeLoad) && !MI.mayRaiseFPException() &&
          !MI.hasUnmodeledSideEffects() && !hasRegMask(MI);
 }
 

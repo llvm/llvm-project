@@ -13934,11 +13934,10 @@ define <4 x i32> @mgather_narrow_edge_case(ptr %base) {
 ; RV64ZVE32F-LABEL: mgather_narrow_edge_case:
 ; RV64ZVE32F:       # %bb.0:
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.v.i v8, 5
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 5
 ; RV64ZVE32F-NEXT:    lw a1, -512(a0)
 ; RV64ZVE32F-NEXT:    lw a0, 0(a0)
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a1
-; RV64ZVE32F-NEXT:    vmv.v.v v0, v8
 ; RV64ZVE32F-NEXT:    vmerge.vxm v8, v9, a0, v0
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i32, ptr %base, <4 x i8>  <i8 0, i8 128, i8 0, i8 128>

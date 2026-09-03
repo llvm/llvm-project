@@ -74,11 +74,10 @@ define <16 x i16> @shuffle_shuffle_duplicated_lane(<16 x i16> %op0, <16 x i16> %
 ; CHECK-NEXT:    vle16.v v14, (a0)
 ; CHECK-NEXT:    vrgather.vv v12, v8, v14
 ; CHECK-NEXT:    li a0, -256
-; CHECK-NEXT:    vmv.s.x v14, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI3_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI3_0)
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vmv1r.v v0, v14
 ; CHECK-NEXT:    vrgather.vv v12, v10, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret

@@ -131,10 +131,9 @@ define <4 x i32> @udiv_constant_rhs(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    vadd.vv v9, v10, v9
 ; CHECK-NEXT:    lui a0, %hi(.LCPI4_1)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI4_1)
-; CHECK-NEXT:    vmv.v.i v10, 4
+; CHECK-NEXT:    vmv.v.i v0, 4
 ; CHECK-NEXT:    vle32.v v11, (a0)
 ; CHECK-NEXT:    vsrl.vv v9, v9, v11
-; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %e0 = udiv i32 %a, 23

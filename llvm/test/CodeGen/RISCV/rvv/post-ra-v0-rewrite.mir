@@ -117,9 +117,9 @@ body: |
     liveins: $v8, $x10, $vl, $vtype
 
     ; CHECK-LABEL: name: nonadjacent_unordered_load
-    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
     ; CHECK-NEXT: dead $x11 = LW
-    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    ; CHECK-NOT: $v0 = COPY
     renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5, implicit $vl, implicit $vtype
     dead $x11 = LW killed $x10, 0 :: (load (s32))
     $v0 = COPY killed renamable $v10, implicit $vl, implicit $vtype

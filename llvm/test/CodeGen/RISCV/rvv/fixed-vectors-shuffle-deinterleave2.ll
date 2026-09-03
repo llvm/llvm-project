@@ -595,12 +595,11 @@ define void @vnsrl_0_i8_undef_negative(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vslideup.vi v10, v9, 4
 ; CHECK-NEXT:    li a0, 48
 ; CHECK-NEXT:    vslideup.vi v10, v9, 3, v0.t
-; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    lui a0, %hi(.LCPI19_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI19_0)
 ; CHECK-NEXT:    vle8.v v11, (a0)
 ; CHECK-NEXT:    vrgather.vv v12, v8, v11
-; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vvm v8, v12, v10, v0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
