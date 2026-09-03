@@ -622,6 +622,8 @@ features cannot lower the translation-unit ABI level;
   available as an identifier (e.g. `struct __make_unsigned`) was seen again
   in a token that was lexed and cached before the first occurrence was parsed.
   (#GH214128)
+- Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
+  function that is not a constructor. (#GH194298)
 
 #### Bug Fixes to AST Handling
 
