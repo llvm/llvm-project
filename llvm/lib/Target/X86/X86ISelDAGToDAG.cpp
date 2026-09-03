@@ -17,6 +17,7 @@
 #include "X86TargetMachine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/ConstantRange.h"
@@ -600,6 +601,7 @@ namespace {
                         uint8_t Imm);
     bool tryVPTESTM(SDNode *Root, SDValue Setcc, SDValue Mask);
     bool tryMatchBitSelect(SDNode *N);
+    bool tryMatchHRegisterInsert(SDNode *N);
 
     MachineSDNode *emitPCMPISTR(unsigned ROpc, unsigned MOpc, bool MayFoldLoad,
                                 const SDLoc &dl, MVT VT, SDNode *Node);
@@ -5459,6 +5461,185 @@ bool X86DAGToDAGISel::tryMatchBitSelect(SDNode *N) {
                         Ternlog.getNode(), A, B, C, 0xCA);
 }
 
+using namespace llvm::SDPatternMatch;
+
+static bool isBEXTRControlOperand(SDNode *N) {
+  if (!N->hasOneUse())
+    return false;
+  SDNode *User = *N->user_begin();
+
+  if (User->getOpcode() == X86ISD::BEXTR)
+    return User->getOperand(1).getNode() == N;
+
+  if (!User->isMachineOpcode())
+    return false;
+
+  switch (User->getMachineOpcode()) {
+  case X86::BEXTR32rr:
+  case X86::BEXTR64rr:
+    return User->getOperand(1).getNode() == N;
+  case X86::BEXTR32rm:
+  case X86::BEXTR64rm:
+    return User->getOperand(5).getNode() == N;
+  default:
+    return false;
+  }
+}
+
+struct LoInfo {
+  SDValue Base;
+  bool NeedMovzx;
+};
+
+static std::optional<LoInfo> getLoBase(SDValue V) {
+  SDValue Base;
+  uint64_t Mask;
+
+  if (sd_match(V, m_And(m_Value(Base), m_ConstInt(Mask)))) {
+    if (Mask == 0xFF)
+      return LoInfo{Base, true};
+    if (Mask == 0xFFFF00FF)
+      return LoInfo{Base, false};
+  }
+
+  if (sd_match(V, m_ZExt(m_Value(Base))) ||
+      sd_match(V, m_AnyExt(m_Value(Base)))) {
+    if (Base.getValueType() == MVT::i8)
+      return LoInfo{Base, true};
+  }
+
+  return std::nullopt;
+}
+
+static bool upperBitsAreDiscarded(SDNode *N) {
+  if (!N->hasOneUse())
+    return false;
+
+  SDNode *User = *N->user_begin();
+  if (User->getOpcode() == ISD::TRUNCATE) {
+    MVT TruncVT = User->getSimpleValueType(0);
+    return TruncVT == MVT::i16 || TruncVT == MVT::i8;
+  }
+
+  if (User->isMachineOpcode() &&
+      User->getMachineOpcode() == TargetOpcode::EXTRACT_SUBREG) {
+    if (auto *IdxNode = dyn_cast<ConstantSDNode>(User->getOperand(1))) {
+      unsigned Idx = IdxNode->getZExtValue();
+      if (Idx == X86::sub_16bit || Idx == X86::sub_8bit)
+        return true;
+    }
+  }
+
+  return false;
+}
+
+static std::optional<SDValue> getHiBase(SDValue V, bool UpperBitsDiscarded) {
+  if (!V.hasOneUse())
+    return std::nullopt;
+
+  SDValue Src;
+  if (!sd_match(V, m_Shl(m_Value(Src), m_SpecificInt(8))))
+    return std::nullopt;
+
+  SDValue Base;
+  if (sd_match(Src, m_And(m_Value(Base), m_SpecificInt(255))))
+    return Base;
+
+  if (sd_match(Src, m_ZExt(m_Value(Base))) ||
+      sd_match(Src, m_AnyExt(m_Value(Base)))) {
+    if (Base.getValueType() == MVT::i8)
+      return Base;
+  }
+
+  if (UpperBitsDiscarded)
+    return Src;
+
+  return std::nullopt;
+}
+
+bool X86DAGToDAGISel::tryMatchHRegisterInsert(SDNode *N) {
+  // High-byte registers (AH, BH, CH, DH) are not supported by APX and have
+  // microarchitectural penalties on recent 64-bit targets (see #210321).
+  // Ideally, this should be gated on a TuningSlowHighByteRegs subtarget
+  // feature instead of just bitness, but for now we disable it entirely on
+  // 64-bit.
+  if (Subtarget->is64Bit())
+    return false;
+
+  // This matcher attempts to fold (or (and X, 0xff), (shl Y, 8)) into
+  // INSERT_SUBREG(X, Y, sub_8bit_hi). It handles 0xFFFF00FF masks by skipping
+  // the AND, and ZERO_EXTEND/ANY_EXTEND by emitting a MOVZX.
+  // If the OR result is uniquely used as a BEXTR control operand, the upper
+  // bits of the shift source are ignored by BEXTR, so we can safely bypass
+  // byte-cleanness checks for Y.
+  if (N->getOpcode() != ISD::OR)
+    return false;
+  if (N->getValueType(0) != MVT::i32)
+    return false;
+
+  bool UpperBitsDiscarded =
+      isBEXTRControlOperand(N) || upperBitsAreDiscarded(N);
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  struct MatchResult {
+    LoInfo Lo;
+    SDValue HiBase;
+  };
+
+  auto tryMatch = [&](SDValue LoVal,
+                      SDValue HiVal) -> std::optional<MatchResult> {
+    auto Lo = getLoBase(LoVal);
+    if (!Lo)
+      return std::nullopt;
+    auto Hi = getHiBase(HiVal, UpperBitsDiscarded);
+    if (!Hi)
+      return std::nullopt;
+    return MatchResult{*Lo, *Hi};
+  };
+
+  auto Match = tryMatch(LHS, RHS);
+  if (!Match)
+    Match = tryMatch(RHS, LHS);
+
+  if (!Match)
+    return false;
+
+  SDLoc dl(N);
+  SDValue Sub8 = CurDAG->getTargetConstant(X86::sub_8bit, dl, MVT::i32);
+  SDValue RC_ABCD =
+      CurDAG->getTargetConstant(X86::GR32_ABCDRegClassID, dl, MVT::i32);
+
+  SDValue DestBase = Match->Lo.Base;
+  if (Match->Lo.NeedMovzx) {
+    if (DestBase.getValueType() != MVT::i8) {
+      DestBase = SDValue(CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
+                                                dl, MVT::i8, DestBase, Sub8),
+                         0);
+    }
+    DestBase = SDValue(
+        CurDAG->getMachineNode(X86::MOVZX32rr8, dl, MVT::i32, DestBase), 0);
+  }
+
+  DestBase = SDValue(CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, dl,
+                                            MVT::i32, DestBase, RC_ABCD),
+                     0);
+
+  SDValue HiExtr = Match->HiBase;
+  if (HiExtr.getValueType() != MVT::i8)
+    HiExtr = SDValue(CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl,
+                                            MVT::i8, HiExtr, Sub8),
+                     0);
+
+  SDValue Sub8Hi = CurDAG->getTargetConstant(X86::sub_8bit_hi, dl, MVT::i32);
+  SDNode *Insert = CurDAG->getMachineNode(TargetOpcode::INSERT_SUBREG, dl,
+                                          MVT::i32, DestBase, HiExtr, Sub8Hi);
+
+  ReplaceNode(N, Insert);
+  return true;
+}
+
 void X86DAGToDAGISel::Select(SDNode *Node) {
   MVT NVT = Node->getSimpleValueType(0);
   unsigned Opcode = Node->getOpcode();
@@ -5770,6 +5951,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     if (tryShrinkShlLogicImm(Node))
       return;
     if (Opcode == ISD::OR && tryMatchBitSelect(Node))
+      return;
+    if (Opcode == ISD::OR && tryMatchHRegisterInsert(Node))
       return;
     if (tryVPTERNLOG(Node))
       return;
