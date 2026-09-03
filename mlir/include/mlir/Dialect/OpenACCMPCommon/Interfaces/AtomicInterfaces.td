@@ -445,7 +445,8 @@ def AtomicCompareOpInterface : OpInterface<"AtomicCompareOpInterface"> {
           llvm::StringRef opName = op.getName().getStringRef();
           if (opName == "arith.cmpi" || opName == "llvm.icmp") {
             foundComparison = true;
-            auto predAttr = op.getAttrOfType<mlir::IntegerAttr>("predicate");
+            auto predAttr = llvm::dyn_cast_or_null<mlir::IntegerAttr>(
+                op.getInherentAttr("predicate").value_or(mlir::Attribute{}));
             if (predAttr) {
 	      auto predName = mlir::arith::stringifyCmpIPredicate(
                   static_cast<mlir::arith::CmpIPredicate>(predAttr.getInt()));
@@ -460,7 +461,8 @@ def AtomicCompareOpInterface : OpInterface<"AtomicCompareOpInterface"> {
             break;
           } else if (opName == "arith.cmpf" || opName == "llvm.fcmp") {
             foundComparison = true;
-            auto predAttr = op.getAttrOfType<mlir::IntegerAttr>("predicate");
+            auto predAttr = llvm::dyn_cast_or_null<mlir::IntegerAttr>(
+                op.getInherentAttr("predicate").value_or(mlir::Attribute{}));
             if (predAttr) {
               auto predName = mlir::arith::stringifyCmpFPredicate(
                   static_cast<mlir::arith::CmpFPredicate>(predAttr.getInt()));
@@ -475,7 +477,8 @@ def AtomicCompareOpInterface : OpInterface<"AtomicCompareOpInterface"> {
             break;
           } else if (opName == "fir.cmpc") {
             foundComparison = true;
-            auto predAttr = op.getAttrOfType<mlir::IntegerAttr>("predicate");
+            auto predAttr = llvm::dyn_cast_or_null<mlir::IntegerAttr>(
+                op.getInherentAttr("predicate").value_or(mlir::Attribute{}));
             if (predAttr) {
               auto predName = mlir::arith::stringifyCmpFPredicate(
                   static_cast<mlir::arith::CmpFPredicate>(predAttr.getInt()));

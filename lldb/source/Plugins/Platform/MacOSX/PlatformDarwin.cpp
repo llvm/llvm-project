@@ -439,15 +439,18 @@ Status PlatformDarwin::GetModuleFromSharedCaches(
       if (module_spec.GetUUID())
         image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
                                                        sc_uuid, sc_mode);
-      else
-        image_info = HostInfo::GetSharedCacheImageInfo(
-            ConstString(module_spec.GetFileSpec().GetPath()), sc_uuid, sc_mode);
+      else {
+        std::string filepath = module_spec.GetFileSpec().GetPath();
+        image_info =
+            HostInfo::GetSharedCacheImageInfo(filepath, sc_uuid, sc_mode);
+      }
     }
   }
   // Fall back to looking for the file in lldb's own shared cache.
-  if (!image_info.GetUUID())
-    image_info = HostInfo::GetSharedCacheImageInfo(
-        ConstString(module_spec.GetFileSpec().GetPath()), sc_mode);
+  if (!image_info.GetUUID()) {
+    std::string filepath = module_spec.GetFileSpec().GetPath();
+    image_info = HostInfo::GetSharedCacheImageInfo(filepath, sc_mode);
+  }
 
   // If we found it and it has the correct UUID, let's proceed with
   // creating a module from the memory contents.

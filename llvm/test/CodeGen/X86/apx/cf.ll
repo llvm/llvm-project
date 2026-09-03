@@ -265,3 +265,15 @@ define i64 @redundant_test(i64 %num, ptr %p1, i64 %in) {
   %sel = select i1 %cmp, i64 %add, i64 %num
   ret i64 %sel
 }
+
+define void @pr219637(ptr %a, ptr %b, <1 x i1> %c) {
+; CHECK-LABEL: pr219637:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cfcmovnel (%rsi), %eax
+; CHECK-NEXT:    cfcmovnel %eax, (%rdi)
+; CHECK-NEXT:    retq
+  %1 = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr %b, i32 4, <1 x i1> %c, <1 x i32> poison)
+  call void @llvm.masked.store.v1i32.p0(<1 x i32> %1, ptr %a, i32 4, <1 x i1> %c)
+  ret void
+}

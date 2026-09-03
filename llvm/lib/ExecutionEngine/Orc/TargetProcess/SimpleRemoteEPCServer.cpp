@@ -8,14 +8,11 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
 
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
-
-#include "OrcRTBootstrap.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -100,8 +97,15 @@ SimpleRemoteEPCServer::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
   case SimpleRemoteEPCOpcode::Setup:
     return make_error<StringError>("Unexpected Setup opcode",
                                    inconvertibleErrorCode());
-  case SimpleRemoteEPCOpcode::Hangup:
+  case SimpleRemoteEPCOpcode::Hangup: {
+    {
+      std::lock_guard<std::mutex> Lock(ServerStateMutex);
+      RemoteHangup = true;
+    }
+    if (auto Err = decodeHangupPayload(std::move(ArgBytes)))
+      return std::move(Err);
     return SimpleRemoteEPCTransportClient::EndSession;
+  }
   case SimpleRemoteEPCOpcode::Result:
     if (auto Err = handleResult(SeqNo, TagAddr, std::move(ArgBytes)))
       return std::move(Err);
@@ -144,7 +148,26 @@ void SimpleRemoteEPCServer::handleDisconnect(Error Err) {
   }
 
   std::lock_guard<std::mutex> Lock(ServerStateMutex);
-  ShutdownErr = joinErrors(std::move(ShutdownErr), std::move(Err));
+
+  // The server never initiates a disconnection, so if the transport reported no
+  // error and no hangup arrived then the controller went away without telling
+  // us. The cause is not knowable from here -- it may have crashed, been
+  // killed, or become unreachable -- so report what was observed rather than a
+  // cause.
+  //
+  // A missing hangup is evidence, not proof: a hangup can also be lost in
+  // transit, since closing a TCP socket with unread data queued sends an RST,
+  // which can discard bytes the peer had already delivered. We accept that
+  // rather than draining the read side before closing -- the cost is a
+  // misleading diagnostic on a session that is ending regardless, whereas a
+  // drain risks stalling teardown on a peer that never closes.
+  Error DisconnectReason =
+      (!Err && !RemoteHangup)
+          ? make_error<StringError>("Connection closed without hangup",
+                                    inconvertibleErrorCode())
+          : std::move(Err);
+
+  ShutdownErr = joinErrors(std::move(ShutdownErr), std::move(DisconnectReason));
   RunState = ServerShutDown;
   ShutdownCV.notify_all();
 }

@@ -210,7 +210,7 @@
 #    error "__cpp_lib_string_view should have the value 201803L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  if defined(__cpp_char8_t)
 #    ifndef __cpp_lib_char8_t
@@ -273,6 +273,69 @@
 #    error "__cpp_lib_string_view should have the value 202403L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if defined(__cpp_char8_t)
+#    ifndef __cpp_lib_char8_t
+#      error "__cpp_lib_char8_t should be defined in c++29"
+#    endif
+#    if __cpp_lib_char8_t != 201907L
+#      error "__cpp_lib_char8_t should have the value 201907L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_char8_t
+#      error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_constexpr_string_view
+#    error "__cpp_lib_constexpr_string_view should be defined in c++29"
+#  endif
+#  if __cpp_lib_constexpr_string_view != 201811L
+#    error "__cpp_lib_constexpr_string_view should have the value 201811L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_freestanding_string_view
+#      error "__cpp_lib_freestanding_string_view should be defined in c++29"
+#    endif
+#    if __cpp_lib_freestanding_string_view != 202311L
+#      error "__cpp_lib_freestanding_string_view should have the value 202311L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_freestanding_string_view
+#      error "__cpp_lib_freestanding_string_view should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_starts_ends_with
+#    error "__cpp_lib_starts_ends_with should be defined in c++29"
+#  endif
+#  if __cpp_lib_starts_ends_with != 201711L
+#    error "__cpp_lib_starts_ends_with should have the value 201711L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_string_contains
+#    error "__cpp_lib_string_contains should be defined in c++29"
+#  endif
+#  if __cpp_lib_string_contains != 202011L
+#    error "__cpp_lib_string_contains should have the value 202011L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should be defined in c++29"
+#  endif
+#  if __cpp_lib_string_subview != 202506L
+#    error "__cpp_lib_string_subview should have the value 202506L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_string_view
+#    error "__cpp_lib_string_view should be defined in c++29"
+#  endif
+#  if __cpp_lib_string_view != 202403L
+#    error "__cpp_lib_string_view should have the value 202403L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

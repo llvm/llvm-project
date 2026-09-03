@@ -465,7 +465,7 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
 void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
-      FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
+      FT, FT->getExtInfo().withCallingConv(CC_C));
 }
 
 // LLVM currently assumes a null pointer has the bit pattern 0, but some GPU
@@ -920,7 +920,7 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   IntParams[2] = static_cast<unsigned>(attributes.IsArray);
 
   // MS
-  IntParams[3] = 0;
+  IntParams[3] = static_cast<unsigned>(attributes.isMultiSampled());
 
   // Sampled
   IntParams[4] =

@@ -284,8 +284,7 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; DEFAULT:       vector.scevcheck:
-; DEFAULT-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
-; DEFAULT-NEXT:    [[TMP2:%.*]] = add i32 [[UMAX]], -1
+; DEFAULT-NEXT:    [[TMP2:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 1)
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 0
 ; DEFAULT-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; DEFAULT:       vector.ph:
@@ -338,8 +337,7 @@ define void @outside_lattice(ptr noalias %p, ptr noalias %q, i32 %n) {
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; STRIDED:       vector.scevcheck:
-; STRIDED-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
-; STRIDED-NEXT:    [[TMP2:%.*]] = add i32 [[UMAX]], -1
+; STRIDED-NEXT:    [[TMP2:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N]], i32 1)
 ; STRIDED-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 0
 ; STRIDED-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
