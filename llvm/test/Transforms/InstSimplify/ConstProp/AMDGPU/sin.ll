@@ -122,9 +122,9 @@ define void @test_f32(ptr %p) {
   store volatile float %p1000, ptr %p
   %n1000 = call float @llvm.amdgcn.sin.f32(float -1000.0)
   store volatile float %n1000, ptr %p
-  %pinf = call float @llvm.amdgcn.sin.f32(float 0x7FF0000000000000) ; +inf
+  %pinf = call float @llvm.amdgcn.sin.f32(float +inf) ; +inf
   store volatile float %pinf, ptr %p
-  %ninf = call float @llvm.amdgcn.sin.f32(float 0xFFF0000000000000) ; -inf
+  %ninf = call float @llvm.amdgcn.sin.f32(float -inf) ; -inf
   store volatile float %ninf, ptr %p
   %nan = call float @llvm.amdgcn.sin.f32(float 0x7FF8000000000000) ; nan
   store volatile float %nan, ptr %p
