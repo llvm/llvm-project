@@ -34,6 +34,14 @@ void empty_and_defaults() {
   (void)a; (void)b; (void)c; (void)d;
 }
 
+void interleaved_noinline() {
+  Wrapper a([] __device__ __noinline__ () {});
+  Wrapper b([] __attribute__((device)) __noinline__
+                __attribute__((host)) () {});
+  Wrapper c([] __device__ __noinline__ {});
+  (void)a; (void)b; (void)c;
+}
+
 #if __cplusplus >= 202302L
 void omitted_parameter_list() {
   Wrapper a([] __device__ noexcept {});
@@ -44,8 +52,11 @@ void omitted_parameter_list() {
   Wrapper f([] __device__ static {});
   Wrapper g([] __device__ mutable constexpr noexcept -> int { return 1; });
   Wrapper h([] __device__ mutable [[]] {});
+  Wrapper i([] __device__ __noinline__ mutable constexpr noexcept -> int {
+    return 1;
+  });
   (void)a; (void)b; (void)c; (void)d;
-  (void)e; (void)f; (void)g; (void)h;
+  (void)e; (void)f; (void)g; (void)h; (void)i;
 }
 
 void explicit_template_parameter_list() {
