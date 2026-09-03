@@ -27,6 +27,15 @@ namespace cir {
 /// sites. Conservative defaults (MayAlias / ModRef) are returned for cases
 /// that are not yet handled.
 class CIRBasicAliasAnalysis {
+  enum class ObjectRelation {
+    /// Provably different underlying allocations.
+    Distinct,
+    /// Same underlying allocation, no offset.
+    Identical,
+    /// Cannot determine the relationship.
+    Unknown,
+  };
+
 public:
   CIRBasicAliasAnalysis() = default;
   CIRBasicAliasAnalysis(CIRBasicAliasAnalysis &&) = default;
@@ -50,9 +59,11 @@ private:
   /// no more specific source is found.
   mlir::Value getUnderlyingObject(mlir::Value val);
 
-  /// Return true if `lhs` and `rhs` are provably different allocations and
-  /// therefore cannot alias.
-  bool areDistinctObjects(mlir::Value lhs, mlir::Value rhs);
+  /// Classify the relationship between \p lhs and \p rhs.  Returns one of:
+  ///   Distinct      – provably different allocations
+  ///   Identical     – same allocation, no offset
+  ///   Unknown       – cannot determine
+  ObjectRelation classifyObjects(mlir::Value lhs, mlir::Value rhs);
 };
 
 } // namespace cir

@@ -13,9 +13,36 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/RegisterValue.h"
+
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
+#include <sys/ptrace.h>
 #include <sys/uio.h>
+
+#ifndef PTRACE_GETREGS
+#define PTRACE_GETREGS 12
+#endif
+
+#ifndef PTRACE_SETREGS
+#define PTRACE_SETREGS 13
+#endif
+
+#ifndef PTRACE_GETFPREGS
+#define PTRACE_GETFPREGS 14
+#endif
+
+#ifndef PTRACE_SETFPREGS
+#define PTRACE_SETFPREGS 15
+#endif
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_SETREGSET
+#define PTRACE_SETREGSET 0x4205
+#endif
 
 using namespace lldb_private;
 using namespace lldb_private::process_linux;

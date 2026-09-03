@@ -29,6 +29,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -270,10 +271,14 @@ public:
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
-  void convertFromNewDbgValues() {
+  /// Returns true if any function's conversion modified the module.
+  bool convertFromNewDbgValues() {
+    bool Modified = false;
     for (auto &F : *this) {
-      F.convertFromNewDbgValues();
+      if (F.convertFromNewDbgValues())
+        Modified = true;
     }
+    return Modified;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -665,7 +670,7 @@ public:
     if (It == ValueToGUIDMap.end())
       return std::nullopt;
 
-    return It->getSecond();
+    return It->second;
   }
 
   void insertGUID(const Value *V, GlobalValue::GUID GUID) {
@@ -680,10 +685,15 @@ public:
   }
 
 private:
+  /// Do not transfer GUID of a value to the value it is being RAUWed with.
+  struct GUIDMapConfig : ValueMapConfig<const Value *> {
+    enum { FollowRAUW = false };
+  };
+
   /// A mapping directly from Value to GUID. Populated from bitcode
   /// (MODULE_CODE_GUIDLIST). Necessary for lazy-loading modules, where we
   /// don't load metadata.
-  DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
+  ValueMap<const Value *, GlobalValue::GUID, GUIDMapConfig> ValueToGUIDMap;
 
   /// @}
   /// @name Direct access to the globals list, functions list, and symbol table
@@ -987,6 +997,11 @@ public:
              bool ShouldPreserveUseListOrder = false,
              bool IsForDebug = false) const;
 
+  /// Renumber the IDs stored in metadata nodes into canonical assembly order.
+  /// This mutates the IDs and should only be used immediately before final
+  /// assembly output.
+  void renumberMetadataForAssembly();
+
   /// Dump the module to stderr (for debugging).
   void dump() const;
 
@@ -1066,7 +1081,7 @@ public:
   /// @{
 
   /// Returns the floating-point ABI recorded by the "float-abi" module flag, or
-  /// FloatABI::Default when the flag is absent (meaning the target default).
+  /// the ABI implied by the target triple when the flag is absent.
   FloatABI::ABIType getFloatABI() const;
   /// @}
 

@@ -169,9 +169,9 @@ class TestFrameVarDILArithmetic(TestBase):
 
         # Check that binary * is allowed only in full mode
         frame = thread.GetFrameAtIndex(0)
-        simple = frame.GetValueForVariablePath("x * 2", lldb.eDILModeSimple)
-        legacy = frame.GetValueForVariablePath("x * 2", lldb.eDILModeLegacy)
-        full = frame.GetValueForVariablePath("x * 2", lldb.eDILModeFull)
+        simple = frame.GetValueForVariablePathWithMode("x * 2", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePathWithMode("x * 2", lldb.eDILModeLegacy)
+        full = frame.GetValueForVariablePathWithMode("x * 2", lldb.eDILModeFull)
         self.assertFailure(simple.GetError())
         self.assertFailure(legacy.GetError())
         self.assertSuccess(full.GetError())

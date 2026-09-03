@@ -103,7 +103,8 @@ public:
   };
 
   LIBC_INLINE constexpr FreeTrie() : FreeTrie(SizeRange{0, 0}) {}
-  LIBC_INLINE constexpr FreeTrie(SizeRange range) : range(range) {}
+  LIBC_INLINE constexpr FreeTrie(SizeRange range, Node *root = nullptr)
+      : root_(root), range(range) {}
 
   /// Sets the range of possible block sizes. This can only be called when the
   /// trie is empty.
@@ -113,7 +114,10 @@ public:
   }
 
   /// @returns Whether the trie contains any blocks.
-  LIBC_INLINE bool empty() const { return !root; }
+  LIBC_INLINE bool empty() const { return !root_; }
+
+  /// @returns The root node of the trie.
+  LIBC_INLINE Node *root() const { return root_; }
 
   /// Push a block to the trie.
   void push(BlockRef block);
@@ -130,13 +134,13 @@ public:
 
 private:
   /// @returns Whether a node is the head of its containing freelist.
-  bool is_head(Node *node) const { return node->parent || node == root; }
+  bool is_head(Node *node) const { return node->parent || node == root_; }
 
   /// Replaces references to one node with another (or nullptr) in all adjacent
   /// parent and child nodes.
   void replace_node(Node *node, Node *new_node);
 
-  Node *root = nullptr;
+  Node *root_ = nullptr;
   SizeRange range;
 };
 
@@ -147,7 +151,7 @@ LIBC_INLINE void FreeTrie::push(BlockRef block) {
   LIBC_ASSERT(range.contains(size) && "requested size out of trie range");
 
   // Find the position in the tree to push to.
-  Node **cur = &root;
+  Node **cur = &root_;
   Node *parent = nullptr;
   SizeRange cur_range = range;
   while (*cur && (*cur)->size() != size) {
@@ -179,7 +183,7 @@ LIBC_INLINE FreeTrie::Node *FreeTrie::find_best_fit(size_t size) {
   if (empty() || range.max() < size)
     return nullptr;
 
-  Node *cur = root;
+  Node *cur = root_;
   SizeRange cur_range = range;
   Node *best_fit = nullptr;
   Node *deferred_upper_trie = nullptr;

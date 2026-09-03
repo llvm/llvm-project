@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -334,6 +333,9 @@ bool llvm::isKnownNegative(const Value *V, const SimplifyQuery &SQ,
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
                             const APInt &DemandedElts, const SimplifyQuery &Q,
                             unsigned Depth);
+
+static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
+                            const Value *RHS);
 
 bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
                            const SimplifyQuery &Q, unsigned Depth) {
@@ -1317,6 +1319,42 @@ ConstantRange llvm::getVScaleRange(const Function *F, unsigned BitWidth) {
   return ConstantRange(Min, APInt(BitWidth, *AttrMax) + 1);
 }
 
+/// Return true if \p II reads a register named "vlenb". On RISC-V this is the
+/// VLENB CSR, which holds VLEN/8: a non-zero power of two bounded by the
+/// target's VLEN range. Callers must ensure the target is RISC-V.
+static bool isReadVLENB(const IntrinsicInst &II) {
+  auto *MAV = dyn_cast<MetadataAsValue>(II.getArgOperand(0));
+  if (!MAV)
+    return false;
+  auto *MD = dyn_cast<MDNode>(MAV->getMetadata());
+  if (!MD || MD->getNumOperands() != 1)
+    return false;
+  auto *RegName = dyn_cast<MDString>(MD->getOperand(0));
+  return RegName && RegName->getString() == "vlenb";
+}
+
+/// Return the value range of a RISC-V vlenb CSR read. RVV requires VLEN to be a
+/// power of two in [32, 65536] (Zvl32b is the smallest vector extension), so
+/// VLENB = VLEN/8 is in [4, 8192]. This architectural bound is independent of
+/// any function attribute and stays sound for Zvl32b, whose VLEN (32) is not
+/// representable as an integer vscale (VLEN / RVVBitsPerBlock). A vscale_range
+/// attribute, when present, pins the subtarget's VLEN in units of
+/// RVVBitsPerBlock (64 bits) and so gives a tighter VLENB = vscale *
+/// RVVBytesPerBlock.
+static ConstantRange getRISCVVLENBRange(const IntrinsicInst &II,
+                                        unsigned Width) {
+  // Architectural bounds: VLEN in [32, 65536] => VLENB in [4, 8192].
+  ConstantRange Range(APInt(Width, 32 / 8), APInt(Width, 65536 / 8) + 1);
+
+  const Function *F = II.getFunction();
+  if (F->getFnAttribute(Attribute::VScaleRange).isValid()) {
+    ConstantRange VScale = getVScaleRange(F, Width);
+    Range = Range.intersectWith(
+        VScale.multiply(ConstantRange(APInt(Width, RISCV::RVVBytesPerBlock))));
+  }
+  return Range;
+}
+
 void llvm::adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
                                        Value *Arm, bool Invert,
                                        const SimplifyQuery &Q, unsigned Depth) {
@@ -1526,33 +1564,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
       Type *FPType = V->getType()->getScalarType();
       KnownFPClass Result =
           computeKnownFPClass(V, DemandedElts, fcAllFlags, Q, Depth + 1);
-      FPClassTest FPClasses = Result.KnownFPClasses;
 
-      // TODO: Treat it as zero/poison if the use of I is unreachable.
-      if (FPClasses == fcNone)
-        break;
-
-      if (Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
-        Known.setAllConflict();
-
-        if (FPClasses & fcInf)
-          Known = Known.intersectWith(KnownBits::makeConstant(
-              APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt()));
-
-        if (FPClasses & fcZero)
-          Known = Known.intersectWith(KnownBits::makeConstant(
-              APInt::getZero(FPType->getScalarSizeInBits())));
-
-        Known.Zero.clearSignBit();
-        Known.One.clearSignBit();
-      }
-
-      if (Result.SignBit) {
-        if (*Result.SignBit)
-          Known.makeNegative();
-        else
-          Known.makeNonNegative();
-      }
+      Known = Result.toKnownBits(FPType->getFltSemantics());
 
       break;
     }
@@ -2308,6 +2321,30 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = getVScaleRange(II->getFunction(), BitWidth).toKnownBits();
         break;
       }
+      case Intrinsic::stepvector: {
+        auto *VecTy = cast<VectorType>(II->getType());
+        unsigned MinNumElts = VecTy->getElementCount().getKnownMinValue();
+        if (!isUIntN(BitWidth, MinNumElts))
+          break;
+
+        bool Overflow = false;
+        APInt MaxNumElts(BitWidth, MinNumElts);
+        if (VecTy->isScalableTy()) {
+          if (!II->getParent() || !II->getFunction())
+            break;
+          MaxNumElts = getVScaleRange(II->getFunction(), BitWidth)
+                           .getUnsignedMax()
+                           .umul_ov(MaxNumElts, Overflow);
+        }
+
+        // Give up if the lane count could wrap. Stepvector truncates lane
+        // indices that do not fit in the element type.
+        if (Overflow)
+          break;
+
+        Known.Zero.setHighBits((MaxNumElts - 1).countl_zero());
+        break;
+      }
       }
     }
     break;
@@ -2868,6 +2905,19 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
         if (II->getArgOperand(0) == II->getArgOperand(1))
           return isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Q, Depth);
         break;
+      case Intrinsic::riscv_vsetvlimax:
+        // VLMAX is VLEN * LMUL / SEW, which is always a non-zero power of two
+        // for any valid vtype, so it is a power of two regardless of OrZero.
+        return true;
+      case Intrinsic::read_register:
+      case Intrinsic::read_volatile_register: {
+        // The RISC-V vlenb CSR holds VLEN/8, which is always a non-zero power
+        // of two, so it is a power of two regardless of OrZero.
+        const Module *M = II->getModule();
+        if (!M || !M->getTargetTriple().isRISCV())
+          break;
+        return isReadVLENB(*II);
+      }
       default:
         break;
       }
@@ -4173,6 +4223,22 @@ static bool isKnownNonEqualFromContext(const Value *V1, const Value *V2,
   return false;
 }
 
+static bool isNonEqualURem(const Value *X, const Value *Rem,
+                           const SimplifyQuery &Q) {
+  const Value *Y;
+  if (!match(Rem, m_URem(m_Specific(X), m_Value(Y))))
+    return false;
+
+  // For a defined urem, X != X urem Y exactly when X u>= Y.
+  // isTruePredicate does not handle UGE, so use the equivalent Y u<= X.
+  if (isTruePredicate(ICmpInst::ICMP_ULE, Y, X))
+    return true;
+
+  std::optional<bool> Implied =
+      isImpliedByDomCondition(ICmpInst::ICMP_UGE, X, Y, Q.CxtI, Q.DL);
+  return Implied && *Implied;
+}
+
 /// Return true if it is known that V1 != V2.
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
                             const APInt &DemandedElts, const SimplifyQuery &Q,
@@ -4243,6 +4309,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
   if (match(V1, m_PtrToIntSameSize(Q.DL, m_Value(A))) &&
       match(V2, m_PtrToIntSameSize(Q.DL, m_Value(B))))
     return isKnownNonEqual(A, B, DemandedElts, Q, Depth + 1);
+
+  if (isNonEqualURem(V1, V2, Q) || isNonEqualURem(V2, V1, Q))
+    return true;
 
   if (isKnownNonEqualFromContext(V1, V2, Q, Depth))
     return true;
@@ -4681,9 +4750,11 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   // We are going to infer semantics of a library function based on mapping it
   // to an LLVM intrinsic. Check that the library function is available from
   // this callbase and in this environment.
-  LibFunc Func;
-  if (F->hasLocalLinkage() || !TLI || !TLI->getLibFunc(CB, Func) ||
-      !CB.onlyReadsMemory())
+  if (F->hasLocalLinkage() || !TLI || !CB.onlyReadsMemory())
+    return Intrinsic::not_intrinsic;
+
+  LibFunc Func = TLI->getLibFunc(CB);
+  if (Func == NotLibFunc)
     return Intrinsic::not_intrinsic;
 
   switch (Func) {
@@ -5112,13 +5183,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   if (isa<ConstantAggregateZero>(V)) {
     Known.KnownFPClasses = fcPosZero;
-    Known.SignBit = false;
+    Known.setSignBit(false);
     return;
   }
 
   if (isa<PoisonValue>(V)) {
     Known.KnownFPClasses = fcNone;
-    Known.SignBit = false;
+    Known.setSignBit(false);
     return;
   }
 
@@ -5157,7 +5228,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         SignBitAllOne = false;
     }
     if (SignBitAllOne != SignBitAllZero)
-      Known.SignBit = SignBitAllOne;
+      Known.setSignBit(SignBitAllOne);
     return;
   }
 
@@ -5207,8 +5278,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   llvm::scope_exit ClearClassesFromFlags([=, &Known] {
     Known.knownNot(KnownNotFromFlags);
-    if (!Known.SignBit && AssumedClasses.SignBit) {
-      if (*AssumedClasses.SignBit)
+    if (!Known.getSignBit() && AssumedClasses.getSignBit()) {
+      if (*AssumedClasses.getSignBit())
         Known.signBitMustBeOne();
       else
         Known.signBitMustBeZero();
@@ -5425,12 +5496,25 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::atan2: {
-      KnownFPClass KnownLHS, KnownRHS;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
-                          KnownLHS, Q, Depth + 1);
-      computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedClasses,
-                          KnownRHS, Q, Depth + 1);
-      Known = KnownFPClass::atan2(KnownLHS, KnownRHS);
+      FPClassTest InterestedY = InterestedClasses;
+      FPClassTest InterestedX = InterestedClasses;
+
+      // We can rule out zero and subnormal if x cannot have a positive value.
+      if ((InterestedClasses & (fcZero | fcSubnormal)) != fcNone)
+        InterestedX |= fcPositive | fcNegSubnormal;
+
+      KnownFPClass KnownY, KnownX;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedY,
+                          KnownY, Q, Depth + 1);
+      computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedX,
+                          KnownX, Q, Depth + 1);
+
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      Known = KnownFPClass::atan2(KnownY, KnownX, Mode);
       break;
     }
     case Intrinsic::maxnum:
@@ -5472,14 +5556,16 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::vector_reduce_fmax:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
-    case Intrinsic::vector_reduce_fminimum: {
+    case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum: {
       // reduce min/max will choose an element from one of the vector elements,
       // so we can infer and class information that is common to all elements.
       Known = computeKnownFPClass(II->getArgOperand(0), II->getFastMathFlags(),
                                   InterestedClasses, Q, Depth + 1);
       // Can only propagate sign if output is never NaN.
       if (!Known.isKnownNeverNaN())
-        Known.SignBit.reset();
+        Known.setSignBit(std::nullopt);
       break;
     }
       // reverse preserves all characteristics of the input vec's element.
@@ -5562,16 +5648,52 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       break;
     }
+    case Intrinsic::pow: {
+      const bool WantNaN = (InterestedClasses & fcNan) != fcNone;
+      const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
+      if (!WantNaN && !WantNegative)
+        break;
+
+      FPClassTest InterestedLHS = fcNone;
+      FPClassTest InterestedRHS = fcNone;
+      if (WantNaN) {
+        // pow may return NaN if one of the arguments is NaN. NaN may also be
+        // produced from a negative, non-zero finite base and a non-integer
+        // exponent.
+        InterestedLHS |= fcNan | fcNegNormal | fcNegSubnormal;
+        InterestedRHS |= fcNan;
+      }
+      if (WantNegative) {
+        // A negative value is returned when a negative base is raised to an odd
+        // integer power. Only normal values can be odd integers.
+        InterestedLHS |= fcNegative;
+        InterestedRHS |= fcNormal;
+      }
+
+      KnownFPClass KnownLHS;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedLHS,
+                          KnownLHS, Q, Depth + 1);
+
+      // If the LHS is unknown, then querying the RHS is only useful for rare
+      // edge cases.
+      if (KnownLHS.isUnknown())
+        break;
+
+      KnownFPClass KnownRHS;
+      computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedRHS,
+                          KnownRHS, Q, Depth + 1);
+      Known = KnownFPClass::pow(KnownLHS, KnownRHS);
+      break;
+    }
     case Intrinsic::powi: {
       if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
         break;
 
+      // The exponent is always a scalar, even when raising a vector to a power.
       const Value *Exp = II->getArgOperand(1);
-      Type *ExpTy = Exp->getType();
-      unsigned BitWidth = ExpTy->getScalarType()->getIntegerBitWidth();
+      unsigned BitWidth = Exp->getType()->getIntegerBitWidth();
       KnownBits ExponentKnownBits(BitWidth);
-      computeKnownBits(Exp, isa<VectorType>(ExpTy) ? DemandedElts : APInt(1, 1),
-                       ExponentKnownBits, Q, Depth + 1);
+      computeKnownBits(Exp, APInt(1, 1), ExponentKnownBits, Q, Depth + 1);
 
       FPClassTest InterestedSrcs = fcNone;
       if (InterestedClasses & fcNan)
@@ -5659,7 +5781,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
 
-      Known.propagateNaN(KnownSrc);
+      Known.propagateNonNaN(KnownSrc);
 
       Type *EltTy = II->getType()->getScalarType();
 
@@ -5876,22 +5998,19 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
-  case Instruction::FDiv:
-  case Instruction::FRem: {
+  case Instruction::FDiv: {
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
 
-    if (Op->getOpcode() == Instruction::FRem)
-      Known.knownNot(fcInf);
+    const Function *F = cast<Instruction>(Op)->getFunction();
+    const fltSemantics &FltSem =
+        Op->getType()->getScalarType()->getFltSemantics();
+    DenormalMode Mode =
+        F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
 
     if (Op->getOperand(0) == Op->getOperand(1) &&
         isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
-      if (Op->getOpcode() == Instruction::FDiv) {
-        // X / X is always exactly 1.0 or a NaN.
-        Known.KnownFPClasses = fcNan | fcPosNormal;
-      } else {
-        // X % X is always exactly [+-]0.0 or a NaN.
-        Known.KnownFPClasses = fcNan | fcZero;
-      }
+      // X / X is always exactly 1.0 or a NaN.
+      Known.KnownFPClasses = fcNan | fcPosNormal;
 
       if (!WantNan)
         break;
@@ -5900,27 +6019,66 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(Op->getOperand(0), DemandedElts,
                           fcNan | fcInf | fcZero | fcSubnormal, KnownSrc, Q,
                           Depth + 1);
-      const Function *F = cast<Instruction>(Op)->getFunction();
-      const fltSemantics &FltSem =
-          Op->getType()->getScalarType()->getFltSemantics();
 
-      DenormalMode Mode =
-          F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-
-      Known = Op->getOpcode() == Instruction::FDiv
-                  ? KnownFPClass::fdiv_self(KnownSrc, Mode)
-                  : KnownFPClass::frem_self(KnownSrc, Mode);
+      Known = KnownFPClass::fdiv_self(KnownSrc, Mode);
       break;
     }
 
     const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
-    const bool WantPositive =
-        Opc == Instruction::FRem && (InterestedClasses & fcPositive) != fcNone;
+    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone;
     if (!WantNan && !WantNegative && !WantPositive)
       break;
 
     KnownFPClass KnownLHS, KnownRHS;
+    computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
+                        Q, Depth + 1);
 
+    bool KnowSomethingUseful =
+        KnownRHS.isKnownNeverNaN() ||
+        KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
+        KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
+
+    if (KnowSomethingUseful)
+      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
+                          Q, Depth + 1);
+
+    Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
+    break;
+  }
+  case Instruction::FRem: {
+    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
+
+    Known.knownNot(fcInf);
+
+    const Function *F = cast<Instruction>(Op)->getFunction();
+    DenormalMode Mode =
+        F ? F->getDenormalMode(
+                Op->getType()->getScalarType()->getFltSemantics())
+          : DenormalMode::getDynamic();
+
+    if (Op->getOperand(0) == Op->getOperand(1) &&
+        isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
+      // X % X is always exactly [+-]0.0 or a NaN.
+      Known.KnownFPClasses = fcNan | fcZero;
+
+      if (!WantNan)
+        break;
+
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(Op->getOperand(0), DemandedElts,
+                          fcNan | fcInf | fcZero | fcSubnormal, KnownSrc, Q,
+                          Depth + 1);
+
+      Known = KnownFPClass::frem_self(KnownSrc, Mode);
+      break;
+    }
+
+    const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
+    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone;
+    if (!WantNan && !WantNegative && !WantPositive)
+      break;
+
+    KnownFPClass KnownLHS, KnownRHS;
     computeKnownFPClass(Op->getOperand(1), DemandedElts,
                         fcNan | fcInf | fcZero | fcNegative, KnownRHS, Q,
                         Depth + 1);
@@ -5929,39 +6087,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                                KnownRHS.isKnownNever(fcNegative) ||
                                KnownRHS.isKnownNever(fcPositive);
 
-    if (KnowSomethingUseful || WantPositive) {
+    if (KnowSomethingUseful || WantPositive)
       computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                           Q, Depth + 1);
-    }
 
-    const Function *F = cast<Instruction>(Op)->getFunction();
-    const fltSemantics &FltSem =
-        Op->getType()->getScalarType()->getFltSemantics();
-
-    if (Op->getOpcode() == Instruction::FDiv) {
-      DenormalMode Mode =
-          F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
-    } else {
-      // Inf REM x and x REM 0 produce NaN.
-      if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-          KnownLHS.isKnownNeverInfinity() && F &&
-          KnownRHS.isKnownNeverLogicalZero(F->getDenormalMode(FltSem))) {
-        Known.knownNot(fcNan);
-      }
-
-      // The sign for frem is the same as the first operand.
-      if (KnownLHS.cannotBeOrderedLessThanZero())
-        Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-      if (KnownLHS.cannotBeOrderedGreaterThanZero())
-        Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-
-      // See if we can be more aggressive about the sign of 0.
-      if (KnownLHS.isKnownNever(fcNegative))
-        Known.knownNot(fcNegative);
-      if (KnownLHS.isKnownNever(fcPositive))
-        Known.knownNot(fcPositive);
-    }
+    Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
 
     break;
   }
@@ -6379,7 +6509,7 @@ std::optional<bool> llvm::computeKnownFPSignBit(const Value *V,
                                                 const SimplifyQuery &SQ,
                                                 unsigned Depth) {
   KnownFPClass Known = computeKnownFPClass(V, fcAllFlags, SQ, Depth);
-  return Known.SignBit;
+  return Known.getSignBit();
 }
 
 bool llvm::canIgnoreSignBitOfZero(const Use &U) {
@@ -6403,8 +6533,7 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
         return true;
       case Intrinsic::copysign:
         return U.getOperandNo() == 0;
-      case Intrinsic::is_fpclass:
-      case Intrinsic::vp_is_fpclass: {
+      case Intrinsic::is_fpclass: {
         auto Test =
             static_cast<FPClassTest>(
                 cast<ConstantInt>(II->getArgOperand(1))->getZExtValue()) &
@@ -6474,7 +6603,6 @@ bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
       case Intrinsic::fptoui_sat:
       case Intrinsic::fptosi_sat:
       case Intrinsic::is_fpclass:
-      case Intrinsic::vp_is_fpclass:
         return true;
       default:
         return false;
@@ -10463,6 +10591,15 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
     if (!II.getParent() || !II.getFunction())
       break;
     return getVScaleRange(II.getFunction(), Width);
+  case Intrinsic::read_register:
+  case Intrinsic::read_volatile_register: {
+    const Module *M = II.getModule();
+    if (!M || !M->getTargetTriple().isRISCV())
+      break;
+    if (II.getFunction() && isReadVLENB(II))
+      return getRISCVVLENBRange(II, Width);
+    break;
+  }
   default:
     break;
   }

@@ -503,7 +503,7 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       if (moduleSlotTracker) {
         slot = moduleSlotTracker->getLocalSlot(bb);
       } else if (bb->getParent()) {
-        ModuleSlotTracker tmpTracker(bb->getModule(), false);
+        ModuleSlotTracker tmpTracker(bb->getModule());
         tmpTracker.incorporateFunction(*bb->getParent());
         slot = tmpTracker.getLocalSlot(bb);
       }
@@ -1091,7 +1091,7 @@ MachineBasicBlock *MachineBasicBlock::splitAt(MachineInstr &MI,
     addLiveIns(*SplitBB, LiveRegs);
 
   if (LIS)
-    LIS->insertMBBInMaps(SplitBB);
+    LIS->splitAt(*this, *SplitBB);
 
   return SplitBB;
 }

@@ -1,6 +1,7 @@
 #include "CIRGenTypes.h"
 
 #include "CIRGenCXXABI.h"
+#include "CIRGenCall.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -311,6 +312,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
               cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinSurfaceDeviceType())
         return ty;
     } else if (type->isCUDADeviceBuiltinTextureType()) {
+      if (mlir::Type ty =
+              cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinTextureDeviceType())
+        return ty;
+
       assert(!cir::MissingFeatures::cudaTextureType());
     }
   }
@@ -661,9 +666,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       mlir::Type elements[] = {resultType, paddingArray};
       cir::RecordMemberKind kinds[] = {cir::RecordMemberKind::Data,
                                        cir::RecordMemberKind::Pad};
-      resultType = cir::StructType::get(&getMLIRContext(), /*members=*/elements,
-                                        /*packed=*/false, /*padded=*/true,
-                                        /*is_class=*/false, kinds);
+      resultType =
+          cir::StructType::get(&getMLIRContext(), /*members=*/elements,
+                               /*packed=*/false, /*is_class=*/false, kinds);
     }
 
     break;
@@ -763,8 +768,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
                               argTypes);
 
-  void *insertPos = nullptr;
-  CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
+  llvm::FoldingSetInsertToken insertToken;
+  CIRGenFunctionInfo *fi = functionInfos.lookup(id, insertToken);
   if (fi) {
     // We found a matching function info based on id. These asserts verify that
     // it really is a match.
@@ -780,9 +785,23 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   // Construction the function info. We co-allocate the ArgInfos.
   fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
                                   required);
-  functionInfos.InsertNode(fi, insertPos);
+  functionInfos.insert(fi, insertToken);
 
   return *fi;
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeDeviceKernelCallerDeclaration(QualType resultType,
+                                                  const FunctionArgList &args) {
+  SmallVector<CanQualType, 16> argTypes;
+  for (const VarDecl *arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg->getType()));
+
+  // Classic CodeGen passes FnInfoOpts::None here; that is the no-op case, so
+  // nothing is needed even once CIR models FnInfoOpts.
+  return arrangeCIRFunctionInfo(
+      resultType->getCanonicalTypeUnqualified(), /*isInstanceMethod=*/false,
+      argTypes, FunctionType::ExtInfo(CC_DeviceKernel), RequiredArgs::All);
 }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {

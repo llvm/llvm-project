@@ -741,23 +741,6 @@ function(cxx_link_system_libraries target)
   endif()
 
   if (MSVC)
-    if ((NOT CMAKE_MSVC_RUNTIME_LIBRARY AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-        OR (CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "Debug"))
-      set(LIB_SUFFIX "d")
-    else()
-      set(LIB_SUFFIX "")
-    endif()
-
-    if (NOT CMAKE_MSVC_RUNTIME_LIBRARY OR CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$")
-      set(CRT_LIB "msvcrt")
-      set(CXX_LIB "msvcprt")
-    else()
-      set(CRT_LIB "libcmt")
-      set(CXX_LIB "libcpmt")
-    endif()
-
-    target_link_libraries(${target} PRIVATE ${CRT_LIB}${LIB_SUFFIX}) # C runtime startup files
-    target_link_libraries(${target} PRIVATE ${CXX_LIB}${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
     # Required for standards-complaint wide character formatting functions
     # (e.g. `printfw`/`scanfw`)
     target_link_libraries(${target} PRIVATE iso_stdio_wide_specifiers)
