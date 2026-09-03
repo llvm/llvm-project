@@ -911,51 +911,6 @@ getMatchClauseContextSelector(const parser::OmpDirectiveSpecification &spec) {
   return nullptr;
 }
 
-void OmpStructureChecker::CheckDeclareVariantUserConditions(
-    const parser::OmpContextSelector &ctx) {
-  using SetName = parser::OmpTraitSetSelectorName;
-  using TraitName = parser::OmpTraitSelectorName;
-
-  for (const parser::OmpTraitSetSelector &traitSet : ctx.v) {
-    if (std::get<SetName>(traitSet.t).v != SetName::Value::User) {
-      continue;
-    }
-    for (const parser::OmpTraitSelector &trait :
-        std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
-      const auto &traitName{std::get<TraitName>(trait.t)};
-      if (!std::holds_alternative<TraitName::Value>(traitName.u) ||
-          std::get<TraitName::Value>(traitName.u) !=
-              TraitName::Value::Condition) {
-        continue;
-      }
-      const auto &maybeProps{
-          std::get<std::optional<parser::OmpTraitSelector::Properties>>(
-              trait.t)};
-      if (!maybeProps) {
-        continue;
-      }
-      const auto &properties{
-          std::get<std::list<parser::OmpTraitProperty>>(maybeProps->t)};
-      if (properties.size() != 1) {
-        continue;
-      }
-      const parser::OmpTraitProperty &property{properties.front()};
-      const parser::ScalarExpr &scalarExpr{
-          std::get<parser::ScalarExpr>(property.u)};
-      auto maybeType{GetDynamicType(scalarExpr.thing.value())};
-      if (!maybeType || maybeType->category() != TypeCategory::Logical) {
-        continue;
-      }
-      if (const auto *expr{GetExpr(scalarExpr)}) {
-        if (!IsConstantExpr(*expr, &context_.foldingContext())) {
-          context_.Say(property.source,
-              "Run-time USER condition in the MATCH clause is not yet implemented"_err_en_US);
-        }
-      }
-    }
-  }
-}
-
 static bool IsProcedureOrFunction(const Symbol &symbol) {
   return IsProcedure(symbol) || IsFunction(symbol);
 }
@@ -1236,7 +1191,6 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
 
   EnterDirectiveNest(ContextSelectorNest);
   CheckContextSelectorSpecification(*matchSelector);
-  CheckDeclareVariantUserConditions(*matchSelector);
   ExitDirectiveNest(ContextSelectorNest);
 }
 

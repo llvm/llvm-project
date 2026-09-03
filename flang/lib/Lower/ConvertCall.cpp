@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/HlfirIntrinsics.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
@@ -797,15 +798,40 @@ Fortran::lower::genCallOpAndResult(
     else if (caller.getCallDescription().hasAlwaysInline())
       inlineAttr = fir::FortranInlineEnumAttr::get(
           builder.getContext(), fir::FortranInlineEnum::always_inline);
-    auto call = fir::CallOp::create(
-        builder, loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr,
-        /*accessGroups=*/mlir::ArrayAttr{});
-    callOp = call;
+    auto emitCall = [&](mlir::SymbolRefAttr callee) {
+      return fir::CallOp::create(
+          builder, loc, funcType.getResults(), callee, operands,
+          /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr,
+          /*accessGroups=*/mlir::ArrayAttr{});
+    };
 
-    callNumResults = call.getNumResults();
-    if (callNumResults != 0)
-      callResult = call.getResult(0);
+    // OpenMP DECLARE VARIANT with a run-time user condition: a direct
+    // subroutine call is lowered to an if/else cascade that selects the variant
+    // at run time, reusing the already-lowered arguments. Returns false (and
+    // nothing is emitted) for the common case with no run-time condition.
+    bool emittedVariantCascade = false;
+    if (funcSymbolAttr && funcType.getNumResults() == 0) {
+      if (const Fortran::semantics::Symbol *base =
+              caller.getProcedureSymbol()) {
+        emittedVariantCascade = Fortran::lower::omp::genDeclareVariantCall(
+            converter, loc, *base,
+            [&](const Fortran::semantics::Symbol *callee) {
+              emitCall(callee ? builder.getSymbolRefAttr(
+                                    converter.mangleName(*callee))
+                              : funcSymbolAttr);
+            });
+      }
+    }
+
+    if (!emittedVariantCascade) {
+      auto call = emitCall(funcSymbolAttr);
+      callOp = call;
+      callNumResults = call.getNumResults();
+      if (callNumResults != 0)
+        callResult = call.getResult(0);
+    } else {
+      callNumResults = 0;
+    }
   }
 
   std::optional<Fortran::evaluate::DynamicType> retTy =

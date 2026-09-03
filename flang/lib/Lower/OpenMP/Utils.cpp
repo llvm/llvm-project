@@ -1414,45 +1414,16 @@ void collectEnclosingConstructTraits(
   std::reverse(constructTraits.begin(), constructTraits.end());
 }
 
-const semantics::Symbol *
-resolveDeclareVariantCallee(const semantics::Symbol &base,
-                            AbstractConverter &converter) {
+DeclareVariantResolution resolveDeclareVariant(const semantics::Symbol &base,
+                                               AbstractConverter &converter) {
+  DeclareVariantResolution result;
   const semantics::Symbol &ultimate{base.GetUltimate()};
 
   const auto *details{ultimate.detailsIf<semantics::SubprogramDetails>()};
   assert(details && !details->ompDeclareVariants().empty() &&
-         "resolveDeclareVariantCallee called on symbol with no variants");
+         "resolveDeclareVariant called on symbol with no variants");
 
   semantics::SemanticsContext &semaCtx{ultimate.owner().context()};
-  llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> vmis;
-  llvm::SmallVector<const semantics::Symbol *, 4> variants;
-  for (const semantics::OmpDeclareVariantEntry &entry :
-       details->ompDeclareVariants()) {
-    // Variant selection cannot yet honour some selector features that the
-    // parser/semantics otherwise accept; reject them before building the match
-    // info (MakeVariantMatchInfo asserts none are present). This mirrors how
-    // METADIRECTIVE lowering rejects the same features.
-    if (entry.matchSelector) {
-      switch (semantics::omp::FindUnsupportedSelectorFeature(
-          *entry.matchSelector, semaCtx)) {
-      case semantics::omp::UnsupportedSelectorFeature::TargetDevice:
-        TODO(converter.getCurrentLocation(),
-             "target_device selector in DECLARE VARIANT");
-        break;
-      case semantics::omp::UnsupportedSelectorFeature::
-          ClauseOrExtensionProperty:
-        TODO(converter.getCurrentLocation(),
-             "clause or extension trait matching in DECLARE VARIANT");
-        break;
-      case semantics::omp::UnsupportedSelectorFeature::None:
-        break;
-      }
-    }
-    llvm::omp::VariantMatchInfo &vmi{vmis.emplace_back()};
-    if (entry.matchSelector)
-      semantics::omp::MakeVariantMatchInfo(vmi, *entry.matchSelector, semaCtx);
-    variants.push_back(&entry.variant.get());
-  }
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
   collectEnclosingConstructTraits(
@@ -1461,12 +1432,168 @@ resolveDeclareVariantCallee(const semantics::Symbol &base,
   semantics::omp::OmpVariantMatchContext ompCtx =
       makeVariantMatchContext(converter.getModuleOp(), constructTraits);
 
-  const int bestIdx{llvm::omp::getBestVariantMatchForContext(vmis, ompCtx)};
-  // Return nullptr when no variant matches the current context; the caller
-  // will fall back to the base symbol.
-  if (bestIdx < 0)
+  // A statically-applicable candidate plus the VMI used to rank it. For a
+  // run-time user condition the VMI is evaluated as if the condition holds, so
+  // ranking honours the user-condition selector (mirrors METADIRECTIVE).
+  struct ApplicableCandidate {
+    const semantics::Symbol *variant;
+    llvm::omp::VariantMatchInfo rankingVMI;
+    std::optional<semantics::omp::DynamicUserCondition> condition;
+  };
+  llvm::SmallVector<ApplicableCandidate, 4> applicable;
+
+  for (const semantics::OmpDeclareVariantEntry &entry :
+       details->ompDeclareVariants()) {
+    if (!entry.matchSelector)
+      continue;
+    // Variant selection cannot yet honour some selector features that the
+    // parser/semantics otherwise accept; reject them before building the match
+    // info (MakeVariantMatchInfo asserts none are present). This mirrors how
+    // METADIRECTIVE lowering rejects the same features.
+    switch (semantics::omp::FindUnsupportedSelectorFeature(*entry.matchSelector,
+                                                           semaCtx)) {
+    case semantics::omp::UnsupportedSelectorFeature::TargetDevice:
+      TODO(converter.getCurrentLocation(),
+           "target_device selector in DECLARE VARIANT");
+      break;
+    case semantics::omp::UnsupportedSelectorFeature::ClauseOrExtensionProperty:
+      TODO(converter.getCurrentLocation(),
+           "clause or extension trait matching in DECLARE VARIANT");
+      break;
+    case semantics::omp::UnsupportedSelectorFeature::None:
+      break;
+    }
+
+    llvm::omp::VariantMatchInfo rawVMI;
+    std::optional<semantics::omp::DynamicUserCondition> dynamicCond{
+        semantics::omp::MakeVariantMatchInfo(rawVMI, *entry.matchSelector,
+                                             semaCtx)};
+
+    if (!dynamicCond) {
+      if (!llvm::omp::isVariantApplicableInContext(rawVMI, ompCtx))
+        continue;
+      applicable.push_back({&entry.variant.get(), rawVMI, std::nullopt});
+      continue;
+    }
+
+    // Run-time user condition: static applicability must ignore the unknown
+    // condition trait. Keep its score for ranking, and add user_condition_true
+    // so ranking honours the user-condition selector.
+    constexpr llvm::omp::TraitProperty dynamicConditionTrait{
+        llvm::omp::TraitProperty::user_condition_unknown};
+    llvm::omp::VariantMatchInfo staticVMI = rawVMI;
+    std::optional<llvm::APInt> conditionScore;
+    auto scoreIt = staticVMI.ScoreMap.find(dynamicConditionTrait);
+    if (scoreIt != staticVMI.ScoreMap.end()) {
+      conditionScore = scoreIt->second;
+      staticVMI.ScoreMap.erase(scoreIt);
+    }
+    staticVMI.RequiredTraits.reset(unsigned(dynamicConditionTrait));
+    if (!llvm::omp::isVariantApplicableInContext(staticVMI, ompCtx))
+      continue;
+    llvm::omp::VariantMatchInfo rankingVMI = staticVMI;
+    rankingVMI.addTrait(llvm::omp::TraitProperty::user_condition_true,
+                        "<condition>",
+                        conditionScore ? &*conditionScore : nullptr);
+    applicable.push_back({&entry.variant.get(), rankingVMI, dynamicCond});
+  }
+
+  // Rank best-first by repeatedly selecting the best remaining candidate; the
+  // OpenMP context scorer preserves input order for ties.
+  llvm::SmallVector<unsigned, 4> remaining;
+  for (unsigned i = 0, e = applicable.size(); i < e; ++i)
+    remaining.push_back(i);
+  while (!remaining.empty()) {
+    llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> vmis;
+    for (unsigned idx : remaining)
+      vmis.push_back(applicable[idx].rankingVMI);
+    int bestIdx{llvm::omp::getBestVariantMatchForContext(vmis, ompCtx)};
+    if (bestIdx < 0)
+      break;
+    const ApplicableCandidate &chosen{applicable[remaining[bestIdx]]};
+    if (chosen.condition)
+      result.hasDynamicCondition = true;
+    result.candidates.push_back({chosen.variant, chosen.condition});
+    remaining.erase(remaining.begin() + bestIdx);
+  }
+
+  // Subroutines only for now: a function base with a run-time condition would
+  // need the if/else cascade to carry a result, which is not yet implemented.
+  if (result.hasDynamicCondition && semantics::IsFunction(ultimate))
+    TODO(converter.getCurrentLocation(),
+         "dynamic user condition on a function in DECLARE VARIANT");
+
+  return result;
+}
+
+const semantics::Symbol *
+resolveDeclareVariantCallee(const semantics::Symbol &base,
+                            AbstractConverter &converter) {
+  DeclareVariantResolution resolution{resolveDeclareVariant(base, converter)};
+  // Static fast path: return the single best variant when no run-time condition
+  // is involved. When a candidate carries a run-time condition, fall back to
+  // the base here; the call site lowers the choice as an if/else cascade.
+  if (resolution.candidates.empty() || resolution.hasDynamicCondition)
     return nullptr;
-  return variants[bestIdx];
+  return resolution.candidates.front().variant;
+}
+
+bool genDeclareVariantCall(
+    AbstractConverter &converter, mlir::Location loc,
+    const semantics::Symbol &base,
+    llvm::function_ref<void(const semantics::Symbol *)> emitCall) {
+  const semantics::Symbol &ultimate{base.GetUltimate()};
+  const auto *details{ultimate.detailsIf<semantics::SubprogramDetails>()};
+  if (!details || details->ompDeclareVariants().empty())
+    return false;
+
+  DeclareVariantResolution resolution{resolveDeclareVariant(base, converter)};
+  if (!resolution.hasDynamicCondition)
+    return false;
+
+  fir::FirOpBuilder &builder{converter.getFirOpBuilder()};
+  semantics::SemanticsContext &semaCtx{ultimate.owner().context()};
+  lower::StatementContext stmtCtx;
+
+  // Emit a ranked if/else cascade over the candidates:
+  //   if (cond0) call variant0
+  //   else if (cond1) call variant1
+  //   else call base
+  // An unconditional candidate (should one outrank the guarded ones)
+  // terminates the cascade in place of the base fallback.
+  fir::IfOp outerIf;
+  for (const DeclareVariantCandidate &candidate : resolution.candidates) {
+    if (!candidate.condition) {
+      emitCall(candidate.variant);
+      if (outerIf)
+        builder.setInsertionPointAfter(outerIf);
+      return true;
+    }
+
+    mlir::Location condLoc{converter.genLocation(candidate.condition->source)};
+    const auto *condExpr{
+        semantics::GetExpr(semaCtx, *candidate.condition->expr)};
+    assert(condExpr && "missing expression for user condition");
+    mlir::Value condVal{
+        fir::getBase(converter.genExprValue(*condExpr, stmtCtx, &condLoc))};
+    if (condVal.getType() != builder.getI1Type())
+      condVal = builder.createConvert(condLoc, builder.getI1Type(), condVal);
+    stmtCtx.finalizeAndReset();
+
+    auto ifOp{fir::IfOp::create(builder, condLoc, condVal,
+                                /*withElseRegion=*/true)};
+    if (!outerIf)
+      outerIf = ifOp;
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    emitCall(candidate.variant);
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  }
+
+  // No unconditional terminal: the innermost else calls the base.
+  emitCall(nullptr);
+  if (outerIf)
+    builder.setInsertionPointAfter(outerIf);
+  return true;
 }
 
 } // namespace omp

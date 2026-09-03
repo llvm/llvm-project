@@ -11,6 +11,7 @@
 
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
@@ -59,6 +60,32 @@ struct DeclareTargetCaptureInfo {
                            const semantics::Symbol &s, bool a = false)
       : clause(c), automap(a), symbol(s) {}
 };
+
+/// One statically-applicable DECLARE VARIANT candidate at a call site, ranked
+/// best-first by resolveDeclareVariant.
+struct DeclareVariantCandidate {
+  const semantics::Symbol *variant;
+  /// When set, this candidate applies only if the run-time user condition
+  /// holds; it is lowered as a guard in an if/else cascade. Unset means the
+  /// candidate is unconditional (a terminal in the cascade).
+  std::optional<semantics::omp::DynamicUserCondition> condition;
+};
+
+/// Ranked DECLARE VARIANT candidates that are statically applicable in the
+/// enclosing OpenMP context at a call site.
+struct DeclareVariantResolution {
+  llvm::SmallVector<DeclareVariantCandidate, 4> candidates;
+  /// True if any candidate carries a run-time user condition.
+  bool hasDynamicCondition = false;
+};
+
+/// Resolve the DECLARE VARIANT candidates recorded on \p base against the
+/// enclosing OpenMP context. Candidates that cannot statically apply are
+/// dropped; the rest are returned ranked best-first, each with its optional
+/// run-time user condition. \p base is expected to carry variant entries.
+DeclareVariantResolution
+resolveDeclareVariant(const semantics::Symbol &base,
+                      lower::AbstractConverter &converter);
 
 // A small helper structure for keeping track of a component members MapInfoOp
 // and index data when lowering OpenMP map clauses. Keeps track of the

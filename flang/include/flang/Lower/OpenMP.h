@@ -13,6 +13,7 @@
 #ifndef FORTRAN_LOWER_OPENMP_H
 #define FORTRAN_LOWER_OPENMP_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -119,6 +120,18 @@ namespace omp {
 const Fortran::semantics::Symbol *
 resolveDeclareVariantCallee(const Fortran::semantics::Symbol &base,
                             AbstractConverter &converter);
+
+/// Lower a direct call to \p base (which carries OpenMP DECLARE VARIANT
+/// entries) as a run-time if/else cascade when a variant is guarded by a
+/// run-time user condition. \p emitCall is invoked to emit one call with the
+/// already-lowered arguments at the current insertion point: with the chosen
+/// variant symbol for a guarded branch, or with nullptr for the base fallback.
+/// Returns true if a cascade was emitted; false if no run-time condition
+/// applies and the caller should emit the normal single call. Subroutines only.
+bool genDeclareVariantCall(
+    AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &base,
+    llvm::function_ref<void(const Fortran::semantics::Symbol *)> emitCall);
 } // namespace omp
 
 // Materialize (idempotently) the omp.declare_reduction op for one already-

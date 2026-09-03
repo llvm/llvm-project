@@ -313,7 +313,6 @@ private:
   void CheckMetadirectiveVariantsWithoutLoop(std::size_t firstVariant = 0);
   void CheckOmpDeclareVariantDirective(
       const parser::OmpDeclareVariantDirective &);
-  void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
   const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
       const parser::OmpTraitSelector &);
   std::optional<llvm::omp::Clause> GetClauseFromProperty(
