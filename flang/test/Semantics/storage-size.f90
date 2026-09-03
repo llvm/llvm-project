@@ -126,11 +126,21 @@ end module
 subroutine equivalence_block_size
   ! the EQUIVALENCE chain extends the storage sequence to 3 * 2**62 bytes; the
   ! accumulated offsets are what can wrap around into a plausible small value
-  !ERROR: The size of the storage sequence created by EQUIVALENCE with 'a' exceeds the maximum supported size of 9223372036854775807 bytes
-  integer(8) :: a(576460752303423488_8), b(576460752303423488_8), &
-      c(576460752303423488_8)
+  integer(8) :: a(576460752303423488_8), b(576460752303423488_8)
+  !ERROR: The size of the storage sequence created by EQUIVALENCE with 'c' exceeds the maximum supported size of 9223372036854775807 bytes
+  integer(8) :: c(576460752303423488_8)
   equivalence (a(576460752303423488_8), b(1))
   equivalence (b(576460752303423488_8), c(1))
+end subroutine
+
+subroutine equivalence_oversized_member
+  ! The base of a storage sequence is picked for layout reasons and is often
+  ! its smallest member, so name the member that does not fit instead: here
+  ! 'marker' is the base, but 'oversized' is what the user has to shrink.
+  !ERROR: The size of the storage sequence created by EQUIVALENCE with 'oversized' exceeds the maximum supported size of 9223372036854775807 bytes
+  integer(1) :: oversized(0_8:9223372036854775807_8)
+  integer(8) :: marker
+  equivalence (oversized, marker)
 end subroutine
 
 subroutine equivalence_base_size

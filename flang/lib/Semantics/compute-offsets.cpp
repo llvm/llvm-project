@@ -71,11 +71,14 @@ private:
     SizeAndAlignment(std::size_t bytes) : size{bytes}, alignment{bytes} {}
     SizeAndAlignment(std::size_t bytes, std::size_t align)
         : size{bytes}, alignment{align} {}
-    SizeAndAlignment(std::size_t bytes, std::size_t align, bool tooBig)
-        : size{bytes}, alignment{align}, overflow{tooBig} {}
+    SizeAndAlignment(std::size_t bytes, std::size_t align, const Symbol *tooBig)
+        : size{bytes}, alignment{align}, oversized{tooBig} {}
     std::size_t size{0};
     std::size_t alignment{0};
-    bool overflow{false};
+    // Null unless the size exceeds maxStorageSizeInBytes, in which case the
+    // size is clamped to it and this is the symbol to blame in a diagnostic:
+    // for an EQUIVALENCE storage sequence, the first member found not to fit.
+    const Symbol *oversized{nullptr};
   };
   struct SymbolAndOffset {
     SymbolAndOffset(Symbol &s, std::size_t off, const EquivalenceObject &obj)
@@ -198,16 +201,20 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
     symbol->set_size(symInfo.size);
     Symbol &base{*dep.symbol};
     auto iter{equivalenceBlock_.find(base)};
-    bool blockOverflow{dep.offsetOverflow || symInfo.overflow};
+    bool blockOverflow{dep.offsetOverflow || symInfo.oversized};
     std::size_t minBlockSize{AddSizes(dep.offset, symInfo.size, blockOverflow)};
+    const Symbol *oversized{
+        blockOverflow || IsTooBig(minBlockSize) ? &*symbol : nullptr};
     if (iter == equivalenceBlock_.end()) {
-      equivalenceBlock_.emplace(base,
-          SizeAndAlignment{minBlockSize, symInfo.alignment, blockOverflow});
+      equivalenceBlock_.emplace(
+          base, SizeAndAlignment{minBlockSize, symInfo.alignment, oversized});
     } else {
       SizeAndAlignment &blockInfo{iter->second};
       blockInfo.size = std::max(blockInfo.size, minBlockSize);
       blockInfo.alignment = std::max(blockInfo.alignment, symInfo.alignment);
-      blockInfo.overflow |= blockOverflow;
+      if (!blockInfo.oversized) {
+        blockInfo.oversized = oversized;
+      }
     }
   }
   // Complete each EQUIVALENCE block with its base object, and assign offsets
@@ -217,15 +224,22 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
     SizeAndAlignment baseInfo{GetSizeAndAlignment(*symbol, true)};
     blockInfo.size = std::max(blockInfo.size, baseInfo.size);
     blockInfo.alignment = std::max(blockInfo.alignment, baseInfo.alignment);
-    blockInfo.overflow |= baseInfo.overflow;
+    if (!blockInfo.oversized &&
+        (baseInfo.oversized || IsTooBig(baseInfo.size))) {
+      blockInfo.oversized = &*symbol;
+    }
     if (!FindCommonBlockContaining(*symbol)) {
       DoSymbol(*symbol);
       DoEquivalenceBlockBase(*symbol, blockInfo);
-      // Each EQUIVALENCE block is lowered as one aggregate.
-      if (blockInfo.overflow || IsTooBig(blockInfo.size)) {
-        context_.Say(symbol->name(),
+      // Each EQUIVALENCE block is lowered as one aggregate. Blame a member
+      // that does not fit rather than the base object, whose selection in
+      // DoEquivalenceSet is a layout decision that is invisible to the user.
+      if (blockInfo.oversized || IsTooBig(blockInfo.size)) {
+        const Symbol &blamed{
+            blockInfo.oversized ? *blockInfo.oversized : *symbol};
+        context_.Say(blamed.name(),
             "The size of the storage sequence created by EQUIVALENCE with '%s' exceeds the maximum supported size of %zu bytes"_err_en_US,
-            symbol->name(), maxStorageSizeInBytes);
+            blamed.name(), maxStorageSizeInBytes);
       }
       offset_ = std::max(offset_, symbol->offset() + blockInfo.size);
     }
@@ -289,7 +303,10 @@ auto ComputeOffsetsHelper::Resolve(const SymbolAndOffset &dep)
     return dep;
   } else {
     SymbolAndOffset result{Resolve(it->second)};
-    // Preserve overflow while resolving EQUIVALENCE chains.
+    // Preserve overflow while resolving EQUIVALENCE chains, both the overflow
+    // already recorded for the offset being resolved and any that appears when
+    // accumulating it.
+    result.offsetOverflow |= dep.offsetOverflow;
     result.offset = AddSizes(result.offset, dep.offset, result.offsetOverflow);
     result.object = dep.object;
     return result;
@@ -355,7 +372,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
     // 8.10.2.2 point 1 (2))
     if (eqIter != equivalenceBlock_.end()) {
       SizeAndAlignment &blockInfo{eqIter->second};
-      sizeOverflow_ |= blockInfo.overflow;
+      sizeOverflow_ |= blockInfo.oversized != nullptr;
       std::size_t blockEnd{
           AddSizes(eqIter->first->offset(), blockInfo.size, sizeOverflow_)};
       minSize = std::max(minSize, std::max(offset_, blockEnd));
@@ -473,7 +490,7 @@ std::size_t ComputeOffsetsHelper::DoSymbol(
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol, true)};
   // Oversized standalone objects are left to object emission.
-  sizeOverflow_ |= s.overflow;
+  sizeOverflow_ |= s.oversized != nullptr;
   if (s.size == 0) {
     // Zero-size symbols (e.g. CHARACTER*0) still occupy their sequential
     // position in a COMMON block or derived-type sequence. Record the current
@@ -536,7 +553,7 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
       if (*length < 0 ||
           static_cast<std::size_t>(*length) >
               maxStorageSizeInBytes / bytesPerCharacter) {
-        return {maxStorageSizeInBytes, alignment, /*tooBig=*/true};
+        return {maxStorageSizeInBytes, alignment, &symbol};
       }
       size = static_cast<std::size_t>(*length) * bytesPerCharacter;
     } else {
@@ -546,7 +563,7 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
         return {};
       }
       if (*elementSize < 0) {
-        return {maxStorageSizeInBytes, alignment, /*tooBig=*/true};
+        return {maxStorageSizeInBytes, alignment, &symbol};
       }
       size = static_cast<std::size_t>(*elementSize);
     }
@@ -562,7 +579,7 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
           ++dimension) {
         if ((*extents)[dimension] <= 0) {
           if (!IsEmptyDimension(symbol, dimension)) {
-            return {maxStorageSizeInBytes, alignment, /*tooBig=*/true};
+            return {maxStorageSizeInBytes, alignment, &symbol};
           }
           return {0, alignment}; // a zero-sized array occupies no storage
         }
@@ -570,7 +587,7 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
       for (ConstantSubscript extent : *extents) {
         auto n{static_cast<std::size_t>(extent)};
         if (size > maxStorageSizeInBytes / n) {
-          return {maxStorageSizeInBytes, alignment, /*tooBig=*/true};
+          return {maxStorageSizeInBytes, alignment, &symbol};
         }
         size *= n;
       }
