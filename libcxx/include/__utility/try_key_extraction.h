@@ -81,8 +81,7 @@ template <class _KeyT,
           class _PiecewiseConstruct,
           class _Tuple1,
           class _Tuple2,
-          __enable_if_t<__is_map &&
-                            is_same<__remove_const_ref_t<_PiecewiseConstruct>, piecewise_construct_t>::value &&
+          __enable_if_t<__is_map && is_same<__remove_const_ref_t<_PiecewiseConstruct>, piecewise_construct_t>::value &&
                             __is_tuple_v<_Tuple1> && tuple_size<_Tuple1>::value == 1 &&
                             is_same<__remove_const_ref_t<typename tuple_element<0, _Tuple1>::type>, _KeyT>::value,
                         int> = 0>
