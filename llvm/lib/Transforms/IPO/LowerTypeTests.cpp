@@ -2029,16 +2029,17 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     }
   }
 
-  auto Less = [&](uint64_t A, uint64_t B) {
-    return GTMHotness[A] < GTMHotness[B];
-  };
+  unique_function<bool(uint64_t, uint64_t)> Less;
+  if (!IsGlobalSet) {
+    Less = [&](uint64_t A, uint64_t B) {
+      return GTMHotness[A] < GTMHotness[B];
+    };
+  }
 
   // Create a GlobalLayoutBuilder and provide it with index sets as layout
   // fragments. The GlobalLayoutBuilder tries to lay out members of fragments as
   // close together as possible.
-  GlobalLayoutBuilder GLB(
-      Globals.size(),
-      !IsGlobalSet ? function_ref<bool(uint64_t, uint64_t)>(Less) : nullptr);
+  GlobalLayoutBuilder GLB(Globals.size(), std::move(Less));
   for (auto &&MemSet : TypeMembers)
     GLB.addFragment(MemSet);
 

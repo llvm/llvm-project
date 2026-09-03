@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
 #define LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
 
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
@@ -131,12 +132,15 @@ class GlobalLayoutBuilder {
   std::vector<uint64_t> FragmentMap;
 
   /// Optional comparator for object hotness/ordering.
-  function_ref<bool(uint64_t, uint64_t)> Less;
+  unique_function<bool(uint64_t, uint64_t)> Less;
 
 public:
+  /// Construct a layout builder for \p NumObjects objects.
+  /// If \p Less is provided, it is used to sort sub-fragments and root
+  /// fragments by maximum element.
   GlobalLayoutBuilder(uint64_t NumObjects,
-                      function_ref<bool(uint64_t, uint64_t)> Less = nullptr)
-      : Fragments(1), FragmentMap(NumObjects), Less(Less) {}
+                      unique_function<bool(uint64_t, uint64_t)> Less = nullptr)
+      : Fragments(1), FragmentMap(NumObjects), Less(std::move(Less)) {}
 
   /// Add F to the layout while trying to keep its indices contiguous.
   /// If a previously seen fragment uses any of F's indices, that
