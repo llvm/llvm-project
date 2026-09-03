@@ -580,6 +580,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when instantiating the body of a C++26 expansion
   statement after a fatal error had occurred. (#GH214917)
 
+- Fixed an assertion when an invalid statement appeared in a ``switch``
+  statement nested inside a C++26 expansion statement. (#GH210575)
+
 - Fixed friend declarations sometimes making non-visible default arguments
   incorrectly visible to default argument redefinition checks across modules.
 
