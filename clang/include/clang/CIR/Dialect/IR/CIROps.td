@@ -1369,21 +1369,6 @@ def CIR_CleanupKind : CIR_I32Enum<"CleanupKind", "cleanup kind", [
 ]>;
 
 def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup"> {
-  let summary = "Cleanup kind attribute";
-  let description = [{
-    Cleanup kind attributes.
-  }];
-
-  let cppClassName = "CleanupKindAttr";
-
-  let skipDefaultBuilders = 1;
-  let builders = [
-    AttrBuilder<(ins CArg<"CleanupKind",
-                          "cir::CleanupKind::All">:$value), [{
-      return $_get($_ctxt, value);
-    }]>
-  ];
-
   let extraClassDeclaration = [{
     bool isNormal() const {
       return getValue() == CleanupKind::Normal ||
@@ -3348,7 +3333,6 @@ def CIR_TLSModel : CIR_I32Enum<"TLSModel", "TLS model", [
 ]>;
 
 def CIR_TLSModelAttr: CIR_EnumAttr<CIR_TLSModel, "tls_model"> {
-  let summary = "TLS Model attribute";
   let description = [{
      The TLS mode for the global, which comes from either the
     `tls_model` attribute, or `-ftls-model` flag.
