@@ -1390,7 +1390,7 @@ class RPFilter {
   // not the number of candidates, that tracks how many new concurrent live
   // ranges SLSR would create. Below this count no block in the function can
   // exhibit the pathology, and the liveness and pressure analyses are skipped.
-  static constexpr unsigned MinDistinctBasesToFilter = 16;
+  static constexpr unsigned MinDistinctBasisesToFilter = 16;
 
 public:
   using Candidate = StraightLineStrengthReduce::Candidate;
@@ -1414,7 +1414,7 @@ public:
       return InstsToSkip;
 
     buildBBToNumCandsAndBasises(PickedCandidateMap);
-    if (MaxNumBasisesInBB <= MinDistinctBasesToFilter)
+    if (MaxNumBasisesInBB <= MinDistinctBasisesToFilter)
       return InstsToSkip;
 
     // Compute live-in and live-out of each BB in CFG
@@ -1423,6 +1423,10 @@ public:
     DEBUG_SLSR_RP(dbgs() << "-- MaxRP of BBs -- \n");
     SmallPtrSet<const BasicBlock *, 8> BBsToSkip;
     for (auto &BB : *F) {
+      
+      if (BBToNumCandsAndBasises.at(&BB).second <= MinDistinctBasisesToFilter)
+        continue;
+
       const BlockLiveness &BL = getLiveness(&BB);
       auto [MaxRP, MaxRPWithSLSR] =
           maxPressureInBlockBackward(BB, BL.LiveIn, BL.LiveOut);
@@ -1672,8 +1676,6 @@ private:
   maxPressureInBlockBackward(const BasicBlock &BB, const ValueSet &LiveIn,
                              const ValueSet &LiveOut) const {
 
-    // TODO: ValueSet is a SmallPtrSet, which is supposedly smaller than 33.
-    //       Could be a better-fitting data structure.
     ValueSet LiveSet = LiveOut;
     unsigned MaxW = 0;
     for (const Value *V : LiveSet)
