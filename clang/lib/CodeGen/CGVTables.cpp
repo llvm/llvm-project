@@ -840,12 +840,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       if (!F->empty())
         return F;
 
-      // For NVPTX devices in OpenMP and CUDA, provide a weak definition that
+      // For device compilation, provide a weak definition that
       // traps, otherwise linking ends up with unresolved references.
-      if ((CGM.getLangOpts().OpenMP &&
-            CGM.getLangOpts().OpenMPIsTargetDevice &&
-            CGM.getTriple().isNVPTX()) ||
-           (CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice)) {
+      if (CGM.getLangOpts().isTargetDevice()) {
         F->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
         CodeGenFunction CGF(CGM);
         const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
