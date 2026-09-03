@@ -617,31 +617,29 @@ for.end:
       });
 }
 
-TEST(IVDescriptorsTest, MonotonicPhiNegativeStep) {
+TEST(IVDescriptorsTest, MonotonicPhiNegativeStepPtrVar) {
   // Parse the module.
   LLVMContext Context;
 
   std::unique_ptr<Module> M =
       parseIR(Context,
-              R"(define void @foo(ptr %dst, i1 %cond, i32 %n) {
+              R"(define void @foo(ptr %start, i1 %cond, i64 %n) {
 entry:
   br label %for.body
 
 for.body:
-  %i = phi i32 [ 0, %entry ], [ %i.next, %for.inc ]
-  %monotonic = phi i32 [ 0, %entry ], [ %monotonic.next, %for.inc ]
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %monotonic = phi ptr [ %start, %entry ], [ %monotonic.next, %for.inc ]
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:
-  %dec = add nsw i32 %monotonic, -1
-  %arrayidx = getelementptr inbounds i32, ptr %dst, i32 %monotonic
-  store i32 10, ptr %arrayidx, align 4
+  %dec = getelementptr nusw i8, ptr %monotonic, i32 -4
   br label %for.inc
 
 for.inc:
-  %monotonic.next = phi i32 [ %dec, %if.then ], [ %monotonic, %for.body ]
-  %i.next = add i32 %i, 1
-  %exitcond.not = icmp eq i32 %i.next, %n
+  %monotonic.next = phi ptr [ %dec, %if.then ], [ %monotonic, %for.body ]
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond.not = icmp eq i64 %i.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:
@@ -658,11 +656,24 @@ for.end:
         EXPECT_NE(L, nullptr);
 
         Instruction *Phi = getInstructionByName(F, "monotonic");
+        Instruction *BackedgePhi = getInstructionByName(F, "monotonic.next");
+        Instruction *StepInst = getInstructionByName(F, "dec");
 
-        // Check %monotonic descriptor.
         MonotonicDescriptor Desc;
         bool IsMonotonicPhi = MonotonicDescriptor::isMonotonicPHI(
             cast<PHINode>(Phi), L, Desc, SE);
         EXPECT_TRUE(IsMonotonicPhi);
+
+        EXPECT_EQ(Desc.getHeaderPHI(), Phi);
+        EXPECT_EQ(Desc.getBackedgePHI(), BackedgePhi);
+        EXPECT_EQ(Desc.getStepInst(), StepInst);
+        auto *StartSCEV = SE.getSCEV(F.getArg(0));
+        auto *StepSCEV = SE.getConstant(StartSCEV->getType(), -4);
+        EXPECT_EQ(Desc.getStartSCEV(), StartSCEV);
+        EXPECT_EQ(Desc.getStepSCEV(), StepSCEV);
+
+        // Check we don't add `nuw` when we have a negative GEP step.
+        EXPECT_EQ(SCEV::NoWrapFlags(Desc.getSCEVNoWrapFlags()),
+                  SCEV::FlagAnyWrap);
       });
 }
