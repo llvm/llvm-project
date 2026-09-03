@@ -101,6 +101,8 @@ public:
   std::optional<Pointer> toPointer(const Context &Ctx) const;
 
   bool isBaseCastPossible() const {
+    if (!Base.isBlockPointer())
+      return false;
     if (PtrOffset < 0)
       return true;
     return static_cast<uint64_t>(PtrOffset) <= Base.getByteOffset();
