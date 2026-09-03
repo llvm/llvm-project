@@ -237,6 +237,12 @@ Makes programs 10x faster by doing Special New Thing.
   divide their split factor, and operations that genuinely need 64-bit indices,
   are unchanged.
 
+* Masked gather/scatter costs now take the index width from the address space
+  their pointers live in, instead of assuming the width of address space 0. On
+  x86 this matters for the 32-bit address spaces 270 and 271: a vector of those
+  pointers is half as wide as the same count of ordinary pointers, so it is no
+  longer costed as though it had to be split in two.
+
 ### Changes to the OCaml bindings
 
 ### Changes to the Python bindings
