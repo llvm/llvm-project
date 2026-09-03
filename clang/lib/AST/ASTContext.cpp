@@ -4287,6 +4287,10 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
   llvm::APInt ArySize(ArySizeIn);
   ArySize = ArySize.zextOrTrunc(Target->getMaxPointerWidth());
 
+  // The type stores only the CVR bits of the index qualifiers, so key on
+  // those.
+  IndexTypeQuals &= Qualifiers::CVRMask;
+
   llvm::FoldingSetNodeID ID;
   ConstantArrayType::Profile(ID, *this, EltTy, ArySize.getZExtValue(), SizeExpr,
                              ASM, IndexTypeQuals);
@@ -5066,7 +5070,7 @@ QualType ASTContext::getFunctionTypeInternal(
   // structure.
   llvm::FoldingSetNodeID ID;
   FunctionProtoType::Profile(ID, ResultTy, ArgArray.begin(), NumArgs, EPI,
-                             *this, true);
+                             *this);
 
   QualType Canonical;
   bool Unique = false;
@@ -5701,8 +5705,8 @@ UnresolvedUsingType *ASTContext::getUnresolvedUsingTypeInternal(
   auto *T = new (Mem) UnresolvedUsingType(Keyword, Qualifier, D, CanonicalType);
   if (Token) {
     auto *Placeholder = new (T->getFoldingSetPlaceholder())
-        FoldingSetPlaceholder<TypedefType>();
-    TypedefTypes.insert(Placeholder, Token);
+        FoldingSetPlaceholder<UnresolvedUsingType>();
+    UnresolvedUsingTypes.insert(Placeholder, Token);
   }
   Types.push_back(T);
   return T;
@@ -6534,13 +6538,6 @@ ASTContext::applyObjCProtocolQualifiers(QualType type,
 QualType
 ASTContext::getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
                                  ArrayRef<ObjCProtocolDecl *> protocols) const {
-  // Look in the folding set for an existing type.
-  llvm::FoldingSetNodeID ID;
-  ObjCTypeParamType::Profile(ID, Decl, Decl->getUnderlyingType(), protocols);
-  llvm::FoldingSetInsertToken Token;
-  if (ObjCTypeParamType *TypeParam = ObjCTypeParamTypes.lookup(ID, Token))
-    return QualType(TypeParam, 0);
-
   // We canonicalize to the underlying type.
   QualType Canonical = getCanonicalType(Decl->getUnderlyingType());
   if (!protocols.empty()) {
@@ -6550,6 +6547,14 @@ ASTContext::getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
         Canonical, protocols, hasError, true /*allowOnPointerType*/));
     assert(!hasError && "Error when apply protocol qualifier to bound type");
   }
+
+  // Key on the canonical type the node is constructed with, which is what
+  // Profile() reports; the decl's underlying type can be updated later.
+  llvm::FoldingSetNodeID ID;
+  ObjCTypeParamType::Profile(ID, Decl, Canonical, protocols);
+  llvm::FoldingSetInsertToken Token;
+  if (ObjCTypeParamType *TypeParam = ObjCTypeParamTypes.lookup(ID, Token))
+    return QualType(TypeParam, 0);
 
   unsigned size = sizeof(ObjCTypeParamType);
   size += protocols.size() * sizeof(ObjCProtocolDecl *);
@@ -6837,6 +6842,12 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
 QualType
 ASTContext::getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
                                   UnaryTransformType::UTTKind Kind) const {
+  // Clear UnderlyingType for a dependent base before building the ID: that is
+  // what the node is constructed with, and what Profile() reports.
+  if (BaseType->isDependentType()) {
+    assert(UnderlyingType.isNull() || BaseType == UnderlyingType);
+    UnderlyingType = QualType();
+  }
 
   llvm::FoldingSetNodeID ID;
   UnaryTransformType::Profile(ID, BaseType, UnderlyingType, Kind);
@@ -6849,8 +6860,6 @@ ASTContext::getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
   if (!BaseType->isDependentType()) {
     CanonType = UnderlyingType.getCanonicalType();
   } else {
-    assert(UnderlyingType.isNull() || BaseType == UnderlyingType);
-    UnderlyingType = QualType();
     if (QualType CanonBase = BaseType.getCanonicalType();
         BaseType != CanonBase) {
       CanonType = getUnaryTransformType(CanonBase, QualType(), Kind);
