@@ -5,6 +5,8 @@
 // dictionary. These used to be IntegerAttr subclasses, which printed as
 // `2 : i32`.
 
+!s32i = !cir.int<s, 32>
+
 module {
 
 // CHECK-LABEL: cir.func @cast_attr() {
@@ -60,6 +62,32 @@ cir.func @tls_model_attr() {
   // CHECK: cir.return {cir.test = [#cir.tls_model<tls_dyn>, #cir.tls_model<tls_local_exec>]}
   cir.return {cir.test = [#cir.tls_model<tls_dyn>,
                           #cir.tls_model<tls_local_exec>]}
+}
+
+// CHECK-LABEL: cir.func @mem_order_attr() {
+cir.func @mem_order_attr() {
+  // CHECK: cir.return {cir.test = [#cir.mem_order<relaxed>, #cir.mem_order<acq_rel>, #cir.mem_order<seq_cst>]}
+  cir.return {cir.test = [#cir.mem_order<relaxed>, #cir.mem_order<acq_rel>,
+                          #cir.mem_order<seq_cst>]}
+}
+
+// CHECK-LABEL: cir.func @sync_scope_attr() {
+cir.func @sync_scope_attr() {
+  // CHECK: cir.return {cir.test = [#cir.sync_scope<single_thread>, #cir.sync_scope<hip_workgroup>, #cir.sync_scope<opencl_all_svm_devices>]}
+  cir.return {cir.test = [#cir.sync_scope<single_thread>,
+                          #cir.sync_scope<hip_workgroup>,
+                          #cir.sync_scope<opencl_all_svm_devices>]}
+}
+
+// The operations themselves keep printing a bare keyword.
+
+// CHECK-LABEL: cir.func @mem_order_sync_scope_ops(%arg0: !cir.ptr<!s32i>) {
+cir.func @mem_order_sync_scope_ops(%arg0: !cir.ptr<!s32i>) {
+  // CHECK: %0 = cir.load syncscope(system) atomic(seq_cst) %arg0 : !cir.ptr<!s32i>, !s32i
+  %0 = cir.load syncscope(system) atomic(seq_cst) %arg0 : !cir.ptr<!s32i>, !s32i
+  // CHECK: cir.atomic.fence syncscope(system) seq_cst
+  cir.atomic.fence syncscope(system) seq_cst
+  cir.return
 }
 
 }
