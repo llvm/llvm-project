@@ -19,7 +19,6 @@
 #  include <__locale_dir/locale_base_api.h>
 #  include <__memory/addressof.h>
 #  include <__memory/shared_count.h>
-#  include <__mutex/once_flag.h>
 #  include <__utility/no_destroy.h>
 #  include <__utility/private_constructor_tag.h>
 #  include <__utility/swap.h>
@@ -160,11 +159,22 @@ private:
 };
 
 class _LIBCPP_EXPORTED_FROM_ABI locale::id {
-  once_flag __flag_;
-  int32_t __id_;
+#  ifdef _LIBCPP_ABI_COMPACT_LOCALE_ID
+  using __id_type _LIBCPP_NODEBUG = int32_t;
+#  elif defined(_LIBCPP_ABI_MICROSOFT)
+  using __id_type _LIBCPP_NODEBUG = uintptr_t;
+#  else
+  using __id_type _LIBCPP_NODEBUG = unsigned long;
+#  endif
+
+  __id_type __id_ = 0;
+
+#  ifndef _LIBCPP_ABI_COMPACT_LOCALE_ID
+  [[__maybe_unused__]] int32_t __dummy_ = 0;
+#  endif
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR id() : __id_(0) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR id() = default;
   void operator=(const id&) = delete;
   id(const id&)             = delete;
 

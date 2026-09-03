@@ -134,6 +134,10 @@ flag removes that artificial padding.
 ``char_traits<char_type>::eq_int_type()`` cannot distinguish between ``WEOF`` and ``WCHAR_MAX``. This flag changes
 ``basic_ios`` to instead track whether the fill value has been initialized using a separate boolean.
 
+``_LIBCPP_ABI_COMPACT_LOCALE_ID``
+---------------------------------
+This flag removes some ``locale::id`` members and makes the remaining ones smaller. In an old version ``locale::id``
+used ``once_flag``, which got replaced by a custom implementation that doesn't require as much memory.
 
 Linking TUs which have been compiled against different releases of libc++
 =========================================================================
