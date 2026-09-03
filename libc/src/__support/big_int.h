@@ -17,7 +17,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/optimization.h"        // LIBC_UNLIKELY
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY, LIBC_LOOP_UNROLL
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128, LIBC_TYPES_HAS_INT64
 #include "src/__support/math_extras.h" // add_with_carry, sub_with_borrow
@@ -214,13 +214,23 @@ LIBC_INLINE constexpr word multiply_with_carry(cpp::array<word, O> &dst,
                                                const cpp::array<word, N> &rhs) {
   static_assert(O >= M + N);
   Accumulator<word> acc;
-  for (size_t i = 0; i < O; ++i) {
+  auto step = [&](size_t i) {
     const size_t lower_idx = i < N ? 0 : i - N + 1;
     const size_t upper_idx = i < M ? i : M - 1;
     word carry = 0;
     for (size_t j = lower_idx; j <= upper_idx; ++j)
       carry += mul_add_with_carry(acc, lhs[j], rhs[i - j]);
     dst[i] = acc.advance(carry);
+  };
+  // Unrolling up to 4 words is enough for UInt128, the most used large integer
+  // type; larger integers may bloat the code too much.
+  if constexpr (O <= 4) {
+    LIBC_LOOP_UNROLL
+    for (size_t i = 0; i < O; ++i)
+      step(i);
+  } else {
+    for (size_t i = 0; i < O; ++i)
+      step(i);
   }
   return acc.carry();
 }
@@ -617,19 +627,8 @@ public:
   }
 
   LIBC_INLINE constexpr BigInt operator*(const BigInt &other) const {
-    if constexpr (!Signed && WORD_COUNT == 2) {
-      // Straight-line truncating multiply for the double-word case.
-      BigInt result{};
-      multiword::DoubleWide<word_type> lo_prod =
-          multiword::mul2(val[0], other.val[0]);
-      result.val[0] = multiword::lo(lo_prod);
-      result.val[1] = multiword::hi(lo_prod) + val[0] * other.val[1] +
-                      val[1] * other.val[0];
-      return result;
-    } else {
-      // Perform full mul and truncate.
-      return BigInt(ful_mul(other));
-    }
+    // Perform full mul and truncate.
+    return BigInt(ful_mul(other));
   }
 
   // Fast hi part of the full product.  The normal product `operator*` returns
