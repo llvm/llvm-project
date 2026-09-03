@@ -5116,7 +5116,7 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
         DTU->applyUpdates({{DominatorTree::Delete, BB, OldDest}});
     }
 
-    // Update the profile information on the switch ifwe had a profile
+    // Update the profile information on the switch if we had a profile
     // for both it and the select instruction. We only need to do this
     // in the case where we add a case to the switch.
     if (IsDefault) {

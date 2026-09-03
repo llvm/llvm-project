@@ -40,6 +40,42 @@ bb3:
   unreachable
 }
 
+define void @test_remap_only_switch_profile(i8 %x) !prof !0 {
+; CHECK-LABEL: define void @test_remap_only_switch_profile(
+; CHECK-SAME: i8 [[X:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:    switch i8 [[X]], label %[[BB1:.*]] [
+; CHECK-NEXT:      i8 6, label %[[BB2:.*]]
+; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
+; CHECK-NEXT:      i8 4, label %[[BB2]]
+; CHECK-NEXT:    ], !prof [[PROF2:![0-9]+]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cmp = icmp eq i8 %x, 4
+  %key = select i1 %cmp, i8 6, i8 %x
+  switch i8 %key, label %bb1 [
+  i8 6, label %bb2
+  i8 10, label %bb3
+  ], !prof !2
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
 ; The value 4 already has an explicit case pointing to bb4, but %key can never
 ; actually be 4 (it's remapped to 6 whenever %x is 4), so that case is really
 ; dead and should be retargeted to wherever the remapped value 6 dispatches to
@@ -54,7 +90,7 @@ define void @test_remap_retarget_case(i8 %x) !prof !0 {
 ; CHECK-NEXT:      i8 4, label %[[BB2:.*]]
 ; CHECK-NEXT:      i8 6, label %[[BB2]]
 ; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
-; CHECK-NEXT:    ], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    ], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @func1()
 ; CHECK-NEXT:    unreachable
@@ -432,5 +468,6 @@ declare void @use(i32)
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 15, i32 21, i32 33, i32 46}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 5, i32 7, i32 11, i32 13}
+; CHECK: [[PROF2]] = !{!"unknown", !"simplifycfg"}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 5, i32 7, i32 11, i32 13}
 ;.
