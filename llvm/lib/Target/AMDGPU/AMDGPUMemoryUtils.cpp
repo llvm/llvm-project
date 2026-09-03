@@ -74,6 +74,15 @@ static TargetExtType *getTargetExtType(const GlobalVariable &GV) {
   }
 }
 
+unsigned tryGetSyntheticApertureNumber(unsigned AS) {
+  switch (AS) {
+  case AMDGPUAS::VGPR:
+    return SyntheticAperture::VGPR;
+  default:
+    return SyntheticAperture::None;
+  }
+}
+
 TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
   if (TargetExtType *Ty = getTargetExtType(GV))
     return Ty->getName() == "amdgcn.named.barrier" ? Ty : nullptr;

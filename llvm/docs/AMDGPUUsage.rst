@@ -1172,6 +1172,11 @@ supported for the ``amdgcn`` target.
   aligned to 2^32 which makes it easier to convert from flat to segment or
   segment to flat.
 
+  *Synthetic apertures* are defined that enable safe roundtrips of pointers
+  from special address spaces through the generic address space. Attempting to
+  dereference generic pointers obtained in this way (using e.g. ``load`` or
+  ``store``) has undefined behavior.
+
   A global address space address has the same value when used as a flat address
   so no conversion is needed.
 

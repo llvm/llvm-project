@@ -1126,13 +1126,16 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
 
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
-  // different results.
+  // different results. The same is true of the VGPR ("as memory") address
+  // space: it is a per-lane view of the vector registers, so an access at a
+  // uniform offset still yields a per-lane (divergent) value.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
   if (const LoadInst *Load = dyn_cast<LoadInst>(V))
     return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS;
+           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
+           Load->getPointerAddressSpace() == AMDGPUAS::VGPR;
 
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each

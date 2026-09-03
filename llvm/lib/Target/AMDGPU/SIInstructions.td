@@ -1061,6 +1061,111 @@ def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 
 } // End Uses = [EXEC], Defs = [M0, EXEC]
 
+//===----------------------------------------------------------------------===//
+// VGPR "as memory" indexed load/store pseudos (address space 13)
+//===----------------------------------------------------------------------===//
+
+// V_LOAD_IDX_B<N> / V_STORE_IDX_B<N> load or store N bits from/to the wave's
+// view of its vector registers, at a dword index of ($idx + $offset). $idx is
+// a 32-bit value that may be uniform (SGPR) or divergent (VGPR); $offset is a
+// constant dword offset folded in at selection.
+//
+// AMDGPULowerVGPREncoding lowers each into an M0-relative move over the wave's
+// vector registers: v_movrels_b32 (load) / v_movreld_b32 (store) where the
+// subtarget has movrel, and a v_mov_b32 under the VGPR indexing mode otherwise.
+
+// Populates the VLdStIdxOpcodeInfo searchable table (see AMDGPUMachineInstrs.h
+// and AMDGPU::getVLdStIdxOpcodeInfo*), mapping each pseudo to its bit width and
+// load/store direction.
+class VLdStIdxOpcodeInfo<int size, bit isStore> {
+  Instruction Opcode = !cast<Instruction>(NAME);
+  bits<12> BitWidth = size;
+  bit IsStore = isStore;
+}
+
+foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
+              VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384,
+              VReg_512, VReg_1024] in {
+  // The units of $idx and $offset are in dwords.
+  //
+  // The index reaches the hardware through M0, and how it gets there depends on
+  // the subtarget, so SITargetLowering::finalizeLowering fills that in rather
+  // than TableGen: for v_movrel[sd] it copies the index to M0 and rewrites $idx
+  // to it, making the access a plain M0 read; under the VGPR indexing mode the
+  // s_set_gpr_idx_on it expands to clobbers M0 instead, which the access
+  // carries as an implicit def. A divergent-index access is kept inside its
+  // waterfall loop by its implicit use of EXEC (see resultDependsOnExec).
+  //
+  // Unlike SI_INDIRECT_SRC/DST and the V_INDIRECT_REG_* pseudos, the storage
+  // indexed here is the whole register file rather than a tuple an operand can
+  // name, so these are memory accesses carrying an MMO instead.
+  def V_LOAD_IDX_B#rc.Size : VPseudoInstSI <
+    (outs rc:$data),
+    (ins SReg_32:$idx, i32imm:$offset)>,
+    VLdStIdxOpcodeInfo<rc.Size, 0> {
+      let mayLoad = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+  }
+  def V_STORE_IDX_B#rc.Size : VPseudoInstSI <
+    (outs),
+    (ins rc:$data, SReg_32:$idx, i32imm:$offset)>,
+    VLdStIdxOpcodeInfo<rc.Size, 1> {
+      let mayStore = 1;
+      let UseNamedOperandTable = 1;
+      let hasSideEffects = 0;
+  }
+}
+
+// Copies of v_movrel[sd]_b32 for the moves the pseudos above expand into.
+//
+// The storage a movrel indexes is normally a register tuple, and the machine
+// verifier requires an implicit use of that tuple naming the register the
+// instruction really touches. Here the storage is the whole register file,
+// which no operand can name, so these carry their own opcodes and leave those
+// rules to the tuple form. AMDGPUMCInstLower maps them back for encoding.
+// AMDGPULowerVGPREncoding reaches $vdst and $src0 by name to decide which high
+// address bits a subtarget with more than 256 addressable VGPRs needs, so these
+// have to be in the named operand table. Without it that lookup finds nothing,
+// no S_SET_VGPR_MSB is emitted, and a base register at or above 256 is encoded
+// as its low eight bits - a silent access of the wrong register.
+let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
+    UseNamedOperandTable = 1, Size = V_MOV_B32_e32.Size in {
+  def V_MOVRELS_B32_as_mem
+      : VPseudoInstSI<(outs VGPR_32:$vdst), (ins VRegSrc_32:$src0)>;
+  def V_MOVRELD_B32_as_mem
+      : VPseudoInstSI<(outs), (ins VGPR_32:$vdst, VSrc_b32:$src0)>;
+}
+
+// Select the REG_LOAD/REG_STORE target nodes into the sized indexed pseudos.
+// The pointer is a byte offset into the file; SIreg_load/SIreg_store carry the
+// dword index (ptr >> 2), and an (add idx, imm) shape folds a constant dword
+// offset into the pseudo's $offset operand.
+multiclass VRegIdxLoadStorePat<ValueType vt> {
+  defvar load_inst = !cast<Instruction>("V_LOAD_IDX_B"#vt.Size);
+  defvar store_inst = !cast<Instruction>("V_STORE_IDX_B"#vt.Size);
+
+  def : GCNPat<
+    (vt (SIreg_load (add i32:$idx, (i32 imm:$offset)))),
+    (load_inst $idx, imm:$offset)>;
+  def : GCNPat<
+    (vt (SIreg_load i32:$idx)),
+    (load_inst $idx, 0)>;
+  def : GCNPat<
+    (SIreg_store vt:$data, (add i32:$idx, (i32 imm:$offset))),
+    (store_inst $data, $idx, imm:$offset)>;
+  def : GCNPat<
+    (SIreg_store vt:$data, i32:$idx),
+    (store_inst $data, $idx, 0)>;
+}
+
+foreach vt = !listconcat(
+    Reg32Types.types, Reg64Types.types, Reg96Types.types, Reg128Types.types,
+    Reg160Types.types, Reg192Types.types, Reg224Types.types, Reg256Types.types,
+    Reg288Types.types, Reg320Types.types, Reg352Types.types, Reg384Types.types,
+    Reg512Types.types, Reg1024Types.types) in
+defm : VRegIdxLoadStorePat<vt>;
+
 // This is a pseudo variant of the v_movreld_b32 instruction in which the
 // vector operand appears only twice, once as def and once as use. Using this
 // pseudo avoids problems with the Two Address instructions pass.
@@ -4815,6 +4920,24 @@ def G_AMDGPU_BUFFER_STORE_FORMAT : BufferStoreGenericInstruction;
 def G_AMDGPU_BUFFER_STORE_FORMAT_D16 : BufferStoreGenericInstruction;
 def G_AMDGPU_TBUFFER_STORE_FORMAT : TBufferStoreGenericInstruction;
 def G_AMDGPU_TBUFFER_STORE_FORMAT_D16 : TBufferStoreGenericInstruction;
+
+// GlobalISel equivalents of the REG_LOAD / REG_STORE target nodes: a load or
+// store of the VGPR ("as memory") address space, indexed by the pointer's
+// dword offset. They select to the V_LOAD_IDX_B<N> / V_STORE_IDX_B<N> pseudos
+// through the same TableGen patterns (see GINodeEquiv in AMDGPUGISel.td).
+def G_AMDGPU_REG_LOAD : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$dword_index);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_REG_STORE : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$data, type1:$dword_index);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
 
 def G_AMDGPU_FMIN_LEGACY : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
