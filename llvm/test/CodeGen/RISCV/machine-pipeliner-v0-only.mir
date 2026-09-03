@@ -1,0 +1,166 @@
+# REQUIRES: asserts
+# RUN: split-file %s %t
+# RUN: llc -mtriple=riscv64 -mcpu=sifive-p670 -mattr=+v \
+# RUN:   -riscv-enable-pipeliner=true \
+# RUN:   -debug-only=pipeliner -print-before=pipeliner \
+# RUN:   -stop-after=pipeliner -verify-machineinstrs -o /dev/null \
+# RUN:   %t/basic.mir 2>&1 | FileCheck %s
+
+#--- basic.mir
+
+# The software pipeliner rewrites registers across classes without consulting
+# target rewrite legality. Reject any loop with a virtual V0-only access until
+# those transforms model the singleton V0 constraint.
+# CHECK-LABEL: Machine code for function vmv0_regclass:
+# CHECK: INLINEASM {{.*}}regdef:VMV0{{.*}}%mask:vmv0
+# CHECK: INLINEASM {{.*}}reguse:VR{{.*}}%mask:vmv0
+# CHECK: End machine code for function vmv0_regclass.
+# CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+# CHECK-NOT: MII =
+---
+name: vmv0_regclass
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    %start:gpr = ADDI $x0, 10
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+
+    %iv:gpr = PHI %start, %bb.0, %iv_next, %bb.1
+    INLINEASM &"", sideeffect attdialect, regdef:VMV0, def %mask:vmv0
+    INLINEASM &"", sideeffect attdialect, reguse:VR, %mask
+    %iv_next:gpr = ADDI %iv, -1
+    BNE %iv_next, $x0, %bb.1
+    PseudoBR %bb.2
+
+  bb.2:
+    PseudoRET
+...
+# A broad MRI class can still be constrained to VMV0 by an instruction
+# operand, so reject this form as well.
+# CHECK-LABEL: Machine code for function static_vmv0_constraint:
+# CHECK: INLINEASM {{.*}}reguse:VMV0{{.*}}%mask:vr
+# CHECK: End machine code for function static_vmv0_constraint.
+# CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+# CHECK-NOT: MII =
+---
+name: static_vmv0_constraint
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    %start:gpr = ADDI $x0, 10
+    %mask:vr = IMPLICIT_DEF
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+
+    %iv:gpr = PHI %start, %bb.0, %iv_next, %bb.1
+    INLINEASM &"", sideeffect attdialect, reguse:VMV0, %mask
+    %iv_next:gpr = ADDI %iv, -1
+    BNE %iv_next, $x0, %bb.1
+    PseudoBR %bb.2
+
+  bb.2:
+    PseudoRET
+...
+# A VMV0 virtual def aliases a physical V0 read, so the loop must be rejected
+# before the scheduler computes an MII.
+# CHECK-LABEL: Machine code for function virtual_def_physical_read:
+# CHECK: INLINEASM {{.*}}regdef:VMV0{{.*}}%mask:vmv0
+# CHECK: INLINEASM {{.*}}reguse:VR{{.*}}$v0
+# CHECK: End machine code for function virtual_def_physical_read.
+# CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+# CHECK-NOT: MII =
+---
+name: virtual_def_physical_read
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $x10, $v0
+
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+    liveins: $x10, $v0
+
+    INLINEASM &"", sideeffect attdialect, regdef:VMV0, def %mask:vmv0
+    INLINEASM &"", sideeffect attdialect, reguse:VR, $v0
+    BNE $x10, $x0, %bb.1
+    PseudoBR %bb.2
+
+  bb.2:
+    PseudoRET
+...
+# A broad virtual register constrained to VMV0 is a virtual V0 use. Mixing it
+# with a physical V0 def must likewise be rejected before MII calculation.
+# CHECK-LABEL: Machine code for function static_virtual_use_physical_def:
+# CHECK: INLINEASM {{.*}}reguse:VMV0{{.*}}%mask:vr
+# CHECK: INLINEASM {{.*}}clobber{{.*}}implicit-def dead early-clobber $v0
+# CHECK: End machine code for function static_virtual_use_physical_def.
+# CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+# CHECK-NOT: MII =
+---
+name: static_virtual_use_physical_def
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $x10
+
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+    liveins: $x10
+
+    %mask:vr = IMPLICIT_DEF
+    INLINEASM &"", sideeffect attdialect, reguse:VMV0, %mask
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $v0
+    BNE $x10, $x0, %bb.1
+    PseudoBR %bb.2
+
+  bb.2:
+    PseudoRET
+...
+# Check an otherwise equivalent scalar loop as a control.
+# CHECK-LABEL: Machine code for function control:
+# CHECK: End machine code for function control.
+# CHECK-NOT: Unable to analyzeLoop
+# CHECK: MII =
+---
+name: control
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $x10, $x11, $x12
+
+    %in:gpr = COPY $x10
+    %out:gpr = COPY $x11
+    %end:gpr = COPY $x12
+
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    %in_phi:gpr = PHI %in, %bb.0, %in_next, %bb.1
+    %out_phi:gpr = PHI %out, %bb.0, %out_next, %bb.1
+    %value:gpr = LW %out_phi, 0
+    %result:gpr = ADDI %value, 1
+    SW %result, %in_phi, 0
+    %in_next:gpr = ADDI %in_phi, 4
+    %out_next:gpr = ADDI %out_phi, 4
+    BNE %out_next, %end, %bb.1
+    PseudoBR %bb.2
+
+  bb.2:
+    PseudoRET
+...
