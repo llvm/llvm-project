@@ -21,6 +21,10 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
 
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#endif
+
 #include <cstdio>
 #include <variant>
 
@@ -1000,6 +1004,63 @@ bool PythonFile::Check(PyObject *py_obj) {
   return !!r;
 }
 
+#if defined(_WIN32) && !defined(_DLL)
+// When LLVM is built with a different CRT allocator, it's built against the
+// static C runtime. The official Python builds link to the dynamic C runtime.
+// Since the file descriptors are managed per CRT instance, liblldb and Python
+// have different fd mappings. This translates between the two using the msvcrt
+// module.
+int PythonFile::TranslateFdToPython(int our_fd) {
+  intptr_t handle = _get_osfhandle(our_fd);
+  if (handle == 0 || (HANDLE)handle == INVALID_HANDLE_VALUE)
+    return -1;
+
+  PyObject *msvcrt = PyImport_ImportModule("msvcrt");
+  if (!msvcrt)
+    return -1;
+  PyObject *open_osf = PyObject_GetAttrString(msvcrt, "open_osfhandle");
+  Py_XDECREF(msvcrt);
+  if (!open_osf)
+    return -1;
+  PyObject *fd_obj =
+      PyObject_CallFunction(open_osf, "Li", (long long)handle, 0);
+  Py_XDECREF(open_osf);
+  if (!fd_obj)
+    return -1;
+  if (!PyLong_Check(fd_obj)) {
+    Py_XDECREF(fd_obj);
+    return -1;
+  }
+  long theirs = PyLong_AsLong(fd_obj);
+  Py_XDECREF(fd_obj);
+  return (int)theirs;
+}
+
+int PythonFile::TranslateFdFromPython(int their_fd) {
+  PyObject *msvcrt = PyImport_ImportModule("msvcrt");
+  if (!msvcrt)
+    return -1;
+  PyObject *get_handle = PyObject_GetAttrString(msvcrt, "get_osfhandle");
+  Py_XDECREF(msvcrt);
+  if (!get_handle)
+    return -1;
+  PyObject *handle_obj = PyObject_CallFunction(get_handle, "i", their_fd);
+  Py_XDECREF(get_handle);
+  if (!handle_obj)
+    return -1;
+  if (!PyLong_Check(handle_obj)) {
+    Py_XDECREF(handle_obj);
+    return -1;
+  }
+  size_t handle = PyLong_AsSize_t(handle_obj);
+  Py_XDECREF(handle_obj);
+  return _open_osfhandle((intptr_t)handle, 0);
+}
+#else
+int PythonFile::TranslateFdToPython(int our_fd) { return our_fd; }
+int PythonFile::TranslateFdFromPython(int their_fd) { return their_fd; }
+#endif
+
 const char *PythonException::toCString() const {
   if (!m_repr_bytes)
     return "unknown exception";
@@ -1365,6 +1426,12 @@ llvm::Expected<FileSP> PythonFile::ConvertToFile(bool borrowed) {
     PyErr_Clear();
     return ConvertToFileForcingUseOfScriptingIOMethods(borrowed);
   }
+  fd = TranslateFdFromPython(fd);
+  if (fd < 0) {
+    PyErr_Clear();
+    return llvm::createStringError("failed to translate Python fd to our fd");
+  }
+
   auto options = GetOptionsForPyObject(*this);
   if (!options)
     return options.takeError();
@@ -1409,6 +1476,12 @@ PythonFile::ConvertToFileForcingUseOfScriptingIOMethods(bool borrowed) {
   if (fd < 0) {
     PyErr_Clear();
     fd = File::kInvalidDescriptor;
+  } else {
+    fd = TranslateFdFromPython(fd);
+    if (fd < 0) {
+      PyErr_Clear();
+      return llvm::createStringError("failed to translate Python fd to our fd");
+    }
   }
 
   auto io_module = PythonModule::Import("io");
@@ -1474,8 +1547,8 @@ Expected<PythonFile> PythonFile::FromFile(File &file, const char *mode) {
   }
 
   PyObject *file_obj;
-  file_obj = PyFile_FromFd(file.GetDescriptor(), nullptr, mode, -1, nullptr,
-                           "ignore", nullptr, /*closefd=*/0);
+  file_obj = PyFile_FromFd(TranslateFdToPython(file.GetDescriptor()), nullptr,
+                           mode, -1, nullptr, "ignore", nullptr, /*closefd=*/0);
 
   if (!file_obj)
     return exception();

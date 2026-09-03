@@ -35,6 +35,10 @@ public:
   SBFile(int fd, const char *mode, bool transfer_ownership);
   ~SBFile();
 
+#if defined(_WIN32) && !defined(SWIG)
+  static int OpenFdFromHandle(intptr_t handle, int flags);
+#endif
+
   SBFile &operator=(const SBFile &rhs);
 
   SBError Read(uint8_t *buf, size_t num_bytes, size_t *OUTPUT);
