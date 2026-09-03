@@ -26,9 +26,8 @@ using namespace llvm::omp::target::debug;
 
 PluginManager *PM = nullptr;
 
-// Every plugin exports this method to create an instance of the plugin type.
-#define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
-#include "Shared/Targets.def"
+extern "C" GenericPluginTy *
+__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
 
 void PluginManager::init() {
   TIMESCOPE();
@@ -38,14 +37,21 @@ void PluginManager::init() {
   }
 
   ODBG(ODT_Init) << "Loading RTLs";
+  if (ol_result_t Res = olInit(nullptr))
+    REPORT() << "Failed to initialize liboffload: " << Res->Details;
 
-  // Attempt to create an instance of each supported plugin.
-#define PLUGIN_TARGET(Name)                                                    \
-  do {                                                                         \
-    Plugins.emplace_back(                                                      \
-        std::unique_ptr<GenericPluginTy>(createPlugin_##Name()));              \
-  } while (false);
-#include "Shared/Targets.def"
+  
+  if (ol_result_t Res = olIteratePlatforms(
+          [](ol_platform_handle_t Platform, void *Data) {
+                  auto *PM = static_cast<PluginManager *>(Data);
+                  auto *Plugin = __ol_tgt_GetPluginFromPlatform(Platform);
+                  ODBG(ODT_Init) << "Adding plugin " << Plugin->getName()
+                           << " from liboffload";
+                  PM->Plugins.push_back(Plugin);
+                  return true;
+                },
+                this))
+    REPORT() << "Failed to iterate platforms: " << Res->Details;
 
   ODBG(ODT_Init) << "RTLs loaded!";
 }
@@ -62,7 +68,6 @@ void PluginManager::deinit() {
       std::string InfoMsg = toString(std::move(Err));
       ODBG(ODT_Deinit) << "Failed to deinit plugin: " << InfoMsg;
     }
-    Plugin.release();
   }
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
