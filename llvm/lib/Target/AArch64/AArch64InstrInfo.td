@@ -9737,6 +9737,63 @@ def : Pat<(v1f64 (int_aarch64_neon_vcvtfxu2fp (v1i64 FPR64:$Rn),
 def : Pat<(int_aarch64_neon_vcvtfxs2fp (i32 (bitconvert (f32 FPR32:$Rn))), vecshiftR32:$imm),
           (SCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
 
+multiclass FixedPointUToFPFromUnsignedAcrossLanesV128Pat<
+    string ReduceInst, SDPatternOperator ReduceNode, ValueType VecTy,
+    RegisterOperand VecRC, SubRegIndex SubReg> {
+  let AddedComplexity = 1 in
+  def : Pat<(int_aarch64_neon_vcvtfxu2fp
+              (i32 (vector_extract (VecTy (ReduceNode (VecTy VecRC:$Rn))),
+                                    (i64 0))),
+              vecshiftR32:$imm),
+            (UCVTFs
+              (EXTRACT_SUBREG
+                (VecTy (SUBREG_TO_REG
+                  (!cast<Instruction>(ReduceInst) VecRC:$Rn), SubReg)), ssub),
+              vecshiftR32:$imm)>;
+}
+
+multiclass FixedPointUToFPFromUnsignedAcrossLanesV64Pat<
+    string ReduceInst, SDPatternOperator ReduceNode, ValueType VecTy,
+    ValueType FullVecTy, SubRegIndex SubReg> {
+  let AddedComplexity = 1 in
+  def : Pat<(int_aarch64_neon_vcvtfxu2fp
+              (i32 (vector_extract
+                (FullVecTy (insert_subvector undef,
+                  (VecTy (ReduceNode (VecTy V64:$Rn))), (i64 0))),
+                (i64 0))),
+              vecshiftR32:$imm),
+            (UCVTFs
+              (EXTRACT_SUBREG
+                (FullVecTy (INSERT_SUBREG
+                  (FullVecTy (IMPLICIT_DEF)),
+                  (!cast<Instruction>(ReduceInst) V64:$Rn), SubReg)), ssub),
+              vecshiftR32:$imm)>;
+}
+
+multiclass FixedPointUToFPFromUnsignedAcrossLanesPats<
+    string ReduceInst, SDPatternOperator ReduceNode> {
+  defm : FixedPointUToFPFromUnsignedAcrossLanesV64Pat<
+           ReduceInst # "v8i8v", ReduceNode, v8i8, v16i8, bsub>;
+  defm : FixedPointUToFPFromUnsignedAcrossLanesV128Pat<
+           ReduceInst # "v16i8v", ReduceNode, v16i8, V128, bsub>;
+  defm : FixedPointUToFPFromUnsignedAcrossLanesV64Pat<
+           ReduceInst # "v4i16v", ReduceNode, v4i16, v8i16, hsub>;
+  defm : FixedPointUToFPFromUnsignedAcrossLanesV128Pat<
+           ReduceInst # "v8i16v", ReduceNode, v8i16, V128, hsub>;
+
+  let AddedComplexity = 1 in
+  def : Pat<(int_aarch64_neon_vcvtfxu2fp
+              (i32 (extractelt
+                (v4i32 (ReduceNode (v4i32 V128:$Rn))), (i64 0))),
+              vecshiftR32:$imm),
+            (UCVTFs
+              (!cast<Instruction>(ReduceInst # "v4i32v") V128:$Rn),
+              vecshiftR32:$imm)>;
+}
+
+defm : FixedPointUToFPFromUnsignedAcrossLanesPats<"UMAXV", AArch64umaxv>;
+defm : FixedPointUToFPFromUnsignedAcrossLanesPats<"UMINV", AArch64uminv>;
+
 def : Pat<(f32 (int_aarch64_neon_vcvtfxs2fp GPR32:$Rn, vecshiftR32:$imm)),
           (SCVTFSWSri GPR32:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
 def : Pat<(f32 (int_aarch64_neon_vcvtfxu2fp GPR32:$Rn, vecshiftR32:$imm)),
