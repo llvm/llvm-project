@@ -18,11 +18,11 @@
 #include "MCTargetDesc/SuperHInstPrinter.h"
 #include "SuperH.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -42,6 +42,8 @@ SuperHInstrInfo::SuperHInstrInfo(const SuperHSubtarget &ST)
     : SuperHGenInstrInfo(ST, RI, SH::ADJCALLSTACKDOWN, SH::ADJCALLSTACKUP),
       RI(ST), Subtarget(ST) { }
 
+// Pin the vtable to this file.
+void SuperHInstrInfo::anchor() {}
 
 
 // Gets whether a given opcode can fill a delay slot.
@@ -99,8 +101,14 @@ const MCInstrDesc &SuperHInstrInfo::getBrCond(ISD::CondCode CC) const {
   default:
     llvm_unreachable("Unknown condition code!");
   case ISD::SETTRUE:
+  case ISD::SETEQ:
+  case ISD::SETGT:
+  case ISD::SETGE:
     return get(SH::BT);
   case ISD::SETFALSE:
+  case ISD::SETNE:
+  case ISD::SETLT:
+  case ISD::SETLE:
     return get(SH::BF);
   }
 }
@@ -132,6 +140,140 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   // Otherwise this is not possible.
   llvm_unreachable("Impossible reg-to-reg copy");
+}
+
+void SuperHInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, 
+                                          Register SrcReg, bool isKill, int FrameIndex, 
+                                          const TargetRegisterClass *RC, Register VReg, 
+                                          MachineInstr::MIFlag Flags) const {
+  LLVM_DEBUG(dbgs() << "Store " << RI.getName(SrcReg) << " to slot " << FrameIndex << "\n");
+
+  MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SuperHTargetMachine &TM = (const SuperHTargetMachine &)MF.getTarget();
+  const TargetFrameLowering *TFI = TM.getSubtargetImpl(MF.getFunction())->getFrameLowering();
+  int64_t Offset = MFI.getObjectOffset(FrameIndex) + 
+                   MFI.getStackSize() - 
+                   TFI->getOffsetOfLocalArea();
+
+  // NOTE:  R0-based displacement instructions have a different encoding
+  //        from Rn based instructions, as such we need to know whether
+  //        we need to copy the src register into R0 temporarily.
+  Register SrcStrReg;
+  unsigned Opcode = 0;
+  if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
+    Opcode = SH::MOVBR0D4Rni;
+    SrcStrReg = SH::R0;
+  } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
+    Opcode = SH::MOVWR0D4Rni;
+    SrcStrReg = SH::R0;
+  } else if (RI.isTypeLegalForClass(*RC, MVT::i32)) {
+    Opcode = SH::MOVLRmD4Rni;
+    SrcStrReg = SrcReg;
+  } else {
+    llvm_unreachable("Cannot store this register into a stack slot!");
+  }
+
+  // mov r14,r1
+  // add #-<frame size>,r1
+  BuildMI(MBB, MI, DebugLoc(), get(SH::MOVRmRn), SH::R1)
+    .addReg(SH::R14);
+  BuildMI(MBB, MI, DebugLoc(), get(SH::ADDI8Rn), SH::R1)
+    .addReg(SH::R1)
+    .addImm(-(int)MFI.getStackSize());
+
+  // mov srcreg,r0
+  // mov.b/w r0,@(<offset>,r1)
+  if (SrcStrReg != SrcReg) {
+    BuildMI(MBB, MI, DebugLoc(), get(SH::MOVRmRn), SrcStrReg)
+      .addReg(SrcReg, getKillRegState(isKill));
+    BuildMI(MBB, MI, DebugLoc(), get(Opcode))
+      .addReg(SH::R1)
+      .addImm(Offset);
+    return;
+  }
+
+  // mov.l srcreg,@(<offset>,r1)
+  BuildMI(MBB, MI, DebugLoc(), get(Opcode))
+      .addReg(SrcReg, getKillRegState(isKill))
+      .addReg(SH::R1)
+      .addImm(Offset);
+}
+
+void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, 
+                                           Register DestReg, int FrameIndex, 
+                                           const TargetRegisterClass *RC, Register VReg,
+                                           unsigned SubReg, MachineInstr::MIFlag Flags) const {
+  MachineFunction &MF = *MBB.getParent();
+  const SuperHRegisterInfo &RI = getRegisterInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SuperHTargetMachine &TM = (const SuperHTargetMachine &)MF.getTarget();
+  const TargetFrameLowering *TFI = TM.getSubtargetImpl(MF.getFunction())->getFrameLowering();
+  int64_t Offset = MFI.getObjectOffset(FrameIndex) + 
+                   MFI.getStackSize() - 
+                   TFI->getOffsetOfLocalArea();
+
+  LLVM_DEBUG(dbgs() << "Load " << RI.getName(DestReg) << " from slot " << FrameIndex << "\n");
+
+  // NOTE:  R0-based displacement instructions have a different encoding
+  //        from Rn based instructions, as such we need to know whether
+  //        we need to copy to our dst register from R0.
+  unsigned Opcode = 0;
+  Register DstStrReg;
+  if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
+    Opcode = SH::MOVBD4RmiR0;
+    DstStrReg = SH::R0;
+  } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
+    Opcode = SH::MOVWD4RmiR0;
+    DstStrReg = SH::R0;
+  } else if (RI.isTypeLegalForClass(*RC, MVT::i32)) {
+    Opcode = SH::MOVLD4RmiRn;
+    DstStrReg = DestReg;
+  } else {
+    llvm_unreachable("Cannot load this register into a stack slot!");
+  }
+
+  // mov r14,r1
+  // add #-<frame size>,r1
+  BuildMI(MBB, MI, DebugLoc(), get(SH::MOVRmRn), SH::R1)
+    .addReg(SH::R14);
+  BuildMI(MBB, MI, DebugLoc(), get(SH::ADDI8Rn), SH::R1)
+    .addReg(SH::R1)
+    .addImm(-(int)MFI.getStackSize());
+
+  // mov.b/w @(<offset>,r1),r0
+  // mov r0,dstreg
+  if (DstStrReg != DestReg) {
+    BuildMI(MBB, MI, DebugLoc(), get(Opcode))
+      .addReg(SH::R1)
+      .addImm(Offset);
+    BuildMI(MBB, MI, DebugLoc(), get(SH::MOVRmRn), DestReg)
+      .addReg(DstStrReg);
+    return;
+  }
+
+  // mov.l @(<offset>,r1),destreg
+  BuildMI(MBB, MI, DebugLoc(), get(Opcode), DestReg)
+      .addReg(SH::R1)
+      .addImm(Offset);
+}
+
+Register SuperHInstrInfo::isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex) const {
+  if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
+      MI.getOperand(2).getImm() == 0) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return 0;
+}
+
+Register SuperHInstrInfo::isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex) const {
+  if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
+      MI.getOperand(1).getImm() == 0) {
+    FrameIndex = MI.getOperand(0).getIndex();
+    return MI.getOperand(2).getReg();
+  }
+  return 0;
 }
 
 
@@ -226,25 +368,30 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&
         continue;
       }
 
-      // Handle subsequent conditional branches. Only handle the case where all
-      // conditional branches branch to the same destination.
-      assert(Cond.size() == 1);
-      assert(TBB);
+      FBB = TBB;
+      TBB = I->getOperand(0).getMBB();
+      Cond.push_back(MachineOperand::CreateImm(BranchCode));
+      continue;
+    }
 
-      // Only handle the case where all conditional branches branch to
-      // the same destination.
-      if (TBB != I->getOperand(0).getMBB()) {
-        return true;
-      }
+    // Handle subsequent conditional branches. Only handle the case where all
+    // conditional branches branch to the same destination.
+    assert(Cond.size() == 1);
+    assert(TBB);
 
-      ISD::CondCode OldBranchCode = (ISD::CondCode)Cond[0].getImm();
-      // If the conditions are the same, we can leave them alone.
-      if (OldBranchCode == BranchCode) {
-        continue;
-      }
-
+    // Only handle the case where all conditional branches branch to
+    // the same destination.
+    if (TBB != I->getOperand(0).getMBB()) {
       return true;
     }
+
+    ISD::CondCode OldBranchCode = (ISD::CondCode)Cond[0].getImm();
+    // If the conditions are the same, we can leave them alone.
+    if (OldBranchCode == BranchCode) {
+      continue;
+    }
+
+    return true;
   }
 
   return false;

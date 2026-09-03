@@ -41,7 +41,6 @@ namespace SHCP {
     no_modifier,  /// None
     DIR,          /// Direct
     GOT_PCREL,    /// Global Offset Table, PC Relative
-    GOT_PLTOFF,   /// Global Offset Table, Thread Pointer Offset
   };
 
 } // end namespace SHCP

@@ -47,7 +47,7 @@ SuperHConstantPoolConstant *SuperHMachineFunctionInfo::tryGetConstant(
       }
     }
   }
-
+  
   // If not found, create a new one and add it.
   MachineFunction &MF = DAG.getMachineFunction();
   SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
@@ -120,7 +120,7 @@ SuperHConstantPoolSymbol *SuperHMachineFunctionInfo::tryGetConstant(
   unsigned LabelIndex = SFI->createConstIndex();
   return SuperHConstantPoolSymbol::Create(
     *DAG.getContext(), 
-    N->getSymbol(), 
+    N->getSymbol(),
     LabelIndex
   );
 }

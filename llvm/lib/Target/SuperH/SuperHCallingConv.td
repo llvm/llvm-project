@@ -15,7 +15,7 @@
 def CC_SH : CallingConv<[
 
   // All lower size parameters are promoted to 32-bit
-  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+  CCIfType<[i1, i8, i16],  CCPromoteToType<i32>>,
   CCIfType<[i32], CCAssignToReg<[R4, R5, R6, R7]>>,
 ]>;
 
@@ -29,7 +29,7 @@ def RetCC_SH : CallingConv<[
 
   // Anything that doesn't fit in registers should be spilled.
   CCIfType<[i32], CCAssignToStack<4, 4>>,
-  CCIfType<[i64], CCAssignToStack<8, 8>>,
+  CCIfType<[i64], CCAssignToStack<8, 4>>,
 ]>;
 
 //===----------------------------------------------------------------------===//

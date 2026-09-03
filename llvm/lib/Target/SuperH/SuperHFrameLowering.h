@@ -29,7 +29,8 @@ public:
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown,
                           /*StackAlignment*/Align(4),
                           /*LocalAreaOffset*/0,
-                          /*TransAl*/Align(4)),
+                          /*TransAl*/Align(4),
+                          /*StackReal*/false),
       STI(STI) {}
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;

@@ -75,7 +75,7 @@ public:
                                     InlineAsm::ConstraintCode ConstraintCode,
                                     std::vector<SDValue> &OutOps) override;
   
-  bool SelectAddr(SDNode *Root, SDValue N, SDValue &Base, SDValue &Disp);
+  bool SelectAddr(SDNode *Op, SDValue N, SDValue &Base, SDValue &Disp);
 
 
   /// Return a target constant with the specified value of type i4.
@@ -107,7 +107,7 @@ private:
   bool trySelectFrameIndex(SDNode *N);
   bool trySelectWrapper(SDNode *N);
   bool trySelectCMP(SDNode *N);
-  bool trySelectBrcond(SDNode *N);
+  bool trySelectBRCOND(SDNode *N);
   bool trySelectSELECT_CC(SDNode *N);
 
   const SuperHSubtarget *Subtarget;
@@ -136,6 +136,23 @@ bool SuperHDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
   return false;
 }
 
+bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
+                                    SDValue &Disp) {
+  SDLoc dl(Op);
+  auto DL = CurDAG->getDataLayout();
+  MVT PtrVT = getTargetLowering()->getPointerTy(DL);
+
+  // if the address is a frame index get the TargetFrameIndex.
+  if (const FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), PtrVT);
+    Disp = CurDAG->getTargetConstant(0, dl, MVT::i8);
+
+    return true;
+  }
+
+  return false;
+}
+
 
 
 
@@ -151,26 +168,26 @@ bool SuperHDAGToDAGISel::trySelectWrapper(SDNode *N) {
   SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
   SDValue N0 = N->getOperand(0);
 
-  // Global Addresses
-  if (auto *CPV = SFI->tryGetConstant((GlobalAddressSDNode*)N0.getNode(), *CurDAG, SHCP::no_modifier)) {
-    SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0, SHII::MO_DIR);
-    MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVAD8PCR0, DL, MVT::i32, TGA);
+  // External Symbols
+  if (auto *CPV = SFI->tryGetConstant((ExternalSymbolSDNode*)N0.getNode(), *CurDAG, SHCP::no_modifier)) {
+    SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
+    MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLD8PCRn, DL, MVT::i32, TGA);
     ReplaceNode(N, Res);
     return true;
   }
 
-  // External Symbols
-  if (auto *CPV = SFI->tryGetConstant((ExternalSymbolSDNode*)N0.getNode(), *CurDAG, SHCP::no_modifier)) {
-    SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0, SHII::MO_DIR);
-    MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVAD8PCR0, DL, MVT::i32, TGA);
+  // Global Addresses
+  if (auto *CPV = SFI->tryGetConstant((GlobalAddressSDNode*)N0.getNode(), *CurDAG, SHCP::no_modifier)) {
+    SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
+    MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLD8PCRn, DL, MVT::i32, TGA);
     ReplaceNode(N, Res);
     return true;
   }
 
   // Block Addresses
   if (auto *CPV = SFI->tryGetConstant((BlockAddressSDNode*)N0.getNode(), *CurDAG, SHCP::no_modifier)) {
-    SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0, SHII::MO_DIR);
-    MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVAD8PCR0, DL, MVT::i32, TGA);
+    SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
+    MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLD8PCRn, DL, MVT::i32, TGA);
     ReplaceNode(N, Res);
     return true;
   }
@@ -202,31 +219,31 @@ bool SuperHDAGToDAGISel::trySelectCMP(SDNode *N) {
     // TST would be faster in this case.
     if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
       if (C->getSExtValue() == 0) {
-        Res = CurDAG->getMachineNode(SH::TSTRmRn, DL, MVT::i32, LHS, LHS);
+        Res = CurDAG->getMachineNode(SH::TSTRmRn, DL, MVT::Glue, LHS, LHS);
         break;
       }
     }
-    Res = CurDAG->getMachineNode(SH::CMPEQRmRn, DL, MVT::i32, LHS, RHS);
+    Res = CurDAG->getMachineNode(SH::CMPEQRmRn, DL, MVT::Glue, LHS, RHS);
     break;
   }
   case ISD::SETUGE:
   case ISD::SETULT: {
-    Res = CurDAG->getMachineNode(SH::CMPHSRmRn, DL, MVT::i32, LHS, RHS);
+    Res = CurDAG->getMachineNode(SH::CMPHSRmRn, DL, MVT::Glue, LHS, RHS);
     break;
   }
   case ISD::SETOGE:
   case ISD::SETOLT: {
-    Res = CurDAG->getMachineNode(SH::CMPGERmRn, DL, MVT::i32, LHS, RHS);
+    Res = CurDAG->getMachineNode(SH::CMPGERmRn, DL, MVT::Glue, LHS, RHS);
     break;
   }
   case ISD::SETUGT:
   case ISD::SETULE: {
-    Res = CurDAG->getMachineNode(SH::CMPGTRmRn, DL, MVT::i32, LHS, RHS);
+    Res = CurDAG->getMachineNode(SH::CMPGTRmRn, DL, MVT::Glue, LHS, RHS);
     break;
   }
   case ISD::SETOGT:
   case ISD::SETOLE: {
-    Res = CurDAG->getMachineNode(SH::CMPHIRmRn, DL, MVT::i32, LHS, RHS);
+    Res = CurDAG->getMachineNode(SH::CMPHIRmRn, DL, MVT::Glue, LHS, RHS);
     break;
   }
   }
@@ -240,17 +257,12 @@ bool SuperHDAGToDAGISel::trySelectCMP(SDNode *N) {
   return false;
 }
 
-bool SuperHDAGToDAGISel::trySelectBrcond(SDNode *N) {
+bool SuperHDAGToDAGISel::trySelectBRCOND(SDNode *N) {
   SDValue Chain = N->getOperand(0);
   SDValue Dest = N->getOperand(1);
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   SDValue Cmp = N->getOperand(3);
   SDLoc DL(N);
-
-  // NOTE:  The CMP instruction writes implicitly to the T bit of the status
-  //        register, as such, we need to add said copy to our chain to ensure
-  //        scheduling can handle it.
-  Chain = CurDAG->getCopyToReg(Chain, DL, SH::SR, Cmp, SDValue());
 
   // NOTE:  The comparisons just set the T bit, it's up to later instructions
   //        to interpret the T bit as positive or negative.
@@ -263,7 +275,7 @@ bool SuperHDAGToDAGISel::trySelectBrcond(SDNode *N) {
   case ISD::SETUGT:
   case ISD::SETOGT:
     Res = CurDAG->getMachineNode(CBranchForceDelaySlot ? SH::BTS : SH::BT, 
-          DL, MVT::Other, Dest, Chain);
+          DL, MVT::Other, Dest, Chain, Cmp);
     break;
   case ISD::SETNE:
   case ISD::SETULE:
@@ -271,7 +283,7 @@ bool SuperHDAGToDAGISel::trySelectBrcond(SDNode *N) {
   case ISD::SETULT:
   case ISD::SETOLT:
     Res = CurDAG->getMachineNode(CBranchForceDelaySlot ? SH::BFS : SH::BF, 
-          DL, MVT::Other, Dest, Chain);
+          DL, MVT::Other, Dest, Chain, Cmp);
     break;
   }
 
@@ -284,13 +296,6 @@ bool SuperHDAGToDAGISel::trySelectBrcond(SDNode *N) {
   return false;
 }
 
-bool SuperHDAGToDAGISel::trySelectSELECT_CC(SDNode *N) {
-  const SDValue &TrueV = N->getOperand(0);
-  const SDValue &FalseV = N->getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  const SDValue &Cmp = N->getOperand(3);
-  return false;
-}
 
 
 
@@ -336,10 +341,8 @@ bool SuperHDAGToDAGISel::trySelect(SDNode *N) {
     return trySelectWrapper(N);
   case SHISD::CMP:
     return trySelectCMP(N);
-  case SHISD::SELECT_CC:
-    return trySelectSELECT_CC(N);
   case SHISD::BRCOND:
-    return trySelectBrcond(N);
+    return trySelectBRCOND(N);
   default:
     return false;
   }

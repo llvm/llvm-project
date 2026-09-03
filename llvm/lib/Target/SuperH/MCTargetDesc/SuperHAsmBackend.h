@@ -31,17 +31,27 @@ public:
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool IsResolved) override;
-  bool tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target, uint64_t &FixedValue,
-                               bool IsResolved);
+  std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
+                                    uint64_t &) override;
 	
 	std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
-
+  
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
+  
+
+  bool tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
+                               const MCValue &Target, uint64_t &FixedValue,
+                               bool IsResolved);
+
+  unsigned adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
+                            const MCValue &Target, uint64_t Value,
+                            bool IsResolved, MCContext &Ctx,
+                            const MCSubtargetInfo *STI) const;
 };
 } // namespace llvm
 

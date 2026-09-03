@@ -19,6 +19,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/CommandLine.h"
@@ -29,14 +30,15 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 
-SuperHAsmBackend::SuperHAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI) : MCAsmBackend(STI.getTargetTriple().isLittleEndian()
+SuperHAsmBackend::SuperHAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI) : 
+                  MCAsmBackend(STI.getTargetTriple().isLittleEndian()
                          ? llvm::endianness::little
                          : llvm::endianness::big),
-      STI(STI), OSABI(OSABI) {
-
+                  STI(STI), OSABI(OSABI) {
 }
 
 bool SuperHAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
@@ -47,7 +49,7 @@ bool SuperHAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   // text section (otherwise we have unaligned instructions, and thus have
   // far bigger problems), so just write NOP instructions.
   uint64_t NumNops = Count / 2;
-  for (uint64_t i = 0; i != NumNops; ++i)
+  for (uint64_t i = 0; i != NumNops; i++)
     support::endian::write(OS, SHNopEnc, Endian);
 
   // Write any straggling zeros needed.
@@ -129,47 +131,61 @@ MCFixupKindInfo SuperHAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-void SuperHAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                 const MCValue &Target, uint8_t *Data,
-                                 uint64_t Value, bool IsResolved) {
-  
-  // Handle Relocations
-  IsResolved = tryAddReloc(F, Fixup, Target, Value, IsResolved);
-  MCFixupKind Kind = Fixup.getKind();
-  if (mc::isRelocation(Kind)) 
-    return;
+std::optional<bool> SuperHAsmBackend::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
+                                                    MCValue &Target, uint64_t &FixedValue) {
+  return {};
+}
 
-  // Handle non-relocations
-  MCContext &Ctx = getContext();
-  MCFixupKindInfo Info = getFixupKindInfo(Kind);
-  if (!Value)
-    return; // No encoding change.
+unsigned SuperHAsmBackend::adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
+                                            const MCValue &Target, uint64_t Value,
+                                            bool IsResolved, MCContext &Ctx,
+                                            const MCSubtargetInfo *STI) const {
+  unsigned Kind = Fixup.getKind();
+  int64_t Addend = Target.getConstant();
 
-  unsigned NumBits = Info.TargetSize + Info.TargetOffset;
-  unsigned NumBytes = (NumBits / 8) + ((NumBits % 8) == 0 ? 0 : 1);
-  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
-         "Invalid fixup offset!");
+  switch (Kind) {
+  default:
+    return Value;
 
-  // Flip the bits if neccesary, then spit them out
-  Value <<= Info.TargetOffset;
-  bool SwapValue = Endian == llvm::endianness::big;
-  for (unsigned i = 0; i < NumBytes; ++i) {
-    unsigned Idx = SwapValue ? (NumBytes - 1 - i) : i;
-    uint8_t mask = (((Value >> (i * 8)) & 0xff));
-    Data[Idx] |= mask;
+  case SH::fixup_got_low16:
+    return (Value+Addend) & 65535;
+
+  case SH::fixup_got_medlow16:
+    return ((Value+Addend) >> 16) & 65535;
+
+  case SH::fixup_got_medhi16:
+    return ((Value+Addend) >> 32) & 65535;
+
+  case SH::fixup_got_hi16:
+    return ((Value+Addend) >> 48) & 65535;
+
+  case SH::fixup_got10by4:
+    return (Value+Addend) / 4;
+
+  case SH::fixup_got10by8:
+    return (Value+Addend) / 8;
+
+  case SH::fixup_relative:
+  case SH::fixup_relative64:
+    return Value+Addend;
+
+  case SH::fixup_dir32:
+    return (Value+Addend);
+
+  case SH::fixup_rel32:
+    return Value+Addend;
   }
 }
 
 bool SuperHAsmBackend::tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target, uint64_t &FixedValue,
                                bool IsResolved) {
-  
   MCValue PCITarget; // PC-Indirect Target
 
   // Get indirect target location.
   switch(Fixup.getKind()) {
   default: 
-    return {};
+    return false;
 
   case FK_Data_1:
   case FK_Data_2:
@@ -186,7 +202,7 @@ bool SuperHAsmBackend::tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
   if (!PCITarget.getAddSym())
     return false;
 
-  // Evaluate as ELF.
+  // Evaluate addend as ELF.
   auto &SA = static_cast<const MCSymbolELF &>(*PCITarget.getAddSym());
   if (SA.isUndefined())
     return false;
@@ -207,6 +223,39 @@ bool SuperHAsmBackend::tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
   FixedValue -= (Asm->getFragmentOffset(F) + Fixup.getOffset());
   FixedValue /= 4; // Values are aligned to 4 bytes.
   return true;
+}
+
+void SuperHAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                                 const MCValue &Target, uint8_t *Data,
+                                 uint64_t Value, bool IsResolved) {
+  
+  // Handle Relocations
+  IsResolved = tryAddReloc(F, Fixup, Target, Value, IsResolved);
+  MCFixupKind Kind = Fixup.getKind();
+  if (mc::isRelocation(Kind)) 
+    return;
+
+  // Handle non-relocations
+  MCContext &Ctx = getContext();
+  MCFixupKindInfo Info = getFixupKindInfo(Kind);
+  Value = adjustFixupValue(*Asm, Fixup, Target, Value, IsResolved, 
+                           Ctx, getSubtargetInfo(F));
+
+  if (!Value)
+    return; // No encoding change.
+
+  unsigned NumBits = Info.TargetSize + Info.TargetOffset;
+  unsigned NumBytes = (NumBits / 8) + ((NumBits % 8) == 0 ? 0 : 1);
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
+
+  // Flip the bits if neccesary, then spit them out
+  Value <<= Info.TargetOffset;
+  bool SwapValue = Endian == llvm::endianness::big;
+  for (unsigned i = 0; i < NumBytes; ++i) {
+    unsigned Idx = SwapValue ? (NumBytes - 1 - i) : i;
+    Data[Idx] |= uint8_t(((Value >> (i * 8)) & 0xff));
+  }
 }
 
 std::unique_ptr<MCObjectTargetWriter> 

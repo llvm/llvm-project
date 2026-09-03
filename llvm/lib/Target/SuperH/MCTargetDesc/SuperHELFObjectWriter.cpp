@@ -50,9 +50,19 @@ unsigned SuperHELFObjectWriter::getRelocType(const MCFixup &Fixup,
   switch ((unsigned)Fixup.getKind()) { 
   case FK_Data_1:
   case FK_Data_2:
-  case FK_Data_4:
   case FK_Data_8:
-    return ELF::R_SH_NONE;
+    return 0;
+  
+  case FK_Data_4: {
+    switch (Spec) {
+    case SH::S_None:
+      return ELF::R_SH_DIR32;
+    case SH::S_PCREL:
+      return ELF::R_SH_REL32;
+    default:
+      return SH::S_DIR;
+    }
+  }
 
   case SH::fixup_got32:
     return ELF::R_SH_GOT32;
@@ -172,7 +182,8 @@ unsigned SuperHELFObjectWriter::getRelocType(const MCFixup &Fixup,
 
 bool SuperHELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
                                                    unsigned Type) const {
-  return true;
+
+  return false;
 }
 
 std::unique_ptr<MCObjectTargetWriter>

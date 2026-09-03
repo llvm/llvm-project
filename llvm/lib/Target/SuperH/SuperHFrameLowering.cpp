@@ -26,6 +26,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cstdint>
 
 #define DEBUG_TYPE "sh-framelowering"
 
@@ -58,16 +59,30 @@ static bool emitSPAdj(MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasic
     return false;
 
   Register SP = RII.getStackRegister();
+  Register FP = RII.getFrameRegister();
 
-  if (AdjValue < 255) {
+  if (abs(AdjValue) < 255) {
 
-    // Fast path, emit a single immediate add.
-    //    Emit add #-(size),r15
-    BuildMI(MBB, MBBI, dl, TII.get(SH::ADDI8Rn), SP)
-      .addReg(SP)
-      .addImm((int)AdjValue);
+    if (AdjValue < 0) {
 
-    return true;
+      // Fast path, emit a single immediate add.
+      //    Emit add #-(size),r15
+      BuildMI(MBB, MBBI, dl, TII.get(SH::ADDI8Rn), SP)
+        .addReg(SP)
+        .addImm((int)AdjValue);
+      return true;
+    }
+
+    if (AdjValue > 0) {
+
+      // Fast path, emit a single immediate add.
+      //    Emit add #(size),r14
+      BuildMI(MBB, MBBI, dl, TII.get(SH::ADDI8Rn), FP)
+        .addReg(FP)
+        .addImm((int)AdjValue);
+      return true;
+    }
+
   }
 
   // Slow path, shift 8 bits at a time into r0.
@@ -115,67 +130,48 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &M
   const SuperHRegisterInfo &RII = *STI.getRegisterInfo();
   const MCContext &Ctx = MF.getContext();
   DebugLoc DL = (MBBI != MBB.end()) ? MBBI->getDebugLoc() : DebugLoc();
-  bool HasFP = hasFP(MF);
 
   Register SP = RII.getStackRegister();
   Register FP = RII.getFrameRegister();
   Register GOT = RII.getGOTRegister();
 
+  LLVM_DEBUG(dbgs() << "Emitting prologue...\n");
+
   // Early exit if we have no frame pointer.
-  if (!HasFP) {
+  if (!hasFP(MF)) {
     return;
   }
 
-  // Realign stack
+  // Realign stack to 32-bit offsets.
   uint32_t StackSize = alignSPAdjust(MFI.getStackSize());
   MFI.setStackSize(StackSize);
   
+  // Store GOT
   if (STI.isPositionIndependent()) {
-    // Position Independent Prologue
-
-    // 1. Store GOT to stack and load local GOT.
     if (auto *GOTSym = MF.getPICBaseSymbol()) {
       BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLRmRndeci), SP)
         .addReg(GOT)
         .setMIFlag(MachineInstr::FrameSetup);
     }
+  }
 
-    // 2. Establish Stack Frame
-    //    mov.l r14,@-r15
-    //    add <stackadj>,r15
-    //    mov r15,r14
-    BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLRmRndeci), FP)
+  // Establish Stack Frame
+  //    mov.l r14,@-r15
+  //    add <stackadj>,r15
+  //    mov r15,r14
+  BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLRmRndeci), SP)
+    .addReg(FP)
+    .setMIFlag(MachineInstr::FrameSetup);
+  emitSPAdj(MF, MBB, MBBI, -(int32_t)StackSize);
+  BuildMI(MBB, MBBI, DL, TII.get(SH::MOVRmRn), FP)
+    .addReg(SP)
+    .setMIFlag(MachineInstr::FrameSetup);
+
+  // Save return address to stack.
+  if (MFI.hasCalls()) {
+    BuildMI(MBB, MBBI, DL, TII.get(SH::STSLPRRndeci))
       .addReg(SP)
       .setMIFlag(MachineInstr::FrameSetup);
-    emitSPAdj(MF, MBB, MBBI, -(int32_t)StackSize);
-    BuildMI(MBB, MBBI, DL, TII.get(SH::MOVRmRn), SP)
-      .addReg(FP)
-      .setMIFlag(MachineInstr::FrameSetup);
-
-    // 4. Save return address to stack.
-    if (MFI.hasCalls()) {
-      BuildMI(MBB, MBBI, DL, TII.get(SH::STSLPRRndeci))
-        .addReg(SP)
-        .setMIFlag(MachineInstr::FrameSetup);
-    }
-
-  } else {
-    // Position Dependent Prologue
-
-    // 1. Establish Frame Pointer
-    BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLRmRndeci), SP)
-      .addReg(FP)
-      .setMIFlag(MachineInstr::FrameSetup);
-
-    // 2. Create new stack frame
-    emitSPAdj(MF, MBB, MBBI, -(int32_t)StackSize);
-
-    // 3. Save return address to stack.
-    if (MFI.hasCalls()) {
-      BuildMI(MBB, MBBI, DL, TII.get(SH::STSLPRRndeci))
-        .addReg(SP)
-        .setMIFlag(MachineInstr::FrameSetup);
-    }
   }
 }
 
@@ -183,6 +179,8 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
   const SuperHRegisterInfo &RII = *STI.getRegisterInfo();
   Register SP = RII.getStackRegister();
   Register FP = RII.getFrameRegister();
+
+  LLVM_DEBUG(dbgs() << "Emitting epilogue...\n");
 
   // Early exit if we have no frame pointer.
   if (!hasFP(MF)) {
@@ -207,8 +205,15 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
     }
 
     // 2. Delete stack frame, restoring stack pointer.
-    if (StackSize > 0)
+    if (StackSize > 0) {
       emitSPAdj(MF, MBB, MBBI, StackSize);
+      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVRmRn), FP)
+        .addReg(SP)
+        .setMIFlag(MachineInstr::FrameDestroy);
+      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLRminciRn), SP)
+        .addReg(FP)
+        .setMIFlag(MachineInstr::FrameDestroy);
+    }
 
   } else {
 
@@ -220,13 +225,24 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
     }
 
     // 2. Delete stack frame, restoring stack pointer.
-    if (StackSize > 0)
+    //    add <stackadj>,r14
+    //    mov r14,r15
+    //    mov.l @r15+,r14
+    if (StackSize > 0) {
       emitSPAdj(MF, MBB, MBBI, StackSize);
+      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVRmRn), FP)
+        .addReg(SP)
+        .setMIFlag(MachineInstr::FrameDestroy);
+      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLRminciRn), SP)
+        .addReg(FP)
+        .setMIFlag(MachineInstr::FrameDestroy);
+    }
   }
 }
 bool SuperHFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   
+  LLVM_DEBUG(dbgs() << "Spilling " << CSI.size() << " registers...\n");
   if (CSI.empty()) {
     return false;
   }
@@ -251,6 +267,7 @@ bool SuperHFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, Mach
 bool SuperHFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                                    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   
+  LLVM_DEBUG(dbgs() << "Restoring " << CSI.size() << " registers...\n");
   if (CSI.empty()) {
       return false;
   }
@@ -262,7 +279,9 @@ bool SuperHFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Ma
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   Register SP = RII.getStackRegister();
 
-  for (const CalleeSavedInfo &I : CSI) {
+
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
+
     MCRegister Reg = I.getReg();
     BuildMI(MBB, MI, DL, TII.get(SH::MOVLRminciRn), SP)
       .addReg(Reg)
@@ -316,7 +335,7 @@ bool SuperHFrameLowering::hasFPImpl(const MachineFunction &MF) const {
 
 bool SuperHFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return !MFI.hasVarSizedObjects();
+  return hasFP(MF) && !MFI.hasVarSizedObjects();
 }
 
 void SuperHFrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,

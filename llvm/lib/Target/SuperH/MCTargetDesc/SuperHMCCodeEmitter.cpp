@@ -12,15 +12,14 @@
 
 
 #include "SuperHFixupKinds.h"
-#include "SuperHMCAsmInfo.h"
 #include "SuperHMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
@@ -30,15 +29,14 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 
 
 using namespace llvm;
 
-#define DEBUG_TYPE "mccodeemitter"
+#define DEBUG_TYPE "sh-mccodeemitter"
 
 STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 
@@ -70,11 +68,15 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
-  unsigned getBranchTargetOpValue(const MCInst &MI, const MCExpr *Expr,
+  unsigned getExprOpValue(const MCInst &MI, const MCExpr *Expr,
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
 
-  unsigned getExprOpValue(const MCInst &MI, const MCExpr *Expr,
+  unsigned getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
+                          SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI) const;
+
+  unsigned getPCRelOpValue(const MCInst &MI, unsigned OpNo,
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
 
@@ -122,7 +124,6 @@ void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                            SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-
   uint64_t OpCode = getBinaryCodeForInstr(MI, Fixups, STI);
 
   // NOTE:  All base instructions are 16-bit in SH ASM
@@ -141,11 +142,16 @@ void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,
   ++MCNumEmitted;
 }
 
-unsigned SuperHMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, 
-                                                     const MCExpr *Expr,
+unsigned SuperHMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
                                                      SmallVectorImpl<MCFixup> &Fixups,
                                                      const MCSubtargetInfo &STI) const {
-  return getExprOpValue(MI, Expr, Fixups, STI);
+  return getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
+}
+
+unsigned SuperHMCCodeEmitter::getPCRelOpValue(const MCInst &MI, unsigned OpNo,
+                                              SmallVectorImpl<MCFixup> &Fixups,
+                                              const MCSubtargetInfo &STI) const {
+  return getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
 }
 
 unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Expr,
@@ -156,13 +162,21 @@ unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Exp
 
   MCExpr::ExprKind Kind = Expr->getKind();
 
-  // Binary Op
-  if (Kind == MCExpr::Binary) {
-    Expr = static_cast<const MCBinaryExpr *>(Expr)->getLHS();
-    Kind = Expr->getKind();
+  switch(Kind) {
+  case MCExpr::ExprKind::Binary: {
+    unsigned Res = getExprOpValue(MI, static_cast<const MCBinaryExpr *>(Expr)->getLHS(), Fixups, STI);
+    Res += getExprOpValue(MI, static_cast<const MCBinaryExpr *>(Expr)->getRHS(), Fixups, STI);
+    return Res;
   }
-
-  if (Kind == MCExpr::SymbolRef) {
+  case MCExpr::ExprKind::Target: {
+    llvm_unreachable("TODO"); 
+  }
+  case MCExpr::ExprKind::Specifier: {
+    const MCSpecifierExpr *Spec = static_cast<const MCSpecifierExpr *>(Expr);
+    Fixups.push_back(MCFixup::create(0, Spec, Spec->getSpecifier()));
+    return 0;
+  }
+  case MCExpr::ExprKind::SymbolRef: {
 
     // NOTE:  A few (DSP and SH2A) instructions are 32-bits wide.
     //        We handle those quite crudely.
@@ -170,21 +184,23 @@ unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Exp
     Fixups.push_back(MCFixup::create(0, Expr, isOpcode32(OpCode) ? FK_Data_4 : FK_Data_2, true));
     return 0;
   }
-
-  // Constant immediate.
-  int64_t Result;
-  if (Expr->evaluateAsAbsolute(Result))
-    return Result;
-
-  return 0;
+  case MCExpr::ExprKind::Constant: {
+    const MCConstantExpr *Const = static_cast<const MCConstantExpr *>(Expr);
+    return Const->getValue();
+  }
+  default:
+    llvm_unreachable("expression not supported!");
+  }
 }
 
+/// getMachineOpValue - Return binary encoding of operand. If the machine
+/// operand requires relocation, record the relocation and return zero.
 unsigned SuperHMCCodeEmitter::getMachineOpValue(const MCInst &MI, 
                              const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const {
   if (MO.isReg())
-      return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
+    return Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
 
   if (MO.isImm())
     return MO.getImm();
