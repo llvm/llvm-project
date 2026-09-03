@@ -1897,23 +1897,6 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   }
 }
 
-void SITargetLowering::CollectTargetIntrinsicOperands(
-    const CallInst &I, SmallVectorImpl<SDValue> &Ops, SelectionDAG &DAG) const {
-  switch (cast<IntrinsicInst>(I).getIntrinsicID()) {
-  case Intrinsic::amdgcn_addrspacecast_nonnull: {
-    // The DAG's ValueType loses the addrspaces.
-    // Add them as 2 extra Constant operands "from" and "to".
-    unsigned SrcAS = I.getOperand(0)->getType()->getPointerAddressSpace();
-    unsigned DstAS = I.getType()->getPointerAddressSpace();
-    Ops.push_back(DAG.getTargetConstant(SrcAS, SDLoc(), MVT::i32));
-    Ops.push_back(DAG.getTargetConstant(DstAS, SDLoc(), MVT::i32));
-    break;
-  }
-  default:
-    break;
-  }
-}
-
 bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
                                             SmallVectorImpl<Value *> &Ops,
                                             Type *&AccessTy) const {
@@ -9410,23 +9393,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   const AMDGPUTargetMachine &TM =
       static_cast<const AMDGPUTargetMachine &>(getTargetMachine());
 
-  unsigned DestAS, SrcAS;
-  SDValue Src;
-  bool IsNonNull = false;
-  if (const auto *ASC = dyn_cast<AddrSpaceCastSDNode>(Op)) {
-    SrcAS = ASC->getSrcAddressSpace();
-    Src = ASC->getOperand(0);
-    DestAS = ASC->getDestAddressSpace();
-    IsNonNull = ASC->getFlags().hasNonNull();
-  } else {
-    assert(Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-           Op.getConstantOperandVal(0) ==
-               Intrinsic::amdgcn_addrspacecast_nonnull);
-    Src = Op->getOperand(1);
-    SrcAS = Op->getConstantOperandVal(2);
-    DestAS = Op->getConstantOperandVal(3);
-    IsNonNull = true;
-  }
+  const auto *ASC = cast<AddrSpaceCastSDNode>(Op);
+  unsigned SrcAS = ASC->getSrcAddressSpace();
+  SDValue Src = ASC->getOperand(0);
+  unsigned DestAS = ASC->getDestAddressSpace();
+  bool IsNonNull = ASC->getFlags().hasNonNull();
 
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
 
@@ -11641,8 +11612,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     return SDValue();
   }
-  case Intrinsic::amdgcn_addrspacecast_nonnull:
-    return lowerADDRSPACECAST(Op, DAG);
   case Intrinsic::amdgcn_readlane:
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_writelane:

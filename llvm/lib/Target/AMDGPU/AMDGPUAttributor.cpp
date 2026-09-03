@@ -780,32 +780,7 @@ private:
       }
     }
 
-    // Finally check callees.
-
-    // This is called on each callee; false means callee shouldn't have
-    // no-flat-scratch-init.
-    auto CheckForNoFlatScratchInit = [&](Instruction &I) {
-      const auto &CB = cast<CallBase>(I);
-      const Function *Callee = CB.getCalledFunction();
-
-      // Callee == 0 for inline asm or indirect call with known callees.
-      // In the latter case, updateImpl() already checked the callees and we
-      // know their FLAT_SCRATCH_INIT bit is set.
-      // If function has indirect call with unknown callees, the bit is
-      // already removed in updateImpl() and execution won't reach here.
-      if (!Callee)
-        return true;
-
-      return Callee->getIntrinsicID() !=
-             Intrinsic::amdgcn_addrspacecast_nonnull;
-    };
-
-    UsedAssumedInformation = false;
-    // If any callee is false (i.e. need FlatScratchInit),
-    // checkForAllCallLikeInstructions returns false, in which case this
-    // function returns true.
-    return !A.checkForAllCallLikeInstructions(CheckForNoFlatScratchInit, *this,
-                                              UsedAssumedInformation);
+    return false;
   }
 };
 

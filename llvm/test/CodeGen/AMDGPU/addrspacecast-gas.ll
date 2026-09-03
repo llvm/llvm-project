@@ -90,7 +90,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 ; GFX1250-GISEL-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    s_endpgm
-  %stof = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) %ptr)
+  %stof = addrspacecast nonnull ptr addrspace(5) %ptr to ptr
   store volatile i32 0, ptr %stof
   ret void
 }
@@ -144,7 +144,7 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast_nonnull(ptr %ptr) {
 ; GFX1250-GISEL-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    s_endpgm
-  %ftos = call ptr addrspace(5) @llvm.amdgcn.addrspacecast.nonnull.p5.p0(ptr %ptr)
+  %ftos = addrspacecast nonnull ptr %ptr to ptr addrspace(5)
   store volatile i32 0, ptr addrspace(5) %ftos
   ret void
 }
