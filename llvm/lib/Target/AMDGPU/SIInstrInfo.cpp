@@ -628,6 +628,13 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   }
 
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&LdSt)) {
+    // A sub-dword access is not described by a dword index and width alone -
+    // the bit position within the dword is part of the address - and has no
+    // entry in the width table. Report it as opaque so that callers such as
+    // areMemAccessesTriviallyDisjoint() fall back to assuming an overlap.
+    if (!AMDGPU::getVLdStIdxOpcodeInfoByOpcode(LdSt.getOpcode()))
+      return false;
+
     BaseOp = &LdStIdx->getIdxOp();
     OffsetOp = &LdStIdx->getOffsetOp();
 
@@ -5386,6 +5393,23 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (isImage(MI) && MI.memoperands_empty() && MI.mayLoadOrStore()) {
     ErrInfo = "missing memory operand from image instruction.";
     return false;
+  }
+
+  // The lowering of a VGPR "as memory" indexed access relies on it having
+  // exactly one memory operand, since a sub-dword store synthesizes a load
+  // operand from it, and on the index carrying no subregister, since
+  // SITargetLowering::finalizeLowering rewrites it in place to M0.
+  if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    if (MI.getNumMemOperands() != 1) {
+      ErrInfo = "v_load/store_idx should have exactly one memory operand.";
+      return false;
+    }
+
+    const MachineOperand &IdxOp = LdStIdx->getIdxOp();
+    if (IdxOp.isReg() && IdxOp.getSubReg() != 0) {
+      ErrInfo = "v_load/store_idx register index must not have a subregister.";
+      return false;
+    }
   }
 
   // Make sure the register classes are correct.
@@ -11214,7 +11238,8 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
   // A VGPR ("as memory") indexed load is always divergent: it reads the wave's
   // per-lane view of its vector registers, so even a uniform index yields a
   // per-lane (divergent) value.
-  if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD)
+  if (Opcode == AMDGPU::G_AMDGPU_REG_LOAD ||
+      Opcode == AMDGPU::G_AMDGPU_REG_LOAD_BITS)
     return ValueUniformity::NeverUniform;
 
   // Loads from the private and flat address spaces are divergent, because

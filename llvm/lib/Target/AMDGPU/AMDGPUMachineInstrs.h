@@ -37,7 +37,10 @@ public:
   unsigned getBitWidth() const;
 
   static bool classof(const MachineInstr *MI) {
-    return AMDGPU::getVLdStIdxOpcodeInfoByOpcode(MI->getOpcode()) != nullptr;
+    unsigned Opc = MI->getOpcode();
+    if (Opc == AMDGPU::V_LOAD_IDX_BITS || Opc == AMDGPU::V_STORE_IDX_BITS)
+      return true;
+    return AMDGPU::getVLdStIdxOpcodeInfoByOpcode(Opc) != nullptr;
   }
 };
 
@@ -47,8 +50,11 @@ public:
   static unsigned getOpcodeForBitWidth(unsigned Bits);
 
   static bool classof(const MachineInstr *MI) {
+    unsigned Opc = MI->getOpcode();
+    if (Opc == AMDGPU::V_LOAD_IDX_BITS)
+      return true;
     const AMDGPU::VLdStIdxOpcodeInfo *Info =
-        AMDGPU::getVLdStIdxOpcodeInfoByOpcode(MI->getOpcode());
+        AMDGPU::getVLdStIdxOpcodeInfoByOpcode(Opc);
     return Info && !Info->IsStore;
   }
 };
@@ -59,8 +65,11 @@ public:
   static unsigned getOpcodeForBitWidth(unsigned Bits);
 
   static bool classof(const MachineInstr *MI) {
+    unsigned Opc = MI->getOpcode();
+    if (Opc == AMDGPU::V_STORE_IDX_BITS)
+      return true;
     const AMDGPU::VLdStIdxOpcodeInfo *Info =
-        AMDGPU::getVLdStIdxOpcodeInfoByOpcode(MI->getOpcode());
+        AMDGPU::getVLdStIdxOpcodeInfoByOpcode(Opc);
     return Info && Info->IsStore;
   }
 };

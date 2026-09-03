@@ -123,3 +123,69 @@ body:             |
     }
   }
 }
+
+// A sub-dword access is not described by a dword index and width alone - the
+// bit position within the dword is part of the address - so these pseudos carry
+// no entry in the width table, deliberately. getMemOperandsWithOffsetWidth must
+// decline to describe one rather than reaching getBitWidth() and the
+// llvm_unreachable behind it. With assertions off that unreachable is UB, and
+// the caller it would reach through is an aliasing decision, so the failure
+// would be a garbage width silently declaring two overlapping accesses
+// disjoint.
+//
+// Note the class does match these pseudos, so the dyn_cast is not what protects
+// the call; the width-table lookup inside it is.
+TEST_F(VGPRAsMemoryTest, SubDwordAccessHasNoDescribableWidth) {
+  StringRef MIRString = R"MIR(
+name: width
+body:             |
+  bb.0:
+    liveins: $m0, $sgpr0, $vgpr0
+
+    $vgpr1 = V_LOAD_IDX_B32 $m0, 0, implicit $exec :: (load (s32), addrspace 13)
+    $vgpr2 = V_LOAD_IDX_BITS $m0, 0, 8, $sgpr0, 0, implicit $exec :: (load (s8), addrspace 13)
+    $vgpr3 = V_LOAD_IDX_BITS $m0, 0, 8, $sgpr0, 0, implicit $exec :: (load (s8), addrspace 13)
+    S_ENDPGM 0
+...
+)MIR";
+
+  ASSERT_TRUE(parseMIR(MIRString));
+  MachineFunction &MF = getMF("width");
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  MachineBasicBlock *MBB = MF.getBlockNumbered(0);
+
+  auto Describe = [&](const MachineInstr &MI) {
+    SmallVector<const MachineOperand *, 4> BaseOps;
+    int64_t Offset = 0;
+    bool OffsetIsScalable = false;
+    LocationSize Width = LocationSize::precise(0);
+    return TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
+                                              OffsetIsScalable, Width, TRI);
+  };
+
+  const MachineInstr *FirstBits = nullptr;
+  const MachineInstr *SecondBits = nullptr;
+  for (MachineInstr &MI : *MBB) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::V_LOAD_IDX_B32:
+      // A whole-dword access is describable: dword index plus a known width.
+      EXPECT_TRUE(Describe(MI));
+      break;
+    case AMDGPU::V_LOAD_IDX_BITS:
+      EXPECT_FALSE(Describe(MI))
+          << "a sub-dword access must be reported as opaque";
+      (FirstBits ? SecondBits : FirstBits) = &MI;
+      break;
+    default:
+      break;
+    }
+  }
+
+  // And the caller that would otherwise reach the unreachable: with no width to
+  // compare, two sub-dword accesses have to be assumed to overlap.
+  ASSERT_NE(FirstBits, nullptr);
+  ASSERT_NE(SecondBits, nullptr);
+  EXPECT_FALSE(TII->areMemAccessesTriviallyDisjoint(*FirstBits, *SecondBits));
+}

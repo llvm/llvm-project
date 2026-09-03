@@ -3089,7 +3089,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     return;
   }
   case AMDGPU::G_AMDGPU_REG_LOAD:
-  case AMDGPU::G_AMDGPU_REG_STORE: {
+  case AMDGPU::G_AMDGPU_REG_STORE:
+  case AMDGPU::G_AMDGPU_REG_LOAD_BITS:
+  case AMDGPU::G_AMDGPU_REG_STORE_BITS: {
     // The dword index (operand 1) must be uniform; a divergent index needs a
     // waterfall loop.
     applyDefaultMapping(OpdMapper);
@@ -4496,10 +4498,22 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case AMDGPU::G_AMDGPU_REG_LOAD:
-  case AMDGPU::G_AMDGPU_REG_STORE: {
+  case AMDGPU::G_AMDGPU_REG_STORE:
+  case AMDGPU::G_AMDGPU_REG_LOAD_BITS:
+  case AMDGPU::G_AMDGPU_REG_STORE_BITS: {
     // data/result is a VGPR value; the dword index is uniform (SGPR).
     OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
     OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+    const unsigned Opc = MI.getOpcode();
+    if (Opc == AMDGPU::G_AMDGPU_REG_LOAD_BITS) {
+      // {dst, index, bitsize, bitoffset, is_sext_load}
+      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+      OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
+    } else if (Opc == AMDGPU::G_AMDGPU_REG_STORE_BITS) {
+      // {value, index, mask}
+      OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+    }
     break;
   }
   case AMDGPU::G_AMDGPU_BUFFER_LOAD:

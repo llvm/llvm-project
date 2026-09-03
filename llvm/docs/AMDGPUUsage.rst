@@ -1365,6 +1365,13 @@ supported for the ``amdgcn`` target.
   of ``v3``. Storing 8 bytes to address ``32`` overwrites the contents of
   ``v[8:9]``.
 
+  An access narrower than a dword is implemented by extracting or inserting the
+  bits within the dword that contains it, so it must not straddle a dword
+  boundary: 8-bit accesses are unrestricted, while 16-bit accesses must be
+  2-byte aligned. Wider accesses must be a whole number of dwords. Anything
+  else, such as an under-aligned 16-bit access, is reported as an error rather
+  than miscompiled.
+
   Use of this address space by frontends is strongly discouraged. It has unusual
   and subtle lifetime rules due to the potential for interaction with normal
   register allocation. It exists primarily for internal purposes of the backend,

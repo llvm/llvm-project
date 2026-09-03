@@ -13494,7 +13494,7 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   EVT MemVT = MemOp->getMemoryVT();
   unsigned BitWidth = MemVT.getSizeInBits();
 
-  // Only dword-aligned whole-dword, non-extending/non-truncating accesses are
+  // Dword-aligned whole-dword and naturally aligned 8-/16-bit accesses are
   // implemented. Reject anything else with a diagnostic (replacing the value
   // with poison) instead of failing instruction selection. Both callers -
   // operation legalization and the pre-ISel combine - replace the node with
@@ -13504,7 +13504,8 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         F,
         "unsupported access of VGPR 'as memory' address space (13); only "
-        "dword-aligned whole-dword loads and stores are implemented",
+        "dword-aligned whole-dword and naturally aligned 8-/16-bit loads and "
+        "stores are implemented",
         DL.getDebugLoc()));
     if (isa<StoreSDNode>(MemOp))
       return MemOp->getChain();
@@ -13512,15 +13513,126 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
         {DAG.getPOISON(Op.getValueType()), MemOp->getChain()}, DL);
   };
 
-  if (BitWidth < 32)
-    return reportUnsupported();
+  // Handle bytes and aligned shorts. These become a bit-field extract out of
+  // the containing dword (loads), or a read-modify-write of it (stores); see
+  // AMDGPULowerIdxOps.
+  if (BitWidth < 32) {
+    if (BitWidth != 8 && BitWidth != 16)
+      return reportUnsupported();
 
-  // The dword index built below is the pointer shifted right by two, which
-  // discards the low two bits rather than accounting for them, so an
-  // under-aligned access would silently reach the dword containing the address
-  // instead of the bytes asked for.
+    // The access becomes a bit-field extract from (or insert into) the dword
+    // containing it, so it must not straddle a dword boundary. An 8-bit access
+    // never can; a 16-bit one only if it is 2-byte aligned.
+    if (MemOp->getAlign() < Align(BitWidth / 8))
+      return reportUnsupported();
+
+    // Bail out for sub-dword types we cannot handle.
+    if (auto *Load = dyn_cast<LoadSDNode>(MemOp)) {
+      if (Load->getExtensionType() != ISD::NON_EXTLOAD &&
+          Load->getValueType(0).getSizeInBits() > 32)
+        return reportUnsupported();
+    } else {
+      auto *Store = cast<StoreSDNode>(MemOp);
+      if (Store->isTruncatingStore() &&
+          Store->getValue().getValueType() != MVT::i16 &&
+          Store->getValue().getValueType() != MVT::i32)
+        return reportUnsupported();
+    }
+
+    SDValue Ptr = MemOp->getBasePtr();
+
+    // Split the address into base and constant offset.
+    SDValue Base;
+    int32_t Offset;
+    if (DAG.isBaseWithConstantOffset(Ptr)) {
+      Base = Ptr.getOperand(0);
+      Offset = cast<ConstantSDNode>(Ptr.getOperand(1))->getSExtValue();
+    } else if (auto *C = dyn_cast<ConstantSDNode>(Ptr)) {
+      Base = DAG.getConstant(0, DL, MVT::i32);
+      Offset = C->getSExtValue();
+    } else {
+      Base = Ptr;
+      Offset = 0;
+    }
+
+    // Determine the bit-offset, optimizing the case where the LSBs are
+    // constant.
+    KnownBits BaseKB;
+    if (Offset == 0 && MemOp->getAlign() >= Align(4)) {
+      BaseKB = KnownBits::makeConstant(APInt::getZero(2));
+    } else {
+      BaseKB = DAG.computeKnownBits(Base).trunc(2);
+    }
+
+    SDValue BitOffset;
+    if (BaseKB.isConstant()) {
+      Offset += BaseKB.getConstant().getZExtValue();
+      BitOffset = DAG.getConstant((Offset & 3) * 8, DL, MVT::i32);
+    } else {
+      // V_{LOAD,STORE}_IDX_BITS only care about the least 5 bits of the bit
+      // offset, so we do not have to mask off the high bits.
+      BitOffset = DAG.getNode(ISD::SHL, DL, MVT::i32, Ptr,
+                              DAG.getConstant(3, DL, MVT::i32));
+    }
+
+    SDValue Index = DAG.getNode(ISD::SRL, DL, MVT::i32, Ptr,
+                                DAG.getConstant(2, DL, MVT::i32));
+    SDValue BitSizeImm = DAG.getConstant(BitWidth, DL, MVT::i32);
+    SDValue Chain = MemOp->getChain();
+
+    if (auto *StoreOp = dyn_cast<StoreSDNode>(MemOp)) {
+      SDValue Value = StoreOp->getValue();
+      EVT ValVT = Value.getValueType();
+      if (!ValVT.isScalarInteger())
+        Value = DAG.getNode(
+            ISD::BITCAST, DL,
+            EVT::getIntegerVT(*DAG.getContext(), ValVT.getSizeInBits()), Value);
+      Value = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Value);
+
+      // ISD::SHL produces poison for shift amounts >= bit width, which generic
+      // DAG combines rely on. We need the mask for correctness, but it should
+      // get optimized away during final instruction selection.
+      SDValue ShiftOffset = DAG.getNode(ISD::AND, DL, MVT::i32, BitOffset,
+                                        DAG.getConstant(31, DL, MVT::i32));
+      Value = DAG.getNode(ISD::SHL, DL, MVT::i32, Value, ShiftOffset);
+
+      SDValue MaskBase = DAG.getConstant((1u << BitWidth) - 1, DL, MVT::i32);
+      SDValue Mask = DAG.getNode(ISD::SHL, DL, MVT::i32, MaskBase, ShiftOffset);
+
+      return DAG.getMemIntrinsicNode(
+          AMDGPUISD::REG_STORE_BITS, DL, DAG.getVTList(MVT::Other),
+          {Chain, Value, Index, Mask}, MemVT, StoreOp->getMemOperand());
+    }
+
+    auto *LoadOp = cast<LoadSDNode>(MemOp);
+    bool IsSExt = LoadOp->getExtensionType() == ISD::SEXTLOAD;
+    SDValue IsSExtImm = DAG.getConstant(IsSExt ? 1 : 0, DL, MVT::i32);
+    SDValue Value = DAG.getMemIntrinsicNode(
+        AMDGPUISD::REG_LOAD_BITS, DL, DAG.getVTList(MVT::i32, MVT::Other),
+        {Chain, Index, BitSizeImm, BitOffset, IsSExtImm}, MemVT,
+        LoadOp->getMemOperand());
+    EVT ResVT = LoadOp->getValueType(0);
+    if (ResVT == MVT::i32)
+      return Value;
+
+    SDValue LoadChain = Value.getValue(1);
+    unsigned ResWidth = ResVT.getSizeInBits();
+    if (ResWidth < 32)
+      Value =
+          DAG.getNode(ISD::TRUNCATE, DL,
+                      EVT::getIntegerVT(*DAG.getContext(), ResWidth), Value);
+    if (Value.getValueType() != ResVT)
+      Value = DAG.getNode(ISD::BITCAST, DL, ResVT, Value);
+    return DAG.getMergeValues({Value, LoadChain}, DL);
+  }
+  // Everything below is a whole-dword access. It addresses registers by the
+  // dword index pointer >> 2, which discards the low two bits rather than
+  // accounting for them, so an under-aligned one would silently reach the dword
+  // containing the address instead of the bytes asked for. The sub-dword path
+  // above computes a bit offset instead and carries its own alignment rule.
   if (MemOp->getAlign() < Align(4))
     return reportUnsupported();
+
   if (auto *Load = dyn_cast<LoadSDNode>(MemOp)) {
     if (Load->getExtensionType() != ISD::NON_EXTLOAD)
       return reportUnsupported();
@@ -19266,7 +19378,9 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
   case AMDGPUISD::REG_LOAD:
-  case AMDGPUISD::REG_STORE: {
+  case AMDGPUISD::REG_STORE:
+  case AMDGPUISD::REG_LOAD_BITS:
+  case AMDGPUISD::REG_STORE_BITS: {
     const SIMachineFunctionInfo *MFI =
         DCI.DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
     unsigned NumAddressableVGPRs =
@@ -19274,7 +19388,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     APInt IndexMask =
         APInt::getLowBitsSet(32, Log2_32_Ceil(NumAddressableVGPRs));
 
-    unsigned IndexOpIdx = 0;
+    unsigned IndexOpIdx, BitOffOpIdx = 0;
     switch (N->getOpcode()) {
     case AMDGPUISD::REG_LOAD:
       IndexOpIdx = 1;
@@ -19282,10 +19396,22 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     case AMDGPUISD::REG_STORE:
       IndexOpIdx = 2;
       break;
+    case AMDGPUISD::REG_LOAD_BITS:
+      IndexOpIdx = 1;
+      BitOffOpIdx = 3;
+      break;
+    case AMDGPUISD::REG_STORE_BITS:
+      IndexOpIdx = 2;
+      break;
     }
 
     if (SimplifyDemandedBits(N->getOperand(IndexOpIdx), IndexMask, DCI))
       return SDValue(N, 0);
+    if (BitOffOpIdx) {
+      APInt BitOffMask = APInt::getLowBitsSet(32, 5);
+      if (SimplifyDemandedBits(N->getOperand(BitOffOpIdx), BitOffMask, DCI))
+        return SDValue(N, 0);
+    }
     break;
   }
   case ISD::LOAD: {
@@ -20654,11 +20780,13 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
     return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
            AS == AMDGPUAS::VGPR;
   }
-  // The lowered form of the above. Without this the DAG takes the node's
+  // The lowered forms of the above: a whole-dword access becomes REG_LOAD, a
+  // sub-dword one REG_LOAD_BITS. Without these the DAG takes a node's
   // divergence to be that of its operands, so a uniform index makes the loaded
   // value look uniform, and a consumer that requires a uniform operand gets a
   // v_readfirstlane - broadcasting one lane's value to the whole wave.
   case AMDGPUISD::REG_LOAD:
+  case AMDGPUISD::REG_LOAD_BITS:
     return true;
   case ISD::CALLSEQ_END:
     return true;

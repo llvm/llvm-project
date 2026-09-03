@@ -1166,6 +1166,59 @@ foreach vt = !listconcat(
     Reg512Types.types, Reg1024Types.types) in
 defm : VRegIdxLoadStorePat<vt>;
 
+// Used for byte or short loads.
+// It lowers into V_BFE_U32 + V_LOAD_IDX, or V_BFE_I32 + V_LOAD_IDX for
+// sign-extended loads.
+//
+// Only the least 5 bits of $bitoffset are significant, the rest are ignored.
+// Only offset values of 0, 8, 16, or 24 are meaningful (after masking to the
+// 5 LSBs).
+//
+// Only bitsize of 8 or 16 bits are supported and must be a compile-time
+// constant.
+// The lowering normalizes the loaded value to a dword, so only a 32-bit $data
+// form is needed.
+def V_LOAD_IDX_BITS : VPseudoInstSI<(outs VGPR_32:$data),
+                                    (ins SReg_32:$idx, i32imm:$offset,
+                                         i32imm:$bitsize, VSrc_b32:$bitoffset,
+                                         i32imm:$is_sext_load)> {
+  let mayLoad = 1;
+  let UseNamedOperandTable = 1;
+  let hasSideEffects = 0;
+}
+
+// Used for byte or short stores.
+//
+// $data holds the pre-shifted insert value and $mask holds the insert mask
+// that is used when lowering to V_BFI_B32.
+def V_STORE_IDX_BITS : VPseudoInstSI<(outs),
+                                     (ins VGPR_32:$data, SReg_32:$idx,
+                                          i32imm:$offset, VSrc_b32:$mask)> {
+  let mayStore = 1;
+  let UseNamedOperandTable = 1;
+  let hasSideEffects = 0;
+}
+
+// Select the REG_LOAD_BITS/REG_STORE_BITS target nodes into the sub-dword
+// indexed pseudos. As for the whole-dword patterns above, an (add idx, imm)
+// shape folds a constant dword offset into the pseudo's $offset operand.
+def : GCNPat<
+  (i32 (SIreg_load_bits (add i32:$idx, (i32 imm:$offset)),
+                        (i32 imm:$bitsize), i32:$bitoffset,
+                        (i32 imm:$is_sext_load))),
+  (V_LOAD_IDX_BITS $idx, imm:$offset, imm:$bitsize, $bitoffset,
+                   imm:$is_sext_load)>;
+def : GCNPat<
+  (i32 (SIreg_load_bits i32:$idx, (i32 imm:$bitsize), i32:$bitoffset,
+                        (i32 imm:$is_sext_load))),
+  (V_LOAD_IDX_BITS $idx, 0, imm:$bitsize, $bitoffset, imm:$is_sext_load)>;
+def : GCNPat<
+  (SIreg_store_bits i32:$data, (add i32:$idx, (i32 imm:$offset)), i32:$mask),
+  (V_STORE_IDX_BITS $data, $idx, imm:$offset, $mask)>;
+def : GCNPat<
+  (SIreg_store_bits i32:$data, i32:$idx, i32:$mask),
+  (V_STORE_IDX_BITS $data, $idx, 0, $mask)>;
+
 // This is a pseudo variant of the v_movreld_b32 instruction in which the
 // vector operand appears only twice, once as def and once as use. Using this
 // pseudo avoids problems with the Two Address instructions pass.
@@ -4935,6 +4988,24 @@ def G_AMDGPU_REG_LOAD : AMDGPUGenericInstruction {
 def G_AMDGPU_REG_STORE : AMDGPUGenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$data, type1:$dword_index);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
+
+// Sub-dword (8/16-bit) counterparts of the above. In addition to the dword
+// index they carry the bit position of the access within that dword, and are
+// lowered to a read-modify-write of the whole dword (see AMDGPULowerIdxOps).
+def G_AMDGPU_REG_LOAD_BITS : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$dword_index, type1:$bitsize,
+                           type1:$bitoffset, type1:$is_sext_load);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_REG_STORE_BITS : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$data, type1:$dword_index, type1:$mask);
   let hasSideEffects = 0;
   let mayStore = 1;
 }
