@@ -806,17 +806,12 @@ def XSeqPairs : RegisterTuples<[sube64, subo64],
 
 // Dummy zero register for use in SYSP XZR/XZR pair as tablegen doesn't allow
 // the same physical sub-register to appear twice in one register pair.
-def DUMMY_REG_PAIR_WITH_XZR : AArch64Reg<31, ""> {
-  let isArtificial = 1;
+def DUMMY_XZR : AArch64Reg<31, ""> {
   let isConstant = 1;
 }
 
-def XZR_XZR : AArch64Reg<31, "", [XZR, DUMMY_REG_PAIR_WITH_XZR]> {
-  let SubRegIndices = [sube64, subo64];
-  let CoveredBySubRegs = 1;
-  let isArtificial = 1;
-  let isConstant = 1;
-}
+def XZR_XZR : RegisterTuples<[sube64, subo64],
+                             [(add DUMMY_XZR), (add XZR)]>;
 
 def WSeqPairsClass   : RegisterClass<"AArch64", [untyped], 32,
                                      (add WSeqPairs)>{
@@ -827,11 +822,8 @@ def XSeqPairsClass   : RegisterClass<"AArch64", [untyped], 64,
   let Size = 128;
 }
 def SyspPairsClass   : RegisterClass<"AArch64", [untyped], 64,
-                                     (add XSeqPairs, XZR_XZR)>{
+                                     (add XSeqPairs)>{
   let Size = 128;
-  // This is an asm/disasm operand class. XZR_XZR is used to model the SYSP
-  // Rt == 31 encoding and must not be allocated as a register pair.
-  let isAllocatable = 0;
 }
 
 

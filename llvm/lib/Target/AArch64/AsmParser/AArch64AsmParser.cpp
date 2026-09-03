@@ -1382,8 +1382,9 @@ public:
 
   bool isSyspPair() const {
     return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
-           getAArch64MCRegisterClass(AArch64::SyspPairsClassRegClassID)
-               .contains(Reg.Reg);
+           (Reg.Reg == AArch64::DUMMY_XZR_XZR ||
+            getAArch64MCRegisterClass(AArch64::SyspPairsClassRegClassID)
+                .contains(Reg.Reg));
   }
 
   template<int64_t Angle, int64_t Remainder>
@@ -5353,6 +5354,12 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
     } while (parseOptionalToken(AsmToken::Comma));
   }
 
+  // The optional SYSP register pair defaults to XZR/XZR.
+  if (Mnemonic == "sysp" && Operands.size() == 5)
+    Operands.push_back(AArch64Operand::CreateReg(
+        AArch64::DUMMY_XZR_XZR, RegKind::Scalar, getLoc(), getLoc(),
+        getContext()));
+
   if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
     return true;
 
@@ -8550,7 +8557,7 @@ AArch64AsmParser::tryParseConsecutiveGPRSeqPair(OperandVector &Operands) {
 
   MCRegister Pair;
   if (IsXZRPair) {
-    Pair = AArch64::XZR_XZR;
+    Pair = AArch64::DUMMY_XZR_XZR;
   } else if (IsXReg) {
     Pair = RI->getMatchingSuperReg(
         FirstReg, AArch64::sube64,
