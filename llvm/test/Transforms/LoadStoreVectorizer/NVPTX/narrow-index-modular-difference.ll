@@ -16,11 +16,12 @@ define i32 @zext_difference_not_preserved(ptr %base, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[MUL]], [[X]]
 ; CHECK-NEXT:    [[IDX:%.*]] = trunc i32 [[SUM]] to i8
 ; CHECK-NEXT:    [[NEXT:%.*]] = add nuw i8 [[IDX]], -1
-; CHECK-NEXT:    [[EXTB:%.*]] = zext i8 [[NEXT]] to i64
+; CHECK-NEXT:    [[EXTB:%.*]] = zext i8 [[IDX]] to i64
+; CHECK-NEXT:    [[EXTB1:%.*]] = zext i8 [[NEXT]] to i64
 ; CHECK-NEXT:    [[PB:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PB]], align 8
-; CHECK-NEXT:    [[VB1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[VA2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB1]]
+; CHECK-NEXT:    [[VA2:%.*]] = load i32, ptr [[PB]], align 4
+; CHECK-NEXT:    [[VB1:%.*]] = load i32, ptr [[PB1]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[VA2]], [[VB1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -74,12 +75,14 @@ define i32 @zext_difference_preserved(ptr %base, i32 %x, i32 %y) {
 define i32 @sext_difference_not_preserved(ptr %base, i8 %x) {
 ; CHECK-LABEL: define i32 @sext_difference_not_preserved(
 ; CHECK-SAME: ptr [[BASE:%.*]], i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], 21
 ; CHECK-NEXT:    [[B:%.*]] = add nsw i8 [[X]], 20
-; CHECK-NEXT:    [[EXTB:%.*]] = sext i8 [[B]] to i64
+; CHECK-NEXT:    [[EXTB:%.*]] = sext i8 [[A]] to i64
+; CHECK-NEXT:    [[EXTB1:%.*]] = sext i8 [[B]] to i64
 ; CHECK-NEXT:    [[PB:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PB]], align 8
-; CHECK-NEXT:    [[VB1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[VA2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[EXTB1]]
+; CHECK-NEXT:    [[VA2:%.*]] = load i32, ptr [[PB]], align 4
+; CHECK-NEXT:    [[VB1:%.*]] = load i32, ptr [[PB1]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[VA2]], [[VB1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

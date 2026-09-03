@@ -1515,12 +1515,20 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
   // Now we need to prove that adding IdxDiff to ValA won't overflow.
   bool Safe = false;
 
-  // First attempt: if OpB is an add (or or-disjoint) with NSW/NUW, and OpB is
-  // IdxDiff added to ValA, we're okay.
+  // First attempt: if OpB is X + C with NSW/NUW, adding IdxDiff to ValA cannot
+  // wrap when IdxDiff lies between zero and C. Compare in one extra bit so C is
+  // represented exactly for both extension kinds.
   if (isAddLike(OpB) && isa<ConstantInt>(OpB->getOperand(1)) &&
-      IdxDiff.sle(cast<ConstantInt>(OpB->getOperand(1))->getSExtValue()) &&
-      checkNoWrapFlags(OpB, Signed))
-    Safe = true;
+      checkNoWrapFlags(OpB, Signed)) {
+    const APInt &C = cast<ConstantInt>(OpB->getOperand(1))->getValue();
+    unsigned WideBitWidth = IdxDiff.getBitWidth() + 1;
+    APInt WideIdxDiff = IdxDiff.sext(WideBitWidth);
+    APInt WideC = Signed ? C.sext(WideBitWidth) : C.zext(WideBitWidth);
+    if (WideC.isNegative())
+      Safe = WideIdxDiff.sge(WideC) && WideIdxDiff.sle(0);
+    else
+      Safe = WideIdxDiff.sge(0) && WideIdxDiff.sle(WideC);
+  }
 
   // Second attempt: check if we have eligible add NSW/NUW instruction
   // sequences.
