@@ -318,6 +318,30 @@ TEST(ModuleTest, NamedMDList) {
   EXPECT_EQ(M->named_metadata_size(), 2u);
 }
 
+TEST(ModuleTest, ValueToGUIDMap) {
+  LLVMContext Context;
+  Module M("M", Context);
+  Type *Ty = Type::getInt32Ty(Context);
+  Constant *Init = ConstantInt::get(Ty, 0);
+  auto *OldGV = new GlobalVariable(M, Ty, /*isConstant=*/false,
+                                   GlobalValue::InternalLinkage, Init, "old");
+  auto *NewGV = new GlobalVariable(M, Ty, /*isConstant=*/false,
+                                   GlobalValue::InternalLinkage, Init, "new");
+
+  constexpr GlobalValue::GUID GUID = 101;
+  M.insertGUID(OldGV, GUID);
+  ASSERT_EQ(M.getGUID(OldGV), GUID);
+
+  // GUID does not follow RAUW.
+  OldGV->replaceAllUsesWith(NewGV);
+  EXPECT_EQ(M.getGUID(OldGV), GUID);
+  EXPECT_FALSE(M.getGUID(NewGV).has_value());
+
+  // Mapping deleted upon Value deletion (no dangling pointer in map)
+  OldGV->eraseFromParent();
+  EXPECT_FALSE(M.getGUID(OldGV).has_value());
+}
+
 TEST(ModuleTest, GlobalList) {
   // This tests all Module's functions that interact with Module::GlobalList.
   LLVMContext C;

@@ -1254,19 +1254,25 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
 
   // Emit inner lexical scopes.
   auto skipLexicalScope = [this](LexicalScope *S) -> bool {
-    if (isa<DISubprogram>(S->getScopeNode()))
+    const DILocalScope *DS = S->getScopeNode();
+    if (isa<DISubprogram>(DS))
       return false;
     // Don't skip abstract lexical blocks that are scope targets for global
     // variables (e.g., function-scope statics). Those globals are emitted
     // later in endModule() and need to find the block via
     // getOrCreateContextDIE().
-    if (S->isAbstractScope() && hasGlobalVariableInScope(S->getScopeNode()))
+    if (S->isAbstractScope() && hasGlobalVariableInScope(DS))
+      return false;
+    // Create a concrete lexical block for a scope with an abstract lexical
+    // block to ensure visibility of scope-local types and static variables
+    // within the scope range.
+    if (getAbstractScopeDIEs().lookup(DS))
       return false;
     auto Vars = DU->getScopeVariables().lookup(S);
     if (!Vars.Args.empty() || !Vars.Locals.empty())
       return false;
     return includeMinimalInlineScopes() ||
-           DD->getLocalDeclsForScope(S->getScopeNode()).empty();
+           DD->getLocalDeclsForScope(DS).empty();
   };
   for (LexicalScope *LS : Scope->getChildren()) {
     // If the lexical block doesn't have non-scope children or global

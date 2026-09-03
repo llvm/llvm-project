@@ -278,6 +278,11 @@ features cannot lower the translation-unit ABI level;
   initialization, while not diagnosing parameters passed to the selected
   allocation function or promise constructor. (#GH217501)
 
+- The `wb` and `uwb` `_BitInt` literal suffixes are no longer diagnosed by default
+  before C23. They stay in `-Wc23-extensions` and are still reported under
+  `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
+  type itself is already handled.
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
@@ -496,6 +501,8 @@ features cannot lower the translation-unit ABI level;
   such as when the call is used as an `auto` non-type template argument.
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
+- Fixed a wrong code generation in `__builtin_clear_padding` wherein the
+  wrong bits of the `_BitInt` type were cleared in big-endian mode.
 
 #### Bug Fixes to Attribute Support
 
@@ -814,6 +821,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.
   `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
   matching the behavior of such maps outside a mapper.
+- The `holds` clause on the `assume` directive now lowers side-effect-free
+  conditions to `llvm.assume`, enabling downstream optimizations. Previously
+  the clause was parsed but its condition was discarded without effect.
 
 ### SYCL Support
 
