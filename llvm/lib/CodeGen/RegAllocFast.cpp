@@ -363,7 +363,7 @@ private:
   void assignVirtToPhysReg(MachineInstr &MI, LiveReg &, MCRegister PhysReg);
   void allocVirtReg(MachineInstr &MI, LiveReg &LR, Register Hint,
                     bool LookAtPhysRegUses = false);
-  void allocVirtRegUndef(MachineOperand &MO);
+  void allocVirtRegUndef(MachineInstr &MI, MachineOperand &MO);
   void assignDanglingDebugValues(MachineInstr &Def, Register VirtReg,
                                  MCRegister Reg);
   bool defineLiveThroughVirtReg(MachineInstr &MI, unsigned OpNum,
@@ -1013,12 +1013,27 @@ void RegAllocFastImpl::allocVirtReg(MachineInstr &MI, LiveReg &LR,
   assignVirtToPhysReg(MI, LR, BestReg);
 }
 
-void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
+void RegAllocFastImpl::allocVirtRegUndef(MachineInstr &MI, MachineOperand &MO) {
   assert(MO.isUndef() && "expected undef use");
   Register VirtReg = MO.getReg();
   assert(VirtReg.isVirtual() && "Expected virtreg");
   if (!shouldAllocateRegister(VirtReg))
     return;
+
+  // The tied def has already been allocated and had its subregister folded.
+  // Reuse that exact register without creating a live mapping for the undef
+  // use, which would incorrectly make the new def live before the instruction.
+  if (MO.isTied()) {
+    const MachineOperand &TiedMO =
+        MI.getOperand(MI.findTiedOperandIdx(MI.getOperandNo(&MO)));
+    if (!TiedMO.getReg().isPhysical())
+      report_fatal_error(
+          "tied def was not assigned a physical register by FastRA");
+    MO.setReg(TiedMO.getReg());
+    MO.setSubReg(0);
+    MO.setIsRenamable(TiedMO.isRenamable());
+    return;
+  }
 
   LiveRegMap::iterator LRI = findLiveVirtReg(VirtReg);
   MCRegister PhysReg;
@@ -1684,7 +1699,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
         continue;
 
       assert(MO.isUndef() && "Should only have undef virtreg uses left");
-      allocVirtRegUndef(MO);
+      allocVirtRegUndef(MI, MO);
     }
   }
 
