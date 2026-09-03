@@ -448,6 +448,7 @@ add_entrypoint_object(
     ../nice.h
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.limits_macros
     libc.hdr.sys_resource_macros
     libc.src.__support.OSUtil.linux.syscall_wrappers.getpriority
     libc.src.__support.OSUtil.linux.syscall_wrappers.setpriority

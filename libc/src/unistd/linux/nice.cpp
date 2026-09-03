@@ -14,6 +14,7 @@
 #include "src/unistd/nice.h"
 
 #include "hdr/errno_macros.h"
+#include "hdr/limits_macros.h"
 #include "hdr/sys_resource_macros.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/getpriority.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/setpriority.h"
@@ -25,8 +26,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, nice, (int incr)) {
-  // POSIX NZERO = 20. Priority range in Linux is [-NZERO, NZERO - 1].
-  constexpr int NZERO = 20;
+  // POSIX specifies default nice value as NZERO (20 in <limits.h>).
+  // Priority range in Linux is [-NZERO, NZERO - 1].
   constexpr int MIN_PRIO = -NZERO;
   constexpr int MAX_PRIO = NZERO - 1;
 
