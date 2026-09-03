@@ -28,6 +28,7 @@ define <7 x i32> @multiple_predecessor_unused_lanes(<7 x i32> %ha, i32 %h.sel) {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; CHECK-NEXT:    v_dual_mov_b32 v21, v5 :: v_dual_mov_b32 v16, v0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:  ; %bb.3: ; %Flow
 ; CHECK-NEXT:    s_and_not1_saveexec_b32 s1, s1
 ; CHECK-NEXT:  ; %bb.4: ; %h.shuffle
@@ -36,8 +37,6 @@ define <7 x i32> @multiple_predecessor_unused_lanes(<7 x i32> %ha, i32 %h.sel) {
 ; CHECK-NEXT:    v_mov_b32_e32 v20, v0
 ; CHECK-NEXT:  ; %bb.5: ; %Flow1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:  .LBB0_6: ; %Flow2
 ; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_8

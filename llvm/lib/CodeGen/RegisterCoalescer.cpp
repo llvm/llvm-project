@@ -74,6 +74,8 @@ STATISTIC(NumInflated, "Number of register classes inflated");
 STATISTIC(NumLaneConflicts, "Number of dead lane conflicts tested");
 STATISTIC(NumLaneResolves, "Number of dead lane conflicts resolved");
 STATISTIC(NumShrinkToUses, "Number of shrinkToUses called");
+STATISTIC(NumRecomputedLiveIntervals,
+          "Number of live intervals recomputed after coalescing");
 
 static cl::opt<bool> EnableJoining("join-liveintervals",
                                    cl::desc("Coalesce copies (default=true)"),
@@ -248,10 +250,10 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// will not have been modified, so we can use this information below to
   /// update aliases. Returns Deferred when it may be possible to join later,
   /// or Rejected when retrying should be avoided.
-  JoinResult joinIntervals(CoalescerPair &CP);
+  JoinResult joinIntervals(CoalescerPair &CP, bool &RecomputeLiveInterval);
 
   /// Attempt joining two virtual registers.
-  JoinResult joinVirtRegs(CoalescerPair &CP);
+  JoinResult joinVirtRegs(CoalescerPair &CP, bool &RecomputeLiveInterval);
 
   /// If a live interval has many valnos and is coalesced with other
   /// live intervals many times, we regard such live interval as having
@@ -2193,7 +2195,8 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
   // joined is a physreg and the join succeeds, this method always canonicalizes
   // DstInt to be it.  The output "SrcInt" will not have been modified, so we
   // can use this information below to update aliases.
-  JoinResult Result = joinIntervals(CP);
+  bool RecomputeLiveInterval = false;
+  JoinResult Result = joinIntervals(CP, RecomputeLiveInterval);
   if (Result != JoinResult::Joined) {
     // Coalescing failed.
 
@@ -2291,6 +2294,21 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
   // SrcReg is guaranteed to be the register whose live interval that is
   // being merged.
   LIS->removeInterval(CP.getSrcReg());
+
+  if (RecomputeLiveInterval) {
+    Register DstReg = CP.getDstReg();
+    float Weight = LIS->getInterval(DstReg).weight();
+    LIS->removeInterval(DstReg);
+
+    bool NeedSplit = false;
+    LiveInterval &LI = LIS->createAndComputeVirtRegInterval(DstReg, NeedSplit);
+    LI.setWeight(Weight);
+    if (NeedSplit) {
+      SmallVector<LiveInterval *, 8> SplitLIs;
+      LIS->splitSeparateComponents(LI, SplitLIs);
+    }
+    ++NumRecomputedLiveIntervals;
+  }
 
   // Update regalloc hint.
   TRI->updateRegAllocHint(CP.getSrcReg(), CP.getDstReg(), *MF);
@@ -2531,6 +2549,9 @@ class JoinVals {
   /// NewVNInfo. This is suitable for passing to LiveInterval::join().
   SmallVector<int, 8> Assignments;
 
+  /// Whether an IMPLICIT_DEF of a subregister was erased.
+  bool ErasedSubRegImplicitDef = false;
+
 public:
   /// Conflict resolution for overlapping values.
   enum ConflictResolution {
@@ -2737,6 +2758,8 @@ public:
   ConflictResolution getResolution(unsigned Num) const {
     return Vals[Num].Resolution;
   }
+
+  bool erasedSubRegImplicitDef() const { return ErasedSubRegImplicitDef; }
 };
 
 } // end anonymous namespace
@@ -2855,8 +2878,7 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
     if (SubRangeJoin) {
       // We don't care about the lanes when joining subregister ranges.
       V.WriteLanes = V.ValidLanes = LaneBitmask::getLane(0);
-      // Preserve lane definitions in MIR when tracking subregister liveness.
-      if (DefMI->isImplicitDef() && !TrackSubRegLiveness) {
+      if (DefMI->isImplicitDef()) {
         V.ValidLanes = LaneBitmask::getNone();
         V.ErasableImplicitDef = true;
       }
@@ -2889,10 +2911,8 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
         }
       }
 
-      // An IMPLICIT_DEF writes undef values. When tracking subregister
-      // liveness, treat it like an ordinary definition so the lane conflict
-      // checks below decide whether the join can preserve it.
-      if (DefMI->isImplicitDef() && !TrackSubRegLiveness) {
+      // An IMPLICIT_DEF writes undef values.
+      if (DefMI->isImplicitDef()) {
         // We normally expect IMPLICIT_DEF values to be live only until the end
         // of their block. If the value is really live longer and gets pruned in
         // another block, this flag is cleared again.
@@ -2998,7 +3018,7 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
     return CR_Replace;
 
   // Check for simple erasable conflicts.
-  if (DefMI->isImplicitDef() && V.ErasableImplicitDef)
+  if (DefMI->isImplicitDef())
     return CR_Erase;
 
   // Include the non-conflict where DefMI is a coalescable copy that kills
@@ -3597,6 +3617,9 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr *> &ErasedInstrs,
     case CR_Erase: {
       MachineInstr *MI = Indexes->getInstructionFromIndex(Def);
       assert(MI && "No instruction to erase");
+      if (TrackSubRegLiveness && MI->isImplicitDef() &&
+          TRI->composeSubRegIndices(SubIdx, MI->getOperand(0).getSubReg()) != 0)
+        ErasedSubRegImplicitDef = true;
       if (MI->isCopy()) {
         Register Reg = MI->getOperand(1).getReg();
         if (Reg.isVirtual() && Reg != CP.getSrcReg() && Reg != CP.getDstReg())
@@ -3708,7 +3731,8 @@ bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {
 }
 
 RegisterCoalescer::JoinResult
-RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
+RegisterCoalescer::joinVirtRegs(CoalescerPair &CP,
+                                bool &RecomputeLiveInterval) {
   SmallVector<VNInfo *, 16> NewVNInfo;
   LiveInterval &RHS = LIS->getInterval(CP.getSrcReg());
   LiveInterval &LHS = LIS->getInterval(CP.getDstReg());
@@ -3805,6 +3829,8 @@ RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   SmallVector<Register, 8> ShrinkRegs;
   LHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs, &LHS);
   RHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs);
+  RecomputeLiveInterval =
+      LHSVals.erasedSubRegImplicitDef() || RHSVals.erasedSubRegImplicitDef();
   while (!ShrinkRegs.empty())
     shrinkToUses(&LIS->getInterval(ShrinkRegs.pop_back_val()));
 
@@ -3896,10 +3922,11 @@ RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 }
 
 RegisterCoalescer::JoinResult
-RegisterCoalescer::joinIntervals(CoalescerPair &CP) {
+RegisterCoalescer::joinIntervals(CoalescerPair &CP,
+                                 bool &RecomputeLiveInterval) {
   if (CP.isPhys())
     return joinReservedPhysReg(CP) ? JoinResult::Joined : JoinResult::Deferred;
-  return joinVirtRegs(CP);
+  return joinVirtRegs(CP, RecomputeLiveInterval);
 }
 
 void RegisterCoalescer::buildVRegToDbgValueMap(MachineFunction &MF) {
