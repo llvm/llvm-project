@@ -145,8 +145,8 @@ public:
   /// if they use different identifiers for the function macro parameters.
   /// Otherwise the comparison is lexical and this implements the rules in
   /// C99 6.10.3.
-  bool isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
-                     bool Syntactically) const;
+  bool isIdenticalTo(const MacroInfo &Other, const SourceManager &SourceMgr,
+                     const LangOptions &LangOpts, bool Syntactically) const;
 
   /// Set or clear the isBuiltinMacro flag.
   void setIsBuiltinMacro(bool Val = true) { IsBuiltinMacro = Val; }
