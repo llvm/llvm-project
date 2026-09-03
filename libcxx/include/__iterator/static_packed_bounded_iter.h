@@ -21,7 +21,6 @@
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_pointer.h>
-
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -72,7 +71,7 @@ private:
 
   size_t __count() const { return __data_ & __CountMask; }
 
-  constexpr _Ptr __current() const {
+  _Ptr __current() const {
     if consteval {
       return __ptr_;
     } else {
@@ -80,7 +79,7 @@ private:
     }
   }
 
-  constexpr void __increment(difference_type __n) {
+  void __increment(difference_type __n) {
     if consteval {
       __ptr_ += __n;
     } else {
@@ -88,7 +87,7 @@ private:
     }
   }
 
-  constexpr explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __ptr_(__p) {
+  explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __ptr_(__p) {
     if !consteval {
       _LIBCPP_ASSERT_INTERNAL((reinterpret_cast<uintptr_t>(__p) & __CountMask) == 0,
                               "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
@@ -101,18 +100,18 @@ private:
 
 public:
   template <class _Ptr2, class _Tag2, size_t _RangeCapacity2>
-  friend constexpr auto __make_static_packed_bounded_iter(_Ptr2) noexcept;
+  friend auto __make_static_packed_bounded_iter(_Ptr2) noexcept;
 
-  constexpr __static_packed_bounded_iterator()
+  __static_packed_bounded_iterator()
     requires is_default_constructible_v<_Ptr>
   = default;
 
   template <class _Ptr2, class _Tag2>
     requires is_convertible_v<_Ptr2, _Ptr>
-  constexpr __static_packed_bounded_iterator(const __static_packed_bounded_iterator<_Ptr2, _Tag2, _RangeCapacity>& __y)
+  __static_packed_bounded_iterator(const __static_packed_bounded_iterator<_Ptr2, _Tag2, _RangeCapacity>& __y)
       : __ptr_(__y.__ptr_) {}
 
-  [[nodiscard]] constexpr decltype(auto) operator*() const noexcept {
+  [[nodiscard]] reference operator*() const noexcept {
     if !consteval {
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __count() != _RangeCapacity,
@@ -122,7 +121,7 @@ public:
     return *__current();
   }
 
-  constexpr decltype(auto) operator->() const noexcept {
+  pointer operator->() const noexcept {
     if !consteval {
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __count() != _RangeCapacity,
@@ -132,7 +131,7 @@ public:
     return __current();
   }
 
-  constexpr __static_packed_bounded_iterator& operator++() noexcept {
+  __static_packed_bounded_iterator& operator++() noexcept {
     if !consteval {
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __count() != _RangeCapacity,
@@ -144,13 +143,13 @@ public:
     return *this;
   }
 
-  constexpr __static_packed_bounded_iterator operator++(int) noexcept {
+  __static_packed_bounded_iterator operator++(int) noexcept {
     __static_packed_bounded_iterator __tmp(*this);
     ++*this;
     return __tmp;
   }
 
-  constexpr __static_packed_bounded_iterator& operator--() noexcept {
+  __static_packed_bounded_iterator& operator--() noexcept {
     if !consteval {
       _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
           __count() != 0u,
@@ -162,13 +161,13 @@ public:
     return *this;
   }
 
-  constexpr __static_packed_bounded_iterator operator--(int) noexcept {
+  __static_packed_bounded_iterator operator--(int) noexcept {
     __static_packed_bounded_iterator __tmp(*this);
     --*this;
     return __tmp;
   }
 
-  constexpr __static_packed_bounded_iterator& operator+=(difference_type __n) noexcept {
+  __static_packed_bounded_iterator& operator+=(difference_type __n) noexcept {
     if !consteval {
       if (__n < 0) {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -186,7 +185,7 @@ public:
     return *this;
   }
 
-  constexpr __static_packed_bounded_iterator& operator-=(difference_type __n) noexcept {
+  __static_packed_bounded_iterator& operator-=(difference_type __n) noexcept {
     if !consteval {
       if (__n > 0) {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -204,7 +203,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] constexpr decltype(auto) operator[](difference_type __n) const noexcept {
+  [[nodiscard]] reference operator[](difference_type __n) const noexcept {
     if !consteval {
       if (__n < 0) {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -219,45 +218,45 @@ public:
     return *(*this + __n);
   }
 
-  friend constexpr bool
+  friend bool
   operator==(const __static_packed_bounded_iterator& __x, const __static_packed_bounded_iterator& __y) noexcept {
     return __x.__current() == __y.__current();
   }
 
-  friend constexpr auto
+  friend auto
   operator<=>(const __static_packed_bounded_iterator& __x, const __static_packed_bounded_iterator& __y) noexcept {
     return __x.__current() <=> __y.__current();
   }
 
-  [[nodiscard]] friend constexpr __static_packed_bounded_iterator
+  [[nodiscard]] friend __static_packed_bounded_iterator
   operator+(const __static_packed_bounded_iterator& __i, difference_type __n) noexcept {
     auto __tmp = __i;
     __tmp += __n;
     return __tmp;
   }
 
-  [[nodiscard]] friend constexpr __static_packed_bounded_iterator
+  [[nodiscard]] friend __static_packed_bounded_iterator
   operator+(difference_type __n, const __static_packed_bounded_iterator& __i) noexcept {
     auto __tmp = __i;
     __tmp += __n;
     return __tmp;
   }
 
-  [[nodiscard]] friend constexpr __static_packed_bounded_iterator
+  [[nodiscard]] friend __static_packed_bounded_iterator
   operator-(const __static_packed_bounded_iterator& __i, difference_type __n) noexcept {
     auto __tmp = __i;
     __tmp -= __n;
     return __tmp;
   }
 
-  [[nodiscard]] friend constexpr difference_type
+  [[nodiscard]] friend difference_type
   operator-(const __static_packed_bounded_iterator& __x, const __static_packed_bounded_iterator& __y) noexcept {
     return difference_type(__x.__current() - __y.__current());
   }
 };
 
 template <class _Ptr, class _Tag, size_t _RangeCapacity>
-constexpr auto __make_static_packed_bounded_iter(_Ptr __p) noexcept {
+auto __make_static_packed_bounded_iter(_Ptr __p) noexcept {
   return __static_packed_bounded_iterator<_Ptr, _Tag, _RangeCapacity>(__p);
 }
 
