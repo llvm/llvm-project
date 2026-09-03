@@ -892,7 +892,7 @@ LLVM IR codegen. Only the EH cleanup requires `cir.begin_cleanup` and
 `cir.end_cleanup` operations.
 
 If the `SomeClass` constructor throws an exception, it unwinds to an EH
-catch block (`^bb3`), which has excecutes a `cir.eh.initiate` operation
+catch block (`^bb3`), which executes a `cir.eh.initiate` operation
 before branching to a shared catch dispatch block (`^bb6`).
 
 If the `doSomething()` function throws an exception, it unwinds to an EH
@@ -1422,7 +1422,7 @@ parent token, which may either be none or the token returned by a
 previous `cir.catchpad` operation. This is followed by a list of blocks
 which contain catch handlers. Each block in this list must begin with a
 `cir.catchpad` operation. Finally, the unwind destination is provided to
-specify where excution continues if the exception is not caught by any
+specify where execution continues if the exception is not caught by any
 of the handlers, with unwind to caller indicating that the unwind is not
 handled further in the current function. This operation returns a token
 that is used as the operand for `cir.catchpad` operations associated
@@ -1469,7 +1469,7 @@ cir.catchret from %8 to ^bb8
 
 The `cir.catchret` operation takes an operand which specifies the
 `cir.catchpad` operation which is completed by this operation and a
-block at which excution should be resumed.
+block at which execution should be resumed.
 
 #### Example: Try-catch with cleanup
 
