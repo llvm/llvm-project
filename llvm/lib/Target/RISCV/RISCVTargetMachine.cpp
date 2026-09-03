@@ -283,7 +283,11 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   ScheduleDAGMILive *DAG = createSchedLive<RISCVPreRAMachineSchedStrategy>(C);
 
-  // Add MacroFusion mutation first with a higher priority than later clustering
+  if (ST.hasVInstructions())
+    DAG->addMutation(createRISCVV0AliasDAGMutation(DAG->TRI));
+
+  // Add correctness dependencies before the heuristic mutations below.
+  // Among the heuristics, macro fusion has higher priority than clustering.
   const auto &MacroFusions = ST.getMacroFusions();
   if (!MacroFusions.empty())
     DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
