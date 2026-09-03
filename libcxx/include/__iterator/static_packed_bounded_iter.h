@@ -72,7 +72,7 @@ private:
   static constexpr uintptr_t __PtrMask   = ~__CountMask;
 
   union {
-    _Ptr __ptr;
+    _Ptr __ptr_;
     alignas(pointer) uintptr_t __data_;
   };
 
@@ -81,11 +81,11 @@ private:
   _Ptr __current() const noexcept { return reinterpret_cast<pointer>(__data_ & __PtrMask); }
 
   void __increment(difference_type __n) noexcept {
-    __ptr += __n;
+    __ptr_ += __n;
     __data_ += __n;
   }
 
-  explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __data_(reinterpret_cast<uintptr_t>(__p)) {
+  explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __ptr_(__p) {
     _LIBCPP_ASSERT_INTERNAL((reinterpret_cast<uintptr_t>(__p) & __CountMask) == 0,
                             "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
   }
