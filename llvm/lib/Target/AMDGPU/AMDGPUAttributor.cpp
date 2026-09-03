@@ -1577,7 +1577,7 @@ struct AAAMDGPUAccumOffset
   ChangeStatus manifest(Attributor &A) override {
     if (AccumOffset.Unknown)
       return ChangeStatus::UNCHANGED;
-    SmallString<8> Buffer;
+    SmallString<4> Buffer;
     raw_svector_ostream OS(Buffer);
     OS << AccumOffset.Value;
     return A.manifestAttrs(
