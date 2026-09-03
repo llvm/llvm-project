@@ -652,7 +652,7 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 // What a record member holds, and whether its extent is a declared one.
 //===----------------------------------------------------------------------===//
 
-def CIR_RecordMemberKind : CIR_I32EnumAttr<
+def CIR_RecordMemberKind : CIR_I32Enum<
     "RecordMemberKind", "what a record member holds", [
   I32EnumAttrCase<"Data", 0, "data">,
   I32EnumAttrCase<"Pad", 1, "pad">,
@@ -689,8 +689,6 @@ def CIR_RecordMemberKind : CIR_I32EnumAttr<
     record whose trailing member is an unnamed bit-field unit keeps that unit in
     its data size.
   }];
-
-  let genSpecializedAttr = 0;
 }
 
 //===----------------------------------------------------------------------===//
