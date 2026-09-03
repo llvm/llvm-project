@@ -1203,13 +1203,12 @@ private:
 
   // A pair of instructions with the same value number to be hoisted and merged,
   // together with their respective hoist barriers. A pair of insructions can be
-  // hoisted iff both their barriers (if not null) are hoisted as well. The
-  // `WeakVH` is used to track when the barrier instruction itself is hoisted.
+  // hoisted iff both their barriers (if not null) are hoisted as well.
   struct HoistPair {
     Instruction *ThenI = nullptr;
     Instruction *ThenB = nullptr;
     Instruction *ElseI = nullptr;
-    WeakVH ElseB = nullptr;
+    Instruction *ElseB = nullptr;
   };
 
   /// A mapping from value numbers to a pair of instructions. This map
@@ -1218,6 +1217,9 @@ private:
   /// iteration in `performHoist`.
   using HoistMap = DenseMap<uint32_t, HoistPair>;
   HoistMap HoistPairs;
+
+  /// A set of hoist barrier instructions pending removal.
+  SmallPtrSet<Instruction *, 4> HoistBarriersToDelete;
 
 public:
   GVNPassImpl(GVNOptions Options) : Options(Options) {}
@@ -4041,7 +4043,21 @@ void GVNPassImpl::replaceInstruction(Instruction *I, Instruction *Repl) {
   VN.erase(I);
   ICF->removeInstruction(I);
   LLVM_DEBUG(verifyRemoved(I));
-  I->eraseFromParent();
+
+  /// A hoist barrier may be referenced by entries in `HoistPairs` and thus
+  /// unsafe to erase (in case it was hoisted off the "else" block) until
+  /// the end of hoisting. To avoid dangling references or traversing
+  /// the `HoistPairs` map to find and nullify references to deleted barriers
+  /// we only remove the barrier from its parent block now, but do not delete it
+  /// until hoisting is complete.
+  /// All this is applicable only to hoist barriers from the "else" block since
+  /// instructions from the "then" block are never erased.
+  if (isHoistBarrier(*I)) {
+    I->removeFromParent();
+    HoistBarriersToDelete.insert(I);
+  } else {
+    I->eraseFromParent();
+  }
   ++NumGVNInstr;
 }
 
@@ -4085,9 +4101,10 @@ std::pair<bool, bool> GVNPassImpl::hoistPair(BasicBlock *DestBB,
       return {Change, true};
   }
 
-  // Check the `Else` barrier instruction, if any, was deleted from the `Else`
+  // Check the "else" barrier instruction, if any, was removed from the "else"
   // block as a result of a previous hoisting.
-  if (dyn_cast_or_null<Instruction>(It->second.ElseB) != nullptr)
+  Instruction *ElseB = It->second.ElseB;
+  if (ElseB != nullptr && ElseB->getParent() == ElseBB)
     return {Change, true};
 
   // Hoist operands. Begin by hoisting all of the operands of the "then"
@@ -4190,6 +4207,14 @@ bool GVNPassImpl::performHoist(Function &F) {
       Change |= LocalChange;
     }
   }
+
+  // Erase hoist barriers that were removed from the "else" block.
+  for (Instruction *I : HoistBarriersToDelete) {
+    assert(I->getNumUses() == 0 && I->getParent() == nullptr &&
+           "Removed hoist barrier still referenced");
+    I->deleteValue();
+  }
+  HoistBarriersToDelete.clear();
 
   return Change;
 }
