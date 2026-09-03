@@ -50839,10 +50839,10 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
     if (!Subtarget.useAVX512Regs())
       return SDValue();
     // Widen a non-power-of-two lane count to get a machine type, but only
-    // while it still fits one divide. Two chains lose to a chain plus a scalar.
+    // while the divide and result conversion still fit in one zmm.
     unsigned NumElts = VT.getVectorNumElements();
     if (!isPowerOf2_32(NumElts)) {
-      if (NextPowerOf2(NumElts) * FPSclVT.getSizeInBits() > 512)
+      if (NextPowerOf2(NumElts) > MaxStrictElts)
         return SDValue();
       SDValue WideDividend = DAG.WidenVector(Dividend, DL);
       EVT WideVT = WideDividend.getValueType();
