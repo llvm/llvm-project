@@ -177,6 +177,96 @@ exit:
   ret i64 %iv
 }
 
+define i32 @test_shared_subexpression() {
+; CHECK-LABEL: 'test_shared_subexpression'
+; CHECK-NEXT:  Determining loop execution counts for: @test_shared_subexpression
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 3
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 3
+; CHECK-NEXT:  Loop %loop: Trip multiple is 4
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 32, %entry ], [ %iv.next, %loop ]
+  %lshr = lshr i32 %iv, 1
+  %a = xor i32 %lshr, 3
+  %b = or i32 %lshr, 1
+  %iv.next = and i32 %a, %b
+  %cmp = icmp eq i32 %iv.next, 1
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret i32 %iv
+}
+
+define i64 @test_arg_operand(i64 %n) {
+; CHECK-LABEL: 'test_arg_operand'
+; CHECK-NEXT:  Determining loop execution counts for: @test_arg_operand
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 3, %entry ], [ %iv.next, %loop ]
+  %lshr = lshr i64 %iv, 1
+  %iv.next = add i64 %lshr, %n
+  %cmp = icmp eq i64 %iv.next, 0
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_loop_invariant_operand(i64 %a, i64 %b) {
+; CHECK-LABEL: 'test_loop_invariant_operand'
+; CHECK-NEXT:  Determining loop execution counts for: @test_loop_invariant_operand
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %inv = add i64 %a, %b
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 3, %entry ], [ %iv.next, %loop ]
+  %lshr = lshr i64 %iv, 1
+  %iv.next = add i64 %lshr, %inv
+  %cmp = icmp eq i64 %iv.next, 0
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_multiple_phis() {
+; CHECK-LABEL: 'test_multiple_phis'
+; CHECK-NEXT:  Determining loop execution counts for: @test_multiple_phis
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+
+loop:
+  %iv1 = phi i64 [ 100, %entry ], [ %iv1.next, %loop ]
+  %iv2 = phi i64 [ 200, %entry ], [ %iv2.next, %loop ]
+  %iv1.next = lshr i64 %iv1, 1
+  %iv2.next = lshr i64 %iv2, 2
+  %sum = add i64 %iv1.next, %iv2.next
+  %cmp = icmp eq i64 %sum, 0
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret i64 %sum
+}
+
 declare void @dummy()
 declare void @use(double %i)
 declare double @llvm.sin.f64(double)
