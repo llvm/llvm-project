@@ -499,6 +499,8 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
+- Fixed an assertion failure when diagnosing a constant evaluation failure
+  inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
 - Fixed a wrong code generation in `__builtin_clear_padding` wherein the
@@ -620,6 +622,8 @@ features cannot lower the translation-unit ABI level;
   available as an identifier (e.g. `struct __make_unsigned`) was seen again
   in a token that was lexed and cached before the first occurrence was parsed.
   (#GH214128)
+- Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
+  function that is not a constructor. (#GH194298)
 
 #### Bug Fixes to AST Handling
 
