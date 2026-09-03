@@ -90,10 +90,16 @@ LogicalResult CallIndirectOp::canonicalize(CallIndirectOp indirectCall,
   if (!matchPattern(indirectCall.getCallee(), m_Constant(&calledFn)))
     return failure();
 
-  // Replace with a direct call.
-  rewriter.replaceOpWithNewOp<CallOp>(indirectCall, calledFn,
-                                      indirectCall.getResultTypes(),
-                                      indirectCall.getArgOperands());
+  // Replace with a direct call, preserving the call-site attributes.
+  auto directCall = CallOp::create(rewriter, indirectCall.getLoc(), calledFn,
+                                   indirectCall.getResultTypes(),
+                                   indirectCall.getArgOperands());
+  if (ArrayAttr argAttrs = indirectCall.getArgAttrsAttr())
+    directCall.setArgAttrsAttr(argAttrs);
+  if (ArrayAttr resAttrs = indirectCall.getResAttrsAttr())
+    directCall.setResAttrsAttr(resAttrs);
+  directCall->setDiscardableAttrs(indirectCall->getDiscardableAttrDictionary());
+  rewriter.replaceOp(indirectCall, directCall.getResults());
   return success();
 }
 
