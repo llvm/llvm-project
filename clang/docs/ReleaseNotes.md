@@ -73,7 +73,7 @@ features cannot lower the translation-unit ABI level;
 - On SPARC, a `_Complex` value with an integer element type is now passed and
   returned packed into the one or two integer registers it fits in, matching GCC.
   Clang previously passed such a value indirectly and returned it with one part
-  per register. 
+  per register.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
 
 - On SPARC64, a `_Complex char` or `_Complex short` is now
@@ -119,7 +119,7 @@ features cannot lower the translation-unit ABI level;
 
 - `CompletionString.availability` now returns instances of `AvailabilityKind`.
   As a result, the `__str__` representation of its return values changed.
-  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`. 
+  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
 ### OpenCL Potentially Breaking Changes
 
@@ -477,6 +477,13 @@ features cannot lower the translation-unit ABI level;
   derived from the first template in the chain that can have them, per the
   equivalence rule of `[temp.alias]p2`, matching GCC. (#GH125821)
 
+- Class template argument deduction through an alias template now works when
+  a template parameter of the alias only appears in the synthesized deduction
+  guide through default template arguments. Such a template parameter now gets a default
+  template argument deduced from the return type of the underlying deduction
+  guide (here `Key` becomes the iterator's value type), instead of being
+  undeducible.
+
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
@@ -491,9 +498,9 @@ features cannot lower the translation-unit ABI level;
   producing a spurious "no matching function" error with no candidate notes.
   (#GH210822)
 
-- Fixed a crash when module directive export module foo not following a 
+- Fixed a crash when module directive export module foo not following a
   semicolon and there are no rest pp-tokens in current module file. (#GH187771)
-  
+
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default

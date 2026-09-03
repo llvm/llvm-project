@@ -956,11 +956,51 @@ llvm::DenseSet<const NamedDecl *> getSourceDeductionGuides(DeclarationName Name,
   return Result;
 }
 
+// Marker for a template parameter that doesn't appear in the synthesized
+// deduction guide f' of an alias template.
+constexpr unsigned InvalidFPrimeIndex = -1;
+
+// A template parameter of the synthesized deduction guide f' of an alias
+// template A, before it is created.
+struct FPrimeTemplateParamRef {
+  // Whether this is a template parameter of A, as opposed to a non-deduced
+  // template parameter of the underlying deduction guide f.
+  bool IsAliasParam;
+  // The index of the template parameter in the template parameter list of A or
+  // f, respectively.
+  unsigned Index;
+  // For a non-deduced template parameter of f: the deduced template parameters
+  // of f that it refers to.
+  llvm::SmallBitVector DeducedFParamsUsed;
+};
+
+static bool hasDefaultArgument(const NamedDecl *Param) {
+  if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
+    return TTP->hasDefaultArgument();
+  if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param))
+    return NTTP->hasDefaultArgument();
+  return cast<TemplateTemplateParmDecl>(Param)->hasDefaultArgument();
+}
+
+static void setDefaultArgument(ASTContext &Context, NamedDecl *Param,
+                               const TemplateArgumentLoc &DefArg) {
+  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
+    TTP->setDefaultArgument(Context, DefArg);
+  else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param))
+    NTTP->setDefaultArgument(Context, DefArg);
+  else
+    cast<TemplateTemplateParmDecl>(Param)->setDefaultArgument(Context, DefArg);
+}
+
 // Build the associated constraints for the alias deduction guides.
 // C++ [over.match.class.deduct]p3.3:
 //   The associated constraints ([temp.constr.decl]) are the conjunction of the
 //   associated constraints of g and a constraint that is satisfied if and only
 //   if the arguments of A are deducible (see below) from the return type.
+//
+// AliasParamFPrimeIndex and FParamFPrimeIndex give the index in f' of the
+// template parameters of the alias template and of the non-deduced template
+// parameters of F, respectively (InvalidFPrimeIndex for those not in f').
 //
 // The return result is expected to be the require-clause for the synthesized
 // alias deduction guide.
@@ -968,7 +1008,9 @@ Expr *
 buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
                            TypeAliasTemplateDecl *AliasTemplate,
                            ArrayRef<DeducedTemplateArgument> DeduceResults,
-                           unsigned FirstUndeducedParamIdx, Expr *IsDeducible) {
+                           ArrayRef<unsigned> AliasParamFPrimeIndex,
+                           ArrayRef<unsigned> FParamFPrimeIndex,
+                           Expr *IsDeducible) {
   Expr *RC = F->getTemplateParameters()->getRequiresClause();
   if (!RC)
     return IsDeducible;
@@ -1002,15 +1044,19 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
   // build template arguments refer to them.
   SmallVector<TemplateArgument> AdjustedAliasTemplateArgs;
 
-  for (auto *TP : *AliasTemplate->getTemplateParameters()) {
+  for (auto [Index, TP] :
+       llvm::enumerate(*AliasTemplate->getTemplateParameters())) {
     // Rebuild any internal references to earlier parameters and reindex
-    // as we go.
+    // as we go. Template parameters of the alias that don't appear in f' are
+    // not referred to by the deduced template arguments; keep their index.
     MultiLevelTemplateArgumentList Args;
     Args.setKind(TemplateSubstitutionKind::Rewrite);
     Args.addOuterTemplateArguments(AdjustedAliasTemplateArgs);
+    unsigned NewIndex = AliasParamFPrimeIndex[Index] != InvalidFPrimeIndex
+                            ? AliasParamFPrimeIndex[Index]
+                            : Index;
     NamedDecl *NewParam = transformTemplateParameter(
-        SemaRef, AliasTemplate->getDeclContext(), TP, Args,
-        /*NewIndex=*/AdjustedAliasTemplateArgs.size(),
+        SemaRef, AliasTemplate->getDeclContext(), TP, Args, NewIndex,
         getDepthAndIndex(TP).first + AdjustDepth);
 
     TemplateArgument NewTemplateArgument =
@@ -1036,9 +1082,8 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
       // Rebuild the template parameter with updated depth and index.
       NamedDecl *NewParam =
           transformTemplateParameter(SemaRef, F->getDeclContext(), TP, Args,
-                                     /*NewIndex=*/FirstUndeducedParamIdx,
+                                     /*NewIndex=*/FParamFPrimeIndex[Index],
                                      getDepthAndIndex(TP).first + AdjustDepth);
-      FirstUndeducedParamIdx += 1;
       assert(TemplateArgsForBuildingRC[Index].isNull());
       TemplateArgsForBuildingRC[Index] =
           Context.getInjectedTemplateArg(NewParam);
@@ -1237,6 +1282,255 @@ bool IsNonDeducedArgument(const TemplateArgument &TA) {
           llvm::any_of(TA.pack_elements(), IsNonDeducedArgument));
 }
 
+// Synthesize default template arguments for the template parameters of the
+// alias template A that appear in the deduction guide f' without having a
+// default template argument.
+//
+// Such a template parameter cannot be deduced from the function parameters of
+// f' if it only appears in f' through the default template arguments of other
+// template parameters of A, e.g.
+//
+//   template <class Key, class Hash = std::hash<Key>>
+//   using MySet = std::unordered_set<Key, Hash>;
+//
+// with the deduction guide
+//
+//   template <class It, class H = std::hash<iter_value_t<It>>>
+//   unordered_set(It, It, H = H()) -> unordered_set<iter_value_t<It>, H>;
+//
+// Deducing the return type of the guide from the defining-type-id of MySet
+// gives H = Hash, so Hash and, through its default template argument, Key are
+// template parameters of f':
+//
+//   template <class Key, class Hash = std::hash<Key>, class It>
+//   MySet(It, It, Hash) -> unordered_set<iter_value_t<It>, Hash>;
+//
+// and `MySet(first, last)` fails, as Key cannot be deduced. However, Key
+// corresponds to `iter_value_t<It>` in the return type of the guide: deducing
+// the template arguments of A from the return type of f gives
+// Key = iter_value_t<It>, which we use as the default template argument of Key
+// in f' (see orderFPrimeTemplateParameters for the resulting order):
+//
+//   template <class It, class Key = iter_value_t<It>,
+//             class Hash = std::hash<Key>>
+//   MySet(It, It, Hash) -> unordered_set<iter_value_t<It>, Hash>;
+//
+// The result has an entry for each template parameter of A, which is null for
+// those that don't get a synthesized default template argument. The synthesized
+// default template arguments refer to the (non-deduced) template parameters of
+// f.
+static SmallVector<TemplateArgument> synthesizeDefaultArgumentsForFPrime(
+    Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
+    FunctionTemplateDecl *F, ArrayRef<TemplateArgument> AliasRhsTemplateArgs,
+    ArrayRef<TemplateArgument> FReturnTemplateArgs,
+    ArrayRef<DeducedTemplateArgument> DeduceResults,
+    ArrayRef<unsigned> AliasParamsInFPrime, SourceLocation Loc) {
+  TemplateParameterList *AliasParams = AliasTemplate->getTemplateParameters();
+  TemplateParameterList *FParams = F->getTemplateParameters();
+  SmallVector<TemplateArgument> Result(AliasParams->size());
+
+  auto NeedsDefaultArgument = [&](unsigned Index) {
+    NamedDecl *Param = AliasParams->getParam(Index);
+    return !Param->isTemplateParameterPack() && !hasDefaultArgument(Param);
+  };
+
+  if (llvm::none_of(AliasParamsInFPrime, NeedsDefaultArgument))
+    return Result;
+
+  // Deduce the template arguments of A from the return type of f, the reverse
+  // of the deduction of the template arguments of f from the defining-type-id
+  // of A.
+  sema::TemplateDeductionInfo Info(Loc, AliasParams->getDepth());
+  SmallVector<DeducedTemplateArgument> Deduced(AliasParams->size());
+  SemaRef.DeduceTemplateArguments(AliasParams, AliasRhsTemplateArgs,
+                                  FReturnTemplateArgs, Info, Deduced,
+                                  /*NumberOfArgumentsMustMatch=*/false);
+
+  for (unsigned Index : AliasParamsInFPrime) {
+    if (!NeedsDefaultArgument(Index))
+      continue;
+    const TemplateArgument &D = Deduced[Index];
+
+    if (D.isNull() || D.isPackExpansion())
+      continue;
+
+    NamedDecl *Param = AliasParams->getParam(Index);
+
+    bool KindMatches = [&] {
+      switch (D.getKind()) {
+      case TemplateArgument::Type:
+        return isa<TemplateTypeParmDecl>(Param);
+      case TemplateArgument::Template:
+        return isa<TemplateTemplateParmDecl>(Param);
+      case TemplateArgument::Expression:
+        return isa<NonTypeTemplateParmDecl>(Param);
+      default:
+        return false;
+      }
+    }();
+
+    if (!KindMatches)
+      continue;
+
+    // The deduced argument may only refer to the non-deduced template
+    // parameters of f. The deduced ones are replaced in f' by the template
+    // parameters of A they were deduced to, whose default template arguments
+    // may in turn refer to this template parameter.
+    llvm::SmallBitVector UsedFParams(FParams->size());
+    SemaRef.MarkUsedTemplateParameters(D, /*OnlyDeduced=*/false,
+                                       FParams->getDepth(), UsedFParams);
+    if (llvm::any_of(UsedFParams.set_bits(), [&](unsigned FIndex) {
+          return !IsNonDeducedArgument(DeduceResults[FIndex]);
+        }))
+      continue;
+    Result[Index] = D;
+  }
+  return Result;
+}
+
+// Determine the order of the template parameters of the deduction guide f' of
+// the alias template A when some of them got a synthesized default template
+// argument (see synthesizeDefaultArgumentsForFPrime).
+//
+// A default template argument can only refer to preceding template parameters.
+// The order given by the standard (the template parameters of A, followed by
+// the non-deduced template parameters of f) doesn't satisfy that for the
+// synthesized default template arguments, which refer to non-deduced template
+// parameters of f. Instead, order the template parameters of f' such that each
+// of them follows the ones its default template argument, its type (for a
+// non-type template parameter) and its type-constraint refer to, staying as
+// close to the standard's order as possible.
+//
+// Returns false if there is no such order.
+static bool orderFPrimeTemplateParameters(
+    Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
+    FunctionTemplateDecl *F, ArrayRef<DeducedTemplateArgument> DeduceResults,
+    ArrayRef<unsigned> AliasParamsInFPrime,
+    ArrayRef<unsigned> NonDeducedFParams,
+    ArrayRef<TemplateArgument> SynthesizedDefaultArgs,
+    SmallVectorImpl<FPrimeTemplateParamRef> &Order) {
+  TemplateParameterList *AliasParams = AliasTemplate->getTemplateParameters();
+  TemplateParameterList *FParams = F->getTemplateParameters();
+
+  // The template parameters of f' in the standard's order, and the position
+  // of each template parameter of A / non-deduced template parameter of f in
+  // that list.
+  SmallVector<FPrimeTemplateParamRef> Params;
+  SmallVector<unsigned> AliasParamPos(AliasParams->size(), InvalidFPrimeIndex);
+  SmallVector<unsigned> FParamPos(FParams->size(), InvalidFPrimeIndex);
+
+  for (unsigned Index : AliasParamsInFPrime) {
+    AliasParamPos[Index] = Params.size();
+    Params.push_back(
+        {/*IsAliasParam=*/true, Index, llvm::SmallBitVector(FParams->size())});
+  }
+
+  for (unsigned Index : NonDeducedFParams) {
+    FParamPos[Index] = Params.size();
+    Params.push_back(
+        {/*IsAliasParam=*/false, Index, llvm::SmallBitVector(FParams->size())});
+  }
+
+  unsigned NumParams = Params.size();
+
+  // Mark the template parameters (of the list containing Param, at the given
+  // depth) that the default template argument, the type and the
+  // type-constraint of Param refer to.
+  auto MarkReferencedTemplateParams = [&](NamedDecl *Param, unsigned Depth,
+                                          llvm::SmallBitVector &Used) {
+    if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
+      if (TTP->hasDefaultArgument())
+        SemaRef.MarkUsedTemplateParameters(
+            TTP->getDefaultArgument().getArgument(), /*OnlyDeduced=*/false,
+            Depth, Used);
+      if (const TypeConstraint *TC = TTP->getTypeConstraint())
+        if (const Expr *E = TC->getImmediatelyDeclaredConstraint())
+          SemaRef.MarkUsedTemplateParameters(E, /*OnlyDeduced=*/false, Depth,
+                                             Used);
+    } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+      if (NTTP->hasDefaultArgument())
+        SemaRef.MarkUsedTemplateParameters(
+            NTTP->getDefaultArgument().getArgument(), /*OnlyDeduced=*/false,
+            Depth, Used);
+      SemaRef.MarkUsedTemplateParameters(TemplateArgument(NTTP->getType()),
+                                         /*OnlyDeduced=*/false, Depth, Used);
+    } else {
+      auto *TTP = cast<TemplateTemplateParmDecl>(Param);
+      if (TTP->hasDefaultArgument())
+        SemaRef.MarkUsedTemplateParameters(
+            TTP->getDefaultArgument().getArgument(), /*OnlyDeduced=*/false,
+            Depth, Used);
+    }
+  };
+
+  // Deps[I] holds the positions of the template parameters that must precede
+  // the I-th template parameter.
+  SmallVector<llvm::SmallBitVector> Deps(NumParams,
+                                         llvm::SmallBitVector(NumParams));
+  for (auto [Pos, P] : llvm::enumerate(Params)) {
+    if (P.IsAliasParam) {
+      llvm::SmallBitVector UsedAliasParams(AliasParams->size());
+      MarkReferencedTemplateParams(AliasParams->getParam(P.Index),
+                                   AliasParams->getDepth(), UsedAliasParams);
+      for (unsigned Index : UsedAliasParams.set_bits())
+        if (Index != P.Index && AliasParamPos[Index] != InvalidFPrimeIndex)
+          Deps[Pos].set(AliasParamPos[Index]);
+      // The synthesized default template argument refers to non-deduced
+      // template parameters of f.
+      if (!SynthesizedDefaultArgs[P.Index].isNull()) {
+        llvm::SmallBitVector UsedFParams(FParams->size());
+        SemaRef.MarkUsedTemplateParameters(SynthesizedDefaultArgs[P.Index],
+                                           /*OnlyDeduced=*/false,
+                                           FParams->getDepth(), UsedFParams);
+        for (unsigned Index : UsedFParams.set_bits()) {
+          assert(FParamPos[Index] != InvalidFPrimeIndex &&
+                 "synthesized default argument refers to a deduced parameter");
+          Deps[Pos].set(FParamPos[Index]);
+        }
+      }
+      continue;
+    }
+
+    llvm::SmallBitVector UsedFParams(FParams->size());
+    MarkReferencedTemplateParams(FParams->getParam(P.Index),
+                                 FParams->getDepth(), UsedFParams);
+    for (unsigned Index : UsedFParams.set_bits()) {
+      if (Index == P.Index)
+        continue;
+      if (FParamPos[Index] != InvalidFPrimeIndex) {
+        Deps[Pos].set(FParamPos[Index]);
+        continue;
+      }
+      // A deduced template parameter of f, which is replaced in f' by the
+      // template parameters of A that its deduced argument refers to.
+      P.DeducedFParamsUsed.set(Index);
+      const TemplateArgument &DeducedArg = DeduceResults[Index];
+      llvm::SmallBitVector UsedAliasParams(AliasParams->size());
+      SemaRef.MarkUsedTemplateParameters(DeducedArg, /*OnlyDeduced=*/false,
+                                         AliasParams->getDepth(),
+                                         UsedAliasParams);
+      for (unsigned AliasIndex : UsedAliasParams.set_bits())
+        if (AliasParamPos[AliasIndex] != InvalidFPrimeIndex)
+          Deps[Pos].set(AliasParamPos[AliasIndex]);
+    }
+  }
+
+  // Repeatedly pick the first template parameter all of whose dependencies
+  // have been placed.
+  llvm::SmallBitVector Placed(NumParams);
+  while (Order.size() < NumParams) {
+    unsigned Next = NumParams;
+    for (unsigned Pos = 0; Pos != NumParams && Next == NumParams; ++Pos)
+      if (!Placed[Pos] && !Deps[Pos].test(Placed))
+        Next = Pos;
+    if (Next == NumParams) // The dependencies are circular.
+      return false;
+    Placed.set(Next);
+    Order.push_back(std::move(Params[Next]));
+  }
+  return true;
+}
+
 // Build deduction guides for a type alias template from the given underlying
 // source deduction guide.
 CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
@@ -1349,26 +1643,59 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
   SmallVector<TemplateArgument> TemplateArgsForBuildingFPrime(
       F->getTemplateParameters()->size());
 
+  TemplateParameterList *AliasParams = AliasTemplate->getTemplateParameters();
+  TemplateParameterList *FParams = F->getTemplateParameters();
+
   // Create a template parameter list for the synthesized deduction guide f'.
   //
   // C++ [over.match.class.deduct]p3.2:
   //   If f is a function template, f' is a function template whose template
   //   parameter list consists of all the template parameters of A
   //   (including their default template arguments) that appear in the above
-  //   deductions or (recursively) in their default template arguments
+  //   deductions or (recursively) in their default template arguments,
+  //   followed by the template parameters of f that were not deduced
+  //   (including their default template arguments)
   SmallVector<NamedDecl *> FPrimeTemplateParams;
   // Store template arguments that refer to the newly-created template
   // parameters, used for building `TemplateArgsForBuildingFPrime`.
   SmallVector<TemplateArgument, 16> TransformedDeducedAliasArgs(
-      AliasTemplate->getTemplateParameters()->size());
+      AliasParams->size());
+  // The index in f' of the template parameters of A, and of the non-deduced
+  // template parameters of f, that appear in f'.
+  SmallVector<unsigned> AliasParamFPrimeIndex(AliasParams->size(),
+                                              InvalidFPrimeIndex);
+  SmallVector<unsigned> FParamFPrimeIndex(FParams->size(), InvalidFPrimeIndex);
+
+  // Template parameters of A that appear in f' without a default template
+  // argument, and that cannot be deduced from the function parameters of f',
+  // get a default template argument synthesized from the return type of f.
+  SmallVector<TemplateArgument> SynthesizedDefaultArgs =
+      synthesizeDefaultArgumentsForFPrime(
+          SemaRef, AliasTemplate, F, AliasRhsTemplateArgs, FReturnTemplateArgs,
+          DeduceResults, DeducedAliasTemplateParams, Loc);
+  // Those refer to template parameters of f, which the standard's order places
+  // after the template parameters of A; reorder the template parameters of f'
+  // so that default template arguments only refer to preceding template
+  // parameters. If that is not possible, don't synthesize any.
+  SmallVector<FPrimeTemplateParamRef> FPrimeParamOrder;
+  if (llvm::any_of(SynthesizedDefaultArgs,
+                   [](const TemplateArgument &TA) { return !TA.isNull(); }) &&
+      !orderFPrimeTemplateParameters(
+          SemaRef, AliasTemplate, F, DeduceResults, DeducedAliasTemplateParams,
+          NonDeducedTemplateParamsInFIndex, SynthesizedDefaultArgs,
+          FPrimeParamOrder)) {
+    llvm::fill(SynthesizedDefaultArgs, TemplateArgument());
+    FPrimeParamOrder.clear();
+  }
+
   // We might be already within a pack expansion, but rewriting template
   // parameters is independent of that. (We may or may not expand new packs
   // when rewriting. So clear the state)
   Sema::ArgPackSubstIndexRAII PackSubstReset(SemaRef, std::nullopt);
 
-  for (unsigned AliasTemplateParamIdx : DeducedAliasTemplateParams) {
-    auto *TP =
-        AliasTemplate->getTemplateParameters()->getParam(AliasTemplateParamIdx);
+  // Add the template parameter of A at the given index to f'.
+  auto AddAliasTemplateParam = [&](unsigned AliasTemplateParamIdx) -> bool {
+    auto *TP = AliasParams->getParam(AliasTemplateParamIdx);
     // Rebuild any internal references to earlier parameters and reindex as
     // we go.
     MultiLevelTemplateArgumentList Args;
@@ -1377,13 +1704,31 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, AliasTemplate->getDeclContext(), TP, Args,
         /*NewIndex=*/FPrimeTemplateParams.size(), getDepthAndIndex(TP).first);
+    if (const TemplateArgument &Default =
+            SynthesizedDefaultArgs[AliasTemplateParamIdx];
+        !Default.isNull()) {
+      // The synthesized default template argument refers to template
+      // parameters of f; rewrite it in terms of the corresponding
+      // (already created) template parameters of f'.
+      QualType NTTPType;
+      if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(NewParam))
+        NTTPType = NTTP->getType();
+      MultiLevelTemplateArgumentList FArgs;
+      FArgs.setKind(TemplateSubstitutionKind::Rewrite);
+      FArgs.addOuterTemplateArguments(TemplateArgsForBuildingFPrime);
+      TemplateArgumentLoc Output;
+      if (SemaRef.SubstTemplateArgument(
+              SemaRef.getTrivialTemplateArgumentLoc(Default, NTTPType, Loc),
+              FArgs, Output, Loc, NewParam->getDeclName()))
+        return false;
+      setDefaultArgument(Context, NewParam, Output);
+    }
+    AliasParamFPrimeIndex[AliasTemplateParamIdx] = FPrimeTemplateParams.size();
     FPrimeTemplateParams.push_back(NewParam);
-
-    TemplateArgument NewTemplateArgument =
+    TransformedDeducedAliasArgs[AliasTemplateParamIdx] =
         Context.getInjectedTemplateArg(NewParam);
-    TransformedDeducedAliasArgs[AliasTemplateParamIdx] = NewTemplateArgument;
-  }
-  unsigned FirstUndeducedParamIdx = FPrimeTemplateParams.size();
+    return true;
+  };
 
   // To form a deduction guide f' from f, we leverage clang's instantiation
   // mechanism, we construct a template argument list where the template
@@ -1400,21 +1745,21 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
   //
   // Note: the non-deduced template arguments of `f` might refer to arguments
   // deduced in 1), as in a type constraint.
-  MultiLevelTemplateArgumentList Args;
-  Args.setKind(TemplateSubstitutionKind::Rewrite);
-  Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
-  for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
+  //
+  // Substitute the template parameters of f' into the deduced template
+  // argument for the template parameter of f at the given index (1). The
+  // template parameters of A it refers to must have been added to f' already.
+  auto SubstDeducedTemplateArg = [&](unsigned Index) -> bool {
     const auto &D = DeduceResults[Index];
-    auto *TP = F->getTemplateParameters()->getParam(Index);
-    if (IsNonDeducedArgument(D)) {
-      // 2): Non-deduced template parameters would be substituted later.
-      continue;
-    }
+    auto *TP = FParams->getParam(Index);
+    MultiLevelTemplateArgumentList Args;
+    Args.setKind(TemplateSubstitutionKind::Rewrite);
+    Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
     TemplateArgumentLoc Input =
         SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
     TemplateArgumentListInfo Output;
     if (SemaRef.SubstTemplateArguments(Input, Args, Output))
-      return nullptr;
+      return false;
     assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
            "InstantiatedArgs must be null before setting");
     // CheckTemplateArgument is necessary for NTTP initializations.
@@ -1428,7 +1773,7 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
               TP, TA, F, F->getLocation(), F->getLocation(),
               /*ArgumentPackIndex=*/-1, CTAI,
               Sema::CheckTemplateArgumentKind::CTAK_Specified))
-        return nullptr;
+        return false;
     if (Input.getArgument().getKind() == TemplateArgument::Pack) {
       // We will substitute the non-deduced template arguments with these
       // transformed (unpacked at this point) arguments, where that substitution
@@ -1439,13 +1784,12 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
       assert(Output.arguments().size() == 1);
       TemplateArgsForBuildingFPrime[Index] = CTAI.SugaredConverted[0];
     }
-  }
+    return true;
+  };
 
-  // Case 2)
-  //   ...followed by the template parameters of f that were not deduced
-  //   (including their default template arguments)
-  for (unsigned FTemplateParamIdx : NonDeducedTemplateParamsInFIndex) {
-    auto *TP = F->getTemplateParameters()->getParam(FTemplateParamIdx);
+  // Add the non-deduced template parameter of f at the given index to f' (2).
+  auto AddFTemplateParam = [&](unsigned FTemplateParamIdx) {
+    auto *TP = FParams->getParam(FTemplateParamIdx);
     MultiLevelTemplateArgumentList Args;
     Args.setKind(TemplateSubstitutionKind::Rewrite);
     // We take a shortcut here, it is ok to reuse the
@@ -1454,12 +1798,48 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, F->getDeclContext(), TP, Args, FPrimeTemplateParams.size(),
         getDepthAndIndex(TP).first);
+    FParamFPrimeIndex[FTemplateParamIdx] = FPrimeTemplateParams.size();
     FPrimeTemplateParams.push_back(NewParam);
 
     assert(TemplateArgsForBuildingFPrime[FTemplateParamIdx].isNull() &&
            "The argument must be null before setting");
     TemplateArgsForBuildingFPrime[FTemplateParamIdx] =
         Context.getInjectedTemplateArg(NewParam);
+  };
+
+  if (FPrimeParamOrder.empty()) {
+    // The standard's order: the template parameters of A that appear in the
+    // deductions, followed by the non-deduced template parameters of f.
+    for (unsigned AliasTemplateParamIdx : DeducedAliasTemplateParams)
+      if (!AddAliasTemplateParam(AliasTemplateParamIdx))
+        return nullptr;
+    for (unsigned Index = 0; Index < DeduceResults.size(); ++Index)
+      if (!IsNonDeducedArgument(DeduceResults[Index]) &&
+          !SubstDeducedTemplateArg(Index))
+        return nullptr;
+    for (unsigned FTemplateParamIdx : NonDeducedTemplateParamsInFIndex)
+      AddFTemplateParam(FTemplateParamIdx);
+  } else {
+    for (const FPrimeTemplateParamRef &P : FPrimeParamOrder) {
+      if (P.IsAliasParam) {
+        if (!AddAliasTemplateParam(P.Index))
+          return nullptr;
+        continue;
+      }
+      // The template parameters of A that the deduced template arguments
+      // referred to by this template parameter of f refer to have been added
+      // already, so we can substitute them now.
+      for (unsigned Index : P.DeducedFParamsUsed.set_bits())
+        if (TemplateArgsForBuildingFPrime[Index].isNull() &&
+            !SubstDeducedTemplateArg(Index))
+          return nullptr;
+      AddFTemplateParam(P.Index);
+    }
+    for (unsigned Index = 0; Index < DeduceResults.size(); ++Index)
+      if (!IsNonDeducedArgument(DeduceResults[Index]) &&
+          TemplateArgsForBuildingFPrime[Index].isNull() &&
+          !SubstDeducedTemplateArg(Index))
+        return nullptr;
   }
 
   auto *TemplateArgListForBuildingFPrime =
@@ -1472,9 +1852,9 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
 
     Expr *IsDeducible = buildIsDeducibleConstraint(
         SemaRef, AliasTemplate, FPrime->getReturnType(), FPrimeTemplateParams);
-    Expr *RequiresClause =
-        buildAssociatedConstraints(SemaRef, F, AliasTemplate, DeduceResults,
-                                   FirstUndeducedParamIdx, IsDeducible);
+    Expr *RequiresClause = buildAssociatedConstraints(
+        SemaRef, F, AliasTemplate, DeduceResults, AliasParamFPrimeIndex,
+        FParamFPrimeIndex, IsDeducible);
 
     TemplateParameterList *FPrimeTemplateParamList = nullptr;
     if (!FPrimeTemplateParams.empty())

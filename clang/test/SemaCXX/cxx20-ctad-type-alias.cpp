@@ -629,3 +629,105 @@ template <typename T> using S3 = S2<T>; // expected-note {{candidate function no
                                         // expected-note {{cannot deduce template arguments for 'GH190517::S3' from 'GH190517::S1<char>'}}
 S3 foo(42); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'S3'}}
 }
+
+// Template parameters of the alias template that appear in a synthesized
+// deduction guide only through the default template arguments of other
+// template parameters cannot be deduced from the constructor arguments. They
+// get a default template argument deduced from the return type of the
+// underlying deduction guide instead, and the template parameters of the
+// synthesized guide are ordered so that default template arguments only refer
+// to preceding ones.
+namespace synthesized_default_args {
+template <class T> struct hash {};
+template <class T> struct alloc {};
+template <class It> struct iter_traits { using value_type = typename It::value_type; };
+struct Iter { using value_type = int; };
+
+template <class Key, class Hash = hash<Key>, class Alloc = alloc<Key>>
+struct Set {
+  Set();
+  template <class It> Set(It, It);
+  template <class It> Set(It, It, Hash);
+};
+template <class It,
+          class Hash = hash<typename iter_traits<It>::value_type>,
+          class Alloc = alloc<typename iter_traits<It>::value_type>>
+Set(It, It, Hash = Hash(), Alloc = Alloc())
+    -> Set<typename iter_traits<It>::value_type, Hash, Alloc>;
+
+// Like std::unordered_set: the alias merely renames the class template.
+template <class Key, class Hash = hash<Key>, class Alloc = alloc<Key>>
+using MySet = Set<Key, Hash, Alloc>;
+// The alias has fewer template parameters than the class template.
+template <class Key, class Hash = hash<Key>>
+using MySet2 = Set<Key, Hash>;
+// The alias has a different default template argument, which wins.
+template <class Key, class Hash = hash<Key*>, class Alloc = alloc<Key>>
+using MySet3 = Set<Key, Hash, Alloc>; // #MySet3
+
+void f(Iter b, Iter e) {
+  MySet s1(b, e);
+  static_assert(__is_same(decltype(s1), Set<int, hash<int>, alloc<int>>));
+  MySet s2(b, e, hash<long>());
+  static_assert(__is_same(decltype(s2), Set<int, hash<long>, alloc<int>>));
+  MySet2 s3(b, e);
+  static_assert(__is_same(decltype(s3), Set<int, hash<int>, alloc<int>>));
+  MySet3 s4(b, e);
+  static_assert(__is_same(decltype(s4), Set<int, hash<int*>, alloc<int>>));
+  MySet s5 = s1;
+  static_assert(__is_same(decltype(s5), decltype(s1)));
+
+  // The non-deduced template parameter 'It' of the underlying guide now comes
+  // first, followed by 'Key' with its synthesized default template argument.
+  MySet3 s6(b, e, 1, 2, 3); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'MySet3'}}
+  // expected-note@#MySet3 {{implicit deduction guide declared as 'template <class It, class Key = typename iter_traits<It>::value_type, class Hash = hash<Key *>, class Alloc = alloc<Key>> requires __is_deducible(synthesized_default_args::MySet3, Set<typename iter_traits<It>::value_type, Hash, Alloc>) MySet3(It, It, Hash, Alloc) -> Set<typename iter_traits<It>::value_type, Hash, Alloc>'}}
+  // expected-note@#MySet3 4 {{implicit deduction guide declared as}}
+  // expected-note@#MySet3 {{requires at most 4 arguments, but 5 were provided}}
+  // expected-note@#MySet3 {{requires 3 arguments, but 5 were provided}}
+  // expected-note@#MySet3 {{requires 2 arguments, but 5 were provided}}
+  // expected-note@#MySet3 {{requires 1 argument, but 5 were provided}}
+  // expected-note@#MySet3 {{requires 0 arguments, but 5 were provided}}
+}
+
+// A template parameter of the alias that is deducible from some constructor
+// arguments only.
+template <class T, class A = alloc<T>> struct Vec {
+  template <class It> Vec(It, It);
+  template <class It> Vec(It, It, A);
+};
+template <class It, class A = alloc<typename iter_traits<It>::value_type>>
+Vec(It, It, A = A()) -> Vec<typename iter_traits<It>::value_type, A>;
+template <class T> using MyVec = Vec<T, hash<T>>;
+
+void g(Iter b, Iter e) {
+  MyVec v1(b, e);
+  static_assert(__is_same(decltype(v1), Vec<int, hash<int>>));
+  MyVec v2(b, e, hash<int>());
+  static_assert(__is_same(decltype(v2), Vec<int, hash<int>>));
+}
+
+// The underlying guide is constrained, and the alias is a member of a class
+// template.
+template <class T> concept Any = true;
+template <class Key, class Hash = hash<Key>> struct CSet {
+  CSet();
+  template <class It> CSet(It, It);
+};
+template <class It, class Hash = hash<typename iter_traits<It>::value_type>>
+  requires Any<It> && Any<Hash>
+CSet(It, It, Hash = Hash()) -> CSet<typename iter_traits<It>::value_type, Hash>;
+
+template <class U> struct Outer {
+  template <class Key, class Hash = hash<Key>> using MyCSet = CSet<Key, Hash>;
+};
+
+void h(Iter b, Iter e) {
+  Outer<long>::MyCSet s1(b, e);
+  static_assert(__is_same(decltype(s1), CSet<int, hash<int>>));
+}
+template <class U> void h2(Iter b, Iter e) {
+  typename Outer<U>::MyCSet s(b, e);
+  static_assert(__is_same(decltype(s), CSet<int, hash<int>>));
+}
+template void h2<char>(Iter, Iter);
+} // namespace synthesized_default_args
