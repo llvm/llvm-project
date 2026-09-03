@@ -37,6 +37,7 @@ int main(int, char**) {
     assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
     assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
     C::iterator i;
+    (void)i;
   }
   {
     typedef std::unordered_multiset<int> C;
@@ -48,6 +49,7 @@ int main(int, char**) {
     assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
     assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
     C::const_iterator i;
+    (void)i;
   }
 #if TEST_STD_VER >= 11
   {
@@ -60,6 +62,7 @@ int main(int, char**) {
     assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
     assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
     C::iterator i;
+    (void)i;
   }
   {
     typedef std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, min_allocator<int>> C;
@@ -71,6 +74,7 @@ int main(int, char**) {
     assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
     assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
     C::const_iterator i;
+    (void)i;
   }
 #endif
 #if TEST_STD_VER > 11

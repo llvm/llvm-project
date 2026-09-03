@@ -14,9 +14,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::android {
 
 void CloexecAcceptCheck::registerMatchers(MatchFinder *Finder) {
-  auto SockAddrPointerType =
+  const auto SockAddrPointerType =
       hasType(pointsTo(recordDecl(isStruct(), hasName("sockaddr"))));
-  auto SockLenPointerType = hasType(pointsTo(namedDecl(hasName("socklen_t"))));
+  const auto SockLenPointerType =
+      hasType(pointsTo(namedDecl(hasName("socklen_t"))));
 
   registerMatchersImpl(Finder,
                        functionDecl(returns(isInteger()), hasName("accept"),

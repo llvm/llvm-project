@@ -39,7 +39,8 @@
 # a compiler introspection environment, see
 # https://gitlab.kitware.com/cmake/cmake/-/issues/27419
 function (check_fortran_builtins_available)
-  if (CMAKE_Fortran_COMPILER_FORCED AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+  if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang" AND
+      (CMAKE_Fortran_COMPILER_FORCED OR CMAKE_VERSION VERSION_LESS "3.28"))
     # CMake's check_fortran_source_compiles/try_compile does not take a
     # user-defined CMAKE_Fortran_PREPROCESS_SOURCE into account. Instead of
     # test-compiling, ask Flang directly for the builtin module files.
@@ -47,10 +48,23 @@ function (check_fortran_builtins_available)
     # does not natively recognize Flang (see below). Once we bump the required
     # CMake version, and because setting CMAKE_Fortran_PREPROCESS_SOURCE has
     # been deprecated by CMake, this workaround can be removed.
+    #
+    # The same path is taken for CMake 3.24 to 3.27, which do recognize Flang
+    # but do not pass --target= to try_compile. Setting
+    # CMAKE_Fortran_COMPILE_OPTIONS_TARGET ourselves (see below) does not help:
+    # CMake sets it in CMakeFortranCompiler.cmake, whose scope try_compile
+    # inherits, while ours is only a directory-scope variable. The probe would
+    # therefore compile for the host and report the host's modules.
     if (NOT DEFINED FORTRAN_HAS_ISO_C_BINDING_MOD)
       message(STATUS "Performing Test ISO_C_BINDING_PATH")
+      # Flang's intrinsic modules are per-target; probe for the target we are
+      # compiling for. Empty for compilers without such an option (e.g. GNU).
+      set(_fortran_target_flag "")
+      if (CMAKE_Fortran_COMPILER_TARGET AND CMAKE_Fortran_COMPILE_OPTIONS_TARGET)
+        set(_fortran_target_flag "${CMAKE_Fortran_COMPILE_OPTIONS_TARGET}${CMAKE_Fortran_COMPILER_TARGET}")
+      endif ()
       execute_process(
-        COMMAND ${CMAKE_Fortran_COMPILER} ${CMAKE_Fortran_FLAGS} "-print-file-name=iso_c_binding.mod"
+        COMMAND ${CMAKE_Fortran_COMPILER} ${_fortran_target_flag} ${CMAKE_Fortran_FLAGS} "-print-file-name=iso_c_binding.mod"
         OUTPUT_VARIABLE ISO_C_BINDING_PATH
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
@@ -67,6 +81,8 @@ function (check_fortran_builtins_available)
   else ()
     cmake_push_check_state(RESET)
     set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
+    # CMake 3.28 and later pass --target= to try_compile themselves, so nothing
+    # to add here. Do not pass it a second time.
     check_fortran_source_compiles("
       subroutine testroutine
         use iso_c_binding

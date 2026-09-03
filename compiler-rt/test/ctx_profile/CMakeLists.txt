@@ -38,4 +38,4 @@ endforeach()
 add_lit_testsuite(check-ctx_profile "Running the Contextual Profiler tests"
   ${CTX_PROFILE_TESTSUITES}
   DEPENDS ${CTX_PROFILE_TEST_DEPS})
-set_target_properties(check-ctx_profile PROPERTIES FOLDER "Compiler-RT Misc")
+set_target_properties(check-ctx_profile PROPERTIES FOLDER "compiler-rt Misc")

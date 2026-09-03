@@ -14,7 +14,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::android {
 
 void CloexecOpenCheck::registerMatchers(MatchFinder *Finder) {
-  auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
+  const auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
   registerMatchersImpl(Finder,
                        functionDecl(isExternC(), returns(isInteger()),
                                     hasAnyName("open", "open64"),

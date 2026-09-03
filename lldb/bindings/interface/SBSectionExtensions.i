@@ -10,7 +10,8 @@ STRING_EXTENSION_OUTSIDE(SBSection)
 
         def __iter__(self):
             '''Iterate over all subsections in a lldb.SBSection object.'''
-            return lldb_iter(self, 'GetNumSubSections', 'GetSubSectionAtIndex')
+            for i in range(self.GetNumSubSections()):
+                yield self.GetSubSectionAtIndex(i)
 
         def __len__(self):
             '''Return the number of subsections in a lldb.SBSection object.'''

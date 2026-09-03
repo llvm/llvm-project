@@ -51,6 +51,9 @@ exports_files([
     "include/llvm/Frontend/OpenMP/OMP.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
+    # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
+    "include/llvm/TargetParser/TripleName.def",
+    "utils/get_triple_system_name.py",
     # This one is needed for building and vendoring out lldb from off tree.
     "utils/lldbDataFormatters.py",
 ])
@@ -83,10 +86,19 @@ config_setting(
 )
 
 config_setting(
+    name = "linux_armv7",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:armv7",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
     name = "linux_ppc64le",
     constraint_values = [
         "@platforms//os:linux",
-        "@platforms//cpu:ppc",
+        "@platforms//cpu:ppc64le",
     ],
     visibility = ["//visibility:public"],
 )
@@ -321,12 +333,48 @@ config_setting(
 )
 
 config_setting(
+    name = "is_aarch64_windows_clang_mingw",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+config_setting(
+    name = "is_aarch64_windows_clang_cl",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
+)
+
+config_setting(
+    name = "is_aarch64_windows_msvc",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
+)
+
+config_setting(
     name = "is_x86_64_windows_clang_mingw",
     constraint_values = [
         "@platforms//cpu:x86_64",
         "@platforms//os:windows",
     ],
     flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+config_setting(
+    name = "is_x86_64_windows_clang_cl",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
 )
 
 BLAKE3_x86_64_ASM_SOURCE_PATTERNS = [
@@ -340,6 +388,10 @@ filegroup(
     name = "blake3_x86_64_asm",
     srcs = select({
         ":is_x86_64_windows_clang_mingw": [
+            pattern % "windows_gnu"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        ":is_x86_64_windows_clang_cl": [
             pattern % "windows_gnu"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
@@ -425,7 +477,6 @@ cc_library(
             "-luuid",
             "-lws2_32",
             "-lntdll",
-            "-lwinhttp",
         ],
         ":is_windows_clang_cl": [
             "/STACK:10000000",
@@ -433,7 +484,6 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
-            "winhttp.lib",
         ],
         ":is_windows_msvc": [
             "/STACK:10000000",
@@ -441,7 +491,6 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
-            "winhttp.lib",
         ],
         "@platforms//os:freebsd": [
             "-pthread",
@@ -453,6 +502,7 @@ cc_library(
             "-pthread",
             "-ldl",
         ],
+        "@platforms//os:emscripten": [],
         "//conditions:default": [
             "-pthread",
             "-ldl",
@@ -1436,7 +1486,12 @@ cc_library(
             "include/llvm/Analysis/Utils/*.h",
         ],
     ) + ["include/llvm-c/Analysis.h"],
-    copts = llvm_copts + ["-ftrapping-math"],
+    copts = llvm_copts + select({
+        ":is_windows_clang_cl": ["/fp:except"],
+        ":is_windows_msvc": ["/fp:except"],
+        "@platforms//os:emscripten": [],
+        "//conditions:default": ["-ftrapping-math"],
+    }),
     features = ["-parse_headers"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
@@ -1854,6 +1909,7 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":AsmParser",
         ":BinaryFormat",
         ":Core",
         ":InstCombine",
@@ -2002,6 +2058,7 @@ cc_library(
     name = "FrontendOpenMP",
     srcs = glob([
         "lib/Frontend/OpenMP/*.cpp",
+        "lib/Frontend/OpenMP/*.inc",
     ]),
     hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.h",
@@ -2012,6 +2069,7 @@ cc_library(
     copts = llvm_copts,
     textual_hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.def",
+        "include/llvm/Frontend/OpenMP/*.h.inc",
     ]),
     deps = [
         ":Analysis",
@@ -2177,6 +2235,7 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":AsmParser",
         ":BinaryFormat",
         ":BitReader",
         ":BitWriter",
@@ -2361,6 +2420,7 @@ cc_library(
         ":TransformUtils",
         ":asm_printer_defs",
         ":config",
+        ":runtime_libcalls_gen",
         ":vt_gen",
     ],
 )
@@ -4341,6 +4401,16 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "orc_headers",
+    hdrs = glob([
+        "include/llvm/ExecutionEngine/Orc/**/*.h",
+        "include/llvm/ExecutionEngine/JITLink/**/*.h",
+    ]),
+    copts = llvm_copts,
+    features = ["-parse_headers"],
+)
+
+cc_library(
     name = "JITLink",
     srcs = glob([
         "lib/ExecutionEngine/JITLink/*.cpp",
@@ -4348,7 +4418,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/JITLink/*.h",
-        "include/llvm/ExecutionEngine/Orc/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -4366,6 +4435,7 @@ cc_library(
         ":TargetParser",
         ":TransformUtils",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4396,7 +4466,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/*.h",
-        "include/llvm/ExecutionEngine/Orc/RTBridge/SPS/**/*.h",
     ]) + [
         "include/llvm-c/LLJIT.h",
         "include/llvm-c/Orc.h",
@@ -4431,6 +4500,7 @@ cc_library(
         ":TransformUtils",
         ":WindowsDriver",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4440,11 +4510,10 @@ cc_library(
         "lib/ExecutionEngine/Orc/Shared/*.cpp",
     ]),
     hdrs = glob([
-        "include/llvm/ExecutionEngine/Orc/Shared/*.h",
-        "include/llvm/ExecutionEngine/Orc/RTBridge/*.h",
-    ] + [
+        "include/llvm/ExecutionEngine/Orc/Shared/**/*.h",
+    ]) + [
         "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
-    ]),
+    ],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -4458,6 +4527,7 @@ cc_library(
         ":Support",
         ":Target",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4488,7 +4558,6 @@ cc_library(
     name = "OrcTargetProcess",
     srcs = glob([
         "lib/ExecutionEngine/Orc/TargetProcess/*.cpp",
-        "lib/ExecutionEngine/Orc/TargetProcess/*.h",
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/TargetProcess/*.h",
@@ -4517,6 +4586,7 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4843,7 +4913,15 @@ cc_library(
     hdrs = glob(["include/llvm/HTTP/*.h"]),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [
+        ":is_windows_clang_mingw": [
+            "-lcrypt32",
+            "-lwinhttp",
+        ],
+        ":is_windows_clang_cl": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        ":is_windows_msvc": [
             "crypt32.lib",
             "winhttp.lib",
         ],
@@ -4950,6 +5028,7 @@ cc_binary(
     # ll scripts rely on symbols from dependent
     # libraries being resolvable.
     linkopts = select({
+        "@platforms//os:emscripten": [],
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
@@ -5525,6 +5604,7 @@ cc_binary(
     copts = llvm_copts,
     # Make symbols from the standard library dynamically resolvable.
     linkopts = select({
+        "@platforms//os:emscripten": [],
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
@@ -6627,6 +6707,44 @@ alias(
     actual = "//llvm/utils/lit:lit_bin",
 )
 
+write_file(
+    name = "llvm_config_lit_py_gen",
+    testonly = True,
+    out = "utils/bazel/llvm_config_lit.py",
+    content = [
+        "import sys",
+        "",
+        "VALUES = {",
+        "    '--assertion-mode': 'ON',",
+        "    '--targets-built': '{}',".format(" ".join(llvm_targets)),
+        "}",
+        "",
+        "for argument in sys.argv[1:]:",
+        "    if argument not in VALUES:",
+        "        print('unsupported llvm-config argument: {}'.format(argument), file=sys.stderr)",
+        "        sys.exit(1)",
+        "    print(VALUES[argument])",
+    ],
+)
+
+py_binary(
+    name = "llvm-config",
+    testonly = True,
+    srcs = [":llvm_config_lit_py_gen"],
+    main = "utils/bazel/llvm_config_lit.py",
+    visibility = ["//lld/test:__pkg__"],
+)
+
+filegroup(
+    name = "dtlto_test_scripts",
+    testonly = True,
+    srcs = [
+        "utils/dtlto/mock.py",
+        "utils/dtlto/validate.py",
+    ],
+    visibility = ["//lld/test:__pkg__"],
+)
+
 py_binary(
     name = "extract_ir",
     srcs = [
@@ -6961,23 +7079,6 @@ cc_binary(
         ":TLICheckerOptsTableGen",
         ":TargetParser",
         ":TextAPI",
-        ":config",
-    ],
-)
-
-cc_binary(
-    name = "llvm-sim",
-    testonly = True,
-    srcs = glob([
-        "tools/llvm-sim/*.cpp",
-    ]),
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":Analysis",
-        ":Core",
-        ":IRReader",
-        ":Support",
         ":config",
     ],
 )

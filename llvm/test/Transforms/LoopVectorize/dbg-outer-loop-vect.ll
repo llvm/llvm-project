@@ -131,7 +131,7 @@ exit:
 !30 = !DILocation(line: 10, column: 24, scope: !16)
 !31 = distinct !{!31, !21, !32, !33}
 !32 = !DILocation(line: 13, column: 13, scope: !12)
-!33 = !{!"llvm.loop.vectorize.enable", i1 true}
+!33 = !{!"llvm.loop.vectorize.enable"}
 !34 = !DILocation(line: 10, column: 5, scope: !12)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)

@@ -35,11 +35,11 @@ M m;
 
 // Each 4-byte pointer is followed by 'x' at offset 4 with no padding; records
 // are 4-byte aligned.
-// CIR-DAG: !rec_S = !cir.struct<"S" {!cir.ptr<!s32i>, !s32i}>
-// CIR-DAG: !rec_A = !cir.struct<class "A" {!cir.vptr, !s32i}>
+// CIR-DAG: !rec_S = !cir.struct<"S" {data !cir.ptr<!s32i>, data !s32i}>
+// CIR-DAG: !rec_A = !cir.struct<class "A" {data !cir.vptr, data !s32i}>
 // -emit-cir prints after cir-cxxabi-lowering, so M's member pointer is
 // already a 32-bit integer here.
-// CIR-DAG: !rec_M = !cir.struct<"M" {!s32i, !s32i}>
+// CIR-DAG: !rec_M = !cir.struct<"M" {data !s32i, data !s32i}>
 // CIR-DAG: !cir.ptr<!cir.void> = #cir.ptr_spec<size = 32, abi = 32, preferred = 32, index = 32>
 // CIR: cir.global external @s = #cir.zero : !rec_S {alignment = 4 : i64}
 // CIR: cir.global external @m = #cir.const_record<{#cir.int<-1> : !s32i, #cir.int<0> : !s32i}> : !rec_M {alignment = 4 : i64}
@@ -47,7 +47,7 @@ M m;
 
 // LLVM: @s = global %struct.S zeroinitializer, align 4
 // LLVM: @m = global %struct.M { i32 -1, i32 0 }, align 4
-// LLVM: @_ZTV1A = global { [3 x ptr] } {{.*}}, align 4
+// LLVM: @_ZTV1A = constant { [3 x ptr] } {{.*}}, align 4
 
 // OGCG: @s = global %struct.S zeroinitializer, align 4
 // OGCG: @m = global %struct.M { i32 -1, i32 0 }, align 4

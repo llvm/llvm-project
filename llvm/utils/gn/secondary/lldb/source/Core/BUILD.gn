@@ -58,6 +58,7 @@ static_library("Core") {
     "AddressRangeListImpl.cpp",
     "AddressResolver.cpp",
     "AddressResolverFileLine.cpp",
+    "BugReporter.cpp",
     "Communication.cpp",
     "DataFileCache.cpp",
     "Debugger.cpp",

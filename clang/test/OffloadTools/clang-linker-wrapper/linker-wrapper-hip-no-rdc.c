@@ -41,13 +41,13 @@ __attribute__((visibility("protected"), used)) int x;
 // List code objects in the fat binary
 // RUN: clang-offload-bundler -type=o -input=%t.hipfb -list | FileCheck %s --check-prefix=HIP-FATBIN-LIST
 
-// HIP-FATBIN-LIST-DAG: hip-amdgpu9.4-amd-amdhsa--gfx9-4-generic:xnack+
-// HIP-FATBIN-LIST-DAG: hip-amdgpu12.00-amd-amdhsa--gfx1200
+// HIP-FATBIN-LIST-DAG: hip-amdgcn-amd-amdhsa--gfx9-4-generic:xnack+
+// HIP-FATBIN-LIST-DAG: hip-amdgcn-amd-amdhsa--gfx1200
 // HIP-FATBIN-LIST-DAG: host-x86_64-unknown-linux-gnu
 
 // Extract code objects for both architectures from the fat binary
 // Use '-' instead of ':' in file names to avoid issues on Windows
-// RUN: clang-offload-bundler -type=o -targets=hip-amdgpu9.4-amd-amdhsa--gfx9-4-generic:xnack+,hip-amdgpu12.00-amd-amdhsa--gfx1200 \
+// RUN: clang-offload-bundler -type=o -targets=hip-amdgcn-amd-amdhsa--gfx9-4-generic:xnack+,hip-amdgcn-amd-amdhsa--gfx1200 \
 // RUN:   -output=%t.gfx9-4-generic-xnack+.co -output=%t.gfx1200.co -input=%t.hipfb -unbundle
 
 // Verify extracted code objects exist and are not empty

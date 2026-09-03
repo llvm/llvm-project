@@ -385,6 +385,18 @@ static inline unsigned getADDriFromLEA(unsigned LEAOpcode,
   }
 }
 
+static inline unsigned getSUBriFromLEA(unsigned LEAOpcode) {
+  switch (LEAOpcode) {
+  default:
+    llvm_unreachable("Unexpected LEA instruction");
+  case X86::LEA32r:
+  case X86::LEA64_32r:
+    return X86::SUB32ri;
+  case X86::LEA64r:
+    return X86::SUB64ri32;
+  }
+}
+
 static inline unsigned getINCDECFromLEA(unsigned LEAOpcode, bool IsINC) {
   switch (LEAOpcode) {
   default:
@@ -653,10 +665,8 @@ void FixupLEAsImpl::processInstruction(MachineBasicBlock::iterator &I,
                                        MachineBasicBlock &MBB) {
   // Process a load, store, or LEA instruction.
   MachineInstr &MI = *I;
-  const MCInstrDesc &Desc = MI.getDesc();
-  int AddrOffset = X86II::getMemoryOperandNo(Desc.TSFlags);
+  int AddrOffset = X86II::getMemoryOperandIdx(MI.getDesc());
   if (AddrOffset >= 0) {
-    AddrOffset += X86II::getOperandBias(Desc);
     MachineOperand &p = MI.getOperand(AddrOffset + X86::AddrBaseReg);
     if (p.isReg() && p.getReg() != X86::ESP) {
       seekLEAFixup(p, I, MBB);
@@ -852,6 +862,15 @@ void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
             getINCDECFromLEA(MI.getOpcode(), Offset.getImm() == 1);
         NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
                     .addReg(DestReg);
+        LLVM_DEBUG(NewMI->dump(););
+      } else if (Offset.isImm() && Offset.getImm() == 128) {
+        // ADD of +128 needs a 32-bit immediate, while SUB of -128 fits the
+        // sign-extended 8-bit form, three bytes shorter. EFLAGS was proved
+        // dead above, so the different flag results don't matter.
+        unsigned NewOpc = getSUBriFromLEA(MI.getOpcode());
+        NewMI = BuildMI(MBB, I, MI.getDebugLoc(), TII->get(NewOpc), DestReg)
+                    .addReg(DestReg)
+                    .addImm(-128);
         LLVM_DEBUG(NewMI->dump(););
       } else {
         unsigned NewOpc = getADDriFromLEA(MI.getOpcode(), Offset);

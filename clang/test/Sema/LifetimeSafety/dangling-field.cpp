@@ -255,3 +255,34 @@ struct DtorSet {
   }
 };
 } // namespace DtorNoWarn
+
+namespace LambdaCaptureReset {
+struct MyObj {};
+struct HasField {
+  MyObj* ptr; // expected-note 3 {{this field dangles}}
+
+  void this_capture() {
+    MyObj local;
+    ptr = &local; // expected-warning-re {{stack memory associated with local variable 'local' may escape to the field 'ptr' which will dangle. {{.*}} captured by a lambda}}
+    auto cleanup = [this]() {
+      ptr = nullptr;
+    };
+  }
+
+  void capture_by_ref() {
+    MyObj local;
+    ptr = &local; // expected-warning-re {{stack memory associated with local variable 'local' may escape to the field 'ptr' which will dangle. {{.*}} captured by a lambda}}
+    auto cleanup = [&]() {
+      ptr = nullptr;
+    };
+  }
+
+  void foo_init_capture() {
+    MyObj local;
+    ptr = &local; // expected-warning-re {{stack memory associated with local variable 'local' may escape to the field 'ptr' which will dangle. {{.*}} captured by a lambda}}
+    auto cleanup = [&p = ptr]() {
+      p = nullptr;
+    };
+  }
+};
+} // namespace LambdaCaptureReset

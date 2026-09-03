@@ -623,7 +623,8 @@ SmallVector<utils::IteratorType> {0}::getIteratorTypesArray() {{
 static const char structuredOpIndexingMapsFormat[] = R"FMT(
 ArrayAttr {0}::getIndexingMaps() {{
   static const char memoizeAttr[] = "linalg.memoized_indexing_maps";
-  ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(memoizeAttr);
+  ArrayAttr cached =
+      getOperation()->getDiscardableAttrOfType<ArrayAttr>(memoizeAttr);
   if (cached)
     return cached;
 
@@ -632,7 +633,7 @@ ArrayAttr {0}::getIndexingMaps() {{
   SmallVector<AffineMap> maps;
   {1}
   cached = Builder(context).getAffineMapArrayAttr(maps);
-  getOperation()->setAttr(memoizeAttr, cached);
+  getOperation()->setDiscardableAttr(memoizeAttr, cached);
   return cached;
 }
 )FMT";
@@ -976,7 +977,7 @@ std::string {0}::getLibraryCallName() {{
       // {0}: Attribute name
       // {1}: Attribute size
       static const char attrFmt[] = R"FMT(
-if (auto attr = op->getAttrOfType<DenseElementsAttr>("{0}")) {{
+if (auto attr = op->getInherentAttrOfType<DenseElementsAttr>("{0}")) {{
   if (!attr.getType().getElementType().isInteger(64))
     return op->emitError("incorrect element type for index attribute '{0}'");
   if (attr.getType().getShape() != ArrayRef<int64_t>{{ {1} })
