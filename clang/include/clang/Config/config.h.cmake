@@ -95,4 +95,7 @@
 /* Enable the experimental new constant interpreter by default */
 #cmakedefine01 CLANG_USE_EXPERIMENTAL_CONST_INTERP
 
+/* Define if __emutls_get_address is available in the compiler runtime */
+#cmakedefine01 CLANG_HAVE_EMUTLS_GET_ADDRESS
+
 #endif
