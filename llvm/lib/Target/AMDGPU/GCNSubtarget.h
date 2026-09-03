@@ -1065,6 +1065,13 @@ public:
   bool useVMulU64Inst() const {
     return hasVMulU64Inst() && !hasSlowMaxMinMulI64Insts();
   }
+
+  // \returns true if ISel should select the native i64 min/max instructions
+  // (V_MIN/MAX_{I|U}64). False in CoExec-friendly mode, where they are expanded
+  // to v_cmp + v_cndmask.
+  bool useMinMaxI64Insts() const {
+    return hasMinMaxI64Insts() && !HasCoExecFriendlyISelMode;
+  }
 };
 
 class GCNUserSGPRUsageInfo {
