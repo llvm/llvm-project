@@ -360,6 +360,24 @@ def LLVM_DILanguageParameter : LLVM_DIParameter<
   "language", /*default=*/"0", "Language", /*errorCase=*/"0"
 >;
 
+def LLVM_DISourceLanguageNameParameter : AttrOrTypeParameter<
+  "unsigned", "debug info source language name"> {
+  let parser = [{ [&]() -> FailureOr<unsigned> {
+    SMLoc loc = $_parser.getCurrentLocation();
+    StringRef name;
+    if ($_parser.parseKeyword(&name))
+      return failure();
+    unsigned value = llvm::dwarf::getSourceLanguageName(name);
+    if (!value)
+      return $_parser.emitError(loc)
+        << "invalid debug info source language name: " << name;
+    return value;
+  }() }];
+  let printer = [{ $_printer << llvm::dwarf::SourceLanguageNameString(
+      static_cast<llvm::dwarf::SourceLanguageName>($_self)) }];
+  let defaultValue = "0";
+}
+
 // Source-language dialect values are defined by LLVM's
 // dwarf::LanguageDialectAttribute enum in llvm/BinaryFormat/Dwarf.h. LLVM
 // represents "no source-language dialect" as 0; the LLVM IR printer omits the
@@ -444,6 +462,30 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
 }
 
 //===----------------------------------------------------------------------===//
+// DISourceLanguageNameAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DISourceLanguageNameAttr : LLVM_Attr<"DISourceLanguageName",
+                                               "di_source_language_name"> {
+  let parameters = (ins
+    // An unversioned source-language name (a DW_LANG_* value). This maps to
+    // llvm::DISourceLanguageName::Name when HasVersion is false.
+    LLVM_DILanguageParameter:$language,
+    // A version-independent source-language name (a DW_LNAME_* value). This
+    // maps to llvm::DISourceLanguageName::Name when HasVersion is true.
+    LLVM_DISourceLanguageNameParameter:$name,
+    // The language-dependent version. Its presence maps to
+    // llvm::DISourceLanguageName::HasVersion and its value maps to Version.
+    OptionalParameter<"std::optional<uint32_t>">:$version,
+    // An optional target-specific source-language dialect. Zero represents no
+    // dialect, its value maps to llvm::DISourceLanguageName::Dialect.
+    LLVM_DILanguageDialectParameter:$dialect
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // DICompileUnitAttr
 //===----------------------------------------------------------------------===//
 
@@ -456,8 +498,10 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     OptionalParameter<"bool">:$isRecSelf,
     // DICompileUnitAttr specific parameters.
     OptionalParameter<"DistinctAttr">:$id,
-    LLVM_DILanguageParameter:$sourceLanguage,
-    LLVM_DILanguageDialectParameter:$sourceLanguageDialect,
+    // A plain DW_LANG value uses the historical inline syntax. Source language
+    // names, versions, and dialects are represented by
+    // DISourceLanguageNameAttr.
+    OptionalParameter<"DISourceLanguageNameAttr">:$sourceLanguage,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"StringAttr">:$producer,
     OptionalParameter<"bool">:$isOptimized,
@@ -478,8 +522,11 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
       CArg<"StringAttr", "{}">:$splitDebugFilename,
       CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
     ), [{
+      auto language = DISourceLanguageNameAttr::get(
+          id.getContext(), sourceLanguage, /*name=*/0,
+          /*version=*/std::nullopt, sourceLanguageDialect);
       return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
-                   sourceLanguage, sourceLanguageDialect, file, producer,
+                   language, file, producer,
                    isOptimized, emissionKind, isDebugInfoForProfiling,
                    nameTableKind, splitDebugFilename, importedEntities);
     }]>,
@@ -492,13 +539,25 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
       CArg<"StringAttr", "{}">:$splitDebugFilename,
       CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
     ), [{
+      auto language = DISourceLanguageNameAttr::get(
+          id.getContext(), sourceLanguage, /*name=*/0,
+          /*version=*/std::nullopt, /*dialect=*/0);
       return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
-                   sourceLanguage, /*sourceLanguageDialect=*/0, file, producer,
+                   language, file, producer,
                    isOptimized, emissionKind, isDebugInfoForProfiling,
                    nameTableKind, splitDebugFilename, importedEntities);
     }]>
   ];
-  let assemblyFormat = "`<` struct(params) `>`";
+  let assemblyFormat = [{
+    `<` struct(
+      $recId, $isRecSelf, $id,
+      custom<SourceLanguage>($sourceLanguage),
+      $file, $producer, $isOptimized, $emissionKind,
+      $isDebugInfoForProfiling, $nameTableKind, $splitDebugFilename,
+      $importedEntities
+    ) `>`
+  }];
+  let genVerifyDecl = 1;
   let extraClassDeclaration = [{
     /// Requirements of DIRecursiveTypeAttrInterface.
     /// @{

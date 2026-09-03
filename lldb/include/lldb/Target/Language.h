@@ -221,15 +221,15 @@ public:
   public:
     MethodName() {}
 
-    MethodName(ConstString full)
-        : m_full(full), m_basename(), m_context(), m_arguments(),
+    MethodName(std::string full)
+        : m_full(std::move(full)), m_basename(), m_context(), m_arguments(),
           m_qualifiers(), m_return_type(), m_scope_qualified(), m_parsed(false),
           m_parse_error(false) {}
 
     virtual ~MethodName() {};
 
     void Clear() {
-      m_full.Clear();
+      m_full = {};
       m_basename = llvm::StringRef();
       m_context = llvm::StringRef();
       m_arguments = llvm::StringRef();
@@ -245,10 +245,10 @@ public:
         Parse();
       if (m_parse_error)
         return false;
-      return (bool)m_full;
+      return !m_full.empty();
     }
 
-    ConstString GetFullName() const { return m_full; }
+    const std::string &GetFullName() const { return m_full; }
 
     llvm::StringRef GetBasename() {
       if (!m_parsed)
@@ -292,7 +292,7 @@ public:
       m_parse_error = true;
     }
 
-    ConstString m_full; // Full name:
+    std::string m_full; // Full name:
                         // "size_t lldb::SBTarget::GetBreakpointAtIndex(unsigned
                         // int) const"
     llvm::StringRef m_basename;    // Basename:     "GetBreakpointAtIndex"
@@ -306,9 +306,9 @@ public:
   };
 
   virtual std::unique_ptr<Language::MethodName>
-  GetMethodName(ConstString name) const {
-    return std::make_unique<Language::MethodName>(name);
-  };
+  GetMethodName(llvm::StringRef name) const {
+    return std::make_unique<Language::MethodName>(name.str());
+  }
 
   virtual std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const {

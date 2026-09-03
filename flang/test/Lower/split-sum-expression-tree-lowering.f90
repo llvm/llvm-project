@@ -752,8 +752,8 @@ end
 
 ! Default:   (((x + sqrt((a+b)+c)) + d*e) + f*g)
 ! Rewritten: ((d*e + f*g) + (x + sqrt((a+b)+c)))
-! The pure call is an opaque outer term. Its additive argument retains source
-! order in this stage.
+! A qualifying outer sum is rewritten once. The pure call remains an opaque
+! term, so its additive argument retains source order.
 subroutine eligible_pure_call(x,a,b,c,d,e,f,g)
   real(8) :: x,a,b,c,d,e,f,g
   x = x + sqrt(a+b+c) + d*e + f*g
@@ -836,6 +836,170 @@ end
 ! NO-REWRITE: %[[DE:.*]] = arith.mulf %[[DV]], %[[EV]]
 ! NO-REWRITE: %[[RES:.*]] = arith.addf %[[HEAD_BC]], %[[DE]]
 ! NO-REWRITE: hlfir.assign %[[RES]]
+
+! Default:   d * real((a+b)+c,8)
+! Rewritten: d * real(c+(a+b),8)
+subroutine nested_conversion_operand(x,a,b,c,d)
+  real(8) :: x,d
+  real(4) :: a,b,c
+  x = d * real(a+b+c,8)
+end
+
+! SPLIT-LABEL: func.func @_QPnested_conversion_operand
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[SUM:.*]] = arith.addf %[[CV]], %[[AB]]
+! SPLIT: %[[CONVERT:.*]] = fir.convert %[[SUM]]
+! SPLIT: %[[RES:.*]] = arith.mulf %[[DV]], %[[CONVERT]]
+! SPLIT: hlfir.assign %[[RES]]
+
+! DEFAULT-LABEL: func.func @_QPnested_conversion_operand
+! DEFAULT: %[[DV:.*]] = fir.load
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[SUM:.*]] = arith.addf %[[AB]], %[[CV]]
+! DEFAULT: %[[CONVERT:.*]] = fir.convert %[[SUM]]
+! DEFAULT: %[[RES:.*]] = arith.mulf %[[DV]], %[[CONVERT]]
+! DEFAULT: hlfir.assign %[[RES]]
+
+! Default:   sqrt((a+b)+c)
+! Rewritten: sqrt(c+(a+b))
+subroutine nested_pure_call_argument(x,a,b,c)
+  real(8) :: x,a,b,c
+  x = sqrt(a+b+c)
+end
+
+! SPLIT-LABEL: func.func @_QPnested_pure_call_argument
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[SUM:.*]] = arith.addf %[[CV]], %[[AB]]
+! SPLIT: %[[SQRT:.*]] = math.sqrt %[[SUM]]
+! SPLIT: hlfir.assign %[[SQRT]]
+
+! DEFAULT-LABEL: func.func @_QPnested_pure_call_argument
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[SUM:.*]] = arith.addf %[[AB]], %[[CV]]
+! DEFAULT: %[[SQRT:.*]] = math.sqrt %[[SUM]]
+! DEFAULT: hlfir.assign %[[SQRT]]
+
+! Default:   atan2((a+b)+c,(d+e)+f)
+! Rewritten: atan2(c+(a+b),f+(d+e))
+subroutine nested_separate_call_arguments(x,a,b,c,d,e,f)
+  real(8) :: x,a,b,c,d,e,f
+  x = atan2(a+b+c,d+e+f)
+end
+
+! SPLIT-LABEL: func.func @_QPnested_separate_call_arguments
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[FIRST:.*]] = arith.addf %[[CV]], %[[AB]]
+! SPLIT: %[[FV:.*]] = fir.load
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[EV:.*]] = fir.load
+! SPLIT: %[[DE:.*]] = arith.addf %[[DV]], %[[EV]]
+! SPLIT: %[[SECOND:.*]] = arith.addf %[[FV]], %[[DE]]
+! SPLIT: math.atan2 %[[FIRST]], %[[SECOND]]
+
+! Default:   (flag ? (a+b)+c : d)
+! Rewritten: (flag ? c+(a+b) : d)
+subroutine nested_conditional_branch(x,flag,a,b,c,d)
+  real(8) :: x,a,b,c,d
+  logical :: flag
+  x = (flag ? a+b+c : d)
+end
+
+! SPLIT-LABEL: func.func @_QPnested_conditional_branch
+! SPLIT: fir.if
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[SUM:.*]] = arith.addf %[[CV]], %[[AB]]
+! SPLIT: fir.result %[[SUM]]
+
+! DEFAULT-LABEL: func.func @_QPnested_conditional_branch
+! DEFAULT: fir.if
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[SUM:.*]] = arith.addf %[[AB]], %[[CV]]
+! DEFAULT: fir.result %[[SUM]]
+
+! Default:   ((a+b)+c > d ? e : f)
+! Rewritten: (c+(a+b) > d ? e : f)
+subroutine nested_relational_operand(x,a,b,c,d,e,f)
+  real(8) :: x,a,b,c,d,e,f
+  x = (a+b+c > d ? e : f)
+end
+
+! SPLIT-LABEL: func.func @_QPnested_relational_operand
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[SUM:.*]] = arith.addf %[[CV]], %[[AB]]
+! SPLIT: arith.cmpf ogt, %[[SUM]]
+
+! DEFAULT-LABEL: func.func @_QPnested_relational_operand
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[SUM:.*]] = arith.addf %[[AB]], %[[CV]]
+! DEFAULT: arith.cmpf ogt, %[[SUM]]
+
+subroutine guard_parenthesized_call_argument(x,a,b,c)
+  real(8) :: x,a,b,c
+  x = sqrt((a+b+c))
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_parenthesized_call_argument
+! NO-REWRITE: %[[AV:.*]] = fir.load
+! NO-REWRITE: %[[BV:.*]] = fir.load
+! NO-REWRITE: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! NO-REWRITE: %[[CV:.*]] = fir.load
+! NO-REWRITE: %[[SUM:.*]] = arith.addf %[[AB]], %[[CV]]
+! NO-REWRITE: %[[PAREN:.*]] = hlfir.no_reassoc %[[SUM]]
+! NO-REWRITE: %[[SQRT:.*]] = math.sqrt %[[PAREN]]
+! NO-REWRITE: hlfir.assign %[[SQRT]]
+
+subroutine guard_short_call_argument(x,a,b)
+  real(8) :: x,a,b
+  x = sqrt(a+b)
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_short_call_argument
+! NO-REWRITE: %[[AV:.*]] = fir.load
+! NO-REWRITE: %[[BV:.*]] = fir.load
+! NO-REWRITE: %[[SUM:.*]] = arith.addf %[[AV]], %[[BV]]
+! NO-REWRITE: %[[SQRT:.*]] = math.sqrt %[[SUM]]
+! NO-REWRITE: hlfir.assign %[[SQRT]]
+
+subroutine guard_non_assignment_context(a,b,c)
+  real(8) :: a,b,c
+  call consume(a+b+c)
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_non_assignment_context
+! NO-REWRITE: %[[AV:.*]] = fir.load
+! NO-REWRITE: %[[BV:.*]] = fir.load
+! NO-REWRITE: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! NO-REWRITE: %[[CV:.*]] = fir.load
+! NO-REWRITE: %[[SUM:.*]] = arith.addf %[[AB]], %[[CV]]
+! NO-REWRITE: fir.call @_QPconsume
 
 subroutine guard_array(n,x,a,b,c,d,e,f)
   integer :: n

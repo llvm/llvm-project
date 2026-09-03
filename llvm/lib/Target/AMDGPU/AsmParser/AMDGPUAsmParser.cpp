@@ -21,7 +21,6 @@
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
@@ -342,6 +341,8 @@ public:
   bool isVReg32() const { return isRegClass(AMDGPU::VGPR_32RegClassID); }
 
   bool isVReg32OrOff() const { return isOff() || isVReg32(); }
+
+  bool isRsrcReg32() const { return isRegClass(AMDGPU::RsrcReg32RegClassID); }
 
   bool isNull() const { return isRegKind() && getReg() == AMDGPU::SGPR_NULL; }
 
@@ -1706,6 +1707,7 @@ public:
                                             bool AllowImm = true);
   ParseStatus parseRegWithFPInputMods(OperandVector &Operands);
   ParseStatus parseRegWithIntInputMods(OperandVector &Operands);
+  ParseStatus parseRsrcReg(OperandVector &Operands);
   ParseStatus parseVReg32OrOff(OperandVector &Operands);
   ParseStatus tryParseIndexKey(OperandVector &Operands,
                                AMDGPUOperand::ImmTy ImmTy);
@@ -1865,6 +1867,9 @@ private:
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   bool validateLdsDirect(const MCInst &Inst, const OperandVector &Operands);
   bool validateWMMA(const MCInst &Inst, const OperandVector &Operands);
+  bool validateMonitorSleep(const MCInst &Inst, const OperandVector &Operands);
+  bool validateClusterBarrierIsFirst(const MCInst &Inst,
+                                     const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -3598,6 +3603,35 @@ ParseStatus AMDGPUAsmParser::parseRegWithFPInputMods(OperandVector &Operands) {
 
 ParseStatus AMDGPUAsmParser::parseRegWithIntInputMods(OperandVector &Operands) {
   return parseRegOrImmWithIntInputMods(Operands, false);
+}
+
+ParseStatus AMDGPUAsmParser::parseRsrcReg(OperandVector &Operands) {
+  // Without the marker, fall back to plain register parsing so the legacy
+  // bare-register form (e.g. `s8`, `v8`) still assembles for indexed
+  // buffer/image instructions.
+  if (!trySkipId("rsrcidx"))
+    return parseReg(Operands);
+
+  if (!skipToken(AsmToken::LParen, "expected left paren after rsrcidx"))
+    return ParseStatus::Failure;
+
+  SMLoc RegLoc = getLoc();
+  std::unique_ptr<AMDGPUOperand> Reg = parseRegister();
+  if (!Reg)
+    return ParseStatus::Failure;
+
+  // Enforce that the inner register is a valid index register. The matcher
+  // predicate alone is not sufficient: if it fails, the matcher will fall back
+  // to a non-indexed instruction variant whose resource operand happens to
+  // accept the same register, silently dropping the `rsrcidx` intent.
+  if (!Reg->isRsrcReg32())
+    return Error(RegLoc, "rsrcidx operand must be a 32-bit SGPR or VGPR");
+
+  if (!skipToken(AsmToken::RParen, "expected closing parenthesis"))
+    return ParseStatus::Failure;
+
+  Operands.push_back(std::move(Reg));
+  return ParseStatus::Success;
 }
 
 ParseStatus AMDGPUAsmParser::parseVReg32OrOff(OperandVector &Operands) {
@@ -5586,6 +5620,41 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateMonitorSleep(const MCInst &Inst,
+                                           const OperandVector &Operands) {
+  unsigned Opc = Inst.getOpcode();
+  if (Opc != AMDGPU::S_MONITOR_SLEEP_gfx12 ||
+      !getSTI().hasFeature(AMDGPU::FeatureNoSleepForever))
+    return true;
+
+  int ImmIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::simm16);
+  if (Inst.getOperand(ImmIdx).getImm() & 0x8000) {
+    Error(getOperandLoc(Operands, ImmIdx),
+          "sleep forever is unsuported on the target");
+    return false;
+  }
+
+  return true;
+}
+
+bool AMDGPUAsmParser::validateClusterBarrierIsFirst(
+    const MCInst &Inst, const OperandVector &Operands) {
+  unsigned Opc = Inst.getOpcode();
+  if (Opc != AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM_gfx12 &&
+      Opc != AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM_gfx13)
+    return true;
+
+  int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+  int BarrierID = Inst.getOperand(Src0Idx).getImm();
+  if (BarrierID != AMDGPU::Barrier::CLUSTER)
+    return true;
+
+  Error(
+      getOperandLoc(Operands, Src0Idx),
+      "s_barrier_signal_isfirst does not support user_cluster_barrier_id (-3)");
+  return false;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
                                           const OperandVector &Operands) {
   if (!validateLdsDirect(Inst, Operands))
@@ -5715,6 +5784,12 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
     return false;
   }
   if (!validateWMMA(Inst, Operands)) {
+    return false;
+  }
+  if (!validateMonitorSleep(Inst, Operands)) {
+    return false;
+  }
+  if (!validateClusterBarrierIsFirst(Inst, Operands)) {
     return false;
   }
 

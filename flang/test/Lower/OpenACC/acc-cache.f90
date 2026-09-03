@@ -41,7 +41,7 @@ subroutine test_cache_readonly()
   end do
 
 ! CHECK: acc.loop
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) structured(false) name("b") <{modifiers = #acc<data_clause_modifier readonly>}> -> !fir.ref<!fir.array<10xf32>>
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) structured(false) name("b") <modifiers = readonly> -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]](%{{.*}}) {uniq_name = "_QFtest_cache_readonlyEb"}
 ! Loop body uses the cached readonly reference
 ! CHECK: %[[ELEM:.*]] = hlfir.designate %[[DECL]]#0 (%{{.*}}) : (!fir.ref<!fir.array<10xf32>>, i64) -> !fir.ref<f32>
@@ -605,7 +605,7 @@ subroutine test_cache_derived_type_readonly()
 ! CHECK: acc.loop
 ! CHECK: %[[ARRAY_COORD:.*]] = hlfir.designate %{{.*}}{"array"} shape %{{.*}} : (!fir.ref<!fir.type<_QFtest_cache_derived_type_readonlyTdt{array:!fir.array<100xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) structured(false) name("data%array(i-4_4:i+4_4)") <{modifiers = #acc<data_clause_modifier readonly>}> -> !fir.ref<!fir.array<100xf32>>
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) structured(false) name("data%array(i-4_4:i+4_4)") <modifiers = readonly> -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: acc.yield
 end subroutine
 
@@ -761,7 +761,7 @@ subroutine test_cache_temp_in_designator(data, a)
 ! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental
 ! CHECK: %[[MAXLOC:.*]] = hlfir.maxloc %[[ELEMENTAL]]
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound({{.*}}) upperbound({{.*}})
-! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}}) bounds(%[[BOUND]]) structured(false) name("data(1:maxloc(a+a,dim=1_4))") <{modifiers = #acc<data_clause_modifier readonly>}> -> !fir.ref<!fir.array<100xf32>>
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}}) bounds(%[[BOUND]]) structured(false) name("data(1:maxloc(a+a,dim=1_4))") <modifiers = readonly> -> !fir.ref<!fir.array<100xf32>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]]
 ! CHECK: hlfir.destroy %[[ELEMENTAL]]
 ! CHECK: hlfir.designate %[[DECL]]#0

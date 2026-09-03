@@ -43,14 +43,17 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   MsvcStl.cpp
   MsvcStlAtomic.cpp
   MsvcStlDeque.cpp
+  MsvcStlExpected.cpp
   MsvcStlSmartPointer.cpp
   MsvcStlSpan.cpp
   MsvcStlTree.cpp
   MsvcStlTuple.cpp
   MsvcStlUnordered.cpp
+  MsvcStlValarray.cpp
   MsvcStlVariant.cpp
   MsvcStlVector.cpp
   MSVCUndecoratedNameParser.cpp
+  VectorIterator.cpp
 
   LINK_COMPONENTS
     Support

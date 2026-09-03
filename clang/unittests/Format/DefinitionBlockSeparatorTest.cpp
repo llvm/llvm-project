@@ -391,6 +391,35 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                Style, Prefix + Infix + Postfix);
 }
 
+TEST_F(DefinitionBlockSeparatorTest, AlwaysMaxEmptyLinesZeroAllman) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  Style.MaxEmptyLinesToKeep = 0;
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
+
+  verifyFormat("int my_function(int a)\n"
+               "\n"
+               "{\n"
+               "  return a;\n"
+               "}\n"
+               "int other_function(int a)\n"
+               "\n"
+               "{\n"
+               "  return a;\n"
+               "}",
+               Style,
+               "int my_function(int a)\n"
+               "{\n"
+               "  return a;\n"
+               "}\n"
+               "\n"
+               "int other_function(int a)\n"
+               "{\n"
+               "  return a;\n"
+               "}");
+}
+
 TEST_F(DefinitionBlockSeparatorTest, Never) {
   FormatStyle Style = getLLVMStyle();
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Never;

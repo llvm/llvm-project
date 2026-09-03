@@ -79,7 +79,8 @@ public:
 
     std::string className = llvm::formatv(
         /*Validate=*/false, classNameFormat.c_str(), funcOp.getName());
-    ClassOp newClassOp = ClassOp::create(rewriter, funcOp.getLoc(), className);
+    ClassOp newClassOp = ClassOp::create(rewriter, funcOp.getLoc(), className,
+                                         /*sym_visibility=*/nullptr);
 
     SmallVector<std::pair<StringAttr, TypeAttr>> fields;
     rewriter.createBlock(&newClassOp.getBody());
@@ -93,8 +94,9 @@ public:
       TypeAttr typeAttr = TypeAttr::get(val.getType());
       fields.push_back({fieldName, typeAttr});
 
-      FieldOp fieldop = FieldOp::create(rewriter, funcOp->getLoc(), fieldName,
-                                        typeAttr, nullptr);
+      FieldOp fieldop =
+          FieldOp::create(rewriter, funcOp->getLoc(), fieldName,
+                          /*sym_visibility=*/nullptr, typeAttr, nullptr);
 
       if (argAttrs && idx < argAttrs->size()) {
         fieldop->setDiscardableAttrs(funcOp.getArgAttrDict(idx));
@@ -105,7 +107,8 @@ public:
     if (globalsIt != globalsToMove.end()) {
       for (auto global : globalsIt->second) {
         FieldOp::create(rewriter, funcOp->getLoc(), global.getSymNameAttr(),
-                        global.getTypeAttr(), global.getInitialValueAttr());
+                        /*sym_visibility=*/nullptr, global.getTypeAttr(),
+                        global.getInitialValueAttr());
       }
     }
 

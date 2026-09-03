@@ -870,6 +870,7 @@ bool Relocation::isIRelative(uint32_t Type) {
   case Triple::aarch64:
     return Type == ELF::R_AARCH64_IRELATIVE;
   case Triple::riscv64:
+    return Type == ELF::R_RISCV_IRELATIVE;
   case Triple::riscv32:
     llvm_unreachable("not implemented");
   case Triple::x86_64:
@@ -892,7 +893,7 @@ bool Relocation::isTLS(uint32_t Type) {
 }
 
 bool Relocation::isInstructionReference(uint32_t Type) {
-  if (Arch != Triple::riscv64)
+  if (Arch != Triple::riscv64 && Arch != Triple::riscv32)
     return false;
 
   switch (Type) {

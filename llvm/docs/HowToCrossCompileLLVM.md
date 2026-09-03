@@ -118,7 +118,7 @@ important:
 
 - `CMAKE_SYSTEM_NAME`: Perhaps surprisingly, explicitly setting this
   variable [causes CMake to set
-  CMAKE_CROSSCOMPIILING](https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html#variable:CMAKE_CROSSCOMPILING).
+  CMAKE_CROSSCOMPILING](https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html#variable:CMAKE_CROSSCOMPILING).
 - `CMAKE_{C,CXX}_COMPILER_TARGET`: This will be used to set the
   `--target` argument to `clang`. The triple should match the triple used
   within the sysroot (i.e. `$SYSROOT/usr/lib/$TARGET` should exist).

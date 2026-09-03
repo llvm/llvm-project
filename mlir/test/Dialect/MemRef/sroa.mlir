@@ -173,3 +173,15 @@ func.func @no_out_of_bound_load(%arg0: i32, %arg1: i32) -> i32 {
   // CHECK: return %[[RES]] : i32
   return %res : i32
 }
+
+// -----
+
+// Make sure sroa does not crash on an alloca whose element count overflows
+// int64. Covers getSubelementIndexMap's tryGetNumElements check.
+
+// CHECK-LABEL: func.func @alloca_element_count_overflow
+func.func @alloca_element_count_overflow() {
+  // CHECK: memref.alloca() : memref<9223372036854775807x3xi32>
+  %alloca = memref.alloca() : memref<9223372036854775807x3xi32>
+  return
+}

@@ -8,19 +8,15 @@
 
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 
-#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Object/COFF.h"
-
-#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 
@@ -731,25 +727,21 @@ Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
 
 Error COFFPlatform::runSymbolIfExists(JITDylib &PlatformJD,
                                       StringRef SymbolName) {
-  ExecutorAddr jit_function;
-  auto AfterCLookupErr = lookupAndRecordAddrs(
-      ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
-      {{ES.intern(SymbolName), &jit_function}});
-  if (!AfterCLookupErr) {
-    CallInt32VoidProxy CallFn;
-    if (auto Err =
-            lookupAndApply(ES.getBootstrapJITDylib(),
-                           {recordProxy<sps::CallInt32VoidProxySpec>(&CallFn)}))
-      return Err;
-    auto Res = CallFn(ES, jit_function);
-    if (!Res)
-      return Res.takeError();
-    return Error::success();
-  }
-  if (!AfterCLookupErr.isA<SymbolsNotFound>())
-    return AfterCLookupErr;
-  consumeError(std::move(AfterCLookupErr));
-  return Error::success();
+  ExecutorAddr TargetFn;
+  if (auto Err = lookupAndApply(
+          PlatformJD, {recordAddr(SymbolName, &TargetFn,
+                                  SymbolLookupFlags::WeaklyReferencedSymbol)}))
+    return Err;
+  if (!TargetFn)
+    return Error::success(); // No target function.
+
+  CallInt32VoidProxy CallFn;
+  if (auto Err =
+          lookupAndApply(ES.getBootstrapJITDylib(),
+                         {recordProxy<sps::CallInt32VoidProxySpec>(&CallFn)}))
+    return Err;
+
+  return CallFn(ES, TargetFn).takeError();
 }
 
 void COFFPlatform::COFFPlatformPlugin::modifyPassConfig(

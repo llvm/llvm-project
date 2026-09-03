@@ -531,9 +531,12 @@ let Class = AutoType in {
   def : Property<"keyword", AutoTypeKeyword> {
     let Read = [{ node->getKeyword() }];
   }
-  def : Property<"typeConstraintConcept", Optional<TemplateDeclRef>> {
-    let Read = [{ makeOptionalFromPointer(
-        node->getTypeConstraintConcept()) }];
+  def : Property<"isConstrained", Bool> {
+    let Read = [{ node->isConstrained() }];
+  }
+  def : Property<"typeConstraintConcept", TemplateName> {
+    let Conditional = [{ isConstrained }];
+    let Read = [{ node->getTypeConstraintConcept() }];
   }
   def : Property<"typeConstraintArguments", Array<TemplateArgument>> {
     let Read = [{ node->getTypeConstraintArguments() }];
@@ -541,7 +544,7 @@ let Class = AutoType in {
 
   def : Creator<[{
     return ctx.getAutoType(deducedKind, makeNullableFromOptional(deducedType), keyword,
-                           makePointerFromOptional(typeConstraintConcept),
+                           isConstrained ? *typeConstraintConcept : TemplateName(),
                            typeConstraintArguments);
   }]>;
 }

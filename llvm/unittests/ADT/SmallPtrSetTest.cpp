@@ -481,3 +481,34 @@ TEST(SmallPtrSetTest, Reserve) {
   Set.reserve(192);
   EXPECT_EQ(Set.capacity(), 512u);
 }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(SmallPtrSetTest, SwapInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  SmallPtrSet<int *, 2> Other;
+  Set.swap(Other);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+
+TEST(SmallPtrSetTest, MoveConstructInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  SmallPtrSet<int *, 2> Other = std::move(Set);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+
+TEST(SmallPtrSetTest, MoveAssignInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  SmallPtrSet<int *, 2> Other;
+  Other = std::move(Set);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+#endif

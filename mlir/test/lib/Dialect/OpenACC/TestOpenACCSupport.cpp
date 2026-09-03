@@ -49,7 +49,7 @@ void TestOpenACCSupportPass::runOnOperation() {
   func.walk([&](Operation *op) {
     // Check for test.var_name attribute. This is the marker used to identify
     // the operations that need to be tested for getVariableName.
-    if (op->hasAttr("test.var_name")) {
+    if (op->hasDiscardableAttr("test.var_name")) {
       // For each result of this operation, try to get the variable name
       for (auto result : op->getResults()) {
         std::string foundName = support.getVariableName(result);
@@ -61,7 +61,7 @@ void TestOpenACCSupportPass::runOnOperation() {
     // Check for test.recipe_name attribute. This is the marker used to identify
     // the operations that need to be tested for getRecipeName.
     if (auto recipeAttr =
-            op->getAttrOfType<RecipeKindAttr>("test.recipe_name")) {
+            op->getDiscardableAttrOfType<RecipeKindAttr>("test.recipe_name")) {
       RecipeKind kind = recipeAttr.getValue();
       // Get the type from the first result if available
       if (op->getNumResults() > 0) {
@@ -76,7 +76,8 @@ void TestOpenACCSupportPass::runOnOperation() {
 
     // Check for test.emit_nyi attribute. This is the marker used to
     // test whether the not yet implemented case is reported correctly.
-    if (auto messageAttr = op->getAttrOfType<StringAttr>("test.emit_nyi")) {
+    if (auto messageAttr =
+            op->getDiscardableAttrOfType<StringAttr>("test.emit_nyi")) {
       support.emitNYI(op->getLoc(), messageAttr.getValue());
     }
   });

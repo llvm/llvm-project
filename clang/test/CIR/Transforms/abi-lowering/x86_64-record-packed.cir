@@ -1,0 +1,90 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s16i = !cir.int<s, 16>
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+!rec_P = !cir.struct<"P" packed {data !s8i, data !s32i}>
+!rec_Nine = !cir.struct<"Nine" packed {data !s32i, data !s32i, data !s8i}>
+!rec_FiveShort = !cir.struct<"FiveShort" packed {data !s16i, data !s16i, data !s8i}>
+!rec_UPacked = !cir.union<"UPacked" packed {data !s32i, data !cir.array<!s8i x 5>}, padding = {!u8i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.record_layouts = {
+    FiveShort = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                   has_trivial_dtor = true, record_align = 1>,
+    Nine = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                              has_trivial_dtor = true, record_align = 1>,
+    P = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                           has_trivial_dtor = false, record_align = 1>,
+    UPacked = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                 has_trivial_dtor = true, record_align = 1>
+  },
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The coerce type is as wide as the whole record here, so the slot is
+  // allocated as the coerce type and the record is read through a bitcast of
+  // it.  That is the opposite direction from a padded record, where the slot
+  // has to be the wider record or the reload would run past it.
+  cir.func @take_five_short(%arg0: !rec_FiveShort) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_five_short(%arg0: !cir.int<u, 40>)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!cir.int<u, 40>>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !cir.int<u, 40>, !cir.ptr<!cir.int<u, 40>>
+  // CHECK:   %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!cir.int<u, 40>> -> !cir.ptr<!rec_FiveShort>
+  // CHECK:   %{{.+}} = cir.load %[[VIEW]] : !cir.ptr<!rec_FiveShort>, !rec_FiveShort
+
+  // The caller allocates the slot the other way round, as the record, and
+  // reads the register out through a view of it.
+  cir.func @call_five_short(%arg0: !rec_FiveShort) {
+    cir.call @take_five_short(%arg0) : (!rec_FiveShort) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @call_five_short(%arg0: !cir.int<u, 40>)
+  // CHECK:   %[[OUT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_FiveShort>
+  // CHECK:   cir.store %{{.+}}, %[[OUT]] : !rec_FiveShort, !cir.ptr<!rec_FiveShort>
+  // CHECK:   %[[OUTVIEW:.*]] = cir.cast bitcast %[[OUT]] : !cir.ptr<!rec_FiveShort> -> !cir.ptr<!cir.int<u, 40>>
+  // CHECK:   %[[REG:.*]] = cir.load %[[OUTVIEW]] : !cir.ptr<!cir.int<u, 40>>, !cir.int<u, 40>
+  // CHECK:   cir.call @take_five_short(%[[REG]]) : (!cir.int<u, 40>) -> ()
+
+  // Two eightbytes flatten into two wire arguments, so the record is rebuilt a
+  // register at a time through the coercion tuple rather than by one bitcast.
+  cir.func @take_nine(%arg0: !rec_Nine) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_nine(%arg0: !u64i, %arg1: !s8i)
+  // CHECK:   %[[RECSLOT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_anon_struct>
+  // CHECK:   %[[TUPLE:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_anon_struct>
+  // CHECK:   %[[LO:.*]] = cir.get_member %[[TUPLE]][0]{{.*}}-> !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg0, %[[LO]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %[[HI:.*]] = cir.get_member %[[TUPLE]][1]{{.*}}-> !cir.ptr<!s8i>
+  // CHECK:   cir.store %arg1, %[[HI]] : !s8i, !cir.ptr<!s8i>
+  // CHECK:   %{{.+}} = cir.cast bitcast %[[RECSLOT]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Nine>
+
+  // A packed record the caller must destroy takes byref rather than byval, and
+  // byref keeps the record's declared alignment where byval would raise it to
+  // the ABI minimum of 8.
+  cir.func @take_p(%arg0: !rec_P) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_p(%arg0: !cir.ptr<!rec_P> {llvm.align = 1 : i64, llvm.byref = !rec_P})
+
+  // A union coerces through the same one-register path as FiveShort.
+  cir.func @take_upacked(%arg0: !rec_UPacked) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_upacked(%arg0: !cir.int<u, 40>)
+}

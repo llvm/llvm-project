@@ -24,7 +24,7 @@ wasmssa.return %0 : i32
 }
 
 // CHECK-LABEL:         func.func private @"my_module::foo"() -> i32
-wasmssa.import_func "foo" from "my_module" as @func_0 {sym_visibility = "nested", type = () -> (i32)}
+wasmssa.import_func "foo" from "my_module" as @func_0 : () -> (i32) {sym_visibility = "nested"}
 
 // CHECK-LABEL:   func.func @user_of_func0() -> i32 {
 wasmssa.func exported @user_of_func0() -> i32 {
