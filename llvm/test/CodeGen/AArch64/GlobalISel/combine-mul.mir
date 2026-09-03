@@ -144,6 +144,28 @@ body:             |
     $x0 = COPY %2(i64)
 ...
 ---
+name:            mul_nuw_by_neg_one
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: mul_nuw_by_neg_one
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i64) = nuw G_MUL [[COPY]], [[C]]
+    ; CHECK-NEXT: $x0 = COPY [[MUL]](i64)
+    %0:_(i64) = COPY $x0
+    %1:_(i64) = G_CONSTANT i64 -1
+    %2:_(i64) = nuw G_MUL %0, %1(i64)
+    $x0 = COPY %2(i64)
+...
+---
 name:            mul_vector_by_neg_one
 alignment:       4
 tracksRegLiveness: true
