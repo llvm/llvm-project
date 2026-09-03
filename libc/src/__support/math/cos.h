@@ -116,8 +116,9 @@ LIBC_INLINE double cos(double x) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       return 1.0 + r_lo;
 #else
-      // Overall errors <= ulp(x^2/2) + 2^-69.
-      double err = fputil::multiply_add(x_sq, 0x1.0p-53, 0x1.0p-69);
+      // Overall errors <= 1.0 * ulp(x^2) + 2^-69 for default rounding mode
+      //                <= 2.0 * ulp(x^2) + 2^-69 for directed rounding mode.
+      double err = fputil::multiply_add(x_sq, 0x1.0p-51, 0x1.0p-69);
       double r_lo_u = r_lo + err;
       double r_lo_l = r_lo - err;
       double r_upper = 1.0 + r_lo_u;
