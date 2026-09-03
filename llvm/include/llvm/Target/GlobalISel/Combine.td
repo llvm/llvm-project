@@ -448,8 +448,6 @@ def bitreverse_lshr : GICombineRule<
 
 // Combine (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
 // Combine (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
-// Apply rebuilds the matched opcode, so it stays inline C++. The builder is
-// used rather than an apply pattern so that (shl c1, c2) is constant folded.
 class commute_shift_binop<Instruction binop> : GICombineRule<
   (defs root:$dst),
   (match (binop $binop_dst, $x, $c1):$binop,
@@ -458,12 +456,9 @@ class commute_shift_binop<Instruction binop> : GICombineRule<
                    isConstantOrConstantSplatVector(${c1}.getReg(), MRI) &&
                    isConstantOrConstantSplatVector(${c2}.getReg(), MRI) &&
                    Helper.isDesirableToCommuteWithShift(*${shl}); }]),
-  (apply [{ auto &B = Helper.getBuilder();
-            LLT Ty = MRI.getType(${dst}.getReg());
-            auto S1 = B.buildShl(Ty, ${x}.getReg(), ${c2}.getReg());
-            auto S2 = B.buildShl(Ty, ${c1}.getReg(), ${c2}.getReg());
-            auto New = B.buildInstr(${binop}->getOpcode(), {Ty}, {S1, S2});
-            Helper.replaceSingleDefInstWithReg(*${shl}, New.getReg(0)); }])>;
+  (apply (G_SHL GITypeOf<"$dst">:$s1, $x, $c2),
+         (G_SHL GITypeOf<"$dst">:$s2, $c1, $c2),
+         (binop $dst, $s1, $s2))>;
 def commute_shift_add : commute_shift_binop<G_ADD>;
 def commute_shift_or : commute_shift_binop<G_OR>;
 def commute_shift : GICombineGroup<[commute_shift_add, commute_shift_or]>;
