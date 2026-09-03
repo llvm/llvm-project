@@ -10134,8 +10134,7 @@ public:
     return llvm::any_of(Sets, [](const OMPTraitSet &Set) {
       return Set.Kind == llvm::omp::TraitSet::user &&
              llvm::any_of(Set.Selectors, [](const OMPTraitSelector &Selector) {
-               return Selector.Kind ==
-                      llvm::omp::TraitSelector::user_condition;
+               return Selector.Kind == llvm::omp::TraitSelector::user_condition;
              });
     });
   }
