@@ -1,4 +1,5 @@
 ; RUN: not llc -mtriple=amdgpu6.00-mesa-mesa3d -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
+; RUN: not llc -global-isel -mtriple=amdgpu6.00-mesa-mesa3d -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
 ; RUN: not llc -mtriple=amdgpu6.00--amdpal -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
 ; RUN: not llc -mtriple=r600-- -mcpu=cypress -tailcallopt < %s 2>&1 | FileCheck -check-prefix=R600 %s
 
@@ -40,6 +41,21 @@ define i32 @test_tail_call(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %a = load i32, ptr addrspace(1) %in
   %b = load i32, ptr addrspace(1) %b_ptr
   %c = tail call i32 @defined_function(i32 %b)
+  ret i32 %c
+}
+
+define fastcc i32 @defined_fastcc_function(i32 %x) nounwind noinline {
+  %y = add i32 %x, 8
+  ret i32 %y
+}
+
+; GCN: error: <unknown>:0:0: in function test_tail_call_fastcc i32 (ptr addrspace(1), ptr addrspace(1)): unsupported required tail call to function defined_fastcc_function
+; R600: in function test_tail_call_fastcc{{.*}}: unsupported call to function defined_fastcc_function
+define fastcc i32 @test_tail_call_fastcc(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+  %b_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
+  %a = load i32, ptr addrspace(1) %in
+  %b = load i32, ptr addrspace(1) %b_ptr
+  %c = tail call fastcc i32 @defined_fastcc_function(i32 %b)
   ret i32 %c
 }
 

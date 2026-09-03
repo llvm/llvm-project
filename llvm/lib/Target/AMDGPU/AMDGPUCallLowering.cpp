@@ -1484,7 +1484,7 @@ bool AMDGPUCallLowering::lowerTailCall(
   // If we have -tailcallopt, we need to adjust the stack. We'll do the call
   // sequence start and end here.
   if (!IsSibCall) {
-    MIB->getOperand(CalleeIdx + 1).setImm(FPDiff);
+    MIB->getOperand(CalleeIdx + 2).setImm(FPDiff);
     CallSeqStart.addImm(NumBytes).addImm(0);
     // End the call sequence *before* emitting the call. Normally, we would
     // tidy the frame up after the call. However, here, we've laid out the
@@ -1612,6 +1612,17 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   SmallVector<ArgInfo, 8> InArgs;
   if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy())
     splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
+
+  if (Info.IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
+    StringRef CalleeName = Info.Callee.isGlobal()
+                               ? Info.Callee.getGlobal()->getName()
+                               : "<unknown>";
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F, "unsupported required tail call to function " + CalleeName));
+    for (Register ResReg : Info.OrigRet.Regs)
+      MIRBuilder.buildUndef(ResReg);
+    return true;
+  }
 
   // If we can lower as a tail call, do that instead.
   bool CanTailCallOpt =
