@@ -11,7 +11,7 @@
 define void @local_to_flat_nonnull_arg(ptr addrspace(3) nonnull %ptr) {
 ; OPT-LABEL: define void @local_to_flat_nonnull_arg(
 ; OPT-SAME: ptr addrspace(3) nonnull [[PTR:%.*]]) {
-; OPT-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
+; OPT-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr addrspace(3) [[PTR]] to ptr
 ; OPT-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -32,7 +32,7 @@ define void @local_to_flat_nonnull_arg(ptr addrspace(3) nonnull %ptr) {
 define void @private_to_flat_nonnull_arg(ptr addrspace(5) nonnull %ptr) {
 ; OPT-LABEL: define void @private_to_flat_nonnull_arg(
 ; OPT-SAME: ptr addrspace(5) nonnull [[PTR:%.*]]) {
-; OPT-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) [[PTR]])
+; OPT-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr addrspace(5) [[PTR]] to ptr
 ; OPT-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -53,7 +53,7 @@ define void @private_to_flat_nonnull_arg(ptr addrspace(5) nonnull %ptr) {
 define void @flat_to_local_nonnull_arg(ptr nonnull %ptr) {
 ; OPT-LABEL: define void @flat_to_local_nonnull_arg(
 ; OPT-SAME: ptr nonnull [[PTR:%.*]]) {
-; OPT-NEXT:    [[TMP1:%.*]] = call ptr addrspace(3) @llvm.amdgcn.addrspacecast.nonnull.p3.p0(ptr [[PTR]])
+; OPT-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr [[PTR]] to ptr addrspace(3)
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) [[TMP1]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -72,7 +72,7 @@ define void @flat_to_local_nonnull_arg(ptr nonnull %ptr) {
 define void @flat_to_private_nonnull_arg(ptr nonnull %ptr) {
 ; OPT-LABEL: define void @flat_to_private_nonnull_arg(
 ; OPT-SAME: ptr nonnull [[PTR:%.*]]) {
-; OPT-NEXT:    [[TMP1:%.*]] = call ptr addrspace(5) @llvm.amdgcn.addrspacecast.nonnull.p5.p0(ptr [[PTR]])
+; OPT-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr [[PTR]] to ptr addrspace(5)
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(5) [[TMP1]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -92,7 +92,7 @@ define void @local_to_flat_nonnull_load(ptr %p) {
 ; OPT-LABEL: define void @local_to_flat_nonnull_load(
 ; OPT-SAME: ptr [[P:%.*]]) {
 ; OPT-NEXT:    [[PTR:%.*]] = load ptr addrspace(3), ptr [[P]], align 4, !nonnull [[META0:![0-9]+]]
-; OPT-NEXT:    [[X:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
+; OPT-NEXT:    [[X:%.*]] = addrspacecast nonnull ptr addrspace(3) [[PTR]] to ptr
 ; OPT-NEXT:    store volatile i32 7, ptr [[X]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -117,7 +117,7 @@ define void @private_to_flat_nonnull_load(ptr %p) {
 ; OPT-LABEL: define void @private_to_flat_nonnull_load(
 ; OPT-SAME: ptr [[P:%.*]]) {
 ; OPT-NEXT:    [[PTR:%.*]] = load ptr addrspace(5), ptr [[P]], align 4, !nonnull [[META0]]
-; OPT-NEXT:    [[X:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) [[PTR]])
+; OPT-NEXT:    [[X:%.*]] = addrspacecast nonnull ptr addrspace(5) [[PTR]] to ptr
 ; OPT-NEXT:    store volatile i32 7, ptr [[X]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -142,7 +142,7 @@ define void @flat_to_local_nonnull_load(ptr %p) {
 ; OPT-LABEL: define void @flat_to_local_nonnull_load(
 ; OPT-SAME: ptr [[P:%.*]]) {
 ; OPT-NEXT:    [[PTR:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META0]]
-; OPT-NEXT:    [[X:%.*]] = call ptr addrspace(3) @llvm.amdgcn.addrspacecast.nonnull.p3.p0(ptr [[PTR]])
+; OPT-NEXT:    [[X:%.*]] = addrspacecast nonnull ptr [[PTR]] to ptr addrspace(3)
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) [[X]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -175,7 +175,7 @@ define void @flat_to_private_nonnull_load(ptr %p) {
 ; OPT-LABEL: define void @flat_to_private_nonnull_load(
 ; OPT-SAME: ptr [[P:%.*]]) {
 ; OPT-NEXT:    [[PTR:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META0]]
-; OPT-NEXT:    [[X:%.*]] = call ptr addrspace(5) @llvm.amdgcn.addrspacecast.nonnull.p5.p0(ptr [[PTR]])
+; OPT-NEXT:    [[X:%.*]] = addrspacecast nonnull ptr [[PTR]] to ptr addrspace(5)
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(5) [[X]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -208,7 +208,7 @@ define void @private_alloca_to_flat(ptr %ptr) {
 ; OPT-LABEL: define void @private_alloca_to_flat(
 ; OPT-SAME: ptr [[PTR:%.*]]) {
 ; OPT-NEXT:    [[ALLOCA:%.*]] = alloca i8, align 1, addrspace(5)
-; OPT-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) [[ALLOCA]])
+; OPT-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr addrspace(5) [[ALLOCA]] to ptr
 ; OPT-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -248,7 +248,7 @@ define void @knownbits_on_flat_to_priv(ptr %ptr) {
 ; OPT-NEXT:    [[PTR_INT:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; OPT-NEXT:    [[PTR_OR:%.*]] = or i64 [[PTR_INT]], 15
 ; OPT-NEXT:    [[KB_PTR:%.*]] = inttoptr i64 [[PTR_OR]] to ptr
-; OPT-NEXT:    [[TMP1:%.*]] = call ptr addrspace(5) @llvm.amdgcn.addrspacecast.nonnull.p5.p0(ptr [[KB_PTR]])
+; OPT-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr [[KB_PTR]] to ptr addrspace(5)
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(5) [[TMP1]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -274,7 +274,7 @@ define void @knownbits_on_priv_to_flat(ptr addrspace(5) %ptr) {
 ; OPT-NEXT:    [[PTR_INT:%.*]] = ptrtoint ptr addrspace(5) [[PTR]] to i32
 ; OPT-NEXT:    [[PTR_OR:%.*]] = and i32 [[PTR_INT]], 65535
 ; OPT-NEXT:    [[KB_PTR:%.*]] = inttoptr i32 [[PTR_OR]] to ptr addrspace(5)
-; OPT-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) [[KB_PTR]])
+; OPT-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr addrspace(5) [[KB_PTR]] to ptr
 ; OPT-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
 ; OPT-NEXT:    ret void
 ;
@@ -312,7 +312,7 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; OPT-NEXT:    br label %[[FINALLY]]
 ; OPT:       [[FINALLY]]:
 ; OPT-NEXT:    [[PHI_PTR]] = phi ptr addrspace(5) [ [[KB_PTR]], %[[THEN]] ], [ [[OTHER_PHI]], %[[ELSE]] ]
-; OPT-NEXT:    [[TMP0:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p5(ptr addrspace(5) [[PHI_PTR]])
+; OPT-NEXT:    [[TMP0:%.*]] = addrspacecast nonnull ptr addrspace(5) [[PHI_PTR]] to ptr
 ; OPT-NEXT:    store volatile i32 7, ptr [[TMP0]], align 4
 ; OPT-NEXT:    br i1 [[COND]], label %[[ELSE]], label %[[END:.*]]
 ; OPT:       [[END]]:
