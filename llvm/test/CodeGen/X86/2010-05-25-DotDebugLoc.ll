@@ -71,7 +71,7 @@ bb6:                                              ; preds = %bb4
   br i1 %or.cond94, label %bb9, label %bb8, !dbg !29
 
 bb8:                                              ; preds = %bb6
-  %27 = tail call float @copysignf(float 0x7FF0000000000000, float %c) nounwind readnone, !dbg !30 ; <float> [#uses=2]
+  %27 = tail call float @copysignf(float +inf, float %c) nounwind readnone, !dbg !30 ; <float> [#uses=2]
   %28 = fmul float %27, %a, !dbg !30              ; <float> [#uses=1]
   tail call void @llvm.dbg.value(metadata float %28, i64 0, metadata !17, metadata !DIExpression()), !dbg !30
   %29 = fmul float %27, %b, !dbg !31              ; <float> [#uses=1]

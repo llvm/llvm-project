@@ -112,7 +112,7 @@ define float @test_constant_fold_rcp_f32_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_inf(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %val = call float @llvm.amdgcn.rcp.f32(float 0x7FF0000000000000)
+  %val = call float @llvm.amdgcn.rcp.f32(float +inf)
   ret float %val
 }
 
@@ -433,7 +433,7 @@ define float @test_constant_fold_frexp_mant_f32_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_inf(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.frexp.mant.f32(float 0x7FF0000000000000)
+  %val = call float @llvm.amdgcn.frexp.mant.f32(float +inf)
   ret float %val
 }
 
@@ -449,7 +449,7 @@ define float @test_constant_fold_frexp_mant_f32_ninf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_ninf(
 ; CHECK-NEXT:    ret float -inf
 ;
-  %val = call float @llvm.amdgcn.frexp.mant.f32(float 0xFFF0000000000000)
+  %val = call float @llvm.amdgcn.frexp.mant.f32(float -inf)
   ret float %val
 }
 
@@ -625,7 +625,7 @@ define i32 @test_constant_fold_frexp_exp_f32_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_inf(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float 0x7FF0000000000000)
+  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float +inf)
   ret i32 %val
 }
 
@@ -641,7 +641,7 @@ define i32 @test_constant_fold_frexp_exp_f32_ninf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_ninf(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float 0xFFF0000000000000)
+  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float -inf)
   ret i32 %val
 }
 
@@ -5465,7 +5465,7 @@ define float @test_constant_fold_log_f32_pinf() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_pinf(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0x7FF0000000000000)
+  %val = call float @llvm.amdgcn.log.f32(float +inf)
   ret float %val
 }
 
@@ -5473,7 +5473,7 @@ define float @test_constant_fold_log_f32_ninf() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_ninf(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000)
+  %val = call float @llvm.amdgcn.log.f32(float -inf)
   ret float %val
 }
 
@@ -5575,7 +5575,7 @@ define float @test_constant_fold_log_f32_pinf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_pinf_strictfp(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0x7FF0000000000000) strictfp
+  %val = call float @llvm.amdgcn.log.f32(float +inf) strictfp
   ret float %val
 }
 
@@ -5584,7 +5584,7 @@ define float @test_constant_fold_log_f32_ninf_strictfp() strictfp {
 ; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float -inf) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000) strictfp
+  %val = call float @llvm.amdgcn.log.f32(float -inf) strictfp
   ret float %val
 }
 
@@ -5718,7 +5718,7 @@ define float @test_constant_fold_exp2_f32_pinf() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_pinf(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF0000000000000)
+  %val = call float @llvm.amdgcn.exp2.f32(float +inf)
   ret float %val
 }
 
@@ -5726,7 +5726,7 @@ define float @test_constant_fold_exp2_f32_ninf() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_ninf(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0xFFF0000000000000)
+  %val = call float @llvm.amdgcn.exp2.f32(float -inf)
   ret float %val
 }
 
@@ -5857,7 +5857,7 @@ define float @test_constant_fold_exp2_f32_pinf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_pinf_strictfp(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF0000000000000) strictfp
+  %val = call float @llvm.amdgcn.exp2.f32(float +inf) strictfp
   ret float %val
 }
 
@@ -5865,7 +5865,7 @@ define float @test_constant_fold_exp2_f32_ninf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_ninf_strictfp(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0xFFF0000000000000) strictfp
+  %val = call float @llvm.amdgcn.exp2.f32(float -inf) strictfp
   ret float %val
 }
 

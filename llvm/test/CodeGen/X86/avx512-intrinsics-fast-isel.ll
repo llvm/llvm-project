@@ -8138,7 +8138,7 @@ define float @test_mm512_mask_reduce_max_ps(i16 zeroext %__M, <16 x float> %__W)
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast i16 %__M to <16 x i1>
-  %1 = select <16 x i1> %0, <16 x float> %__W, <16 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+  %1 = select <16 x i1> %0, <16 x float> %__W, <16 x float> <float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf, float -inf>
   %vecext.i = call nnan float @llvm.vector.reduce.fmax.v16f32(<16 x float> %1)
   ret float %vecext.i
 }
@@ -8268,7 +8268,7 @@ define float @test_mm512_mask_reduce_min_ps(i16 zeroext %__M, <16 x float> %__W)
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast i16 %__M to <16 x i1>
-  %1 = select <16 x i1> %0, <16 x float> %__W, <16 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+  %1 = select <16 x i1> %0, <16 x float> %__W, <16 x float> <float +inf, float +inf, float +inf, float +inf, float +inf, float +inf, float +inf, float +inf, float +inf, float +inf, float +inf, float +inf, float +inf, float +inf, float +inf, float +inf>
   %vecext.i = call nnan float @llvm.vector.reduce.fmin.v16f32(<16 x float> %1)
   ret float %vecext.i
 }

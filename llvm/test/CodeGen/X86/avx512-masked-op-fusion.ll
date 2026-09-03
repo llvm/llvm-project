@@ -32,8 +32,8 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %acc_min = phi <16 x float> [ splat (float 0x7FF0000000000000), %entry ], [ %res_min, %loop ]
-  %acc_max = phi <16 x float> [ splat (float 0xFFF0000000000000), %entry ], [ %res_max, %loop ]
+  %acc_min = phi <16 x float> [ splat (float +inf), %entry ], [ %res_min, %loop ]
+  %acc_max = phi <16 x float> [ splat (float -inf), %entry ], [ %res_max, %loop ]
   %msk_ptr = getelementptr inbounds i8, ptr %pMsk, i64 %iv
   %msk_bytes = load <16 x i8>, ptr %msk_ptr, align 1
   %cmp = icmp eq <16 x i8> %msk_bytes, zeroinitializer

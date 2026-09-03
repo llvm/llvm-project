@@ -5,11 +5,11 @@
 @flt_pos_min_subnormal = constant float 0x36A0000000000000, align 4
 @flt_pos_min_normal = constant float 0x3810000000000000, align 4
 @flt_pos_max = constant float 0x47EFFFFFE0000000, align 4
-@flt_pos_infinity = constant float 0x7FF0000000000000, align 4
+@flt_pos_infinity = constant float +inf, align 4
 @flt_neg_min_subnormal = constant float 0xB6A0000000000000, align 4
 @flt_neg_min_normal = constant float 0xB810000000000000, align 4
 @flt_neg_max = constant float 0xC7EFFFFFE0000000, align 4
-@flt_neg_infinity = constant float 0xFFF0000000000000, align 4
+@flt_neg_infinity = constant float -inf, align 4
 @dbl_nan = constant double 0x7FF8000000000000, align 8
 @dbl_pos_min_subnormal = constant double 4.940660e-324, align 8
 @dbl_pos_min_normal = constant double 0x10000000000000, align 8

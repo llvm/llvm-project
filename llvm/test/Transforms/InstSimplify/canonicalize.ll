@@ -245,7 +245,7 @@ define float @canonicalize_inf() {
 ; CHECK-LABEL: @canonicalize_inf(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %ret = call float @llvm.canonicalize.f32(float 0x7FF0000000000000)
+  %ret = call float @llvm.canonicalize.f32(float +inf)
   ret float %ret
 }
 
@@ -253,7 +253,7 @@ define float @canonicalize_neg_inf() {
 ; CHECK-LABEL: @canonicalize_neg_inf(
 ; CHECK-NEXT:    ret float -inf
 ;
-  %ret = call float @llvm.canonicalize.f32(float 0xFFF0000000000000)
+  %ret = call float @llvm.canonicalize.f32(float -inf)
   ret float %ret
 }
 

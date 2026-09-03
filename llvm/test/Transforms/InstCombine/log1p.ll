@@ -150,7 +150,7 @@ define float @log1pf_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float +inf)
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @log1pf(float 0x7FF0000000000000)
+  %r = call float @log1pf(float +inf)
   ret float %r
 }
 
@@ -168,7 +168,7 @@ define float @log1pf_inf_memory_none() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float +inf) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @log1pf(float 0x7FF0000000000000) readnone
+  %r = call float @log1pf(float +inf) readnone
   ret float %r
 }
 
@@ -186,7 +186,7 @@ define float @log1pf_neg_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -inf)
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @log1pf(float 0xFFF0000000000000)
+  %r = call float @log1pf(float -inf)
   ret float %r
 }
 
@@ -204,7 +204,7 @@ define float @log1pf_neg_inf_memory_none() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float -inf) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @log1pf(float 0xFFF0000000000000) readnone
+  %r = call float @log1pf(float -inf) readnone
   ret float %r
 }
 

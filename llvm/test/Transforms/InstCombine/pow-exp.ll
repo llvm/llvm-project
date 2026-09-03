@@ -434,7 +434,7 @@ define float @powf_inf_base(float %e) {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float +inf, float [[E:%.*]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call afn nnan ninf float @powf(float 0x7FF0000000000000, float %e)
+  %call = tail call afn nnan ninf float @powf(float +inf, float %e)
   ret float %call
 }
 

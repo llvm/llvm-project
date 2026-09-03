@@ -1543,29 +1543,26 @@ TEST_F(ComputeKnownFPClassTest, SelectPosOrNeg0) {
 }
 
 TEST_F(ComputeKnownFPClassTest, SelectPosInf) {
-  parseAssembly(
-      "define float @test(i1 %cond) {\n"
-      "  %A = select i1 %cond, float 0x7FF0000000000000, float 0x7FF0000000000000"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(i1 %cond) {\n"
+                "  %A = select i1 %cond, float +inf, float +inf"
+                "  ret float %A\n"
+                "}\n");
   expectKnownFPClass(fcPosInf, false);
 }
 
 TEST_F(ComputeKnownFPClassTest, SelectNegInf) {
-  parseAssembly(
-      "define float @test(i1 %cond) {\n"
-      "  %A = select i1 %cond, float 0xFFF0000000000000, float 0xFFF0000000000000"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(i1 %cond) {\n"
+                "  %A = select i1 %cond, float -inf, float -inf"
+                "  ret float %A\n"
+                "}\n");
   expectKnownFPClass(fcNegInf, true);
 }
 
 TEST_F(ComputeKnownFPClassTest, SelectPosOrNegInf) {
-  parseAssembly(
-      "define float @test(i1 %cond) {\n"
-      "  %A = select i1 %cond, float 0x7FF0000000000000, float 0xFFF0000000000000"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(i1 %cond) {\n"
+                "  %A = select i1 %cond, float +inf, float -inf"
+                "  ret float %A\n"
+                "}\n");
   expectKnownFPClass(fcInf, std::nullopt);
 }
 
