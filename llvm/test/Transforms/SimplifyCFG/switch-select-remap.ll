@@ -464,11 +464,11 @@ declare void @use(i32)
 !0 = !{!"function_entry_count", i32 10}
 !1 = !{!"branch_weights", i32 2, i32 3}
 !2 = !{!"branch_weights", i32 5, i32 7, i32 11}
-!3 = !{!"branch_weights", i32 5, i32 7, i32 11, i32 13}
+!3 = !{!"branch_weights", i32 5, i32 0, i32 11, i32 13}
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 15, i32 21, i32 33, i32 46}
 ; CHECK: [[PROF2]] = !{!"unknown", !"simplifycfg"}
-; CHECK: [[PROF3]] = !{!"branch_weights", i32 5, i32 7, i32 11, i32 13}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 15, i32 58, i32 33, i32 39}
 ; CHECK: [[PROF4]] = !{!"branch_weights", i32 10, i32 14, i32 22, i32 69}
 ;.
