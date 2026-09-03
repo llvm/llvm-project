@@ -32,6 +32,8 @@
 namespace clang {
 namespace clangd {
 
+struct FileEvent;
+
 /// Store all the needed module files information to parse a single
 /// source file. e.g.,
 ///
@@ -97,6 +99,14 @@ public:
 
   ModulesBuilder &operator=(const ModulesBuilder &) = delete;
   ModulesBuilder &operator=(ModulesBuilder &&) = delete;
+
+  /// Makes an opened module interface available to project module queries.
+  /// Returns whether a new module path was observed.
+  bool observeSourcePath(PathRef File);
+
+  /// Updates project module queries after a watched file event. Returns whether
+  /// the event may have changed an observed module.
+  bool onFileEvent(const FileEvent &Event);
 
   std::unique_ptr<PrerequisiteModules>
   buildPrerequisiteModulesFor(PathRef File, const ThreadsafeFS &TFS);
