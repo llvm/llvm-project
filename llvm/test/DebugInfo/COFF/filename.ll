@@ -73,14 +73,14 @@ attributes #0 = { mustprogress noinline nounwind optnone uwtable "min-legal-vect
 !llvm.ident = !{!8}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 22.1.0 (https://github.com/llvm/llvm-project.git 4434dabb69916856b824f68a64b029c67175e532)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "/app/example.cpp", directory: "_DIR_", checksumkind: CSK_MD5, checksum: "6607a2818b39ced0f66b5fb380b775dc")
+!1 = !DIFile(filename: "/app/example.cpp", directory: "_DIR_")
 !2 = !{i32 2, !"CodeView", i32 1}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 2}
 !5 = !{i32 8, !"PIC Level", i32 2}
 !6 = !{i32 7, !"uwtable", i32 2}
 !7 = !{i32 1, !"MaxTLSAlign", i32 65536}
-!8 = !{!"clang version 22.1.0 (https://github.com/llvm/llvm-project.git 4434dabb69916856b824f68a64b029c67175e532)"}
+!8 = !{!"clang version 22.1.0 (https://github.com/llvm/llvm-project.git)"}
 !9 = distinct !DISubprogram(name: "f", linkageName: "?f@@YAXXZ", scope: !10, file: !10, line: 1, type: !11, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !10 = !DIFile(filename: "_FILENAME_", directory: "_DIR_")
 !11 = !DISubroutineType(types: !12)
