@@ -99,6 +99,196 @@ define amdgpu_kernel void @s_load_i16_inttoptr(ptr addrspace(1) %out) {
 }
 
 ;===----------------------------------------------------------------------===;
+; S_LOAD from kernel arguments
+;===----------------------------------------------------------------------===;
+
+define amdgpu_kernel void @s_load_u8_kernarg(ptr addrspace(4) %ptr, ptr addrspace(1) %out) {
+; CHECK-LABEL: s_load_u8_kernarg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_load_b32 s0, s[0:1], 0x0 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; CHECK-NEXT:    global_store_b32 v0, v1, s[2:3]
+; CHECK-NEXT:    s_endpgm
+  %val = load i32, ptr addrspace(4) %ptr, align 4
+  %masked = and i32 %val, 255
+  store i32 %masked, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @s_load_u16_kernarg(ptr addrspace(4) %ptr, ptr addrspace(1) %out) {
+; CHECK-LABEL: s_load_u16_kernarg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_load_b32 s0, s[0:1], 0x0 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xffff
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; CHECK-NEXT:    global_store_b32 v0, v1, s[2:3]
+; CHECK-NEXT:    s_endpgm
+  %val = load i32, ptr addrspace(4) %ptr, align 4
+  %masked = and i32 %val, 65535
+  store i32 %masked, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @s_load_i8_kernarg(ptr addrspace(4) %ptr, ptr addrspace(1) %out) {
+; CHECK-LABEL: s_load_i8_kernarg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_load_i8 s0, s[0:1], 0x0 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; CHECK-NEXT:    global_store_b32 v0, v1, s[2:3]
+; CHECK-NEXT:    s_endpgm
+  %val8 = load i8, ptr addrspace(4) %ptr, align 1
+  %ext = sext i8 %val8 to i32
+  store i32 %ext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @s_load_i16_kernarg(ptr addrspace(4) %ptr, ptr addrspace(1) %out) {
+; CHECK-LABEL: s_load_i16_kernarg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_load_i16 s0, s[0:1], 0x0 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; CHECK-NEXT:    global_store_b32 v0, v1, s[2:3]
+; CHECK-NEXT:    s_endpgm
+  %val16 = load i16, ptr addrspace(4) %ptr, align 2
+  %ext = sext i16 %val16 to i32
+  store i32 %ext, ptr addrspace(1) %out
+  ret void
+}
+
+;===----------------------------------------------------------------------===;
+; S_BUFFER_LOAD from kernel argument buffer descriptors
+;===----------------------------------------------------------------------===;
+
+define amdgpu_kernel void @s_buffer_load_u8_kernarg(<4 x i32> %buf, ptr addrspace(1) %out) {
+; CHECK-LABEL: s_buffer_load_u8_kernarg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_clause 0x1
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; CHECK-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x10 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; CHECK-NEXT:    global_store_b32 v0, v1, s[6:7]
+; CHECK-NEXT:    s_endpgm
+  %val = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %buf, i32 16, i32 0)
+  %masked = and i32 %val, 255
+  store i32 %masked, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @s_buffer_load_u16_kernarg(<4 x i32> %buf, ptr addrspace(1) %out) {
+; CHECK-LABEL: s_buffer_load_u16_kernarg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_clause 0x1
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; CHECK-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x10 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_and_b32 s0, s0, 0xffff
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; CHECK-NEXT:    global_store_b32 v0, v1, s[6:7]
+; CHECK-NEXT:    s_endpgm
+  %val = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %buf, i32 16, i32 0)
+  %masked = and i32 %val, 65535
+  store i32 %masked, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @s_buffer_load_i8_kernarg(<4 x i32> %buf, ptr addrspace(1) %out) {
+; CHECK-LABEL: s_buffer_load_i8_kernarg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_clause 0x1
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; CHECK-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x10 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_sext_i32_i8 s0, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; CHECK-NEXT:    global_store_b32 v0, v1, s[6:7]
+; CHECK-NEXT:    s_endpgm
+  %val = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %buf, i32 16, i32 0)
+  %trunc = trunc i32 %val to i8
+  %ext = sext i8 %trunc to i32
+  store i32 %ext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @s_buffer_load_i16_kernarg(<4 x i32> %buf, ptr addrspace(1) %out) {
+; CHECK-LABEL: s_buffer_load_i16_kernarg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; CHECK-NEXT:    s_mov_b64 s[64:65], 0
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; CHECK-NEXT:    s_clause 0x1
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; CHECK-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x10 nv
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_sext_i32_i16 s0, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; CHECK-NEXT:    global_store_b32 v0, v1, s[6:7]
+; CHECK-NEXT:    s_endpgm
+  %val = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %buf, i32 16, i32 0)
+  %trunc = trunc i32 %val to i16
+  %ext = sext i16 %trunc to i32
+  store i32 %ext, ptr addrspace(1) %out
+  ret void
+}
+
+;===----------------------------------------------------------------------===;
 ; S_BUFFER_LOAD variants with immediate offsets
 ;===----------------------------------------------------------------------===;
 
