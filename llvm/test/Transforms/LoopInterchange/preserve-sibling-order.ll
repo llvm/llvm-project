@@ -1,4 +1,3 @@
-; REQUIRES: asserts
 ; RUN: opt -passes='function(loop(loop-interchange),print<loops>)' \
 ; RUN:     -loop-interchange-profitabilities=ignore -disable-output < %s 2>&1 | \
 ; RUN:     FileCheck %s
