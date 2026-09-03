@@ -705,7 +705,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__scoped_atomic_load_n:
   case AtomicExpr::AO__scoped_atomic_load:
   case AtomicExpr::AO__hip_atomic_load:
-  case AtomicExpr::AO__opencl_atomic_load:
+  case AtomicExpr::AO__opencl_atomic_load: {
     cir::LoadOp load =
         builder.createLoad(loc, ptr, /*isVolatile=*/expr->isVolatile());
 
@@ -720,9 +720,9 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__scoped_atomic_store:
-  case AtomicExpr::AO__scoped_atomic_store_n: {
+  case AtomicExpr::AO__scoped_atomic_store_n:
   case AtomicExpr::AO__hip_atomic_store:
-  case AtomicExpr::AO__opencl_atomic_store:
+  case AtomicExpr::AO__opencl_atomic_store: {
     cir::LoadOp loadVal1 = builder.createLoad(loc, val1);
 
     assert(!cir::MissingFeatures::atomicSyncScopeID());
