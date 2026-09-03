@@ -4985,6 +4985,18 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
 }
 
 //===----------------------------------------------------------------------===//
+// Coroutine intrinsic PromiseOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroPromiseOp : CIR_CoroIntrinsicOp<"promise",
+    (ins CIR_VoidPtrType:$coroframe, CIR_AnyIntType:$align, CIR_BoolType:$from),
+    (outs CIR_VoidPtrType:$result)> {
+  let summary = "Represents llvm.coro.promise";
+  let description = [{
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
 

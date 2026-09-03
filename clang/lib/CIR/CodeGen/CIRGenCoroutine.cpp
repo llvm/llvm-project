@@ -309,6 +309,12 @@ cir::CoroSizeOp CIRGenFunction::emitCoroSizeBuiltinCall(const CallExpr *e) {
   return cir::CoroSizeOp::create(cgm.getBuilder(), loc);
 }
 
+cir::CoroPromiseOp
+CIRGenFunction::emitCoroPromiseBuiltinCall(const CallExpr *e) {
+
+  return {};
+}
+
 static mlir::LogicalResult
 coroutineBodyExceptionHelper(CIRGenFunction &cgf, const CoroutineBodyStmt &s) {
 
