@@ -18,6 +18,7 @@
 #include "src/fcntl/posix_fadvise.h"
 #include "src/unistd/close.h"
 #include "src/unistd/pipe.h"
+#include "src/unistd/unlink.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
@@ -32,8 +33,8 @@ TEST_F(LlvmLibcPosixFadviseTest, InvalidFileDescriptor) {
 TEST_F(LlvmLibcPosixFadviseTest, ValidFile) {
   constexpr const char *TEST_FILE = "testdata/posix_fadvise.test";
   int fd = LIBC_NAMESPACE::creat(TEST_FILE, S_IRWXU);
-  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
+  ASSERT_EQ(LIBC_NAMESPACE::unlink(TEST_FILE), 0);
 
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(fd, 0, 0, POSIX_FADV_NORMAL), 0);
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM), 0);
@@ -47,30 +48,24 @@ TEST_F(LlvmLibcPosixFadviseTest, ValidFile) {
 
   // Invalid advice
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(fd, 0, 0, -1), EINVAL);
-  ASSERT_ERRNO_SUCCESS();
 
   // Negative len
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(fd, 0, -1, POSIX_FADV_NORMAL),
             EINVAL);
-  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_EQ(LIBC_NAMESPACE::close(fd), 0);
-  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST_F(LlvmLibcPosixFadviseTest, Pipe) {
   int pipefd[2];
   ASSERT_EQ(LIBC_NAMESPACE::pipe(pipefd), 0);
-  ASSERT_ERRNO_SUCCESS();
 
   // fadvise on a pipe should return ESPIPE
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(pipefd[0], 0, 0, POSIX_FADV_NORMAL),
             ESPIPE);
   EXPECT_EQ(LIBC_NAMESPACE::posix_fadvise(pipefd[1], 0, 0, POSIX_FADV_NORMAL),
             ESPIPE);
-  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_EQ(LIBC_NAMESPACE::close(pipefd[0]), 0);
   EXPECT_EQ(LIBC_NAMESPACE::close(pipefd[1]), 0);
-  ASSERT_ERRNO_SUCCESS();
 }

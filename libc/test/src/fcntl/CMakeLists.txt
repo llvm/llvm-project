@@ -72,5 +72,6 @@ add_libc_test(
     libc.src.fcntl.posix_fadvise
     libc.src.unistd.close
     libc.src.unistd.pipe
+    libc.src.unistd.unlink
     libc.test.UnitTest.ErrnoCheckingTest
 )
