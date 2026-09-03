@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This provides SPIR-V-specific CIR CodeGen logic for function attributes.
+// This provides SPIR/SPIRV-specific CIR CodeGen logic for function attributes.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,15 +22,22 @@ using namespace clang::CIRGen;
 
 namespace {
 
-class SPIRVABIInfo : public ABIInfo {
+class CommonSPIRABIInfo : public ABIInfo {
 public:
-  SPIRVABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+  CommonSPIRABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
 };
 
-class SPIRVTargetCIRGenInfo : public TargetCIRGenInfo {
+class CommonSPIRTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
-  SPIRVTargetCIRGenInfo(CIRGenTypes &cgt)
-      : TargetCIRGenInfo(std::make_unique<SPIRVABIInfo>(cgt)) {}
+  CommonSPIRTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<CommonSPIRABIInfo>(cgt)) {}
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getCIRAllocaAddressSpace() const override {
+    return cir::LangAddressSpaceAttr::get(
+        &getABIInfo().cgt.getMLIRContext(),
+        cir::LangAddressSpace::OffloadPrivate);
+  }
 
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
                            CIRGenModule &cgm) const override {
@@ -57,6 +64,6 @@ public:
 } // namespace
 
 std::unique_ptr<TargetCIRGenInfo>
-clang::CIRGen::createSPIRVTargetCIRGenInfo(CIRGenTypes &cgt) {
-  return std::make_unique<SPIRVTargetCIRGenInfo>(cgt);
+clang::CIRGen::createCommonSPIRTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<CommonSPIRTargetCIRGenInfo>(cgt);
 }

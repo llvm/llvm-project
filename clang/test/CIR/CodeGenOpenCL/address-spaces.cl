@@ -34,10 +34,7 @@ void local_pointer_value(global int *ptr) {
 
 // CIR-LABEL: cir.func dso_local @local_pointer_value
 // CIR: %[[SAVED:.*]] = cir.alloca "saved"
-// CIR-SAME: !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>>
-// CIR: %[[SAVED_ADDR:.*]] = cir.cast address_space %[[SAVED]]
-// CIR-SAME: !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>>
 // CIR-SAME: !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>, lang_address_space(offload_private)>
-// CIR: cir.store {{.*}}, %[[SAVED_ADDR]]
+// CIR: cir.store {{.*}}, %[[SAVED]]
 // CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_global)>
 // CIR-SAME: !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>, lang_address_space(offload_private)>
