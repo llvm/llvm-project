@@ -5,12 +5,13 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// FileMode class handles everything regarding the mode of the file, be it's opening mode or content type.
+// FileMode class handles everything regarding the mode of the file, be it's
+// opening mode or content type.
 class FileMode {
 public:
   // FileMode constructor accepts the mode string as an argument.
-  // It performs validation against several rules and records the `file_mode` property to
-  // the specific mode.
+  // It performs validation against several rules and records the `file_mode`
+  // property to the specific mode.
   explicit FileMode(const char *mode) : file_mode_(0) {
     // First character in |mode| should be 'a', 'r' or 'w'.
     if (*mode != 'a' && *mode != 'r' && *mode != 'w')
@@ -74,8 +75,8 @@ public:
   }
 
   // '+' means update is allowed
-  // TODO: ask michael if I need to give it a better name like "update_allowed" or just continue with the
-  // old convention.
+  // TODO: ask michael if I need to give it a better name like "update_allowed"
+  // or just continue with the old convention.
   bool is_plus() const {
     return (file_mode_ & static_cast<Mode>(OpenMode::PLUS)) != 0;
   }
@@ -97,7 +98,7 @@ private:
   // integer value. A flag set can include both READ and WRITE if the file
   // is opened in update mode (ie. if the file was opened with a '+' the mode
   // string.)
-  enum class OpenMode: Mode {
+  enum class OpenMode : Mode {
     READ = 0x1,
     WRITE = 0x2,
     APPEND = 0x4,
@@ -106,20 +107,20 @@ private:
 
   // Denotes a file opened in binary mode (which is specified by including
   // the 'b' character in teh mode string.)
-  enum class ContentType: Mode {
+  enum class ContentType : Mode {
     BINARY = 0x10,
   };
 
   // Denotes a file to be created for writing.
-  enum class CreateType: Mode {
+  enum class CreateType : Mode {
     EXCLUSIVE = 0x100,
   };
 
-  // This property tracks the mode for the particular file instance (i.e currently opened file)
+  // This property tracks the mode for the particular file instance (i.e
+  // currently opened file)
   int file_mode_;
 };
 
-
-}
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FILE_FILE_MODE_H
