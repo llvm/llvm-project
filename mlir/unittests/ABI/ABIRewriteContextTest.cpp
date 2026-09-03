@@ -36,7 +36,7 @@ TEST(ABIRewriteContextTest, MockCanBeConstructedAndDestroyed) {
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationDirect) {
-  auto c = ArgClassification::getDirect(/*offset=*/0);
+  auto c = ArgClassification::getDirect();
   EXPECT_EQ(c.kind, ArgKind::Direct);
   EXPECT_EQ(c.coercedType, nullptr);
   EXPECT_TRUE(c.canFlatten);
@@ -84,8 +84,8 @@ TEST(ABIRewriteContextTest, ArgClassificationExtend) {
 
 TEST(ABIRewriteContextTest, FunctionClassificationHoldsReturnAndArgs) {
   FunctionClassification fc;
-  fc.returnInfo = ArgClassification::getDirect(/*offset=*/0);
-  fc.argInfos.push_back(ArgClassification::getDirect(/*offset=*/0));
+  fc.returnInfo = ArgClassification::getDirect();
+  fc.argInfos.push_back(ArgClassification::getDirect());
   fc.argInfos.push_back(ArgClassification::getIndirect(llvm::Align(8), true));
   fc.argInfos.push_back(ArgClassification::getIgnore());
 

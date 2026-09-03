@@ -527,7 +527,7 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // an offset cannot take this path.
     if (!offset && !isAggregate && !comparesAgainstCoerce &&
         !coerceIsRegisterTuple && !coerceWidensScalar)
-      return ArgClassification::getDirect(/*offset=*/0);
+      return ArgClassification::getDirect();
     mlir::Type coerced = abiTypeToCIR(coerceAbi, ctx);
     if (!coerced)
       return std::nullopt;
@@ -538,7 +538,7 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // Coercing a value to the type it already has would add a memory round
     // trip for nothing.
     if (comparesAgainstCoerce && coerced == origTy)
-      return ArgClassification::getDirect(/*offset=*/0);
+      return ArgClassification::getDirect();
     return ArgClassification::getDirect(offset, coerced);
   }
   // An extended value is always read from byte 0 of its own storage, so

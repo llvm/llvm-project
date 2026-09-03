@@ -69,7 +69,7 @@ ArgClassification classifyOne(Type type, const DataLayout &dl) {
       Type i32Ty = IntegerType::get(type.getContext(), ExtendBelowBits);
       return ArgClassification::getExtend(i32Ty, /*signExt=*/intTy.isSigned());
     }
-    return ArgClassification::getDirect(/*offset=*/0);
+    return ArgClassification::getDirect();
   }
 
   if (auto indexTy = dyn_cast<IndexType>(type)) {
@@ -78,11 +78,11 @@ ArgClassification classifyOne(Type type, const DataLayout &dl) {
       Type i32Ty = IntegerType::get(type.getContext(), ExtendBelowBits);
       return ArgClassification::getExtend(i32Ty, /*signExt=*/true);
     }
-    return ArgClassification::getDirect(/*offset=*/0);
+    return ArgClassification::getDirect();
   }
 
   if (isa<FloatType, VectorType, MemRefType>(type))
-    return ArgClassification::getDirect(/*offset=*/0);
+    return ArgClassification::getDirect();
 
   // For dialect-specific types: query DataLayout via
   // DataLayoutTypeInterface.  Types that don't implement the interface
@@ -99,7 +99,7 @@ ArgClassification classifyOne(Type type, const DataLayout &dl) {
 
   uint64_t sizeInBytes = (sizeInBits.getFixedValue() + 7) / 8;
   if (sizeInBytes <= IndirectCutoffBytes)
-    return ArgClassification::getDirect(/*offset=*/0);
+    return ArgClassification::getDirect();
 
   uint64_t alignBytes = dl.getTypeABIAlignment(type);
   return ArgClassification::getIndirect(llvm::Align(alignBytes),
