@@ -1,5 +1,5 @@
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t-input.cpp
-// RUN: not clang-tidy %t-input.cpp -checks='-*,google-explicit-constructor,clang-diagnostic-missing-prototypes,clang-diagnostic-zero-length-array' --warnings-as-errors='clang-diagnostic-missing-prototypes,google-explicit-constructor' -export-sarif=%t.sarif -- -Wmissing-prototypes -Wzero-length-array > %t.msg 2>&1
+// RUN: not clang-tidy %t-input.cpp -checks='-*,google-explicit-constructor,clang-diagnostic-missing-prototypes,clang-diagnostic-zero-length-array' --warnings-as-errors='clang-diagnostic-missing-prototypes,google-explicit-constructor' -sarif-export=%t.sarif -- -Wmissing-prototypes -Wzero-length-array > %t.msg 2>&1
 // RUN: FileCheck -input-file=%t.msg -check-prefix=CHECK-MESSAGES %s -implicit-check-not='{{warning|error|note}}:'
 // RUN: FileCheck -input-file=%t.sarif -check-prefix=CHECK-SARIF %s
 #define X(n) void n ## n() {}
@@ -33,7 +33,7 @@ struct Foo {
 //CHECK-SARIF-NEXT:           "length": {{[0-9]+}},
 //CHECK-SARIF-NEXT:           "location": {
 //CHECK-SARIF-NEXT:             "index": 0,
-//CHECK-SARIF-NEXT:             "uri": "{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:             "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:           },
 //CHECK-SARIF-NEXT:           "mimeType": "text/plain",
 //CHECK-SARIF-NEXT:           "roles": [
@@ -50,7 +50,7 @@ struct Foo {
 //CHECK-SARIF-NEXT:               "physicalLocation": {
 //CHECK-SARIF-NEXT:                 "artifactLocation": {
 //CHECK-SARIF-NEXT:                   "index": 0,
-//CHECK-SARIF-NEXT:                   "uri": "{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                 },
 //CHECK-SARIF-NEXT:                 "region": {
 //CHECK-SARIF-NEXT:                   "endColumn": 2,
@@ -64,6 +64,59 @@ struct Foo {
 //CHECK-SARIF-NEXT:           "message": {
 //CHECK-SARIF-NEXT:             "text": "no previous prototype for function 'ff'"
 //CHECK-SARIF-NEXT:           },
+//CHECK-SARIF-NEXT:           "relatedLocations": [
+//CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "message": {
+//CHECK-SARIF-NEXT:                 "text": "expanded from macro 'X'"
+//CHECK-SARIF-NEXT:               },
+//CHECK-SARIF-NEXT:               "physicalLocation": {
+//CHECK-SARIF-NEXT:                 "artifactLocation": {
+//CHECK-SARIF-NEXT:                   "index": 0,
+//CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                 },
+//CHECK-SARIF-NEXT:                 "region": {
+//CHECK-SARIF-NEXT:                   "endColumn": 20,
+//CHECK-SARIF-NEXT:                   "endLine": 1,
+//CHECK-SARIF-NEXT:                   "startColumn": 19,
+//CHECK-SARIF-NEXT:                   "startLine": 1
+//CHECK-SARIF-NEXT:                 }
+//CHECK-SARIF-NEXT:               }
+//CHECK-SARIF-NEXT:             },
+//CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "message": {
+//CHECK-SARIF-NEXT:                 "text": "declare 'static' if the function is not intended to be used outside of this translation unit"
+//CHECK-SARIF-NEXT:               },
+//CHECK-SARIF-NEXT:               "physicalLocation": {
+//CHECK-SARIF-NEXT:                 "artifactLocation": {
+//CHECK-SARIF-NEXT:                   "index": 0,
+//CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                 },
+//CHECK-SARIF-NEXT:                 "region": {
+//CHECK-SARIF-NEXT:                   "endColumn": 2,
+//CHECK-SARIF-NEXT:                   "endLine": 2,
+//CHECK-SARIF-NEXT:                   "startColumn": 1,
+//CHECK-SARIF-NEXT:                   "startLine": 2
+//CHECK-SARIF-NEXT:                 }
+//CHECK-SARIF-NEXT:               }
+//CHECK-SARIF-NEXT:             },
+//CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "message": {
+//CHECK-SARIF-NEXT:                 "text": "expanded from macro 'X'"
+//CHECK-SARIF-NEXT:               },
+//CHECK-SARIF-NEXT:               "physicalLocation": {
+//CHECK-SARIF-NEXT:                 "artifactLocation": {
+//CHECK-SARIF-NEXT:                   "index": 0,
+//CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                 },
+//CHECK-SARIF-NEXT:                 "region": {
+//CHECK-SARIF-NEXT:                   "endColumn": 15,
+//CHECK-SARIF-NEXT:                   "endLine": 1,
+//CHECK-SARIF-NEXT:                   "startColumn": 14,
+//CHECK-SARIF-NEXT:                   "startLine": 1
+//CHECK-SARIF-NEXT:                 }
+//CHECK-SARIF-NEXT:               }
+//CHECK-SARIF-NEXT:             }
+//CHECK-SARIF-NEXT:           ],
 //CHECK-SARIF-NEXT:           "ruleId": "clang-diagnostic-missing-prototypes",
 //CHECK-SARIF-NEXT:           "ruleIndex": 0
 //CHECK-SARIF-NEXT:         },
@@ -74,7 +127,7 @@ struct Foo {
 //CHECK-SARIF-NEXT:               "physicalLocation": {
 //CHECK-SARIF-NEXT:                 "artifactLocation": {
 //CHECK-SARIF-NEXT:                   "index": 0,
-//CHECK-SARIF-NEXT:                   "uri": "{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                 },
 //CHECK-SARIF-NEXT:                 "region": {
 //CHECK-SARIF-NEXT:                   "endColumn": 9,
@@ -98,7 +151,7 @@ struct Foo {
 //CHECK-SARIF-NEXT:               "physicalLocation": {
 //CHECK-SARIF-NEXT:                 "artifactLocation": {
 //CHECK-SARIF-NEXT:                   "index": 0,
-//CHECK-SARIF-NEXT:                   "uri": "{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                 },
 //CHECK-SARIF-NEXT:                 "region": {
 //CHECK-SARIF-NEXT:                   "endColumn": 8,
@@ -122,7 +175,7 @@ struct Foo {
 //CHECK-SARIF-NEXT:               "physicalLocation": {
 //CHECK-SARIF-NEXT:                 "artifactLocation": {
 //CHECK-SARIF-NEXT:                   "index": 0,
-//CHECK-SARIF-NEXT:                   "uri": "{{.*}}-input.cpp" 
+//CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                 },
 //CHECK-SARIF-NEXT:                 "region": {
 //CHECK-SARIF-NEXT:                   "endColumn": 12,
@@ -146,7 +199,7 @@ struct Foo {
 //CHECK-SARIF-NEXT:               "physicalLocation": {
 //CHECK-SARIF-NEXT:                 "artifactLocation": {
 //CHECK-SARIF-NEXT:                   "index": 0,
-//CHECK-SARIF-NEXT:                   "uri": "{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                 },
 //CHECK-SARIF-NEXT:                 "region": {
 //CHECK-SARIF-NEXT:                   "endColumn": 4,
@@ -163,3 +216,79 @@ struct Foo {
 //CHECK-SARIF-NEXT:           "ruleId": "clang-diagnostic-error",
 //CHECK-SARIF-NEXT:           "ruleIndex": 1
 //CHECK-SARIF-NEXT:         },
+//CHECK-SARIF-NEXT:         {
+//CHECK-SARIF-NEXT:           "level": "error",
+//CHECK-SARIF-NEXT:           "locations": [
+//CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "physicalLocation": {
+//CHECK-SARIF-NEXT:                 "artifactLocation": {
+//CHECK-SARIF-NEXT:                   "index": 0,
+//CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                 },
+//CHECK-SARIF-NEXT:                 "region": {
+//CHECK-SARIF-NEXT:                   "endColumn": 4,
+//CHECK-SARIF-NEXT:                   "endLine": 9,
+//CHECK-SARIF-NEXT:                   "startColumn": 3,
+//CHECK-SARIF-NEXT:                   "startLine": 9
+//CHECK-SARIF-NEXT:                 }
+//CHECK-SARIF-NEXT:               }
+//CHECK-SARIF-NEXT:             }
+//CHECK-SARIF-NEXT:           ],
+//CHECK-SARIF-NEXT:           "message": {
+//CHECK-SARIF-NEXT:             "text": "single-argument constructors must be marked explicit to avoid unintentional implicit conversions"
+//CHECK-SARIF-NEXT:           },
+//CHECK-SARIF-NEXT:           "ruleId": "google-explicit-constructor",
+//CHECK-SARIF-NEXT:           "ruleIndex": 3
+//CHECK-SARIF-NEXT:         }
+//CHECK-SARIF-NEXT:       ],
+//CHECK-SARIF-NEXT:       "tool": {
+//CHECK-SARIF-NEXT:         "driver": {
+//CHECK-SARIF-NEXT:           "fullName": "clang-tidy",
+//CHECK-SARIF-NEXT:           "informationUri": "https://clang.llvm.org/extra/clang-tidy/",
+//CHECK-SARIF-NEXT:           "language": "en-US",
+//CHECK-SARIF-NEXT:           "name": "clang-tidy",
+//CHECK-SARIF-NEXT:           "rules": [
+//CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "defaultConfiguration": {
+//CHECK-SARIF-NEXT:                 "enabled": true,
+//CHECK-SARIF-NEXT:                 "level": "error",
+//CHECK-SARIF-NEXT:                 "rank": 50
+//CHECK-SARIF-NEXT:               },
+//CHECK-SARIF-NEXT:               "id": "clang-diagnostic-missing-prototypes",
+//CHECK-SARIF-NEXT:               "name": "clang-diagnostic-missing-prototypes"
+//CHECK-SARIF-NEXT:             },
+//CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "defaultConfiguration": {
+//CHECK-SARIF-NEXT:                 "enabled": true,
+//CHECK-SARIF-NEXT:                 "level": "error",
+//CHECK-SARIF-NEXT:                 "rank": 50
+//CHECK-SARIF-NEXT:               },
+//CHECK-SARIF-NEXT:               "id": "clang-diagnostic-error",
+//CHECK-SARIF-NEXT:               "name": "clang-diagnostic-error"
+//CHECK-SARIF-NEXT:             },
+//CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "defaultConfiguration": {
+//CHECK-SARIF-NEXT:                 "enabled": true,
+//CHECK-SARIF-NEXT:                 "level": "warning",
+//CHECK-SARIF-NEXT:                 "rank": -1
+//CHECK-SARIF-NEXT:               },
+//CHECK-SARIF-NEXT:               "id": "clang-diagnostic-zero-length-array",
+//CHECK-SARIF-NEXT:               "name": "clang-diagnostic-zero-length-array"
+//CHECK-SARIF-NEXT:             },
+//CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "defaultConfiguration": {
+//CHECK-SARIF-NEXT:                 "enabled": true,
+//CHECK-SARIF-NEXT:                 "level": "error",
+//CHECK-SARIF-NEXT:                 "rank": 50
+//CHECK-SARIF-NEXT:               },
+//CHECK-SARIF-NEXT:               "id": "google-explicit-constructor",
+//CHECK-SARIF-NEXT:               "name": "google-explicit-constructor"
+//CHECK-SARIF-NEXT:             }
+//CHECK-SARIF-NEXT:           ],
+//CHECK-SARIF-NEXT:           "version": "{{.*}}"
+//CHECK-SARIF-NEXT:         }
+//CHECK-SARIF-NEXT:       }
+//CHECK-SARIF-NEXT:     }
+//CHECK-SARIF-NEXT:   ],
+//CHECK-SARIF-NEXT:   "version": "{{.*}}"
+//CHECK-SARIF-NEXT: }

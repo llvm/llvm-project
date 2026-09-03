@@ -312,7 +312,7 @@ code with clang-apply-replacements.
                                         cl::value_desc("filename"),
                                         cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> ExportSarif("export-sarif", desc(R"(
+static cl::opt<std::string> SarifExport("sarif-export", desc(R"(
 File in which to store diagnostics in SARIF format.
 )"),
                                         cl::value_desc("filename"),
@@ -661,9 +661,9 @@ int clangTidyMain(int argc, const char **argv) {
   const SmallString<256> FilePath = makeAbsolute(FileName);
 
   std::unique_ptr<llvm::raw_fd_ostream> SarifOS;
-  if (!ExportSarif.empty()) {
+  if (!SarifExport.empty()) {
     std::error_code EC;
-    SarifOS = std::make_unique<llvm::raw_fd_ostream>(ExportSarif, EC,
+    SarifOS = std::make_unique<llvm::raw_fd_ostream>(SarifExport, EC,
                                                      llvm::sys::fs::OF_Text);
     if (EC) {
       llvm::errs() << "Error opening output file: " << EC.message() << '\n';
@@ -774,7 +774,7 @@ int clangTidyMain(int argc, const char **argv) {
 
   handleErrors(Errors, Context, DisableFixes ? FB_NoFix : Behaviour,
                WErrorCount, BaseFS, SarifOS.get(),
-               SarifOS && ExportSarif == "-");
+               SarifOS && SarifExport == "-");
 
   if (!ExportFixes.empty() && !Errors.empty()) {
     std::error_code EC;

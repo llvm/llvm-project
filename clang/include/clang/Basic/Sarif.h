@@ -332,7 +332,8 @@ class SarifResult {
   std::string HostedViewerURI;
   llvm::SmallDenseMap<StringRef, std::string, 4> PartialFingerprints;
   llvm::SmallVector<CharSourceRange, 8> Locations;
-  llvm::SmallVector<CharSourceRange, 8> RelatedLocations;
+  llvm::SmallVector<std::pair<CharSourceRange, std::string>, 8>
+      RelatedLocations;
   llvm::SmallVector<ThreadFlow, 8> ThreadFlows;
   std::optional<SarifResultLevel> LevelOverride;
 
@@ -373,7 +374,8 @@ public:
     return *this;
   }
 
-  SarifResult addRelatedLocations(llvm::ArrayRef<CharSourceRange> DiagLocs) {
+   SarifResult addRelatedLocations(llvm::ArrayRef<CharSourceRange> DiagLocs,
+                                  llvm::StringRef Message = "") {
 #ifndef NDEBUG
     for (const auto &Loc : DiagLocs) {
       assert(
@@ -381,7 +383,8 @@ public:
           "SARIF RelatedLocations require character granular source ranges!");
     }
 #endif
-    RelatedLocations.append(DiagLocs.begin(), DiagLocs.end());
+    for (const CharSourceRange &Loc : DiagLocs)
+      RelatedLocations.emplace_back(Loc, Message.str());
     return *this;
   }
 

@@ -276,11 +276,11 @@ void SarifDocumentWriter::endRun() {
         {"enabled", R.DefaultConfiguration.Enabled},
         {"level", resultLevelToStr(R.DefaultConfiguration.Level)},
         {"rank", R.DefaultConfiguration.Rank}};
-    json::Object Rule{
-        {"name", R.Name},
-        {"id", R.Id},
-        {"fullDescription", json::Object{{"text", R.Description}}},
-        {"defaultConfiguration", std::move(Config)}};
+    json::Object Rule{{"name", R.Name},
+                      {"id", R.Id},
+                      {"defaultConfiguration", std::move(Config)}};
+    if (!(Tool.getObject("driver")->getString("fullName") == "clang-tidy"))
+      Rule["fullDescription"] = json::Object{{"text", R.Description}};
     if (!R.HelpURI.empty())
       Rule["helpUri"] = R.HelpURI;
     if (!R.DeprecatedIds.empty())
@@ -411,9 +411,9 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
 
   if (!Result.RelatedLocations.empty()) {
     json::Array ReLocs;
-    for (auto &Range : Result.RelatedLocations) {
-      ReLocs.emplace_back(createLocation(createPhysicalLocation(Range)));
-    }
+    for (const auto &[Range, Message] : Result.RelatedLocations)
+      ReLocs.emplace_back(
+          createLocation(createPhysicalLocation(Range), Message));
     Ret["relatedLocations"] = std::move(ReLocs);
   }
 
