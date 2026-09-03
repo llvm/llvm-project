@@ -1526,6 +1526,10 @@ bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 /// Is Reg - scalar register
 bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI);
 
+/// \returns true if \p Reg is an indexed-resource index register, i.e. either a
+/// 32-bit SGPR (uniform-indexed form) or a Lo256 VGPR (per-lane indexed form).
+bool isRsrcIndexReg(MCRegister Reg, const MCRegisterInfo &MRI);
+
 /// \returns if \p Reg occupies the high 16-bits of a 32-bit register.
 bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI);
 

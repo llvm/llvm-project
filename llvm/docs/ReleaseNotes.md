@@ -248,6 +248,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLDB
 
+* `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
+  runtime's command line instead of following it. A runtime that dispatches on a
+  leading subcommand can therefore name that subcommand through this setting,
+  rather than needing a wrapper script.
+
 #### SBAPI
 
 * A [bug](https://github.com/llvm/llvm-project/issues/211787) involving SBValues

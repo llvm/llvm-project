@@ -10,6 +10,7 @@ algorithm initializer_list
 algorithm iosfwd
 algorithm limits
 algorithm ratio
+algorithm stdexcept
 algorithm tuple
 algorithm version
 any cstdint
@@ -187,7 +188,6 @@ condition_variable climits
 condition_variable cstdint
 condition_variable cstring
 condition_variable ctime
-condition_variable initializer_list
 condition_variable limits
 condition_variable ratio
 condition_variable typeinfo
