@@ -46,6 +46,30 @@ static cl::opt<bool> EnableLocalReassignment(
              "may be compile time intensive"),
     cl::init(false));
 
+static cl::opt<bool> EvictBasedOnSimpleWeightComp(
+    "evict-based-on-simple-weight-comp", cl::Hidden,
+    cl::desc("Make eviction decisions based on simple weight comparisson"),
+    cl::init(true));
+
+static cl::opt<float> MinUseDefFreqRatioToIgnoreSize(
+    "min-use-def-freq-ratio-to-ignore-size", cl::Hidden,
+    cl::desc(
+        "if live range A wants to evict live range B and A's use-def frequency "
+        "divided by B's use-def frequency is outside of the range `(1 / "
+        "MinUseDefFreqRatioToIgnoreSize,  MinUseDefFreqRatioToIgnoreSize)` "
+        "ignore the sizes of A dn B when making the eviction decision."),
+    cl::init(5.0));
+
+static cl::opt<float> MinSizeRatioNeededToEvict(
+    "min-size-ratio-needed-to-evict", cl::Hidden,
+    cl::desc(
+        "if live range A wants to evict live range B and A's use-def frequency "
+        "divided by B's use-def frequency is in the renge `[1 / "
+        "MinUseDefFreqRatioToIgnoreSize,  MinUseDefFreqRatioToIgnoreSize]` "
+        "then evict B only if size of A divided by the size of B is smaller "
+        "than `MinSizeRatioNeededToEvict`"),
+    cl::init(0.05));
+
 namespace llvm {
 cl::opt<unsigned> EvictInterferenceCutoff(
     "regalloc-eviction-max-interference-cutoff", cl::Hidden,
@@ -226,10 +250,28 @@ bool DefaultEvictionAdvisor::shouldEvict(const LiveInterval &A, bool IsHint,
   if (CanSplit && IsHint && !BreaksHint)
     return true;
 
-  if (A.weight() > B.weight()) {
-    LLVM_DEBUG(dbgs() << "should evict: " << B << '\n');
+  if (EvictBasedOnSimpleWeightComp)
+    return A.weight() > B.weight();
+
+  const unsigned SizeOffset = 25 * SlotIndex::InstrDist;
+  float AUseDefFreq = A.weight() * (A.getSize() + SizeOffset);
+  float BUseDefFreq = B.weight() * (B.getSize() + SizeOffset);
+  if (BUseDefFreq == 0.0f)
     return true;
-  }
+  float FreqRatio = AUseDefFreq / BUseDefFreq;
+  if (FreqRatio > MinUseDefFreqRatioToIgnoreSize)
+    return true;
+  if (FreqRatio < 1.0f / MinUseDefFreqRatioToIgnoreSize)
+    return false;
+  // use-def frequencies are comparable. Evict B only if
+  // its size is much larger, so eviction can provide some register pressure
+  // relief.
+  int ASize = A.getSize();
+  int BSize = B.getSize();
+  if (BSize == 0)
+    return false;
+  if ((float)ASize / (float)BSize < MinSizeRatioNeededToEvict)
+    return true;
   return false;
 }
 
@@ -322,6 +364,9 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
       // Apply the eviction policy for non-urgent evictions.
       if (!shouldEvict(VirtReg, IsHint, *Intf, BreaksHint))
         return false;
+      LLVM_DEBUG(dbgs() << "should evict: " << *Intf << " w= " << Intf->weight()
+                        << '\n');
+
       // If !MaxCost.isMax(), then we're just looking for a cheap register.
       // Evicting another local live range in this case could lead to suboptimal
       // coloring.
