@@ -2528,9 +2528,7 @@ define <2 x i32> @fcmal2xfloat(<2 x float> %A, <2 x float> %B) {
 ;
 ; CHECK-GI-LABEL: fcmal2xfloat:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v0.2s, #1
-; CHECK-GI-NEXT:    shl v0.2s, v0.2s, #31
-; CHECK-GI-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp true <2 x float> %A, %B
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
@@ -2538,34 +2536,19 @@ define <2 x i32> @fcmal2xfloat(<2 x float> %A, <2 x float> %B) {
 }
 
 define <4 x i32> @fcmal4xfloat(<4 x float> %A, <4 x float> %B) {
-; CHECK-SD-LABEL: fcmal4xfloat:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fcmal4xfloat:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v0.4s, #1
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fcmal4xfloat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-NEXT:    ret
   %tmp3 = fcmp true <4 x float> %A, %B
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
   ret <4 x i32> %tmp4
 }
 define <2 x i64> @fcmal2xdouble(<2 x double> %A, <2 x double> %B) {
-; CHECK-SD-LABEL: fcmal2xdouble:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fcmal2xdouble:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI221_0
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI221_0]
-; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #63
-; CHECK-GI-NEXT:    cmlt v0.2d, v0.2d, #0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fcmal2xdouble:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-NEXT:    ret
   %tmp3 = fcmp true <2 x double> %A, %B
   %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
   ret <2 x i64> %tmp4
