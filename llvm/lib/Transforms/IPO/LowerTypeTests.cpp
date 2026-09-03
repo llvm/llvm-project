@@ -199,6 +199,8 @@ BitSetInfo BitSetBuilder::build() {
 }
 
 void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
+  assert(Fragments.front().empty() && "Cannot add fragments after build()");
+
   // Create a new fragment to hold the layout for F.
   Fragments.emplace_back();
   std::vector<uint64_t> &Fragment = Fragments.back();
@@ -225,6 +227,16 @@ void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
   // Update the fragment map to point our object indices to this fragment.
   for (uint64_t ObjIndex : Fragment)
     FragmentMap[ObjIndex] = FragmentIndex;
+}
+
+const std::vector<uint64_t> &GlobalLayoutBuilder::build() {
+  std::vector<uint64_t> Layout;
+  Layout.reserve(FragmentMap.size());
+  for (auto &&F : Fragments)
+    llvm::append_range(Layout, F);
+  Fragments.clear();
+  Fragments.push_back(std::move(Layout));
+  return Fragments.front();
 }
 
 void ByteArrayBuilder::allocate(const std::set<uint64_t> &Bits,
@@ -1943,13 +1955,11 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
       Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
   std::vector<GlobalTypeMember *> OrderedGTMs(Globals.size());
   auto OGTMI = OrderedGTMs.begin();
-  for (auto &&F : GLB.Fragments) {
-    for (auto &&Offset : F) {
-      if (IsGlobalSet != isa<GlobalVariable>(Globals[Offset]->getGlobal()))
-        report_fatal_error("Type identifier may not contain both global "
-                           "variables and functions");
-      *OGTMI++ = Globals[Offset];
-    }
+  for (uint64_t Offset : GLB.build()) {
+    if (IsGlobalSet != isa<GlobalVariable>(Globals[Offset]->getGlobal()))
+      report_fatal_error("Type identifier may not contain both global "
+                         "variables and functions");
+    *OGTMI++ = Globals[Offset];
   }
 
   // Build the bitsets from this disjoint set.
