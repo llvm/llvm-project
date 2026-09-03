@@ -49,7 +49,7 @@
 
 # FILTERED-THRESHOLD-NOT: _Z24partially_excluded_blocki:
 # FILTERED-THRESHOLD: _Z8includedi:
-# FILTERED-INDEX: /tmp/lcov-exclusion-markers.cpp{{ +}}4{{ +}}1{{ +}}75.00%{{ +}}1{{ +}}0{{ +}}100.00%{{ +}}5{{ +}}1{{ +}}80.00%
+# FILTERED-INDEX: {{/|\\}}tmp{{/|\\}}lcov-exclusion-markers.cpp{{ +}}4{{ +}}1{{ +}}75.00%{{ +}}1{{ +}}0{{ +}}100.00%{{ +}}5{{ +}}1{{ +}}80.00%
 
 # RUN: llvm-cov report %t.o -instr-profile=%t.profdata \
 # RUN:   -path-equivalence=/tmp,%S/Inputs \
