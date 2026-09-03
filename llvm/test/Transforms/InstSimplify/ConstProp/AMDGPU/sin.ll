@@ -185,9 +185,9 @@ define void @test_f64(ptr %p) {
   store volatile double %p1000, ptr %p
   %n1000 = call double @llvm.amdgcn.sin.f64(double -1000.0)
   store volatile double %n1000, ptr %p
-  %pinf = call double @llvm.amdgcn.sin.f64(double 0x7FF0000000000000) ; +inf
+  %pinf = call double @llvm.amdgcn.sin.f64(double +inf) ; +inf
   store volatile double %pinf, ptr %p
-  %ninf = call double @llvm.amdgcn.sin.f64(double 0xFFF0000000000000) ; -inf
+  %ninf = call double @llvm.amdgcn.sin.f64(double -inf) ; -inf
   store volatile double %ninf, ptr %p
   %nan = call double @llvm.amdgcn.sin.f64(double 0x7FF8000000000000) ; nan
   store volatile double %nan, ptr %p
