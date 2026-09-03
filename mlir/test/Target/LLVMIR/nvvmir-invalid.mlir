@@ -94,7 +94,7 @@ llvm.func @convert_float_to_tf32_no_rnd_mode(%src : f32) -> i32 {
 
 llvm.func @nvvm_st_bulk_initval_nonzero(%addr : !llvm.ptr, %size : i64) {
   // expected-error @below {{only 0 is supported for initVal, got 1}}
-  nvvm.st.bulk %addr, size =  %size, init =  1 : !llvm.ptr
+  nvvm.st.bulk %addr, size =  %size, init =  1 : !llvm.ptr, i64
   llvm.return
 }
 
