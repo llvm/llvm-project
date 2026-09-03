@@ -89,6 +89,18 @@ public:
     cgf.cgm.errorNYI(de->getSourceRange(), "emitVirtualObjectDelete: MSVC ABI");
   }
 
+  size_t getSrcArgforCopyCtor(const CXXConstructorDecl *cd,
+                              FunctionArgList &args) const override {
+    assert(args.size() >= 2 &&
+           "expected the arglist to have at least two args!");
+    // The 'most_derived' parameter goes second if the ctor is variadic and
+    // has v-bases.
+    if (cd->getParent()->getNumVBases() > 0 &&
+        cd->getType()->castAs<FunctionProtoType>()->isVariadic())
+      return 2;
+    return 1;
+  }
+
   const CXXRecordDecl *
   getThisArgumentTypeForMethod(const CXXMethodDecl *md) override {
     return md->getParent();
