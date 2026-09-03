@@ -40,7 +40,7 @@ struct __cpu_parallel_is_heap_until {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy>) {
       if (__last - __first < 2)
         return __last; // Any sequence with less than 2 elements is a heap
-      // Run a parallel find in chunks over [first+1, last) to validate every element excepting the root.
+      // Run a parallel find in chunks over [first+1, last) to validate every element except the root.
       return __pstl::__parallel_find<_Backend>(
           __first + 1,
           __last,
