@@ -31,9 +31,9 @@ LLVM_LIBC_FUNCTION(int, __sprintf_modular,
                                  // destruction automatically.
   va_end(vlist);
 
-  printf_core::DropOverflowBuffer wb(buffer,
-                                     cpp::numeric_limits<size_t>::max());
-  printf_core::Writer writer(wb);
+  printf_core::Writer writer = printf_core::make_drop_overflow_writer(
+      buffer, cpp::numeric_limits<size_t>::max());
+  printf_core::WriteBuffer<char> &wb = writer.get_write_buffer();
 
   auto ret_val = printf_core::printf_main_modular(&writer, format, args);
   if (!ret_val.has_value()) {

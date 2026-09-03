@@ -31,27 +31,47 @@ enum class OverflowMode {
 // avoid multiple copies of the converter functions.
 template <OverflowMode mode> struct Mode {
 #ifdef LIBC_COPT_PRINTF_RUNTIME_DISPATCH
-  static constexpr OverflowMode value = OverflowMode::RUNTIME_DISPATCH;
+  static constexpr OverflowMode value = OverflowMode::CALLBACK;
 #else
   static constexpr OverflowMode value = mode;
 #endif
 };
 
+// Function type for an optionally stateful write sink to be used in a
+// `Writer` "overflow write" callback.
+//
+// Should not be expected to handle an empty string input.
+template <typename CharT>
+using WriteSink = int (*)(cpp::basic_string_view<CharT> /* str */,
+                          void * /* state */);
+
 template <typename CharT> struct WriteBuffer {
   CharT *buff;
   size_t buff_len;
   size_t buff_cur = 0;
+
+  // Flushes the current contents of the buffer to `write_sink`, if non-empty.
+  template <WriteSink<CharT> write_sink>
+  LIBC_INLINE int flush_to_sink(void *sink_state = nullptr) {
+    if (buff_cur == 0)
+      return WRITE_OK;
+
+    int retval = write_sink({buff, buff_cur}, sink_state);
+    if (retval >= 0)
+      buff_cur = 0;
+    return retval;
+  }
 };
 
-// Function type for handling the slow path in `Writer` when the `WriteBuffer`
-// may not have enough remaining capacity for the new content.
+// Function type for handling the "overflow write" slow path in `Writer` when
+// the `WriteBuffer` may not have enough remaining capacity for the new content.
 template <typename CharT>
 using OverflowWriteFn = int (*)(WriteBuffer<CharT> & /* wb */,
                                 cpp::basic_string_view<CharT> /* new_str */,
                                 void * /* state */);
 
 // Handles overflow by filling any remaining space in `wb` with the start of
-// `new_str`, and dropping any excess bytes.
+// `new_str`, and dropping any excess characters.
 template <typename CharT>
 LIBC_INLINE int
 overflow_write_drop_overflow(WriteBuffer<CharT> &wb,
@@ -67,50 +87,22 @@ overflow_write_drop_overflow(WriteBuffer<CharT> &wb,
   return WRITE_OK;
 }
 
-// Defined in make_file_writer.h
-template <typename CharT>
-int overflow_write_flush_to_file(WriteBuffer<CharT> &wb,
-                                 cpp::basic_string_view<CharT> new_str,
-                                 void *fp);
-
-// Defined in make_stderr_writer.h
-template <typename CharT>
-int overflow_write_flush_to_stderr(WriteBuffer<CharT> &wb,
-                                   cpp::basic_string_view<CharT> new_str,
-                                   void *);
-
-// Defined in make_resizing_writer.h
-template <typename CharT>
-int overflow_write_resize_buffer(WriteBuffer<CharT> &wb,
-                                 cpp::basic_string_view<CharT> new_str,
-                                 void *initial_stack_buffer);
-
-// Trait type helper mapping `OverflowMode` to the corresponding function.
-template <OverflowMode mode, typename CharT> struct OverflowModeToWriteFn {};
-
-template <typename CharT>
-struct OverflowModeToWriteFn<OverflowMode::DROP_OVERFLOW, CharT> {
-  static constexpr OverflowWriteFn<CharT> value =
-      overflow_write_drop_overflow<CharT>;
-};
-
-template <typename CharT>
-struct OverflowModeToWriteFn<OverflowMode::FLUSH_TO_FILE, CharT> {
-  static constexpr OverflowWriteFn<CharT> value =
-      overflow_write_flush_to_file<CharT>;
-};
-
-template <typename CharT>
-struct OverflowModeToWriteFn<OverflowMode::FLUSH_TO_STDERR, CharT> {
-  static constexpr OverflowWriteFn<CharT> value =
-      overflow_write_flush_to_stderr<CharT>;
-};
-
-template <typename CharT>
-struct OverflowModeToWriteFn<OverflowMode::RESIZE_BUFFER, CharT> {
-  static constexpr OverflowWriteFn<CharT> value =
-      overflow_write_resize_buffer<CharT>;
-};
+// Flushes the current contents of `wb` to `write_sink`, followed by `new_str`.
+template <typename CharT, WriteSink<CharT> write_sink>
+LIBC_INLINE int
+overflow_write_flush_to_sink(WriteBuffer<CharT> &wb,
+                             cpp::basic_string_view<CharT> new_str,
+                             void *sink_state) {
+  int retval = wb.template flush_to_sink<write_sink>(sink_state);
+  if (retval < 0)
+    return retval;
+  if (new_str.size() > 0) {
+    retval = write_sink(new_str, sink_state);
+    if (retval < 0)
+      return retval;
+  }
+  return WRITE_OK;
+}
 
 // Helper template used by `Writer` to dispatch to the appropriate
 // `OverflowWriteFn`.
@@ -126,43 +118,7 @@ struct OverflowWriter<OverflowMode::DROP_OVERFLOW, CharT> {
   }
 };
 
-template <typename CharT>
-struct OverflowWriter<OverflowMode::FLUSH_TO_FILE, CharT> {
-  void *file;
-
-  LIBC_INLINE OverflowWriter(OverflowWriteFn<CharT>, void *file) : file(file) {}
-
-  LIBC_INLINE int write(WriteBuffer<CharT> &wb,
-                        cpp::basic_string_view<CharT> new_str) {
-    return overflow_write_flush_to_file(wb, new_str, file);
-  }
-};
-
-template <typename CharT>
-struct OverflowWriter<OverflowMode::FLUSH_TO_STDERR, CharT> {
-  LIBC_INLINE OverflowWriter(OverflowWriteFn<CharT>, void *) {}
-
-  LIBC_INLINE int write(WriteBuffer<CharT> &wb,
-                        cpp::basic_string_view<CharT> new_str) {
-    return overflow_write_flush_to_stderr(wb, new_str, nullptr);
-  }
-};
-
-template <typename CharT>
-struct OverflowWriter<OverflowMode::RESIZE_BUFFER, CharT> {
-  void *initial_stack_buffer;
-
-  LIBC_INLINE OverflowWriter(OverflowWriteFn<CharT>, void *initial_stack_buffer)
-      : initial_stack_buffer(initial_stack_buffer) {}
-
-  LIBC_INLINE int write(WriteBuffer<CharT> &wb,
-                        cpp::basic_string_view<CharT> new_str) {
-    return overflow_write_resize_buffer(wb, new_str, initial_stack_buffer);
-  }
-};
-
-template <typename CharT>
-struct OverflowWriter<OverflowMode::RUNTIME_DISPATCH, CharT> {
+template <typename CharT> struct OverflowWriter<OverflowMode::CALLBACK, CharT> {
   OverflowWriteFn<CharT> runtime_fn;
   void *state;
 
@@ -174,15 +130,6 @@ struct OverflowWriter<OverflowMode::RUNTIME_DISPATCH, CharT> {
     return runtime_fn(wb, new_str, state);
   }
 };
-
-// Constructs an `OverflowWriter` that dispatches according to
-// `LIBC_COPT_PRINTF_RUNTIME_DISPATCH`.
-template <OverflowMode mode, typename CharT>
-LIBC_INLINE OverflowWriter<Mode<mode>::value, CharT>
-make_overflow_writer(void *state) {
-  return OverflowWriter<Mode<mode>::value, CharT>(
-      OverflowModeToWriteFn<mode, CharT>::value, state);
-}
 
 // Fills the `dest` buffer with `count` copies of `value`.
 template <typename CharT>
@@ -227,14 +174,20 @@ template <OverflowMode mode, typename CharT = char> class Writer final {
     return overflow_writer.write(wb, mb_substr);
   }
 
-public:
-  // Prefer using the factory functions in make_*_writer.h or
-  // `make_drop_overflow_writer` below, instead of directly calling this
-  // constructor.
   LIBC_INLINE Writer(CharT *buffer, size_t buffer_len,
                      OverflowWriter<mode, CharT> overflow_writer)
       : wb{.buff = buffer, .buff_len = buffer_len},
         overflow_writer(overflow_writer) {}
+
+public:
+  template <typename CharType>
+  friend Writer<Mode<OverflowMode::DROP_OVERFLOW>::value, CharType>
+  make_drop_overflow_writer(CharType *buffer, size_t buffer_len);
+
+  template <typename CharType>
+  friend Writer<Mode<OverflowMode::CALLBACK>::value, CharType>
+  make_writer(CharType *buffer, size_t buffer_len,
+              OverflowWriteFn<CharType> callback, void *callback_state);
 
   // Takes a string, copies it into the buffer if there is space, else passes it
   // to the overflow mechanism to be handled separately.
@@ -287,9 +240,18 @@ Writer(CharT *, size_t, OverflowWriter<mode, CharT>) -> Writer<mode, CharT>;
 template <typename CharT>
 LIBC_INLINE Writer<Mode<OverflowMode::DROP_OVERFLOW>::value, CharT>
 make_drop_overflow_writer(CharT *buffer, size_t buffer_len) {
+  return Writer(buffer, buffer_len,
+                OverflowWriter<Mode<OverflowMode::DROP_OVERFLOW>::value, CharT>(
+                    overflow_write_drop_overflow<CharT>, nullptr));
+}
+
+template <typename CharT>
+LIBC_INLINE Writer<OverflowMode::CALLBACK, CharT>
+make_writer(CharT *buffer, size_t buffer_len, OverflowWriteFn<CharT> callback,
+            void *callback_state = nullptr) {
   return Writer(
       buffer, buffer_len,
-      make_overflow_writer<OverflowMode::DROP_OVERFLOW, CharT>(nullptr));
+      OverflowWriter<OverflowMode::CALLBACK, CharT>(callback, callback_state));
 }
 
 } // namespace printf_core
