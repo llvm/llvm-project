@@ -67,8 +67,8 @@ class AtomicLineLogger {
   std::mutex EnableMtx;
   enum class LogPathSource {
     None,
-    Constructor, /* the path is from the constructor */
-    EnableMethod /* the path is set through calling the enable() method */
+    Constructor, // The path is from the constructor.
+    EnableMethod // The path is set through calling the enable() method.
   };
   LogPathSource PathSource = LogPathSource::None;
 
