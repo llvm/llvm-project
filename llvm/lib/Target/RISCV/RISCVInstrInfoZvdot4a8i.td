@@ -52,8 +52,8 @@ let Predicates = [HasStdExtZvdot4a8i] in {
 //===----------------------------------------------------------------------===//
 
 let HasPassthruOp = true, HasMaskOp = true in {
-  def riscv_vdot4a_vl : RVSDNode<"VDOT4A_VL", SDT_RISCVIntBinOp_VL>;
-  def riscv_vdot4au_vl : RVSDNode<"VDOT4AU_VL", SDT_RISCVIntBinOp_VL>;
+  def riscv_vdot4a_vl : RVSDNode<"VDOT4A_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+  def riscv_vdot4au_vl : RVSDNode<"VDOT4AU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   def riscv_vdot4asu_vl : RVSDNode<"VDOT4ASU_VL", SDT_RISCVIntBinOp_VL>;
 } // let HasPassthruOp = true, HasMaskOp = true
 

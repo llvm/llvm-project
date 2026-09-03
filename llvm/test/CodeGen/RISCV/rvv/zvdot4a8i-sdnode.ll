@@ -989,8 +989,7 @@ define <vscale x 4 x i32> @partial_reduce_vdot4a_vx_operand0(<vscale x 4 x i32> 
 ; DOT-LABEL: partial_reduce_vdot4a_vx_operand0:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; DOT-NEXT:    vmv.v.x v12, a0
-; DOT-NEXT:    vdot4a.vv v8, v12, v10
+; DOT-NEXT:    vdot4a.vx v8, v10, a0
 ; DOT-NEXT:    ret
 entry:
   %h = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
@@ -1056,8 +1055,7 @@ define <vscale x 4 x i32> @partial_reduce_vdot4au_vx_operand0(<vscale x 4 x i32>
 ; DOT-LABEL: partial_reduce_vdot4au_vx_operand0:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; DOT-NEXT:    vmv.v.x v12, a0
-; DOT-NEXT:    vdot4au.vv v8, v12, v10
+; DOT-NEXT:    vdot4au.vx v8, v10, a0
 ; DOT-NEXT:    ret
 entry:
   %h = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
