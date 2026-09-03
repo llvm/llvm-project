@@ -6169,6 +6169,13 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     }
   }
 
+  // Fold pack(empty) to the destination tensor if no padding value is provided.
+  if (packOp.getSource().getDefiningOp<tensor::EmptyOp>() &&
+      !packOp.getPaddingValue()) {
+    rewriter.replaceOp(packOp, packOp.getDest());
+    return success();
+  }
+
   // Fold optional PaddingValue operand away if padding is not needed.
   if (packOp.getPaddingValue() && paddingIsNotNeeded(packOp)) {
     rewriter.startOpModification(packOp);
