@@ -13,7 +13,7 @@ declare void @escape(ptr)
 
 ; CHECK:      Name:{{ +}}AllocaNotSplit
 ; CHECK:      Function:{{ +}}aggregate_escapes
-; CHECK:      A pointer to it escapes here.
+; CHECK:      Pointer escapes.
 
 define void @aggregate_escapes() {
 entry:

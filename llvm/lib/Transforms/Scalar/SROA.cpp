@@ -609,9 +609,11 @@ public:
     return PtrI.isEscaped() ? PtrI.getEscapingInst() : PtrI.getAbortingInst();
   }
 
-  /// Failure reason, if any.
+  /// Failure reason, generic text about pointer escape if we don't have one.
   const char *getFailureReason() const {
-    return PtrI.isEscaped() ? nullptr : PtrI.getFailureReason();
+    if (PtrI.isEscaped())
+      return "Pointer escapes.";
+    return PtrI.getFailureReason();
   }
 
   /// Support for iterating over the slices.
