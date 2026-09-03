@@ -1112,8 +1112,13 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
   // Reset for the next piece.
   eval_ctx.loc_desc_kind = Memory;
 
-  if (piece_byte_size == 0)
+  if (piece_byte_size == 0) {
+    // A zero-sized piece contributes no data, but it still consumes its source
+    // location description.
+    if (!eval_ctx.stack.empty())
+      eval_ctx.stack.pop_back();
     return llvm::Error::success();
+  }
 
   Value curr_piece;
 
