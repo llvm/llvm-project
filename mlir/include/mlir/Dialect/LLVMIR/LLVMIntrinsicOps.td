@@ -1589,9 +1589,14 @@ def LLVM_vector_insert
     "type($srcvec) `into` type($res)";
   let extraClassDeclaration = [{
     uint64_t getVectorBitWidth(Type vector) {
-      return getVectorNumElements(vector).getKnownMinValue() *
-             ::llvm::cast<VectorType>(vector).getElementType()
-                .getIntOrFloatBitWidth();
+      auto vectorType = ::llvm::cast<VectorType>(vector);
+      // A scalable vector dimension is its known minimum element count.
+      uint64_t minNumElements = vectorType.getDimSize(0);
+      uint64_t elementBitWidth =
+          vectorType.getElementType().getIntOrFloatBitWidth();
+      if (minNumElements > uint64_t(-1) / elementBitWidth)
+        return uint64_t(-1);
+      return minNumElements * elementBitWidth;
     }
     uint64_t getSrcVectorBitWidth() {
       return getVectorBitWidth(getSrcvec().getType());
@@ -1622,9 +1627,14 @@ def LLVM_vector_extract
     "type($res) `from` type($srcvec)";
   let extraClassDeclaration = [{
     uint64_t getVectorBitWidth(Type vector) {
-      return getVectorNumElements(vector).getKnownMinValue() *
-             ::llvm::cast<VectorType>(vector).getElementType()
-                .getIntOrFloatBitWidth();
+      auto vectorType = ::llvm::cast<VectorType>(vector);
+      // A scalable vector dimension is its known minimum element count.
+      uint64_t minNumElements = vectorType.getDimSize(0);
+      uint64_t elementBitWidth =
+          vectorType.getElementType().getIntOrFloatBitWidth();
+      if (minNumElements > uint64_t(-1) / elementBitWidth)
+        return uint64_t(-1);
+      return minNumElements * elementBitWidth;
     }
     uint64_t getSrcVectorBitWidth() {
       return getVectorBitWidth(getSrcvec().getType());
