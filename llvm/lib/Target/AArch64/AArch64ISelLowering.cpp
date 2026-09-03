@@ -6553,9 +6553,9 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
       !DAG.getTargetLoweringInfo().isTypeLegal(Op1VT))
     return SDValue();
 
-  assert((Op1VT.getVectorElementType() == MVT::i8 ||
-          Op1VT.getVectorElementType() == MVT::i16) &&
-         "Expected 8-bit or 16-bit characters.");
+  if (Op1VT.getVectorElementType() != MVT::i8 &&
+      Op1VT.getVectorElementType() != MVT::i16)
+    return SDValue();
 
   if (Op2VT.getFixedSizeInBits() > 128) {
     // For VLS SVE fixed-vector types > 128-bit can be legal. These still need

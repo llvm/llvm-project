@@ -549,4 +549,49 @@ define <3 x i1> @match_v3i8_v3i1(<3 x i8> %op1, <8 x i8> %op2, <3 x i1> %mask) #
   ret <3 x i1> %r
 }
 
+define <8 x i1> @match_v8i32_v8i32_vscale_range(<8 x i32> %op1, <8 x i32> %op2, <8 x i1> %mask) #0 vscale_range(2, 2) {
+; CHECK-LABEL: match_v8i32_v8i32_vscale_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z2_z3 def $z2_z3
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    splice z2.s, p0, { z2.s, z3.s }
+; CHECK-NEXT:    splice z0.s, p0, { z0.s, z1.s }
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.s, z2.s[1]
+; CHECK-NEXT:    mov z3.s, s2
+; CHECK-NEXT:    mov z5.s, z2.s[2]
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    mov z1.s, z2.s[3]
+; CHECK-NEXT:    cmpeq p3.s, p0/z, z0.s, z5.s
+; CHECK-NEXT:    mov z3.s, z2.s[4]
+; CHECK-NEXT:    mov p1.b, p2/m, p2.b
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    mov z1.s, z2.s[5]
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p3.b
+; CHECK-NEXT:    cmpeq p3.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    mov z3.s, z2.s[6]
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    mov z1.s, z2.s[7]
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p3.b
+; CHECK-NEXT:    cmpeq p3.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    shl v1.8b, v4.8b, #7
+; CHECK-NEXT:    sel p0.b, p1, p1.b, p3.b
+; CHECK-NEXT:    cmlt v1.8b, v1.8b, #0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p2.b
+; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %r = tail call <8 x i1> @llvm.experimental.vector.match(<8 x i32> %op1, <8 x i32> %op2, <8 x i1> %mask)
+  ret <8 x i1> %r
+}
+
 attributes #0 = { "target-features"="+sve2" }
