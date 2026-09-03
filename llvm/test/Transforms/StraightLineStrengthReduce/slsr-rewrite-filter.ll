@@ -1,16 +1,17 @@
+; NOTE: Do not auto-generate
 ; REQUIRES: asserts
 ; RUN: opt -passes=slsr -stats -disable-output <%s 2>&1 | FileCheck %s
 
-; CHECK-NOT: Number of blocks whose rewrites SLSR skipped due to register pressure
+; CHECK-NOT: Number of SLSR candidates not rewritten due to register pressure
 
-; The register-pressure filter needs a register budget to compare against, and
+; The SLSR rewirte filter needs a register budget to compare against, and
 ; the generic TargetTransformInfo has none: getRegisterBudget() returns
 ; std::nullopt unless a target implements it. There is no target triple here, so
 ; RPFilter::run() returns early, before it even computes liveness or pressure,
 ; and every rewrite stands.
 ;
 ; @many_basises_overlapping is the same body used by
-; @peak_above_budget in AMDGPU/slsr-rp-filter.ll: 17 distinct basises whose
+; @peak_above_budget in AMDGPU/slsr-rewrite-filter.ll: 17 distinct basises whose
 ; rewrites take the block's peak pressure from 80 registers to 144. Under an
 ; AMDGPU triple that exceeds the budget and the rewrites are dropped.
 ;

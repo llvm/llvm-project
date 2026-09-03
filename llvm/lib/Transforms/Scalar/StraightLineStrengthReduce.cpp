@@ -111,8 +111,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "slsr"
-#define DEBUG_SLSR_RP(X) DEBUG_WITH_TYPE(DEBUG_TYPE "-rp", X)
-#define DEBUG_SLSR_RP_DETAIL(X) DEBUG_WITH_TYPE(DEBUG_TYPE "-rp-detail", X)
+#define DEBUG_SLSR_REWRITE_FILTER(X)                                           \
+  DEBUG_WITH_TYPE(DEBUG_TYPE "-rewrite-filter", X)
+#define DEBUG_SLSR_REWRITE_FILTER_DETAIL(X)                                    \
+  DEBUG_WITH_TYPE(DEBUG_TYPE "-rewrite-filter-detail", X)
 
 static const unsigned UnknownAddressSpace =
     std::numeric_limits<unsigned>::max();
@@ -125,18 +127,15 @@ static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
 
-static cl::opt<bool> EnableRPFilter(
-    "slsr-rp-filter", cl::init(true), cl::Hidden,
+static cl::opt<bool> EnableRewriteFilter(
+    "slsr-rewrite-filter", cl::init(true), cl::Hidden,
     cl::desc("SLSR: skip rewrites in blocks where they would push register "
              "pressure past the target's register budget"));
 
 STATISTIC(NumSCEVCandidateBasisDifferences,
           "Number of candidate-basis SCEV differences computed by SLSR");
-STATISTIC(NumRPFilteredBlocks,
-          "Number of blocks whose rewrites SLSR skipped due to register "
-          "pressure");
-STATISTIC(NumRPFilteredCandidates,
-          "Number of candidates SLSR skipped due to register pressure");
+STATISTIC(NumFilteredCandidates,
+          "Number of SLSR candidates not rewritten due to register pressure");
 
 namespace {
 
@@ -1426,28 +1425,28 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
 
 namespace {
 
-class RPFilter {
-  // RPFilter targets one pathological shape: a block holding many distinct
-  // bases. Each basis contributes one extended live range no matter how many
-  // candidates are rewritten against it, so it is the number of distinct bases,
-  // not the number of candidates, that tracks how many new concurrent live
-  // ranges SLSR would create. Below this count no block in the function can
-  // exhibit the pathology, and the liveness and pressure analyses are skipped.
-  static constexpr unsigned MinDistinctBasesToFilter = 16;
+class RewriteFilter {
+  // Recondiser rewriting a basic block holding many distinct SLSR bases.
+
+  // Each basis contributes one extended live range no matter how many
+  // candidates are rewritten against it in a basic block.
+  // If the number of bases is above this threshold do a check if the
+  // liveness of the block has increase a lot by SLSR.
+  static constexpr unsigned MinDistinctBasisesToFilter = 16;
 
 public:
   using Candidate = StraightLineStrengthReduce::Candidate;
 
-  RPFilter(const Function *F,
-           DenseMap<Instruction *, Candidate *> &PickedCandidateMap,
-           const TargetTransformInfo *TTI)
+  RewriteFilter(const Function *F,
+                DenseMap<Instruction *, Candidate *> &PickedCandidateMap,
+                const TargetTransformInfo *TTI)
       : F(F), PickedCandidateMap(PickedCandidateMap), TTI(TTI) {}
 
   // Return the candidates whose rewrite would push their block's register
   // pressure past what the target can allocate.
   DenseSet<const Instruction *> run() {
     DenseSet<const Instruction *> InstsToSkip;
-    if (!EnableRPFilter || PickedCandidateMap.empty())
+    if (!EnableRewriteFilter || PickedCandidateMap.empty())
       return InstsToSkip;
 
     // Without a budget there is nothing to compare the pressure against, so
@@ -1457,27 +1456,33 @@ public:
       return InstsToSkip;
 
     buildBBToNumCandsAndBasises(PickedCandidateMap);
-    if (MaxNumBasisesInBB <= MinDistinctBasesToFilter)
+    if (MaxNumBasisesInBB <= MinDistinctBasisesToFilter)
       return InstsToSkip;
 
     // Compute live-in and live-out of each BB in CFG
     buildBBToLiveness(*F);
 
-    DEBUG_SLSR_RP(dbgs() << "-- MaxRP of BBs -- \n");
+    DEBUG_SLSR_REWRITE_FILTER(dbgs() << "-- MaxRP of BBs -- \n");
     SmallPtrSet<const BasicBlock *, 8> BBsToSkip;
     for (auto &BB : *F) {
+
+      auto It = BBToNumCandsAndBasises.find(&BB);
+      if (It == BBToNumCandsAndBasises.end() ||
+          It->second.second <= MinDistinctBasisesToFilter)
+        continue;
+
       const BlockLiveness &BL = getLiveness(&BB);
       auto [MaxRP, MaxRPWithSLSR] =
-          maxPressureInBlockBackward(BB, BL.LiveIn, BL.LiveOut);
-      DEBUG_SLSR_RP(dbgs() << "MaxRP:" << BB.getName() << ": (" << MaxRP << ", "
-                           << MaxRPWithSLSR << ")" << "\n");
+          maxLivenessInBlockBackward(BB, BL.LiveIn, BL.LiveOut);
+      DEBUG_SLSR_REWRITE_FILTER(dbgs()
+                                << "MaxRP:" << BB.getName() << ": (" << MaxRP
+                                << ", " << MaxRPWithSLSR << ")" << "\n");
 
       if (!rewriteWouldOverflowBudget(MaxRP, MaxRPWithSLSR, *Budget))
         continue;
 
-      DEBUG_SLSR_RP(dbgs() << "Skipping BB from SLSR: " << BB.getName()
-                           << "\n");
-      ++NumRPFilteredBlocks;
+      DEBUG_SLSR_REWRITE_FILTER(
+          dbgs() << "Skipping BB from SLSR: " << BB.getName() << "\n");
       BBsToSkip.insert(&BB);
     } // Done with BBs
 
@@ -1487,7 +1492,7 @@ public:
     for (const auto &It : PickedCandidateMap)
       if (BBsToSkip.contains(It.first->getParent()) &&
           InstsToSkip.insert(It.first).second)
-        ++NumRPFilteredCandidates;
+        NumFilteredCandidates++;
 
     return InstsToSkip;
   }
@@ -1508,6 +1513,9 @@ private:
   };
 
   DenseMap<const BasicBlock *, BlockLiveness> BBToLiveness;
+  // The liveness scan asks for the weight of every live value at every
+  // instruction, so memoize on the type, which is all the weight depends on.
+  mutable DenseMap<Type *, unsigned> WeightCache;
 
   // Liveness is only computed for functions that pass the candidate-count
   // gate. Blocks of the remaining functions read as having nothing live across
@@ -1563,7 +1571,7 @@ private:
       }
     }
     MaxNumBasisesInBB = std::max(MaxNumBasisesInBB, UniqueBasises.size());
-    DEBUG_WITH_TYPE("slsr-rp", {
+    DEBUG_SLSR_REWRITE_FILTER({
       dbgs() << "BB: " << BB->getName() << " - NumCands: " << NumCands
              << " UniqueBasises: " << UniqueBasises.size() << "\n";
     });
@@ -1584,27 +1592,23 @@ private:
     return isa<Instruction>(V) || isa<Argument>(V);
   }
 
-  // The pressure scan asks for the weight of every live value at every
-  // instruction, so memoize on the type, which is all the weight depends on.
-  mutable DenseMap<Type *, unsigned> RegWeightCache;
-
-  unsigned regWeight(const Value *V) const {
-    Type *Ty = V->getType();
-    if (Ty->isVoidTy() || Ty->isTokenTy())
-      return 0;
-
-    auto [It, Inserted] = RegWeightCache.try_emplace(Ty);
-    if (Inserted)
-      It->second = computeRegWeight(Ty);
-    return It->second;
-  }
-
-  unsigned computeRegWeight(Type *Ty) const {
+  unsigned computeWeight(Type *Ty) const {
     const DataLayout &DL = F->getDataLayout();
 
     // TTI's getRegUsageForType is less accurate than
     // default logic to compute RP for targets like AMDGPU
     return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
+  }
+
+  unsigned weight(const Value *V) const {
+    Type *Ty = V->getType();
+    if (Ty->isVoidTy() || Ty->isTokenTy())
+      return 0;
+
+    auto [It, Inserted] = WeightCache.try_emplace(Ty);
+    if (Inserted)
+      It->second = computeWeight(Ty);
+    return It->second;
   }
 
   void buildBBToLiveness(const Function &F) {
@@ -1632,7 +1636,7 @@ private:
         if (!I.getType()->isVoidTy())
           D.insert(&I);
       }
-      DEBUG_SLSR_RP_DETAIL({
+      DEBUG_SLSR_REWRITE_FILTER_DETAIL({
         dbgs() << "BB-fill: " << BB.getName()
                << " UpExposed: " << UpExposed[&BB].size();
         dbgs() << " Defs: " << Defs[&BB].size() << "\n";
@@ -1665,7 +1669,7 @@ private:
             Out.size() != BBToLiveness[BB].LiveOut.size())
           Changed = true;
 
-        DEBUG_SLSR_RP_DETAIL({
+        DEBUG_SLSR_REWRITE_FILTER_DETAIL({
           dbgs() << "BB-update: " << BB->getName() << " In: " << In.size()
                  << " Out: " << Out.size() << "\n";
         });
@@ -1675,7 +1679,7 @@ private:
       }
     }
 
-    DEBUG_WITH_TYPE("slsr-rp", {
+    DEBUG_WITH_TYPE("slsr-rewrite-filter", {
       dbgs() << "-- Live Ins/Outs of BBs -- \n";
       for (const BasicBlock &BB : F) {
         dbgs() << BB.getName() << ": ";
@@ -1712,15 +1716,13 @@ private:
   }
 
   std::pair<unsigned, unsigned>
-  maxPressureInBlockBackward(const BasicBlock &BB, const ValueSet &LiveIn,
+  maxLivenessInBlockBackward(const BasicBlock &BB, const ValueSet &LiveIn,
                              const ValueSet &LiveOut) const {
 
-    // TODO: ValueSet is a SmallPtrSet, which is supposedly smaller than 33.
-    //       Could be a better-fitting data structure.
     ValueSet LiveSet = LiveOut;
     unsigned MaxW = 0;
     for (const Value *V : LiveSet)
-      MaxW += regWeight(V);
+      MaxW += weight(V);
 
     // Initial LiveSetWithSLSR is the same as LiveOut.
     // SLSR changes
@@ -1754,10 +1756,10 @@ private:
             // removed from LiveSetWithSLSR. As a heuristic, we don't dicern
             // which Op of I is replaced by Basis. When IsCand is true, there is
             // only one reg-like Op in practice.
-            // TODO: Can further restrict by Candidate's type and DeltaKind.
             LiveSetWithSLSR.erase(Op);
-            DEBUG_SLSR_RP_DETAIL(dbgs() << "Removed Op from LiveSetWithSLSR: "
-                                        << *Op << " in inst " << I << "\n");
+            DEBUG_SLSR_REWRITE_FILTER_DETAIL(
+                dbgs() << "Removed Op from LiveSetWithSLSR: " << *Op
+                       << " in inst " << I << "\n");
           } else {
             LiveSetWithSLSR.insert(Op);
           }
@@ -1770,13 +1772,13 @@ private:
       // Compute RP reaching for this instruction.
       unsigned W = 0;
       for (const Value *V : LiveSet) {
-        auto RW = regWeight(V);
+        auto RW = weight(V);
         W += RW;
       }
       MaxW = std::max(MaxW, W);
       W = 0;
       for (const Value *V : LiveSetWithSLSR) {
-        auto RW = regWeight(V);
+        auto RW = weight(V);
         W += RW;
       }
       MaxWWithSLSR = std::max(MaxWWithSLSR, W);
@@ -1810,6 +1812,7 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   }
   sortCandidateInstructions();
 
+  // Keep picked candidates not to call pickRewriteCandidate() again.
   DenseMap<Instruction *, Candidate *> PickedCandidateMap;
   for (Instruction *I : SortedCandidateInsts)
     if (Candidate *C = pickRewriteCandidate(I))
@@ -1818,18 +1821,18 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   // Candidates whose rewrite would push their block's register pressure past
   // what the target can allocate. Evaluated on the original IR, before any
   // rewriteCandidate mutates it: rewriting inserts instructions and calls
-  // replaceAllUsesWith, which would invalidate the liveness and pressure
+  // replaceAllUsesWith, which would invalidate the liveness
   // analyses the filter relies on.
-  RPFilter RPFilter(&F, PickedCandidateMap, TTI);
-  DenseSet<const Instruction *> ToSkipRewrite = RPFilter.run();
+  RewriteFilter RewriteFilter(&F, PickedCandidateMap, TTI);
+  DenseSet<const Instruction *> ToSkipRewrite = RewriteFilter.run();
 
   // Rewrite candidates in the topological order that rewrites a Candidate
   // always before rewriting its Basis
   for (Instruction *I : reverse(SortedCandidateInsts)) {
-    if (ToSkipRewrite.contains(I))
-      continue;
-    if (Candidate *C = pickRewriteCandidate(I))
-      rewriteCandidate(*C);
+    auto It = PickedCandidateMap.find(I);
+    if (It != PickedCandidateMap.end())
+      if (!ToSkipRewrite.contains(It->first))
+        rewriteCandidate(*It->second);
   }
 
   for (auto *DeadIns : DeadInstructions)

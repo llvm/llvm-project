@@ -2,9 +2,9 @@
 ; RUN: opt < %s -mtriple=amdgpu-amdhsa-amd -passes=slsr -S | FileCheck %s
 
 ; SLSR rewrites a candidate as its basis plus a delta, which keeps the basis live
-; down to the candidate. The register-pressure filter drops a block's rewrites
-; when doing so would take the block's peak pressure past what the target can
-; allocate.
+; down to the candidate. (Multiple candidates can be rewritten off of one basis). 
+; If the rewrites are likely to increase the basic block's peak pressure what 
+; the target can allocate, the rewrites are skipped. 
 ;
 ; The budget comes from TTI, which on AMDGPU reports the VGPR count implied by
 ; the occupancy the function is compiled for. This triple selects the generic
@@ -14,8 +14,8 @@
 ;
 ; Both functions below have byte-identical bodies: 17 distinct bases whose
 ; rewrites take the block's peak pressure from 80 registers to 144. The only
-; difference is the occupancy attribute, so the budget is the only variable and
-; the comparison isolates it.
+; difference is the occupancy attribute to demonstrate the difference with 
+; different budgets
 ;
 ;   @peak_above_budget  no attribute. The work group size defaults to 1024
 ;                       threads, which is 16 wave64s over 4 EUs, so 4 waves per
