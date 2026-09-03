@@ -2128,9 +2128,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::VSCALE, MVT::i32, Custom);
 
     for (auto VT : {MVT::v16i1, MVT::v8i1, MVT::v4i1, MVT::v2i1})
-      setOperationAction(
-          {ISD::INTRINSIC_WO_CHAIN, ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON},
-          VT, Custom);
+      setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::CTTZ_ELTS,
+                          ISD::CTTZ_ELTS_ZERO_POISON, ISD::EXTRACT_SUBVECTOR},
+                         VT, Custom);
 
     // Without SubReg Liveness the multi-vector instructions can introduce
     // unnecessary COPY and/or MOVPFRX instructions.
@@ -2243,6 +2243,22 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MSTORE, VT, Custom);
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
     }
+
+    // Promote nxv4<f16|bf16> to nxv4i32.
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv4bf16,
+                               MVT::nxv4i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv4f16,
+                               MVT::nxv4i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv4i16,
+                               MVT::nxv4i32);
+
+    // Promote nxv2<f16|bf16> to nxv2i64.
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv2bf16,
+                               MVT::nxv2i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv2f16,
+                               MVT::nxv2i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv2i16,
+                               MVT::nxv2i64);
 
     if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
       // With +sve2p2/+sme2p2 the full range of vector types are supported.
@@ -15502,25 +15518,6 @@ static bool isEXTMaskWithSplat(ArrayRef<int> M, EVT VT, unsigned SplatOperand,
   return false;
 }
 
-/// isUZP_v_undef_Mask - Special case of isUZPMask for canonical form of
-/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
-/// Mask is e.g., <0, 2, 0, 2> instead of <0, 2, 4, 6>,
-static bool isUZP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned Half = VT.getVectorNumElements() / 2;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned j = 0; j != 2; ++j) {
-    unsigned Idx = WhichResult;
-    for (unsigned i = 0; i != Half; ++i) {
-      int MIdx = M[i + j * Half];
-      if (MIdx >= 0 && (unsigned)MIdx != Idx)
-        return false;
-      Idx += 2;
-    }
-  }
-
-  return true;
-}
-
 /// isTRN_v_undef_Mask - Special case of isTRNMask for canonical form of
 /// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
 /// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
@@ -16254,7 +16251,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::ZIP1 : AArch64ISD::ZIP2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V1);
   }
-  if (isUZP_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+  if (isUZP_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V1);
   }
@@ -18042,7 +18039,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isUZPMask(M, NumElts, DummyUnsigned) ||
           isZIPMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isTRN_v_undef_Mask(M, VT, DummyUnsigned) ||
-          isUZP_v_undef_Mask(M, VT, DummyUnsigned) ||
+          isUZP_v_undef_Mask(M, NumElts, DummyUnsigned) ||
           isZIP_v_undef_Mask(M, NumElts, DummyUnsigned) ||
           isINSMask(M, NumElts, DummyBool, DummyInt) ||
           isConcatMask(M, VT, VT.getSizeInBits() == 128));
@@ -32225,6 +32222,29 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
+  if (VT.isFixedLengthVectorOf(MVT::i1)) {
+    EVT NewEltVT;
+    switch (VT.getVectorMinNumElements()) {
+    case 2:
+      NewEltVT = MVT::i32;
+      break;
+    case 4:
+      NewEltVT = MVT::i16;
+      break;
+    default:
+      NewEltVT = MVT::i8;
+      break;
+    }
+
+    EVT NewInVT = InVT.changeVectorElementType(*DAG.getContext(), NewEltVT);
+    EVT NewVT = VT.changeVectorElementType(*DAG.getContext(), NewEltVT);
+    SDValue ExtendedIn = DAG.getNode(ISD::ANY_EXTEND, DL, NewInVT, In);
+    SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, ExtendedIn,
+                                 N->getOperand(1));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, SubVec));
+    return;
+  }
+
   // The following checks bail if this is not a halving operation.
 
   ElementCount ResEC = VT.getVectorElementCount();
@@ -35651,7 +35671,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT, Op1, Op1));
 
-    if (isUZP_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+    if (isUZP_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
       unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));

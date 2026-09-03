@@ -989,6 +989,10 @@ defm CubeInsts : AMDGPUSubtargetFeature<"cube-insts",
   "Has v_cube* instructions"
 >;
 
+defm IndexedResources : AMDGPUSubtargetFeature<"indexed-resources",
+  "Has indexed resources"
+>;
+
 defm LerpInst : AMDGPUSubtargetFeature<"lerp-inst",
   "Has v_lerp_u8 instruction"
 >;
@@ -2627,6 +2631,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureSmemPrefetchInsts,
    FeatureAsyncLoadToLDSInsts,
+   FeatureIndexedResources
 ]>;
 
 def FeatureISAVersion13_Generic: FeatureSet<

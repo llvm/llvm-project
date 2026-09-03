@@ -754,7 +754,20 @@ convertProfileSummaryFormat(ModuleOp mlirModule, const llvm::Module *llvmModule,
     return std::nullopt;
   }
 
-  llvm::MDString *valMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(1));
+  llvm::Metadata *valueMD = tupleEntry->getOperand(1).get();
+  if (!valueMD) {
+    emitWarning(mlirModule.getLoc())
+        << "expected string metadata value for key 'ProfileFormat': null";
+    return std::nullopt;
+  }
+
+  llvm::MDString *valMD = dyn_cast<llvm::MDString>(valueMD);
+  if (!valMD) {
+    emitWarning(mlirModule.getLoc())
+        << "expected string metadata value for key 'ProfileFormat': "
+        << diagMD(valueMD, llvmModule);
+    return std::nullopt;
+  }
   std::optional<ProfileSummaryFormatKind> fmtKind =
       symbolizeProfileSummaryFormatKind(valMD->getString());
   if (!fmtKind) {

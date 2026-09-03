@@ -463,6 +463,10 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<ICmpInst>(this)->setSameSign(false);
     break;
 
+  case Instruction::AddrSpaceCast:
+    cast<AddrSpaceCastInst>(this)->setNonNull(false);
+    break;
+
   case Instruction::Call: {
     if (auto *II = dyn_cast<IntrinsicInst>(this)) {
       switch (II->getIntrinsicID()) {
@@ -754,6 +758,14 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
   if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
     if (auto *DestICmp = dyn_cast<ICmpInst>(this))
       DestICmp->setSameSign(SrcICmp->hasSameSign());
+
+  if (auto *SrcASC = dyn_cast<AddrSpaceCastInst>(V))
+    if (auto *DestASC = dyn_cast<AddrSpaceCastInst>(this)) {
+      assert(DestASC->getSrcAddressSpace() == SrcASC->getSrcAddressSpace() &&
+             "nonull flag cannot be safely preserved with different source "
+             "address spaces");
+      DestASC->setNonNull(SrcASC->hasNonNull());
+    }
 }
 
 void Instruction::andIRFlags(const Value *V) {
@@ -799,6 +811,14 @@ void Instruction::andIRFlags(const Value *V) {
   if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
     if (auto *DestICmp = dyn_cast<ICmpInst>(this))
       DestICmp->setSameSign(DestICmp->hasSameSign() && SrcICmp->hasSameSign());
+
+  if (auto *SrcASC = dyn_cast<AddrSpaceCastInst>(V))
+    if (auto *DestASC = dyn_cast<AddrSpaceCastInst>(this)) {
+      assert(DestASC->getSrcAddressSpace() == SrcASC->getSrcAddressSpace() &&
+             "nonull flag cannot be safely preserved with different source "
+             "address spaces");
+      DestASC->setNonNull(DestASC->hasNonNull() && SrcASC->hasNonNull());
+    }
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {
