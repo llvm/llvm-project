@@ -493,8 +493,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
 - Fixed an assertion failure when diagnosing a constant evaluation failure
-  inside a member function call synthesized by ``__builtin_invoke``.
-  (#GH185241)
+  inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 
 #### Bug Fixes to Attribute Support
 
