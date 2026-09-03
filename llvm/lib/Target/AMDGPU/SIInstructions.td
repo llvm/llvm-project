@@ -497,6 +497,7 @@ def S_OR_B64_term : WrapTerminatorInst<S_OR_B64>;
 def S_ANDN2_B64_term : WrapTerminatorInst<S_ANDN2_B64>;
 def S_AND_B64_term : WrapTerminatorInst<S_AND_B64>;
 def S_AND_SAVEEXEC_B64_term : WrapTerminatorInst<S_AND_SAVEEXEC_B64>;
+def S_ANDN2_WREXEC_B64_term : WrapTerminatorInst<S_ANDN2_WREXEC_B64>;
 }
 
 let WaveSizePredicate = isWave32 in {
@@ -506,6 +507,7 @@ def S_OR_B32_term : WrapTerminatorInst<S_OR_B32>;
 def S_ANDN2_B32_term : WrapTerminatorInst<S_ANDN2_B32>;
 def S_AND_B32_term : WrapTerminatorInst<S_AND_B32>;
 def S_AND_SAVEEXEC_B32_term : WrapTerminatorInst<S_AND_SAVEEXEC_B32>;
+def S_ANDN2_WREXEC_B32_term : WrapTerminatorInst<S_ANDN2_WREXEC_B32>;
 }
 
 class WrapTerminatorVOPC<VOPC_Pseudo base_inst> : VPseudoInstSI<
