@@ -315,6 +315,7 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_GT(PatternSize, 0);
         EXPECT_NE(PatternPtr, nullptr);
         EXPECT_GT(FillSize, 0);
+        EXPECT_EQ(FillSize % PatternSize, 0);
         return OL_SUCCESS;
       });
 

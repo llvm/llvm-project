@@ -450,6 +450,7 @@ public:
   /// \param value is the value the memory should be filled with, interpreted
   /// as an unsigned char.
   /// \param numBytes is the number of bytes to set.
+  /// \return an event that represents the status of the operation.
   event memset(void *ptr, int value, std::size_t numBytes) {
     return memset(ptr, value, numBytes, std::vector<event>{});
   }
@@ -464,6 +465,7 @@ public:
   /// \param numBytes is the number of bytes to set.
   /// \param depEvent is an event that represents a dependency for the
   /// operation.
+  /// \return an event that represents the status of the operation.
   event memset(void *ptr, int value, std::size_t numBytes, event depEvent) {
     return memset(ptr, value, numBytes, std::vector<event>{depEvent});
   }
@@ -478,6 +480,7 @@ public:
   /// \param numBytes is the number of bytes to set.
   /// \param depEvents is a vector of events that represent dependencies for the
   /// operation.
+  /// \return an event that represents the status of the operation.
   event memset(void *ptr, int value, std::size_t numBytes,
                const std::vector<event> &depEvents) {
     return fill(ptr, static_cast<unsigned char>(value), numBytes, depEvents);
@@ -489,8 +492,7 @@ public:
   /// \param ptr is the pointer to memory to be filled.
   /// \param pattern is the pattern to be replicated.
   /// \param count is the number of times the pattern is filled.
-  /// \param depEvents is a vector of events that represent dependencies for the
-  /// operation.
+  /// \return an event that represents the status of the operation.
   template <typename T>
   event fill(void *ptr, const T &pattern, std::size_t count) {
     return fill(ptr, pattern, count, std::vector<event>{});
@@ -504,6 +506,7 @@ public:
   /// \param count is the number of times the pattern is filled.
   /// \param depEvent is an event that represents a dependency for the
   /// operation.
+  /// \return an event that represents the status of the operation.
   template <typename T>
   event fill(void *ptr, const T &pattern, std::size_t count, event depEvent) {
     return fill(ptr, pattern, count, std::vector<event>{depEvent});
@@ -517,6 +520,7 @@ public:
   /// \param count is the number of times the pattern is filled.
   /// \param depEvents is a vector of events that represent dependencies for the
   /// operation.
+  /// \return an event that represents the status of the operation.
   template <typename T>
   event fill(void *ptr, const T &pattern, std::size_t count,
              const std::vector<event> &depEvents) {
