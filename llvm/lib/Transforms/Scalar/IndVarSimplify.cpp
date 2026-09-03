@@ -35,6 +35,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -125,6 +126,15 @@ static cl::opt<bool>
 AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
                 cl::desc("Allow widening of indvars to eliminate s/zext"));
 
+static cl::opt<bool> AllowPointerIVElimination(
+    "indvars-eliminate-pointer-ivs", cl::ReallyHidden, cl::init(false),
+    cl::desc("Allow elimination of pointer induction variables"));
+
+static cl::opt<int64_t> MaxPointerIVStride(
+    "indvars-max-pointer-iv-stride", cl::ReallyHidden, cl::init(64),
+    cl::desc("Maximum stride value for pointer IV elimination. Larger strides "
+             "are unlikely to benefit from this optimization."));
+
 namespace {
 
 class IndVarSimplify {
@@ -142,6 +152,7 @@ class IndVarSimplify {
   bool RunUnswitching = false;
 
   bool handleFloatingPointIV(Loop *L, PHINode *PH);
+  bool handlePointerIV(Loop *L, PHINode *PN);
   bool rewriteNonIntegerIVs(Loop *L);
 
   bool simplifyAndExtend(Loop *L, SCEVExpander &Rewriter, LoopInfo *LI);
@@ -511,6 +522,163 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   return true;
 }
 
+/// If the loop has pointer induction variables then replace them with
+/// integer induction variables and compute pointer values as base + (iv *
+/// stride). For example, for(int *p = base; p != end; p += 2)
+///   bar(*p)
+/// is converted into
+/// for(int i = 0; base + i * 2 != end; i++)
+///   bar(*(base + (i * 2)));
+bool IndVarSimplify::handlePointerIV(Loop *L, PHINode *PN) {
+  // Respect the user-controlled opt-out first.
+  if (!AllowPointerIVElimination)
+    return false;
+
+  // Only handle pointer PHI nodes with one preheader incoming value and one
+  // backedge incoming value.
+  if (!PN->getType()->isPointerTy() || PN->getNumIncomingValues() != 2)
+    return false;
+
+  // Limit the transform to simple loop shapes for now.
+  if (!L->isInnermost() || !L->getExitBlock())
+    return false;
+
+  unsigned IncomingEdge = L->contains(PN->getIncomingBlock(0)) ? 1 : 0;
+  unsigned BackEdge = IncomingEdge ^ 1;
+
+  // Require a simple pointer increment recurrence.
+  auto *Incr = dyn_cast<GetElementPtrInst>(PN->getIncomingValue(BackEdge));
+  if (!Incr || Incr->getPointerOperand() != PN || Incr->getNumIndices() != 1)
+    return false;
+
+  Type *ElemType = Incr->getSourceElementType();
+  if (!ElemType)
+    return false;
+
+  auto *ConstStride = dyn_cast<ConstantInt>(Incr->getOperand(1));
+  // Only handle constant strides.
+  if (!ConstStride)
+    return false;
+
+  int64_t StrideInt = ConstStride->getSExtValue();
+  // Limit transformation to loops with small strides
+  if (StrideInt == 0 || StrideInt > MaxPointerIVStride ||
+      StrideInt < -MaxPointerIVStride)
+    return false;
+
+  Value *BasePtr = PN->getIncomingValue(IncomingEdge);
+
+  // Skip transformation if the base pointer is defined inside a parent loop.
+  // Pointer transformation on such loops can lead to incorrect SCEV computation
+  // of exit values when combined with other transformations.
+  if (auto *BasePtrInst = dyn_cast<Instruction>(BasePtr)) {
+    Loop *BasePtrLoop = LI->getLoopFor(BasePtrInst->getParent());
+    if (BasePtrLoop && BasePtrLoop != L && BasePtrLoop->contains(L))
+      return false;
+  }
+
+  // Create integer induction variable
+  const DataLayout &DL = PN->getDataLayout();
+  auto *IntPtrType = DL.getIntPtrType(PN->getType());
+
+  // Insert new integer PHI in the loop header
+  PHINode *NewPHI =
+      PHINode::Create(IntPtrType, 2, PN->getName() + ".int", PN->getIterator());
+  NewPHI->addIncoming(ConstantInt::get(IntPtrType, 0),
+                      PN->getIncomingBlock(IncomingEdge));
+  NewPHI->setDebugLoc(PN->getDebugLoc());
+
+  // Create integer increment - place it in the same block as the original
+  // increment For negative strides, we still increment the integer IV by 1, but
+  // the scaling will handle the negative direction
+  BasicBlock *IncrBB = Incr->getParent();
+  BinaryOperator *NewAdd = BinaryOperator::CreateAdd(
+      NewPHI, ConstantInt::get(IntPtrType, 1), NewPHI->getName() + ".next",
+      IncrBB->getFirstInsertionPt());
+  NewAdd->setDebugLoc(Incr->getDebugLoc());
+  NewPHI->addIncoming(NewAdd, PN->getIncomingBlock(BackEdge));
+
+  if (const auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(NewAdd))) {
+    NewAdd->setHasNoUnsignedWrap(AR->hasNoUnsignedWrap());
+    NewAdd->setHasNoSignedWrap(AR->hasNoSignedWrap());
+  }
+
+  // Helper lambda to create scaled GEP for pointer computation
+  auto createScaledGEP = [&](Value *IntIV, Instruction *InsertPt,
+                             const Twine &Name) -> Value * {
+    // For stride of 1 use the IV directly (scaling handled by stride
+    Value *ScaledIndex = IntIV;
+    if (StrideInt != 1) {
+      IRBuilder<> Builder(InsertPt);
+      Value *StrideConst = ConstantInt::getSigned(IntPtrType, StrideInt);
+      ScaledIndex =
+          Builder.CreateMul(IntIV, StrideConst, IntIV->getName() + ".scaled");
+    }
+
+    IRBuilder<> Builder(InsertPt);
+    Value *ComputedPtr =
+        Builder.CreateGEP(ElemType, BasePtr, ScaledIndex, Name);
+    return ComputedPtr;
+  };
+
+  // Collect all users that need to be replaced
+  SmallVector<std::pair<Use *, Value *>, 8> ReplacementPairs;
+
+  // Handle users of the PHI node
+  for (Use &U : PN->uses()) {
+    if (auto *UserInst = dyn_cast<Instruction>(U.getUser())) {
+      if (UserInst != Incr) {
+        if (isa<PHINode>(UserInst) && !L->contains(UserInst->getParent()))
+          continue;
+
+        auto *InstPt = isa<PHINode>(UserInst)
+                           ? &*PN->getParent()->getFirstInsertionPt()
+                           : UserInst;
+        Value *ComputedPtr =
+            createScaledGEP(NewPHI, InstPt, PN->getName() + ".computed");
+        ReplacementPairs.push_back({&U, ComputedPtr});
+      }
+    }
+  }
+
+  // Handle users of the increment instruction
+  for (Use &U : Incr->uses()) {
+    if (auto *UserInst = dyn_cast<Instruction>(U.getUser())) {
+      if (UserInst != PN) {
+        if (isa<PHINode>(UserInst) && !L->contains(UserInst->getParent()))
+          continue;
+
+        auto *InstPt = isa<PHINode>(UserInst) ? Incr : UserInst;
+        Value *ComputedPtr =
+            createScaledGEP(NewAdd, InstPt, Incr->getName() + ".computed");
+        ReplacementPairs.push_back({&U, ComputedPtr});
+      }
+    }
+  }
+
+  // Perform all replacements
+  for (auto &Pair : ReplacementPairs) {
+    Use *U = Pair.first;
+    Value *ComputedPtr = Pair.second;
+    U->set(ComputedPtr);
+  }
+
+  RecursivelyDeleteTriviallyDeadInstructions(Incr, TLI, MSSAU.get());
+  RecursivelyDeleteTriviallyDeadInstructions(PN, TLI, MSSAU.get());
+
+  // Emit optimization remark
+  OptimizationRemarkEmitter ORE(L->getHeader()->getParent());
+  ORE.emit([&]() {
+    auto Remark = OptimizationRemark(DEBUG_TYPE, "PointerIVSimplified",
+                                     L->getStartLoc(), L->getHeader())
+                  << "Simplified pointer induction variable with stride "
+                  << ore::NV("Stride", StrideInt);
+    return Remark;
+  });
+
+  return true;
+}
+
 bool IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
   // First step.  Check to see if there are any floating-point recurrences.
   // If there are, change them into integer recurrences, permitting analysis by
@@ -521,8 +689,10 @@ bool IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
 
   bool Changed = false;
   for (WeakTrackingVH &PHI : PHIs)
-    if (PHINode *PN = dyn_cast_or_null<PHINode>(&*PHI))
+    if (PHINode *PN = dyn_cast_or_null<PHINode>(&*PHI)) {
       Changed |= handleFloatingPointIV(L, PN);
+      Changed |= handlePointerIV(L, PN);
+    }
 
   // If the loop previously had floating-point IV, ScalarEvolution
   // may not have been able to compute a trip count. Now that we've done some
