@@ -16,13 +16,16 @@ namespace clang::CodeGenUtils {
 /// destructor.
 bool CanSkipVTablePointerInitialization(ASTContext &Ctx,
                                         const CXXDestructorDecl *Dtor);
+
 bool FieldHasTrivialDestructorBody(ASTContext &Context, const FieldDecl *Field);
+
 /// Determines whether the language options require us to model
 /// unwind exceptions.  We treat -fexceptions as mandating this
 /// except under the fragile ObjC ABI with only ObjC exceptions
 /// enabled.  This means, for example, that C with -fexceptions
 /// enables this.
 bool hasUnwindExceptions(const LangOptions &LangOpts);
+
 /// Helper method to check if the underlying ABI is AAPCS
 bool isAAPCS(const TargetInfo &TargetInfo);
 
