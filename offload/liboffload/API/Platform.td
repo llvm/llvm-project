@@ -97,3 +97,26 @@ def olPlatformRegisterRPCCallback : Function {
                       "RPC callback function pointer", PARAM_IN>];
   let returns = [Return<"OL_ERRC_INVALID_PLATFORM">, Return<"OL_ERRC_SUCCESS">];
 }
+
+def ol_platform_iterate_cb_t : FptrTypedef {
+  let desc = "User-provided function to be used with `olIteratePlatforms`";
+  let params = [
+    Param<"ol_platform_handle_t", "Platform", "the platform handle of the current iteration", PARAM_IN>,
+    Param<"void*", "UserData", "optional user data", PARAM_IN_OPTIONAL>
+  ];
+  let return = "bool";
+}
+
+def olIteratePlatforms : Function {
+  let desc = "Iterates over all available platforms, calling the callback for each platform.";
+  let details = [
+    "If the user-provided callback returns `false`, the iteration is stopped."
+  ];
+  let params = [
+    Param<"ol_platform_iterate_cb_t", "Callback", "User-provided function called for each available platform", PARAM_IN>,
+    Param<"void*", "UserData", "Optional user data to pass to the callback", PARAM_IN_OPTIONAL>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_PLATFORM">
+  ];
+}
