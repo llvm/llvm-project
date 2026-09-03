@@ -7678,9 +7678,9 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskDepend) {
   // Check for the `DepInfo` array argument
   AllocaInst *DepArray = dyn_cast<AllocaInst>(TaskAllocCall->getOperand(4));
   ASSERT_NE(DepArray, nullptr);
-  Value::user_iterator DepArrayI = DepArray->user_begin();
+  Instruction::user_iterator DepArrayI = DepArray->user_begin();
   ++DepArrayI;
-  Value::user_iterator DepInfoI = DepArrayI->user_begin();
+  Instruction::user_iterator DepInfoI = DepArrayI->user_begin();
   // Check for the `DependKind` flag in the `DepInfo` array
   Value *Flag = findStoredValue<GetElementPtrInst>(*DepInfoI);
   ASSERT_NE(Flag, nullptr);

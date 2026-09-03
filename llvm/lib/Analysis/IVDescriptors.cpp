@@ -349,9 +349,9 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   // that are not intermediate min/max operations (which are handled below).
   // Requires integer min/max, and single-use BackedgeValue (so vectorizer can
   // handle both PHIs together).
-  bool PhiHasInvalidUses = any_of(Phi->users(), [&](User *U) {
+  bool PhiHasInvalidUses = any_of(Phi->users(), [&](Instruction *U) {
     Value *A, *B;
-    return !Chain.contains(U) && TheLoop->contains(cast<Instruction>(U)) &&
+    return !Chain.contains(U) && TheLoop->contains(U) &&
            GetMinMaxRK(U, A, B) == RecurKind::None;
   });
   if (PhiHasInvalidUses) {
