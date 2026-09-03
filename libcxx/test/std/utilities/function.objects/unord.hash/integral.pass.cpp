@@ -24,23 +24,23 @@
 #include <limits>
 #include <type_traits>
 
+#include "constexpr_hash.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 11
 #  include "poisoned_hash_helper.h"
 #endif
 
-template <class T>
-void
-test()
-{
+template <class T, template <class> class THash = std::hash >
+TEST_CONSTEXPR_CXX26 void test() {
 #if TEST_STD_VER >= 11
-    test_hash_disabled<const T>();
-    test_hash_disabled<volatile T>();
-    test_hash_disabled<const volatile T>();
+  test_hash_disabled<const T, THash<const T>>();
+  test_hash_disabled<volatile T, THash<volatile T>>();
+  test_hash_disabled<const volatile T, THash<const volatile T>>();
 #endif
 
-    typedef std::hash<T> H;
+  // typedef std::hash<T> H;
+  typedef THash<T> H;
 #if TEST_STD_VER <= 17
     static_assert((std::is_same<typename H::argument_type, T>::value), "");
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
@@ -61,69 +61,79 @@ test()
     }
 }
 
-int main(int, char**)
-{
-    test<bool>();
-    test<char>();
-    test<signed char>();
-    test<unsigned char>();
-    test<char16_t>();
-    test<char32_t>();
+template <template <typename> typename THash >
+TEST_CONSTEXPR_CXX26 bool test_with_hash() {
+  test<bool, THash>();
+  test<char, THash>();
+  test<signed char, THash>();
+  test<unsigned char, THash>();
+  test<char16_t, THash>();
+  test<char32_t, THash>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    test<wchar_t>();
+  test<wchar_t, THash>();
 #endif
-    test<short>();
-    test<unsigned short>();
-    test<int>();
-    test<unsigned int>();
-    test<long>();
-    test<unsigned long>();
-    test<long long>();
-    test<unsigned long long>();
+  test<short, THash>();
+  test<unsigned short, THash>();
+  test<int, THash>();
+  test<unsigned int, THash>();
+  test<long, THash>();
+  test<unsigned long, THash>();
+  test<long long, THash>();
+  test<unsigned long long, THash>();
 
-//  LWG #2119
-    test<std::ptrdiff_t>();
-    test<std::size_t>();
+  //  LWG #2119
+  test<std::ptrdiff_t, THash>();
+  test<std::size_t, THash>();
 
-    test<std::int8_t>();
-    test<std::int16_t>();
-    test<std::int32_t>();
-    test<std::int64_t>();
+  test<std::int8_t, THash>();
+  test<std::int16_t, THash>();
+  test<std::int32_t, THash>();
+  test<std::int64_t, THash>();
 
-    test<std::int_fast8_t>();
-    test<std::int_fast16_t>();
-    test<std::int_fast32_t>();
-    test<std::int_fast64_t>();
+  test<std::int_fast8_t, THash>();
+  test<std::int_fast16_t, THash>();
+  test<std::int_fast32_t, THash>();
+  test<std::int_fast64_t, THash>();
 
-    test<std::int_least8_t>();
-    test<std::int_least16_t>();
-    test<std::int_least32_t>();
-    test<std::int_least64_t>();
+  test<std::int_least8_t, THash>();
+  test<std::int_least16_t, THash>();
+  test<std::int_least32_t, THash>();
+  test<std::int_least64_t, THash>();
 
-    test<std::intmax_t>();
-    test<std::intptr_t>();
+  test<std::intmax_t, THash>();
+  test<std::intptr_t, THash>();
 
-    test<std::uint8_t>();
-    test<std::uint16_t>();
-    test<std::uint32_t>();
-    test<std::uint64_t>();
+  test<std::uint8_t, THash>();
+  test<std::uint16_t, THash>();
+  test<std::uint32_t, THash>();
+  test<std::uint64_t, THash>();
 
-    test<std::uint_fast8_t>();
-    test<std::uint_fast16_t>();
-    test<std::uint_fast32_t>();
-    test<std::uint_fast64_t>();
+  test<std::uint_fast8_t, THash>();
+  test<std::uint_fast16_t, THash>();
+  test<std::uint_fast32_t, THash>();
+  test<std::uint_fast64_t, THash>();
 
-    test<std::uint_least8_t>();
-    test<std::uint_least16_t>();
-    test<std::uint_least32_t>();
-    test<std::uint_least64_t>();
+  test<std::uint_least8_t, THash>();
+  test<std::uint_least16_t, THash>();
+  test<std::uint_least32_t, THash>();
+  test<std::uint_least64_t, THash>();
 
-    test<std::uintmax_t>();
-    test<std::uintptr_t>();
+  test<std::uintmax_t, THash>();
+  test<std::uintptr_t, THash>();
 
 #ifndef TEST_HAS_NO_INT128
-    test<__int128_t>();
-    test<__uint128_t>();
+  test<__int128_t, THash>();
+  test<__uint128_t, THash>();
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test_with_hash<std::hash>());
+
+#if TEST_STD_VER >= 26
+  static_assert(test_with_hash<support::constexpr_hash>());
 #endif
 
   return 0;

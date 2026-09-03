@@ -25,23 +25,23 @@
 #include <limits>
 #include <cmath>
 
+#include "constexpr_hash.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 11
 #  include "poisoned_hash_helper.h"
 #endif
 
-template <class T>
-void
-test()
-{
+template <class T, template <class> class THash = std::hash >
+TEST_CONSTEXPR_CXX26 void test() {
 #if TEST_STD_VER >= 11
-    test_hash_disabled<const T>();
-    test_hash_disabled<volatile T>();
-    test_hash_disabled<const volatile T>();
+  test_hash_disabled<const T, THash<const T>>();
+  test_hash_disabled<volatile T, THash<volatile T>>();
+  test_hash_disabled<const volatile T, THash<const volatile T>>();
 #endif
 
-    typedef std::hash<T> H;
+  // typedef std::hash<T> H;
+  typedef THash<T> H;
 #if TEST_STD_VER <= 17
     static_assert((std::is_same<typename H::argument_type, T>::value), "");
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
@@ -78,11 +78,19 @@ test()
     assert(pinf != ninf);
 }
 
+template <template <typename> typename THash >
+TEST_CONSTEXPR_CXX26 bool test_with_hash() {
+  test<float, THash>();
+  test<double, THash>();
+  test<long double, THash>();
+  return true;
+}
+
 int main(int, char**)
 {
-    test<float>();
-    test<double>();
-    test<long double>();
-
+  assert(test_with_hash<std::hash>());
+#if TEST_STD_VER >= 26
+  static_assert(test_with_hash<support::constexpr_hash>());
+#endif
   return 0;
 }
