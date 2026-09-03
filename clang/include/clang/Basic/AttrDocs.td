@@ -5575,6 +5575,11 @@ members, one of which is a pointer to the start of the allocated memory and
 the other one is either an integer type containing the size of the actually
 allocated memory or a pointer to the end of the allocated region. Note, static
 data members do not impact whether a type is span-like or not.
+
+In combination with the `alloc_size` attribute, if the begin pointer is
+non-null, the size of the returned span-like object has to be greater or equal
+to the number of bytes guaranteed to be dereferenceable by `alloc_size`. It also
+guarantees that the number of dereferenceable bytes is at least size.
   }];
 }
 
