@@ -33,6 +33,7 @@ TEST_F(LlvmLibcChrootTest, ChangeRoot) {
   constexpr const char *FILENAME = "chroot.testdir";
   auto TEST_DIR = libc_make_test_file_path(FILENAME);
   LIBC_NAMESPACE::rmdir(TEST_DIR);
+  libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::mkdir(TEST_DIR, S_IRWXU),
               LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds(0));
   // try to chroot to this folder. Fails without permissions, but that's about
@@ -44,4 +45,5 @@ TEST_F(LlvmLibcChrootTest, ChangeRoot) {
     ASSERT_ERRNO_EQ(EPERM);
   }
   LIBC_NAMESPACE::rmdir(TEST_DIR);
+  libc_errno = 0;
 }
