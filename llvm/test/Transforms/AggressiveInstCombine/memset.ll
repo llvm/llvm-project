@@ -155,20 +155,20 @@ entry:
   ret void
 }
 
-define void @undef_length(ptr %dst, i8 %value) {
-; AIC-LABEL: define void @undef_length(
-; AIC-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]]) {
+define void @unknown_length(ptr %dst, i8 %value, i64 %n) {
+; AIC-LABEL: define void @unknown_length(
+; AIC-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]], i64 [[N:%.*]]) {
 ; AIC-NEXT:  [[ENTRY:.*:]]
-; AIC-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 undef, i1 false)
+; AIC-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 [[N]], i1 false)
 ; AIC-NEXT:    ret void
 ;
-; COMBINED-LABEL: define void @undef_length(
-; COMBINED-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]]) {
+; COMBINED-LABEL: define void @unknown_length(
+; COMBINED-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]], i64 [[N:%.*]]) {
 ; COMBINED-NEXT:  [[ENTRY:.*:]]
-; COMBINED-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 undef, i1 false)
+; COMBINED-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 [[N]], i1 false)
 ; COMBINED-NEXT:    ret void
 ;
 entry:
-  call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 undef, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 %n, i1 false)
   ret void
 }
