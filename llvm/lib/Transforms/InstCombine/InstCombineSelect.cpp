@@ -3726,8 +3726,11 @@ static bool impliesPoisonOrCond(const Value *ValAssumedPoison, const Value *V,
                       *RHSC2);
     }
   }
+  // For non-poison X in [0, 1], `trunc nuw X to i1` is not poison, but an
+  // additional `nsw` flag makes it poison for X == 1.
   Value *A;
   if (match(ValAssumedPoison, m_NUWTrunc(m_Value(A))) &&
+      !cast<TruncInst>(ValAssumedPoison)->hasNoSignedWrap() &&
       isGuaranteedNotToBePoison(A)) {
     assert(ValAssumedPoison->getType()->isIntOrIntVectorTy(1));
     return computeKnownBits(
