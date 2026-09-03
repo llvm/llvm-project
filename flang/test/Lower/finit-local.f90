@@ -215,7 +215,7 @@ end subroutine
 ! ---------------------------------------------------------------------------
 ! CHARACTER(10) -- fixed-length scalar.
 ! zero: fir.zero_bits over the whole character type.
-! hex: byte-loop over 10 singleton code-units.
+! hex: byte-loop over 10 bytes via an i8 view.
 ! ---------------------------------------------------------------------------
 subroutine test_char10(res)
   character(10) :: res
@@ -230,7 +230,7 @@ end subroutine
 
 ! HEX-LABEL:  func.func @_QPtest_char10
 ! HEX:        fir.do_loop
-! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! HEX:          arith.constant {{.*}} : i8
 ! HEX:          fir.store {{.*}} : !fir.ref<i8>
 
@@ -263,15 +263,14 @@ subroutine test_charN(res, n)
 end subroutine
 ! ZERO-LABEL: func.func @_QPtest_charn
 ! ZERO:       fir.do_loop
-! ZERO:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-! ZERO:         fir.zero_bits !fir.char<1>
-! ZERO:         fir.store {{.*}} : !fir.ref<!fir.char<1>>
+! ZERO:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! ZERO:         fir.store {{.*}} : !fir.ref<i8>
 
 
 
 ! HEX-LABEL:  func.func @_QPtest_charn
 ! HEX:        fir.do_loop
-! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! HEX:          arith.constant {{.*}} : i8
 ! HEX:          fir.store {{.*}} : !fir.ref<i8>
 
@@ -475,7 +474,7 @@ end subroutine
 
 ! ---------------------------------------------------------------------------
 ! CHARACTER(kind=2, len=3) -- fixed-length, higher kind.
-! hex: byte-loop over 3*2=6 bytes using a kind=1 singleton view.
+! hex: byte-loop over 3*2=6 bytes via an i8 view.
 ! zero: fir.zero_bits over the whole type.
 ! ---------------------------------------------------------------------------
 subroutine test_char2_fixed(res)
@@ -490,13 +489,13 @@ end subroutine
 ! HEX-LABEL:  func.func @_QPtest_char2_fixed
 ! HEX:        %[[C5:.*]] = arith.constant 5 : index
 ! HEX:        fir.do_loop %{{.*}} = %{{.*}} to %[[C5]] step %{{.*}} {
-! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! HEX:          arith.constant {{.*}} : i8
 ! HEX:          fir.store {{.*}} : !fir.ref<i8>
 
 ! ---------------------------------------------------------------------------
 ! CHARACTER(kind=4, len=2) -- fixed-length, wider kind.
-! hex: byte-loop over 2*4=8 bytes using a kind=1 singleton view.
+! hex: byte-loop over 2*4=8 bytes via an i8 view.
 ! ---------------------------------------------------------------------------
 subroutine test_char4_fixed(res)
   character(kind=4, len=2) :: res
@@ -510,7 +509,7 @@ end subroutine
 ! HEX-LABEL:  func.func @_QPtest_char4_fixed
 ! HEX:        %[[C7:.*]] = arith.constant 7 : index
 ! HEX:        fir.do_loop %{{.*}} = %{{.*}} to %[[C7]] step %{{.*}} {
-! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! HEX:          arith.constant {{.*}} : i8
 ! HEX:          fir.store {{.*}} : !fir.ref<i8>
 
@@ -529,14 +528,13 @@ end subroutine
 ! ZERO:       %[[C2:.*]] = arith.constant 2 : index
 ! ZERO:       arith.muli {{.*}}, %[[C2]] : index
 ! ZERO:       fir.do_loop
-! ZERO:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-! ZERO:         fir.zero_bits !fir.char<1>
-! ZERO:         fir.store {{.*}} : !fir.ref<!fir.char<1>>
+! ZERO:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! ZERO:         fir.store {{.*}} : !fir.ref<i8>
 
 ! HEX-LABEL:  func.func @_QPtest_char2_runtime
 ! HEX:        %[[C2:.*]] = arith.constant 2 : index
 ! HEX:        arith.muli {{.*}}, %[[C2]] : index
 ! HEX:        fir.do_loop
-! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! HEX:          arith.constant {{.*}} : i8
 ! HEX:          fir.store {{.*}} : !fir.ref<i8>
