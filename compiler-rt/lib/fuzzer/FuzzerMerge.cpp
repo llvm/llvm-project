@@ -523,7 +523,7 @@ void CrashResistantMerge(const std::vector<std::string> &Args,
   M.ParseOrExit(IF, true);
   IF.close();
   VPrintf(V,
-          "MERGE-OUTER: consumed %zdMb (%zdMb rss) to parse the control file\n",
+          "MERGE-OUTER: consumed %zdMB (%zdMB rss) to parse the control file\n",
           M.ApproximateMemoryConsumption() >> 20, GetPeakRSSMb());
 
   M.Files.insert(M.Files.end(), KnownFiles.begin(), KnownFiles.end());

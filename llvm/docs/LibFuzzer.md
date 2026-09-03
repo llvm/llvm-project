@@ -255,14 +255,14 @@ The most important command line options are:
 : Timeout in seconds, default 1200. If an input takes longer than this timeout,
   the process is treated as a failure case.
 `-rss_limit_mb`
-: Memory usage limit in Mb, default 2048. Use 0 to disable the limit.
+: Memory usage limit in MB, default 2048. Use 0 to disable the limit.
   If an input requires more than this amount of RSS memory to execute,
   the process is treated as a failure case.
   The limit is checked in a separate thread every second.
   If running w/o ASAN/MSAN, you may use 'ulimit -v' instead.
 `-malloc_limit_mb`
 : If non-zero, the fuzzer will exit if the target tries to allocate this
-  number of Mb with one malloc call.
+  number of MB with one malloc call.
   If zero (default) same limit as rss_limit_mb is applied.
 `-timeout_exitcode`
 : Exit code (default 77) used if libFuzzer reports a timeout.
@@ -344,12 +344,12 @@ INFO: Loaded 1 modules   (8 inline 8-bit counters): 8 [0x5f03d189be90, 0x5f03d18
 INFO: Loaded 1 PC tables (8 PCs): 8 [0x5f03d189be98,0x5f03d189bf18),
 INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
 INFO: A corpus is not provided, starting from an empty corpus
-#2      INITED cov: 2 ft: 2 corp: 1/1b exec/s: 0 rss: 31Mb
-#144    NEW    cov: 3 ft: 3 corp: 2/2b lim: 4 exec/s: 0 rss: 31Mb L: 1/1 MS: 2 ChangeByte-ChangeByte-
-#157    NEW    cov: 4 ft: 4 corp: 3/4b lim: 4 exec/s: 0 rss: 31Mb L: 2/2 MS: 3 CrossOver-ChangeBit-CrossOver-
-#1345   NEW    cov: 5 ft: 5 corp: 4/8b lim: 14 exec/s: 0 rss: 32Mb L: 4/4 MS: 3 InsertByte-ChangeBit-CrossOver-
-#1696   NEW    cov: 6 ft: 6 corp: 5/10b lim: 17 exec/s: 0 rss: 32Mb L: 2/4 MS: 1 EraseBytes-
-#1832   REDUCE cov: 6 ft: 6 corp: 5/9b lim: 17 exec/s: 0 rss: 32Mb L: 3/3 MS: 1 EraseBytes-
+#2      INITED cov: 2 ft: 2 corp: 1/1B exec/s: 0 rss: 31MB
+#144    NEW    cov: 3 ft: 3 corp: 2/2B lim: 4 exec/s: 0 rss: 31MB L: 1/1 MS: 2 ChangeByte-ChangeByte-
+#157    NEW    cov: 4 ft: 4 corp: 3/4B lim: 4 exec/s: 0 rss: 31MB L: 2/2 MS: 3 CrossOver-ChangeBit-CrossOver-
+#1345   NEW    cov: 5 ft: 5 corp: 4/8B lim: 14 exec/s: 0 rss: 32MB L: 4/4 MS: 3 InsertByte-ChangeBit-CrossOver-
+#1696   NEW    cov: 6 ft: 6 corp: 5/10B lim: 17 exec/s: 0 rss: 32MB L: 2/4 MS: 1 EraseBytes-
+#1832   REDUCE cov: 6 ft: 6 corp: 5/9B lim: 17 exec/s: 0 rss: 32MB L: 3/3 MS: 1 EraseBytes-
 ...
 ```
 
@@ -445,12 +445,12 @@ INFO: Loaded 1 modules   (8 inline 8-bit counters): 8 [0x5f03d189be90, 0x5f03d18
 INFO: Loaded 1 PC tables (8 PCs): 8 [0x5f03d189be98,0x5f03d189bf18),
 INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
 INFO: A corpus is not provided, starting from an empty corpus
-#2      INITED cov: 2 ft: 2 corp: 1/1b exec/s: 0 rss: 31Mb
-#144    NEW    cov: 3 ft: 3 corp: 2/2b lim: 4 exec/s: 0 rss: 31Mb L: 1/1 MS: 2 ChangeByte-ChangeByte-
-#157    NEW    cov: 4 ft: 4 corp: 3/4b lim: 4 exec/s: 0 rss: 31Mb L: 2/2 MS: 3 CrossOver-ChangeBit-CrossOver-
-#1345   NEW    cov: 5 ft: 5 corp: 4/8b lim: 14 exec/s: 0 rss: 32Mb L: 4/4 MS: 3 InsertByte-ChangeBit-CrossOver-
-#1696   NEW    cov: 6 ft: 6 corp: 5/10b lim: 17 exec/s: 0 rss: 32Mb L: 2/4 MS: 1 EraseBytes-
-#1832   REDUCE cov: 6 ft: 6 corp: 5/9b lim: 17 exec/s: 0 rss: 32Mb L: 3/3 MS: 1 EraseBytes-
+#2      INITED cov: 2 ft: 2 corp: 1/1B exec/s: 0 rss: 31MB
+#144    NEW    cov: 3 ft: 3 corp: 2/2B lim: 4 exec/s: 0 rss: 31MB L: 1/1 MS: 2 ChangeByte-ChangeByte-
+#157    NEW    cov: 4 ft: 4 corp: 3/4B lim: 4 exec/s: 0 rss: 31MB L: 2/2 MS: 3 CrossOver-ChangeBit-CrossOver-
+#1345   NEW    cov: 5 ft: 5 corp: 4/8B lim: 14 exec/s: 0 rss: 32MB L: 4/4 MS: 3 InsertByte-ChangeBit-CrossOver-
+#1696   NEW    cov: 6 ft: 6 corp: 5/10B lim: 17 exec/s: 0 rss: 32MB L: 2/4 MS: 1 EraseBytes-
+#1832   REDUCE cov: 6 ft: 6 corp: 5/9B lim: 17 exec/s: 0 rss: 32MB L: 3/3 MS: 1 EraseBytes-
 ==840148== ERROR: libFuzzer: deadly signal
 ...
 SUMMARY: libFuzzer: deadly signal
