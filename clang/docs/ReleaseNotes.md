@@ -278,6 +278,11 @@ features cannot lower the translation-unit ABI level;
   initialization, while not diagnosing parameters passed to the selected
   allocation function or promise constructor. (#GH217501)
 
+- The `wb` and `uwb` `_BitInt` literal suffixes are no longer diagnosed by default
+  before C23. They stay in `-Wc23-extensions` and are still reported under
+  `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
+  type itself is already handled.
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
