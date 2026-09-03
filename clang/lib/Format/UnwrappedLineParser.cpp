@@ -1975,6 +1975,11 @@ void UnwrappedLineParser::parseStructuralElement(
       // Block return type.
       if (FormatTok->Tok.isAnyIdentifier() || FormatTok->isTypeName(LangOpts)) {
         nextToken();
+        // Return types: ObjC generics and protocol qualifiers are ok too.
+        if (FormatTok->is(tok::less)) {
+          nextToken();
+          parseBracedList(/*IsAngleBracket=*/true);
+        }
         // Return types: pointers are ok too.
         while (FormatTok->is(tok::star))
           nextToken();

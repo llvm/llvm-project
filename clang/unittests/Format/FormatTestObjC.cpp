@@ -1080,6 +1080,24 @@ TEST_F(FormatTestObjC, ObjCBlockTypesAndVariables) {
                "  return nullptr;\n"
                "};");
 
+  verifyFormat("id p = ^NSArray<NSString *> *() {\n"
+               "  return nil;\n"
+               "};");
+
+  verifyFormat("id p = ^NSArray<NSArray<NSString *> *> *(int) {\n"
+               "  return nil;\n"
+               "};");
+
+  verifyFormat("id p = ^id<Proto>(int x) {\n"
+               "  return nil;\n"
+               "};");
+
+  Style.RemoveSemicolon = true;
+  verifyFormat("id p = ^NSDictionary<NSString *, NSString *> *(int x) {\n"
+               "  return nil;\n"
+               "};");
+  Style.RemoveSemicolon = false;
+
   // WebKit forces function braces onto a newline, but blocks should not.
   verifyFormat("int* p = ^int*() { //\n"
                "    return nullptr;\n"
