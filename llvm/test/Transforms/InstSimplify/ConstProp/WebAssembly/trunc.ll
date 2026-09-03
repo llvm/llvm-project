@@ -79,9 +79,9 @@ define void @test_i32_trunc_f32_s(ptr %p) {
   store volatile i32 %t14, ptr %p
   %t15 = call i32 @llvm.wasm.trunc.signed.i32.f32(float -2147483904.0)
   store volatile i32 %t15, ptr %p
-  %t16 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x7ff0000000000000); inf
+  %t16 = call i32 @llvm.wasm.trunc.signed.i32.f32(float +inf); inf
   store volatile i32 %t16, ptr %p
-  %t17 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0xfff0000000000000); -inf
+  %t17 = call i32 @llvm.wasm.trunc.signed.i32.f32(float -inf); -inf
   store volatile i32 %t17, ptr %p
   %t18 = call i32 @llvm.wasm.trunc.signed.i32.f32(float 0x7ff8000000000000); nan
   store volatile i32 %t18, ptr %p
@@ -157,9 +157,9 @@ define void @test_i32_trunc_f32_u(ptr %p) {
   store volatile i32 %t13, ptr %p
   %t14 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float -1.0)
   store volatile i32 %t14, ptr %p
-  %t15 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x7ff0000000000000); inf
+  %t15 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float +inf); inf
   store volatile i32 %t15, ptr %p
-  %t16 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0xfff0000000000000); -inf
+  %t16 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float -inf); -inf
   store volatile i32 %t16, ptr %p
   %t17 = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float 0x7ff8000000000000); nan
   store volatile i32 %t17, ptr %p
@@ -427,9 +427,9 @@ define void @test_i64_trunc_f32_s(ptr %p) {
   store volatile i64 %t16, ptr %p
   %t17 = call i64 @llvm.wasm.trunc.signed.i64.f32(float -9223373136366403584.0)
   store volatile i64 %t17, ptr %p
-  %t18 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x7ff0000000000000); inf
+  %t18 = call i64 @llvm.wasm.trunc.signed.i64.f32(float +inf); inf
   store volatile i64 %t18, ptr %p
-  %t19 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0xfff0000000000000); -inf
+  %t19 = call i64 @llvm.wasm.trunc.signed.i64.f32(float -inf); -inf
   store volatile i64 %t19, ptr %p
   %t20 = call i64 @llvm.wasm.trunc.signed.i64.f32(float 0x7ff8000000000000); nan
   store volatile i64 %t20, ptr %p
@@ -499,9 +499,9 @@ define void @test_i64_trunc_f32_u(ptr %p) {
   store volatile i64 %t11, ptr %p
   %t12 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float -1.0)
   store volatile i64 %t12, ptr %p
-  %t13 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x7ff0000000000000); inf
+  %t13 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float +inf); inf
   store volatile i64 %t13, ptr %p
-  %t14 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0xfff0000000000000); -inf
+  %t14 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float -inf); -inf
   store volatile i64 %t14, ptr %p
   %t15 = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float 0x7ff8000000000000); nan
   store volatile i64 %t15, ptr %p

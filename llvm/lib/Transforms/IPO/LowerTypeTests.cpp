@@ -199,7 +199,7 @@ BitSetInfo BitSetBuilder::build() {
 }
 
 void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
-  assert(Fragments.front().empty());
+  assert(Fragments.front().empty() && "Cannot add fragments after build()");
 
   // Create a new fragment to hold the layout for F.
   Fragments.emplace_back();
@@ -233,8 +233,9 @@ const std::vector<uint64_t> &GlobalLayoutBuilder::build() {
   std::vector<uint64_t> Layout;
   Layout.reserve(FragmentMap.size());
   for (auto &&F : Fragments)
-    llvm::append_range(Layout, std::move(F));
-  Fragments = {std::move(Layout)};
+    llvm::append_range(Layout, F);
+  Fragments.clear();
+  Fragments.push_back(std::move(Layout));
   return Fragments.front();
 }
 
