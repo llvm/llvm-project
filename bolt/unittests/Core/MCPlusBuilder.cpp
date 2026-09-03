@@ -83,8 +83,8 @@ protected:
   void initializeBolt() {
     const Triple TheTriple = GetParam();
     Relocation::Arch = TheTriple.getArch();
-    // Minimal test ELFs have no RISC-V attributes. Pass an empty feature set so
-    // createBinaryContext() can add the +relax feature required by BOLT.
+    // Minimal test ELFs have no RISC-V attributes. RISC-V needs an empty
+    // feature set for +relax, while other targets reject a non-null one.
     SubtargetFeatures Features;
     BC = cantFail(BinaryContext::createBinaryContext(
         TheTriple, std::make_shared<orc::SymbolStringPool>(),
@@ -92,7 +92,7 @@ protected:
         DWARFContext::create(*ObjFile), {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
     BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
-        createMCPlusBuilder(GetParam(), BC->MIA.get(), BC->MII.get(),
+        createMCPlusBuilder(TheTriple.getArch(), BC->MIA.get(), BC->MII.get(),
                             BC->MRI.get(), BC->STI.get())));
   }
 
@@ -108,13 +108,6 @@ protected:
     BitVector RegMask(BC->MRI->getNumRegs());
     FillRegMask(RegMask);
     assertRegMask(RegMask, ExpectedRegs);
-  }
-
-  BitVector getAliasMask(std::initializer_list<MCPhysReg> Registers) {
-    BitVector RegMask(BC->MRI->getNumRegs());
-    for (MCPhysReg Reg : Registers)
-      RegMask |= BC->MIB->getAliases(Reg);
-    return RegMask;
   }
 
   void testRegAliases(Triple::ArchType Arch, uint64_t Register,
@@ -974,7 +967,9 @@ TEST_P(MCPlusBuilderTester, RISCV_ABIRegisterMasks) {
 
   BitVector LiveOut(BC->MRI->getNumRegs());
   BC->MIB->getDefaultLiveOut(LiveOut);
-  EXPECT_EQ(LiveOut, getAliasMask({RISCV::X10, RISCV::X11}));
+  BitVector ExpectedLiveOut = BC->MIB->getAliases(RISCV::X10);
+  ExpectedLiveOut |= BC->MIB->getAliases(RISCV::X11);
+  EXPECT_EQ(LiveOut, ExpectedLiveOut);
 }
 
 TEST_P(MCPlusBuilderTester, RISCV_GPRegisterMasks) {
