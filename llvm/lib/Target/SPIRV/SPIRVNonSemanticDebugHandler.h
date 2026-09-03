@@ -334,8 +334,7 @@ private:
   /// DISubroutineType type, the signature type was not emitted in \c
   /// DebugTypeRegs, no path
   /// \c OpString was recorded for \p SP in section 7, or
-  /// \c resolveDebugFunctionParent returns no id for the \c Parent
-  /// operand.
+  /// \c resolveScope returns no id for the \c Parent operand.
   std::optional<MCRegister>
   emitDebugFunctionDeclaration(const DISubprogram *SP, MCRegister VoidTypeReg,
                                MCRegister I32TypeReg, MCRegister ExtInstSetReg,
@@ -370,9 +369,6 @@ private:
       const DIGlobalVariable *GV, const GlobalVariableDebugInfo &Info,
       MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
       SPIRV::ModuleAnalysisInfo &MAI);
-
-  /// Resolve the \c Parent operand for \c DebugGlobalVariable.
-  MCRegister resolveGlobalVariableParent(const DIGlobalVariable *GV) const;
 
   /// Emit \c DebugExpression for \p Expr. Unimplemented: defined as a no-op
   /// (\returns \c std::nullopt, emits nothing) so \c emitDebugGlobalVariable
@@ -480,34 +476,18 @@ private:
                                                MCRegister ExtInstSetReg,
                                                SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Resolve the \c Parent operand for \c DebugFunctionDeclaration and
-  /// \c DebugFunction: an emitted debug type id when \c SP->getScope() is a
-  /// \c DIType in \c DebugTypeRegs, otherwise \c DebugCompilationUnit for
-  /// \c SP->getUnit() (or the first module CU when \c unit: is absent).
-  /// \returns \c std::nullopt when the scope requires a parent we cannot supply
-  /// (non-file scope that is not a mapped \c DIType) or the CU has no emitted
-  /// id.
+  /// Map \p Scope to the NonSemantic debug id used as a \c Parent operand.
+  ///
+  /// Checks \c DebugTypeRegs, \c DebugLexicalBlockRegs, and \c
+  /// DebugFunctionRegs in order. When \p Scope is null, a \c DIFile, or
+  /// another scope without a dedicated debug instruction, falls back to \p
+  /// FallbackCU or the first module \c DebugCompilationUnit.
+  ///
+  /// \returns \c std::nullopt when \p Scope names an emitted scope that has
+  /// not been recorded yet, or when no fallback compile unit is available.
   std::optional<MCRegister>
-  resolveDebugFunctionParent(const DISubprogram *SP) const;
-
-  /// Resolve the \c Parent operand for a type instruction (\c
-  /// DebugTypeComposite) from its \p Scope: an emitted debug type id when \p
-  /// Scope is a \c DIType in \c DebugTypeRegs (a type nested in another type),
-  /// otherwise the first module \c DebugCompilationUnit.
-  /// \returns \c std::nullopt when \p Scope is a \c DIType that has not been
-  /// emitted, or when there is no compile unit.
-  std::optional<MCRegister> resolveTypeScopeParent(const DIScope *Scope) const;
-
-  /// Resolve the \c Parent operand for \c DebugLexicalBlock, and for any other
-  /// instruction whose LLVM scope may be a \c DILexicalBlock or \c
-  /// DINamespace: an emitted \c DebugLexicalBlock id when \p Scope is a \c
-  /// DILexicalBlock or \c DINamespace already in \c DebugLexicalBlockRegs, an
-  /// emitted \c DebugFunction id when \p Scope is a defining \c DISubprogram,
-  /// otherwise the first module \c DebugCompilationUnit.
-  /// \returns \c std::nullopt when \p Scope requires a parent we cannot
-  /// supply, or the fallback CU has no emitted id.
-  std::optional<MCRegister>
-  resolveLexicalBlockParent(const DIScope *Scope) const;
+  resolveScope(const DIScope *Scope,
+               const DICompileUnit *FallbackCU = nullptr) const;
 
   /// Emit \c DebugLexicalBlock for \p S, which must be a \c DILexicalBlock or
   /// a \c DINamespace. A \c DILexicalBlock supplies Line/Column
@@ -515,8 +495,7 @@ private:
   /// emitted as 0, and its Name is appended as an extra \c OpString operand.
   ///
   /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if \c resolveLexicalBlockParent returns no id for
-  /// \c S->getScope().
+  /// emits nothing if \c resolveScope returns no id for \c S->getScope().
   std::optional<MCRegister>
   emitDebugLexicalBlock(const DIScope *S, MCRegister VoidTypeReg,
                         MCRegister I32TypeReg, MCRegister ExtInstSetReg,

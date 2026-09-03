@@ -651,58 +651,24 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
 }
 
 // Match SPIRV-LLVM-Translator's selection logic for the Parent operand.
-std::optional<MCRegister>
-SPIRVNonSemanticDebugHandler::resolveDebugFunctionParent(
-    const DISubprogram *SP) const {
-  const DIScope *Scope = SP->getScope();
-  if (Scope && !isa<DIFile>(Scope)) {
-    // Find the DINamespace that was emitted as a lexical block.
-    if (isa<DINamespace>(Scope))
-      return lookupOptReg(DebugLexicalBlockRegs, Scope);
-    // TODO: Complete with other lookups once other scopes are supported
-    // (subclasses of DIScope).
-    const DIType *Ty = dyn_cast<DIType>(Scope);
-    if (!Ty)
-      return std::nullopt;
-    return lookupOptReg(DebugTypeRegs, Ty);
-  }
-
-  const DICompileUnit *ParentCU = SP->getUnit();
-  if (!ParentCU && !CompileUnits.empty())
-    ParentCU = CompileUnits[0].TheCU;
-  if (!ParentCU)
-    return std::nullopt;
-  return lookupOptReg(CUToCompilationUnitDbgReg, ParentCU);
-}
-
-std::optional<MCRegister> SPIRVNonSemanticDebugHandler::resolveTypeScopeParent(
-    const DIScope *Scope) const {
-  // When the scope is itself a type (e.g. a struct nested in another struct),
-  // the parent is that enclosing type's debug id.
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::resolveScope(
+    const DIScope *Scope, const DICompileUnit *FallbackCU) const {
   if (const auto *Ty = dyn_cast_or_null<DIType>(Scope))
     return lookupOptReg(DebugTypeRegs, Ty);
 
-  // Find the DINamespace that was emitted as a lexical block.
-  if (isa_and_nonnull<DINamespace>(Scope))
-    return lookupOptReg(DebugLexicalBlockRegs, Scope);
-
-  // For a file, compile-unit, or absent scope, the parent is the first module
-  // DebugCompilationUnit.
-  if (CompileUnits.empty())
-    return std::nullopt;
-
-  return lookupOptReg(CUToCompilationUnitDbgReg, CompileUnits[0].TheCU);
-}
-
-std::optional<MCRegister>
-SPIRVNonSemanticDebugHandler::resolveLexicalBlockParent(
-    const DIScope *Scope) const {
   if (isa_and_nonnull<DILexicalBlock, DINamespace>(Scope))
     return lookupOptReg(DebugLexicalBlockRegs, Scope);
+
   if (const auto *SP = dyn_cast_or_null<DISubprogram>(Scope))
     return lookupOptReg(DebugFunctionRegs, SP);
+
+  // For a file, compile-unit, or absent scope, fall back to a compile unit.
+  if (FallbackCU)
+    return lookupOptReg(CUToCompilationUnitDbgReg, FallbackCU);
+
   if (CompileUnits.empty())
     return std::nullopt;
+
   return lookupOptReg(CUToCompilationUnitDbgReg, CompileUnits[0].TheCU);
 }
 
@@ -711,7 +677,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugLexicalBlock(
     MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
   assert((isa<DILexicalBlock, DINamespace>(S)) &&
          "S must be a DILexicalBlock or DINamespace in emitDebugLexicalBlock");
-  auto ParentRegOpt = resolveLexicalBlockParent(S->getScope());
+  auto ParentRegOpt = resolveScope(S->getScope());
   if (!ParentRegOpt)
     return std::nullopt;
 
@@ -756,7 +722,7 @@ SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
     return std::nullopt;
   MCRegister FnTyReg = *FnTyRegOpt;
 
-  auto ParentRegOpt = resolveDebugFunctionParent(SP);
+  auto ParentRegOpt = resolveScope(SP->getScope(), SP->getUnit());
   if (!ParentRegOpt)
     return std::nullopt;
 
@@ -797,7 +763,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugFunction(
   if (!FnTyRegOpt)
     return std::nullopt;
 
-  auto ParentRegOpt = resolveDebugFunctionParent(SP);
+  auto ParentRegOpt = resolveScope(SP->getScope(), SP->getUnit());
   if (!ParentRegOpt)
     return std::nullopt;
 
@@ -841,30 +807,6 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
   return lookupOptReg(DebugTypeRegs, Ty);
 }
 
-MCRegister SPIRVNonSemanticDebugHandler::resolveGlobalVariableParent(
-    const DIGlobalVariable *GV) const {
-  // A namespace-scoped global variable's parent is the enclosing
-  // DebugLexicalBlock emitted for that DINamespace.
-  // TODO: When this backend emits debug instructions for subprogram,
-  // compilation units, and module scopes, also return GV->getScope()'s debug
-  // id for those cases.
-  if (isa_and_nonnull<DINamespace>(GV->getScope())) {
-    if (auto ParentRegOpt = lookupOptReg(DebugLexicalBlockRegs, GV->getScope()))
-      return *ParentRegOpt;
-  }
-
-  // !CompileUnits.empty() was already checked before staring the emission of
-  // NSDI instructions.
-  assert(!CompileUnits.empty() &&
-         "resolveGlobalVariableParent requires non-empty CompileUnits");
-  std::optional<MCRegister> ParentRegOpt =
-      lookupOptReg(CUToCompilationUnitDbgReg, CompileUnits[0].TheCU);
-  assert(ParentRegOpt && "DebugCompilationUnit must be emitted before "
-                         "resolveGlobalVariableParent");
-  // Fallback: first module compile unit (SPIRV-LLVM-Translator default).
-  return *ParentRegOpt;
-}
-
 // Unimplemented no-op; see emitDebugExpression declaration.
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugExpression(
     const DIExpression *, MCRegister, MCRegister, SPIRV::ModuleAnalysisInfo &) {
@@ -877,7 +819,11 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
     SPIRV::ModuleAnalysisInfo &MAI) {
   assert(GV && "GV must not be null in emitDebugGlobalVariable");
 
-  MCRegister ParentReg = resolveGlobalVariableParent(GV);
+  auto ParentRegOpt = resolveScope(GV->getScope());
+  if (!ParentRegOpt)
+    return std::nullopt;
+
+  MCRegister ParentReg = *ParentRegOpt;
 
   // TyReg: DebugInfoNone when GV has no DI type (as done in
   // SPIRV-LLVM-Translator). Declarations (isDefinition: false) can have null
@@ -1050,7 +996,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
     const DICompositeType *CT, ArrayRef<MCRegister> MemberRegs,
     MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
-  auto ParentRegOpt = resolveTypeScopeParent(CT->getScope());
+  auto ParentRegOpt = resolveScope(CT->getScope());
   if (!ParentRegOpt)
     return std::nullopt;
 
@@ -1104,21 +1050,10 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypedef(
   // Parent must be a lexical scope. Valid NSDI lexical scopes are
   // DebugCompilationUnit, DebugFunction, DebugLexicalBlock, or
   // DebugTypeComposite.
-  //
-  // FIXME: We currently only emit DebugCompilationUnit, so the compile unit is
-  // the only parent available today.
-  MCRegister ParentReg;
-  if (const auto *Ty = dyn_cast_or_null<DIType>(TD->getScope()))
-    if (auto TyRegOpt = lookupOptReg(DebugTypeRegs, Ty))
-      ParentReg = *TyRegOpt;
-  if (!ParentReg.isValid()) {
-    assert(!CompileUnits.empty() &&
-           "emitDebugTypedef requires a compile unit for the Parent operand");
-    auto CURegOpt =
-        lookupOptReg(CUToCompilationUnitDbgReg, CompileUnits[0].TheCU);
-    assert(CURegOpt && "DebugCompilationUnit must be emitted before typedefs");
-    ParentReg = *CURegOpt;
-  }
+  auto ParentRegOpt = resolveScope(TD->getScope());
+  if (!ParentRegOpt)
+    return std::nullopt;
+  MCRegister ParentReg = *ParentRegOpt;
 
   return emitExtInst(
       SPIRV::NonSemanticExtInst::DebugTypedef, VoidTypeReg, ExtInstSetReg,
