@@ -27,24 +27,25 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-NEXT:  vector.ph:
 ; FINAL-NEXT:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<%n>, ir<1>
 ; FINAL-NEXT:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
+; FINAL-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = TC > VF ? TC - VF : 0 ir<%n>, vp<%num.active.lanes>
 ; FINAL-NEXT:  Successor(s): vector.body
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.body:
 ; FINAL-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; FINAL-NEXT:    ACTIVE-LANE-MASK-PHI vp<[[VP8:%[0-9]+]]> = phi vp<%extract.entry.alm.part>, vp<%extract.next.alm.part>
-; FINAL-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = and vp<[[VP8]]>, vp<[[VP4]]>
+; FINAL-NEXT:    ACTIVE-LANE-MASK-PHI vp<[[VP9:%[0-9]+]]> = phi vp<%extract.entry.alm.part>, vp<%extract.next.alm.part>
+; FINAL-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = and vp<[[VP9]]>, vp<[[VP4]]>
 ; FINAL-NEXT:    CLONE ir<%ptr.a> = getelementptr inbounds ir<%a>, vp<%index>
-; FINAL-NEXT:    WIDEN ir<%ld.a> = load ir<%ptr.a>, vp<[[VP9]]>
+; FINAL-NEXT:    WIDEN ir<%ld.a> = load ir<%ptr.a>, vp<[[VP10]]>
 ; FINAL-NEXT:    CLONE ir<%ptr.b> = getelementptr inbounds ir<%b>, vp<%index>
-; FINAL-NEXT:    WIDEN ir<%ld.b> = load ir<%ptr.b>, vp<[[VP9]]>
+; FINAL-NEXT:    WIDEN ir<%ld.b> = load ir<%ptr.b>, vp<[[VP10]]>
 ; FINAL-NEXT:    WIDEN ir<%add> = add ir<%ld.b>, ir<%ld.a>
 ; FINAL-NEXT:    CLONE ir<%ptr.c> = getelementptr inbounds ir<%c>, vp<%index>
-; FINAL-NEXT:    WIDEN store ir<%ptr.c>, ir<%add>, vp<[[VP9]]>
+; FINAL-NEXT:    WIDEN store ir<%ptr.c>, ir<%add>, vp<[[VP10]]>
 ; FINAL-NEXT:    EMIT vp<%index.next> = add vp<%index>, vp<%num.active.lanes>
-; FINAL-NEXT:    EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<%n>, ir<1>
+; FINAL-NEXT:    EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index>, vp<[[VP8]]>, ir<1>
 ; FINAL-NEXT:    EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
-; FINAL-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = not vp<%extract.next.alm.part>
-; FINAL-NEXT:    EMIT branch-on-cond vp<[[VP10]]>
+; FINAL-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = not vp<%extract.next.alm.part>
+; FINAL-NEXT:    EMIT branch-on-cond vp<[[VP11]]>
 ; FINAL-NEXT:  Successor(s): middle.block, vector.body
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  middle.block:
