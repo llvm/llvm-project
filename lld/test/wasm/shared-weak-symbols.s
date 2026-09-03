@@ -3,9 +3,9 @@
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d %t.wasm | FileCheck %s -check-prefix=ASM
 
-# Verify the weakly defined fuctions (weak_func) are both imported and exported,
-# and that internal usage (direct call) always uses the imported version.
-# Hidden functions, even if weak, should not be imported or exported.
+# Verify the weakly defined functions (weak_func) are both imported and
+# exported, and that internal usage (direct call) always uses the imported
+# version. Hidden functions, even if weak, should not be imported or exported.
 
 .globl weak_func
 .weak weak_func

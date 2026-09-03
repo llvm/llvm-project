@@ -76,11 +76,6 @@ namespace lower {
 namespace omp {
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec) {
-  // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have implicit
-  // default mappers available so that OpenMP offloading can correctly map them.
-  if (semantics::IsIsoCType(&typeSpec))
-    return true;
-
   llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;
 
   std::function<bool(const semantics::DerivedTypeSpec &)> requiresMapper =
@@ -708,7 +703,7 @@ static void processTileSizesFromOpenMPConstruct(
 // can happen when COLLAPSE counts loops that a transforming construct such as
 // TILE generates from the source DO loops. getNestedDoConstruct wraps this for
 // callers that require a DO construct and asserts when none is found.
-static pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval) {
+pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval) {
   for (pft::Evaluation &nested : eval.getNestedEvaluations()) {
     // In an OpenMPConstruct there can be compiler directives:
     // 1 <<OpenMPConstruct>>
@@ -1235,7 +1230,6 @@ resolveMapperId(Fortran::lower::AbstractConverter &converter,
           (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
           mlir::omp::ClauseMapFlags::implicit;
       bool needsDefaultMapper =
-          isAllocOrPointer ||
           requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
       // For implicit captures, avoid synthesizing default mappers for
       // pointer entities (which can over-map pointer payloads) and for

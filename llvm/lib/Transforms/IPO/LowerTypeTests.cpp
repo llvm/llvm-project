@@ -20,7 +20,6 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -541,11 +540,10 @@ class LowerTypeTestsModule {
   void createJumpTable(Function *F, ArrayRef<GlobalTypeMember *> Functions,
                        Triple::ArchType JumpTableArch);
 
-  /// replaceCfiUses - Go through the uses list for this definition
-  /// and make each use point to "V" instead of "this" when the use is outside
-  /// the block. 'This's use list is expected to have at least one element.
-  /// Unlike replaceAllUsesWith this function skips blockaddr and direct call
-  /// uses.
+  /// replaceCfiUses - Go through the uses list for this definition and make
+  /// each use point to "New" instead of "Old" when the use is outside the
+  /// block. 'Old's use list is expected to have at least one element.  Unlike
+  /// replaceAllUsesWith this function skips blockaddr and direct call uses.
   void replaceCfiUses(Function *Old, Value *New, bool IsJumpTableCanonical);
 
   /// replaceDirectCalls - Go through the uses list for this definition and
@@ -1091,15 +1089,26 @@ void LowerTypeTestsModule::importFunction(Function *F,
   if (F->isDeclarationForLinker() && isJumpTableCanonical) {
     // Non-dso_local functions may be overriden at run time,
     // don't short curcuit them
-    if (F->isDSOLocal()) {
+    if (!F->isDSOLocal())
+      return;
+    if (F->isDeclaration()) {
+      // Direct calls do not need the type check, so let them skip the jump
+      // table and call the real function directly.
       Function *RealF = Function::Create(F->getFunctionType(),
                                          GlobalValue::ExternalLinkage,
                                          F->getAddressSpace(),
                                          Name + ".cfi", &M);
       RealF->setVisibility(GlobalVariable::HiddenVisibility);
       replaceDirectCalls(F, RealF);
+      return;
     }
-    return;
+    // Otherwise F is an available_externally definition imported from
+    // another module. Handle it like a local definition below: the body is
+    // renamed to Name.cfi and stays the target of direct calls, so it remains
+    // inlinable, while address-taken uses are redirected to the jump table
+    // entry. If the body is not inlined and is dropped later, the reference
+    // to Name.cfi resolves to the real function at link time, exactly as for
+    // a declaration.
   }
 
   Function *FDecl;
@@ -1115,6 +1124,7 @@ void LowerTypeTestsModule::importFunction(Function *F,
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              F->getAddressSpace(), Name, &M);
     FDecl->setVisibility(Visibility);
+    FDecl->setDSOLocal(F->isDSOLocal());
     Visibility = GlobalValue::HiddenVisibility;
 
     // Update aliases pointing to this function to also include the ".cfi" suffix,
@@ -1129,6 +1139,7 @@ void LowerTypeTestsModule::importFunction(Function *F,
         AliasDecl->takeName(A);
         A->replaceAllUsesWith(AliasDecl);
         A->setName(AliasName);
+        AliasDecl->setDSOLocal(A->isDSOLocal());
       }
     }
   }
@@ -1829,6 +1840,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
           GlobalAlias::create(JumpTableEntryType, 0, F->getLinkage(), "",
                               CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
+      FAlias->setDSOLocal(F->isDSOLocal());
       FAlias->takeName(F);
       if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
@@ -2032,7 +2044,7 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
     if (isa<NoCFIValue>(U.getUser()))
       continue;
 
-    // Skip direct calls to externally defined or non-dso_local functions.
+    // Skip direct calls to externally defined or dso_local functions.
     if (isDirectCall(U) && (Old->isDSOLocal() || !IsJumpTableCanonical))
       continue;
 
@@ -2276,6 +2288,16 @@ bool LowerTypeTestsModule::lower() {
           F->setMetadata(
               LLVMContext::MD_guid,
               MDTuple::get(M.getContext(), {FuncMD->getOperand(2).get()}));
+          if (ExportSummary) {
+            GlobalValue::GUID GUID =
+                cast<ConstantAsMetadata>(FuncMD->getOperand(2))
+                    ->getValue()
+                    ->getUniqueInteger()
+                    .getZExtValue();
+            if (auto VI = ExportSummary->getValueInfo(GUID))
+              F->setDSOLocal(
+                  VI.isDSOLocal(ExportSummary->withDSOLocalPropagation()));
+          }
         }
         // If the function is available_externally, remove its definition so
         // that it is handled the same way as a declaration. Later we will try
@@ -2549,6 +2571,7 @@ bool LowerTypeTestsModule::lower() {
     auto *AliasGA = GlobalAlias::create("", Target);
     AliasGA->setVisibility(A.Alias->getVisibility());
     AliasGA->setLinkage(A.Alias->getLinkage());
+    AliasGA->setDSOLocal(A.Alias->isDSOLocal());
     AliasGA->takeName(A.Alias);
     A.Alias->replaceAllUsesWith(AliasGA);
     A.Alias->eraseFromParent();

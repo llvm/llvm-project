@@ -278,6 +278,225 @@ define <vscale x 16 x i32> @vwabdau_vv_mask_i16m4(<vscale x 16 x i32> %vd, <vsca
     iXLen %vl, iXLen 0)
   ret <vscale x 16 x i32> %res
 }
+define <vscale x 1 x i16> @vwabdau_vx_i8mf8(<vscale x 1 x i16> %vd, <vscale x 1 x i8> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i8mf8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v9, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i16> @llvm.riscv.vwabdau(<vscale x 1 x i16> %vd, <vscale x 1 x i8> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 1 x i16> %res
+}
+
+define <vscale x 1 x i16> @vwabdau_vx_mask_i8mf8(<vscale x 1 x i16> %vd, <vscale x 1 x i8> %vs2, iXLen %rs1, <vscale x 1 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i8mf8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i16> @llvm.riscv.vwabdau.mask(<vscale x 1 x i16> %vd, <vscale x 1 x i8> %vs2, iXLen %rs1, <vscale x 1 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 1 x i16> %res
+}
+
+define <vscale x 2 x i16> @vwabdau_vx_i8mf4(<vscale x 2 x i16> %vd, <vscale x 2 x i8> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i8mf4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v9, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i16> @llvm.riscv.vwabdau(<vscale x 2 x i16> %vd, <vscale x 2 x i8> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 2 x i16> %res
+}
+
+define <vscale x 2 x i16> @vwabdau_vx_mask_i8mf4(<vscale x 2 x i16> %vd, <vscale x 2 x i8> %vs2, iXLen %rs1, <vscale x 2 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i8mf4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i16> @llvm.riscv.vwabdau.mask(<vscale x 2 x i16> %vd, <vscale x 2 x i8> %vs2, iXLen %rs1, <vscale x 2 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 2 x i16> %res
+}
+
+define <vscale x 4 x i16> @vwabdau_vx_i8mf2(<vscale x 4 x i16> %vd, <vscale x 4 x i8> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i8mf2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v9, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i16> @llvm.riscv.vwabdau(<vscale x 4 x i16> %vd, <vscale x 4 x i8> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 4 x i16> %res
+}
+
+define <vscale x 4 x i16> @vwabdau_vx_mask_i8mf2(<vscale x 4 x i16> %vd, <vscale x 4 x i8> %vs2, iXLen %rs1, <vscale x 4 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i8mf2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i16> @llvm.riscv.vwabdau.mask(<vscale x 4 x i16> %vd, <vscale x 4 x i8> %vs2, iXLen %rs1, <vscale x 4 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 4 x i16> %res
+}
+
+define <vscale x 8 x i16> @vwabdau_vx_i8m1(<vscale x 8 x i16> %vd, <vscale x 8 x i8> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i8m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v10, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i16> @llvm.riscv.vwabdau(<vscale x 8 x i16> %vd, <vscale x 8 x i8> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 8 x i16> @vwabdau_vx_mask_i8m1(<vscale x 8 x i16> %vd, <vscale x 8 x i8> %vs2, iXLen %rs1, <vscale x 8 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i8m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v10, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i16> @llvm.riscv.vwabdau.mask(<vscale x 8 x i16> %vd, <vscale x 8 x i8> %vs2, iXLen %rs1, <vscale x 8 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 16 x i16> @vwabdau_vx_i8m2(<vscale x 16 x i16> %vd, <vscale x 16 x i8> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i8m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v12, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i16> @llvm.riscv.vwabdau(<vscale x 16 x i16> %vd, <vscale x 16 x i8> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 16 x i16> %res
+}
+
+define <vscale x 16 x i16> @vwabdau_vx_mask_i8m2(<vscale x 16 x i16> %vd, <vscale x 16 x i8> %vs2, iXLen %rs1, <vscale x 16 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i8m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v12, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i16> @llvm.riscv.vwabdau.mask(<vscale x 16 x i16> %vd, <vscale x 16 x i8> %vs2, iXLen %rs1, <vscale x 16 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 16 x i16> %res
+}
+
+define <vscale x 32 x i16> @vwabdau_vx_i8m4(<vscale x 32 x i16> %vd, <vscale x 32 x i8> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i8m4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v16, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 32 x i16> @llvm.riscv.vwabdau(<vscale x 32 x i16> %vd, <vscale x 32 x i8> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 32 x i16> %res
+}
+
+define <vscale x 32 x i16> @vwabdau_vx_mask_i8m4(<vscale x 32 x i16> %vd, <vscale x 32 x i8> %vs2, iXLen %rs1, <vscale x 32 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i8m4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v16, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 32 x i16> @llvm.riscv.vwabdau.mask(<vscale x 32 x i16> %vd, <vscale x 32 x i8> %vs2, iXLen %rs1, <vscale x 32 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 32 x i16> %res
+}
+
+define <vscale x 1 x i32> @vwabdau_vx_i16mf4(<vscale x 1 x i32> %vd, <vscale x 1 x i16> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i16mf4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v9, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i32> @llvm.riscv.vwabdau(<vscale x 1 x i32> %vd, <vscale x 1 x i16> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 1 x i32> %res
+}
+
+define <vscale x 1 x i32> @vwabdau_vx_mask_i16mf4(<vscale x 1 x i32> %vd, <vscale x 1 x i16> %vs2, iXLen %rs1, <vscale x 1 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i16mf4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i32> @llvm.riscv.vwabdau.mask(<vscale x 1 x i32> %vd, <vscale x 1 x i16> %vs2, iXLen %rs1, <vscale x 1 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 1 x i32> %res
+}
+
+define <vscale x 2 x i32> @vwabdau_vx_i16mf2(<vscale x 2 x i32> %vd, <vscale x 2 x i16> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i16mf2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v9, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.riscv.vwabdau(<vscale x 2 x i32> %vd, <vscale x 2 x i16> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i32> @vwabdau_vx_mask_i16mf2(<vscale x 2 x i32> %vd, <vscale x 2 x i16> %vs2, iXLen %rs1, <vscale x 2 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i16mf2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.riscv.vwabdau.mask(<vscale x 2 x i32> %vd, <vscale x 2 x i16> %vs2, iXLen %rs1, <vscale x 2 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 4 x i32> @vwabdau_vx_i16m1(<vscale x 4 x i32> %vd, <vscale x 4 x i16> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i16m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v10, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i32> @llvm.riscv.vwabdau(<vscale x 4 x i32> %vd, <vscale x 4 x i16> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @vwabdau_vx_mask_i16m1(<vscale x 4 x i32> %vd, <vscale x 4 x i16> %vs2, iXLen %rs1, <vscale x 4 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i16m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v10, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i32> @llvm.riscv.vwabdau.mask(<vscale x 4 x i32> %vd, <vscale x 4 x i16> %vs2, iXLen %rs1, <vscale x 4 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 8 x i32> @vwabdau_vx_i16m2(<vscale x 8 x i32> %vd, <vscale x 8 x i16> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i16m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v12, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i32> @llvm.riscv.vwabdau(<vscale x 8 x i32> %vd, <vscale x 8 x i16> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 8 x i32> %res
+}
+
+define <vscale x 8 x i32> @vwabdau_vx_mask_i16m2(<vscale x 8 x i32> %vd, <vscale x 8 x i16> %vs2, iXLen %rs1, <vscale x 8 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i16m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v12, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i32> @llvm.riscv.vwabdau.mask(<vscale x 8 x i32> %vd, <vscale x 8 x i16> %vs2, iXLen %rs1, <vscale x 8 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 8 x i32> %res
+}
+
+define <vscale x 16 x i32> @vwabdau_vx_i16m4(<vscale x 16 x i32> %vd, <vscale x 16 x i16> %vs2, iXLen %rs1, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_i16m4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, tu, ma
+; CHECK-NEXT:    vwabdau.vx v8, v16, a0
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i32> @llvm.riscv.vwabdau(<vscale x 16 x i32> %vd, <vscale x 16 x i16> %vs2, iXLen %rs1, iXLen %vl, iXLen 0)
+  ret <vscale x 16 x i32> %res
+}
+
+define <vscale x 16 x i32> @vwabdau_vx_mask_i16m4(<vscale x 16 x i32> %vd, <vscale x 16 x i16> %vs2, iXLen %rs1, <vscale x 16 x i1> %mask, iXLen %vl) {
+; CHECK-LABEL: vwabdau_vx_mask_i16m4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
+; CHECK-NEXT:    vwabdau.vx v8, v16, a0, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i32> @llvm.riscv.vwabdau.mask(<vscale x 16 x i32> %vd, <vscale x 16 x i16> %vs2, iXLen %rs1, <vscale x 16 x i1> %mask, iXLen %vl, iXLen 0)
+  ret <vscale x 16 x i32> %res
+}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; RV32: {{.*}}
 ; RV64: {{.*}}

@@ -40,6 +40,15 @@ struct DirectiveWithTokens {
       : Kind(Kind), NumTokens(NumTokens) {}
 };
 
+enum class CXX20ModuleDirectiveKind {
+  None,
+  GlobalModuleFragment,
+  NamedModuleDeclaration,
+  ImportDeclaration,
+};
+
+static CXX20ModuleDirectiveKind scanFirstCXX20ModuleDirective(StringRef Source);
+
 /// Does an efficient "scan" of the sources to detect the presence of
 /// preprocessor (or module import) directives and collects the raw lexed tokens
 /// for those directives so that the \p Lexer can "replay" them when the file is
@@ -84,7 +93,8 @@ struct Scanner {
   /// \returns True on error.
   bool scan(SmallVectorImpl<Directive> &Directives);
 
-  friend bool clang::scanInputForCXX20ModulesUsage(StringRef Source);
+  friend CXX20ModuleDirectiveKind
+  scanFirstCXX20ModuleDirective(StringRef Source);
   friend bool clang::isPreprocessedModuleFile(StringRef Source);
 
 private:
@@ -1134,35 +1144,63 @@ static void skipUntilMaybeCXX20ModuleDirective(const char *&First,
   }
 }
 
-bool clang::scanInputForCXX20ModulesUsage(StringRef Source) {
+namespace {
+
+static CXX20ModuleDirectiveKind
+scanFirstCXX20ModuleDirective(StringRef Source) {
   const char *First = Source.begin();
   const char *const End = Source.end();
   skipUntilMaybeCXX20ModuleDirective(First, End);
   if (First == End)
-    return false;
+    return CXX20ModuleDirectiveKind::None;
 
   // Check if the next token can even be a module directive before creating a
   // full lexer.
   if (!(*First == 'i' || *First == 'e' || *First == 'm'))
-    return false;
+    return CXX20ModuleDirectiveKind::None;
 
   llvm::SmallVector<dependency_directives_scan::Token> Tokens;
   Scanner S(StringRef(First, End - First), Tokens, nullptr, SourceLocation());
   S.TheLexer.setParsingPreprocessorDirective(true);
-  if (S.lexModule(First, End))
-    return false;
-  auto IsCXXNamedModuleDirective = [](const DirectiveWithTokens &D) {
-    switch (D.Kind) {
-    case dependency_directives_scan::cxx_module_decl:
-    case dependency_directives_scan::cxx_import_decl:
-    case dependency_directives_scan::cxx_export_module_decl:
-    case dependency_directives_scan::cxx_export_import_decl:
-      return true;
-    default:
-      return false;
-    }
-  };
-  return llvm::any_of(S.DirsWithToks, IsCXXNamedModuleDirective);
+  if (S.lexModule(First, End) || S.DirsWithToks.empty())
+    return CXX20ModuleDirectiveKind::None;
+
+  assert(S.DirsWithToks.size() == 1);
+  const DirectiveWithTokens &Directive = S.DirsWithToks.front();
+  switch (Directive.Kind) {
+  case dependency_directives_scan::cxx_module_decl:
+    assert(Directive.NumTokens >= 2);
+    return Tokens[1].is(tok::semi)
+               ? CXX20ModuleDirectiveKind::GlobalModuleFragment
+               : CXX20ModuleDirectiveKind::NamedModuleDeclaration;
+  case dependency_directives_scan::cxx_export_module_decl:
+    return CXX20ModuleDirectiveKind::NamedModuleDeclaration;
+  case dependency_directives_scan::cxx_import_decl:
+  case dependency_directives_scan::cxx_export_import_decl:
+    return CXX20ModuleDirectiveKind::ImportDeclaration;
+  default:
+    llvm_unreachable("unexpected C++20 module directive kind");
+  }
+}
+
+} // namespace
+
+bool clang::scanInputForCXX20ModulesUsage(StringRef Source) {
+  return scanFirstCXX20ModuleDirective(Source) !=
+         CXX20ModuleDirectiveKind::None;
+}
+
+ModuleUnitKind clang::scanInputForCXX20ModuleUnit(StringRef Source) {
+  switch (scanFirstCXX20ModuleDirective(Source)) {
+  case CXX20ModuleDirectiveKind::GlobalModuleFragment:
+    return ModuleUnitKind::HasGlobalModuleFragment;
+  case CXX20ModuleDirectiveKind::NamedModuleDeclaration:
+    return ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment;
+  case CXX20ModuleDirectiveKind::None:
+  case CXX20ModuleDirectiveKind::ImportDeclaration:
+    return ModuleUnitKind::NotModuleUnit;
+  }
+  llvm_unreachable("unexpected C++20 module directive kind");
 }
 
 bool clang::isPreprocessedModuleFile(StringRef Source) {

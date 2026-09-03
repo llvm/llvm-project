@@ -40,5 +40,5 @@
 // RUN: 2>&1 | FileCheck -check-prefix=CO %s
 
 // CO: clang-offload-bundler{{.*}} "-type=o"
-// CO-SAME: -targets={{.*}}hipv4-amdgpu11.00-amd-amdhsa--gfx1100,hipv4-amdgpu11.01-amd-amdhsa--gfx1101
+// CO-SAME: -targets={{.*}}hipv4-amdgcn-amd-amdhsa--gfx1100,hipv4-amdgcn-amd-amdhsa--gfx1101
 // CO-SAME: "--compress" "--verbose"

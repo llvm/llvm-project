@@ -22,10 +22,10 @@
 // CHECK-DAG:       %[[VAL_3:.*]] = tensor.empty() : tensor<4x3xf64, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_4:.*]] = sparse_tensor.convert %[[VAL_0]] : tensor<3x4xf64, #sparse{{[0-9]*}}> to tensor<3x4xf64, #sparse{{[0-9]*}}>
 // CHECK:           %[[DEMAP:.*]] = sparse_tensor.reinterpret_map %[[VAL_4]] : tensor<3x4xf64, #sparse{{[0-9]*}}> to tensor<4x3xf64, #sparse{{[0-9]*}}>
-// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[DEMAP]] {level = 0 : index} : tensor<4x3xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[DEMAP]] {level = 0 : index} : tensor<4x3xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.positions %[[DEMAP]] {level = 1 : index} : tensor<4x3xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[DEMAP]] {level = 1 : index} : tensor<4x3xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[DEMAP]] level = 0 : tensor<4x3xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.coordinates %[[DEMAP]] level = 0 : tensor<4x3xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.positions %[[DEMAP]] level = 1 : tensor<4x3xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[DEMAP]] level = 1 : tensor<4x3xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.values %[[DEMAP]] : tensor<4x3xf64, #sparse{{[0-9]*}}> to memref<?xf64>
 // CHECK:           %[[VAL_10:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_1]]] : memref<?xindex>
 // CHECK:           %[[VAL_11:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_2]]] : memref<?xindex>

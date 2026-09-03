@@ -28,7 +28,6 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
-#include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
@@ -184,8 +183,7 @@ bool WebAssemblyMemIntrinsicResultsImpl::optimizeCall(
   if (!CallReturnsInput)
     return false;
 
-  LibFunc Func;
-  if (!LibInfo->getLibFunc(Name, Func))
+  if (LibInfo->getLibFunc(Name) == NotLibFunc)
     return false;
 
   Register FromReg = MI.getOperand(2).getReg();
