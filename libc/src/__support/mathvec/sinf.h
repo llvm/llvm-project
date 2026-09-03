@@ -30,8 +30,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace mathvec {
 
 template <size_t N>
-LIBC_INLINE static cpp::simd<double, N>
-sinpif_poly(cpp::simd<double, N> r) {
+LIBC_INLINE static cpp::simd<double, N> sinpif_poly(cpp::simd<double, N> r) {
   // Approximate sin(pi * r) for |r| <= 0.5.
   // These coefficients aren't produced directly via sollya, but rather
   // are fine-tuned by iterative adjustment to remove hard to round cases.
