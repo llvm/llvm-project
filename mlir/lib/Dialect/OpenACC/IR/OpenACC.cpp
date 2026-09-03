@@ -12,6 +12,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -49,7 +50,7 @@ static void attachVarNameAttr(Operation *op, OpBuilder &builder,
                               StringRef varName) {
   if (!varName.empty()) {
     auto varNameAttr = acc::VarNameAttr::get(builder.getContext(), varName);
-    op->setAttr(acc::getVarNameAttrName(), varNameAttr);
+    op->setDiscardableAttr(acc::getVarNameAttrName(), varNameAttr);
   }
 }
 
@@ -593,6 +594,68 @@ ValueRange HostDataOp::getSuccessorInputs(RegionSuccessor successor) {
   return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
+/// Whether the body of a structured `acc.loop` is proven to run. This decides
+/// which edges out of the parent are feasible; the edges out of the region are
+/// unaffected.
+enum class BodyExecution {
+  /// The body runs at least once, so the parent cannot bypass the region.
+  Always,
+  /// The body never runs, so the parent cannot enter the region.
+  Never,
+  /// Neither could be proven, so the parent may do either.
+  Maybe
+};
+
+/// Prove whether the body of `loopOp` runs. A counted dimension whose entry
+/// test already fails at its lower bound runs exactly zero times, so a single
+/// comparison decides both `Always` and `Never`. Bounds that are not constant
+/// prove nothing.
+static BodyExecution getBodyExecution(LoopOp loopOp) {
+  // A container-like loop describes its iteration space inside the region.
+  if (loopOp.isContainerLike())
+    return BodyExecution::Maybe;
+
+  // The verifier guarantees one lower bound, upper bound and step per
+  // dimension.
+  ValueRange lbs = loopOp.getLowerbound();
+  ValueRange ubs = loopOp.getUpperbound();
+  ValueRange steps = loopOp.getStep();
+
+  BodyExecution result = BodyExecution::Always;
+  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
+    std::optional<int64_t> lb = getConstantIntValue(lbs[i]);
+    std::optional<int64_t> ub = getConstantIntValue(ubs[i]);
+    std::optional<int64_t> step = getConstantIntValue(steps[i]);
+    // An unknown bound cannot be tested, and a zero step either spins forever
+    // or never starts. Neither proves `Always`, but a later dimension may
+    // still prove the nest empty: `(0 to %n)` collapsed with `(0 to 0)`.
+    if (!lb || !ub || !step || *step == 0) {
+      result = BodyExecution::Maybe;
+      continue;
+    }
+
+    // The entry test at the lower bound. A descending dimension compares
+    // against its bound the other way round. The attribute is absent when
+    // every dimension is exclusive as in `scf.for`, and the verifier otherwise
+    // guarantees one entry per dimension.
+    std::optional<ArrayRef<bool>> inclusiveUbs =
+        loopOp.getInclusiveUpperbound();
+    bool inclusiveUb = inclusiveUbs && (*inclusiveUbs)[i];
+    assert(*step != 0 && "zero step should have been filtered out");
+    bool runsOnce = *step > 0 ? (inclusiveUb ? *lb <= *ub : *lb < *ub)
+                              : (inclusiveUb ? *lb >= *ub : *lb > *ub);
+    // The dimensions are iterated as a nest, so one empty dimension empties
+    // the whole nest whatever the others do, while the body runs only if every
+    // dimension runs.
+    if (!runsOnce)
+      return BodyExecution::Never;
+  }
+
+  // No dimension was empty, so the body runs unless some dimension was
+  // unknown.
+  return result;
+}
+
 void LoopOp::getSuccessorRegions(RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
   // Unstructured loops: the body may contain arbitrary CFG and early exits.
@@ -607,7 +670,21 @@ void LoopOp::getSuccessorRegions(RegionBranchPoint point,
     return;
   }
 
-  // Structured loops: model a loop-shaped region graph similar to scf.for.
+  // Structured loops: model a loop-shaped region graph similar to scf.for,
+  // minus the entry edge the loop is proven not to take.
+  if (point.isParent()) {
+    switch (getBodyExecution(*this)) {
+    case BodyExecution::Always:
+      regions.push_back(RegionSuccessor(&getRegion()));
+      return;
+    case BodyExecution::Never:
+      regions.push_back(RegionSuccessor(getOperation()));
+      return;
+    case BodyExecution::Maybe:
+      break;
+    }
+  }
+
   regions.push_back(RegionSuccessor(&getRegion()));
   regions.push_back(RegionSuccessor(getOperation()));
 }
@@ -1682,7 +1759,8 @@ static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
                                       Region &initRegion, Value hostVar,
                                       StringRef varName, ValueRange bounds,
                                       bool &needsFree,
-                                      acc::VariableInfoAttr &varInfo) {
+                                      acc::VariableInfoAttr &varInfo,
+                                      SmallVectorImpl<Value> &destroyValues) {
   Type varType = hostVar.getType();
 
   // Create init block with arguments: original value + bounds
@@ -1708,8 +1786,9 @@ static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
     auto typedVar = cast<TypedValue<MappableType>>(blockArgVar);
     auto typedHostVar = cast<TypedValue<MappableType>>(hostVar);
     varInfo = mappableTy.genPrivateVariableInfo(typedHostVar);
-    privatizedValue = mappableTy.generatePrivateInit(
-        builder, loc, typedVar, varName, bounds, {}, varInfo, needsFree);
+    privatizedValue =
+        mappableTy.generatePrivateInit(builder, loc, typedVar, varName, bounds,
+                                       {}, varInfo, needsFree, destroyValues);
     if (!privatizedValue)
       return failure();
   } else {
@@ -1723,7 +1802,9 @@ static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
   }
 
   // Add yield operation to init block
-  acc::YieldOp::create(builder, loc, privatizedValue);
+  SmallVector<Value> initResults{privatizedValue};
+  initResults.append(destroyValues);
+  acc::YieldOp::create(builder, loc, initResults);
 
   return success();
 }
@@ -1779,14 +1860,18 @@ static LogicalResult createCopyRegion(OpBuilder &builder, Location loc,
 /// Returns success if the region is populated, failure otherwise.
 /// The `varInfo` carries language-specific metadata produced by
 /// `createInitRegion`.
-static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
-                                         Region &destroyRegion, Type varType,
-                                         Value allocRes, ValueRange bounds,
-                                         acc::VariableInfoAttr varInfo) {
+static LogicalResult
+createDestroyRegion(OpBuilder &builder, Location loc, Region &destroyRegion,
+                    Type varType, Value allocRes, ValueRange destroyValues,
+                    ValueRange bounds, acc::VariableInfoAttr varInfo) {
   // Create destroy block with arguments: original value + privatized value +
-  // bounds
+  // values preserved for destruction + bounds.
   SmallVector<Type> destroyArgTypes{varType, varType};
   SmallVector<Location> destroyArgLocs{loc, loc};
+  for (Value destroyValue : destroyValues) {
+    destroyArgTypes.push_back(destroyValue.getType());
+    destroyArgLocs.push_back(loc);
+  }
   for (Value bound : bounds) {
     destroyArgTypes.push_back(bound.getType());
     destroyArgLocs.push_back(loc);
@@ -1800,8 +1885,12 @@ static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
       cast<TypedValue<PointerLikeType>>(destroyBlock->getArgument(1));
   if (isa<MappableType>(varType)) {
     auto mappableTy = cast<MappableType>(varType);
-    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree, bounds,
-                                           varInfo))
+    ValueRange destroyArgs =
+        destroyBlock->getArguments().slice(2, destroyValues.size());
+    ValueRange destroyBounds =
+        destroyBlock->getArguments().drop_front(2 + destroyValues.size());
+    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree, destroyArgs,
+                                           destroyBounds, varInfo))
       return failure();
   } else {
     assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
@@ -1878,13 +1967,16 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   OpBuilder::InsertionGuard guard(builder);
 
   // Create the recipe operation first so regions have proper parent context
-  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
+  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName,
+                                        /*sym_visibility=*/nullptr, varType);
 
   // Populate the init region
   bool needsFree = false;
   acc::VariableInfoAttr varInfo;
+  SmallVector<Value> destroyValues;
   if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), hostVar,
-                              varName, bounds, needsFree, varInfo))) {
+                              varName, bounds, needsFree, varInfo,
+                              destroyValues))) {
     recipe.erase();
     return std::nullopt;
   }
@@ -1897,7 +1989,8 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
     Value allocRes = yieldOp.getOperand(0);
 
     if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
-                                   varType, allocRes, bounds, varInfo))) {
+                                   varType, allocRes, destroyValues, bounds,
+                                   varInfo))) {
       recipe.erase();
       return std::nullopt;
     }
@@ -1913,7 +2006,8 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   // Create the private.recipe op with the same type as the firstprivate.recipe.
   OpBuilder::InsertionGuard guard(builder);
   auto varType = firstprivRecipe.getType();
-  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName, varType);
+  auto recipe = PrivateRecipeOp::create(builder, loc, recipeName,
+                                        /*sym_visibility=*/nullptr, varType);
 
   // Clone the init region
   IRMapping mapping;
@@ -1975,7 +2069,8 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   OpBuilder::InsertionGuard guard(builder);
 
   // Create the recipe operation first so regions have proper parent context
-  auto recipe = FirstprivateRecipeOp::create(builder, loc, recipeName, varType);
+  auto recipe = FirstprivateRecipeOp::create(
+      builder, loc, recipeName, /*sym_visibility=*/nullptr, varType);
 
   // Populate the init region
   bool needsFree = false;
@@ -1983,8 +2078,10 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   // then passed through to copy/destroy so generateCopy /
   // generatePrivateDestroy receive the same metadata as generatePrivateInit.
   acc::VariableInfoAttr varInfo;
+  SmallVector<Value> destroyValues;
   if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), hostVar,
-                              varName, bounds, needsFree, varInfo))) {
+                              varName, bounds, needsFree, varInfo,
+                              destroyValues))) {
     recipe.erase();
     return std::nullopt;
   }
@@ -2004,7 +2101,8 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
     Value allocRes = yieldOp.getOperand(0);
 
     if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
-                                   varType, allocRes, bounds, varInfo))) {
+                                   varType, allocRes, destroyValues, bounds,
+                                   varInfo))) {
       recipe.erase();
       return std::nullopt;
     }
@@ -4643,18 +4741,22 @@ static ParseResult parseBindName(OpAsmParser &parser,
   llvm::SmallVector<mlir::Attribute> deviceStrTypeAttrs;
 
   if (failed(parser.parseCommaSeparatedList([&]() {
+        llvm::SMLoc attrLoc = parser.getCurrentLocation();
         mlir::Attribute newAttr;
         bool isSymbolRefAttr;
-        auto parseResult = parser.parseAttribute(newAttr);
+        if (parser.parseAttribute(newAttr))
+          return failure();
         if (auto symbolRefAttr = dyn_cast<mlir::SymbolRefAttr>(newAttr)) {
           bindIdNameAttrs.push_back(symbolRefAttr);
           isSymbolRefAttr = true;
         } else if (auto stringAttr = dyn_cast<mlir::StringAttr>(newAttr)) {
           bindStrNameAttrs.push_back(stringAttr);
           isSymbolRefAttr = false;
-        }
-        if (parseResult)
+        } else {
+          parser.emitError(attrLoc,
+                           "expected symbol reference or string attribute");
           return failure();
+        }
         if (failed(parser.parseOptionalLSquare())) {
           if (isSymbolRefAttr) {
             deviceIdTypeAttrs.push_back(mlir::acc::DeviceTypeAttr::get(

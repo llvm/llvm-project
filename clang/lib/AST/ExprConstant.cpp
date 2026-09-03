@@ -9018,9 +9018,9 @@ public:
           const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
           FunctionTemplateDecl *CallOpTemplate =
               LambdaCallOp->getDescribedFunctionTemplate();
-          void *InsertPos = nullptr;
+          llvm::FoldingSetInsertToken InsertToken;
           FunctionDecl *CorrespondingCallOpSpecialization =
-              CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+              CallOpTemplate->findSpecialization(TAL->asArray(), InsertToken);
           assert(CorrespondingCallOpSpecialization &&
                  "We must always have a function call operator specialization "
                  "that corresponds to our static invoker specialization");
@@ -16557,7 +16557,7 @@ static QualType getObjectType(APValue::LValueBase B) {
 /// Ex. For E = `(short*)((char*)(&foo))`, returns `&foo`
 ///
 /// Always returns an RValue with a pointer representation.
-static const Expr *ignorePointerCastsAndParens(const Expr *E) {
+const Expr *ignorePointerCastsAndParens(const Expr *E) {
   assert(E->isPRValue() && E->getType()->hasPointerRepresentation());
 
   const Expr *NoParens = E->IgnoreParens();
@@ -23107,7 +23107,10 @@ std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type);
+    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(
+        Info, this, Type,
+        /*IsDynamic=*/false);
+
   return tryEvaluateBuiltinObjectSize(this, Type, Info);
 }
 
@@ -23122,31 +23125,25 @@ EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
   if (!EvaluatePointer(E, String, Info))
     return std::nullopt;
 
-  QualType CharTy = E->getType()->getPointeeType();
-
   // Fast path: if it's a string literal, search the string value.
   if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
           String.getLValueBase().dyn_cast<const Expr *>())) {
     StringRef Str = S->getBytes();
     int64_t Off = String.Offset.getQuantity();
-    if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size() &&
-        S->getCharByteWidth() == 1 &&
-        // FIXME: Add fast-path for wchar_t too.
-        Info.Ctx.hasSameUnqualifiedType(CharTy, Info.Ctx.CharTy)) {
-      Str = Str.substr(Off);
-
-      StringRef::size_type Pos = Str.find(0);
-      if (Pos != StringRef::npos)
-        Str = Str.substr(0, Pos);
-
-      if (StringResult)
+    if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size()) {
+      UnsignedOrNone ZeroIndex = S->findZeroCodeUnit(Off);
+      if (StringResult) {
+        if (ZeroIndex)
+          Str = Str.substr(Off, *ZeroIndex);
         *StringResult = Str;
-      return Str.size();
-    }
+      }
 
-    // Fall through to slow path.
+      return ZeroIndex.value_or(Str.size());
+    }
+    // For an invalid index, fall through to the offset handling below.
   }
 
+  QualType CharTy = E->getType()->getPointeeType();
   // Slow path: scan the bytes of the string looking for the terminating 0.
   for (uint64_t Strlen = 0; /**/; ++Strlen) {
     APValue Char;

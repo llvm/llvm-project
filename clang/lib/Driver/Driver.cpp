@@ -999,7 +999,7 @@ static TripleSet inferOffloadToolchains(Compilation &C,
         C.getArgs().hasFlag(options::OPT_foffload_via_llvm,
                             options::OPT_fno_offload_via_llvm, false);
     if (!UsesLLVMOffloading) {
-      if (Kind == Action::OFK_HIP && !ID.isAMDGPU() && !ID.isSPIRV()) {
+      if (Kind == Action::OFK_HIP && !ID.isAMDGPU() && !ID.isAMDGCNSPIRV()) {
         C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
             << "HIP" << Arch;
         return {};
@@ -1182,6 +1182,20 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       }
 
       C.addOffloadDeviceToolChain(&TC, Kind);
+    }
+  }
+
+  // Non-RDC SYCL device code is finalized by a clang-linker-wrapper job
+  // bound to one device toolchain, so only one SYCL target can be requested
+  // for now. This restriction might be relaxed in future updates.
+  if (Kinds.contains(Action::OFK_SYCL)) {
+    const Arg *RDCArg = C.getInputArgs().getLastArg(options::OPT_fgpu_rdc,
+                                                    options::OPT_fno_gpu_rdc);
+    if (RDCArg && RDCArg->getOption().matches(options::OPT_fno_gpu_rdc)) {
+      auto TCRange = C.getOffloadToolChains<Action::OFK_SYCL>();
+      if (std::distance(TCRange.first, TCRange.second) > 1)
+        Diag(clang::diag::err_drv_sycl_no_rdc_multiple_targets)
+            << RDCArg->getAsString(C.getInputArgs());
     }
   }
 }
@@ -4918,7 +4932,7 @@ static StringRef getCanonicalArchString(Compilation &C,
         << "CUDA" << ArchStr;
     return StringRef();
   } else if (Triple.isAMDGPU()) {
-    if (Arch.isUnknown() || (!Arch.isAMDGPU() && !Arch.isSPIRV())) {
+    if (Arch.isUnknown() || (!Arch.isAMDGPU() && !Arch.isAMDGCNSPIRV())) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
           << "HIP" << ArchStr;
       return StringRef();
@@ -4938,7 +4952,7 @@ static StringRef getCanonicalArchString(Compilation &C,
   if (Arch.isNVPTX())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
-  if (Arch.isAMDGPU() || Arch.isSPIRV()) {
+  if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
     llvm::StringMap<bool> Features;
     std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
     if (!Arch) {
@@ -5105,6 +5119,12 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
   bool HIPNoRDC =
       C.isOffloadingHostKind(Action::OFK_HIP) &&
       !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+
+  // SYCL defaults to relocatable device code.
+  bool SYCLNoRDC =
+      C.isOffloadingHostKind(Action::OFK_SYCL) &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                    /*Default=*/true);
 
   bool HIPRelocatableObj =
       C.isOffloadingHostKind(Action::OFK_HIP) &&
@@ -5295,10 +5315,10 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     DDep.add(*FatbinAction,
              *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
              /*BA=*/{}, Action::OFK_HIP);
-  } else if (!UsesLLVMOffloading && HIPNoRDC) {
+  } else if ((!UsesLLVMOffloading && HIPNoRDC) || SYCLNoRDC) {
     // Host + device assembly: defer to clang-offload-bundler (see
     // BuildActions).
-    if (HIPAsmBundleDeviceOut &&
+    if (HIPNoRDC && HIPAsmBundleDeviceOut &&
         shouldBundleHIPAsmWithNewDriver(C, Args, C.getDriver())) {
       for (Action *OA : OffloadActions)
         HIPAsmBundleDeviceOut->push_back(OA);
@@ -5309,15 +5329,16 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     Action *PackagerAction =
         C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
 
-    // For HIP non-RDC compilation, wrap the device binary with linker wrapper
-    // before bundling with host code. Do not bind a specific GPU arch here,
-    // as the packaged image may contain entries for multiple GPUs.
+    // For non-RDC compilation, wrap the device binary with linker wrapper
+    // before bundling with host code. Do not bind a specific arch here, as the
+    // packaged binary may contain entries for multiple archs.
+    Action::OffloadKind Kind = SYCLNoRDC ? Action::OFK_SYCL : Action::OFK_HIP;
+    types::ID FatbinType =
+        SYCLNoRDC ? types::TY_SYCL_FATBIN : types::TY_HIP_FATBIN;
     ActionList AL{PackagerAction};
-    PackagerAction =
-        C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_HIP_FATBIN);
-    DDep.add(*PackagerAction,
-             *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
-             /*BA=*/{}, Action::OFK_HIP);
+    PackagerAction = C.MakeAction<LinkerWrapperJobAction>(AL, FatbinType);
+    DDep.add(*PackagerAction, *C.getOffloadToolChains(Kind).first->second,
+             /*BA=*/{}, Kind);
   } else {
     // Package all the offloading actions into a single output that can be
     // embedded in the host and linked.

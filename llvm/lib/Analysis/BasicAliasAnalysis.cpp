@@ -585,6 +585,11 @@ struct BasicAAResult::DecomposedGEP {
   }
 };
 
+// Results of analyzing variable GEP indices for offset-based disambiguation.
+struct BasicAAResult::VariableGEPOffsetInfo {
+  APInt GCD;
+  ConstantRange OffsetRange;
+};
 
 /// If V is a symbolic pointer expression, decompose it into a base pointer
 /// with a constant offset and a number of scaled symbolic offsets.
@@ -1152,8 +1157,7 @@ AliasResult BasicAAResult::aliasGEP(
   // If an inbounds GEP would have to start from an out of bounds address
   // for the two to alias, then we can assume noalias.
   // TODO: Remove !isScalable() once BasicAA fully support scalable location
-  // size
-
+  // size.
   if (DecompGEP1.NWFlags.isInBounds() && DecompGEP1.VarIndices.empty() &&
       V2Size.hasValue() && !V2Size.isScalable() &&
       DecompGEP1.Offset.sge(V2Size.getValue()) &&
@@ -1229,15 +1233,15 @@ AliasResult BasicAAResult::aliasGEP(
         return AR;
       }
       return AliasResult::NoAlias;
-    } else {
-      // We can use the getVScaleRange to prove that Off >= (CR.upper * LSize).
-      ConstantRange CR = getVScaleRange(&F, Off.getBitWidth());
-      bool Overflow;
-      APInt UpperRange = CR.getUnsignedMax().umul_ov(
-          APInt(Off.getBitWidth(), LSize.getKnownMinValue()), Overflow);
-      if (!Overflow && Off.uge(UpperRange))
-        return AliasResult::NoAlias;
     }
+
+    // We can use the getVScaleRange to prove that Off >= (CR.upper * LSize).
+    ConstantRange CR = getVScaleRange(&F, Off.getBitWidth());
+    bool Overflow;
+    APInt UpperRange = CR.getUnsignedMax().umul_ov(
+        APInt(Off.getBitWidth(), LSize.getKnownMinValue()), Overflow);
+    if (!Overflow && Off.uge(UpperRange))
+      return AliasResult::NoAlias;
   }
 
   // VScale Alias Analysis - Given one scalable offset between accesses and a
@@ -1285,7 +1289,7 @@ AliasResult BasicAAResult::aliasGEP(
       !V2Size.isScalable() && DecompGEP1.Offset.uge(V2Size.getValue()))
     return AliasResult::NoAlias;
 
-  // Bail on analysing scalable LocationSize
+  // Bail on analyzing scalable LocationSize.
   if (V1Size.isScalable() || V2Size.isScalable())
     return AliasResult::MayAlias;
 
@@ -1296,55 +1300,10 @@ AliasResult BasicAAResult::aliasGEP(
       !isUIntN(BW, V1Size.getValue()) || !isUIntN(BW, V2Size.getValue()))
     return AliasResult::MayAlias;
 
-  APInt GCD;
-  ConstantRange OffsetRange = ConstantRange(DecompGEP1.Offset);
-  for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
-    const VariableGEPIndex &Index = DecompGEP1.VarIndices[i];
-    const APInt &Scale = Index.Scale;
-
-    SimplifyQuery SQ(DL, DT, &AC, Index.CxtI, /*UseInstrInfo=*/true);
-    KnownBits Known = computeKnownBits(Index.Val.V, SQ);
-
-    APInt ScaleForGCD = Scale;
-    if (!Index.IsNSW)
-      ScaleForGCD =
-          APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
-
-    // If V has known trailing zeros, V is a multiple of 2^VarTZ, so
-    // V*Scale is a multiple of ScaleForGCD * 2^VarTZ. Shift ScaleForGCD
-    // left to account for this (trailing zeros compose additively through
-    // multiplication, even in Z/2^n).
-    unsigned VarTZ = Known.countMinTrailingZeros();
-    if (VarTZ > 0) {
-      unsigned MaxShift =
-          Scale.getBitWidth() - ScaleForGCD.getSignificantBits();
-      ScaleForGCD <<= std::min(VarTZ, MaxShift);
-    }
-
-    if (i == 0)
-      GCD = ScaleForGCD.abs();
-    else
-      GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
-
-    ConstantRange CR =
-        computeConstantRange(Index.Val.V, /*ForSigned=*/false, SQ);
-    CR = CR.intersectWith(
-        ConstantRange::fromKnownBits(Known, /* Signed */ true),
-        ConstantRange::Signed);
-    CR = Index.Val.evaluateWith(CR).sextOrTrunc(OffsetRange.getBitWidth());
-
-    assert(OffsetRange.getBitWidth() == Scale.getBitWidth() &&
-           "Bit widths are normalized to MaxIndexSize");
-    if (Index.IsNSW)
-      CR = CR.smul_sat(ConstantRange(Scale));
-    else
-      CR = CR.smul_fast(ConstantRange(Scale));
-
-    if (Index.IsNegated)
-      OffsetRange = OffsetRange.sub(CR);
-    else
-      OffsetRange = OffsetRange.add(CR);
-  }
+  // Analyze the variable indices, and compute the GCD that the total
+  // variable offset is guaranteed to be a multiple of, and its approximate
+  // range.
+  auto [GCD, OffsetRange] = analyzeVariableOffsets(DecompGEP1, DT);
 
   // We now have accesses at two offsets from the same base:
   //  1. (...)*GCD + DecompGEP1.Offset with size V1Size
@@ -1359,8 +1318,8 @@ AliasResult BasicAAResult::aliasGEP(
       (GCD - ModOffset).uge(V1Size.getValue()))
     return AliasResult::NoAlias;
 
-  // Compute ranges of potentially accessed bytes for both accesses. If the
-  // interseciton is empty, there can be no overlap.
+  // If the ranges of potentially accessed bytes are disjoint, there cannot be
+  // any overlap.
   ConstantRange Range1 = OffsetRange.add(
       ConstantRange(APInt(BW, 0), APInt(BW, V1Size.getValue())));
   ConstantRange Range2 =
@@ -1368,56 +1327,9 @@ AliasResult BasicAAResult::aliasGEP(
   if (Range1.intersectWith(Range2).isEmptySet())
     return AliasResult::NoAlias;
 
-  // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
-  // potentially wrapping math.
-  auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
-    if (Var.IsNSW)
-      return true;
-
-    int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
-    // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
-    // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
-    // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
-    int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
-    if (MaxScaleValueBW <= 0)
-      return false;
-    return Var.Scale.ule(
-        APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
-  };
-
-  // Try to determine the range of values for VarIndex such that
-  // VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex.
-  std::optional<APInt> MinAbsVarIndex;
-  if (DecompGEP1.VarIndices.size() == 1) {
-    // VarIndex = Scale*V.
-    const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
-    if (Var.Val.TruncBits == 0 &&
-        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
-      // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
-      // presence of potentially wrapping math.
-      if (MultiplyByScaleNoWrap(Var)) {
-        // If V != 0 then abs(VarIndex) >= abs(Scale).
-        MinAbsVarIndex = Var.Scale.abs();
-      }
-    }
-  } else if (DecompGEP1.VarIndices.size() == 2) {
-    // VarIndex = Scale*V0 + (-Scale)*V1.
-    // If V0 != V1 then abs(VarIndex) >= abs(Scale).
-    // Check that MayBeCrossIteration is false, to avoid reasoning about
-    // inequality of values across loop iterations.
-    const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
-    const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
-    if (Var0.hasNegatedScaleOf(Var1) && Var0.Val.TruncBits == 0 &&
-        Var0.Val.hasSameCastsAs(Var1.Val) && !AAQI.MayBeCrossIteration &&
-        MultiplyByScaleNoWrap(Var0) && MultiplyByScaleNoWrap(Var1) &&
-        isKnownNonEqual(Var0.Val.V, Var1.Val.V,
-                        SimplifyQuery(DL, DT, &AC, /*CxtI=*/Var0.CxtI
-                                                       ? Var0.CxtI
-                                                       : Var1.CxtI)))
-      MinAbsVarIndex = Var0.Scale.abs();
-  }
-
-  if (MinAbsVarIndex) {
+  // If a minimum absolute variable offset can be established, employ it to
+  // prove that the two accesses are far enough apart.
+  if (auto MinAbsVarIndex = computeMinAbsVarOffset(DecompGEP1, DT, AAQI)) {
     // The constant offset will have added at least +/-MinAbsVarIndex to it.
     APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
     APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
@@ -1427,7 +1339,9 @@ AliasResult BasicAAResult::aliasGEP(
       return AliasResult::NoAlias;
   }
 
-  if (constantOffsetHeuristic(DecompGEP1, V1Size, V2Size, &AC, DT, AAQI))
+  // As a last attempt, search for a constant offset between the variable
+  // indices that GetLinearExpression could not extract through casts.
+  if (computeConstantOffsetHeuristic(DecompGEP1, V1Size, V2Size, &AC, DT, AAQI))
     return AliasResult::NoAlias;
 
   // Statically, we can see that the base objects are the same, but the
@@ -2005,12 +1919,124 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
   }
 }
 
-bool BasicAAResult::constantOffsetHeuristic(const DecomposedGEP &GEP,
-                                            LocationSize MaybeV1Size,
-                                            LocationSize MaybeV2Size,
-                                            AssumptionCache *AC,
-                                            DominatorTree *DT,
-                                            const AAQueryInfo &AAQI) {
+BasicAAResult::VariableGEPOffsetInfo
+BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
+                                      DominatorTree *DT) {
+  APInt GCD;
+  ConstantRange OffsetRange(GEP.Offset);
+
+  for (unsigned I = 0, E = GEP.VarIndices.size(); I != E; ++I) {
+    const VariableGEPIndex &Index = GEP.VarIndices[I];
+    const APInt &Scale = Index.Scale;
+
+    SimplifyQuery SQ(DL, DT, &AC, Index.CxtI, /*UseInstrInfo=*/true);
+    KnownBits Known = computeKnownBits(Index.Val.V, SQ);
+
+    APInt ScaleForGCD = Scale;
+    if (!Index.IsNSW)
+      ScaleForGCD =
+          APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
+
+    // If V has known trailing zeros, V is a multiple of 2^VarTZ, so
+    // V*Scale is a multiple of ScaleForGCD * 2^VarTZ. Shift ScaleForGCD
+    // left to account for this (trailing zeros compose additively through
+    // multiplication, even in Z/2^n).
+    unsigned VarTZ = Known.countMinTrailingZeros();
+    if (VarTZ > 0) {
+      unsigned MaxShift =
+          Scale.getBitWidth() - ScaleForGCD.getSignificantBits();
+      ScaleForGCD <<= std::min(VarTZ, MaxShift);
+    }
+
+    if (I == 0)
+      GCD = ScaleForGCD.abs();
+    else
+      GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
+
+    ConstantRange CR =
+        computeConstantRange(Index.Val.V, /*ForSigned=*/false, SQ);
+    CR =
+        CR.intersectWith(ConstantRange::fromKnownBits(Known, /*IsSigned=*/true),
+                         ConstantRange::Signed);
+    CR = Index.Val.evaluateWith(CR).sextOrTrunc(OffsetRange.getBitWidth());
+
+    assert(OffsetRange.getBitWidth() == Scale.getBitWidth() &&
+           "Bit widths are normalized to MaxIndexSize");
+    if (Index.IsNSW)
+      CR = CR.smul_sat(ConstantRange(Scale));
+    else
+      CR = CR.smul_fast(ConstantRange(Scale));
+
+    if (Index.IsNegated)
+      OffsetRange = OffsetRange.sub(CR);
+    else
+      OffsetRange = OffsetRange.add(CR);
+  }
+
+  return {GCD, OffsetRange};
+}
+
+std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
+    const DecomposedGEP &GEP, DominatorTree *DT, const AAQueryInfo &AAQI) {
+  // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
+  // potentially wrapping math.
+  auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
+    if (Var.IsNSW)
+      return true;
+
+    int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
+    // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
+    // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
+    // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
+    int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
+    if (MaxScaleValueBW <= 0)
+      return false;
+    return Var.Scale.ule(
+        APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
+  };
+
+  const auto &VarIndices = GEP.VarIndices;
+  if (VarIndices.size() == 1) {
+    // VarIndex = Scale*V.
+    const VariableGEPIndex &Var = VarIndices[0];
+    if (Var.Val.TruncBits == 0 &&
+        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
+      // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
+      // presence of potentially wrapping math.
+      if (MultiplyByScaleNoWrap(Var)) {
+        // If V != 0 then abs(VarIndex) >= abs(Scale).
+        return Var.Scale.abs();
+      }
+    }
+    return std::nullopt;
+  }
+
+  if (VarIndices.size() == 2) {
+    // VarIndex = Scale*V0 + (-Scale)*V1.
+    // If V0 != V1 then abs(VarIndex) >= abs(Scale).
+    // Check that MayBeCrossIteration is false, to avoid reasoning about
+    // inequality of values across loop iterations.
+    const VariableGEPIndex &Var0 = VarIndices[0];
+    const VariableGEPIndex &Var1 = VarIndices[1];
+    if (Var0.hasNegatedScaleOf(Var1) && Var0.Val.TruncBits == 0 &&
+        Var0.Val.hasSameCastsAs(Var1.Val) && !AAQI.MayBeCrossIteration &&
+        MultiplyByScaleNoWrap(Var0) && MultiplyByScaleNoWrap(Var1) &&
+        isKnownNonEqual(Var0.Val.V, Var1.Val.V,
+                        SimplifyQuery(DL, DT, &AC, /*CxtI=*/Var0.CxtI
+                                                       ? Var0.CxtI
+                                                       : Var1.CxtI)))
+      return Var0.Scale.abs();
+  }
+
+  return std::nullopt;
+}
+
+bool BasicAAResult::computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
+                                                   LocationSize MaybeV1Size,
+                                                   LocationSize MaybeV2Size,
+                                                   AssumptionCache *AC,
+                                                   DominatorTree *DT,
+                                                   const AAQueryInfo &AAQI) {
   if (GEP.VarIndices.size() != 2 || !MaybeV1Size.hasValue() ||
       !MaybeV2Size.hasValue())
     return false;

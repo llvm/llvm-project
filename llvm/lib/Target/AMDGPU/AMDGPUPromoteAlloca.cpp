@@ -892,6 +892,27 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
   return I;
 }
 
+/// Peel nested aggregates down to a single uniform element type, multiplying
+/// NumElems by the element count of each layer peeled.
+static Type *peelAggregateToElementType(Type *Ty, uint64_t &NumElems) {
+  while (true) {
+    if (auto *ArrayTy = dyn_cast<ArrayType>(Ty)) {
+      NumElems *= ArrayTy->getNumElements();
+      Ty = ArrayTy->getElementType();
+      continue;
+    }
+
+    auto *StructTy = dyn_cast<StructType>(Ty);
+    if (!StructTy || !StructTy->containsHomogeneousTypes())
+      break;
+
+    NumElems *= StructTy->getNumElements();
+    Ty = StructTy->getElementType(0);
+  }
+
+  return Ty;
+}
+
 FixedVectorType *
 AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   if (DisablePromoteAllocaToVector) {
@@ -900,13 +921,9 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   }
 
   auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
-  if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
+  if (AllocaTy->isAggregateType()) {
     uint64_t NumElems = 1;
-    Type *ElemTy;
-    do {
-      NumElems *= ArrayTy->getNumElements();
-      ElemTy = ArrayTy->getElementType();
-    } while ((ArrayTy = dyn_cast<ArrayType>(ElemTy)));
+    Type *ElemTy = peelAggregateToElementType(AllocaTy, NumElems);
 
     // Check for array of vectors
     auto *InnerVectorTy = dyn_cast<FixedVectorType>(ElemTy);
@@ -1731,21 +1748,12 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
     case Intrinsic::strip_invariant_group: {
-      SmallVector<Value *> Args;
-      if (Intr->getIntrinsicID() == Intrinsic::invariant_start) {
-        Args.emplace_back(Intr->getArgOperand(0));
-      } else if (Intr->getIntrinsicID() == Intrinsic::invariant_end) {
-        Args.emplace_back(Intr->getArgOperand(0));
-        Args.emplace_back(Intr->getArgOperand(1));
-      }
-      Args.emplace_back(Offset);
-      Function *F = Intrinsic::getOrInsertDeclaration(
-          Intr->getModule(), Intr->getIntrinsicID(), Offset->getType());
-      CallInst *NewIntr =
-          CallInst::Create(F, Args, Intr->getName(), Intr->getIterator());
-      Intr->mutateType(NewIntr->getType());
-      Intr->replaceAllUsesWith(NewIntr);
-      Intr->eraseFromParent();
+      assert(Intr->getArgOperand(Intr->arg_size() - 1)->getType() == NewPtrTy &&
+             "pointer operand should already have been promoted");
+      Function *NewF = Intrinsic::getOrInsertDeclaration(
+          Intr->getModule(), Intr->getIntrinsicID(), NewPtrTy);
+      Intr->mutateType(NewF->getReturnType());
+      Intr->setCalledFunction(NewF);
       continue;
     }
     case Intrinsic::objectsize: {

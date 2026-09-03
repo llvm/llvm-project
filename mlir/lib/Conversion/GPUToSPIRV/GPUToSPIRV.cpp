@@ -317,13 +317,9 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
   copyGPUProperty(funcOp.getWorkgroupAttributionsAttrName(),
                   funcOp.getWorkgroupAttributionsAttr());
   for (const auto &discardableAttr :
-       funcOp->getDiscardableAttrDictionary().getValue()) {
-    if (discardableAttr.getName() == funcOp.getFunctionTypeAttrName() ||
-        discardableAttr.getName() == SymbolTable::getSymbolAttrName())
-      continue;
+       funcOp->getDiscardableAttrDictionary().getValue())
     newFuncOp->setDiscardableAttr(discardableAttr.getName(),
                                   discardableAttr.getValue());
-  }
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                               newFuncOp.end());
@@ -541,7 +537,8 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
   // Require the shuffle width to be the same as the target's subgroup size,
   // given that for SPIR-V non-uniform subgroup ops, we cannot select
   // participating invocations.
-  auto targetEnv = getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
+  const spirv::TargetEnv &targetEnv =
+      getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
   unsigned subgroupSize =
       targetEnv.getAttr().getResourceLimits().getSubgroupSize();
   IntegerAttr widthAttr;
@@ -964,7 +961,8 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
         makeVarName(moduleOp, llvm::Twine(globalVarName) + "_sc");
 
     return spirv::SpecConstantOp::create(
-        rewriter, loc, rewriter.getStringAttr(specCstName), attr);
+        rewriter, loc, rewriter.getStringAttr(specCstName), attr,
+        /*sym_visibility=*/nullptr);
   };
   {
     Operation *parent =
@@ -1000,7 +998,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
     specCstComposite = spirv::SpecConstantCompositeOp::create(
         rewriter, loc, TypeAttr::get(globalType),
         rewriter.getStringAttr(specCstCompositeName),
-        rewriter.getArrayAttr(constituents));
+        rewriter.getArrayAttr(constituents), /*sym_visibility=*/nullptr);
 
     auto ptrType = spirv::PointerType::get(
         globalType, spirv::StorageClass::UniformConstant);

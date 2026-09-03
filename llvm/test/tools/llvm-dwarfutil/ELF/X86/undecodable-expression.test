@@ -1,0 +1,17 @@
+## Test that an expression the DWARF parser cannot decode is carried across
+## unmodified instead of being silently dropped. The operation below is a
+## DW_OP_LLVM_user DW_OP_LLVM_NVIDIA_mux, whose selector implies operands that
+## are not known here, so decoding stops at it. Everything from that operation
+## onwards must still appear in the output.
+
+# RUN: yaml2obj %p/Inputs/undecodable-expression.yaml -o %t.o
+
+# RUN: llvm-dwarfutil %t.o %t1
+# RUN: llvm-dwarfdump -debug-info %t1 | FileCheck %s
+
+# RUN: llvm-dwarfutil --linker parallel %t.o %t1
+# RUN: llvm-dwarfdump -debug-info %t1 | FileCheck %s
+
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_name{{.*}}"var"
+# CHECK-NEXT:   DW_AT_location{{.*}}e9 0d a5 01 9f

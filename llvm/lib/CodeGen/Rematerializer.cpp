@@ -529,8 +529,7 @@ void Rematerializer::addRegIfRematerializable(
 
   // Check that the register's definitions can be rematerialized.
   SmallPtrSet<MachineInstr *, 1> DefSet;
-  for (MachineOperand &MO : MRI.def_operands(DefReg)) {
-    MachineInstr &DefMI = *MO.getParent();
+  for (MachineInstr &DefMI : MRI.def_instructions(DefReg)) {
     // If a single MI has multiple defs for the same register, we don't need to
     // redo MI-based checks.
     if (!DefSet.insert(&DefMI).second)
@@ -631,8 +630,7 @@ void Rematerializer::addRegIfRematerializable(
     // register under consideration makes the latter unrematerializable.
     SlotIndex FirstDefSlot = LIS.getInstructionIndex(*RematReg.getFirstDef());
     for (const auto &[UnrematDepReg, _] : UnrematDeps) {
-      for (MachineOperand &UnrematMODef : MRI.def_operands(UnrematDepReg)) {
-        MachineInstr &UnrematDefMI = *UnrematMODef.getParent();
+      for (MachineInstr &UnrematDefMI : MRI.def_instructions(UnrematDepReg)) {
         SlotIndex UnrematDefSlot = LIS.getInstructionIndex(UnrematDefMI);
         if (UnrematDefSlot > FirstDefSlot || UnrematDefSlot < LastDefSlot)
           return;
@@ -657,7 +655,8 @@ bool Rematerializer::isMIRematerializable(const MachineInstr &MI) const {
     // We can't remat physreg uses, unless it is a constant or an ignorable
     // use (e.g. implicit exec use on VALU instructions)
     if (MO.getReg().isPhysical()) {
-      if (MRI.isConstantPhysReg(MO.getReg()) || TII.isIgnorableUse(MO))
+      if (MRI.isConstantPhysReg(MO.getReg()) ||
+          TII.isIgnorableUse(MI, MI.getOperandNo(&MO)))
         continue;
       return false;
     }

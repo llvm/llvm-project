@@ -10,25 +10,22 @@ define void @test_edge_detection_conditional_branch() {
 ; CHECK-LABEL: test_edge_detection_conditional_branch:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %start
-; CHECK-NEXT:    suba.l #12, %sp
-; CHECK-NEXT:    .cfi_def_cfa_offset -16
-; CHECK-NEXT:    movem.l %d2, (8,%sp) ; 8-byte Folded Spill
+; CHECK-NEXT:    suba.l #4, %sp
+; CHECK-NEXT:    .cfi_def_cfa_offset -8
 ; CHECK-NEXT:    bra .LBB0_1
 ; CHECK-NEXT:  .LBB0_1: ; %condition_check
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jsr get1
-; CHECK-NEXT:    move.b (7,%sp), %d2
-; CHECK-NEXT:    and.b #1, %d2
-; CHECK-NEXT:    move.b %d0, %d1
-; CHECK-NEXT:    sub.b %d2, %d1
-; CHECK-NEXT:    movem.w %d0, (4,%sp)
+; CHECK-NEXT:    move.b (3,%sp), %d1
+; CHECK-NEXT:    and.b #1, %d1
+; CHECK-NEXT:    cmp.b %d1, %d0
+; CHECK-NEXT:    movem.w %d0, (0,%sp)
 ; CHECK-NEXT:    bne .LBB0_1
 ; CHECK-NEXT:    bra .LBB0_2
 ; CHECK-NEXT:  .LBB0_2: ; %do_something
-; CHECK-NEXT:    movem.w (4,%sp), %d0
-; CHECK-NEXT:    move.b %d0, (7,%sp)
-; CHECK-NEXT:    movem.l (8,%sp), %d2 ; 8-byte Folded Reload
-; CHECK-NEXT:    adda.l #12, %sp
+; CHECK-NEXT:    movem.w (0,%sp), %d0
+; CHECK-NEXT:    move.b %d0, (3,%sp)
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 start:
   %prev_state = alloca [1 x i8], align 1
