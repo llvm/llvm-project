@@ -185,6 +185,17 @@ LLVM_ABI const AMDGPUFeatureBitset &getFeatureBitset(GPUKind AK);
 LLVM_ABI void getFeatureNames(const AMDGPUFeatureBitset &Features,
                               SmallVectorImpl<StringRef> &Names);
 
+/// Returns the feature bit named \p Name (e.g. "dot1-insts"), or nullopt if it
+/// is not a frontend-visible feature. This is the inverse of getFeatureNames.
+LLVM_ABI std::optional<AMDGPUFeature> parseFeature(StringRef Name);
+
+/// Applies a comma-separated list of "+feature"/"-feature" modifiers (an
+/// -mattr-style string) to \p Features. Returns the offending entry if one is
+/// missing its +/- prefix or names an unknown feature, in which case the
+/// preceding entries have already been applied; returns nullopt on success.
+LLVM_ABI std::optional<StringRef>
+applyFeatureModifiers(StringRef Modifiers, AMDGPUFeatureBitset &Features);
+
 /// Append the valid AMDGCN GPU names to \p Values. If \p SubArch is not
 /// NoSubArch, only GPUs compatible with that subarch (see isCPUValidForSubArch)
 /// are appended.

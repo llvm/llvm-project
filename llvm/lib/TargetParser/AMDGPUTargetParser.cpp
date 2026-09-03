@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/ADT/Twine.h"
@@ -343,6 +344,42 @@ void AMDGPU::getFeatureNames(const AMDGPUFeatureBitset &Features,
     if (Features.test(I))
       Names.push_back(AMDGPUNameStrTab[AMDGPUFeatureNames[I]]);
   }
+}
+
+std::optional<AMDGPUFeature> AMDGPU::parseFeature(StringRef Name) {
+  // The feature bits are emitted in name order, so the names this indexes are
+  // sorted.
+  const StringTable::Offset *It = llvm::lower_bound(
+      AMDGPUFeatureNames, Name, [](StringTable::Offset O, StringRef N) {
+        return AMDGPUNameStrTab[O] < N;
+      });
+  if (It == std::end(AMDGPUFeatureNames) || AMDGPUNameStrTab[*It] != Name)
+    return std::nullopt;
+  return static_cast<AMDGPUFeature>(It - std::begin(AMDGPUFeatureNames));
+}
+
+std::optional<StringRef>
+AMDGPU::applyFeatureModifiers(StringRef Modifiers,
+                              AMDGPUFeatureBitset &Features) {
+  while (!Modifiers.empty()) {
+    StringRef Entry;
+    std::tie(Entry, Modifiers) = Modifiers.split(',');
+    Entry = Entry.trim();
+
+    if (Entry.empty())
+      continue;
+
+    char Sign = Entry.front();
+    std::optional<AMDGPUFeature> Feature = parseFeature(Entry.drop_front());
+    if ((Sign != '+' && Sign != '-') || !Feature)
+      return Entry;
+
+    if (Sign == '+')
+      Features.set(*Feature);
+    else
+      Features.reset(*Feature);
+  }
+  return std::nullopt;
 }
 
 void AMDGPU::fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values,

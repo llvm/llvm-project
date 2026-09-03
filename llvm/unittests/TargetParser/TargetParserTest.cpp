@@ -2856,6 +2856,58 @@ TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
   EXPECT_TRUE(Empty.empty());
 }
 
+TEST(TargetParserTest, testAMDGPUParseFeature) {
+  // parseFeature is the inverse of getFeatureNames, so every bit must round
+  // trip. This also covers the sorted-index table the lookup binary searches:
+  // the enum is in declaration order, which is not name order.
+  for (unsigned I = 0; I != AMDGPU::NUM_FEATURES; ++I) {
+    AMDGPU::AMDGPUFeatureBitset Single;
+    Single.set(I);
+    SmallVector<StringRef, 0> Names;
+    AMDGPU::getFeatureNames(Single, Names);
+    ASSERT_EQ(Names.size(), 1u);
+    EXPECT_EQ(AMDGPU::parseFeature(Names[0]),
+              static_cast<AMDGPU::AMDGPUFeature>(I))
+        << "round trip failed for '" << Names[0] << "'";
+  }
+
+  // Catch sorting subtleties.
+  EXPECT_EQ(AMDGPU::parseFeature("dot1-insts"), AMDGPU::FEAT_DOT1_INSTS);
+  EXPECT_EQ(AMDGPU::parseFeature("dot10-insts"), AMDGPU::FEAT_DOT10_INSTS);
+
+  EXPECT_EQ(AMDGPU::parseFeature(""), std::nullopt);
+  EXPECT_EQ(AMDGPU::parseFeature("not-a-feature"), std::nullopt);
+  EXPECT_EQ(AMDGPU::parseFeature("+dot1-insts"), std::nullopt);
+  EXPECT_EQ(AMDGPU::parseFeature("sram-ecc"), std::nullopt);
+}
+
+TEST(TargetParserTest, testAMDGPUApplyFeatureModifiers) {
+  AMDGPU::AMDGPUFeatureBitset Bits =
+      AMDGPU::getFeatureBitset(AMDGPU::GK_GFX900);
+  ASSERT_TRUE(Bits.test(AMDGPU::FEAT_DPP));
+  ASSERT_FALSE(Bits.test(AMDGPU::FEAT_MAI_INSTS));
+
+  EXPECT_EQ(AMDGPU::applyFeatureModifiers("+mai-insts,-dpp", Bits),
+            std::nullopt);
+  EXPECT_TRUE(Bits.test(AMDGPU::FEAT_MAI_INSTS));
+  EXPECT_FALSE(Bits.test(AMDGPU::FEAT_DPP));
+
+  // Whitespace and empty entries are tolerated.
+  EXPECT_EQ(AMDGPU::applyFeatureModifiers(" +dpp , ,", Bits), std::nullopt);
+  EXPECT_TRUE(Bits.test(AMDGPU::FEAT_DPP));
+
+  // An empty modifier list leaves the set alone.
+  AMDGPU::AMDGPUFeatureBitset Before = Bits;
+  EXPECT_EQ(AMDGPU::applyFeatureModifiers("", Bits), std::nullopt);
+  EXPECT_EQ(Bits, Before);
+
+  // A malformed or unknown entry is reported verbatim, sign included.
+  EXPECT_EQ(AMDGPU::applyFeatureModifiers("dpp", Bits), "dpp");
+  EXPECT_EQ(AMDGPU::applyFeatureModifiers("+nonsense", Bits), "+nonsense");
+  EXPECT_EQ(AMDGPU::applyFeatureModifiers("+dpp,~mai-insts", Bits),
+            "~mai-insts");
+}
+
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
   SmallVector<StringRef, 0> All;
   AMDGPU::fillValidArchListAMDGCN(All, Triple::NoSubArch);
