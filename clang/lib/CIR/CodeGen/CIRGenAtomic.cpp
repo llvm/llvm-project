@@ -703,7 +703,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__scoped_atomic_load_n:
-  case AtomicExpr::AO__scoped_atomic_load: {
+  case AtomicExpr::AO__scoped_atomic_load:
   case AtomicExpr::AO__hip_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
     cir::LoadOp load =
