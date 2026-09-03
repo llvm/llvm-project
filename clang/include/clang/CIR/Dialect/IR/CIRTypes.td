@@ -647,6 +647,99 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 }
 
 //===----------------------------------------------------------------------===//
+// BitFieldType
+//
+// The member type of a bit-field access unit.
+//===----------------------------------------------------------------------===//
+
+def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
+  let summary = "CIR bit-field access unit member type";
+  let description = [{
+    A run of bit-fields shares one access unit. A record has one member per
+    access unit, and that member has this type. The `storage_type` is the unit
+    the record stores, and `fields` says which bit-fields the source packed into
+    it, in declaration order.
+
+    The unit answers where the bits live, and `fields` answers how the fields
+    were declared in the user's source code. The storage type can be narrower
+    than the declared type of a bit-field within it, and the fields in it need
+    not agree on a declared type.
+
+    A zero-width bit-field belongs to no unit.  It is spelled as a member with
+    no `storage_type` and a single zero-width field, which occupies no bytes of
+    the record and becomes no field of the lowered LLVM struct.  Every other
+    member of this type owns the bytes of its unit.
+
+    Examples:
+
+    ```
+        // struct S { int a : 4; int b : 27; };
+        !rec_S = !cir.struct<"S"
+            {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 4>,
+                                            #cir.bitfield_decl<!s32i, 27>]>}>
+
+        // struct M { int a : 2; long long b : 30; };
+        !rec_M = !cir.struct<"M"
+            {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 2>,
+                                            #cir.bitfield_decl<!s64i, 30>]>,
+             pad !cir.array<!u8i x 4>}>
+
+        // struct Tail { int x; unsigned : 0; };
+        !rec_Tail = !cir.struct<"Tail"
+            {data !s32i,
+             empty !cir.bitfield<[#cir.bitfield_decl<!u32i, 0, unnamed>]>}>
+    ```
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"mlir::Type">:$storage_type,
+    OptionalArrayRefParameter<"cir::BitFieldDeclAttr">:$fields
+  );
+
+  // Storage comes first when there is any.  A zero-width bit-field has none,
+  // and is spelled as the list on its own.  An empty list parses so that the
+  // verifier is the one to reject it.
+  let assemblyFormat = [{
+    `<` (`[`) : ($storage_type^ `,` `[`)?
+        (`]`) : (qualified($fields)^ `]`)? `>`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Whether this member owns the bytes of an access unit.  Only a
+    /// zero-width bit-field does not, and it is the only member of this type
+    /// that contributes neither size nor alignment to its record and becomes
+    /// no field of the lowered LLVM struct.
+    bool ownsBytes() const { return static_cast<bool>(getStorageType()); }
+
+    /// Whether this member is a zero-width bit-field, which holds no bits and
+    /// exists only to end the run of bit-fields before it.
+    bool isZeroWidth() const { return !ownsBytes(); }
+
+    /// Whether the source can read any of the bit-fields in this unit.
+    bool holdsNamedField() const {
+      return llvm::any_of(getFields(), [](cir::BitFieldDeclAttr decl) {
+        return !decl.getIsUnnamed();
+      });
+    }
+
+    /// Where the bit-field at \p idx starts within the unit, counted from the
+    /// unit's first bit.  The fields of a unit are contiguous and in
+    /// declaration order, so this is the widths of the fields ahead of it.
+    uint64_t getFieldBitOffset(unsigned idx) const {
+      uint64_t offset = 0;
+      for (cir::BitFieldDeclAttr decl : getFields().take_front(idx))
+        offset += decl.getWidth();
+      return offset;
+    }
+  }];
+
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // RecordMemberKind
 //
 // What a record member holds, and whether its extent is a declared one.
@@ -667,26 +760,27 @@ def CIR_RecordMemberKind : CIR_I32EnumAttr<
     field, a vtable pointer, or a base subobject.  They differ only on whether
     it holds data for argument passing.
 
-    `bitfield` is a bit-field access unit holding at least one named
-    bit-field.  A unit can be narrower than the declared type of the bit-fields
-    it holds, so its extent does not answer what the source declared.  Without
-    it, a unit holding a 32-bit bit-field of `long long` would be
+    `bitfield` is a bit-field access unit the source can read at least one
+    bit-field of, and its member type is `!cir.bitfield`.  The mark is needed
+    because a unit can be narrower than the declared type of a bit-field in it:
+    without it, a 32-bit unit holding a bit-field of `long long` would be
     indistinguishable from an `unsigned` field, and clang's x86-64 lowering
     coerces two records that differ only in that to `i64` and `i32`.
 
-    An access unit holding only unnamed bit-fields is `empty`, since it carries
-    no data for argument passing.  A consumer that has to recognize one can:
-    among `empty` members only an access unit occupies bytes, everything else
-    the source declared as empty for the ABI occupies none.
+    A unit of nothing but unnamed bit-fields is `empty`, since no field of the
+    source reads it, even though it still holds data for argument passing.  A
+    zero-width bit-field is unnamed by definition, so it is always `empty`, and
+    it is the only bit-field member that holds no such data.
 
     A union's base subobject is the one exception to all of this: a single
-    member stands in for every variant, and it takes a unit mark as soon as any
-    variant is one, whatever its own storage type came from.
+    member stands in for every variant, and it takes a bit-field mark as soon
+    as any variant is one, whatever its own storage type came from.
 
     A record is empty for the ABI when no member is `data` or `bitfield`, which
-    is vacuously true for a record with no members.  The distinction between
-    `pad` and the rest is load-bearing beyond that: only `pad` is reusable, so a
-    record whose trailing member is an unnamed bit-field unit keeps that unit in
+    is trivially true for a record with no members, and when no `empty` member
+    is an access unit of unnamed bit-fields.  The distinction between `pad` and
+    the rest is load-bearing beyond that: only `pad` is reusable, so a record
+    whose trailing member is a unit of unnamed bit-fields keeps that unit in
     its data size.
   }];
 
@@ -741,7 +835,9 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
         !rec_packed   = !cir.struct<"p1" packed {data !u8i, data !u8i}>
         !rec_pad      = !cir.struct<"p3" {data !u8i, pad !cir.array<!u8i x 3>}>
         !rec_empty    = !cir.struct<"e" {empty !u8i}>
-        !rec_bits     = !cir.struct<"b" {bitfield !u8i, empty !u8i}>
+        !rec_bits     = !cir.struct<"b"
+            {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>,
+             empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>}>
         !recursive    = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
     ```
   }];
@@ -826,6 +922,11 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                               unsigned idx) const;
 
+    /// The field of the lowered LLVM struct that member \p idx is stored in.
+    /// A zero-width bit-field owns no bytes and is left out of the LLVM body,
+    /// so the two numberings differ from there on.
+    unsigned getLLVMFieldIndex(unsigned idx) const;
+
     /// Marks are provenance rather than layout, so two records that differ
     /// only in how their members were produced are layout-identical.
     bool isLayoutIdentical(const StructType &other);
@@ -897,7 +998,9 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
         !u_anonymous  = !cir.union<{data !s32i, data !u8i}>
         !u_padded     = !cir.union<"U" {data !s32i, data !u8i}, padding = {!u8i}>
         !u_empty      = !cir.union<"U" {empty !u8i}>
-        !u_bits       = !cir.union<"U" {bitfield !u8i, empty !u8i}>
+        !u_bits       = !cir.union<"U"
+            {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>,
+             empty !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3, unnamed>]>}>
     ```
   }];
 
@@ -1061,7 +1164,7 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
-  CIR_UnionType,
+  CIR_UnionType, CIR_BitFieldType,
   CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceTextureType,
   CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType

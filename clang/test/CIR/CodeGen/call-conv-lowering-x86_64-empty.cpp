@@ -16,6 +16,8 @@ struct NoUnique { [[no_unique_address]] Empty a, b, c; };
 struct NoUniqueOne { [[no_unique_address]] Empty e; };
 struct UnnamedBits { int : 3; };
 struct Reserved { unsigned : 32; };
+struct ReservedBase : Reserved { int i; };
+struct ReservedMem { [[no_unique_address]] Reserved r; int i; };
 struct OneByte { unsigned char c; };
 struct ArrOfEmpty { Empty a[2]; };
 struct HasEmpty { int x; Empty e; };
@@ -82,19 +84,34 @@ int takeNoUniqueOne(NoUniqueOne v, int k) { return k; }
 // CIR: cir.func {{.*}}@_Z15takeNoUniqueOne11NoUniqueOnei(%arg0: !s32i {{.*}}) -> (!s32i
 // LLVM: define dso_local noundef i32 @_Z15takeNoUniqueOne11NoUniqueOnei(i32 noundef %{{[^,]+}})
 
-// Unnamed bit-field storage is marked empty rather than pad, so a record of
-// nothing but unnamed bit-fields carries no data either.
+// Unnamed bit-field storage is marked empty because no field of the source
+// reads it, but the classifier gives it the eightbyte classes of a named
+// bit-field's, so a record of nothing but unnamed bit-fields is still passed.
 int takeUnnamedBits(UnnamedBits v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z15takeUnnamedBits11UnnamedBitsi(%arg0: !s32i {{.*}}) -> (!s32i
-// LLVM-CIR: define dso_local noundef i32 @_Z15takeUnnamedBits11UnnamedBitsi(i32 noundef %{{[^,]+}})
-// LLVM-OGCG: define dso_local noundef i32 @_Z15takeUnnamedBits11UnnamedBitsi(i8 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// CIR: cir.func {{.*}}@_Z15takeUnnamedBits11UnnamedBitsi(%arg0: !u8i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z15takeUnnamedBits11UnnamedBitsi(i8 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
+// The eightbyte is coerced from the access unit, so a wider reservation is
+// passed in a wider register.
 int takeReserved(Reserved v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z12takeReserved8Reservedi(%arg0: !s32i {{.*}}) -> (!s32i
-// LLVM-CIR: define dso_local noundef i32 @_Z12takeReserved8Reservedi(i32 noundef %{{[^,]+}})
-// LLVM-OGCG: define dso_local noundef i32 @_Z12takeReserved8Reservedi(i32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// CIR: cir.func {{.*}}@_Z12takeReserved8Reservedi(%arg0: !u32i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z12takeReserved8Reservedi(i32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+
+// A record reaches that storage through a base the same way it reaches a data
+// member, so the eightbyte covering both is an integer one.
+int takeReservedBase(ReservedBase v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z16takeReservedBase12ReservedBasei(%arg0: !u64i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z16takeReservedBase12ReservedBasei(i64 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+
+// And through a [[no_unique_address]] member, which does not make a record
+// holding an unnamed bit-field empty.
+int takeReservedMem(ReservedMem v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z15takeReservedMem11ReservedMemi(%arg0: !u64i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z15takeReservedMem11ReservedMemi(i64 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // A byte of real data keeps its register.
 int takeOneByte(OneByte v, int k) { return k; }
@@ -161,13 +178,12 @@ Big32 retBig32() { return Big32{}; }
 // CIR: cir.func {{.*}}@_Z8retBig32v(%arg0: !cir.ptr<!rec_Big32> {llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big32, llvm.writable}
 // LLVM: define dso_local void @_Z8retBig32v(ptr dead_on_unwind noalias writable sret(%struct.Big32) align 32 %{{[^,]+}})
 
-// A union of only unnamed bit-fields holds no data, and neither does one with
-// no members at all.
+// A union variant that is an unnamed bit-field holds data the same way a
+// struct member does, so only a union with no members at all holds none.
 int takeUBits(UBits v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z9takeUBits5UBitsi(%arg0: !s32i {{.*}}) -> (!s32i
-// LLVM-CIR: define dso_local noundef i32 @_Z9takeUBits5UBitsi(i32 noundef %{{[^,]+}})
-// LLVM-OGCG: define dso_local noundef i32 @_Z9takeUBits5UBitsi(i8 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// CIR: cir.func {{.*}}@_Z9takeUBits5UBitsi(%arg0: !u8i{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z9takeUBits5UBitsi(i8 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 int takeUNone(UNone v, int k) { return k; }
 
