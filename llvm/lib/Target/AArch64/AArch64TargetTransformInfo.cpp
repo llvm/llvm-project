@@ -69,11 +69,6 @@ static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
 static cl::opt<bool> EnableLSRCostOpt("enable-aarch64-lsr-cost-opt",
                                       cl::init(true), cl::Hidden);
 
-// A complete guess as to a reasonable cost.
-static cl::opt<unsigned>
-    BaseHistCntCost("aarch64-base-histcnt-cost", cl::init(8), cl::Hidden,
-                    cl::desc("The cost of a histcnt instruction"));
-
 static cl::opt<unsigned> DMBLookaheadThreshold(
     "dmb-lookahead-threshold", cl::init(10), cl::Hidden,
     cl::desc("The number of instructions to search for a redundant dmb"));
@@ -564,8 +559,10 @@ static bool isUnpackedVectorVT(EVT VecVT) {
          VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
 }
 
-static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
-                                        const IntrinsicCostAttributes &ICA) {
+InstructionCost
+AArch64TTIImpl::getHistogramCost(const AArch64Subtarget *ST,
+                                 const IntrinsicCostAttributes &ICA,
+                                 TTI::TargetCostKind CostKind) const {
   // We need to know at least the number of elements in the vector of buckets
   // and the size of each element to update.
   if (ICA.getArgTypes().size() < 2)
@@ -575,9 +572,18 @@ static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
   if (!ST->hasSVE2())
     return InstructionCost::getInvalid();
 
-  Type *BucketPtrsTy = ICA.getArgTypes()[0]; // Type of vector of pointers
-  Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
-  unsigned TotalHistCnts = 1;
+  auto *BucketPtrsTy = cast<VectorType>(ICA.getArgTypes()[0]);
+  Type *EltTy = ICA.getArgTypes()[1];
+
+  InstructionCost Cost = 0;
+  /// Get gather/scatter costs.
+  /// TODO: Find a way to get more info about the pointers, so we can determine
+  ///       whether we can use 32b indices or require full 64b pointers.
+  Type *DataTy = VectorType::get(EltTy, BucketPtrsTy->getElementCount());
+  MemIntrinsicCostAttributes GMICA(Intrinsic::masked_gather, DataTy, Align(1));
+  Cost += getGatherScatterOpCost(GMICA, CostKind);
+  MemIntrinsicCostAttributes SMICA(Intrinsic::masked_scatter, DataTy, Align(1));
+  Cost += getGatherScatterOpCost(SMICA, CostKind);
 
   unsigned EltSize = EltTy->getScalarSizeInBits();
   // Only allow (up to 64b) integers or pointers
@@ -594,13 +600,14 @@ static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
     // HistCnt only supports 32b and 64b element types
     unsigned LegalEltSize = EltSize <= 32 ? 32 : 64;
 
-    if (EC == 2 || (LegalEltSize == 32 && EC == 4))
-      return InstructionCost(BaseHistCntCost);
-
+    // HistCnt is the same cost as a vector integer add on 128b implementations,
+    // but will likely increase on wider vector types. Multiply by vscale as
+    // a quick estimate.
+    unsigned VScale = ST->getVScaleForTuning();
     unsigned NaturalVectorWidth = AArch64::SVEBitsPerBlock / LegalEltSize;
-    TotalHistCnts = EC / NaturalVectorWidth;
+    unsigned TotalHistCnts = EC / NaturalVectorWidth;
 
-    return InstructionCost(BaseHistCntCost * TotalHistCnts);
+    return Cost + VScale * TotalHistCnts;
   }
 
   return InstructionCost::getInvalid();
@@ -620,7 +627,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   switch (ICA.getID()) {
   case Intrinsic::experimental_vector_histogram_add: {
-    InstructionCost HistCost = getHistogramCost(ST, ICA);
+    InstructionCost HistCost = getHistogramCost(ST, ICA, CostKind);
     // If the cost isn't valid, we may still be able to scalarize
     if (HistCost.isValid())
       return HistCost;

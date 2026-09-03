@@ -2605,10 +2605,13 @@ public:
       if (!PtrsTy)
         return InstructionCost::getInvalid();
 
+      FixedVectorType *MaskTy = cast<FixedVectorType>(ICA.getArgTypes()[2]);
+      Type *MaskEltTy = MaskTy->getScalarType();
+
       Align Alignment = thisT()->DL.getABITypeAlign(EltTy);
       InstructionCost Cost = 0;
-      Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, PtrsTy,
-                                          CostKind, 1, nullptr, nullptr);
+
+      // Cost the main load->update->store sequence, for one element.
       Cost += thisT()->getMemoryOpCost(Instruction::Load, EltTy, Alignment, 0,
                                        CostKind);
       switch (IID) {
@@ -2636,7 +2639,26 @@ public:
       }
       Cost += thisT()->getMemoryOpCost(Instruction::Store, EltTy, Alignment, 0,
                                        CostKind);
+
+      // Add the cost of a compare + branch for the mask; for a type-only cost
+      // we cannot check whether the mask is all-true.
+      Cost += thisT()->getCmpSelInstrCost(
+          Instruction::ICmp, MaskEltTy, MaskEltTy, CmpInst::ICMP_EQ, CostKind);
+      Cost += thisT()->getCFInstrCost(Instruction::CondBr, CostKind);
+
+      // Multiply to find the cost for all elements.
       Cost *= PtrsTy->getNumElements();
+
+      // Add in the cost of the extracts; the lanes may have different costs.
+      for (unsigned Lane = 0; Lane < PtrsTy->getNumElements(); ++Lane) {
+        // Pointer extract.
+        Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, PtrsTy,
+                                            CostKind, Lane, nullptr, nullptr);
+        // Mask extract.
+        Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, MaskTy,
+                                            CostKind, Lane, nullptr, nullptr);
+      }
+
       return Cost;
     }
     case Intrinsic::get_active_lane_mask: {

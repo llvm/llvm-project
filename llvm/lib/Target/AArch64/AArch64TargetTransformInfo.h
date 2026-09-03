@@ -133,6 +133,12 @@ public:
     return 31;
   }
 
+  /// Gets the cost for a histogram operation, consisting of at least one
+  /// set of gather + histcnt + scatter instructions.
+  InstructionCost getHistogramCost(const AArch64Subtarget *ST,
+                                   const IntrinsicCostAttributes &ICA,
+                                   TTI::TargetCostKind CostKind) const;
+
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
