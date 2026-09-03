@@ -939,7 +939,7 @@ hasHazard(StateT InitialState,
     }
 
     if (!Expired) {
-      unsigned StateIdx = States.size();
+      unsigned StateIdx = static_cast<unsigned>(States.size());
       StateMapKey Key = {&States, StateIdx};
       auto Insertion = StateMap.insert_as(std::pair(Key, StateIdx), State);
       if (Insertion.second) {
@@ -1866,7 +1866,8 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
            (MI.getOpcode() == AMDGPU::S_WAITCNT &&
             !MI.getOperand(0).getImm()) ||
            (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-            AMDGPU::DepCtr::decodeFieldVmVsrc(MI.getOperand(0).getImm()) == 0);
+            AMDGPU::DepCtr::decodeFieldVmVsrc(
+                static_cast<unsigned>(MI.getOperand(0).getImm())) == 0);
   };
 
   if (::getWaitStatesSince(IsHazardFn, MI, IsExpiredFn) ==
@@ -1936,7 +1937,8 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
                (MI.getOperand(0).getReg() == AMDGPU::SGPR_NULL);
       case AMDGPU::S_WAITCNT: {
         const int64_t Imm = MI.getOperand(0).getImm();
-        AMDGPU::Waitcnt Decoded = AMDGPU::decodeWaitcnt(IV, Imm);
+        AMDGPU::Waitcnt Decoded =
+            AMDGPU::decodeWaitcnt(IV, static_cast<unsigned>(Imm));
         // DsCnt corresponds to LGKMCnt here.
         return Decoded.get(AMDGPU::DS_CNT) == 0;
       }
@@ -1998,7 +2000,8 @@ bool GCNHazardRecognizer::fixVcmpxExecWARHazard(MachineInstr *MI) {
           return true;
     }
     if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-        AMDGPU::DepCtr::decodeFieldSaSdst(MI.getOperand(0).getImm()) == 0)
+        AMDGPU::DepCtr::decodeFieldSaSdst(
+            static_cast<unsigned>(MI.getOperand(0).getImm())) == 0)
       return true;
     return false;
   };
@@ -2160,7 +2163,8 @@ bool GCNHazardRecognizer::fixLdsDirectVMEMHazard(MachineInstr *MI) {
            SIInstrInfo::isEXP(I) ||
            (I.getOpcode() == AMDGPU::S_WAITCNT && !I.getOperand(0).getImm()) ||
            (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-            AMDGPU::DepCtr::decodeFieldVmVsrc(I.getOperand(0).getImm()) == 0) ||
+            AMDGPU::DepCtr::decodeFieldVmVsrc(
+                static_cast<unsigned>(I.getOperand(0).getImm())) == 0) ||
            (LdsdirCanWait && SIInstrInfo::isLDSDIR(I) &&
             !TII.getNamedOperand(I, AMDGPU::OpName::waitvsrc)->getImm());
   };
@@ -2225,8 +2229,8 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
     int VALUs = 0;
 
     static unsigned getHashValue(const StateType &State) {
-      return hash_combine(State.ExecPos, State.VALUs,
-                          hash_combine_range(State.DefPos));
+      return static_cast<unsigned>(hash_combine(
+          State.ExecPos, State.VALUs, hash_combine_range(State.DefPos)));
     }
     static bool isEqual(const StateType &LHS, const StateType &RHS) {
       return LHS.DefPos == RHS.DefPos && LHS.ExecPos == RHS.ExecPos &&
@@ -2246,7 +2250,8 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
     if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isDS(I) ||
         SIInstrInfo::isEXP(I) ||
         (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-         AMDGPU::DepCtr::decodeFieldVaVdst(I.getOperand(0).getImm()) == 0))
+         AMDGPU::DepCtr::decodeFieldVaVdst(
+             static_cast<unsigned>(I.getOperand(0).getImm())) == 0))
       return HazardExpired;
 
     // Track registers writes
@@ -2370,7 +2375,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
     int TRANS = 0;
 
     static unsigned getHashValue(const StateType &State) {
-      return hash_combine(State.VALUs, State.TRANS);
+      return static_cast<unsigned>(hash_combine(State.VALUs, State.TRANS));
     }
     static bool isEqual(const StateType &LHS, const StateType &RHS) {
       return LHS.VALUs == RHS.VALUs && LHS.TRANS == RHS.TRANS;
@@ -2389,7 +2394,8 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
     if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isDS(I) ||
         SIInstrInfo::isEXP(I) ||
         (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-         AMDGPU::DepCtr::decodeFieldVaVdst(I.getOperand(0).getImm()) == 0))
+         AMDGPU::DepCtr::decodeFieldVaVdst(
+             static_cast<unsigned>(I.getOperand(0).getImm())) == 0))
       return HazardExpired;
 
     // Track registers writes
@@ -3942,7 +3948,7 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
     SmallSet<Register, 2> HazardSGPRs;
 
     static unsigned getHashValue(const StateType &State) {
-      return hash_combine_range(State.HazardSGPRs);
+      return static_cast<unsigned>(hash_combine_range(State.HazardSGPRs));
     }
     static bool isEqual(const StateType &LHS, const StateType &RHS) {
       return LHS.HazardSGPRs == RHS.HazardSGPRs;
@@ -4128,7 +4134,7 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
   case AMDGPU::S_SETPRIO: {
     // Raise minimum priority unless in workaround.
     auto &PrioOp = MI->getOperand(0);
-    int Prio = PrioOp.getImm();
+    int Prio = static_cast<int>(PrioOp.getImm());
     bool InWA = (Prio == PostExportPriority) &&
                 (It != MBB->begin() && TII.isEXP(*std::prev(It)));
     if (InWA || Prio >= NormalPriority)
@@ -4272,7 +4278,7 @@ bool GCNHazardRecognizer::fixScratchBaseForwardingHazard(MachineInstr *MI) {
 
     auto IsExpiredFn = [=](const MachineInstr &MI, int SgprWrites) {
       if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
-        unsigned Wait = MI.getOperand(0).getImm();
+        unsigned Wait = static_cast<unsigned>(MI.getOperand(0).getImm());
         if (AMDGPU::DepCtr::decodeFieldSaSdst(Wait) == 0 &&
             AMDGPU::DepCtr::decodeFieldVaSdst(Wait) == 0)
           return true;

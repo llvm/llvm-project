@@ -614,7 +614,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
 
       if (MI.getOpcode() == AMDGPU::S_CLAUSE) {
         assert(!ClauseRemaining && "Nested clauses are not supported");
-        ClauseLen = MI.getOperand(0).getImm();
+        ClauseLen = static_cast<unsigned>(MI.getOperand(0).getImm());
         ClauseBreaks = (ClauseLen >> 8) & 15;
         ClauseLen = ClauseRemaining = (ClauseLen & 63) + 1;
         Clause = &MI;
