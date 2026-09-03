@@ -102,6 +102,10 @@ features = [
         ),
     ),
     Feature(
+        name="LIBCXX-WASI-FIXME",
+        when=lambda cfg: "__wasi__" in compilerMacros(cfg),
+    ),
+    Feature(
         name="LIBCXX-AMDGPU-FIXME",
         when=lambda cfg: "__AMDGPU__" in compilerMacros(cfg),
     ),

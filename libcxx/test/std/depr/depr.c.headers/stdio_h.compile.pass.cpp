@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// wasi-libc does not define L_tmpnam or TMP_MAX, and has no tmpfile.
+// UNSUPPORTED: LIBCXX-WASI-FIXME
+
 // Missing some functions/macros.
 // XFAIL: LLVM-LIBC-FIXME
 

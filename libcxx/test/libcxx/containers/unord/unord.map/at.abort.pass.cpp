@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// The test needs a SIGABRT handler to run, which WASI does not deliver.
+// XFAIL: LIBCXX-WASI-FIXME
+
 // <unordered_map>
 
 // class unordered_map

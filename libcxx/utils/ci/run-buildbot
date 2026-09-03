@@ -249,6 +249,63 @@ function test-armv7m-picolibc() {
     check-runtimes
 }
 
+function test-wasm32-wasip1() {
+    clean
+
+    step "Building wasi-libc from source"
+    ${MONOREPO_ROOT}/libcxx/utils/ci/build-wasi-libc.sh \
+        --build-dir "${BUILD_DIR}" \
+        --install-dir "${INSTALL_DIR}" \
+        --target wasm32-wasip1
+
+    if [ -z ${WASM_RUNTIME+x} ]; then
+        step "Installing WasmKit"
+        ${MONOREPO_ROOT}/libcxx/utils/ci/install-wasmkit.sh \
+            --install-dir "${BUILD_DIR}/wasmkit"
+        WASM_RUNTIME="${BUILD_DIR}/wasmkit/wasmkit"
+    fi
+
+    step "Generating CMake for compiler-rt"
+    flags="--sysroot=${INSTALL_DIR} ${WASI_EH_FLAGS}"
+    # The cache file requires WASI_RUNTIME even here, where nothing runs tests.
+    ${CMAKE} \
+        -S "${MONOREPO_ROOT}/compiler-rt" \
+        -B "${BUILD_DIR}/compiler-rt" \
+        -GNinja \
+        ${MAKE_PROGRAM} \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+        -DCMAKE_C_FLAGS="${flags}" \
+        -DCMAKE_CXX_FLAGS="${flags}" \
+        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON \
+        -DWASI_RUNTIME="${WASM_RUNTIME}" \
+        "${@}"
+
+    step "Generating CMake for libc++"
+    generate-cmake-base \
+        -DLLVM_ENABLE_RUNTIMES="${WASI_RUNTIMES}" \
+        -DLIBCXX_CXX_ABI=libcxxabi \
+        -DLIBCXX_TEST_CONFIG="wasm32-wasip1-libc++.cfg.in" \
+        -DLIBCXXABI_TEST_CONFIG="wasm32-wasip1-libc++abi.cfg.in" \
+        -DCMAKE_C_FLAGS="${flags}" \
+        -DCMAKE_CXX_FLAGS="${flags}" \
+        -DWASI_RUNTIME="${WASM_RUNTIME}" \
+        -DWASI_EH_FLAGS="${WASI_EH_FLAGS}" \
+        "${@}"
+
+    step "Installing compiler-rt"
+    ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
+    # compiler-rt normalizes the target triple, so its libraries land next to,
+    # rather than in, the sysroot directory wasi-libc installed to.
+    mv "${INSTALL_DIR}/lib/wasm32-unknown-wasip1"/* "${INSTALL_DIR}/lib/wasm32-wasip1"
+
+    step "Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+
+    step "Running the libc++abi tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
+}
+
 case "${BUILDER}" in
 check-generated-output)
     # `! foo` doesn't work properly with `set -e`, use `! foo || false` instead.
@@ -756,6 +813,27 @@ armv7m-picolibc-no-exceptions)
         -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
         -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
         -DLIBCXXABI_ENABLE_STATIC_UNWINDER=OFF \
+        -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
+        -DLIBCXX_ENABLE_RTTI=OFF
+;;
+wasm32-wasip1)
+    # libc++abi's personality routine needs the wasm entry points in libunwind's
+    # Unwind-wasm.c. Building libunwind for wasm warns about a zero sized
+    # unw_context_t and about thread_local.
+    WASI_RUNTIMES="libcxx;libcxxabi;libunwind"
+    WASI_EH_FLAGS="-fwasm-exceptions -mllvm -wasm-use-legacy-eh=false"
+    test-wasm32-wasip1 \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/WASI.cmake" \
+        -DLIBUNWIND_ENABLE_WERROR=NO
+;;
+wasm32-wasip1-no-exceptions)
+    WASI_RUNTIMES="libcxx;libcxxabi"
+    WASI_EH_FLAGS=""
+    test-wasm32-wasip1 \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/WASI.cmake" \
+        -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
+        -DLIBCXXABI_ENABLE_STATIC_UNWINDER=OFF \
+        -DLIBCXXABI_USE_LLVM_UNWINDER=OFF \
         -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
         -DLIBCXX_ENABLE_RTTI=OFF
 ;;

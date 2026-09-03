@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// wasi-libc does not provide mkstemp, which the test support header uses to
+// create temporary files.
+// UNSUPPORTED: LIBCXX-WASI-FIXME
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME

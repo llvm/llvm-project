@@ -166,7 +166,9 @@ jobs:
           'generic-tsan',
           'generic-ubsan',
           'generic-msan',
-          'bootstrapping-build'
+          'bootstrapping-build',
+          'wasm32-wasip1',
+          'wasm32-wasip1-no-exceptions'
         ]
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3

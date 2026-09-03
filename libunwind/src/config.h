@@ -71,17 +71,16 @@
 #endif
 
 #if defined(_LIBUNWIND_HIDE_SYMBOLS)
-  // The CMake file passes -fvisibility=hidden to control ELF/Mach-O visibility.
-  #define _LIBUNWIND_EXPORT
-  #define _LIBUNWIND_HIDDEN
+// The CMake file passes -fvisibility=hidden to control ELF/Mach-O visibility.
+#define _LIBUNWIND_EXPORT
+#define _LIBUNWIND_HIDDEN
+#elif !defined(__ELF__) && !defined(__MACH__) && !defined(_AIX) &&             \
+    !defined(__wasm__)
+#define _LIBUNWIND_EXPORT __declspec(dllexport)
+#define _LIBUNWIND_HIDDEN
 #else
-  #if !defined(__ELF__) && !defined(__MACH__) && !defined(_AIX)
-    #define _LIBUNWIND_EXPORT __declspec(dllexport)
-    #define _LIBUNWIND_HIDDEN
-  #else
-    #define _LIBUNWIND_EXPORT __attribute__((visibility("default")))
-    #define _LIBUNWIND_HIDDEN __attribute__((visibility("hidden")))
-  #endif
+#define _LIBUNWIND_EXPORT __attribute__((visibility("default")))
+#define _LIBUNWIND_HIDDEN __attribute__((visibility("hidden")))
 #endif
 
 #define STR(a) #a

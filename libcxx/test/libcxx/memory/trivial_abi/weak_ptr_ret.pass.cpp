@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// On wasm, structs are returned through a pointer to the caller's storage.
+// XFAIL: LIBCXX-WASI-FIXME
+
 // <memory>
 
 // Test weak_ptr<T> with trivial_abi as return-type.
