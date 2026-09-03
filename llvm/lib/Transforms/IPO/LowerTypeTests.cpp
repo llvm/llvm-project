@@ -33,7 +33,6 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -74,6 +73,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -116,10 +116,11 @@ static cl::opt<PassSummaryAction> ClSummaryAction(
                           "Export typeid resolutions to summary and globals")),
     cl::Hidden);
 
-static cl::opt<std::string> ClReadSummary(
-    "lowertypetests-read-summary",
-    cl::desc("Read summary from given textual assembly or YAML file before running pass"),
-    cl::Hidden);
+static cl::opt<std::string>
+    ClReadSummary("lowertypetests-read-summary",
+                  cl::desc("Read summary from given textual assembly or YAML "
+                           "file before running pass"),
+                  cl::Hidden);
 
 static cl::opt<std::string> ClWriteSummary(
     "lowertypetests-write-summary",
