@@ -6441,6 +6441,9 @@ def mno_fix_r5900 : Flag<["-"], "mno-fix-r5900">,
                     HelpText<"Disable R5900 short loop erratum fix">;
 def mcompact_branches_EQ : Joined<["-"], "mcompact-branches=">,
                            Group<m_mips_Features_Group>;
+foreach i = {1-31} in
+  def ffixed_#i : Flag<["-"], "ffixed-"#i>, Group<m_Group>,
+    HelpText<"Reserve the MIPS GPR "#i#" register (MIPS only)">;
 } // let Flags = [TargetSpecific]
 def mbranch_likely : Flag<["-"], "mbranch-likely">, Group<m_Group>,
   IgnoredGCCCompat;
