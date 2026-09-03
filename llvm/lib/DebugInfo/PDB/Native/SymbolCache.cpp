@@ -28,7 +28,8 @@
 #include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypePointer.h"
-#include "llvm/DebugInfo/PDB/Native/NativeTypeTypedef.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypeTypedefAlias.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypeTypedefUDT.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeUDT.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeVTShape.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -146,6 +147,10 @@ SymbolCache::createSymbolForModifiedType(codeview::TypeIndex ModifierTI,
   case PDB_SymType::UDT:
     return createSymbol<NativeTypeUDT>(
         static_cast<NativeTypeUDT &>(UnmodifiedNRS), std::move(Record));
+  case PDB_SymType::Typedef:
+    return createSymbol<NativeTypeTypedefAlias>(
+        static_cast<NativeTypeTypedefAlias &>(UnmodifiedNRS),
+        std::move(Record));
   default:
     // No other types can be modified.  (LF_POINTER, for example, records
     // its modifiers a different way.
@@ -232,6 +237,10 @@ SymIndexId SymbolCache::findSymbolByTypeIndex(codeview::TypeIndex Index) const {
     Id = createSymbolForType<NativeTypeVTShape, VFTableShapeRecord>(
         Index, std::move(CVT));
     break;
+  case codeview::LF_ALIAS:
+    Id = createSymbolForType<NativeTypeTypedefAlias, AliasRecord>(
+        Index, std::move(CVT));
+    break;
   default:
     Id = createSymbolPlaceholder();
     break;
@@ -282,7 +291,7 @@ SymIndexId SymbolCache::getOrCreateGlobalSymbolByOffset(uint32_t Offset) {
   switch (CVS.kind()) {
   case SymbolKind::S_UDT: {
     UDTSym US = cantFail(SymbolDeserializer::deserializeAs<UDTSym>(CVS));
-    Id = createSymbol<NativeTypeTypedef>(std::move(US));
+    Id = createSymbol<NativeTypeTypedefUDT>(std::move(US));
     break;
   }
   default:
@@ -680,5 +689,3 @@ SymbolCache::getOrCreateSourceFile(const FileChecksumEntry &Checksums) const {
   Iter->second = Id;
   return Id;
 }
-
-

@@ -428,6 +428,8 @@ public:
                                   TypeIndex TI, LVElement *Element);
   LLVM_ABI Error visitKnownRecord(CVType &Record, EndPrecompRecord &EndPrecomp,
                                   TypeIndex TI, LVElement *Element);
+  LLVM_ABI Error visitKnownRecord(CVType &Record, AliasRecord &Alias,
+                                  TypeIndex TI, LVElement *Element);
 
   LLVM_ABI Error visitUnknownMember(CVMemberRecord &Record, TypeIndex TI);
   LLVM_ABI Error visitKnownMember(CVMemberRecord &Record, BaseClassRecord &Base,
