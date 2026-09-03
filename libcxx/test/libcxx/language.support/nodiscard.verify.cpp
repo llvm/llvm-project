@@ -224,7 +224,7 @@ void test() {
     ::operator new[](0, std::align_val_t{1}, std::nothrow);
 #endif // _LIBCPP_HAS_ALIGNED_ALLOCATION
 
-    // expected-warning@+1 {{ignoring return value of function declared with pure attribute}}
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::get_new_handler();
   }
 
