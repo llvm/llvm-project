@@ -1,4 +1,8 @@
 // RUN: mlir-opt --convert-amdgpu-to-rocdl=chipset=gfx950 --canonicalize %s | FileCheck %s
+// The permlane swaps come from FeaturePermlane16Swap/FeaturePermlane32Swap,
+// which gfx1200 does not have -- but it compares greater than gfx950 by ISA
+// version, so `chipset < kGfx950` lets it through and it lowers identically.
+// RUN: mlir-opt --convert-amdgpu-to-rocdl=chipset=gfx1200 --canonicalize %s | FileCheck %s
 
 // CHECK-LABEL: func @test_permlane16_i32
 // CHECK-SAME: (%[[ARG0:.*]]: i32)
