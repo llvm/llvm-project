@@ -63,8 +63,8 @@ hot:
 
 ## Check that correct veneers are used depending on the target proximity.
 # CHECK-OUTPUT-LABEL: <hot>:
-# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64ADRPThunk_foo>
-# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64Thunk_bar>
+# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64_backward_long_call_foo>
+# CHECK-OUTPUT-NEXT: bl {{.*}} <__AArch64_backward_short_call_bar>
 # CHECK-OUTPUT-NEXT: bl {{.*}} <_start>
 
   .global _start
