@@ -1408,6 +1408,7 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX11-MAD-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX11-MAD-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-MAD-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-MAD-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-MAD-NEXT:    s_cbranch_scc1 .LBB9_2
 ; GFX11-MAD-NEXT:  ; %bb.1: ; %bb3
 ; GFX11-MAD-NEXT:    v_mov_b32_e32 v0, 0
@@ -1475,6 +1476,7 @@ define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], fl
 ; GFX11-FMA-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX11-FMA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FMA-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-FMA-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FMA-NEXT:    s_cbranch_scc1 .LBB9_2
 ; GFX11-FMA-NEXT:  ; %bb.1: ; %bb3
 ; GFX11-FMA-NEXT:    v_mov_b32_e32 v0, 0

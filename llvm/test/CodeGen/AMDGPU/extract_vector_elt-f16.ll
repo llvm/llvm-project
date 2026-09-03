@@ -662,7 +662,7 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 4, v4
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v0, s[2:3]
@@ -705,7 +705,7 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
 ; GFX11-FAKE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 4, v4
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[0:3], v0, s[2:3]
@@ -738,7 +738,7 @@ define amdgpu_kernel void @v_extractelement_v8f16_dynamic_sgpr(ptr addrspace(1) 
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 7
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX11-FAKE16-NEXT:    global_store_b16 v2, v0, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
@@ -909,36 +909,36 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v4, s[2:3]
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v4, s[2:3] offset:16
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 2
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, v9.l, s2
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 3
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, v1.l, s2
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 4
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, v9.l, s2
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 5
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, v2.l, s2
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 6
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v8
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, v1.l, s2
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v3
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 7
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, v3.l, s2
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 8
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, v1.l, s2
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -987,36 +987,36 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[0:3], v4, s[2:3]
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[4:7], v4, s[2:3] offset:16
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 2
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v9, vcc_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 3
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 4
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v9, vcc_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 5
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 6
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v8
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v3
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 7
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 8
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1048,7 +1048,7 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 15
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX11-FAKE16-NEXT:    global_store_b16 v2, v0, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm

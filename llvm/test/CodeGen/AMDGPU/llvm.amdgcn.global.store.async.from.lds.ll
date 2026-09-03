@@ -25,7 +25,6 @@ define amdgpu_ps void @global_store_async_from_lds_b8_vaddr(ptr addrspace(1) %ga
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    global_store_async_from_lds_b8 v[0:1], v2, off offset:16 th:TH_STORE_NT
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -69,7 +68,6 @@ define amdgpu_ps void @global_store_async_from_lds_b32(ptr addrspace(1) %gaddr, 
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    global_store_async_from_lds_b32 v[0:1], v2, off offset:16 th:TH_STORE_HT scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -113,7 +111,6 @@ define amdgpu_ps void @global_store_async_from_lds_b64_vaddr(ptr addrspace(1) %g
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    global_store_async_from_lds_b64 v[0:1], v2, off offset:16 th:TH_STORE_NT_HT scope:SCOPE_DEV
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -157,7 +154,6 @@ define amdgpu_ps void @global_store_async_from_lds_b128_vaddr(ptr addrspace(1) %
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    global_store_async_from_lds_b128 v[0:1], v2, off offset:16 th:TH_STORE_BYPASS scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm

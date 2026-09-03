@@ -42,6 +42,7 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    s_cbranch_execnz .LBB0_1
 ; SDAG-NEXT:  ; %bb.2:
 ; SDAG-NEXT:    s_mov_b32 exec_lo, s12
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_dual_mov_b32 v0, 0x7fc00000 :: v_dual_mov_b32 v1, 1.0
 ; SDAG-NEXT:    s_mov_b32 s0, s8
 ; SDAG-NEXT:    s_mov_b32 s1, s8
@@ -111,9 +112,11 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
 ; GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cbranch_execnz .LBB0_1
 ; GISEL-NEXT:  ; %bb.2:
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s3
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, 0x7fc00000
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GISEL-NEXT:    s_clause 0x2

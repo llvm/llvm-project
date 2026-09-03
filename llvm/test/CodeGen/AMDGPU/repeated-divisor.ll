@@ -89,10 +89,10 @@ define <2 x float> @v_repeat_divisor_f32_x2(float %x, float %y, float %D) #0 {
 ; GFX11-NEXT:    v_fma_f32 v4, -v4, v10, v7
 ; GFX11-NEXT:    v_div_fmas_f32 v3, v3, v5, v8
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f32 v4, v4, v6, v10
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fixup_f32 v0, v3, v2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_div_fixup_f32 v1, v4, v2, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %div0 = fdiv float %x, %D
@@ -228,10 +228,10 @@ define <2 x float> @v_repeat_divisor_f32_x2_arcp_daz(float %x, float %y, float %
 ; GFX11-NEXT:    v_fmac_f32_e32 v6, v7, v4
 ; GFX11-NEXT:    v_fma_f32 v3, -v3, v6, v5
 ; GFX11-NEXT:    s_denorm_mode 12
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_div_fixup_f32 v2, v3, v2, 1.0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

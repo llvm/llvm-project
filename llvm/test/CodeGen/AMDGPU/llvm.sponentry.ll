@@ -12,6 +12,7 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_16(i32 %val) #0 {
 ; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
@@ -32,6 +33,7 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_32(i32 %val) #1 {
 ; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x380
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
@@ -69,19 +71,21 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_control_flow(i32 %val, ptr
 ; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_mov_b32 s0, exec_lo
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    v_cmpx_gt_i32_e32 0x43, v0
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
 ; CHECK-NEXT:    s_getreg_b32 s1, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s1
 ; CHECK-NEXT:    s_cmovk_i32 s1, 0x1c0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-NEXT:  ; %bb.2: ; %if.end
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v1
 ; CHECK-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; CHECK-NEXT:    ; return to shader part epilog
@@ -120,6 +124,7 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_calls(i32 %val) #0 {
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_cmp_lg_u32 0, s0
+; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAGISEL-NEXT:    s_cmovk_i32 s0, 0x1c0
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    ; return to shader part epilog
@@ -139,6 +144,7 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_calls(i32 %val) #0 {
 ; GISEL-NEXT:    s_wait_storecnt 0x0
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_cmp_lg_u32 0, s0
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_cmovk_i32 s0, 0x1c0
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    ; return to shader part epilog
@@ -157,6 +163,7 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_realign(i32 %val) #0 {
 ; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x200
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
@@ -189,8 +196,9 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx(i32 %val, ptr addrspace(5) %pt
 ; DAGISEL-NEXT:    v_mov_b32_e32 v1, s32
 ; DAGISEL-NEXT:  ; %bb.2: ; %if.end
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; DAGISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; DAGISEL-NEXT:    v_mov_b32_e32 v0, v1
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -213,6 +221,7 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx(i32 %val, ptr addrspace(5) %pt
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s1
 ; GISEL-NEXT:  ; %bb.2: ; %if.end
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -325,23 +334,23 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_dyn_alloc(i32 %val) #0 {
 ; DAGISEL-NEXT:    scratch_store_b32 off, v2, s33 offset:8
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
+; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_lshl_add_u32 v3, v0, 2, 15
 ; DAGISEL-NEXT:    s_add_co_i32 s32, s32, 16
-; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_and_b32_e32 v3, -16, v3
 ; DAGISEL-NEXT:    s_or_saveexec_b32 s0, -1
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_cndmask_b32_e64 v1, 0, v3, s0
-; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf
-; DAGISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf
 ; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; DAGISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf
 ; DAGISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf
+; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
 ; DAGISEL-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
 ; DAGISEL-NEXT:    s_wait_dscnt 0x0
 ; DAGISEL-NEXT:    v_max_u32_e32 v1, v1, v2
-; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_readlane_b32 s1, v1, 31
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; DAGISEL-NEXT:    s_mov_b32 s0, s32
@@ -379,25 +388,25 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx_dyn_alloc(i32 %val) #0 {
 ; GISEL-NEXT:    scratch_store_b32 off, v2, s33 offset:8
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_lshl_add_u32 v3, v0, 2, 15
 ; GISEL-NEXT:    s_add_co_i32 s32, s32, 16
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_mov_b32 s0, s32
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_and_b32_e32 v3, -16, v3
 ; GISEL-NEXT:    s_or_saveexec_b32 s1, -1
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, v3, s1
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf
-; GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf
 ; GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GISEL-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
 ; GISEL-NEXT:    s_wait_dscnt 0x0
 ; GISEL-NEXT:    v_max_u32_e32 v1, v1, v2
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_readlane_b32 s2, v1, 31
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s1
 ; GISEL-NEXT:    s_add_co_u32 s32, s0, s2
@@ -442,6 +451,7 @@ define amdgpu_cs_chain void @sponentry_cs_chain(i32 %val, ptr addrspace(5) %ptr)
 ; DAGISEL-NEXT:    v_mov_b32_e32 v0, s32
 ; DAGISEL-NEXT:  ; %bb.2: ; %if.end
 ; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; DAGISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; DAGISEL-NEXT:    scratch_store_b32 v9, v0, off scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
@@ -466,6 +476,7 @@ define amdgpu_cs_chain void @sponentry_cs_chain(i32 %val, ptr addrspace(5) %ptr)
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s1
 ; GISEL-NEXT:  ; %bb.2: ; %if.end
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GISEL-NEXT:    scratch_store_b32 v9, v0, off scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_storecnt 0x0
@@ -591,6 +602,7 @@ define amdgpu_cs_chain void @sponentry_cs_chain_dyn_alloc(i32 %val) #0 {
 ; GISEL-NEXT:    v_max_u32_e32 v0, v0, v1
 ; GISEL-NEXT:    v_readlane_b32 s2, v0, 31
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s1
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s33
 ; GISEL-NEXT:    s_wait_storecnt 0x0
 ; GISEL-NEXT:    scratch_store_b32 off, v8, s0 scope:SCOPE_SYS

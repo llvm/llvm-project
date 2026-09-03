@@ -57,18 +57,21 @@ define amdgpu_kernel void @triangular_loop_scc_liveness(i64 %n) {
 ; GFX1100-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; GFX1100-NEXT:    s_cselect_b32 s3, 0, s1
 ; GFX1100-NEXT:    s_cselect_b32 s2, 0, s0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-NEXT:    s_cmp_eq_u64 s[2:3], 0
 ; GFX1100-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s2
 ; GFX1100-NEXT:  .LBB0_3: ; %TransitionBlock
 ; GFX1100-NEXT:    ; Parent Loop BB0_1 Depth=1
 ; GFX1100-NEXT:    ; => This Inner Loop Header: Depth=2
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB0_3
 ; GFX1100-NEXT:  ; %bb.4: ; %loop.exit.guard
 ; GFX1100-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; GFX1100-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1100-NEXT:    s_mov_b32 vcc_lo, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB0_1
 ; GFX1100-NEXT:  ; %bb.5: ; %DummyReturnBlock
 ; GFX1100-NEXT:    s_endpgm

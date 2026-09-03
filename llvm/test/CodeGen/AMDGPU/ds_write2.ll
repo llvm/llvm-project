@@ -1281,13 +1281,14 @@ define amdgpu_kernel void @write2_sgemm_sequence(ptr addrspace(1) %C, i32 %lda, 
 ; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-UNALIGNED-NEXT:    s_add_co_i32 s1, s1, 1
 ; GFX1250-UNALIGNED-NEXT:    s_mul_i32 s1, ttmp9, s1
-; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-UNALIGNED-NEXT:    s_add_co_i32 s2, s2, s1
 ; GFX1250-UNALIGNED-NEXT:    s_cmp_eq_u32 s3, 0
 ; GFX1250-UNALIGNED-NEXT:    s_cselect_b32 s1, ttmp9, s2
-; GFX1250-UNALIGNED-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1250-UNALIGNED-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX1250-UNALIGNED-NEXT:    s_add_co_i32 s2, s1, 0xc20
+; GFX1250-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-UNALIGNED-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_lshrrev_b32 v0, 8, v0
 ; GFX1250-UNALIGNED-NEXT:    s_addk_co_i32 s1, 0xc60
 ; GFX1250-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
@@ -1317,17 +1318,17 @@ define amdgpu_kernel void @write2_sgemm_sequence(ptr addrspace(1) %C, i32 %lda, 
 ; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250S-UNALIGNED-NEXT:    s_add_co_i32 s1, s1, 1
 ; GFX1250S-UNALIGNED-NEXT:    s_mul_i32 s1, ttmp9, s1
-; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250S-UNALIGNED-NEXT:    s_add_co_i32 s2, s2, s1
 ; GFX1250S-UNALIGNED-NEXT:    s_cmp_eq_u32 s3, 0
 ; GFX1250S-UNALIGNED-NEXT:    s_cselect_b32 s1, ttmp9, s2
+; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250S-UNALIGNED-NEXT:    s_lshl_b32 s2, s1, 2
-; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250S-UNALIGNED-NEXT:    v_dual_mov_b32 v3, s2 :: v_dual_lshrrev_b32 v2, 8, v0
+; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250S-UNALIGNED-NEXT:    v_and_b32_e32 v2, 0xffc, v2
 ; GFX1250S-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250S-UNALIGNED-NEXT:    s_mov_b32 s1, s0
-; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250S-UNALIGNED-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250S-UNALIGNED-NEXT:    ds_store_b64 v3, v[0:1] offset:3104
 ; GFX1250S-UNALIGNED-NEXT:    ds_store_b64 v3, v[0:1] offset:3168

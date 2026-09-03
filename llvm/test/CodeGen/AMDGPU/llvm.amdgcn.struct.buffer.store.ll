@@ -362,6 +362,7 @@ define amdgpu_ps void @struct_buffer_store_f16(<4 x i32> inreg %rsrc, float %v1,
 ; GFX12-TRUE16-NEXT:    v_nop
 ; GFX12-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX12-TRUE16-NEXT:    buffer_store_b16 v0, v1, s[0:3], null idxen
 ; GFX12-TRUE16-NEXT:    s_endpgm
@@ -373,6 +374,7 @@ define amdgpu_ps void @struct_buffer_store_f16(<4 x i32> inreg %rsrc, float %v1,
 ; GFX12-FAKE16-NEXT:    v_nop
 ; GFX12-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX12-FAKE16-NEXT:    buffer_store_b16 v0, v1, s[0:3], null idxen
 ; GFX12-FAKE16-NEXT:    s_endpgm

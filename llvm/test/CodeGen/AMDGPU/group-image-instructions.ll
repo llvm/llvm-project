@@ -21,6 +21,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
 ; GFX11-NEXT:    lds_param_load v2, attr0.y wait_vdst:15
 ; GFX11-NEXT:    lds_param_load v3, attr0.x wait_vdst:15
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_interp_p10_f32 v4, v2, v0, v2 wait_exp:1
 ; GFX11-NEXT:    v_interp_p10_f32 v0, v3, v0, v3 wait_exp:0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)

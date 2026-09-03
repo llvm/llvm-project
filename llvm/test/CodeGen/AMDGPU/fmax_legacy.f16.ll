@@ -138,7 +138,7 @@ define <2 x half> @test_fmax_legacy_ugt_v2f16(<2 x half> %a, <2 x half> %b) #0 {
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e64 s0, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e32 vcc_lo, v3.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v0.l, s0
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.l, v3.l, vcc_lo
@@ -263,11 +263,10 @@ define <3 x half> @test_fmax_legacy_ugt_v3f16(<3 x half> %a, <3 x half> %b) #0 {
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e32 vcc_lo, v0.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e64 s1, v1.l, v3.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e64 s0, v5.l, v4.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, v0.l, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, v5.l, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -422,11 +421,10 @@ define <4 x half> @test_fmax_legacy_ugt_v4f16(<4 x half> %a, <4 x half> %b) #0 {
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e32 vcc_lo, v1.l, v3.l
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e64 s0, v0.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e64 s1, v5.l, v4.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cmp_nle_f16_e64 s2, v7.l, v6.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, v0.l, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, v5.l, s1
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, v6.l, v7.l, s2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]

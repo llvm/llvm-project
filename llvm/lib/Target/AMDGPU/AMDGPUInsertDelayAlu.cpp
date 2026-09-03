@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -117,9 +118,13 @@ public:
     // until it completes.
     uint8_t SALUCycles = 0;
 
+    // Set when this entry was produced by a data fast-forward producer
+    bool IsFFProducer = false;
+
     DelayInfo() = default;
 
-    DelayInfo(DelayType Type, unsigned Cycles) {
+    DelayInfo(DelayType Type, unsigned Cycles, bool IsFFProducer = false)
+        : IsFFProducer(IsFFProducer) {
       switch (Type) {
       default:
         llvm_unreachable("unexpected type");
@@ -143,7 +148,8 @@ public:
     bool operator==(const DelayInfo &RHS) const {
       return VALUCycles == RHS.VALUCycles && VALUNum == RHS.VALUNum &&
              TRANSCycles == RHS.TRANSCycles && TRANSNum == RHS.TRANSNum &&
-             TRANSNumVALU == RHS.TRANSNumVALU && SALUCycles == RHS.SALUCycles;
+             TRANSNumVALU == RHS.TRANSNumVALU && SALUCycles == RHS.SALUCycles &&
+             IsFFProducer == RHS.IsFFProducer;
     }
 
     bool operator!=(const DelayInfo &RHS) const { return !(*this == RHS); }
@@ -157,6 +163,7 @@ public:
       TRANSNum = std::min(TRANSNum, RHS.TRANSNum);
       TRANSNumVALU = std::min(TRANSNumVALU, RHS.TRANSNumVALU);
       SALUCycles = std::max(SALUCycles, RHS.SALUCycles);
+      IsFFProducer = IsFFProducer && RHS.IsFFProducer;
     }
 
     // Update this DelayInfo after issuing an instruction of the specified type.
@@ -344,6 +351,169 @@ public:
     return (Imm & 0x780) ? nullptr : DelayAlu;
   }
 
+  static bool isFastForwardProducer(const MachineInstr &MI,
+                                    const MachineOperand &MO) {
+    assert((MO.isReg() && MO.isDef()) && "Expected a register definition");
+
+    if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
+      return false;
+
+    const TargetRegisterInfo *TRI =
+        MI.getMF()->getSubtarget().getRegisterInfo();
+    Register Reg = MO.getReg();
+    if (AMDGPU::isSGPR(Reg, TRI)) {
+      switch (MI.getOpcode()) {
+      // VOP2 carry-out producers (implicit VCC)
+      case AMDGPU::V_ADD_CO_U32_e32:
+      case AMDGPU::V_SUB_CO_U32_e32:
+      case AMDGPU::V_SUBREV_CO_U32_e32:
+      case AMDGPU::V_ADDC_U32_e32:
+      case AMDGPU::V_SUBB_U32_e32:
+      case AMDGPU::V_SUBBREV_U32_e32:
+      // VOP3 carry-out producers (explicit VCC/SGPR)
+      case AMDGPU::V_ADD_CO_U32_e64:
+      case AMDGPU::V_SUB_CO_U32_e64:
+      case AMDGPU::V_SUBREV_CO_U32_e64:
+      case AMDGPU::V_ADDC_U32_e64:
+      case AMDGPU::V_SUBB_U32_e64:
+      case AMDGPU::V_SUBBREV_U32_e64:
+      case AMDGPU::V_DIV_SCALE_F32_e64:
+      case AMDGPU::V_DIV_SCALE_F64_e64:
+        return true;
+      default:
+        if (MI.isCompare())
+          return true;
+      }
+    }
+    return false;
+  }
+
+  static unsigned int getVOPDComponentOpCode(const MachineInstr &MI,
+                                             unsigned OpNo,
+                                             const MachineOperand &MO) {
+    Register Reg = MO.getReg();
+    auto MIOpCode = MI.getOpcode();
+    // Get the component instruction descriptors for VOPD.
+    auto [OpX, OpY] = AMDGPU::getVOPDComponents(MIOpCode);
+    const MCInstrInfo *MCII = MI.getMF()->getTarget().getMCInstrInfo();
+
+    if (MO.isImplicit()) {
+      const TargetRegisterInfo *TRI =
+          MI.getMF()->getSubtarget().getRegisterInfo();
+      for (unsigned CompOp : {OpX, OpY}) {
+        const MCInstrDesc &CompDesc = MCII->get(CompOp);
+        bool UsesReg = any_of(CompDesc.implicit_uses(), [&](MCPhysReg R) {
+          return TRI->regsOverlap(R, Reg);
+        });
+        if (UsesReg) {
+          MIOpCode = CompOp;
+          break;
+        }
+      }
+    } else {
+      // Explicit source: identify which component/source THIS operand is by
+      // matching its operand index (OpNo). The same register can appear in
+      // multiple slots, so matching by register value is not reliable.
+      const auto &InstInfo = AMDGPU::getVOPDInstInfo(MIOpCode, MCII);
+
+      // Map a parsed source index (0/1/2) to the matching named operand for a
+      // standalone component opcode.
+      static constexpr AMDGPU::OpName SrcNames[] = {
+          AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2};
+
+      bool Found = false;
+      for (auto CompIdx : AMDGPU::VOPD::COMPONENTS) {
+        const auto &CInfo = InstInfo[CompIdx];
+        unsigned CompSrcOperandsNum = CInfo.getCompParsedSrcOperandsNum();
+        for (unsigned CompSrcIdx = 0; CompSrcIdx < CompSrcOperandsNum;
+             ++CompSrcIdx) {
+          if (CInfo.getIndexOfSrcInParsedOperands(CompSrcIdx) != OpNo)
+            continue;
+
+          // Re-target analysis to this component's standalone opcode.
+          MIOpCode = (CompIdx == AMDGPU::VOPD::X) ? OpX : OpY;
+
+          // Translate the parsed src index into MIOpCode's operand-index
+          assert(CompSrcIdx < std::size(SrcNames) &&
+                 "unexpected VOPD src index");
+          int NamedIdx =
+              AMDGPU::getNamedOperandIdx(MIOpCode, SrcNames[CompSrcIdx]);
+          if (NamedIdx >= 0)
+            OpNo = static_cast<unsigned>(NamedIdx);
+          Found = true;
+          break;
+        }
+        if (Found)
+          break;
+      }
+    }
+    return MIOpCode;
+  }
+
+  static bool isFastForwardConsumer(const MachineInstr &MI,
+                                    const MachineOperand &MO, Register VccReg,
+                                    Register ExecReg, unsigned OpNo) {
+    assert((MO.isReg() && MO.isUse()) && "Expected a register use");
+
+    if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
+      return false;
+
+    const TargetRegisterInfo *TRI =
+        MI.getMF()->getSubtarget().getRegisterInfo();
+    Register Reg = MO.getReg();
+    auto MIOpCode = MI.getOpcode();
+
+    if (AMDGPU::isVOPD(MIOpCode)) {
+      MIOpCode = getVOPDComponentOpCode(MI, OpNo, MO);
+    }
+
+    if (TRI->isSubRegisterEq(Reg, VccReg)) {
+      switch (MIOpCode) {
+      case AMDGPU::V_DIV_FMAS_F32_e64:
+      case AMDGPU::V_DIV_FMAS_F64_e64:
+        return false;
+
+      // VOP2 implicit carry-in consumers
+      case AMDGPU::V_ADDC_U32_e32:
+      case AMDGPU::V_SUBB_U32_e32:
+      case AMDGPU::V_SUBBREV_U32_e32:
+      // VOP2 implicit condition mask consumers
+      case AMDGPU::V_CNDMASK_B32_e32:
+      case AMDGPU::V_CNDMASK_B16_fake16_e32:
+      case AMDGPU::V_CNDMASK_B16_t16_e32:
+        return MO.isImplicit();
+      }
+    } else if (TRI->isSubRegisterEq(Reg, ExecReg)) {
+      switch (MIOpCode) {
+      case AMDGPU::V_READLANE_B32:
+      case AMDGPU::V_READFIRSTLANE_B32:
+      case AMDGPU::V_WRITELANE_B32:
+        return false;
+      default:
+        // Any other VALU
+        return MO.isImplicit();
+      }
+    }
+
+    if (AMDGPU::isSGPR(Reg, TRI)) {
+      switch (MIOpCode) {
+      // VOP3 explicit carry-in consumers
+      case AMDGPU::V_ADDC_U32_e64:
+      case AMDGPU::V_SUBB_U32_e64:
+      case AMDGPU::V_SUBBREV_U32_e64:
+      // VOP3 condition mask consumers
+      case AMDGPU::V_CNDMASK_B32_e64:
+      case AMDGPU::V_CNDMASK_B16_fake16_e64:
+      case AMDGPU::V_CNDMASK_B16_t16_e64:
+        int Src2Idx =
+            AMDGPU::getNamedOperandIdx(MIOpCode, AMDGPU::OpName::src2);
+        assert(Src2Idx >= 0 && "Unexpected source index");
+        return OpNo == static_cast<unsigned>(Src2Idx);
+      }
+    }
+    return false;
+  }
+
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB, bool Emit) {
     DelayState State;
     for (auto *Pred : MBB.predecessors())
@@ -392,19 +562,42 @@ public:
         State = DelayState();
       } else if (Type != OTHER) {
         DelayInfo Delay;
+        Register VccReg = AMDGPU::LaneMaskConstants::get(*ST).VccReg;
+        Register ExecReg = AMDGPU::LaneMaskConstants::get(*ST).ExecReg;
+
         // C-reuse: back-to-back WMMAs into the same C register forward the
         // accumulator in place, so the tied srcC read has no dependency. WMMA
         // implies GFX11+, so no explicit subtarget check is needed.
         bool IsWMMACReuse =
             PrevWMMAVDst.isValid() && (SII->isWMMA(MI) || SII->isSWMMAC(MI));
-        // TODO: Scan implicit uses too?
-        for (const auto &Op : MI.explicit_uses()) {
+
+        for (const auto &Op : MI.all_uses()) {
           if (Op.isReg()) {
             // One of the operands of the writelane is also the output operand.
             // This creates the insertion of redundant delays. Hence, we have to
             // ignore this operand.
             if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 && Op.isTied())
               continue;
+
+            Register Reg = Op.getReg();
+            unsigned OperandNo = MI.getOperandNo(&Op);
+            // Skip operands that are not part of the instruction definition
+            if (OperandNo >= MI.getDesc().getNumOperands() &&
+                !MI.getDesc().hasImplicitUseOfPhysReg(
+                    Reg == VccReg ? AMDGPU::VCC : Reg))
+              continue;
+
+            // Suppress the delay for VCC/EXEC/SGPR operands when both the
+            // producer and consumer are in the hardware fast-forward set.
+            if (isFastForwardConsumer(MI, Op, VccReg, ExecReg, OperandNo) &&
+                llvm::all_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+                  auto It = State.find(Unit);
+                  if (It != State.end())
+                    return It->second.IsFFProducer;
+                  return true; // no wait for this regunit if it has no delay
+                })) {
+              continue;
+            }
             // Skip the tied srcC of a C-reuse edge.
             if (IsWMMACReuse && Op.isTied() && Op.getReg() == PrevWMMAVDst)
               continue;
@@ -436,12 +629,18 @@ public:
       }
 
       if (Type != OTHER) {
-        // TODO: Scan implicit defs too?
-        for (const auto &Op : MI.defs()) {
+        for (const auto &Op : MI.all_defs()) {
+          unsigned OperandNo = MI.getOperandNo(&Op);
+          Register Reg = Op.getReg();
+          if (OperandNo >= MI.getDesc().getNumOperands() &&
+              !MI.getDesc().hasImplicitDefOfPhysReg(Reg))
+            continue;
+
           unsigned Latency = SchedModel->computeOperandLatency(
               &MI, Op.getOperandNo(), nullptr, 0);
-          for (MCRegUnit Unit : TRI->regunits(Op.getReg()))
-            State[Unit] = DelayInfo(Type, Latency);
+          DelayInfo Info(Type, Latency, isFastForwardProducer(MI, Op));
+          for (MCRegUnit Unit : TRI->regunits(Reg))
+            State[Unit] = Info;
         }
       }
 

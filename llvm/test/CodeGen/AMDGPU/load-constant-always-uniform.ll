@@ -9,7 +9,7 @@ define amdgpu_cs void @test_uniform_load_b96(ptr addrspace(1) %ptr, i32 %arg) "a
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, v1, v3, vcc_lo
 ; GFX11-NEXT:    global_load_b96 v[2:4], v[2:3], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -23,7 +23,7 @@ define amdgpu_cs void @test_uniform_load_b96(ptr addrspace(1) %ptr, i32 %arg) "a
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_load_b96 v[2:4], v[2:3], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0

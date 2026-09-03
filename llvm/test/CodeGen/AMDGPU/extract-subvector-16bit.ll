@@ -144,6 +144,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_cbranch_scc1 .LBB0_5
 ; GFX11-TRUE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
@@ -181,6 +182,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_cbranch_scc1 .LBB0_5
 ; GFX11-FAKE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
@@ -360,6 +362,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_cbranch_scc1 .LBB1_5
 ; GFX11-TRUE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
@@ -395,6 +398,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_cbranch_scc1 .LBB1_5
 ; GFX11-FAKE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
@@ -574,6 +578,7 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_cbranch_scc1 .LBB2_5
 ; GFX11-TRUE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
@@ -585,10 +590,9 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    v_cmp_nge_f16_e64 s0, 0.5, v3.l
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e64 s2, 0.5, v3.l
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e64 s1, 0.5, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, 0x3d00, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x3d00, v1.l, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.l, 0x3d00, s1
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v1.l, 0x3d00, s2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -611,6 +615,7 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_cbranch_scc1 .LBB2_5
 ; GFX11-FAKE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
@@ -831,6 +836,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_cbranch_scc1 .LBB3_5
 ; GFX11-TRUE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
@@ -872,6 +878,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_cbranch_scc1 .LBB3_5
 ; GFX11-FAKE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
@@ -1094,6 +1101,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_cbranch_scc1 .LBB4_5
 ; GFX11-TRUE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
@@ -1133,6 +1141,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_cbranch_scc1 .LBB4_5
 ; GFX11-FAKE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
@@ -1355,6 +1364,7 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_cbranch_scc1 .LBB5_5
 ; GFX11-TRUE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
@@ -1368,10 +1378,9 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-TRUE16-NEXT:    v_cmp_nge_f16_e64 s0, 0.5, v3.l
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e64 s2, 0.5, v3.l
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e64 s1, 0.5, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, 0x3d00, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x3d00, v1.l, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v1.l, 0x3d00, s1
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v1.l, 0x3d00, s2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1396,6 +1405,7 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_cbranch_scc1 .LBB5_5
 ; GFX11-FAKE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
@@ -1751,6 +1761,7 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_cbranch_scc1 .LBB7_5
 ; GFX11-TRUE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
@@ -1806,6 +1817,7 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_cbranch_scc1 .LBB7_5
 ; GFX11-FAKE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
@@ -2093,6 +2105,7 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_cbranch_scc1 .LBB8_5
 ; GFX11-TRUE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
@@ -2148,6 +2161,7 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_cbranch_scc1 .LBB8_5
 ; GFX11-FAKE16-NEXT:  ; %bb.4: ; %T
 ; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc

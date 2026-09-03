@@ -9,6 +9,7 @@ define amdgpu_cs void @ttracedata_c() {
 ; GFX11-LABEL: ttracedata_c:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_mov_b32 m0, 0xf4240
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_ttracedata
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.ttracedata(i32 1000000)
@@ -19,6 +20,7 @@ define amdgpu_cs void @ttracedata_s(i32 inreg %val) {
 ; GFX11-LABEL: ttracedata_s:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_mov_b32 m0, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_ttracedata
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.ttracedata(i32 %val)
@@ -30,6 +32,7 @@ define amdgpu_cs void @ttracedata_v(i32 %val) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    s_mov_b32 m0, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_ttracedata
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.ttracedata(i32 %val)

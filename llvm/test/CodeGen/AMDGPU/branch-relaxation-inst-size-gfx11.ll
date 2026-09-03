@@ -9,6 +9,7 @@ define amdgpu_kernel void @long_forward_branch_gfx11plus(ptr addrspace(1) %in, p
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x34
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB0_1
 ; GFX11-NEXT:  ; %bb.3: ; %bb0
 ; GFX11-NEXT:    s_getpc_b64 s[6:7]

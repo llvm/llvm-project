@@ -31,6 +31,7 @@ define amdgpu_ps <4 x float> @sample_2d_nsa2(<8 x i32> inreg %rsrc, <4 x i32> in
 ; FORCE-3:       ; %bb.0: ; %main_body
 ; FORCE-3-NEXT:    s_mov_b32 s12, exec_lo
 ; FORCE-3-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; FORCE-3-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FORCE-3-NEXT:    v_mov_b32_e32 v2, v0
 ; FORCE-3-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; FORCE-3-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
@@ -41,6 +42,7 @@ define amdgpu_ps <4 x float> @sample_2d_nsa2(<8 x i32> inreg %rsrc, <4 x i32> in
 ; FORCE-4:       ; %bb.0: ; %main_body
 ; FORCE-4-NEXT:    s_mov_b32 s12, exec_lo
 ; FORCE-4-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; FORCE-4-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FORCE-4-NEXT:    v_mov_b32_e32 v2, v0
 ; FORCE-4-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; FORCE-4-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
@@ -86,6 +88,7 @@ define amdgpu_ps <4 x float> @sample_3d_nsa2(<8 x i32> inreg %rsrc, <4 x i32> in
 ; FORCE-4:       ; %bb.0: ; %main_body
 ; FORCE-4-NEXT:    s_mov_b32 s12, exec_lo
 ; FORCE-4-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; FORCE-4-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FORCE-4-NEXT:    v_mov_b32_e32 v3, v0
 ; FORCE-4-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; FORCE-4-NEXT:    image_sample v[0:3], v[1:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D
@@ -101,6 +104,7 @@ define amdgpu_ps <4 x float> @sample_2d_nsa3(<8 x i32> inreg %rsrc, <4 x i32> in
 ; ATTRIB:       ; %bb.0: ; %main_body
 ; ATTRIB-NEXT:    s_mov_b32 s12, exec_lo
 ; ATTRIB-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; ATTRIB-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; ATTRIB-NEXT:    v_mov_b32_e32 v2, v0
 ; ATTRIB-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; ATTRIB-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
@@ -121,6 +125,7 @@ define amdgpu_ps <4 x float> @sample_2d_nsa3(<8 x i32> inreg %rsrc, <4 x i32> in
 ; FORCE-3:       ; %bb.0: ; %main_body
 ; FORCE-3-NEXT:    s_mov_b32 s12, exec_lo
 ; FORCE-3-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; FORCE-3-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FORCE-3-NEXT:    v_mov_b32_e32 v2, v0
 ; FORCE-3-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; FORCE-3-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
@@ -131,6 +136,7 @@ define amdgpu_ps <4 x float> @sample_2d_nsa3(<8 x i32> inreg %rsrc, <4 x i32> in
 ; FORCE-4:       ; %bb.0: ; %main_body
 ; FORCE-4-NEXT:    s_mov_b32 s12, exec_lo
 ; FORCE-4-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; FORCE-4-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FORCE-4-NEXT:    v_mov_b32_e32 v2, v0
 ; FORCE-4-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; FORCE-4-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
@@ -176,6 +182,7 @@ define amdgpu_ps <4 x float> @sample_3d_nsa3(<8 x i32> inreg %rsrc, <4 x i32> in
 ; FORCE-4:       ; %bb.0: ; %main_body
 ; FORCE-4-NEXT:    s_mov_b32 s12, exec_lo
 ; FORCE-4-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; FORCE-4-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FORCE-4-NEXT:    v_mov_b32_e32 v3, v0
 ; FORCE-4-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; FORCE-4-NEXT:    image_sample v[0:3], v[1:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D
@@ -191,6 +198,7 @@ define amdgpu_ps <4 x float> @sample_2d_nsa4(<8 x i32> inreg %rsrc, <4 x i32> in
 ; ATTRIB:       ; %bb.0: ; %main_body
 ; ATTRIB-NEXT:    s_mov_b32 s12, exec_lo
 ; ATTRIB-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; ATTRIB-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; ATTRIB-NEXT:    v_mov_b32_e32 v2, v0
 ; ATTRIB-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; ATTRIB-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
@@ -211,6 +219,7 @@ define amdgpu_ps <4 x float> @sample_2d_nsa4(<8 x i32> inreg %rsrc, <4 x i32> in
 ; FORCE-3:       ; %bb.0: ; %main_body
 ; FORCE-3-NEXT:    s_mov_b32 s12, exec_lo
 ; FORCE-3-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; FORCE-3-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FORCE-3-NEXT:    v_mov_b32_e32 v2, v0
 ; FORCE-3-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; FORCE-3-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
@@ -221,6 +230,7 @@ define amdgpu_ps <4 x float> @sample_2d_nsa4(<8 x i32> inreg %rsrc, <4 x i32> in
 ; FORCE-4:       ; %bb.0: ; %main_body
 ; FORCE-4-NEXT:    s_mov_b32 s12, exec_lo
 ; FORCE-4-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; FORCE-4-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FORCE-4-NEXT:    v_mov_b32_e32 v2, v0
 ; FORCE-4-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; FORCE-4-NEXT:    image_sample v[0:3], v[1:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
@@ -236,6 +246,7 @@ define amdgpu_ps <4 x float> @sample_3d_nsa4(<8 x i32> inreg %rsrc, <4 x i32> in
 ; ATTRIB:       ; %bb.0: ; %main_body
 ; ATTRIB-NEXT:    s_mov_b32 s12, exec_lo
 ; ATTRIB-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; ATTRIB-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; ATTRIB-NEXT:    v_mov_b32_e32 v3, v0
 ; ATTRIB-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; ATTRIB-NEXT:    image_sample v[0:3], v[1:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D
@@ -266,6 +277,7 @@ define amdgpu_ps <4 x float> @sample_3d_nsa4(<8 x i32> inreg %rsrc, <4 x i32> in
 ; FORCE-4:       ; %bb.0: ; %main_body
 ; FORCE-4-NEXT:    s_mov_b32 s12, exec_lo
 ; FORCE-4-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; FORCE-4-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; FORCE-4-NEXT:    v_mov_b32_e32 v3, v0
 ; FORCE-4-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; FORCE-4-NEXT:    image_sample v[0:3], v[1:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D

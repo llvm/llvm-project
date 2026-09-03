@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgpu10.10 -amdgpu-s-branch-bits=4 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -mtriple=amdgpu9.00 -amdgpu-s-branch-bits=4 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgpu11.00 -amdgpu-s-branch-bits=4 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgpu11.00 -amdgpu-s-branch-bits=4 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11 %s
 
 ; Make sure the code size estimate for inline asm is 12-bytes per
 ; instruction, rather than 8 in previous generations.
@@ -15,6 +15,14 @@
 ; GFX10: s_add_u32
 ; GFX10: s_addc_u32
 ; GFX10: s_setpc_b64
+
+; GFX11: s_cmp_eq_u32
+; GFX11-NEXT: s_delay_alu
+; GFX11-NEXT: s_cbranch_scc0
+; GFX11: s_getpc_b64
+; GFX11: s_add_u32
+; GFX11: s_addc_u32
+; GFX11: s_setpc_b64
 define amdgpu_kernel void @long_forward_branch_gfx10only(ptr addrspace(1) %arg, i32 %cnd) #0 {
 bb0:
   %cmp = icmp eq i32 %cnd, 0

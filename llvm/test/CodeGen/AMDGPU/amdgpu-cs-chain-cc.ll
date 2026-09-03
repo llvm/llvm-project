@@ -651,9 +651,10 @@ define amdgpu_cs_chain void @chain_to_chain_wwm(<3 x i32> inreg %a, <3 x i32> %b
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX11-NEXT:    s_mov_b32 s3, s0
 ; GISEL-GFX11-NEXT:    s_or_saveexec_b32 s0, -1
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-GFX11-NEXT:    v_cndmask_b32_e64 v1, 4, 3, s0
 ; GISEL-GFX11-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v2, v1
 ; GISEL-GFX11-NEXT:    ;;#ASMSTART
 ; GISEL-GFX11-NEXT:    s_nop
@@ -690,7 +691,7 @@ define amdgpu_cs_chain void @chain_to_chain_wwm(<3 x i32> inreg %a, <3 x i32> %b
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s3, s0
 ; DAGISEL-GFX11-NEXT:    v_cndmask_b32_e64 v1, 4, 3, s4
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 exec_lo, s4
-; DAGISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; DAGISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v2, v1
 ; DAGISEL-GFX11-NEXT:    ;;#ASMSTART
 ; DAGISEL-GFX11-NEXT:    s_nop

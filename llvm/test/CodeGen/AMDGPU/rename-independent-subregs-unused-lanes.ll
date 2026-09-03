@@ -15,15 +15,18 @@ define <7 x i32> @multiple_predecessor_unused_lanes(<7 x i32> %ha, i32 %h.sel) {
 ; CHECK-NEXT:    v_dual_mov_b32 v7, v0 :: v_dual_and_b32 v0, 3, v8
 ; CHECK-NEXT:    s_mov_b32 s0, exec_lo
 ; CHECK-NEXT:    v_cmpx_lt_i32_e32 0, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_6
 ; CHECK-NEXT:  ; %bb.1: ; %LeafBlock
 ; CHECK-NEXT:    s_mov_b32 s1, exec_lo
 ; CHECK-NEXT:    v_cmpx_ne_u32_e32 1, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    s_xor_b32 s1, exec_lo, s1
 ; CHECK-NEXT:  ; %bb.2: ; %h.default
 ; CHECK-NEXT:    v_xor_b32_e32 v12, 1, v5
 ; CHECK-NEXT:  ; %bb.3: ; %Flow
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; CHECK-NEXT:    s_and_not1_saveexec_b32 s1, s1
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %h.shuffle
@@ -41,6 +44,7 @@ define <7 x i32> @multiple_predecessor_unused_lanes(<7 x i32> %ha, i32 %h.sel) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:  .LBB0_6: ; %Flow2
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_8
 ; CHECK-NEXT:  ; %bb.7: ; %h.add
@@ -53,7 +57,7 @@ define <7 x i32> @multiple_predecessor_unused_lanes(<7 x i32> %ha, i32 %h.sel) {
 ; CHECK-NEXT:    v_or_b32_e32 v7, 1, v7
 ; CHECK-NEXT:  .LBB0_8: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
 ; CHECK-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
 ; CHECK-NEXT:    v_dual_mov_b32 v4, v11 :: v_dual_mov_b32 v5, v12

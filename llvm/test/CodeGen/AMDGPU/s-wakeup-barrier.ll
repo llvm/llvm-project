@@ -18,6 +18,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
 ; GFX1250-SDAG-NEXT:    s_mov_b32 m0, 1
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_wakeup_barrier m0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_bfe_u32 m0, s0, 0x60004
@@ -34,7 +35,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX1250-GISEL-NEXT:    s_wakeup_barrier 1
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_lshr_b32 s0, s0, 4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_and_b32 m0, s0, 63
 ; GFX1250-GISEL-NEXT:    s_wakeup_barrier m0
 ; GFX1250-GISEL-NEXT:    s_endpgm

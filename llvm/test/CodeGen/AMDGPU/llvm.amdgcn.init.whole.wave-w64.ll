@@ -25,7 +25,7 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i64
 ; GISEL12-NEXT:    s_or_saveexec_b64 s[10:11], -1
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v13, s[10:11]
-; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GISEL12-NEXT:    v_cmp_ne_u32_e64 s[12:13], 0, v0
 ; GISEL12-NEXT:    s_mov_b64 exec, s[10:11]
 ; GISEL12-NEXT:    v_add_nc_u32_e32 v10, 42, v13
@@ -54,7 +54,7 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i64
 ; DAGISEL12-NEXT:    s_or_saveexec_b64 s[10:11], -1
 ; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v13, s[10:11]
-; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s[12:13], 0, v0
 ; DAGISEL12-NEXT:    s_mov_b64 exec, s[10:11]
 ; DAGISEL12-NEXT:    v_add_nc_u32_e32 v10, 42, v13

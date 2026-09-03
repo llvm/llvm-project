@@ -195,7 +195,7 @@ define i32 @frexp_not_inf_clamp_exp_f32(float %x) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
 ; GFX11-NEXT:    v_cmp_class_f32_e64 vcc_lo, v0, 0x1f8
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -253,7 +253,7 @@ define i32 @frexp_inf_or_nan_clamp_exp_f32(float %x) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
 ; GFX11-NEXT:    v_cmp_class_f32_e64 vcc_lo, v0, 0x1f8
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -613,7 +613,7 @@ define <2 x i16> @frexp_nan_clamp_exp_v2f16(<2 x half> %x) {
 ; GFX11-NEXT:    v_frexp_exp_i16_f16_e32 v1.l, v2.l
 ; GFX11-NEXT:    v_cmp_o_f16_e64 s0, v2.l, v2.l
 ; GFX11-NEXT:    v_cndmask_b16 v0.l, 0, v0.h, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b16 v0.h, 0, v1.l, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -700,7 +700,7 @@ define <2 x i16> @frexp_nan_clamp_exp_v2bf16(<2 x bfloat> %x) {
 ; GFX11-NEXT:    v_frexp_exp_i32_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
 ; GFX11-NEXT:    v_cmp_o_f32_e64 s0, v1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b16 v0.h, 0, v3.l, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b16 v0.l, 0, v2.l, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
