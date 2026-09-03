@@ -1,12 +1,15 @@
-; Test that llvm.masked.scatter produces an error when the
-; SPV_INTEL_masked_gather_scatter extension is not enabled, since vector of
-; pointers is not supported in SPIR-V without this extension.
+; Test that llvm.masked.scatter is scalarized into individual stores when the
+; SPV_INTEL_masked_gather_scatter extension is not enabled. The generic
+; ScalarizeMaskedMemIntrin pass handles this before SPIR-V-specific passes run.
 
-; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
 declare void @llvm.masked.scatter.v4i32.v4p1(<4 x i32>, <4 x ptr addrspace(1)>, i32, <4 x i1>)
 
-; CHECK: error: {{.*}}Vector of pointers requires SPV_INTEL_masked_gather_scatter extension
+; CHECK: OpFunction
+; CHECK: OpStore
+; CHECK: OpStore
+; CHECK: OpReturn
 
 define spir_kernel void @test_scatter_no_ext(<4 x i32> %data, <4 x i64> %addrs) {
 entry:
