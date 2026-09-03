@@ -1325,7 +1325,6 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   CM.finish();
 }
 
-
 static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
                                          CodeGenFunction &CGF,
                                          llvm::Value *ShouldDeleteCondition) {

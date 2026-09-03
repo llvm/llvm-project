@@ -16,8 +16,7 @@ namespace clang::CodeGenUtils {
 /// destructor.
 bool CanSkipVTablePointerInitialization(ASTContext &Ctx,
                                         const CXXDestructorDecl *Dtor);
-bool FieldHasTrivialDestructorBody(ASTContext &Context,
-                                          const FieldDecl *Field);
+bool FieldHasTrivialDestructorBody(ASTContext &Context, const FieldDecl *Field);
 /// Determines whether the language options require us to model
 /// unwind exceptions.  We treat -fexceptions as mandating this
 /// except under the fragile ObjC ABI with only ObjC exceptions
@@ -28,6 +27,6 @@ bool hasUnwindExceptions(const LangOptions &LangOpts);
 bool isAAPCS(const TargetInfo &TargetInfo);
 
 bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit);
-}
+} // namespace clang::CodeGenUtils
 
 #endif // LLVM_CLANG_CODEGENUTILS_CODEGENUTILS_H
