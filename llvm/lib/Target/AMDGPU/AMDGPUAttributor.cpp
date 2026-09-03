@@ -1964,7 +1964,7 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
 
     if (ST.hasGFX90AInsts()) {
       A.getOrCreateAAFor<AAAMDGPUMinAGPRAlloc>(IRPosition::function(*F));
-      if (AMDGPU::isEntryFunctionCC(CC)) {
+      if (!AMDGPU::isEntryFunctionCC(CC)) {
         A.getOrCreateAAFor<AAAMDGPUMaxAGPRAlloc>(IRPosition::function(*F));
       }
       A.getOrCreateAAFor<AAAMDGPUAccumOffset>(IRPosition::function(*F));

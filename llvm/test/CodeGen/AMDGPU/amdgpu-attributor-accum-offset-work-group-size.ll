@@ -183,10 +183,10 @@ define amdgpu_kernel void @sat_kernel_1024_noagpr() #1 {
 attributes #0 = { "amdgpu-flat-work-group-size"="1,512" }
 attributes #1 = { "amdgpu-flat-work-group-size"="1,1024" }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-accum-offset"="126" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-accum-offset"="126" "amdgpu-agpr-alloc"="0,0" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR1]] = { "amdgpu-accum-offset"="126" "amdgpu-agpr-alloc"="130" "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR2]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR3]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0,0" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR4]] = { "amdgpu-accum-offset"="200" "amdgpu-agpr-alloc"="56" "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }

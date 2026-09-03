@@ -108,7 +108,7 @@ define internal void @direct_leaf_hivgpr(ptr %p) {
 
 define amdgpu_kernel void @k_direct(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_direct(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    call void @direct_leaf_agpr()
 ; CHECK-NEXT:    call void @direct_leaf_hivgpr(ptr [[P]])
 ; CHECK-NEXT:    call void @direct_use_most()
@@ -133,14 +133,14 @@ define amdgpu_kernel void @k_direct(ptr %p) {
 ;;     /   \
 ;;    B     C
 ;;
-;;   C = indirect_leaf_agpr   : agpr-alloc 50, accum-offset NA (no attribute) 
+;;   C = indirect_leaf_agpr   : agpr-alloc 50, accum-offset NA (no attribute)
 ;;   B = indirect_leaf_hivgpr : agpr-alloc 0,  accum-offset NA
-;;   A = k_indirect           : no attributes                           
+;;   A = k_indirect           : no attributes
 ;; ===========================================================================
 
 define internal void @indirect_use_most() {
 ; CHECK-LABEL: define internal void @indirect_use_most(
-; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -183,7 +183,7 @@ define internal void @indirect_use_most() {
 ; Leaf that would otherwise force 50 AGPRs, but is only reachable indirectly.
 define void @indirect_leaf_agpr() {
 ; CHECK-LABEL: define void @indirect_leaf_agpr(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @indirect_use_most()
 ; CHECK-NEXT:    ret void
@@ -196,7 +196,7 @@ define void @indirect_leaf_agpr() {
 ; All-VGPR leaf, also only reachable indirectly.
 define void @indirect_leaf_hivgpr(ptr %p) {
 ; CHECK-LABEL: define void @indirect_leaf_hivgpr(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile <128 x i32>, ptr [[P]], align 512
 ; CHECK-NEXT:    store volatile <128 x i32> [[V]], ptr [[P]], align 512
 ; CHECK-NEXT:    call void @indirect_use_most()
@@ -312,7 +312,7 @@ define internal void @pong(i1 %c) {
 
 define amdgpu_kernel void @k_mutual(i1 %c) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_mutual(
-; CHECK-SAME: i1 [[C:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i1 [[C:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    call void @ping(i1 [[C]])
 ; CHECK-NEXT:    ret void
 ;
@@ -323,7 +323,7 @@ define amdgpu_kernel void @k_mutual(i1 %c) {
 ; Second, independent component with its own @use_most copy.
 define internal void @use_most_lo() {
 ; CHECK-LABEL: define internal void @use_most_lo(
-; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -368,7 +368,7 @@ define internal void @use_most_lo() {
 ; component's 64.
 define internal void @self_rec(i1 %c) {
 ; CHECK-LABEL: define internal void @self_rec(
-; CHECK-SAME: i1 [[C:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: i1 [[C:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @use_most_lo()
 ; CHECK-NEXT:    br i1 [[C]], label %[[REC:.*]], label %[[EXIT:.*]]
@@ -390,7 +390,7 @@ exit:
 
 define amdgpu_kernel void @k_self(i1 %c) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_self(
-; CHECK-SAME: i1 [[C:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: i1 [[C:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    call void @self_rec(i1 [[C]])
 ; CHECK-NEXT:    ret void
 ;
@@ -423,7 +423,7 @@ define amdgpu_kernel void @k_self(i1 %c) {
 
 define internal void @shared_use_most() {
 ; CHECK-LABEL: define internal void @shared_use_most(
-; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -479,7 +479,7 @@ define internal void @shared_f1() {
 ; shared_f2: shared between shared_k1 and shared_k2, needs no AGPRs of its own.
 define internal void @shared_f2(ptr %p) {
 ; CHECK-LABEL: define internal void @shared_f2(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR8]] {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile <128 x i32>, ptr [[P]], align 512
 ; CHECK-NEXT:    store volatile <128 x i32> [[V]], ptr [[P]], align 512
 ; CHECK-NEXT:    call void @shared_use_most()
@@ -494,7 +494,7 @@ define internal void @shared_f2(ptr %p) {
 ; shared_k1 reaches the AGPR-hungry shared_f1 and the shared shared_f2.
 define amdgpu_kernel void @shared_k1(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @shared_k1(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    call void @shared_f1()
 ; CHECK-NEXT:    call void @shared_f2(ptr [[P]])
 ; CHECK-NEXT:    ret void
@@ -507,7 +507,7 @@ define amdgpu_kernel void @shared_k1(ptr %p) {
 ; shared_k2 reaches only shared_f2 and must not inherit shared_k1's split.
 define amdgpu_kernel void @shared_k2(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @shared_k2(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    call void @shared_f2(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -533,7 +533,7 @@ define amdgpu_kernel void @shared_k2(ptr %p) {
 
 define internal void @noroom_use_most() {
 ; CHECK-LABEL: define internal void @noroom_use_most(
-; CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR10:[0-9]+]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -577,7 +577,7 @@ define internal void @noroom_use_most() {
 ; ceiling from B.
 define internal void @noroom_shared() {
 ; CHECK-LABEL: define internal void @noroom_shared(
-; CHECK-SAME: ) #[[ATTR7]] {
+; CHECK-SAME: ) #[[ATTR10]] {
 ; CHECK-NEXT:    call void @noroom_use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -587,7 +587,7 @@ define internal void @noroom_shared() {
 
 define amdgpu_kernel void @noroom_kernel_agpr16() {
 ; CHECK-LABEL: define amdgpu_kernel void @noroom_kernel_agpr16(
-; CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR11:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @noroom_shared()
 ; CHECK-NEXT:    ret void
@@ -599,7 +599,7 @@ define amdgpu_kernel void @noroom_kernel_agpr16() {
 
 define amdgpu_kernel void @noroom_kernel_noagpr() {
 ; CHECK-LABEL: define amdgpu_kernel void @noroom_kernel_noagpr(
-; CHECK-SAME: ) #[[ATTR6]] {
+; CHECK-SAME: ) #[[ATTR9]] {
 ; CHECK-NEXT:    call void @noroom_shared()
 ; CHECK-NEXT:    ret void
 ;
@@ -627,7 +627,7 @@ define amdgpu_kernel void @noroom_kernel_noagpr() {
 
 define internal void @room_use_most() {
 ; CHECK-LABEL: define internal void @room_use_most(
-; CHECK-SAME: ) #[[ATTR7]] {
+; CHECK-SAME: ) #[[ATTR12:[0-9]+]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -669,7 +669,7 @@ define internal void @room_use_most() {
 
 define internal void @room_shared() {
 ; CHECK-LABEL: define internal void @room_shared(
-; CHECK-SAME: ) #[[ATTR7]] {
+; CHECK-SAME: ) #[[ATTR12]] {
 ; CHECK-NEXT:    call void @room_use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -679,7 +679,7 @@ define internal void @room_shared() {
 
 define amdgpu_kernel void @room_kernel_agpr16() {
 ; CHECK-LABEL: define amdgpu_kernel void @room_kernel_agpr16(
-; CHECK-SAME: ) #[[ATTR8]] {
+; CHECK-SAME: ) #[[ATTR11]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @room_shared()
 ; CHECK-NEXT:    ret void
@@ -691,7 +691,7 @@ define amdgpu_kernel void @room_kernel_agpr16() {
 
 define amdgpu_kernel void @room_kernel_agpr12() {
 ; CHECK-LABEL: define amdgpu_kernel void @room_kernel_agpr12(
-; CHECK-SAME: ) #[[ATTR9:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR13:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @room_shared()
 ; CHECK-NEXT:    ret void
@@ -715,7 +715,7 @@ define amdgpu_kernel void @room_kernel_agpr12() {
 
 define internal void @fanout_use_most() {
 ; CHECK-LABEL: define internal void @fanout_use_most(
-; CHECK-SAME: ) #[[ATTR7]] {
+; CHECK-SAME: ) #[[ATTR14:[0-9]+]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -757,7 +757,7 @@ define internal void @fanout_use_most() {
 
 define internal void @fanout_sink() {
 ; CHECK-LABEL: define internal void @fanout_sink(
-; CHECK-SAME: ) #[[ATTR7]] {
+; CHECK-SAME: ) #[[ATTR14]] {
 ; CHECK-NEXT:    call void @fanout_use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -767,7 +767,7 @@ define internal void @fanout_sink() {
 
 define internal void @fanout_agpr() {
 ; CHECK-LABEL: define internal void @fanout_agpr(
-; CHECK-SAME: ) #[[ATTR8]] {
+; CHECK-SAME: ) #[[ATTR15:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @fanout_sink()
 ; CHECK-NEXT:    ret void
@@ -779,7 +779,7 @@ define internal void @fanout_agpr() {
 
 define internal void @fanout_noagpr(ptr %p) {
 ; CHECK-LABEL: define internal void @fanout_noagpr(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR7]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR14]] {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile <128 x i32>, ptr [[P]], align 512
 ; CHECK-NEXT:    store volatile <128 x i32> [[V]], ptr [[P]], align 512
 ; CHECK-NEXT:    call void @fanout_sink()
@@ -793,7 +793,7 @@ define internal void @fanout_noagpr(ptr %p) {
 
 define amdgpu_kernel void @fanout_kernel(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @fanout_kernel(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR8]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    call void @fanout_agpr()
 ; CHECK-NEXT:    call void @fanout_noagpr(ptr [[P]])
 ; CHECK-NEXT:    ret void
@@ -803,16 +803,22 @@ define amdgpu_kernel void @fanout_kernel(ptr %p) {
   ret void
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-accum-offset"="78" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-accum-offset"="78" "amdgpu-agpr-alloc"="50" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR2]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR3]] = { "amdgpu-agpr-alloc"="50" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-accum-offset"="96" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR5]] = { "amdgpu-accum-offset"="96" "amdgpu-agpr-alloc"="32" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR6]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR7]] = { "amdgpu-accum-offset"="112" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR8]] = { "amdgpu-accum-offset"="112" "amdgpu-agpr-alloc"="16" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR9]] = { "amdgpu-accum-offset"="116" "amdgpu-agpr-alloc"="12" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR10:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR11:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-accum-offset"="78" "amdgpu-agpr-alloc"="0,50" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-accum-offset"="78" "amdgpu-agpr-alloc"="50,50" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR2]] = { "amdgpu-accum-offset"="78" "amdgpu-agpr-alloc"="50" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR4]] = { "amdgpu-agpr-alloc"="50" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-accum-offset"="96" "amdgpu-agpr-alloc"="0,32" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR6]] = { "amdgpu-accum-offset"="96" "amdgpu-agpr-alloc"="32,32" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR7]] = { "amdgpu-accum-offset"="96" "amdgpu-agpr-alloc"="32" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR8]] = { "amdgpu-accum-offset"="78" "amdgpu-agpr-alloc"="0,0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR9]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR10]] = { "amdgpu-accum-offset"="112" "amdgpu-agpr-alloc"="0,0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR11]] = { "amdgpu-accum-offset"="112" "amdgpu-agpr-alloc"="16" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR12]] = { "amdgpu-accum-offset"="112" "amdgpu-agpr-alloc"="0,12" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR13]] = { "amdgpu-accum-offset"="116" "amdgpu-agpr-alloc"="12" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR14]] = { "amdgpu-accum-offset"="112" "amdgpu-agpr-alloc"="0,16" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR15]] = { "amdgpu-accum-offset"="112" "amdgpu-agpr-alloc"="16,16" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR16:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR17:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.

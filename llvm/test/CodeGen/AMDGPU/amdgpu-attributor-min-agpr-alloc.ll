@@ -1113,14 +1113,14 @@ attributes #2 = { sanitize_address "amdgpu-agpr-alloc"="0" }
 !4 = !{!"a256"}
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-accum-offset"="0" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-accum-offset"="0" "amdgpu-agpr-alloc"="0,0" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR1]] = { "amdgpu-accum-offset"="127" "amdgpu-agpr-alloc"="1" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR2]] = { "amdgpu-accum-offset"="126" "amdgpu-agpr-alloc"="2" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR3]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR4]] = { "amdgpu-agpr-alloc"="1" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR5]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="1" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="1,1" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR6]] = { "amdgpu-agpr-alloc"="2" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR7]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR7]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="0,0" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR8:[0-9]+]] = { convergent nocallback nocreateundeforpoison nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR9]] = { "amdgpu-accum-offset"="124" "amdgpu-agpr-alloc"="4" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR10]] = { "amdgpu-accum-offset"="122" "amdgpu-agpr-alloc"="6" "amdgpu-no-wwm" }
@@ -1139,12 +1139,12 @@ attributes #2 = { sanitize_address "amdgpu-agpr-alloc"="0" }
 ; CHECK: attributes #[[ATTR23]] = { "amdgpu-accum-offset"="72" "amdgpu-agpr-alloc"="56" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR24]] = { "amdgpu-accum-offset"="72" "amdgpu-agpr-alloc"="56" }
 ; CHECK: attributes #[[ATTR25]] = { "amdgpu-accum-offset"="68" "amdgpu-agpr-alloc"="60" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR26]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="8" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR27]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="2" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR26]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="8,8" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR27]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="2,8" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR28]] = { "amdgpu-accum-offset"="0" "amdgpu-agpr-alloc"="256" "amdgpu-no-wwm" "amdgpu-waves-per-eu"="1,1" }
 ; CHECK: attributes #[[ATTR29]] = { "amdgpu-agpr-alloc"="7" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR30]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="7" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR31]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="3" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR30]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="7,7" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR31]] = { "amdgpu-accum-offset"="64" "amdgpu-agpr-alloc"="3,7" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR32]] = { "amdgpu-accum-offset"="121" "amdgpu-agpr-alloc"="7" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR33]] = { sanitize_address "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR34]] = { sanitize_memory "amdgpu-no-wwm" }
