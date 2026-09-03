@@ -1495,12 +1495,17 @@ public:
   /// identify the region. Depend clauses of \p D are forwarded to the entry
   /// point, which satisfies them synchronously; a replayable target is never
   /// wrapped in a hidden helper task.
+  ///
+  /// \p Relocate is the kmp_target_kernel_relocate_t the runtime calls before
+  /// each replay to refresh map slots whose host addresses moved with the
+  /// frame, or a null pointer where the region's maps cannot be relocated.
   void emitTaskgraphTargetCall(CodeGenFunction &CGF,
                                const OMPExecutableDirective &D,
                                SourceLocation Loc, llvm::Value *OutlinedFnID,
                                llvm::Value *DeviceID, llvm::Value *NumTeams,
                                llvm::Value *NumThreads,
-                               llvm::Value *KernelArgsPtr);
+                               llvm::Value *KernelArgsPtr,
+                               llvm::Value *Relocate);
 
   /// Record a standalone 'target {enter|exit} data' / 'target update' directive
   /// nested inside a taskgraph by emitting the matching
@@ -1508,12 +1513,17 @@ public:
   /// arrays are passed directly, and depend clauses of \p D are forwarded to
   /// the entry point, which satisfies them synchronously; a replayable
   /// target-data directive is never wrapped in a hidden helper task.
+  ///
+  /// \p Relocate refreshes the recorded map arrays for a replay from a
+  /// different frame, or is null where the maps cannot be re-derived; it is
+  /// built by the caller, which is where the map info the decision needs is.
   void emitTaskgraphTargetDataCall(
       CodeGenFunction &CGF, const OMPExecutableDirective &D, SourceLocation Loc,
       llvm::Value *DeviceID, unsigned NumTargetItems,
       llvm::Value *BasePointersArray, llvm::Value *PointersArray,
       llvm::Value *SizesArray, llvm::Value *MapTypesArray,
-      llvm::Value *MapNamesArray, llvm::Value *MappersArray);
+      llvm::Value *MapNamesArray, llvm::Value *MappersArray,
+      llvm::Value *Relocate);
 
   /// Emit the target regions enclosed in \a GD function definition or
   /// the function itself in case it is a valid device function. Returns true if

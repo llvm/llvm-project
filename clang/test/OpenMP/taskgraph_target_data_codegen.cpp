@@ -35,10 +35,28 @@ void inside() {
 
 // Inside a taskgraph: recorded via the matching taskgraph entry points. With
 // no depend clause, ndeps (arg 3) is 0 and dep_list (arg 4) is null; the seven
-// map-info pointers are forwarded, followed by the (currently null) relocation
-// callback as the trailing argument.
-// CHECK: call void @__kmpc_taskgraph_target_enter_data(ptr {{[^,]+}}, i32 {{[^,]+}}, i32 0, ptr null, i32 0, i64 {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr null)
-// CHECK: call void @__kmpc_taskgraph_target_update(ptr {{[^,]+}}, i32 {{[^,]+}}, i32 0, ptr null, i32 0, i64 {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr null)
-// CHECK: call void @__kmpc_taskgraph_target_exit_data(ptr {{[^,]+}}, i32 {{[^,]+}}, i32 0, ptr null, i32 0, i64 {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr null)
+// map-info pointers are forwarded, followed by the relocation callback as the
+// trailing argument -- one per action, since each records its own map arrays.
+// CHECK: call void @__kmpc_taskgraph_target_enter_data(ptr {{[^,]+}}, i32 {{[^,]+}}, i32 0, ptr null, i32 0, i64 {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr @.omp.taskgraph.target.relocate{{[0-9.]*}})
+// CHECK: call void @__kmpc_taskgraph_target_update(ptr {{[^,]+}}, i32 {{[^,]+}}, i32 0, ptr null, i32 0, i64 {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr @.omp.taskgraph.target.relocate{{[0-9.]*}})
+// CHECK: call void @__kmpc_taskgraph_target_exit_data(ptr {{[^,]+}}, i32 {{[^,]+}}, i32 0, ptr null, i32 0, i64 {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr {{[^,]+}}, ptr @.omp.taskgraph.target.relocate{{[0-9.]*}})
+
+// The map arrays a data action records hold the addresses the mapped variables
+// had on the encounter that recorded them, so each action gets a callback that
+// refreshes them for a replay from a different frame.  It takes the recorded
+// base-pointer and pointer arrays as its first two arguments, rather than a
+// target region's kernel-args blob: a data node's two arrays are separate
+// allocations.
+// CHECK: define internal void @.omp.taskgraph.target.relocate.(ptr noundef %0, ptr noundef %1, ptr noundef %2)
+// CHECK: [[BASES:%.+]] = load ptr, ptr %.addr,
+// CHECK-NEXT: [[PTRS:%.+]] = load ptr, ptr %.addr1,
+// x is a whole-variable map, so its base is the capture's live address and the
+// recorded distance carries the begin pointer to the same place.
+// CHECK: [[X:%.+]] = load ptr, ptr {{%.+}}, align 8, !nonnull
+// CHECK-NEXT: [[XB:%.+]] = getelementptr ptr, ptr [[BASES]], i64 0
+// CHECK-NEXT: [[XP:%.+]] = getelementptr ptr, ptr [[PTRS]], i64 0
+// CHECK: store ptr [[X]], ptr [[XB]],
+// CHECK-NEXT: store ptr {{%.+}}, ptr [[XP]],
+// CHECK-NEXT: ret void
 
 #endif

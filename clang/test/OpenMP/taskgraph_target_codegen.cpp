@@ -41,13 +41,13 @@ void inside_depend() {
 // CHECK-NOT: @__kmpc_taskgraph_target
 
 // Inside a taskgraph: recorded via __kmpc_taskgraph_target. The trailing
-// arguments are the __tgt_kernel_arguments struct and the (currently null)
-// relocation callback; ndeps (arg 3) is 0 and the dep_list (arg 4) is null for
-// a target with no depend clause.
-// CHECK: call i32 @__kmpc_taskgraph_target(ptr {{[^,]+}}, i32 {{[^,]+}}, i32 0, ptr null, i32 0, i64 {{[^,]+}}, i32 {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, ptr %kernel_args{{[0-9.]*}}, ptr null)
+// arguments are the __tgt_kernel_arguments struct and the relocation callback
+// (see taskgraph_target_relocate_codegen.c); ndeps (arg 3) is 0 and the
+// dep_list (arg 4) is null for a target with no depend clause.
+// CHECK: call i32 @__kmpc_taskgraph_target(ptr {{[^,]+}}, i32 {{[^,]+}}, i32 0, ptr null, i32 0, i64 {{[^,]+}}, i32 {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, ptr %kernel_args{{[0-9.]*}}, ptr @.omp.taskgraph.target.relocate.{{[0-9.]*}})
 
 // Inside a taskgraph with depend(out:) + nowait: ndeps is non-zero, the
 // dep_list points at the emitted kmp_depend_info array, and has_no_wait is 1.
-// CHECK: call i32 @__kmpc_taskgraph_target(ptr {{[^,]+}}, i32 {{[^,]+}}, i32 1, ptr {{[^,]+}}, i32 1, i64 {{[^,]+}}, i32 {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, ptr %kernel_args{{[0-9.]*}}, ptr null)
+// CHECK: call i32 @__kmpc_taskgraph_target(ptr {{[^,]+}}, i32 {{[^,]+}}, i32 1, ptr {{[^,]+}}, i32 1, i64 {{[^,]+}}, i32 {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, ptr %kernel_args{{[0-9.]*}}, ptr @.omp.taskgraph.target.relocate.{{[0-9.]*}})
 
 #endif

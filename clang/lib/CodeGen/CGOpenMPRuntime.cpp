@@ -11184,10 +11184,15 @@ public:
           // entry.
           if (PartialStruct.Base.isValid()) {
             CurCaptureVarInfo.append(PartialStruct.PreliminaryMapData);
+            // The combined entry is the struct itself, so it is named after
+            // the captured variable rather than left anonymous.  Taskgraph
+            // relocation needs it: the entry's base pointer is the struct's
+            // address, and without a declaration to reach it by there is no
+            // way to re-derive that address on a replay from another frame.
             emitCombinedEntry(
                 CurCaptureVarInfo, CurInfoForComponentLists.Types,
-                PartialStruct, AttachInfo, Cap->capturesThis(), OMPBuilder,
-                /*VD=*/nullptr, OffsetForMemberOfFlag,
+                PartialStruct, AttachInfo, Cap->capturesThis(), OMPBuilder, VD,
+                OffsetForMemberOfFlag,
                 /*NotTargetParams*/ !IsEligibleForTargetParamFlag);
           }
 
@@ -11517,8 +11522,16 @@ public:
         CombinedInfo.Sizes.push_back(llvm::Constant::getNullValue(CGF.Int64Ty));
       }
       auto I = FirstPrivateDecls.find(VD);
-      if (I != FirstPrivateDecls.end())
+      if (I != FirstPrivateDecls.end()) {
         IsImplicit = I->getSecond().isImplicit;
+        // Tells a taskgraph's relocation helper to leave the recorded value
+        // alone rather than re-read the variable at replay.
+        if (I->getSecond().isSaved &&
+            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                CombinedInfo.Types.back() &
+                OpenMPOffloadMappingFlags::OMP_MAP_LITERAL))
+          CombinedInfo.Types.back() |= OpenMPOffloadMappingFlags::OMP_MAP_SAVED;
+      }
     } else {
       assert(CI.capturesVariable() && "Expected captured reference.");
       const auto *PtrTy = cast<ReferenceType>(RI.getType().getTypePtr());
@@ -12155,10 +12168,638 @@ emitClauseForBareTargetDirective(CodeGenFunction &CGF,
   }
 }
 
+/// Where a recorded map slot's base pointer comes from, expressed against the
+/// variables the enclosing taskgraph captures.
+///
+/// A map array records two addresses per slot, and the distance between them
+/// is a property of the *shape* of the map -- which array element the section
+/// starts at, which member of the struct it names -- rather than of the frame
+/// the encounter ran in.  So relocation only has to re-derive the base and can
+/// take the distance from the recorded pair, which is what lets it accept
+/// dynamic bounds and member expressions that no constant offset could
+/// describe.  It is also why `saved` is what makes a graph replayable: the
+/// distance is frozen at record time, so a bound that moves between replays is
+/// a shape change, and shapes are graph invariants.
+namespace {
+/// How the base pointer recorded for a slot is reached from the capture it
+/// belongs to.  Which of the three applies is a property of the *encoding* the
+/// map entry was emitted with rather than of the expression, because the same
+/// expression is recorded differently depending on what the runtime will do
+/// with it -- see mapBaseOf.
+enum class BaseProjectionTy {
+  /// The base is the capture's own address.  A whole variable, an array
+  /// section over an array, and a struct member all record the enclosing
+  /// object's address, the distance to the mapped begin being what the
+  /// recorded pair holds.
+  CaptureAddr,
+  /// The base is the address of a pointer object, which the runtime loads for
+  /// itself.  This is what PTR_AND_OBJ means, and what an attach entry
+  /// records.
+  PointerAddr,
+  /// The base is the *value* of a pointer object, loaded when the entry was
+  /// emitted.  Such a base moves when the pointer is assigned and not only
+  /// when the frame changes, which is why it is reloaded here.
+  PointerValue,
+};
+
+struct MapBaseTy {
+  /// The captured variable the base is reached from.  Null when it is reached
+  /// from `this` instead.
+  const VarDecl *Capture = nullptr;
+  /// The base is reached from `this`: it is the object `this` points to, or a
+  /// member of it, which is what a member named in a member function's map
+  /// clause is reached through.  The taskgraph's record holds `this` by value,
+  /// so its field *is* the pointer object, and the projection is always
+  /// PointerValue.
+  bool IsThis = false;
+  /// Byte offset from the capture to the pointer object.  Only meaningful for
+  /// the pointer projections; a capture-address base is the capture itself and
+  /// any offset from it belongs to the recorded distance.
+  CharUnits Offset = CharUnits::Zero();
+  BaseProjectionTy Projection = BaseProjectionTy::CaptureAddr;
+};
+
+/// One recorded map slot and how to refresh it.
+struct RelocatedSlotTy {
+  enum KindTy {
+    /// Both addresses are refreshed: the base from the capture, the begin
+    /// pointer from the base plus the recorded distance.
+    Whole,
+    /// Only the base is refreshed.  A non-contiguous entry's begin pointer is
+    /// not an address in the mapped data at all but a pointer to the stride
+    /// descriptor, which the runtime owns and copies at record time.
+    BaseOnly,
+    /// An attach entry's two addresses live in different objects -- the base
+    /// is the pointer itself, the begin pointer is where it points -- so the
+    /// recorded distance between them means nothing.  The pointee address is
+    /// taken from the map entry the attach belongs to instead.
+    Attach,
+  };
+
+  /// Position in the recorded base-pointer / pointer arrays.
+  unsigned Index;
+  /// The capture's field in the enclosing taskgraph's record.
+  const FieldDecl *Field;
+  MapBaseTy Base;
+  KindTy Kind;
+  /// For Attach, the entry in this list whose refreshed begin pointer this
+  /// slot shares.
+  unsigned Pointee = 0;
+};
+} // namespace
+
+/// The captured variable \p E names and the byte offset of \p E within it, for
+/// the shapes whose offset is a matter of record layout rather than of a value:
+/// the variable itself, and direct member accesses on it.
+///
+/// A dereference on the way is what makes an offset a runtime question, and is
+/// declined here rather than followed, so a base reached through two pointers
+/// (`ps->p[0:n]`) declines instead of relocating from a pointer this replay has
+/// not reloaded.  A reference member is a hidden dereference and goes the same
+/// way, as does a bit-field, which has no byte offset to give.
+static const VarDecl *captureOffsetOf(ASTContext &C, const Expr *E,
+                                      CharUnits &Offset) {
+  E = E->IgnoreParenImpCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return dyn_cast<VarDecl>(DRE->getDecl());
+
+  const auto *ME = dyn_cast<MemberExpr>(E);
+  if (!ME || ME->isArrow())
+    return nullptr;
+  const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+  if (!FD || FD->isBitField() || FD->getType()->isReferenceType())
+    return nullptr;
+  const VarDecl *VD = captureOffsetOf(C, ME->getBase(), Offset);
+  if (!VD)
+    return nullptr;
+  Offset += C.toCharUnitsFromBits(C.getASTRecordLayout(FD->getParent())
+                                      .getFieldOffset(FD->getFieldIndex()));
+  return VD;
+}
+
+/// Whether \p E is `this` itself.  A conversion to a base class's `this` is
+/// not: the object it points to starts somewhere else.
+static bool isThisPointer(const Expr *E) {
+  E = E->IgnoreParens();
+  while (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    if (ICE->getCastKind() != CK_NoOp)
+      break;
+    E = ICE->getSubExpr()->IgnoreParens();
+  }
+  return isa<CXXThisExpr>(E);
+}
+
+/// Where the base pointer recorded for \p MapExpr came from.
+///
+/// Two questions, answered from two different places.  *Which* object the base
+/// is reached from comes from walking the map expression: inwards until either
+/// a capture, or the pointer whose pointee the map names -- an array section or
+/// subscript over a pointer, an arrow, or an explicit `*`.  A `MEMBER_OF`
+/// slot's declaration is the field, so it is the expression and not the mapped
+/// declaration that leads to the enclosing struct's capture.  A member named
+/// in a member function is reached through `this` in the same way (see
+/// MapBaseTy::IsThis).
+///
+/// *How* the base is reached from there is not a property of the expression at
+/// all, and cannot be inferred from it: the same `map(p[0:n])` records the
+/// pointer's address when the runtime is going to load it (`PTR_AND_OBJ`) and
+/// the loaded value when it is not, and a pointer captured implicitly by a
+/// `target` region records the loaded value from no expression whatsoever.  So
+/// the projection is a matter of how the entry was emitted: \p BaseIsPointer
+/// says the base names a pointer object rather than the mapped object, and
+/// \p RuntimeLoadsBase says the runtime will dereference it itself.
+static std::optional<MapBaseTy>
+mapBaseOf(ASTContext &C, const ValueDecl *MapDecl, const Expr *MapExpr,
+          bool BaseIsPointer, bool RuntimeLoadsBase) {
+  const bool HasAttachPtr = BaseIsPointer;
+  const BaseProjectionTy PtrProjection = RuntimeLoadsBase
+                                             ? BaseProjectionTy::PointerAddr
+                                             : BaseProjectionTy::PointerValue;
+
+  // The pointer object is named directly, so its offset within the capture is
+  // part of reaching the base rather than part of the recorded distance.
+  auto pointerObject = [&](const Expr *PtrExpr) -> std::optional<MapBaseTy> {
+    MapBaseTy Base;
+    if (isThisPointer(PtrExpr)) {
+      // `this` is a value, not an object the runtime could load it from.
+      if (RuntimeLoadsBase)
+        return std::nullopt;
+      Base.IsThis = true;
+      Base.Projection = BaseProjectionTy::PointerValue;
+      return Base;
+    }
+    Base.Projection = PtrProjection;
+    Base.Capture = captureOffsetOf(C, PtrExpr, Base.Offset);
+    if (!Base.Capture)
+      return std::nullopt;
+    return Base;
+  };
+
+  // No dereference in the expression.  With an attach pointer the expression
+  // *is* that pointer -- a whole-pointer map -- and the base is what it holds;
+  // without one the base is the enclosing object's address.
+  auto wholeObject = [&](const Expr *E,
+                         const VarDecl *Capture) -> std::optional<MapBaseTy> {
+    if (HasAttachPtr) {
+      // Only a whole-pointer map can carry an attach pointer here: the
+      // expression is the pointer itself.  A non-pointer reached without a
+      // dereference has none, so decline rather than guess.
+      if (!E->getType()->isAnyPointerType())
+        return std::nullopt;
+      return pointerObject(E);
+    }
+    MapBaseTy Base;
+    Base.Capture = Capture;
+    if (!Base.Capture)
+      return std::nullopt;
+    return Base;
+  };
+
+  // A default capture map has no expression to walk; it names the whole
+  // variable, and if the base is a pointer it is that variable.
+  if (!MapExpr) {
+    const auto *VD = dyn_cast_or_null<VarDecl>(MapDecl);
+    if (!VD)
+      return std::nullopt;
+    MapBaseTy Base;
+    Base.Capture = VD;
+    if (HasAttachPtr)
+      Base.Projection = PtrProjection;
+    return Base;
+  }
+
+  for (const Expr *E = MapExpr->IgnoreParenImpCasts();;) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+      return wholeObject(MapExpr, dyn_cast<VarDecl>(DRE->getDecl()));
+    if (const auto *OASE = dyn_cast<ArraySectionExpr>(E)) {
+      const Expr *B = OASE->getBase()->IgnoreParenImpCasts();
+      if (ArraySectionExpr::getBaseOriginalType(B)
+              .getCanonicalType()
+              ->isAnyPointerType())
+        return pointerObject(B);
+      E = B;
+      continue;
+    }
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      const Expr *B = ASE->getBase()->IgnoreParenImpCasts();
+      if (B->getType()->isAnyPointerType())
+        return pointerObject(B);
+      E = B;
+      continue;
+    }
+    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      if (ME->isArrow())
+        return pointerObject(ME->getBase());
+      if (ME->getType()->isAnyPointerType() && HasAttachPtr)
+        return pointerObject(ME);
+      E = ME->getBase()->IgnoreParenImpCasts();
+      continue;
+    }
+    if (const auto *UO = dyn_cast<UnaryOperator>(E);
+        UO && UO->getOpcode() == UO_Deref)
+      return pointerObject(UO->getSubExpr());
+    return std::nullopt;
+  }
+}
+
+/// Emit a helper with one of the runtime target-relocation signatures,
+/// kmp_target_kernel_relocate_t for a target region: void relocate(void
+/// *kernel_args, void *outer_captures); or, if \p IsDataNode,
+/// kmp_target_data_relocate_t for a target-data directive: void relocate(void
+/// **args_base, void **args, void *outer_captures);
+///
+/// A target region's recorded __tgt_kernel_arguments blob holds the two map
+/// arrays of addresses, and a target-data directive's are handed over as they
+/// are.  The two differ only in where the arrays are found; everything about
+/// which slots move and how is the same, since both hold the same recorded map
+/// entries.
+///
+/// A recorded target region keeps the map arrays it was launched with, and
+/// those hold the addresses the mapped variables had on the encounter that
+/// recorded the graph.  A replay from a different frame -- the same function
+/// called at another stack depth, or a different caller entirely -- finds those
+/// addresses stale.  The runtime calls this helper first, with the recorded
+/// kernel-arguments blob and the taskgraph record reconstructed for *this*
+/// encounter, and the helper rewrites each stale slot.
+///
+/// A slot is rewritten by re-deriving its base pointer from the capture it came
+/// from (see MapBaseTy) and moving its begin pointer by the same distance the
+/// recorded pair held.  Slots that cannot move, or must not, are skipped rather
+/// than rewritten: a by-value argument is a value and not an address, a
+/// variable with static storage duration has the same link-time-fixed address
+/// on every replay, and a firstprivate aggregate's slot points into the
+/// recorded snapshot on purpose.  A slot that is neither skippable nor
+/// recognised makes the whole helper null, because rewriting some of a region's
+/// slots and leaving the rest stale is worse than declining: the caller passes
+/// null on to the runtime, which keeps its existing refuse-to-relocate
+/// behaviour.
+///
+/// A by-value (literal) slot has no address to move, but it does have a value
+/// to refresh: a firstprivate of a variable in the taskgraph's enclosing data
+/// environment is initialized from the variable's value at each replay (OpenMP
+/// 6.0 [14.3]), so the helper re-reads the variable and writes it into the
+/// slot.  A `saved` list item, a variable declared inside the region and a
+/// clause's captured expression keep their recorded values, as the saved data
+/// environment requires.
+///
+/// When every slot is skippable the helper is still emitted, as a non-null
+/// no-op, the same convention emitTaskRelocationFunction uses: null means
+/// "cannot relocate", not "nothing to relocate".
+static llvm::Function *emitTargetRelocationFunction(
+    CodeGenModule &CGM, SourceLocation Loc, const CapturedStmt *CS,
+    const CodeGenFunction::CGCapturedStmtInfo *OuterCSI,
+    const MappableExprsHandler::MapCombinedInfoTy &CombinedInfo,
+    bool IsDataNode) {
+  ASTContext &C = CGM.getContext();
+  using OpenMPOffloadMappingFlags = llvm::omp::OpenMPOffloadMappingFlags;
+
+  auto Flagged = [&](unsigned I, OpenMPOffloadMappingFlags Mask) {
+    return static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+               CombinedInfo.Types[I] & Mask) != 0;
+  };
+
+  // A pointer the region only uses -- with no map clause naming it -- is
+  // captured by copy, and generateDefaultMapInfo records its *value* as both
+  // base and begin.  Nothing in the entry says so: it has no map expression to
+  // read a dereference from, and HasAttachPtr is hardcoded false there.  So it
+  // is asked of the capture list, which is the only place that distinguishes a
+  // by-copy capture from a by-reference one.  A data directive has no capture
+  // list and needs none: every entry of one comes from an explicit clause, so
+  // there is always a map expression to read.
+  auto capturedByCopy = [CS](const ValueDecl *VD) {
+    if (!CS)
+      return false;
+    for (const CapturedStmt::Capture &Cap : CS->captures())
+      if (Cap.capturesVariableByCopy() &&
+          Cap.getCapturedVar()->getCanonicalDecl() == VD->getCanonicalDecl())
+        return true;
+    return false;
+  };
+
+  // A by-value firstprivate whose value is refreshed on replay: the variable
+  // and where to read it, the outer record field for a captured one and null
+  // for a global.
+  struct LiteralSlotTy {
+    unsigned Index;
+    const VarDecl *VD;
+    const FieldDecl *Field;
+  };
+  SmallVector<RelocatedSlotTy, 8> Slots;
+  SmallVector<LiteralSlotTy, 4> Literals;
+  const RecordDecl *OuterRD = nullptr;
+
+  // In a member function, maps of members of the object are grouped under an
+  // entry for the object `this` points to, which has neither a declaration
+  // nor an expression.  It is recognised by its members, which name it as
+  // their MEMBER_OF parent and are reached from `this`.
+  llvm::SmallDenseSet<unsigned, 4> ThisStructEntries;
+  for (unsigned J = 0, E = CombinedInfo.Exprs.size(); J != E; ++J) {
+    uint64_t MemberOf =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            CombinedInfo.Types[J] &
+            OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) >>
+        CGM.getOpenMPRuntime().getOMPBuilder().getFlagMemberOffset();
+    if (!MemberOf || MemberOf > E)
+      continue;
+    const unsigned Parent = MemberOf - 1;
+    const Expr *MemberExpr = CombinedInfo.Exprs[J].getMapExpr();
+    if (CombinedInfo.Exprs[Parent].getMapDecl() ||
+        CombinedInfo.Exprs[Parent].getMapExpr() || !MemberExpr)
+      continue;
+    std::optional<MapBaseTy> MemberBase =
+        mapBaseOf(C, CombinedInfo.Exprs[J].getMapDecl(), MemberExpr,
+                  /*BaseIsPointer=*/false, /*RuntimeLoadsBase=*/false);
+    if (MemberBase && MemberBase->IsThis)
+      ThisStructEntries.insert(Parent);
+  }
+
+  for (unsigned I = 0, E = CombinedInfo.Exprs.size(); I != E; ++I) {
+    // A by-value argument carries the value itself, so there is no address to
+    // move.  But a firstprivate of a variable in the taskgraph's enclosing data
+    // environment takes the variable's value at each replay (OpenMP 6.0
+    // [14.3]), so that value is re-read.  Only an argument the region captured
+    // by copy holds the variable's bytes; the other literal entries -- a
+    // lambda's captures, VLA bounds, the trailing dyn_ptr -- hold addresses or
+    // values of expressions, and keep what the recording gave them.  So do a
+    // `saved` list item (whose entry carries SAVED), a variable declared inside
+    // the region (which the taskgraph record does not capture) and a clause's
+    // captured expression.
+    if (Flagged(I, OpenMPOffloadMappingFlags::OMP_MAP_LITERAL)) {
+      const auto *VD =
+          dyn_cast_or_null<VarDecl>(CombinedInfo.Exprs[I].getMapDecl());
+      if (IsDataNode || !VD || isa<OMPCapturedExprDecl>(VD) ||
+          !Flagged(I, OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM) ||
+          Flagged(I, OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ |
+                         OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF |
+                         OpenMPOffloadMappingFlags::OMP_MAP_SAVED) ||
+          !capturedByCopy(VD) ||
+          C.getTypeSizeInChars(VD->getType().getNonReferenceType()) >
+              C.getTypeSizeInChars(C.VoidPtrTy))
+        continue;
+      const FieldDecl *Field = nullptr;
+      if (!VD->hasGlobalStorage()) {
+        Field = OuterCSI ? OuterCSI->lookup(VD) : nullptr;
+        if (!Field)
+          continue;
+        OuterRD = cast<RecordDecl>(Field->getDeclContext());
+      }
+      Literals.push_back({I, VD, Field});
+      continue;
+    }
+    // A `saved` firstprivate aggregate's slot is deliberately *not* the live
+    // variable: __tgt_taskgraph_dup_kernel_args repoints it at a snapshot
+    // inside the recorded blob, which is what makes it saved.  So it is
+    // skipped, not declined -- rewriting it back to the live variable would
+    // undo exactly that, but declining the region around it would leave the
+    // ordinary maps beside it stale for no reason.
+    //
+    // Without `saved` the slot does still name the live variable, and a
+    // privatised argument is read from it at every replay, so it is relocated
+    // like any other.
+    if (Flagged(I, OpenMPOffloadMappingFlags::OMP_MAP_PRIVATE) &&
+        Flagged(I, OpenMPOffloadMappingFlags::OMP_MAP_SAVED))
+      continue;
+
+    const ValueDecl *MapDecl = CombinedInfo.Exprs[I].getMapDecl();
+    const bool IsAttach = Flagged(I, OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    const Expr *MapExpr = CombinedInfo.Exprs[I].getMapExpr();
+    std::optional<MapBaseTy> Base;
+    if (ThisStructEntries.contains(I)) {
+      Base.emplace();
+      Base->IsThis = true;
+      Base->Projection = BaseProjectionTy::PointerValue;
+    } else if (MapDecl || MapExpr) {
+      Base = mapBaseOf(
+          C, MapDecl, MapExpr,
+          // An attach entry's base *is* the pointer object, which is the one
+          // thing HasAttachPtr does not say of it: the flag marks the entries
+          // that were reached *through* a pointer, and an attachment is the
+          // entry that fixes that pointer up.
+          /*BaseIsPointer=*/IsAttach || CombinedInfo.HasAttachPtr[I] ||
+              (!MapExpr && capturedByCopy(MapDecl) &&
+               MapDecl->getType()->isAnyPointerType()),
+          /*RuntimeLoadsBase=*/
+          IsAttach ||
+              Flagged(I, OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ));
+      if (!Base)
+        return nullptr;
+    } else {
+      continue;
+    }
+    // A variable with static storage duration is at the same address on every
+    // replay, so its slots are already right.  That covers a pointee base
+    // through a global too: what a global pointer holds is program state, and
+    // a replay is no more entitled to reload it than to re-evaluate any other
+    // expression the graph froze.
+    if (!Base->IsThis && Base->Capture->hasGlobalStorage())
+      continue;
+    const FieldDecl *Field = nullptr;
+    if (OuterCSI)
+      Field = Base->IsThis ? OuterCSI->getThisFieldDecl()
+                           : OuterCSI->lookup(Base->Capture);
+    if (!Field)
+      return nullptr;
+    OuterRD = cast<RecordDecl>(Field->getDeclContext());
+
+    RelocatedSlotTy Slot{I, Field, *Base, RelocatedSlotTy::Whole, 0};
+    if (Flagged(I, OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG)) {
+      Slot.Kind = RelocatedSlotTy::BaseOnly;
+    } else if (IsAttach) {
+      // The pointee address an attach entry publishes is the same one the map
+      // entry for the pointee data holds, so it is taken from there rather
+      // than re-derived: the two were emitted from one address, and computing
+      // it twice would be two chances to disagree.  Both entries reach the
+      // pointer object by the same route, which is what identifies the pair.
+      const auto *Sibling = llvm::find_if(Slots, [&](const RelocatedSlotTy &S) {
+        return S.Kind == RelocatedSlotTy::Whole &&
+               S.Base.Projection != BaseProjectionTy::CaptureAddr &&
+               S.Base.Capture == Base->Capture &&
+               S.Base.IsThis == Base->IsThis && S.Base.Offset == Base->Offset;
+      });
+      if (Sibling == Slots.end())
+        return nullptr;
+      Slot.Kind = RelocatedSlotTy::Attach;
+      Slot.Pointee = Sibling - Slots.begin();
+    } else if (Slot.Base.Projection == BaseProjectionTy::PointerAddr) {
+      // A `PTR_AND_OBJ` data entry records the pointer's *address* as its base
+      // and its pointee's address as its begin, so the recorded pair is not a
+      // distance within one object and there is nothing to carry over: the
+      // distance that matters is from the pointer's old *value*, which the
+      // recording did not keep.  Clang records the loaded value instead and
+      // leaves the loading to the attach entry, so no such entry is expected;
+      // were one to arrive, declining is the only safe answer.
+      assert(false && "PTR_AND_OBJ data entry in a recorded target region");
+      return nullptr;
+    }
+    Slots.push_back(Slot);
+  }
+
+  // void relocate(void *kernel_args, void *outer_captures) for a target
+  // region, or
+  // void relocate(void **args_base, void **args, void *outer_captures)
+  // for a data directive.
+  auto MakeArg = [&](QualType Ty) {
+    return ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, Ty,
+                                     ImplicitParamKind::Other);
+  };
+  FunctionArgList Args;
+  ImplicitParamDecl *KernelArgsArg = nullptr;
+  ImplicitParamDecl *BasePtrsArg = nullptr;
+  ImplicitParamDecl *PtrsArg = nullptr;
+  if (IsDataNode) {
+    BasePtrsArg = MakeArg(C.getPointerType(C.VoidPtrTy));
+    PtrsArg = MakeArg(C.getPointerType(C.VoidPtrTy));
+    Args.append({BasePtrsArg, PtrsArg});
+  } else {
+    KernelArgsArg = MakeArg(C.VoidPtrTy);
+    Args.push_back(KernelArgsArg);
+  }
+  auto *OuterArg = MakeArg(C.VoidPtrTy);
+  Args.push_back(OuterArg);
+  QualType RetTy = C.VoidTy;
+  const CGFunctionInfo &FnInfo =
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(RetTy, Args);
+
+  std::string Name = CGM.getOpenMPRuntime().getName(
+      {"omp", "taskgraph", "target", "relocate", ""});
+  auto *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(FnInfo),
+                                    llvm::GlobalValue::InternalLinkage, Name,
+                                    &CGM.getModule());
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
+  Fn->setDoesNotRecurse();
+
+  CodeGenFunction CGF(CGM);
+  CGF.StartFunction(GlobalDecl(), RetTy, Fn, FnInfo, Args, Loc, Loc);
+
+  if (!Slots.empty() || !Literals.empty()) {
+    CGBuilderTy &Bld = CGF.Builder;
+    CharUnits PtrAlign = CGF.getPointerAlign();
+
+    // The two arrays of addresses this helper refreshes.  A data directive
+    // hands them over as they are; a target region hands over its recorded
+    // __tgt_kernel_arguments, where their field numbers are fixed by the
+    // KernelArgs struct in OMPKinds.def.
+    auto LoadArg = [&](const ImplicitParamDecl *Arg) {
+      return Address(Bld.CreateLoad(CGF.GetAddrOfLocalVar(Arg)), CGF.VoidPtrTy,
+                     PtrAlign);
+    };
+    Address BasePtrs = Address::invalid();
+    Address Ptrs = Address::invalid();
+    if (IsDataNode) {
+      BasePtrs = LoadArg(BasePtrsArg);
+      Ptrs = LoadArg(PtrsArg);
+    } else {
+      Address KernelArgs(Bld.CreateLoad(CGF.GetAddrOfLocalVar(KernelArgsArg)),
+                         CGM.getOpenMPRuntime().getOMPBuilder().KernelArgs,
+                         PtrAlign);
+      auto LoadArray = [&](unsigned Field) {
+        return Address(Bld.CreateLoad(Bld.CreateStructGEP(KernelArgs, Field)),
+                       CGF.VoidPtrTy, PtrAlign);
+      };
+      BasePtrs = LoadArray(2);
+      Ptrs = LoadArray(3);
+    }
+
+    // Base of the taskgraph record reconstructed for this replay.  There is
+    // none to read when the only slots are literals of globals.
+    LValue OuterBase;
+    if (OuterRD) {
+      QualType OuterTy = C.getCanonicalTagType(OuterRD);
+      OuterBase = CGF.MakeAddrLValue(
+          Address(Bld.CreateLoad(CGF.GetAddrOfLocalVar(OuterArg)),
+                  CGF.ConvertTypeForMem(OuterTy), PtrAlign),
+          OuterTy);
+    }
+
+    // Kept so an attach slot can take the pointee address its sibling arrived
+    // at.  The reads below all precede their own slot's writes, and no two
+    // slots share an index, so the recorded pair a slot reads is still the one
+    // the recording left there.
+    SmallVector<llvm::Value *, 8> NewPointers(Slots.size(), nullptr);
+
+    for (const auto &[N, Slot] : llvm::enumerate(Slots)) {
+      // EmitLValueForField auto-loads the outer reference field, so this is
+      // the variable's live address rather than the record slot holding it.
+      // `this` is held by value, so for it this is the slot, which is the
+      // pointer object its base is loaded from.
+      llvm::Value *Var =
+          CGF.EmitLValueForField(OuterBase, Slot.Field).getPointer(CGF);
+      Var = Bld.CreatePointerBitCastOrAddrSpaceCast(Var, CGM.VoidPtrTy);
+
+      // Where the pointer object sits, for a base reached through one.
+      llvm::Value *PtrObj =
+          Slot.Base.Offset.isZero()
+              ? Var
+              : Bld.CreateConstInBoundsGEP1_64(CGF.Int8Ty, Var,
+                                               Slot.Base.Offset.getQuantity());
+      llvm::Value *NewBase = Var;
+      switch (Slot.Base.Projection) {
+      case BaseProjectionTy::CaptureAddr:
+        break;
+      case BaseProjectionTy::PointerAddr:
+        NewBase = PtrObj;
+        break;
+      case BaseProjectionTy::PointerValue:
+        NewBase = Bld.CreateAlignedLoad(CGM.VoidPtrTy, PtrObj, PtrAlign);
+        break;
+      }
+
+      Address BaseSlot = Bld.CreateConstGEP(BasePtrs, Slot.Index);
+      Address PtrSlot = Bld.CreateConstGEP(Ptrs, Slot.Index);
+
+      if (Slot.Kind == RelocatedSlotTy::Whole) {
+        llvm::Value *OldBase = Bld.CreateLoad(BaseSlot);
+        llvm::Value *OldPtr = Bld.CreateLoad(PtrSlot);
+        NewPointers[N] =
+            Bld.CreateGEP(CGF.Int8Ty, NewBase,
+                          Bld.CreatePtrDiff(CGF.Int8Ty, OldPtr, OldBase));
+      } else if (Slot.Kind == RelocatedSlotTy::Attach) {
+        NewPointers[N] = NewPointers[Slot.Pointee];
+      }
+
+      Bld.CreateStore(NewBase, BaseSlot);
+      if (NewPointers[N])
+        Bld.CreateStore(NewPointers[N], PtrSlot);
+    }
+
+    // A literal's slots hold the variable's bytes at the bottom of a
+    // pointer-sized word, the way the by-copy capture put them there, and the
+    // rest of the word is whatever the capture's temporary held.
+    for (const LiteralSlotTy &L : Literals) {
+      QualType Ty = L.VD->getType().getNonReferenceType();
+      LValue Src;
+      if (L.Field) {
+        Src = CGF.EmitLValueForField(OuterBase, L.Field);
+      } else {
+        DeclRefExpr DRE(C, const_cast<VarDecl *>(L.VD),
+                        /*RefersToEnclosingVariableOrCapture=*/false, Ty,
+                        VK_LValue, Loc);
+        Src = CGF.EmitLValue(&DRE);
+      }
+      llvm::Type *BitsTy = CGF.Builder.getIntNTy(
+          static_cast<unsigned>(C.getTypeSizeInChars(Ty).getQuantity()) * 8);
+      llvm::Value *New =
+          Bld.CreateLoad(Src.getAddress().withElementType(BitsTy));
+      Address BaseSlot =
+          Bld.CreateConstGEP(BasePtrs, L.Index).withElementType(BitsTy);
+      Address PtrSlot =
+          Bld.CreateConstGEP(Ptrs, L.Index).withElementType(BitsTy);
+      Bld.CreateStore(New, BaseSlot);
+      Bld.CreateStore(New, PtrSlot);
+    }
+  }
+
+  CGF.FinishFunction();
+  return Fn;
+}
+
 void CGOpenMPRuntime::emitTaskgraphTargetCall(
     CodeGenFunction &CGF, const OMPExecutableDirective &D, SourceLocation Loc,
     llvm::Value *OutlinedFnID, llvm::Value *DeviceID, llvm::Value *NumTeams,
-    llvm::Value *NumThreads, llvm::Value *KernelArgsPtr) {
+    llvm::Value *NumThreads, llvm::Value *KernelArgsPtr,
+    llvm::Value *Relocate) {
   llvm::Value *ThreadID = getThreadID(CGF, Loc);
   llvm::Value *UpLoc = emitUpdateLocation(CGF, Loc);
 
@@ -12182,12 +12823,6 @@ void CGOpenMPRuntime::emitTaskgraphTargetCall(
   llvm::Value *HasNoWait =
       CGF.Builder.getInt32(D.hasClausesOfKind<OMPNowaitClause>() ? 1 : 0);
 
-  // Relocation callback used at replay to rewrite moved host pointers in the
-  // captured kernel arguments.  Emission of a real relocate function is not yet
-  // implemented (the recorded graph is not replayed through this path yet), so
-  // a null callback is passed; the runtime simply stores it.
-  llvm::Value *Relocate = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
-
   llvm::Value *Args[] = {UpLoc,        ThreadID,      NumDeps,  DepList,
                          HasNoWait,    DeviceID,      NumTeams, NumThreads,
                          OutlinedFnID, KernelArgsPtr, Relocate};
@@ -12201,7 +12836,8 @@ void CGOpenMPRuntime::emitTaskgraphTargetDataCall(
     llvm::Value *DeviceID, unsigned NumTargetItems,
     llvm::Value *BasePointersArray, llvm::Value *PointersArray,
     llvm::Value *SizesArray, llvm::Value *MapTypesArray,
-    llvm::Value *MapNamesArray, llvm::Value *MappersArray) {
+    llvm::Value *MapNamesArray, llvm::Value *MappersArray,
+    llvm::Value *Relocate) {
   llvm::Value *ThreadID = getThreadID(CGF, Loc);
   llvm::Value *UpLoc = emitUpdateLocation(CGF, Loc);
 
@@ -12240,10 +12876,6 @@ void CGOpenMPRuntime::emitTaskgraphTargetDataCall(
   default:
     llvm_unreachable("Unexpected standalone target data directive.");
   }
-
-  // See emitTaskgraphTargetCall: a real relocate callback is not emitted yet,
-  // so a null pointer is passed and merely stored by the runtime.
-  llvm::Value *Relocate = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
 
   llvm::Value *Args[] = {UpLoc,        ThreadID,          NumDeps,
                          DepList,      HasNoWait,         DeviceID,
@@ -12308,7 +12940,8 @@ static void emitTargetCallKernelLaunch(
   auto &&EmitBody = [&OMPRuntime, OutlinedFn, &D, &CapturedVars,
                      RequiresOuterTask, &CS, OffloadingMandatory, Device,
                      OutlinedFnID, &InputInfo, &MapTypesArray, &MapNamesArray,
-                     SizeEmitter](CodeGenFunction &CGF, bool Recording) {
+                     SizeEmitter, &CGM,
+                     &CombinedInfo](CodeGenFunction &CGF, bool Recording) {
     bool IsReverseOffloading = Device.getInt() == OMPC_DEVICE_ancestor;
 
     if (IsReverseOffloading) {
@@ -12391,11 +13024,23 @@ static void emitTargetCallKernelLaunch(
       // emitKernelArgsStruct drives the OMPIRBuilder's own IRBuilder; keep
       // CGF's builder in sync so the runtime call is emitted after the stores.
       CGF.Builder.restoreIP(OMPRuntime->getOMPBuilder().getInsertionPoint());
+      // A replay may run from a different frame than the encounter that
+      // recorded the region, so the recorded map arrays need refreshing before
+      // they are used again.  CapturedStmtInfo here is the target region's
+      // inlined region, whose lookup chains out to the enclosing taskgraph's
+      // record -- the same record the runtime hands back as outer_captures.
+      llvm::Function *RelocateFn = emitTargetRelocationFunction(
+          CGM, D.getBeginLoc(), &CS, CGF.CapturedStmtInfo, CombinedInfo,
+          /*IsDataNode=*/false);
+      llvm::Value *Relocate =
+          RelocateFn ? cast<llvm::Value>(RelocateFn)
+                     : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
       // The taskgraph entry point satisfies the dependences itself; there is no
       // enclosing helper task on this path.
-      OMPRuntime->emitTaskgraphTargetCall(
-          CGF, D, D.getBeginLoc(), OutlinedFnID, DeviceID,
-          Args.NumTeams.front(), Args.NumThreads.front(), KernelArgsPtr);
+      OMPRuntime->emitTaskgraphTargetCall(CGF, D, D.getBeginLoc(), OutlinedFnID,
+                                          DeviceID, Args.NumTeams.front(),
+                                          Args.NumThreads.front(),
+                                          KernelArgsPtr, Relocate);
     } else {
       llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
           cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(
@@ -13166,9 +13811,11 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
   CodeGenFunction::OMPTargetDataInfo InputInfo;
   llvm::Value *MapTypesArray = nullptr;
   llvm::Value *MapNamesArray = nullptr;
+  llvm::Value *Relocate = nullptr;
   // Generate the code for the opening of the data environment.
   auto &&EmitDataBody = [this, &D, Device, &InputInfo, &MapTypesArray,
-                         &MapNamesArray](CodeGenFunction &CGF, bool Recording) {
+                         &MapNamesArray,
+                         &Relocate](CodeGenFunction &CGF, bool Recording) {
     // Emit device ID if any.
     llvm::Value *DeviceID = nullptr;
     if (Device) {
@@ -13188,7 +13835,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
           InputInfo.BasePointersArray.emitRawPointer(CGF),
           InputInfo.PointersArray.emitRawPointer(CGF),
           InputInfo.SizesArray.emitRawPointer(CGF), MapTypesArray,
-          MapNamesArray, InputInfo.MappersArray.emitRawPointer(CGF));
+          MapNamesArray, InputInfo.MappersArray.emitRawPointer(CGF), Relocate);
       return;
     }
 
@@ -13312,8 +13959,9 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
   };
 
   auto &&TargetThenGen = [this, &EmitDataBody, &D, &InputInfo, &MapTypesArray,
-                          &MapNamesArray, RequiresOuterTask, ReplayableCond](
-                             CodeGenFunction &CGF, PrePostActionTy &) {
+                          &MapNamesArray, &Relocate, RequiresOuterTask,
+                          ReplayableCond](CodeGenFunction &CGF,
+                                          PrePostActionTy &) {
     // Fill up the arrays with all the mapped variables.
     MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
     CGOpenMPRuntime::TargetDataInfo Info;
@@ -13333,6 +13981,18 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
         Address(Info.RTArgs.MappersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
     MapTypesArray = Info.RTArgs.MapTypesArray;
     MapNamesArray = Info.RTArgs.MapNamesArray;
+
+    // A replay may run from a different frame than the encounter that recorded
+    // the directive, so the recorded map arrays need refreshing before they are
+    // used again.  Built here rather than at the call, which is inside a lambda
+    // that no longer has the map info the decision is made from.
+    if (ReplayableCond) {
+      llvm::Function *RelocateFn = emitTargetRelocationFunction(
+          CGM, D.getBeginLoc(), /*CS=*/nullptr, CGF.CapturedStmtInfo,
+          CombinedInfo, /*IsDataNode=*/true);
+      Relocate = RelocateFn ? cast<llvm::Value>(RelocateFn)
+                            : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+    }
 
     // The taskgraph (recording) path is never wrapped in a hidden helper task:
     // a replayable target-data directive executes synchronously and the
