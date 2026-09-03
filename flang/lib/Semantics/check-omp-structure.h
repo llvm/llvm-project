@@ -422,6 +422,8 @@ private:
 
   llvm::SmallVector<EffectiveDirectivePath, 4>
   GetEnclosingDirectivePaths() const;
+  ConstructTraitSequence GetConstructTraitsForPath(
+      const EffectiveDirectivePath &) const;
   llvm::SmallVector<EffectiveDirectivePath, 4> GetUniqueEffectiveDirectivePaths(
       llvm::SmallVector<EffectiveDirectivePath, 4>) const;
   void CollectMetadirectiveConstructSelectors(const parser::ProgramUnit &);

@@ -755,6 +755,23 @@ void OmpStructureChecker::CollectMetadirectiveConstructSelectors(
   parser::Walk(programUnit, collector);
 }
 
+OmpStructureChecker::ConstructTraitSequence
+OmpStructureChecker::GetConstructTraitsForPath(
+    const EffectiveDirectivePath &path) const {
+  ConstructTraitSequence constructTraits;
+  for (auto directive{path.rbegin()}; directive != path.rend(); ++directive) {
+    // The construct trait set starts at the innermost target construct.
+    if (llvm::omp::allTargetSet.test(*directive)) {
+      constructTraits.clear();
+    }
+    llvm::omp::VariantMatchInfo directiveVMI;
+    AppendConstructTraitsForDirective(*directive, directiveVMI);
+    constructTraits.append(directiveVMI.ConstructTraits.begin(),
+        directiveVMI.ConstructTraits.end());
+  }
+  return constructTraits;
+}
+
 llvm::SmallVector<OmpStructureChecker::EffectiveDirectivePath, 4>
 OmpStructureChecker::GetUniqueEffectiveDirectivePaths(
     llvm::SmallVector<EffectiveDirectivePath, 4> paths) const {
@@ -771,11 +788,7 @@ OmpStructureChecker::GetUniqueEffectiveDirectivePaths(
   }
 
   auto getSignature = [&](const EffectiveDirectivePath &path) {
-    llvm::omp::VariantMatchInfo contextVMI;
-    for (auto directive{path.rbegin()}; directive != path.rend(); ++directive) {
-      AppendConstructTraitsForDirective(*directive, contextVMI);
-    }
-    const auto &contextTraits{contextVMI.ConstructTraits};
+    ConstructTraitSequence contextTraits{GetConstructTraitsForPath(path)};
 
     // Matching depends on trait presence and on the positions at which each
     // ordered construct-selector prefix is matched. This is also enough to
@@ -825,13 +838,7 @@ OmpStructureChecker::GetReachableMetadirectiveReplacements(
 
   for (const EffectiveDirectivePath &path : GetEnclosingDirectivePaths()) {
     std::size_t firstBranch{result.size()};
-    llvm::omp::VariantMatchInfo constructVMI;
-    for (auto context{path.rbegin()}; context != path.rend(); ++context) {
-      AppendConstructTraitsForDirective(*context, constructVMI);
-    }
-    llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits(
-        constructVMI.ConstructTraits.begin(),
-        constructVMI.ConstructTraits.end());
+    ConstructTraitSequence constructTraits{GetConstructTraitsForPath(path)};
     OmpVariantMatchContext matchContext{context_, constructTraits};
     if (auto candidateSet{
             BuildMetadirectiveCandidateSet(clauses, context_, matchContext)}) {
@@ -851,6 +858,7 @@ OmpStructureChecker::GetReachableMetadirectiveReplacements(
 
     // Unsupported selectors are diagnosed elsewhere. Retain every explicit
     // replacement on each path so recovery cannot miss a loop constraint.
+    bool hasFallback{false};
     for (const parser::OmpClause &clause : clauses.v) {
       const parser::OmpDirectiveSpecification *spec{nullptr};
       if (const auto *when{std::get_if<parser::OmpClause::When>(&clause.u)}) {
@@ -860,12 +868,14 @@ OmpStructureChecker::GetReachableMetadirectiveReplacements(
         }
       } else if (const auto *otherwise{
                      std::get_if<parser::OmpClause::Otherwise>(&clause.u)}) {
+        hasFallback = true;
         if (otherwise->v && otherwise->v->v) {
           spec = &otherwise->v->v->value();
         }
       } else if (const auto *defaultVariant{
                      std::get_if<parser::OmpClause::DefaultVariant>(
                          &clause.u)}) {
+        hasFallback = true;
         spec = &defaultVariant->v.v.value();
       } else {
         continue;
@@ -875,7 +885,7 @@ OmpStructureChecker::GetReachableMetadirectiveReplacements(
       }
       result.push_back({path, spec});
     }
-    if (result.size() == firstBranch) {
+    if (!hasFallback) {
       result.push_back({path, nullptr});
     }
   }
