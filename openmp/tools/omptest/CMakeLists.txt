@@ -107,8 +107,9 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
 else()
   message(STATUS "omptest build mode: standalone")
 
-  # Add 'standalone' compile definitions
-  target_compile_definitions(omptest PRIVATE
+  # PUBLIC: OmptTester.h selects the standalone variant on this macro, so
+  # consumers must see the same value the library was built with.
+  target_compile_definitions(omptest PUBLIC
     -DOPENMP_LIBOMPTEST_BUILD_STANDALONE)
 
   # Add 'standalone' source files
