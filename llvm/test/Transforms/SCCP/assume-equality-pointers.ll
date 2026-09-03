@@ -143,9 +143,11 @@ define ptr @assume_pointers_equality_maybe_different_provenance_6(ptr %p) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], @g_inner
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[IF]]:
+; CHECK-NEXT:    store ptr [[P]], ptr @g_outer, align 8
 ; CHECK-NEXT:    ret ptr null
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    ret ptr poison
+; CHECK-NEXT:    [[RES:%.*]] = load ptr, ptr @g_outer, align 8
+; CHECK-NEXT:    ret ptr [[RES]]
 ;
 entry:
   %cmp = icmp eq ptr %p, @g_inner
