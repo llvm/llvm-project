@@ -214,21 +214,22 @@ constexpr bool test() {
 
   test_alloc<std::vector, std::vector>();
 
-#ifndef __cpp_lib_constexpr_deque
-  if (!TEST_IS_CONSTANT_EVALUATED)
-#endif
-  {
-    test<std::deque<int>, std::vector<double>>();
-    test_alloc<std::deque, std::deque>();
-  }
+  return true;
+}
+
+constexpr bool test_deque() {
+  test<std::deque<int>, std::vector<double>>();
+  test_alloc<std::deque, std::deque>();
 
   return true;
 }
 
 int main(int, char**) {
   test();
+  test_deque();
 #if TEST_STD_VER >= 26
   static_assert(test());
+  static_assert(test_deque());
 #endif
 
   return 0;
