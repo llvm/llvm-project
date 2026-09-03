@@ -297,6 +297,7 @@ private:
   void initializeSections(bool ignoreComdats,
                           const llvm::object::ELFFile<ELFT> &obj);
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
+  void initDynDbgSymbols();
   void initializeJustSymbols();
 
   InputSectionBase *getRelocTarget(uint32_t idx, uint32_t info);

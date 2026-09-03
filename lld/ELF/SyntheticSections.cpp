@@ -4425,20 +4425,22 @@ void DynamicDebugSection::writeTo(uint8_t *buf) {
          ctx.dynDbgOutput->getBufferSize());
 }
 
+constexpr char dynDbgNoteName[] = "LLVM";
+
 DynamicDebugNote::DynamicDebugNote(Ctx &ctx)
     : SyntheticSection(ctx, ".note.llvm.dyndbg", SHT_NOTE, 0, 4) {}
 
 size_t DynamicDebugNote::getSize() const {
-  return /*hdrsz=*/12 + /*namesz=*/8 + /*descsz=*/sizeof(uint32_t);
+  return sizeof(llvm::ELF::Elf64_Nhdr) + alignTo(sizeof(dynDbgNoteName), 4) +
+         /*descsz=*/sizeof(uint32_t);
 }
 
 void DynamicDebugNote::writeTo(uint8_t *buf) {
-  write32(ctx, buf, 5);                             // Name size
+  write32(ctx, buf, sizeof(dynDbgNoteName));        // Name size
   write32(ctx, buf + 4, sizeof(uint32_t));          // Content size
   write32(ctx, buf + 8, NT_LLVM_DYNAMIC_DEBUGGING); // Type
-  memcpy(buf + 12, "LLVM", 5);                      // Name string
-  uint32_t version = 0;
-  write32(ctx, buf + 20, version);
+  memcpy(buf + 12, dynDbgNoteName, sizeof(dynDbgNoteName));
+  write32(ctx, buf + 12 + alignTo(sizeof(dynDbgNoteName), 4), 0); // Version
 }
 
 static OutputSection *findSection(Ctx &ctx, StringRef name) {

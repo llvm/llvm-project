@@ -371,7 +371,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     // link()) instead of committing the buffer, which would write to the
     // process's stdout.
     if (ctx.inDynDbgLink)
-      ctx.dynDbgOutput.swap(buffer);
+      ctx.dynDbgOutput = std::move(buffer);
     else if (ctx.arg.outputFile == "-") {
       ctx.e.outs() << StringRef(
           reinterpret_cast<const char *>(buffer->getBufferStart()),
@@ -1923,43 +1923,20 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // debugging. Report references to undefined symbols and ensure that
     // references to shared symbols have PLT/GOT entries as appropriate.
     if (ctx.hasDynDbg) {
-      bool ignoreUnresolved =
-          (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Ignore);
-      bool warnUnresolved =
-          (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Warn);
+      InputSection *unknownSec = make<InputSection>(
+          ctx.internalFile, dynDbgSecName, 0, 0, 0, 0, ArrayRef<uint8_t>());
       for (Symbol *sym : ctx.symtab->getSymbols()) {
         if (!sym->isDynDbgRef)
           continue;
 
         if (sym->isUndefined()) {
-          bool isWarning;
-
-          // If versioned, issue an error (even if the symbol is weak) because
-          // we don't know the defining filename which is required to construct
-          // a Verneed entry.
-          if (sym->hasVersionSuffix)
-            isWarning = false;
-          else {
-            if (sym->isWeak())
-              continue;
-
-            bool canBeExternal =
-                !sym->isLocal() && sym->visibility() == STV_DEFAULT;
-            if (ignoreUnresolved && canBeExternal)
-              continue;
-
-            isWarning =
-                (warnUnresolved && canBeExternal) || ctx.arg.noinhibitExec;
-          }
-
-          // Report with actual dynamic debugging input section if available.
-          static InputSection dummy(ctx.internalFile, dynDbgSecName, 0, 0, 0, 0,
-                                    ArrayRef<uint8_t>());
-          ObjFile<ELFT> *dbgObj = dyn_cast<ObjFile<ELFT>>(sym->file);
-          InputSectionBase *isec =
-              dbgObj && dbgObj->dynDbgSec ? dbgObj->dynDbgSec.get() : &dummy;
-          ctx.undefErrs.push_back(
-              {cast<Undefined>(sym), {{isec, 0}}, isWarning});
+          // Report against the referencing dynamic debugging section when the
+          // symbol's file has one.
+          auto *dbgObj = dyn_cast<ObjFile<ELFT>>(sym->file);
+          InputSectionBase *isec = dbgObj && dbgObj->dynDbgSec
+                                       ? dbgObj->dynDbgSec.get()
+                                       : unknownSec;
+          maybeReportUndefined(ctx, cast<Undefined>(*sym), *isec, 0);
           continue;
         }
 

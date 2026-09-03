@@ -22,13 +22,10 @@ using namespace lld;
 // state.
 static CommonLinkerContext *lctx;
 
-static uint32_t numNestedCtx;
-
 CommonLinkerContext::CommonLinkerContext() {
-  if (lctx) {
-    ++numNestedCtx;
+  // A nested context, e.g. the dynamic debugging link, does not install itself.
+  if (lctx)
     return;
-  }
 
   lctx = this;
   // Fire off the static initializations in CGF's constructor.
@@ -42,13 +39,8 @@ CommonLinkerContext::~CommonLinkerContext() {
   for (auto &it : instances)
     it.second->~SpecificAllocBase();
 
-  if (numNestedCtx) {
-    assert(lctx != this);
-    --numNestedCtx;
-    return;
-  }
-
-  lctx = nullptr;
+  if (lctx == this)
+    lctx = nullptr;
 }
 
 CommonLinkerContext &lld::commonContext() {
