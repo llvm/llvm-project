@@ -135,6 +135,18 @@ typedef unsigned int NSTimeInterval;
 - (id)initWithTimeout:(NSTimeInterval)timeout;
 @end
 
+// @method and @methodgroup should not warn when the comment is directly
+// attached to an Objective-C method declaration.
+@interface TestMethodAndMethodgroupAttached
+/*!
+ @methodgroup Creating a request
+*/
+/*!
+ @method doSomething
+*/
+- (id)doSomething;
+@end
+
 // expected-warning@+2 {{'@protocol' command should not be used in a comment attached to a non-protocol declaration}}
 /*!
 @protocol PROTO
