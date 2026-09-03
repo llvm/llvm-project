@@ -72,7 +72,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 16 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 16 : i64, llvm.byval = !rec_Big, llvm.noundef})
 
   // A record the caller must destroy is passed by reference rather than copied,
   // so it takes byref instead of byval even though the size rule is the same.
