@@ -2900,8 +2900,7 @@ protected:
   }
 
   /// Indicate how a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
-  /// given interleave factor Factor and type VT should be
-  /// treated.
+  /// given interleave factor Factor and type VT should be treated.
   void setVectorInterleaveAction(unsigned Opc, unsigned Factor, MVT VT,
                                  LegalizeAction Action) {
     assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
