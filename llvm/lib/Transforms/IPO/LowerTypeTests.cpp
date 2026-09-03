@@ -199,7 +199,7 @@ BitSetInfo BitSetBuilder::build() {
 }
 
 void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
-  assert(Fragments.front().empty());
+  assert(Fragments.front().empty() && "Cannot add fragments after build()");
 
   // Create a new fragment to hold the layout for F.
   Fragments.emplace_back();
@@ -224,11 +224,10 @@ void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
   }
 
   if (Less) {
-    llvm::stable_sort(SubFragments,
-                      [&](const std::vector<uint64_t> &A,
-                          const std::vector<uint64_t> &B) {
-                        return Less(A.back(), B.back());
-                      });
+    llvm::stable_sort(SubFragments, [&](const std::vector<uint64_t> &A,
+                                        const std::vector<uint64_t> &B) {
+      return Less(A.back(), B.back());
+    });
   }
 
   for (auto &SF : SubFragments)
@@ -244,21 +243,20 @@ const std::vector<uint64_t> &GlobalLayoutBuilder::build() {
     // If multiple root fragments remain (e.g. disjoint signatures with no
     // generalized type), order them so the one containing the hottest function
     // is placed last.
-    llvm::erase_if(Fragments, [](const std::vector<uint64_t> &F) {
-      return F.empty();
+    llvm::erase_if(Fragments,
+                   [](const std::vector<uint64_t> &F) { return F.empty(); });
+    llvm::stable_sort(Fragments, [&](const std::vector<uint64_t> &FA,
+                                     const std::vector<uint64_t> &FB) {
+      return Less(FA.back(), FB.back());
     });
-    llvm::stable_sort(Fragments,
-                      [&](const std::vector<uint64_t> &FA,
-                          const std::vector<uint64_t> &FB) {
-                        return Less(FA.back(), FB.back());
-                      });
   }
 
   std::vector<uint64_t> Layout;
   Layout.reserve(FragmentMap.size());
   for (auto &&F : Fragments)
-    llvm::append_range(Layout, std::move(F));
-  Fragments = {std::move(Layout)};
+    llvm::append_range(Layout, F);
+  Fragments.clear();
+  Fragments.push_back(std::move(Layout));
   return Fragments.front();
 }
 
