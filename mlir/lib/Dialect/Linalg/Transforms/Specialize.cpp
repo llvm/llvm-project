@@ -206,11 +206,9 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
     if (auto divOp = dyn_cast<arith::DivFOp>(op)) {
       if (auto constOp = dyn_cast_if_present<arith::ConstantOp>(
               divOp.getLhs().getDefiningOp()))
-        if (cast<FloatAttr>(constOp.getValue())
-                .getValue()
-                .isExactlyValue(1.0))
+        if (cast<FloatAttr>(constOp.getValue()).getValue().isExactlyValue(1.0))
           return replaceOp(nullptr, ElementwiseKind::reciprocal,
-                            /*mayHoistScalarOperand=*/false);
+                           /*mayHoistScalarOperand=*/false);
     }
     if (isa<math::RoundOp>(op))
       return replaceOp(nullptr, ElementwiseKind::round);
@@ -262,8 +260,8 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
                      "category op");
 
     // Boolean-typed `linalg.add` and `linalg.mul` require special handling.
-    bool allBool = llvm::all_of(op->getOperands(),
-                                [](Value v) { return v.getType().isInteger(1); });
+    bool allBool = llvm::all_of(
+        op->getOperands(), [](Value v) { return v.getType().isInteger(1); });
 
     if (isa<arith::AddFOp, arith::AddIOp, complex::AddOp>(op) ||
         (allBool && isa<arith::OrIOp>(op)))
