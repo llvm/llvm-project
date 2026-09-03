@@ -119,7 +119,7 @@ constexpr bool test() {
     assert(a[2].other == 6);
   }
 
-  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED)
     test_segmented_deque_iterator();
 
   {

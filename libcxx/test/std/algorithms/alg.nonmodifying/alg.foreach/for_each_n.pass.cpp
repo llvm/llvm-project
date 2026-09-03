@@ -117,7 +117,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(it == (std::begin(ia) + N) && std::equal(std::begin(ia), std::end(ia), std::begin(expected)));
   }
 
-  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED)
     test_deque_and_join_view_iterators();
 
 #if TEST_STD_VER >= 20
