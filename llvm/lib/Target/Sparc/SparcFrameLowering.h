@@ -35,8 +35,8 @@ public:
                                 MachineBasicBlock::iterator I) const override;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-                            RegScavenger *RS = nullptr) const override;
+
+  void finalizeLeafProc(MachineFunction &MF) const;
 
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
@@ -55,7 +55,6 @@ private:
 
   // Returns true if MF is a leaf procedure.
   bool isLeafProc(MachineFunction &MF) const;
-
 
   // Emits code for adjusting SP in function prologue/epilogue.
   void emitSPAdjustment(MachineFunction &MF,

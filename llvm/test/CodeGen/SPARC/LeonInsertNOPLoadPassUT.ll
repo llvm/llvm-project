@@ -7,9 +7,7 @@ define float @ld_float_test() #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0: ! %entry
 ; CHECK-NEXT:    add %sp, -96, %sp
-; CHECK-NEXT:    .cfi_def_cfa_register %fp
-; CHECK-NEXT:    .cfi_window_save
-; CHECK-NEXT:    .cfi_register %o7, %i7
+; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    sethi 1042305, %o0
 ; CHECK-NEXT:    or %o0, 25, %o0
 ; CHECK-NEXT:    st %o0, [%sp+92]

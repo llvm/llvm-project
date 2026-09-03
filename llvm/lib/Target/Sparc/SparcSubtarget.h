@@ -51,7 +51,7 @@ public:
   ~SparcSubtarget() override;
 
   const SparcInstrInfo *getInstrInfo() const override { return &InstrInfo; }
-  const TargetFrameLowering *getFrameLowering() const override {
+  const SparcFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
   }
   const SparcRegisterInfo *getRegisterInfo() const override {
@@ -86,6 +86,10 @@ public:
 
   bool isRegisterReserved(MCPhysReg PhysReg) const {
     return ReserveRegister[PhysReg];
+  }
+
+  bool hasReservedLocalRegister() const {
+    return ReserveRegister.find_first_in(SP::L0, SP::L7 + 1) != -1;
   }
 
   /// Given a actual stack size as determined by FrameInfo, this function
