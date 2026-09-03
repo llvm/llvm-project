@@ -1583,8 +1583,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
 
   // Make sure that the copied offset is actually part of the alloca. There
   // might be an out-of-bounds copy in dead code.
-  if (!Size.isFixed() || *SrcOffset + Size > *SrcSize)
+  if (Size.isFixed()) {
+    if (*SrcOffset + Size > *SrcSize)
+      return false;
+  } else if (*SrcOffset != 0) {
+    // Cannot compute an in-bounds offset on scalable sizes.
     return false;
+  }
 
   // Check if it will be legal to combine allocas without breaking dominator.
   bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
