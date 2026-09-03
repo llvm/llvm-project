@@ -11,8 +11,6 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - 'test-*'
-      - 'libc-mcdc-*'
       - main
     paths:
       - 'libc/src/**'
@@ -26,6 +24,8 @@ on:
       - '!libc/utils/**'
       - '!**.md'
   pull_request:
+    branches:
+      - main
     paths:
       - 'libc/src/**'
       - 'libc/include/**'

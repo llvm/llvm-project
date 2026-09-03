@@ -14,12 +14,10 @@ on:
   # Allow manual on-demand execution from GitHub Actions UI
   workflow_dispatch:
 
-  # Trigger on pushes to main / libc-coverage-ci-bots / post-commit-bot
+  # Trigger on pushes to main
   push:
     branches:
       - main
-      - libc-coverage-ci-bots
-      - post-commit-bot
     paths:
       - 'libc/**'
       - '.github/workflows/libc-full-coverage.yml'

@@ -14,12 +14,10 @@ on:
   # Allow manual on-demand execution from GitHub Actions UI ("Run workflow" button)
   workflow_dispatch:
 
-  # Trigger on pushes to main / libc-mcdc-coverage / post-commit-bot
+  # Trigger on pushes to main
   push:
     branches:
       - main
-      - libc-mcdc-coverage
-      - post-commit-bot
     paths:
       - 'libc/**'
       - '.github/workflows/libc-full-mcdc.yml'
