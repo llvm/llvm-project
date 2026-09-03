@@ -15,13 +15,15 @@
 #define FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_
 
 #include "check-directive-structure.h"
-#include "flang/Common/enum-set.h"
+
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/semantics.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <cstddef>
 #include <functional>
@@ -51,6 +53,19 @@ struct AnalyzedCondStmt;
 namespace omp {
 struct LoopSequence;
 }
+
+// Support classes for verifying syntactic properties.
+template <typename ElemTy> struct AppliedElement {
+  parser::omp::WithSource<ElemTy> id;
+};
+
+template <typename ElemTy> struct AppliedElementInfo {
+  using ElementTy = AppliedElement<ElemTy>;
+  llvm::SmallVector<ElementTy> elements;
+};
+
+using AppliedModifierInfo = AppliedElementInfo<llvm::omp::Modifier>;
+using AppliedModifier = AppliedModifierInfo::ElementTy;
 
 // Mapping from 'Symbol' to 'Source' to keep track of the variables
 // used in multiple clauses
@@ -337,6 +352,22 @@ private:
       const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
   void CheckTraitSimd(
       const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+
+  // check-omp-syntax.cpp
+  bool VerifyModifierVersion(parser::omp::WithSource<llvm::omp::Clause> clause,
+      const AppliedModifierInfo &info);
+  bool VerifyModifierRequired(parser::omp::WithSource<llvm::omp::Clause> clause,
+      const AppliedModifierInfo &info);
+  bool VerifyModifierUnique(parser::omp::WithSource<llvm::omp::Clause> clause,
+      const AppliedModifierInfo &info);
+  bool VerifyModifierExclusive(
+      parser::omp::WithSource<llvm::omp::Clause> clause,
+      const AppliedModifierInfo &info);
+  bool VerifyModifierUltimate(parser::omp::WithSource<llvm::omp::Clause> clause,
+      const AppliedModifierInfo &info);
+  bool VerifyModifiers(parser::omp::WithSource<llvm::omp::Clause> clause,
+      const AppliedModifierInfo &info);
+  void VerifyModifiers(const parser::OmpClause &x);
 
   // check-omp-structure.cpp
   using ClauseIterator =

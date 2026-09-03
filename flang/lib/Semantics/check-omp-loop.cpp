@@ -773,7 +773,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 
   auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
     if (!symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
-      auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
+      auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::LinearModifier)};
       context_.Say(source,
           "The list item '%s' specified without the REF '%s' must be of INTEGER type"_err_en_US,
           symbol->name(), desc.getName().str());
@@ -784,7 +784,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
     auto &modifiers{OmpGetModifiers(x.v)};
     linearMod = OmpGetUniqueModifier<parser::OmpLinearModifier>(modifiers);
     if (linearMod) {
-      auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
+      auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::LinearModifier)};
       parser::CharBlock modSource{OmpGetModifierSource(modifiers, linearMod)};
       bool valid{true};
 
