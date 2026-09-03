@@ -6,6 +6,11 @@
 @fill_table32_partial = internal unnamed_addr constant [17 x i32] [i32 0, i32 1, i32 3, i32 7, i32 15, i32 31, i32 63, i32 127, i32 255, i32 511, i32 1023, i32 2047, i32 4095, i32 8191, i32 16383, i32 32767, i32 65535], align 16
 @fill_table64 = internal unnamed_addr constant [64 x i64] [i64 0, i64 1, i64 3, i64 7, i64 15, i64 31, i64 63, i64 127, i64 255, i64 511, i64 1023, i64 2047, i64 4095, i64 8191, i64 16383, i64 32767, i64 65535, i64 131071, i64 262143, i64 524287, i64 1048575, i64 2097151, i64 4194303, i64 8388607, i64 16777215, i64 33554431, i64 67108863, i64 134217727, i64 268435455, i64 536870911, i64 1073741823, i64 2147483647, i64 4294967295, i64 8589934591, i64 17179869183, i64 34359738367, i64 68719476735, i64 137438953471, i64 274877906943, i64 549755813887, i64 1099511627775, i64 2199023255551, i64 4398046511103, i64 8796093022207, i64 17592186044415, i64 35184372088831, i64 70368744177663, i64 140737488355327, i64 281474976710655, i64 562949953421311, i64 1125899906842623, i64 2251799813685247, i64 4503599627370495, i64 9007199254740991, i64 18014398509481983, i64 36028797018963967, i64 72057594037927935, i64 144115188075855871, i64 288230376151711743, i64 576460752303423487, i64 1152921504606846975, i64 2305843009213693951, i64 4611686018427387903, i64 9223372036854775807], align 16
 @fill_table64_partial = internal unnamed_addr constant [51 x i64] [i64 0, i64 1, i64 3, i64 7, i64 15, i64 31, i64 63, i64 127, i64 255, i64 511, i64 1023, i64 2047, i64 4095, i64 8191, i64 16383, i64 32767, i64 65535, i64 131071, i64 262143, i64 524287, i64 1048575, i64 2097151, i64 4194303, i64 8388607, i64 16777215, i64 33554431, i64 67108863, i64 134217727, i64 268435455, i64 536870911, i64 1073741823, i64 2147483647, i64 4294967295, i64 8589934591, i64 17179869183, i64 34359738367, i64 68719476735, i64 137438953471, i64 274877906943, i64 549755813887, i64 1099511627775, i64 2199023255551, i64 4398046511103, i64 8796093022207, i64 17592186044415, i64 35184372088831, i64 70368744177663, i64 140737488355327, i64 281474976710655, i64 562949953421311, i64 1125899906842623], align 16
+@fill_table32_full = internal unnamed_addr constant [33 x i32] [i32 0, i32 1, i32 3, i32 7, i32 15, i32 31, i32 63, i32 127, i32 255, i32 511, i32 1023, i32 2047, i32 4095, i32 8191, i32 16383, i32 32767, i32 65535, i32 131071, i32 262143, i32 524287, i32 1048575, i32 2097151, i32 4194303, i32 8388607, i32 16777215, i32 33554431, i32 67108863, i32 134217727, i32 268435455, i32 536870911, i32 1073741823, i32 2147483647, i32 -1], align 16
+@fill_table64_full = internal unnamed_addr constant [65 x i64] [i64 0, i64 1, i64 3, i64 7, i64 15, i64 31, i64 63, i64 127, i64 255, i64 511, i64 1023, i64 2047, i64 4095, i64 8191, i64 16383, i64 32767, i64 65535, i64 131071, i64 262143, i64 524287, i64 1048575, i64 2097151, i64 4194303, i64 8388607, i64 16777215, i64 33554431, i64 67108863, i64 134217727, i64 268435455, i64 536870911, i64 1073741823, i64 2147483647, i64 4294967295, i64 8589934591, i64 17179869183, i64 34359738367, i64 68719476735, i64 137438953471, i64 274877906943, i64 549755813887, i64 1099511627775, i64 2199023255551, i64 4398046511103, i64 8796093022207, i64 17592186044415, i64 35184372088831, i64 70368744177663, i64 140737488355327, i64 281474976710655, i64 562949953421311, i64 1125899906842623, i64 2251799813685247, i64 4503599627370495, i64 9007199254740991, i64 18014398509481983, i64 36028797018963967, i64 72057594037927935, i64 144115188075855871, i64 288230376151711743, i64 576460752303423487, i64 1152921504606846975, i64 2305843009213693951, i64 4611686018427387903, i64 9223372036854775807, i64 -1], align 16
+@fill_table32_too_long = internal unnamed_addr constant [34 x i32] [i32 0, i32 1, i32 3, i32 7, i32 15, i32 31, i32 63, i32 127, i32 255, i32 511, i32 1023, i32 2047, i32 4095, i32 8191, i32 16383, i32 32767, i32 65535, i32 131071, i32 262143, i32 524287, i32 1048575, i32 2097151, i32 4194303, i32 8388607, i32 16777215, i32 33554431, i32 67108863, i32 134217727, i32 268435455, i32 536870911, i32 1073741823, i32 2147483647, i32 -1, i32 -1], align 16
+@bad_table32 = internal unnamed_addr constant [32 x i32] [i32 0, i32 1, i32 3, i32 7, i32 15, i32 31, i32 63, i32 127, i32 255, i32 511, i32 1023, i32 2047, i32 4095, i32 8191, i32 16383, i32 32767, i32 65535, i32 131071, i32 262143, i32 524287, i32 1048575, i32 2097151, i32 4194303, i32 8388607, i32 16777215, i32 33554431, i32 67108863, i32 134217727, i32 268435455, i32 536870911, i32 1073741823, i32 2147483646], align 16
+@mutable_table32 = internal unnamed_addr global [32 x i32] [i32 0, i32 1, i32 3, i32 7, i32 15, i32 31, i32 63, i32 127, i32 255, i32 511, i32 1023, i32 2047, i32 4095, i32 8191, i32 16383, i32 32767, i32 65535, i32 131071, i32 262143, i32 524287, i32 1048575, i32 2097151, i32 4194303, i32 8388607, i32 16777215, i32 33554431, i32 67108863, i32 134217727, i32 268435455, i32 536870911, i32 1073741823, i32 2147483647], align 16
 
 define i32 @f32_bzhi(i32 %x, i32 %y) local_unnamed_addr {
 ; X64-LABEL: f32_bzhi:
@@ -165,4 +170,300 @@ entry:
   %0 = load i64, ptr %arrayidx, align 8
   %and = and i64 %x, %0
   ret i64 %and
+}
+
+; Negative for now: a bitwidth + 1 entry table ending in the all-ones mask is
+; not recognized, even though bzhi would produce every entry's value.
+define i32 @f32_bzhi_full(i32 %x, i32 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_full:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movslq %esi, %rcx
+; X64-NEXT:    andl fill_table32_full(,%rcx,4), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_full:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl fill_table32_full(,%eax,4), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %idxprom = sext i32 %y to i64
+  %arrayidx = getelementptr inbounds [33 x i32], ptr @fill_table32_full, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
+}
+
+define i64 @f64_bzhi_full(i64 %x, i64 %y) local_unnamed_addr {
+; X64-LABEL: f64_bzhi_full:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    andq fill_table64_full(,%rsi,8), %rax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f64_bzhi_full:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl fill_table64_full+4(,%eax,8), %edx
+; X86-NEXT:    movl fill_table64_full(,%eax,8), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    retl
+entry:
+  %arrayidx = getelementptr inbounds [65 x i64], ptr @fill_table64_full, i64 0, i64 %y
+  %0 = load i64, ptr %arrayidx, align 8
+  %and = and i64 %0, %x
+  ret i64 %and
+}
+
+; The other operand of the and is a load that can become the bzhi memory operand.
+define i32 @f32_bzhi_load(ptr %p, i32 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_load:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    bzhil %esi, (%rdi), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_load:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    bzhil %ecx, (%eax), %eax
+; X86-NEXT:    retl
+entry:
+  %x = load i32, ptr %p, align 4
+  %idxprom = sext i32 %y to i64
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @fill_table32, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
+}
+
+; Negative for now: the constant part of the index ends up as a byte offset
+; folded into the global address.
+define i32 @f32_bzhi_index_add(i32 %x, i32 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_index_add:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movslq %esi, %rcx
+; X64-NEXT:    andl fill_table32+4(,%rcx,4), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_index_add:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl fill_table32+4(,%eax,4), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %inc = add nsw i32 %y, 1
+  %idxprom = sext i32 %inc to i64
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @fill_table32, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
+}
+
+; The canonical i8-typed GEP form with a pre-scaled offset still folds.
+define i32 @f32_bzhi_i8_gep(i32 %x, i64 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_i8_gep:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    bzhil %esi, %edi, %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_i8_gep:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bzhil %eax, {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %offset = shl nuw nsw i64 %y, 2
+  %arrayidx = getelementptr inbounds i8, ptr @fill_table32, i64 %offset
+  %0 = load i32, ptr %arrayidx, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
+}
+
+; Negative: the index is scaled by 8, so this loads fill_table32[2 * y].
+define i32 @f32_bzhi_wrong_scale(i32 %x, i64 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_wrong_scale:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl fill_table32(,%rsi,8), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_wrong_scale:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl fill_table32(,%eax,8), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %offset = shl nuw nsw i64 %y, 3
+  %arrayidx = getelementptr inbounds i8, ptr @fill_table32, i64 %offset
+  %0 = load i32, ptr %arrayidx, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
+}
+
+; Negative: an extending load only reads the low half of the table element.
+define i32 @f32_bzhi_extload(i32 %x, i64 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_extload:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movzwl fill_table32(,%rsi,4), %eax
+; X64-NEXT:    andl %edi, %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_extload:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl fill_table32(,%eax,4), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %offset = shl nuw nsw i64 %y, 2
+  %arrayidx = getelementptr inbounds i8, ptr @fill_table32, i64 %offset
+  %0 = load i16, ptr %arrayidx, align 4
+  %ext = zext i16 %0 to i32
+  %and = and i32 %ext, %x
+  ret i32 %and
+}
+
+; Negative: volatile loads must stay.
+define i32 @f32_bzhi_volatile(i32 %x, i32 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_volatile:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movslq %esi, %rcx
+; X64-NEXT:    andl fill_table32(,%rcx,4), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_volatile:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl fill_table32(,%eax,4), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %idxprom = sext i32 %y to i64
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @fill_table32, i64 0, i64 %idxprom
+  %0 = load volatile i32, ptr %arrayidx, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
+}
+
+; Negative: one table element is not a low-bit mask.
+define i32 @f32_bzhi_bad_table(i32 %x, i32 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_bad_table:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movslq %esi, %rcx
+; X64-NEXT:    andl bad_table32(,%rcx,4), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_bad_table:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl bad_table32(,%eax,4), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %idxprom = sext i32 %y to i64
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @bad_table32, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
+}
+
+; Negative: the table is not constant.
+define i32 @f32_bzhi_mutable_table(i32 %x, i32 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_mutable_table:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movslq %esi, %rcx
+; X64-NEXT:    andl mutable_table32(,%rcx,4), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_mutable_table:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl mutable_table32(,%eax,4), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %idxprom = sext i32 %y to i64
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @mutable_table32, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
+}
+
+; Negative: more than bitwidth + 1 entries.
+define i32 @f32_bzhi_too_long(i32 %x, i32 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_too_long:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movslq %esi, %rcx
+; X64-NEXT:    andl fill_table32_too_long(,%rcx,4), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_too_long:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl fill_table32_too_long(,%eax,4), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %idxprom = sext i32 %y to i64
+  %arrayidx = getelementptr inbounds [34 x i32], ptr @fill_table32_too_long, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
+}
+
+; Negative: the +1 element arrives as a runtime byte offset through an
+; i8-typed GEP and is folded into the global address.
+define i32 @f32_bzhi_i8_gep_offset(i32 %x, i64 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_i8_gep_offset:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl fill_table32+4(,%rsi,4), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_i8_gep_offset:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl fill_table32+4(,%eax,4), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %o = shl nuw nsw i64 %y, 2
+  %o2 = add nuw nsw i64 %o, 4
+  %p = getelementptr inbounds i8, ptr @fill_table32, i64 %o2
+  %0 = load i32, ptr %p, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
+}
+
+; Negative: a nonzero first GEP index is a whole-array byte offset on the
+; global address.
+define i32 @f32_bzhi_row1(i32 %x, i64 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_row1:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl fill_table32+128(,%rsi,4), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_row1:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl fill_table32+128(,%eax,4), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+entry:
+  %p = getelementptr [32 x i32], ptr @fill_table32, i64 1, i64 %y
+  %0 = load i32, ptr %p, align 4
+  %and = and i32 %0, %x
+  ret i32 %and
 }
