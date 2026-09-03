@@ -15839,6 +15839,11 @@ private:
       return;
     }
 
+    if (const auto *BITy = D.Ty->getAs<BitIntType>()) {
+      VisitBitInt(BITy, D.StartBitOffset);
+      return;
+    }
+
     uint64_t SizeBit = getScalarOccupiedSizeInBits(D.Ty);
     OccuppiedIntervals.push_back(
         ASTContext::BitInterval{D.StartBitOffset, D.StartBitOffset + SizeBit});
@@ -15947,6 +15952,47 @@ private:
     }();
     OccuppiedIntervals.push_back(
         ASTContext::BitInterval{StartBitOffset, StartBitOffset + SizeBit});
+  }
+
+  /// Compute the occupied bit intervals for a BitInt.
+  ///
+  /// In the case of little endian, the occupied bits are always contiguous so a
+  /// single interval is sufficient. However in big endian, the intervals can be
+  /// disjoint.
+  void VisitBitInt(const BitIntType *Ty, uint64_t StartBitOffset) {
+    const uint64_t OccupiedSizeInBits = Ty->getNumBits();
+
+    if (Ctx.getTargetInfo().isLittleEndian()) {
+      OccuppiedIntervals.push_back(
+          {StartBitOffset, StartBitOffset + OccupiedSizeInBits});
+      return;
+    }
+
+    // In big endian mode, the layout of a BitInt in memory has its bytes in
+    // reverse order, and is pictured in this order:
+    //   1. Fully padding bytes.
+    //   2. One partially occupied byte, with padding at the most significant
+    //   bits. ("remaining occupied bits")
+    //   3. A sequence of fully occupied bytes up until the end of the storage.
+    const uint64_t StorageSizeInBits = Ctx.getTypeSize(Ty);
+    const uint64_t CharWidth = Ctx.getCharWidth();
+    const uint64_t NumFullyPaddingBytes =
+        (StorageSizeInBits - OccupiedSizeInBits) / CharWidth;
+    const uint64_t NumFullyOccupiedBytes = OccupiedSizeInBits / CharWidth;
+    const uint64_t NumRemainingOccupiedBits = OccupiedSizeInBits % CharWidth;
+
+    // Partially occupied byte
+    if (NumRemainingOccupiedBits > 0)
+      OccuppiedIntervals.push_back(
+          {StartBitOffset + NumFullyPaddingBytes * CharWidth,
+           StartBitOffset + NumFullyPaddingBytes * CharWidth +
+               NumRemainingOccupiedBits});
+
+    // Fully occupied bytes
+    if (NumFullyOccupiedBytes > 0)
+      OccuppiedIntervals.push_back({StartBitOffset + StorageSizeInBits -
+                                        NumFullyOccupiedBytes * CharWidth,
+                                    StartBitOffset + StorageSizeInBits});
   }
 
   void MergeOccuppiedIntervals() {

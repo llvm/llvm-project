@@ -501,6 +501,8 @@ features cannot lower the translation-unit ABI level;
   such as when the call is used as an `auto` non-type template argument.
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
+- Fixed a wrong code generation in `__builtin_clear_padding` wherein the
+  wrong bits of the `_BitInt` type were cleared in big-endian mode.
 
 #### Bug Fixes to Attribute Support
 
