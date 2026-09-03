@@ -577,6 +577,7 @@ class VectorType;
     SDValue LowerALUO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
@@ -727,6 +728,7 @@ class VectorType;
                                            MachineBasicBlock *MBB) const;
     MachineBasicBlock *EmitLowered__dbzchk(MachineInstr &MI,
                                            MachineBasicBlock *MBB) const;
+
     void addMVEVectorTypes(bool HasMVEFP);
     void addAllExtLoads(const MVT From, const MVT To, LegalizeAction Action);
     void setAllExpand(MVT VT);

@@ -203,6 +203,7 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT) {
   setOperationAction(ISD::SELECT,            VT, Expand);
   setOperationAction(ISD::SELECT_CC,         VT, Expand);
   setOperationAction(ISD::VSELECT,           VT, Expand);
+  setOperationAction(ISD::CT_SELECT, VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
   if (VT.isInteger()) {
     setOperationAction(ISD::SHL, VT, Custom);
@@ -305,6 +306,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::CTPOP, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
+    setOperationAction(ISD::CT_SELECT, VT, Custom);
 
     // Vector reductions
     setOperationAction(ISD::VECREDUCE_ADD, VT, Legal);
@@ -356,6 +358,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::MSTORE, VT, Legal);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
+    setOperationAction(ISD::CT_SELECT, VT, Custom);
 
     // Pre and Post inc are supported on loads and stores
     for (unsigned im = (unsigned)ISD::PRE_INC;
@@ -409,6 +412,28 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
   setOperationAction(ISD::VECREDUCE_FMIN, MVT::v2f16, Custom);
   setOperationAction(ISD::VECREDUCE_FMAX, MVT::v2f16, Custom);
 
+  if (Subtarget->hasFullFP16()) {
+    setOperationAction(ISD::CT_SELECT, MVT::v4f16, Custom);
+    setOperationAction(ISD::CT_SELECT, MVT::v8f16, Custom);
+  }
+
+  if (Subtarget->hasBF16()) {
+    setOperationAction(ISD::CT_SELECT, MVT::v4bf16, Custom);
+    setOperationAction(ISD::CT_SELECT, MVT::v8bf16, Custom);
+  }
+
+  // small exotic vectors get scalarised for ctselect
+  setOperationAction(ISD::CT_SELECT, MVT::v1i8, Expand);
+  setOperationAction(ISD::CT_SELECT, MVT::v1i16, Expand);
+  setOperationAction(ISD::CT_SELECT, MVT::v1i32, Expand);
+  setOperationAction(ISD::CT_SELECT, MVT::v1f32, Expand);
+  setOperationAction(ISD::CT_SELECT, MVT::v2i8, Expand);
+
+  setOperationAction(ISD::CT_SELECT, MVT::v2i16, Promote);
+  setOperationPromotedToType(ISD::CT_SELECT, MVT::v2i16, MVT::v4i16);
+  setOperationAction(ISD::CT_SELECT, MVT::v4i8, Promote);
+  setOperationPromotedToType(ISD::CT_SELECT, MVT::v4i8, MVT::v8i8);
+
   // We 'support' these types up to bitcast/load/store level, regardless of
   // MVE integer-only / float support. Only doing FP data processing on the FP
   // vector types is inhibited at integer-only level.
@@ -420,6 +445,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
     setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
     setOperationAction(ISD::VSELECT, VT, Legal);
+    setOperationAction(ISD::CT_SELECT, VT, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   }
   setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v2f64, Legal);
@@ -475,6 +501,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::VSELECT, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
+    setOperationAction(ISD::CT_SELECT, VT, Custom);
 
     if (!HasMVEFP) {
       setOperationAction(ISD::SINT_TO_FP, VT, Expand);
@@ -518,6 +545,74 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
   const Triple &TT = TM.getTargetTriple();
+
+  if (TT.isOSBinFormatMachO()) {
+    // Uses VFP for Thumb libfuncs if available.
+    if (Subtarget->isThumb() && Subtarget->hasVFP2Base() &&
+        Subtarget->hasARMOps() && !Subtarget->useSoftFloat()) {
+      // clang-format off
+      static const struct {
+        const RTLIB::Libcall Op;
+        const RTLIB::LibcallImpl Impl;
+      } LibraryCalls[] = {
+        // Single-precision floating-point arithmetic.
+        { RTLIB::ADD_F32, RTLIB::impl___addsf3vfp },
+        { RTLIB::SUB_F32, RTLIB::impl___subsf3vfp },
+        { RTLIB::MUL_F32, RTLIB::impl___mulsf3vfp },
+        { RTLIB::DIV_F32, RTLIB::impl___divsf3vfp },
+
+        // Double-precision floating-point arithmetic.
+        { RTLIB::ADD_F64, RTLIB::impl___adddf3vfp },
+        { RTLIB::SUB_F64, RTLIB::impl___subdf3vfp },
+        { RTLIB::MUL_F64, RTLIB::impl___muldf3vfp },
+        { RTLIB::DIV_F64, RTLIB::impl___divdf3vfp },
+
+        // Single-precision comparisons.
+        { RTLIB::OEQ_F32, RTLIB::impl___eqsf2vfp },
+        { RTLIB::UNE_F32, RTLIB::impl___nesf2vfp },
+        { RTLIB::OLT_F32, RTLIB::impl___ltsf2vfp },
+        { RTLIB::OLE_F32, RTLIB::impl___lesf2vfp },
+        { RTLIB::OGE_F32, RTLIB::impl___gesf2vfp },
+        { RTLIB::OGT_F32, RTLIB::impl___gtsf2vfp },
+        { RTLIB::UO_F32,  RTLIB::impl___unordsf2vfp },
+
+        // Double-precision comparisons.
+        { RTLIB::OEQ_F64, RTLIB::impl___eqdf2vfp },
+        { RTLIB::UNE_F64, RTLIB::impl___nedf2vfp },
+        { RTLIB::OLT_F64, RTLIB::impl___ltdf2vfp },
+        { RTLIB::OLE_F64, RTLIB::impl___ledf2vfp },
+        { RTLIB::OGE_F64, RTLIB::impl___gedf2vfp },
+        { RTLIB::OGT_F64, RTLIB::impl___gtdf2vfp },
+        { RTLIB::UO_F64,  RTLIB::impl___unorddf2vfp },
+
+        // Floating-point to integer conversions.
+        // i64 conversions are done via library routines even when generating VFP
+        // instructions, so use the same ones.
+        { RTLIB::FPTOSINT_F64_I32, RTLIB::impl___fixdfsivfp },
+        { RTLIB::FPTOUINT_F64_I32, RTLIB::impl___fixunsdfsivfp },
+        { RTLIB::FPTOSINT_F32_I32, RTLIB::impl___fixsfsivfp },
+        { RTLIB::FPTOUINT_F32_I32, RTLIB::impl___fixunssfsivfp },
+
+        // Conversions between floating types.
+        { RTLIB::FPROUND_F64_F32, RTLIB::impl___truncdfsf2vfp },
+        { RTLIB::FPEXT_F32_F64,   RTLIB::impl___extendsfdf2vfp },
+
+        // Integer to floating-point conversions.
+        // i64 conversions are done via library routines even when generating VFP
+        // instructions, so use the same ones.
+        // FIXME: There appears to be some naming inconsistency in ARM libgcc:
+        // e.g., __floatunsidf vs. __floatunssidfvfp.
+        { RTLIB::SINTTOFP_I32_F64, RTLIB::impl___floatsidfvfp },
+        { RTLIB::UINTTOFP_I32_F64, RTLIB::impl___floatunssidfvfp },
+        { RTLIB::SINTTOFP_I32_F32, RTLIB::impl___floatsisfvfp },
+        { RTLIB::UINTTOFP_I32_F32, RTLIB::impl___floatunssisfvfp },
+      };
+      // clang-format on
+
+      for (const auto &LC : LibraryCalls)
+        setLibcallImpl(LC.Op, LC.Impl);
+    }
+  }
 
   if (Subtarget->isThumb1Only())
     addRegisterClass(MVT::i32, &ARM::tGPRRegClass);
@@ -1215,10 +1310,27 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
+  setOperationAction(ISD::CT_SELECT, MVT::i8, Promote);
+  setOperationAction(ISD::CT_SELECT, MVT::i16, Promote);
+  setOperationPromotedToType(ISD::CT_SELECT, MVT::i16, MVT::i32);
+
+  setOperationAction(ISD::CT_SELECT, MVT::i32, Custom);
+  setOperationAction(ISD::CT_SELECT, MVT::i64, Expand);
+  setOperationAction(ISD::CT_SELECT, MVT::f32, Custom);
+  setOperationAction(ISD::CT_SELECT, MVT::f64, Custom);
+
+  // Handle f16 and bf16 without falling back to select from ctselect.
+  setTargetDAGCombine({ISD::CT_SELECT});
+
   if (Subtarget->hasFullFP16()) {
     setOperationAction(ISD::SETCC,     MVT::f16, Expand);
     setOperationAction(ISD::SELECT,    MVT::f16, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Custom);
+    setOperationAction(ISD::CT_SELECT, MVT::f16, Custom);
+  }
+
+  if (Subtarget->hasBF16()) {
+    setOperationAction(ISD::CT_SELECT, MVT::bf16, Custom);
   }
 
   setOperationAction(ISD::SETCCCARRY, MVT::i32, Custom);
@@ -1300,6 +1412,18 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FMAXNUM, MVT::v2f32, Legal);
       setOperationAction(ISD::FMINNUM, MVT::v4f32, Legal);
       setOperationAction(ISD::FMAXNUM, MVT::v4f32, Legal);
+    }
+
+    if (Subtarget->hasFP64()) {
+      setOperationAction(ISD::FFLOOR, MVT::f64, Legal);
+      setOperationAction(ISD::FCEIL, MVT::f64, Legal);
+      setOperationAction(ISD::FROUND, MVT::f64, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::f64, Legal);
+      setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
+      setOperationAction(ISD::FRINT, MVT::f64, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::f64, Legal);
+      setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+      setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     }
   }
 
@@ -5013,6 +5137,20 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getSelectCC(dl, Cond,
                          DAG.getConstant(0, dl, Cond.getValueType()),
                          SelectTrue, SelectFalse, ISD::SETNE);
+}
+
+SDValue ARMTargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  SDValue Cond = Op.getOperand(0);
+  SDValue TrueVal = Op.getOperand(1);
+  SDValue FalseVal = Op.getOperand(2);
+  EVT VT = Op.getValueType();
+
+  // Normalise the condition to 0 or 1.
+  SDValue One = DAG.getConstant(1, DL, MVT::i32);
+  SDValue CondNode = DAG.getNode(ISD::AND, DL, MVT::i32, Cond, One);
+  return DAG.getNode(ARMISD::CT_SELECT, DL, VT, TrueVal, FalseVal, CondNode);
 }
 
 static void checkVSELConstraints(ISD::CondCode CC, ARMCC::CondCodes &CondCode,
@@ -10543,6 +10681,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::GlobalTLSAddress: return LowerGlobalTLSAddress(Op, DAG);
   case ISD::SELECT:        return LowerSELECT(Op, DAG);
   case ISD::SELECT_CC:     return LowerSELECT_CC(Op, DAG);
+  case ISD::CT_SELECT:
+    return LowerCTSELECT(Op, DAG);
   case ISD::BRCOND:        return LowerBRCOND(Op, DAG);
   case ISD::BR_CC:         return LowerBR_CC(Op, DAG);
   case ISD::BR_JT:         return LowerBR_JT(Op, DAG);
@@ -10797,6 +10937,36 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FP_TO_UINT_SAT:
     Res = LowerFP_TO_INT_SAT(SDValue(N, 0), DAG, Subtarget);
     break;
+  case ISD::CT_SELECT: {
+    EVT VT = N->getValueType(0);
+
+    // Handle f16/bf16 type promotion while preserving ctselect
+    if (VT == MVT::f16 || VT == MVT::bf16) {
+      SDLoc DL(N);
+      SDValue Cond = N->getOperand(0);
+      SDValue TrueVal = N->getOperand(1);
+      SDValue FalseVal = N->getOperand(2);
+
+      // Bitcast to i16, then promote to i32
+      SDValue TrueInt = DAG.getBitcast(MVT::i16, TrueVal);
+      SDValue FalseInt = DAG.getBitcast(MVT::i16, FalseVal);
+
+      TrueInt = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, TrueInt);
+      FalseInt = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, FalseInt);
+
+      // Normalize condition
+      SDValue One = DAG.getConstant(1, DL, MVT::i32);
+      SDValue CondNorm = DAG.getNode(ISD::AND, DL, MVT::i32, Cond, One);
+
+      // Create i32 ctselect that will go through normal lowering
+      Res = DAG.getNode(ISD::CT_SELECT, DL, MVT::i32, CondNorm, TrueInt,
+                        FalseInt);
+    } else {
+      // For other types, use existing lowering
+      Res = LowerCTSELECT(SDValue(N, 0), DAG);
+    }
+    break;
+  }
   }
   if (Res.getNode())
     Results.push_back(Res);
@@ -13421,6 +13591,64 @@ static SDValue PerformVQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   }
   return DAG.getNode(ISD::SIGN_EXTEND, DL, VT,
                      DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Parts));
+}
+
+static SDValue PerformCTSELECTCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      const ARMSubtarget *Subtarget) {
+  if (!DCI.isBeforeLegalize()) {
+    return SDValue();
+  }
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+
+  EVT VT = N->getValueType(0);
+  if (VT == MVT::f16 || VT == MVT::bf16) {
+    SDValue Cond = N->getOperand(0);
+    SDValue TrueVal = N->getOperand(1);
+    SDValue FalseVal = N->getOperand(2);
+
+    SDValue TrueInt = DAG.getBitcast(MVT::i16, TrueVal);
+    SDValue FalseInt = DAG.getBitcast(MVT::i16, FalseVal);
+
+    // Create i16 ctselect - this will be promoted to i32 ctselect naturally
+    SDValue Result =
+        DAG.getNode(ISD::CT_SELECT, DL, MVT::i16, Cond, TrueInt, FalseInt);
+
+    return DAG.getBitcast(VT, Result);
+  } else if (VT.isVector()) {
+    EVT EltVT = VT.getVectorElementType();
+    if (EltVT == MVT::f16 || EltVT == MVT::bf16) {
+      SDValue Cond = N->getOperand(0);
+      SDValue TrueVal = N->getOperand(1);
+      SDValue FalseVal = N->getOperand(2);
+
+      EVT IntVT;
+      switch (VT.getSimpleVT().SimpleTy) {
+      case MVT::v4f16:
+      case MVT::v4bf16:
+        IntVT = MVT::v4i16;
+        break;
+      case MVT::v8f16:
+      case MVT::v8bf16:
+        IntVT = MVT::v8i16;
+        break;
+      default:
+        return SDValue(); // Unsupported vector type
+      }
+
+      SDValue TrueInt = DAG.getBitcast(IntVT, TrueVal);
+      SDValue FalseInt = DAG.getBitcast(IntVT, FalseVal);
+
+      SDValue Result =
+          DAG.getNode(ISD::CT_SELECT, DL, IntVT, Cond, TrueInt, FalseInt);
+
+      return DAG.getBitcast(VT, Result);
+    }
+  }
+
+  return SDValue();
 }
 
 static SDValue PerformVSELECTCombine(SDNode *N,
@@ -19140,6 +19368,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SELECT_CC:
   case ISD::SELECT:     return PerformSELECTCombine(N, DCI, Subtarget);
   case ISD::VSELECT:    return PerformVSELECTCombine(N, DCI, Subtarget);
+  case ISD::CT_SELECT:
+    return PerformCTSELECTCombine(N, DCI, Subtarget);
   case ISD::SETCC:      return PerformVSetCCToVCTPCombine(N, DCI, Subtarget);
   case ARMISD::ADDE:    return PerformADDECombine(N, DCI, Subtarget);
   case ARMISD::UMLAL:   return PerformUMLALCombine(N, DCI.DAG, Subtarget);
