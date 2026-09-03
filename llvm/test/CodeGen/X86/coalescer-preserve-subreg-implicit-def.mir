@@ -1,0 +1,60 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=register-coalescer \
+# RUN:   -enable-subreg-liveness -verify-coalescing -o - %s | FileCheck %s
+
+# An IMPLICIT_DEF must be preserved when a coalesced register tracks
+# subregister liveness. Otherwise the value defining the high byte in bb.1
+# also reaches the use in bb.5 along the bb.3 edge, where the high byte was
+# explicitly made undef. The low-byte use in bb.3 keeps another lane live.
+
+# CHECK-LABEL: name: preserve_subreg_implicit_def
+# CHECK: bb.3:
+# CHECK: [[REG:%[0-9]+]].sub_8bit_hi:gr16_abcd = IMPLICIT_DEF
+# CHECK-NEXT: TEST8rr [[REG]].sub_8bit, [[REG]].sub_8bit, implicit-def $eflags
+# CHECK: bb.5:
+# CHECK: TEST8rr [[REG]].sub_8bit_hi, [[REG]].sub_8bit_hi, implicit-def dead $eflags
+
+---
+name: preserve_subreg_implicit_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+
+    %0:gr16_abcd = MOV16ri 1
+    TEST8rr %0.sub_8bit, %0.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit killed $eflags
+
+  bb.2:
+    successors: %bb.5(0x80000000)
+
+    undef %1.sub_8bit_hi:gr16_abcd = COPY %0.sub_8bit_hi
+    %2:gr8_abcd_h = COPY %1.sub_8bit_hi
+    %3:gr8_abcd_h = COPY %2
+    JMP_1 %bb.5
+
+  bb.3:
+    successors: %bb.5(0x30000000), %bb.4(0x50000000)
+
+    %3:gr8_abcd_h = IMPLICIT_DEF
+    TEST8rr %0.sub_8bit, %0.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.5, 5, implicit killed $eflags
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+
+    %4:gr8_abcd_h = MOV8ri 2
+    %3:gr8_abcd_h = COPY %4
+
+  bb.5:
+    successors: %bb.1(0x80000000)
+
+    %5:gr8_abcd_h = COPY %3
+    TEST8rr %5, %5, implicit-def dead $eflags
+    JMP_1 %bb.1
+
+...
