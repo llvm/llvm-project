@@ -3710,7 +3710,6 @@ static QualType createCounterHandleType(ASTContext &AST,
                                            MainAttrs);
 }
 
-
 enum class SampleKind { Sample, Bias, Grad, Level, Cmp, CmpLevelZero };
 
 static StringRef getSampleMethodName(SampleKind Kind) {
