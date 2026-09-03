@@ -19,7 +19,7 @@ end subroutine
 
 ! HEX-LABEL:  func.func @_QPtest_unsigned(
 ! HEX:         %[[X:.*]]:2 = hlfir.declare {{.*}}_QFtest_unsignedEx
-! HEX:         %[[C:.*]] = arith.constant {{.*}} : i32
+! HEX:         %[[C:.*]] = arith.constant -1431655766 : i32
 ! HEX:         %[[U:.*]] = fir.convert %[[C]] : (i32) -> ui32
 ! HEX:         fir.store %[[U]] to %[[X]]#0 : !fir.ref<ui32>
 
