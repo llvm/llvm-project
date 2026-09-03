@@ -5494,6 +5494,18 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     const TargetRegisterClass *NewUsedRegRC =
         RI.getRegClass(MCID.operands()[i].RegClass);
     const TargetRegisterClass *OrgRC = MRI->getRegClass(OperandReg);
+
+    // An operand that reads the sub_32 subregister of a 64-bit register already
+    // holds the value in a full 64-bit register, so it can be used directly by
+    // the promoted instruction.
+    if (Operand.getSubReg() == PPC::sub_32) {
+      assert(NewUsedRegRC->hasSubClassEq(OrgRC) &&
+             "sub_32 source register class is incompatible with the promoted "
+             "operand register class");
+      PromoteRegs[i] = OperandReg;
+      continue;
+    }
+
     if (NewUsedRegRC != OrgRC && (OrgRC == &PPC::GPRCRegClass ||
                                   OrgRC == &PPC::GPRC_and_GPRC_NOR0RegClass)) {
       // Promote the used 32-bit register to 64-bit register.
