@@ -22,6 +22,7 @@
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
@@ -29,6 +30,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataEncoder.h"
@@ -67,6 +69,74 @@ TEST_F(SymbolFileDWARFTests, TestAbilitiesForDWARF) {
 
   uint32_t expected_abilities = SymbolFile::kAllAbilities;
   EXPECT_EQ(expected_abilities, symfile->CalculateAbilities());
+}
+
+TEST(SymbolFileDWARFCallEdgeTests, ParseCallSiteNestedInInline) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_call_all_calls
+              Form:            DW_FORM_flag_present
+        - Code:            0x3
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_yes
+        - Code:            0x4
+          Tag:             DW_TAG_call_site
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_call_target
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_call_return_pc
+              Form:            DW_FORM_addr
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+        - AbbrCode:        0x2
+        - AbbrCode:        0x3
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x1
+              BlockData:
+                - 0x50 # DW_OP_reg0
+            - Value:           0x1234
+        - AbbrCode:        0x0
+        - AbbrCode:        0x2
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x1
+              BlockData:
+                - 0x50 # DW_OP_reg0
+            - Value:           0x5678
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+)";
+
+  YAMLModuleTester t(yamldata);
+  auto *symbol_file =
+      llvm::cast<SymbolFileDWARF>(t.GetModule()->GetSymbolFile());
+  DWARFDIE function_die = t.GetDwarfUnit()->DIE().GetFirstChild();
+
+  auto call_edges = symbol_file->ParseCallEdgesInFunction(function_die.GetID());
+  ASSERT_EQ(call_edges.size(), 1u);
+  EXPECT_EQ(call_edges.front()->GetSortKey().second, 0x1234u);
 }
 
 TEST_F(SymbolFileDWARFTests, ParseArangesNonzeroSegmentSize) {
