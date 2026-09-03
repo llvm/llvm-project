@@ -1164,13 +1164,13 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (SearchSize <= 2)
       break;
 
-    auto SearchLT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
+    auto [LegalParts, SearchVT] = getTypeLegalizationCost(ICA.getArgTypes()[0]);
     if (!is_contained(
             {MVT::nxv8i16, MVT::nxv16i8, MVT::v8i16, MVT::v16i8, MVT::v8i8},
-            SearchLT.second.SimpleTy))
+            SearchVT.SimpleTy))
       break;
 
-    unsigned ElementSizeInBits = SearchLT.second.getScalarSizeInBits();
+    unsigned ElementSizeInBits = SearchVT.getScalarSizeInBits();
 
     // Number of needle elements we can compare per `match` instruction.
     unsigned NeedleEltsPerMatch = AArch64::SVEBitsPerBlock / ElementSizeInBits;
@@ -1188,7 +1188,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (isa<FixedVectorType>(RetTy))
       Cost += 10;
 
-    return Cost * SearchLT.first * MatchesRequiredForNeedle;
+    return Cost * LegalParts * MatchesRequiredForNeedle;
   }
   case Intrinsic::cttz: {
     auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
