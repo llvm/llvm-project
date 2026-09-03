@@ -3406,7 +3406,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
-    (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
+    (` ` custom<GlobalMemorySpace>($addr_space)^ )?
     $sym_name
     (`alias` `(` $aliasee^ `)`)?
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
