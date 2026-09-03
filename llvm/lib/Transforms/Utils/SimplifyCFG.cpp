@@ -5122,9 +5122,10 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
     if (IsDefault) {
       SmallVector<uint32_t> SwitchWeights;
       bool SwitchHasBranchWeights = extractBranchWeights(*SI, SwitchWeights);
-      SmallVector<uint32_t> SelectWeights;
+      uint64_t SelectTrueWeight;
+      uint64_t SelectFalseWeight;
       bool SelectHasBranchWeights =
-          extractBranchWeights(*Select, SelectWeights);
+          extractBranchWeights(*Select, SelectTrueWeight, SelectFalseWeight);
       if (SwitchHasBranchWeights && SelectHasBranchWeights &&
           !ProfcheckDisableMetadataFixes) {
         // Update the branch weights of the switch by multiplying all of them by
@@ -5135,9 +5136,9 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
         SmallVector<uint64_t> NewSwitchWeights;
         NewSwitchWeights.reserve(SwitchWeights.size() + 1);
         for (uint32_t SwitchWeight : SwitchWeights)
-          NewSwitchWeights.push_back(SwitchWeight * SelectWeights[1]);
-        NewSwitchWeights.push_back(SwitchTotalWeight * SelectWeights[0]);
-        setFittedBranchWeights(*SI, NewSwitchWeights, false);
+          NewSwitchWeights.push_back(SwitchWeight * SelectFalseWeight);
+        NewSwitchWeights.push_back(SwitchTotalWeight * SelectTrueWeight);
+        setFittedBranchWeights(*SI, NewSwitchWeights, /*IsExpected=*/false);
       } else if (SwitchHasBranchWeights) {
         // If we only have branch weights on the switch, we cannot reconstruct
         // branch weights correctly, so mark them as unknown.
