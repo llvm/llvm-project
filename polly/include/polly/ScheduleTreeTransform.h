@@ -234,6 +234,24 @@ isl::schedule applyMaxFission(isl::schedule_node BandToFission);
 ///                      relation.
 isl::set getPartialTilePrefixes(isl::set ScheduleRange, int VectorWidth);
 
+/// Compute the prefixes of the complete tiles of a tiled band.
+///
+/// A tile is complete if every point of it belongs to @p ScheduleRange; those
+/// are the tiles whose point loops can be given constant bounds by isolating
+/// them from the partial tiles at the boundary of the iteration space.
+///
+/// @param ScheduleRange   A range of a map, which describes a prefix schedule
+///                        relation whose last @p TileSizes.size() dimensions
+///                        are the point dimensions of the tiling.
+/// @param TileSizes       The tile size of each tiled dimension.
+/// @param NumCompleteDims The number of innermost point dimensions that have to
+///                        be complete. Requiring fewer than all of them
+///                        isolates more tiles, but bounds the number of copies
+///                        of the loop nest that the AST generator creates.
+isl::set getFullTilePrefixes(isl::set ScheduleRange,
+                             llvm::ArrayRef<int> TileSizes,
+                             unsigned NumCompleteDims);
+
 /// Create an isl::union_set, which describes the isolate option based on
 /// IsolateDomain.
 ///
