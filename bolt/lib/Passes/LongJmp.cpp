@@ -17,6 +17,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MathExtras.h"
+#include <algorithm>
 
 #define DEBUG_TYPE "longjmp"
 
@@ -1052,6 +1053,12 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
     const FunctionFragment *FF;
     size_t FunctionIndex;
     SmallString<32> SectionName;
+    uint64_t Size;
+  };
+
+  struct FragmentRange {
+    size_t Begin;
+    size_t End;
   };
 
   FragmentClusterLayout Layout;
@@ -1066,8 +1073,9 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
       if (FF.empty() && !BF->hasConstantIsland())
         continue;
 
-      OrderedFragments.push_back(
-          {&FF, I, BF->getCodeSectionName(FF.getFragmentNum())});
+      OrderedFragments.push_back({&FF, I,
+                                  BF->getCodeSectionName(FF.getFragmentNum()),
+                                  estimateFragmentSize(*BF, FF)});
     }
   }
 
@@ -1078,25 +1086,57 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
         return BC.compareSectionNames(A.SectionName, B.SectionName);
       });
 
-  auto addFragmentToCluster = [&](const OutputFragment &Fragment) {
+  auto buildClusterRanges = [&]() {
+    SmallVector<FragmentRange> ClusterRanges;
+    if (OrderedFragments.empty())
+      return ClusterRanges;
+
+    if (!opts::HotFunctionsAtEnd) {
+      size_t Begin = 0;
+      uint64_t Size = OrderedFragments[0].Size;
+      for (size_t I = 1; I < OrderedFragments.size(); ++I) {
+        if (Size + OrderedFragments[I].Size > opts::MaxClusterSize) {
+          ClusterRanges.push_back({Begin, I});
+          Begin = I;
+          Size = 0;
+        }
+        Size += OrderedFragments[I].Size;
+      }
+      ClusterRanges.push_back({Begin, OrderedFragments.size()});
+      return ClusterRanges;
+    }
+
+    size_t End = OrderedFragments.size();
+    uint64_t Size = OrderedFragments.back().Size;
+    for (size_t I = End - 1; I > 0;) {
+      --I;
+      if (Size + OrderedFragments[I].Size > opts::MaxClusterSize) {
+        ClusterRanges.push_back({I + 1, End});
+        End = I + 1;
+        Size = 0;
+      }
+      Size += OrderedFragments[I].Size;
+    }
+    ClusterRanges.push_back({0, End});
+    std::reverse(ClusterRanges.begin(), ClusterRanges.end());
+    return ClusterRanges;
+  };
+
+  auto addFragmentToCluster = [&](const OutputFragment &Fragment,
+                                  FragmentCluster &FC,
+                                  const unsigned ClusterNum) {
     BinaryFunction &BF = *OutputFunctions[Fragment.FunctionIndex];
     const FunctionFragment &FF = *Fragment.FF;
-    const uint64_t FFSize = estimateFragmentSize(BF, FF);
 
-    if (Layout.Clusters.empty() ||
-        Layout.Clusters.back().Size + FFSize > opts::MaxClusterSize) {
-      Layout.Clusters.emplace_back(FragmentCluster());
-      FragmentCluster &FC = Layout.Clusters.back();
+    if (FC.NumFragments == 0) {
       FC.StartSectionName = Fragment.SectionName;
       FC.FirstFunctionIndex = Fragment.FunctionIndex;
     }
 
-    FragmentCluster &FC = Layout.Clusters.back();
     FC.EndSectionName = Fragment.SectionName;
     FC.LastFunctionIndex = Fragment.FunctionIndex;
     ++FC.NumFragments;
-    EstimatedSize += FFSize;
-    const unsigned ClusterNum = Layout.Clusters.size() - 1;
+    EstimatedSize += Fragment.Size;
 
     // Map primary entry points.
     if (FF.isMainFragment())
@@ -1113,11 +1153,16 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
         Layout.SymToCluster[EntrySymbol] = ClusterNum;
     }
 
-    FC.Size += FFSize;
+    FC.Size += Fragment.Size;
   };
 
-  for (const OutputFragment &Fragment : OrderedFragments)
-    addFragmentToCluster(Fragment);
+  for (const FragmentRange &Range : buildClusterRanges()) {
+    Layout.Clusters.emplace_back(FragmentCluster());
+    FragmentCluster &FC = Layout.Clusters.back();
+    const unsigned ClusterNum = Layout.Clusters.size() - 1;
+    for (size_t I = Range.Begin; I < Range.End; ++I)
+      addFragmentToCluster(OrderedFragments[I], FC, ClusterNum);
+  }
 
   if (Layout.Clusters.empty())
     return Layout;
