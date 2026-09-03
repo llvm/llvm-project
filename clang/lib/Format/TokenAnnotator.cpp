@@ -6511,8 +6511,14 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
             !(Right.Next &&
               Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
-  if (Left.is(tok::hashhash) || Right.is(tok::hashhash))
+  // Keep pasted tokens together, except for the GNU comma elision extension,
+  // where the comma is also an argument separator and remains a useful break
+  // point before ##__VA_ARGS__.
+  if ((Left.is(tok::hashhash) || Right.is(tok::hashhash)) &&
+      !(Line.InMacroBody && Left.is(tok::comma) &&
+        Right.is(tok::hashhash))) {
     return false;
+  }
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
                     TT_ClassHeadName, TT_QtProperty, tok::kw_operator)) {
     return true;
