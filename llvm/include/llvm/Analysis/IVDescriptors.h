@@ -490,13 +490,6 @@ class MonotonicDescriptor {
 public:
   MonotonicDescriptor() = default;
 
-  MonotonicDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
-                      Instruction *StepInst, const SCEV *StartSCEV,
-                      const SCEV *StepSCEV, unsigned SCEVNoWrapFlags)
-      : HeaderPHI(HeaderPHI), BackedgePHI(BackedgePHI), StepInst(StepInst),
-        StartSCEV(StartSCEV), StepSCEV(StepSCEV),
-        SCEVNoWrapFlags(SCEVNoWrapFlags) {}
-
   /// Returns true if \p PN is a monotonic variable in the loop \p L. If \p PN
   /// is monotonic, the monotonic descriptor \p D will contain the data
   /// describing the PHI.
@@ -525,6 +518,13 @@ public:
   unsigned getSCEVNoWrapFlags() const { return SCEVNoWrapFlags; }
 
 private:
+  MonotonicDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
+                      Instruction *StepInst, const SCEV *StartSCEV,
+                      const SCEV *StepSCEV, unsigned SCEVNoWrapFlags)
+      : HeaderPHI(HeaderPHI), BackedgePHI(BackedgePHI), StepInst(StepInst),
+        StartSCEV(StartSCEV), StepSCEV(StepSCEV),
+        SCEVNoWrapFlags(SCEVNoWrapFlags) {}
+
   /// The header PHI (this is the PHI described by the descriptor).
   PHINode *HeaderPHI = nullptr;
 
