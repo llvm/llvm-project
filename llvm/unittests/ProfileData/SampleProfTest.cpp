@@ -659,4 +659,231 @@ TEST_F(SampleProfTest, ProfileSymbolListMD5) {
   EXPECT_EQ(2u, List.size());
 }
 
+struct ScopedHasUniqSuffix {
+  bool OldVal;
+  ScopedHasUniqSuffix(bool NewVal) : OldVal(FunctionSamples::HasUniqSuffix) {
+    FunctionSamples::HasUniqSuffix = NewVal;
+  }
+  ~ScopedHasUniqSuffix() { FunctionSamples::HasUniqSuffix = OldVal; }
+};
+
+TEST(SampleProfCanonicalNameTest, SelectedPolicyDefault) {
+  // Plain names without dots.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo"));
+  EXPECT_EQ("_Z3barv", FunctionSamples::getCanonicalFnName("_Z3barv"));
+  EXPECT_EQ("", FunctionSamples::getCanonicalFnName(""));
+
+  // Suffix elision policy "selected" is default.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo", "selected"));
+
+  // Names with dot but no matching suffix.
+  EXPECT_EQ("foo.bar", FunctionSamples::getCanonicalFnName("foo.bar"));
+  EXPECT_EQ("foo.1", FunctionSamples::getCanonicalFnName("foo.1"));
+  EXPECT_EQ("foo.part", FunctionSamples::getCanonicalFnName("foo.part"));
+  EXPECT_EQ("foo.llvm", FunctionSamples::getCanonicalFnName("foo.llvm"));
+  EXPECT_EQ("foo.__uniq", FunctionSamples::getCanonicalFnName("foo.__uniq"));
+  EXPECT_EQ(".foo", FunctionSamples::getCanonicalFnName(".foo"));
+
+  // .llvm. suffix (ThinLTO promotion / renaming).
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.llvm.1234"));
+  EXPECT_EQ("_Z3foov",
+            FunctionSamples::getCanonicalFnName("_Z3foov.llvm.1234567890"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.llvm."));
+  EXPECT_EQ("foo.llvm.1234.bar",
+            FunctionSamples::getCanonicalFnName("foo.llvm.1234.bar"));
+  EXPECT_EQ("my_llvm_func",
+            FunctionSamples::getCanonicalFnName("my_llvm_func"));
+
+  // .part. suffix.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.42"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part."));
+  EXPECT_EQ("foo.part.1.bar",
+            FunctionSamples::getCanonicalFnName("foo.part.1.bar"));
+
+  // Combined suffixes in canonical order.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1.llvm.456"));
+
+  // Suffixes in non-canonical order: .llvm. cannot be stripped if .part.
+  // follows it, but .part. can be stripped leaving .llvm.
+  EXPECT_EQ("foo.llvm.1",
+            FunctionSamples::getCanonicalFnName("foo.llvm.1.part.2"));
+
+  // Repeated suffix: only the last one is stripped.
+  EXPECT_EQ("foo.llvm.1",
+            FunctionSamples::getCanonicalFnName("foo.llvm.1.llvm.2"));
+}
+
+TEST(SampleProfCanonicalNameTest, SelectedPolicyHasUniqSuffix) {
+  // When HasUniqSuffix is false, .__uniq. is stripped.
+  {
+    ScopedHasUniqSuffix Scope(false);
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.__uniq.123"));
+    EXPECT_EQ("foo",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.123.llvm.456"));
+    EXPECT_EQ("foo",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.123.part.1"));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName(
+                         "foo.__uniq.123.part.1.llvm.456"));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.llvm.456"));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1"));
+  }
+
+  // When HasUniqSuffix is true, .__uniq. is preserved.
+  {
+    ScopedHasUniqSuffix Scope(true);
+    EXPECT_EQ("foo.__uniq.123",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.123"));
+    EXPECT_EQ("foo.__uniq.123",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.123.llvm.456"));
+    EXPECT_EQ("foo.__uniq.123",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.123.part.1"));
+    EXPECT_EQ("foo.__uniq.123", FunctionSamples::getCanonicalFnName(
+                                    "foo.__uniq.123.part.1.llvm.456"));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.llvm.456"));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1"));
+  }
+}
+
+TEST(SampleProfCanonicalNameTest, AllPolicy) {
+  for (StringRef Attr : {"all", ""}) {
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo", Attr));
+    EXPECT_EQ("foo",
+              FunctionSamples::getCanonicalFnName("foo.llvm.1234", Attr));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1", Attr));
+    EXPECT_EQ("foo",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.1234", Attr));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.bar", Attr));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.1.2.3", Attr));
+    EXPECT_EQ("", FunctionSamples::getCanonicalFnName(".foo", Attr));
+    EXPECT_EQ("", FunctionSamples::getCanonicalFnName("", Attr));
+  }
+}
+
+TEST(SampleProfCanonicalNameTest, NonePolicy) {
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo", "none"));
+  EXPECT_EQ("foo.llvm.1234",
+            FunctionSamples::getCanonicalFnName("foo.llvm.1234", "none"));
+  EXPECT_EQ("foo.part.1",
+            FunctionSamples::getCanonicalFnName("foo.part.1", "none"));
+  EXPECT_EQ("foo.__uniq.1234",
+            FunctionSamples::getCanonicalFnName("foo.__uniq.1234", "none"));
+  EXPECT_EQ("foo.bar", FunctionSamples::getCanonicalFnName("foo.bar", "none"));
+  EXPECT_EQ("", FunctionSamples::getCanonicalFnName("", "none"));
+}
+
+TEST(SampleProfCanonicalNameTest, CoroFnName) {
+  // Default "selected" policy.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.cleanup"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.destroy"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.resume"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.llvm.1234"));
+  EXPECT_EQ("_Zfoo",
+            FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.cleanup"));
+  EXPECT_EQ("_Zfoo",
+            FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.destroy"));
+  EXPECT_EQ("_Zfoo",
+            FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.resume"));
+  // Suffixes without trailing dot require an exact match.
+  EXPECT_EQ("foo.cleanupper",
+            FunctionSamples::getCanonicalCoroFnName("foo.cleanupper"));
+  EXPECT_EQ("foo.destroyer",
+            FunctionSamples::getCanonicalCoroFnName("foo.destroyer"));
+  EXPECT_EQ("foo.resumed",
+            FunctionSamples::getCanonicalCoroFnName("foo.resumed"));
+  EXPECT_EQ("foo.other", FunctionSamples::getCanonicalCoroFnName("foo.other"));
+
+  // Policy "none".
+  EXPECT_EQ("_Zfoo.llvm.1234.cleanup", FunctionSamples::getCanonicalCoroFnName(
+                                           "_Zfoo.llvm.1234.cleanup", "none"));
+
+  // Policy "all".
+  EXPECT_EQ("_Zfoo", FunctionSamples::getCanonicalCoroFnName(
+                         "_Zfoo.llvm.1234.cleanup", "all"));
+}
+
+TEST(SampleProfCanonicalNameTest, CustomSuffixes) {
+  const SmallVector<StringRef, 2> Suffixes{".custom.", ".cfi"};
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.cfi", Suffixes));
+  EXPECT_EQ("foo",
+            FunctionSamples::getCanonicalFnName("foo.custom.123", Suffixes));
+  // In Suffixes {".custom.", ".cfi"}, .custom. is evaluated before .cfi.
+  // Because .cfi was appended after .custom.123, .custom. cannot be stripped
+  // first, leaving "foo.custom.123".
+  EXPECT_EQ("foo.custom.123", FunctionSamples::getCanonicalFnName(
+                                  "foo.custom.123.cfi", Suffixes));
+  // Conversely, when ordered {".cfi", ".custom."}, both are stripped.
+  const SmallVector<StringRef, 2> OrderedSuffixes{".cfi", ".custom."};
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.custom.123.cfi",
+                                                       OrderedSuffixes));
+
+  // Suffix without trailing dot requires an exact match; it does not match
+  // as a prefix of a component.
+  EXPECT_EQ("foo.cfiUnrelated",
+            FunctionSamples::getCanonicalFnName("foo.cfiUnrelated", Suffixes));
+  EXPECT_EQ("foo.cfiSomething.123", FunctionSamples::getCanonicalFnName(
+                                        "foo.cfiSomething.123", Suffixes));
+  EXPECT_EQ("foo.cfi_jt",
+            FunctionSamples::getCanonicalFnName("foo.cfi_jt", Suffixes));
+  // Suffix not in the list is preserved.
+  EXPECT_EQ("foo.llvm.123",
+            FunctionSamples::getCanonicalFnName("foo.llvm.123", Suffixes));
+
+  // Empty suffixes list preserves the name under "selected".
+  EXPECT_EQ("foo.llvm.123", FunctionSamples::getCanonicalFnName(
+                                "foo.llvm.123", {}, "selected"));
+
+  // Policies "all" and "none" with custom suffixes.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.custom.123",
+                                                       Suffixes, "all"));
+  EXPECT_EQ("foo.custom.123", FunctionSamples::getCanonicalFnName(
+                                  "foo.custom.123", Suffixes, "none"));
+}
+
+TEST(SampleProfCanonicalNameTest, FromLLVMFunction) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), false);
+
+  // Without attribute, default policy is "" (same as "all").
+  auto *FDefault = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                    "f_default.llvm.1234", M.get());
+  EXPECT_EQ("f_default", FunctionSamples::getCanonicalFnName(*FDefault));
+
+  auto *FDefaultDot = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                       "f_default_dot.bar", M.get());
+  EXPECT_EQ("f_default_dot", FunctionSamples::getCanonicalFnName(*FDefaultDot));
+
+  // With attribute "selected".
+  auto *FSelectedLLVM = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                         "f_selected.llvm.1234", M.get());
+  FSelectedLLVM->addFnAttr("sample-profile-suffix-elision-policy", "selected");
+  EXPECT_EQ("f_selected", FunctionSamples::getCanonicalFnName(*FSelectedLLVM));
+
+  auto *FSelectedDot = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                        "f_selected_dot.bar", M.get());
+  FSelectedDot->addFnAttr("sample-profile-suffix-elision-policy", "selected");
+  EXPECT_EQ("f_selected_dot.bar",
+            FunctionSamples::getCanonicalFnName(*FSelectedDot));
+
+  // With attribute "none".
+  auto *FNone = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                 "f_none.llvm.1234", M.get());
+  FNone->addFnAttr("sample-profile-suffix-elision-policy", "none");
+  EXPECT_EQ("f_none.llvm.1234", FunctionSamples::getCanonicalFnName(*FNone));
+
+  // With attribute "all".
+  auto *FAll = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                "f_all.bar.1234", M.get());
+  FAll->addFnAttr("sample-profile-suffix-elision-policy", "all");
+  EXPECT_EQ("f_all", FunctionSamples::getCanonicalFnName(*FAll));
+}
+
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
+TEST(SampleProfCanonicalNameTest, InvalidPolicyDeathTest) {
+  EXPECT_DEATH(FunctionSamples::getCanonicalFnName("foo", "invalid_policy"),
+               "unknown suffix elision policy");
+}
+#endif
+
 } // end anonymous namespace

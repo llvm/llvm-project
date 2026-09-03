@@ -6,6 +6,11 @@
 // RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t.ll %s
 
 typedef struct __attribute__((packed)) { char c; int i; } CharInt;
+typedef struct __attribute__((packed)) { char c; int i : 32; } CharIntBF;
+typedef struct __attribute__((packed)) { char c; unsigned long long w : 64; } CharWideBF;
+typedef struct __attribute__((packed)) { char c; int i : 25; int j : 17; int k : 4; } CharMultipleBFInt;
+typedef struct __attribute__((packed)) { char c; int i : 19; } CharUndersizedIntBF;
+typedef struct __attribute__((packed)) { char c; int i : 32; char pad[3]; double d; } BFDouble;
 typedef struct __attribute__((packed)) { int a; int b; char c; } Nine;
 typedef struct __attribute__((packed)) { short a; short b; char c; } FiveShort;
 typedef struct __attribute__((packed)) { double d; char c; } DoubleChar;
@@ -24,6 +29,11 @@ typedef struct { char c; int i; } PragmaPacked;
 #pragma pack()
 
 // CIR-DAG: !rec_CharInt = !cir.struct<"CharInt" packed {data !s8i, data !s32i}>
+// CIR-DAG: !rec_CharIntBF = !cir.struct<"CharIntBF" packed {data !s8i, bitfield !u32i}>
+// CIR-DAG: !rec_CharWideBF = !cir.struct<"CharWideBF" packed {data !s8i, bitfield !u64i}>
+// CIR-DAG: !rec_CharMultipleBFInt = !cir.struct<"CharMultipleBFInt" {data !s8i, bitfield !cir.array<!u8i x 6>}>
+// CIR-DAG: !rec_CharUndersizedIntBF = !cir.struct<"CharUndersizedIntBF" {data !s8i, bitfield !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_BFDouble = !cir.struct<"BFDouble" packed {data !s8i, bitfield !u32i, data !cir.array<!s8i x 3>, data !cir.double}>
 // CIR-DAG: !rec_Nine = !cir.struct<"Nine" packed {data !s32i, data !s32i, data !s8i}>
 // CIR-DAG: !rec_FiveShort = !cir.struct<"FiveShort" packed {data !s16i, data !s16i, data !s8i}>
 // CIR-DAG: !rec_DoubleChar = !cir.struct<"DoubleChar" packed {data !cir.double, data !s8i}>
@@ -40,6 +50,7 @@ typedef struct { char c; int i; } PragmaPacked;
 
 // Anonymous coercion records are numbered in print order, so capture them.
 // CIR-DAG: ![[I64I8:rec_anon_struct[0-9]*]] = !cir.struct<{data !u64i, data !s8i}>
+// CIR-DAG: ![[I64U8:rec_anon_struct[0-9]*]] = !cir.struct<{data !u64i, data !u8i}>
 // CIR-DAG: ![[F64I8:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.double, data !s8i}>
 // CIR-DAG: ![[V2F32I8:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.vector<2 x !cir.float>, data !s8i}>
 
@@ -55,6 +66,52 @@ CharInt ret_char_int(int x) { CharInt v = {0, x}; return v; }
 // LLVM-CIR: define dso_local i32 @take_char_int(ptr noalias noundef byval(%struct.CharInt) align 8 %{{.+}})
 // LLVM-OGCG: define dso_local i32 @take_char_int(ptr noundef byval(%struct.CharInt) align 8 %{{.+}})
 // LLVM: define dso_local void @ret_char_int(ptr dead_on_unwind noalias writable sret(%struct.CharInt) align 1 %{{.+}}, i32 noundef %{{.+}})
+
+// The same record with the int declared as a bit-field.  A bit-field may sit
+// at any offset, so the rule above does not reach it and the five bytes stay
+// in a register.
+int take_char_int_bf(CharIntBF v) { return v.i; }
+CharIntBF ret_char_int_bf(int x) { CharIntBF v = {0, x}; return v; }
+
+// A unit that crosses the eightbyte boundary is classified on both sides of it.
+int take_char_wide_bf(CharWideBF v) { return (int)v.w; }
+CharWideBF ret_char_wide_bf(unsigned long long x) { CharWideBF v = {0, x}; return v; }
+
+// CIR: cir.func{{.*}} @take_char_int_bf(%arg0: !cir.int<u, 40>{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @ret_char_int_bf(%arg0: !s32i {llvm.noundef}{{.*}}) -> !cir.int<u, 40>
+// LLVM: define dso_local i32 @take_char_int_bf(i40 %{{.+}})
+// LLVM: define dso_local i40 @ret_char_int_bf(i32 noundef %{{.+}})
+
+// CIR: cir.func{{.*}} @take_char_wide_bf(%arg0: !u64i{{.*}}, %arg1: !u8i{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @ret_char_wide_bf(%arg0: !u64i {llvm.noundef}{{.*}}) -> ![[I64U8]]
+// LLVM: define dso_local i32 @take_char_wide_bf(i64 %{{.+}}, i8 %{{.+}})
+// LLVM: define dso_local { i64, i8 } @ret_char_wide_bf(i64 noundef %{{.+}})
+
+// Three bit-fields share one unit, so the unit spans the bits of all three
+// and the record coerces to the seven bytes it occupies.
+int take_multiple_bf(CharMultipleBFInt v) { return v.i; }
+CharMultipleBFInt ret_multiple_bf(int x) { CharMultipleBFInt v = {0, x, x, x}; return v; }
+
+// CIR: cir.func{{.*}} @take_multiple_bf(%arg0: !cir.int<u, 56>{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @ret_multiple_bf(%arg0: !s32i {llvm.noundef}{{.*}}) -> !cir.int<u, 56>
+// LLVM: define dso_local i32 @take_multiple_bf(i56 %{{.+}})
+// LLVM: define dso_local i56 @ret_multiple_bf(i32 noundef %{{.+}})
+
+// A unit narrower than the type its bit-field was declared with.  The three
+// bytes it occupies and the leading char round up to the same eightbyte.
+int take_undersized_bf(CharUndersizedIntBF v) { return v.i; }
+CharUndersizedIntBF ret_undersized_bf(int x) { CharUndersizedIntBF v = {0, x}; return v; }
+
+// CIR: cir.func{{.*}} @take_undersized_bf(%arg0: !u32i{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @ret_undersized_bf(%arg0: !s32i {llvm.noundef}{{.*}}) -> !u32i
+// LLVM: define dso_local i32 @take_undersized_bf(i32 %{{.+}})
+// LLVM: define dso_local i32 @ret_undersized_bf(i32 noundef %{{.+}})
+
+// The unit decides the low eightbyte while the double decides the high one.
+double take_bf_double(BFDouble v) { return v.d; }
+
+// CIR: cir.func{{.*}} @take_bf_double(%arg0: !u64i{{.*}}, %arg1: !cir.double{{.*}}) -> !cir.double
+// LLVM: define dso_local double @take_bf_double(i64 %{{.+}}, double %{{.+}})
 
 // Every member is naturally aligned and only the nine-byte size earns the
 // packed mark, so this one is classified: an eightbyte of ints and a trailing

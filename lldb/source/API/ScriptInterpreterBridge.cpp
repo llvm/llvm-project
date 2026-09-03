@@ -25,6 +25,7 @@
 #include "lldb/API/SBSymbolContext.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/API/SBThreadPlan.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -38,6 +39,11 @@ using namespace lldb_private;
 lldb::DataExtractorSP
 ScriptInterpreterBridge::GetDataExtractor(const lldb::SBData &data) {
   return data.m_opaque_sp;
+}
+
+lldb::ThreadPlanSP
+ScriptInterpreterBridge::GetThreadPlan(const lldb::SBThreadPlan &thread_plan) {
+  return thread_plan.GetSP();
 }
 
 lldb::BreakpointSP
