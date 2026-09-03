@@ -46,11 +46,10 @@ using namespace SCEVPatternMatch;
 
 // TODO: Remove this once the partial reduction intrinsics are no worse than
 //       normal vector operations.
-static cl::opt<bool>
-    UsePartialReduceByDefault("use-partial-reduce-by-default", cl::init(false),
-                              cl::Hidden,
-                              cl::desc("Use partial reduction intrinsics for "
-                                       "all supported unordered reductions."));
+static cl::opt<bool> UsePartialReductionsByDefault(
+    "use-partial-reductions-by-default", cl::init(false), cl::Hidden,
+    cl::desc("Use partial reduction intrinsics for "
+             "all supported unordered reductions."));
 
 /// If the pointer operand \p Addr of a memory access is an affine AddRec
 /// w.r.t. \p L with a constant stride, return the stride in units of
@@ -5259,16 +5258,16 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 
     if (auto Chains = getScaledReductions(RedPhiR))
       ChainsByPhi.try_emplace(RedPhiR, std::move(*Chains));
-    else if (UsePartialReduceByDefault &&
+    else if (UsePartialReductionsByDefault &&
              (RedPhiR->getRecurrenceKind() == RecurKind::Add ||
               (RedPhiR->getRecurrenceKind() == RecurKind::FAdd &&
                !RedPhiR->isOrdered() && !RedPhiR->isInLoop())))
       UnorderedReductions.push_back(RedPhiR);
   }
 
-  // For general unordered reductions which aren't part of a candidate
-  // chain for a scaled partial reduction, we can potentially still use
-  // the intrinsic to allow for more optimization later on.
+  // For general unordered reductions which aren't part of a candidate chain for
+  // a scaled partial reduction, we can still use the intrinsic to allow for
+  // more optimization later on.
   for (auto *Rdx : UnorderedReductions) {
     auto *Backedge = dyn_cast<VPWidenRecipe>(Rdx->getBackedgeValue());
     VPValue *OtherOp;

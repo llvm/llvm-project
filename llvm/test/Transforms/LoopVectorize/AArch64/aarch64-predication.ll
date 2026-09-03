@@ -2,7 +2,7 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=COST
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -S | FileCheck %s
-; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -use-partial-reduce-by-default -S | FileCheck %s --check-prefix=PARTIALRDX
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -use-partial-reductions-by-default -S | FileCheck %s --check-prefix=PARTIALRDX
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
