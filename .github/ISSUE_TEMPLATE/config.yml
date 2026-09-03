@@ -1,0 +1,3 @@
+# Keep blank issues enabled: most LLVM issues (bug reports, feature requests)
+# are filed as free-form issues and labeled by the new-issues-labeler.
+blank_issues_enabled: true
