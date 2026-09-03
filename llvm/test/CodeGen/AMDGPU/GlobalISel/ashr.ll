@@ -1534,6 +1534,28 @@ define i64 @v_ashr_i64_31(i64 %value) {
   ret i64 %result
 }
 
+define i64 @v_ashr_i64_or32(i64 %value, i32 %amount) {
+; GCN-LABEL: v_ashr_i64_or32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 31, v2
+; GCN-NEXT:    v_ashrrev_i32_e32 v0, v0, v1
+; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10PLUS-LABEL: v_ashr_i64_or32:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 31, v2
+; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v0, v0, v1
+; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+  %amount.or = or i32 %amount, 32
+  %amount.ext = zext i32 %amount.or to i64
+  %result = ashr i64 %value, %amount.ext
+  ret i64 %result
+}
+
 define amdgpu_ps i64 @s_ashr_i64(i64 inreg %value, i64 inreg %amount) {
 ; GCN-LABEL: s_ashr_i64:
 ; GCN:       ; %bb.0:

@@ -8,6 +8,8 @@
 
 #include "AMDGPUCombinerHelper.h"
 #include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -554,4 +556,58 @@ bool AMDGPUCombinerHelper::matchConstantIs32BitMask(Register Reg) const {
 
   // Check if low 32 bits or high 32 bits are all ones.
   return MaskLen >= 32 && ((MaskIdx == 0) || (MaskIdx == 64 - MaskLen));
+}
+
+// 64-bit shift is quarter rate on some subtargets, so splitting into a move
+// plus 32-bit shift is a win. Constant amounts are handled by the generic
+// matchCombineShiftToUnmerge combine already.
+bool AMDGPUCombinerHelper::matchShiftKnownGeHalfWidth(
+    MachineInstr &MI, BuildFnTy &MatchInfo) const {
+  unsigned Opc = MI.getOpcode();
+  assert(Opc == TargetOpcode::G_SHL || Opc == TargetOpcode::G_LSHR ||
+         Opc == TargetOpcode::G_ASHR);
+
+  Register Dst = MI.getOperand(0).getReg();
+  if (MRI.getType(Dst) != LLT::scalar(64))
+    return false;
+
+  Register ShiftAmt = MI.getOperand(2).getReg();
+  if (getIConstantVRegValWithLookThrough(ShiftAmt, MRI))
+    return false;
+
+  if (VT->getKnownBits(ShiftAmt).getMinValue().getZExtValue() < 32)
+    return false;
+
+  Register Src = MI.getOperand(1).getReg();
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    const LLT S32 = LLT::integer(32);
+    auto Unmerge = B.buildUnmerge(S32, Src);
+    Register Lo = Unmerge.getReg(0);
+    Register Hi = Unmerge.getReg(1);
+    auto MaskedAmt = B.buildAnd(S32, ShiftAmt, B.buildConstant(S32, 31));
+
+    switch (Opc) {
+    case TargetOpcode::G_SHL: {
+      auto Shl = B.buildShl(S32, Lo, MaskedAmt, MI.getFlags());
+      B.buildMergeLikeInstr(Dst, {B.buildConstant(S32, 0), Shl});
+      break;
+    }
+    case TargetOpcode::G_LSHR: {
+      auto Shr = B.buildLShr(S32, Hi, MaskedAmt, MI.getFlags());
+      B.buildMergeLikeInstr(Dst, {Shr, B.buildConstant(S32, 0)});
+      break;
+    }
+    case TargetOpcode::G_ASHR: {
+      auto FrozenHi = B.buildFreeze(S32, Hi);
+      auto NewLo = B.buildAShr(S32, FrozenHi, MaskedAmt, MI.getFlags());
+      auto NewHi = B.buildAShr(S32, FrozenHi, B.buildConstant(S32, 31));
+      B.buildMergeLikeInstr(Dst, {NewLo, NewHi});
+      break;
+    }
+    default:
+      llvm_unreachable("Unexpected opcode");
+    }
+  };
+
+  return true;
 }
