@@ -120,6 +120,9 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // DebugLexicalBlock result id per emitted DILexicalBlock/DINamespace.
   DenseMap<const DIScope *, MCRegister> DebugLexicalBlockRegs;
 
+  // DebugInlinedAt result id per DILocation used as an inlined-at chain link.
+  DenseMap<const DILocation *, MCRegister> DebugInlinedAtRegs;
+
   // Path \c OpString result id per \c DIScope (CU, \c DIFile, declaration
   // \c DISubprogram, …). Filled during \c emitNonSemanticDebugStrings() using
   // \c getDebugFullPath + \c emitOpStringIfNew; section 10 uses it for
@@ -180,6 +183,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   bool DebugFunctionDefinitionEmitted = false;
 
   const MachineInstr *LastLineMI = nullptr;
+
+  const MachineInstr *LastScopeMI = nullptr;
 
 public:
   explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);
@@ -246,6 +251,16 @@ private:
 
   void resetPerFunctionDebugState();
 
+  /// Resolve the instruction that a per-instruction DebugLine/DebugScope
+  /// update should attach to: \p MI adjusted forward past a merge
+  /// instruction to its terminator, or \c std::nullopt if \p MI is not a
+  /// valid attachment point (skip-emission, or one of the structural opcodes
+  /// that can never carry DebugLine/DebugScope: OpFunction,
+  /// OpFunctionParameter, OpFunctionEnd, OpLabel, OpPhi).
+  std::optional<const MachineInstr *>
+  resolveDebugLocTarget(const MachineInstr *MI);
+
+  void emitDebugScopeForInstruction(const MachineInstr *MI);
   void emitDebugLineForInstruction(const MachineInstr *MI);
   void preparePerFunctionDebug(const MachineFunction *MF);
   void tryEmitDebugFunctionDefinition(SPIRV::ModuleAnalysisInfo &MAI);
@@ -521,6 +536,24 @@ private:
   emitDebugLexicalBlock(const DIScope *S, MCRegister VoidTypeReg,
                         MCRegister I32TypeReg, MCRegister ExtInstSetReg,
                         SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Return a cached \c DebugInlinedAt id for \p IA, or emit one (recursing
+  /// into \c IA->getInlinedAt() first for the optional Inlined operand, so
+  /// outer frames are always emitted before the inner frame that references
+  /// them). Must run after \c DebugFunctionRegs and \c DebugLexicalBlockRegs
+  /// are populated, since the Scope operand is resolved through
+  /// \c resolveLexicalBlockParent. \c DebugInlinedAt is not in the spec's
+  /// in-block instruction list, so this is only ever called from
+  /// module-scope emission (\c emitNonSemanticGlobalDebugInfo), never from
+  /// per-instruction emission.
+  ///
+  /// \returns An invalid (default-constructed) \c MCRegister, and emits
+  /// nothing, if \p IA's Scope does not resolve.
+  MCRegister getOrEmitDebugInlinedAt(const DILocation *IA,
+                                     MCRegister VoidTypeReg,
+                                     MCRegister I32TypeReg,
+                                     MCRegister ExtInstSetReg,
+                                     SPIRV::ModuleAnalysisInfo &MAI);
 };
 
 } // namespace llvm
