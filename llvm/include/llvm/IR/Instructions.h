@@ -118,6 +118,13 @@ public:
   LLVM_ABI std::optional<TypeSize>
   getAllocationSizeInBits(const DataLayout &DL) const;
 
+  /// Get the size of the allocated type.  (This is the allocation size
+  /// ignoring the array size.)
+  LLVM_ABI TypeSize getAllocationBaseSize(const DataLayout &DL) const;
+
+  // Get whether the allocated type is a scalable type.
+  bool isScalable() const { return AllocatedType->isScalableTy(); }
+
   /// Return the type that is being allocated by the instruction.
   Type *getAllocatedType() const { return AllocatedType; }
   /// for use only in special circumstances that need to generically
@@ -332,9 +339,10 @@ class StoreInst : public Instruction {
   using VolatileField = BoolBitfieldElementT<0>;
   using AlignmentField = AlignmentBitfieldElementT<VolatileField::NextBit>;
   using OrderingField = AtomicOrderingBitfieldElementT<AlignmentField::NextBit>;
-  static_assert(
-      Bitfield::areContiguous<VolatileField, AlignmentField, OrderingField>(),
-      "Bitfields must be contiguous");
+  using ElementWiseField = BoolBitfieldElementT<OrderingField::NextBit>;
+  static_assert(Bitfield::areContiguous<VolatileField, AlignmentField,
+                                        OrderingField, ElementWiseField>(),
+                "Bitfields must be contiguous");
 
   void AssertOK();
 
@@ -369,6 +377,12 @@ public:
 
   /// Specify whether this is a volatile store or not.
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
+
+  /// Return true if this is an elementwise atomic store.
+  bool isElementwise() const { return getSubclassData<ElementWiseField>(); }
+
+  /// Specify whether this is an elementwise atomic store or not.
+  void setElementwise(bool V) { setSubclassData<ElementWiseField>(V); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -412,7 +426,8 @@ public:
 
   /// Returns the properties of this store instruction.
   LoadStoreInstProperties getProperties() const {
-    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID(),
+            isElementwise()};
   }
 
   /// Sets the properties of this store instruction.
@@ -421,6 +436,7 @@ public:
     setAlignment(Props.Alignment);
     setOrdering(Props.Ordering);
     setSyncScopeID(Props.SSID);
+    setElementwise(Props.IsElementwise);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
@@ -5181,6 +5197,8 @@ protected:
   LLVM_ABI AddrSpaceCastInst *cloneImpl() const;
 
 public:
+  enum { NonNull = (1 << 0) };
+
   /// Constructor with insert-before-instruction semantics
   LLVM_ABI AddrSpaceCastInst(
       Value *S,                  ///< The value to be casted
@@ -5197,6 +5215,14 @@ public:
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
+
+  void setNonNull(bool B = true) {
+    SubclassOptionalData = (SubclassOptionalData & ~NonNull) | (B * NonNull);
+  }
+
+  /// Test whether the source is known not to be the null value of its
+  /// address space.
+  bool hasNonNull() const { return (SubclassOptionalData & NonNull) != 0; }
 
   /// Gets the pointer operand.
   Value *getPointerOperand() {

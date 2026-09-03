@@ -349,3 +349,146 @@ func.func @fpowi_exp_three(%arg0: f32, %arg1: vector<4xf32>) -> (f32, vector<4xf
   %3 = math.fpowi %arg1, %vm1 : vector<4xf32>, vector<4xi32>
   return %0, %1, %2, %3 : f32, vector<4xf32>, f32, vector<4xf32>
 }
+
+// CHECK-LABEL: @exp_quotient(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32,
+// CHECK-SAME: %[[ARG2:.+]]: vector<4xf32>, %[[ARG3:.+]]: vector<4xf32>
+func.func @exp_quotient(%arg0: f32, %arg1: f32, %arg2: vector<4xf32>,
+                        %arg3: vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[SSUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: %[[SCALAR:.*]] = math.exp %[[SSUB]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: %[[VSUB:.*]] = arith.subf %[[ARG2]], %[[ARG3]] fastmath<reassoc,nsz,arcp,contract,afn> : vector<4xf32>
+  // CHECK: %[[VECTOR:.*]] = math.exp2 %[[VSUB]] fastmath<reassoc,nsz,arcp,contract,afn> : vector<4xf32>
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<fast> : f32
+  %3 = math.exp2 %arg2 fastmath<fast> : vector<4xf32>
+  %4 = math.exp2 %arg3 fastmath<fast> : vector<4xf32>
+  %5 = arith.divf %3, %4 fastmath<fast> : vector<4xf32>
+  return %2, %5 : f32, vector<4xf32>
+}
+
+// The rewrite only needs `arcp` and `reassoc` on the division. The subtraction
+// takes the division's flags, the new `exp` the ones shared by both
+// exponentials it replaces.
+// CHECK-LABEL: @exp_quotient_minimal_fastmath(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @exp_quotient_minimal_fastmath(%arg0: f32, %arg1: f32) -> f32 {
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,arcp> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<afn> : f32
+  // CHECK: return %[[EXP]]
+  %0 = math.exp %arg0 fastmath<afn,ninf> : f32
+  %1 = math.exp %arg1 fastmath<afn> : f32
+  %2 = arith.divf %0, %1 fastmath<reassoc,arcp> : f32
+  return %2 : f32
+}
+
+// `nnan` and `ninf` are assumptions about the values an operation sees, and
+// neither new operation sees the values of the ones it replaces, so they are
+// dropped rather than propagated: here `ninf` holds for the division for
+// `%arg0 = -inf`, `%arg1 = 0.0`, but not for the subtraction.
+// CHECK-LABEL: @exp_quotient_drops_value_assumptions(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @exp_quotient_drops_value_assumptions(%arg0: f32, %arg1: f32) -> f32 {
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,arcp> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<afn> : f32
+  // CHECK: return %[[EXP]]
+  %0 = math.exp %arg0 fastmath<nnan,ninf,afn> : f32
+  %1 = math.exp %arg1 fastmath<nnan,ninf,afn> : f32
+  %2 = arith.divf %0, %1 fastmath<nnan,ninf,reassoc,arcp> : f32
+  return %2 : f32
+}
+
+// The two new operations derive their flags independently: the subtraction from
+// the division, the exponential from the two exponentials, and neither inherits
+// flags that only the other side carries.
+// CHECK-LABEL: @exp_quotient_mixed_fastmath(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @exp_quotient_mixed_fastmath(%arg0: f32, %arg1: f32) -> f32 {
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,arcp,contract> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<nsz,contract> : f32
+  // CHECK: return %[[EXP]]
+  %0 = math.exp %arg0 fastmath<nsz,contract,afn> : f32
+  %1 = math.exp %arg1 fastmath<nsz,contract,ninf> : f32
+  %2 = arith.divf %0, %1 fastmath<reassoc,arcp,contract,nnan> : f32
+  return %2 : f32
+}
+
+// The numerator is still needed, but folding remains profitable because the
+// division becomes a subtraction.
+// CHECK-LABEL: @exp_quotient_numerator_multiple_uses(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @exp_quotient_numerator_multiple_uses(%arg0: f32, %arg1: f32) -> (f32, f32) {
+  // CHECK: %[[NUM:.*]] = math.exp %[[ARG0]] fastmath<fast> : f32
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: return %[[EXP]], %[[NUM]]
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<fast> : f32
+  return %2, %0 : f32, f32
+}
+
+// The divisor is still needed, but folding remains profitable because the
+// numerator dies and the division becomes a subtraction.
+// CHECK-LABEL: @exp_quotient_denominator_multiple_uses(
+// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @exp_quotient_denominator_multiple_uses(%arg0: f32, %arg1: f32) -> (f32, f32) {
+  // CHECK: %[[DEN:.*]] = math.exp %[[ARG1]] fastmath<fast> : f32
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG1]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: return %[[EXP]], %[[DEN]]
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<fast> : f32
+  return %2, %1 : f32, f32
+}
+
+// Negative test - neither exponential dies, so the fold would add a third one.
+// CHECK-LABEL: @exp_quotient_both_multiple_uses(
+func.func @exp_quotient_both_multiple_uses(%arg0: f32, %arg1: f32) -> (f32, f32, f32) {
+  // CHECK-COUNT-2: math.exp
+  // CHECK-NOT: math.exp
+  // CHECK: arith.divf
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<fast> : f32
+  return %2, %0, %1 : f32, f32, f32
+}
+
+// Both operands come from the same exponential, which therefore dies.
+// CHECK-LABEL: @exp_quotient_same_exponential(
+// CHECK-SAME: %[[ARG0:.+]]: f32
+func.func @exp_quotient_same_exponential(%arg0: f32) -> f32 {
+  // CHECK: %[[SUB:.*]] = arith.subf %[[ARG0]], %[[ARG0]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: %[[EXP:.*]] = math.exp %[[SUB]] fastmath<reassoc,nsz,arcp,contract,afn> : f32
+  // CHECK: return %[[EXP]]
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = arith.divf %0, %0 fastmath<fast> : f32
+  return %1 : f32
+}
+
+// Negative test - not enough fastmath flags on the division.
+// CHECK-LABEL: @exp_quotient_not_enough_fastmath(
+func.func @exp_quotient_not_enough_fastmath(%arg0: f32, %arg1: f32, %arg2: f32,
+                                            %arg3: f32) -> (f32, f32) {
+  // CHECK-COUNT-2: arith.divf
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<reassoc> : f32
+  %3 = math.exp %arg2 fastmath<fast> : f32
+  %4 = math.exp %arg3 fastmath<fast> : f32
+  %5 = arith.divf %3, %4 fastmath<arcp> : f32
+  return %2, %5 : f32, f32
+}
+
+// Negative test - mismatched exponential bases.
+// CHECK-LABEL: @exp_quotient_mixed_bases(
+func.func @exp_quotient_mixed_bases(%arg0: f32, %arg1: f32) -> f32 {
+  // CHECK: arith.divf
+  %0 = math.exp %arg0 fastmath<fast> : f32
+  %1 = math.exp2 %arg1 fastmath<fast> : f32
+  %2 = arith.divf %0, %1 fastmath<fast> : f32
+  return %2 : f32
+}

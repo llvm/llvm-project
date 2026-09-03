@@ -7,7 +7,7 @@
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
 
 struct Empty {};
-// CIR-DAG: !rec_Empty = !cir.struct<"Empty" padded {pad !u8i}>
+// CIR-DAG: !rec_Empty = !cir.struct<"Empty" {pad !u8i}>
 // LLVMCIR-DAG: %struct.Empty = type { i8 }
 
 struct HasEmpty {
@@ -38,7 +38,7 @@ const HasEmpty2 globalHE2 = {{}, 1};
 
 // Not referenced enough to be emitted in 'after'.
 struct EmptyBase{};
-// CIR-BEFORE-DAG: !rec_EmptyBase = !cir.struct<"EmptyBase" padded {pad !u8i}>
+// CIR-BEFORE-DAG: !rec_EmptyBase = !cir.struct<"EmptyBase" {pad !u8i}>
 
 struct Base { int i; };
 // CIR-DAG: !rec_Base = !cir.struct<"Base" {data !s32i}>
@@ -87,7 +87,7 @@ struct hasNUA {
   [[no_unique_address]] EmptyBase eb6;
   int i;
 };
-// CIR-DAG: !rec_hasNUA = !cir.struct<"hasNUA" padded {data !s32i, pad !cir.array<!u8i x 4>}>
+// CIR-DAG: !rec_hasNUA = !cir.struct<"hasNUA" {data !s32i, pad !cir.array<!u8i x 4>}>
 // LLVM-DAG: %struct.hasNUA = type { i32, [4 x i8] }
 
 const hasNUA nua = {{},{},{},{},{},{}, 1};
@@ -126,6 +126,25 @@ int hasNUA::* nua_i = &hasNUA::i;
 // CIR-BEFORE-DAG: cir.global external @nua_i = #cir.data_member<[0]> : !cir.data_member<!s32i in !rec_hasNUA>
 // CIR-AFTER-DAG: cir.global external @nua_i = #cir.int<0> : !s64i
 // LLVM-DAG: @nua_i = global i64 0
+
+struct EmptyForLayoutOnly2 { Empty s; };
+// CIR-BEFORE-DAG: !rec_EmptyForLayoutOnly2 = !cir.struct<"EmptyForLayoutOnly2" {data !rec_Empty}>
+// CIR-AFTER-DAG: !rec_EmptyForLayoutOnly2 = !cir.struct<"EmptyForLayoutOnly2" {data !rec_Empty}>
+// LLVMCIR-DAG: %struct.EmptyForLayoutOnly2 = type { %struct.Empty }
+// OGCG-DAG: %struct.EmptyForLayoutOnly2 = type { i8 }
+struct HoldsAbiDataViaPointer {
+  int x;
+  [[no_unique_address]] EmptyForLayoutOnly2 e;
+};
+// CIR-BEFORE-DAG: !rec_HoldsAbiDataViaPointer = !cir.struct<"HoldsAbiDataViaPointer" {data !s32i, data !rec_EmptyForLayoutOnly2}>
+// CIR-AFTER-DAG: !rec_HoldsAbiDataViaPointer = !cir.struct<"HoldsAbiDataViaPointer" {data !s32i, data !rec_EmptyForLayoutOnly2}>
+// LLVMCIR-DAG: %struct.HoldsAbiDataViaPointer = type { i32, %struct.EmptyForLayoutOnly2 }
+// OGCG-DAG: %struct.HoldsAbiDataViaPointer = type { i32, [4 x i8] }
+
+EmptyForLayoutOnly2 HoldsAbiDataViaPointer::* pm_holds = &HoldsAbiDataViaPointer::e;
+// CIR-BEFORE-DAG: cir.global external @pm_holds = #cir.data_member<[1]> : !cir.data_member<!rec_EmptyForLayoutOnly2 in !rec_HoldsAbiDataViaPointer>
+// CIR-AFTER-DAG: cir.global external @pm_holds = #cir.int<4> : !s64i
+// LLVM-DAG: @pm_holds = global i64 4
 
 struct FirstField { int a; };
 struct HoldsNUA { int b; [[no_unique_address]] EmptyBase e; [[no_unique_address]] EmptyBase e2; };
@@ -277,4 +296,7 @@ void uses() {
   globalD2.i;
 
   nua.i;
+
+  EmptyForLayoutOnly2 e;
+  HoldsAbiDataViaPointer p;
 }

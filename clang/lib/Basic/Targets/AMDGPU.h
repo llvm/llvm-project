@@ -55,7 +55,8 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   /// Has fast fma f32
   bool hasFastFMAF() const {
     return getTriple().isAMDGCN() &&
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_FMA_F32);
+           llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+               llvm::AMDGPU::FEAT_FAST_FMAF);
   }
 
   /// Has fast fma f64
@@ -68,7 +69,8 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   bool hasFullRateDenormalsF32() const {
     return getTriple().isAMDGCN() &&
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
+           llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+               llvm::AMDGPU::FEAT_FAST_DENORMAL_F32);
   }
 
   bool hasLDEXPF() const { return getTriple().isAMDGCN(); }
@@ -280,7 +282,7 @@ public:
   bool setCPU(StringRef Name) override {
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
-      GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
+      GPUFeatures = llvm::AMDGPU::FEATURE_NONE;
       return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
                                                 GPUKind) &&
              !llvm::AMDGPU::isPseudoTarget(GPUKind);

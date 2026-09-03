@@ -53,7 +53,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -247,10 +246,10 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     return MI;
   }
 
-  // Extract the length and alignment and fill if they are constant.
+  // Extract the length and validate the fill type.
   ConstantInt *LenC = dyn_cast<ConstantInt>(MI->getLength());
-  ConstantInt *FillC = dyn_cast<ConstantInt>(MI->getValue());
-  if (!LenC || !FillC || !FillC->getType()->isIntegerTy(8))
+  Value *Fill = MI->getValue();
+  if (!LenC || !Fill->getType()->isIntegerTy(8))
     return nullptr;
   const uint64_t Len = LenC->getLimitedValue();
   assert(Len && "0-sized memory setting should be removed already.");
@@ -267,14 +266,22 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   if (Len <= 8 && isPowerOf2_32((uint32_t)Len)) {
     Value *Dest = MI->getDest();
 
-    // Extract the fill value and store.
-    Constant *FillVal = ConstantInt::get(
-        MI->getContext(), APInt::getSplat(Len * 8, FillC->getValue()));
+    // Extract the fill value and store.  A one-byte memset does not need
+    // replication so a nonconstant i8 fill can be stored directly.
+    Value *FillVal;
+    if (auto *FillC = dyn_cast<ConstantInt>(Fill))
+      FillVal = ConstantInt::get(MI->getContext(),
+                                 APInt::getSplat(Len * 8, FillC->getValue()));
+    else if (Len == 1)
+      FillVal = Fill;
+    else
+      return nullptr;
+
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
     for (DbgVariableRecord *DbgAssign : at::getDVRAssignmentMarkers(S)) {
-      if (llvm::is_contained(DbgAssign->location_ops(), FillC))
-        DbgAssign->replaceVariableLocationOp(FillC, FillVal);
+      if (llvm::is_contained(DbgAssign->location_ops(), Fill))
+        DbgAssign->replaceVariableLocationOp(Fill, FillVal);
     }
 
     S->setAlignment(Alignment);
@@ -1853,25 +1860,19 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
       return nullptr;
   }
 
-  BinaryOperator *NewBinop;
   if (A == C &&
       leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode)) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
-    NewBinop =
-        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, A, NewIntrinsic));
-  } else if (B == D && rightDistributesOverLeft(InnerOpcode, HasNUW, HasNSW,
-                                                TopLevelOpcode)) {
-    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
-    NewBinop =
-        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, B));
-  } else {
-    return nullptr;
+    return Builder.CreateNoWrapBinOp(InnerOpcode, A, NewIntrinsic, HasNUW,
+                                     HasNSW);
   }
-
-  NewBinop->setHasNoUnsignedWrap(HasNUW);
-  NewBinop->setHasNoSignedWrap(HasNSW);
-
-  return NewBinop;
+  if (B == D &&
+      rightDistributesOverLeft(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode)) {
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
+    return Builder.CreateNoWrapBinOp(InnerOpcode, NewIntrinsic, B, HasNUW,
+                                     HasNSW);
+  }
+  return nullptr;
 }
 
 static Instruction *foldNeonShift(IntrinsicInst *II, InstCombinerImpl &IC) {
@@ -1980,6 +1981,60 @@ static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
   IC.replaceInstUsesWith(*Match, IsSin ? Cos : Sin);
   IC.eraseInstFromFunction(*Match);
   return IsSin ? Sin : Cos;
+}
+
+/// Fold an scmp/ucmp intrinsic whose operands are extended from a narrower
+/// type:
+///   scmp (sext X), (sext Y) --> scmp X, Y
+///   scmp (zext X), (zext Y) --> ucmp X, Y
+///   ucmp (ext X), (ext Y)   --> ucmp X, Y
+/// Both operands must use the same extend opcode and source type. A constant
+/// operand is narrowed instead, if truncating and re-extending it gives back
+/// the same constant.
+static Value *foldCmpIntrinsicOfExtended(IntrinsicInst *II,
+                                         InstCombiner::BuilderTy &Builder,
+                                         const DataLayout &DL) {
+  // scmp/ucmp are not commutative, so the extend may be on either side.
+  unsigned ExtIdx = 0;
+  Value *X;
+  if (!match(II->getArgOperand(0), m_ZExtOrSExt(m_Value(X)))) {
+    ExtIdx = 1;
+    if (!match(II->getArgOperand(1), m_ZExtOrSExt(m_Value(X))))
+      return nullptr;
+  }
+
+  auto CastOpc = static_cast<Instruction::CastOps>(
+      cast<Operator>(II->getArgOperand(ExtIdx))->getOpcode());
+  Type *NarrowTy = X->getType();
+
+  // The other operand must be the same kind of extend from the same type, or a
+  // constant that can be narrowed losslessly.
+  Value *OtherOp = II->getArgOperand(1 - ExtIdx);
+  Value *Y;
+  Constant *WideC;
+  if (match(OtherOp, m_ZExtOrSExt(m_Value(Y)))) {
+    if (cast<Operator>(OtherOp)->getOpcode() != CastOpc ||
+        Y->getType() != NarrowTy)
+      return nullptr;
+  } else if (match(OtherOp, m_ImmConstant(WideC))) {
+    Y = getLosslessInvCast(WideC, NarrowTy, CastOpc, DL);
+    if (!Y)
+      return nullptr;
+  } else {
+    return nullptr;
+  }
+
+  // Both extends preserve the unsigned order, so an unsigned compare of the
+  // narrow operands is always equivalent. The signed order is only preserved by
+  // sext; zero extended values are non-negative, so a signed compare of those
+  // is an unsigned compare of the narrow operands.
+  Intrinsic::ID NewIID =
+      II->getIntrinsicID() == Intrinsic::scmp && CastOpc == Instruction::SExt
+          ? Intrinsic::scmp
+          : Intrinsic::ucmp;
+  if (ExtIdx != 0)
+    std::swap(X, Y);
+  return Builder.CreateIntrinsic(II->getType(), NewIID, {X, Y});
 }
 
 /// CallInst simplification. This mostly only handles folding of intrinsic
@@ -2480,8 +2535,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     break;
   }
-  case Intrinsic::scmp: {
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp: {
+    if (Value *V = foldCmpIntrinsicOfExtended(II, Builder, DL))
+      return replaceInstUsesWith(CI, V);
+
+    if (IID == Intrinsic::ucmp)
+      break;
+
     Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+
+    // scmp(X, 0) -> sext_or_trunc(X) if X is known to be one of -1, 0, 1.
+    if (match(I1, m_Zero())) {
+      ConstantRange Range = computeConstantRange(I0, /*ForSigned=*/true,
+                                                 SQ.getWithInstruction(II));
+      if (Range.getSignedMin().sge(-1) && Range.getSignedMax().sle(1))
+        return replaceInstUsesWith(
+            CI, Builder.CreateSExtOrTrunc(I0, II->getType()));
+    }
     Value *LHS, *RHS;
     if (match(I0, m_NSWSub(m_Value(LHS), m_Value(RHS))) && match(I1, m_Zero()))
       return replaceInstUsesWith(
@@ -3960,8 +4031,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // call void @llvm.assume(i1 %A)
     // into
     // call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
-    if (match(IIOperand,
-              m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero())) &&
+    if (match(
+            IIOperand,
+            m_CombineOr(m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero()),
+                        m_Not(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(A),
+                                             m_Zero())))) &&
         A->getType()->isPointerTy()) {
       Builder.CreateNonnullAssumption(A);
       return eraseInstFromFunction(*II);

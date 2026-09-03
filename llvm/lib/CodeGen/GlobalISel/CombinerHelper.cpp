@@ -33,7 +33,6 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1000,15 +999,16 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   Register SrcReg = MI.getOperand(1).getReg();
   // Don't use getOpcodeDef() here since intermediate instructions may have
   // multiple users.
-  GAnyLoad *LoadMI = dyn_cast<GAnyLoad>(MRI.getVRegDef(SrcReg));
-  if (!LoadMI)
+  GAnyLoad *LoadMI;
+  Register PtrReg;
+  const MachineMemOperand *MMO;
+  if (!mi_match(SrcReg, MRI, m_GAnyLoad(LoadMI, m_Reg(PtrReg), m_MMO(MMO))))
     return false;
 
   Register LoadReg = LoadMI->getDstReg();
   LLT RegTy = MRI.getType(LoadReg);
-  Register PtrReg = LoadMI->getPointerReg();
   unsigned RegSize = RegTy.getSizeInBits();
-  unsigned LoadSizeBits = LoadMI->getMemSizeInBits().getValue();
+  unsigned LoadSizeBits = MMO->getSizeInBits().getValue();
   unsigned MaskSizeBits = MaskVal.countr_one();
 
   if ((isa<GSExtLoad>(LoadMI) || MaskSizeBits < LoadSizeBits) &&
@@ -1030,12 +1030,11 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   if (MaskSizeBits < 8 || !isPowerOf2_32(MaskSizeBits))
     return false;
 
-  const MachineMemOperand &MMO = LoadMI->getMMO();
-  LegalityQuery::MemDesc MemDesc(MMO);
+  LegalityQuery::MemDesc MemDesc(*MMO);
 
   // Don't modify the memory access size if this is atomic/volatile, but we can
   // still adjust the opcode to indicate the high bit behavior.
-  if (LoadMI->isSimple())
+  if (!MMO->isAtomic() && !MMO->isVolatile())
     MemDesc.MemoryTy = LLT::scalar(MaskSizeBits);
   else if (LoadSizeBits > MaskSizeBits || LoadSizeBits == RegSize)
     return false;
@@ -1048,8 +1047,8 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   MatchInfo = [=](MachineIRBuilder &B) {
     B.setInstrAndDebugLoc(*LoadMI);
     auto &MF = B.getMF();
-    auto PtrInfo = MMO.getPointerInfo();
-    auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, MemDesc.MemoryTy);
+    auto PtrInfo = MMO->getPointerInfo();
+    auto *NewMMO = MF.getMachineMemOperand(MMO, PtrInfo, MemDesc.MemoryTy);
     B.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, Dst, PtrReg, *NewMMO);
     replaceRegWith(MRI, LoadReg, Dst);
     LoadMI->eraseFromParent();
@@ -1130,11 +1129,12 @@ bool CombinerHelper::matchSextInRegOfLoad(
     return false;
 
   Register SrcReg = MI.getOperand(1).getReg();
-  auto *LoadDef = dyn_cast<GLoad>(MRI.getVRegDef(SrcReg));
-  if (!LoadDef)
+  Register PtrReg;
+  const MachineMemOperand *MMO;
+  if (!mi_match(SrcReg, MRI, m_GLoad(m_Reg(PtrReg), m_MMO(MMO))))
     return false;
 
-  uint64_t MemBits = LoadDef->getMemSizeInBits().getValue();
+  uint64_t MemBits = MMO->getSizeInBits().getValue();
   uint64_t ExtFrom = MI.getOperand(2).getImm();
 
   if (MemBits > ExtFrom && !MRI.hasOneNonDBGUse(SrcReg))
@@ -1153,24 +1153,21 @@ bool CombinerHelper::matchSextInRegOfLoad(
   if (!isPowerOf2_32(NewSizeBits))
     return false;
 
-  const MachineMemOperand &MMO = LoadDef->getMMO();
-  LegalityQuery::MemDesc MMDesc(MMO);
+  LegalityQuery::MemDesc MMDesc(*MMO);
 
   // Don't modify the memory access size if this is atomic/volatile, but we can
   // still adjust the opcode to indicate the high bit behavior.
-  if (LoadDef->isSimple())
+  if (!MMO->isAtomic() && !MMO->isVolatile())
     MMDesc.MemoryTy = LLT::scalar(NewSizeBits);
   else if (MemBits > NewSizeBits || MemBits == RegTy.getSizeInBits())
     return false;
 
   // TODO: Could check if it's legal with the reduced or original memory size.
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SEXTLOAD,
-                                 {MRI.getType(LoadDef->getDstReg()),
-                                  MRI.getType(LoadDef->getPointerReg())},
-                                 {MMDesc}}))
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_SEXTLOAD, {RegTy, MRI.getType(PtrReg)}, {MMDesc}}))
     return false;
 
-  MatchInfo = std::make_tuple(LoadDef->getDstReg(), NewSizeBits);
+  MatchInfo = std::make_tuple(SrcReg, NewSizeBits);
   return true;
 }
 
@@ -2891,13 +2888,6 @@ void CombinerHelper::applyCombineTruncOfShift(
   eraseInst(MI);
 }
 
-bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) const {
-  return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
-    return MO.isReg() &&
-           getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
-  });
-}
-
 bool CombinerHelper::matchAllExplicitUsesAreUndef(MachineInstr &MI) const {
   return all_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
     return !MO.isReg() ||
@@ -3132,19 +3122,6 @@ bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) const {
   return matchEqualDefs(MI.getOperand(2), MI.getOperand(3)) &&
          canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(2).getReg(),
                        MRI);
-}
-
-bool CombinerHelper::matchBinOpSameVal(MachineInstr &MI) const {
-  return matchEqualDefs(MI.getOperand(1), MI.getOperand(2)) &&
-         canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(1).getReg(),
-                       MRI);
-}
-
-bool CombinerHelper::matchOperandIsUndef(MachineInstr &MI,
-                                         unsigned OpIdx) const {
-  MachineOperand &MO = MI.getOperand(OpIdx);
-  return MO.isReg() &&
-         getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
 }
 
 bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(
@@ -6292,14 +6269,25 @@ bool CombinerHelper::matchTruncSSatS(MachineInstr &MI,
 
   APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
   APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
-  return mi_match(Src, MRI,
-                  m_GSMin(m_GSMax(m_Reg(MatchInfo),
-                                  m_SpecificICstOrSplat(SignedMin)),
-                          m_SpecificICstOrSplat(SignedMax))) ||
-         mi_match(Src, MRI,
-                  m_GSMax(m_GSMin(m_Reg(MatchInfo),
-                                  m_SpecificICstOrSplat(SignedMax)),
-                          m_SpecificICstOrSplat(SignedMin)));
+  if (mi_match(
+          Src, MRI,
+          m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMin)),
+                  m_SpecificICstOrSplat(SignedMax))))
+    return true;
+  if (mi_match(
+          Src, MRI,
+          m_GSMax(m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMax)),
+                  m_SpecificICstOrSplat(SignedMin))))
+    return true;
+
+  // CVP in the midend will often transform trunc(smin(smax(..)) into
+  // trunc nsw(smin(..)) as the smax against INT_MIN never saturates.
+  if (MI.getFlag(MachineInstr::MIFlag::NoSWrap) &&
+      mi_match(Src, MRI,
+               m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMax))))
+    return true;
+
+  return false;
 }
 
 void CombinerHelper::applyTruncSSatS(MachineInstr &MI,
@@ -6372,9 +6360,7 @@ bool CombinerHelper::matchTruncUSatUToFPTOUISat(MachineInstr &MI,
 bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,
                                                BuildFnTy &MatchInfo) const {
   unsigned Opc = MI.getOpcode();
-  assert(Opc == TargetOpcode::G_FADD || Opc == TargetOpcode::G_FSUB ||
-         Opc == TargetOpcode::G_FMUL || Opc == TargetOpcode::G_FDIV ||
-         Opc == TargetOpcode::G_FMAD || Opc == TargetOpcode::G_FMA);
+  assert(Opc == TargetOpcode::G_FADD || Opc == TargetOpcode::G_FSUB);
 
   Register Dst = MI.getOperand(0).getReg();
   Register X = MI.getOperand(1).getReg();
@@ -6392,16 +6378,6 @@ bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,
   else if (mi_match(Dst, MRI, m_GFSub(m_Reg(X), m_GFNeg(m_Reg(Y)))) &&
            isLegalOrBeforeLegalizer({TargetOpcode::G_FADD, {Type}})) {
     Opc = TargetOpcode::G_FADD;
-  }
-  // fold (fmul fneg(x), fneg(y)) -> (fmul x, y)
-  // fold (fdiv fneg(x), fneg(y)) -> (fdiv x, y)
-  // fold (fmad fneg(x), fneg(y), z) -> (fmad x, y, z)
-  // fold (fma fneg(x), fneg(y), z) -> (fma x, y, z)
-  else if ((Opc == TargetOpcode::G_FMUL || Opc == TargetOpcode::G_FDIV ||
-            Opc == TargetOpcode::G_FMAD || Opc == TargetOpcode::G_FMA) &&
-           mi_match(X, MRI, m_GFNeg(m_Reg(X))) &&
-           mi_match(Y, MRI, m_GFNeg(m_Reg(Y)))) {
-    // no opcode change
   } else
     return false;
 
@@ -6640,14 +6616,6 @@ bool CombinerHelper::matchCombineFAddFMAFMulToFMadOrFMA(
   unsigned PreferredFusedOpcode =
       HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
 
-  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
-  // prefer to fold the multiply with fewer uses.
-  if (Aggressive && isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
-      isContractableFMul(*RHS.MI, AllowFusionGlobally)) {
-    if (hasMoreUses(*LHS.MI, *RHS.MI, MRI))
-      std::swap(LHS, RHS);
-  }
-
   MachineInstr *FMA = nullptr;
   Register Z;
   // fold (fadd (fma x, y, (fmul u, v)), z) -> (fma x, y, (fma u, v, z))
@@ -6857,7 +6825,7 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
   DefinitionAndSourceRegister RHS = {Op2Def, Op2};
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
 
-  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
+  // If we have two choices trying to fold (fsub (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
   int FirstMulHasFewerUses = true;
   if (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&

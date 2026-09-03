@@ -12,7 +12,7 @@
 // CIR-DAG: !rec_OuterS = !cir.struct<"OuterS" {data !rec_InnerS, data !s32i}>  
 // CIR-DAG: !rec_InnerS = !cir.struct<"InnerS" {data !s32i, data !s8i}>
 // CIR-DAG: !rec_PackedS = !cir.struct<"PackedS" packed {data !s32i, data !s8i}>
-// CIR-DAG: !rec_PackedAndPaddedS = !cir.struct<"PackedAndPaddedS" packed padded {data !s32i, data !s8i, pad !u8i}>
+// CIR-DAG: !rec_PackedAndPaddedS = !cir.struct<"PackedAndPaddedS" packed {data !s32i, data !s8i, pad !u8i}>
 // CIR-DAG: !rec_NodeS = !cir.struct<"NodeS" {data !cir.ptr<!cir.struct<"NodeS">>}>
 // CIR-DAG: !rec_RightS = !cir.struct<"RightS" {data !cir.ptr<!cir.struct<"LeftS" {data !cir.ptr<!cir.struct<"RightS">>}>>}>
 // CIR-DAG: !rec_LeftS = !cir.struct<"LeftS" {data !cir.ptr<!rec_RightS>}>

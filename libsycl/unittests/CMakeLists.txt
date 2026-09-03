@@ -1,5 +1,8 @@
 include(AddUnitTest)
 
+# Make the targets default_gtest and default_gtest_main available.
+build_gtest()
+
 add_custom_target(LibsyclUnitTests)
 
 set_target_properties(LibsyclUnitTests PROPERTIES FOLDER "libsycl/Tests/Unit")
@@ -7,6 +10,7 @@ set_target_properties(LibsyclUnitTests PROPERTIES FOLDER "libsycl/Tests/Unit")
 add_subdirectory(mock)
 add_subdirectory(device_selector)
 add_subdirectory(event)
+add_subdirectory(handler)
 add_subdirectory(platform)
 add_subdirectory(program_manager)
 add_subdirectory(queue)

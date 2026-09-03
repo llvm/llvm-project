@@ -19,7 +19,9 @@
 #include "AMDGPUGlobalISelUtils.h"
 #include "SILowerI1Copies.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/InitializePasses.h"
 
@@ -29,12 +31,12 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPUGlobalISelDivergenceLowering : public MachineFunctionPass {
+class AMDGPUGlobalISelDivergenceLoweringLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
 public:
-  AMDGPUGlobalISelDivergenceLowering() : MachineFunctionPass(ID) {}
+  AMDGPUGlobalISelDivergenceLoweringLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -53,8 +55,8 @@ public:
 
 class DivergenceLoweringHelper : public AMDGPU::PhiLoweringHelper {
 public:
-  DivergenceLoweringHelper(MachineFunction *MF, MachineDominatorTree *DT,
-                           MachinePostDominatorTree *PDT,
+  DivergenceLoweringHelper(MachineFunction &MF, MachineDominatorTree &DT,
+                           MachinePostDominatorTree &PDT,
                            MachineUniformityInfo *MUI);
 
 private:
@@ -82,9 +84,9 @@ public:
 };
 
 DivergenceLoweringHelper::DivergenceLoweringHelper(
-    MachineFunction *MF, MachineDominatorTree *DT,
-    MachinePostDominatorTree *PDT, MachineUniformityInfo *MUI)
-    : PhiLoweringHelper(MF, DT, PDT), MUI(MUI), B(*MF) {}
+    MachineFunction &MF, MachineDominatorTree &DT,
+    MachinePostDominatorTree &PDT, MachineUniformityInfo *MUI)
+    : PhiLoweringHelper(MF, DT, PDT), MUI(MUI), B(MF) {}
 
 // _(s1) -> SReg_32/64(s1)
 void DivergenceLoweringHelper::markAsLaneMask(Register DstReg) const {
@@ -106,7 +108,7 @@ void DivergenceLoweringHelper::getCandidatesForLowering(
   // Add divergent i1 G_PHIs to the list. Only consider G_PHI instructions,
   // not PHI instructions that may have been created by earlier lowering stages
   // (e.g., lowerTemporalDivergenceI1).
-  for (MachineBasicBlock &MBB : *MF) {
+  for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB.phis()) {
       if (MI.getOpcode() != TargetOpcode::G_PHI)
         continue;
@@ -203,7 +205,7 @@ void replaceUsesOfRegInInstWith(Register Reg, MachineInstr *Inst,
 }
 
 bool DivergenceLoweringHelper::lowerTemporalDivergence() {
-  AMDGPU::IntrinsicLaneMaskAnalyzer ILMA(*MF);
+  AMDGPU::IntrinsicLaneMaskAnalyzer ILMA(MF);
   DenseMap<Register, Register> TDCache;
 
   for (auto [Reg, UseInst, _] : MUI->getTemporalDivergenceList()) {
@@ -234,7 +236,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergence() {
 bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
   MachineRegisterInfo::VRegAttrs BoolS1 = {ST->getBoolRC(), LLT::scalar(1)};
   initializeLaneMaskRegisterAttributes(BoolS1);
-  MachineSSAUpdater SSAUpdater(*MF);
+  MachineSSAUpdater SSAUpdater(MF);
 
   const auto &CInfo = MUI->getCycleInfo();
 
@@ -290,35 +292,10 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
   return false;
 }
 
-} // End anonymous namespace.
-
-INITIALIZE_PASS_BEGIN(AMDGPUGlobalISelDivergenceLowering, DEBUG_TYPE,
-                      "AMDGPU GlobalISel divergence lowering", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
-INITIALIZE_PASS_END(AMDGPUGlobalISelDivergenceLowering, DEBUG_TYPE,
-                    "AMDGPU GlobalISel divergence lowering", false, false)
-
-char AMDGPUGlobalISelDivergenceLowering::ID = 0;
-
-char &llvm::AMDGPUGlobalISelDivergenceLoweringID =
-    AMDGPUGlobalISelDivergenceLowering::ID;
-
-FunctionPass *llvm::createAMDGPUGlobalISelDivergenceLoweringPass() {
-  return new AMDGPUGlobalISelDivergenceLowering();
-}
-
-bool AMDGPUGlobalISelDivergenceLowering::runOnMachineFunction(
-    MachineFunction &MF) {
-  MachineDominatorTree &DT =
-      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MachinePostDominatorTree &PDT =
-      getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-  MachineUniformityInfo &MUI =
-      getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
-
-  DivergenceLoweringHelper Helper(&MF, &DT, &PDT, &MUI);
+static bool runDivergenceLowering(MachineFunction &MF, MachineDominatorTree &DT,
+                                  MachinePostDominatorTree &PDT,
+                                  MachineUniformityInfo &MUI) {
+  DivergenceLoweringHelper Helper(MF, DT, PDT, &MUI);
 
   bool Changed = false;
   // Temporal divergence lowering needs to inspect list of instructions used
@@ -337,4 +314,48 @@ bool AMDGPUGlobalISelDivergenceLowering::runOnMachineFunction(
   // since in some case lowerPhis does unnecessary lane mask merging.
   Changed |= Helper.lowerPhis();
   return Changed;
+}
+
+} // End anonymous namespace.
+
+INITIALIZE_PASS_BEGIN(AMDGPUGlobalISelDivergenceLoweringLegacy, DEBUG_TYPE,
+                      "AMDGPU GlobalISel divergence lowering", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
+INITIALIZE_PASS_END(AMDGPUGlobalISelDivergenceLoweringLegacy, DEBUG_TYPE,
+                    "AMDGPU GlobalISel divergence lowering", false, false)
+
+char AMDGPUGlobalISelDivergenceLoweringLegacy::ID = 0;
+
+char &llvm::AMDGPUGlobalISelDivergenceLoweringLegacyID =
+    AMDGPUGlobalISelDivergenceLoweringLegacy::ID;
+
+FunctionPass *llvm::createAMDGPUGlobalISelDivergenceLoweringPass() {
+  return new AMDGPUGlobalISelDivergenceLoweringLegacy();
+}
+
+bool AMDGPUGlobalISelDivergenceLoweringLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  MachineDominatorTree &DT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachinePostDominatorTree &PDT =
+      getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  MachineUniformityInfo &MUI =
+      getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
+
+  return runDivergenceLowering(MF, DT, PDT, MUI);
+}
+
+PreservedAnalyses AMDGPUGlobalISelDivergenceLoweringPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree &DT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MachinePostDominatorTree &PDT =
+      MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
+  MachineUniformityInfo &MUI = MFAM.getResult<MachineUniformityAnalysis>(MF);
+
+  if (!runDivergenceLowering(MF, DT, PDT, MUI))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

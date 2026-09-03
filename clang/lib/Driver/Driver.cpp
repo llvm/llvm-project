@@ -989,15 +989,17 @@ static TripleSet inferOffloadToolchains(Compilation &C,
   TripleSet Triples;
   for (llvm::StringRef Arch : Archs) {
     OffloadArch ID = StringToOffloadArch(Arch);
-    if (ID.isUnknown())
-      ID = StringToOffloadArch(
-          getProcessorFromTargetID(llvm::Triple("amdgcn-amd-amdhsa"), Arch));
+    if (ID.isUnknown()) {
+      llvm::Triple AMDGPUTriple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
+                                llvm::Triple::AMD, llvm::Triple::AMDHSA);
+      ID = StringToOffloadArch(getProcessorFromTargetID(AMDGPUTriple, Arch));
+    }
 
     bool UsesLLVMOffloading =
         C.getArgs().hasFlag(options::OPT_foffload_via_llvm,
                             options::OPT_fno_offload_via_llvm, false);
     if (!UsesLLVMOffloading) {
-      if (Kind == Action::OFK_HIP && !ID.isAMDGPU() && !ID.isSPIRV()) {
+      if (Kind == Action::OFK_HIP && !ID.isAMDGPU() && !ID.isAMDGCNSPIRV()) {
         C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
             << "HIP" << Arch;
         return {};
@@ -1042,9 +1044,10 @@ static TripleSet inferOffloadToolchains(Compilation &C,
   }
 
   // Infer the default target triple if no specific architectures are given.
-  if (Archs.empty() && Kind == Action::OFK_HIP)
-    Triples.insert(llvm::Triple("amdgcn-amd-amdhsa"));
-  else if (Archs.empty() && Kind == Action::OFK_Cuda) {
+  if (Archs.empty() && Kind == Action::OFK_HIP) {
+    Triples.insert(llvm::Triple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
+                                llvm::Triple::AMD, llvm::Triple::AMDHSA));
+  } else if (Archs.empty() && Kind == Action::OFK_Cuda) {
     llvm::Triple::ArchType Arch =
         C.getDefaultToolChain().getTriple().isArch64Bit()
             ? llvm::Triple::nvptx64
@@ -1179,6 +1182,20 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       }
 
       C.addOffloadDeviceToolChain(&TC, Kind);
+    }
+  }
+
+  // Non-RDC SYCL device code is finalized by a clang-linker-wrapper job
+  // bound to one device toolchain, so only one SYCL target can be requested
+  // for now. This restriction might be relaxed in future updates.
+  if (Kinds.contains(Action::OFK_SYCL)) {
+    const Arg *RDCArg = C.getInputArgs().getLastArg(options::OPT_fgpu_rdc,
+                                                    options::OPT_fno_gpu_rdc);
+    if (RDCArg && RDCArg->getOption().matches(options::OPT_fno_gpu_rdc)) {
+      auto TCRange = C.getOffloadToolChains<Action::OFK_SYCL>();
+      if (std::distance(TCRange.first, TCRange.second) > 1)
+        Diag(clang::diag::err_drv_sycl_no_rdc_multiple_targets)
+            << RDCArg->getAsString(C.getInputArgs());
     }
   }
 }
@@ -4914,17 +4931,28 @@ static StringRef getCanonicalArchString(Compilation &C,
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
         << "CUDA" << ArchStr;
     return StringRef();
-  } else if (Triple.isAMDGPU() &&
-             (Arch.isUnknown() || (!Arch.isAMDGPU() && !Arch.isSPIRV()))) {
-    C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
-        << "HIP" << ArchStr;
-    return StringRef();
+  } else if (Triple.isAMDGPU()) {
+    if (Arch.isUnknown() || (!Arch.isAMDGPU() && !Arch.isAMDGCNSPIRV())) {
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "HIP" << ArchStr;
+      return StringRef();
+    }
+
+    if (Triple.getSubArch() != llvm::Triple::NoSubArch) {
+      llvm::Triple::SubArchType ArchSubArch = getOffloadArchSubArch(Arch);
+      if (ArchSubArch != Triple.getSubArch() &&
+          llvm::AMDGPU::getMajorSubArch(ArchSubArch) != Triple.getSubArch()) {
+        C.getDriver().Diag(clang::diag::err_target_unsupported_arch)
+            << ArchStr << Triple.getArchName();
+        return StringRef();
+      }
+    }
   }
 
   if (Arch.isNVPTX())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
-  if (Arch.isAMDGPU() || Arch.isSPIRV()) {
+  if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
     llvm::StringMap<bool> Features;
     std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
     if (!Arch) {
@@ -5016,7 +5044,9 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         << ConflictingArchs->first << ConflictingArchs->second;
 
   // Fill in the default architectures if not provided explicitly.
-  if (Archs.empty()) {
+  bool HasSubArch = TC.getTriple().isAMDGCN() &&
+                    TC.getTriple().getSubArch() != llvm::Triple::NoSubArch;
+  if (Archs.empty() && !HasSubArch) {
     if (Kind == Action::OFK_Cuda) {
       Archs.insert(OffloadArchToString(TC.getTriple().isSPIRV()
                                            ? OffloadArch::getUnused()
@@ -5046,7 +5076,22 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         }
       }
     }
+  } else if (Archs.empty() && HasSubArch) {
+    // Use default CPU if we have a subarch in the triple.
+    //
+    // TODO: We ought to be able to get away with the empty string here, but
+    // many tests require removal of redundant -target-cpu arguments
+    OffloadArch TripleOffloadArch =
+        getSubArchOffloadArch(TC.getTriple().getSubArch());
+    llvm::StringRef ArchStr = TripleOffloadArch.isUnknown()
+                                  ? ""
+                                  : OffloadArchToString(TripleOffloadArch);
+    StringRef CanonicalStr =
+        getCanonicalArchString(C, Args, ArchStr, TC.getTriple());
+    if (!CanonicalStr.empty())
+      Archs.insert(CanonicalStr);
   }
+
   Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
   Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
 
@@ -5074,6 +5119,12 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
   bool HIPNoRDC =
       C.isOffloadingHostKind(Action::OFK_HIP) &&
       !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+
+  // SYCL defaults to relocatable device code.
+  bool SYCLNoRDC =
+      C.isOffloadingHostKind(Action::OFK_SYCL) &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                    /*Default=*/true);
 
   bool HIPRelocatableObj =
       C.isOffloadingHostKind(Action::OFK_HIP) &&
@@ -5264,10 +5315,10 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     DDep.add(*FatbinAction,
              *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
              /*BA=*/{}, Action::OFK_HIP);
-  } else if (!UsesLLVMOffloading && HIPNoRDC) {
+  } else if ((!UsesLLVMOffloading && HIPNoRDC) || SYCLNoRDC) {
     // Host + device assembly: defer to clang-offload-bundler (see
     // BuildActions).
-    if (HIPAsmBundleDeviceOut &&
+    if (HIPNoRDC && HIPAsmBundleDeviceOut &&
         shouldBundleHIPAsmWithNewDriver(C, Args, C.getDriver())) {
       for (Action *OA : OffloadActions)
         HIPAsmBundleDeviceOut->push_back(OA);
@@ -5278,15 +5329,16 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     Action *PackagerAction =
         C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
 
-    // For HIP non-RDC compilation, wrap the device binary with linker wrapper
-    // before bundling with host code. Do not bind a specific GPU arch here,
-    // as the packaged image may contain entries for multiple GPUs.
+    // For non-RDC compilation, wrap the device binary with linker wrapper
+    // before bundling with host code. Do not bind a specific arch here, as the
+    // packaged binary may contain entries for multiple archs.
+    Action::OffloadKind Kind = SYCLNoRDC ? Action::OFK_SYCL : Action::OFK_HIP;
+    types::ID FatbinType =
+        SYCLNoRDC ? types::TY_SYCL_FATBIN : types::TY_HIP_FATBIN;
     ActionList AL{PackagerAction};
-    PackagerAction =
-        C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_HIP_FATBIN);
-    DDep.add(*PackagerAction,
-             *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
-             /*BA=*/{}, Action::OFK_HIP);
+    PackagerAction = C.MakeAction<LinkerWrapperJobAction>(AL, FatbinType);
+    DDep.add(*PackagerAction, *C.getOffloadToolChains(Kind).first->second,
+             /*BA=*/{}, Kind);
   } else {
     // Package all the offloading actions into a single output that can be
     // embedded in the host and linked.

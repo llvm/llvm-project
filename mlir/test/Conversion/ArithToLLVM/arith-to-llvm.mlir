@@ -557,7 +557,7 @@ func.func @fcmp(f32, f32) -> () {
   %13 = arith.cmpf une, %arg0, %arg1 : f32
   %14 = arith.cmpf uno, %arg0, %arg1 : f32
 
-  %15 = arith.cmpf oeq, %arg0, %arg1 {fastmath = #arith.fastmath<fast>} : f32
+  %15 = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
 
   return
 }
@@ -566,7 +566,7 @@ func.func @fcmp(f32, f32) -> () {
 
 // CHECK-LABEL: @index_vector
 func.func @index_vector(%arg0: vector<4xindex>) {
-  // CHECK: %[[CST:.*]] = llvm.mlir.constant(dense<[0, 1, 2, 3]> : vector<4xindex>) : vector<4xi64>
+  // CHECK: %[[CST:.*]] = llvm.mlir.constant(dense<[0, 1, 2, 3]> : vector<4xi64>) : vector<4xi64>
   %0 = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
   // CHECK: %[[V:.*]] = llvm.add %{{.*}}, %[[CST]] : vector<4xi64>
   %1 = arith.addi %arg0, %0 : vector<4xindex>
@@ -982,3 +982,117 @@ func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8
   return
 }
 
+// -----
+
+// The type converter maps the low-precision float types that have no LLVM
+// equivalent to an integer of the same width. The value attribute stays a float
+// attribute, which `llvm.mlir.constant` accepts for such a result type.
+
+// CHECK-LABEL: @low_precision_float_constant
+//       CHECK:   llvm.mlir.constant(1.000000e+00 : f8E4M3FN) : i8
+//       CHECK:   llvm.mlir.constant(dense<1.000000e+00> : vector<4xf8E4M3FN>) : vector<4xi8>
+//       CHECK:   llvm.mlir.constant(dense<1.000000e+00> : vector<2x4xf8E4M3FN>) : !llvm.array<2 x vector<4xi8>>
+func.func @low_precision_float_constant() -> (f8E4M3FN, vector<4xf8E4M3FN>, vector<2x4xf8E4M3FN>) {
+  %0 = arith.constant 1.0 : f8E4M3FN
+  %1 = arith.constant dense<1.0> : vector<4xf8E4M3FN>
+  %2 = arith.constant dense<1.0> : vector<2x4xf8E4M3FN>
+  return %0, %1, %2 : f8E4M3FN, vector<4xf8E4M3FN>, vector<2x4xf8E4M3FN>
+}
+
+// -----
+
+// An integer or float constant whose element type the converter leaves alone
+// keeps its value attribute.
+
+// CHECK-LABEL: @unconverted_element_type_constant
+//       CHECK:   llvm.mlir.constant(42 : i32) : i32
+//       CHECK:   llvm.mlir.constant(4.200000e+01 : f32) : f32
+//       CHECK:   llvm.mlir.constant(dense<42> : vector<4xi32>) : vector<4xi32>
+func.func @unconverted_element_type_constant() -> (i32, f32, vector<4xi32>) {
+  %0 = arith.constant 42 : i32
+  %1 = arith.constant 42.0 : f32
+  %2 = arith.constant dense<42> : vector<4xi32>
+  return %0, %1, %2 : i32, f32, vector<4xi32>
+}
+
+// -----
+
+// A scalar `index` constant is retyped to the converted index type.
+
+// CHECK-LABEL: @scalar_index_constant
+//       CHECK:   llvm.mlir.constant(42 : i64) : i64
+func.func @scalar_index_constant() -> index {
+  %0 = arith.constant 42 : index
+  return %0 : index
+}
+
+// -----
+
+// A multi-dimensional vector constant keeps its builtin attribute type even
+// though the result is a nested LLVM array, as only the element types have to
+// match.
+
+// CHECK-LABEL: @multi_dim_vector_constant
+//       CHECK:   llvm.mlir.constant(dense<1.000000e+00> : vector<2x3xf32>) : !llvm.array<2 x vector<3xf32>>
+//       CHECK:   llvm.mlir.constant(dense<{{\[}}[1, 2, 3], [-4, 5, 6]]> : vector<2x3xi64>) : !llvm.array<2 x vector<3xi64>>
+func.func @multi_dim_vector_constant() -> (vector<2x3xf32>, vector<2x3xindex>) {
+  %0 = arith.constant dense<1.0> : vector<2x3xf32>
+  %1 = arith.constant dense<[[1, 2, 3], [-4, 5, 6]]> : vector<2x3xindex>
+  return %0, %1 : vector<2x3xf32>, vector<2x3xindex>
+}
+
+// -----
+
+// A scalable vector constant has to be a splat, which the element-wise retyping
+// of a dense attribute preserves.
+
+// CHECK-LABEL: @scalable_index_constant
+//       CHECK:   llvm.mlir.constant(dense<1> : vector<[4]xi64>) : vector<[4]xi64>
+func.func @scalable_index_constant() -> vector<[4]xindex> {
+  %0 = arith.constant dense<1> : vector<[4]xindex>
+  return %0 : vector<[4]xindex>
+}
+
+// -----
+
+// A sparse elements attribute of `index` element type has to be rebuilt, as it
+// cannot be retyped element-wise like a dense one.
+
+// CHECK-LABEL: @sparse_index_constant
+//       CHECK:   llvm.mlir.constant(sparse<0, 1> : vector<4xi64>) : vector<4xi64>
+func.func @sparse_index_constant() -> vector<4xindex> {
+  %0 = arith.constant sparse<[[0]], [1]> : vector<4xindex>
+  return %0 : vector<4xindex>
+}
+
+// -----
+
+// A resource-backed elements attribute refers to a blob laid out for its own
+// element type, so it is reinterpreted rather than rewritten. This works because
+// `index` is stored with the same width as the target `i64`.
+
+// CHECK-LABEL: @resource_index_constant
+//       CHECK:   llvm.mlir.constant(dense_resource<index_blob> : vector<2xi64>) : vector<2xi64>
+func.func @resource_index_constant() -> vector<2xindex> {
+  %0 = arith.constant dense_resource<index_blob> : vector<2xindex>
+  return %0 : vector<2xindex>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      index_blob: "0x0800000001000000000000000200000000000000"
+    }
+  }
+#-}
+
+// -----
+
+// There is no type conversion rule for `tf32`, so the constant is not lowered.
+
+// CHECK-LABEL: @unconvertible_type_constant
+//       CHECK:   arith.constant 2.000000e+00 : tf32
+func.func @unconvertible_type_constant() -> tf32 {
+  %0 = arith.constant 2.0 : tf32
+  return %0 : tf32
+}
