@@ -748,33 +748,6 @@ ExprResult Parser::TryParseLambdaExpression() {
   return ParseLambdaExpressionAfterIntroducer(Intro);
 }
 
-bool Parser::startsLambdaNotMicrosoftAttribute() {
-  // Restricted to CUDA/HIP.
-  if (!getLangOpts().CUDA || Tok.isNot(tok::l_square))
-    return false;
-
-  // Skip the '[...]' and any trailing attributes (e.g. CUDA/HIP's
-  // '__device__'). A lambda then continues with a parameter list, body,
-  // explicit template parameter list, or lambda declarator. An attribute is
-  // followed by the declaration it applies to (e.g. '[propget] int get()').
-  RevertingTentativeParsingAction TPA(*this);
-  ConsumeBracket();
-  if (!SkipUntil(tok::r_square, StopAtSemi | StopAtCodeCompletion) ||
-      !TrySkipAttributes())
-    return false;
-
-  // C++23 allows omitting '()' before 'mutable', 'constexpr', 'consteval', and
-  // 'static'.
-  while (Tok.isOneOf(tok::kw_mutable, tok::kw_constexpr, tok::kw_consteval,
-                     tok::kw_static))
-    ConsumeToken();
-  if (!TrySkipAttributes())
-    return false;
-
-  return Tok.isOneOf(tok::l_paren, tok::l_brace, tok::less, tok::arrow,
-                     tok::kw_noexcept);
-}
-
 bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
                                    LambdaIntroducerTentativeParse *Tentative) {
   if (Tentative)
@@ -1218,6 +1191,16 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
   }
 }
 
+bool Parser::isLambdaSpecifier() {
+  return Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
+                     tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
+                     tok::kw___private, tok::kw___global, tok::kw___local,
+                     tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
+                     tok::kw_requires, tok::kw_noexcept) ||
+         Tok.isRegularKeywordAttribute() ||
+         (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
+}
+
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
@@ -1365,14 +1348,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     HasParentheses = true;
   }
 
-  HasSpecifiers =
-      Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
-                  tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
-                  tok::kw___private, tok::kw___global, tok::kw___local,
-                  tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
-                  tok::kw_requires, tok::kw_noexcept) ||
-      Tok.isRegularKeywordAttribute() ||
-      (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
+  HasSpecifiers = isLambdaSpecifier();
 
   if (HasSpecifiers && !HasParentheses && !getLangOpts().CPlusPlus23) {
     // It's common to forget that one needs '()' before 'mutable', an

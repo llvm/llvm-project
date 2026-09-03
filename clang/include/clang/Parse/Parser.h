@@ -2341,10 +2341,8 @@ private:
 
   bool MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
     bool AttrsParsed = false;
-    // A '[' may begin a Microsoft attribute or a C++ lambda, so only parse it
-    // as an attribute after confirming it does not start a lambda.
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
-        Tok.is(tok::l_square) && !startsLambdaNotMicrosoftAttribute()) {
+        Tok.is(tok::l_square)) {
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
       AttrsParsed = !AttrsWithRange.empty();
@@ -4720,11 +4718,6 @@ private:
   /// If we are not looking at a lambda expression, returns ExprError().
   ExprResult TryParseLambdaExpression();
 
-  /// Returns true if the current '[' begins a CUDA/HIP lambda rather than a
-  /// Microsoft '[]' attribute (enabled under -fms-extensions or HLSL).
-  /// Restricted to CUDA/HIP.
-  bool startsLambdaNotMicrosoftAttribute();
-
   /// Parse a lambda introducer.
   /// \param Intro A LambdaIntroducer filled in with information about the
   ///        contents of the lambda-introducer.
@@ -4741,6 +4734,9 @@ private:
   /// ParseLambdaExpressionAfterIntroducer - Parse the rest of a lambda
   /// expression.
   ExprResult ParseLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro);
+
+  /// Whether the current token can begin a lambda specifier sequence.
+  bool isLambdaSpecifier();
 
   //===--------------------------------------------------------------------===//
   // C++ 5.2p1: C++ Casts
@@ -9044,6 +9040,10 @@ private:
   /// Try to skip a possibly empty sequence of 'attribute-specifier's without
   /// full validation of the syntactic structure of attributes.
   bool TrySkipAttributes();
+
+  /// Whether tentative lookahead from the current '[' finds a lambda-like
+  /// continuation. This does not parse or validate a lambda.
+  bool hasLambdaLikeContinuation();
 
   //===--------------------------------------------------------------------===//
   // C++ 7: Declarations [dcl.dcl]
