@@ -47,3 +47,9 @@ float3 test_ldexp_float3(float3 X, float3 Exp) { return ldexp(X, Exp); }
 // CHECK: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x float> [[EXP2]], %{{.*}}
 // CHECK: ret <4 x float> [[MUL]]
 float4 test_ldexp_float4(float4 X, float4 Exp) { return ldexp(X, Exp); }
+
+// CHECK-LABEL: define linkonce_odr hidden noundef nofpclass(nan inf) <5 x float> @_ZN4hlsl5ldexp
+// CHECK: [[EXP2:%.*]] = call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.exp2.v5f32(<5 x float> %{{.*}})
+// CHECK: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <5 x float> [[EXP2]], %{{.*}}
+// CHECK: ret <5 x float> [[MUL]]
+vector<float, 5> test_ldexp_float5(vector<float, 5> X, vector<float, 5> Exp) { return ldexp(X, Exp); }

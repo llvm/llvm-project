@@ -140,6 +140,13 @@ float3 test_mad_float3(float3 p0, float3 p1, float3 p2) { return mad(p0, p1, p2)
 // CHECK: ret <4 x float> %hlsl.fmad
 float4 test_mad_float4(float4 p0, float4 p1, float4 p2) { return mad(p0, p1, p2); }
 
+// CHECK: %[[p0:.*]] = load <5 x float>, ptr %p0.addr
+// CHECK: %[[p1:.*]] = load <5 x float>, ptr %p1.addr
+// CHECK: %[[p2:.*]] = load <5 x float>, ptr %p2.addr
+// CHECK: %hlsl.fmad = call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.fmuladd.v5f32(<5 x float> %[[p0]], <5 x float> %[[p1]], <5 x float> %[[p2]])
+// CHECK: ret <5 x float> %hlsl.fmad
+vector<float, 5> test_mad_float5(vector<float, 5> p0, vector<float, 5> p1, vector<float, 5> p2) { return mad(p0, p1, p2); }
+
 // CHECK: %[[p0:.*]] = load double, ptr %p0.addr
 // CHECK: %[[p1:.*]] = load double, ptr %p1.addr
 // CHECK: %[[p2:.*]] = load double, ptr %p2.addr
