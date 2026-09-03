@@ -136,6 +136,18 @@ static bool reachesNamedBitFieldUnit(mlir::Type ty) {
   return llvm::any_of(recTy.getMembers(), reachesNamedBitFieldUnit);
 }
 
+/// Whether \p ty, or an aggregate member/element reached by value (never
+/// through a pointer), is an incomplete record.  Such a record has no known
+/// layout, so no eightbyte classification can be built for it.
+static bool hasIncompleteRecordByValue(mlir::Type ty) {
+  if (auto recTy = dyn_cast<cir::RecordType>(ty))
+    return !recTy.isComplete() ||
+           llvm::any_of(recTy.getMembers(), hasIncompleteRecordByValue);
+  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
+    return hasIncompleteRecordByValue(arrTy.getElementType());
+  return false;
+}
+
 /// The CIR types the x86_64 bridge handles.  Scalars: an integer up to 128
 /// bits (including `_BitInt` and `__int128`), pointer, vtable pointer, bool,
 /// void, or any floating-point type.  Aggregates: a complete struct or union
@@ -430,7 +442,8 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           // what the ABI counts, and that is the element type it carries.
           mlir::Type countedTy = fieldTy;
           bool isUnnamedUnit = kind == cir::RecordMemberKind::Empty;
-          if (cir::isZeroWidthBitField(fieldTy, kind)) {
+          bool isZeroWidth = cir::isZeroWidthBitField(fieldTy, kind);
+          if (isZeroWidth) {
             countedTy = cast<cir::ArrayType>(fieldTy).getElementType();
             isUnnamedUnit = true;
           }
@@ -440,11 +453,21 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           assert((!isUnnamedUnit || !memberIsEmptyRecord(countedTy)) &&
                  "an empty-for-ABI member must not reach the classifier as an "
                  "unnamed bit-field");
-          fields.push_back(llvm::abi::FieldInfo(
-              mapCIRType(countedTy, typeMapper, dl, modOp),
-              recTy.getElementOffset(dl, idx) * 8,
-              /*IsBitField=*/isUnnamedUnit, isUnnamedUnit ? widthBits : 0,
-              /*IsUnnamedBitField=*/isUnnamedUnit));
+          // A named access unit is a bit-field to the classifier as well.  Its
+          // eightbyte classes come from the bits it spans, and the rule that
+          // sends a record with an unaligned field to memory does not apply to
+          // a bit-field, which may sit at any offset.
+          bool isAccessUnit = isUnnamedUnit || cir::isBitFieldAccessUnit(kind);
+          // A zero-width bit-field spans no bits, and a zero width is what the
+          // classifier reads to leave it out of the eightbyte classes.  Its
+          // declared type stays on the field, since that is what the coerce
+          // type counts as user data.
+          uint64_t abiWidthBits = isAccessUnit && !isZeroWidth ? widthBits : 0;
+          fields.push_back(
+              llvm::abi::FieldInfo(mapCIRType(countedTy, typeMapper, dl, modOp),
+                                   recTy.getElementOffset(dl, idx) * 8,
+                                   /*IsBitField=*/isAccessUnit, abiWidthBits,
+                                   /*IsUnnamedBitField=*/isUnnamedUnit));
         }
 
         return tb.getRecordType(
@@ -850,6 +873,15 @@ void CallConvLoweringPass::runOnOperation() {
   llvm::MapVector<cir::FuncOp, FunctionClassification> classifications;
   bool anyFailed = false;
   moduleOp.walk([&](cir::FuncOp f) {
+    // A complete type is required at any call or definition, so only a
+    // declaration can carry an incomplete-by-value parameter or return type,
+    // and no translation unit can ever call or define it with real argument
+    // data.  Leave it unclassified.
+    cir::FuncType fnTy = f.getFunctionType();
+    if (f.isDeclaration() &&
+        (hasIncompleteRecordByValue(fnTy.getReturnType()) ||
+         llvm::any_of(fnTy.getInputs(), hasIncompleteRecordByValue)))
+      return;
     std::optional<FunctionClassification> fc;
     if (isX86)
       fc = classifyX86_64Function(f, dl, *x86TypeMapper,

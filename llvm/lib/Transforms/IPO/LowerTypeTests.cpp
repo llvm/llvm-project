@@ -20,7 +20,6 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -541,11 +540,10 @@ class LowerTypeTestsModule {
   void createJumpTable(Function *F, ArrayRef<GlobalTypeMember *> Functions,
                        Triple::ArchType JumpTableArch);
 
-  /// replaceCfiUses - Go through the uses list for this definition
-  /// and make each use point to "V" instead of "this" when the use is outside
-  /// the block. 'This's use list is expected to have at least one element.
-  /// Unlike replaceAllUsesWith this function skips blockaddr and direct call
-  /// uses.
+  /// replaceCfiUses - Go through the uses list for this definition and make
+  /// each use point to "New" instead of "Old" when the use is outside the
+  /// block. 'Old's use list is expected to have at least one element.  Unlike
+  /// replaceAllUsesWith this function skips blockaddr and direct call uses.
   void replaceCfiUses(Function *Old, Value *New, bool IsJumpTableCanonical);
 
   /// replaceDirectCalls - Go through the uses list for this definition and
@@ -1091,15 +1089,26 @@ void LowerTypeTestsModule::importFunction(Function *F,
   if (F->isDeclarationForLinker() && isJumpTableCanonical) {
     // Non-dso_local functions may be overriden at run time,
     // don't short curcuit them
-    if (F->isDSOLocal()) {
+    if (!F->isDSOLocal())
+      return;
+    if (F->isDeclaration()) {
+      // Direct calls do not need the type check, so let them skip the jump
+      // table and call the real function directly.
       Function *RealF = Function::Create(F->getFunctionType(),
                                          GlobalValue::ExternalLinkage,
                                          F->getAddressSpace(),
                                          Name + ".cfi", &M);
       RealF->setVisibility(GlobalVariable::HiddenVisibility);
       replaceDirectCalls(F, RealF);
+      return;
     }
-    return;
+    // Otherwise F is an available_externally definition imported from
+    // another module. Handle it like a local definition below: the body is
+    // renamed to Name.cfi and stays the target of direct calls, so it remains
+    // inlinable, while address-taken uses are redirected to the jump table
+    // entry. If the body is not inlined and is dropped later, the reference
+    // to Name.cfi resolves to the real function at link time, exactly as for
+    // a declaration.
   }
 
   Function *FDecl;
@@ -2035,7 +2044,7 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
     if (isa<NoCFIValue>(U.getUser()))
       continue;
 
-    // Skip direct calls to externally defined or non-dso_local functions.
+    // Skip direct calls to externally defined or dso_local functions.
     if (isDirectCall(U) && (Old->isDSOLocal() || !IsJumpTableCanonical))
       continue;
 
@@ -2141,38 +2150,6 @@ bool LowerTypeTestsModule::lower() {
       report_fatal_error(
           "unexpected call to llvm.icall.branch.funnel during import phase");
 
-    // For internal linkage cfiFunction defs/decls, we only needed the alias
-    // through the linker. We can replace those aliases with the aliased
-    // function here.
-    SmallVector<std::pair<Function *, std::string>> PromotedFuncs;
-    for (auto &A : llvm::make_early_inc_range(M.aliases())) {
-      if (A.hasLocalLinkage())
-        continue;
-      if (ImportSummary->cfiFunctionDefs().contains(A.getName()) ||
-          ImportSummary->cfiFunctionDecls().contains(A.getName())) {
-        if (auto *F = dyn_cast_or_null<Function>(A.getAliaseeObject())) {
-          if (F->hasExternalLinkage()) {
-            // The original internal linkage function was independently promoted
-            // by thinlink. While, pre-link, all static references to it
-            // (implicitly, module-internal) were replaced with references to
-            // the alias, thinlink might decide to promote it because (for
-            // example) it turns out to be a hot indirect call target in a
-            // different module.
-            // In that case, we need to remember its thinlink-promoted name
-            // because it's potentially referenced elsewhere, and make sure
-            // there's an alias to it.
-            PromotedFuncs.emplace_back(F, F->getName());
-          } else {
-            F->setLinkage(GlobalValue::ExternalLinkage);
-            F->setVisibility(GlobalValue::HiddenVisibility);
-          }
-          A.replaceAllUsesWith(F);
-          F->takeName(&A);
-          A.eraseFromParent();
-        }
-      }
-    }
-
     SmallVector<Function *, 8> Defs;
     SmallVector<Function *, 8> Decls;
     for (auto &F : M) {
@@ -2193,9 +2170,6 @@ bool LowerTypeTestsModule::lower() {
       for (auto *F : Decls)
         importFunction(F, /*isJumpTableCanonical*/ false);
     }
-    // Add an alias with the thinlink promotion name.
-    for (auto &[F, Name] : PromotedFuncs)
-      GlobalAlias::create(GlobalValue::LinkageTypes::ExternalLinkage, Name, F);
 
     return true;
   }

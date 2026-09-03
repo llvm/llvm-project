@@ -2034,6 +2034,147 @@ LogicalResult ReduceOp::verify() {
   return success();
 }
 
+namespace {
+
+/// Reduction kinds supported by the reduce-of-broadcast fold.
+/// Only the simplest reduce op are supported now.
+/// TODO: We can extend the list in the future.
+enum class BroadcastReduceKind {
+  MaxSI,
+  MaxUI,
+  MinSI,
+  MinUI,
+};
+
+/// Match a supported max/min reduction body and return its reduction kind.
+static std::optional<BroadcastReduceKind>
+matchBroadcastReduceBody(ReduceOp reduceOp) {
+  if (reduceOp.getNumDpsInputs() != 1 || reduceOp.getNumDpsInits() != 1 ||
+      !reduceOp.getBody())
+    return std::nullopt;
+
+  // Match the simplest linalg.reduce body. e.g.,
+  //
+  //  ^bb0(%in: i32, %acc: i32):
+  //    %max = arith.maxsi %in, %acc : i32
+  //    linalg.yield %max : i32
+  Block &block = *reduceOp.getBody();
+  if (block.getNumArguments() != 2 ||
+      !llvm::hasSingleElement(block.without_terminator()))
+    return std::nullopt;
+
+  auto yieldOp = cast<YieldOp>(block.getTerminator());
+
+  Operation *combineOp = yieldOp.getOperand(0).getDefiningOp();
+  if (!combineOp || combineOp->getNumOperands() != 2)
+    return std::nullopt;
+
+  // Checks that the combine op **only** used the block arguments and
+  // we allow the block arguments to exchange their orders.
+  if (!((combineOp->getOperand(0) == block.getArgument(0) &&
+         combineOp->getOperand(1) == block.getArgument(1)) ||
+        (combineOp->getOperand(0) == block.getArgument(1) &&
+         combineOp->getOperand(1) == block.getArgument(0))))
+    return std::nullopt;
+
+  // TODO: We can extend the list here.
+  return TypeSwitch<Operation *, std::optional<BroadcastReduceKind>>(combineOp)
+      .Case<arith::MaxSIOp>(
+          [](arith::MaxSIOp) { return BroadcastReduceKind::MaxSI; })
+      .Case<arith::MaxUIOp>(
+          [](arith::MaxUIOp) { return BroadcastReduceKind::MaxUI; })
+      .Case<arith::MinSIOp>(
+          [](arith::MinSIOp) { return BroadcastReduceKind::MinSI; })
+      .Case<arith::MinUIOp>(
+          [](arith::MinUIOp) { return BroadcastReduceKind::MinUI; })
+      .Default([](Operation *) -> std::optional<BroadcastReduceKind> {
+        return std::nullopt;
+      });
+}
+
+/// Return whether `init` is the identity value for `kind`.
+static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
+  auto initAttr = getScalarConstantAttrFromDenseSplat(init);
+  if (!initAttr)
+    return false;
+
+  auto integerAttr = dyn_cast<IntegerAttr>(*initAttr);
+  if (!integerAttr)
+    return false;
+
+  const APInt &value = integerAttr.getValue();
+  switch (kind) {
+  case BroadcastReduceKind::MaxSI:
+    return value.isMinSignedValue();
+  case BroadcastReduceKind::MaxUI:
+    return value.isZero();
+  case BroadcastReduceKind::MinSI:
+    return value.isMaxSignedValue();
+  case BroadcastReduceKind::MinUI:
+    return value.isAllOnes();
+  }
+  llvm_unreachable("unknown broadcast reduction kind");
+}
+
+/// Fold cases like:
+///
+///  maxsi(broadcast(x)) -> x
+///  minsi(broadcast(y)) -> y
+///
+// TODO: We can add other op. e.g., add, mul, and, or, xor.
+struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
+  using OpRewritePattern<linalg::ReduceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::ReduceOp reduceOp,
+                                PatternRewriter &rewriter) const override {
+    if (reduceOp.getNumResults() != 1 || !reduceOp.hasPureTensorSemantics())
+      return failure();
+
+    assert(reduceOp.getInputs().size() == 1 &&
+           "expected one input for a single-result tensor reduce");
+
+    auto broadcastOp =
+        reduceOp.getInputs().front().getDefiningOp<linalg::BroadcastOp>();
+    if (!broadcastOp || !broadcastOp.hasPureTensorSemantics())
+      return failure();
+
+    auto sourceType = cast<RankedTensorType>(broadcastOp.getInput().getType());
+    auto broadcastType =
+        cast<RankedTensorType>(broadcastOp.getResult().front().getType());
+    auto resultType = cast<RankedTensorType>(reduceOp.getResult(0).getType());
+    if (!sourceType.hasStaticShape() || !broadcastType.hasStaticShape() ||
+        !resultType.hasStaticShape() || sourceType != resultType)
+      return failure();
+
+    ArrayRef<int64_t> broadcastDims = broadcastOp.getDimensions();
+    ArrayRef<int64_t> reduceDims = reduceOp.getDimensions();
+    if (broadcastDims != reduceDims)
+      return failure();
+
+    // Reducing an empty broadcast dimension yields the init value, not the
+    // broadcast input.
+    for (int64_t dimension : broadcastDims)
+      if (broadcastType.getDimSize(dimension) == 0)
+        return failure();
+
+    std::optional<BroadcastReduceKind> kind =
+        matchBroadcastReduceBody(reduceOp);
+    if (!kind ||
+        !hasBroadcastReduceIdentity(reduceOp.getInits().front(), *kind))
+      return failure();
+
+    rewriter.replaceOp(reduceOp, broadcastOp.getInput());
+    return success();
+  }
+};
+
+} // namespace
+
+void ReduceOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<FoldReduceBroadcast>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
