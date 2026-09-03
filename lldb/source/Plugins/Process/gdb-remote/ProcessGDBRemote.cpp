@@ -5486,10 +5486,12 @@ ParseVector(const XMLNode &vector_node, RegisterTypeMap &feature_register_types,
     return;
   }
 
-  if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector>(element_type)) {
+  if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector, RegisterTypeUnion>(
+          element_type)) {
     LLDB_LOG(log,
              "ProcessGDBRemote::ParseVector Found element type \"{0}\" for "
-             "vector \"{1}\", but it is not a builtin or vector type",
+             "vector \"{1}\", but it is not a builtin, vector, or union "
+             "type",
              *element_type_name, *id);
     return;
   }
@@ -5510,13 +5512,137 @@ ParseVector(const XMLNode &vector_node, RegisterTypeMap &feature_register_types,
   owned_register_types.push_back(std::move(vector_type));
 }
 
+static std::vector<RegisterTypeUnion::Field>
+ParseUnionFields(const XMLNode &union_node, llvm::StringRef union_id,
+                 const RegisterTypeMap &feature_register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::vector<RegisterTypeUnion::Field> fields;
+  bool invalid_field = false;
+
+  union_node.ForEachChildElementWithName(
+      "field", [&fields, &invalid_field, log, &feature_register_types,
+                union_id](const XMLNode &field_node) {
+        std::optional<llvm::StringRef> name;
+        std::optional<llvm::StringRef> type_name;
+
+        field_node.ForEachAttribute(
+            [&name, &type_name, log, union_id](llvm::StringRef attribute,
+                                               llvm::StringRef value) {
+              if (attribute == "name")
+                name = value;
+              else if (attribute == "type")
+                type_name = value;
+              else
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseUnionFields Ignoring unknown "
+                         "attribute \"{0}\" in a field of union \"{1}\"",
+                         attribute, union_id);
+              return true;
+            });
+
+        if (!name || name->empty() || !type_name || type_name->empty()) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Union \"{0}\" has a "
+                   "field missing a non-empty name or type",
+                   union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        const RegisterType *field_type =
+            ResolveGDBType(*type_name, feature_register_types);
+        if (!field_type) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Could not resolve type "
+                   "\"{0}\" for field \"{1}\" of union \"{2}\"",
+                   *type_name, *name, union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector,
+                       RegisterTypeUnion>(field_type)) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Found type \"{0}\" "
+                   "for field \"{1}\", but it is not a builtin, vector, or "
+                   "union type. Union \"{2}\" will be ignored.",
+                   *type_name, *name, union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        fields.emplace_back(name->str(), field_type);
+        return true;
+      });
+
+  // Reject the whole union if any field is invalid. Retaining only valid fields
+  // would misrepresent the target's type definition.
+  if (invalid_field) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnionFields Ignoring union \"{0}\" "
+             "because it contains an invalid field",
+             union_id);
+    fields.clear();
+  } else if (fields.empty()) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnionFields Ignoring union \"{0}\" "
+             "because it has no fields",
+             union_id);
+  }
+  return fields;
+}
+
 static void
-ParseVectors(XMLNode feature_node, RegisterTypeMap &feature_register_types,
-             std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
-  feature_node.ForEachChildElementWithName(
-      "vector", [&feature_register_types,
-                 &owned_register_types](const XMLNode &vector_node) {
-        ParseVector(vector_node, feature_register_types, owned_register_types);
+ParseUnion(const XMLNode &union_node, RegisterTypeMap &feature_register_types,
+           std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::optional<llvm::StringRef> id;
+
+  union_node.ForEachAttribute(
+      [&id, log](llvm::StringRef name, llvm::StringRef value) {
+        if (name == "id")
+          id = value;
+        else
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnion Ignoring unknown attribute "
+                   "\"{0}\"",
+                   name);
+        return true;
+      });
+
+  if (!id || id->empty()) {
+    LLDB_LOG(log, "ProcessGDBRemote::ParseUnion Ignoring union without an id");
+    return;
+  }
+
+  if (feature_register_types.contains(*id)) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnion Ignoring duplicate type \"{0}\"",
+             *id);
+    return;
+  }
+
+  std::vector<RegisterTypeUnion::Field> fields =
+      ParseUnionFields(union_node, *id, feature_register_types);
+  if (fields.empty())
+    return;
+
+  auto union_type =
+      std::make_unique<RegisterTypeUnion>(id->str(), std::move(fields));
+  feature_register_types.try_emplace(*id, union_type.get());
+  owned_register_types.push_back(std::move(union_type));
+}
+
+static void ParseCompositeTypes(
+    XMLNode feature_node, RegisterTypeMap &feature_register_types,
+    std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  feature_node.ForEachChildElement(
+      [&feature_register_types,
+       &owned_register_types](const XMLNode &type_node) {
+        if (type_node.NameIs("vector"))
+          ParseVector(type_node, feature_register_types, owned_register_types);
+        else if (type_node.NameIs("union"))
+          ParseUnion(type_node, feature_register_types, owned_register_types);
         return true;
       });
 }
@@ -5544,11 +5670,19 @@ bool ParseRegisters(
             llvm::dyn_cast<RegisterTypeFlags>(register_type.second))
       flags_type->DumpToLog(log);
 
-  ParseVectors(feature_node, feature_register_types, owned_register_types);
+  // Enums and flags retain their dedicated passes above. Vectors and unions
+  // can reference one another, so parse them together in document order. A
+  // referenced composite type must precede its user.
+  ParseCompositeTypes(feature_node, feature_register_types,
+                      owned_register_types);
   for (const auto &register_type : feature_register_types)
     if (const auto *vector_type =
             llvm::dyn_cast<RegisterTypeVector>(register_type.second))
       vector_type->DumpToLog(log);
+  for (const auto &register_type : feature_register_types)
+    if (const auto *union_type =
+            llvm::dyn_cast<RegisterTypeUnion>(register_type.second))
+      union_type->DumpToLog(log);
 
   feature_node.ForEachChildElementWithName(
       "reg",
@@ -5665,6 +5799,30 @@ bool ParseRegisters(
                 }
                 if (!format_set) {
                   reg_info.format = eFormatVectorOfUInt8;
+                  format_set = true;
+                }
+              }
+            } else if (const auto *union_type =
+                           llvm::dyn_cast<RegisterTypeUnion>(it->second)) {
+              if (reg_info.byte_size > RegisterValue::kMaxRegisterByteSize) {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Register {0} is "
+                         "too large for union type {1}",
+                         reg_info.name, union_type->GetID());
+              } else if (!union_type->IsByteSizeCompatible(
+                             reg_info.byte_size)) {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Size of register "
+                         "{0} is incompatible with union type {1}",
+                         reg_info.name, union_type->GetID());
+              } else {
+                reg_info.register_type = union_type;
+                if (!encoding_set) {
+                  reg_info.encoding = eEncodingUint;
+                  encoding_set = true;
+                }
+                if (!format_set) {
+                  reg_info.format = eFormatHex;
                   format_set = true;
                 }
               }
