@@ -28,10 +28,14 @@ class LetDummies {
   list<Predicate> OtherPredicates;
   Predicate AssemblerPredicate;
   string DecoderNamespace;
+  bits<8> GFX1250BlockingCycles;
+  bit HasGFX1250BlockingCycles;
 }
 
 class VOP <string opName> {
   string OpName = opName;
+  bits<8> GFX1250BlockingCycles = 0;
+  bit HasGFX1250BlockingCycles = false;
 }
 
 // First 13 insts from VOPDY are also VOPDX.
@@ -2479,4 +2483,15 @@ def DPMACCInstructionTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getDPMACCInstructionHelper";
+}
+
+// BlockingCycles indicates how many cycles until a new instruction can acquire
+// a resource, allowing modeling of multi-cycle blocking.
+def GFX1250BlockingCyclesTable : GenericTable {
+  let FilterClass = "VOP_Pseudo";
+  let FilterClassField = "HasGFX1250BlockingCycles";
+  let CppTypeName = "AMDGPUBlockingCyclesInfo";
+  let Fields = ["Opcode", "GFX1250BlockingCycles"];
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getGFX1250BlockingCyclesInfo";
 }

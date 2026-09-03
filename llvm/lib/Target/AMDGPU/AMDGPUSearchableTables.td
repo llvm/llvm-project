@@ -429,3 +429,4 @@ def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let PrimaryKeyName = "getAMDGPUImageDMaskIntrinsic";
   let PrimaryKeyEarlyOut = 1;
 }
+
