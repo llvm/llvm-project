@@ -101,6 +101,8 @@ private:
   Value genExprImpl(const ast::RangeExpr *expr);
   SmallVector<Value> genExprImpl(const ast::TupleExpr *expr);
   Value genExprImpl(const ast::TypeExpr *expr);
+  Value genExprImpl(const ast::TypeConversionExpr *expr);
+  Value genExprImpl(const ast::ConvertedOperandExpr *expr);
 
   SmallVector<Value> genConstraintCall(const ast::UserConstraintDecl *decl,
                                        Location loc, ValueRange inputs,
@@ -147,7 +149,12 @@ OwningOpRef<ModuleOp> CodeGen::generate(const ast::Module &module) {
 Location CodeGen::genLoc(llvm::SMLoc loc) {
   unsigned fileID = sourceMgr.FindBufferContainingLoc(loc);
 
-  auto [lineNo, column] = sourceMgr.getLineAndColumn(loc);
+  // TODO: Fix performance issues in SourceMgr::getLineAndColumn so that we can
+  //       use it here.
+  auto &bufferInfo = sourceMgr.getBufferInfo(fileID);
+  unsigned lineNo = bufferInfo.getLineNumber(loc.getPointer());
+  unsigned column =
+      (loc.getPointer() - bufferInfo.getPointerForLineNumber(lineNo)) + 1;
   auto *buffer = sourceMgr.getMemoryBuffer(fileID);
 
   return FileLineColLoc::get(builder.getContext(),
@@ -380,7 +387,8 @@ Value CodeGen::genSingleExpr(const ast::Expr *expr) {
   return TypeSwitch<const ast::Expr *, Value>(expr)
       .Case<const ast::AttributeExpr, const ast::MemberAccessExpr,
             const ast::OperationExpr, const ast::RangeExpr,
-            const ast::TypeExpr>(
+            const ast::TypeExpr, const ast::TypeConversionExpr,
+            const ast::ConvertedOperandExpr>(
           [&](auto derivedNode) { return this->genExprImpl(derivedNode); })
       .Case<const ast::CallExpr, const ast::DeclRefExpr, const ast::TupleExpr>(
           [&](auto derivedNode) {
@@ -624,4 +632,44 @@ OwningOpRef<ModuleOp> mlir::pdll::codegenPDLLToMLIR(
   if (failed(verify(*mlirModule)))
     return nullptr;
   return mlirModule;
+}
+
+Value CodeGen::genExprImpl(const ast::TypeConversionExpr *expr) {
+  Location loc = genLoc(expr->getLoc());
+  
+  // Generate the type expression to be converted
+  Value typeValue = genSingleExpr(expr->getTypeExpr());
+  
+  // Create a StringAttr for the converter name and wrap it in a PDL attribute
+  Attribute converterNameAttr = builder.getStringAttr(expr->getConverterName());
+  Value converterNameValue = pdl::AttributeOp::create(
+      builder, loc, converterNameAttr);
+  
+  // Create a native rewrite that will call the type converter at runtime
+  // Pass both the type and the converter name as arguments
+  auto rewriteOp = pdl::ApplyNativeRewriteOp::create(
+      builder, loc,
+      pdl::TypeType::get(builder.getContext()),
+      "__pdll_convert_type__",
+      ValueRange{typeValue, converterNameValue});
+  
+  return rewriteOp.getResult(0);
+}
+
+Value CodeGen::genExprImpl(const ast::ConvertedOperandExpr *expr) {
+  Location loc = genLoc(expr->getLoc());
+  
+  // Generate the operand and target type expressions
+  Value operandValue = genSingleExpr(expr->getOperandExpr());
+  Value targetType = genSingleExpr(expr->getTypeExpr());
+  
+  // Create a native rewrite that accesses the converted operand
+  // This will look up the value through the ConversionPatternRewriter's adaptor
+  auto rewriteOp = pdl::ApplyNativeRewriteOp::create(
+      builder, loc,
+      pdl::ValueType::get(builder.getContext()),
+      "__pdll_converted_operand__",
+      ValueRange{operandValue, targetType});
+  
+  return rewriteOp.getResult(0);
 }
