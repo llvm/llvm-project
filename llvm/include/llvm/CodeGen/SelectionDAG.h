@@ -135,8 +135,7 @@ struct SDNodeKeyInfo {
         Key.Opcode, DenseMapInfo<const EVT *>::getHashValue(Key.VTs));
     for (const SDValue &Op : Key.Ops)
       H = detail::combineHashValue(H, DenseMapInfo<SDValue>::getHashValue(Op));
-    FoldingSetNodeIDRef Tail = Key.Tail.getRef();
-    for (unsigned Word : ArrayRef(Tail.getData(), Tail.getSize()))
+    for (unsigned Word : Key.Tail.getRef())
       H = detail::combineHashValue(H, Word);
     return H;
   }
