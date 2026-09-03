@@ -146,8 +146,8 @@ let Namespace = "SH" in {
   // System Registers
   def PC    : SysReg<0, "pc">,    DwarfRegNum<[16]>;   // Program Counter
   def PR    : SysReg<0, "pr">,    DwarfRegNum<[17]>;   // Procedure Register
-  def MACH  : SysReg<1, "mach">,  DwarfRegNum<[20]>;   // Mult & Accum Hi
-  def MACL  : SysReg<0, "macl">,  DwarfRegNum<[21]>;   // Mult & Accum Low
+  def MACHI : SysReg<1, "mach">,  DwarfRegNum<[20]>;   // Mult & Accum Hi
+  def MACLO : SysReg<0, "macl">,  DwarfRegNum<[21]>;   // Mult & Accum Low
   def FPUL  : SysReg<0, "fpul">,  DwarfRegNum<[23]>;   // FPU Comms Register
   def FPSCR : SysReg<0, "fpscr">, DwarfRegNum<[24]>;   // FPU Status/Control Register
 
@@ -221,7 +221,7 @@ def CTRL : RegisterClass<"SH", [ i32 ], 32,
 
 // System registers.
 def SYS : RegisterClass<"SH", [ i32 ], 32, 
-  (add PR, PC, MACL, MACH, FPSCR, FPUL)>, Unallocatable;
+  (add PR, PC, MACLO, MACHI, FPSCR, FPUL)>, Unallocatable;
 
 // Program Counter
 def R_PC : RegisterClass<"SH", [ i32 ], 32, (add PC)>, Unallocatable;

@@ -133,7 +133,7 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   // If the targets are GPR registers, use MOV Rm, Rn.
   if (SH::GPRRegClass.contains(DestReg, SrcReg)) {
-    BuildMI(MBB, MI, DL, get(SH::MOVRmRn), DestReg)
+    BuildMI(MBB, MI, DL, get(SH::MOV), DestReg)
       .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   };
@@ -162,13 +162,13 @@ void SuperHInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBl
   Register SrcStrReg;
   unsigned Opcode = 0;
   if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
-    Opcode = SH::MOVBR0D4Rni;
+    Opcode = SH::MOVBS4;
     SrcStrReg = SH::R0;
   } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
-    Opcode = SH::MOVWR0D4Rni;
+    Opcode = SH::MOVWS4;
     SrcStrReg = SH::R0;
   } else if (RI.isTypeLegalForClass(*RC, MVT::i32)) {
-    Opcode = SH::MOVLRmD4Rni;
+    Opcode = SH::MOVLS4;
     SrcStrReg = SrcReg;
   } else {
     llvm_unreachable("Cannot store this register into a stack slot!");
@@ -176,16 +176,16 @@ void SuperHInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBl
 
   // mov r14,r1
   // add #-<frame size>,r1
-  BuildMI(MBB, MI, DebugLoc(), get(SH::MOVRmRn), SH::R1)
+  BuildMI(MBB, MI, DebugLoc(), get(SH::MOV), SH::R1)
     .addReg(SH::R14);
-  BuildMI(MBB, MI, DebugLoc(), get(SH::ADDI8Rn), SH::R1)
+  BuildMI(MBB, MI, DebugLoc(), get(SH::ADDI), SH::R1)
     .addReg(SH::R1)
     .addImm(-(int)MFI.getStackSize());
 
   // mov srcreg,r0
   // mov.b/w r0,@(<offset>,r1)
   if (SrcStrReg != SrcReg) {
-    BuildMI(MBB, MI, DebugLoc(), get(SH::MOVRmRn), SrcStrReg)
+    BuildMI(MBB, MI, DebugLoc(), get(SH::MOV), SrcStrReg)
       .addReg(SrcReg, getKillRegState(isKill));
     BuildMI(MBB, MI, DebugLoc(), get(Opcode))
       .addReg(SH::R1)
@@ -221,13 +221,13 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicB
   unsigned Opcode = 0;
   Register DstStrReg;
   if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
-    Opcode = SH::MOVBD4RmiR0;
+    Opcode = SH::MOVBL4;
     DstStrReg = SH::R0;
   } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
-    Opcode = SH::MOVWD4RmiR0;
+    Opcode = SH::MOVWL4;
     DstStrReg = SH::R0;
   } else if (RI.isTypeLegalForClass(*RC, MVT::i32)) {
-    Opcode = SH::MOVLD4RmiRn;
+    Opcode = SH::MOVLL4;
     DstStrReg = DestReg;
   } else {
     llvm_unreachable("Cannot load this register into a stack slot!");
@@ -235,9 +235,9 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicB
 
   // mov r14,r1
   // add #-<frame size>,r1
-  BuildMI(MBB, MI, DebugLoc(), get(SH::MOVRmRn), SH::R1)
+  BuildMI(MBB, MI, DebugLoc(), get(SH::MOV), SH::R1)
     .addReg(SH::R14);
-  BuildMI(MBB, MI, DebugLoc(), get(SH::ADDI8Rn), SH::R1)
+  BuildMI(MBB, MI, DebugLoc(), get(SH::ADDI), SH::R1)
     .addReg(SH::R1)
     .addImm(-(int)MFI.getStackSize());
 
@@ -247,7 +247,7 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicB
     BuildMI(MBB, MI, DebugLoc(), get(Opcode))
       .addReg(SH::R1)
       .addImm(Offset);
-    BuildMI(MBB, MI, DebugLoc(), get(SH::MOVRmRn), DestReg)
+    BuildMI(MBB, MI, DebugLoc(), get(SH::MOV), DestReg)
       .addReg(DstStrReg);
     return;
   }

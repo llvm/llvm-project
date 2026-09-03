@@ -67,7 +67,7 @@ static bool emitSPAdj(MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasic
 
       // Fast path, emit a single immediate add.
       //    Emit add #-(size),r15
-      BuildMI(MBB, MBBI, dl, TII.get(SH::ADDI8Rn), SP)
+      BuildMI(MBB, MBBI, dl, TII.get(SH::ADDI), SP)
         .addReg(SP)
         .addImm((int)AdjValue);
       return true;
@@ -77,7 +77,7 @@ static bool emitSPAdj(MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasic
 
       // Fast path, emit a single immediate add.
       //    Emit add #(size),r14
-      BuildMI(MBB, MBBI, dl, TII.get(SH::ADDI8Rn), FP)
+      BuildMI(MBB, MBBI, dl, TII.get(SH::ADDI), FP)
         .addReg(FP)
         .addImm((int)AdjValue);
       return true;
@@ -89,7 +89,7 @@ static bool emitSPAdj(MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasic
   unsigned ToShift = getShiftAmt(AdjValue);
 
   // Empty R0 in case it had something.
-  BuildMI(MBB, MBBI, dl, TII.get(SH::MOVI8Rn), SH::R0)
+  BuildMI(MBB, MBBI, dl, TII.get(SH::MOVI), SH::R0)
     .addImm(0)
     .addReg(SH::R0)
     .setMIFlag(MFlag);
@@ -98,10 +98,10 @@ static bool emitSPAdj(MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasic
   //  or #(byte), r0
   //  shll8 r0
   for(unsigned i = 0; i < ToShift; i++) {
-    BuildMI(MBB, MBBI, dl, TII.get(SH::ORI8R0))
+    BuildMI(MBB, MBBI, dl, TII.get(SH::ORI))
       .addImm((AdjValue >> (i*8)) & 0xFF)
       .setMIFlag(MFlag);
-    BuildMI(MBB, MBBI, dl, TII.get(SH::SHLL8Rn), SH::R0)
+    BuildMI(MBB, MBBI, dl, TII.get(SH::SHLL8), SH::R0)
       .addReg(SH::R0)
       .setMIFlag(MFlag);
   }
@@ -110,12 +110,12 @@ static bool emitSPAdj(MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasic
   //  neg r0, r0 (if negative displacement)
   //  add r0, r15
   if (AdjValue < 0)
-    BuildMI(MBB, MBBI, dl, TII.get(SH::NEGRmRn), SH::R0)
+    BuildMI(MBB, MBBI, dl, TII.get(SH::NEG), SH::R0)
       .addReg(SH::R0)
       .addReg(SH::R0)
       .setMIFlag(MFlag);
 
-  BuildMI(MBB, MBBI, dl, TII.get(SH::SUBRmRn), SP)
+  BuildMI(MBB, MBBI, dl, TII.get(SH::SUB), SP)
     .addReg(SH::R0, RegState::Kill)
     .addReg(SP)
     .setMIFlag(MFlag);
@@ -149,7 +149,7 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &M
   // Store GOT
   if (STI.isPositionIndependent()) {
     if (auto *GOTSym = MF.getPICBaseSymbol()) {
-      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLRmRndeci), SP)
+      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLM), SP)
         .addReg(GOT)
         .setMIFlag(MachineInstr::FrameSetup);
     }
@@ -159,17 +159,17 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &M
   //    mov.l r14,@-r15
   //    add <stackadj>,r15
   //    mov r15,r14
-  BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLRmRndeci), SP)
+  BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLM), SP)
     .addReg(FP)
     .setMIFlag(MachineInstr::FrameSetup);
   emitSPAdj(MF, MBB, MBBI, -(int32_t)StackSize);
-  BuildMI(MBB, MBBI, DL, TII.get(SH::MOVRmRn), FP)
+  BuildMI(MBB, MBBI, DL, TII.get(SH::MOV), FP)
     .addReg(SP)
     .setMIFlag(MachineInstr::FrameSetup);
 
   // Save return address to stack.
   if (MFI.hasCalls()) {
-    BuildMI(MBB, MBBI, DL, TII.get(SH::STSLPRRndeci))
+    BuildMI(MBB, MBBI, DL, TII.get(SH::STSMPR))
       .addReg(SP)
       .setMIFlag(MachineInstr::FrameSetup);
   }
@@ -199,7 +199,7 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
 
     // 1. Restore return address from stack.
     if (MFI.hasCalls()) {
-      BuildMI(MBB, MBBI, DL, TII.get(SH::LDSLRminciPR))
+      BuildMI(MBB, MBBI, DL, TII.get(SH::LDSMPR))
         .addReg(SP)
         .setMIFlag(MachineInstr::FrameDestroy);
     }
@@ -207,10 +207,10 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
     // 2. Delete stack frame, restoring stack pointer.
     if (StackSize > 0) {
       emitSPAdj(MF, MBB, MBBI, StackSize);
-      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVRmRn), FP)
+      BuildMI(MBB, MBBI, DL, TII.get(SH::MOV), FP)
         .addReg(SP)
         .setMIFlag(MachineInstr::FrameDestroy);
-      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLRminciRn), SP)
+      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLM), SP)
         .addReg(FP)
         .setMIFlag(MachineInstr::FrameDestroy);
     }
@@ -219,7 +219,7 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
 
     // 1. Restore return address from stack.
     if (MFI.hasCalls()) {
-      BuildMI(MBB, MBBI, DL, TII.get(SH::LDSLRminciPR))
+      BuildMI(MBB, MBBI, DL, TII.get(SH::LDSMPR))
         .addReg(SP)
         .setMIFlag(MachineInstr::FrameDestroy);
     }
@@ -230,10 +230,10 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
     //    mov.l @r15+,r14
     if (StackSize > 0) {
       emitSPAdj(MF, MBB, MBBI, StackSize);
-      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVRmRn), FP)
+      BuildMI(MBB, MBBI, DL, TII.get(SH::MOV), FP)
         .addReg(SP)
         .setMIFlag(MachineInstr::FrameDestroy);
-      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLRminciRn), SP)
+      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLM), SP)
         .addReg(FP)
         .setMIFlag(MachineInstr::FrameDestroy);
     }
@@ -256,7 +256,7 @@ bool SuperHFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, Mach
 
   for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
     MCRegister Reg = I.getReg();
-    BuildMI(MBB, MI, DL, TII.get(SH::MOVLRmRndeci), SP)
+    BuildMI(MBB, MI, DL, TII.get(SH::MOVLM), SP)
       .addReg(Reg)
       .setMIFlag(MachineInstr::FrameSetup);
   }
@@ -283,7 +283,7 @@ bool SuperHFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Ma
   for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
 
     MCRegister Reg = I.getReg();
-    BuildMI(MBB, MI, DL, TII.get(SH::MOVLRminciRn), SP)
+    BuildMI(MBB, MI, DL, TII.get(SH::MOVLM), SP)
       .addReg(Reg)
       .setMIFlag(MachineInstr::FrameDestroy);
   }
