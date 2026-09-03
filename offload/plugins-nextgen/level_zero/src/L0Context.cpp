@@ -15,11 +15,37 @@
 
 namespace llvm::omp::target::plugin {
 
+/// Compose a driver version string from the packed value reported by
+/// zeDriverGetProperties. Used when zeIntelGetDriverVersionString is missing.
+static Expected<std::string>
+getDriverVersionFromProperties(ze_driver_handle_t zeDriver) {
+  ze_driver_properties_t DriverProperties{};
+  DriverProperties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
+  CALL_ZE_RET_ERROR(zeDriverGetProperties, zeDriver, &DriverProperties);
+
+  const uint32_t PackedVersion = DriverProperties.driverVersion;
+  return std::to_string((PackedVersion & 0xFF000000) >> 24) + "." +
+         std::to_string((PackedVersion & 0x00FF0000) >> 16) + "." +
+         std::to_string(PackedVersion & 0x0000FFFF);
+}
+
 L0ContextTy::L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
                          int32_t DriverId)
-    : Plugin(Plugin), zeDriver(zeDriver) {}
+    : Plugin(Plugin), zeDriver(zeDriver), DriverId(DriverId) {}
 
 L0ContextTy::~L0ContextTy() = default;
+
+Expected<std::string> L0ContextTy::tryGetIntelDriverVersion() {
+  size_t VersionSize = 0;
+  CALL_ZE_RET_ERROR(IntelGetDriverVersionString, zeDriver, nullptr,
+                    &VersionSize);
+  std::string Version(VersionSize, '\0');
+  CALL_ZE_RET_ERROR(IntelGetDriverVersionString, zeDriver, Version.data(),
+                    &VersionSize);
+  if (!Version.empty() && Version.back() == '\0')
+    Version.pop_back();
+  return Version;
+}
 
 Error L0ContextTy::init() {
   auto CleanupOnError = [&]() {
@@ -87,6 +113,10 @@ Error L0ContextTy::init() {
     DriverGetDefaultContext.loadExperimental(zeDriver,
                                              "zeDriverGetDefaultContext");
 
+  if (!IntelGetDriverVersionString)
+    IntelGetDriverVersionString.loadExperimental(
+        zeDriver, "zeIntelGetDriverVersionString");
+
   ODBG(OLDT_Init) << "APIs supported by the context with added extensions: ";
   ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
                   << (LaunchKernelWithArguments.available() ? "yes" : "no");
@@ -96,6 +126,14 @@ Error L0ContextTy::init() {
                   << (CommandListAppendHostFunction.available() ? "yes" : "no");
   ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
                   << (DriverGetDefaultContext.available() ? "yes" : "no");
+
+  auto DriverVersionOrErr = IntelGetDriverVersionString.available()
+                                ? tryGetIntelDriverVersion()
+                                : getDriverVersionFromProperties(zeDriver);
+  if (!DriverVersionOrErr)
+    return DriverVersionOrErr.takeError();
+  DriverVersion = std::move(*DriverVersionOrErr);
+  ODBG(OLDT_Init) << "Driver version is " << DriverVersion;
 
   DefaultUserCtx = std::make_unique<LevelZeroPluginContextTy>(
       Plugin, /*Devices=*/llvm::ArrayRef<GenericDeviceTy *>{}, zeDriver,
