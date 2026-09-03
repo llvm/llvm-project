@@ -1301,7 +1301,8 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
 def EmitC_PreIncrementOp
     : EmitC_IncDecOp<"pre_increment", "Pre-increment operation"> {
   let description = [{
-    This operation models the C/C++ pre-increment operator on an lvalue.
+    This operation models the C pre-increment operator on an lvalue. Its result
+    is an rvalue of the operand's underlying type.
 
     Example:
 
@@ -1314,7 +1315,8 @@ def EmitC_PreIncrementOp
 def EmitC_PostIncrementOp
     : EmitC_IncDecOp<"post_increment", "Post-increment operation"> {
   let description = [{
-    This operation models the C/C++ post-increment operator on an lvalue.
+    This operation models the C post-increment operator on an lvalue.
+    Its result is an rvalue of the operand's underlying type.
 
     Example:
 
@@ -1327,7 +1329,8 @@ def EmitC_PostIncrementOp
 def EmitC_PreDecrementOp
     : EmitC_IncDecOp<"pre_decrement", "Pre-decrement operation"> {
   let description = [{
-    This operation models the C/C++ pre-decrement operator on an lvalue.
+    This operation models the C pre-decrement operator on an lvalue. Its result
+    is an rvalue of the operand's underlying type.
 
     Example:
 
@@ -1340,7 +1343,8 @@ def EmitC_PreDecrementOp
 def EmitC_PostDecrementOp
     : EmitC_IncDecOp<"post_decrement", "Post-decrement operation"> {
   let description = [{
-    This operation models the C/C++ post-decrement operator on an lvalue.
+    This operation models the C post-decrement operator on an lvalue.
+    Its result is an rvalue of the operand's underlying type.
 
     Example:
 
