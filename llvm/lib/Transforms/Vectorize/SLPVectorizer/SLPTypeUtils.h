@@ -14,6 +14,8 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPTYPEUTILS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPTYPEUTILS_H
 
+#include <limits>
+
 namespace llvm {
 class FixedVectorType;
 class TargetTransformInfo;
@@ -69,6 +71,19 @@ FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
 /// legalization.
 bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
                               unsigned Sz, bool ReVec);
+
+/// True when \p VectorizeNonPowerOf2 is set and \p NumElts is a supported
+/// non-power-of-2 width: \p NumElts + 1 must be a power of two (e.g. 3 or 7
+/// lanes, i.e. almost a full power-of-2 register).
+bool isAllowedNonPowerOf2VF(unsigned NumElts, bool VectorizeNonPowerOf2);
+
+/// Returns number of parts, the type \p VecTy will be split at the codegen
+/// phase. If the type is going to be scalarized or does not uses whole
+/// registers, returns 1.
+unsigned
+getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy, Type *ScalarTy,
+                 bool ReVec,
+                 unsigned Limit = std::numeric_limits<unsigned>::max());
 
 } // namespace llvm::slpvectorizer
 
