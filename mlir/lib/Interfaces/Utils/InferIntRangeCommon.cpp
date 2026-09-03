@@ -572,7 +572,8 @@ mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
 static APInt getVaryingBitsMask(const ConstantIntRanges &bound) {
   APInt leftVal = bound.umin(), rightVal = bound.umax();
   unsigned bitwidth = leftVal.getBitWidth();
-  unsigned differingBits = bitwidth - (leftVal ^ rightVal).countl_zero();
+  unsigned differingBits =
+      bitwidth - (std::move(leftVal) ^ rightVal).countl_zero();
   return APInt::getLowBitsSet(bitwidth, differingBits);
 }
 
@@ -580,11 +581,11 @@ ConstantIntRanges
 mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
   // Construct mask of varying bits for both ranges, xor values and then replace
   // masked bits with 0s and 1s to get min and max values respectively.
-  ConstantIntRanges lhs = argRanges[0], rhs = argRanges[1];
+  const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
   APInt mask = getVaryingBitsMask(lhs) | getVaryingBitsMask(rhs);
   APInt res = lhs.umin() ^ rhs.umin();
   APInt min = res & ~mask;
-  APInt max = res | mask;
+  APInt max = std::move(res) | mask;
   return ConstantIntRanges::fromUnsigned(min, max);
 }
 
