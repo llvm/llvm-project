@@ -2049,6 +2049,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_getpid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/getpid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_pid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_unlinkat",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/unlinkat.h"],
     target_compatible_with = select({
@@ -15352,7 +15367,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_getpid",
         ":hdr_unistd_macros",
         ":types_pid_t",
     ],
