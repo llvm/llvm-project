@@ -744,6 +744,7 @@ def LLVM_InvokeOp
                    OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
                    DefaultValuedAttr<CConv, "CConv::C">:$CConv,
                    OptionalAttr<DictionaryAttr>:$default_func_attrs,
+                   UnitAttr:$uniform_work_group_size,
                    VariadicOfVariadic<LLVM_Type,
                                       "op_bundle_sizes">:$op_bundle_operands,
                    DenseI32ArrayAttr:$op_bundle_sizes,

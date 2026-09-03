@@ -1607,8 +1607,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, /*default_func_attrs=*/nullptr, {}, {}, normal,
-        unwind);
+        nullptr, nullptr, /*default_func_attrs=*/nullptr,
+        /*uniform_work_group_size=*/nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1618,7 +1618,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
   build(builder, state, tys,
         /*var_callee_type=*/nullptr, callee, ops, /*arg_attrs=*/nullptr,
         /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr,
-        /*default_func_attrs=*/nullptr, {}, {}, normal, unwind);
+        /*default_func_attrs=*/nullptr,
+        /*uniform_work_group_size=*/nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1628,8 +1629,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), callee, ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, /*default_func_attrs=*/nullptr, {}, {}, normal,
-        unwind);
+        nullptr, nullptr, /*default_func_attrs=*/nullptr,
+        /*uniform_work_group_size=*/nullptr, {}, {}, normal, unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {

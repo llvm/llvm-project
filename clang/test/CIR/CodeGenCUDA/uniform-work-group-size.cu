@@ -41,15 +41,15 @@
 
 __device__ void extern_func();
 
-// CIR: cir.func private @_Z11extern_funcv()
-// CIR-SAME: uniform_work_group_size
-
 __device__ void func() {
   extern_func();
 }
 // CIR: cir.func{{.*}}@_Z4funcv()
 // CIR-SAME: uniform_work_group_size
 // CIR: cir.call @_Z11extern_funcv()
+// CIR-SAME: uniform_work_group_size
+
+// CIR: cir.func private @_Z11extern_funcv()
 // CIR-SAME: uniform_work_group_size
 
 // LLVM: define{{.*}} void @_Z4funcv() [[FUNC:#[0-9]+]]

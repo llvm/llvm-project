@@ -667,6 +667,17 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   llvm.return %0 : i32
 }
 
+// CHECK-LABEL: @invokeUniformWorkGroupSize
+llvm.func @invokeUniformWorkGroupSize() attributes { personality = @__gxx_personality_v0 } {
+  // CHECK: llvm.invoke @baz() to ^{{.*}} unwind ^{{.*}} {uniform_work_group_size}
+  llvm.invoke @baz() to ^bb1 unwind ^bb2 {uniform_work_group_size} : () -> ()
+^bb1:
+  llvm.return
+^bb2:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+}
+
 // CHECK-LABEL: @useFreezeOp
 func.func @useFreezeOp(%arg0: i32) {
   // CHECK:  = llvm.freeze %[[ARG0:.*]] : i32

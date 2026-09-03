@@ -668,6 +668,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           operandsRef.drop_front(), opBundles);
     }
     result->setCallingConv(convertCConvToLLVM(invOp.getCConv()));
+    if (invOp.getUniformWorkGroupSizeAttr())
+      result->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                             "uniform-work-group-size"));
     moduleTranslation.convertFunctionAttrCollection(
         invOp.getDefaultFuncAttrsAttr(), result,
         ModuleTranslation::convertDefaultFuncAttr);

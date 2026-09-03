@@ -3240,6 +3240,9 @@ static LogicalResult convertCallBaseAttributes(llvm::CallBase *inst, Op op) {
 
 LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
                                                     InvokeOp op) {
+  llvm::AttributeList invokeAttrs = inst->getAttributes();
+  op.setUniformWorkGroupSize(
+      invokeAttrs.getFnAttr("uniform-work-group-size").isValid());
   return convertCallBaseAttributes(inst, op);
 }
 

@@ -435,11 +435,8 @@ void CIRGenModule::constructAttributeList(
 
     // TODO(cir): Quite a few CUDA and OpenCL attributes are added here.
 
-    // OpenCL v2.0 Work groups may be whether uniform or not.
-    // '-cl-uniform-work-group-size' compile option gets a hint
-    // to the compiler that the global work-size be a multiple of
-    // the work-group size specified to clEnqueueNDRangeKernel
-    // (i.e. work groups are uniform).
+    // -cl-uniform-work-group-size / -foffload-uniform-block: work groups are
+    // uniform (global work-size is a multiple of work-group size).
     if (langOpts.OffloadUniformBlock)
       addUnitAttr(cir::CIRDialect::getUniformWorkGroupSizeAttrName());
 
