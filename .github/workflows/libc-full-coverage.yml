@@ -1,7 +1,7 @@
 name: Libc Full Codebase Coverage
 
 permissions:
-  contents: write # Required to publish live HTML dashboard to gh-pages branch
+  contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -94,11 +94,15 @@ jobs:
     - name: Merge Profiles
       run: |
         echo "=== [STAGE 3/4] Merging Raw Profiles at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
-        find . build-cov -name "libc_cov_*.profraw" > profraw_list.txt
+        find . -name "libc_cov_*.profraw" > profraw_list.txt
         NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
         echo "[LOG] Discovered $NUM_PROFS raw profile data files."
-        llvm-profdata-23 merge -sparse --input-files=profraw_list.txt -o libc_full.profdata
-        echo "[LOG] Merged full codebase profile into libc_full.profdata."
+        if [ -s profraw_list.txt ]; then
+          llvm-profdata-23 merge -sparse --input-files=profraw_list.txt -o libc_full.profdata
+          echo "[LOG] Merged full codebase profile into libc_full.profdata."
+        else
+          echo "[LOG] Warning: No profraw files found."
+        fi
 
     - name: Generate Reports and Summary
       env:
@@ -111,6 +115,13 @@ jobs:
         OBJECTS=("${OBJECTS[@]/#/-object=}")
 
         echo "[LOG] Exporting coverage data across ${#EXECUTABLES[@]} test binaries."
+
+        if [ ! -f libc_full.profdata ] || [ ${#EXECUTABLES[@]} -eq 0 ]; then
+          echo "[LOG] Warning: Profile data or test executables missing. Skipping report generation."
+          echo "### LLVM-libc Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "No coverage data was generated for this run." >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
 
         # 1. Generate JSON export for Full Coverage Analyzer
         llvm-cov-23 export -format=text -instr-profile=libc_full.profdata "${EXECUTABLES[0]}" "${OBJECTS[@]}" > coverage.json
@@ -125,19 +136,14 @@ jobs:
           --compilation-dir=. \
           --path-equivalence="$GITHUB_WORKSPACE,." \
           -ignore-filename-regex=".*(test|utils).*"
-        touch coverage_html/.nojekyll
-
         # 3. Run Codebase Coverage Analyzer
         PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/codebase_coverage.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" >> $GITHUB_STEP_SUMMARY
         echo "[LOG] Post-commit summary report written to GITHUB_STEP_SUMMARY."
 
-    - name: Deploy Coverage Dashboard to GitHub Pages
-      if: github.repository != 'llvm/llvm-project'
-      continue-on-error: true
-      uses: peaceiris/actions-gh-pages@v4
+    - name: Upload HTML Coverage Artifact
+      uses: actions/upload-artifact@v4
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./coverage_html
-        keep_files: true
-        enable_jekyll: false
-        force_orphan: false
+        name: libc-coverage-html
+        path: coverage_html/
+        retention-days: 14
+        overwrite: true

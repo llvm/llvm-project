@@ -83,15 +83,10 @@ class FullCoverageSummary:
 
 
 def resolve_dashboard_url(has_mcdc: bool) -> str:
-    """Resolves the live dashboard URL based on repository environment variables."""
-    pages_url = os.environ.get("COVERAGE_DASHBOARD_URL")
+    """Resolves the live dashboard URL if explicitly configured via environment variable."""
+    pages_url = os.environ.get("COVERAGE_DASHBOARD_URL", "").strip()
     if not pages_url:
-        repo = os.environ.get("GITHUB_REPOSITORY", DEFAULT_REPOSITORY)
-        if "/" in repo:
-            owner, repo_name = repo.split("/", 1)
-            pages_url = f"https://{owner}.github.io/{repo_name}/"
-        else:
-            pages_url = f"https://{repo}.github.io/"
+        return ""
 
     if has_mcdc and not pages_url.endswith("/mcdc/"):
         return pages_url.rstrip("/") + "/mcdc/"
@@ -194,7 +189,12 @@ def format_overview_callout(summary: FullCoverageSummary) -> str:
         )
 
     lines.append("")
-    lines.append(f"- **Coverage Dashboard:** [{summary.dashboard_url}]({summary.dashboard_url})")
+    if summary.dashboard_url:
+        lines.append(f"- **Coverage Dashboard:** [{summary.dashboard_url}]({summary.dashboard_url})")
+    else:
+        lines.append(
+            "- **HTML Coverage Report:** Available for download under the **Artifacts** section of this workflow run."
+        )
     return "\n".join(lines)
 
 

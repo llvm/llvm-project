@@ -226,7 +226,7 @@ jobs:
       if: env.TARGETS != ''
       run: |
         echo "=== [STAGE 3/4] Merging Raw Profiles at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
-        find build-cov -name "libc_cov_*.profraw" > profraw_list.txt
+        find . -name "libc_cov_*.profraw" > profraw_list.txt
         NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
         echo "[LOG] Discovered $NUM_PROFS raw profile data files."
         if [ -s profraw_list.txt ]; then
