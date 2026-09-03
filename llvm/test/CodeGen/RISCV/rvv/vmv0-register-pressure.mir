@@ -1,0 +1,41 @@
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=machine-scheduler \
+# RUN:   -debug-only=machine-scheduler -misched-prera-direction=topdown \
+# RUN:   -verify-machineinstrs -verify-misched -o /dev/null %s 2>&1 \
+# RUN:   | FileCheck %s
+# REQUIRES: asserts
+
+# CHECK-LABEL: two_live_vmv0:%bb.0
+# CHECK: VMV0 Limit 1 Actual 2
+# CHECK: Excess PSets: VMV0
+
+---
+name: two_live_vmv0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v8, $v9
+
+    %0:vmv0 = COPY $v8
+    %1:vmv0 = COPY $v9
+    %2:vmv0 = PseudoVMAND_MM_B8 %0, %1, -1, 0
+    $v10 = COPY %2
+    PseudoRET implicit $v10
+...
+
+# CHECK-LABEL: one_live_lmul8:%bb.0
+# CHECK-NOT: VMV0
+# CHECK: Max Pressure: {{.*}}VR=8
+# CHECK-NOT: VMV0
+# CHECK: Pressure Diff      : VR -8
+# CHECK-NOT: Excess PSets: VMV0
+# CHECK: {{^$}}
+
+---
+name: one_live_lmul8
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vrm8 = IMPLICIT_DEF
+    $v16m8 = COPY %0
+    PseudoRET implicit $v16m8
+...

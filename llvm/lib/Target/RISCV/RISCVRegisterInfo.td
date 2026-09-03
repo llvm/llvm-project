@@ -938,7 +938,9 @@ def ZZZ_VRMF4NoV0 : VReg<VMF4VTs, (add VRNoV0), 1>;
 def ZZZ_VRMF2 : VReg<VMF2VTs, (add VR), 1>;
 def ZZZ_VRMF2NoV0 : VReg<VMF2VTs, (add VRNoV0), 1>;
 
-def VMV0 : VReg<VMaskVTs, (add V0), 1>;
+def VMV0 : VReg<VMaskVTs, (add V0), 1> {
+  let PreservePressureSet = true;
+}
 
 // The register class is added for inline assembly for vector mask types.
 // The ZZZ_ prefix is to make sure these are ordered after VR/VRNoV0 in the
