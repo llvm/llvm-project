@@ -2200,6 +2200,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     bool UseClang11Compat = getContext().getLangOpts().isCompatibleWith(
                                 LangOptions::ClangABI::Ver11) ||
                             getContext().getTargetInfo().getTriple().isPS();
+    bool UseClang23Compat = getContext().getLangOpts().isCompatibleWith(
+        LangOptions::ClangABI::Ver23);
     bool IsUnion = RT->isUnionType() && !UseClang11Compat;
 
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
@@ -2207,9 +2209,14 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
 
-      // Ignore zero-length bit-fields. Other unnamed bit-fields are real
-      // storage and classify like named ones, matching GCC.
-      if (BitField && i->isZeroLengthBitField())
+      // Ignore padding bit-fields. Under -fclang-abi-compat=23 every unnamed
+      // bit-field is padding, faithfully reproducing Clang 23 (including its
+      // crash on aggregates where doing so leaves part of a wider access unit,
+      // e.g. an __int128 bit-field run, unclassified); otherwise only
+      // zero-length bit-fields are, and other unnamed bit-fields classify like
+      // named ones, matching GCC.
+      if (BitField && (UseClang23Compat ? i->isUnnamedBitField()
+                                        : i->isZeroLengthBitField()))
         continue;
 
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
@@ -2250,7 +2257,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // structure to be passed in memory even if unaligned, and
       // therefore they can straddle an eightbyte.
       if (BitField) {
-        assert(!i->isZeroLengthBitField());
+        assert(UseClang23Compat ? !i->isUnnamedBitField()
+                                : !i->isZeroLengthBitField());
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
         uint64_t Size = i->getBitWidthValue();
 

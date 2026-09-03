@@ -106,7 +106,8 @@ features cannot lower the translation-unit ABI level;
   Aggregates where this changes the classification may be passed or returned
   differently -- a struct holding a run of `__int128` bit-fields, for example,
   now travels in the two integer registers the ABI assigns it. This also fixes
-  a crash when such a struct was passed or returned. (#GH202205)
+  a crash when such a struct was passed or returned. `-fclang-abi-compat=23`
+  restores the previous behavior. (#GH202205)
 
 ### AST Dumping Potentially Breaking Changes
 
