@@ -32,7 +32,6 @@ A cast is *precise* when its destination type is exactly the underlying type of
 the enumeration. A cast is *imprecise* when the destination type is an integer
 type other than the underlying type (a different width or signedness).
 
-
 ```cpp
 enum class E : int {};
 
