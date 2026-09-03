@@ -243,7 +243,11 @@ void MachineSSAUpdater::RewriteUse(MachineOperand &U) {
   if (NewVR) {
     const TargetRegisterClass *UseRC =
         dyn_cast_or_null<const TargetRegisterClass *>(RegAttrs.RCOrRB);
-    if (UseRC && !MRI->constrainRegClass(NewVR, UseRC)) {
+    const TargetRegisterClass *NewRC = MRI->getRegClassOrNull(NewVR);
+    const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+    if (UseRC && ((!NewRC || !TRI->shouldRewriteCopySrc(
+                                 UseRC, U.getSubReg(), NewRC, U.getSubReg())) ||
+                  !MRI->constrainRegClass(NewVR, UseRC))) {
       MachineBasicBlock *CopyBB = SourceBB ? SourceBB : UseMI->getParent();
       MachineBasicBlock::iterator InsertPt =
           SourceBB ? CopyBB->getFirstTerminator() : CopyBB->getFirstNonPHI();

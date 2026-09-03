@@ -213,8 +213,12 @@ bool UnreachableMachineBlockElim::run(MachineFunction &F) {
 
         if (InputReg != OutputReg) {
           MachineRegisterInfo &MRI = F.getRegInfo();
+          const TargetRegisterInfo *TRI = F.getSubtarget().getRegisterInfo();
           unsigned InputSub = Input.getSubReg();
           if (InputSub == 0 && !Input.isUndef() &&
+              TRI->shouldRewriteCopySrc(MRI.getRegClass(OutputReg),
+                                        Output.getSubReg(),
+                                        MRI.getRegClass(InputReg), InputSub) &&
               MRI.constrainRegClass(InputReg, MRI.getRegClass(OutputReg))) {
             MRI.replaceRegWith(OutputReg, InputReg);
           } else {

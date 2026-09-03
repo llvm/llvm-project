@@ -191,7 +191,12 @@ bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
     InstrSet PHIsInCycle;
     if (IsSingleValuePHICycle(MI, SingleValReg, PHIsInCycle) && SingleValReg) {
       Register OldReg = MI->getOperand(0).getReg();
-      if (!MRI->constrainRegClass(SingleValReg, MRI->getRegClass(OldReg)))
+      const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+      if (!TRI->shouldRewriteCopySrc(MRI->getRegClass(OldReg),
+                                     /*DefSubReg=*/0,
+                                     MRI->getRegClass(SingleValReg),
+                                     /*SrcSubReg=*/0) ||
+          !MRI->constrainRegClass(SingleValReg, MRI->getRegClass(OldReg)))
         continue;
 
       MRI->replaceRegWith(OldReg, SingleValReg);

@@ -181,6 +181,12 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
     Register SrcReg = DefMI->getOperand(1).getReg();
     if (!SrcReg.isVirtual())
       continue;
+    const TargetRegisterClass *DefRC = MRI->getRegClassOrNull(Reg);
+    const TargetRegisterClass *SrcRC = MRI->getRegClassOrNull(SrcReg);
+    if (DefRC && SrcRC &&
+        !TRI->shouldRewriteCopySrc(DefRC, DefMI->getOperand(0).getSubReg(),
+                                   SrcRC, DefMI->getOperand(1).getSubReg()))
+      continue;
     // FIXME: We should trivially coalesce subregister copies to expose CSE
     // opportunities on instructions with truncated operands (see
     // cse-add-with-overflow.ll). This can be done here as follows:
@@ -558,9 +564,14 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
           // New instruction. It doesn't need to be kept.
           NewMI->eraseFromParent();
           Changed = true;
-        } else if (!FoundCSE)
+        } else if (!FoundCSE) {
           // MI was changed but it didn't help, commute it back!
           (void)TII->commuteInstruction(MI);
+        } else {
+          // If a later legality or profitability check rejects CSE, the
+          // semantically equivalent commuted instruction remains in the block.
+          Changed = true;
+        }
       }
     }
 
@@ -647,6 +658,15 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
 
       assert(OldReg.isVirtual() && NewReg.isVirtual() &&
              "Do not CSE physical register defs!");
+
+      const TargetRegisterClass *OldRC = MRI->getRegClassOrNull(OldReg);
+      const TargetRegisterClass *NewRC = MRI->getRegClassOrNull(NewReg);
+      if (OldRC && NewRC &&
+          !TRI->shouldRewriteCopySrc(OldRC, MO.getSubReg(), NewRC,
+                                     CSMI->getOperand(i).getSubReg())) {
+        DoCSE = false;
+        break;
+      }
 
       if (!isProfitableToCSE(NewReg, OldReg, CSMI->getParent(), &MI)) {
         LLVM_DEBUG(dbgs() << "*** Not profitable, avoid CSE!\n");

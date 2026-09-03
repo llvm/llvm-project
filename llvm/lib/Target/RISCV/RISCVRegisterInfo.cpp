@@ -953,6 +953,97 @@ RISCVRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   return RC;
 }
 
+bool RISCVRegisterInfo::isV0OnlyRegClass(const TargetRegisterClass *RC,
+                                         unsigned SubReg,
+                                         const TargetRegisterInfo &TRI) {
+  return RC && !RC->getRegisters().empty() &&
+         llvm::all_of(RC->getRegisters(), [&](MCPhysReg Reg) {
+           if (SubReg) {
+             Reg = TRI.getSubReg(Reg, SubReg);
+             if (!Reg)
+               return false;
+           }
+           return TRI.regsOverlap(Reg, RISCV::V0);
+         });
+}
+
+unsigned RISCVRegisterInfo::getV0AccessKind(const MachineInstr &MI,
+                                            const MachineRegisterInfo &MRI,
+                                            const TargetInstrInfo *TII,
+                                            const TargetRegisterInfo &TRI) {
+  unsigned Kind = NoV0Access;
+  for (ConstMIBundleOperands OpIt(MI); OpIt.isValid(); ++OpIt) {
+    const MachineOperand &MO = *OpIt;
+    if (MO.isRegMask()) {
+      if (MO.clobbersPhysReg(RISCV::V0))
+        Kind |= PhysV0Def;
+      continue;
+    }
+    if (!MO.isReg() || !MO.getReg())
+      continue;
+
+    Register Reg = MO.getReg();
+    bool IsVirtualV0 = false;
+    if (Reg.isPhysical()) {
+      if (!TRI.regsOverlap(Reg, RISCV::V0))
+        continue;
+    } else {
+      IsVirtualV0 = isV0OnlyRegClass(MRI.getRegClass(Reg), MO.getSubReg(), TRI);
+      const MachineInstr *OperandMI = MO.getParent();
+      const TargetRegisterClass *Constraint =
+          OperandMI->getRegClassConstraint(MO.getOperandNo(), TII, &TRI);
+      IsVirtualV0 |= isV0OnlyRegClass(Constraint, /*SubReg=*/0, TRI);
+      if (!IsVirtualV0)
+        continue;
+    }
+
+    if (MO.readsReg())
+      Kind |= IsVirtualV0 ? VirtualV0Use : PhysV0Use;
+    if (MO.isDef())
+      Kind |= IsVirtualV0 ? VirtualV0Def : PhysV0Def;
+  }
+  return Kind;
+}
+
+static bool isV0OnlyCrossClassCopy(const TargetRegisterClass *SrcRC,
+                                   unsigned SrcSubReg,
+                                   const TargetRegisterClass *DstRC,
+                                   unsigned DstSubReg,
+                                   const TargetRegisterInfo &TRI) {
+  return RISCVRegisterInfo::isV0OnlyRegClass(SrcRC, SrcSubReg, TRI) !=
+         RISCVRegisterInfo::isV0OnlyRegClass(DstRC, DstSubReg, TRI);
+}
+
+bool RISCVRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
+                                             unsigned DefSubReg,
+                                             const TargetRegisterClass *SrcRC,
+                                             unsigned SrcSubReg) const {
+  if (isV0OnlyCrossClassCopy(SrcRC, SrcSubReg, DefRC, DefSubReg, *this))
+    return false;
+  const TargetRegisterClass *NewRC =
+      findCommonRegClass(DefRC, DefSubReg, SrcRC, SrcSubReg);
+  if (isV0OnlyRegClass(NewRC, /*SubReg=*/0, *this) &&
+      (!isV0OnlyRegClass(SrcRC, SrcSubReg, *this) ||
+       !isV0OnlyRegClass(DefRC, DefSubReg, *this)))
+    return false;
+  return NewRC != nullptr;
+}
+
+bool RISCVRegisterInfo::shouldCoalesce(
+    MachineInstr *, const TargetRegisterClass *SrcRC, unsigned SrcSubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &) const {
+  // SrcSubReg and DstSubReg describe where the old virtual registers would
+  // live in NewRC, not subregisters of SrcRC and DstRC. Reject a join if it
+  // would newly constrain either complete old value to V0.
+  bool SrcForcedToV0 = isV0OnlyRegClass(NewRC, SrcSubReg, *this);
+  bool DstForcedToV0 = isV0OnlyRegClass(NewRC, DstSubReg, *this);
+  bool SrcWasV0Only = isV0OnlyRegClass(SrcRC, /*SubReg=*/0, *this);
+  bool DstWasV0Only = isV0OnlyRegClass(DstRC, /*SubReg=*/0, *this);
+  return !((SrcForcedToV0 && !SrcWasV0Only) ||
+           (DstForcedToV0 && !DstWasV0Only));
+}
+
 void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
                                          SmallVectorImpl<uint64_t> &Ops) const {
   // VLENB is the length of a vector register in bytes. We use <vscale x 8 x i8>

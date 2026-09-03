@@ -1,0 +1,210 @@
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=machine-cse \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=CSE
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=register-coalescer \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=COAL
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=early-machinelicm \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=LICM
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=opt-phis \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=PHI
+
+# Do not propagate or coalesce copies between VMV0 and a wider register class.
+# Doing so would give the masked instruction two independent operands that
+# both have to be allocated to V0. Ordinary same-class copies should still be
+# eliminated.
+
+--- |
+  define void @vmv0_cross_class_copy() {
+    ret void
+  }
+  define void @machine_licm_vmv0_cross_class_cse() {
+    ret void
+  }
+  define void @opt_phis_vmv0_cross_class() {
+    ret void
+  }
+  define void @machine_cse_vmv0_cross_class_defs() {
+    ret void
+  }
+  define void @machine_cse_restore_commuted_vmv0() {
+    ret void
+  }
+  define void @coalesce_synthetic_v0_subreg() {
+    ret void
+  }
+...
+---
+name: vmv0_cross_class_copy
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CSE-LABEL: name: vmv0_cross_class_copy
+    ; CSE: %mask0:vmv0 = IMPLICIT_DEF
+    ; CSE: %mask1:vmv0 = IMPLICIT_DEF
+    ; CSE: %wide_from_mask:vr = COPY %mask0
+    ; CSE: %ordinary_src:vr = IMPLICIT_DEF
+    ; CSE-NOT: %ordinary_copy:vr = COPY
+    ; CSE: %result:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide_from_mask, %ordinary_src, %mask1
+
+    ; COAL-LABEL: name: vmv0_cross_class_copy
+    ; COAL: %mask0:vmv0 = IMPLICIT_DEF
+    ; COAL: %mask1:vmv0 = IMPLICIT_DEF
+    ; COAL: %wide_from_mask:vr = COPY %mask0
+    ; COAL: %ordinary_copy:vr = IMPLICIT_DEF
+    ; COAL-NOT: COPY %ordinary_copy
+    ; COAL: %result:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide_from_mask, %ordinary_copy, %mask1
+
+    %mask0:vmv0 = IMPLICIT_DEF
+    %mask1:vmv0 = IMPLICIT_DEF
+    %wide_from_mask:vr = COPY %mask0
+    %ordinary_src:vr = IMPLICIT_DEF
+    %ordinary_copy:vr = COPY %ordinary_src
+    %result:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide_from_mask, %ordinary_copy, %mask1, -1, 3, 0
+    PseudoRET
+...
+
+# A synthesized tuple class is not itself V0-only, but sub_vrm1_0 is forced
+# to V0. Do not coalesce that subregister into a broad VR live range.
+
+---
+name: coalesce_synthetic_v0_subreg
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; COAL-LABEL: name: coalesce_synthetic_v0_subreg
+    ; COAL: %tuple:vrm2_with_sub_vrm1_0_in_vmv0 = IMPLICIT_DEF
+    ; COAL-NEXT: %wide:vr = COPY %tuple.sub_vrm1_0
+    ; COAL-NEXT: %data:vr = IMPLICIT_DEF
+    ; COAL-NEXT: %mask:vmv0 = IMPLICIT_DEF
+    ; COAL-NEXT: %out:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide, %data, %mask{{.*}}
+
+    %tuple:vrm2_with_sub_vrm1_0_in_vmv0 = IMPLICIT_DEF
+    %wide:vr = COPY %tuple.sub_vrm1_0
+    %data:vr = IMPLICIT_DEF
+    %mask:vmv0 = IMPLICIT_DEF
+    %out:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide, %data, %mask, -1, 3, 0
+    PseudoRET
+...
+
+---
+name: machine_licm_vmv0_cross_class_cse
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+
+    ; LICM-LABEL: name: machine_licm_vmv0_cross_class_cse
+    ; LICM: bb.0:
+    ; LICM: %avl:gprnox0 = IMPLICIT_DEF
+    ; LICM-NEXT: %wide_mask:vr = PseudoVMSET_M_B8 %avl{{.*}}, 0
+    ; LICM-NEXT: %other_mask:vmv0 = IMPLICIT_DEF
+    ; LICM-NEXT: %data:vr = IMPLICIT_DEF
+    ; LICM-NEXT: %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide_mask, %data, %other_mask{{.*}}
+    ; LICM: %loop_mask:vmv0 = PseudoVMSET_M_B8 %avl{{.*}}, 0
+    ; LICM-NEXT: %later_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %loop_mask{{.*}}
+
+    %avl:gprnox0 = IMPLICIT_DEF
+    %wide_mask:vr = PseudoVMSET_M_B8 %avl, 0
+    %other_mask:vmv0 = IMPLICIT_DEF
+    %data:vr = IMPLICIT_DEF
+    %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide_mask, %data, %other_mask, -1, 3, 0
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.1
+
+    %loop_mask:vmv0 = PseudoVMSET_M_B8 %avl, 0
+    %later_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %loop_mask, -1, 3, 0
+    PseudoBR %bb.1
+...
+
+---
+name: opt_phis_vmv0_cross_class
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+
+    ; PHI-LABEL: name: opt_phis_vmv0_cross_class
+    ; PHI: bb.0:
+    ; PHI: %src:vr = IMPLICIT_DEF
+    ; PHI-NEXT: %other_mask:vmv0 = IMPLICIT_DEF
+    ; PHI-NEXT: %data:vr = IMPLICIT_DEF
+    ; PHI-NEXT: %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %src, %data, %other_mask{{.*}}
+    ; PHI-NEXT: PseudoBR %bb.1
+
+    %src:vr = IMPLICIT_DEF
+    %other_mask:vmv0 = IMPLICIT_DEF
+    %data:vr = IMPLICIT_DEF
+    %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %src, %data, %other_mask, -1, 3, 0
+    PseudoBR %bb.1
+
+  bb.1:
+    successors: %bb.1
+
+    ; PHI: bb.1:
+    ; PHI: %phi:vmv0 = PHI %src, %bb.0, %phi, %bb.1
+    ; PHI-NEXT: %later_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %phi{{.*}}
+    ; PHI-NEXT: PseudoBR %bb.1
+
+    %phi:vmv0 = PHI %src, %bb.0, %phi, %bb.1
+    %later_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %phi, -1, 3, 0
+    PseudoBR %bb.1
+...
+
+# MachineCSE must preserve both definitions rather than narrow the equivalent
+# VR definition to VMV0.
+
+---
+name: machine_cse_vmv0_cross_class_defs
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CSE-LABEL: name: machine_cse_vmv0_cross_class_defs
+    ; CSE: %avl:gprnox0 = IMPLICIT_DEF
+    ; CSE-NEXT: %wide_mask:vr = PseudoVMSET_M_B8 %avl{{.*}}, 0
+    ; CSE-NEXT: %other_mask:vmv0 = IMPLICIT_DEF
+    ; CSE-NEXT: %data:vr = IMPLICIT_DEF
+    ; CSE-NEXT: %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide_mask, %data, %other_mask{{.*}}
+    ; CSE-NEXT: %mask1:vmv0 = PseudoVMSET_M_B8 %avl{{.*}}, 0
+    ; CSE-NEXT: DBG_VALUE %mask1
+    ; CSE-NEXT: %later_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %mask1{{.*}}
+    ; CSE-NEXT: PseudoRET
+
+    %avl:gprnox0 = IMPLICIT_DEF
+    %wide_mask:vr = PseudoVMSET_M_B8 %avl, 0
+    %other_mask:vmv0 = IMPLICIT_DEF
+    %data:vr = IMPLICIT_DEF
+    %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide_mask, %data, %other_mask, -1, 3, 0
+    %mask1:vmv0 = PseudoVMSET_M_B8 %avl, 0
+    DBG_VALUE %mask1, $noreg
+    %later_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %mask1, -1, 3, 0
+    PseudoRET
+...
+
+# MachineCSE may commute an instruction in place to find an equivalent
+# expression. If the target then rejects replacing its VMV0 result with the
+# dominating VR result, retain the semantically equivalent commuted instruction
+# and report the transformation rather than silently preserving all analyses.
+---
+name: machine_cse_restore_commuted_vmv0
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CSE-LABEL: name: machine_cse_restore_commuted_vmv0
+    ; CSE: %wide:vr = PseudoVMAND_MM_B8 %lhs, %rhs
+    ; CSE-NEXT: %mask:vmv0 = PseudoVMAND_MM_B8 %lhs, %rhs
+
+    %lhs:vr = IMPLICIT_DEF
+    %rhs:vr = IMPLICIT_DEF
+    %wide:vr = PseudoVMAND_MM_B8 %lhs, %rhs, 4, 0
+    %mask:vmv0 = PseudoVMAND_MM_B8 %rhs, %lhs, 4, 0
+    INLINEASM &"", sideeffect attdialect, reguse:VR, %wide
+    INLINEASM &"", sideeffect attdialect, reguse:VMV0, %mask
+    PseudoRET
+...

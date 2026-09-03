@@ -1,0 +1,66 @@
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=register-coalescer \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+
+# Coalescing a general vector register into VMV0 would constrain the entire
+# value to V0. Keep the cross-class copy so independently live V0-only values
+# remain allocatable. Same-class VMV0 copies can still be coalesced.
+
+--- |
+  define void @do_not_coalesce_vr_to_vmv0() { ret void }
+  define void @do_not_coalesce_synthetic_v0_subreg() { ret void }
+  define void @coalesce_same_class_vmv0() { ret void }
+...
+
+---
+name: do_not_coalesce_vr_to_vmv0
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: do_not_coalesce_vr_to_vmv0
+    ; CHECK: %wide:vr = PseudoVMAND_MM_B8
+    ; CHECK-NEXT: %mask:vmv0 = COPY %wide
+    ; CHECK-NEXT: INLINEASM {{.*}}reguse:VMV0{{.*}}%mask
+
+    %a:vr = IMPLICIT_DEF
+    %b:vr = IMPLICIT_DEF
+    %wide:vr = PseudoVMAND_MM_B8 %a, %b, 4, 0
+    %mask:vmv0 = COPY %wide
+    INLINEASM &"", sideeffect attdialect, reguse:VMV0, %mask
+    PseudoRET
+...
+
+# A synthesized tuple class is not itself V0-only, but sub_vrm1_0 is forced
+# to V0. Do not merge that subregister with a broad VR live range.
+---
+name: do_not_coalesce_synthetic_v0_subreg
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: do_not_coalesce_synthetic_v0_subreg
+    ; CHECK: %tuple:vrm2_with_sub_vrm1_0_in_vmv0 = IMPLICIT_DEF
+    ; CHECK-NEXT: %wide:vr = COPY %tuple.sub_vrm1_0
+
+    %tuple:vrm2_with_sub_vrm1_0_in_vmv0 = IMPLICIT_DEF
+    %wide:vr = COPY %tuple.sub_vrm1_0
+    INLINEASM &"", sideeffect attdialect, reguse:VR, %wide
+    PseudoRET
+...
+
+---
+name: coalesce_same_class_vmv0
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: coalesce_same_class_vmv0
+    ; CHECK: %dst:vmv0 = IMPLICIT_DEF
+    ; CHECK-NOT: COPY %src
+    ; CHECK: INLINEASM {{.*}}reguse:VMV0{{.*}}%dst
+
+    %src:vmv0 = IMPLICIT_DEF
+    %dst:vmv0 = COPY %src
+    INLINEASM &"", sideeffect attdialect, reguse:VMV0, %dst
+    PseudoRET
+...
