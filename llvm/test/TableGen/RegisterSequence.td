@@ -159,12 +159,17 @@ def : RegisterSequence<[R2, R5]>;
 // member it begins at, R_64 and member 2 naming R2_64, so the Name field of
 // the rest, the first, is the empty string at offset 2.
 //
-// The first two pairs, then. The first holds a name, its sub-registers and its
-// register units, being the first register of its block; the second holds none
-// of them, being described by the block and by that first register.
+// And what is left is the same for every register of a block, so the first of
+// them holds that too and the rest hold nothing at all: their sub-register
+// indices, the lane masks of their register units, and whether they are
+// constant or artificial.
+//
+// The first two pairs, then. The first holds a whole entry, being the first
+// register of its block; the second holds an empty one, everything about it
+// coming from the block and from that first register.
 // CHECK:      extern const MCRegisterDesc TestTargetRegDesc[]
-// CHECK:      { {{[0-9]+}}, 20, 7, 0, {{[0-9]+}},
-// CHECK-NEXT: { 2, 7, 7, 0, 0,
+// CHECK:      { {{[0-9]+}}, 20, 7, 0, {{[0-9]+}}, {{[0-9]+}}, 0, 0 },
+// CHECK-NEXT: { 2, 7, 7, 0, 0, 0, 0, 0 },
 
 // The series of register that the registers of a block are contained by, said
 // as where one sits with respect to the register it contains: the register it

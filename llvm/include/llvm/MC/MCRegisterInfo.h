@@ -441,6 +441,24 @@ private:
     return Reg.id() < unsigned(Block.FirstReg) + Block.Count ? &Block : nullptr;
   }
 
+  /// The descriptor of the given register.
+  ///
+  /// A register of a sequence block gets the descriptor of the first register
+  /// of that block. Registers of a block differ only in how far along the
+  /// sequence they start, so one descriptor says as much about them as a
+  /// descriptor can, and only the first of them has one.
+  ///
+  /// What differs between them is held by the block instead, and the register
+  /// info puts the two together: where their sub-registers and register units
+  /// are, what contains them, and what they are called.
+  const MCRegisterDesc &get(MCRegister Reg) const {
+    assert(Reg.id() < NumRegs &&
+           "Attempting to access record for invalid register number!");
+    if (const MCSeqBlockDesc *Block = getSeqBlockOf(Reg))
+      return Desc[Block->FirstReg];
+    return Desc[Reg.id()];
+  }
+
   /// Iterator class that can traverse the differentially encoded values in
   /// DiffLists. Don't use this class directly, use one of the adaptors below.
   class DiffListIterator
@@ -621,18 +639,6 @@ public:
     return PCReg;
   }
 
-  const MCRegisterDesc &operator[](MCRegister Reg) const {
-    assert(Reg.id() < NumRegs &&
-           "Attempting to access record for invalid register number!");
-    return Desc[Reg.id()];
-  }
-
-  /// Provide a get method, equivalent to [], but more useful with a
-  /// pointer to this object.
-  const MCRegisterDesc &get(MCRegister Reg) const {
-    return operator[](Reg);
-  }
-
   /// Returns the physical register number of sub-register "Index"
   /// for physical register RegNo. Return zero if the sub-register does not
   /// exist.
@@ -664,6 +670,18 @@ public:
       return (Name.take_front(At) + Twine(Member) + Name.drop_front(At)).str();
     }
     return RegStrings + get(RegNo).Name;
+  }
+
+  /// Returns where the sub-register indices of the given register begin, in
+  /// MCRI::SubRegIndices. They run alongside its sub-registers.
+  const uint16_t *getSubRegIndices(MCRegister Reg) const {
+    return SubRegIndices + get(Reg).SubRegIndices;
+  }
+
+  /// Returns where the lane masks of the given register's register units
+  /// begin, in MCRI::RegUnitMaskSequences. They run alongside its units.
+  const LaneBitmask *getRegUnitLaneMasks(MCRegister Reg) const {
+    return &RegUnitMaskSequences[get(Reg).RegUnitLaneMasks];
   }
 
   /// Returns true if the given register is constant.
@@ -824,15 +842,17 @@ public:
     assert(Reg.isPhysical());
 
     // Registers of a sequence block have no sub-register lists of their own,
-    // so walk the first register's list and adjust each element by its slope.
-    MCRegister Described = Reg;
+    // so walk the list of the block's first register, which is also the
+    // register whose descriptor they share, and adjust each element by its
+    // slope.
+    MCRegister ListOf = Reg;
     if (const MCSeqBlockDesc *Block = MCRI->getSeqBlockOf(Reg)) {
-      Described = Block->FirstReg;
+      ListOf = Block->FirstReg;
       Shift = Reg.id() - Block->FirstReg;
       Slopes = MCRI->DiffLists + Block->SubRegSlopes;
     }
 
-    I.init(Described.id(), MCRI->DiffLists + MCRI->get(Described).SubRegs);
+    I.init(ListOf.id(), MCRI->DiffLists + MCRI->get(Reg).SubRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(Reg.id());
     if (!IncludeSelf)
@@ -866,7 +886,7 @@ public:
   /// associated subregister indices.
   MCSubRegIndexIterator(MCRegister Reg, const MCRegisterInfo *MCRI)
     : SRIter(Reg, MCRI) {
-    SRIndex = MCRI->SubRegIndices + MCRI->get(Reg).SubRegIndices;
+    SRIndex = MCRI->getSubRegIndices(Reg);
   }
 
   /// Returns current sub-register.
@@ -1005,15 +1025,12 @@ public:
     // walk the first register's list and shift each unit along. The units of
     // one register of a block sit the same way as those of the previous one,
     // only starting RegUnitStride further on.
-    MCRegister Described = Reg;
     unsigned Moved = 0;
-    if (const MCSeqBlockDesc *Block = MCRI->getSeqBlockOf(Reg)) {
-      Described = Block->FirstReg;
+    if (const MCSeqBlockDesc *Block = MCRI->getSeqBlockOf(Reg))
       Moved = (Reg.id() - Block->FirstReg) * Block->RegUnitStride;
-    }
 
-    // Decode the RegUnits MCRegisterDesc field.
-    unsigned RU = MCRI->get(Described).RegUnits;
+    // Decode the RegUnits MCRegisterDesc field of the register described.
+    unsigned RU = MCRI->get(Reg).RegUnits;
     unsigned FirstRU = RU & ((1u << RegUnitBits) - 1);
     unsigned Offset = RU >> RegUnitBits;
     I.init(FirstRU + Moved, MCRI->DiffLists + Offset);
@@ -1046,8 +1063,7 @@ public:
   /// associated LaneMasks in Reg.
   MCRegUnitMaskIterator(MCRegister Reg, const MCRegisterInfo *MCRI)
     : RUIter(Reg, MCRI) {
-      uint16_t Idx = MCRI->get(Reg).RegUnitLaneMasks;
-      MaskListIter = &MCRI->RegUnitMaskSequences[Idx];
+    MaskListIter = MCRI->getRegUnitLaneMasks(Reg);
   }
 
   /// Returns a (RegUnit, LaneMask) pair.

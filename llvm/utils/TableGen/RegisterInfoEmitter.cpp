@@ -1079,7 +1079,10 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     SubRegIdxVec &SRIs = SubRegIdxLists[i];
     for (const CodeGenRegister *S : SR)
       SRIs.push_back(Reg.getSubRegIndex(S));
-    SubRegIdxSeqs.add(SRIs);
+    // What the registers of a block have in common is held by the first of
+    // them, so only that one's goes in the table.
+    if (auto [Blk, Idx] = GetSeqBlockMember(Reg); !Blk || Idx == 0)
+      SubRegIdxSeqs.add(SRIs);
 
     // Super-registers are already computed. A register of a block reads the
     // series its block says instead, so only registers outside one need a list.
@@ -1100,7 +1103,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     MaskVec &LaneMaskVec = RegUnitLaneMasks[i];
     assert(LaneMaskVec.empty());
     llvm::append_range(LaneMaskVec, RUMasks);
-    LaneMaskSeqs.add(LaneMaskVec);
+    if (auto [Blk, Idx] = GetSeqBlockMember(Reg); !Blk || Idx == 0)
+      LaneMaskSeqs.add(LaneMaskVec);
   }
 
   // The slopes go in the same table as the lists they accompany. They are
@@ -1246,13 +1250,17 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       Offset = 0;
     }
 
-    OS << "  { "
-       << RegStrings.get(Block && Index != 0 ? "" : Reg.getName().str()) << ", "
+    // What the registers of a block have in common they read from the first
+    // of them, so the rest hold none of it.
+    bool Shares = Block && Index != 0;
+
+    OS << "  { " << RegStrings.get(Shares ? "" : Reg.getName().str()) << ", "
        << SubRegs << ", " << SuperRegs << ", "
-       << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
+       << (Shares ? 0 : SubRegIdxSeqs.get(SubRegIdxLists[i])) << ", "
        << (Offset << RegUnitBits | FirstRU) << ", "
-       << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant << ", "
-       << Reg.Artificial << " },\n";
+       << (Shares ? 0 : LaneMaskSeqs.get(RegUnitLaneMasks[i])) << ", "
+       << (Shares ? false : Reg.Constant) << ", "
+       << (Shares ? false : Reg.Artificial) << " },\n";
     ++i;
   }
   OS << "};\n\n"; // End of register descriptors...

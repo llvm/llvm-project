@@ -87,7 +87,7 @@ DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
       MCRI(Context->getRegisterInfo()), IsEH(IsEH) {
 
   for (auto LLVMReg : getTrackingRegs(MCRI)) {
-    if (MCRI->get(LLVMReg).IsArtificial || MCRI->get(LLVMReg).IsConstant)
+    if (MCRI->isArtificial(LLVMReg) || MCRI->isConstant(LLVMReg))
       continue;
 
     DWARFRegNum Reg = MCRI->getDwarfRegNum(LLVMReg, IsEH);

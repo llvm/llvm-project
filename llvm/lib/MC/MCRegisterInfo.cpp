@@ -118,7 +118,7 @@ MCRegister MCRegisterInfo::getSubReg(MCRegister Reg, unsigned Idx) const {
          "This is not a subregister index");
   // Get a pointer to the corresponding SubRegIndices list. This list has the
   // name of each sub-register in the same order as MCSubRegIterator.
-  const uint16_t *SRI = SubRegIndices + get(Reg).SubRegIndices;
+  const uint16_t *SRI = getSubRegIndices(Reg);
   for (MCPhysReg Sub : subregs(Reg)) {
     if (*SRI == Idx)
       return Sub;
@@ -132,7 +132,7 @@ unsigned MCRegisterInfo::getSubRegIndex(MCRegister Reg,
   assert(SubReg && SubReg < getNumRegs() && "This is not a register");
   // Get a pointer to the corresponding SubRegIndices list. This list has the
   // name of each sub-register in the same order as MCSubRegIterator.
-  const uint16_t *SRI = SubRegIndices + get(Reg).SubRegIndices;
+  const uint16_t *SRI = getSubRegIndices(Reg);
   for (MCPhysReg Sub : subregs(Reg)) {
     if (Sub == SubReg)
       return *SRI;

@@ -1424,12 +1424,22 @@ void CodeGenRegBank::computeSeqBlocks() {
       return true;
     };
 
+    // Registers of a block read the shared descriptor from the first of them,
+    // so every field of it must hold for them all. Their sub-register indices
+    // already have to agree, being what tells one sub-register from another.
+    // Their lane masks are not computed until after the blocks are formed and
+    // so are checked in a later pass.
+    auto SharesWithFirst = [&](unsigned Index) {
+      return Run[Index]->Constant == Run[0]->Constant &&
+             Run[Index]->Artificial == Run[0]->Artificial;
+    };
+
     // Take the run as far as all of them hold, and no further.
     if (First.MemberIndex == 0 && Step != 0) {
       FirstSubRegs = getSubRegsInOrder(*Run[0], *this);
       unsigned Count = 1;
       while (Count < Run.size() && TilesSequence(Count) && MovesInStep(Count) &&
-             UnitsLieAlike(Count))
+             UnitsLieAlike(Count) && SharesWithFirst(Count))
         ++Count;
       Run.resize(Count);
     } else {
@@ -1471,8 +1481,6 @@ void CodeGenRegBank::computeSeqBlocks() {
   }
 
   FinishRun();
-
-  computeSeqBlockSuperRegSeries();
 }
 
 // Work out, for each block, every series of register its registers are
@@ -1496,6 +1504,51 @@ void CodeGenRegBank::computeSeqBlocks() {
 // one not yet formed. Shortening a block can leave a register that was one of
 // its own outside every block, which is another register nothing describes,
 // so it settles.
+// Shorten each block to the run of registers that share lane masks.
+//
+// The masks run alongside the register units, and a register of a block reads
+// those of the first register, so they must be the same in each. They are not
+// computed until well after the blocks are formed, hence the separate pass.
+void CodeGenRegBank::shortenSeqBlocksToSharedLaneMasks() {
+  bool Shortened = false;
+  for (CodeGenRegisterSequenceBlock &Block : SeqBlocks) {
+    ArrayRef<LaneBitmask> FirstMasks = Block.FirstReg->getRegUnitLaneMasks();
+
+    unsigned Count = 1;
+    while (Count != Block.Count) {
+      ArrayRef<LaneBitmask> Masks =
+          Registers[Block.FirstReg->EnumValue - 1 + Count]
+              .getRegUnitLaneMasks();
+      if (Masks.size() != FirstMasks.size() ||
+          !std::equal(Masks.begin(), Masks.end(), FirstMasks.begin()))
+        break;
+      ++Count;
+    }
+
+    if (Count != Block.Count) {
+      Shortened = true;
+      // A block of one register says nothing the register does not say for
+      // itself, so it is no block at all.
+      Block.Count = Count < 2 ? 0 : Count;
+    }
+  }
+
+  if (!Shortened)
+    return;
+
+  // Registers dropped from a shortened block belong to no block now.
+  SeqBlockMembers.clear();
+  erase_if(SeqBlocks, [](const CodeGenRegisterSequenceBlock &Block) {
+    return Block.Count < 2;
+  });
+  for (const auto &[BlockIndex, Block] : enumerate(SeqBlocks)) {
+    for (unsigned Index = 0; Index != Block.Count; ++Index)
+      SeqBlockMembers.try_emplace(
+          Registers[Block.FirstReg->EnumValue - 1 + Index].TheDef,
+          SeqBlockPos{unsigned(BlockIndex), Index});
+  }
+}
+
 void CodeGenRegBank::computeSeqBlockSuperRegSeries() {
   if (SeqBlocks.empty())
     return;
@@ -2847,6 +2900,11 @@ void CodeGenRegBank::computeDerivedInfo() {
   computeRegUnitSets();
 
   computeRegUnitLaneMasks();
+
+  // Now that the lane masks are known, shorten the blocks to the runs of
+  // registers that share them, then work out what contains those registers.
+  shortenSeqBlocksToSharedLaneMasks();
+  computeSeqBlockSuperRegSeries();
 
   // Compute register class HasDisjunctSubRegs/CoveredBySubRegs flag.
   for (CodeGenRegisterClass &RC : RegClasses) {

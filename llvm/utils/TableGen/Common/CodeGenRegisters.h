@@ -801,6 +801,7 @@ class CodeGenRegBank {
 
   void computeRegSeqPositions();
   void computeSeqBlocks();
+  void shortenSeqBlocksToSharedLaneMasks();
   void computeSeqBlockSuperRegSeries();
   bool computeSeqBlockSuperRegSeriesOnce();
 
