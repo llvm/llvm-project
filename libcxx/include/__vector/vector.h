@@ -930,10 +930,9 @@ vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) 
 template <class _Tp, class _Allocator>
 template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n) {
+vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel, size_type __n) {
   _ConstructTransaction __tx(*this, __n);
-  __tx.__pos_ = std::__uninitialized_allocator_copy(
-      this->__layout_.__alloc(), std::move(__first), std::move(__last), __tx.__pos_);
+  __tx.__pos_ = std::__uninitialized_allocator_copy_n(this->__layout_.__alloc(), std::move(__first), __n, __tx.__pos_);
 }
 
 template <class _Tp, class _Allocator>
