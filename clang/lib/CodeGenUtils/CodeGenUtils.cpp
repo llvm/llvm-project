@@ -82,7 +82,7 @@ bool canSkipVTablePointerInitialization(ASTContext &Ctx,
 
   // Check the fields.
   for (const auto *Field : ClassDecl->fields())
-    if (fieldHasTrivialDestructorBody(Ctx, Field))
+    if (!fieldHasTrivialDestructorBody(Ctx, Field))
       return false;
 
   return true;
