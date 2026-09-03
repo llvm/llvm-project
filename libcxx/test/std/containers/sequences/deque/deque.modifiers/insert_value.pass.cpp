@@ -139,7 +139,7 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
   auto it   = d.insert(d.begin() + 1, value);
   assert(*it == 2);
   assert(d.size() == 3);
-  assert(std::equal(d.begin(), d.end(), std::begin(src_array)));
+  assert(std::equal(d.begin(), d.end(), std::begin(dst_array)));
 
   return true;
 }

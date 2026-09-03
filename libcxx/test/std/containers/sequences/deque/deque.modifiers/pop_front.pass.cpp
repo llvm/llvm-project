@@ -83,7 +83,7 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
   const int src_array[]      = {158, 650, 43, -605, 8420, 481, 78, -27, 580, 7036, 873};
   const std::size_t src_size = sizeof(src_array) / sizeof(src_array[0]);
 
-  std::deque<int> d(std::begin(), std::end());
+  std::deque<int> d(std::begin(src_array), std::end(src_array));
   d.pop_front();
   assert(d.size() == src_size - 1);
   assert(std::equal(d.begin(), d.end(), std::begin(src_array) + 1));

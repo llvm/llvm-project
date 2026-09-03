@@ -95,13 +95,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 TEST_CONSTEXPR_CXX26 bool test_constexpr() {
-  const int src_array[] = {1, 2};
-  const int dst_array[] = {1, 2, 9, 9};
+  const int src_array[] = {1, 2, 9, 9};
 
-  std::deque<int> d(std::begin(src_array), std::end(src_array));
+  std::deque<int> d(std::begin(src_array), std::begin(src_array) + 2);
   d.resize(4, 9);
   assert(d.size() == 4);
-  assert(std::equal(d.begin(), d.end(), std::begin(dst_array)));
+  assert(std::equal(d.begin(), d.end(), std::begin(src_array)));
 
   return true;
 }

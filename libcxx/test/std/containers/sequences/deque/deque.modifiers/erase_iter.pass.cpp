@@ -135,6 +135,7 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
 
   std::deque<int> d(std::begin(src_array), std::end(src_array));
   auto it = d.erase(d.begin() + 1);
+  assert(*it == 3);
   assert(d.size() == 2);
   assert(std::equal(d.begin(), d.end(), std::begin(dst_array)));
   return true;

@@ -38,9 +38,9 @@ struct deque_test {
   std::deque<int>* d_;
   int* i_;
 
-  deque_test(std::deque<int>& d, int& i) : d_(&d), i_(&i) {}
+  TEST_CONSTEXPR_CXX26 deque_test(std::deque<int>& d, int& i) : d_(&d), i_(&i) {}
 
-  void operator()(int& v) {
+  TEST_CONSTEXPR_CXX26 void operator()(int& v) {
     assert(&(*d_)[*i_] == &v);
     ++*i_;
   }

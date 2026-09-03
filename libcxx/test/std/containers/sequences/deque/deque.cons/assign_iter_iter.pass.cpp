@@ -11,14 +11,16 @@
 // template <class InputIterator>
 //   void assign(InputIterator f, InputIterator l); // constexpr since C++26
 
-#include "asan_testing.h"
-#include <deque>
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <deque>
 
-#include "test_macros.h"
-#include "test_iterators.h"
+#include "asan_testing.h"
 #include "min_allocator.h"
+#include "test_iterators.h"
+#include "test_macros.h"
+
 #if TEST_STD_VER >= 11
 #  include "emplace_constructible.h"
 #endif
@@ -153,7 +155,7 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
   std::deque<int> d;
   d.assign(input, input + 3);
   assert(d.size() == 3);
-  assert(std::equal(d.begin(), d.end(), std::begin(input));
+  assert(std::equal(d.begin(), d.end(), std::begin(input)));
 
   test_iterators();
 

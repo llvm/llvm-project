@@ -91,7 +91,7 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
   const std::size_t dst_size = sizeof(dst_array) / sizeof(dst_array[0]);
 
   std::deque<int> d(std::begin(dst_array) + 1, std::end(dst_array));
-  int value = dst_array[1];
+  int value = dst_array[0];
   d.push_front(value);
   assert(d.size() == dst_size);
   assert(std::equal(d.begin(), d.end(), std::begin(dst_array)));
