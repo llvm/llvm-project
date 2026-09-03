@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
@@ -1357,7 +1358,8 @@ bool mlir::affine::isValidLoopInterchangePermutation(
   // Gather dependence components for dependences between all ops in loop nest
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
   std::vector<SmallVector<DependenceComponent, 2>> depCompsVec;
-  getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec);
+  if (failed(getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec)))
+    return false;
   return checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap);
 }
 
@@ -1453,6 +1455,31 @@ unsigned mlir::affine::permuteLoops(ArrayRef<AffineForOp> input,
   return invPermMap[0].second;
 }
 
+// Returns true when affine accesses use different views of the same storage
+// and at least one access writes. The affine dependence analysis cannot
+// compare access maps expressed in different view coordinate systems, so a
+// schedule-changing transform must conservatively preserve this ordering.
+static bool
+hasConflictingAffineStorageAccesses(ArrayRef<Operation *> affineAccesses) {
+  for (unsigned i = 0, e = affineAccesses.size(); i < e; ++i) {
+    MemRefAccess firstAccess(affineAccesses[i]);
+    Value firstStorage =
+        memref::skipViewLikeOps(cast<MemrefValue>(firstAccess.memref));
+    for (unsigned j = i + 1; j < e; ++j) {
+      MemRefAccess secondAccess(affineAccesses[j]);
+      if (firstAccess.memref == secondAccess.memref)
+        continue;
+      Value secondStorage =
+          memref::skipViewLikeOps(cast<MemrefValue>(secondAccess.memref));
+      if (firstStorage != secondStorage)
+        continue;
+      if (firstAccess.isStore() || secondAccess.isStore())
+        return true;
+    }
+  }
+  return false;
+}
+
 // Sinks all sequential loops to the innermost levels (while preserving
 // relative order among them) and moves all parallel loops to the
 // outermost (while again preserving relative order among them).
@@ -1462,11 +1489,39 @@ AffineForOp mlir::affine::sinkSequentialLoops(AffineForOp forOp) {
   if (loops.size() < 2)
     return forOp;
 
+  // Dependence components only model affine memory accesses. Do not reorder a
+  // loop nest containing any other memory effect, even if that effect can be
+  // represented by a different analysis, because its schedule is not covered
+  // by the dependence components used below.
+  LoopNestStateCollector collector;
+  collector.collect(loops[0]);
+  if (collector.hasUnmodeledMemoryEffects)
+    return forOp;
+  SmallVector<Operation *, 8> affineAccesses;
+  for (Operation *op : collector.loadOpInsts)
+    affineAccesses.push_back(op);
+  for (Operation *op : collector.storeOpInsts)
+    affineAccesses.push_back(op);
+  if (hasConflictingAffineStorageAccesses(affineAccesses))
+    return forOp;
+  if (loops[0]
+          ->walk([&](Operation *op) {
+            if (isa<AffineForOp, AffineReadOpInterface, AffineWriteOpInterface>(
+                    op) ||
+                op->mightHaveTrait<OpTrait::IsTerminator>())
+              return WalkResult::advance();
+            return isMemoryEffectFree(op) ? WalkResult::advance()
+                                          : WalkResult::interrupt();
+          })
+          .wasInterrupted())
+    return forOp;
+
   // Gather dependence components for dependences between all ops in loop nest
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
   unsigned maxLoopDepth = loops.size();
   std::vector<SmallVector<DependenceComponent, 2>> depCompsVec;
-  getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec);
+  if (failed(getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec)))
+    return forOp;
 
   // Mark loops as either parallel or sequential.
   SmallVector<bool, 8> isParallelLoop(maxLoopDepth, true);

@@ -524,8 +524,11 @@ bool mlir::affine::isTilingValid(ArrayRef<AffineForOp> loops) {
             srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
             &depComps);
 
+        if (result.value == DependenceResult::Failure)
+          return false;
+
         // Skip if there is no dependence in this case.
-        if (!hasDependence(result))
+        if (noDependence(result))
           continue;
 
         // Check whether there is any negative direction vector in the

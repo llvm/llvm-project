@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -37,10 +38,14 @@ static void getLoadAndStoreMemRefAccesses(Operation *opA,
                                           DenseMap<Value, bool> &values) {
   opA->walk([&](Operation *op) {
     if (auto loadOp = dyn_cast<AffineReadOpInterface>(op)) {
-      if (values.count(loadOp.getMemRef()) == 0)
-        values[loadOp.getMemRef()] = false;
+      Value memref = memref::skipFullyAliasingOperations(
+          cast<MemrefValue>(loadOp.getMemRef()));
+      if (values.count(memref) == 0)
+        values[memref] = false;
     } else if (auto storeOp = dyn_cast<AffineWriteOpInterface>(op)) {
-      values[storeOp.getMemRef()] = true;
+      Value memref = memref::skipFullyAliasingOperations(
+          cast<MemrefValue>(storeOp.getMemRef()));
+      values[memref] = true;
     }
   });
 }
@@ -50,10 +55,16 @@ static void getLoadAndStoreMemRefAccesses(Operation *opA,
 /// Returns false otherwise.
 static bool isDependentLoadOrStoreOp(Operation *op,
                                      DenseMap<Value, bool> &values) {
-  if (auto loadOp = dyn_cast<AffineReadOpInterface>(op))
-    return values.count(loadOp.getMemRef()) > 0 && values[loadOp.getMemRef()];
-  if (auto storeOp = dyn_cast<AffineWriteOpInterface>(op))
-    return values.count(storeOp.getMemRef()) > 0;
+  if (auto loadOp = dyn_cast<AffineReadOpInterface>(op)) {
+    Value memref = memref::skipFullyAliasingOperations(
+        cast<MemrefValue>(loadOp.getMemRef()));
+    return values.count(memref) > 0 && values[memref];
+  }
+  if (auto storeOp = dyn_cast<AffineWriteOpInterface>(op)) {
+    Value memref = memref::skipFullyAliasingOperations(
+        cast<MemrefValue>(storeOp.getMemRef()));
+    return values.count(memref) > 0;
+  }
   return false;
 }
 
@@ -180,6 +191,63 @@ gatherLoadsAndStores(AffineForOp forOp,
   return !hasIfOp;
 }
 
+// The fusion transformation clones the complete source loop body into the
+// destination schedule. The affine slice and dependence analysis below does
+// not model the order or execution count of non-affine effects within that
+// schedule, so reject every such effect here. This check is intentionally
+// independent of MDG construction because this utility is also used as a
+// partial predicate by tests and by the main pass after MDG legality checks.
+// It does not model generic or unknown effects in operations between the
+// candidate loops; the MDG-backed caller remains responsible for those.
+static bool hasUnmodeledMemoryEffects(AffineForOp forOp) {
+  LoopNestStateCollector collector;
+  collector.collect(forOp);
+  if (collector.hasUnmodeledMemoryEffects)
+    return true;
+
+  bool hasEffects = false;
+  forOp.walk([&](Operation *op) {
+    if (hasEffects || isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
+      return;
+    auto memInterface = dyn_cast<MemoryEffectOpInterface>(op);
+    if (!memInterface) {
+      hasEffects = hasUnknownEffects(op);
+      return;
+    }
+
+    SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+    memInterface.getEffects(effects);
+    hasEffects = !effects.empty();
+  });
+  return hasEffects;
+}
+
+// Returns true when accesses in two loop bodies use different views of the
+// same storage and at least one access writes. The raw view remains important
+// for affine coordinate analysis, but a storage-level conflict is enough to
+// reject fusion because this check protects the frame condition of the
+// complete loop bodies before strategy-specific filtering.
+static bool hasConflictingStorageAccesses(ArrayRef<Operation *> firstOps,
+                                          ArrayRef<Operation *> secondOps) {
+  for (Operation *firstOp : firstOps) {
+    MemRefAccess firstAccess(firstOp);
+    Value firstStorage =
+        memref::skipViewLikeOps(cast<MemrefValue>(firstAccess.memref));
+    for (Operation *secondOp : secondOps) {
+      MemRefAccess secondAccess(secondOp);
+      if (firstAccess.memref == secondAccess.memref)
+        continue;
+      Value secondStorage =
+          memref::skipViewLikeOps(cast<MemrefValue>(secondAccess.memref));
+      if (firstStorage != secondStorage)
+        continue;
+      if (firstAccess.isStore() || secondAccess.isStore())
+        return true;
+    }
+  }
+  return false;
+}
+
 /// Returns the maximum loop depth at which we could fuse producer loop
 /// 'srcForOp' into consumer loop 'dstForOp' without violating data dependences.
 // TODO: Generalize this check for sibling and more generic fusion scenarios.
@@ -200,7 +268,10 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
     auto loadOp = dyn_cast<AffineReadOpInterface>(dstOp);
     Value memref = loadOp ? loadOp.getMemRef()
                           : cast<AffineWriteOpInterface>(dstOp).getMemRef();
-    if (producerConsumerMemrefs.count(memref) > 0)
+    if (llvm::any_of(producerConsumerMemrefs, [&](Value producerMemref) {
+          return memref::isSameViewOrTrivialAlias(
+              cast<MemrefValue>(producerMemref), cast<MemrefValue>(memref));
+        }))
       targetDstOps.push_back(dstOp);
   }
 
@@ -223,13 +294,26 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
       auto *dstOpInst = targetDstOps[j];
       MemRefAccess dstAccess(dstOpInst);
 
+      if (!memref::isSameViewOrTrivialAlias(
+              cast<MemrefValue>(srcAccess.memref),
+              cast<MemrefValue>(dstAccess.memref)))
+        continue;
+      // Affine maps are expressed in the raw view coordinates. Do not run
+      // precise dependence analysis across different views without a
+      // translation between those coordinate systems.
+      if (srcAccess.memref != dstAccess.memref) {
+        if (srcAccess.isStore() || dstAccess.isStore())
+          return 0;
+        continue;
+      }
+
       unsigned numCommonLoops =
           getNumCommonSurroundingLoops(*srcOpInst, *dstOpInst);
       for (unsigned d = 1; d <= numCommonLoops + 1; ++d) {
         // TODO: Cache dependence analysis results, check cache here.
         DependenceResult result =
             checkMemrefAccessDependence(srcAccess, dstAccess, d);
-        if (hasDependence(result)) {
+        if (mayHaveDependence(result)) {
           // Store minimum loop depth and break because we want the min 'd' at
           // which there is a dependence.
           loopDepth = std::min(loopDepth, d - 1);
@@ -262,6 +346,12 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
     return FusionResult::FailPrecondition;
   }
 
+  if (hasUnmodeledMemoryEffects(srcForOp) ||
+      hasUnmodeledMemoryEffects(dstForOp)) {
+    LDBG() << "Cannot fuse loop nests with unmodeled non-affine memory effects";
+    return FusionResult::FailFusionDependence;
+  }
+
   // Return 'failure' if no valid insertion point for fused loop nest in 'block'
   // exists which would preserve dependences.
   if (!getFusedLoopNestInsertionPoint(srcForOp, dstForOp)) {
@@ -287,6 +377,12 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
   if (!gatherLoadsAndStores(forOpB, opsB)) {
     LDBG() << "Fusing loops with affine.if unsupported";
     return FusionResult::FailPrecondition;
+  }
+
+  if (hasConflictingStorageAccesses(opsA, opsB)) {
+    LDBG() << "Fusion would change ordering of accesses through different "
+              "views of the same storage";
+    return FusionResult::FailFusionDependence;
   }
 
   // Return 'failure' if fusing loops at depth 'dstLoopDepth' wouldn't preserve
@@ -328,10 +424,34 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
     // to 'memref' in 'srcForOp' to compute the slice union.
     for (Operation *op : opsA) {
       auto load = dyn_cast<AffineReadOpInterface>(op);
-      if (load && load.getMemRef() == fusionStrategy.getSiblingFusionMemRef())
+      if (load &&
+          memref::isSameViewOrTrivialAlias(
+              cast<MemrefValue>(load.getMemRef()),
+              cast<MemrefValue>(fusionStrategy.getSiblingFusionMemRef())))
         strategyOpsA.push_back(op);
     }
     break;
+  }
+
+  // Affine access maps are expressed in the raw view coordinates. Reject a
+  // fusion that would pair different views from one trivial alias class until
+  // a coordinate translation is available.
+  auto getMemref = [](Operation *op) -> Value {
+    if (auto load = dyn_cast<AffineReadOpInterface>(op))
+      return load.getMemRef();
+    return cast<AffineWriteOpInterface>(op).getMemRef();
+  };
+  if (llvm::any_of(strategyOpsA, [&](Operation *srcOp) {
+        return llvm::any_of(opsB, [&](Operation *dstOp) {
+          Value srcMemref = getMemref(srcOp);
+          Value dstMemref = getMemref(dstOp);
+          return srcMemref != dstMemref &&
+                 memref::isSameViewOrTrivialAlias(cast<MemrefValue>(srcMemref),
+                                                  cast<MemrefValue>(dstMemref));
+        });
+      })) {
+    LDBG() << "Fusion across different trivial alias views is unsupported";
+    return FusionResult::FailFusionDependence;
   }
 
   // Compute union of computation slices computed between all pairs of ops
@@ -652,6 +772,10 @@ void mlir::affine::gatherProducerConsumerMemrefs(
   // memrefs from loads in 'dstOps'.
   for (Operation *op : dstOps)
     if (auto loadOp = dyn_cast<AffineReadOpInterface>(op))
-      if (srcStoreMemRefs.count(loadOp.getMemRef()) > 0)
+      if (llvm::any_of(srcStoreMemRefs, [&](Value storeMemref) {
+            return memref::isSameViewOrTrivialAlias(
+                cast<MemrefValue>(storeMemref),
+                cast<MemrefValue>(loadOp.getMemRef()));
+          }))
         producerConsumerMemrefs.insert(loadOp.getMemRef());
 }

@@ -869,7 +869,8 @@ func.func @call_op_prevents_fusion(%arg0: memref<16xf32>){
 // -----
 
 func.func private @some_function()
-func.func @call_op_does_not_prevent_fusion(%arg0: memref<16xf32>){
+func.func @call_op_without_memref_operands_prevents_fusion(
+    %arg0: memref<16xf32>) {
   %A = memref.alloc() : memref<16xf32>
   %cst_1 = arith.constant 1.000000e+00 : f32
   affine.for %arg1 = 0 to 16 {
@@ -885,9 +886,10 @@ func.func @call_op_does_not_prevent_fusion(%arg0: memref<16xf32>){
   }
   return
 }
-// CHECK-LABEL: func @call_op_does_not_prevent_fusion
+// CHECK-LABEL: func @call_op_without_memref_operands_prevents_fusion
 // CHECK:         affine.for
-// CHECK-NOT:     affine.for
+// CHECK:         call @some_function() : () -> ()
+// CHECK:         affine.for
 
 // -----
 
@@ -1281,14 +1283,13 @@ func.func @unknown_memref_def_op() {
   affine.for %i1 = 0 to 10 {
     %0 = affine.load %may_alias[%i1] : memref<10xf32>
   }
-  // Fusion happens, but memref isn't privatized since %may_alias's origin is
-  // unknown.
+  // The unknown call prevents fusion because its memory effects are not
+  // limited to the returned memref.
   // CHECK:       call
   // CHECK-NEXT:  affine.for
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK:       affine.for
   // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
-  // CHECK-NEXT:  }
-  // CHECK-NOT:   affine.for
 
   return
 }

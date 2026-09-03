@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -154,7 +155,11 @@ static void getProducerCandidates(unsigned dstId,
 
     if (any_of(srcNode->stores, [&](Operation *op) {
           auto storeOp = cast<AffineWriteOpInterface>(op);
-          return consumedMemrefs.count(storeOp.getMemRef()) > 0;
+          return llvm::any_of(consumedMemrefs, [&](Value consumedMemref) {
+            return memref::isSameViewOrTrivialAlias(
+                cast<MemrefValue>(consumedMemref),
+                cast<MemrefValue>(storeOp.getMemRef()));
+          });
         }))
       srcIdCandidates.push_back(srcNode->id);
   }
@@ -218,7 +223,10 @@ static void gatherEscapingMemrefs(unsigned id, const MemRefDependenceGraph &mdg,
   auto *node = mdg.getNode(id);
   for (Operation *storeOp : node->stores) {
     auto memref = cast<AffineWriteOpInterface>(storeOp).getMemRef();
-    if (escapingMemRefs.count(memref))
+    if (llvm::any_of(escapingMemRefs, [&](Value escapingMemref) {
+          return memref::isSameViewOrTrivialAlias(
+              cast<MemrefValue>(escapingMemref), cast<MemrefValue>(memref));
+        }))
       continue;
     if (isEscapingMemref(memref, &mdg.block))
       escapingMemRefs.insert(memref);
@@ -764,8 +772,9 @@ namespace {
 //   *) Update graph state to reflect the fusion of 'sibNode' into 'dstNode'.
 //
 // Given a graph where top-level operations are vertices in the set 'V' and
-// edges in the set 'E' are dependences between vertices, this algorithm
-// takes O(V) time for initialization, and has runtime O(V + E).
+// edges in the set 'E' are dependences between vertices, graph traversal is
+// linear in the graph size. Graph construction and fusion legality also
+// perform pairwise access and dependence checks for candidate loop depths.
 //
 // This greedy algorithm is not 'maximal' due to the current restriction of
 // fusing along single producer consumer edges, but there is a TODO: to fix
@@ -852,7 +861,12 @@ public:
     // 1. The source is to be removed after fusion,
     // OR
     // 2. The destination writes to `memref`.
-    if (srcEscapingMemRefs.count(memref) > 0 &&
+    if (llvm::any_of(srcEscapingMemRefs,
+                     [&](Value escapingMemref) {
+                       return memref::isSameViewOrTrivialAlias(
+                           cast<MemrefValue>(escapingMemref),
+                           cast<MemrefValue>(memref));
+                     }) &&
         (removeSrcNode || consumerNode->getStoreOpCount(memref) > 0))
       return false;
 
@@ -867,7 +881,12 @@ public:
     // cannot create a private memref.
     if (removeSrcNode &&
         any_of(mdg->outEdges[producerId], [&](const auto &edge) {
-          return edge.value == memref && edge.id != consumerId;
+          if (edge.id == consumerId)
+            return false;
+          if (edge.kind == MemRefDependenceGraph::Edge::Kind::SSA)
+            return edge.value == memref;
+          return memref::isSameViewOrTrivialAlias(cast<MemrefValue>(edge.value),
+                                                  cast<MemrefValue>(memref));
         }))
       return false;
 
@@ -972,12 +991,20 @@ public:
         // producer-consumer loads/stores.
         SmallVector<Operation *, 2> dstMemrefOps;
         for (Operation *op : dstNode->loads)
-          if (producerConsumerMemrefs.count(
-                  cast<AffineReadOpInterface>(op).getMemRef()) > 0)
+          if (llvm::any_of(producerConsumerMemrefs, [&](Value producerMemref) {
+                return memref::isSameViewOrTrivialAlias(
+                    cast<MemrefValue>(producerMemref),
+                    cast<MemrefValue>(
+                        cast<AffineReadOpInterface>(op).getMemRef()));
+              }))
             dstMemrefOps.push_back(op);
         for (Operation *op : dstNode->stores)
-          if (producerConsumerMemrefs.count(
-                  cast<AffineWriteOpInterface>(op).getMemRef()))
+          if (llvm::any_of(producerConsumerMemrefs, [&](Value producerMemref) {
+                return memref::isSameViewOrTrivialAlias(
+                    cast<MemrefValue>(producerMemref),
+                    cast<MemrefValue>(
+                        cast<AffineWriteOpInterface>(op).getMemRef()));
+              }))
             dstMemrefOps.push_back(op);
         if (dstMemrefOps.empty())
           continue;
@@ -1050,8 +1077,13 @@ public:
           // Retrieve producer stores from the src loop.
           SmallVector<Operation *, 2> producerStores;
           for (Operation *op : srcNode->stores)
-            if (producerConsumerMemrefs.count(
-                    cast<AffineWriteOpInterface>(op).getMemRef()))
+            if (llvm::any_of(
+                    producerConsumerMemrefs, [&](Value producerMemref) {
+                      return memref::isSameViewOrTrivialAlias(
+                          cast<MemrefValue>(producerMemref),
+                          cast<MemrefValue>(
+                              cast<AffineWriteOpInterface>(op).getMemRef()));
+                    }))
               producerStores.push_back(op);
 
           assert(!producerStores.empty() && "Expected producer store");
@@ -1075,14 +1107,13 @@ public:
             srcId, dstId, bestSlice, fusedLoopInsPoint, srcEscapingMemRefs,
             *mdg);
 
-        DenseSet<Value> privateMemrefs;
+        DenseSet<Value> privateMemrefsToCreate;
         for (Value memref : producerConsumerMemrefs) {
           if (canCreatePrivateMemRef(memref, srcEscapingMemRefs, srcId, dstId,
                                      removeSrcNode)) {
             // Create a private version of this memref.
             LDBG() << "Creating private memref for " << memref;
-            // Create a private version of this memref.
-            privateMemrefs.insert(memref);
+            privateMemrefsToCreate.insert(memref);
           }
         }
 
@@ -1098,12 +1129,11 @@ public:
         if (fusedLoopInsPoint != dstAffineForOp)
           dstAffineForOp->moveBefore(fusedLoopInsPoint);
 
-        // Update edges between 'srcNode' and 'dstNode'.
-        mdg->updateEdges(srcNode->id, dstNode->id, privateMemrefs,
-                         removeSrcNode);
-
-        // Create private memrefs.
-        if (!privateMemrefs.empty()) {
+        // Create private memrefs. Only record a memref for edge updates after
+        // its replacement has succeeded; a failed private-buffer creation
+        // leaves the original memref uses and their dependences intact.
+        DenseSet<Value> privateMemrefs;
+        if (!privateMemrefsToCreate.empty()) {
           // Note the block into which fusion was performed. This can be used to
           // place `alloc`s that create private memrefs.
           Block *sliceInsertionBlock = bestSlice.insertPoint->getBlock();
@@ -1112,7 +1142,11 @@ public:
           DenseMap<Value, SmallVector<Operation *, 4>> privateMemRefToStores;
           dstAffineForOp.walk([&](AffineWriteOpInterface storeOp) {
             Value storeMemRef = storeOp.getMemRef();
-            if (privateMemrefs.count(storeMemRef) > 0)
+            if (llvm::any_of(privateMemrefsToCreate, [&](Value privateMemref) {
+                  return memref::isSameViewOrTrivialAlias(
+                      cast<MemrefValue>(privateMemref),
+                      cast<MemrefValue>(storeMemRef));
+                }))
               privateMemRefToStores[storeMemRef].push_back(storeOp);
           });
 
@@ -1121,16 +1155,21 @@ public:
           // loads and stores. Any reference to the original ones becomes
           // invalid after this point.
           for (auto &memrefToStoresPair : privateMemRefToStores) {
+            // Capture the pre-replacement value; the store operands are
+            // rewritten before createPrivateMemRef returns.
+            Value oldMemRef = memrefToStoresPair.first;
             ArrayRef<Operation *> storesForMemref = memrefToStoresPair.second;
             Value newMemRef = createPrivateMemRef(
                 dstAffineForOp, storesForMemref, bestDstLoopDepth,
                 fastMemorySpace, sliceInsertionBlock, localBufSizeThreshold);
             if (!newMemRef)
               continue;
+            privateMemrefs.insert(oldMemRef);
             // Create new node in dependence graph for 'newMemRef' alloc op.
             unsigned newMemRefNodeId = mdg->addNode(newMemRef.getDefiningOp());
             // Add edge from 'newMemRef' node to dstNode.
-            mdg->addEdge(newMemRefNodeId, dstId, newMemRef);
+            mdg->addEdge(newMemRefNodeId, dstId, newMemRef,
+                         MemRefDependenceGraph::Edge::Kind::SSA);
           }
           // One or more entries for 'newMemRef' alloc op are inserted into
           // the DenseMap mdg->nodes. Since an insertion may cause DenseMap to
@@ -1138,12 +1177,16 @@ public:
           dstNode = mdg->getNode(dstId);
         }
 
+        // Update edges between 'srcNode' and 'dstNode' after IR mutation and
+        // only for private memrefs whose replacements succeeded.
+        mdg->updateEdges(srcId, dstId, privateMemrefs, removeSrcNode);
+
         // Collect dst loop stats after memref privatization transformation.
         LoopNestStateCollector dstLoopCollector;
         dstLoopCollector.collect(dstAffineForOp);
 
-        // Clear and add back loads and stores.
-        mdg->clearNodeLoadAndStores(dstNode->id);
+        // Clear and add back all memory operations.
+        mdg->clearNodeMemoryOps(dstNode->id);
         mdg->addToNode(
             dstId, dstLoopCollector.loadOpInsts, dstLoopCollector.storeOpInsts,
             dstLoopCollector.memrefLoads, dstLoopCollector.memrefStores,
@@ -1387,7 +1430,8 @@ public:
       DenseSet<Value> storeMemrefs;
       for (auto *storeOpInst : sibNode->stores) {
         storeMemrefs.insert(
-            cast<AffineWriteOpInterface>(storeOpInst).getMemRef());
+            memref::skipFullyAliasingOperations(cast<MemrefValue>(
+                cast<AffineWriteOpInterface>(storeOpInst).getMemRef())));
       }
       return storeMemrefs.size() <= 1;
     };
@@ -1457,7 +1501,10 @@ public:
             if (visitedSibNodeIds->count(sibNodeId) > 0)
               return;
             // Skip output edge if not a sibling using the same memref.
-            if (outEdge.id == dstNode->id || outEdge.value != inEdge.value)
+            if (outEdge.id == dstNode->id ||
+                !memref::isSameViewOrTrivialAlias(
+                    cast<MemrefValue>(outEdge.value),
+                    cast<MemrefValue>(inEdge.value)))
               return;
             auto *sibNode = mdg->getNode(sibNodeId);
             if (!isa<AffineForOp>(sibNode->op))
@@ -1490,8 +1537,8 @@ public:
     auto dstForInst = cast<AffineForOp>(dstNode->op);
     LoopNestStateCollector dstLoopCollector;
     dstLoopCollector.collect(dstForInst);
-    // Clear and add back loads and stores
-    mdg->clearNodeLoadAndStores(dstNode->id);
+    // Clear and add back all memory operations.
+    mdg->clearNodeMemoryOps(dstNode->id);
     mdg->addToNode(dstNode->id, dstLoopCollector.loadOpInsts,
                    dstLoopCollector.storeOpInsts, dstLoopCollector.memrefLoads,
                    dstLoopCollector.memrefStores, dstLoopCollector.memrefFrees);

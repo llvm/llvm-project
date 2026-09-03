@@ -176,10 +176,16 @@ DependenceResult checkMemrefAccessDependence(
     SmallVector<DependenceComponent, 2> *dependenceComponents = nullptr,
     bool allowRAR = false);
 
-/// Utility function that returns true if the provided DependenceResult
-/// corresponds to a dependence result.
-inline bool hasDependence(DependenceResult result) {
+/// Returns true if the provided DependenceResult proves that a dependence
+/// exists.
+inline bool mustHaveDependence(DependenceResult result) {
   return result.value == DependenceResult::HasDependence;
+}
+
+/// Returns true unless the provided DependenceResult proves that no dependence
+/// exists.
+inline bool mayHaveDependence(DependenceResult result) {
+  return result.value != DependenceResult::NoDependence;
 }
 
 /// Returns true if the provided DependenceResult corresponds to the absence of
@@ -190,8 +196,8 @@ inline bool noDependence(DependenceResult result) {
 
 /// Returns in 'depCompsVec', dependence components for dependences between all
 /// load and store ops in loop nest rooted at 'forOp', at loop depths in range
-/// [1, maxLoopDepth].
-void getDependenceComponents(
+/// [1, maxLoopDepth]. Returns failure if any dependence cannot be analyzed.
+LogicalResult getDependenceComponents(
     AffineForOp forOp, unsigned maxLoopDepth,
     std::vector<SmallVector<DependenceComponent, 2>> *depCompsVec);
 
