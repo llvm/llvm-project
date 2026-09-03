@@ -5982,16 +5982,16 @@ Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
       if (const Symbol *host{parent.FindSymbol(name.source)}) {
         const Symbol &hostUlt{host->GetUltimate()};
         const auto *hostSubp{hostUlt.detailsIf<SubprogramDetails>()};
-        if (hostSubp && hostSubp->isInterface() &&
-            hostUlt.attrs().test(Attr::MODULE)) {
+        if (IsSeparateModuleProcedureInterface(&hostUlt)) {
+          // Use the low-level Warn() call to avoid module-file suppression based on
+          // scope ancestry; InModuleFile() provides the appropriate check here.
           context().messages().Warn(/*isInModuleFile=*/InModuleFile(),
               context().languageFeatures(), common::UsageWarning::Portability,
               name.source,
               "Subprogram '%s' in this submodule is missing the MODULE prefix "
               "to implement the module procedure interface from its parent; "
               "did you mean 'MODULE %s'?"_port_en_US,
-              name.source,
-              subpFlag == Symbol::Flag::Subroutine ? "SUBROUTINE" : "FUNCTION");
+              name.source, hostSubp->isFunction() ? "FUNCTION" : "SUBROUTINE");
         }
       }
     }
