@@ -730,6 +730,7 @@ bool SuperHConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
     // We are adding new water.  Update NewWaterList.
     NewWaterList.insert(NewIsland);
   }
+
   // Always align the new block because CP entries can be smaller than 4
   // bytes. Be careful not to decrease the existing alignment, e.g. NewMBB may
   // be an already aligned constant pool block.
@@ -1101,7 +1102,7 @@ SuperHConstantIslands::doInitialConstPlacement(std::vector<MachineInstr *> &CPEM
   // move functions around based on their alignment.
   // Special case: halfword literals still need word alignment on the function.
   Align FuncAlign = MaxAlign;
-  if (MaxAlign == 2)
+  if (FuncAlign < 4)
     FuncAlign = Align(4);
   MF->ensureAlignment(FuncAlign);
 
