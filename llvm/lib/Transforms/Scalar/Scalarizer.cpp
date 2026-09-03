@@ -945,6 +945,25 @@ bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
   std::optional<VectorSplit> DstVS = getVectorSplit(BCI.getDestTy());
   std::optional<VectorSplit> SrcVS = getVectorSplit(BCI.getSrcTy());
 
+  if (DstVS && !SrcVS && BCI.getSrcTy()->isIntegerTy() && !DstVS->RemainderTy &&
+      DstVS->NumPacked == 1 && DstVS->SplitTy->isIntegerTy()) {
+    IRBuilder<> Builder(&BCI);
+    Builder.SetCurrentDebugLocation(BCI.getDebugLoc());
+    ValueVector Res(DstVS->NumFragments);
+    unsigned FragmentBits = DstVS->SplitTy->getPrimitiveSizeInBits();
+    bool IsBigEndian = BCI.getDataLayout().isBigEndian();
+    for (unsigned I = 0; I < DstVS->NumFragments; ++I) {
+      unsigned FragmentIndex = IsBigEndian ? DstVS->NumFragments - I - 1 : I;
+      Value *Fragment = BCI.getOperand(0);
+      if (FragmentIndex)
+        Fragment = Builder.CreateLShr(Fragment, FragmentIndex * FragmentBits);
+      Res[I] = Builder.CreateTruncOrBitCast(Fragment, DstVS->getFragmentType(I),
+                                            BCI.getName() + ".i" + Twine(I));
+    }
+    gather(&BCI, Res, *DstVS);
+    return true;
+  }
+
   if (!DstVS && SrcVS && BCI.getDestTy()->isIntegerTy() &&
       !SrcVS->RemainderTy && SrcVS->NumPacked == 1 &&
       SrcVS->SplitTy->isIntegerTy()) {
