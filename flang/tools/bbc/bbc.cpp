@@ -376,6 +376,7 @@ static llvm::LogicalResult runOpenMPPasses(mlir::ModuleOp mlirModule) {
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
 
   fir::OpenMPFIRPassPipelineOpts opts;
+  opts.isSimdOnly = false;
   opts.isTargetDevice = enableOpenMPDevice;
   opts.doConcurrentMappingKind =
       llvm::StringSwitch<DoConcurrentMappingKind>(

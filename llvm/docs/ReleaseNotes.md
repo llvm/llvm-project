@@ -217,6 +217,7 @@ Makes programs 10x faster by doing Special New Thing.
   push/pop extensions.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
+* Added support for `Sspmp`, `Sspmpen` and `Smpmpdeleg` extensions.
 
 ### Changes to the WebAssembly Backend
 
@@ -246,6 +247,11 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-mca no longer defaults -mcpu to "native"
 
 ### Changes to LLDB
+
+* `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
+  runtime's command line instead of following it. A runtime that dispatches on a
+  leading subcommand can therefore name that subcommand through this setting,
+  rather than needing a wrapper script.
 
 #### SBAPI
 

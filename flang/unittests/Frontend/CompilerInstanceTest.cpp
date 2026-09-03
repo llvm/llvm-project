@@ -103,15 +103,12 @@ TEST(CompilerInstance,
     OpenAccDefaultNoneScalarsStrictDisableOptionUsesDriverTable) {
   CompilerInstance compInst;
   compInst.createDiagnostics();
-
-  auto invocation = std::make_shared<CompilerInvocation>();
-  invocation->getTargetOpts().triple =
+  compInst.getInvocation().getTargetOpts().triple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
 
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
 
-  compInst.setInvocation(std::move(invocation));
   ASSERT_TRUE(compInst.setUpTargetMachine());
   auto &context = compInst.createNewSemanticsContext();
 

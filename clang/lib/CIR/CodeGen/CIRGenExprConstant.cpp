@@ -34,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <functional>
 #include <iterator>
+#include <optional>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -715,6 +716,8 @@ struct ConstantLValue {
       : value(nullptr), hasOffsetApplied(false) {}
   /*implicit*/ ConstantLValue(cir::GlobalViewAttr address)
       : value(address), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(cir::GlobalOffsetAttr address)
+      : value(address), hasOffsetApplied(true) {}
   /*implicit*/ ConstantLValue(cir::BlockAddrInfoAttr address)
       : value(address), hasOffsetApplied(true) {}
 
@@ -758,13 +761,16 @@ private:
   ConstantLValue
   VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
 
-  /// Return GEP-like value offset
-  mlir::ArrayAttr getOffset(mlir::Type ty) {
+  /// Return GEP-like value offset, or std::nullopt if the offset doesn't
+  /// designate a subelement of \p ty and must be described as a byte offset.
+  /// A null ArrayAttr means the offset is zero, so no indexing is needed.
+  std::optional<mlir::ArrayAttr> getOffsetIndices(mlir::Type ty) {
     int64_t offset = value.getLValueOffset().getQuantity();
     cir::CIRDataLayout layout(cgm.getModule());
     SmallVector<int64_t, 3> idxVec;
-    cgm.getBuilder().computeGlobalViewIndicesFromFlatOffset(offset, ty, layout,
-                                                            idxVec);
+    if (!cgm.getBuilder().computeGlobalViewIndicesFromFlatOffset(
+            offset, ty, layout, idxVec))
+      return std::nullopt;
 
     llvm::SmallVector<mlir::Attribute, 3> indices;
     for (int64_t i : idxVec) {
@@ -773,7 +779,7 @@ private:
     }
 
     if (indices.empty())
-      return {};
+      return mlir::ArrayAttr{};
     return cgm.getBuilder().getArrayAttr(indices);
   }
 
@@ -785,8 +791,11 @@ private:
         auto baseTy = mlir::cast<cir::PointerType>(gv.getType()).getPointee();
         mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
         assert(!gv.getIndices() && "Global view is already indexed");
-        return cir::GlobalViewAttr::get(destTy, gv.getSymbol(),
-                                        getOffset(baseTy));
+        std::optional<mlir::ArrayAttr> indices = getOffsetIndices(baseTy);
+        if (!indices)
+          return cir::GlobalOffsetAttr::get(
+              destTy, gv.getSymbol(), value.getLValueOffset().getQuantity());
+        return cir::GlobalViewAttr::get(destTy, gv.getSymbol(), *indices);
       }
       llvm_unreachable("Unsupported attribute type to offset");
     }

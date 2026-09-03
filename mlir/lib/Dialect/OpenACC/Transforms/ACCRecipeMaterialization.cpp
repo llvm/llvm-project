@@ -57,6 +57,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -185,7 +186,9 @@ private:
   template <typename OpTy>
   void handleInitialValueMapping(OpTy op) const;
   template <typename OpTy>
-  void removeRecipe(OpTy op, ModuleOp moduleOp) const;
+  void removeRecipe(
+      OpTy op, ModuleOp moduleOp,
+      const std::optional<llvm::DenseSet<StringAttr>> &usedSymbols) const;
   template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
   LogicalResult materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
                             acc::OpenACCSupport &accSupport,
@@ -215,9 +218,16 @@ static bool readsVar(Region &region) {
 }
 
 template <typename OpTy>
-void ACCRecipeMaterialization::removeRecipe(OpTy op, ModuleOp moduleOp) const {
+void ACCRecipeMaterialization::removeRecipe(
+    OpTy op, ModuleOp moduleOp,
+    const std::optional<llvm::DenseSet<StringAttr>> &usedSymbols) const {
   auto recipeName = op.getNameAttr();
-  if (SymbolTable::symbolKnownUseEmpty(recipeName, moduleOp)) {
+  // Fall back to scanning the module when the symbol uses could not be
+  // gathered up front.
+  bool useEmpty = usedSymbols
+                      ? !usedSymbols->contains(recipeName)
+                      : SymbolTable::symbolKnownUseEmpty(recipeName, moduleOp);
+  if (useEmpty) {
     LLVM_DEBUG(llvm::dbgs() << "erasing recipe: " << recipeName << "\n");
     op.erase();
   } else {
@@ -529,14 +539,27 @@ void ACCRecipeMaterialization::runOnOperation() {
     return;
   }
 
-  // Remove all recipes.
+  // Remove all recipes. Gather the symbol uses that are left with a single
+  // walk: asking whether each recipe is still referenced walks the whole module
+  // again for every recipe, and recipes are generated per type, so there can be
+  // many of them.
+  std::optional<llvm::DenseSet<StringAttr>> usedSymbols;
+  // The module region, not the module op, is the symbol table scope: asking
+  // for the uses on the op itself would not walk into the body.
+  if (std::optional<SymbolTable::UseRange> uses =
+          SymbolTable::getSymbolUses(&moduleOp.getBodyRegion())) {
+    usedSymbols.emplace();
+    for (const SymbolTable::SymbolUse &use : *uses)
+      usedSymbols->insert(use.getSymbolRef().getLeafReference());
+  }
+
   moduleOp.walk([&](Operation *op) {
     if (auto recipe = dyn_cast<acc::ReductionRecipeOp>(op))
-      removeRecipe(recipe, moduleOp);
+      removeRecipe(recipe, moduleOp, usedSymbols);
     else if (auto recipe = dyn_cast<acc::PrivateRecipeOp>(op))
-      removeRecipe(recipe, moduleOp);
+      removeRecipe(recipe, moduleOp, usedSymbols);
     else if (auto recipe = dyn_cast<acc::FirstprivateRecipeOp>(op))
-      removeRecipe(recipe, moduleOp);
+      removeRecipe(recipe, moduleOp, usedSymbols);
   });
 }
 
