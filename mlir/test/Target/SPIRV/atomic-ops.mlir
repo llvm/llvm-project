@@ -5,7 +5,7 @@
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
-spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, Addresses, AtomicFloat32AddEXT], [SPV_EXT_shader_atomic_float_add]> {
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, Addresses, AtomicFloat32AddEXT, AtomicFloat32MinMaxEXT], [SPV_EXT_shader_atomic_float_add, SPV_EXT_shader_atomic_float_min_max]> {
   // CHECK-LABEL: @test_int_atomics
   spirv.func @test_int_atomics(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 "None" {
     // CHECK: spirv.AtomicCompareExchangeWeak <Workgroup> <Release> <Acquire> %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
@@ -47,8 +47,12 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, Addre
   spirv.func @test_float_atomics(%ptr: !spirv.ptr<f32, Workgroup>, %value: f32) -> f32 "None" {
     // CHECK: spirv.EXT.AtomicFAdd <Workgroup> <Acquire> %{{.*}}, %{{.*}} : !spirv.ptr<f32, Workgroup>
     %0 = spirv.EXT.AtomicFAdd <Workgroup> <Acquire> %ptr, %value : !spirv.ptr<f32, Workgroup>
+    // CHECK: spirv.EXT.AtomicFMin <Workgroup> <Acquire> %{{.*}}, %{{.*}} : !spirv.ptr<f32, Workgroup>
+    %1 = spirv.EXT.AtomicFMin <Workgroup> <Acquire> %ptr, %value : !spirv.ptr<f32, Workgroup>
+    // CHECK: spirv.EXT.AtomicFMax <Workgroup> <Acquire> %{{.*}}, %{{.*}} : !spirv.ptr<f32, Workgroup>
+    %2 = spirv.EXT.AtomicFMax <Workgroup> <Acquire> %ptr, %value : !spirv.ptr<f32, Workgroup>
     // CHECK: spirv.AtomicLoad <Workgroup> <Acquire> %{{.*}} : !spirv.ptr<f32, Workgroup>
-    %1 = spirv.AtomicLoad <Workgroup> <Acquire> %ptr : !spirv.ptr<f32, Workgroup>
+    %3 = spirv.AtomicLoad <Workgroup> <Acquire> %ptr : !spirv.ptr<f32, Workgroup>
     // CHECK: spirv.AtomicStore <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<f32, Workgroup>
     spirv.AtomicStore <Workgroup> <Release> %ptr, %value : !spirv.ptr<f32, Workgroup>
     spirv.ReturnValue %0: f32

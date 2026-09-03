@@ -4708,6 +4708,8 @@ def SPIRV_OC_OpEmitMeshTasksEXT               : I32EnumAttrCase<"OpEmitMeshTasks
 def SPIRV_OC_OpSetMeshOutputsEXT              : I32EnumAttrCase<"OpSetMeshOutputsEXT", 5295>;
 def SPIRV_OC_OpSubgroupBlockReadINTEL         : I32EnumAttrCase<"OpSubgroupBlockReadINTEL", 5575>;
 def SPIRV_OC_OpSubgroupBlockWriteINTEL        : I32EnumAttrCase<"OpSubgroupBlockWriteINTEL", 5576>;
+def SPIRV_OC_OpAtomicFMinEXT                  : I32EnumAttrCase<"OpAtomicFMinEXT", 5614>;
+def SPIRV_OC_OpAtomicFMaxEXT                  : I32EnumAttrCase<"OpAtomicFMaxEXT", 5615>;
 def SPIRV_OC_OpAssumeTrueKHR                  : I32EnumAttrCase<"OpAssumeTrueKHR", 5630>;
 def SPIRV_OC_OpExpectKHR                      : I32EnumAttrCase<"OpExpectKHR", 5631>;
 def SPIRV_OC_OpAtomicFAddEXT                  : I32EnumAttrCase<"OpAtomicFAddEXT", 6035>;
@@ -4838,6 +4840,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpSpecConstantCompositeReplicateEXT,
       SPIRV_OC_OpEmitMeshTasksEXT, SPIRV_OC_OpSetMeshOutputsEXT,
       SPIRV_OC_OpSubgroupBlockReadINTEL, SPIRV_OC_OpSubgroupBlockWriteINTEL,
+      SPIRV_OC_OpAtomicFMinEXT, SPIRV_OC_OpAtomicFMaxEXT,
       SPIRV_OC_OpAssumeTrueKHR, SPIRV_OC_OpExpectKHR, SPIRV_OC_OpAtomicFAddEXT,
       SPIRV_OC_OpTypeStructContinuedINTEL,
       SPIRV_OC_OpConstantCompositeContinuedINTEL,
