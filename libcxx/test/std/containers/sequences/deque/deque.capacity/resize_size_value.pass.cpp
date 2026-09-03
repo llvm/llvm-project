@@ -8,7 +8,7 @@
 
 // <deque>
 
-// void resize(size_type n, const value_type& v);
+// void resize(size_type n, const value_type& v); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>
@@ -94,10 +94,18 @@ TEST_CONSTEXPR_CXX26 bool test() {
   return true;
 }
 
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d = {1, 2};
+  d.resize(4, 9);
+  assert((d == std::deque<int>{1, 2, 9, 9}));
+  return true;
+}
+
 int main(int, char**) {
   test();
+  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(test());
+  static_assert(test_constexpr());
 #endif
   return 0;
 }

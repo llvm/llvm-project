@@ -8,7 +8,7 @@
 
 // <deque>
 
-// iterator insert (const_iterator p, const value_type& v);
+// iterator insert (const_iterator p, const value_type& v); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>
@@ -129,10 +129,20 @@ TEST_CONSTEXPR_CXX26 bool tests() {
   return true;
 }
 
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d = {1, 3};
+  int value         = 2;
+  auto it           = d.insert(d.begin() + 1, value);
+  assert(*it == 2);
+  assert((d == std::deque<int>{1, 2, 3}));
+  return true;
+}
+
 int main(int, char**) {
   tests();
+  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(tests());
+  static_assert(test_constexpr());
 #endif
 
   return 0;

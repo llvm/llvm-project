@@ -8,7 +8,7 @@
 
 // <deque>
 
-// void pop_front()
+// void pop_front(); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>
@@ -78,10 +78,18 @@ TEST_CONSTEXPR_CXX26 bool tests() {
   return true;
 }
 
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d = {1, 2, 3};
+  d.pop_front();
+  assert((d == std::deque<int>{2, 3}));
+  return true;
+}
+
 int main(int, char**) {
   tests();
+  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(tests());
+  static_assert(test_constexpr());
 #endif
 
   return 0;

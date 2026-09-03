@@ -9,7 +9,7 @@
 // <deque>
 
 // template <class InputIterator>
-//   void assign(InputIterator f, InputIterator l);
+//   void assign(InputIterator f, InputIterator l); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>
@@ -148,10 +148,22 @@ TEST_CONSTEXPR_CXX26 bool test() {
   return true;
 }
 
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  int input[] = {1, 2, 3};
+  std::deque<int> d;
+  d.assign(input, input + 3);
+  assert((d == std::deque<int>{1, 2, 3}));
+
+  test_iterators();
+
+  return true;
+}
+
 int main(int, char**) {
   test();
+  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(test());
+  static_assert(test_constexpr());
 #endif
   return 0;
 }

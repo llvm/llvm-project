@@ -79,10 +79,18 @@ TEST_CONSTEXPR_CXX26 bool tests() {
   return true;
 }
 
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d = {1, 2, 1, 3};
+  assert(std::erase(d, 1) == 2);
+  assert((d == std::deque<int>{2, 3}));
+  return true;
+}
+
 int main(int, char**) {
   tests();
+  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(tests());
+  static_assert(test_constexpr());
 #endif
 
   return 0;

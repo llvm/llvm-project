@@ -10,7 +10,7 @@
 
 // <deque>
 
-// template <class... Args> reference emplace_front(Args&&... args);
+// template <class... Args> reference emplace_front(Args&&... args); // constexpr since C++26
 // return type is 'reference' in C++17; 'void' before
 
 #include "asan_testing.h"
@@ -101,10 +101,18 @@ TEST_CONSTEXPR_CXX26 bool tests() {
   return true;
 }
 
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d;
+  d.emplace_front(1);
+  assert(d.front() == 1);
+  return true;
+}
+
 int main(int, char**) {
   tests();
+  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(tests());
+  static_assert(test_constexpr());
 #endif
 
   return 0;

@@ -14,7 +14,7 @@
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // template<container-compatible-range<T> R>
-//   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23
+//   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23, constexpr since C++26
 
 #include <deque>
 
@@ -43,10 +43,20 @@ TEST_CONSTEXPR_CXX26 bool test() {
   return true;
 }
 
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  int input[]       = {2, 3};
+  std::deque<int> d = {1, 4};
+  auto it           = d.insert_range(d.begin() + 1, input);
+  assert(*it == 2);
+  assert((d == std::deque<int>{1, 2, 3, 4}));
+  return true;
+}
+
 int main(int, char**) {
   test();
+  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(test());
+  static_assert(test_constexpr());
 #endif
 
   return 0;

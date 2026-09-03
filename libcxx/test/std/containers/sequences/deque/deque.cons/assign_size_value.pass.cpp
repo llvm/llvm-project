@@ -8,7 +8,7 @@
 
 // <deque>
 
-// void assign(size_type n, const value_type& v);
+// void assign(size_type n, const value_type& v); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>
@@ -77,10 +77,18 @@ TEST_CONSTEXPR_CXX26 bool test() {
   return true;
 }
 
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d;
+  d.assign(3, 7);
+  assert((d == std::deque<int>{7, 7, 7}));
+  return true;
+}
+
 int main(int, char**) {
   test();
+  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(test());
+  static_assert(test_constexpr());
 #endif
 
   return 0;

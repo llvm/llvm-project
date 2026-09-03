@@ -10,7 +10,7 @@
 
 // <deque>
 
-// void push_front(value_type&& v);
+// void push_front(value_type&& v); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>
@@ -79,10 +79,19 @@ TEST_CONSTEXPR_CXX26 bool tests() {
   return true;
 }
 
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d;
+  d.push_front(2);
+  d.push_front(1);
+  assert((d == std::deque<int>{1, 2}));
+  return true;
+}
+
 int main(int, char**) {
   tests();
+  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(tests());
+  static_assert(test_constexpr());
 #endif
 
   return 0;
