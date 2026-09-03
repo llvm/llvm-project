@@ -70,9 +70,20 @@ public:
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
-  SDValue getSHCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC, SDValue &OutCC,
+  SDValue getSHCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                    SelectionDAG &DAG, SDLoc DL) const;
+
+  // Inserters
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *MBB) const override;
 private:
+  MachineBasicBlock *insertSELECTCC(MachineInstr &MI, 
+                                    MachineBasicBlock *BB) const;
+  MachineBasicBlock *insertLoad(MachineInstr &MI, 
+                                MachineBasicBlock *BB) const;
+  MachineBasicBlock *insertStore(MachineInstr &MI, 
+                                 MachineBasicBlock *BB) const;
 
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG) const override;
 

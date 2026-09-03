@@ -40,9 +40,7 @@ StringRef SuperHConstantPoolValue::getModifierText() const {
   case SHCP::no_modifier:
     return "none";
   case SHCP::GOT_PCREL:
-    return "GOT_PCREL";
-  case SHCP::GOT_PLTOFF:
-    return "gotpltoff";
+    return "gotpcrel";
   case SHCP::DIR:
     return "";
   }
@@ -199,7 +197,7 @@ SuperHConstantPoolSymbol::SuperHConstantPoolSymbol(LLVMContext &C, StringRef s,
 
 SuperHConstantPoolSymbol *SuperHConstantPoolSymbol::Create(LLVMContext &C,
                                                      StringRef s, unsigned ID) {
-  return new SuperHConstantPoolSymbol(C, s, ID, SHCP::no_modifier);
+  return new SuperHConstantPoolSymbol(C, s, ID, SHCP::DIR);
 }
 
 int SuperHConstantPoolSymbol::getExistingMachineCPValue(MachineConstantPool *CP,

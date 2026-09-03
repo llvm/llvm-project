@@ -17,6 +17,7 @@
 #include "SuperHRegisterInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 
 #define GET_INSTRINFO_HEADER
 #include "SuperHGenInstrInfo.inc"
@@ -26,6 +27,7 @@ namespace llvm {
 class SuperHInstrInfo : public SuperHGenInstrInfo {
   const SuperHRegisterInfo RI;
   const SuperHSubtarget &Subtarget;
+  virtual void anchor();
 
 public:
   explicit SuperHInstrInfo(const SuperHSubtarget &STI);
@@ -59,6 +61,19 @@ public:
                            Register DestReg, Register SrcReg, bool KillSrc,
                            bool RenamableDest = false,
                            bool RenamableSrc = false) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
+  Register isLoadFromStackSlot(const MachineInstr &MI,
+                               int &FrameIndex) const override;
+  Register isStoreToStackSlot(const MachineInstr &MI,
+                              int &FrameIndex) const override;
 
   // Branch Analysis
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,

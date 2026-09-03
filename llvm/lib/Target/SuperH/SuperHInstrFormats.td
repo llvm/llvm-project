@@ -74,8 +74,26 @@ class SHInst32<dag outs, dag ins, string asmstr, list<dag> pattern = []>
 // in later passes implemented in C++.
 class SHPseudo<dag outs, dag ins, string asmstr="; error: this should not be emitted", list<dag> pattern = []>
     : SHInst<outs, ins, asmstr, pattern> {
+  let Pattern = pattern;
+
   let isCodeGenOnly = 1;
   let isPseudo = 1;
+}
+
+class SHSelectPseudo<dag outs, dag ins, string asmstr, list<dag> pattern> 
+      : SHPseudo<outs, ins, asmstr, pattern> {
+  let usesCustomInserter = 1;
+  let Uses = [SR];
+}
+
+class SHLoadPseudo<dag outs, dag ins, string asmstr, list<dag> pattern> 
+      : SHPseudo<outs, ins, asmstr, pattern> {
+  let usesCustomInserter = 1;
+}
+
+class SHStorePseudo<dag outs, dag ins, string asmstr, list<dag> pattern> 
+      : SHPseudo<outs, ins, asmstr, pattern> {
+  let usesCustomInserter = 1;
 }
 
 

@@ -21,6 +21,7 @@
 #include "SuperHMCInstLower.h"
 #include "TargetInfo/SuperHTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -96,14 +97,16 @@ bool SuperHAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
 // Convert a SuperH-specific constant pool modifier into the associated
 // specifier.
-static uint8_t getSpecifierFromModifier(SHCP::SHCPModifier Modifier) {
+static uint8_t getModifierSpecifier(SHCP::SHCPModifier Modifier) {
   switch (Modifier) {
-  case SHCP::SHCPModifier::DIR:
-  case SHCP::SHCPModifier::no_modifier:
-    return SHII::MO_DIR;
-  default:
-    return SHII::MO_DIR;
+  case SHCP::no_modifier:
+    return SH::S_DIR;
+  case SHCP::GOT_PCREL:
+    return SH::S_GOT_PCREL;
+  case SHCP::DIR:
+    return SH::S_DIR;
   }
+  llvm_unreachable("Invalid SHCPModifier!");
 }
 
 
@@ -173,7 +176,6 @@ bool SuperHAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned Op
 //                                Constant Pool
 //===----------------------------------------------------------------------===//
 
-
 void SuperHAsmPrinter::emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
   const DataLayout &DL = getDataLayout();
   int Size = DL.getTypeAllocSize(MCPV->getType());
@@ -197,7 +199,7 @@ void SuperHAsmPrinter::emitMachineConstantPoolValue(MachineConstantPoolValue *MC
 
   // Create an MCSymbol for the reference.
   const MCExpr *Expr = MCSymbolRefExpr::create(
-    MCSym, 
+    MCSym,
     OutContext
   );
   OutStreamer->emitValue(Expr, Size);
