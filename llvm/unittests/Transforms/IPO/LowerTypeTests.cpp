@@ -149,8 +149,10 @@ TEST(LowerTypeTests, GlobalLayoutBuilderHotness) {
   };
 
   for (auto &&T : GLBTests) {
-    auto Less = [&](uint64_t A, uint64_t B) { return T.Ranks[A] < T.Ranks[B]; };
-    GlobalLayoutBuilder GLB(T.NumObjects, Less);
+    // Pass a temporary lambda directly to verify it does not dangle.
+    GlobalLayoutBuilder GLB(T.NumObjects, [&](uint64_t A, uint64_t B) {
+      return T.Ranks[A] < T.Ranks[B];
+    });
     for (auto &&F : T.Fragments)
       GLB.addFragment(F);
 

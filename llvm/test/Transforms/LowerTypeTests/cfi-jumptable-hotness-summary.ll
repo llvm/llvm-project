@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t && split-file %s %t
 ; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%t/summary.ll %t/main.ll | FileCheck %s
 
-; Tests that functions in a jump table are reordered according to call edge hotness
+; TODO: Tests that functions in a jump table are reordered according to call edge hotness
 ; recorded in the ThinLTO summary index:
 ; 1. (Highest priority) Within each strict type, hotter functions are placed later,
 ;    ordered strictly by: Cold (0) < Unknown (1) < None (2) < Hot (3) < Critical (4).
