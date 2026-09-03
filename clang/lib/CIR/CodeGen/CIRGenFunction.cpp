@@ -1377,7 +1377,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
 
   // Cast the dest ptr to the appropriate i8 pointer type.
   if (!builder.isInt8Ty(destPtr.getElementType()))
-    destPtr = destPtr.withElementType(builder, sInt8Ty);
+    destPtr = destPtr.withElementType(builder, uInt8Ty);
 
   // Get size and alignment info for this aggregate.
   mlir::IntegerAttr sizeVal;

@@ -79,22 +79,22 @@ void test_aggregate() {
 // CIR:   %[[THIS:.*]] = cir.load %{{.*}}
 
 // CIR:   %[[BAR:.*]] = cir.get_member %[[THIS]][0] {name = "bar_"} : !cir.ptr<!rec_Foo> -> !cir.ptr<!cir.array<!s32i x 5>>
-// CIR:   %[[BAR_PTR_S8I:.*]] = cir.cast bitcast %[[BAR]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s8i>
+// CIR:   %[[BAR_PTR_I8:.*]] = cir.cast bitcast %[[BAR]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!u8i>
 // CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
 // CIR:   %[[CONST_20:.*]] = cir.const #cir.int<20> : !u64i
-// CIR:   %[[BAR_VOID_PTR:.*]] = cir.cast bitcast %[[BAR_PTR_S8I]] : !cir.ptr<!s8i> -> !cir.ptr<!void>
+// CIR:   %[[BAR_VOID_PTR:.*]] = cir.cast bitcast %[[BAR_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
 // CIR:   cir.libc.memset %[[CONST_20]] bytes at %[[BAR_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CIR:   %[[DBAR:.*]] = cir.get_member %[[THIS]][1] {name = "dbar_"} : !cir.ptr<!rec_Foo> -> !cir.ptr<!cir.array<!cir.double x 5>>
-// CIR:   %[[DBAR_PTR_S8I:.*]] = cir.cast bitcast %[[DBAR]] : !cir.ptr<!cir.array<!cir.double x 5>> -> !cir.ptr<!s8i>
+// CIR:   %[[DBAR_PTR_I8:.*]] = cir.cast bitcast %[[DBAR]] : !cir.ptr<!cir.array<!cir.double x 5>> -> !cir.ptr<!u8i>
 // CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
 // CIR:   %[[CONST_40:.*]] = cir.const #cir.int<40> : !u64i
-// CIR:   %[[DBAR_VOID_PTR:.*]] = cir.cast bitcast %[[DBAR_PTR_S8I]] : !cir.ptr<!s8i> -> !cir.ptr<!void>
+// CIR:   %[[DBAR_VOID_PTR:.*]] = cir.cast bitcast %[[DBAR_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
 // CIR:   cir.libc.memset %[[CONST_40]] bytes at %[[DBAR_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CIR:   %[[SBAR:.*]] = cir.get_member %[[THIS]][2] {name = "sbar_"} : !cir.ptr<!rec_Foo> -> !cir.ptr<!cir.array<!rec_S x 5>>
-// CIR:   %[[SBAR_PTR_S8I:.*]] = cir.cast bitcast %[[SBAR]] : !cir.ptr<!cir.array<!rec_S x 5>> -> !cir.ptr<!s8i>
+// CIR:   %[[SBAR_PTR_I8:.*]] = cir.cast bitcast %[[SBAR]] : !cir.ptr<!cir.array<!rec_S x 5>> -> !cir.ptr<!u8i>
 // CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
 // CIR:   %[[CONST_40:.*]] = cir.const #cir.int<40> : !u64i
-// CIR:   %[[SBAR_VOID_PTR:.*]] = cir.cast bitcast %[[SBAR_PTR_S8I]] : !cir.ptr<!s8i> -> !cir.ptr<!void>
+// CIR:   %[[SBAR_VOID_PTR:.*]] = cir.cast bitcast %[[SBAR_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
 // CIR:   cir.libc.memset %[[CONST_40]] bytes at %[[SBAR_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CIR:   cir.return
 
