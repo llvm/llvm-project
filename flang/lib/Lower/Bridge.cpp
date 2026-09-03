@@ -5963,6 +5963,11 @@ private:
                           ? eval.getFirstNestedEvaluation().block
                           : eval.block);
 
+    if (eval.skipNextLowering) {
+      eval.skipNextLowering = false;
+      return;
+    }
+
     // Add scope for constructs inside acc.loop to properly contain symbol
     // bindings (e.g., from cache directive) within the construct.
     bool needsAccScope =
