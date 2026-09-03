@@ -1044,6 +1044,14 @@ public:
 
   /// Estimate the cost of type-legalization and the legalized type.
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const {
+    auto [It, Inserted] = TypeLegalizationCostCache.try_emplace(Ty);
+    if (Inserted)
+      It->second = computeTypeLegalizationCost(Ty);
+    return It->second;
+  }
+
+private:
+  std::pair<InstructionCost, MVT> computeTypeLegalizationCost(Type *Ty) const {
     LLVMContext &C = Ty->getContext();
     EVT MTy = getTLI()->getValueType(DL, Ty);
 
@@ -1077,6 +1085,12 @@ public:
     }
   }
 
+  /// Memoizes type legalization cost. The mapping does not depend on the IR, so
+  /// entries stay valid for the lifetime of this object.
+  mutable DenseMap<Type *, std::pair<InstructionCost, MVT>>
+      TypeLegalizationCostCache;
+
+public:
   unsigned getMaxInterleaveFactor(ElementCount VF,
                                   bool HasUnorderedReductions) const override {
     return 1;
