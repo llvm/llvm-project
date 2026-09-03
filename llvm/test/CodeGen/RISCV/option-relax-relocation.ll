@@ -11,14 +11,14 @@
 ; RELAX-NOT:            R_RISCV_RELAX
 ; CHECK-NEXT:   auipc   ra, 0x0
 ; CHECK-NEXT:           R_RISCV_CALL_PLT     f
-; RELAX-NEXT:           R_RISCV_RELAX        *ABS*
+; RELAX-NEXT:           R_RISCV_RELAX        $xrv64i2p1
 ; CHECK-NEXT:   jalr    ra
 ; CHECK-NEXT:   j       {{.*}}
 ; RELAX-NEXT:           R_RISCV_JAL  {{.*}}
 ; RELAX-NOT:            R_RISCV_RELAX
 ; CHECK-NEXT:   j       {{.*}}
 ; RELAX-NEXT:           R_RISCV_JAL  {{.*}}
-; RELAX-NEXT:           R_RISCV_RELAX        *ABS*
+; RELAX-NEXT:           R_RISCV_RELAX        $xrv64i2p1
 ; NORELAX-NEXT: li      a0, 0x0
 ; RELAX-EMPTY:
 

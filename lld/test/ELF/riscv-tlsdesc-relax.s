@@ -65,7 +65,7 @@
 # LE64-NEXT:         c.add   a0, tp
 # LE64-NEXT:         jal     {{.*}} <foo>
 # LE64-NEXT:                 R_RISCV_JAL foo
-# LE64-NEXT:                 R_RISCV_RELAX *ABS*
+# LE64-NEXT:                 R_RISCV_RELAX {{\$xrv.*}}
 # LE64-LABEL: <.Ltlsdesc_hi1>:
 # LE64-NEXT:         addi    a0, zero, 0x7ff
 # LE64-NEXT:                 R_RISCV_TLSDESC_HI20 b
