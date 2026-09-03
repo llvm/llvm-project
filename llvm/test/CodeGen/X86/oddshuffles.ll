@@ -2216,22 +2216,13 @@ define <16 x i32> @splat_v3i32(ptr %ptr) {
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2],ymm2[3,4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
-; AVX2-SLOW-LABEL: splat_v3i32:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-SLOW-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm1[1],ymm2[2,3,4,5,6,7]
-; AVX2-SLOW-NEXT:    vbroadcastss %xmm1, %xmm1
-; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2],ymm2[3,4,5,6,7]
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-LABEL: splat_v3i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX2-FAST-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7]
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX2-FAST-NEXT:    retq
+; AVX2-LABEL: splat_v3i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    retq
 ;
 ; XOP-LABEL: splat_v3i32:
 ; XOP:       # %bb.0:

@@ -17,11 +17,13 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=haswell | FileCheck %s --check-prefixes=FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=skx | FileCheck %s --check-prefixes=FAST
 
+; The byte mask here is 16-bit granular, so this narrows to a v16i16 shuffle.
+; A 256-bit per-lane variable shuffle is used whatever the tuning: no AVX2
+; implementation runs one slower than the two fixed shuffles it replaces.
 define <32 x i8> @PR44795(<32 x i8> %a0) {
 ; SLOW-LABEL: PR44795:
 ; SLOW:       # %bb.0:
-; SLOW-NEXT:    vpshuflw {{.*#+}} ymm0 = ymm0[0,0,2,2,4,5,6,7,8,8,10,10,12,13,14,15]
-; SLOW-NEXT:    vpshufhw {{.*#+}} ymm0 = ymm0[0,1,2,3,4,4,6,6,8,9,10,11,12,12,14,14]
+; SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13,16,17,16,17,20,21,20,21,24,25,24,25,28,29,28,29]
 ; SLOW-NEXT:    retq
 ;
 ; FAST-LABEL: PR44795:
@@ -30,4 +32,38 @@ define <32 x i8> @PR44795(<32 x i8> %a0) {
 ; FAST-NEXT:    retq
   %r = shufflevector <32 x i8> %a0, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5, i32 8, i32 9, i32 8, i32 9, i32 12, i32 13, i32 12, i32 13, i32 16, i32 17, i32 16, i32 17, i32 20, i32 21, i32 20, i32 21, i32 24, i32 25, i32 24, i32 25, i32 28, i32 29, i32 28, i32 29>
   ret <32 x i8> %r
+}
+
+; A 128-bit per-lane variable shuffle stays tuning-dependent: unlike AVX2, SSSE3
+; parts with a slow PSHUFB do exist, so generic tuning keeps the two fixed
+; shuffles here.
+define <16 x i8> @PR44795_128(<16 x i8> %a0) {
+; SLOW-LABEL: PR44795_128:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,2,2,4,5,6,7]
+; SLOW-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,6,6]
+; SLOW-NEXT:    retq
+;
+; FAST-LABEL: PR44795_128:
+; FAST:       # %bb.0:
+; FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,0,1,4,5,4,5,8,9,8,9,12,13,12,13]
+; FAST-NEXT:    retq
+  %r = shufflevector <16 x i8> %a0, <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5, i32 8, i32 9, i32 8, i32 9, i32 12, i32 13, i32 12, i32 13>
+  ret <16 x i8> %r
+}
+
+; A mask that a single PSHUFLW already handles must not be traded for a PSHUFB
+; and its constant pool entry.
+define <16 x i16> @single_pshuflw_v16i16(<16 x i16> %a0) {
+; SLOW-LABEL: single_pshuflw_v16i16:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    vpshuflw {{.*#+}} ymm0 = ymm0[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15]
+; SLOW-NEXT:    retq
+;
+; FAST-LABEL: single_pshuflw_v16i16:
+; FAST:       # %bb.0:
+; FAST-NEXT:    vpshuflw {{.*#+}} ymm0 = ymm0[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15]
+; FAST-NEXT:    retq
+  %r = shufflevector <16 x i16> %a0, <16 x i16> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 4, i32 5, i32 6, i32 7, i32 9, i32 8, i32 11, i32 10, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i16> %r
 }
