@@ -499,6 +499,8 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
+- Fixed an assertion failure when diagnosing a constant evaluation failure
+  inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
 - Fixed a wrong code generation in `__builtin_clear_padding` wherein the
