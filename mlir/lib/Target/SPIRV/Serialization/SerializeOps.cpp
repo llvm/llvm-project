@@ -1166,6 +1166,84 @@ LogicalResult Serializer::processOp<spirv::GenericCastToPtrExplicitOp>(
   return success();
 }
 
+// The auto-generated serialization only supports a Variadic<>/Optional<>
+// operand as the last ODS argument, but `stride` sits between `pointer`/
+// `object` and the mandatory `matrix_layout` attribute. Hand-write the
+// serialization to emit Stride only when present.
+template <>
+LogicalResult Serializer::processOp<spirv::KHRCooperativeMatrixLoadOp>(
+    spirv::KHRCooperativeMatrixLoadOp op) {
+  SmallVector<uint32_t, 6> operands;
+  SmallVector<StringRef, 3> elidedAttrs;
+  uint32_t resultTypeID = 0;
+  if (failed(processType(op.getLoc(), op.getType(), resultTypeID)))
+    return failure();
+  operands.push_back(resultTypeID);
+
+  uint32_t resultID = getNextID();
+  valueIDMap[op.getResult()] = resultID;
+  operands.push_back(resultID);
+
+  operands.push_back(getValueID(op.getPointer()));
+
+  operands.push_back(prepareConstantInt(
+      op.getLoc(), Builder(op).getI32IntegerAttr(
+                       static_cast<uint32_t>(op.getMatrixLayout()))));
+  elidedAttrs.push_back("matrix_layout");
+
+  if (Value stride = op.getStride())
+    operands.push_back(getValueID(stride));
+
+  if (auto attr = op.getMemoryOperandAttr())
+    operands.push_back(static_cast<uint32_t>(attr.getValue()));
+  elidedAttrs.push_back("memory_operand");
+
+  if (auto attr = op.getAlignmentAttr())
+    operands.push_back(static_cast<uint32_t>(attr.getValue().getZExtValue()));
+  elidedAttrs.push_back("alignment");
+
+  if (failed(emitDebugLine(functionBody, op.getLoc())))
+    return failure();
+  encodeInstructionInto(functionBody, spirv::Opcode::OpCooperativeMatrixLoadKHR,
+                        operands);
+
+  for (auto attr : op->getAttrs()) {
+    if (llvm::is_contained(elidedAttrs, attr.getName()))
+      continue;
+    if (failed(processDecoration(op.getLoc(), resultID, attr)))
+      return failure();
+  }
+  return success();
+}
+
+template <>
+LogicalResult Serializer::processOp<spirv::KHRCooperativeMatrixStoreOp>(
+    spirv::KHRCooperativeMatrixStoreOp op) {
+  SmallVector<uint32_t, 6> operands;
+
+  operands.push_back(getValueID(op.getPointer()));
+  operands.push_back(getValueID(op.getObject()));
+
+  operands.push_back(prepareConstantInt(
+      op.getLoc(), Builder(op).getI32IntegerAttr(
+                       static_cast<uint32_t>(op.getMatrixLayout()))));
+
+  if (Value stride = op.getStride())
+    operands.push_back(getValueID(stride));
+
+  if (auto attr = op.getMemoryOperandAttr())
+    operands.push_back(static_cast<uint32_t>(attr.getValue()));
+
+  if (auto attr = op.getAlignmentAttr())
+    operands.push_back(static_cast<uint32_t>(attr.getValue().getZExtValue()));
+
+  if (failed(emitDebugLine(functionBody, op.getLoc())))
+    return failure();
+  encodeInstructionInto(functionBody,
+                        spirv::Opcode::OpCooperativeMatrixStoreKHR, operands);
+  return success();
+}
+
 // Pull in auto-generated Serializer::dispatchToAutogenSerialization() and
 // various Serializer::processOp<...>() specializations.
 #define GET_SERIALIZATION_FNS

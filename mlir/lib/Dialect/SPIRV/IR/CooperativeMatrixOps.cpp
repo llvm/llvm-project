@@ -22,7 +22,8 @@ namespace mlir::spirv {
 
 static LogicalResult
 verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
-                       spirv::MemoryAccessAttr memoryOperand,
+                       spirv::CooperativeMatrixLayoutKHR matrixLayout,
+                       Value stride, spirv::MemoryAccessAttr memoryOperand,
                        IntegerAttr alignment) {
   auto pointerType = cast<PointerType>(pointer);
   Type pointeeType = pointerType.getPointeeType();
@@ -30,6 +31,15 @@ verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
     return op->emitOpError(
                "Pointer must point to a scalar or vector type but provided ")
            << pointeeType;
+  }
+
+  // Per the SPIR-V spec, Stride is required for the RowMajor and ColumnMajor
+  // layouts.
+  if (!stride &&
+      (matrixLayout == spirv::CooperativeMatrixLayoutKHR::RowMajor ||
+       matrixLayout == spirv::CooperativeMatrixLayoutKHR::ColumnMajor)) {
+    return op->emitOpError("Stride is required for '")
+           << stringifyCooperativeMatrixLayoutKHR(matrixLayout) << "'";
   }
 
   if (memoryOperand) {
@@ -76,9 +86,9 @@ verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
 //===----------------------------------------------------------------------===//
 
 LogicalResult KHRCooperativeMatrixLoadOp::verify() {
-  return verifyCoopMatrixAccess(*this, getPointer().getType(),
-                                getResult().getType(), getMemoryOperandAttr(),
-                                getAlignmentAttr());
+  return verifyCoopMatrixAccess(
+      *this, getPointer().getType(), getResult().getType(), getMatrixLayout(),
+      getStride(), getMemoryOperandAttr(), getAlignmentAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -86,9 +96,9 @@ LogicalResult KHRCooperativeMatrixLoadOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult KHRCooperativeMatrixStoreOp::verify() {
-  return verifyCoopMatrixAccess(*this, getPointer().getType(),
-                                getObject().getType(), getMemoryOperandAttr(),
-                                getAlignmentAttr());
+  return verifyCoopMatrixAccess(
+      *this, getPointer().getType(), getObject().getType(), getMatrixLayout(),
+      getStride(), getMemoryOperandAttr(), getAlignmentAttr());
 }
 
 //===----------------------------------------------------------------------===//
