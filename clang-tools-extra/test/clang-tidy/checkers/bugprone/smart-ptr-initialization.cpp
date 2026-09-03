@@ -183,8 +183,6 @@ void test_new_expression_crossed_fail() {
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
 }
 
-// TODO: template and macro test
-
 bool can_take(std::shared_ptr<A> a);
 void take(std::shared_ptr<A> a);
 

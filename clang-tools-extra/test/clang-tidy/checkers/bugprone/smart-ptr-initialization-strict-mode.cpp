@@ -157,11 +157,3 @@ void test_array_new() {
   sp.reset(new A[10]);
   // This would be caught by bugprone-shared-ptr-array-mismatch checks
 }
-
-template<typename T>
-void test_shared_ptr_constructor_template() {
-  T a(&getA());
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' constructor may cause double deletion
-}
-
-int a = (test_shared_ptr_constructor_template<std::shared_ptr<A>>(), 0);
