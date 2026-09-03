@@ -51,6 +51,14 @@
 # CHECK-NEXT:      "implementationProvider": true,
 # CHECK-NEXT:      "inactiveRegionsProvider": true,
 # CHECK-NEXT:      "inlayHintProvider": true,
+# CHECK-NEXT:      "languages": [
+# CHECK-NEXT:        "c",
+# CHECK-NEXT:        "cpp",
+# CHECK-NEXT:        "cuda-cpp",
+# CHECK-NEXT:        "objective-c",
+# CHECK-NEXT:        "objective-cpp",
+# CHECK-NEXT:        "hlsl"
+# CHECK-NEXT:      ],
 # CHECK-NEXT:      "memoryUsageProvider": true,
 # CHECK-NEXT:      "referencesProvider": true,
 # CHECK-NEXT:      "renameProvider": true,
