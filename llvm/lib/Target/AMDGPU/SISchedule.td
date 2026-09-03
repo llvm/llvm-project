@@ -185,7 +185,6 @@ multiclass SICommonWriteRes {
 
   def : HWVALUWriteRes<Write32Bit,         1>;
   def : HWVALUWriteRes<WriteFloatCvt,      4>;
-  def : HWVALUWriteRes<WriteTrans32,       4>;
   def : HWVALUWriteRes<WriteQuarterRate32, 4>;
 
   let ReleaseAtCycles = [4] in
@@ -249,6 +248,7 @@ def : HWVALUWriteRes<WriteFloatFMA,    1>;
 def : HWVALUWriteRes<WriteDouble,      4>;
 def : HWVALUWriteRes<WriteDoubleAdd,   2>;
 def : HWVALUWriteRes<WriteDoubleCvt,   4>;
+def : HWVALUWriteRes<WriteTrans32,     4>;
 def : HWVALUWriteRes<WriteTrans64,     4>;
 } // End RetireOOO = 1
 
@@ -267,6 +267,7 @@ def : HWVALUWriteRes<WriteFloatFMA,    16>;
 def : HWVALUWriteRes<WriteDouble,      16>;
 def : HWVALUWriteRes<WriteDoubleAdd,    8>;
 def : HWVALUWriteRes<WriteDoubleCvt,    4>;
+def : HWVALUWriteRes<WriteTrans32,     4>;
 def : HWVALUWriteRes<WriteTrans64,     16>;
 } // End RetireOOO = 1
 
@@ -287,6 +288,7 @@ def : HWVALUWriteRes<WriteFloatFMA,    1>;
 def : HWVALUWriteRes<WriteDouble,      1>;
 def : HWVALUWriteRes<WriteDoubleAdd,   1>;
 def : HWVALUWriteRes<WriteDoubleCvt,   1>;
+def : HWVALUWriteRes<WriteTrans32,     4>;
 def : HWVALUWriteRes<WriteTrans64,     4>;
 def : HWVALUWriteRes<WriteIntMul,      1>;
 def : HWVALUWriteRes<Write64Bit,       1>;
@@ -310,6 +312,7 @@ def : HWVALUWriteRes<WriteFloatFMA,    1>;
 def : HWVALUWriteRes<WriteDouble,      1>;
 def : HWVALUWriteRes<WriteDoubleAdd,   1>;
 def : HWVALUWriteRes<WriteDoubleCvt,   1>;
+def : HWVALUWriteRes<WriteTrans32,     4>;
 def : HWVALUWriteRes<WriteTrans64,     4>;
 def : HWVALUWriteRes<WriteIntMul,      1>;
 def : HWVALUWriteRes<Write64Bit,       1>;
@@ -344,6 +347,7 @@ def : HWVALUWriteRes<WriteFloatFMA,    1>;
 def : HWVALUWriteRes<WriteDouble,      1>;
 def : HWVALUWriteRes<WriteDoubleAdd,   1>;
 def : HWVALUWriteRes<WriteDoubleCvt,   1>;
+def : HWVALUWriteRes<WriteTrans32,     2>;
 def : HWVALUWriteRes<WriteTrans64,     4>;
 def : HWVALUWriteRes<WriteIntMul,      1>;
 def : HWVALUWriteRes<Write64Bit,       1>;
