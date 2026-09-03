@@ -5,6 +5,6 @@
 #include "include/fill_memset_common.hpp"
 
 int main() {
-  queue Q;
+  sycl::queue Q;
   runTests<int>(Q, [&](void *Ptr) { Q.fill(Ptr, Pattern, DataSize); });
 }
