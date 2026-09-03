@@ -12,7 +12,7 @@
 # CHECK-NEXT:     Name: .testbss (2E 74 65 73 74 62 73 73)
 # CHECK-NEXT:     VirtualSize: 0x18
 # CHECK-NEXT:     VirtualAddress: 0x1000
-# CHECK-NEXT:     RawDataSize: 512
+# CHECK-NEXT:     RawDataSize: 0x200
 # CHECK-NEXT:     PointerToRawData: 0x400
 # CHECK-NEXT:     PointerToRelocations: 0x0
 # CHECK-NEXT:     PointerToLineNumbers: 0x0
@@ -29,7 +29,7 @@
 # CHECK-NEXT:     Name: .testd (2E 74 65 73 74 64 00 00)
 # CHECK-NEXT:     VirtualSize: 0x18
 # CHECK-NEXT:     VirtualAddress: 0x2000
-# CHECK-NEXT:     RawDataSize: 512
+# CHECK-NEXT:     RawDataSize: 0x200
 # CHECK-NEXT:     PointerToRawData: 0x600
 # CHECK-NEXT:     PointerToRelocations: 0x0
 # CHECK-NEXT:     PointerToLineNumbers: 0x0
@@ -45,7 +45,7 @@
 # CHECK-NEXT:     Name: .testx3 (2E 74 65 73 74 78 33 00)
 # CHECK-NEXT:     VirtualSize: 0x12
 # CHECK-NEXT:     VirtualAddress: 0x3000
-# CHECK-NEXT:     RawDataSize: 512
+# CHECK-NEXT:     RawDataSize: 0x200
 # CHECK-NEXT:     PointerToRawData: 0x800
 # CHECK-NEXT:     PointerToRelocations: 0x0
 # CHECK-NEXT:     PointerToLineNumbers: 0x0
@@ -62,7 +62,7 @@
 # CHECK-NEXT:     Name: .testx4 (2E 74 65 73 74 78 34 00)
 # CHECK-NEXT:     VirtualSize: 0x14
 # CHECK-NEXT:     VirtualAddress: 0x4000
-# CHECK-NEXT:     RawDataSize: 512
+# CHECK-NEXT:     RawDataSize: 0x200
 # CHECK-NEXT:     PointerToRawData: 0xA00
 # CHECK-NEXT:     PointerToRelocations: 0x0
 # CHECK-NEXT:     PointerToLineNumbers: 0x0

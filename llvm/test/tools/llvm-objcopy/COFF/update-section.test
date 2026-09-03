@@ -9,7 +9,7 @@
 # CHECK-NEXT:     Number: 1
 # CHECK-NEXT:     Name: .text
 # CHECK-NOT:    }
-# CHECK:          RawDataSize: 4
+# CHECK:          RawDataSize: 0x4
 # CHECK:          Hex dump of section '.text':
 # CHECK-NEXT:     0x00000000 41414142 AAAB
 
@@ -18,7 +18,7 @@
 # SMALLER-NEXT:   Number: 1
 # SMALLER-NEXT:   Name: .text
 # SMALLER-NOT:  }
-# SMALLER:        RawDataSize: 3
+# SMALLER:        RawDataSize: 0x3
 # SMALLER:        Hex dump of section '.text':
 # SMALLER-NEXT:   0x00000000 414141 AAA
 
@@ -28,12 +28,12 @@
 # MULTIPLE-NEXT:  Number: 1
 # MULTIPLE-NEXT:  Name: .text
 # MULTIPLE-NOT: }
-# MULTIPLE:       RawDataSize: 4
+# MULTIPLE:       RawDataSize: 0x4
 # MULTIPLE:     Section {
 # MULTIPLE-NEXT:  Number: 2
 # MULTIPLE-NEXT:  Name: .other
 # MULTIPLE-NOT: }
-# MULTIPLE:       RawDataSize: 4
+# MULTIPLE:       RawDataSize: 0x4
 # MULTIPLE:       Hex dump of section '.text':
 # MULTIPLE-NEXT:  0x00000000 41414142 AAAB
 # MULTIPLE:       Hex dump of section '.other':

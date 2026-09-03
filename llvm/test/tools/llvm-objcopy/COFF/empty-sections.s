@@ -25,13 +25,13 @@
 # INPUT:          Name: .data
 # INPUT-NEXT:     VirtualSize: 0x0
 # INPUT-NEXT:     VirtualAddress: 0x0
-# INPUT-NEXT:     RawDataSize: 0
+# INPUT-NEXT:     RawDataSize: 0x0
 # INPUT-NEXT:     PointerToRawData: 0x8D
 
 # OUTPUT:         Name: .data
 # OUTPUT-NEXT:    VirtualSize: 0x0
 # OUTPUT-NEXT:    VirtualAddress: 0x0
-# OUTPUT-NEXT:    RawDataSize: 0
+# OUTPUT-NEXT:    RawDataSize: 0x0
 # OUTPUT-NEXT:    PointerToRawData: 0x0{{$}}
 
     .text

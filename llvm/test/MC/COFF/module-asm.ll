@@ -11,7 +11,7 @@ module asm "  ret"
 ; CHECK:            Name:                      .text
 ; CHECK-NEXT:       VirtualSize:               0
 ; CHECK-NEXT:       VirtualAddress:            0
-; CHECK-NEXT:       RawDataSize:               {{[0-9]+}}
+; CHECK-NEXT:       RawDataSize:               0x{{[0-9A-F]+}}
 ; CHECK-NEXT:       PointerToRawData:          0x{{[0-9A-F]+}}
 ; CHECK-NEXT:       PointerToRelocations:      0x{{[0-9A-F]+}}
 ; CHECK-NEXT:       PointerToLineNumbers:      0x0
