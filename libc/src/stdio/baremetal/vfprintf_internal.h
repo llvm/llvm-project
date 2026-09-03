@@ -45,7 +45,6 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
   static constexpr size_t BUFF_SIZE = 1024;
   char buffer[BUFF_SIZE];
 
-  // TODO:
   printf_core::Writer writer = print_core::make_writer(
       buffer, BUFF_SIZE,
       &printf_core::overflow_write_flush_to_sink<char, internal::write_hook>,
