@@ -47,11 +47,9 @@ _CLC_OVERLOAD _CLC_DEF _CLC_CONST __CLC_GENTYPE __clc_hypot(__CLC_GENTYPE x,
                                                             __CLC_GENTYPE y) {
   __CLC_FLOATN fx = __CLC_CONVERT_FLOATN(x);
   __CLC_FLOATN fy = __CLC_CONVERT_FLOATN(y);
-  __CLC_FLOATN d2 = __clc_mad(fx, fx, fy * fy);
+  __CLC_FLOATN d2 = __clc_fma(fx, fx, fy * fy);
 
-  __CLC_GENTYPE ret = __CLC_CONVERT_HALFN(__clc_sqrt_fast(d2));
-
-  return __clc_isinf(x) || __clc_isinf(y) ? __CLC_GENTYPE_INF : ret;
+  return __CLC_CONVERT_HALFN(__clc_sqrt_fast(d2));
 }
 
 #endif
