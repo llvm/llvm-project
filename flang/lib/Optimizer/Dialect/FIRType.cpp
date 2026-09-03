@@ -493,6 +493,8 @@ unsigned getBoxCorank(mlir::Type ty) {
 
 /// Return the ISO_C_BINDING intrinsic module value of type \p ty.
 int getTypeCode(mlir::Type ty, const fir::KindMapping &kindMap) {
+  if (mlir::isa<mlir::IndexType>(ty))
+    return CFI_type_ptrdiff_t;
   if (mlir::IntegerType intTy = mlir::dyn_cast<mlir::IntegerType>(ty)) {
     if (intTy.isUnsigned()) {
       switch (intTy.getWidth()) {
