@@ -3694,6 +3694,8 @@ public:
   void EmitDeferStmt(const DeferStmt &S);
   void EmitAsmStmt(const AsmStmt &S);
 
+  /// Look up the destination for a break/continue statement, nullptr if not
+  /// found.
   const BreakContinue *GetDestForLoopControlStmt(const LoopControlStmt &S);
 
   void EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S);

@@ -372,4 +372,25 @@ out:
 // CHECK: [[ifend2]]
 // CHECK: ret i32
 
+// A break in a filter expression leaves the filter function, so generate
+// unreachable here.
+int break_out_of_filter(void) {
+  for (int i = 0; i < 4; i++) {
+    __try {
+      try_body(0, 0, 0);
+    } __except(({ break; 1; })) {
+    }
+  }
+  return 0;
+}
+
+// CHECK-LABEL: define dso_local {{.*}}i32 @break_out_of_filter()
+// CHECK: catchpad within %{{[^ ]*}} [ptr @"?filt$0@0@break_out_of_filter@@"]
+
+// CHECK-LABEL: define internal {{.*}}i32 @"?filt$0@0@break_out_of_filter@@"({{.*}})
+// CHECK: store i32 %{{.*}}, ptr %__exception_code
+// CHECK-NOT: br
+// CHECK-NOT: ret i32
+// CHECK: unreachable
+
 // CHECK: attributes #[[NOINLINE]] = { {{.*noinline.*}} }
