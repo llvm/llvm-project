@@ -26,6 +26,8 @@
 #include "mlir/Interfaces/TilingInterface.h"
 #include "llvm/Support/Debug.h"
 
+#include <utility>
+
 #define DEBUG_TYPE "test-tiling-interface"
 
 #define GET_OP_CLASSES
@@ -63,7 +65,7 @@ template <typename Range>
 static LogicalResult
 applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
                       Range &&payloadOps, unsigned numLoops,
-                      scf::SCFTilingOptions tilingOptions,
+                      const scf::SCFTilingOptions &tilingOptions,
                       TransformResults &transformResults) {
   SmallVector<Operation *> tiledOps;
   SmallVector<SmallVector<Operation *>> loopOps(numLoops);
@@ -97,7 +99,7 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
       return scf::SCFTileAndFuseOptions::ControlFnResult{
           yieldProducerReplacement};
     };
-    tileAndFuseOptions.setFusionControlFn(controlFn);
+    tileAndFuseOptions.setFusionControlFn(std::move(controlFn));
 
     rewriter.setInsertionPoint(target);
     FailureOr<scf::SCFTileAndFuseResult> tiledResults =
@@ -154,7 +156,8 @@ transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
       getAsIndexOpFoldResult(rewriter.getContext(), tileSizes);
 
   scf::SCFTilingOptions tilingOptions;
-  tilingOptions.setTileSizes(tileSizesOfr).setInterchange(tileInterchange);
+  tilingOptions.setTileSizes(tileSizesOfr);
+  tilingOptions.interchangeVector = std::move(tileInterchange);
   if (getUseForall()) {
     tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
   }
@@ -451,13 +454,13 @@ transform::TestFuseUsingForallOp::apply(TransformRewriter &rewriter,
       extractFromIntegerArrayAttr<int64_t>(getInterchange());
 
   scf::SCFTilingOptions tilingOptions;
-  tilingOptions.interchangeVector = tileInterchange;
+  tilingOptions.interchangeVector = std::move(tileInterchange);
   SmallVector<OpFoldResult> tileSizesOfr =
       getAsIndexOpFoldResult(rewriter.getContext(), tileSizes);
-  tilingOptions = tilingOptions.setTileSizes(tileSizesOfr);
+  tilingOptions.setTileSizes(tileSizesOfr);
   tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
   scf::SCFTileAndFuseOptions tileAndFuseOptions;
-  tileAndFuseOptions.tilingOptions = tilingOptions;
+  tileAndFuseOptions.tilingOptions = std::move(tilingOptions);
   LogicalResult result = applyTilingToAll(
       rewriter, getOperation(), state.getPayloadOps(getRootOp()),
       tileSizes.size() - llvm::count(tileSizes, 0), transformResults,
@@ -652,9 +655,9 @@ DiagnosedSilenceableFailure transform::TestTileUsingCustomLoopOp::apply(
     rewriter.setInsertionPointToEnd(forOp.getBody());
     return scf::SCFTilingOptions::CustomLoopHeaderInfo{
         {cast<LoopLikeOpInterface>(forOp.getOperation())},
-        offsets,
-        sizes,
-        innerDestinationTensors};
+        std::move(offsets),
+        std::move(sizes),
+        std::move(innerDestinationTensors)};
   };
 
   scf::SCFTilingOptions::GenerateLoopTerminatorFn terminatorFn =
@@ -683,7 +686,8 @@ DiagnosedSilenceableFailure transform::TestTileUsingCustomLoopOp::apply(
       getAsIndexOpFoldResult(transformRewriter.getContext(), staticTileSizes);
   tilingOptions.setTileSizes(tileSizes)
       .setLoopType(scf::SCFTilingOptions::LoopType::CustomOp)
-      .setCustomLoopGenerationFns(loopHeaderFn, terminatorFn);
+      .setCustomLoopGenerationFns(std::move(loopHeaderFn),
+                                  std::move(terminatorFn));
 
   OpBuilder::InsertionGuard g(transformRewriter);
   transformRewriter.setInsertionPoint(target);
