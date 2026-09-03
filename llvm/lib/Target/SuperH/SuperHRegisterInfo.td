@@ -18,6 +18,10 @@
 //===----------------------------------------------------------------------===//
 
 let Namespace = "SH" in {
+  def sub_8      : SubRegIndex<8>;
+  def sub_16     : SubRegIndex<16>;
+  def sub_32     : SubRegIndex<32>;
+
   def sub_64_lo  : SubRegIndex<64>;
   def sub_64_hi  : SubRegIndex<64, 64>;
   def sub_32_lo  : SubRegIndex<32>;
@@ -43,10 +47,39 @@ class SHReg<bits<16> Enc, string n> : Register<n> {
 }
 
 class SHRegWithSubRegs<bits<16> Enc, string n, list<Register> subregs>
-  : RegisterWithSubRegs<n, subregs> {
+    : RegisterWithSubRegs<n, subregs> {
   let HWEncoding = Enc;
   let Namespace = "SH";
 }
+
+// Broken due to issue #218854, resume work on this after it's fixed.
+// // Artificial subregisters of the GPR registers.
+// class GPRReg8<bits<16> Enc, string n>
+//     : SHReg<Enc, n # ".b"> {
+//   let isArtificial = 1;
+// }
+// 
+// class GPRReg16<bits<16> Enc, string n, list<Register> subregs> 
+//     : SHRegWithSubRegs<Enc, n # ".w", subregs> {
+//   let isArtificial = 1;
+//   let SubRegIndices = [sub_8];
+// }
+// 
+// // SH General Purpose Registers.
+// class GPRReg32<bits<16> Enc, string n, list<Register> subregs> 
+//     : SHRegWithSubRegs<Enc, n, subregs> {
+//   let SubRegIndices = [sub_16];
+// }
+// 
+// multiclass GPRReg<bits<16> Enc, string n> {
+//   def NAME#B : GPRReg8<Enc, n>;
+//   defvar RB = !cast<Register>(NAME#B);
+// 
+//   def NAME#W : GPRReg16<Enc, n, [RB]>;
+//   defvar RW = !cast<Register>(NAME#W);
+// 
+//   def NAME   : GPRReg32<Enc, n, [RW]>;
+// }
 
 // SH General Purpose Registers.
 class GPRReg<bits<16> Enc, string n> : SHReg<Enc, n>;
@@ -151,7 +184,10 @@ let Namespace = "SH" in {
 // Register Classes
 //===----------------------------------------------------------------------===//
 
-def GPR : RegisterClass<"SH", [ i8, i16, i32 ], 32, (sequence "R%u", 0, 15)>;
+def GPR8  : RegisterClass<"SH", [ i8 ], 32, (sequence "R%u", 0, 15)>;
+def GPR16 : RegisterClass<"SH", [ i16 ], 32, (sequence "R%u", 0, 15)>;
+def GPR32 : RegisterClass<"SH", [ i32 ], 32, (sequence "R%u", 0, 15)>;
+def GPR   : RegisterClass<"SH", [ i8, i16, i32 ], 32, (sequence "R%u", 0, 15)>;
 
 // 32-bit floating point registers.
 def FR32 : RegisterClass<"SH", [ f32 ], 32, (add

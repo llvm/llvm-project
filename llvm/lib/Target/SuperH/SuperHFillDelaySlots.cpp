@@ -114,7 +114,7 @@ bool SuperHFillDelaySlots::fillDelaySlot(Block &MBB, BlockIt MBBI) {
   MachineFunction &MF = *MBB.getParent();
   MachineInstr &MI = *MBBI;
 
-  if (auto *Candidate = SuperHFillDelaySlots::findSlotCandidate(MBB, MBBI)) {
+  if (auto *Candidate = findSlotCandidate(MBB, MBBI)) {
       LLVM_DEBUG(dbgs() << "Swapping " << TII->getName(MI.getOpcode()) 
                         << " and " << TII->getName(Candidate->getOpcode()) 
                         << " @ " << MBB.getParent()->getName() << "\n");

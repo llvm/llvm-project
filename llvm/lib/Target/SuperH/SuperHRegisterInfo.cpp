@@ -60,6 +60,10 @@ SuperHRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     return &SH::GPRRegClass;
   }
 
+  if (TRI->isTypeLegalForClass(*RC, MVT::i1)) {
+    return &SH::GPRRegClass;
+  }
+
   return TargetRegisterInfo::getLargestLegalSuperClass(RC, MF);
 }
 
@@ -75,6 +79,9 @@ BitVector SuperHRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Also reserve the stack frame and stack pointer.
   Reserved.set(SH::R14);
   Reserved.set(SH::R15);
+
+  // Status Register
+  Reserved.set(SH::SR);
   return Reserved;
 }
 
@@ -88,23 +95,37 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const SuperHTargetMachine &TM = (const SuperHTargetMachine &)MF.getTarget();
+  const TargetFrameLowering *TFI = TM.getSubtargetImpl(MF.getFunction())->getFrameLowering();
   const TargetInstrInfo &TII = *TM.getSubtargetImpl(MF.getFunction())->getInstrInfo();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
-  // NOTE: Stack grows down, so flip this.
-  int Offset = -MFI.getObjectOffset(FrameIndex);
+  int64_t Size = MFI.getObjectSize(FrameIndex);
+  int64_t StackSize = MFI.getStackSize() + 8;
+  int64_t Offset = MFI.getObjectOffset(FrameIndex);
+  
+  // Add 4 to offset because SP points to saved FP
+  Offset += StackSize - TFI->getOffsetOfLocalArea() + 4;
+
+  // Fold incoming offset.
+  Offset += MI.getOperand(FIOperandNum + 1).getImm();
 
   if (MI.getOpcode() == SH::SHFrmIdx) {
-
-    // TODO: Lower frames that can't be expressed in 4 bits.
     Register DstReg = MI.getOperand(0).getReg();
-    MachineInstr *New = BuildMI(MBB, MI, dl, TII.get(SH::MOVLD4RmiRn), DstReg)
-                        .addReg(SH::R14)
-                        .addImm(Offset);
 
+    // mov r14,r1
+    // add #-<frame size>,r1
+    BuildMI(MBB, MI, DebugLoc(), TII.get(SH::MOVRmRn), DstReg)
+      .addReg(SH::R14);
+    BuildMI(MBB, MI, DebugLoc(), TII.get(SH::ADDI8Rn), DstReg)
+      .addReg(DstReg)
+      .addImm(-StackSize);
+
+    II++;
     MI.eraseFromParent();
-    return false;
   }
+
+  MI.getOperand(FIOperandNum).ChangeToRegister(SH::R1, false);
+  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
   return false;
 }
 

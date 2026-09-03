@@ -23,7 +23,7 @@ SuperHMCInstLower::lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   const MCExpr *Expr = nullptr;
   switch (MO.getTargetFlags()) {
     case SHII::MO_NO_FLAG:
-      Expr = MCSymbolRefExpr::create(Sym, SH::S_None, Ctx);
+      Expr = MCSymbolRefExpr::create(Sym, SH::S_DIR, Ctx);
       break;
 
     case SHII::MO_GOT:
@@ -79,11 +79,6 @@ void SuperHMCInstLower::lowerInstruction(const MachineInstr &MI,
           MO, Printer.GetExternalSymbolSymbol(MO.getSymbolName()), Subtarget);
       break;
     case MachineOperand::MO_MachineBasicBlock:
-
-      // NOTE:  Branch instructions will generally jump to labels.
-      //        so ensure we emit them if they're referenced in an
-      //        operand during lowering.
-      MO.getMBB()->setLabelMustBeEmitted();
       MCOp = MCOperand::createExpr(
           MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
       break;
