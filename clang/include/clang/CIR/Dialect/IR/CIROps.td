@@ -6967,14 +6967,6 @@ def FPClassTestEnum
   FPClass_Sub, FPClass_Zero, FPClass_PosFin, FPClass_NegFin, FPClass_Fin,
   FPClass_Pos, FPClass_Neg, FPClass_All]> {
   let printBitEnumPrimaryGroups = 1;
-
-  // I32BitEnumAttr turns this on for backwards compatibility, which makes the
-  // operation printer quote every value that is not a single bit. Turning it
-  // off, together with the `enum` directive on cir.is_fp_class, gets a
-  // separator-aware parser and printer that spell every value unquoted.
-  let printBitEnumQuoted = 0;
-
-  let genSpecializedAttr = 0;
 }
 
 def CIR_FPClassTestAttr : CIR_EnumAttr<FPClassTestEnum, "fp_class">;
