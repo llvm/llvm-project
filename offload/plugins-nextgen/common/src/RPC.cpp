@@ -13,6 +13,7 @@
 
 #include "PluginInterface.h"
 
+#include "shared/emissary_rpc_server.h"
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
 #include "shared/rpc_server.h"
@@ -110,6 +111,9 @@ runServer(plugin::GenericDeviceTy &Device, void *Buffer,
 
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = rpc::handle_libc_opcodes(*Port, NumLanes);
+
+  if (Status == rpc::RPC_UNHANDLED_OPCODE)
+    Status = rpc::handleEmissaryOpcodes(*Port, NumLanes);
 
   return Status;
 }

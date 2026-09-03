@@ -7131,6 +7131,14 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       StaticOperator = true;
   }
 
+  // Call EmitEmissaryExec(E) on device pass calls to _emissary_exec.
+  if ((CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()) && FnType &&
+      isa<FunctionProtoType>(FnType) &&
+      cast<FunctionProtoType>(FnType)->isVariadic() && E->getDirectCallee() &&
+      E->getDirectCallee()->getIdentifier() &&
+      E->getDirectCallee()->getIdentifier()->isStr("_emissary_exec"))
+    return EmitEmissaryExec(E);
+
   auto Arguments = E->arguments();
   if (StaticOperator) {
     // If we're calling a static operator, we need to emit the object argument
