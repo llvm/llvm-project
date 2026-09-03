@@ -2276,7 +2276,7 @@ bool ItaniumRecordLayoutBuilder::TypeContainsVectorsOrFp80(QualType Ty) {
   return TypeContainsVectorsOrFp80Impl(Ty, InArray);
 }
 
-bool ItaniumRecordLayoutBuilder::TypeContainsVectorsOrFp80Impl(QualType Ty
+bool ItaniumRecordLayoutBuilder::TypeContainsVectorsOrFp80Impl(QualType Ty,
                                                                bool InArray) {
   // Direct vector type.
   if (Ty->isVectorType())
