@@ -1423,8 +1423,10 @@ public:
     DEBUG_SLSR_RP(dbgs() << "-- MaxRP of BBs -- \n");
     SmallPtrSet<const BasicBlock *, 8> BBsToSkip;
     for (auto &BB : *F) {
-      
-      if (BBToNumCandsAndBasises.at(&BB).second <= MinDistinctBasisesToFilter)
+
+      auto It = BBToNumCandsAndBasises.find(&BB);
+      if (It == BBToNumCandsAndBasises.end() ||
+          It->second.second <= MinDistinctBasisesToFilter)
         continue;
 
       const BlockLiveness &BL = getLiveness(&BB);
