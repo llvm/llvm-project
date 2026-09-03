@@ -26,9 +26,7 @@ define i64 @PR62286(i32 %a) {
 ; AVX1-LABEL: PR62286:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1,2],ymm1[3],ymm2[4,5,6,7]
+; AVX1-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3]
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7]

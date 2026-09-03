@@ -3626,19 +3626,17 @@ define <8 x float> @PR213251() {
 ; SSE2-LABEL: PR213251:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl $1, (%rax)
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0,2,2]
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: PR213251:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movl $1, (%rax)
-; SSSE3-NEXT:    movd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSSE3-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSSE3-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0,2,2]
 ; SSSE3-NEXT:    xorps %xmm1, %xmm1
-; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: PR213251:
@@ -3648,28 +3646,11 @@ define <8 x float> @PR213251() {
 ; SSE41-NEXT:    xorps %xmm1, %xmm1
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: PR213251:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    movl $1, (%rax)
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2,3,4,5,6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2-SLOW-LABEL: PR213251:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    movl $1, (%rax)
-; AVX2-SLOW-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
-; AVX2-SLOW-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2,3,4,5,6,7]
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-LABEL: PR213251:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    movl $1, (%rax)
-; AVX2-FAST-NEXT:    vmovd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX2-FAST-NEXT:    retq
+; AVX-LABEL: PR213251:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl $1, (%rax)
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,mem[0],zero,zero
+; AVX-NEXT:    retq
   store i32 1, ptr poison, align 4
   %f.promoted = load i32, ptr poison, align 4
   %tobool.not12 = icmp eq i32 %f.promoted, 0
