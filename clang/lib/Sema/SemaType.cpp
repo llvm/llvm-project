@@ -10060,7 +10060,11 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   //   access to a corresponding data member of the closure type that
   //   would have been declared if x were an odr-use of the denoted
   //   entity.
-  if (getCurLambda() && isa<ParenExpr>(IDExpr)) {
+
+  // decltype result for blocks should be the same as decltype result in
+  // lambdas because blocks capture variables the same as lambdas do
+  // https://github.com/llvm/llvm-project/issues/207355#issuecomment-4877181419
+  if (isa<ParenExpr>(IDExpr)) {
     if (auto *DRE = dyn_cast<DeclRefExpr>(IDExpr->IgnoreParens())) {
       if (auto *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
         QualType T = getCapturedDeclRefType(Var, DRE->getLocation());
