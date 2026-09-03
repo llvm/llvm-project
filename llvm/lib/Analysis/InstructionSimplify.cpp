@@ -5710,7 +5710,7 @@ Value *llvm::simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 static Value *simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
                                         const SimplifyQuery &Q,
                                         unsigned MaxRecurse) {
-  if (IsNonNull && match(Op, m_Zero()) && Q.CxtI &&
+  if (IsNonNull && isa<ConstantPointerNull>(Op) && Q.CxtI &&
       !NullPointerIsDefined(Q.CxtI->getFunction(),
                             Op->getType()->getPointerAddressSpace()))
     return PoisonValue::get(Ty);
