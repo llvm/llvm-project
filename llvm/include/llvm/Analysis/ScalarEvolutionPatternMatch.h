@@ -79,6 +79,7 @@ inline cst_pred_ty<is_all_ones> m_scev_AllOnes() {
 }
 
 inline auto m_SCEV() { return m_Isa<const SCEV>(); }
+inline auto m_SCEVUnknown() { return m_Isa<const SCEVUnknown>(); }
 inline auto m_SCEVConstant() { return m_Isa<const SCEVConstant>(); }
 inline auto m_SCEVVScale() { return m_Isa<const SCEVVScale>(); }
 
@@ -137,6 +138,18 @@ inline cst_pred_ty<is_specific_signed_cst> m_scev_SpecificSInt(int64_t V) {
   return V;
 }
 
+struct match_specific_apint {
+  const APInt &C;
+  match_specific_apint(const APInt &C) : C(C) {}
+  bool match(const SCEV *S) const {
+    return isa<SCEVConstant>(S) &&
+           APInt::isSameValue(C, cast<SCEVConstant>(S)->getAPInt());
+  }
+};
+
+/// Match an SCEV constant with an APInt.
+inline match_specific_apint m_scev_SpecificInt(const APInt &C) { return C; }
+
 struct bind_cst_ty {
   const APInt *&CR;
 
@@ -172,6 +185,17 @@ template <typename SCEVTy, typename Op0_t> struct SCEVUnaryExpr_match {
 template <typename SCEVTy, typename Op0_t>
 inline SCEVUnaryExpr_match<SCEVTy, Op0_t> m_scev_Unary(const Op0_t &Op0) {
   return SCEVUnaryExpr_match<SCEVTy, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
+inline SCEVUnaryExpr_match<SCEVIntegralCastExpr, Op0_t>
+m_scev_IntegralCast(const Op0_t &Op0) {
+  return m_scev_Unary<SCEVIntegralCastExpr>(Op0);
+}
+
+template <typename Op0_t>
+inline auto m_scev_IntegralCastOrSelf(const Op0_t &Op0) {
+  return m_CombineOr(m_scev_IntegralCast(Op0), Op0);
 }
 
 template <typename Op0_t>

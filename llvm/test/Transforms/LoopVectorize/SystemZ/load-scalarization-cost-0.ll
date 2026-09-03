@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=s390x-unknown-linux -mcpu=z13 -passes=loop-vectorize \
-; RUN:   -force-vector-width=2 -debug-only=loop-vectorize \
-; RUN:   -disable-output < %s 2>&1 | FileCheck %s
+; RUN:   -force-vector-width=2 -laa-speculate-unit-stride=false \
+; RUN:   -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ;
 ; Check that a scalarized load does not get operands scalarization costs added.
