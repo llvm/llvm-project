@@ -818,6 +818,10 @@ private:
   /// Raw data representing complete debug line section for the unit.
   StringRef RawData;
 
+  /// Maps file indexes from the input line table to the indexes assigned while
+  /// rebuilding the output table.
+  std::unordered_map<unsigned, unsigned> InputToOutputFileIndex;
+
   /// DWARF version and format for this line table.
   uint16_t DwarfVersion = 0;
   dwarf::DwarfFormat Format = dwarf::DWARF32;
@@ -838,6 +842,15 @@ public:
     assert(RawData.empty() && "cannot use with raw data");
     return Header.tryGetFile(Directory, FileName, Checksum, Source,
                              DwarfVersion, FileNumber);
+  }
+
+  void mapFileIndex(unsigned InputIndex, unsigned OutputIndex) {
+    InputToOutputFileIndex[InputIndex] = OutputIndex;
+  }
+
+  unsigned translateFileIndex(unsigned InputIndex) const {
+    const auto It = InputToOutputFileIndex.find(InputIndex);
+    return It == InputToOutputFileIndex.end() ? InputIndex : It->second;
   }
 
   /// Return label at the start of the emitted debug line for the unit.
