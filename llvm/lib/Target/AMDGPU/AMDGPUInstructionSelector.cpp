@@ -3346,6 +3346,23 @@ computeIndirectRegIndex(MachineRegisterInfo &MRI, const SIRegisterInfo &TRI,
   return std::pair(IdxBaseReg, SubRegs[Offset]);
 }
 
+/// M0/GPR-index addressing counts 32-bit registers, not EltSize-byte elements.
+static Register scaleIndirectIdxReg(MachineRegisterInfo &MRI,
+                                    const SIInstrInfo &TII,
+                                    MachineBasicBlock &BB, MachineInstr &I,
+                                    const DebugLoc &DL, Register IdxReg,
+                                    unsigned EltSize) {
+  if (EltSize == 4)
+    return IdxReg;
+
+  assert(isPowerOf2_32(EltSize) && "cannot scale index by a shift");
+  Register ScaledIdxReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(BB, I, DL, TII.get(AMDGPU::S_LSHL_B32), ScaledIdxReg)
+      .addReg(IdxReg)
+      .addImm(Log2_32(EltSize / 4));
+  return ScaledIdxReg;
+}
+
 bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
   MachineInstr &MI) const {
   Register DstReg = MI.getOperand(0).getReg();
@@ -3387,6 +3404,9 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
     if (DstTy.getSizeInBits() != 32 && !Is64)
       return false;
 
+    IdxReg = scaleIndirectIdxReg(*MRI, TII, *BB, MI, DL, IdxReg,
+                                 DstTy.getSizeInBits() / 8);
+
     BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
       .addReg(IdxReg);
 
@@ -3397,9 +3417,6 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
     MI.eraseFromParent();
     return true;
   }
-
-  if (SrcRB->getID() != AMDGPU::VGPRRegBankID || DstTy.getSizeInBits() != 32)
-    return false;
 
   if (!STI.useVGPRIndexMode()) {
     BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
@@ -3469,6 +3486,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
 
   MachineBasicBlock *BB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
+  IdxReg = scaleIndirectIdxReg(*MRI, TII, *BB, MI, DL, IdxReg, ValSize / 8);
 
   if (!IndexMode) {
     BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
