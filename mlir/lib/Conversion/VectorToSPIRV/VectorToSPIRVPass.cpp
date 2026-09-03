@@ -37,6 +37,15 @@ void ConvertVectorToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
   Operation *op = getOperation();
 
+  // Skip unrolling when nothing needs it: the unroll functions also run
+  // whole-module canonicalization as a side effect.
+  if (spirv::hasMultiRankVectorType(op)) {
+    if (failed(spirv::unrollVectorsInSignatures(op)))
+      return signalPassFailure();
+    if (failed(spirv::unrollVectorsInFuncBodies(op)))
+      return signalPassFailure();
+  }
+
   auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
