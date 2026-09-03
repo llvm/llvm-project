@@ -2437,21 +2437,28 @@ let Predicates = [HasSVE_or_SME] in {
   defm CNTD_XPiI : sve_int_count<0b110, "cntd", int_aarch64_sve_cntd>;
   defm CNTP_XPP : sve_int_pcount_pred<0b000, "cntp", int_aarch64_sve_cntp>;
 
-  def : Pat<(i64 (AArch64CttzElts nxv16i1:$Pg, nxv16i1:$Op1)),
-            (CNTP_XPP_B (BRKB_PPzP PPR:$Pg, PPR:$Op1),
-                        (BRKB_PPzP PPR:$Pg, PPR:$Op1))>;
+  multiclass sve_cttz_elts_pats<SDPatternOperator cttz_op> {
+    def : Pat<(i64 (cttz_op nxv16i1:$Pg, nxv16i1:$Op1)),
+              (CNTP_XPP_B (BRKB_PPzP PPR:$Pg, PPR:$Op1),
+                          (BRKB_PPzP PPR:$Pg, PPR:$Op1))>;
 
-  def : Pat<(i64 (AArch64CttzElts nxv8i1:$Pg, nxv8i1:$Op1)),
-            (CNTP_XPP_H (BRKB_PPzP PPR:$Pg, PPR:$Op1),
-                        (BRKB_PPzP PPR:$Pg, PPR:$Op1))>;
+    def : Pat<(i64 (cttz_op nxv8i1:$Pg, nxv8i1:$Op1)),
+              (CNTP_XPP_H (BRKB_PPzP PPR:$Pg, PPR:$Op1),
+                          (BRKB_PPzP PPR:$Pg, PPR:$Op1))>;
 
-  def : Pat<(i64 (AArch64CttzElts nxv4i1:$Pg, nxv4i1:$Op1)),
-            (CNTP_XPP_S (BRKB_PPzP PPR:$Pg, PPR:$Op1),
-                        (BRKB_PPzP PPR:$Pg, PPR:$Op1))>;
+    def : Pat<(i64 (cttz_op nxv4i1:$Pg, nxv4i1:$Op1)),
+              (CNTP_XPP_S (BRKB_PPzP PPR:$Pg, PPR:$Op1),
+                          (BRKB_PPzP PPR:$Pg, PPR:$Op1))>;
 
-  def : Pat<(i64 (AArch64CttzElts nxv2i1:$Pg, nxv2i1:$Op1)),
-            (CNTP_XPP_D (BRKB_PPzP PPR:$Pg, PPR:$Op1),
-                        (BRKB_PPzP PPR:$Pg, PPR:$Op1))>;
+    def : Pat<(i64 (cttz_op nxv2i1:$Pg, nxv2i1:$Op1)),
+              (CNTP_XPP_D (BRKB_PPzP PPR:$Pg, PPR:$Op1),
+                          (BRKB_PPzP PPR:$Pg, PPR:$Op1))>;
+  }
+
+  defm : sve_cttz_elts_pats<AArch64CttzElts>;
+
+  let Predicates = [HasSVE_or_SME, HasNoSVE2p2_or_SME2p2] in
+    defm : sve_cttz_elts_pats<AArch64CttzEltsZeroPoison>;
 }
 
   defm INCB_XPiI : sve_int_pred_pattern_a<0b000, "incb", add, int_aarch64_sve_cntb>;
@@ -2537,37 +2544,43 @@ let Predicates = [HasSVE_or_SME] in {
   defm INCP_ZP     : sve_int_count_v<0b10000, "incp">;
   defm DECP_ZP     : sve_int_count_v<0b10100, "decp">;
 
-  def : Pat<(i64 (add GPR64:$Op1, (i64 (AArch64CttzElts nxv16i1:$Pg, nxv16i1:$Op2)))),
-            (INCP_XP_B (BRKB_PPzP PPR:$Pg, PPR:$Op2), GPR64:$Op1)>;
+  multiclass sve_cttz_elts_add_pats<SDPatternOperator cttz_op> {
+    def : Pat<(i64 (add GPR64:$Op1, (i64 (cttz_op nxv16i1:$Pg, nxv16i1:$Op2)))),
+              (INCP_XP_B (BRKB_PPzP PPR:$Pg, PPR:$Op2), GPR64:$Op1)>;
 
-  def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (AArch64CttzElts nxv16i1:$Pg, nxv16i1:$Op2))))),
-            (EXTRACT_SUBREG (INCP_XP_B (BRKB_PPzP PPR:$Pg, PPR:$Op2),
-                                       (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
-                            sub_32)>;
+    def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (cttz_op nxv16i1:$Pg, nxv16i1:$Op2))))),
+              (EXTRACT_SUBREG (INCP_XP_B (BRKB_PPzP PPR:$Pg, PPR:$Op2),
+                                         (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
+                              sub_32)>;
 
-  def : Pat<(i64 (add GPR64:$Op1, (i64 (AArch64CttzElts nxv8i1:$Pg, nxv8i1:$Op2)))),
-            (INCP_XP_H (BRKB_PPzP PPR:$Pg, PPR:$Op2), GPR64:$Op1)>;
+    def : Pat<(i64 (add GPR64:$Op1, (i64 (cttz_op nxv8i1:$Pg, nxv8i1:$Op2)))),
+              (INCP_XP_H (BRKB_PPzP PPR:$Pg, PPR:$Op2), GPR64:$Op1)>;
 
-  def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (AArch64CttzElts nxv8i1:$Pg, nxv8i1:$Op2))))),
-            (EXTRACT_SUBREG (INCP_XP_H (BRKB_PPzP PPR:$Pg, PPR:$Op2),
-                                       (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
-                            sub_32)>;
+    def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (cttz_op nxv8i1:$Pg, nxv8i1:$Op2))))),
+              (EXTRACT_SUBREG (INCP_XP_H (BRKB_PPzP PPR:$Pg, PPR:$Op2),
+                                         (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
+                              sub_32)>;
 
-  def : Pat<(i64 (add GPR64:$Op1, (i64 (AArch64CttzElts nxv4i1:$Pg, nxv4i1:$Op2)))),
-            (INCP_XP_S (BRKB_PPzP PPR:$Pg, PPR:$Op2), GPR64:$Op1)>;
+    def : Pat<(i64 (add GPR64:$Op1, (i64 (cttz_op nxv4i1:$Pg, nxv4i1:$Op2)))),
+              (INCP_XP_S (BRKB_PPzP PPR:$Pg, PPR:$Op2), GPR64:$Op1)>;
 
-  def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (AArch64CttzElts nxv4i1:$Pg, nxv4i1:$Op2))))),
-            (EXTRACT_SUBREG (INCP_XP_S (BRKB_PPzP PPR:$Pg, PPR:$Op2),
-                                       (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
-                            sub_32)>;
+    def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (cttz_op nxv4i1:$Pg, nxv4i1:$Op2))))),
+              (EXTRACT_SUBREG (INCP_XP_S (BRKB_PPzP PPR:$Pg, PPR:$Op2),
+                                         (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
+                              sub_32)>;
 
-  def : Pat<(i64 (add GPR64:$Op1, (i64 (AArch64CttzElts nxv2i1:$Pg, nxv2i1:$Op2)))),
-            (INCP_XP_D (BRKB_PPzP PPR:$Pg, PPR:$Op2), GPR64:$Op1)>;
+    def : Pat<(i64 (add GPR64:$Op1, (i64 (cttz_op nxv2i1:$Pg, nxv2i1:$Op2)))),
+              (INCP_XP_D (BRKB_PPzP PPR:$Pg, PPR:$Op2), GPR64:$Op1)>;
 
-  def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (AArch64CttzElts nxv2i1:$Pg, nxv2i1:$Op2))))),
-            (EXTRACT_SUBREG (INCP_XP_D (BRKB_PPzP PPR:$Pg, PPR:$Op2),
-                                       (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
-                            sub_32)>;
+    def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (cttz_op nxv2i1:$Pg, nxv2i1:$Op2))))),
+              (EXTRACT_SUBREG (INCP_XP_D (BRKB_PPzP PPR:$Pg, PPR:$Op2),
+                                         (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
+                              sub_32)>;
+  }
+
+  defm : sve_cttz_elts_add_pats<AArch64CttzElts>;
+  let Predicates = [HasSVE_or_SME, HasNoSVE2p2_or_SME2p2] in
+    defm : sve_cttz_elts_add_pats<AArch64CttzEltsZeroPoison>;
 
   defm INDEX_RR : sve_int_index_rr<"index", AArch64mul_p_oneuse>;
   defm INDEX_IR : sve_int_index_ir<"index", AArch64mul_p, AArch64mul_p_oneuse>;
@@ -5070,6 +5083,18 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   // SVE predicate count
   defm FIRSTP_XPP : sve_int_pcount_pred<0b001, "firstp", int_aarch64_sve_firstp>;
   defm LASTP_XPP  : sve_int_pcount_pred<0b010, "lastp", int_aarch64_sve_lastp>;
+
+  def : Pat<(i64 (AArch64CttzEltsZeroPoison nxv16i1:$Pg, nxv16i1:$Op1)),
+            (FIRSTP_XPP_B PPR:$Pg, PPR:$Op1)>;
+
+  def : Pat<(i64 (AArch64CttzEltsZeroPoison nxv8i1:$Pg, nxv8i1:$Op1)),
+            (FIRSTP_XPP_H PPR:$Pg, PPR:$Op1)>;
+
+  def : Pat<(i64 (AArch64CttzEltsZeroPoison nxv4i1:$Pg, nxv4i1:$Op1)),
+            (FIRSTP_XPP_S PPR:$Pg, PPR:$Op1)>;
+
+  def : Pat<(i64 (AArch64CttzEltsZeroPoison nxv2i1:$Pg, nxv2i1:$Op1)),
+            (FIRSTP_XPP_D PPR:$Pg, PPR:$Op1)>;
 
   // SVE reverse within elements, zeroing predicate
   defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit", AArch64rbit_mt>;

@@ -306,6 +306,8 @@ def HasSVE2p2_or_SME2p2
     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSVE2p2),
                 "sme2p2 or sve2p2">;
+def HasNoSVE2p2_or_SME2p2
+    : Predicate<"!(Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()))">;
 def HasSVE2p3_or_SME2p3
     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p3() || Subtarget->hasSME2p3())">,
                 AssemblerPredicateWithAll<(any_of FeatureSME2p3, FeatureSVE2p3),
@@ -1258,6 +1260,9 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
 // res = cttz.elts(pg, op)
 def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 2,
                              [SDTCisInt<0>, SDTCVecEltisVT<1,i1>, SDTCisSameAs<1,2>]>, []>;
+def AArch64CttzEltsZeroPoison
+    : SDNode<"AArch64ISD::CTTZ_ELTS_ZERO_POISON", SDTypeProfile<1, 2,
+             [SDTCisInt<0>, SDTCVecEltisVT<1,i1>, SDTCisSameAs<1,2>]>, []>;
 
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
