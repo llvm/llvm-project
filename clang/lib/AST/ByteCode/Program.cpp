@@ -79,9 +79,11 @@ unsigned Program::getOrCreateDummy(DeclOrExpr D, bool IsConstexprUnknown) {
     const auto *VD = D.asValueDecl();
     IsWeak = VD->isWeak();
     QT = VD->getType();
-    if (QT->isPointerOrReferenceType())
+
+    if (QT->isReferenceType())
       QT = QT->getPointeeType();
   }
+
   assert(!QT.isNull());
 
   Descriptor *Desc;
