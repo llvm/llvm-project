@@ -271,7 +271,6 @@ static cl::opt<bool> VectorizeOnceUsed(
     cl::desc("Use instructions with the single user as standalone "
              "vectorization seeds."));
 
-
 /// Enables vectorization of copyable elements.
 static cl::opt<bool> VectorizeCopyableElements(
     "slp-copyable-elements", cl::init(true), cl::Hidden,
@@ -486,7 +485,6 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc;
 }
-
 
 /// Bottom Up SLP Vectorizer.
 class slpvectorizer::BoUpSLP {
