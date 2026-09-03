@@ -718,7 +718,13 @@ void MCObjectStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
                                          unsigned char Value,
                                          SMLoc Loc) {
-  newSpecialFragment<MCOrgFragment>(*Offset, Value, Loc);
+  emitValueToOffset(Offset, Value, Loc, /*AllowOmission=*/false);
+}
+
+void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
+                                         unsigned char Value, SMLoc Loc,
+                                         bool AllowOmission) {
+  newSpecialFragment<MCOrgFragment>(*Offset, Value, Loc, AllowOmission);
 }
 
 void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,

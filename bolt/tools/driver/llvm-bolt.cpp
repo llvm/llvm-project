@@ -14,6 +14,7 @@
 
 #include "bolt/Profile/DataAggregator.h"
 #include "bolt/Rewrite/MachORewriteInstance.h"
+#include "bolt/Rewrite/MergeFunctionLayouts.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -21,13 +22,22 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 
 #define DEBUG_TYPE "bolt"
+
+// FIXME: Is this portable enough?
+#if defined(_WIN32) || defined(_WIN64)
+#define NULL_FILE "nul"
+#else
+#define NULL_FILE "/dev/null"
+#endif
 
 using namespace llvm;
 using namespace object;
@@ -80,6 +90,18 @@ InputFilename2(
   cl::desc("<executable>"),
   cl::Optional,
   cl::cat(BoltDiffCategory));
+
+static cl::OptionCategory BoltAlignCategory("BOLT align options");
+
+static cl::OptionCategory *BoltAlignCategories[] = {&BoltAlignCategory};
+
+static cl::opt<std::string>
+    AlignOutputA("o-a", cl::desc("output path for aligned binary A"),
+                 cl::value_desc("filename"), cl::cat(BoltAlignCategory));
+
+static cl::opt<std::string>
+    AlignOutputB("o-b", cl::desc("output path for aligned binary B"),
+                 cl::value_desc("filename"), cl::cat(BoltAlignCategory));
 
 } // namespace opts
 
@@ -147,6 +169,114 @@ void boltDiffMode(int argc, char **argv) {
   opts::DiffOnly = true;
 }
 
+static Error runBoltAlignCommand(StringRef ToolPath, StringRef Input,
+                                 StringRef Output, StringRef LayoutOption) {
+  std::string OutputArg = (Twine("-o=") + Output).str();
+  SmallVector<StringRef, 16> Args;
+  Args.push_back(ToolPath);
+  Args.push_back(Input);
+  Args.push_back(OutputArg);
+  Args.push_back(LayoutOption);
+
+  outs().flush();
+  errs().flush();
+  std::string ErrMsg;
+  const int Result =
+      sys::ExecuteAndWait(ToolPath, Args, std::nullopt, {}, 0, 0, &ErrMsg);
+  if (Result < 0)
+    return createStringError(inconvertibleErrorCode(),
+                             Twine("failed to execute llvm-bolt-align: ") +
+                                 ErrMsg);
+  if (Result != 0)
+    return createStringError(inconvertibleErrorCode(),
+                             Twine("llvm-bolt-align exited with status ") +
+                                 Twine(Result));
+  return Error::success();
+}
+
+static Expected<std::string> createAlignTempFile(StringRef Label) {
+  int FD;
+  SmallString<128> Path;
+  if (std::error_code EC = sys::fs::createTemporaryFile(
+          Twine("llvm-bolt-align-") + Label, "layout", FD, Path))
+    return createStringError(EC, "cannot create temporary layout file");
+
+  if (std::error_code EC = sys::fs::closeFile(FD))
+    return createStringError(EC, "cannot close temporary layout file");
+
+  return Path.str().str();
+}
+
+static int boltAlignMode(int argc, char **argv, StringRef ToolPath) {
+  cl::HideUnrelatedOptions(ArrayRef(opts::BoltAlignCategories));
+  cl::AddExtraVersionPrinter(printBoltRevision);
+  cl::ParseCommandLineOptions(
+      argc, argv,
+      "llvm-bolt-align - align the function layouts of two binaries\n"
+      "\nEXAMPLE: llvm-bolt-align a.out b.out -o-a=a.aligned -o-b=b.aligned\n");
+  if (opts::InputFilename2.empty()) {
+    errs() << ToolName << ": expected two input binaries.\n";
+    return EXIT_FAILURE;
+  }
+  if (opts::AlignOutputA.empty() || opts::AlignOutputB.empty()) {
+    errs() << ToolName << ": expected -o-a=<file> and -o-b=<file>.\n";
+    return EXIT_FAILURE;
+  }
+
+  Expected<std::string> NaturalLayoutAOrErr = createAlignTempFile("natural-a");
+  if (!NaturalLayoutAOrErr)
+    report_error("llvm-bolt-align", NaturalLayoutAOrErr.takeError());
+  const std::string NaturalLayoutA = std::move(*NaturalLayoutAOrErr);
+  FileRemover RemoveNaturalLayoutA(NaturalLayoutA);
+
+  Expected<std::string> NaturalLayoutBOrErr = createAlignTempFile("natural-b");
+  if (!NaturalLayoutBOrErr)
+    report_error("llvm-bolt-align", NaturalLayoutBOrErr.takeError());
+  const std::string NaturalLayoutB = std::move(*NaturalLayoutBOrErr);
+  FileRemover RemoveNaturalLayoutB(NaturalLayoutB);
+
+  Expected<std::string> MergedOrErr = createAlignTempFile("merged");
+  if (!MergedOrErr)
+    report_error("llvm-bolt-align", MergedOrErr.takeError());
+  const std::string Merged = std::move(*MergedOrErr);
+  FileRemover RemoveMerged(Merged);
+
+  // FIXME: The FileRemovers will not run on exit(1).
+
+  outs() << "BOLT-ALIGN: measuring natural binary A layout\n";
+  if (Error E = runBoltAlignCommand(
+          ToolPath, opts::InputFilename, NULL_FILE,
+          (Twine("--generate-function-layout-file=") + NaturalLayoutA).str()))
+    report_error(opts::InputFilename, std::move(E));
+
+  outs() << "BOLT-ALIGN: measuring natural binary B layout\n";
+  if (Error E = runBoltAlignCommand(
+          ToolPath, opts::InputFilename2, NULL_FILE,
+          (Twine("--generate-function-layout-file=") + NaturalLayoutB).str()))
+    report_error(opts::InputFilename2, std::move(E));
+
+  if (Error E = bolt::mergeFunctionLayouts(NaturalLayoutA, NaturalLayoutB,
+                                           Merged, outs()))
+    report_error("llvm-bolt-align", std::move(E));
+
+  outs() << "BOLT-ALIGN: rewriting binary A\n";
+  if (Error E = runBoltAlignCommand(
+          ToolPath, opts::InputFilename, opts::AlignOutputA,
+          (Twine("--function-layout-file=") + Merged).str()))
+    report_error(opts::InputFilename, std::move(E));
+
+  outs() << "BOLT-ALIGN: rewriting binary B\n";
+  if (Error E = runBoltAlignCommand(
+          ToolPath, opts::InputFilename2, opts::AlignOutputB,
+          (Twine("--function-layout-file=") + Merged).str()))
+    report_error(opts::InputFilename2, std::move(E));
+
+  outs() << "BOLT-ALIGN: wrote aligned binaries to " << opts::AlignOutputA
+         << " and " << opts::AlignOutputB << "\n";
+
+  return EXIT_SUCCESS;
+}
+
 void boltMode(int argc, char **argv) {
   cl::HideUnrelatedOptions(ArrayRef(opts::BoltCategories));
   // Register the target printer for --version.
@@ -188,6 +318,8 @@ int main(int argc, char **argv) {
     perf2boltMode(argc, argv);
   else if (llvm::sys::path::filename(ToolName).starts_with("llvm-boltdiff"))
     boltDiffMode(argc, argv);
+  else if (llvm::sys::path::filename(ToolName).starts_with("llvm-bolt-align"))
+    return boltAlignMode(argc, argv, ToolPath);
   else
     boltMode(argc, argv);
 

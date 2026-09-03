@@ -275,6 +275,10 @@ private:
   /// Maximum number of bytes used for alignment of cold part of the function.
   uint16_t MaxColdAlignmentBytes{0};
 
+  /// The desired output offset of the function's main fragment in bytes
+  /// relative to its code section.
+  std::optional<uint64_t> DesiredOffset;
+
   const MCSymbol *PersonalityFunction{nullptr};
   uint8_t PersonalityEncoding{dwarf::DW_EH_PE_sdata4 | dwarf::DW_EH_PE_pcrel};
 
@@ -1996,6 +2000,13 @@ public:
   }
 
   uint16_t getMaxColdAlignmentBytes() const { return MaxColdAlignmentBytes; }
+
+  BinaryFunction &setDesiredOffset(uint64_t Offset) {
+    DesiredOffset = Offset;
+    return *this;
+  }
+
+  std::optional<uint64_t> getDesiredOffset() const { return DesiredOffset; }
 
   BinaryFunction &setImageAddress(uint64_t Address) {
     getLayout().getMainFragment().setImageAddress(Address);

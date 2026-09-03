@@ -150,6 +150,8 @@ public:
                      uint8_t Fill, const MCSubtargetInfo &STI) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
+  void emitValueToOffset(const MCExpr *Offset, unsigned char Value, SMLoc Loc,
+                         bool AllowOmission);
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator, StringRef FileName,

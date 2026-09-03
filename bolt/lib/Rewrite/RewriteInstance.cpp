@@ -17,6 +17,7 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Core/Relocation.h"
+#include "bolt/Passes/AssignDesiredFunctionOffset.h"
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
@@ -178,6 +179,12 @@ static cl::opt<std::string> FunctionNamesFileNR(
     "funcs-file-no-regex",
     cl::desc("file with list of functions to optimize (non-regex)"), cl::Hidden,
     cl::cat(BoltCategory));
+
+static cl::opt<std::string> GenerateFunctionLayoutFile(
+    "generate-function-layout-file",
+    cl::desc("write a file mapping each emitted function to its finalized byte "
+             "offset within its output code section."),
+    cl::value_desc("filename"), cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool>
 KeepTmp("keep-tmp",
@@ -3065,6 +3072,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
              << " : + 0x" << Twine::utohexstr(Addend) << '\n'
     );
 
+    DynamicRelocationOrder.push_back(Rel.getOffset());
     if (IsJmpRel)
       IsJmpRelocation[RType] = true;
 
@@ -4286,6 +4294,76 @@ void RewriteInstance::preregisterSections() {
                               ELF::SHT_PROGBITS, ROFlags);
 }
 
+static void printFunctionLayoutStats(BinaryContext &BC) {
+  uint64_t LayoutConstraints = 0;
+  uint64_t SatisfiedLayoutConstraints = 0;
+  for (const BinaryFunction *Function : BC.getAllBinaryFunctions()) {
+    const std::optional<uint64_t> DesiredOffset = Function->getDesiredOffset();
+
+    if (!DesiredOffset || !Function->isEmitted())
+      continue;
+
+    ErrorOr<BinarySection &> Section = Function->getCodeSection();
+    if (!Section)
+      continue;
+
+    ++LayoutConstraints;
+
+    const uint64_t ActualOffset =
+        Function->getOutputAddress() - Section->getOutputAddress();
+    if (ActualOffset == *DesiredOffset) {
+      ++SatisfiedLayoutConstraints;
+      continue;
+    }
+
+    BC.errs() << "BOLT-WARNING: --function-layout-file: missed offset 0x"
+              << Twine::utohexstr(*DesiredOffset) << " for function '"
+              << Function->getOneName() << "' (emitted at 0x"
+              << Twine::utohexstr(ActualOffset) << ")\n";
+  }
+  if (LayoutConstraints)
+    BC.outs() << "BOLT-INFO: --function-layout-file: satisfied "
+              << SatisfiedLayoutConstraints << " of " << LayoutConstraints
+              << " layout constraints\n";
+}
+
+static void generateFunctionLayoutFile(BinaryContext &BC) {
+  std::error_code EC;
+  raw_fd_ostream OS(opts::GenerateFunctionLayoutFile, EC,
+                    sys::fs::OpenFlags::OF_None);
+  if (EC) {
+    BC.errs() << "BOLT-ERROR: cannot open --generate-function-layout-file '"
+              << opts::GenerateFunctionLayoutFile << "': " << EC.message()
+              << "\n";
+    exit(1);
+  }
+
+  std::vector<std::pair<uint64_t, const BinaryFunction *>> Functions;
+  for (const BinaryFunction *Function : BC.getAllBinaryFunctions()) {
+    if (!Function->isEmitted())
+      continue;
+    ErrorOr<BinarySection &> Section = Function->getCodeSection();
+    if (!Section)
+      continue;
+    Functions.emplace_back(Function->getOutputAddress(), Function);
+  }
+
+  llvm::sort(Functions, llvm::less_first());
+
+  for (const auto &[OutputAddress, Function] : Functions) {
+    const uint64_t SectionAddress =
+        Function->getCodeSection()->getOutputAddress();
+    assert(OutputAddress >= SectionAddress &&
+           "function output address precedes its section");
+    const uint64_t Offset = OutputAddress - SectionAddress;
+    OS << Function->getOneName() << " 0x" << Twine::utohexstr(Offset) << "\n";
+  }
+
+  BC.outs() << "BOLT-INFO: --generate-function-layout-file: wrote "
+            << Functions.size() << " functions to "
+            << opts::GenerateFunctionLayoutFile << "\n";
+}
+
 void RewriteInstance::emitAndLink() {
   NamedRegionTimer T("emitAndLink", "emit and link", TimerGroupName,
                      TimerGroupDesc, opts::TimeRewrite);
@@ -4355,6 +4433,12 @@ void RewriteInstance::emitAndLink() {
   // Update output addresses based on the new section map and
   // layout. Only do this for the object created by ourselves.
   updateOutputValues(*Linker);
+
+  if (!opts::FunctionLayoutFile.empty())
+    printFunctionLayoutStats(*BC);
+
+  if (!opts::GenerateFunctionLayoutFile.empty())
+    generateFunctionLayoutFile(*BC);
 
   if (opts::UpdateDebugSections) {
     DebugInfoRewriter->updateLineTableOffsets(
@@ -6303,16 +6387,28 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
     Offset += sizeof(*RelA);
   };
 
-  auto writeRelocations = [&](bool PatchRelative) {
-    for (BinarySection &Section : BC->allocatableSections()) {
+  {
+    for (const uint64_t Address : DynamicRelocationOrder) {
+      ErrorOr<BinarySection &> SectionOrError =
+          BC->getSectionForAddress(Address);
+      if (!SectionOrError) {
+        BC->errs() << "Cannot find section for dynamic relocation at 0x"
+                   << Twine::utohexstr(Address) << "\n";
+        exit(1);
+      }
+
+      BinarySection &Section = *SectionOrError;
       const uint64_t SectionInputAddress = Section.getAddress();
       uint64_t SectionAddress = Section.getOutputAddress();
       if (!SectionAddress)
         SectionAddress = SectionInputAddress;
 
-      for (const Relocation &Rel : Section.dynamicRelocations()) {
+      const Relocation &Rel =
+          *Section.getDynamicRelocationAt(Address - SectionInputAddress);
+
+      {
         const bool IsRelative = Rel.isRelative();
-        if (PatchRelative != IsRelative || Rel.isRELR())
+        if (Rel.isRELR())
           continue;
 
         if (IsRelative)
@@ -6356,12 +6452,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
         writeRela(&NewRelA, Offset);
       }
     }
-  };
-
-  // The dynamic linker expects all R_*_RELATIVE relocations in RELA
-  // to be emitted first.
-  writeRelocations(/* PatchRelative */ true);
-  writeRelocations(/* PatchRelative */ false);
+  }
 
   auto fillNone = [&](uint64_t &Offset, uint64_t EndOffset) {
     if (!Offset)
