@@ -204,6 +204,11 @@ LIBC_INLINE constexpr word scalar_multiply_with_carry(cpp::array<word, N> &dst,
   return acc.carry();
 }
 
+// Products of up to this many words are fully unrolled. 4 words is enough for
+// UInt128, the most used large integer type; larger integers may bloat the code
+// too much.
+LIBC_INLINE_VAR constexpr size_t MUL_UNROLL_MAX_WORDS = 4;
+
 // Multiplication of 'lhs' by 'rhs' into 'dst'. Returns carry.
 // This function is safe to use for signed numbers.
 // https://stackoverflow.com/a/20793834
@@ -222,9 +227,7 @@ LIBC_INLINE constexpr word multiply_with_carry(cpp::array<word, O> &dst,
       carry += mul_add_with_carry(acc, lhs[j], rhs[i - j]);
     dst[i] = acc.advance(carry);
   };
-  // Unrolling up to 4 words is enough for UInt128, the most used large integer
-  // type; larger integers may bloat the code too much.
-  if constexpr (O <= 4) {
+  if constexpr (O <= MUL_UNROLL_MAX_WORDS) {
     LIBC_LOOP_UNROLL
     for (size_t i = 0; i < O; ++i)
       step(i);
