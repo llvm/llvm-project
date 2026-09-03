@@ -251,7 +251,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(
       continue;
     Register Dst = Copy->getOperand(0).getReg();
     Register Src = Copy->getOperand(1).getReg();
-    if (MRI->hasOneNonDBGUse(Src) &&
+    if (!Copy->getOperand(1).getSubReg() && MRI->hasOneNonDBGUse(Src) &&
         MRI->constrainRegClass(Src, MRI->getRegClass(Dst))) {
       // Copy is the only use. Do trivial copy propagation here.
       MRI->replaceRegWith(Dst, Src);
