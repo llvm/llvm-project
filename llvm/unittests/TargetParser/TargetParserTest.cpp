@@ -2824,6 +2824,14 @@ TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
 
   // A capability feature is queried through the bitset only.
   EXPECT_FALSE(HasFeature("gfx1030", "half-addressable-physical-local-memory"));
+
+  // The addressable LDS sizes stay out of the target-feature string, since a
+  // string merging two of them would silently take the larger.
+  EXPECT_FALSE(HasFeature("gfx600", "addressablelocalmemorysize32768"));
+  EXPECT_FALSE(HasFeature("gfx900", "addressablelocalmemorysize65536"));
+  EXPECT_FALSE(HasFeature("gfx950", "addressablelocalmemorysize163840"));
+  EXPECT_FALSE(HasFeature("gfx1310", "addressablelocalmemorysize196608"));
+  EXPECT_FALSE(HasFeature("gfx1250", "addressablelocalmemorysize327680"));
 }
 
 TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
@@ -2872,6 +2880,46 @@ TEST(TargetParserTest, testAMDGPUHalfAddressableLDSFeature) {
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1200));
   EXPECT_FALSE(Has(AMDGPU::GK_GFX1250));
   EXPECT_FALSE(Has(AMDGPU::GK_GFX1310));
+}
+
+TEST(TargetParserTest, testAMDGPUAddressableLocalMemorySizeFeatures) {
+  auto Has = [](AMDGPU::GPUKind AK, AMDGPU::AMDGPUFeature Feature) {
+    return AMDGPU::getFeatureBitset(AK).test(Feature);
+  };
+  auto Count = [&Has](AMDGPU::GPUKind AK) {
+    return Has(AK, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE32768) +
+           Has(AK, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE65536) +
+           Has(AK, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE163840) +
+           Has(AK, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE196608) +
+           Has(AK, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE327680);
+  };
+
+  // Exactly one addressable LDS size is set per GPU.
+  EXPECT_EQ(Count(AMDGPU::GK_GFX600), 1);
+  EXPECT_EQ(Count(AMDGPU::GK_GFX900), 1);
+  EXPECT_EQ(Count(AMDGPU::GK_GFX950), 1);
+  EXPECT_EQ(Count(AMDGPU::GK_GFX1310), 1);
+  EXPECT_EQ(Count(AMDGPU::GK_GFX1250), 1);
+  EXPECT_EQ(Count(AMDGPU::GK_GFX9_4_GENERIC), 1);
+  EXPECT_TRUE(
+      Has(AMDGPU::GK_GFX600, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE32768));
+  EXPECT_TRUE(
+      Has(AMDGPU::GK_GFX900, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE65536));
+  EXPECT_FALSE(
+      Has(AMDGPU::GK_GFX900, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE32768));
+  EXPECT_TRUE(
+      Has(AMDGPU::GK_GFX950, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE163840));
+  EXPECT_TRUE(
+      Has(AMDGPU::GK_GFX1310, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE196608));
+  EXPECT_TRUE(
+      Has(AMDGPU::GK_GFX1250, AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE327680));
+
+  // A generic target takes the smallest size of the GPUs it covers, so
+  // gfx9-4-generic keeps 64k despite covering gfx950's 160k.
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX9_4_GENERIC,
+                  AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE65536));
+  EXPECT_FALSE(Has(AMDGPU::GK_GFX9_4_GENERIC,
+                   AMDGPU::FEAT_ADDRESSABLELOCALMEMORYSIZE163840));
 }
 
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {

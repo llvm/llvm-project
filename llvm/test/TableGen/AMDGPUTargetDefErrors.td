@@ -19,6 +19,12 @@
 // RUN:   | FileCheck %t/bad-stepping.td -DFILE=%t/bad-stepping.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/generic-feature-superset.td 2>&1 \
 // RUN:   | FileCheck %t/generic-feature-superset.td -DFILE=%t/generic-feature-superset.td --implicit-check-not="error:"
+// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/generic-default-true-feature.td 2>&1 \
+// RUN:   | FileCheck %t/generic-default-true-feature.td -DFILE=%t/generic-default-true-feature.td --implicit-check-not="error:"
+// RUN: llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/generic-addressable-size-valid.td 2>&1 \
+// RUN:   | FileCheck %t/generic-addressable-size-valid.td --check-prefix=VALID
+// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/generic-addressable-size-invalid.td 2>&1 \
+// RUN:   | FileCheck %t/generic-addressable-size-invalid.td -DFILE=%t/generic-addressable-size-invalid.td --implicit-check-not="error:"
 
 // Verify the validation performed by the -gen-amdgpu-target-def backend.
 
@@ -182,6 +188,92 @@ def GFX900 : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]
 // not have 'foo'.
 // CHECK: [[FILE]]:[[#@LINE+1]]:1: error: generic target 'gfx9-generic' exposes feature 'foo' not supported by covered GPU 'gfx900'
 def : ProcessorModel<"gfx9-generic", NoSchedModel, [FeatureFoo]>,
+      AMDGPUGPUInfo<[9, 0, 0]> {
+  let CoveredGPUs = [GFX900];
+}
+
+//--- generic-default-true-feature.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+
+// A feature clearing a field that defaults to true is still a boolean one.
+def FeatureNoFoo : SubtargetFeature<"no-foo", "HasFoo", "false", "No foo">;
+
+def AMDGPUFrontendVisibleFeatures {
+  list<SubtargetFeature> Features = [FeatureNoFoo];
+}
+
+def GFX900 : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
+
+// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: generic target 'gfx9-generic' exposes feature 'no-foo' not supported by covered GPU 'gfx900'
+def : ProcessorModel<"gfx9-generic", NoSchedModel, [FeatureNoFoo]>,
+      AMDGPUGPUInfo<[9, 0, 0]> {
+  let CoveredGPUs = [GFX900];
+}
+
+//--- generic-addressable-size-valid.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+
+def FeatureSizeSmall : SubtargetFeature<
+  "size-small", "AddressableLocalMemorySize", "1024", "Small">;
+def FeatureSizeBig : SubtargetFeature<
+  "size-big", "AddressableLocalMemorySize", "2048", "Big">;
+
+def AMDGPUFrontendVisibleFeatures {
+  list<SubtargetFeature> Features = [FeatureSizeSmall, FeatureSizeBig];
+}
+
+def GFX900 : ProcessorModel<"gfx900", NoSchedModel, [FeatureSizeBig]>,
+             AMDGPUGPUInfo<[9, 0, 0]>;
+
+// A generic carries the worst case of a numeric field, so it keeps the smaller
+// size while covering a GPU with the larger one. That is not an error.
+// VALID: GK_GFX9_GENERIC
+def : ProcessorModel<"gfx9-generic", NoSchedModel, [FeatureSizeSmall]>,
+      AMDGPUGPUInfo<[9, 0, 0]> {
+  let CoveredGPUs = [GFX900];
+}
+
+//--- generic-addressable-size-invalid.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+
+def FeatureSizeSmall : SubtargetFeature<
+  "size-small", "AddressableLocalMemorySize", "1024", "Small">;
+def FeatureSizeBig : SubtargetFeature<
+  "size-big", "AddressableLocalMemorySize", "2048", "Big">;
+
+def AMDGPUFrontendVisibleFeatures {
+  list<SubtargetFeature> Features = [FeatureSizeSmall, FeatureSizeBig];
+}
+
+def GFX900 : ProcessorModel<"gfx900", NoSchedModel, [FeatureSizeSmall]>,
+             AMDGPUGPUInfo<[9, 0, 0]>;
+
+// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: generic target 'gfx9-generic' exposes feature 'size-big' exceeding the 'AddressableLocalMemorySize' of covered GPU 'gfx900'
+def : ProcessorModel<"gfx9-generic", NoSchedModel, [FeatureSizeBig]>,
       AMDGPUGPUInfo<[9, 0, 0]> {
   let CoveredGPUs = [GFX900];
 }

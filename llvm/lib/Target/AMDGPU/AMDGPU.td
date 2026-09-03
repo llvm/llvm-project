@@ -3246,6 +3246,11 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
   FeatureAGPRAlloc, Feature1536VGPRs,
   FeatureHalfAddressablePhysicalLocalMemory,
+  FeatureAddressableLocalMemorySize32768,
+  FeatureAddressableLocalMemorySize65536,
+  FeatureAddressableLocalMemorySize163840,
+  FeatureAddressableLocalMemorySize196608,
+  FeatureAddressableLocalMemorySize327680,
   ];
 }
 
