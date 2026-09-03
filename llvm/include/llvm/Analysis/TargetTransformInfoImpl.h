@@ -103,6 +103,29 @@ public:
   virtual unsigned adjustInliningThreshold(const CallBase *CB) const {
     return 0;
   }
+  virtual bool allowSizeGrowth(const CallBase &Call) const {
+    // If the normal destination of the invoke or the parent block of the call
+    // site is unreachable-terminated, there is little point in inlining this
+    // unless there is literally zero cost.
+    // FIXME: Note that it is possible that an unreachable-terminated block has
+    // a hot entry. For example, in below scenario inlining hot_call_X() may be
+    // beneficial :
+    // main() {
+    //   hot_call_1();
+    //   ...
+    //   hot_call_N()
+    //   exit(0);
+    // }
+    // For now, we are not handling this corner case here as it is rare in real
+    // code. In future, we should elaborate this based on BPI and BFI in more
+    // general threshold adjusting heuristics in updateThreshold().
+    if (const InvokeInst *II = dyn_cast<InvokeInst>(&Call)) {
+      if (isa<UnreachableInst>(II->getNormalDest()->getTerminator()))
+        return false;
+    } else if (isa<UnreachableInst>(Call.getParent()->getTerminator()))
+      return false;
+    return true;
+  }
   virtual unsigned getCallerAllocaCost(const CallBase *CB,
                                        const AllocaInst *AI) const {
     return 0;
