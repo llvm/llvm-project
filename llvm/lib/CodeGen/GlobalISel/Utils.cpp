@@ -455,7 +455,7 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
   if (!Reg)
     return std::nullopt;
 
-  APFloat FloatVal(getFltSemanticForLLT(LLT::scalar(Reg->Value.getBitWidth())),
+  APFloat FloatVal(getFltSemanticForLLT(MRI.getType(Reg->VReg).getScalarType()),
                    Reg->Value);
   return FPValueAndVReg{FloatVal, Reg->VReg};
 }

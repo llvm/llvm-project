@@ -33,3 +33,29 @@ entry:
   ret void
 }
 
+
+define x86_fp80 @test_x86_fp80(x86_fp80 %x) {
+; CHECK64_SMALL-LABEL: test_x86_fp80:
+; CHECK64_SMALL:       # %bb.0:
+; CHECK64_SMALL-NEXT:    fldt {{[0-9]+}}(%rsp)
+; CHECK64_SMALL-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; CHECK64_SMALL-NEXT:    faddp %st, %st(1)
+; CHECK64_SMALL-NEXT:    retq
+;
+; CHECK64_LARGE-LABEL: test_x86_fp80:
+; CHECK64_LARGE:       # %bb.0:
+; CHECK64_LARGE-NEXT:    fldt {{[0-9]+}}(%rsp)
+; CHECK64_LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
+; CHECK64_LARGE-NEXT:    fldt (%rax)
+; CHECK64_LARGE-NEXT:    faddp %st, %st(1)
+; CHECK64_LARGE-NEXT:    retq
+;
+; CHECK32-LABEL: test_x86_fp80:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    fldt {{[0-9]+}}(%esp)
+; CHECK32-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK32-NEXT:    faddp %st, %st(1)
+; CHECK32-NEXT:    retl
+  %r = fadd x86_fp80 %x, 0xK4000C000000000000000
+  ret x86_fp80 %r
+}
