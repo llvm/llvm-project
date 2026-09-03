@@ -2049,6 +2049,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_getpid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/getpid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_pid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_unlinkat",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/unlinkat.h"],
     target_compatible_with = select({
@@ -3870,6 +3885,7 @@ libc_function(
         ":__support_common",
         ":__support_cpp_optional",
         ":__support_macros_config",
+        ":__support_macros_null_check",
         ":__support_net_address",
         ":hdr_netinet_in_macros",
         ":types_in_addr_t",
@@ -3884,6 +3900,7 @@ libc_function(
         ":__support_common",
         ":__support_cpp_optional",
         ":__support_macros_config",
+        ":__support_macros_null_check",
         ":__support_net_address",
         ":types_struct_in_addr",
     ],
@@ -10340,6 +10357,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_optional",
         ":__support_cpp_span",
+        ":__support_cpp_string_view",
         ":__support_ctype_utils",
         ":__support_libc_assert",
         ":__support_macros_config",
@@ -15352,7 +15370,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_getpid",
         ":hdr_unistd_macros",
         ":types_pid_t",
     ],
