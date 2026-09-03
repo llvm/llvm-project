@@ -363,6 +363,91 @@ else:
   ret void
 }
 
+; Call-site-only nonnull+noundef on a PHI argument is not a stable ABI
+; contract (it can go stale after inlining) and must not be treated as UB.
+; The callee does not declare the parameter nonnull.
+define void @test9_stale_callsite_nonnull(i1 %X, ptr %Y) {
+; CHECK-LABEL: @test9_stale_callsite_nonnull(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @fn_ptr_arg(ptr noundef nonnull [[SPEC_SELECT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  call ptr @fn_ptr_arg(ptr nonnull noundef %phi)
+  ret void
+}
+
+; Same as above for call-site-only dereferenceable, which paramHasNonNullAttr
+; treats as implying nonnull.
+define void @test9_stale_callsite_deref(i1 %X, ptr %Y) {
+; CHECK-LABEL: @test9_stale_callsite_deref(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @fn_ptr_arg(ptr dereferenceable(4) [[SPEC_SELECT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  call ptr @fn_ptr_arg(ptr dereferenceable(4) %phi)
+  ret void
+}
+
+; Indirect call: there is no callee declaration to consult.
+define void @test9_stale_callsite_nonnull_indirect(i1 %X, ptr %Y, ptr %fn) {
+; CHECK-LABEL: @test9_stale_callsite_nonnull_indirect(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr [[FN:%.*]](ptr noundef nonnull [[SPEC_SELECT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  call ptr %fn(ptr nonnull noundef %phi)
+  ret void
+}
+
+; Looking through a zero-offset GEP of the PHI must use the same rule.
+define void @test9_stale_callsite_nonnull_gep(i1 %X, ptr %Y) {
+; CHECK-LABEL: @test9_stale_callsite_nonnull_gep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SPEC_SELECT]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @fn_ptr_arg(ptr noundef nonnull [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr i8, ptr %phi, i64 0
+  call ptr @fn_ptr_arg(ptr nonnull noundef %gep)
+  ret void
+}
+
 define void @test9_gep_mismatch(i1 %X, ptr %Y,  ptr %P) {
 ; CHECK-LABEL: @test9_gep_mismatch(
 ; CHECK-NEXT:  entry:
