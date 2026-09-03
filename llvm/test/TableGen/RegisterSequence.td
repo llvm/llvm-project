@@ -151,12 +151,16 @@ def : RegisterSequence<[R2, R5]>;
 // descriptor, point at the empty list at offset 7 rather than naming registers
 // that have nothing to do with them.
 //
-// The first two pairs. The first lists its sub-registers, being the first
-// register of its block; the second does not, being described by that one and
-// the distances above.
+// Their register units are said for the block as well, being those of the
+// first register carried as far along as the register sits, so the RegUnits
+// field of the rest, the fifth, reads as no units at all.
+//
+// The first two pairs, then. The first holds its sub-registers and its
+// register units, being the first register of its block; the second holds
+// neither, being described by that one and the distances above.
 // CHECK:      extern const MCRegisterDesc TestTargetRegDesc[]
-// CHECK:      { {{[0-9]+}}, 20, 7, 0,
-// CHECK-NEXT: { {{[0-9]+}}, 7, 7, 0,
+// CHECK:      { {{[0-9]+}}, 20, 7, 0, {{[0-9]+}},
+// CHECK-NEXT: { {{[0-9]+}}, 7, 7, 0, 0,
 
 // The series of register that the registers of a block are contained by, said
 // as where one sits with respect to the register it contains: the register it

@@ -1229,10 +1229,14 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     // of, so that they list none of their own.
     unsigned SuperRegs = DiffSeqs.get(Block ? DiffVec() : SuperRegLists[i]);
 
-    // Their register units likewise: the list is the first register's, and
-    // what tells them apart is the unit it is walked from, which is theirs.
-    if (Block)
-      Offset = DiffSeqs.get(RegUnitLists[Block->FirstReg->EnumValue - 1]);
+    // Their register units likewise: those are the first register's, carried
+    // as far along as the register sits, which the block says how far is. So
+    // the registers of a block after the first hold neither the list nor the
+    // unit it is walked from, and the field reads as no units at all.
+    if (Block && Index != 0) {
+      FirstRU = 0;
+      Offset = 0;
+    }
 
     OS << "  { " << RegStrings.get(Reg.getName().str()) << ", " << SubRegs
        << ", " << SuperRegs << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i])
