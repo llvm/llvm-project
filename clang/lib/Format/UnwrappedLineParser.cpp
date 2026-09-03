@@ -4150,7 +4150,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
                             tok::kw_alignas, tok::l_square) ||
          FormatTok->isAttribute() ||
          ((Style.isJava() || Style.isJavaScript()) &&
-          FormatTok->isOneOf(tok::period, tok::comma))) {
+          FormatTok->isOneOf(tok::period, tok::comma)) ||
+         (Style.isVerilog() &&
+          FormatTok->isOneOf(tok::kw_signed, tok::kw_unsigned))) {
     if (Style.isJavaScript() &&
         FormatTok->isOneOf(Keywords.kw_extends, Keywords.kw_implements)) {
       JSPastExtendsOrImplements = true;
