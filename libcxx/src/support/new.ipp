@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: This file is now only used from libc++abi. Simplify the implementation accordingly.
+
 #include <cstddef>
 #include <cstdlib>
 #include <new>
