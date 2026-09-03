@@ -201,6 +201,20 @@ public:
     return LastI;
   }
 
+  /// \Returns the BB iterator after the lowest instruction in \p Vals
+  /// (skipping instructions not in \p BB), or the top of BB if no
+  /// instruction found in \p Vals.
+  static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
+                                                        BasicBlock *BB) {
+    auto *BotI = getLastPHIOrSelf(getLowest(Vals, BB));
+    if (BotI == nullptr)
+      // We are using BB->begin() (or after PHIs) as the fallback insert point.
+      return BB->empty()
+                 ? BB->begin()
+                 : std::next(getLastPHIOrSelf(&*BB->begin())->getIterator());
+    return std::next(BotI->getIterator());
+  }
+
   /// If all values in \p Bndl are of the same scalar type then return it,
   /// otherwise return nullptr.
   static Type *tryGetCommonScalarType(ArrayRef<Value *> Bndl) {

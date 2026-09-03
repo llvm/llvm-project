@@ -37,6 +37,11 @@ page](https://llvm.org/releases/).
   (OpenMP 5.2, section 3.1): `!$omx`, `c$omx` and `*$omx` in fixed source form
   and `!$ompx` in free source form. These sentinels are recognized like their
   `omp` counterparts when OpenMP is enabled.
+  
+- Change source path in -Rpass remarks (e.g., -Rpass=loop-vectorize) from a
+  (mostly) full path to clang's behavior which is to use the source filename
+  as specified on the command line (except that ./foo.f90 removes the ./
+  prefix).
 
 - The legacy array-value operations (`fir.array_load`, `fir.array_fetch`,
   `fir.array_update`, `fir.array_modify`, `fir.array_access`,
@@ -56,6 +61,13 @@ page](https://llvm.org/releases/).
   default at optimization levels above `-O0`. It can be turned off with
   `-mmlir -disable-fir-licm`. The `-mmlir -enable-fir-licm` option that
   previously opted into the pass has been removed.
+
+- Named constants (`PARAMETER`) now appear in the debug information, so a
+  debugger can print them by name. A constant is described only in the
+  compilation unit that defines it: one declared in a module is described
+  where that module is compiled, and one declared in a procedure is local to
+  that unit. Constants of an intrinsic module such as `iso_fortran_env` are
+  not described yet, because no compilation unit defines them.
 
 ## New Compiler Flags
 - Added the gfortran-compatible `-ffpe-trap=` flag, which sets the initial
