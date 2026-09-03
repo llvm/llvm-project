@@ -2244,6 +2244,22 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
     }
 
+    // Promote nxv4<f16|bf16> to nxv4i32.
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv4bf16,
+                               MVT::nxv4i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv4f16,
+                               MVT::nxv4i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv4i16,
+                               MVT::nxv4i32);
+
+    // Promote nxv2<f16|bf16> to nxv2i64.
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv2bf16,
+                               MVT::nxv2i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv2f16,
+                               MVT::nxv2i16);
+    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::nxv2i16,
+                               MVT::nxv2i64);
+
     if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
       // With +sve2p2/+sme2p2 the full range of vector types are supported.
       for (auto VT :
