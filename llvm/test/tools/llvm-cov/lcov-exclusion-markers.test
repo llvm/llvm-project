@@ -209,8 +209,8 @@
 # ORPHAN: LCOV_EXCL_STOP at line 1 has no matching LCOV_EXCL_START
 # OVERLAP: overlapping LCOV_EXCL_START at line 2; previous block started at line 1
 # STOP-LINE: 11|       |  return 0; // LCOV_EXCL_STOP LCOV_EXCL_LINE
-# MISSING: error: {{.*}}lcov-exclusion-markers.cpp: No such file or directory
-# MISSING-REFERENCE: error: {{.*}}prevent_false_instantiations.h: No such file or directory
+# MISSING: error: {{.*}}lcov-exclusion-markers.cpp: {{[Nn]o}} such file or directory
+# MISSING-REFERENCE: error: {{.*}}prevent_false_instantiations.h: {{[Nn]o}} such file or directory
 
 # BOUNDARY-SHOW: 4|       |  int x = 0; // LCOV_EXCL_LINE
 # BOUNDARY-SHOW-NEXT: 5|      0|  return x;
