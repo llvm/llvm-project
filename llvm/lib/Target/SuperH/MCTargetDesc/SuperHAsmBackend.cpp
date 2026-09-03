@@ -147,6 +147,11 @@ unsigned SuperHAsmBackend::adjustFixupValue(const MCAssembler &Asm, const MCFixu
   default:
     return Value;
 
+  case FK_Data_2:
+  case FK_Data_4:
+    // NOTE:  Largest possible displacement is 12 bit, so force this.
+    return (Value & 0xFFF);
+
   case SH::fixup_got_low16:
     return (Value+Addend) & 65535;
 

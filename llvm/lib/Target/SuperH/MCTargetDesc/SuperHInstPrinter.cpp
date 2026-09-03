@@ -45,6 +45,12 @@ void SuperHInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   OS << getRegName(Reg);
 }
 
+void SuperHInstPrinter::printMemri(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
+  const MCOperand &Op0 = MI->getOperand(OpNo);
+  const MCOperand &Op1 = MI->getOperand(OpNo+1);
+  OS << "@(" << Op1.getImm() << "," << getRegName(Op0.getReg()) << ")";
+}
+
 void SuperHInstPrinter::printDisp(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
   OS << Op.getImm();

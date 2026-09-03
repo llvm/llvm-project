@@ -32,6 +32,7 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
+#include <optional>
 
 
 using namespace llvm;
@@ -118,6 +119,44 @@ unsigned SuperHMCCodeEmitter::getOpBits(const MCInst &MI,
   }
 
   return getBinaryCodeForInstr(Inst, Fixups, STI);
+}
+
+// @getFixupForOpcode - Helper that gets the neccesary fixup for 
+// the given opcode.
+// This is neccesary due to the various opcodes that access memory
+// have different scaling factors applied.
+static std::optional<MCFixup> getFixupForOpcode(unsigned Opcode, const MCExpr *Expr, MCContext &Ctx) {
+  bool isOp32 = isOpcode32(Opcode) ? FK_Data_4 : FK_Data_2;
+
+  switch(Opcode) {
+  default: break;
+
+  // disp * 2
+  case SH::BF:
+  case SH::BFS:
+  case SH::BT:
+  case SH::BTS:
+  case SH::BSR:
+  case SH::BRA:
+  case SH::MOVWI:
+  case SH::MOVWL4:
+  case SH::MOVWLG:
+  case SH::MOVWS4:
+  case SH::MOVWSG:
+    Expr = MCBinaryExpr::createDiv(Expr, MCConstantExpr::create(2, Ctx), Ctx);
+    break;
+
+  // disp * 4
+  case SH::MOVA:
+  case SH::MOVLI:
+  case SH::MOVLL4:
+  case SH::MOVLLG:
+  case SH::MOVLS4:
+  case SH::MOVLSG:
+    Expr = MCBinaryExpr::createDiv(Expr, MCConstantExpr::create(4, Ctx), Ctx);
+    break;
+  }
+  return MCFixup::create(0, Expr, isOp32 ? FK_Data_4 : FK_Data_2, true);
 }
 
 void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,

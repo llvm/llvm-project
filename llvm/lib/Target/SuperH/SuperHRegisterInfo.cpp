@@ -114,9 +114,9 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
     // mov r14,r1
     // add #-<frame size>,r1
-    BuildMI(MBB, MI, DebugLoc(), TII.get(SH::MOVRmRn), DstReg)
+    BuildMI(MBB, MI, DebugLoc(), TII.get(SH::MOV), DstReg)
       .addReg(SH::R14);
-    BuildMI(MBB, MI, DebugLoc(), TII.get(SH::ADDI8Rn), DstReg)
+    BuildMI(MBB, MI, DebugLoc(), TII.get(SH::ADDI), DstReg)
       .addReg(DstReg)
       .addImm(-StackSize);
 
