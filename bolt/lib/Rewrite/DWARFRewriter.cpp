@@ -1284,14 +1284,12 @@ void DWARFRewriter::updateUnitDebugInfo(
               std::move(OutputRanges), CachedRanges);
           OutputRanges.clear();
         } else if (OutputRanges.empty()) {
-          OutputRanges.push_back({0, RangesOrError.get().front().HighPC});
+          OutputRanges.push_back({0, 0});
         }
       } else if (!RangesOrError) {
         consumeError(RangesOrError.takeError());
       } else {
-        OutputRanges.push_back({0, !RangesOrError->empty()
-                                       ? RangesOrError.get().front().HighPC
-                                       : 0});
+        OutputRanges.push_back({0, 0});
       }
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
