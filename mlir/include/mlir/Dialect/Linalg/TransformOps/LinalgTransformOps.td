@@ -3117,4 +3117,38 @@ def DecomposeWinogradOp : Op<Transform_Dialect,
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// LinalgToAffine
+//===----------------------------------------------------------------------===//
+
+def LinalgToAffineOp : Op<Transform_Dialect, "structured.to_affine",
+    [FunctionalStyleTransformOpTrait,
+     MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Convert a linalg operation into affine for loops.
+    The hypothesis are the same than the convert-linalg-to-affine
+    pass: we assume that the linalg operation is already generalized
+    (into a linalg.generic operation) and that "memref" are used.
+    If these hypothesis are not satisfied, a silenceable failure is raised.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat = [{
+      $target attr-dict `:` 
+      custom<SemiFunctionType>(type($target), type($transformed), "false")
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::linalg::LinalgOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // LINALG_TRANSFORM_OPS
