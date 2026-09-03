@@ -2948,14 +2948,47 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
     context_.Say(GetContext().clauseSource,
         "THREADS and SIMD clauses are not allowed when ORDERED construct is a standalone construct with no ORDERED region"_err_en_US);
   }
+
+  int dependSinkCount{0}, dependSourceCount{0};
+  bool exclusiveShown{false}, duplicateSourceShown{false};
+
+  auto visitDoacross{[&](const parser::OmpDoacross &doa,
+                         const parser::CharBlock &src) {
+    // Modifiers should have been verified by now.
+    auto &modifiers{OmpGetModifiers(doa)};
+    if (auto *source{
+            OmpGetUniqueModifier<parser::OmpDependenceType>(modifiers)}) {
+      if (source->v == parser::OmpDependenceType::Value::Source) {
+        ++dependSourceCount;
+      } else {
+        ++dependSinkCount;
+      }
+    }
+    if (!exclusiveShown && dependSinkCount > 0 && dependSourceCount > 0) {
+      exclusiveShown = true;
+      context_.Say(src,
+          "The SINK and SOURCE dependence types are mutually exclusive"_err_en_US);
+    }
+    if (!duplicateSourceShown && dependSourceCount > 1) {
+      duplicateSourceShown = true;
+      context_.Say(src,
+          "At most one SOURCE dependence type can appear on ORDERED directive"_err_en_US);
+    }
+  }};
+
   // Visit the DEPEND and DOACROSS clauses.
   for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_depend)) {
     const auto &dependClause{std::get<parser::OmpClause::Depend>(clause->u)};
-    using TaskDep = parser::OmpDependClause::TaskDep;
-    if (std::holds_alternative<TaskDep>(dependClause.v.u)) {
+    if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
+      visitDoacross(*doAcross, clause->source);
+    } else {
       context_.Say(clause->source,
           "Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region"_err_en_US);
     }
+  }
+  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_doacross)) {
+    auto &doaClause{std::get<parser::OmpClause::Doacross>(clause->u)};
+    visitDoacross(doaClause.v.v, clause->source);
   }
 
   bool isNestedInDoOrderedWithPara{false};

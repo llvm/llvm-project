@@ -38,8 +38,11 @@ program main
   !$omp do ordered(1)
   do i = 2, N
     !ERROR: Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region
+    !ERROR: At most one SOURCE dependence type can appear on ORDERED directive
     !$omp ordered depend(source) depend(inout: arrayA) depend(source)
     arrayA(i) = foo(i)
+    !ERROR: At most one SOURCE dependence type can appear on ORDERED directive
+    !ERROR: The SINK and SOURCE dependence types are mutually exclusive
     !$omp ordered depend(sink: i - 1) depend(source) depend(source)
     arrayB(i) = bar(arrayA(i), arrayB(i-1))
     !ERROR: Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region
