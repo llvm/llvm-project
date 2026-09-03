@@ -54,6 +54,8 @@
 #include <string>
 #include <utility>
 
+#define DEBUG_TYPE "orc"
+
 #ifdef LLVM_ON_UNIX
 #include <netdb.h>
 #include <netinet/in.h>
@@ -417,11 +419,11 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
       JITBuilder->setPlatformSetUp(
           llvm::orc::ExecutorNativePlatform(OrcRuntimePath));
     } else {
-      auto Err = llvm::make_error<llvm::StringError>(
-          "OrcRuntime not found, running JIT without native platform support "
-          "and some features may not work.",
-          std::error_code());
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "warning: ");
+      LLVM_DEBUG({
+        llvm::dbgs() << "OrcRuntime not found, running JIT without native "
+                        "platform support "
+                     << "and some features may not work.\n";
+      });
     }
     // TODO: Switch to native TLS once clang-repl can adopt the ORC runtime
     // (which provides __emutls_get_address and supports the full TLS
