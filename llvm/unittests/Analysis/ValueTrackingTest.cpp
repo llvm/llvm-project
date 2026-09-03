@@ -1760,6 +1760,18 @@ TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_PosSign) {
   expectKnownFPClass(fcPosZero | fcPosNormal | fcNan, false);
 }
 
+TEST_F(ComputeKnownFPClassTest, LogDeduceSubnormalOrNegativeZero) {
+  parseAssembly("declare float @llvm.log.f32(float)\n"
+                "define float @test(float %x) {\n"
+                "  %A = call float @llvm.log.f32(float %x)\n"
+                "  ret float %A\n"
+                "}\n");
+
+  KnownFPClass Known =
+      computeKnownFPClass(A, M->getDataLayout(), fcNegZero | fcSubnormal);
+  EXPECT_EQ(~(fcNegZero | fcSubnormal), Known.KnownFPClasses);
+}
+
 TEST_F(ComputeKnownFPClassTest, UIToFP) {
   parseAssembly(
       "define float @test(i32 %arg0, i16 %arg1) {\n"
