@@ -3568,9 +3568,15 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
               }
             }
           }
+          bool IsBinding =
+              Pair.second.OriginalRef &&
+              isa<BindingDecl>(
+                  cast<DeclRefExpr>(Pair.second.OriginalRef)->getDecl());
           SharedRefLValue = CGF.MakeAddrLValue(
               SharedRefLValue.getAddress().withAlignment(
-                  C.getDeclAlign(OriginalVD)),
+                  IsBinding ? C.toCharUnitsFromBits(
+                                  C.getTypeAlign(SharedRefLValue.getType()))
+                            : C.getDeclAlign(OriginalVD)),
               SharedRefLValue.getType(), LValueBaseInfo(AlignmentSource::Decl),
               SharedRefLValue.getTBAAInfo());
         } else if (CGF.LambdaCaptureFields.count(

@@ -2118,9 +2118,9 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
     if (IsOpenMP) {
       if (auto *BD = dyn_cast_or_null<BindingDecl>(Capture.getVariable())) {
         Var = cast<VarDecl>(BD->getDecomposedDecl());
-        FieldType = Var->getType();
+        FieldType = Var->getType().getNonReferenceType();
         if (Capture.isReferenceCapture())
-          FieldType = Context.getLValueReferenceType(Var->getType());
+          FieldType = Context.getLValueReferenceType(FieldType);
       } else if (auto *DD = dyn_cast_or_null<DecompositionDecl>(
                      Capture.getVariable())) {
         // OpenMP already transformed BindingDecl to DecompositionDecl
