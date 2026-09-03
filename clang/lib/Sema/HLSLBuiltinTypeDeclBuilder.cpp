@@ -1761,6 +1761,10 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
                                         "__builtin_hlsl_interlocked_add");
   addByteAddressBufferInterlockedMethod("InterlockedAnd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_and");
+  addByteAddressBufferInterlockedMethod("InterlockedMax", AST.IntTy,
+                                        "__builtin_hlsl_interlocked_max");
+  addByteAddressBufferInterlockedMethod("InterlockedMax", AST.UnsignedIntTy,
+                                        "__builtin_hlsl_interlocked_max");
   addByteAddressBufferInterlockedMethod("InterlockedMin", AST.IntTy,
                                         "__builtin_hlsl_interlocked_min");
   addByteAddressBufferInterlockedMethod("InterlockedMin", AST.UnsignedIntTy,
@@ -1783,6 +1787,11 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
     addByteAddressBufferInterlockedMethod("InterlockedAnd64",
                                           AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_and");
+    addByteAddressBufferInterlockedMethod("InterlockedMax64", AST.LongTy,
+                                          "__builtin_hlsl_interlocked_max");
+    addByteAddressBufferInterlockedMethod("InterlockedMax64",
+                                          AST.UnsignedLongTy,
+                                          "__builtin_hlsl_interlocked_max");
     addByteAddressBufferInterlockedMethod("InterlockedMin64", AST.LongTy,
                                           "__builtin_hlsl_interlocked_min");
     addByteAddressBufferInterlockedMethod("InterlockedMin64",
