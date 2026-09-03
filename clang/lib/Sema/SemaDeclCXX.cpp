@@ -4775,6 +4775,13 @@ Sema::BuildDelegatingInitializer(TypeSourceInfo *TInfo, Expr *Init,
   InitializationSequence InitSeq(*this, DelegationEntity, Kind, Args);
   ExprResult DelegationInit = InitSeq.Perform(*this, DelegationEntity, Kind,
                                               Args, nullptr);
+
+  // Aggregate initialization here means the class has no valid user-provided
+  // constructor, so the one being defined has already been diagnosed.
+  if (DelegationInit.isUsable() && !DelegationInit.get()->containsErrors() &&
+      !isa<CXXConstructExpr>(DelegationInit.get()))
+    DelegationInit = ExprError();
+
   if (!DelegationInit.isInvalid()) {
     assert((DelegationInit.get()->containsErrors() ||
             cast<CXXConstructExpr>(DelegationInit.get())->getConstructor()) &&
