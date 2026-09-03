@@ -250,8 +250,6 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
 }
 
 TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
-  SKIP_KNOWN_FAILURE(LevelZero{"unsupported DynSharedMemory"});
-
   LaunchArgs.NumGroups.x = 4;
   LaunchArgs.DynSharedMemory = 0;
 
