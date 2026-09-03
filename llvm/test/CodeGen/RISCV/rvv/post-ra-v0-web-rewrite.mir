@@ -1,8 +1,8 @@
 # RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=riscv-post-ra-v0-rewrite \
-# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=BASE
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,COMMON
 # RUN: llc -mtriple=riscv64 -mattr=+v -enable-new-pm \
 # RUN:   -passes=riscv-post-ra-v0-rewrite -verify-machineinstrs -o - %s | \
-# RUN:   FileCheck %s --check-prefix=BASE
+# RUN:   FileCheck %s --check-prefixes=CHECK,COMMON
 
 --- |
   define void @rewrite_b64_f16_mf4() { ret void }
@@ -61,11 +61,11 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: rewrite_b64_f16_mf4
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
-    ; BASE-NEXT: $v10 = PseudoVMFLE_VV_MF4_MASK
-    ; BASE-NEXT: $v0 = PseudoVMNAND_MM_B64
+    ; CHECK-LABEL: name: rewrite_b64_f16_mf4
+    ; CHECK: $v0 = PseudoVMAND_MM_B64
+    ; CHECK-NOT: COPY
+    ; CHECK-NEXT: $v0 = PseudoVMFLE_VV_MF4_MASK killed $v0, killed renamable $v8, killed renamable $v9, killed $v0
+    ; CHECK-NEXT: $v0 = PseudoVMNAND_MM_B64 killed $v0, killed $v0
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -79,11 +79,11 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: rewrite_b32_f32_m1
-    ; BASE: $v10 = PseudoVMAND_MM_B32
-    ; BASE-NEXT: $v0 = COPY renamable $v10
-    ; BASE-NEXT: $v10 = PseudoVMFLT_VV_M1_MASK
-    ; BASE-NEXT: $v0 = PseudoVMNAND_MM_B32
+    ; CHECK-LABEL: name: rewrite_b32_f32_m1
+    ; CHECK: $v0 = PseudoVMAND_MM_B32
+    ; CHECK-NOT: COPY
+    ; CHECK-NEXT: $v0 = PseudoVMFLT_VV_M1_MASK
+    ; CHECK-NEXT: $v0 = PseudoVMNAND_MM_B32
     renamable $v10 = PseudoVMAND_MM_B32 killed renamable $v11, killed renamable $v10, 4, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLT_VV_M1_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, 4, 5, 1, implicit $vl, implicit $vtype
@@ -98,11 +98,11 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: rewrite_b16_f16_m1
-    ; BASE: $v10 = PseudoVMAND_MM_B16
-    ; BASE-NEXT: $v0 = COPY renamable $v10
-    ; BASE-NEXT: $v10 = PseudoVMFLT_VV_M1_MASK
-    ; BASE-NEXT: $v0 = PseudoVMNAND_MM_B16
+    ; CHECK-LABEL: name: rewrite_b16_f16_m1
+    ; CHECK: $v0 = PseudoVMAND_MM_B16
+    ; CHECK-NOT: COPY
+    ; CHECK-NEXT: $v0 = PseudoVMFLT_VV_M1_MASK
+    ; CHECK-NEXT: $v0 = PseudoVMNAND_MM_B16
     renamable $v10 = PseudoVMAND_MM_B16 killed renamable $v11, killed renamable $v10, 8, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLT_VV_M1_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, 8, 4, 1, implicit $vl, implicit $vtype
@@ -118,11 +118,13 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: rewrite_fanout_three_colors
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
-    ; BASE-NEXT: $v11 = COPY renamable $v10
-    ; BASE: $v0 = PseudoVMOR_MM_B64
+    ; CHECK-LABEL: name: rewrite_fanout_three_colors
+    ; CHECK: $v11 = PseudoVMAND_MM_B64
+    ; CHECK-NEXT: $v0 = COPY $v11, implicit $vtype
+    ; CHECK-NOT: $v11 = COPY
+    ; CHECK: $v11 = PseudoVMFLT_VV_MF4_MASK killed $v11
+    ; CHECK-NEXT: $v0 = PseudoVMFLT_VV_MF4_MASK killed $v0
+    ; CHECK-NEXT: $v0 = PseudoVMOR_MM_B64 killed $v0, killed $v11
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v11 = COPY renamable $v10, implicit $vtype
@@ -139,11 +141,13 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: rewrite_fanout_vmnor_swapped
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
-    ; BASE-NEXT: $v11 = COPY renamable $v10
-    ; BASE: $v0 = PseudoVMNOR_MM_B64 killed renamable $v11, killed renamable $v10
+    ; CHECK-LABEL: name: rewrite_fanout_vmnor_swapped
+    ; CHECK: $v11 = PseudoVMAND_MM_B64
+    ; CHECK-NEXT: $v0 = COPY $v11, implicit $vtype
+    ; CHECK-NOT: $v11 = COPY
+    ; CHECK: $v11 = PseudoVMFLT_VV_MF4_MASK killed $v11
+    ; CHECK-NEXT: $v0 = PseudoVMFLT_VV_MF4_MASK killed $v0
+    ; CHECK-NEXT: $v0 = PseudoVMNOR_MM_B64 killed $v11, killed $v0
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v11 = COPY renamable $v10, implicit $vtype
@@ -162,9 +166,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $x10, $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_fanout_nondebug_gap
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE: $v11 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_fanout_nondebug_gap
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON: $v11 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v11 = COPY renamable $v10, implicit $vtype
@@ -183,12 +187,11 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: rewrite_debug_gap_not_counted
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE: DBG_VALUE $noreg
-    ; BASE: $v0 = COPY renamable $v10
-    ; BASE-NEXT: $v11 = COPY renamable $v10
-    ; BASE: $v0 = PseudoVMOR_MM_B64
+    ; CHECK-LABEL: name: rewrite_debug_gap_not_counted
+    ; CHECK: $v11 = PseudoVMAND_MM_B64
+    ; CHECK: DBG_VALUE $noreg
+    ; CHECK-NOT: $v11 = COPY
+    ; CHECK: $v0 = PseudoVMOR_MM_B64
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     DBG_VALUE $noreg, $noreg, !11, !DIExpression(), debug-location !12
     renamable $v0 = COPY renamable $v10, implicit $vtype
@@ -207,9 +210,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_four_colors
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE: $v12 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_four_colors
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON: $v12 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v11 = COPY renamable $v10, implicit $vtype
@@ -228,9 +231,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_vl_mismatch
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_vl_mismatch
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, 4, 4, 1, implicit $vl, implicit $vtype
@@ -245,9 +248,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_policy_mismatch
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_policy_mismatch
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 3, implicit $vl, implicit $vtype
@@ -262,9 +265,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8m2, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_alias_color
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE: $v8 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_alias_color
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON: $v8 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v8 = COPY renamable $v10, implicit $vtype
@@ -281,10 +284,10 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $x10, $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_regmask_gap
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE: CustomRegMask({{.*}}$v10{{.*}}$x10)
-    ; BASE: $v11 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_regmask_gap
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON: CustomRegMask({{.*}}$v10{{.*}}$x10)
+    ; COMMON: $v11 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     $x10 = ADDI $x10, 0, CustomRegMask($x10, $v0, $v8, $v9, $v10, $vl, $vtype)
@@ -303,9 +306,9 @@ body: |
   bb.0:
     successors: %bb.1
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_d_live_out_cfg
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE: $v11 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_d_live_out_cfg
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON: $v11 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v11 = COPY renamable $v10, implicit $vtype
@@ -326,9 +329,9 @@ body: |
   bb.0:
     successors: %bb.1
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_e_live_out_cfg
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE: $v11 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_e_live_out_cfg
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON: $v11 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v11 = COPY renamable $v10, implicit $vtype
@@ -348,9 +351,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_mask_type_mismatch
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_mask_type_mismatch
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLT_VV_M1_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -365,9 +368,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8m2, $v10m2, $v12, $v13, $vl, $vtype
-    ; BASE-LABEL: name: keep_lmul2_earlyclobber
-    ; BASE: $v12 = PseudoVMAND_MM_B8
-    ; BASE-NEXT: $v0 = COPY renamable $v12
+    ; COMMON-LABEL: name: keep_lmul2_earlyclobber
+    ; COMMON: $v12 = PseudoVMAND_MM_B8
+    ; COMMON-NEXT: $v0 = COPY renamable $v12
     renamable $v12 = PseudoVMAND_MM_B8 killed renamable $v13, killed renamable $v12, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v12, implicit $vtype
     early-clobber renamable $v12 = PseudoVMFLT_VV_M2_MASK killed renamable $v12, killed renamable $v8m2, killed renamable $v10m2, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -382,9 +385,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_extra_use
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_extra_use
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype, implicit $v10
@@ -399,9 +402,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_live_out
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_live_out
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -416,9 +419,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_wrong_producer_family
-    ; BASE: $v10 = PseudoVMOR_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_wrong_producer_family
+    ; COMMON: $v10 = PseudoVMOR_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMOR_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -433,9 +436,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_wrong_consumer_family
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_wrong_consumer_family
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -450,9 +453,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_wrong_compare_family
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_wrong_compare_family
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMSEQ_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -467,10 +470,10 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $x10, $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_wrong_order
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
-    ; BASE-NEXT: $x10 = ADDI
+    ; COMMON-LABEL: name: keep_wrong_order
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-NEXT: $x10 = ADDI
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     $x10 = ADDI killed $x10, 0
@@ -486,9 +489,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $x10, $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_extra_implicit
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_extra_implicit
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype, implicit $x10
@@ -503,9 +506,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_flagged_copy
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = frame-setup COPY renamable $v10
+    ; COMMON-LABEL: name: keep_flagged_copy
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = frame-setup COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = frame-setup COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -520,9 +523,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_flagged_producer
-    ; BASE: $v10 = frame-setup PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_flagged_producer
+    ; COMMON: $v10 = frame-setup PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = frame-setup PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -537,9 +540,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_lr_split
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = lr-split COPY renamable $v10
+    ; COMMON-LABEL: name: keep_lr_split
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = lr-split COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = lr-split COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -554,9 +557,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_metadata
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10, implicit $vtype, pre-instr-symbol <mcsymbol .Lkeep_metadata>
+    ; COMMON-LABEL: name: keep_metadata
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10, implicit $vtype, pre-instr-symbol <mcsymbol .Lkeep_metadata>
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype, pre-instr-symbol <mcsymbol .Lkeep_metadata>
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -571,9 +574,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_debug_number
-    ; BASE: $v10 = PseudoVMAND_MM_B64{{.*}}debug-instr-number 1
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_debug_number
+    ; COMMON: $v10 = PseudoVMAND_MM_B64{{.*}}debug-instr-number 1
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype, debug-instr-number 1
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v10 = PseudoVMFLE_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
@@ -588,10 +591,10 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_probe
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: PSEUDO_PROBE
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_probe
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: PSEUDO_PROBE
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     PSEUDO_PROBE 1, 1, 0, 0
     renamable $v0 = COPY renamable $v10, implicit $vtype
@@ -607,9 +610,9 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_bundle
-    ; BASE: BUNDLE
-    ; BASE: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_bundle
+    ; COMMON: BUNDLE
+    ; COMMON: $v0 = COPY renamable $v10
     BUNDLE {
       renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     }
@@ -626,10 +629,10 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $vl, $vtype
-    ; BASE-LABEL: name: keep_debug_ref
-    ; BASE: DBG_VALUE $v10
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
+    ; COMMON-LABEL: name: keep_debug_ref
+    ; COMMON: DBG_VALUE $v10
+    ; COMMON: $v10 = PseudoVMAND_MM_B64
+    ; COMMON-NEXT: $v0 = COPY renamable $v10
     DBG_VALUE $v10, $noreg, !7, !DIExpression(), debug-location !9
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
@@ -645,15 +648,17 @@ noVRegs: true
 body: |
   bb.0:
     liveins: $v8, $v9, $v10, $v11, $v12, $v13, $v14, $v15, $vl, $vtype
-    ; BASE-LABEL: name: rewrite_two_webs_same_mbb
-    ; BASE: $v10 = PseudoVMAND_MM_B64
-    ; BASE-NEXT: $v0 = COPY renamable $v10
-    ; BASE-NEXT: $v11 = COPY renamable $v10
-    ; BASE: dead renamable $v0 = PseudoVMOR_MM_B64
-    ; BASE-NEXT: $v12 = PseudoVMAND_MM_B32
-    ; BASE-NEXT: $v0 = COPY renamable $v12
-    ; BASE-NEXT: $v12 = PseudoVMFLT_VV_M1_MASK
-    ; BASE-NEXT: $v0 = PseudoVMNAND_MM_B32
+    ; CHECK-LABEL: name: rewrite_two_webs_same_mbb
+    ; CHECK: $v11 = PseudoVMAND_MM_B64
+    ; CHECK-NEXT: $v0 = COPY $v11
+    ; CHECK-NOT: $v11 = COPY
+    ; CHECK: $v11 = PseudoVMFLT_VV_MF4_MASK
+    ; CHECK-NEXT: $v0 = PseudoVMFLT_VV_MF4_MASK
+    ; CHECK-NEXT: dead $v0 = PseudoVMOR_MM_B64
+    ; CHECK-NEXT: $v0 = PseudoVMAND_MM_B32
+    ; CHECK-NOT: COPY
+    ; CHECK-NEXT: $v0 = PseudoVMFLT_VV_M1_MASK
+    ; CHECK-NEXT: $v0 = PseudoVMNAND_MM_B32
     renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v11, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
     renamable $v0 = COPY renamable $v10, implicit $vtype
     renamable $v11 = COPY renamable $v10, implicit $vtype
