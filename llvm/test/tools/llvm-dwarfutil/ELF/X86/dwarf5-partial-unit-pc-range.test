@@ -1,0 +1,206 @@
+## A unit root's DW_AT_low_pc/DW_AT_high_pc bound the unit, so the linker has to
+## replace them with the range it actually linked rather than copy the input
+## values through. Both backends keyed that on the root being a
+## DW_TAG_compile_unit, which left a DW_TAG_partial_unit root - what dwz emits,
+## and what Fedora, RHEL and Debian debuginfo packaging therefore ships -
+## advertising a range that no longer contains its own subprograms.
+##
+## The input declares the root range as [0x1140, 0x1150), the gap between foo1
+## at [0x1130, 0x1140) and foo2 at [0x1150, 0x1160), so both halves of the
+## substitution are observable: low_pc has to move down to 0x1130 and high_pc
+## out to 0x1160. The declared range stays inside .text because llvm-dwarfutil
+## decides whether a unit has anything worth linking from the root DIE's own
+## ranges, and --tombstone=universal, the default, treats a root range outside
+## every executable section as dead. DW_AT_high_pc reaches a different code path
+## in each backend depending on whether it is encoded as an address or as a
+## length, so both encodings are linked here, and a DW_TAG_compile_unit root is
+## linked alongside as the control.
+
+## DW_TAG_compile_unit root, DW_AT_high_pc as an address.
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -DHIGHPCFORM=DW_FORM_addr -DHIGHPC=0x1150 -DFOO1LOW=0x1130 -DFOO2LOW=0x1150 -o %t.cu-addr.o
+# RUN: llvm-dwarfutil %t.cu-addr.o %t.cu-addr.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu-addr.classic | FileCheck %s --check-prefixes=CHECK,CU
+# RUN: llvm-dwarfdump --verify %t.cu-addr.classic
+# RUN: llvm-dwarfutil --linker parallel %t.cu-addr.o %t.cu-addr.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu-addr.parallel | FileCheck %s --check-prefixes=CHECK,CU
+# RUN: llvm-dwarfdump --verify %t.cu-addr.parallel
+
+## DW_TAG_compile_unit root, DW_AT_high_pc as a length.
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -DHIGHPCFORM=DW_FORM_data8 -DHIGHPC=0x10 -DFOO1LOW=0x1130 -DFOO2LOW=0x1150 -o %t.cu-len.o
+# RUN: llvm-dwarfutil %t.cu-len.o %t.cu-len.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu-len.classic | FileCheck %s --check-prefixes=CHECK,CU
+# RUN: llvm-dwarfdump --verify %t.cu-len.classic
+# RUN: llvm-dwarfutil --linker parallel %t.cu-len.o %t.cu-len.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu-len.parallel | FileCheck %s --check-prefixes=CHECK,CU
+# RUN: llvm-dwarfdump --verify %t.cu-len.parallel
+
+## DW_TAG_partial_unit root, DW_AT_high_pc as an address.
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -DHIGHPCFORM=DW_FORM_addr -DHIGHPC=0x1150 -DFOO1LOW=0x1130 -DFOO2LOW=0x1150 -o %t.pu-addr.o
+# RUN: llvm-dwarfutil %t.pu-addr.o %t.pu-addr.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu-addr.classic | FileCheck %s --check-prefixes=CHECK,PU
+# RUN: not llvm-dwarfdump --verify %t.pu-addr.classic | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfutil --linker parallel %t.pu-addr.o %t.pu-addr.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu-addr.parallel | FileCheck %s --check-prefixes=CHECK,PU
+# RUN: not llvm-dwarfdump --verify %t.pu-addr.parallel | FileCheck %s --check-prefix=VERIFY
+
+## DW_TAG_partial_unit root, DW_AT_high_pc as a length.
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -DHIGHPCFORM=DW_FORM_data8 -DHIGHPC=0x10 -DFOO1LOW=0x1130 -DFOO2LOW=0x1150 -o %t.pu-len.o
+# RUN: llvm-dwarfutil %t.pu-len.o %t.pu-len.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu-len.classic | FileCheck %s --check-prefixes=CHECK,PU
+# RUN: not llvm-dwarfdump --verify %t.pu-len.classic | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfutil --linker parallel %t.pu-len.o %t.pu-len.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu-len.parallel | FileCheck %s --check-prefixes=CHECK,PU
+# RUN: not llvm-dwarfdump --verify %t.pu-len.parallel | FileCheck %s --check-prefix=VERIFY
+
+## The same unit shapes with both functions tombstoned to the BFD dead value, so
+## the linker keeps the unit for its live variable but has no function extents
+## to substitute. Every run below is paired with a DW_TAG_compile_unit control,
+## which shows the behaviour a partial unit root now inherits rather than one
+## this change invents.
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -DHIGHPCFORM=DW_FORM_addr -DHIGHPC=0x1150 -DFOO1LOW=0x0 -DFOO2LOW=0x0 -o %t.drop-cu-addr.o
+# RUN: llvm-dwarfutil %t.drop-cu-addr.o %t.drop-cu-addr.classic
+# RUN: llvm-dwarfdump --debug-info %t.drop-cu-addr.classic | FileCheck %s --check-prefixes=CU,DROP
+# RUN: llvm-dwarfutil --linker parallel %t.drop-cu-addr.o %t.drop-cu-addr.parallel
+# RUN: llvm-dwarfdump --debug-info %t.drop-cu-addr.parallel | FileCheck %s --check-prefixes=CU,DROP
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -DHIGHPCFORM=DW_FORM_data8 -DHIGHPC=0x10 -DFOO1LOW=0x0 -DFOO2LOW=0x0 -o %t.drop-cu-len.o
+# RUN: llvm-dwarfutil %t.drop-cu-len.o %t.drop-cu-len.classic
+# RUN: llvm-dwarfdump --debug-info %t.drop-cu-len.classic | FileCheck %s --check-prefixes=CU,DROP
+# RUN: llvm-dwarfutil --linker parallel %t.drop-cu-len.o %t.drop-cu-len.parallel
+# RUN: llvm-dwarfdump --debug-info %t.drop-cu-len.parallel | FileCheck %s --check-prefixes=CU,DROP
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -DHIGHPCFORM=DW_FORM_addr -DHIGHPC=0x1150 -DFOO1LOW=0x0 -DFOO2LOW=0x0 -o %t.drop-pu-addr.o
+# RUN: llvm-dwarfutil %t.drop-pu-addr.o %t.drop-pu-addr.classic
+# RUN: llvm-dwarfdump --debug-info %t.drop-pu-addr.classic | FileCheck %s --check-prefixes=PU,DROP
+# RUN: llvm-dwarfutil --linker parallel %t.drop-pu-addr.o %t.drop-pu-addr.parallel
+# RUN: llvm-dwarfdump --debug-info %t.drop-pu-addr.parallel | FileCheck %s --check-prefixes=PU,DROP
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -DHIGHPCFORM=DW_FORM_data8 -DHIGHPC=0x10 -DFOO1LOW=0x0 -DFOO2LOW=0x0 -o %t.drop-pu-len.o
+# RUN: llvm-dwarfutil %t.drop-pu-len.o %t.drop-pu-len.classic
+# RUN: llvm-dwarfdump --debug-info %t.drop-pu-len.classic | FileCheck %s --check-prefixes=PU,DROP
+# RUN: llvm-dwarfutil --linker parallel %t.drop-pu-len.o %t.drop-pu-len.parallel
+# RUN: llvm-dwarfdump --debug-info %t.drop-pu-len.parallel | FileCheck %s --check-prefixes=PU,DROP
+
+## The root tag survives linking, and the unit range is the one the linker
+## produced: it starts at the first surviving function and ends past the last.
+# CU: DW_TAG_compile_unit
+# PU: DW_TAG_partial_unit
+# CHECK:        DW_AT_producer ("by_hand")
+# CHECK-NEXT:   DW_AT_name ("U1")
+# CHECK-NEXT:   DW_AT_low_pc (0x0000000000001130)
+# CHECK-NEXT:   DW_AT_high_pc (0x0000000000001160)
+
+## The subprograms keep the ranges they came in with. Only the unit root is
+## rewritten from the linked extents; a DW_AT_high_pc below the root is still
+## the function's own, so widening it to the unit range would be wrong.
+# CHECK:        DW_TAG_subprogram
+# CHECK-NEXT:     DW_AT_name ("foo1")
+# CHECK-NEXT:     DW_AT_low_pc (0x0000000000001130)
+# CHECK-NEXT:     DW_AT_high_pc (0x0000000000001140)
+# CHECK:        DW_TAG_subprogram
+# CHECK-NEXT:     DW_AT_name ("foo2")
+# CHECK-NEXT:     DW_AT_low_pc (0x0000000000001150)
+# CHECK-NEXT:     DW_AT_high_pc (0x0000000000001160)
+
+## The compile unit control above verifies clean. A partial unit does not yet,
+## and this pins what is left: the ranges no longer draw "DIE address ranges are
+## not contained in its parent's ranges", and the only remaining complaint is
+## that the unit header still says DW_UT_compile, which is a separate defect.
+## When that one is fixed these four runs become a plain llvm-dwarfdump
+## --verify with no expected errors at all.
+# VERIFY:      error: Aggregated error counts:
+# VERIFY-NEXT: error: Mismatched unit type occurred 1 time(s).
+# VERIFY-NEXT: Errors detected.
+
+## With no surviving function the unit has no extents to advertise, so both
+## bounds are dropped rather than left at the unrelocated input values. The
+## DW_AT_name line is followed straight by DW_AT_str_offsets_base, which is what
+## pins the absence.
+# DROP:          DW_AT_producer ("by_hand")
+# DROP-NEXT:     DW_AT_name ("U1")
+# DROP-NEXT:     DW_AT_str_offsets_base (0x00000008)
+# DROP:        DW_TAG_variable
+# DROP-NEXT:     DW_AT_name ("gvar")
+
+## A DWARFv5 unit with two functions in .text, whose root advertises the gap
+## between them. FOO1LOW and FOO2LOW select whether the functions are live or
+## tombstoned; gvar is a variable in .text that keeps the unit alive once they
+## are gone, since a unit with nothing live is dropped whole and asserts
+## nothing. The root carries its own DW_AT_str_offsets_base, so the strings the
+## linker rewrites into DW_FORM_strx stay resolvable on output; the linker does
+## not synthesize that attribute for a partial unit root by itself.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x30
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      [[HIGHPCFORM]]
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_location
+            Form:      DW_FORM_exprloc
+  debug_info:
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U1
+            - Value: 0x1140
+            - Value: [[HIGHPC]]
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: [[FOO1LOW]]
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: [[FOO2LOW]]
+            - Value: 0x10
+        - AbbrCode: 3
+          Values:
+            - CStr: gvar
+            - BlockData: [ 0x03, 0x40, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ]
+        - AbbrCode: 0
+...

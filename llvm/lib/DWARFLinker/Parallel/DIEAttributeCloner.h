@@ -140,6 +140,15 @@ protected:
   /// is constrained as well.
   uint64_t constrainHighPC(uint64_t HighPC, bool IsLength);
 
+  /// Returns true if the DIE being cloned is the unit root, which owns the
+  /// attributes that bound the unit and so are replaced with the extents the
+  /// linker kept. Index 0 is that root whatever its tag: DWARFv5 section 3.1.1
+  /// gives a full or a partial compilation unit entry the same address range
+  /// attributes, encoding the ranges generated for that unit, and
+  /// DWARFContext::compile_units() hands both kinds to the linker on the same
+  /// path.
+  bool isUnitRootDIE() const { return InputDIEIdx == 0; }
+
   /// Returns true if attribute should be skipped.
   bool
   shouldSkipAttribute(DWARFAbbreviationDeclaration::AttributeSpec AttrSpec);
