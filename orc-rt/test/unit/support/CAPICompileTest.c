@@ -35,3 +35,23 @@ int orc_rt_test_hasBuiltinExpect(void) { return 0; }
 #if ORC_RT_HAS_BUILTIN(__builtin_orc_rt_not_a_real_builtin)
 #error "ORC_RT_HAS_BUILTIN reported support for a nonexistent builtin"
 #endif
+
+/* ORC_RT_LIKELY / ORC_RT_UNLIKELY must normalize their operand without relying
+   on bool, which is not a keyword in C before C23. */
+int orc_rt_test_likely(int X) { return ORC_RT_LIKELY(X) ? 1 : 0; }
+int orc_rt_test_unlikely(int X) { return ORC_RT_UNLIKELY(X) ? 1 : 0; }
+
+/* ORC_RT_WEAK_IMPORT must be applicable to a declaration in C. Never called;
+   this only checks that the attribute parses here. */
+ORC_RT_WEAK_IMPORT void orc_rt_test_weakImportDecl(void);
+
+/* ORC_RT_UNREACHABLE must compile in a value-returning C function, and must
+   satisfy the compiler that control does not fall off the end. */
+int orc_rt_test_unreachable(int X) {
+  switch (X) {
+  case 0:
+    return 0;
+  default:
+    ORC_RT_UNREACHABLE("only 0 is expected");
+  }
+}
