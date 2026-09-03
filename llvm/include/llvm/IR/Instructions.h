@@ -5324,6 +5324,8 @@ inline std::optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
     return AI->getSyncScopeID();
   if (auto *AI = dyn_cast<AtomicRMWInst>(I))
     return AI->getSyncScopeID();
+  if (auto *CB = dyn_cast<CallBase>(I))
+    return CB->getAtomicityBundleInfo()->SSID;
   llvm_unreachable("unhandled atomic operation");
 }
 
@@ -5341,6 +5343,8 @@ inline void setAtomicSyncScopeID(Instruction *I, SyncScope::ID SSID) {
   else if (auto *AI = dyn_cast<AtomicRMWInst>(I))
     AI->setSyncScopeID(SSID);
   else
+    // A call records its scope in an operand bundle, which cannot be mutated
+    // in place.
     llvm_unreachable("unhandled atomic operation");
 }
 

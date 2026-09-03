@@ -1429,11 +1429,22 @@ static AtomicOrdering parseAtomicOrderingCABIArg(const CallBase &CI,
   }
 }
 
-static unsigned parseSyncscopeMDArg(const CallBase &CI, unsigned ArgIdx) {
+static SyncScope::ID parseSyncscopeMDArg(const CallBase &CI, unsigned ArgIdx) {
   MDNode *ScopeMD = cast<MDNode>(
       cast<MetadataAsValue>(CI.getArgOperand(ArgIdx))->getMetadata());
-  StringRef Scope = cast<MDString>(ScopeMD->getOperand(0))->getString();
-  return CI.getContext().getOrInsertSyncScopeID(Scope);
+  return CI.getContext().getOrInsertSyncScopeID(
+      cast<MDString>(ScopeMD->getOperand(0))->getString());
+}
+
+// A buffer instruction is identical whether or not the access is atomic, so
+// the "atomicity" bundle is the only record of it.
+static void applyBufferAtomicityBundle(const CallBase &CI,
+                                       TargetLowering::IntrinsicInfo &Info) {
+  if (std::optional<AtomicityBundleInfo> Atomicity =
+          CI.getAtomicityBundleInfo()) {
+    Info.order = Atomicity->Order;
+    Info.ssid = Atomicity->SSID;
+  }
 }
 
 void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
@@ -1486,6 +1497,8 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         // areMemAccessesTriviallyDisjoint.
         Info.ptrVal = RsrcArg;
     }
+
+    applyBufferAtomicityBundle(CI, Info);
 
     if (ME.onlyReadsMemory()) {
       if (RsrcIntr->IsImage) {
@@ -17907,7 +17920,6 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
                                                   : Intrinsic::amdgcn_udot4,
                                         SL, MVT::i64);
 
-    assert(!VT.isVector());
     auto Dot = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32, IID, Src0,
                            Src1, Src2, DAG.getTargetConstant(0, SL, MVT::i1));
 

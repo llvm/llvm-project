@@ -1545,6 +1545,39 @@ loads.
   requirements of strict OOB mode. However, in strict OOB mode, those intrinsics
   will not be combined in a way that would violate the guarantees of that mode.
 
+.. _amdgpu-buffer-intrinsic-atomicity:
+
+Buffer memory intrinsic atomicity
+---------------------------------
+
+A call to a buffer memory intrinsic (``llvm.amdgcn.{raw,struct}.ptr.buffer.{load,store}``,
+``llvm.amdgcn.{raw,struct}.ptr.buffer.{load,store}.format``,
+``llvm.amdgcn.{raw,struct}.ptr.atomic.buffer.load`` or
+``llvm.amdgcn.{raw,struct}.ptr.buffer.atomic.*``) may carry an
+``"atomicity"`` operand bundle recording the atomicity of the access:
+
+.. code-block:: llvm
+
+  call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %val, ptr addrspace(8) %rsrc,
+      i32 %off, i32 0, i32 0)
+      [ "atomicity"(metadata !"release", metadata !"agent") ]
+
+The first bundle operand is the LLVM IR spelling of the memory ordering
+(``unordered``, ``monotonic``, ``acquire``, ``release``, ``acq_rel`` or
+``seq_cst``). The second is a synchronization scope name from table
+:ref:`amdgpu-amdhsa-llvm-sync-scopes-table`, where the empty string denotes
+system scope. An access with no such bundle is not atomic.
+
+The bundle is needed because a buffer instruction is the same instruction
+whether or not the access it implements is atomic, so the atomicity cannot be
+recovered from the selected instruction. The information is transferred to the
+``MachineMemOperand`` during instruction selection, where ``SIMemoryLegalizer``
+uses it to set the cache-bypass bits and to insert the cache invalidations and
+writebacks the memory model requires.
+
+``AMDGPULowerBufferFatPointers`` populates the bundle from the ``atomicrmw``,
+``cmpxchg``, ``load`` or ``store`` instruction it lowers.
+
 Target Types
 ------------
 

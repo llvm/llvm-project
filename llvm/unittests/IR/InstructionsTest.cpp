@@ -1959,6 +1959,34 @@ TEST(InstructionsTest, AtomicSyncscope) {
   EXPECT_TRUE(LLVMIsAtomicSingleThread(CmpXchg));
 }
 
+TEST(InstructionsTest, AtomicityBundle) {
+  LLVMContext Ctx;
+
+  Module M("Mod", Ctx);
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
+  Function *F = Function::Create(FT, Function::ExternalLinkage, "Fun", M);
+  Function *Callee =
+      Function::Create(FT, Function::ExternalLinkage, "Callee", M);
+  BasicBlock *BB = BasicBlock::Create(Ctx, "Entry", F);
+  IRBuilder<> Builder(BB);
+
+  CallInst *Plain = Builder.CreateCall(Callee);
+  EXPECT_FALSE(Plain->isAtomic());
+  EXPECT_FALSE(Plain->getAtomicityBundleInfo().has_value());
+  EXPECT_EQ(getAtomicSyncScopeID(Plain), std::nullopt);
+
+  Value *Ops[] = {MetadataAsValue::get(Ctx, MDString::get(Ctx, "release")),
+                  MetadataAsValue::get(Ctx, MDString::get(Ctx, "agent"))};
+  CallInst *Atomic =
+      Builder.CreateCall(Callee, {}, {OperandBundleDef("atomicity", Ops)});
+  EXPECT_TRUE(Atomic->isAtomic());
+  EXPECT_EQ(Atomic->getAtomicityBundleInfo()->Order, AtomicOrdering::Release);
+  EXPECT_EQ(getAtomicSyncScopeID(Atomic), Ctx.getOrInsertSyncScopeID("agent"));
+  // The callee is not readnone, so the call both reads and writes memory.
+  EXPECT_TRUE(Atomic->hasAtomicLoad());
+  EXPECT_TRUE(Atomic->hasAtomicStore());
+}
+
 TEST(InstructionsTest, CmpPredicate) {
   CmpPredicate P0(CmpInst::ICMP_ULE, false), P1(CmpInst::ICMP_ULE, true),
       P2(CmpInst::ICMP_SLE, false), P3(CmpInst::ICMP_SLT, false);

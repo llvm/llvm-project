@@ -3573,16 +3573,8 @@ bool MIParser::parseOptionalAtomicOrdering(AtomicOrdering &Order) {
   if (Token.isNot(MIToken::Identifier))
     return false;
 
-  Order = StringSwitch<AtomicOrdering>(Token.stringValue())
-              .Case("unordered", AtomicOrdering::Unordered)
-              .Case("monotonic", AtomicOrdering::Monotonic)
-              .Case("acquire", AtomicOrdering::Acquire)
-              .Case("release", AtomicOrdering::Release)
-              .Case("acq_rel", AtomicOrdering::AcquireRelease)
-              .Case("seq_cst", AtomicOrdering::SequentiallyConsistent)
-              .Default(AtomicOrdering::NotAtomic);
-
-  if (Order != AtomicOrdering::NotAtomic) {
+  if (auto ParsedOrder = parseAtomicOrdering(Token.stringValue())) {
+    Order = *ParsedOrder;
     lex();
     return false;
   }

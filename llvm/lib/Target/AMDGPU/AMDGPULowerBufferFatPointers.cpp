@@ -250,6 +250,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -266,6 +267,13 @@ using GetTTIFn = function_ref<const TargetTransformInfo *(Function &)>;
 using GetSEFn = function_ref<ScalarEvolution *(Function &)>;
 
 static constexpr unsigned BufferOffsetWidth = 32;
+
+// Prototype: rely on the "atomicity" operand bundle alone to keep generic
+// transforms from reordering across an atomic buffer access, instead of
+// bracketing the access with explicit fences.
+static cl::opt<bool> NoAtomicityFences(
+    "amdgpu-buffer-atomicity-no-fences", cl::Hidden, cl::init(false),
+    cl::desc("Do not emit fences around atomic buffer memory intrinsics"));
 
 namespace {
 /// Recursively replace instances of ptr addrspace(7) and vector<Nxptr
@@ -1598,6 +1606,9 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
   void setAlign(CallInst *Intr, Align A, unsigned RsrcArgIdx);
   void insertPreMemOpFence(AtomicOrdering Order, SyncScope::ID SSID);
   void insertPostMemOpFence(AtomicOrdering Order, SyncScope::ID SSID);
+  // Empty when the access is not atomic.
+  SmallVector<OperandBundleDef, 1> getAtomicityBundle(AtomicOrdering Order,
+                                                      SyncScope::ID SSID);
   Value *handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr, Type *Ty,
                           Align Alignment, AtomicOrdering Order,
                           bool IsVolatile, SyncScope::ID SSID);
@@ -1904,8 +1915,22 @@ void SplitPtrStructs::setAlign(CallInst *Intr, Align A, unsigned RsrcArgIdx) {
   Intr->addParamAttr(RsrcArgIdx, Attribute::getWithAlignment(Ctx, A));
 }
 
+SmallVector<OperandBundleDef, 1>
+SplitPtrStructs::getAtomicityBundle(AtomicOrdering Order, SyncScope::ID SSID) {
+  if (Order == AtomicOrdering::NotAtomic)
+    return {};
+  LLVMContext &Ctx = IRB.getContext();
+  StringRef Scope = Ctx.getSyncScopeName(SSID).value_or("");
+  Value *Ops[] = {
+      MetadataAsValue::get(Ctx, MDString::get(Ctx, toIRString(Order))),
+      MetadataAsValue::get(Ctx, MDString::get(Ctx, Scope))};
+  return {OperandBundleDef("atomicity", Ops)};
+}
+
 void SplitPtrStructs::insertPreMemOpFence(AtomicOrdering Order,
                                           SyncScope::ID SSID) {
+  if (NoAtomicityFences)
+    return;
   switch (Order) {
   case AtomicOrdering::Release:
   case AtomicOrdering::AcquireRelease:
@@ -1919,6 +1944,8 @@ void SplitPtrStructs::insertPreMemOpFence(AtomicOrdering Order,
 
 void SplitPtrStructs::insertPostMemOpFence(AtomicOrdering Order,
                                            SyncScope::ID SSID) {
+  if (NoAtomicityFences)
+    return;
   switch (Order) {
   case AtomicOrdering::Acquire:
   case AtomicOrdering::AcquireRelease:
@@ -2053,7 +2080,9 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     }
   }
 
-  CallInst *Call = IRB.CreateIntrinsicWithoutFolding(IID, Ty, Args);
+  CallInst *Call = IRB.CreateIntrinsicWithoutFolding(
+      IID, {Ty}, Args, /*FMFSource=*/{}, /*Name=*/"",
+      getAtomicityBundle(Order, SSID));
   copyMetadata(Call, I);
   setAlign(Call, Alignment, Arg ? 1 : 0);
   Call->takeName(I);
@@ -2121,9 +2150,10 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
   if (AI.isVolatile())
     Aux |= AMDGPU::CPol::VOLATILE;
   CallInst *Call = IRB.CreateIntrinsicWithoutFolding(
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, Ty,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, {Ty},
       {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc, Off,
-       IRB.getInt32(0), IRB.getInt32(Aux)});
+       IRB.getInt32(0), IRB.getInt32(Aux)},
+      /*FMFSource=*/{}, /*Name=*/"", getAtomicityBundle(Order, SSID));
   copyMetadata(Call, &AI);
   setAlign(Call, AI.getAlign(), 2);
   Call->takeName(&AI);
