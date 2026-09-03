@@ -48,6 +48,19 @@ attributes {
   // Single-element array in non-last position is still wrapped.
   // CHECK: #test.arr_struct<elements = [7], count = 1>
   attr_arr_struct_single = #test.arr_struct<count = 1, elements = [7]>,
+  // A non-final comma-separated bit enum is bracketed to disambiguate its
+  // separator from the struct's comma separator.
+  // CHECK: #test.bit_enum_attr_struct<flags = [read, write], count = 2>
+  attr_bit_enum_attr_struct =
+      #test.bit_enum_attr_struct<count = 2, flags = [read, write]>,
+  // EnumAttr parameters use their underlying enum syntax inside a struct,
+  // independent of the EnumAttr's `<value>` assembly format.
+  // CHECK: #test.enum_attr_struct<required = first, optional = second>
+  attr_enum_attr_struct =
+      #test.enum_attr_struct<optional = second, required = first>,
+  // CHECK: #test.enum_attr_struct<required = third>
+  attr_enum_attr_struct_optional =
+      #test.enum_attr_struct<required = third>,
   // OptionalArrayRefParameter in non-last struct position (present).
   // CHECK: #test.opt_arr_struct<elements = [4, 5], count = 9>
   attr_opt_arr_struct = #test.opt_arr_struct<count = 9, elements = [4, 5]>,
