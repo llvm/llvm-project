@@ -408,3 +408,111 @@ body:             |
     RET_ReallyLR implicit $s0
 
 ...
+---
+name:            add_vector
+legalized:       true
+liveins:
+  - { reg: '$q0' }
+body:             |
+  bb.1.entry:
+    liveins: $q0
+
+    ; Element-wise fold of an integer vector binop: <40, 10> + <2, 2> = <42, 12>.
+    ; CHECK-LABEL: name: add_vector
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+    ; CHECK-NEXT: %res:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C1]](i64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x i64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(i64) = G_CONSTANT i64 40
+    %a1:_(i64) = G_CONSTANT i64 10
+    %b:_(i64) = G_CONSTANT i64 2
+    %av:_(<2 x i64>) = G_BUILD_VECTOR %a0(i64), %a1(i64)
+    %bv:_(<2 x i64>) = G_BUILD_VECTOR %b(i64), %b(i64)
+    %res:_(<2 x i64>) = G_ADD %av, %bv
+    $q0 = COPY %res(<2 x i64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            fadd_vector
+legalized:       true
+liveins:
+  - { reg: '$q0' }
+body:             |
+  bb.1.entry:
+    liveins: $q0
+
+    ; Element-wise fold of an FP vector binop: <40.0, 1.0> + <2.0, 2.0>.
+    ; CHECK-LABEL: name: fadd_vector
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double 4.200000e+01
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 3.000000e+00
+    ; CHECK-NEXT: %res:_(<2 x f64>) = G_BUILD_VECTOR [[C]](f64), [[C1]](f64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x f64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(f64) = G_FCONSTANT double 40.0
+    %a1:_(f64) = G_FCONSTANT double 1.0
+    %b:_(f64) = G_FCONSTANT double 2.0
+    %av:_(<2 x f64>) = G_BUILD_VECTOR %a0(f64), %a1(f64)
+    %bv:_(<2 x f64>) = G_BUILD_VECTOR %b(f64), %b(f64)
+    %res:_(<2 x f64>) = G_FADD %av, %bv
+    $q0 = COPY %res(<2 x f64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            zext_vector
+legalized:       true
+liveins:
+  - { reg: '$q0' }
+body:             |
+  bb.1.entry:
+    liveins: $q0
+
+    ; Element-wise fold of a vector cast: zext(<7, 8> : <2 x i32>) to <2 x i64>.
+    ; CHECK-LABEL: name: zext_vector
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 7
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %res:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C1]](i64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x i64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(i32) = G_CONSTANT i32 7
+    %a1:_(i32) = G_CONSTANT i32 8
+    %src:_(<2 x i32>) = G_BUILD_VECTOR %a0(i32), %a1(i32)
+    %res:_(<2 x i64>) = G_ZEXT %src(<2 x i32>)
+    $q0 = COPY %res(<2 x i64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            fneg_vector
+legalized:       true
+liveins:
+  - { reg: '$q0' }
+body:             |
+  bb.1.entry:
+    liveins: $q0
+
+    ; Element-wise fold of a unary FP op: fneg(<3.0, -4.0>) = <-3.0, 4.0>.
+    ; CHECK-LABEL: name: fneg_vector
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double -3.000000e+00
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(f64) = G_FCONSTANT double 4.000000e+00
+    ; CHECK-NEXT: %res:_(<2 x f64>) = G_BUILD_VECTOR [[C]](f64), [[C1]](f64)
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x f64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(f64) = G_FCONSTANT double 3.0
+    %a1:_(f64) = G_FCONSTANT double -4.0
+    %src:_(<2 x f64>) = G_BUILD_VECTOR %a0(f64), %a1(f64)
+    %res:_(<2 x f64>) = G_FNEG %src(<2 x f64>)
+    $q0 = COPY %res(<2 x f64>)
+    RET_ReallyLR implicit $q0
+
+...
