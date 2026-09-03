@@ -79,7 +79,7 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
   int value = dst_array[dst_size - 1];
   d.push_back(value);
   assert(d.size() == dst_size);
-  assert(std::equal(d.begin(), std::end(), std::begin(dst_array)));
+  assert(std::equal(d.begin(), d.end(), std::begin(dst_array)));
 
   return true;
 }
