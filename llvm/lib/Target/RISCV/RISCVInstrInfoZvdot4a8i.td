@@ -95,6 +95,22 @@ defm : VPatBinaryVL_VV_VX<riscv_vdot4a_vl, "PseudoVDOT4A", AllE32Vectors, ExtraP
 defm : VPatBinaryVL_VV_VX<riscv_vdot4au_vl, "PseudoVDOT4AU", AllE32Vectors, ExtraPreds=[HasStdExtZvdot4a8i]>;
 defm : VPatBinaryVL_VV_VX<riscv_vdot4asu_vl, "PseudoVDOT4ASU", AllE32Vectors, ExtraPreds=[HasStdExtZvdot4a8i]>;
 
+// vdot4aus.vx is the operand-swapped counterpart of vdot4asu.vx: it takes an
+// unsigned vector and a signed scalar. Use it when the signed operand of
+// riscv_vdot4asu_vl is a scalar splat. There is no .vv form because the
+// register operands can just be swapped.
+foreach vti = AllE32Vectors in {
+  let Predicates = !listconcat([HasStdExtZvdot4a8i],
+                               GetVTypePredicates<vti>.Predicates) in
+  def : Pat<(riscv_vdot4asu_vl (vti.Vector (SplatPat (XLenVT GPR:$rs1))),
+                               (vti.Vector vti.RegClass:$rs2),
+                               vti.RegClass:$passthru, (vti.Mask VMV0:$vm),
+                               VLOpFrag),
+            (!cast<Instruction>("PseudoVDOT4AUS_VX_"#vti.LMul.MX#"_MASK")
+                 vti.RegClass:$passthru, vti.RegClass:$rs2, GPR:$rs1,
+                 (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+}
+
 // These VPat definitions are for vdot4a because they have a different operand
 // order with other ternary instructions (i.e. vop.vx vd, vs2, rs1)
 multiclass VPatTernaryV_VX_AAAX<string intrinsic, string instruction,
