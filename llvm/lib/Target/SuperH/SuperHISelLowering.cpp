@@ -89,6 +89,11 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SREM, VT, Custom);
   }
 
+  // Multiplies have multiple lowerings depending on size.
+  for (MVT VT : {MVT::i8, MVT::i16, MVT::i32}) {
+    setOperationAction(ISD::MUL, VT, Custom);
+  }
+
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
   setOperationAction(ISD::ExternalSymbol, MVT::i32, Custom);
@@ -564,7 +569,7 @@ SDValue SuperHTargetLowering::LowerCallResult(
 //                              DIVISION LOWERING
 //===----------------------------------------------------------------------===//
 
-SDValue SuperHTargetLowering::LowerDiv(SDValue Op, SelectionDAG &DAG) const {
+SDValue SuperHTargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::SDIV || Opcode == ISD::UDIV) &&
          "Invalid opcode for Div lowering");
@@ -626,6 +631,66 @@ SDValue SuperHTargetLowering::LowerDiv(SDValue Op, SelectionDAG &DAG) const {
 
 
 //===----------------------------------------------------------------------===//
+//                          MULTIPLICATION LOWERING
+//===----------------------------------------------------------------------===//
+SDValue SuperHTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
+  unsigned Opcode = Op->getOpcode();
+  assert((Opcode == ISD::MUL) && "Invalid opcode for MUL lowering");
+  SDLoc DL(Op);
+
+  EVT VT = Op->getValueType(0);
+  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected type for ");
+  case MVT::i8: {
+    SDValue MulOp = DAG.getNode(SH::MULS, DL, MVT::i32, Op.getValue(0), Op.getValue(1));
+    return DAG.getNode(SH::LDSMACL, DL, MVT::i32, MulOp);
+  }
+  case MVT::i16: {
+    SDValue MulOp = DAG.getNode(SH::MULS, DL, MVT::i32, Op.getValue(0), Op.getValue(1));
+    return DAG.getNode(SH::LDSMACL, DL, MVT::i32, MulOp);
+  }
+
+  case MVT::i32: {
+    // 32-bit multiplication requires lowering to __mulsi3
+    SDValue InChain = DAG.getEntryNode();
+
+    TargetLowering::ArgListTy Args;
+    for (SDValue const &Value : Op->op_values()) {
+      TargetLowering::ArgListEntry Entry(
+          Value, Value.getValueType().getTypeForEVT(*DAG.getContext()));
+      Args.push_back(Entry);
+    }
+
+    RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(RTLIB::MUL_I32);
+    if (LCImpl == RTLIB::Unsupported)
+      return SDValue();
+
+    SDValue Callee =
+        DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
+
+    Type *RetTy = (Type *)StructType::get(Ty, Ty);
+
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(DL)
+        .setChain(InChain)
+        .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
+                      Callee, std::move(Args))
+        .setInRegister();
+
+    std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
+    return CallInfo.first;
+  }
+  }
+}
+
+
+
+
+//===----------------------------------------------------------------------===//
 //                              CUSTOM LOWERING
 //===----------------------------------------------------------------------===//
 
@@ -633,7 +698,9 @@ SDValue SuperHTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) cons
   switch(Op->getOpcode()) {
   case ISD::UDIV:
   case ISD::SDIV:
-    return LowerDiv(Op, DAG);
+    return LowerDIV(Op, DAG);
+  case ISD::MUL:
+    return LowerMUL(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::ExternalSymbol:
@@ -655,38 +722,6 @@ SDValue SuperHTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) cons
 //                                INSERTERS
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
-//                            Load/Store Lowering
-//===----------------------------------------------------------------------===//
-
-MachineBasicBlock *SuperHTargetLowering::insertLoad(MachineInstr &MI, 
-                                                    MachineBasicBlock *MBB) const {
-  DEBUG_FN_PRINT()
-  MachineFunction &MF = *MBB->getParent();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const SuperHTargetMachine &TM = (const SuperHTargetMachine &)MF.getTarget();
-  const TargetFrameLowering *TFI = TM.getSubtargetImpl(MF.getFunction())->getFrameLowering();
-
-  MachineOperand Dest = MI.getOperand(0);
-  MachineOperand Offset = MI.getOperand(1);
-
-  // Target index load.
-  if (Dest.isTargetIndex()) {
-
-  }
-  
-  MI.eraseFromParent();
-  return MBB;
-}
-
-MachineBasicBlock *SuperHTargetLowering::insertStore(MachineInstr &MI, 
-                                                     MachineBasicBlock *MBB) const {
-  DEBUG_FN_PRINT()
-
-  MI.eraseFromParent();
-  return MBB;
-}
 
 
 
@@ -712,7 +747,7 @@ MachineBasicBlock *SuperHTargetLowering::insertSELECTCC(MachineInstr &MI,
   // Lower True-False selection
   if (TrueV.isImm() && FalseV.isImm()) {
     if (TrueV.getImm() == 1 && FalseV.getImm() == 0) {
-      BuildMI(*MBB, BBI, DL, TII.get(SH::MOVTRn), SH::R0);
+      BuildMI(*MBB, BBI, DL, TII.get(SH::MOVT), SH::R0);
       MI.eraseFromParent();
       return MBB;
     }
@@ -797,14 +832,6 @@ SuperHTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case SH::Select16:
   case SH::Select32:
     return insertSELECTCC(MI, MBB);
-  case SH::LDI8:
-  case SH::LDI16:
-  case SH::LDI32:
-    return insertLoad(MI, MBB);
-  case SH::STI8:
-  case SH::STI16:
-  case SH::STI32:
-    return insertStore(MI, MBB);
   }
 
   return MBB;

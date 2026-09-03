@@ -85,7 +85,7 @@ MachineInstr *SuperHFillDelaySlots::findSlotCandidate(Block &MBB, BlockIt MBBI) 
     if (MI.isReturn()) {
       
       // Skip the LDS instruction.
-      if (Opcode == SH::LDSLRminciPR || Opcode == SH::LDSRmPR)
+      if (Opcode == SH::LDSPR || Opcode == SH::LDSMPR)
         return nullptr;
     }
 
