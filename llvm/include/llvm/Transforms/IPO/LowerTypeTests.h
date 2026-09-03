@@ -134,9 +134,8 @@ class GlobalLayoutBuilder {
   function_ref<bool(uint64_t, uint64_t)> Less;
 
 public:
-  GlobalLayoutBuilder(
-      uint64_t NumObjects,
-      function_ref<bool(uint64_t, uint64_t)> Less = nullptr)
+  GlobalLayoutBuilder(uint64_t NumObjects,
+                      function_ref<bool(uint64_t, uint64_t)> Less = nullptr)
       : Fragments(1), FragmentMap(NumObjects), Less(Less) {}
 
   /// Add F to the layout while trying to keep its indices contiguous.

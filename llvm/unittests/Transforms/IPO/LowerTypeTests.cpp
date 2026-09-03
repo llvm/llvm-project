@@ -149,9 +149,7 @@ TEST(LowerTypeTests, GlobalLayoutBuilderHotness) {
   };
 
   for (auto &&T : GLBTests) {
-    auto Less = [&](uint64_t A, uint64_t B) {
-      return T.Ranks[A] < T.Ranks[B];
-    };
+    auto Less = [&](uint64_t A, uint64_t B) { return T.Ranks[A] < T.Ranks[B]; };
     GlobalLayoutBuilder GLB(T.NumObjects, Less);
     for (auto &&F : T.Fragments)
       GLB.addFragment(F);
