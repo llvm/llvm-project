@@ -364,6 +364,7 @@ char ScalarizerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ScalarizerLegacyPass, "scalarizer",
                       "Scalarize vector operations", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
                     "Scalarize vector operations", false, false)
 
@@ -711,7 +712,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
 
-  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
     return false;
 
   // unsigned NumElems = VT->getNumElements();
@@ -1083,7 +1084,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (!F)
       return false;
     Intrinsic::ID ID = F->getIntrinsicID();
-    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
+    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
       return false;
     // Note: Fall through means Operand is a`CallInst` and it is defined in
     // `isTriviallyScalarizable`.

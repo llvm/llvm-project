@@ -1,8 +1,8 @@
 // This file contains references to sections of the Coroutines TS, which can be
 // found at http://wg21.link/coroutines.
 
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fcxx-exceptions -fexceptions -Wunused-result
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fcxx-exceptions -fexceptions -Wunused-result
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fcxx-exceptions -fexceptions -Wunused-result -Wno-coroutines-unsupported-target
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fcxx-exceptions -fexceptions -Wunused-result -Wno-coroutines-unsupported-target
 
 // Run without -verify to check the order of errors we show.
 // RUN: not %clang_cc1 -std=c++20 -fsyntax-only %s -fcxx-exceptions -fexceptions -Wunused-result 2>&1 | FileCheck %s
@@ -1565,4 +1565,16 @@ void g() {
     };
 }
 
+}
+
+namespace GH194298 {
+coro<promise_void> f1() : bar { co_await suspend_always{} }; // expected-error {{only constructors take base initializers}}
+coro<promise> f2() : bar { co_yield 0 }; // expected-error {{only constructors take base initializers}}
+coro<promise_void> f3() : bar { co_return }; // expected-error {{expected expression}} \
+                                             // expected-error {{only constructors take base initializers}}
+coro<good_promise_13> f4() try : bar { co_await suspend_always{} } { } catch (...) {} // expected-error {{only constructors take base initializers}}
+struct S {
+  coro<good_promise_13> m1() : bar { co_await suspend_always{} } { } // expected-error {{only constructors take base initializers}}
+  coro<good_promise_13> m2() try : bar { co_await suspend_always{} } { } catch (...) {} // expected-error {{only constructors take base initializers}}
+};
 }

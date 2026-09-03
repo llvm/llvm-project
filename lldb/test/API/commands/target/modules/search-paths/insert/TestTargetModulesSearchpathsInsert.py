@@ -14,11 +14,11 @@ class TestCase(TestBase):
         self.expect(
             "target modules search-paths insert -1 a b",
             error=True,
-            startstr="error: <index> parameter is not an integer: '-1'.",
+            startstr="error: <index> parameter is not an integer: '-1'",
         )
 
         self.expect(
             "target modules search-paths insert abcdefx a b",
             error=True,
-            startstr="error: <index> parameter is not an integer: 'abcdefx'.",
+            startstr="error: <index> parameter is not an integer: 'abcdefx'",
         )

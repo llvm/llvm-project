@@ -134,7 +134,7 @@ LIBC_INLINE constexpr float atan2f(float y, float x) {
   constexpr FloatFloat MPI = {0x1.777a5cp-24f, -0x1.921fb6p1f};
   constexpr FloatFloat PI_OVER_4 = {-0x1.777a5cp-26f, 0x1.921fb6p-1f};
   constexpr FloatFloat PI_OVER_2 = {-0x1.777a5cp-25f, 0x1.921fb6p0f};
-  constexpr FloatFloat MPI_OVER_2 = {-0x1.777a5cp-25f, 0x1.921fb6p0f};
+  constexpr FloatFloat MPI_OVER_2 = {0x1.777a5cp-25f, -0x1.921fb6p0f};
   constexpr FloatFloat THREE_PI_OVER_4 = {-0x1.99bc5cp-28f, 0x1.2d97c8p1f};
   // Adjustment for constant term:
   //   CONST_ADJ[x_sign][y_sign][recip]

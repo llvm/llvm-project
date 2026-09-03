@@ -1,4 +1,4 @@
-! RUN: bbc --hlfir -o - %s | FileCheck %s
+! RUN: bbc -o - %s | FileCheck %s
 
 ! Test jumping to the body of a do loop.
 subroutine sub1()

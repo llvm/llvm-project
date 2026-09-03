@@ -20,7 +20,7 @@ class Universal64TestCase(TestBase):
     # The Makefile manually invokes clang.
     @skipIfLLVMTargetMissing("X86")
     @skipIfAsan
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfDarwinEmbedded
     def test_universal64_executable(self):
         """Test fat64 universal executable"""
@@ -30,7 +30,7 @@ class Universal64TestCase(TestBase):
     # The Makefile manually invokes clang.
     @skipIfLLVMTargetMissing("X86")
     @skipIfAsan
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfDarwinEmbedded
     def test_universal64_dsym(self):
         """Test fat64 universal dSYM"""

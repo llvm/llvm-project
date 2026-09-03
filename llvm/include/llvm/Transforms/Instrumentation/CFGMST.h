@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_CFGMST_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -286,12 +287,37 @@ public:
     if (!Message.str().empty())
       OS << Message << "\n";
     OS << "  Number of Basic Blocks: " << BBInfos.size() << "\n";
-    for (auto &BI : BBInfos) {
-      const BasicBlock *BB = BI.first;
-      OS << "  BB: " << (BB == nullptr ? "FakeNode" : BB->getName()) << "  "
-         << BI.second->infoString() << "\n";
-    }
+    // Collect and sort BBInfos deterministically by their assigned Index.
+    std::vector<std::pair<const BasicBlock *, const BBInfo *>> SortedBBInfos;
+    SortedBBInfos.reserve(BBInfos.size());
+    for (const auto &BI : BBInfos)
+      SortedBBInfos.emplace_back(BI.first, BI.second.get());
 
+#ifndef NDEBUG
+    SmallDenseSet<uint32_t, 16> SeenIndices;
+    for (const auto &P : SortedBBInfos)
+      assert(SeenIndices.insert(P.second->Index).second &&
+             "BBInfo indices should be unique");
+#endif
+
+    llvm::sort(SortedBBInfos, [](const auto &A, const auto &B) {
+      // Primary key: BBInfo Index
+      if (A.second->Index != B.second->Index)
+        return A.second->Index < B.second->Index;
+      // Secondary key: name string to keep a stable order even if
+      // indices tie (ties shouldn't happen, but this makes ordering
+      // explicit).
+      StringRef NameA = A.first ? A.first->getName() : StringRef("FakeNode");
+      StringRef NameB = B.first ? B.first->getName() : StringRef("FakeNode");
+      return NameA < NameB;
+    });
+
+    for (const auto &P : SortedBBInfos) {
+      const BasicBlock *BB = P.first;
+      const BBInfo *Info = P.second;
+      OS << "  BB: " << (BB == nullptr ? "FakeNode" : BB->getName()) << "  "
+         << Info->infoString() << "\n";
+    }
     OS << "  Number of Edges: " << AllEdges.size()
        << " (*: Instrument, C: CriticalEdge, -: Removed)\n";
     uint32_t Count = 0;

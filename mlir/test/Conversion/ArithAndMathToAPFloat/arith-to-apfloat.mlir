@@ -226,6 +226,32 @@ func.func @negf(%arg0: f32) {
 
 // -----
 
+// CHECK: func.func private @_mlir_apfloat_flush_denormals(i32, i64) -> i64
+// CHECK-LABEL: func.func @flush_denormals
+// CHECK: %[[bc:.*]] = arith.bitcast %{{.*}} : f32 to i32
+// CHECK: %[[ext:.*]] = arith.extui %[[bc]] : i32 to i64
+// CHECK: %[[sem:.*]] = arith.constant 2 : i32
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_flush_denormals(%[[sem]], %[[ext]]) : (i32, i64) -> i64
+// CHECK: %[[trunc:.*]] = arith.trunci %[[res]] : i64 to i32
+// CHECK: arith.bitcast %[[trunc]] : i32 to f32
+func.func @flush_denormals(%arg0: f32) {
+  %0 = arith.flush_denormals %arg0 : f32
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_flush_denormals(i32, i64) -> i64
+// CHECK-LABEL: func.func @flush_denormals_f8
+// CHECK: %[[sem:.*]] = arith.constant 10 : i32
+// CHECK: call @_mlir_apfloat_flush_denormals(%[[sem]], %{{.*}}) : (i32, i64) -> i64
+func.func @flush_denormals_f8(%arg0: f8E4M3FN) {
+  %0 = arith.flush_denormals %arg0 : f8E4M3FN
+  return
+}
+
+// -----
+
 // CHECK: func.func private @_mlir_apfloat_minimum(i32, i64, i64) -> i64
 // CHECK: %[[sem:.*]] = arith.constant 2 : i32
 // CHECK: %[[res:.*]] = call @_mlir_apfloat_minimum(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64

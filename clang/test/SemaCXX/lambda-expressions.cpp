@@ -657,26 +657,29 @@ namespace ConversionOperatorDoesNotHaveDeducedReturnType {
 
   struct X {
 #if __cplusplus > 201402L
-    friend constexpr auto T::operator()(int) const;
-    friend constexpr T::operator ExpectedTypeT() const noexcept;
+    friend constexpr auto T::operator()(int) const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
+    friend constexpr T::operator ExpectedTypeT() const noexcept; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 
     template<typename T>
-      friend constexpr void U::operator()(T&) const;
+      friend constexpr void U::operator()(T&) const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
     // FIXME: This should not match; the return type is specified as behaving
     // "as if it were a decltype-specifier denoting the return type of
     // [operator()]", which is not equivalent to this alias template.
     template<typename T>
-      friend constexpr U::operator ExpectedTypeU<T>() const noexcept;
+      friend constexpr U::operator ExpectedTypeU<T>() const noexcept; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 #else
     friend auto T::operator()(int) const; // cxx11-error {{'auto' return without trailing return type; deduced return types are a C++14 extension}} \
-                                             cxx03-error {{'auto' not allowed in function return type}}
-    friend T::operator ExpectedTypeT() const;
+                                             cxx03-error {{'auto' not allowed in function return type}} \
+                                             expected-error {{a member of a lambda should not be the target of a friend declaration}}
+    friend T::operator ExpectedTypeT() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 
     template<typename T>
-      friend void U::operator()(T&) const; // cxx03-cxx11-error {{friend declaration of 'operator()' does not match any declaration}}
+      friend void U::operator()(T&) const; // cxx03-cxx11-error {{friend declaration of 'operator()' does not match any declaration}} \
+                                              expected-error {{a member of a lambda should not be the target of a friend declaration}}
     // FIXME: This should not match, as above.
     template<typename T>
-      friend U::operator ExpectedTypeU<T>() const; // cxx03-cxx11-error {{friend declaration of 'operator void (*)(type-parameter-0-0 &)' does not match any declaration}}
+      friend U::operator ExpectedTypeU<T>() const; // cxx03-cxx11-error {{friend declaration of 'operator void (*)(type-parameter-0-0 &)' does not match any declaration}} \
+                                                      expected-error {{a member of a lambda should not be the target of a friend declaration}}
 #endif
 
   private:
@@ -785,18 +788,24 @@ void GH67492() {
 // FIXME: This currently causes clang to crash in C++11 mode.
 #if __cplusplus >= 201402L
 namespace GH83267 {
-auto l = [](auto a) { return 1; };
+auto l = [](auto a) { return 1; }; // #l-gh83267
 using type = decltype(l);
 
 template<>
-auto type::operator()(int a) const { // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+auto type::operator()(int a) const { // expected-error {{a member of a lambda should not be explicitly specialized}}
+                                     //   expected-note@#l-gh83267 {{defined here}}
   return c; // expected-error {{use of undeclared identifier 'c'}}
 }
 
-auto ll = [](auto a) { return 1; }; // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+auto ll = [](auto a) -> int { return 1; }; // #ll-gh83267
 using t = decltype(ll);
-template auto t::operator()<int>(int a) const; // expected-note {{in instantiation}}
+template auto t::operator()<int>(int a) const -> int; // expected-error {{a member of a lambda should not be explicitly instantiated}}
+                                                      //   expected-note@#ll-gh83267 {{defined here}}
 
+template <typename T>
+using cll = int(*)(T);
+template t::operator cll<int>() const; // expected-error {{a member of a lambda should not be explicitly instantiated}}
+                                       //   expected-note@#ll-gh83267 {{defined here}}
 }
 #endif
 
@@ -812,3 +821,49 @@ void test_lambda_return_type() {
   };
 }
 }
+
+namespace GH26540 {
+#if __cplusplus >= 201703L
+#define CONSTEXPR17 constexpr
+#define NOEXCEPT17 noexcept
+#else
+#define CONSTEXPR17
+#define NOEXCEPT17
+#endif
+    auto l = []() -> int {
+        return 5;
+    };
+    using L = decltype(l);
+    using ConvertL = int(*)();
+
+    class NonGenericLambdaFriend {
+        friend CONSTEXPR17 int L::operator()() const; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+        friend CONSTEXPR17 L::operator ConvertL() const NOEXCEPT17; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+    };
+
+#if __cplusplus > 201103L
+    auto gl = [](auto t) -> int {
+        return t.x;
+    };
+    using GL = decltype(gl);
+    template <typename T>
+    using ConvertGL = int(*)(T);
+
+    class GenericLambdaFriend {
+        int x{2};
+        template <typename T>
+        friend CONSTEXPR17 auto GL::operator()(T t) const -> int; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+        template <typename T>
+        friend CONSTEXPR17 GL::operator ConvertGL<T>() const NOEXCEPT17; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+    };
+#endif
+#undef NOEXCEPT17
+#undef CONSTEXPR17
+}
+
+namespace cwg3035 {
+static union {
+  int x = [] { return 42; }();
+  // FIXME-error@-1 {{lambda expressions are not allowed in anonymous unions}}
+};
+} // namespace cwg3035

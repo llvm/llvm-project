@@ -3,9 +3,9 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-setup_host_tool(clang-tidy-confusable-chars-gen CLANG_TIDY_CONFUSABLE_CHARS_GEN clang_tidy_confusable_chars_gen clang_tidy_confusable_chars_gen_target)
-
 add_subdirectory(ConfusableTable)
+
+setup_host_tool(clang-tidy-confusable-chars-gen CLANG_TIDY_CONFUSABLE_CHARS_GEN clang_tidy_confusable_chars_gen clang_tidy_confusable_chars_gen_target)
 
 include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/../../include-cleaner/include")
 
@@ -19,10 +19,11 @@ set_target_properties(genconfusable PROPERTIES FOLDER "Clang Tools Extra/Sourceg
 
 add_clang_library(clangTidyMiscModule STATIC
   AnonymousNamespaceInHeaderCheck.cpp
+  ConfusableIdentifierCheck.cpp
   ConstCorrectnessCheck.cpp
   CoroutineHostileRAIICheck.cpp
   DefinitionsInHeadersCheck.cpp
-  ConfusableIdentifierCheck.cpp
+  ExplicitConstructorCheck.cpp
   HeaderIncludeCycleCheck.cpp
   IncludeCleanerCheck.cpp
   MiscTidyModule.cpp
@@ -38,6 +39,7 @@ add_clang_library(clangTidyMiscModule STATIC
   PredictableRandCheck.cpp
   RedundantExpressionCheck.cpp
   StaticAssertCheck.cpp
+  StaticInitializationCycleCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
   UnconventionalAssignOperatorCheck.cpp
   UniqueptrResetReleaseCheck.cpp

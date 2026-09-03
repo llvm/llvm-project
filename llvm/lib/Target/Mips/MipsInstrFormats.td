@@ -69,7 +69,7 @@ class StdArch {
 
 // Generic Mips Format
 class MipsInst<dag outs, dag ins, string asmstr, list<dag> pattern,
-               InstrItinClass itin, Format f>: Instruction, PredicateControl
+               Format f>: Instruction, PredicateControl
 {
   field bits<32> Inst;
   Format Form = f;
@@ -88,7 +88,7 @@ class MipsInst<dag outs, dag ins, string asmstr, list<dag> pattern,
 
   let AsmString   = asmstr;
   let Pattern     = pattern;
-  let Itinerary   = itin;
+
 
   //
   // Attributes specific to Mips instructions...
@@ -111,25 +111,23 @@ class MipsInst<dag outs, dag ins, string asmstr, list<dag> pattern,
 
 // Mips32/64 Instruction Format
 class InstSE<dag outs, dag ins, string asmstr, list<dag> pattern,
-             InstrItinClass itin, Format f, string opstr = ""> :
-  MipsInst<outs, ins, asmstr, pattern, itin, f> {
+             Format f, string opstr = ""> :
+  MipsInst<outs, ins, asmstr, pattern, f> {
   let EncodingPredicates = [NotInMips16Mode];
   string BaseOpcode = opstr;
   string Arch;
 }
 
 // Mips Pseudo Instructions Format
-class MipsPseudo<dag outs, dag ins, list<dag> pattern,
-                 InstrItinClass itin = IIPseudo> :
-  MipsInst<outs, ins, "", pattern, itin, Pseudo> {
+class MipsPseudo<dag outs, dag ins, list<dag> pattern> :
+  MipsInst<outs, ins, "", pattern, Pseudo> {
   let isCodeGenOnly = 1;
   let isPseudo = 1;
 }
 
 // Mips32/64 Pseudo Instruction Format
-class PseudoSE<dag outs, dag ins, list<dag> pattern,
-               InstrItinClass itin = IIPseudo> :
-  MipsPseudo<outs, ins, pattern, itin> {
+class PseudoSE<dag outs, dag ins, list<dag> pattern> :
+  MipsPseudo<outs, ins, pattern> {
   let EncodingPredicates = [NotInMips16Mode];
 }
 
@@ -137,7 +135,7 @@ class PseudoSE<dag outs, dag ins, list<dag> pattern,
 // These are aliases that require C++ handling to convert to the target
 // instruction, while InstAliases can be handled directly by tblgen.
 class MipsAsmPseudoInst<dag outs, dag ins, string asmstr>:
-  MipsInst<outs, ins, asmstr, [], IIPseudo, Pseudo> {
+  MipsInst<outs, ins, asmstr, [], Pseudo> {
   let isPseudo = 1;
   let hasNoSchedulingInfo = 1;
   let Pattern = [];
@@ -147,8 +145,8 @@ class MipsAsmPseudoInst<dag outs, dag ins, string asmstr>:
 //===----------------------------------------------------------------------===//
 
 class FR<bits<6> op, bits<6> _funct, dag outs, dag ins, string asmstr,
-         list<dag> pattern, InstrItinClass itin>:
-  InstSE<outs, ins, asmstr, pattern, itin, FrmR>
+         list<dag> pattern>:
+  InstSE<outs, ins, asmstr, pattern, FrmR>
 {
   bits<5>  rd;
   bits<5>  rs;

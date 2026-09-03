@@ -18,8 +18,8 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Types.h"
@@ -50,10 +50,7 @@ getMaybeLaneData(xegpu::TensorDescType tdescType) {
   auto layout = tdescType.getLayoutAttr();
   if (!layout)
     return std::nullopt;
-  auto laneData = layout.getEffectiveLaneDataAsInt();
-  if (laneData.size() != 2)
-    return std::nullopt;
-  return laneData;
+  return xegpu::getInner2DIfUnitLeadingDims(layout.getEffectiveLaneDataAsInt());
 }
 
 /// Get the 2D lane layout from a tensor desc type if it exists.
@@ -62,10 +59,8 @@ getMaybeLaneLayout(xegpu::TensorDescType tdescType) {
   auto layout = tdescType.getLayoutAttr();
   if (!layout)
     return std::nullopt;
-  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  if (laneLayout.size() != 2)
-    return std::nullopt;
-  return laneLayout;
+  return xegpu::getInner2DIfUnitLeadingDims(
+      layout.getEffectiveLaneLayoutAsInt());
 }
 
 /// A layout can be optimized if its lane layout is transposed (lane[0] != 1 &&
@@ -106,8 +101,9 @@ static bool canBeOptimizedForTranspose(xegpu::TensorDescType tdescType) {
 
 /// Check if a tensor desc type can be optimized for transpose, if so return the
 /// new optimized tensor desc type with a valid transpose layout.
-static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
-                                         const uArch *targetuArch) {
+static xegpu::TensorDescType
+tryOptimize(xegpu::TensorDescType tdescType,
+            const xegpu::uArch::uArch *targetuArch) {
   if (!canBeOptimizedForTranspose(tdescType))
     return tdescType;
   auto laneData = getMaybeLaneData(tdescType)
@@ -124,8 +120,10 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
   Type newElemTy = IntegerType::get(tdescType.getContext(), newBitWidth);
   // Supported shape is the max transpose shape that can be supported by
   // hardware that is less than or equal to required shape.
-  auto *blockLoadTarget = dyn_cast<Subgroup2DBlockLoadInstruction>(
-      targetuArch->getInstruction(InstructionKind::Subgroup2DBlockLoad));
+  auto *blockLoadTarget =
+      dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+          targetuArch->getInstruction(
+              xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
   auto maybeHWParams = blockLoadTarget->getBlockWidthHeightCount(
       newElemTy, /** has transform */ false, /** has transpose */ true);
   // If no HW params found, return the original type.
@@ -136,15 +134,22 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
   if (counts.size() != 1 || counts[0] != 1)
     return tdescType;
   int arrayLen = counts[0];
-  int supportedHeight =
-      xegpu::getLargestDivisor(static_cast<int>(requiredShape[0]), heights);
-  int supportedWidth =
-      xegpu::getLargestDivisor(static_cast<int>(requiredShape[1]), widths);
+  // The transpose acts on the innermost 2 dims; any leading dims are unit
+  // batch.
+  int64_t rank = requiredShape.size();
+  int supportedHeight = xegpu::getLargestDivisor(
+      static_cast<int>(requiredShape[rank - 2]), heights);
+  int supportedWidth = xegpu::getLargestDivisor(
+      static_cast<int>(requiredShape[rank - 1]), widths);
   // If no supported height or width found, return the original type.
   if (supportedHeight == -1 || supportedWidth == -1)
     return tdescType;
 
-  SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
+  // Preserve leading (unit) batch dims; only the inner 2 dims are reshaped.
+  SmallVector<int64_t> supportedShape(requiredShape.begin(),
+                                      requiredShape.end() - 2);
+  supportedShape.push_back(supportedHeight);
+  supportedShape.push_back(supportedWidth);
   auto ctx = tdescType.getContext();
   auto origLayout = tdescType.getLayoutAttr();
   auto laneLayoutI64 = origLayout.getEffectiveLaneLayoutAsInt();
@@ -153,7 +158,9 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
 
   xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
       ctx, /*lane_layout=*/DenseI32ArrayAttr::get(ctx, laneLayoutI32),
-      /*lane_data=*/DenseI32ArrayAttr::get(ctx, {1, 1}),
+      /*lane_data=*/
+      DenseI32ArrayAttr::get(ctx,
+                             SmallVector<int32_t>(laneLayoutI32.size(), 1)),
       /*order=*/origLayout.getOrder());
 
   // Array length can not be larger than 1 for transpose case.
@@ -198,6 +205,7 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
                            xegpu::LoadNdOp origLoadOp) {
   Location loc = data.getLoc();
   assert(offsets.size() >= 2 && "Expecting at least 2 offsets for 2D LoadNdOp");
+  int64_t rank = data.getType().getRank();
   Value offsetDim0 = convertToValue(rewriter, loc, offsets[offsets.size() - 2]);
   Value offsetDim1 = convertToValue(rewriter, loc, offsets[offsets.size() - 1]);
   SmallVector<int64_t> supportedShape(newTensorDesc.getType().getShape());
@@ -206,10 +214,15 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
   auto shapeRatio = computeShapeRatio(data.getType().getShape(),
                                       supportedShape)
                         .value(); // `ratio` must be defined if we reach here.
-  for (int64_t h = 0; h < shapeRatio[0]; ++h) {
-    for (int64_t w = 0; w < shapeRatio[1]; ++w) {
-      int64_t localOffsetDim0 = h * supportedShape[0];
-      int64_t localOffsetDim1 = w * supportedShape[1];
+  // The loop below only walks the last 2 entries of `shapeRatio`; leading
+  // (batch) dims are unit, so their ratio is 1 and their offsets pass through
+  // unchanged.
+  int64_t suppDim0 = supportedShape[rank - 2];
+  int64_t suppDim1 = supportedShape[rank - 1];
+  for (int64_t h = 0; h < shapeRatio[rank - 2]; ++h) {
+    for (int64_t w = 0; w < shapeRatio[rank - 1]; ++w) {
+      int64_t localOffsetDim0 = h * suppDim0;
+      int64_t localOffsetDim1 = w * suppDim1;
       Value loadOffsetX = arith::AddIOp::create(
           rewriter, loc, offsetDim0,
           arith::ConstantIndexOp::create(rewriter, loc, localOffsetDim0)
@@ -218,21 +231,28 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
           rewriter, loc, offsetDim1,
           arith::ConstantIndexOp::create(rewriter, loc, localOffsetDim1)
               .getResult());
+      // Keep the leading (batch) offsets; replace only the inner 2.
+      SmallVector<OpFoldResult> loadOffsets(offsets.begin(), offsets.end());
+      loadOffsets[loadOffsets.size() - 2] = loadOffsetX;
+      loadOffsets[loadOffsets.size() - 1] = loadOffsetY;
       auto loadOp = xegpu::LoadNdOp::create(
           rewriter, loc,
           VectorType::get(supportedShape, data.getType().getElementType()),
-          newTensorDesc, ArrayRef<OpFoldResult>{loadOffsetX, loadOffsetY},
-          origLoadOp.getPackedAttr(), origLoadOp.getTransposeAttr(),
-          origLoadOp.getL1HintAttr(), origLoadOp.getL2HintAttr(),
-          origLoadOp.getL3HintAttr(), origLoadOp.getLayoutAttr());
+          newTensorDesc, loadOffsets, origLoadOp.getPackedAttr(),
+          origLoadOp.getTransposeAttr(), origLoadOp.getL1HintAttr(),
+          origLoadOp.getL2HintAttr(), origLoadOp.getL3HintAttr(),
+          origLoadOp.getLayoutAttr());
       // Set the layout for the loadOp.
       auto layoutAttr = newTensorDesc.getType().getLayoutAttr();
       loadOp.setAnchorLayout(layoutAttr);
-      // Insert the loaded block into the right position in data.
+      // Insert the loaded block into the right position in data (leading dims
+      // at 0, inner 2 dims at the local tile offset).
+      SmallVector<int64_t> insertPos(rank, 0);
+      insertPos[rank - 2] = localOffsetDim0;
+      insertPos[rank - 1] = localOffsetDim1;
+      SmallVector<int64_t> insertStrides(rank, 1);
       auto insertOp = vector::InsertStridedSliceOp::create(
-          rewriter, loc, loadOp.getResult(), data,
-          ArrayRef<int64_t>{localOffsetDim0, localOffsetDim1},
-          ArrayRef<int64_t>{1, 1});
+          rewriter, loc, loadOp.getResult(), data, insertPos, insertStrides);
       // InsertOp must have the same layout as newTensorDesc.
       xegpu::setTemporaryLayout(insertOp->getOpResult(0), layoutAttr);
       data = insertOp.getResult();
@@ -256,56 +276,78 @@ public:
     // Get the target uArch info.
     auto chipStr = xegpu::getChipStr(createNdOp);
     // Check if the chip is supported.
-    assert(
-        chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg") &&
-        "Expecting target chip to be pvc or bmg for transpose optimization.");
-    const uArch *targetuArch = xegpu::uArch::getUArch(chipStr.value());
+    assert(chipStr &&
+           (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
+            chipStr.value() == "cri") &&
+           "Expecting target chip to be pvc, bmg or cri for transpose "
+           "optimization.");
+    const auto *targetuArch = xegpu::uArch::getUArch(chipStr.value());
 
     auto convertType = tryOptimize(tdescTy, targetuArch);
     if (convertType == tdescTy)
       return failure();
-    auto strides = createNdOp.getMixedStrides();
-    auto maybeConstInnerStride = getConstantIntValue(strides.back());
+    Location loc = createNdOp.getLoc();
+    Value source = createNdOp.getSource();
+    auto memrefType = dyn_cast<MemRefType>(source.getType());
+
+    bool dynamicMemref =
+        memrefType && !xegpu::hasStaticShapeAndStrides(memrefType);
+    SmallVector<OpFoldResult> mixedSizes;
+    SmallVector<OpFoldResult> mixedStrides;
+    memref::ExtractStridedMetadataOp meta;
+    if (dynamicMemref) {
+      meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
+      mixedSizes = meta.getConstifiedMixedSizes();
+      mixedStrides = meta.getConstifiedMixedStrides();
+    } else {
+      mixedSizes = createNdOp.getMixedSizes();
+      mixedStrides = createNdOp.getMixedStrides();
+    }
+
+    auto maybeConstInnerStride = getConstantIntValue(mixedStrides.back());
     // Only row-major memrefs are expected for now.
     if (!maybeConstInnerStride || *maybeConstInnerStride != 1)
       return rewriter.notifyMatchFailure(
           createNdOp, "Expecting row-major memref for transpose optimization.");
-    Value source = createNdOp.getSource();
     auto optionalLaneData = getMaybeLaneData(tdescTy);
     assert(optionalLaneData && "Expected 2D lane data");
     auto laneData = optionalLaneData.value();
     int64_t innerLaneData = laneData[1];
-    auto memrefType = dyn_cast<MemRefType>(source.getType());
     // Inner dimension of the shape must be adjusted based on innerLaneData.
-    SmallVector<OpFoldResult> modifiedShape(createNdOp.getMixedSizes());
+    SmallVector<OpFoldResult> modifiedShape(mixedSizes);
     modifiedShape.back() = divideByConstant(
-        rewriter, createNdOp.getLoc(),
-        convertToValue(rewriter, createNdOp.getLoc(), modifiedShape.back()),
+        rewriter, loc, convertToValue(rewriter, loc, modifiedShape.back()),
         innerLaneData);
-    // Similarly, second to last stride must be adjusted.
-    assert(strides.size() >= 2 &&
+    // Repacking to a wider element rescales every stride but the innermost.
+    assert(mixedStrides.size() >= 2 &&
            "Expected at least 2 strides for CreateNdDescOp");
-    SmallVector<OpFoldResult> modifiedStrides(strides);
-    modifiedStrides[modifiedStrides.size() - 2] = divideByConstant(
-        rewriter, createNdOp.getLoc(),
-        convertToValue(rewriter, createNdOp.getLoc(),
-                       modifiedStrides[modifiedStrides.size() - 2]),
-        innerLaneData);
+    SmallVector<OpFoldResult> modifiedStrides(mixedStrides);
+    for (size_t i = 0; i + 1 < modifiedStrides.size(); ++i)
+      modifiedStrides[i] = divideByConstant(
+          rewriter, loc, convertToValue(rewriter, loc, modifiedStrides[i]),
+          innerLaneData);
 
-    // If the source is a static memref, we need to extract the pointer to
-    // base address.
-    if (memrefType && memrefType.hasStaticShape()) {
-      auto extractOp = memref::ExtractAlignedPointerAsIndexOp::create(
-          rewriter, createNdOp.getLoc(), source);
-      source = arith::IndexCastOp::create(rewriter, createNdOp.getLoc(),
-                                          rewriter.getI64Type(),
-                                          extractOp.getResult())
-                   .getResult();
+    if (memrefType) {
+      Value baseIdx;
+      if (dynamicMemref) {
+        // Base = aligned base pointer + structural offset (in bytes).
+        Value alignedPtr = memref::ExtractAlignedPointerAsIndexOp::create(
+            rewriter, loc, meta.getBaseBuffer());
+        Value elemBytes = arith::ConstantIndexOp::create(
+            rewriter, loc, memrefType.getElementTypeBitWidth() / 8);
+        Value offBytes =
+            arith::MulIOp::create(rewriter, loc, meta.getOffset(), elemBytes);
+        baseIdx = arith::AddIOp::create(rewriter, loc, alignedPtr, offBytes);
+      } else {
+        baseIdx = memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc,
+                                                                 source);
+      }
+      source = arith::IndexCastOp::create(rewriter, loc, rewriter.getI64Type(),
+                                          baseIdx);
     }
     // Create a new CreateNdDescOp with the modified shape and converted type.
     auto newCreateNdDescOp = xegpu::CreateNdDescOp::create(
-        rewriter, createNdOp.getLoc(), convertType, source, modifiedShape,
-        modifiedStrides);
+        rewriter, loc, convertType, source, modifiedShape, modifiedStrides);
     rewriter.replaceOp(createNdOp, newCreateNdDescOp.getResult());
     return success();
   }
@@ -449,17 +491,39 @@ class MultiRed2dOpPattern
     auto loc = reductionOp.getLoc();
     auto acc = reductionOp.getAcc();
 
-    // If the result is scalar after reduction, look for consumer
-    // convert_layout op and remove it. The layout propagation pass will
-    // re-install it properly after the decomposition.
-    Type resultType = reductionOp.getResult().getType();
-    if (resultType.isIntOrFloat()) {
-      for (auto &use : reductionOp.getResult().getUses()) {
-        if (auto convertLayoutOp =
-                llvm::dyn_cast<xegpu::ConvertLayoutOp>(use.getOwner())) {
-          rewriter.replaceOp(convertLayoutOp, reductionOp.getResult());
-          break;
-        }
+    // The decomposition below splits the 2D reduction into an intra-lane
+    // then a cross-lane 1D reduction. The natural result layout of the
+    // decomposed sequence (a doubly-sliced layout) differs from the
+    // original 2D reduction's result layout that the rest of the IR was
+    // written/propagated against. To keep the post-peephole IR
+    // self-consistent without depending on a follow-up layout
+    // propagation pass, we always insert a bridge xegpu.convert_layout
+    // from the natural post-decomposition layout to the original
+    // reduction's result layout. Trivial bridges fold away in
+    // canonicalization.
+    xegpu::DistributeLayoutAttr postDecompLayout;
+    if (resLayout) {
+      // Derive the source vector's layout.
+      xegpu::DistributeLayoutAttr srcLayoutForCvt;
+      if (auto resSlice = dyn_cast_if_present<xegpu::SliceAttr>(resLayout))
+        srcLayoutForCvt = resSlice.getParent();
+      if (!srcLayoutForCvt)
+        srcLayoutForCvt =
+            xegpu::getDistributeLayoutAttr(reductionOp.getSource());
+      if (srcLayoutForCvt) {
+        // The natural layout of the post-decomposition reduction result
+        // is a nested SliceAttr: REDUCE_1 (reduces `intraLaneDim` from
+        // the source) yields `slice<src, [intraLaneDim]>`; REDUCE_2
+        // then reduces `adjCrossLaneDim` from that intermediate, giving
+        // `slice<slice<src, [intraLaneDim]>, [adjCrossLaneDim]>`.
+        MLIRContext *ctx = reductionOp.getContext();
+        int64_t adjCrossLaneDim =
+            crossLaneDim > intraLaneDim ? crossLaneDim - 1 : crossLaneDim;
+        auto intermediateLayout = xegpu::SliceAttr::get(
+            ctx, srcLayoutForCvt, DenseI64ArrayAttr::get(ctx, {intraLaneDim}));
+        postDecompLayout = xegpu::SliceAttr::get(
+            ctx, intermediateLayout,
+            DenseI64ArrayAttr::get(ctx, {adjCrossLaneDim}));
       }
     }
 
@@ -481,7 +545,21 @@ class MultiRed2dOpPattern
         ArrayRef<int64_t>(crossLaneDim));
     assert(crossLaneReduced.getType() == reductionOp.getResult().getType() &&
            "Type mismatch");
-    rewriter.replaceOp(reductionOp, crossLaneReduced);
+
+    Value replacement = crossLaneReduced;
+    if (resLayout && postDecompLayout) {
+      // Bridge from the natural post-decomposition layout to the
+      // original reduction's result layout. This preserves the contract
+      // any consumer (convert_layout, anchor op, or otherwise) was
+      // written against, so the rewrite is correct independent of
+      // whether layout propagation runs afterwards.
+      auto bridgeOp = xegpu::ConvertLayoutOp::create(
+          rewriter, loc, crossLaneReduced.getType(), crossLaneReduced,
+          postDecompLayout, resLayout);
+      replacement = bridgeOp.getResult();
+    }
+
+    rewriter.replaceOp(reductionOp, replacement);
     return success();
   }
 
@@ -531,19 +609,32 @@ struct XeGPUPeepHoleOptimizerPass final
     RewritePatternSet patterns(&context);
     ConversionTarget target(context);
 
-    // This pass is only meant for PVC and BMG targets. If unsupported target
-    // is found, exit early.
+    // This pass is only meant for PVC, BMG or CRI targets. If unsupported
+    // target is found, exit early.
     bool isTargetSupported = false;
     getOperation()->walk([&](gpu::GPUFuncOp funcOp) {
       auto chipStr = xegpu::getChipStr(funcOp);
-      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg"))
+      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
+                      chipStr.value() == "cri"))
         isTargetSupported = true;
     });
 
     if (!isTargetSupported) {
-      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC and BMG targets."
+      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC, BMG targets."
              << "\n";
       return;
+    }
+
+    // Run array length optimization patterns first so that subsequent transpose
+    // peephole patterns operate on the array-length-optimized tensor descs.
+    {
+      RewritePatternSet arrayLenPatterns(&context);
+      xegpu::populateXeGPUArrayLengthOptimizationPatterns(arrayLenPatterns);
+      if (failed(applyPatternsGreedily(getOperation(),
+                                       std::move(arrayLenPatterns)))) {
+        DBGS() << "Array length optimization patterns failed.\n";
+        return signalPassFailure();
+      }
     }
 
     // CreateNdDescOp and LoadNdOp with optimizable tensor desc types must be
@@ -584,6 +675,9 @@ struct XeGPUPeepHoleOptimizerPass final
 
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            vector::VectorDialect>();
+    // xegpu.convert_layout is left untouched by this pass; mark it legal
+    // so in-place updates don't trigger re-legalization failures.
+    target.addLegalOp<xegpu::ConvertLayoutOp>();
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
     xegpu::populateXeGPUPeepHoleOptimizerPatterns(patterns);
@@ -598,16 +692,7 @@ struct XeGPUPeepHoleOptimizerPass final
     RewritePatternSet emptyPatterns(ctx);
     (void)applyPatternsGreedily(getOperation(), std::move(emptyPatterns));
 
-    // Remove the temporary layout after all patterns are applied.
-    getOperation()->walk([](Operation *op) {
-      SmallVector<StringAttr> attrsToRemove;
-      for (auto namedAttr : op->getDiscardableAttrs()) {
-        if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
-          attrsToRemove.push_back(namedAttr.getName());
-      }
-      for (auto attrName : attrsToRemove)
-        op->removeDiscardableAttr(attrName);
-    });
+    xegpu::removeTemporaryLayoutAttrs(getOperation());
   }
 };
 

@@ -1,6 +1,6 @@
-;RUN: llc < %s -global-isel=0 -mtriple=amdgcn -mcpu=verde -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,SDAG %s
-;RUN: llc < %s -global-isel=0 -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,SDAG %s
-;RUN: llc < %s -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,GISEL %s
+;RUN: llc < %s -global-isel=0 -mtriple=amdgpu6.01 -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,SDAG %s
+;RUN: llc < %s -global-isel=0 -mtriple=amdgpu8.02 -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,SDAG %s
+;RUN: llc < %s -global-isel=1 -mtriple=amdgpu8.02 -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,GISEL %s
 
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK-NOT: s_waitcnt

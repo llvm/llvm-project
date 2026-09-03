@@ -80,7 +80,7 @@ module @patterns {
     pdl_interp.are_equal %test_attr, %attr : !pdl.attribute -> ^pat, ^end
 
   ^pat:
-    pdl_interp.apply_constraint "single_entity_constraint"(%root : !pdl.operation) {isNegated = true} -> ^pat1, ^end
+    pdl_interp.apply_constraint "single_entity_constraint"(%root : !pdl.operation) is_negated = true -> ^pat1, ^end
 
   ^pat1:
     pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end

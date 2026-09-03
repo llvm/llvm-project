@@ -12,7 +12,7 @@ from lldbsuite.test import lldbutil
 class FatArchiveTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_breakpoint_resolution_dwarf(self):
         if self.getArchitecture() == "x86_64":
             self.build()

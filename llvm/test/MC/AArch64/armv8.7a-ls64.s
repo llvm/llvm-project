@@ -5,23 +5,33 @@
 
   ld64b x0, [x13]
   st64b x14, [x13]
+  ld64b x2, [x13, #0]
+  st64b x16, [x13, #0]
   st64bv x1, x20, [x13]
   st64bv0 x1, x22, [x13]
 // CHECK: ld64b x0, [x13]        // encoding: [0xa0,0xd1,0x3f,0xf8]
 // CHECK: st64b x14, [x13]       // encoding: [0xae,0x91,0x3f,0xf8]
+// CHECK: ld64b x2, [x13]        // encoding: [0xa2,0xd1,0x3f,0xf8]
+// CHECK: st64b x16, [x13]       // encoding: [0xb0,0x91,0x3f,0xf8]
 // CHECK: st64bv x1, x20, [x13]  // encoding: [0xb4,0xb1,0x21,0xf8]
 // CHECK: st64bv0 x1, x22, [x13] // encoding: [0xb6,0xa1,0x21,0xf8]
-// CHECK-NO-LS64-ERR: [[@LINE-8]]:3: error: instruction requires: ls64
-// CHECK-NO-LS64-ERR: [[@LINE-8]]:3: error: instruction requires: ls64
-// CHECK-NO-LS64-ERR: [[@LINE-8]]:3: error: instruction requires: ls64
-// CHECK-NO-LS64-ERR: [[@LINE-8]]:3: error: instruction requires: ls64
+// CHECK-NO-LS64-ERR: [[@LINE-12]]:3: error: instruction requires: ls64
+// CHECK-NO-LS64-ERR: [[@LINE-12]]:3: error: instruction requires: ls64
+// CHECK-NO-LS64-ERR: [[@LINE-12]]:3: error: instruction requires: ls64
+// CHECK-NO-LS64-ERR: [[@LINE-12]]:3: error: instruction requires: ls64
+// CHECK-NO-LS64-ERR: [[@LINE-12]]:3: error: instruction requires: ls64
+// CHECK-NO-LS64-ERR: [[@LINE-12]]:3: error: instruction requires: ls64
 
   ld64b x0, [sp]
+  ld64b x2, [sp, #0]
   st64b x14, [sp]
+  st64b x16, [sp, #0]
   st64bv x1, x20, [sp]
   st64bv0 x1, x22, [sp]
 // CHECK: ld64b x0, [sp]         // encoding: [0xe0,0xd3,0x3f,0xf8]
+// CHECK: ld64b x2, [sp]         // encoding: [0xe2,0xd3,0x3f,0xf8]
 // CHECK: st64b x14, [sp]        // encoding: [0xee,0x93,0x3f,0xf8]
+// CHECK: st64b x16, [sp]        // encoding: [0xf0,0x93,0x3f,0xf8]
 // CHECK: st64bv x1, x20, [sp]   // encoding: [0xf4,0xb3,0x21,0xf8]
 // CHECK: st64bv0 x1, x22, [sp]  // encoding: [0xf6,0xa3,0x21,0xf8]
 

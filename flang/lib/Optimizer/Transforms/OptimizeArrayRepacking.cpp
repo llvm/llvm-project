@@ -15,9 +15,7 @@
 /// temp and original operands - these are also removed as redundant.
 //===----------------------------------------------------------------------===//
 #include "flang/Optimizer/Builder/HLFIRTools.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 

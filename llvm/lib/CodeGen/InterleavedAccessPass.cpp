@@ -698,6 +698,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   assert(Factor && "unexpected deinterleave intrinsic");
 
   Value *Mask = nullptr;
+  auto GapMask = APInt::getAllOnes(Factor);
   if (LI) {
     if (!LI->isSimple())
       return false;
@@ -711,24 +712,20 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
 
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    APInt GapMask(Factor, 0);
     std::tie(Mask, GapMask) =
         getMask(getMaskOperand(II), Factor, getDeinterleavedVectorType(DI));
     if (!Mask)
       return false;
-    // We haven't supported gap mask if it's deinterleaving using intrinsics.
-    // Yet it is possible that we already changed the IR, hence returning true
-    // here.
-    if (GapMask.popcount() != Factor)
-      return true;
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.load or masked.load with deinterleave"
                       << " intrinsic " << *DI << " and factor = "
                       << Factor << "\n");
+    LLVM_DEBUG(dbgs() << "IA: With nominal factor " << Factor
+                      << " and actual factor " << GapMask.popcount() << "\n");
   }
 
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerDeinterleaveIntrinsicToLoad(LoadedVal, Mask, DI))
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(LoadedVal, Mask, DI, GapMask))
     return false;
 
   DeadInsts.insert(DI);

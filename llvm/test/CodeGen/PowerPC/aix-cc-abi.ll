@@ -4,7 +4,7 @@
 ; RUN: FileCheck --check-prefixes=CHECKASM,ASM32PWR4 %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
-; RUN:  -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:  -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck --check-prefixes=CHECKASM,ASM64PWR4 %s
 
 define void @call_test_chars() {

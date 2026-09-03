@@ -18,9 +18,9 @@ void test_mma(unsigned char *vdmrpp, unsigned char *vdmrp, unsigned char *vpp, v
   __builtin_dmxor(&vdmr, (__dmr1024*)vpp); // expected-error {{'__builtin_dmxor' needs target feature mma,isa-future-instructions}}
   __builtin_build_dmr(&vdmr, vc, vc, vc, vc, vc, vc, vc, vc); // expected-error {{'__builtin_build_dmr' needs target feature mma,isa-future-instructions}}
   __builtin_disassemble_dmr(vdmrp, &vdmr); // expected-error {{'__builtin_disassemble_dmr' needs target feature mma,isa-future-instructions}}
-  __builtin_mma_dmsha2hash(&vdmr, &vdmr, 0); // expected-error {{'__builtin_mma_dmsha2hash' needs target feature mma,isa-future-instructions}}
-  __builtin_mma_dmsha3hash(&vdmrpair, 0); // expected-error {{'__builtin_mma_dmsha3hash' needs target feature mma,isa-future-instructions}}
-  __builtin_mma_dmxxshapad(&vdmr, vc, 0, 0, 0); // expected-error {{'__builtin_mma_dmxxshapad' needs target feature mma,isa-future-instructions}}
+  __builtin_dmsha2hash(&vdmr, &vdmr, 0); // expected-error {{'__builtin_dmsha2hash' needs target feature mma,isa-future-instructions}}
+  __builtin_dmsha3hash(&vdmrpair, 0); // expected-error {{'__builtin_dmsha3hash' needs target feature mma,isa-future-instructions}}
+  __builtin_dmxxshapad(&vdmr, vc, 0, 0, 0); // expected-error {{'__builtin_dmxxshapad' needs target feature mma,isa-future-instructions}}
 
   // DMF VSX Vector bfloat16 GER 2x builtins.
 

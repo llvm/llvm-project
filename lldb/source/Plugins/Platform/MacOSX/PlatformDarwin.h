@@ -73,16 +73,14 @@ public:
 
   bool IsSymbolFileTrusted(Module &module) override;
 
-  Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
+  Status GetSharedModule(const ModuleSpec &module_spec, Target &target,
                          lldb::ModuleSP &module_sp,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
 
-  Status
-  GetModuleFromSharedCaches(const ModuleSpec &module_spec, Process *process,
-                            lldb::ModuleSP &module_sp,
-                            llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                            bool *did_create_ptr);
+  Status GetModuleFromSharedCaches(
+      const ModuleSpec &module_spec, Target &target, lldb::ModuleSP &module_sp,
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
@@ -110,7 +108,7 @@ public:
 
   bool SupportsModules() override { return true; }
 
-  ConstString GetFullNameForDylib(ConstString basename) override;
+  std::string GetFullNameForDylib(llvm::StringRef basename) override;
 
   FileSpec LocateExecutable(const char *basename) override;
 
@@ -135,6 +133,9 @@ public:
   llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(CompileUnit &unit) override;
 
+  /// Resolve an XcodeSDK to an on-disk path under a Progress event.
+  static llvm::Expected<FileSpec> ResolveXcodeSDK(XcodeSDK sdk);
+
   /// Helper function for \c LocateExecutableScriptingResources
   /// which gathers FileSpecs for executable scripts (currently
   /// just Python) from a .dSYM Python directory.
@@ -158,6 +159,9 @@ public:
                                              FileSpec module_spec,
                                              const Target &target,
                                              const FileSpec &symfile_spec);
+
+  llvm::Expected<FileSpecList>
+  GetSafeAutoLoadPaths(const Target &target) const override;
 
 protected:
   static const char *GetCompatibleArch(ArchSpec::Core core, size_t idx);
@@ -219,8 +223,7 @@ protected:
                                              XcodeSDK::Type sdk_type);
 
   Status FindBundleBinaryInExecSearchPaths(
-      const ModuleSpec &module_spec, Process *process,
-      lldb::ModuleSP &module_sp,
+      const ModuleSpec &module_spec, Target &target, lldb::ModuleSP &module_sp,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   // The OSType where lldb is running.

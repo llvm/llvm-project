@@ -94,7 +94,7 @@ class MCSectionXCOFF final : public MCSection {
   void printCsectDirective(raw_ostream &OS) const;
 
 public:
-  ~MCSectionXCOFF();
+  LLVM_ABI ~MCSectionXCOFF();
 
   XCOFF::StorageMappingClass getMappingClass() const {
     assert(isCsect() && "Only csect section has mapping class property!");

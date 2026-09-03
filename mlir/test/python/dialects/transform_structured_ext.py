@@ -193,6 +193,33 @@ def testFuseOpAttributes(target):
 
 @run
 @create_sequence
+def testFuseOpPackedTileSizes(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(target, tile_sizes=tiles)
+    # CHECK-LABEL: TEST: testFuseOpPackedTileSizes
+    # CHECK: transform.sequence
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpPackedTileSizesForall(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(target, tile_sizes=tiles, use_forall=True)
+    # CHECK-LABEL: TEST: testFuseOpPackedTileSizesForall
+    # CHECK: transform.sequence
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: {use_forall}
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
 def testGeneralize(target):
     structured.GeneralizeOp(target)
     # CHECK-LABEL: TEST: testGeneralize
@@ -486,6 +513,39 @@ def testTileAttributes(target):
 
 @run
 @create_sequence
+def testTileInterchangeMixed(target):
+    i0 = constant_param(0)
+    i1 = Attribute.parse("1")
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=[i0, i1])
+    # CHECK-LABEL: TEST: testTileInterchangeMixed
+    # CHECK-DAG: %[[I0:.*]] = transform.param.constant 0
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for
+    # CHECK-SAME: [4, 8] interchange = [%[[I0]], 1]
+
+
+@run
+@create_sequence
+def testTileInterchangeArrayAttr(target):
+    interchange = ArrayAttr.get(
+        [IntegerAttr.get(IndexType.get(), 0), IntegerAttr.get(IndexType.get(), 1)]
+    )
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=interchange)
+    # CHECK-LABEL: TEST: testTileInterchangeArrayAttr
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for
+    # CHECK-SAME: [4, 8] interchange = [0, 1]
+
+
+@run
+@create_sequence
+def testTileInterchangeTuple(target):
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=(0, 1))
+    # CHECK-LABEL: TEST: testTileInterchangeTuple
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for
+    # CHECK-SAME: [4, 8] interchange = [0, 1]
+
+
+@run
+@create_sequence
 def testTileZero(target):
     structured.TileUsingForOp(target, sizes=[4, 0, 2, 0], interchange=[0, 1, 2, 3])
     # CHECK-LABEL: TEST: testTileZero
@@ -514,6 +574,43 @@ def testTileDynamic():
     # CHECK: %[[FIRST:.+]] = pdl_match
     # CHECK: %[[SECOND:.+]] = pdl_match
     # CHECK: %{{.+}}, %{{.+}}:3 = transform.structured.tile_using_for %{{.*}}[%[[FIRST]], 3, %[[SECOND]], 0]
+
+
+@run
+@create_sequence
+def testTilePackedSizes(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.TileUsingForOp(target, sizes=tiles)
+    # CHECK-LABEL: TEST: testTilePackedSizes
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.tile_using_for
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testTilePackedInterchange(target):
+    interchange = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=interchange)
+    # CHECK-LABEL: TEST: testTilePackedInterchange
+    # CHECK: %[[I:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for
+    # CHECK-SAME: [4, 8] interchange = *(%[[I]])
+
+
+@run
+@create_sequence
+def testTilePackedSizesAndInterchange(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    interchange = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.TileUsingForOp(target, sizes=tiles, interchange=interchange)
+    # CHECK-LABEL: TEST: testTilePackedSizesAndInterchange
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %[[I:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.tile_using_for
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: interchange = *(%[[I]])
 
 
 @run

@@ -1,4 +1,4 @@
-# RUN: dsymutil -verbose -oso-prepend-path=%p -y -o %t.dSYM  %s | FileCheck %s
+# RUN: dsymutil --linker classic -verbose -oso-prepend-path=%p -y -o %t.dSYM  %s | FileCheck %s
 #
 # RUN: dsymutil --linker parallel -verbose -oso-prepend-path=%p -y %s -o %t-parallel.dSYM | FileCheck %s
 #

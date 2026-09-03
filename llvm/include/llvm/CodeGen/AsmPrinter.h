@@ -94,7 +94,7 @@ public:
   TargetMachine &TM;
 
   /// Target Asm Printer information.
-  const MCAsmInfo *MAI = nullptr;
+  const MCAsmInfo &MAI;
 
   /// This is the context for the output file that we are streaming. This owns
   /// all of the global MC-related objects for the generated translation unit.
@@ -360,9 +360,6 @@ public:
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
 
-  /// Emits inital debug location directive.
-  void emitInitialRawDwarfLocDirective(const MachineFunction &MF);
-
   /// Return the current section we are emitting to.
   const MCSection *getCurrentSection() const;
 
@@ -537,6 +534,11 @@ public:
   /// Emit the specified global variable to the .s file.
   virtual void emitGlobalVariable(const GlobalVariable *GV);
 
+  /// Emit the specified global variable to the .s file, with an explicit
+  /// alignment granule applied to both address and size.
+  virtual void emitGlobalVariable(const GlobalVariable *GV,
+                                  MaybeAlign AlignmentGranule);
+
   /// Check to see if the specified global is a special global used by LLVM. If
   /// so, emit it and return true, otherwise do nothing and return false.
   bool emitSpecialLLVMGlobal(const GlobalVariable *GV);
@@ -660,7 +662,7 @@ public:
   }
 
   virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
-    report_fatal_error("ptrauth constant lowering not implemented");
+    reportFatalUsageError("ptrauth constant lowering not implemented");
   }
 
   /// Lower the specified BlockAddress to an MCExpr.
@@ -933,6 +935,19 @@ public:
                                 const MCSubtargetInfo *EndInfo,
                                 const MachineInstr *MI);
 
+  /// Emit necessary directives to allow use of instructions that are permitted
+  /// by target features enabled by STI, but are not permitted by target
+  /// features enabled by the global subtarget (TM.getSubTargetInfo()).
+  /// Returns whether anything was emitted.
+  virtual bool emitTargetFeaturePush(const MCSubtargetInfo &STI) {
+    return false;
+  }
+
+  /// Emit necessary directives to restore target feature state.
+  /// The \p DidPush argument is the result of the prior emitTargetFeaturePush()
+  /// call.
+  virtual void emitTargetFeaturePop(const MCSubtargetInfo &STI, bool DidPush) {}
+
   /// This emits visibility information about symbol, if this is supported by
   /// the target.
   void emitVisibility(MCSymbol *Sym, unsigned Visibility,
@@ -1011,14 +1026,23 @@ protected:
   virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
     return false;
   }
+
+  /// Returns a optional minimum alignment that applies to both the address and
+  /// the allocation size of the global. This is used for systems like CHERI and
+  /// MTE that impose a minimum alignment, and require globals to be padded to
+  /// that alignment.
+  virtual MaybeAlign
+  getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
+    return std::nullopt;
+  };
 };
 
-void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
-                           AsmPrinter &AsmPrinter);
-
-void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
-                                    MachineFunction &MF,
+LLVM_ABI void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
                                     AsmPrinter &AsmPrinter);
+
+LLVM_ABI void
+setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
+                               MachineFunction &MF, AsmPrinter &AsmPrinter);
 
 } // end namespace llvm
 

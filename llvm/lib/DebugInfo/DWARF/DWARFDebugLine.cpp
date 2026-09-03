@@ -16,7 +16,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1268,6 +1267,9 @@ Error DWARFDebugLine::LineTable::parse(
         "last sequence in debug line table at offset 0x%8.8" PRIx64
         " is not terminated",
         DebugLineOffset));
+
+  Rows.shrink_to_fit();
+  Sequences.shrink_to_fit();
 
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {

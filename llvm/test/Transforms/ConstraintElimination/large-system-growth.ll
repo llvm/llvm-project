@@ -15,13 +15,11 @@ define void @test(i64 %x, ptr %y, ptr %z, ptr %w) {
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp ult ptr [[TMP29]], [[Z]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[EARLY_EXIT]], label [[BB32:%.*]]
 ; CHECK:       bb32:
-; CHECK-NEXT:    [[TMP33:%.*]] = icmp ult ptr [[TMP29]], [[Z]]
-; CHECK-NEXT:    br i1 [[TMP33]], label [[BB35:%.*]], label [[EARLY_EXIT]]
+; CHECK-NEXT:    br i1 false, label [[BB35:%.*]], label [[EARLY_EXIT]]
 ; CHECK:       bb35:
-; CHECK-NEXT:    [[TMP36:%.*]] = icmp ult ptr [[Y]], [[Z]]
-; CHECK-NEXT:    br i1 [[TMP36]], label [[EARLY_EXIT]], label [[BB38:%.*]]
+; CHECK-NEXT:    br i1 true, label [[EARLY_EXIT]], label [[BB38:%.*]]
 ; CHECK:       bb38:
-; CHECK-NEXT:    br i1 false, label [[EARLY_EXIT]], label [[BB43:%.*]]
+; CHECK-NEXT:    br i1 true, label [[EARLY_EXIT]], label [[BB43:%.*]]
 ; CHECK:       bb43:
 ; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[W:%.*]], i64 [[X]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = icmp ult ptr [[TMP47]], [[Y]]
@@ -31,8 +29,7 @@ define void @test(i64 %x, ptr %y, ptr %z, ptr %w) {
 ; CHECK-NEXT:    [[TMP53:%.*]] = icmp ult ptr [[TMP52]], [[Y]]
 ; CHECK-NEXT:    br i1 [[TMP53]], label [[EARLY_EXIT]], label [[BB55:%.*]]
 ; CHECK:       bb55:
-; CHECK-NEXT:    [[TMP57:%.*]] = icmp ult ptr [[W]], [[Y]]
-; CHECK-NEXT:    br i1 [[TMP57]], label [[BB59:%.*]], label [[EARLY_EXIT]]
+; CHECK-NEXT:    br i1 true, label [[BB59:%.*]], label [[EARLY_EXIT]]
 ; CHECK:       bb59:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void

@@ -140,23 +140,23 @@ HANDLE_TERM_INST  (12, CallBr        , CallBrInst) // A call-site terminator
 
 // Standard unary operators...
  FIRST_UNARY_INST(13)
-HANDLE_UNARY_INST(13, FNeg  , UnaryOperator)
+HANDLE_UNARY_INST(13, FNeg  , FPUnaryOperator)
   LAST_UNARY_INST(13)
 
 // Standard binary operators...
  FIRST_BINARY_INST(14)
 HANDLE_BINARY_INST(14, Add  , BinaryOperator)
-HANDLE_BINARY_INST(15, FAdd , BinaryOperator)
+HANDLE_BINARY_INST(15, FAdd , FPBinaryOperator)
 HANDLE_BINARY_INST(16, Sub  , BinaryOperator)
-HANDLE_BINARY_INST(17, FSub , BinaryOperator)
+HANDLE_BINARY_INST(17, FSub , FPBinaryOperator)
 HANDLE_BINARY_INST(18, Mul  , BinaryOperator)
-HANDLE_BINARY_INST(19, FMul , BinaryOperator)
+HANDLE_BINARY_INST(19, FMul , FPBinaryOperator)
 HANDLE_BINARY_INST(20, UDiv , BinaryOperator)
 HANDLE_BINARY_INST(21, SDiv , BinaryOperator)
-HANDLE_BINARY_INST(22, FDiv , BinaryOperator)
+HANDLE_BINARY_INST(22, FDiv , FPBinaryOperator)
 HANDLE_BINARY_INST(23, URem , BinaryOperator)
 HANDLE_BINARY_INST(24, SRem , BinaryOperator)
-HANDLE_BINARY_INST(25, FRem , BinaryOperator)
+HANDLE_BINARY_INST(25, FRem , FPBinaryOperator)
 
 // Logical operators (integer operands)
 HANDLE_BINARY_INST(26, Shl  , BinaryOperator) // Shift left  (logical)

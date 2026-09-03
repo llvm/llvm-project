@@ -898,6 +898,12 @@ namespace dynamic_alloc {
   static_assert(erroneous_array_bound(-1)); // expected-error {{constant expression}} expected-note {{in call}}
   static_assert(erroneous_array_bound(1LL << 62)); // expected-error {{constant expression}} expected-note {{in call}}
 
+  // An array new-expression whose bound is neither given nor deducible from the
+  // initializer is ill-formed; the constant evaluator must reject it gracefully
+  // rather than crash. See GH200139.
+  static_assert((new int[]())[0] == 0); // expected-error {{cannot determine allocated array size from initializer}} \
+                                        // expected-error {{static assertion expression is not an integral constant expression}}
+
   constexpr bool erroneous_array_bound_nothrow(long long n) {
     int *p = new (std::nothrow) int[n];
     bool result = p != 0;
@@ -1517,4 +1523,24 @@ namespace GH150705 {
   constexpr B b;
   constexpr const A& a = b;
   constexpr auto x = (a.*q)(); // expected-error {{constant expression}}
+}
+
+namespace GH197403 {
+  struct Inner {
+    constexpr ~Inner() noexcept {}
+  };
+  struct Outer {
+    Inner inner;
+  };
+  template<typename T>
+  struct BugTrigger {
+    union { T value; int dummy; };
+    constexpr BugTrigger() : value{} {}
+    constexpr ~BugTrigger() noexcept { value.~T(); }
+  };
+  consteval int test() {
+    BugTrigger<Outer> bt;
+    return 0;
+  }
+  static_assert(test() == 0);
 }

@@ -9,7 +9,7 @@ define nonnull ptr @f(i32 %n) presplitcoroutine {
 ; CHECK-LABEL: define nonnull ptr @f(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 24)
@@ -29,7 +29,7 @@ define nonnull ptr @f(i32 %n) presplitcoroutine {
 ; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null);
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null);
   %n.addr = alloca i32
   store i32 %n, ptr %n.addr ; this needs to go after coro.begin
   %0 = tail call i32 @llvm.coro.size.i32()

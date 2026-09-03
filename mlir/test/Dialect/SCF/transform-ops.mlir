@@ -168,6 +168,55 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: @loop_unroll_full_op
+func.func @loop_unroll_full_op(%arg0: tensor<4xf32>) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c2 = arith.constant 2 : index
+  %c0_f32 = arith.constant 0.0 : f32
+  // CHECK-NOT: scf.for
+  // CHECK-COUNT-2: arith.addf
+  %res = scf.for %i = %c0 to %c4 step %c2 iter_args(%acc = %c0_f32) -> f32 {
+    %val = tensor.extract %arg0[%i] : tensor<4xf32>
+    %add = arith.addf %acc, %val : f32
+    scf.yield %add : f32
+  }
+  return %res : f32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.loop.unroll_full %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @loop_unroll_full_op
+func.func @loop_unroll_full_op(%arg0: tensor<4xf32>) -> f32 {
+  %c0_f32 = arith.constant 0.0 : f32
+  // CHECK-NOT: affine.for
+  // CHECK-COUNT-4: arith.addf
+  %res = affine.for %i = 0 to 4 iter_args(%acc = %c0_f32) -> f32 {
+    %val = tensor.extract %arg0[%i] : tensor<4xf32>
+    %add = arith.addf %acc, %val : f32
+    affine.yield %add : f32
+  }
+  return %res : f32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["affine.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.loop.unroll_full %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @loop_unroll_and_jam_op
 func.func @loop_unroll_and_jam_op() {
   // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : index
@@ -443,6 +492,20 @@ func.func @test_promote_if_one_iteration(%a: index) -> index {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0 = scf.for %j = %c0 to %c1 step %c1 iter_args(%arg0 = %a) -> index {
+    %1 = "test.foo"(%a) : (index) -> (index)
+    scf.yield %1 : index
+  }
+  return %0 : index
+}
+
+// CHECK-LABEL: func @test_promote_if_one_iteration_dynamic(
+//   CHECK-NOT:   scf.for
+//       CHECK:   %[[r:.*]] = "test.foo"
+//       CHECK:   return %[[r]]
+func.func @test_promote_if_one_iteration_dynamic(%a: index, %val: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.for %j = %c0 to %val step %val iter_args(%arg0 = %a) -> index {
     %1 = "test.foo"(%a) : (index) -> (index)
     scf.yield %1 : index
   }

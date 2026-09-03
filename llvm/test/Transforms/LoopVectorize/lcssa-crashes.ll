@@ -13,7 +13,7 @@ define void @test(i32 %tc, ptr %p) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -224,7 +224,7 @@ define i32 @exit_phi_sunk_def(ptr noalias %src, ptr noalias %dst) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP1]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 2)
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[SEL]], i32 0
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[SEL]], i64 0
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[EXT]]

@@ -132,7 +132,7 @@ void AsanThread::Destroy() {
       CHECK_EQ(this, thread);
     malloc_storage().CommitBack();
     if (common_flags()->use_sigaltstack)
-      UnsetAlternateSignalStack();
+      UnsetAlternateSignalStack(altstack_base_);
     FlushToDeadThreadStats(&stats_);
     // We also clear the shadow on thread destruction because
     // some code may still be executing in later TSD destructors
@@ -288,7 +288,7 @@ void AsanThread::ThreadStart(ThreadID os_id) {
   asanThreadRegistry().StartThread(tid(), os_id, ThreadType::Regular, nullptr);
 
   if (common_flags()->use_sigaltstack)
-    SetAlternateSignalStack();
+    altstack_base_ = SetAlternateSignalStack();
 }
 
 AsanThread *CreateMainThread() {

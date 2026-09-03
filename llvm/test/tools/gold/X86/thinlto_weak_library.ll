@@ -2,6 +2,9 @@
 ; final native link based on the linker's determination of which
 ; object within a static library contains the prevailing def of a symbol.
 
+; --start-lib is not supported by ld.bfd, use gold instead.
+; REQUIRES: gold_linker
+
 ; First generate bitcode with a module summary index for each file
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: opt -module-summary %p/Inputs/thinlto_weak_library1.ll -o %t2.o
@@ -24,7 +27,7 @@
 ; copy of f() (and didn't simply convert to available_externally, which
 ; would incorrectly enable inlining).
 ; RUN: llvm-dis %t2.o.1.promote.bc -o - | FileCheck %s
-; CHECK: declare i32 @f()
+; CHECK: declare !guid !{{[0-9]+}} i32 @f()
 
 ; ModuleID = 'thinlto_weak_library.c'
 source_filename = "thinlto_weak_library.c"

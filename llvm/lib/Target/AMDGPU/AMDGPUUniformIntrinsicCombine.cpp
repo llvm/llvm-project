@@ -19,8 +19,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "GCNSubtarget.h"
-#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -28,7 +26,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -49,7 +46,7 @@ isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
   Value *V = U.get();
   if (auto It = Tracker.find(V); It != Tracker.end())
     return !It->second; // divergent if marked false
-  return UI.isDivergentUse(U);
+  return UI.isDivergentAtUse(U);
 }
 
 /// Optimizes uniform intrinsics calls if their operand can be proven uniform.

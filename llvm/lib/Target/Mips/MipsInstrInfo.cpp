@@ -636,7 +636,8 @@ bool MipsInstrInfo::SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
     return false;
 
   return !llvm::any_of(LoadMI.defs(), [&](const MachineOperand &Op) {
-    return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr);
+    return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr) &&
+           !MIInSlot.hasRegisterImplicitUseOperand(Op.getReg());
   });
 }
 
@@ -707,13 +708,19 @@ bool MipsInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
 unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
+    if (MI.hasDelaySlot()) {
+      // instr + 1 nop
+      return MI.getDesc().getSize() + 4;
+    }
     return MI.getDesc().getSize();
   case  TargetOpcode::INLINEASM:
   case  TargetOpcode::INLINEASM_BR: {       // Inline Asm: Variable size.
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
+  case TargetOpcode::BUNDLE:
+    return getInstBundleSize(MI);
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
   case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
   case TargetOpcode::PATCHABLE_TAIL_CALL:

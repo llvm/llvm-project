@@ -41,6 +41,12 @@ Coding Guidelines
 
 libc++'s coding guidelines are documented :ref:`here <CodingGuidelines>`.
 
+Procedures for recurring tasks
+==============================
+
+* :ref:`After a WG21 meeting <PostMeetingProcedure>`
+* :ref:`Around a LLVM release <ReleaseProcedure>`
+* :ref:`When a new Standard is introduced <NewStandardProcedure>`
 
 Resources
 =========
@@ -272,7 +278,7 @@ The libcxx linux premerge testing can run on one of three sets of runner
 groups. The three runner group names are ``llvm-premerge-libcxx-runners``,
 ``llvm-premerge-libcxx-release-runners`` and ``llvm-premerge-libcxx-next-runners``.
 The runner set currently in use is controlled by the contents of
-https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml.
+https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-pr-conformance-tests.yaml.
 By default, it uses ``llvm-premerge-libcxx-runners``. To switch to one of the
 other runner sets, just replace all uses of ``llvm-premerge-libcxx-runners`` in
 the yaml file with the desired runner set.

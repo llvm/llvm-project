@@ -295,15 +295,22 @@ LogicalResult x86::amx::TileMulFOp::verify() {
   x86::amx::TileType aType = getLhsTileType();
   x86::amx::TileType bType = getRhsTileType();
   x86::amx::TileType cType = getTileType();
+  unsigned scale = 1;
+  if (aType.getElementType().isF8E4M3FN() || aType.getElementType().isF8E5M2())
+    scale = 2;
   if (failed(verifyTileSize(*this, aType)) ||
       failed(verifyTileSize(*this, bType)) ||
       failed(verifyTileSize(*this, cType)) ||
-      failed(verifyMultShape(*this, aType, bType, cType, 1)))
+      failed(verifyMultShape(*this, aType, bType, cType, scale)))
     return failure();
   Type ta = aType.getElementType();
   Type tb = bType.getElementType();
   Type tc = cType.getElementType();
-  if ((!ta.isBF16() && !ta.isF16()) || (ta != tb) || !tc.isF32())
+  bool flag1 = !ta.isBF16() && !ta.isF16() &&
+               !((ta.isF8E4M3FN() || ta.isF8E5M2()) &&
+                 (tb.isF8E4M3FN() || tb.isF8E5M2()));
+  bool flag2 = (ta.isBF16() || ta.isF16()) ? (ta != tb) : false;
+  if (flag1 || flag2 || !tc.isF32())
     return emitOpError("unsupported type combination");
   return success();
 }

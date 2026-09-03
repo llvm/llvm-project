@@ -111,13 +111,15 @@ static cl::opt<std::string> AIXSystemAssemblerPath(
     cl::desc("Path to a system assembler, picked up on AIX only"),
     cl::value_desc("path"));
 
-static cl::opt<bool>
+cl::opt<bool>
     LTORunCSIRInstr("cs-profile-generate",
                     cl::desc("Perform context sensitive PGO instrumentation"));
 
-static cl::opt<std::string>
+cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
+
+extern cl::opt<std::string> SampleProfileFile;
 } // namespace llvm
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -557,6 +559,10 @@ bool LTOCodeGenerator::optimize() {
 
   // libLTO parses options late, so re-set them here.
   Context.setDiscardValueNames(LTODiscardValueNames);
+  Config.StatsFile = LTOStatsFile;
+  Config.RunCSIRInstr = LTORunCSIRInstr;
+  Config.CSIRProfile = LTOCSIRProfile;
+  Config.SampleProfile = SampleProfileFile;
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,

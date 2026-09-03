@@ -86,8 +86,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 !1 = !DIFile(filename: "a", directory: "")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
+!3 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, type: !9)
 !4 = !DILocation(line: 0, scope: !3)
 !5 = !DILocalVariable(scope: !6)
-!6 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
+!6 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, type: !9)
 !7 = !DILocation(line: 0, scope: !6, inlinedAt: !4)
+!8 = !{null}
+!9 = !DISubroutineType(types: !8)

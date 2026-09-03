@@ -54,7 +54,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "lib/Utils.h"
+#include "IRUtils/IRUtils.h"
+#include "MIRUtils/MIRUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -207,7 +208,7 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
     if (TheTriple.getTriple().empty())
       TheTriple.setTriple(sys::getDefaultTargetTriple());
 
-    auto TMOrErr = codegen::createTargetMachineForTriple(TheTriple.str());
+    auto TMOrErr = codegen::createTargetMachineForTriple(TheTriple);
     if (!TMOrErr) {
       Err.print(ToolName, errs());
       exit(1); // Match original behavior

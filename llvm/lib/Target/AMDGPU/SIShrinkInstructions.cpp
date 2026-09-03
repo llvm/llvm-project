@@ -11,7 +11,6 @@
 #include "SIShrinkInstructions.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -39,8 +38,8 @@ class SIShrinkInstructions {
 
   bool foldImmediates(MachineInstr &MI, bool TryToCommute = true) const;
   bool shouldShrinkTrue16(MachineInstr &MI) const;
-  bool isKImmOperand(const MachineOperand &Src) const;
-  bool isKUImmOperand(const MachineOperand &Src) const;
+  bool isKImmOperand(const MachineInstr &MI, const MachineOperand &Src) const;
+  bool isKUImmOperand(const MachineInstr &MI, const MachineOperand &Src) const;
   bool isKImmOrKUImmOperand(const MachineOperand &Src, bool &IsUnsigned) const;
   void copyExtraImplicitOps(MachineInstr &NewMI, MachineInstr &MI) const;
   bool shrinkScalarCompare(MachineInstr &MI) const;
@@ -170,14 +169,16 @@ bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
   return true;
 }
 
-bool SIShrinkInstructions::isKImmOperand(const MachineOperand &Src) const {
+bool SIShrinkInstructions::isKImmOperand(const MachineInstr &MI,
+                                         const MachineOperand &Src) const {
   return isInt<16>(SignExtend64(Src.getImm(), 32)) &&
-         !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
+         !TII->isInlineConstant(MI, MI.getOperandNo(&Src));
 }
 
-bool SIShrinkInstructions::isKUImmOperand(const MachineOperand &Src) const {
+bool SIShrinkInstructions::isKUImmOperand(const MachineInstr &MI,
+                                          const MachineOperand &Src) const {
   return isUInt<16>(Src.getImm()) &&
-         !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
+         !TII->isInlineConstant(MI, MI.getOperandNo(&Src));
 }
 
 bool SIShrinkInstructions::isKImmOrKUImmOperand(const MachineOperand &Src,
@@ -288,8 +289,8 @@ bool SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
 
   const MCInstrDesc &NewDesc = TII->get(SOPKOpc);
 
-  if ((SIInstrInfo::sopkIsZext(SOPKOpc) && isKUImmOperand(Src1)) ||
-      (!SIInstrInfo::sopkIsZext(SOPKOpc) && isKImmOperand(Src1))) {
+  if ((SIInstrInfo::sopkIsZext(SOPKOpc) && isKUImmOperand(MI, Src1)) ||
+      (!SIInstrInfo::sopkIsZext(SOPKOpc) && isKImmOperand(MI, Src1))) {
     if (!SIInstrInfo::sopkIsZext(SOPKOpc))
       Src1.setImm(SignExtend64(Src1.getImm(), 32));
     MI.setDesc(NewDesc);
@@ -708,6 +709,8 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     return nullptr;
   Register X = Xop.getReg();
   unsigned Xsub = Xop.getSubReg();
+  Register Y;
+  unsigned Ysub;
 
   unsigned Size = TII->getOpSize(MovT, 0);
 
@@ -721,73 +724,82 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
 
   const unsigned SearchLimit = 16;
   unsigned Count = 0;
-  bool KilledT = false;
+
+  MachineInstr *MovX = nullptr;
+  MachineInstr *InsertionPt = nullptr;
+  MachineInstr *MovY = nullptr;
+
   for (auto Iter = std::next(MovT.getIterator()),
             E = MovT.getParent()->instr_end();
-       Iter != E && Count < SearchLimit && !KilledT; ++Iter) {
-
-    MachineInstr *MovY = &*Iter;
-    KilledT = MovY->killsRegister(T, TRI);
-    if (MovY->isDebugInstr())
+       Iter != E && Count < SearchLimit; ++Iter) {
+    if (Iter->isDebugInstr())
       continue;
     ++Count;
 
-    if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
-         MovY->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
-         MovY->getOpcode() != AMDGPU::COPY) ||
-        !MovY->getOperand(1).isReg() || MovY->getOperand(1).getReg() != T ||
-        MovY->getOperand(1).getSubReg() != Tsub)
-      continue;
-
-    Register Y = MovY->getOperand(0).getReg();
-    unsigned Ysub = MovY->getOperand(0).getSubReg();
-
-    if (!TRI->isVGPR(*MRI, Y))
-      continue;
-
-    MachineInstr *MovX = nullptr;
-    for (auto IY = MovY->getIterator(), I = std::next(MovT.getIterator());
-         I != IY; ++I) {
-      if (I->isDebugInstr())
-        continue;
-      if (instReadsReg(&*I, X, Xsub) || instModifiesReg(&*I, Y, Ysub) ||
-          instModifiesReg(&*I, T, Tsub) ||
-          (MovX && instModifiesReg(&*I, X, Xsub))) {
-        MovX = nullptr;
-        break;
+    if (!MovX) {
+      // Search for mov x, y.
+      if ((Iter->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+           Iter->getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
+           Iter->getOpcode() == AMDGPU::COPY) &&
+          Iter->getOperand(0).getReg() == X &&
+          Iter->getOperand(0).getSubReg() == Xsub &&
+          Iter->getOperand(1).isReg()) {
+        MovX = &*Iter;
+        Y = MovX->getOperand(1).getReg();
+        Ysub = MovX->getOperand(1).getSubReg();
+      } else if (instModifiesReg(&*Iter, X, Xsub)) {
+        // Writes to x are not allowed until mov x, y has been found
+        return nullptr;
       }
-      if (!instReadsReg(&*I, Y, Ysub)) {
-        if (!MovX && instModifiesReg(&*I, X, Xsub)) {
-          MovX = nullptr;
-          break;
-        }
-        continue;
-      }
-      if (MovX ||
-          (I->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
-           I->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
-           I->getOpcode() != AMDGPU::COPY) ||
-          I->getOperand(0).getReg() != X ||
-          I->getOperand(0).getSubReg() != Xsub) {
-        MovX = nullptr;
+    } else {
+      // mov x, y has been found.
+      // Search for mov y, t.
+      if ((Iter->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+           Iter->getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
+           Iter->getOpcode() == AMDGPU::COPY) &&
+          Iter->getOperand(0).getReg() == Y &&
+          Iter->getOperand(0).getSubReg() == Ysub &&
+          Iter->getOperand(1).isReg() && Iter->getOperand(1).getReg() == T &&
+          Iter->getOperand(1).getSubReg() == Tsub) {
+        MovY = &*Iter;
         break;
       }
 
-      if (Size > 4 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
-        continue;
+      // Effectively, mov x, y must be moved downward
+      // and mov y, t must be moved upward so that they can be fused into a
+      // swap. A write to y creates a barrier that prevents the two moves from
+      // being moved adjacent to each other.
+      if (instModifiesReg(&*Iter, Y, Ysub))
+        return nullptr;
 
-      MovX = &*I;
+      // Reads or writes to x prevent mov x, y from being moved farther
+      // downward. Select this to be the insertion point.
+      if (!InsertionPt &&
+          (instReadsReg(&*Iter, X, Xsub) || instModifiesReg(&*Iter, X, Xsub))) {
+        InsertionPt = &*Iter;
+      }
+      // If the insertion point has been found, then mov y, t must be moved
+      // upward past all subsequent instructions.  A read of y will block this
+      // movement.
+      if (InsertionPt) {
+        if (instReadsReg(&*Iter, Y, Ysub))
+          return nullptr;
+      }
     }
 
-    if (!MovX)
-      continue;
-
+    if (instModifiesReg(&*Iter, T, Tsub))
+      return nullptr;
+  }
+  if (MovY) {
     LLVM_DEBUG(dbgs() << "Matched v_swap:\n" << MovT << *MovX << *MovY);
 
     MachineBasicBlock &MBB = *MovT.getParent();
     SmallVector<MachineInstr *, 4> Swaps;
+
+    if (!InsertionPt)
+      InsertionPt = MovY;
     if (Size == 2) {
-      auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+      auto *MIB = BuildMI(MBB, InsertionPt->getIterator(), MovT.getDebugLoc(),
                           TII->get(AMDGPU::V_SWAP_B16))
                       .addDef(X)
                       .addDef(Y)
@@ -801,7 +813,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         TargetInstrInfo::RegSubRegPair X1, Y1;
         X1 = getSubRegForIndex(X, Xsub, I);
         Y1 = getSubRegForIndex(Y, Ysub, I);
-        auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+        auto *MIB = BuildMI(MBB, InsertionPt->getIterator(), MovT.getDebugLoc(),
                             TII->get(AMDGPU::V_SWAP_B32))
                         .addDef(X1.Reg, {}, X1.SubReg)
                         .addDef(Y1.Reg, {}, Y1.SubReg)
@@ -836,7 +848,6 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
 
     return Next;
   }
-
   return nullptr;
 }
 
@@ -941,7 +952,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           continue;
         }
         if (Src0->isReg() && Src0->getReg() == Dest->getReg()) {
-          if (Src1->isImm() && isKImmOperand(*Src1)) {
+          if (Src1->isImm() && isKImmOperand(MI, *Src1)) {
             unsigned Opc = (MI.getOpcode() == AMDGPU::S_MUL_I32)
                                ? AMDGPU::S_MULK_I32
                                : AMDGPU::S_ADDK_I32;
@@ -967,7 +978,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         if (Src.isImm() && Dst.getReg().isPhysical()) {
           unsigned ModOpc;
           int32_t ModImm;
-          if (isKImmOperand(Src)) {
+          if (isKImmOperand(MI, Src)) {
             MI.setDesc(TII->get(AMDGPU::S_MOVK_I32));
             Src.setImm(SignExtend64(Src.getImm(), 32));
             Changed = true;
@@ -1028,30 +1039,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
       int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
 
-      if (TII->isVOPC(Op32)) {
-        MachineOperand &Op0 = MI.getOperand(0);
-        if (Op0.isReg()) {
-          // Exclude VOPCX instructions as these don't explicitly write a
-          // dst.
-          Register DstReg = Op0.getReg();
-          if (DstReg.isVirtual()) {
-            // VOPC instructions can only write to the VCC register. We can't
-            // force them to use VCC here, because this is only one register and
-            // cannot deal with sequences which would require multiple copies of
-            // VCC, e.g. S_AND_B64 (vcc = V_CMP_...), (vcc = V_CMP_...)
-            //
-            // So, instead of forcing the instruction to write to VCC, we
-            // provide a hint to the register allocator to use VCC and then we
-            // will run this pass again after RA and shrink it if it outputs to
-            // VCC.
-            MRI->setRegAllocationHint(DstReg, 0, VCCReg);
-            continue;
-          }
-          if (DstReg != VCCReg)
-            continue;
-        }
-      }
-
       if (Op32 == AMDGPU::V_CNDMASK_B32_e32) {
         // We shrink V_CNDMASK_B32_e64 using regalloc hints like we do for VOPC
         // instructions.
@@ -1069,13 +1056,24 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       }
 
       // Check for the bool flag output for instructions like V_ADD_I32_e64.
-      const MachineOperand *SDst = TII->getNamedOperand(MI,
-                                                        AMDGPU::OpName::sdst);
+      // For VOPC e64 this is also the dst operand. VOPCX (nosdst) variants
+      // have no sdst, so they fall through to be shrunk directly.
+      const MachineOperand *SDst =
+          TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
 
       if (SDst) {
         bool Next = false;
 
         if (SDst->getReg() != VCCReg) {
+          // VOPC instructions can only write to the VCC register. We can't
+          // force them to use VCC here, because this is only one register and
+          // cannot deal with sequences which would require multiple copies of
+          // VCC, e.g. S_AND_B64 (vcc = V_CMP_...), (vcc = V_CMP_...)
+          //
+          // So, instead of forcing the instruction to write to VCC, we
+          // provide a hint to the register allocator to use VCC and then we
+          // will run this pass again after RA and shrink it if it outputs to
+          // VCC.
           if (SDst->getReg().isVirtual())
             MRI->setRegAllocationHint(SDst->getReg(), 0, VCCReg);
           Next = true;

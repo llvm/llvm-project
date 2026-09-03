@@ -52,6 +52,7 @@ private:
   bool tryMergeNSStringLiteral();
   bool tryMergeJSPrivateIdentifier();
   bool tryMergeCSharpStringLiteral();
+  bool tryMergeCSharpUtf8StringLiteral();
   bool tryMergeCSharpKeywordVariables();
   bool tryMergeNullishCoalescingEqual();
   bool tryTransformCSharpForEach();
@@ -135,7 +136,6 @@ private:
       TemplateNames, TypeNames, VariableTemplates;
 
   bool FormattingDisabled;
-  llvm::Regex FormatOffRegex; // For one line.
 
   llvm::Regex MacroBlockBeginRegex;
   llvm::Regex MacroBlockEndRegex;

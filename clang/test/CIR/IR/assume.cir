@@ -1,0 +1,57 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!void = !cir.void
+!u64i = !cir.int<u, 64>
+
+module {
+  cir.func @assume_plain() {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    cir.assume %0 : !cir.bool
+    cir.return
+  }
+// CHECK: #true = #cir.bool<true> : !cir.bool
+// CHECK: cir.func{{.*}} @assume_plain() {
+// CHECK:   %0 = cir.const #true
+// CHECK:   cir.assume %0 : !cir.bool
+// CHECK:   cir.return
+// CHECK: }
+
+  cir.func @assume_dereferenceable(%ptr : !cir.ptr<!void>, %size : !u64i) {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    cir.assume %0 dereferenceable(%ptr, %size : !cir.ptr<!void>, !u64i)
+        : !cir.bool
+    cir.return
+  }
+// CHECK: cir.func{{.*}} @assume_dereferenceable(
+// CHECK:   %0 = cir.const #true
+// CHECK:   cir.assume %0 dereferenceable(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)
+// CHECK:       : !cir.bool
+// CHECK:   cir.return
+// CHECK: }
+
+  cir.func @assume_separate_storage(%a : !cir.ptr<!void>,
+                                    %b : !cir.ptr<!void>) {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    cir.assume %0 separate_storage(%a, %b : !cir.ptr<!void>, !cir.ptr<!void>)
+        : !cir.bool
+    cir.return
+  }
+// CHECK: cir.func{{.*}} @assume_separate_storage(
+// CHECK:   %0 = cir.const #true
+// CHECK:   cir.assume %0 separate_storage(%{{.+}}, %{{.+}} : !cir.ptr<!void>,
+// CHECK:       !cir.ptr<!void>) : !cir.bool
+// CHECK:   cir.return
+// CHECK: }
+
+  cir.func @assume_align(%ptr : !cir.ptr<!void>, %align : !u64i) {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    cir.assume %0 align(%ptr, %align : !cir.ptr<!void>, !u64i) : !cir.bool
+    cir.return
+  }
+// CHECK: cir.func{{.*}} @assume_align(
+// CHECK:   %0 = cir.const #true
+// CHECK:   cir.assume %0 align(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i)
+// CHECK:       : !cir.bool
+// CHECK:   cir.return
+// CHECK: }
+}

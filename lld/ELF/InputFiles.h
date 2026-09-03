@@ -130,7 +130,7 @@ public:
   // checking feature. All files within the same --{start,end}-group or
   // --{start,end}-lib get the same group ID. Otherwise, each file gets a new
   // group ID. For more info, see checkDependency() in SymbolTable.cpp.
-  uint32_t groupId;
+  uint32_t groupId = 0;
 
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
@@ -315,6 +315,10 @@ private:
   // The following variable contains the contents of .symtab_shndx.
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
+
+  // Section indices of kept SHT_GROUP sections, recorded by parse() in
+  // ascending order, to be used by the parallel initializeSections().
+  SmallVector<uint32_t, 0> keptGroups;
 };
 
 class BitcodeFile : public InputFile {

@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers < %s 2>&1 | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers < %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpName [[MAIN:%.*]] "main"
 ; CHECK: [[MAIN]] = OpFunction

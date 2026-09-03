@@ -131,15 +131,44 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     QT = Context.BoolTy;
     break;
   case ScalarTypeKind::SignedInteger:
-    QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), true);
+    // getIntTypeForBitwidth() picks a type purely by matching bit width, so
+    // on LP64 targets a 64-bit element would resolve to "long" even if the
+    // target's actual int64_t is "long long" (e.g. OpenBSD). Go through the
+    // target's Int64Type so this matches int64_t/uint64_t.
+    if (Type->getElementBitwidth() == 64)
+      QT = Context.getTargetInfo().getInt64Type() == TargetInfo::SignedLong
+               ? Context.LongTy
+               : Context.LongLongTy;
+    else
+      QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), true);
     break;
   case ScalarTypeKind::UnsignedInteger:
-    QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
+    if (Type->getElementBitwidth() == 64)
+      QT = Context.getTargetInfo().getInt64Type() == TargetInfo::SignedLong
+               ? Context.UnsignedLongTy
+               : Context.UnsignedLongLongTy;
+    else
+      QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
     break;
   case ScalarTypeKind::FloatE4M3:
-  case ScalarTypeKind::FloatE5M2:
-    QT = Context.getIntTypeForBitwidth(8, false);
-    break;
+  case ScalarTypeKind::FloatE5M2: {
+    // TODO: This is a workaround code to only support OP8 RVV types without
+    // supporting scalar OFP8 types. We need to refactor after scalar types are
+    // supported.
+    assert(Type->isVector() && "Only support vector of OFP8 types.");
+    bool IsE5M2 = Type->getScalarType() == ScalarTypeKind::FloatE5M2;
+    unsigned Scale = *Type->getScale();
+#define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
+  if (IsE5M2 == E5m2 && Scale == NumEls)                                       \
+    QT = Context.SingletonId;
+#include "clang/Basic/RISCVVTypes.def"
+    assert(!QT.isNull() && "Unsupported OFP8 vector type");
+    if (Type->isConstant())
+      QT = Context.getConstType(QT);
+    if (Type->isPointer())
+      QT = Context.getPointerType(QT);
+    return QT;
+  }
   case ScalarTypeKind::BFloat:
     QT = Context.BFloat16Ty;
     break;
@@ -1513,10 +1542,22 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
 
 void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
                                     const llvm::StringMap<bool> &FeatureMap) {
+  const BuiltinType *BT = Ty->castAs<BuiltinType>();
   ASTContext::BuiltinVectorTypeInfo Info =
-      SemaRef.Context.getBuiltinVectorTypeInfo(Ty->castAs<BuiltinType>());
+      SemaRef.Context.getBuiltinVectorTypeInfo(BT);
   unsigned EltSize = SemaRef.Context.getTypeSize(Info.ElementType);
   unsigned MinElts = Info.EC.getKnownMinValue();
+
+  auto IsOFP8Type = [](const BuiltinType *BT) {
+    switch (BT->getKind()) {
+#define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
+  case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
+      return true;
+    default:
+      return false;
+    }
+  };
 
   if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
       !FeatureMap.lookup("zve64d"))
@@ -1527,8 +1568,7 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
             MinElts == 1) &&
            !FeatureMap.lookup("zve64x"))
     Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve64x";
-  else if (Info.ElementType->isFloat16Type() && !FeatureMap.lookup("zvfh") &&
-           !FeatureMap.lookup("zvfhmin") &&
+  else if (Info.ElementType->isFloat16Type() && !FeatureMap.lookup("zvfhmin") &&
            !FeatureMap.lookup("xandesvpackfph"))
     if (DeclareAndesVectorBuiltins) {
       Diag(Loc, diag::err_riscv_type_requires_extension)
@@ -1554,6 +1594,8 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
   // if we don't have at least zve32x supported, then we need to emit error.
   else if (!FeatureMap.lookup("zve32x"))
     Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve32x";
+  else if (IsOFP8Type(BT) && !FeatureMap.lookup("experimental-zvfofp8min"))
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zvfofp8min";
 }
 
 /// Are the two types RVV-bitcast-compatible types? I.e. is bitcasting from the
@@ -1590,7 +1632,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   // - Must be a function.
   // - Must have no parameters.
   // - Must have the 'void' return type.
-  // - The attribute itself must have at most 2 arguments
+  // - The attribute itself must have at most 3 arguments
   // - The attribute arguments must be string literals, and valid choices.
   // - The attribute arguments must be a valid combination
   // - The current target must support the right extensions for the combination.
@@ -1613,13 +1655,14 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (!AL.checkAtMostNumArgs(SemaRef, 2))
+  if (!AL.checkAtMostNumArgs(SemaRef, 3))
     return;
 
   bool HasSiFiveCLICType = false;
   bool HasUnaryType = false;
+  bool ReportedDuplicateType = false;
 
-  SmallSet<RISCVInterruptAttr::InterruptType, 2> Types;
+  SmallSet<RISCVInterruptAttr::InterruptType, 3> Types;
   for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
     RISCVInterruptAttr::InterruptType Type;
     StringRef TypeString;
@@ -1655,7 +1698,11 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
       break;
     }
 
-    Types.insert(Type);
+    if (!Types.insert(Type).second && !ReportedDuplicateType) {
+      Diag(Loc, diag::warn_riscv_attribute_interrupt_duplicate_type)
+          << TypeString;
+      ReportedDuplicateType = true;
+    }
   }
 
   if (HasUnaryType && Types.size() > 1) {
@@ -1717,7 +1764,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  SmallVector<RISCVInterruptAttr::InterruptType, 2> TypesVec(Types.begin(),
+  SmallVector<RISCVInterruptAttr::InterruptType, 3> TypesVec(Types.begin(),
                                                              Types.end());
 
   D->addAttr(::new (getASTContext()) RISCVInterruptAttr(

@@ -44,6 +44,7 @@ class KaleidoscopeJIT {
 private:
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<EPCIndirectionUtils> EPCIU;
+  std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr;
   std::unique_ptr<MemoryAccess> MemAccess;
 
   DataLayout DL;
@@ -65,9 +66,10 @@ private:
 public:
   KaleidoscopeJIT(std::unique_ptr<ExecutionSession> ES,
                   std::unique_ptr<EPCIndirectionUtils> EPCIU,
+                  std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr,
                   std::unique_ptr<MemoryAccess> MemAccess,
                   JITTargetMachineBuilder JTMB, DataLayout DL)
-      : ES(std::move(ES)), EPCIU(std::move(EPCIU)),
+      : ES(std::move(ES)), EPCIU(std::move(EPCIU)), MemMgr(std::move(MemMgr)),
         MemAccess(std::move(MemAccess)), DL(std::move(DL)),
         Mangle(*this->ES, this->DL),
         ObjectLayer(*this->ES,
@@ -100,13 +102,17 @@ public:
 
     auto ES = std::make_unique<ExecutionSession>(std::move(*EPC));
 
+    auto MemMgr = ES->getExecutorProcessControl().createDefaultMemoryManager();
+    if (!MemMgr)
+      return MemMgr.takeError();
+
     auto MemAccess =
         ES->getExecutorProcessControl().createDefaultMemoryAccess();
     if (!MemAccess)
       return MemAccess.takeError();
 
     auto EPCIU = EPCIndirectionUtils::Create(ES->getExecutorProcessControl(),
-                                             **MemAccess);
+                                             **MemMgr, **MemAccess);
     if (!EPCIU)
       return EPCIU.takeError();
 
@@ -123,9 +129,9 @@ public:
     if (!DL)
       return DL.takeError();
 
-    return std::make_unique<KaleidoscopeJIT>(std::move(ES), std::move(*EPCIU),
-                                             std::move(*MemAccess),
-                                             std::move(JTMB), std::move(*DL));
+    return std::make_unique<KaleidoscopeJIT>(
+        std::move(ES), std::move(*EPCIU), std::move(*MemMgr),
+        std::move(*MemAccess), std::move(JTMB), std::move(*DL));
   }
 
   const DataLayout &getDataLayout() const { return DL; }

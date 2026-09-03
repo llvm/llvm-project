@@ -8,12 +8,13 @@
 
 #include "OrcTestCommon.h"
 
-#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManagerSPS.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Memory.h"
@@ -106,16 +107,29 @@ CWrapperFunctionBuffer testRelease(const char *ArgData, size_t ArgSize) {
 }
 
 TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
-  auto SelfEPC = cantFail(SelfExecutorProcessControl::Create());
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
   SimpleAllocator SA;
 
-  EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
-  SAs.Allocator = ExecutorAddr::fromPtr(&SA);
-  SAs.Reserve = ExecutorAddr::fromPtr(&testReserve);
-  SAs.Initialize = ExecutorAddr::fromPtr(&testInitialize);
-  SAs.Release = ExecutorAddr::fromPtr(&testRelease);
+  // Register the test wrappers in the bootstrap JITDylib under the default
+  // SimpleNativeMemoryMap names so that Create resolves its proxies to them.
+  namespace sps_ci = rt::sps_ci;
+  auto Exported = JITSymbolFlags::Exported;
+  cantFail(ES.getBootstrapJITDylib().define(absoluteSymbols({
+      {ES.intern(sps_ci::SimpleNativeMemoryMapInstanceName),
+       {ExecutorAddr::fromPtr(&SA), Exported}},
+      {ES.intern(sps_ci::MemMgrReserve::Name),
+       {ExecutorAddr::fromPtr(&testReserve), Exported}},
+      {ES.intern(sps_ci::MemMgrInitialize::Name),
+       {ExecutorAddr::fromPtr(&testInitialize), Exported}},
+      // Deinitialize is part of the interface but unused here; the release
+      // wrapper (same signature) stands in so the proxy resolves.
+      {ES.intern(sps_ci::MemMgrDeinitialize::Name),
+       {ExecutorAddr::fromPtr(&testRelease), Exported}},
+      {ES.intern(sps_ci::MemMgrRelease::Name),
+       {ExecutorAddr::fromPtr(&testRelease), Exported}},
+  })));
 
-  auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
+  auto MemMgr = cantFail(sps::createEPCGenericJITLinkMemoryManager(ES));
   StringRef Hello = "hello";
   auto SSA = jitlink::SimpleSegmentAlloc::Create(
       *MemMgr, std::make_shared<SymbolStringPool>(),
@@ -138,12 +152,13 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   auto Err2 = MemMgr->deallocate(std::move(*FA));
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
 
-  cantFail(SelfEPC->disconnect());
+  cantFail(ES.endSession());
 }
 
-TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromSymbolNames) {
-  // Verify that Create successfully looks up symbols and constructs
-  // the memory manager.
+TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromJITDylib) {
+  // Verify that Create(JITDylib&) looks up the default SimpleNativeMemoryMap
+  // symbols and constructs the memory manager.
+  namespace sps_ci = rt::sps_ci;
   auto SSP = std::make_shared<SymbolStringPool>();
   auto EPC =
       std::make_unique<UnsupportedExecutorProcessControl>(std::move(SSP));
@@ -154,22 +169,19 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromSymbolNames) {
       ReleaseAddr(5);
 
   cantFail(JD.define(absoluteSymbols({
-      {ES.intern("allocator_instance"),
+      {ES.intern(sps_ci::SimpleNativeMemoryMapInstanceName),
        {AllocatorAddr, JITSymbolFlags::Exported}},
-      {ES.intern("allocator_reserve"), {ReserveAddr, JITSymbolFlags::Exported}},
-      {ES.intern("allocator_init"), {InitAddr, JITSymbolFlags::Exported}},
-      {ES.intern("allocator_deinit"), {DeinitAddr, JITSymbolFlags::Exported}},
-      {ES.intern("allocator_release"), {ReleaseAddr, JITSymbolFlags::Exported}},
+      {ES.intern(sps_ci::MemMgrReserve::Name),
+       {ReserveAddr, JITSymbolFlags::Exported}},
+      {ES.intern(sps_ci::MemMgrInitialize::Name),
+       {InitAddr, JITSymbolFlags::Exported}},
+      {ES.intern(sps_ci::MemMgrDeinitialize::Name),
+       {DeinitAddr, JITSymbolFlags::Exported}},
+      {ES.intern(sps_ci::MemMgrRelease::Name),
+       {ReleaseAddr, JITSymbolFlags::Exported}},
   })));
 
-  EPCGenericJITLinkMemoryManager::SymbolNames SNs;
-  SNs.AllocatorName = "allocator_instance";
-  SNs.ReserveName = "allocator_reserve";
-  SNs.InitializeName = "allocator_init";
-  SNs.DeinitializeName = "allocator_deinit";
-  SNs.ReleaseName = "allocator_release";
-
-  auto Result = EPCGenericJITLinkMemoryManager::Create(JD, SNs);
+  auto Result = sps::createEPCGenericJITLinkMemoryManager(JD);
   EXPECT_THAT_EXPECTED(Result, Succeeded());
 
   cantFail(ES.endSession());
@@ -177,26 +189,20 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromSymbolNames) {
 
 TEST(EPCGenericJITLinkMemoryManagerTest, CreateFailsOnMissingSymbol) {
   // Verify that Create returns an error when a symbol is missing.
+  namespace sps_ci = rt::sps_ci;
   auto SSP = std::make_shared<SymbolStringPool>();
   auto EPC =
       std::make_unique<UnsupportedExecutorProcessControl>(std::move(SSP));
   ExecutionSession ES(std::move(EPC));
   auto &JD = ES.createBareJITDylib("JD");
 
-  // Only define some of the required symbols.
+  // Only define the instance symbol; the wrapper symbols are missing.
   cantFail(JD.define(absoluteSymbols({
-      {ES.intern("allocator_instance"),
+      {ES.intern(sps_ci::SimpleNativeMemoryMapInstanceName),
        {ExecutorAddr(1), JITSymbolFlags::Exported}},
   })));
 
-  EPCGenericJITLinkMemoryManager::SymbolNames SNs;
-  SNs.AllocatorName = "allocator_instance";
-  SNs.ReserveName = "allocator_reserve";     // missing
-  SNs.InitializeName = "allocator_init";     // missing
-  SNs.DeinitializeName = "allocator_deinit"; // missing
-  SNs.ReleaseName = "allocator_release";     // missing
-
-  auto Result = EPCGenericJITLinkMemoryManager::Create(JD, SNs);
+  auto Result = sps::createEPCGenericJITLinkMemoryManager(JD);
   EXPECT_THAT_EXPECTED(Result, Failed());
 
   cantFail(ES.endSession());
@@ -205,6 +211,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFailsOnMissingSymbol) {
 TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromExecutionSession) {
   // Verify that Create(ExecutionSession&) looks up symbols in the bootstrap
   // JITDylib using the default SimpleNativeMemoryMap symbol names.
+  namespace sps_ci = rt::sps_ci;
   class EPCWithBootstrapSymbols : public UnsupportedExecutorProcessControl {
   public:
     EPCWithBootstrapSymbols(std::shared_ptr<SymbolStringPool> SSP,
@@ -214,25 +221,22 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromExecutionSession) {
     }
   };
 
-  auto &SNs =
-      EPCGenericJITLinkMemoryManager::orc_rt_SimpleNativeMemoryMapSPSSymbols;
-
   ExecutorAddr AllocatorAddr(1), ReserveAddr(2), InitAddr(3), DeinitAddr(4),
       ReleaseAddr(5);
 
   StringMap<ExecutorAddr> BootstrapSyms;
-  BootstrapSyms[SNs.AllocatorName] = AllocatorAddr;
-  BootstrapSyms[SNs.ReserveName] = ReserveAddr;
-  BootstrapSyms[SNs.InitializeName] = InitAddr;
-  BootstrapSyms[SNs.DeinitializeName] = DeinitAddr;
-  BootstrapSyms[SNs.ReleaseName] = ReleaseAddr;
+  BootstrapSyms[sps_ci::SimpleNativeMemoryMapInstanceName] = AllocatorAddr;
+  BootstrapSyms[sps_ci::MemMgrReserve::Name] = ReserveAddr;
+  BootstrapSyms[sps_ci::MemMgrInitialize::Name] = InitAddr;
+  BootstrapSyms[sps_ci::MemMgrDeinitialize::Name] = DeinitAddr;
+  BootstrapSyms[sps_ci::MemMgrRelease::Name] = ReleaseAddr;
 
   auto SSP = std::make_shared<SymbolStringPool>();
   auto EPC =
       std::make_unique<EPCWithBootstrapSymbols>(SSP, std::move(BootstrapSyms));
   ExecutionSession ES(std::move(EPC));
 
-  auto Result = EPCGenericJITLinkMemoryManager::Create(ES, SNs);
+  auto Result = sps::createEPCGenericJITLinkMemoryManager(ES);
   EXPECT_THAT_EXPECTED(Result, Succeeded());
 
   cantFail(ES.endSession());

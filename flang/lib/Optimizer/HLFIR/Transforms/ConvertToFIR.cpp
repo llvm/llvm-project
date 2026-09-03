@@ -17,7 +17,6 @@
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -30,6 +29,10 @@ namespace hlfir {
 #define GEN_PASS_DEF_CONVERTHLFIRTOFIR
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
 } // namespace hlfir
+static llvm::cl::opt<bool> useFortranAssignOnly(
+    "use-fortran-assign-only",
+    llvm::cl::desc("Do not use _FortranAAssignSimple. Only _FortranAAssign"),
+    llvm::cl::init(false));
 
 using namespace mlir;
 
@@ -91,6 +94,26 @@ public:
       return fir::getBase(builder.createBox(loc, rhsExv));
     };
 
+    // Use the lightweight AssignSimple runtime for simple intrinsic type
+    // assignments (integer, real, complex, logical) with matching ranks,
+    // non-volatile, non-polymorphic, and non-CUDA. AssignSimple handles
+    // both contiguous (fast memmove) and non-contiguous (element-wise)
+    // cases at runtime, including aliasing detection and allocatable
+    // reallocation.
+    // Fall back to the full Assign runtime for derived types, polymorphic,
+    // rank mismatch (scalar-to-array broadcasting), volatile, or CUDA.
+    auto genSimpleOrAssign = [&](mlir::Value to, mlir::Value from) {
+      if (!useFortranAssignOnly && !lhs.isPolymorphic() &&
+          fir::isa_trivial(lhs.getFortranElementType()) &&
+          lhs.getRank() == rhs.getRank() &&
+          !fir::isa_volatile_type(lhs.getType()) &&
+          !cuf::getDataAttr(lhs.getDefiningOp())) {
+        fir::runtime::genAssignSimple(builder, loc, to, from);
+      } else {
+        fir::runtime::genAssign(builder, loc, to, from);
+      }
+    };
+
     if (assignOp.isAllocatableAssignment()) {
       // For trivial scalar allocatable assignments that are not polymorphic,
       // not character, not temporary, and not CUDA Fortran, inline the
@@ -146,7 +169,9 @@ public:
           // type after the assignment.
           fir::runtime::genAssignPolymorphic(builder, loc, to, from);
         } else {
-          fir::runtime::genAssign(builder, loc, to, from);
+          // For allocatables, whole-array assignments are always
+          // contiguous. Strided sections go through a different path.
+          genSimpleOrAssign(to, from);
         }
       }
     } else if (lhs.isArray() ||
@@ -170,10 +195,12 @@ public:
       // reference.
       auto toMutableBox = builder.createTemporary(loc, to.getType());
       fir::StoreOp::create(builder, loc, to, toMutableBox);
-      if (assignOp.isTemporaryLHS())
+      if (assignOp.isTemporaryLHS()) {
         fir::runtime::genAssignTemporary(builder, loc, toMutableBox, from);
-      else
-        fir::runtime::genAssign(builder, loc, toMutableBox, from);
+      } else {
+        // Non-allocatable array: contiguity is handled at runtime.
+        genSimpleOrAssign(toMutableBox, from);
+      }
     } else {
       // TODO: use the type specification to see if IsFinalizable is set,
       // or propagate IsFinalizable attribute from lowering.
@@ -365,23 +392,30 @@ public:
     if (mlir::isa<fir::BaseBoxType>(hlfirBaseType)) {
       fir::FirOpBuilder builder(rewriter, declareOp.getOperation());
       // Helper to generate the hlfir fir.box with the local lower bounds and
-      // type parameters.
+      // type parameters and OPTIONAL aspect.
+      const bool isOptional =
+          mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
+              .isOptional();
       auto genHlfirBox = [&]() -> mlir::Value {
         if (auto baseBoxType =
                 mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
           if (declareOp.getSkipRebox())
             return firBase;
           // Rebox so that lower bounds and attributes are correct.
-          if (baseBoxType.isAssumedRank())
+          if (baseBoxType.isAssumedRank()) {
             return fir::ReboxAssumedRankOp::create(
                 builder, loc, hlfirBaseType, firBase,
-                fir::LowerBoundModifierAttribute::SetToOnes);
+                fir::LowerBoundModifierAttribute::SetToOnes, isOptional);
+          }
           if (!fir::extractSequenceType(baseBoxType.getEleTy()) &&
               baseBoxType == hlfirBaseType)
             return firBase;
-          return fir::ReboxOp::create(builder, loc, hlfirBaseType, firBase,
-                                      declareOp.getShape(),
-                                      /*slice=*/mlir::Value{});
+          auto rebox = fir::ReboxOp::create(builder, loc, hlfirBaseType,
+                                            firBase, declareOp.getShape(),
+                                            /*slice=*/mlir::Value{});
+          if (isOptional)
+            rebox.setOptional(true);
+          return rebox.getResult();
         } else {
           llvm::SmallVector<mlir::Value> typeParams;
           auto maybeCharType = mlir::dyn_cast<fir::CharacterType>(
@@ -389,14 +423,16 @@ public:
           if (!maybeCharType || maybeCharType.hasDynamicLen())
             typeParams.append(declareOp.getTypeparams().begin(),
                               declareOp.getTypeparams().end());
-          return fir::EmboxOp::create(builder, loc, hlfirBaseType, firBase,
-                                      declareOp.getShape(),
-                                      /*slice=*/mlir::Value{}, typeParams);
+          auto embox = fir::EmboxOp::create(
+              builder, loc, hlfirBaseType, firBase, declareOp.getShape(),
+              /*slice=*/mlir::Value{}, typeParams);
+          if (isOptional)
+            embox.setOptional(true);
+          return embox.getResult();
         }
       };
-      if (!mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
-               .isOptional()) {
-        hlfirBase = genHlfirBox();
+      hlfirBase = genHlfirBox();
+      if (!isOptional) {
         // If the original base is a box too, we could as well
         // use the HLFIR box as the FIR base: otherwise, the two
         // boxes are "alive" at the same time, and the FIR box
@@ -406,26 +442,6 @@ public:
         // the representation a little bit more clear.
         if (hlfirBase.getType() == declareOp.getOriginalBase().getType())
           firBase = hlfirBase;
-      } else {
-        // Need to conditionally rebox/embox the optional: the input fir.box
-        // may be null and the rebox would be illegal. It is also important to
-        // preserve the optional aspect: the hlfir fir.box should be null if
-        // the entity is absent so that later fir.is_present on the hlfir base
-        // are valid.
-        mlir::Value isPresent = fir::IsPresentOp::create(
-            builder, loc, builder.getI1Type(), firBase);
-        hlfirBase =
-            builder
-                .genIfOp(loc, {hlfirBaseType}, isPresent,
-                         /*withElseRegion=*/true)
-                .genThen(
-                    [&] { fir::ResultOp::create(builder, loc, genHlfirBox()); })
-                .genElse([&]() {
-                  mlir::Value absent =
-                      fir::AbsentOp::create(builder, loc, hlfirBaseType);
-                  fir::ResultOp::create(builder, loc, absent);
-                })
-                .getResults()[0];
       }
     } else if (mlir::isa<fir::BoxCharType>(hlfirBaseType)) {
       assert(declareOp.getTypeparams().size() == 1 &&

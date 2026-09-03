@@ -11,8 +11,10 @@
 #include "../readability/ElseAfterReturnCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/QualifiedAutoCheck.h"
+#include "FormatvStringCheck.h"
 #include "HeaderGuardCheck.h"
 #include "IncludeOrderCheck.h"
+#include "InvalidRegexPatternCheck.h"
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
 #include "PreferRegisterOverUnsignedCheck.h"
 #include "PreferStaticOverAnonymousNamespaceCheck.h"
@@ -32,6 +34,7 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<readability::ElseAfterReturnCheck>(
         "llvm-else-after-return");
+    CheckFactories.registerCheck<FormatvStringCheck>("llvm-formatv-string");
     CheckFactories.registerCheck<LLVMHeaderGuardCheck>("llvm-header-guard");
     CheckFactories.registerCheck<IncludeOrderCheck>("llvm-include-order");
     CheckFactories.registerCheck<readability::NamespaceCommentCheck>(
@@ -46,6 +49,8 @@ public:
         "llvm-qualified-auto");
     CheckFactories.registerCheck<RedundantCastingCheck>(
         "llvm-redundant-casting");
+    CheckFactories.registerCheck<InvalidRegexPatternCheck>(
+        "llvm-invalid-regex-pattern");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
     CheckFactories.registerCheck<TypeSwitchCaseTypesCheck>(
         "llvm-type-switch-case-types");

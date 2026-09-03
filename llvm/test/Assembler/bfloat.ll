@@ -9,7 +9,7 @@ define bfloat @check_bfloat(bfloat %A) {
 }
 
 define bfloat @check_bfloat_literal() {
-; ASSEM-DISASS: ret bfloat 0xR3149
+; ASSEM-DISASS: ret bfloat 2.924930e-09
     ret bfloat 0xR3149
 }
 
@@ -27,36 +27,36 @@ define <vscale x 4 x bfloat> @check_vector() {
 
 define bfloat @check_bfloat_constprop() {
   %tmp = fadd bfloat 0xR40C0, 0xR40C0
-; OPT: 0xR4140
+; OPT: 1.200000e+01
   ret bfloat %tmp
 }
 
 define float @check_bfloat_convert() {
   %tmp = fpext bfloat 0xR4C8D to float
-; OPT: 0x4191A00000000000
+; OPT: f0x4C8D0000
   ret float %tmp
 }
 
 ; ASSEM-DISASS-LABEL @snan_bfloat
 define bfloat @snan_bfloat() {
-; ASSEM-DISASS: ret bfloat 0xR7F81
+; ASSEM-DISASS: ret bfloat +snan(0x1)
     ret bfloat 0xR7F81
 }
 
 ; ASSEM-DISASS-LABEL @qnan_bfloat
 define bfloat @qnan_bfloat() {
-; ASSEM-DISASS: ret bfloat 0xR7FC0
+; ASSEM-DISASS: ret bfloat +qnan
     ret bfloat 0xR7FC0
 }
 
 ; ASSEM-DISASS-LABEL @pos_inf_bfloat
 define bfloat @pos_inf_bfloat() {
-; ASSEM-DISASS: ret bfloat 0xR7F80
+; ASSEM-DISASS: ret bfloat +inf
     ret bfloat 0xR7F80
 }
 
 ; ASSEM-DISASS-LABEL @neg_inf_bfloat
 define bfloat @neg_inf_bfloat() {
-; ASSEM-DISASS: ret bfloat 0xRFF80
+; ASSEM-DISASS: ret bfloat -inf
     ret bfloat 0xRFF80
 }

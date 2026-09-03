@@ -91,9 +91,8 @@ class VPHierarchicalChildrenIterator
     return Current;
   }
 
-  /// Templated helper to dereference successor/predecessor \p EdgeIdx of \p
-  /// Block. Used by both the const and non-const operator* implementations.
-  template <typename T1> static T1 deref(T1 Block, unsigned EdgeIdx) {
+  /// Helper to dereference successor/predecessor \p EdgeIdx of \p Block.
+  static BlockPtrTy deref(BlockPtrTy Block, unsigned EdgeIdx) {
     if (auto *R = dyn_cast<VPRegionBlock>(Block)) {
       assert(EdgeIdx == 0);
       if constexpr (Forward)
@@ -129,9 +128,7 @@ public:
     return Block == R.Block && EdgeIdx == R.EdgeIdx;
   }
 
-  const VPBlockBase *operator*() const { return deref(Block, EdgeIdx); }
-
-  BlockPtrTy operator*() { return deref(Block, EdgeIdx); }
+  BlockPtrTy operator*() const { return deref(Block, EdgeIdx); }
 
   VPHierarchicalChildrenIterator &operator++() {
     EdgeIdx++;
@@ -259,18 +256,27 @@ vp_depth_first_shallow(const VPBlockBase *G) {
   return depth_first(VPBlockShallowTraversalWrapper<const VPBlockBase *>(G));
 }
 
-/// Returns an iterator range to traverse the graph starting at \p G in
-/// post order. The iterator won't traverse through region blocks.
-inline PostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
-vp_post_order_shallow(VPBlockBase *G) {
-  return post_order(VPBlockShallowTraversalWrapper<VPBlockBase *>(G));
-}
-
-/// Returns an iterator range to traverse the graph starting at \p G in
-/// post order while traversing through region blocks.
-inline PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>>
-vp_post_order_deep(VPBlockBase *G) {
-  return post_order(VPBlockDeepTraversalWrapper<VPBlockBase *>(G));
+/// Returns the VPBasicBlocks forming the loop body of a plain (pre-region)
+/// VPlan in reverse post-order starting from \p Header.
+inline SmallVector<VPBasicBlock *>
+vp_rpo_plain_cfg_loop_body(VPBasicBlock *Header) {
+  assert(!Header->getParent() && "Header must not be inside a region");
+  VPBlockBase *Middle = Header->getPredecessors()[1]->getSuccessors()[0];
+  SmallVector<VPBasicBlock *> Result;
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Header);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksAs<VPBasicBlock>(RPOT)) {
+    if (VPBB == Middle)
+      break;
+    // Skip exit blocks.
+    if (isa<VPIRBasicBlock>(VPBB)) {
+      assert(is_contained(Header->getPlan()->getExitBlocks(), VPBB) &&
+             "skipped VPIRBBs must be exit blocks");
+      continue;
+    }
+    Result.push_back(VPBB);
+  }
+  return Result;
 }
 
 /// Returns an iterator range to traverse the graph starting at \p G in
@@ -304,6 +310,8 @@ template <> struct GraphTraits<VPBlockBase *> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
+
+  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<const VPBlockBase *> {
@@ -319,6 +327,8 @@ template <> struct GraphTraits<const VPBlockBase *> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
+
+  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<Inverse<VPBlockBase *>> {
@@ -335,6 +345,8 @@ template <> struct GraphTraits<Inverse<VPBlockBase *>> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
+
+  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<VPlan *> {
@@ -353,6 +365,11 @@ template <> struct GraphTraits<VPlan *> {
     // matter.
     return nodes_iterator::end(N->getEntry());
   }
+
+  static unsigned getMaxNumber(GraphRef N) { return N->getMaxBlockNumber(); }
+
+  // Nodes are never renumbered.
+  static unsigned getNumberEpoch(GraphRef) { return 0; }
 };
 
 } // namespace llvm

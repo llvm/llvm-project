@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 @skipUnlessPlatform(["linux"] + lldbplatformutil.getDarwinOSTriples())
 class ModuleLoadedNotifysTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -111,7 +112,11 @@ class ModuleLoadedNotifysTestCase(TestBase):
                         # shared cache. Use the basename so this also works
                         # when reading dyld from the expanded shared cache.
                         exe_basename = lldb.SBFileSpec(exe).basename
-                        if module.file.basename not in ["dyld", exe_basename]:
+                        if module.file.basename not in [
+                            "dyld",
+                            "libsharedcache.dylib",
+                            exe_basename,
+                        ]:
                             self.assertNotIn(
                                 module,
                                 already_loaded_modules,

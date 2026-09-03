@@ -90,7 +90,7 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; ARM5:       @ %bb.0:
 ; ARM5-NEXT:    ldr r1, .LCPI1_0
 ; ARM5-NEXT:    mul r2, r0, r1
-; ARM5-NEXT:    bic r0, r2, #-134217727
+; ARM5-NEXT:    bic r0, r2, #134217728
 ; ARM5-NEXT:    lsr r0, r0, #1
 ; ARM5-NEXT:    orr r0, r0, r2, lsl #26
 ; ARM5-NEXT:    ldr r2, .LCPI1_1
@@ -333,11 +333,9 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; ARM5-NEXT:    mov r3, #171
 ; ARM5-NEXT:    orr r3, r3, #512
 ; ARM5-NEXT:    mul r12, r0, r3
-; ARM5-NEXT:    mov r0, #1020
-; ARM5-NEXT:    orr r0, r0, #1024
 ; ARM5-NEXT:    mov r3, #254
 ; ARM5-NEXT:    orr r3, r3, #1792
-; ARM5-NEXT:    and r0, r12, r0
+; ARM5-NEXT:    bic r0, r12, #2048
 ; ARM5-NEXT:    lsr r0, r0, #1
 ; ARM5-NEXT:    orr r0, r0, r12, lsl #10
 ; ARM5-NEXT:    sub r12, r1, #1

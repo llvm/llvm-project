@@ -14,6 +14,7 @@ include "mlir/IR/OpBase.td"
 
 def Arith_Dialect : Dialect {
   let name = "arith";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::arith";
   let description = [{
     The arith dialect is intended to hold basic integer and floating point
@@ -29,6 +30,13 @@ def Arith_Dialect : Dialect {
     Manipulating value with type `i0` isn't supported in this dialect at the
     moment and is considered invalid. This can change in the future if some
     motivating use-cases are presented.
+
+    Some floating-point operations may specify rounding modes and/or fast-math
+    flags. In the absence of an explicit rounding mode, the arith dialect uses
+    this default round mode for internal purposes such as constant folding and
+    canonicalization: round-to-nearest, ties-to-even. The runtime behavior of
+    operations without an explicit rounding mode is deferred to the target
+    backend and may differ from the default arith rounding mode.
   }];
 
   let hasConstantMaterializer = 1;
@@ -135,9 +143,7 @@ def FastMathFlags : I32BitEnumAttr<
 }
 
 def Arith_FastMathAttr :
-    EnumAttr<Arith_Dialect, FastMathFlags, "fastmath"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<Arith_Dialect, FastMathFlags, "fastmath">;
 
 //===----------------------------------------------------------------------===//
 // Arith_IntegerOverflowFlags
@@ -158,9 +164,7 @@ def Arith_IntegerOverflowFlags : I32BitEnumAttr<
 }
 
 def Arith_IntegerOverflowAttr :
-    EnumAttr<Arith_Dialect, Arith_IntegerOverflowFlags, "overflow"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<Arith_Dialect, Arith_IntegerOverflowFlags, "overflow">;
 
 //===----------------------------------------------------------------------===//
 // Arith_RoundingMode

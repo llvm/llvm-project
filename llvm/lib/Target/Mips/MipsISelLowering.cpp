@@ -72,7 +72,6 @@
 #include <cstdint>
 #include <deque>
 #include <iterator>
-#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -877,9 +876,10 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
   } else {
     // Pattern match DINS.
     //  $dst = or (and $src, mask0), mask1
-    //  where mask0 = ((1 << SMSize0) -1) << SMPos0
+    //  where mask0 = maskTrailingOnes<uint64_t>(SMSize0) << SMPos0
     //  => dins $dst, $src, pos, size
-    if (~CN->getSExtValue() == ((((int64_t)1 << SMSize0) - 1) << SMPos0) &&
+    uint64_t Mask = maskTrailingOnes<uint64_t>(SMSize0) << SMPos0;
+    if (~CN->getSExtValue() == (int64_t)Mask &&
         ((SMSize0 + SMPos0 <= 64 && Subtarget.hasMips64r2()) ||
          (SMSize0 + SMPos0 <= 32))) {
       // Check if AND instruction has constant as argument
@@ -2667,8 +2667,23 @@ SDValue MipsTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   // FIXME: Set SType for weaker fences where supported/appropriate.
   unsigned SType = 0;
   SDLoc DL(Op);
-  return DAG.getNode(MipsISD::Sync, DL, MVT::Other, Op.getOperand(0),
-                     DAG.getConstant(SType, DL, MVT::i32));
+  SyncScope::ID FenceSSID =
+      static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
+
+  if (Subtarget.hasMips2() && FenceSSID == SyncScope::System)
+    return DAG.getNode(MipsISD::Sync, DL, MVT::Other, Op.getOperand(0),
+                       DAG.getTargetConstant(SType, DL, MVT::i32));
+
+  // singlethread fences only synchronize with signal handlers on the same
+  // thread and thus only need to preserve instruction order, not actually
+  // enforce memory ordering.
+  if ((Subtarget.hasMips1() && !Subtarget.hasMips2()) ||
+      FenceSSID == SyncScope::SingleThread) {
+    // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+    return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
+  }
+
+  return Op;
 }
 
 SDValue MipsTargetLowering::lowerShiftLeftParts(SDValue Op,
@@ -3123,6 +3138,7 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
                                         ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
                                         CCState &State);
 
+#define GET_CALLING_CONV_IMPL
 #include "MipsGenCallingConv.inc"
 
  CCAssignFn *MipsTargetLowering::CCAssignFnForCall() const{
@@ -3858,7 +3874,7 @@ SDValue MipsTargetLowering::LowerFormalArguments(
 
       assert(!VA.needsCustom() && "unexpected custom memory argument");
 
-      // Only arguments pased on the stack should make it here. 
+      // Only arguments pased on the stack should make it here.
       assert(VA.isMemLoc());
 
       // The stack pointer offset is relative to the caller stack frame.
@@ -4172,7 +4188,7 @@ static std::pair<bool, bool> parsePhysicalReg(StringRef C, StringRef &Prefix,
 EVT MipsTargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
                                             ISD::NodeType) const {
   bool Cond = !Subtarget.isABI_O32() && VT.getSizeInBits() == 32;
-  EVT MinVT = getRegisterType(Cond ? MVT::i64 : MVT::i32);
+  EVT MinVT = getRegisterType(Context, Cond ? MVT::i64 : MVT::i32);
   return VT.bitsLT(MinVT) ? MinVT : VT;
 }
 
@@ -4646,8 +4662,8 @@ void MipsTargetLowering::passByValArg(
   SDValue Dst = DAG.getNode(ISD::ADD, DL, PtrTy, StackPtr,
                             DAG.getIntPtrConstant(VA.getLocMemOffset(), DL));
   Chain = DAG.getMemcpy(
-      Chain, DL, Dst, Src, DAG.getConstant(MemCpySize, DL, PtrTy),
-      Align(Alignment), /*isVolatile=*/false, /*AlwaysInline=*/false,
+      Chain, DL, Dst, Src, DAG.getConstant(MemCpySize, DL, PtrTy), Alignment,
+      Alignment, /*isVolatile=*/false, /*AlwaysInline=*/false,
       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
   MemOpChains.push_back(Chain);
 }
@@ -4966,29 +4982,44 @@ int MipsTargetLowering::getCPURegisterIndex(StringRef Name) const {
 Register
 MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                       const MachineFunction &MF) const {
-  // 1. Delete symbol '$'.
-  std::string newRegName = RegName;
-  if (StringRef(RegName).starts_with("$"))
-    newRegName = StringRef(RegName).substr(1);
+  StringRef Name(RegName);
+  Name.consume_front("$");
 
-  // 2. Get register index value.
-  std::smatch matchResult;
-  int regIdx;
-  static const std::regex matchStr("^[0-9]*$");
-  if (std::regex_match(newRegName, matchResult, matchStr))
-    regIdx = std::stoi(newRegName);
-  else {
-    newRegName = StringRef(newRegName).lower();
-    regIdx = getCPURegisterIndex(StringRef(newRegName));
+  unsigned RegIdx;
+  if (Name.getAsInteger(10, RegIdx)) {
+    std::string LowerName = Name.lower();
+    int NamedRegIdx = getCPURegisterIndex(LowerName);
+    if (NamedRegIdx < 0)
+      report_fatal_error(
+          Twine("Invalid register name \"" + StringRef(RegName) + "\"."));
+    RegIdx = NamedRegIdx;
   }
 
-  // 3. Get register.
-  if (regIdx >= 0 && regIdx < 32) {
+  if (RegIdx < 32) {
     const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
-    const MCRegisterClass &RC = Subtarget.isGP64bit()
-                                    ? MRI->getRegClass(Mips::GPR64RegClassID)
-                                    : MRI->getRegClass(Mips::GPR32RegClassID);
-    return RC.getRegister(regIdx);
+    unsigned RegClassID = Mips::GPR32RegClassID;
+    if (VT.isValid()) {
+      if (VT.getSizeInBits() == 64) {
+        if (!Subtarget.isGP64bit())
+          report_fatal_error("64-bit registers not supported on 32-bit target");
+        RegClassID = Mips::GPR64RegClassID;
+      } else if (VT.getSizeInBits() == 32) {
+        RegClassID = Mips::GPR32RegClassID;
+      } else {
+        report_fatal_error(Twine("Invalid register \"" + StringRef(RegName) +
+                                 "\" for " + Twine(VT.getSizeInBits()) +
+                                 "-bit type."));
+      }
+    } else if (Subtarget.isGP64bit()) {
+      RegClassID = Mips::GPR64RegClassID;
+    }
+    const MCRegisterClass &RC = MRI->getRegClass(RegClassID);
+    Register Reg = RC.getRegister(RegIdx);
+    BitVector ReservedRegs = Subtarget.getRegisterInfo()->getReservedRegs(MF);
+    if (!ReservedRegs.test(Reg))
+      reportFatalUsageError(Twine("Trying to obtain non-reserved register \"" +
+                                  StringRef(RegName) + "\"."));
+    return Reg;
   }
 
   report_fatal_error(

@@ -20,7 +20,11 @@ namespace llvm::sandboxir {
 #define DEF_INSTR(ID, OPC, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
 #define DEF_USER(ID, CLASS) class CLASS;
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
+#undef DEF_CONST
+#undef DEF_USER
 class Context;
 class FuncletPadInst;
 class Type;
@@ -72,7 +76,12 @@ public:
 #define DEF_USER(ID, CLASS) ID,
 #define DEF_CONST(ID, CLASS) ID,
 #define DEF_INSTR(ID, OPC, CLASS) ID,
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_VALUE
+#undef DEF_USER
+#undef DEF_CONST
+#undef DEF_INSTR
   };
 
 protected:
@@ -90,7 +99,12 @@ protected:
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   case ClassID::ID:                                                            \
     return #ID;
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_VALUE
+#undef DEF_USER
+#undef DEF_CONST
+#undef DEF_INSTR
     }
     llvm_unreachable("Unimplemented ID");
   }
@@ -177,6 +191,11 @@ protected:
   friend class ScoreBoard; // Needs access to `Val` for the instruction cost.
   friend class ConstantDataArray; // For `Val`
   friend class ConstantDataVector; // For `Val`
+
+#define DEF_INSTR(ID, OPC, CLASS) friend class CLASS;
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
 
   /// All values point to the context.
   Context &Ctx;

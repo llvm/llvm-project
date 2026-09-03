@@ -115,7 +115,9 @@ unsigned HexagonTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 32;
 }
 
-unsigned HexagonTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned
+HexagonTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                       bool HasUnorderedReductions) const {
   return useHVX() ? 2 : 1;
 }
 
@@ -174,6 +176,12 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                                 TTI::OperandValueInfo OpInfo,
                                                 const Instruction *I) const {
   assert(Opcode == Instruction::Load || Opcode == Instruction::Store);
+
+  // FIXME: Load latency isn't handled here
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
@@ -225,9 +233,9 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
 InstructionCost
 HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, ArrayRef<int> Mask,
-                               TTI::TargetCostKind CostKind, int Index,
-                               VectorType *SubTp, ArrayRef<const Value *> Args,
+                               VectorType *SrcTy, TTI::TargetCostKind CostKind,
+                               ArrayRef<int> Mask, int Index, VectorType *SubTp,
+                               ArrayRef<const Value *> Args,
                                const Instruction *CxtI) const {
   return 1;
 }

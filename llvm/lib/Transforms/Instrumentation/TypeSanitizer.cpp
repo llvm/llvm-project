@@ -900,9 +900,12 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
     if (!Src)
       Src = ConstantPointerNull::get(IRB.getPtrTy());
 
+    // The runtime function expects a uint64_t size parameter. On 32-bit
+    // targets, Size may be IntptrTy (i32), so extend it to match.
+    Value *Size64 = IRB.CreateZExtOrTrunc(Size, U64Ty);
     IRB.CreateCall(
         TysanIntrumentMemInst,
-        {Dest, Src, Size, NeedsMemMove ? IRB.getTrue() : IRB.getFalse()});
+        {Dest, Src, Size64, NeedsMemMove ? IRB.getTrue() : IRB.getFalse()});
     return true;
   } else {
     if (!ShadowBase)

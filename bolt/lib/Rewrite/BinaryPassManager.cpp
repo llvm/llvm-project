@@ -518,6 +518,11 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<Peepholes>(PrintPeepholes));
 
+  // Assign each function an output section before AlignerPass and LongJmpPass,
+  // so those passes can attribute per-section code alignment and tentative
+  // layout to the final .text / .text.cold sections.
+  Manager.registerPass(std::make_unique<AssignSections>());
+
   Manager.registerPass(std::make_unique<AlignerPass>());
 
   // Perform reordering on data contained in one or more sections using
@@ -527,6 +532,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // Patch original function entries
   if (BC.HasRelocations)
     Manager.registerPass(std::make_unique<PatchEntries>());
+
+  // Assign each function an output section.
+  Manager.registerPass(std::make_unique<AssignSections>());
 
   if (BC.isAArch64()) {
     Manager.registerPass(
@@ -554,9 +562,6 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(
       std::make_unique<RetpolineInsertion>(PrintRetpolineInsertion));
-
-  // Assign each function an output section.
-  Manager.registerPass(std::make_unique<AssignSections>());
 
   // This pass turns tail calls into jumps which makes them invisible to
   // function reordering. It's unsafe to use any CFG or instruction analysis

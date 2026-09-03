@@ -15,5 +15,7 @@ cir.func coroutine @missing_condition() {
       cir.yield
     },)
   }
+  cir.coro.body {
+  }
   cir.return
 }

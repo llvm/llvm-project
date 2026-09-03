@@ -6,7 +6,7 @@ define x86_fp80 @remquo_fp80(ptr %quo) {
 ; CHECK-SAME: ptr [[QUO:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store i32 -2, ptr [[QUO]], align 4
-; CHECK-NEXT:    ret x86_fp80 0xK3FFF8000000000000000
+; CHECK-NEXT:    ret x86_fp80 1.000000e+00
 ;
 entry:
   %call = call x86_fp80 @remquol(x86_fp80 0xKC001A000000000000000, x86_fp80 0xK4000C000000000000000, ptr %quo)

@@ -11,10 +11,15 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <chrono>
+#if LLDB_ENABLE_POSIX
+#include <cerrno>
+#include <csignal>
+#endif
 #if __linux__
 #include <lldb/Host/linux/AbstractSocket.h>
 #endif
@@ -80,12 +85,16 @@ TEST_F(SocketTest, DecodeHostAndPort) {
 TEST_F(SocketTest, CreatePair) {
   std::vector<std::optional<Socket::SocketProtocol>> functional_protocols = {
       std::nullopt,
-      Socket::ProtocolTcp,
-#if LLDB_ENABLE_POSIX
-      Socket::ProtocolUnixDomain,
-      Socket::ProtocolUnixAbstract,
-#endif
   };
+  if (HostSupportsIPv4() || HostSupportsIPv6())
+    functional_protocols.push_back(Socket::ProtocolTcp);
+#if LLDB_ENABLE_POSIX
+  if (HostSupportsDomainSockets()) {
+    functional_protocols.push_back(Socket::ProtocolUnixDomain);
+    functional_protocols.push_back(Socket::ProtocolUnixAbstract);
+  }
+#endif
+
   for (auto p : functional_protocols) {
     auto expected_socket_pair = Socket::CreatePair(p);
     ASSERT_THAT_EXPECTED(expected_socket_pair, llvm::Succeeded());
@@ -114,6 +123,9 @@ TEST_F(SocketTest, CreatePair) {
 
 #if LLDB_ENABLE_POSIX
 TEST_F(SocketTest, DomainListenConnectAccept) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   llvm::SmallString<64> Path;
   std::error_code EC =
       llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
@@ -130,6 +142,9 @@ TEST_F(SocketTest, DomainListenConnectAccept) {
 }
 
 TEST_F(SocketTest, DomainListenGetListeningConnectionURI) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   llvm::SmallString<64> Path;
   std::error_code EC =
       llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
@@ -146,12 +161,18 @@ TEST_F(SocketTest, DomainListenGetListeningConnectionURI) {
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   ASSERT_TRUE(listen_socket_up->IsValid());
 
-  ASSERT_THAT(
-      listen_socket_up->GetListeningConnectionURI(),
-      testing::ElementsAre(llvm::formatv("unix-connect://{0}", Path).str()));
+  std::string expected_uri =
+      llvm::formatv("unix-connect://{0}",
+                    DomainSocket::NativePathToURIPath(Path))
+          .str();
+  ASSERT_THAT(listen_socket_up->GetListeningConnectionURI(),
+              testing::ElementsAre(expected_uri));
 }
 
 TEST_F(SocketTest, DomainMainLoopAccept) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   llvm::SmallString<64> Path;
   std::error_code EC =
       llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
@@ -356,6 +377,9 @@ TEST_P(SocketTest, UDPGetConnectURI) {
 
 #if LLDB_ENABLE_POSIX
 TEST_F(SocketTest, DomainGetConnectURI) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   llvm::SmallString<64> domain_path;
   std::error_code EC = llvm::sys::fs::createUniqueDirectory(
       "DomainListenConnectAccept", domain_path);
@@ -371,13 +395,40 @@ TEST_F(SocketTest, DomainGetConnectURI) {
   CreateDomainConnectedSockets(domain_path, &socket_a_up, &socket_b_up);
 
   std::string uri(socket_a_up->GetRemoteConnectionURI());
-  EXPECT_EQ((URI{"unix-connect", "", std::nullopt, domain_path}),
+  std::string expected_path = DomainSocket::NativePathToURIPath(domain_path);
+  EXPECT_EQ((URI{"unix-connect", "", std::nullopt, expected_path}),
             URI::Parse(uri));
 
   EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");
 }
 
+TEST_F(SocketTest, DomainSocketPathURIConversion) {
+  // Paths that are already valid URI paths (no drive letter) are unchanged.
+  EXPECT_EQ(DomainSocket::NativePathToURIPath("/tmp/foo"), "/tmp/foo");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath("/tmp/foo"), "/tmp/foo");
+
+  // A Windows drive-letter path round-trips through the RFC 8089 "/C:/..."
+  // URI form.
+  EXPECT_EQ(DomainSocket::NativePathToURIPath("C:\\dir\\sock"), "/C:/dir/sock");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath("/C:/dir/sock"), "C:\\dir\\sock");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath(
+                DomainSocket::NativePathToURIPath("C:\\dir\\sock")),
+            "C:\\dir\\sock");
+
+  // A Windows UNC path round-trips by swapping backslashes for forward slashes.
+  EXPECT_EQ(DomainSocket::NativePathToURIPath("\\\\server\\share\\sock"),
+            "//server/share/sock");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath("//server/share/sock"),
+            "\\\\server\\share\\sock");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath(
+                DomainSocket::NativePathToURIPath("\\\\server\\share\\sock")),
+            "\\\\server\\share\\sock");
+}
+
 TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
+  if (!HostSupportsDomainSockets())
+    GTEST_SKIP() << "Domain sockets unavailable";
+
   // Generate a name for the domain socket.
   llvm::SmallString<64> name;
   std::error_code EC = llvm::sys::fs::createUniqueDirectory(
@@ -424,6 +475,34 @@ TEST_F(SocketTest, AbstractSocketFromBoundNativeSocket) {
                                           /*should_close=*/false);
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
   ASSERT_EQ(Socket::ProtocolUnixAbstract, sock->get()->GetSocketProtocol());
+}
+#endif
+
+#if LLDB_ENABLE_POSIX
+TEST_F(SocketTest, DontReceiveSIGPIPE) {
+  static volatile std::sig_atomic_t sigpipe_received;
+  sigpipe_received = 0;
+
+  struct sigaction new_action = {};
+  struct sigaction old_action = {};
+  new_action.sa_handler = [](int) { sigpipe_received = 1; };
+  sigemptyset(&new_action.sa_mask);
+  ASSERT_EQ(0, sigaction(SIGPIPE, &new_action, &old_action));
+  llvm::scope_exit restore_sigpipe(
+      [&] { sigaction(SIGPIPE, &old_action, nullptr); });
+
+  auto pair = Socket::CreatePair();
+  ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+  Socket &reader = *pair->first;
+  Socket &writer = *pair->second;
+
+  ASSERT_THAT_ERROR(reader.Close().takeError(), llvm::Succeeded());
+
+  size_t num_bytes = 1;
+  Status err = writer.Write("x", num_bytes);
+  EXPECT_TRUE(err.Fail());
+  EXPECT_EQ(EPIPE, static_cast<int>(err.GetError()));
+  EXPECT_EQ(0, sigpipe_received);
 }
 #endif
 

@@ -91,6 +91,9 @@ public:
             (IsIntentIn(sym) && !IsOptional(sym) &&
                 !sym.attrs().test(semantics::Attr::VALUE)));
   }
+  bool operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
+  }
 
   bool operator()(const ImpliedDoIndex &ido) const {
     return acImpliedDos_.find(ido.name) != acImpliedDos_.end() || !context_ ||
@@ -363,6 +366,9 @@ public:
         IsConstantExpr(x.upper(), context_) && (*this)(x.parent());
   }
   bool operator()(const DescriptorInquiry &) const { return false; }
+  bool operator()(const RankOneBoundElement &x) const {
+    return false;
+  } // unreachable
   template <typename T> bool operator()(const ArrayConstructor<T> &) const {
     return false;
   }
@@ -796,6 +802,10 @@ public:
     } else {
       return "non-constant descriptor inquiry not allowed for local object";
     }
+  }
+
+  Result operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
   }
 
   Result operator()(const TypeParamInquiry &inq) const {
@@ -1649,6 +1659,21 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // Expressions are copy-in, but not copy-out.
     return forCopyIn;
   }
+  if (forCopyOut) {
+    // F2023 8.5.10 C846/p2/p6: a nonpointer INTENT(IN) dummy and its
+    // subobjects may not be defined. Suppress copy-out when the actual
+    // argument is a subobject of a nonpointer INTENT(IN) dummy.
+    // Exception: a data-ref that goes through a pointer component defines the
+    // pointer's target, which is not a subobject of the dummy (F2023 9.4.2
+    // p5), so copy-out is still needed in that case.
+    if (const auto dataRef{ExtractDataRef(*actual)}) {
+      const Symbol &firstSym{dataRef->GetFirstSymbol()};
+      if (semantics::IsIntentIn(firstSym) && !IsPointer(firstSym) &&
+          !GetLastPointerSymbol(*dataRef)) {
+        return false;
+      }
+    }
+  }
   auto maybeContigActual{IsContiguous(*actual, fc)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
@@ -1781,6 +1806,9 @@ public:
   }
   Result operator()(const DescriptorInquiry &) const {
     return {}; // doesn't count as a use
+  }
+  Result operator()(const RankOneBoundElement &x) const {
+    return {}; // unreachable
   }
 
   template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {

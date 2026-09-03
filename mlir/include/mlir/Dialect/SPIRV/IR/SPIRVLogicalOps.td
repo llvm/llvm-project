@@ -48,6 +48,70 @@ class SPIRV_LogicalUnaryOp<string mnemonic, Type operandType,
 
 // -----
 
+def SPIRV_AnyOp : SPIRV_Op<"Any", [Pure]> {
+  let summary = "Result is true if any component of Vector is true.";
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    Vector must be a vector of Boolean type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.Any %vector : vector<4xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_VectorOf<SPIRV_Bool>:$vector
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let assemblyFormat = "$vector attr-dict `:` type($vector)";
+
+  let hasVerifier = 0;
+}
+
+// -----
+
+def SPIRV_AllOp : SPIRV_Op<"All", [Pure]> {
+  let summary = "Result is true if all components of Vector are true.";
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    Vector must be a vector of Boolean type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.All %vector : vector<4xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_VectorOf<SPIRV_Bool>:$vector
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let assemblyFormat = "$vector attr-dict `:` type($vector)";
+
+  let hasVerifier = 0;
+}
+
+// -----
+
 def SPIRV_FOrdEqualOp : SPIRV_LogicalBinaryOp<"FOrdEqual", SPIRV_Float, [Commutative]> {
   let summary = "Floating-point comparison for being ordered and equal.";
 
@@ -465,6 +529,28 @@ def SPIRV_IsNanOp : SPIRV_LogicalUnaryOp<"IsNan", SPIRV_Float, []> {
     ```mlir
     %2 = spirv.IsNan %0: f32
     %3 = spirv.IsNan %1: vector<4xf32>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_IsNormalOp : SPIRV_LogicalUnaryOp<"IsNormal", SPIRV_Float, []> {
+  let summary = "Result is true if x is an IEEE normal number, otherwise result is false";
+
+  let description = [{
+    Result Type must be a scalar or vector of Boolean type.
+
+    x must be a scalar or vector of floating-point type.  It must have the
+    same number of components as Result Type.
+
+    Results are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.IsNormal %0: f32
+    %3 = spirv.IsNormal %1: vector<4xf32>
     ```
   }];
 }

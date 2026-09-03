@@ -15,6 +15,7 @@
 #ifndef LLVM_OBJECTYAML_DWARFYAML_H
 #define LLVM_OBJECTYAML_DWARFYAML_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -189,8 +190,12 @@ struct LineTable {
   // For DWARF>=v5
   uint8_t DirectoryEntryFormatCount;
   std::vector<LnctForm> DirectoryEntryFormat;
+  uint64_t DirectoriesCount;
+  std::vector<std::vector<FormValue>> Directories;
   uint8_t FileNameEntryFormatCount;
   std::vector<LnctForm> FileNameEntryFormat;
+  uint64_t FileNamesCount;
+  std::vector<std::vector<FormValue>> FileNames;
 
   std::vector<LineTableOpcode> Opcodes;
 };
@@ -284,7 +289,9 @@ struct Data {
   LLVM_ABI StringRef getAbbrevTableContentByIndex(uint64_t Index) const;
 
 private:
-  mutable std::unordered_map<uint64_t, AbbrevTableInfo> AbbrevTableInfoMap;
+  mutable DenseMap<uint64_t, AbbrevTableInfo> AbbrevTableInfoMap;
+  // getAbbrevTableContentByIndex returns StringRefs into the values. DenseMap
+  // cannot be used.
   mutable std::unordered_map<uint64_t, std::string> AbbrevTableContents;
 };
 
@@ -301,6 +308,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Ranges)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::PubEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Unit)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::FormValue)
+LLVM_YAML_IS_SEQUENCE_VECTOR(std::vector<llvm::DWARFYAML::FormValue>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Entry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::File)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LnctForm)

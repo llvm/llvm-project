@@ -84,9 +84,6 @@ namespace cwg506 { // cwg506: 2.7
   // since-cxx11-error@-2 {{cannot pass object of non-trivial type 'NonPod' through variadic function; call will abort at runtime}}
 } // namespace cwg506
 
-// FIXME: Add tests here once CWG260 is resolved.
-// cwg507: dup 260
-
 // cwg508: na
 // cwg509: na
 // cwg510: na
@@ -475,7 +472,7 @@ namespace cwg535 { // cwg535: 3.1
 // cwg538: na
 
 namespace cwg539 { // cwg539: 3.4
-const f(const a) {
+const cwg539_f(const a) {
 // expected-error@-1 {{unknown type name 'a'}}
 // expected-error@-2 {{a type specifier is required for all declarations}}
   const b;
@@ -682,8 +679,8 @@ namespace cwg553 {
   // "is looked up in global scope", where it is not visible.
   void *p = new (c) int;
   // expected-error@-1 {{no matching function for call to 'operator new'}}
-  //   since-cxx17-note@#cwg5xx-global-operator-new-aligned {{candidate function not viable: no known conversion from 'cwg553_class' to 'std::align_val_t' for 2nd argument}}
   //   expected-note@#cwg5xx-global-operator-new {{candidate function not viable: requires 1 argument, but 2 were provided}}
+  //   since-cxx17-note@#cwg5xx-global-operator-new-aligned {{candidate function not viable: requires 2 arguments, but 3 were provided}}
 
   struct namespace_scope {
     friend void *operator new(size_t, namespace_scope);
@@ -962,12 +959,12 @@ namespace cwg574 { // cwg574: 3.0
 #elif __cplusplus >= 201103L
     // FIXME: We shouldn't produce the 'cannot overload' diagnostics here.
     friend C &C::operator=(const C&); // #cwg574-test-C
-    // since-cxx11-error@#cwg574-test-C {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&'}}
+    // since-cxx11-error@#cwg574-test-C {{cannot overload a member function with ref-qualifier '&' with a member function without a ref-qualifier}}
     //   since-cxx11-note@#cwg574-C-copy-assign {{previous declaration is here}}
     // since-cxx11-error@#cwg574-test-C {{friend declaration of 'operator=' does not match any declaration in 'cwg574::C'}}
     //   since-cxx11-note@#cwg574-C-copy-assign {{candidate function}}
     friend D &D::operator=(const D&); // #cwg574-test-D
-    // since-cxx11-error@#cwg574-test-D {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&&'}}
+    // since-cxx11-error@#cwg574-test-D {{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
     //   since-cxx11-note@#cwg574-D-copy-assign {{previous declaration is here}}
     // since-cxx11-error@#cwg574-test-D {{friend declaration of 'operator=' does not match any declaration in 'cwg574::D'}}
     //   since-cxx11-note@#cwg574-D-copy-assign {{candidate function}}

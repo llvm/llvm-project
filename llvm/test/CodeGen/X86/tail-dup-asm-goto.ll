@@ -36,7 +36,7 @@ define ptr @test1(ptr %arg1, ptr %arg2) {
   ; CHECK-NEXT:   successors: %bb.5(0x80000000), %bb.4(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr64 = PHI [[COPY]], %bb.2, [[MOV64rm]], %bb.1
-  ; CHECK-NEXT:   INLINEASM_BR &"#$0 $1 $2", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42, 13 /* imm */, 0, 13 /* imm */, %bb.4, 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
+  ; CHECK-NEXT:   INLINEASM_BR &"#$0 $1 $2", sideeffect mayload attdialect, imm, 42, imm, 0, imm, %bb.4, clobber, implicit-def early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def early-clobber $eflags
   ; CHECK-NEXT:   JMP_1 %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.bb17.i.i.i (inlineasm-br-indirect-target):
@@ -109,7 +109,7 @@ define void @ceph_con_v2_try_read(i32 %__trans_tmp_3.sroa.0.0.copyload, i1 %tobo
   ; CHECK-NEXT: bb.3.if.else.i.i:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"", 1 /* sideeffect attdialect */, 13 /* imm */, %bb.5
+  ; CHECK-NEXT:   INLINEASM_BR &"", sideeffect attdialect, imm, %bb.5
   ; CHECK-NEXT:   JMP_1 %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.process_message_header.exit.i:

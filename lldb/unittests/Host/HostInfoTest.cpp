@@ -132,3 +132,11 @@ TEST_F(HostInfoTest, FindComponentInPath) {
   EXPECT_EQ("", HostInfoTester::FindComponentInPath("/path/to/foo", "bar"));
 }
 #endif
+
+#if defined(__linux__) && defined(__aarch64__)
+TEST_F(HostInfoTest, Arm32OnAArch64Compatibility) {
+  ArchSpec host_spec = HostInfo::GetArchitecture(HostInfo::eArchKind32);
+  ArchSpec target_spec("arm--linux-eabihf");
+  EXPECT_TRUE(target_spec.IsCompatibleMatch(host_spec));
+}
+#endif

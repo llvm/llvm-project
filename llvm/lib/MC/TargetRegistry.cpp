@@ -16,7 +16,6 @@
 #include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
@@ -29,8 +28,17 @@ bool Target::isValidFeatureListFormat(StringRef Features) {
   if (Features.empty())
     return true;
 
-  static const llvm::Regex pattern("^([+-][^,]+)(,[+-][^,]+)*,?$");
-  return pattern.match(Features);
+  // Each feature starts with '+'/'-' followed by at least one non-comma
+  // character. Features are comma-separated with an optional trailing comma.
+  for (size_t I = 0, E = Features.size(); I != E; ++I) {
+    if (I == 0 || Features[I - 1] == ',') {
+      // At the start of a feature: must have a sign and a non-empty name.
+      if ((Features[I] != '+' && Features[I] != '-') ||
+          I + 1 == Features.size() || Features[I + 1] == ',')
+        return false;
+    }
+  }
+  return true;
 }
 
 MCStreamer *Target::createMCObjectStreamer(
@@ -42,8 +50,7 @@ MCStreamer *Target::createMCObjectStreamer(
   case Triple::UnknownObjectFormat:
     llvm_unreachable("Unknown object format");
   case Triple::COFF:
-    assert((T.isOSWindows() || T.isUEFI()) &&
-           "only Windows and UEFI COFF are supported");
+    assert(T.isOSWindowsOrUEFI() && "only Windows and UEFI COFF are supported");
     S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
                            std::move(Emitter));
     break;

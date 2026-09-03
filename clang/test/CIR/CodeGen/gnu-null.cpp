@@ -10,15 +10,15 @@ void gnu_null_expr() {
   int *b = __null;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s64i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s64i
 // CIR: cir.store {{.*}} %[[CONST_0]], %[[A_ADDR]] : !s64i, !cir.ptr<!s64i>
 // CIR: %[[CONST_NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
 // CIR: cir.store {{.*}} %[[CONST_NULL]], %[[B_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[B_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca ptr, align 8
 // LLVM: store i64 0, ptr %[[A_ADDR]], align 8
 // LLVM: store ptr null, ptr %[[B_ADDR]], align 8
 

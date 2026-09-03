@@ -21,6 +21,30 @@ types:
 enums: []
 objects: []
 functions:
+  - name: cabs
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: _Complex double
+  - name: cabsf
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: _Complex float
+  - name: carg
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: _Complex double
+  - name: cargf
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: _Complex float
   - name: cimag
     standards:
       - stdc

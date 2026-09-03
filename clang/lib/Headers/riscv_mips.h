@@ -14,6 +14,8 @@
 #error "This header is only meant to be used on riscv architecture"
 #endif
 
+#define __riscv_intrinsic_xmipsexectl 1
+
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("xmipsexectl")))
 

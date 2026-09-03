@@ -30,7 +30,10 @@ namespace presburger {
 /// represents a valid IntegerSet.
 inline IntegerPolyhedron parseIntegerPolyhedron(StringRef str) {
   MLIRContext context(MLIRContext::Threading::DISABLED);
-  return affine::FlatAffineValueConstraints(parseIntegerSet(str, &context));
+  FailureOr<affine::FlatAffineValueConstraints> cst =
+      affine::FlatAffineValueConstraints::create(parseIntegerSet(str, &context));
+  assert(succeeded(cst) && "expected a valid IntegerSet");
+  return *cst;
 }
 
 /// Parse a list of StringRefs to IntegerRelation and combine them into a

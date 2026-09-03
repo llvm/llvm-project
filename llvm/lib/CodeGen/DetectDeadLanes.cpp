@@ -264,7 +264,7 @@ LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(Register Reg) {
     return LaneBitmask::getAll();
 
   const MachineOperand &Def = *MRI->def_begin(Reg);
-  const MachineInstr &DefMI = *Def.getParent();
+  const MachineInstr &DefMI = *MRI->getVRegDef(Reg);
   if (lowersToCopies(DefMI)) {
     // Start optimisatically with no used or defined lanes for copy
     // instructions. The following dataflow analysis will add more bits.
@@ -297,8 +297,7 @@ LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(Register Reg) {
       } else {
         assert(MOReg.isVirtual());
         if (MRI->hasOneDef(MOReg)) {
-          const MachineOperand &MODef = *MRI->def_begin(MOReg);
-          const MachineInstr &MODefMI = *MODef.getParent();
+          const MachineInstr &MODefMI = *MRI->getVRegDef(MOReg);
           // Bits from copy-like operations will be added later.
           if (lowersToCopies(MODefMI) || MODefMI.isImplicitDef())
             continue;
@@ -382,8 +381,8 @@ private:
   bool isUndefRegAtInput(const MachineOperand &MO,
                          const DeadLaneDetector::VRegInfo &RegInfo) const;
 
-  bool isUndefInput(const DeadLaneDetector &DLD, const MachineOperand &MO,
-                    bool *CrossCopy) const;
+  bool isUndefInput(const DeadLaneDetector &DLD, const MachineInstr &MI,
+                    const MachineOperand &MO, bool *CrossCopy) const;
 
   const MachineRegisterInfo *MRI = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -421,11 +420,11 @@ bool DetectDeadLanes::isUndefRegAtInput(
 }
 
 bool DetectDeadLanes::isUndefInput(const DeadLaneDetector &DLD,
+                                   const MachineInstr &MI,
                                    const MachineOperand &MO,
                                    bool *CrossCopy) const {
   if (!MO.isUse())
     return false;
-  const MachineInstr &MI = *MO.getParent();
   if (!lowersToCopies(MI))
     return false;
   const MachineOperand &Def = MI.getOperand(0);
@@ -470,8 +469,7 @@ void DeadLaneDetector::computeSubRegisterLaneBitInfo() {
     Register Reg = Register::index2VirtReg(RegIdx);
 
     // Transfer UsedLanes to operands of DefMI (backwards dataflow).
-    MachineOperand &Def = *MRI->def_begin(Reg);
-    const MachineInstr &MI = *Def.getParent();
+    const MachineInstr &MI = *MRI->getVRegDef(Reg);
     transferUsedLanesStep(MI, Info.UsedLanes);
     // Transfer DefinedLanes to users of Reg (forward dataflow).
     for (const MachineOperand &MO : MRI->use_nodbg_operands(Reg))
@@ -520,7 +518,7 @@ DetectDeadLanes::modifySubRegisterOperandStatus(const DeadLaneDetector &DLD,
                        << "Marking operand '" << MO << "' as undef in " << MI);
             MO.setIsUndef();
             Changed = true;
-          } else if (isUndefInput(DLD, MO, &CrossCopy)) {
+          } else if (isUndefInput(DLD, MI, MO, &CrossCopy)) {
             LLVM_DEBUG(dbgs()
                        << "Marking operand '" << MO << "' as undef in " << MI);
             MO.setIsUndef();

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI9
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=VI9
+// RUN: llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck %s --check-prefix=VI9
+// RUN: llvm-mc -triple=amdgpu9.00 -show-encoding %s | FileCheck %s --check-prefix=VI9
 
 zero = 0
 two = 2

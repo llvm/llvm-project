@@ -17,7 +17,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UUID.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/HTTP/HTTPClient.h"
 #include "llvm/HTTP/StreamedHTTPResponseHandler.h"
 #include "llvm/Support/Caching.h"
@@ -26,6 +28,9 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <memory>
+#include <mutex>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -58,6 +63,40 @@ public:
     m_collection_sp->GetPropertyAtIndexAsArgs(ePropertySymStoreURLs, urls);
     return urls;
   }
+
+  std::string GetCachePath() const {
+    OptionValueString *s =
+        m_collection_sp->GetPropertyAtIndexAsOptionValueString(
+            ePropertyCachePath);
+    if (s && !s->GetCurrentValueAsRef().empty())
+      return s->GetCurrentValue();
+    return SymbolLocatorSymStore::GetSystemDefaultCachePath();
+  }
+
+  uint64_t GetTimeout() const {
+    const uint32_t idx = ePropertyTimeout;
+    return GetPropertyAtIndexAs<uint64_t>(
+        idx, g_symbollocatorsymstore_properties[idx].default_uint_value);
+  }
+
+  std::optional<std::string> GetTLSCertFingerprint() const {
+    OptionValueString *s =
+        m_collection_sp->GetPropertyAtIndexAsOptionValueString(
+            ePropertyTLSCertFingerprint);
+    if (!s)
+      return {};
+    llvm::StringRef val = s->GetCurrentValueAsRef();
+    if (val.empty())
+      return {};
+    if (val.size() != 64 || !llvm::all_of(val, llvm::isHexDigit)) {
+      Debugger::ReportWarning(llvm::formatv(
+          "plugin.symbol-locator.symstore.tls-cert-fingerprint: expected a "
+          "64-character hex string (SHA-256), but got '{0}', ignoring",
+          val));
+      return {};
+    }
+    return val.lower();
+  }
 };
 
 } // namespace
@@ -75,6 +114,13 @@ void SymbolLocatorSymStore::Initialize() {
       nullptr, LocateExecutableSymbolFile, nullptr, nullptr,
       SymbolLocatorSymStore::DebuggerInitialize);
   llvm::HTTPClient::initialize();
+
+  std::string default_cache = GetSystemDefaultCachePath();
+  if (std::error_code ec = llvm::sys::fs::create_directories(default_cache)) {
+    Debugger::ReportWarning(llvm::formatv(
+        "default SymStore cache directory '{0}' is not accessible: {1}",
+        default_cache, ec.message()));
+  }
 }
 
 void SymbolLocatorSymStore::DebuggerInitialize(Debugger &debugger) {
@@ -102,6 +148,79 @@ SymbolLocator *SymbolLocatorSymStore::CreateInstance() {
 }
 
 namespace {
+
+SymbolLocatorSymStore::LookupEntry MakeLookupEntry(llvm::StringRef source) {
+  SymbolLocatorSymStore::LookupEntry entry;
+  entry.source = source.str();
+  entry.cache = std::nullopt;
+  return entry;
+}
+
+SymbolLocatorSymStore::LookupEntry MakeLookupEntry(llvm::StringRef source,
+                                                   llvm::StringRef cache) {
+  SymbolLocatorSymStore::LookupEntry entry;
+  entry.source = source.str();
+  entry.cache = cache.str();
+  return entry;
+}
+
+std::vector<SymbolLocatorSymStore::LookupEntry> GetGlobalLookupOrder() {
+  std::vector<SymbolLocatorSymStore::LookupEntry> result;
+
+  const char *sym_path = std::getenv("_NT_SYMBOL_PATH");
+  for (auto entry : SymbolLocatorSymStore::ParseEnvSymbolPaths(sym_path))
+    result.push_back(std::move(entry));
+
+  const char *alt_path = std::getenv("_NT_ALT_SYMBOL_PATH");
+  for (auto entry : SymbolLocatorSymStore::ParseEnvSymbolPaths(alt_path))
+    result.push_back(std::move(entry));
+
+  for (const auto &url : GetGlobalPluginProperties().GetURLs())
+    result.push_back(MakeLookupEntry(url.ref()));
+
+  return result;
+}
+
+std::optional<SymbolLocatorSymStore::LookupEntry>
+ParseSrvEntry(llvm::StringRef entry) {
+  llvm::SmallVector<llvm::StringRef, 4> parts;
+  entry.trim().split(parts, '*');
+
+  // Format is: srv*[LocalCache*]SymbolStore
+  switch (parts.size()) {
+  case 2:
+    return MakeLookupEntry(parts[1]);
+  case 3: {
+    // Fall back to the configured default cache for empty values.
+    if (parts[1].empty())
+      return MakeLookupEntry(parts[2],
+                             GetGlobalPluginProperties().GetCachePath());
+    return MakeLookupEntry(parts[2], parts[1]);
+  }
+  default:
+    return {}; // Ignore entries with invalid number of parts.
+  }
+}
+
+std::optional<std::string> ParseCacheEntry(llvm::StringRef entry) {
+  llvm::SmallVector<llvm::StringRef, 2> parts;
+  entry.trim().split(parts, '*');
+
+  // Ignore entries with invalid number of parts.
+  if (parts.size() > 2)
+    return {};
+
+  // Empty cache* deliberatly specifies the default cache path.
+  llvm::StringRef value;
+  if (parts.size() == 2)
+    value = parts.back();
+
+  // Fall back to LLDB's default cache for empty values.
+  if (value.empty())
+    return GetGlobalPluginProperties().GetCachePath();
+
+  return value.str();
+}
 
 // RSDS entries store identity as a 20-byte UUID composed of 16-byte GUID and
 // 4-byte age:
@@ -133,8 +252,6 @@ bool HasUnsafeCharacters(llvm::StringRef s) {
   return s == "." || s == "..";
 }
 
-// TODO: This is a dumb initial implementation: It always downloads the file and
-// doesn't validate the result.
 std::optional<FileSpec>
 RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
                                   llvm::StringRef pdb_name) {
@@ -149,28 +266,38 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
     return {};
   }
 
-  // Download into a temporary file. Cache coming soon.
-  llvm::SmallString<128> tmp_file;
-  std::string tmp_file_name =
-      llvm::formatv("lldb_symstore_{0}_{1}", key, pdb_name);
-  constexpr bool erase_on_reboot = true;
-  path::system_temp_directory(erase_on_reboot, tmp_file);
-  path::append(tmp_file, tmp_file_name);
-
-  // Server has SymStore directory structure with forward slashes as separators.
-  std::string source_url =
-      llvm::formatv("{0}/{1}/{2}/{1}", base_url, pdb_name, key);
-
   if (!llvm::HTTPClient::isAvailable()) {
     Debugger::ReportWarning(
         "HTTP client is not available for SymStore download");
     return {};
   }
 
+  // Download into a temporary file. The name must be unique: lookups for the
+  // same file can be in flight concurrently.
+  llvm::SmallString<128> tmp_model;
+  constexpr bool erase_on_reboot = true;
+  path::system_temp_directory(erase_on_reboot, tmp_model);
+  path::append(tmp_model,
+               llvm::formatv("lldb_symstore_{0}_{1}.%%%%%%", key, pdb_name));
+
+  llvm::SmallString<128> tmp_file;
+  if (std::error_code ec = fs::createUniqueFile(tmp_model, tmp_file)) {
+    Debugger::ReportWarning(llvm::formatv(
+        "failed to create a temporary file to download '{0}' into: {1}",
+        pdb_name, ec.message()));
+    return {};
+  }
+
+  // Clean up the temporary file unless we hand it off to the caller.
+  llvm::scope_exit remove_tmp_file([&] { fs::remove(tmp_file.str()); });
+
+  // Server has SymStore directory structure with forward slashes as separators.
+  std::string source_url =
+      llvm::formatv("{0}/{1}/{2}/{1}", base_url, pdb_name, key);
+
   llvm::HTTPClient client;
-  // TODO: Since PDBs can be huge, we should distinguish between resolve,
-  // connect, send and receive.
-  client.setTimeout(std::chrono::seconds(60));
+  client.setTimeout(
+      std::chrono::seconds(GetGlobalPluginProperties().GetTimeout()));
 
   llvm::StreamedHTTPResponseHandler Handler(
       [dest = tmp_file.str().str()]()
@@ -184,6 +311,8 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
       client);
 
   llvm::HTTPRequest request(source_url);
+  request.PinnedCertFingerprint =
+      GetGlobalPluginProperties().GetTLSCertFingerprint();
   if (llvm::Error Err = client.perform(request, Handler)) {
     Debugger::ReportWarning(
         llvm::formatv("failed to download from SymStore '{0}': {1}", source_url,
@@ -199,10 +328,11 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
 
   unsigned responseCode = client.responseCode();
   switch (responseCode) {
+  case 200:
+    remove_tmp_file.release();
+    return FileSpec(tmp_file.str()); // success
   case 404:
     return {}; // file not found
-  case 200:
-    return FileSpec(tmp_file.str()); // success
   default:
     Debugger::ReportWarning(llvm::formatv(
         "failed to download from SymStore '{0}': response code {1}", source_url,
@@ -223,16 +353,176 @@ std::optional<FileSpec> FindFileInLocalSymStore(llvm::StringRef root_dir,
   return spec;
 }
 
-std::optional<FileSpec> LocateSymStoreEntry(llvm::StringRef base_url,
+/// Synchronizes lookups that resolve to the same cache entry. Lookups for
+/// different entries never contend. The map is proportional to the number of
+/// lookups in flight, not the number of symbols resolved.
+class DownloadLock {
+public:
+  DownloadLock(llvm::StringRef cache, llvm::StringRef key,
+               llvm::StringRef pdb_name)
+      : m_key(llvm::formatv("{0}/{1}/{2}", cache, key, pdb_name)) {
+    {
+      std::lock_guard<std::mutex> guard(GetMapMutex());
+      std::shared_ptr<Entry> &entry = GetMap()[m_key];
+      if (!entry)
+        entry = std::make_shared<Entry>();
+      m_entry = entry;
+    }
+    m_entry->mutex.lock();
+  }
+
+  ~DownloadLock() {
+    m_entry->mutex.unlock();
+    std::lock_guard<std::mutex> guard(GetMapMutex());
+    m_entry.reset();
+    auto it = GetMap().find(m_key);
+    if (it != GetMap().end() && it->second.use_count() == 1)
+      GetMap().erase(it);
+  }
+
+  DownloadLock(const DownloadLock &) = delete;
+  DownloadLock &operator=(const DownloadLock &) = delete;
+
+private:
+  struct Entry {
+    std::mutex mutex;
+  };
+
+  static std::mutex &GetMapMutex() {
+    static std::mutex g_mutex;
+    return g_mutex;
+  }
+
+  static llvm::StringMap<std::shared_ptr<Entry>> &GetMap() {
+    static llvm::StringMap<std::shared_ptr<Entry>> g_map;
+    return g_map;
+  }
+
+  std::string m_key;
+  std::shared_ptr<Entry> m_entry;
+};
+
+std::optional<FileSpec> MoveToLocalSymStore(llvm::StringRef cache,
                                             llvm::StringRef key,
-                                            llvm::StringRef pdb_name) {
-  if (base_url.starts_with("http://") || base_url.starts_with("https://"))
-    return RequestFileFromSymStoreServerHTTP(base_url, key, pdb_name);
+                                            llvm::StringRef pdb_name,
+                                            FileSpec tmp_file) {
+  // Caches have SymStore directory structure: cache/pdb_name/key/pdb_name
+  llvm::SmallString<256> dest_dir;
+  llvm::sys::path::append(dest_dir, cache, pdb_name, key);
+  if (std::error_code ec = llvm::sys::fs::create_directories(dest_dir)) {
+    Debugger::ReportWarning(
+        llvm::formatv("failed to create SymStore cache directory '{0}': {1}",
+                      dest_dir, ec.message()));
+    return {};
+  }
 
-  if (base_url.starts_with("file://"))
-    base_url = base_url.drop_front(7);
+  llvm::SmallString<256> dest;
+  llvm::sys::path::append(dest, dest_dir, pdb_name);
+  std::error_code ec = llvm::sys::fs::rename(tmp_file.GetPath(), dest);
 
-  return FindFileInLocalSymStore(base_url, key, pdb_name);
+  // Fall back to copy+delete if we move to a different volume. Copy next to
+  // the destination and rename, so a concurrent lookup never observes a
+  // partially written file at the cache location.
+  if (ec == std::errc::cross_device_link) {
+    llvm::SmallString<256> staged;
+    if ((ec = llvm::sys::fs::createUniqueFile(dest + ".%%%%%%", staged))) {
+      Debugger::ReportWarning(llvm::formatv(
+          "failed to create a temporary file in SymStore cache '{0}': {1}",
+          dest_dir, ec.message()));
+      return {};
+    }
+    llvm::scope_exit remove_staged([&] { llvm::sys::fs::remove(staged); });
+    if (!(ec = llvm::sys::fs::copy_file(tmp_file.GetPath(), staged)) &&
+        !(ec = llvm::sys::fs::rename(staged, dest))) {
+      remove_staged.release();
+      llvm::sys::fs::remove(tmp_file.GetPath());
+    }
+  }
+  if (ec) {
+    Debugger::ReportWarning(
+        llvm::formatv("failed to move '{0}' to SymStore cache '{1}': {2}",
+                      tmp_file.GetPath(), dest, ec.message()));
+    return {};
+  }
+
+  return FileSpec(dest.str());
+}
+
+std::string SelectSymStoreCache(std::optional<std::string> sympath_cache) {
+  llvm::SmallVector<std::string, 2> candidates;
+
+  // Prefer user cache from symbol path.
+  if (sympath_cache) {
+    assert(!sympath_cache->empty() && "Empty entries resolve to default cache");
+    candidates.push_back(*sympath_cache);
+  }
+
+  // Fallback to configured cache from settings.
+  candidates.push_back(GetGlobalPluginProperties().GetCachePath());
+
+  Log *log = GetLog(LLDBLog::Symbols);
+  for (const auto &path : candidates) {
+    if (llvm::sys::fs::is_directory(path))
+      return path;
+    if (std::error_code ec = llvm::sys::fs::create_directories(path)) {
+      LLDB_LOG(log, "Ignoring invalid SymStore cache directory '{0}': {1}",
+               path, ec.message());
+      continue;
+    }
+    return path;
+  }
+
+  // Last resort is the system default location.
+  return SymbolLocatorSymStore::GetSystemDefaultCachePath();
+}
+
+std::optional<FileSpec>
+LocateSymStoreEntry(const SymbolLocatorSymStore::LookupEntry &entry,
+                    llvm::StringRef key, llvm::StringRef pdb_name) {
+  Log *log = GetLog(LLDBLog::Symbols);
+  llvm::StringRef url = entry.source;
+  if (url.starts_with("http://") || url.starts_with("https://")) {
+    std::string cache_path = SelectSymStoreCache(entry.cache);
+
+    // Held across the cache check as well as the download, so that a thread
+    // that loses the race observes the winner's result instead of fetching
+    // the same symbol a second time.
+    DownloadLock lock(cache_path, key, pdb_name);
+
+    // Check cache first.
+    if (auto spec = FindFileInLocalSymStore(cache_path, key, pdb_name)) {
+      LLDB_LOG(log, "Found {0} in SymStore cache {1}", pdb_name, cache_path);
+      return *spec;
+    }
+
+    // Download and move to cache.
+    if (auto tmp_file = RequestFileFromSymStoreServerHTTP(url, key, pdb_name)) {
+      LLDB_LOG(log, "Downloaded {0} from SymStore {1}", pdb_name, url);
+      auto spec = MoveToLocalSymStore(cache_path, key, pdb_name, *tmp_file);
+      if (!spec) {
+        // Try the fallback and eventually rather cancel than loading the tmp
+        // file, since it might disappear or get overwritten.
+        cache_path = SymbolLocatorSymStore::GetSystemDefaultCachePath();
+        spec = MoveToLocalSymStore(cache_path, key, pdb_name, *tmp_file);
+        if (!spec)
+          return {};
+      }
+      LLDB_LOG(log, "Added {0} to SymStore cache {1}", pdb_name, cache_path);
+      return *spec;
+    }
+
+    return {};
+  }
+
+  llvm::StringRef file = entry.source;
+  if (file.starts_with("file://"))
+    file = file.drop_front(7);
+  if (auto spec = FindFileInLocalSymStore(file, key, pdb_name)) {
+    LLDB_LOG(log, "Found {0} in local SymStore {1}", pdb_name, file);
+    return *spec;
+  }
+
+  return {};
 }
 
 } // namespace
@@ -245,29 +535,87 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
     return {};
 
   Log *log = GetLog(LLDBLog::Symbols);
-  std::string pdb_name =
-      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef().str();
+  std::string pdb_name = module_spec.GetSymbolFileSpec().GetFilename().str();
   if (pdb_name.empty()) {
-    LLDB_LOG_VERBOSE(log,
-                     "Failed to resolve symbol PDB module: PDB name empty");
+    LLDB_LOG(log, "Failed to resolve symbol PDB module: PDB name empty");
     return {};
   }
 
-  LLDB_LOG_VERBOSE(log, "LocateExecutableSymbolFile {0} with UUID {1}",
-                   pdb_name, uuid.GetAsString());
+  LLDB_LOG(log, "LocateExecutableSymbolFile {0} with UUID {1}", pdb_name,
+           uuid.GetAsString());
   if (uuid.GetBytes().size() != 20) {
-    LLDB_LOG_VERBOSE(log, "Failed to resolve symbol PDB module: UUID invalid");
+    LLDB_LOG(log, "Failed to resolve symbol PDB module: UUID invalid");
     return {};
   }
 
   std::string key = FormatSymStoreKey(uuid);
-  Args sym_store_urls = GetGlobalPluginProperties().GetURLs();
-  for (const Args::ArgEntry &url : sym_store_urls) {
-    if (auto spec = LocateSymStoreEntry(url.ref(), key, pdb_name)) {
-      LLDB_LOG_VERBOSE(log, "Found {0} in SymStore {1}", pdb_name, url.ref());
+  for (const LookupEntry &entry : GetGlobalLookupOrder()) {
+    if (auto spec = LocateSymStoreEntry(entry, key, pdb_name))
       return *spec;
-    }
   }
 
   return {};
+}
+
+std::vector<SymbolLocatorSymStore::LookupEntry>
+SymbolLocatorSymStore::ParseEnvSymbolPaths(llvm::StringRef val) {
+  if (val.empty())
+    return {};
+
+  std::vector<LookupEntry> result;
+  std::optional<std::string> implicit_cache;
+  llvm::SmallVector<llvm::StringRef, 2> entries;
+  val.split(entries, ';');
+
+  for (llvm::StringRef raw : entries) {
+    llvm::StringRef entry = raw.trim();
+    if (entry.empty())
+      continue;
+
+    // Explicit cache directives apply to all subsequent srv* entries that don't
+    // set their own explicit cache.
+    if (entry.starts_with_insensitive("cache*")) {
+      if (auto cache = ParseCacheEntry(entry))
+        implicit_cache = *cache;
+      continue;
+    }
+
+    // SymStore directives with explicit interpreters are unsupported
+    // explicitly.
+    if (entry.starts_with_insensitive("symsrv*")) {
+      Debugger::ReportWarning(
+          llvm::formatv("ignoring unsupported entry in env: {0}", entry));
+      continue;
+    }
+
+    // SymStore server directives may include an explicit cache.
+    // Format is: srv*[LocalCache*]SymbolStore
+    if (entry.starts_with_insensitive("srv*")) {
+      if (auto lookup_entry = ParseSrvEntry(entry)) {
+        if (!lookup_entry->cache && implicit_cache)
+          lookup_entry->cache = implicit_cache;
+        result.push_back(*lookup_entry);
+      }
+      continue;
+    }
+
+    // Plain local paths aren't cached.
+    result.push_back(MakeLookupEntry(entry));
+  }
+
+  return result;
+}
+
+std::string SymbolLocatorSymStore::GetSystemDefaultCachePath() {
+  // Fall back to the platform cache directory.
+  llvm::SmallString<128> cache_dir;
+  if (llvm::sys::path::cache_directory(cache_dir)) {
+    llvm::sys::path::append(cache_dir, "lldb", "symstore");
+    return cache_dir.str().str();
+  }
+  // Last resort: use a subdirectory of the system temp directory.
+  constexpr bool erase_on_reboot = false;
+  llvm::sys::path::system_temp_directory(erase_on_reboot, cache_dir);
+  llvm::sys::path::append(cache_dir, "lldb", "symstore");
+  return cache_dir.str().str();
 }

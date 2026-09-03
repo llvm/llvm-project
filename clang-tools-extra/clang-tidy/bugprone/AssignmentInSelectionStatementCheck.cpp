@@ -52,8 +52,8 @@ AST_MATCHER_P(Expr, conditionValueCanPropagateFrom,
 // Ignore implicit casts (including C++ conversion member calls) but not parens.
 AST_MATCHER_P(Expr, ignoringImplicitAsWritten,
               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
-  auto IgnoreImplicitMemberCallSingleStep = [](Expr *E) {
-    if (auto *C = dyn_cast<CXXMemberCallExpr>(E)) {
+  const auto IgnoreImplicitMemberCallSingleStep = [](Expr *E) {
+    if (const auto *C = dyn_cast<CXXMemberCallExpr>(E)) {
       Expr *ExprNode = C->getImplicitObjectArgument();
       if (ExprNode->getSourceRange() == E->getSourceRange())
         return ExprNode;
@@ -84,8 +84,9 @@ void AssignmentInSelectionStatementCheck::registerMatchers(
   auto AssignOpFromEmbeddedExpr = expr(ignoringParenImpCasts(
       conditionValueCanPropagateFrom(AssignOpMaybeParens)));
 
-  auto CondExprWithAssign = anyOf(AssignOpNoParens, AssignOpFromEmbeddedExpr);
-  auto OpCondExprWithAssign =
+  const auto CondExprWithAssign =
+      anyOf(AssignOpNoParens, AssignOpFromEmbeddedExpr);
+  const auto OpCondExprWithAssign =
       anyOf(AssignOpMaybeParens, AssignOpFromEmbeddedExpr);
 
   // In these cases "single primary expression" is possible.
@@ -102,7 +103,7 @@ void AssignmentInSelectionStatementCheck::registerMatchers(
       hasAnyOperatorName("&&", "||"),
       eachOf(hasLHS(OpCondExprWithAssign), hasRHS(OpCondExprWithAssign)));
 
-  auto FoundSelectionStmt =
+  const auto FoundSelectionStmt =
       stmt(anyOf(FoundControlStmt, FoundConditionalOperator, FoundLogicalOp))
           .bind("parent");
 

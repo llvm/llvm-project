@@ -35,7 +35,7 @@ cir.func @f3() {
 }
 
 cir.func @f4(%arg0: !s32i) {
-  %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+  %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
   cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
   // CHECK: call void asm sideeffect "", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %2)
   cir.asm(x86_att, 
@@ -57,7 +57,7 @@ cir.func @f5() {
 }
 
 cir.func @f6() -> !s32i {
-  %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+  %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
   // CHECK: %2 = call i32 asm sideeffect "movl $$42, $0", "=r,~{dirflag},~{fpsr},~{flags}"()
   %1 = cir.asm(x86_att, 
     out = [],
@@ -70,7 +70,7 @@ cir.func @f6() -> !s32i {
 }
 
 cir.func @f7(%arg0: !u32i) -> !u32i {
-  %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
+  %0 = cir.alloca "x" align(4) init : !cir.ptr<!u32i>
   cir.store %arg0, %0 : !u32i, !cir.ptr<!u32i>
   %1 = cir.load align(4) %0 : !cir.ptr<!u32i>, !u32i
   // CHECK: %4 = call i32 asm sideeffect "addl $$42, $0", "=r,0,~{dirflag},~{fpsr},~{flags}"(i32 %3)

@@ -16,6 +16,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "mlir/Dialect/Transform/Interfaces/TransformAttrInterfaces.h.inc"
 #include "mlir/Dialect/Transform/Interfaces/TransformTypeInterfaces.h.inc"
 
 namespace mlir {
@@ -81,6 +82,21 @@ TransformState makeTransformStateForTesting(Region *region,
 /// Returns all operands that are handles and being consumed by the given op.
 SmallVector<OpOperand *>
 getConsumedHandleOpOperands(transform::TransformOpInterface transformOp);
+
+/// Checks that the given payload operations satisfy the normal form
+/// constraints, reports the first encountered definite failure or the first
+/// encountered silenceable failure if there were no definite failures. Normal
+/// forms are checked in order, so trailing normal forms may assume earlier
+/// normal forms did not produce definite failures.
+mlir::DiagnosedSilenceableFailure checkNormalForms(
+    llvm::ArrayRef<mlir::transform::NormalFormAttrInterface> normalForms,
+    llvm::ArrayRef<mlir::Operation *> payload);
+
+/// Checks that the given list does not contain duplicate normal forms of the
+/// same class.
+llvm::LogicalResult verifyNormalFormList(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    llvm::ArrayRef<mlir::transform::NormalFormAttrInterface> normalForms);
 } // namespace detail
 } // namespace transform
 } // namespace mlir
@@ -1623,5 +1639,17 @@ mlir::transform::TransformEachOpTrait<OpTy>::verifyTrait(Operation *op) {
 
   return success();
 }
+
+namespace llvm {
+template <>
+struct PointerLikeTypeTraits<mlir::transform::NormalFormAttrInterface>
+    : public PointerLikeTypeTraits<mlir::Attribute> {
+  static inline mlir::transform::NormalFormAttrInterface
+  getFromVoidPointer(void *p) {
+    return cast<mlir::transform::NormalFormAttrInterface>(
+        mlir::Attribute::getFromOpaquePointer(p));
+  }
+};
+} // namespace llvm
 
 #endif // DIALECT_TRANSFORM_INTERFACES_TRANSFORMINTERFACES_H

@@ -3,11 +3,11 @@
 # RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=-v5t -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,LIBCALLS
 --- |
   define void @test_ctlz_s32() { ret void }
-  define void @test_ctlz_zero_undef_s32() { ret void }
+  define void @test_ctlz_zero_poison_s32() { ret void }
 
   ; same as above but with extensions
   define void @test_ctlz_s16() { ret void }
-  define void @test_ctlz_zero_undef_s8() { ret void }
+  define void @test_ctlz_zero_poison_s8() { ret void }
 ...
 ---
 name:            test_ctlz_s32
@@ -47,8 +47,8 @@ body:             |
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
-name:            test_ctlz_zero_undef_s32
-# CHECK-LABEL: name: test_ctlz_zero_undef_s32
+name:            test_ctlz_zero_poison_s32
+# CHECK-LABEL: name: test_ctlz_zero_poison_s32
 legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
@@ -72,7 +72,7 @@ body:             |
     ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = COPY $r0
     ; LIBCALLS: ADJCALLSTACKUP
     ; LIBCALLS-NOT: G_CTLZ
-    %1(s32) = G_CTLZ_ZERO_UNDEF %0
+    %1(s32) = G_CTLZ_ZERO_POISON %0
 
     ; CHECK: $r0 = COPY [[R]]
     $r0 = COPY %1(s32)
@@ -128,8 +128,8 @@ body:             |
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
-name:            test_ctlz_zero_undef_s8
-# CHECK-LABEL: name: test_ctlz_zero_undef_s8
+name:            test_ctlz_zero_poison_s8
+# CHECK-LABEL: name: test_ctlz_zero_poison_s8
 legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
@@ -159,8 +159,8 @@ body:             |
     ; LIBCALLS: ADJCALLSTACKUP
     ; LIBCALLS-NOT: G_CTLZ
     ; CLZ: [[COUNT:%[0-9]+]]:_(s32) = G_CTLZ [[R32]]
-    ; CLZ-NOT: G_CTLZ_ZERO_UNDEF
-    %2(s8) = G_CTLZ_ZERO_UNDEF %1
+    ; CLZ-NOT: G_CTLZ_ZERO_POISON
+    %2(s8) = G_CTLZ_ZERO_POISON %1
 
     ; LIBCALLS: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[COUNT]], [[BITDIFF]]
     ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]

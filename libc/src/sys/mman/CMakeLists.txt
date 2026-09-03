@@ -10,6 +10,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  memfd_create
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.memfd_create
+)
+
+add_entrypoint_object(
   mmap
   ALIAS
   DEPENDS
@@ -125,7 +132,7 @@ add_entrypoint_object(
   remap_file_pages
   ALIAS
   DEPENDS
-  .${LIBC_TARGET_OS}.remap_file_pages
+    .${LIBC_TARGET_OS}.remap_file_pages
 )
 
 add_entrypoint_object(

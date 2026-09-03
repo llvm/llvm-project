@@ -264,7 +264,7 @@ return:
 define ptr @test8(ptr %0) nounwind uwtable {
 ; CHECK: Function Attrs: nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@test8
-; CHECK-SAME: (ptr [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr nofree [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP0]], null
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
@@ -550,13 +550,13 @@ define internal i32 @ret(ptr %arg) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@ret
 ; TUNIT-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]]) #[[ATTR6:[0-9]+]] {
-; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr [[ARG]], align 4
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr [[ARG]], align 4, !invariant.load [[META0:![0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[L]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@ret
 ; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]]) #[[ATTR7:[0-9]+]] {
-; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[ARG]], align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[ARG]], align 4, !invariant.load [[META0:![0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[L]]
 ;
   %l = load i32, ptr %arg
@@ -969,4 +969,8 @@ l2:
 ; CGSCC: attributes #[[ATTR13]] = { nofree willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR14]] = { nofree willreturn memory(readwrite) }
 ; CGSCC: attributes #[[ATTR15]] = { nofree nounwind willreturn memory(write) }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.

@@ -9,7 +9,7 @@
 // RUN:   | FileCheck -check-prefix=NEG %s
 
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm %s \
-// RUN:     -aux-triple amdgcn-amd-amdhsa -fcuda-include-gpubinary \
+// RUN:     -aux-triple amdgpu-amd-amdhsa -fcuda-include-gpubinary \
 // RUN:     %t -o - -x hip\
 // RUN:   | FileCheck -check-prefixes=CHECK,MSVC,MSVC-HIP,HIP %s
 
@@ -19,7 +19,7 @@
 // RUN:   | FileCheck -check-prefixes=CHECK,MSVC,CUDA %s
 
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm %s \
-// RUN:     -aux-triple amdgcn-amd-amdhsa -fcuda-include-gpubinary \
+// RUN:     -aux-triple amdgpu-amd-amdhsa -fcuda-include-gpubinary \
 // RUN:     %t -o - -x hip\
 // RUN:   | FileCheck -check-prefix=NEG %s
 

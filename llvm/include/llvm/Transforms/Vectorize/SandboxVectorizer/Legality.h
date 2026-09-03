@@ -183,7 +183,7 @@ public:
 
 /// Base class for results with reason.
 class LegalityResultWithReason : public LegalityResult {
-  [[maybe_unused]] ResultReason Reason;
+  ResultReason Reason;
   LegalityResultWithReason(LegalityResultID ID, ResultReason Reason)
       : LegalityResult(ID), Reason(Reason) {}
   friend class Pack; // For constructor.
@@ -335,8 +335,8 @@ class LegalityAnalysis {
 
 public:
   LegalityAnalysis(AAResults &AA, ScalarEvolution &SE, const DataLayout &DL,
-                   Context &Ctx, InstrMaps &IMaps)
-      : Sched(AA, Ctx), SE(SE), DL(DL), IMaps(IMaps) {}
+                   Context &Ctx, InstrMaps &IMaps, SchedDirection Dir)
+      : Sched(AA, Ctx, Dir), SE(SE), DL(DL), IMaps(IMaps) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
   ResultT &createLegalityResult(ArgsT &&...Args) {

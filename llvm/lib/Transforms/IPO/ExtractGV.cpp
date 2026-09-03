@@ -58,7 +58,7 @@ ExtractGVPass::ExtractGVPass(std::vector<GlobalValue *> &GVs, bool deleteS,
 PreservedAnalyses ExtractGVPass::run(Module &M, ModuleAnalysisManager &) {
   // Visit the global inline asm.
   if (!deleteStuff)
-    M.setModuleInlineAsm("");
+    M.removeModuleInlineAsm();
 
   // For simplicity, just give all GlobalValues ExternalLinkage. A trickier
   // implementation could figure out which GlobalValues are actually

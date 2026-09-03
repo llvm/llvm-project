@@ -11,7 +11,7 @@
 //
 // RUN: echo '{"%t/Inputs/chain.cpp": ["g++", "%t/Inputs/chain.cpp"], "%t/Inputs/other.cpp": ["g++", "%t/Inputs/other.cpp"]}' | sed -e 's/\\/\\\\/g' > %t/invocations.yaml
 //
-// RUN: cd "%t" && %clang_extdef_map Inputs/chain.cpp Inputs/other.cpp > externalDefMap.txt
+// RUN: cd "%t" && %clang_extdef_map Inputs/chain.cpp Inputs/other.cpp -- > externalDefMap.txt
 //
 // RUN: cd "%t" && %clang_analyze_cc1 \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \

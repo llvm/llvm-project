@@ -12,12 +12,12 @@
 #include "SymbolFileNativePDB.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Symbol/Type.h"
-#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
@@ -58,6 +58,12 @@ UdtRecordCompleter::UdtRecordCompleter(
     m_record.record.kind = Member::Struct;
     break;
   }
+}
+
+llvm::Error
+UdtRecordCompleter::visitMemberEnd(llvm::codeview::CVMemberRecord &Record) {
+  ++m_member_index;
+  return Error::success();
 }
 
 clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
@@ -115,9 +121,13 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
   if (base_qt.isNull())
     return llvm::Error::success();
-  auto decl =
+  auto *decl =
       m_ast_builder.clang().GetAsCXXRecordDecl(base_qt.getAsOpaquePtr());
-  lldbassert(decl);
+  if (!decl) {
+    LLDB_LOG(GetLog(LLDBLog::Symbols), "base ({0}) of {1} is not a record",
+             base.Type, m_id.index);
+    return Error::success();
+  }
 
   auto offset = clang::CharUnits::fromQuantity(base.getBaseOffset());
   m_layout.base_offsets.insert(std::make_pair(decl, offset));
@@ -179,10 +189,18 @@ Error UdtRecordCompleter::visitKnownMember(
 
         clang::QualType qual_type = decl->getType();
         unsigned type_width = decl->getASTContext().getIntWidth(qual_type);
-        unsigned constant_width = constant.Value.getBitWidth();
+
+        // Get the minimum bit width to encode this constant value.
+        // The bit width of the APSInt might be larger than the bits required to
+        // encode the value.
+        unsigned min_constant_width = 0;
+        if (qual_type->isUnsignedIntegerOrEnumerationType())
+          min_constant_width = constant.Value.getActiveBits();
+        else
+          min_constant_width = constant.Value.getSignificantBits();
 
         if (qual_type->isIntegralOrEnumerationType()) {
-          if (type_width >= constant_width) {
+          if (type_width >= min_constant_width) {
             TypeSystemClang::SetIntegerInitializerForVariable(
                 decl, constant.Value.extOrTrunc(type_width));
           } else {
@@ -191,7 +209,7 @@ Error UdtRecordCompleter::visitKnownMember(
                      "which resolves to a wider constant value ({4} bits). "
                      "Ignoring constant.",
                      m_derived_ct.GetTypeName(), static_data_member.Name,
-                     member_ct.GetTypeName(), type_width, constant_width);
+                     member_ct.GetTypeName(), type_width, min_constant_width);
           }
         } else {
           lldb::BasicType basic_type_enum = member_ct.GetBasicTypeEnumeration();
@@ -199,7 +217,7 @@ Error UdtRecordCompleter::visitKnownMember(
           case lldb::eBasicTypeFloat:
           case lldb::eBasicTypeDouble:
           case lldb::eBasicTypeLongDouble:
-            if (type_width == constant_width) {
+            if (type_width == min_constant_width) {
               TypeSystemClang::SetFloatingInitializerForVariable(
                   decl, basic_type_enum == lldb::eBasicTypeFloat
                             ? llvm::APFloat(constant.Value.bitsToFloat())
@@ -212,7 +230,7 @@ Error UdtRecordCompleter::visitKnownMember(
                   "which resolves to a constant value of mismatched width "
                   "({4} bits). Ignoring constant.",
                   m_derived_ct.GetTypeName(), static_data_member.Name,
-                  member_ct.GetTypeName(), type_width, constant_width);
+                  member_ct.GetTypeName(), type_width, min_constant_width);
             }
             break;
           default:
@@ -288,8 +306,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
       bitfield_width ? bitfield_width : GetSizeOfType(ti, m_index.tpi()) * 8;
   if (field_size == 0)
     return Error::success();
-  m_record.CollectMember(data_member.Name, offset, field_size, member_qt, access,
-                bitfield_width);
+  m_record.CollectMember(data_member.Name, offset, field_size, member_qt,
+                         access, bitfield_width, m_member_index);
   return Error::success();
 }
 
@@ -323,8 +341,24 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
   Declaration decl;
   llvm::StringRef name = DropNameScope(enumerator.getName());
 
+  clang::EnumDecl *enum_decl = TypeSystemClang::GetAsEnumDecl(m_derived_ct);
+  if (!enum_decl)
+    return Error::success();
+
+  llvm::APSInt val = enumerator.Value;
+  clang::QualType int_ty = enum_decl->getIntegerType();
+  uint64_t n_bits = m_ast_builder.clang().getASTContext().getTypeSize(int_ty);
+  if (n_bits == 0)
+    return Error::success();
+
+  // MSVC encodes 64 Bit unsigned enum values as signed integers. For example,
+  // ULONGLONG_MAX will be encoded as -1. LLVM encodes all values as unsigned.
+  // Fix this by explicitly setting the bit width and signedness.
+  val = val.extOrTrunc(n_bits);
+  val.setIsSigned(int_ty->isSignedIntegerType());
+
   m_ast_builder.clang().AddEnumerationValueToEnumerationType(
-      m_derived_ct, decl, name.str().c_str(), enumerator.Value);
+      m_derived_ct, decl, name.str().c_str(), val);
   return Error::success();
 }
 
@@ -437,11 +471,22 @@ void UdtRecordCompleter::FinishRecord() {
   }
 }
 
+void UdtRecordCompleter::Member::RestoreOriginalOrder() {
+  llvm::stable_sort(fields, [](const MemberUP &lhs, const MemberUP &rhs) {
+    return std::tie(lhs->original_index, lhs->bit_offset) <
+           std::tie(rhs->original_index, rhs->bit_offset);
+  });
+
+  for (MemberUP &field : fields)
+    field->RestoreOriginalOrder();
+}
+
 void UdtRecordCompleter::Record::CollectMember(
     llvm::StringRef name, uint64_t offset, uint64_t field_size,
-    clang::QualType qt, lldb::AccessType access, uint64_t bitfield_width) {
+    clang::QualType qt, lldb::AccessType access, uint64_t bitfield_width,
+    uint32_t member_index) {
   fields_map[offset].push_back(std::make_unique<Member>(
-      name, offset, field_size, qt, access, bitfield_width));
+      name, offset, field_size, qt, access, bitfield_width, member_index));
   if (start_offset > offset)
     start_offset = offset;
 }
@@ -473,13 +518,13 @@ void UdtRecordCompleter::Record::ConstructRecord() {
   for (auto &pair : fields_map) {
     uint64_t offset = pair.first;
     auto &fields = pair.second;
-    lldbassert(offset >= start_offset);
+    assert(offset >= start_offset);
     Member *parent = &record;
     if (offset > start_offset) {
       // Find the field with largest end offset that is <= offset. If it's less
       // than offset, it indicates there are padding bytes between end offset
       // and offset.
-      lldbassert(!end_offset_map.empty());
+      assert(!end_offset_map.empty());
       auto iter = end_offset_map.lower_bound(offset);
       if (iter == end_offset_map.end())
         --iter;
@@ -519,25 +564,31 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       if (parent->kind == Member::Struct) {
         end_offset_map[end_offset].push_back(parent);
       } else {
-        lldbassert(parent == &record &&
-                   "If parent is union, it must be the top level record.");
+        assert(parent == &record &&
+               "If parent is union, it must be the top level record.");
         end_offset_map[end_offset].push_back(parent->fields.back().get());
       }
     } else {
       if (parent->kind == Member::Struct) {
         parent->fields.push_back(std::make_unique<Member>(Member::Union));
         parent = parent->fields.back().get();
+        parent->original_index = std::numeric_limits<uint32_t>::max();
         parent->bit_offset = offset;
       } else {
-        lldbassert(parent == &record &&
-                   "If parent is union, it must be the top level record.");
+        assert(parent == &record &&
+               "If parent is union, it must be the top level record.");
       }
       for (auto &field : fields) {
         int64_t bit_size = field->bit_size;
+        // Use the lowest index of the union members.
+        parent->original_index =
+            std::min(parent->original_index, field->original_index);
         parent->fields.push_back(std::move(field));
         end_offset_map[offset + bit_size].push_back(
             parent->fields.back().get());
       }
     }
   }
+
+  record.RestoreOriginalOrder();
 }

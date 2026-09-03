@@ -106,7 +106,7 @@ func.func @shuffle_index_out_of_range(%arg0: vector<2xf32>, %arg1: vector<2xf32>
 // -----
 
 func.func @shuffle_scalable_vec(%arg0: vector<[2]xf32>, %arg1: vector<[2]xf32>) {
-  // expected-error@+1 {{'vector.shuffle' op operand #0 must be fixed-length vector of any type values}}
+  // expected-error@+1 {{'vector.shuffle' op operand #0 must be fixed-length vector of any non-token type values}}
   %1 = vector.shuffle %arg0, %arg1 [0, 1, 2, 3] : vector<[2]xf32>, vector<[2]xf32>
 }
 
@@ -655,49 +655,49 @@ func.func @test_vector.transfer_write(%arg0: memref<?xvector<2xindex>>, %arg1: v
 
 func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected offsets of same size as destination vector rank}}
-  %1 = vector.insert_strided_slice %a, %b {offsets = [100], strides = [1, 1]} : vector<4x4xf32> into vector<4x8x16xf32>
+  %1 = vector.insert_strided_slice %a, %b offsets = [100], strides = [1, 1] : vector<4x4xf32> into vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected strides of same size as source vector rank}}
-  %1 = vector.insert_strided_slice %a, %b {offsets = [2, 2, 2], strides = [1]} : vector<4x4xf32> into vector<4x8x16xf32>
+  %1 = vector.insert_strided_slice %a, %b offsets = [2, 2, 2], strides = [1] : vector<4x4xf32> into vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected source rank to be no greater than destination rank}}
-  %1 = vector.insert_strided_slice %b, %a {offsets = [2, 2], strides = [1, 1, 1]} : vector<4x8x16xf32> into vector<4x4xf32>
+  %1 = vector.insert_strided_slice %b, %a offsets = [2, 2], strides = [1, 1, 1] : vector<4x8x16xf32> into vector<4x4xf32>
 }
 
 // -----
 
 func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected offsets dimension 0 to be confined to [0, 4)}}
-  %1 = vector.insert_strided_slice %a, %b {offsets = [100,100,100], strides = [1, 1]} : vector<4x4xf32> into vector<4x8x16xf32>
+  %1 = vector.insert_strided_slice %a, %b offsets = [100,100,100], strides = [1, 1] : vector<4x4xf32> into vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected strides to be confined to [1, 2)}}
-  %1 = vector.insert_strided_slice %a, %b {offsets = [2, 2, 2], strides = [100, 100]} : vector<4x4xf32> into vector<4x8x16xf32>
+  %1 = vector.insert_strided_slice %a, %b offsets = [2, 2, 2], strides = [100, 100] : vector<4x4xf32> into vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected sum(offsets, source vector shape) dimension 1 to be confined to [1, 9)}}
-  %1 = vector.insert_strided_slice %a, %b {offsets = [2, 7, 2], strides = [1, 1]} : vector<4x4xf32> into vector<4x8x16xf32>
+  %1 = vector.insert_strided_slice %a, %b offsets = [2, 7, 2], strides = [1, 1] : vector<4x4xf32> into vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @insert_strided_slice_scalable(%a : vector<1x1x[2]xi32>, %b: vector<1x4x[4]xi32>) -> vector<1x4x[4]xi32> {
   // expected-error@+1 {{op expected size at idx=2 to match the corresponding base size from the input vector (2 vs 4)}}
-  %0 = vector.insert_strided_slice %a, %b {offsets = [0, 3, 0], strides = [1, 1, 1]} : vector<1x1x[2]xi32> into vector<1x4x[4]xi32>
+  %0 = vector.insert_strided_slice %a, %b offsets = [0, 3, 0], strides = [1, 1, 1] : vector<1x1x[2]xi32> into vector<1x4x[4]xi32>
   return %0 : vector<1x4x[4]xi32>
 }
 
@@ -705,7 +705,7 @@ func.func @insert_strided_slice_scalable(%a : vector<1x1x[2]xi32>, %b: vector<1x
 
 func.func @insert_strided_slice_scalable(%a : vector<1x1x4xi32>, %b: vector<1x4x[4]xi32>) -> vector<1x4x[4]xi32> {
   // expected-error@+1 {{op mismatching scalable flags (at source vector idx=2)}}
-  %0 = vector.insert_strided_slice %a, %b {offsets = [0, 3, 0], strides = [1, 1, 1]} : vector<1x1x4xi32> into vector<1x4x[4]xi32>
+  %0 = vector.insert_strided_slice %a, %b offsets = [0, 3, 0], strides = [1, 1, 1] : vector<1x1x4xi32> into vector<1x4x[4]xi32>
   return %0 : vector<1x4x[4]xi32>
 }
 
@@ -713,42 +713,42 @@ func.func @insert_strided_slice_scalable(%a : vector<1x1x4xi32>, %b: vector<1x4x
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected offsets, sizes and strides attributes of same size}}
-  %1 = vector.extract_strided_slice %arg0 {offsets = [100], sizes = [2, 2], strides = [1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [100], sizes = [2, 2], strides = [1, 1] : vector<4x8x16xf32> to vector<2x2x16xf32>
 }
 
 // -----
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected offsets attribute of rank no greater than vector rank}}
-  %1 = vector.extract_strided_slice %arg0 {offsets = [2, 2, 2, 2], sizes = [2, 2, 2, 2], strides = [1, 1, 1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [2, 2, 2, 2], sizes = [2, 2, 2, 2], strides = [1, 1, 1, 1] : vector<4x8x16xf32> to vector<2x2x16xf32>
 }
 
 // -----
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected offsets dimension 0 to be confined to [0, 4)}}
-  %1 = vector.extract_strided_slice %arg0 {offsets = [100], sizes = [100], strides = [100]} : vector<4x8x16xf32> to vector<100x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [100], sizes = [100], strides = [100] : vector<4x8x16xf32> to vector<100x8x16xf32>
 }
 
 // -----
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected sizes dimension 0 to be confined to [1, 5)}}
-  %1 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [100], strides = [100]} : vector<4x8x16xf32> to vector<100x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [2], sizes = [100], strides = [100] : vector<4x8x16xf32> to vector<100x8x16xf32>
 }
 
 // -----
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected strides to be confined to [1, 2)}}
-  %1 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [1], strides = [100]} : vector<4x8x16xf32> to vector<1x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [2], sizes = [1], strides = [100] : vector<4x8x16xf32> to vector<1x8x16xf32>
 }
 
 // -----
 
 func.func @extract_strided_slice_scalable(%arg0 : vector<1x4x[4]xi32>) -> vector<1x1x[2]xi32> {
     // expected-error@+1 {{op expected size at idx=2 to match the corresponding base size from the input vector (2 vs 4)}}
-    %1 = vector.extract_strided_slice %arg0 {offsets = [0, 3, 0], sizes = [1, 1, 2], strides = [1, 1, 1]} : vector<1x4x[4]xi32> to vector<1x1x[2]xi32>
+    %1 = vector.extract_strided_slice %arg0 offsets = [0, 3, 0], sizes = [1, 1, 2], strides = [1, 1, 1] : vector<1x4x[4]xi32> to vector<1x1x[2]xi32>
     return %1 : vector<1x1x[2]xi32>
   }
 
@@ -756,21 +756,21 @@ func.func @extract_strided_slice_scalable(%arg0 : vector<1x4x[4]xi32>) -> vector
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected strides to be confined to [1, 2)}}
-  %1 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [1], strides = [100]} : vector<4x8x16xf32> to vector<1x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [2], sizes = [1], strides = [100] : vector<4x8x16xf32> to vector<1x8x16xf32>
 }
 
 // -----
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected sum(offsets, sizes) dimension 0 to be confined to [1, 5)}}
-  %1 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [3], strides = [1]} : vector<4x8x16xf32> to vector<3x8x16xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [2], sizes = [3], strides = [1] : vector<4x8x16xf32> to vector<3x8x16xf32>
 }
 
 // -----
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected result type to be 'vector<2x8x16xf32>'}}
-  %1 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]} : vector<4x8x16xf32> to vector<3x1xf32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [2], sizes = [2], strides = [1] : vector<4x8x16xf32> to vector<3x1xf32>
 }
 
 // -----
@@ -1273,6 +1273,30 @@ func.func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>, %acc: vector<16xf3
 
 // -----
 
+func.func @multi_reduce_dim_out_of_range(%arg0: vector<4x16xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+  // expected-error@+1 {{'vector.multi_reduction' op reduction dimension out of range: 2}}
+  %0 = vector.multi_reduction <add>, %arg0, %acc [1, 2] : vector<4x16xf32> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @multi_reduce_negative_dim(%arg0: vector<4x16xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+  // expected-error@+1 {{'vector.multi_reduction' op reduction dimension out of range: -1}}
+  %0 = vector.multi_reduction <add>, %arg0, %acc [1, -1] : vector<4x16xf32> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @multi_reduce_duplicate_dim(%arg0: vector<4x16xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+  // expected-error@+1 {{'vector.multi_reduction' op duplicate reduction dimension: 1}}
+  %0 = vector.multi_reduction <add>, %arg0, %acc [1, 1] : vector<4x16xf32> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
 func.func @transpose_rank_mismatch_0d(%arg0: vector<f32>) {
   // expected-error@+1 {{'vector.transpose' op vector result rank mismatch: 1}}
   %0 = vector.transpose %arg0, [] : vector<f32> to vector<100xf32>
@@ -1368,7 +1392,7 @@ func.func @store_memref_index_mismatch(%base : memref<?xf32>, %value : vector<16
 
 func.func @maskedload_nonpositive_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %pass: vector<1xi32>, %index: index) {
   // expected-error@below {{'vector.maskedload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  %val = vector.maskedload %base[%index], %mask, %pass { alignment = 0 } : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
+  %val = vector.maskedload %base[%index], %mask, %pass alignment = 0 : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
   return
 }
 
@@ -1376,7 +1400,7 @@ func.func @maskedload_nonpositive_alignment(%base: memref<4xi32>, %mask: vector<
 
 func.func @maskedload_non_power_of_2_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %pass: vector<1xi32>, %index: index) {
   // expected-error@below {{'vector.maskedload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  %val = vector.maskedload %base[%index], %mask, %pass { alignment = 3 } : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
+  %val = vector.maskedload %base[%index], %mask, %pass alignment = 3 : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
   return
 }
 
@@ -1413,13 +1437,40 @@ func.func @maskedload_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>
 
 // -----
 
+func.func @maskedload_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %mask: vector<8xi1>, %pass: vector<8xf32>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.maskedload' op memref strides must be non-negative}}
+  %0 = vector.maskedload %src[%c0, %c0], %mask, %pass : memref<100x100xf32, strided<[-100, 1]>>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// -----
+
+func.func @maskedload_non_unit_stride(%src: memref<?xi8, strided<[2], offset: ?>>, %mask: vector<8xi1>, %pass: vector<8xi8>) -> vector<8xi8> {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.maskedload' op most minor memref dim must have unit stride}}
+  %0 = vector.maskedload %src[%c0], %mask, %pass : memref<?xi8, strided<[2], offset: ?>>, vector<8xi1>, vector<8xi8> into vector<8xi8>
+  return %0 : vector<8xi8>
+}
+
+// -----
+
+func.func @maskedload_dynamic_stride(%src: memref<?xi8, strided<[?], offset: ?>>, %mask: vector<8xi1>, %pass: vector<8xi8>) -> vector<8xi8> {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.maskedload' op most minor memref dim must have unit stride}}
+  %0 = vector.maskedload %src[%c0], %mask, %pass : memref<?xi8, strided<[?], offset: ?>>, vector<8xi1>, vector<8xi8> into vector<8xi8>
+  return %0 : vector<8xi8>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.maskedstore
 //===----------------------------------------------------------------------===//
 
 func.func @maskedstore_nonpositive_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %value: vector<1xi32>, %index: index) {
   // expected-error@below {{'vector.maskedstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  vector.maskedstore %base[%index], %mask, %value { alignment = 0 } : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
+  vector.maskedstore %base[%index], %mask, %value alignment = 0 : memref<4xi32>, vector<32xi1>, vector<1xi32>
   return
 }
 
@@ -1427,7 +1478,7 @@ func.func @maskedstore_nonpositive_alignment(%base: memref<4xi32>, %mask: vector
 
 func.func @maskedstore_non_power_of_2_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %value: vector<1xi32>, %index: index) {
   // expected-error@below {{'vector.maskedstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  vector.maskedstore %base[%index], %mask, %value { alignment = 3 } : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
+  vector.maskedstore %base[%index], %mask, %value alignment = 3 : memref<4xi32>, vector<32xi1>, vector<1xi32>
   return
 }
 
@@ -1457,10 +1508,37 @@ func.func @maskedstore_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1
 
 // -----
 
+func.func @maskedstore_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %mask: vector<8xi1>, %value: vector<8xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.maskedstore' op memref strides must be non-negative}}
+  vector.maskedstore %src[%c0, %c0], %mask, %value : memref<100x100xf32, strided<[-100, 1]>>, vector<8xi1>, vector<8xf32>
+  return
+}
+
+// -----
+
+func.func @maskedstore_non_unit_stride(%src: memref<?xi8, strided<[2], offset: ?>>, %mask: vector<8xi1>, %value: vector<8xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.maskedstore' op most minor memref dim must have unit stride}}
+  vector.maskedstore %src[%c0], %mask, %value : memref<?xi8, strided<[2], offset: ?>>, vector<8xi1>, vector<8xi8>
+  return
+}
+
+// -----
+
+func.func @maskedstore_dynamic_stride(%src: memref<?xi8, strided<[?], offset: ?>>, %mask: vector<8xi1>, %value: vector<8xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.maskedstore' op most minor memref dim must have unit stride}}
+  vector.maskedstore %src[%c0], %mask, %value : memref<?xi8, strided<[?], offset: ?>>, vector<8xi1>, vector<8xi8>
+  return
+}
+
+// -----
+
 func.func @gather_from_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.gather' op operand #0 must be Tensor or MemRef of any type values, but got 'vector<16xf32>'}}
+  // expected-error@+1 {{'vector.gather' op operand #0 must be Tensor or MemRef of any non-token type values, but got 'vector<16xf32>'}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
@@ -1529,18 +1607,18 @@ func.func @gather_pass_thru_type_mismatch(%base: memref<?xf32>, %indices: vector
 
 func.func @gather_nonpositive_alignment(%base: memref<16xf32>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0 : index) {
-  // expected-error@+2 {{'vector.gather' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  // expected-error@+1 {{'vector.gather' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
-    { alignment = 0 } : memref<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    alignment = 0 : memref<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
 
 // -----
 
 func.func @gather_non_power_of_two_alignment(%base: memref<16xf32>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0 : index) {
-  // expected-error@+2 {{'vector.gather' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  // expected-error@+1 {{'vector.gather' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
-    { alignment = 3 } : memref<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    alignment = 3 : memref<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
 
 // -----
@@ -1549,7 +1627,17 @@ func.func @gather_tensor_alignment(%base: tensor<16xf32>, %indices: vector<16xi3
                                 %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0 : index) {
   // expected-error@+1 {{'vector.gather' op alignment is only supported for memref bases, not tensor bases}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
-    { alignment = 8 : i64 } : tensor<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    alignment = 8 : tensor<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
+func.func @gather_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %indices: vector<16xi32>,
+                                  %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %idx: index) -> vector<16xf32> {
+  // expected-error @+1 {{'vector.gather' op memref strides must be non-negative}}
+  %0 = vector.gather %src[%idx, %idx][%indices], %mask, %pass_thru
+    : memref<100x100xf32, strided<[-100, 1]>>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %0 : vector<16xf32>
 }
 
 // -----
@@ -1557,7 +1645,7 @@ func.func @gather_tensor_alignment(%base: tensor<16xf32>, %indices: vector<16xi3
 func.func @scatter_to_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
                              %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.scatter' op operand #0 must be Tensor or MemRef of any type values, but got 'vector<16xf32>'}}
+  // expected-error@+1 {{'vector.scatter' op operand #0 must be Tensor or MemRef of any non-token type values, but got 'vector<16xf32>'}}
   vector.scatter %base[%c0][%indices], %mask, %pass_thru
     : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
 }
@@ -1618,7 +1706,7 @@ func.func @scatter_dim_mask_mismatch(%base: memref<?xf32>, %indices: vector<16xi
 func.func @scatter_nonpositive_alignment(%base: memref<?xf32>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
   // expected-error@+1 {{'vector.scatter' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  vector.scatter %base[%c0][%indices], %mask, %value { alignment = 0 }
+  vector.scatter %base[%c0][%indices], %mask, %value alignment = 0
     : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
 }
 
@@ -1627,7 +1715,7 @@ func.func @scatter_nonpositive_alignment(%base: memref<?xf32>, %indices: vector<
 func.func @scatter_non_power_of_2_alignment(%base: memref<?xf32>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
   // expected-error@+1 {{'vector.scatter' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  vector.scatter %base[%c0][%indices], %mask, %value { alignment = 3 }
+  vector.scatter %base[%c0][%indices], %mask, %value alignment = 3
     : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
 }
 
@@ -1636,8 +1724,18 @@ func.func @scatter_non_power_of_2_alignment(%base: memref<?xf32>, %indices: vect
 func.func @scatter_tensor_alignment(%base: tensor<?xf32>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
   // expected-error@+1 {{'vector.scatter' op alignment is only supported for memref bases, not tensor bases}}
-  vector.scatter %base[%c0][%indices], %mask, %value { alignment = 8 : i64 }
+  vector.scatter %base[%c0][%indices], %mask, %value alignment = 8
     : tensor<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> -> tensor<?xf32>
+}
+
+// -----
+
+func.func @scatter_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %indices: vector<16xi32>,
+                                   %mask: vector<16xi1>, %value: vector<16xf32>, %idx: index) {
+  // expected-error @+1 {{'vector.scatter' op memref strides must be non-negative}}
+  vector.scatter %src[%idx, %idx][%indices], %mask, %value
+    : memref<100x100xf32, strided<[-100, 1]>>, vector<16xi32>, vector<16xi1>, vector<16xf32>
+  return
 }
 
 // -----
@@ -1650,18 +1748,18 @@ func.func @expand_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>,
 
 // -----
 
-func.func @expand_base_scalable(%base: memref<?xf32>, %mask: vector<[16]xi1>, %pass_thru: vector<[16]xf32>) {
+func.func @expand_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.expandload' op operand #2 must be fixed-length vector of 1-bit signless integer values, but got 'vector<[16]xi1>}}
-  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
+  // expected-error@+1 {{'vector.expandload' op expected result shape to match mask shape}}
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<17xi1>, vector<16xf32> into vector<16xf32>
 }
 
 // -----
 
-func.func @expand_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %pass_thru: vector<16xf32>) {
+func.func @expand_shape_mask_mismatch(%base: memref<?xf32>, %mask: vector<2x7xi1>, %pass_thru: vector<2x8xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.expandload' op expected result dim to match mask dim}}
-  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<17xi1>, vector<16xf32> into vector<16xf32>
+  // expected-error@+1 {{'vector.expandload' op expected result shape to match mask shape}}
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<2x7xi1>, vector<2x8xf32> into vector<2x8xf32>
 }
 
 // -----
@@ -1684,14 +1782,48 @@ func.func @expand_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, 
 
 func.func @expand_nonpositive_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0: index) {
   // expected-error@+1 {{'vector.expandload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  %0 = vector.expandload %base[%c0], %mask, %pass_thru { alignment = 0 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru alignment = 0 : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
 
 // -----
 
 func.func @expand_non_power_of_2_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0: index) {
   // expected-error@+1 {{'vector.expandload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  %0 = vector.expandload %base[%c0], %mask, %pass_thru { alignment = 3 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru alignment = 3 : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
+func.func @expand_scalable_dims_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<[16]xf32>, %c0: index) {
+  // expected-error@+1 {{expected result scalable dims to match mask scalable dims}}
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<16xi1>, vector<[16]xf32> into vector<[16]xf32>
+}
+
+// -----
+
+func.func @expandload_non_unit_stride(%src: memref<?xi8, strided<[2], offset: ?>>, %mask: vector<8xi1>, %pass_thru: vector<8xi8>) -> vector<8xi8> {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.expandload' op most minor memref dim must have unit stride}}
+  %0 = vector.expandload %src[%c0], %mask, %pass_thru : memref<?xi8, strided<[2], offset: ?>>, vector<8xi1>, vector<8xi8> into vector<8xi8>
+  return %0 : vector<8xi8>
+}
+
+// -----
+
+func.func @expandload_dynamic_stride(%src: memref<?xi8, strided<[?], offset: ?>>, %mask: vector<8xi1>, %pass_thru: vector<8xi8>) -> vector<8xi8> {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.expandload' op most minor memref dim must have unit stride}}
+  %0 = vector.expandload %src[%c0], %mask, %pass_thru : memref<?xi8, strided<[?], offset: ?>>, vector<8xi1>, vector<8xi8> into vector<8xi8>
+  return %0 : vector<8xi8>
+}
+
+// -----
+
+func.func @expandload_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %mask: vector<8xi1>, %pass_thru: vector<8xf32>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.expandload' op memref strides must be non-negative}}
+  %0 = vector.expandload %src[%c0, %c0], %mask, %pass_thru : memref<100x100xf32, strided<[-100, 1]>>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  return %0 : vector<8xf32>
 }
 
 // -----
@@ -1704,18 +1836,18 @@ func.func @compress_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1
 
 // -----
 
-func.func @compress_scalable(%base: memref<?xf32>, %mask: vector<[16]xi1>, %value: vector<[16]xf32>) {
+func.func @compress_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.compressstore' op operand #2 must be fixed-length vector of 1-bit signless integer values, but got 'vector<[16]xi1>}}
-  vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32>
+  // expected-error@+1 {{'vector.compressstore' op expected valueToStore shape to match mask shape}}
+  vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<17xi1>, vector<16xf32>
 }
 
 // -----
 
-func.func @compress_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %value: vector<16xf32>) {
+func.func @compress_shape_mask_mismatch(%base: memref<?xf32>, %mask: vector<2x7xi1>, %value: vector<2x8xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.compressstore' op expected valueToStore dim to match mask dim}}
-  vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<17xi1>, vector<16xf32>
+  // expected-error@+1 {{'vector.compressstore' op expected valueToStore shape to match mask shape}}
+  vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<2x7xi1>, vector<2x8xf32>
 }
 
 // -----
@@ -1730,21 +1862,56 @@ func.func @compress_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>
 
 func.func @compress_nonpositive_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
   // expected-error @below {{'vector.compressstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  vector.compressstore %base[%c0], %mask, %value { alignment = 0 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
+  vector.compressstore %base[%c0], %mask, %value alignment = 0 : memref<?xf32>, vector<16xi1>, vector<16xf32>
 }
 
 // -----
 
 func.func @compress_non_power_of_2_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
   // expected-error @below {{'vector.compressstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  vector.compressstore %base[%c0], %mask, %value { alignment = 3 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
+  vector.compressstore %base[%c0], %mask, %value alignment = 3 : memref<?xf32>, vector<16xi1>, vector<16xf32>
+}
+
+// -----
+
+func.func @compress_scalable_dims_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<[16]xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{expected valueToStore scalable dims to match mask scalable dims}}
+  vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<16xi1>, vector<[16]xf32>
+}
+
+// -----
+
+func.func @compressstore_non_unit_stride(%src: memref<?xi8, strided<[2], offset: ?>>, %mask: vector<8xi1>, %value: vector<8xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.compressstore' op most minor memref dim must have unit stride}}
+  vector.compressstore %src[%c0], %mask, %value : memref<?xi8, strided<[2], offset: ?>>, vector<8xi1>, vector<8xi8>
+  return
+}
+
+// -----
+
+func.func @compressstore_dynamic_stride(%src: memref<?xi8, strided<[?], offset: ?>>, %mask: vector<8xi1>, %value: vector<8xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.compressstore' op most minor memref dim must have unit stride}}
+  vector.compressstore %src[%c0], %mask, %value : memref<?xi8, strided<[?], offset: ?>>, vector<8xi1>, vector<8xi8>
+  return
+}
+
+// -----
+
+func.func @compressstore_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %mask: vector<8xi1>, %value: vector<8xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.compressstore' op memref strides must be non-negative}}
+  vector.compressstore %src[%c0, %c0], %mask, %value : memref<100x100xf32, strided<[-100, 1]>>, vector<8xi1>, vector<8xf32>
+  return
 }
 
 // -----
 
 func.func @scan_reduction_dim_constraint(%arg0: vector<2x3xi32>, %arg1: vector<3xi32>) -> vector<3xi32> {
   // expected-error@+1 {{'vector.scan' op reduction dimension 5 has to be less than 2}}
-  %0:2 = vector.scan <add>, %arg0, %arg1 {inclusive = true, reduction_dim = 5} :
+  %0:2 = vector.scan <add>, %arg0, %arg1 reduction_dim = 5, inclusive = true :
     vector<2x3xi32>, vector<3xi32>
   return %0#1 : vector<3xi32>
 }
@@ -1753,7 +1920,7 @@ func.func @scan_reduction_dim_constraint(%arg0: vector<2x3xi32>, %arg1: vector<3
 
 func.func @scan_ival_rank_constraint(%arg0: vector<2x3xi32>, %arg1: vector<1x3xi32>) -> vector<1x3xi32> {
   // expected-error@+1 {{initial value rank 2 has to be equal to 1}}
-  %0:2 = vector.scan <add>, %arg0, %arg1 {inclusive = true, reduction_dim = 0} :
+  %0:2 = vector.scan <add>, %arg0, %arg1 reduction_dim = 0, inclusive = true :
     vector<2x3xi32>, vector<1x3xi32>
   return %0#1 : vector<1x3xi32>
 }
@@ -1762,7 +1929,7 @@ func.func @scan_ival_rank_constraint(%arg0: vector<2x3xi32>, %arg1: vector<1x3xi
 
 func.func @scan_incompatible_shapes(%arg0: vector<2x3xi32>, %arg1: vector<5xi32>) -> vector<2x3xi32> {
   // expected-error@+1 {{incompatible input/initial value shapes}}
-  %0:2 = vector.scan <add>, %arg0, %arg1 {inclusive = true, reduction_dim = 0} :
+  %0:2 = vector.scan <add>, %arg0, %arg1 reduction_dim = 0, inclusive = true :
     vector<2x3xi32>, vector<5xi32>
   return %0#0 : vector<2x3xi32>
 }
@@ -1771,7 +1938,7 @@ func.func @scan_incompatible_shapes(%arg0: vector<2x3xi32>, %arg1: vector<5xi32>
 
 func.func @scan_unsupported_kind(%arg0: vector<2x3xf32>, %arg1: vector<3xf32>) -> vector<2x3xf32> {
   // expected-error@+1 {{'vector.scan' op unsupported reduction type 'f32' for kind 'xor'}}
-  %0:2 = vector.scan <xor>, %arg0, %arg1 {inclusive = true, reduction_dim = 0} :
+  %0:2 = vector.scan <xor>, %arg0, %arg1 reduction_dim = 0, inclusive = true :
     vector<2x3xf32>, vector<3xf32>
   return %0#0 : vector<2x3xf32>
 }
@@ -1943,7 +2110,7 @@ func.func @invalid_outerproduct1(%src : memref<?xf32>, %lhs : vector<[4]x[4]xf32
 // -----
 
 func.func @deinterleave_zero_dim_fail(%vec : vector<f32>) {
-  // expected-error @+1 {{'vector.deinterleave' op operand #0 must be vector of any type values, but got 'vector<f32>}}
+  // expected-error @+1 {{'vector.deinterleave' op operand #0 must be vector of any non-token type values, but got 'vector<f32>}}
   %0, %1 = vector.deinterleave %vec : vector<f32> -> vector<f32>
   return
 }
@@ -2032,7 +2199,7 @@ func.func @from_elements_wrong_operand_type(%a: f32, %b: i32) {
 // -----
 
 func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
-  // expected-error @+1 {{'dest' must be fixed-length vector of any type values, but got 'vector<[2]xf32>'}}
+  // expected-error @+1 {{'dest' must be fixed-length vector of any non-token type values, but got 'vector<[2]xf32>'}}
   vector.from_elements %a, %b : vector<[2]xf32>
   return
 }
@@ -2040,7 +2207,7 @@ func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
 // -----
 
 func.func @invalid_step_0d() {
-  // expected-error @+1 {{vector.step' op result #0 must be vector of index values of ranks 1, but got 'vector<f32>'}}
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<f32>'}}
   vector.step : vector<f32>
   return
 }
@@ -2048,8 +2215,40 @@ func.func @invalid_step_0d() {
 // -----
 
 func.func @invalid_step_2d() {
-  // expected-error @+1 {{vector.step' op result #0 must be vector of index values of ranks 1, but got 'vector<2x4xf32>'}}
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<2x4xf32>'}}
   vector.step : vector<2x4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_step_float_element() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xf32>'}}
+  vector.step : vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_step_narrow_integer() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xi4>'}}
+  vector.step : vector<4xi4>
+  return
+}
+
+// -----
+
+func.func @invalid_step_i1_element() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xi1>'}}
+  vector.step : vector<4xi1>
+  return
+}
+
+// -----
+
+func.func @invalid_step_unsigned_integer() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index or signless integer of at least 8 bits values of ranks 1, but got 'vector<4xui8>'}}
+  vector.step : vector<4xui8>
   return
 }
 
@@ -2070,7 +2269,7 @@ func.func @vector_load(%src : memref<?xi8>) {
 
 func.func @load_nonpositive_alignment(%memref: memref<4xi32>, %c0: index) {
   // expected-error @below {{'vector.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  %val = vector.load %memref[%c0] { alignment = 0 } : memref<4xi32>, vector<4xi32>
+  %val = vector.load %memref[%c0] alignment = 0 : memref<4xi32>, vector<4xi32>
   return
 }
 
@@ -2078,7 +2277,7 @@ func.func @load_nonpositive_alignment(%memref: memref<4xi32>, %c0: index) {
 
 func.func @load_non_pow_of_2_alignment(%memref: memref<4xi32>, %c0: index) {
   // expected-error @below {{'vector.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  %val = vector.load %memref[%c0] { alignment = 3 } : memref<4xi32>, vector<4xi32>
+  %val = vector.load %memref[%c0] alignment = 3 : memref<4xi32>, vector<4xi32>
   return
 }
 
@@ -2088,6 +2287,15 @@ func.func @load_non_unit_stride(%src : memref<?xi8, strided<[2], offset: ?>>) {
   %c0 = arith.constant 0 : index
   // expected-error @+1 {{'vector.load' op most minor memref dim must have unit stride}}
   %0 = vector.load %src[%c0] : memref<?xi8, strided<[2], offset: ?>>, vector<16xi8>
+  return
+}
+
+// -----
+
+func.func @load_dynamic_stride(%src : memref<?xi8, strided<[?], offset: ?>>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.load' op most minor memref dim must have unit stride}}
+  %0 = vector.load %src[%c0] : memref<?xi8, strided<[?], offset: ?>>, vector<16xi8>
   return
 }
 
@@ -2108,7 +2316,7 @@ func.func @vector_store(%dest : memref<?xi8>, %vec : vector<16x16xi8>) {
 
 func.func @store_nonpositive_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, %c0: index) {
   // expected-error @below {{'vector.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  vector.store %val, %memref[%c0] { alignment = 0 } : memref<4xi32>, vector<4xi32>
+  vector.store %val, %memref[%c0] alignment = 0 : memref<4xi32>, vector<4xi32>
   return
 }
 
@@ -2116,7 +2324,7 @@ func.func @store_nonpositive_alignment(%memref: memref<4xi32>, %val: vector<4xi3
 
 func.func @store_non_pow_of_2_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, %c0: index) {
   // expected-error @below {{'vector.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
-  vector.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>, vector<4xi32>
+  vector.store %val, %memref[%c0] alignment = 3 : memref<4xi32>, vector<4xi32>
   return
 }
 
@@ -2124,6 +2332,23 @@ func.func @store_non_pow_of_2_alignment(%memref: memref<4xi32>, %val: vector<4xi
 func.func @store_non_unit_stride(%src : memref<?xi8, strided<[2], offset:?>>,%val : vector<16xi8>, %c0: index) {
   // expected-error @below {{'vector.store' op most minor memref dim must have unit stride}}
   vector.store %val, %src[%c0] : memref<?xi8, strided<[2], offset: ?>>, vector<16xi8>
+  return
+}
+
+// -----
+
+func.func @store_dynamic_stride(%src : memref<?xi8, strided<[?], offset: ?>>, %val : vector<16xi8>, %c0: index) {
+  // expected-error @below {{'vector.store' op most minor memref dim must have unit stride}}
+  vector.store %val, %src[%c0] : memref<?xi8, strided<[?], offset: ?>>, vector<16xi8>
+  return
+}
+
+// -----
+
+func.func @store_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>, %val: vector<4xf32>) {
+  // expected-error @+2 {{'vector.store' op memref strides must be non-negative}}
+  %c0 = arith.constant 0 : index
+  vector.store %val, %src[%c0, %c0] : memref<100x100xf32, strided<[-100, 1]>>, vector<4xf32>
   return
 }
 
@@ -2178,7 +2403,16 @@ func.func @outerproduct_i0(%lhs: vector<4xi0>, %rhs: i0) -> vector<4xi0> {
 
 func.func @scan_i0(%a: vector<4xi0>, %init: vector<1xi0>) -> (vector<4xi0>, vector<1xi0>) {
   // expected-error @+1 {{'vector.scan' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
-  %0:2 = vector.scan <add>, %a, %init {inclusive = true, reduction_dim = 0 : i64} :
+  %0:2 = vector.scan <add>, %a, %init reduction_dim = 0, inclusive = true :
     vector<4xi0>, vector<1xi0>
   return %0#0, %0#1 : vector<4xi0>, vector<1xi0>
+}
+
+// -----
+
+func.func @load_negative_stride(%src: memref<100x100xf32, strided<[-100, 1]>>) -> vector<8xf32> {
+  // expected-error @+2 {{'vector.load' op memref strides must be non-negative}}
+  %c0 = arith.constant 0 : index
+  %v = vector.load %src[%c0, %c0] : memref<100x100xf32, strided<[-100, 1]>>, vector<8xf32>
+  return %v : vector<8xf32>
 }

@@ -352,8 +352,23 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   if (Loc.isInvalid())
     return;
 
-  CurLoc = CGM.getContext().getSourceManager().getExpansionLoc(
-      getMacroDebugLoc(CGM, Loc));
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  SourceLocation NewLoc = SM.getExpansionLoc(getMacroDebugLoc(CGM, Loc));
+  if (CurLoc != NewLoc) {
+    CurLoc = NewLoc;
+    CurLocFile = nullptr;
+    CurLocLine = 0;
+    CurLocColumn = 0;
+
+    PresumedLoc PCLoc = SM.getPresumedLoc(CurLoc);
+    if (PCLoc.isInvalid())
+      return;
+
+    CurLocLine = PCLoc.getLine();
+    if (CGM.getCodeGenOpts().DebugColumnInfo)
+      CurLocColumn = PCLoc.getColumn();
+    CurLocFile = getOrCreateFile(CurLoc);
+  }
 
   // If we've changed files in the middle of a lexical scope go ahead
   // and create a new lexical scope with file node if it's different
@@ -361,21 +376,19 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   if (LexicalBlockStack.empty())
     return;
 
-  SourceManager &SM = CGM.getContext().getSourceManager();
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
-  PresumedLoc PCLoc = SM.getPresumedLoc(CurLoc);
-  if (PCLoc.isInvalid() || Scope->getFile() == getOrCreateFile(CurLoc))
+  if (!CurLocFile || Scope->getFile() == CurLocFile)
     return;
 
   if (auto *LBF = dyn_cast<llvm::DILexicalBlockFile>(Scope)) {
     LexicalBlockStack.pop_back();
-    LexicalBlockStack.emplace_back(DBuilder.createLexicalBlockFile(
-        LBF->getScope(), getOrCreateFile(CurLoc)));
+    LexicalBlockStack.emplace_back(
+        DBuilder.createLexicalBlockFile(LBF->getScope(), CurLocFile));
   } else if (isa<llvm::DILexicalBlock>(Scope) ||
              isa<llvm::DISubprogram>(Scope)) {
     LexicalBlockStack.pop_back();
     LexicalBlockStack.emplace_back(
-        DBuilder.createLexicalBlockFile(Scope, getOrCreateFile(CurLoc)));
+        DBuilder.createLexicalBlockFile(Scope, CurLocFile));
   }
 }
 
@@ -430,6 +443,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
   PP.UseEnumerators = false;
+  PP.PrettyEnums = false;
 
   // Apply -fdebug-prefix-map.
   PP.Callbacks = &PrintCB;
@@ -582,7 +596,11 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    PresumedLoc PLoc = SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc));
+    Loc = getMacroDebugLoc(CGM, Loc);
+    if (Loc == CurLoc && CurLocFile)
+      return CurLocFile;
+
+    PresumedLoc PLoc = SM.getPresumedLoc(Loc);
     FileName = PLoc.getFilename();
 
     if (FileName.empty()) {
@@ -654,31 +672,32 @@ llvm::DIFile *CGDebugInfo::createFile(
 }
 
 std::string CGDebugInfo::remapDIPath(StringRef Path) const {
-  SmallString<256> P = Path;
-  for (auto &[From, To] : llvm::reverse(CGM.getCodeGenOpts().DebugPrefixMap))
-    if (llvm::sys::path::replace_path_prefix(P, From, To))
-      break;
-  return P.str().str();
+  return CGM.getCodeGenOpts().remapDebugPathPrefix(Path);
 }
 
 unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  return SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc)).getLine();
+  SourceLocation DebugLoc = getMacroDebugLoc(CGM, Loc);
+  if (DebugLoc == CurLoc)
+    return CurLocLine;
+  return SM.getPresumedLoc(DebugLoc).getLine();
 }
 
-unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
+unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc) {
   // We may not want column information at all.
-  if (!Force && !CGM.getCodeGenOpts().DebugColumnInfo)
+  if (!CGM.getCodeGenOpts().DebugColumnInfo)
     return 0;
 
   // If the location is invalid then use the current column.
   if (Loc.isInvalid() && CurLoc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc =
-      SM.getPresumedLoc(Loc.isValid() ? getMacroDebugLoc(CGM, Loc) : CurLoc);
+  SourceLocation DebugLoc = Loc.isValid() ? getMacroDebugLoc(CGM, Loc) : CurLoc;
+  if (DebugLoc == CurLoc)
+    return CurLocColumn;
+  PresumedLoc PLoc = SM.getPresumedLoc(DebugLoc);
   return PLoc.isValid() ? PLoc.getColumn() : 0;
 }
 
@@ -852,9 +871,11 @@ void CGDebugInfo::CreateCompileUnit() {
 
   StringRef Sysroot, SDK;
   if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB) {
-    Sysroot = CGM.getHeaderSearchOpts().Sysroot;
-    auto B = llvm::sys::path::rbegin(Sysroot);
-    auto E = llvm::sys::path::rend(Sysroot);
+    StringRef FullSysroot = CGM.getHeaderSearchOpts().Sysroot;
+    if (CGM.getCodeGenOpts().DebugRecordSysroot)
+      Sysroot = FullSysroot;
+    auto B = llvm::sys::path::rbegin(FullSysroot);
+    auto E = llvm::sys::path::rend(FullSysroot);
     auto It =
         std::find_if(B, E, [](auto SDK) { return SDK.ends_with(".sdk"); });
     if (It != E)
@@ -1117,6 +1138,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    return getOrCreateStructPtrType(Name, SingletonId);
+#include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;
@@ -1507,36 +1532,21 @@ llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
       CGM.getTarget().getDWARFAddressSpace(
           CGM.getTypes().getTargetAddressSpace(PointeeTy));
 
-  const BTFTagAttributedType *BTFAttrTy;
-  if (auto *Atomic = PointeeTy->getAs<AtomicType>())
-    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Atomic->getValueType());
-  else
-    BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy);
-  SmallVector<llvm::Metadata *, 4> Annots;
-  while (BTFAttrTy) {
-    StringRef Tag = BTFAttrTy->getAttr()->getBTFTypeTag();
-    if (!Tag.empty()) {
-      llvm::Metadata *Ops[2] = {
-          llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_type_tag")),
-          llvm::MDString::get(CGM.getLLVMContext(), Tag)};
-      Annots.insert(Annots.begin(),
-                    llvm::MDNode::get(CGM.getLLVMContext(), Ops));
-    }
-    BTFAttrTy = dyn_cast<BTFTagAttributedType>(BTFAttrTy->getWrappedType());
-  }
-
-  llvm::DINodeArray Annotations = nullptr;
-  if (Annots.size() > 0)
-    Annotations = DBuilder.getOrCreateArray(Annots);
-
   if (Tag == llvm::dwarf::DW_TAG_reference_type ||
-      Tag == llvm::dwarf::DW_TAG_rvalue_reference_type)
+      Tag == llvm::dwarf::DW_TAG_rvalue_reference_type) {
     return DBuilder.createReferenceType(Tag, getOrCreateType(PointeeTy, Unit),
                                         Size, Align, DWARFAddressSpace);
-  else
+  } else {
+    SmallVector<llvm::Metadata *, 4> Annots;
+    CollectBTFTypeTagAnnotations(PointeeTy, Annots);
+
+    llvm::DINodeArray Annotations = nullptr;
+    if (Annots.size() > 0)
+      Annotations = DBuilder.getOrCreateArray(Annots);
     return DBuilder.createPointerType(getOrCreateType(PointeeTy, Unit), Size,
                                       Align, DWARFAddressSpace, StringRef(),
                                       Annotations);
+  }
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateStructPtrType(StringRef Name,
@@ -1756,8 +1766,17 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
   SourceLocation Loc = Ty->getDecl()->getLocation();
 
   uint32_t Align = getDeclAlignIfRequired(Ty->getDecl(), CGM.getContext());
-  // Typedefs are derived from some other type.
-  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(Ty->getDecl());
+
+  // Typedefs are derived from some other type. Collect both btf_decl_tag
+  // annotations on the typedef declaration and btf_type_tag annotations on
+  // the (possibly non-pointer) underlying type, e.g.
+  //   typedef struct foo __attribute__((btf_type_tag("tag"))) foo_t;
+  SmallVector<llvm::Metadata *, 4> Annots;
+  llvm::DINodeArray Annotations;
+  CollectBTFTypeTagAnnotations(Ty->getDecl()->getUnderlyingType(), Annots);
+  CollectBTFDeclTagAnnotations(Ty->getDecl(), Annots);
+  if (!Annots.empty())
+    Annotations = DBuilder.getOrCreateArray(Annots);
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   const DeclContext *DC = Ty->getDecl()->getDeclContext();
@@ -1770,9 +1789,13 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
                                 Flags, Annotations);
 }
 
-static unsigned getDwarfCC(CallingConv CC) {
+static unsigned getDwarfCC(CallingConv CC, const llvm::Triple &T) {
   switch (CC) {
   case CC_C:
+    // On SPIR/SPIR-V, CC_C is the target default calling convention and lowers
+    // to spir_func, so describe it that way.
+    if (T.isSPIROrSPIRV())
+      return llvm::dwarf::DW_CC_LLVM_SpirFunction;
     // Avoid emitting DW_AT_calling_convention if the C convention was used.
     return 0;
 
@@ -1798,8 +1821,6 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_AAPCS_VFP;
   case CC_IntelOclBicc:
     return llvm::dwarf::DW_CC_LLVM_IntelOclBicc;
-  case CC_SpirFunction:
-    return llvm::dwarf::DW_CC_LLVM_SpirFunction;
   case CC_DeviceKernel:
     return llvm::dwarf::DW_CC_LLVM_DeviceKernel;
   case CC_Swift:
@@ -1876,7 +1897,8 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
 
   llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
   llvm::DIType *F = DBuilder.createSubroutineType(
-      EltTypeArray, Flags, getDwarfCC(Ty->getCallConv()));
+      EltTypeArray, Flags,
+      getDwarfCC(Ty->getCallConv(), CGM.getTarget().getTriple()));
   return F;
 }
 
@@ -2361,8 +2383,9 @@ CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
 
   llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
 
-  return DBuilder.createSubroutineType(EltTypeArray, OriginalFunc->getFlags(),
-                                       getDwarfCC(Func->getCallConv()));
+  return DBuilder.createSubroutineType(
+      EltTypeArray, OriginalFunc->getFlags(),
+      getDwarfCC(Func->getCallConv(), CGM.getTarget().getTriple()));
 }
 
 /// isFunctionLocalClass - Return true if CXXRecordDecl is defined
@@ -2512,10 +2535,17 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   // In this debug mode, emit type info for a class when its constructor type
-  // info is emitted.
-  if (DebugKind == llvm::codegenoptions::DebugInfoConstructor)
-    if (const CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(Method))
-      completeUnusedClass(*CD->getParent());
+  // info is emitted. Delegating constructors are ignored because the target
+  // constructor's definition will emit the type info.
+  if (DebugKind == llvm::codegenoptions::DebugInfoConstructor) {
+    if (const auto *CD = dyn_cast<CXXConstructorDecl>(Method)) {
+      if (const auto *Def =
+              dyn_cast_or_null<CXXConstructorDecl>(CD->getDefinition());
+          Def && !Def->isDelegatingConstructor()) {
+        completeUnusedClass(*CD->getParent());
+      }
+    }
+  }
 
   llvm::DINodeArray TParamsArray = CollectFunctionTemplateParams(Method, Unit);
   llvm::DISubprogram *SP = DBuilder.createMethod(
@@ -2820,18 +2850,44 @@ llvm::DINodeArray CGDebugInfo::CollectCXXTemplateParams(const RecordDecl *RD,
   return CollectTemplateParams(GetTemplateArgs(RD), Unit);
 }
 
-llvm::DINodeArray CGDebugInfo::CollectBTFDeclTagAnnotations(const Decl *D) {
-  if (!D->hasAttr<BTFDeclTagAttr>())
-    return nullptr;
-
-  SmallVector<llvm::Metadata *, 4> Annotations;
+void CGDebugInfo::CollectBTFDeclTagAnnotations(
+    const Decl *D, SmallVectorImpl<llvm::Metadata *> &Annotations) {
   for (const auto *I : D->specific_attrs<BTFDeclTagAttr>()) {
     llvm::Metadata *Ops[2] = {
         llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_decl_tag")),
         llvm::MDString::get(CGM.getLLVMContext(), I->getBTFDeclTag())};
     Annotations.push_back(llvm::MDNode::get(CGM.getLLVMContext(), Ops));
   }
+}
+
+llvm::DINodeArray CGDebugInfo::CollectBTFDeclTagAnnotations(const Decl *D) {
+  if (!D->hasAttr<BTFDeclTagAttr>())
+    return nullptr;
+
+  SmallVector<llvm::Metadata *, 4> Annotations;
+  CollectBTFDeclTagAnnotations(D, Annotations);
   return DBuilder.getOrCreateArray(Annotations);
+}
+
+void CGDebugInfo::CollectBTFTypeTagAnnotations(
+    QualType Ty, SmallVectorImpl<llvm::Metadata *> &Annotations) {
+  const BTFTagAttributedType *BTFAttrTy;
+  if (auto *Atomic = Ty->getAs<AtomicType>())
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Atomic->getValueType());
+  else
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Ty);
+
+  while (BTFAttrTy) {
+    StringRef Tag = BTFAttrTy->getAttr()->getBTFTypeTag();
+    if (!Tag.empty()) {
+      llvm::Metadata *Ops[2] = {
+          llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_type_tag")),
+          llvm::MDString::get(CGM.getLLVMContext(), Tag)};
+      Annotations.insert(Annotations.begin(),
+                         llvm::MDNode::get(CGM.getLLVMContext(), Ops));
+    }
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(BTFAttrTy->getWrappedType());
+  }
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateVTablePtrType(llvm::DIFile *Unit) {
@@ -3191,6 +3247,14 @@ static bool canUseCtorHoming(const CXXRecordDecl *RD) {
   for (const CXXConstructorDecl *Ctor : RD->ctors()) {
     if (Ctor->isCopyOrMoveConstructor())
       continue;
+    if (const FunctionDecl *Def = Ctor->getDefinition()) {
+      const auto *CtorDef = cast<CXXConstructorDecl>(Def);
+      // Ignore delegating constructors, the target constructor will either be
+      // a non-deleted custom constructor that enables homing, or could be a
+      // copy/move constructor, which does not enable homing.
+      if (CtorDef->isDelegatingConstructor())
+        continue;
+    }
     if (!Ctor->isDeleted())
       return true;
   }
@@ -3529,7 +3593,12 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
       IsRootModule ? nullptr
                    : getOrCreateModuleRef(ASTSourceDescriptor(*M->Parent),
                                           CreateSkeletonCU);
-  std::string IncludePath = Mod.getPath().str();
+  StringRef IncludePath = Mod.getPath();
+  if (!CGM.getCodeGenOpts().DebugRecordSysroot) {
+    StringRef Sysroot = CGM.getHeaderSearchOpts().Sysroot;
+    if (!Sysroot.empty() && IncludePath.starts_with(Sysroot))
+      IncludePath = "";
+  }
   llvm::DIModule *DIMod =
       DBuilder.createModule(Parent, Mod.getModuleName(), ConfigMacros,
                             RemapPath(IncludePath));
@@ -3598,7 +3667,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   };
   {
     // Use 'char' for the isClassProperty bit as DenseSet requires space for
-    // empty/tombstone keys in the data type (and bool is too small for that).
+    // the empty key in the data type (and bool is too small for that).
     typedef std::pair<char, const IdentifierInfo *> IsClassAndIdent;
     /// List of already emitted properties. Two distinct class and instance
     /// properties can share the same identifier (but not two instance
@@ -3679,13 +3748,17 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
       Flags |= llvm::DINode::FlagBitField;
 
     llvm::MDNode *PropertyNode = nullptr;
+    ObjCPropertyDecl *SynthesizedProperty = nullptr;
+    llvm::DIFile *PUnit = nullptr;
+    unsigned PLine = 0;
     if (ObjCImplementationDecl *ImpD = ID->getImplementation()) {
       if (ObjCPropertyImplDecl *PImpD =
               ImpD->FindPropertyImplIvarDecl(Field->getIdentifier())) {
         if (ObjCPropertyDecl *PD = PImpD->getPropertyDecl()) {
+          SynthesizedProperty = PD;
           SourceLocation Loc = PD->getLocation();
-          llvm::DIFile *PUnit = getOrCreateFile(Loc);
-          unsigned PLine = getLineNumber(Loc);
+          PUnit = getOrCreateFile(Loc);
+          PLine = getLineNumber(Loc);
           ObjCMethodDecl *Getter = PImpD->getGetterMethodDecl();
           ObjCMethodDecl *Setter = PImpD->getSetterMethodDecl();
           PropertyNode = DBuilder.createObjCProperty(
@@ -3701,10 +3774,17 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
         }
       }
     }
-    FieldTy = DBuilder.createObjCIVar(FieldName, FieldDefUnit, FieldLine,
-                                      FieldSize, FieldAlign, FieldOffset, Flags,
-                                      FieldTy, PropertyNode);
-    EltTys.push_back(FieldTy);
+    auto *IvarTy = DBuilder.createObjCIVar(FieldName, FieldDefUnit, FieldLine,
+                                           FieldSize, FieldAlign, FieldOffset,
+                                           Flags, FieldTy, PropertyNode);
+    EltTys.push_back(IvarTy);
+
+    if (SynthesizedProperty) {
+      assert(PUnit && "SynthesizedProperty implies PUnit");
+      EltTys.push_back(DBuilder.createProperty(
+          SynthesizedProperty->getName(), PUnit, PLine,
+          getOrCreateType(SynthesizedProperty->getType(), PUnit), IvarTy));
+    }
   }
 
   llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);
@@ -4026,12 +4106,19 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
-llvm::DILocation *CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc Location,
-                                                       StringRef FuncName) {
-  llvm::DISubprogram *SP =
-      createInlinedSubprogram(FuncName, Location->getFile());
+llvm::DILocation *
+CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                     llvm::DISubprogram *SynthSubprogram) {
   return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               /*Scope=*/SP, /*InlinedAt=*/Location);
+                               SynthSubprogram, ParentLocation);
+}
+
+llvm::DILocation *
+CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                     StringRef SynthFuncName,
+                                     llvm::DIFile *SynthFile) {
+  llvm::DISubprogram *SP = createInlinedSubprogram(SynthFuncName, SynthFile);
+  return CreateSyntheticInlineAt(ParentLocation, SP);
 }
 
 llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
@@ -4045,7 +4132,8 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
   FuncName += "$";
   FuncName += FailureMsg;
 
-  return CreateSyntheticInlineAt(TrapLocation, FuncName);
+  return CreateSyntheticInlineAt(TrapLocation, FuncName,
+                                 TrapLocation->getFile());
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
@@ -4295,6 +4383,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::PredefinedSugar:
     return getOrCreateType(cast<PredefinedSugarType>(Ty)->desugar(), Unit);
   case Type::CountAttributed:
+  case Type::LateParsedAttr:
   case Type::Auto:
   case Type::Attributed:
   case Type::BTFTagAttributed:
@@ -4568,6 +4657,14 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
     TemplateParameters = nullptr;
   }
 
+  // Get context for static locals (that are technically globals) the same way
+  // we do for "local" locals -- by using current lexical block.
+  if (VD->isStaticLocal()) {
+    assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+    VDContext = LexicalBlockStack.back();
+    return;
+  }
+
   // Since we emit declarations (DW_AT_members) for static members, place the
   // definition of those static members in the namespace they were declared in
   // in the source code (the lexical decl context).
@@ -4838,8 +4935,9 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
       Elts.push_back(DBuilder.createUnspecifiedParameter());
 
     llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
-    return DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
-                                         getDwarfCC(CC));
+    return DBuilder.createSubroutineType(
+        EltTypeArray, llvm::DINode::FlagZero,
+        getDwarfCC(CC, CGM.getTarget().getTriple()));
   }
 
   // Handle variadic function types; they need an additional
@@ -4853,8 +4951,9 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
           EltTys.push_back(getOrCreateType(ParamType, F));
       EltTys.push_back(DBuilder.createUnspecifiedParameter());
       llvm::DITypeArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
-      return DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
-                                           getDwarfCC(CC));
+      return DBuilder.createSubroutineType(
+          EltTypeArray, llvm::DINode::FlagZero,
+          getDwarfCC(CC, CGM.getTarget().getTriple()));
     }
 
   return cast<llvm::DISubroutineType>(getOrCreateType(FnType, F));
@@ -4918,6 +5017,8 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     // This is a global initializer or atexit destructor for a global variable.
     Name = getDynamicInitializerName(cast<VarDecl>(D), GD.getDynamicInitKind(),
                                      Fn);
+    if (Name != Fn->getName())
+      LinkageName = Fn->getName();
   } else {
     Name = Fn->getName();
 
@@ -4936,7 +5037,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
       isa<VarDecl>(D) || isa<CapturedDecl>(D)) {
     Flags |= llvm::DINode::FlagArtificial;
     // Artificial functions should not silently reuse CurLoc.
-    CurLoc = SourceLocation();
+    clearCurLoc();
   }
 
   if (CurFuncIsThunk)
@@ -5022,7 +5123,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
     Flags |= llvm::DINode::FlagArtificial;
     // Artificial functions without a location should not silently reuse CurLoc.
     if (Loc.isInvalid())
-      CurLoc = SourceLocation();
+      clearCurLoc();
   }
   unsigned LineNo = getLineNumber(Loc);
   unsigned ScopeLine = 0;
@@ -5087,13 +5188,18 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
     return;
   if (Func->getSubprogram())
     return;
+  // If the function has a definition, it either already has a
+  // subprogram or it is a nodebug function.
+  if (!Func->isDeclaration())
+    return;
 
   const FunctionDecl *CalleeDecl =
       cast<FunctionDecl>(CalleeGlobalDecl.getDecl());
 
   // Do not emit a declaration subprogram for a function with nodebug
-  // attribute, or if call site info isn't required.
-  if (CalleeDecl->hasAttr<NoDebugAttr>() ||
+  // attribute, or if call site info isn't required.  The attribute
+  // could be on a later redeclaration than the one the call resolves to.
+  if (CalleeDecl->getMostRecentDecl()->hasAttr<NoDebugAttr>() ||
       getCallSiteRelatedAttrs() == llvm::DINode::FlagZero)
     return;
 
@@ -5136,9 +5242,8 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
     return;
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
-  Builder.SetCurrentDebugLocation(
-      llvm::DILocation::get(CGM.getLLVMContext(), getLineNumber(CurLoc),
-                            getColumnNumber(CurLoc), Scope, CurInlinedAt));
+  Builder.SetCurrentDebugLocation(llvm::DILocation::get(
+      CGM.getLLVMContext(), CurLocLine, CurLocColumn, Scope, CurInlinedAt));
 }
 
 void CGDebugInfo::CreateLexicalBlock(SourceLocation Loc) {
@@ -6353,8 +6458,8 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
                                   Type, false, llvm::DINode::FlagArtificial);
 
   if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
-    DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
-                                     *InsertPoint);
+    DBuilder.insertDbgValue(Value, D, DBuilder.createExpression(), DIL,
+                            *InsertPoint);
   }
 }
 
@@ -6769,8 +6874,15 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
   else
     Label = SanitizerHandlerToCheckLabel(Handler);
 
-  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); }))
-    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label);
+  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); })) {
+    // Use ubsan header file to have the same filename for all checks. There is
+    // nothing special in that file, we just want to make tools to count all
+    // syntetic functions of a check as the same.
+    llvm::DIFile *File = llvm::DIFile::get(CGM.getLLVMContext(),
+                                           /*Filename=*/"ubsan_interface.h",
+                                           /*Directory=*/"sanitizer");
+    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label, File);
+  }
 
   return CheckDebugLoc;
 }

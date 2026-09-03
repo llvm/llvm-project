@@ -11,14 +11,14 @@ branch:
 ; Check that we don't call bar at all. 
 ; CHECK-NOT: call void @bar{{.*}}
   call void @bar() coro_elide_safe
-; CHECK: call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @bar.resumers)
+; CHECK: call token @llvm.coro.id(i32 0, ptr null, ptr @bar, ptr @bar.resumers)
   ret void
 }
 
 ; CHECK-LABEL: define void @bar()
 define void @bar() presplitcoroutine personality ptr null {
 entry:
-  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr @bar, ptr null)
   %1 = call ptr @llvm.coro.begin(token %0, ptr null)
   %2 = call token @llvm.coro.save(ptr null)
   %3 = call i8 @llvm.coro.suspend(token none, i1 false)

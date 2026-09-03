@@ -205,8 +205,12 @@ def parseScript(test, preamble):
         )
 
     # Perform substitutions in the script itself.
+    conditions = {feature: True for feature in test.config.available_features}
     script = lit.TestRunner.applySubstitutions(
-        script, substitutions, recursion_limit=test.config.recursiveExpansionLimit
+        script,
+        substitutions,
+        conditions,
+        recursion_limit=test.config.recursiveExpansionLimit,
     )
 
     return script
@@ -359,7 +363,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",
             ]
             if "enable-benchmarks=run" in test.config.available_features:
-                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%{temp}/benchmark-result.json --benchmark_out_format=json"]
+                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_min_time=%{benchmark_min_time} --benchmark_out=%{temp}/benchmark-result.json --benchmark_out_format=json"]
                 parse_results = os.path.join(LIBCXX_UTILS, 'parse-google-benchmark-results')
                 steps += [f"{parse_results} %{{temp}}/benchmark-result.json --output-format=lnt > %{{temp}}/results.lnt"]
             return self._executeShTest(test, litConfig, steps)

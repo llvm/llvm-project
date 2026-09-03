@@ -2,7 +2,7 @@
 ; RUN:  FileCheck %s -check-prefix=CHECK
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -passes=loop-vectorize -tail-predication=enabled \
-; RUN:     -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | \
+; RUN:     -tail-folding-policy=must-fold-tail -S < %s | \
 ; RUN:     FileCheck -check-prefix=PREDFLAG %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -101,8 +101,8 @@ for.body:
 }
 
 !10 = distinct !{!10, !11, !12}
-!11 = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
-!12 = !{!"llvm.loop.vectorize.enable", i1 true}
+!11 = !{!"llvm.loop.vectorize.predicate.disable"}
+!12 = !{!"llvm.loop.vectorize.enable"}
 
 !14 = distinct !{!14, !15}
 !15 = !{!"llvm.loop.interleave.count", i32 4}

@@ -24,13 +24,6 @@ add_header_library(
     libc.src.__support.time.abs_timeout
 )
 
-set(monotonicity_flags)
-if (LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
-  libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
-else()
-  libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
-endif()
-
 add_object_library(
   thread
   SRCS
@@ -40,19 +33,32 @@ add_object_library(
     libc.config.app_h
     libc.include.sys_syscall
     libc.hdr.fcntl_macros
+    libc.hdr.errno_macros
+    libc.hdr.sched_macros
+    libc.hdr.sys_mman_macros
     libc.src.errno.errno
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.stringstream
     libc.src.__support.CPP.string_view
     libc.src.__support.common
     libc.src.__support.error_or
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mprotect
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getparam
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getscheduler
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_setscheduler
+    libc.src.__support.OSUtil.linux.syscall_wrappers.write
     libc.src.__support.threads.thread_common
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
-                            # the new thread's stack reliably.
-    -Wno-frame-address      # Yes, calling __builtin_return_address with a
-                            # value other than 0 is dangerous. We know.
+    # the new thread's stack reliably.
+    -Wno-frame-address # Yes, calling __builtin_return_address with a
+  # value other than 0 is dangerous. We know.
 )
 
 add_header_library(
@@ -63,22 +69,6 @@ add_header_library(
   DEPENDS
     .futex_utils
     libc.src.__support.macros.optimization
-)
-
-add_object_library(
-  CndVar
-  SRCS
-    CndVar.cpp
-  HDRS
-    ../CndVar.h
-  DEPENDS
-    libc.hdr.stdint_proxy
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.threads.linux.futex_word_type
-    libc.src.__support.threads.mutex
-    libc.src.__support.threads.raw_mutex
-    libc.src.__support.CPP.mutex
 )
 
 add_object_library(

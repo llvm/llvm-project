@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A,DPP64-GFX9 -DCTL=row_newbcast
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9,GFX942 -DCTL=row_newbcast
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10 -DCTL=row_share
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11 -DCTL=row_share
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1250 -DCTL=row_share
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX1251 -DCTL=row_share
+; RUN: llc -mtriple=amdgpu9.0a < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A,DPP64-GFX9 -DCTL=row_newbcast
+; RUN: llc -mtriple=amdgpu9.42 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9,GFX942 -DCTL=row_newbcast
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10 -DCTL=row_share
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11 -DCTL=row_share
+; RUN: llc -mtriple=amdgpu12.50 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1250 -DCTL=row_share
+; RUN: llc -mtriple=amdgpu12.51 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX1251 -DCTL=row_share
 
 ; GCN-LABEL: {{^}}dpp64_ceil:
 ; GCN:           global_load_{{dwordx2|b64}} [[V:v\[[0-9:]+\]]],
@@ -111,6 +111,28 @@ bb1:
   %i2 = add i64 %i, %arg
   %i3 = atomicrmw add ptr addrspace(1) null, i64 %i2 monotonic, align 8
   br label %bb1
+}
+
+; GCN-LABEL: {{^}}dpp64_fmin:
+; DPP64-GFX1251: v_min_num_f64_dpp v[0:1], v[0:1], v[0:1] [[CTL]]:1 row_mask:0xf bank_mask:0xf{{$}}
+; DPP64-GFX9: v_min_f64 v[0:1], v[0:1], v[{{[0-9:]+}}]{{$}}
+; DPP32: v_min{{(_num)?}}_f64{{(_e32)?}} v[0:1], v[0:1], v[{{[0-9:]+}}]{{$}}
+define nofpclass(nan) double @dpp64_fmin(double nofpclass(nan) %x) {
+entry:
+  %dpp = tail call double @llvm.amdgcn.update.dpp.f64(double 0x7FF0000000000000, double %x, i32 337, i32 15, i32 15, i1 false)
+  %min = tail call nnan double @llvm.minnum.f64(double %x, double %dpp)
+  ret double %min
+}
+
+; GCN-LABEL: {{^}}dpp64_fmax:
+; DPP64-GFX1251: v_max_num_f64_dpp v[0:1], v[0:1], v[0:1] [[CTL]]:1 row_mask:0xf bank_mask:0xf{{$}}
+; DPP64-GFX9: v_max_f64 v[0:1], v[0:1], v[{{[0-9:]+}}]{{$}}
+; DPP32: v_max{{(_num)?}}_f64{{(_e32)?}} v[0:1], v[0:1], v[{{[0-9:]+}}]{{$}}
+define nofpclass(nan) double @dpp64_fmax(double nofpclass(nan) %x) #0 {
+entry:
+  %dpp = tail call double @llvm.amdgcn.update.dpp.f64(double 0xFFF0000000000000, double %x, i32 337, i32 15, i32 15, i1 false)
+  %max = tail call nnan double @llvm.maxnum.f64(double %x, double %dpp)
+  ret double %max
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()

@@ -94,7 +94,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:  %[[VAL40:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %{{.*}}, i32 0, i32 0
 // box access:
 // CHECK:  %[[VAL41:.*]] = load ptr, ptr %[[VAL40]], align 8, !tbaa ![[BOX_ACCESS_TAG]]
-// CHECK:  %[[VAL42:.*]] = getelementptr nusw nuw i8, ptr %[[VAL41]], i64 %{{.*}}
+// CHECK:  %[[VAL42:.*]] = getelementptr nusw i8, ptr %[[VAL41]], i64 %{{.*}}
 // access to 'a':
 // CHECK:  %[[VAL43:.*]] = load i32, ptr %[[VAL42]], align 4, !tbaa ![[A_ACCESS_TAG:.*]]
 // [...]
@@ -113,4 +113,4 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK: ![[DATA_ACCESS_TYPE]] = !{!"any data access", ![[ANY_ACCESS_TYPE]], i64 0}
 // CHECK: ![[TMP_DATA_ACCESS_TAG]] = !{![[TMP_DATA_ACCESS_TYPE:.*]], ![[TMP_DATA_ACCESS_TYPE]], i64 0}
 // CHECK: ![[TMP_DATA_ACCESS_TYPE]] = !{!"allocated data/", ![[TMP_ACCESS_TYPE:.*]], i64 0}
-// CHECK: ![[TMP_ACCESS_TYPE]] = !{!"allocated data", ![[TARGET_ACCESS_TAG:.*]], i64 0}
+// CHECK: ![[TMP_ACCESS_TYPE]] = !{!"allocated data", ![[DATA_ACCESS_TYPE]], i64 0}

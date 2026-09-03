@@ -18,6 +18,7 @@
 #include <string>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 template <class>
 inline constexpr std::string to_string = "";
@@ -30,10 +31,13 @@ inline constexpr std::string to_string<double> = "double";
 
 enum class ValueE { Inf, Random };
 
+std::string value_name(ValueE value) { return value == ValueE::Inf ? "-inf" : "random"; }
+
 int main(int argc, char** argv) {
   auto bm = []<class FloatingPoint>(std::type_identity<FloatingPoint>, ValueE v, std::string fmt) {
     benchmark::RegisterBenchmark(
-        "std::format(" + to_string<FloatingPoint> + ") (fmt: " + fmt + ")", [fmt, v](benchmark::State& state) {
+        "std::format(" + to_string<FloatingPoint> + ") (value: " + value_name(v) + ", fmt: " + fmt + ")",
+        [fmt, v](benchmark::State& state) TEST_ALIGN_BENCHMARK {
           std::array<FloatingPoint, 1000> data = [&] {
             std::array<FloatingPoint, 1000> result;
             if (v == ValueE::Inf) {

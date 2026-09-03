@@ -165,8 +165,8 @@ define i1 @presplit_overlarge_load() {
 !0 = !{!"function_entry_count", i32 10}
 
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i32 10}
 ;.

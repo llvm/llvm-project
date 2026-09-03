@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdlib>
+
 #include <level_zero/ze_api.h>
 #include <sycl/ext/oneapi/backend/level_zero.hpp>
 #include <sycl/sycl.hpp>
@@ -27,13 +29,13 @@ auto catchAll(F &&func) {
   try {
     return func();
   } catch (const std::exception &e) {
-    fprintf(stdout, "An exception was thrown: %s\n", e.what());
-    fflush(stdout);
-    abort();
+    fprintf(stderr, "SYCL runtime error: %s\n", e.what());
+    fflush(stderr);
+    std::exit(EXIT_FAILURE);
   } catch (...) {
-    fprintf(stdout, "An unknown exception was thrown\n");
-    fflush(stdout);
-    abort();
+    fprintf(stderr, "SYCL runtime error: unknown exception was thrown\n");
+    fflush(stderr);
+    std::exit(EXIT_FAILURE);
   }
 }
 
@@ -41,8 +43,8 @@ auto catchAll(F &&func) {
   {                                                                            \
     ze_result_t status = (call);                                               \
     if (status != ZE_RESULT_SUCCESS) {                                         \
-      fprintf(stdout, "L0 error %d\n", status);                                \
-      fflush(stdout);                                                          \
+      fprintf(stderr, "L0 error %d\n", status);                                \
+      fflush(stderr);                                                          \
       abort();                                                                 \
     }                                                                          \
   }
@@ -64,7 +66,9 @@ static sycl::device getDefaultDevice() {
       isDeviceInitialised = true;
       return syclDevice;
     }
-    throw std::runtime_error("getDefaultDevice failed");
+    throw std::runtime_error(
+        "no Level-Zero SYCL platform found; the MLIR SYCL runtime wrapper "
+        "currently requires a Level-Zero backend");
   } else {
     return syclDevice;
   }

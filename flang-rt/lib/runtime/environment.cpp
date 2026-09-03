@@ -17,10 +17,12 @@
 
 #ifdef _WIN32
 #include <stdlib.h>
-#elif defined(__FreeBSD__) || RT_GPU_TARGET
+#elif defined(__FreeBSD__)
 // FreeBSD has environ in crt rather than libc. Using "extern char** environ"
 // in the code of a shared library makes it fail to link with -Wl,--no-undefined
 // See https://reviews.freebsd.org/D30842#840642
+#include <dlfcn.h>
+#elif RT_GPU_TARGET
 // GPU targets do not provide environ.
 #else
 extern char **environ;
@@ -163,6 +165,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     } else {
       std::fprintf(stderr,
           "Fortran runtime: NO_STOP_MESSAGE=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FLANG_TIMEF_IN_MILLISECONDS")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      timefInMillisec = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FLANG_TIMEF_IN_MILLISECONDS=%s is invalid; "
+          "ignored\n",
+          x);
     }
   }
 

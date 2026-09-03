@@ -1,28 +1,11 @@
 import argparse
-from typing import TypedDict, Union, Optional, TextIO, NotRequired
+from typing import Any, Dict, TypedDict, Union, Optional, TextIO
 from dataclasses import dataclass
 import json
 import re
 
 
-PropertyDef = TypedDict(
-    "PropertyDef",
-    {
-        "!superclasses": list[str],
-        "Name": str,
-        "Path": str,
-        "Type": str,
-        "Description": NotRequired[str],
-        "HasDefaultUnsignedValue": NotRequired[int],
-        "HasDefaultBooleanValue": NotRequired[int],
-        "DefaultUnsignedValue": NotRequired[int],
-        "HasDefaultStringValue": NotRequired[int],
-        "DefaultStringValue": NotRequired[str],
-        "HasDefaultEnumValue": NotRequired[int],
-        "DefaultEnumValue": NotRequired[str],
-        "EnumValues": NotRequired[str],
-    },
-)
+PropertyDef = Dict[str, Any]
 
 
 class Property:

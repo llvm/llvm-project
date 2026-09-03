@@ -8,23 +8,29 @@
 define void @nested(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1) {
 ; CHECK-LABEL: define void @nested(
 ; CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]], i1 [[C0:%.*]], i1 [[C1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[C0]], label %[[THEN_0:.*]], label %[[LATCH]]
-; CHECK:       [[THEN_0]]:
-; CHECK-NEXT:    br i1 [[C1]], label %[[THEN_1:.*]], label %[[LATCH]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = select <vscale x 4 x i1> [[BROADCAST_SPLAT2]], <vscale x 4 x i1> [[BROADCAST_SPLAT]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    br label %[[THEN_1:.*]]
 ; CHECK:       [[THEN_1]]:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, %[[LOOP]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[THEN_1]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 1024, %[[LOOP]] ], [ [[AVL_NEXT:%.*]], %[[THEN_1]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[P0]], i32 [[IV1]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P1]], i32 [[X]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP1]], align 4
-; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[GEP2]], <vscale x 4 x i1> [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[P1]], <vscale x 4 x i32> [[VP_OP_LOAD]]
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x ptr> align 4 [[TMP3]], <vscale x 4 x i1> [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP1]], [[IV1]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[LATCH:.*]], label %[[THEN_1]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV1]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -80,7 +86,7 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP1]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:

@@ -11,7 +11,8 @@
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 #include "src/sys/auxv/getauxval.h"
 #endif
 
@@ -66,12 +67,12 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 static constexpr uint64_t ALIGNMENT = alignof(double);
 static constexpr uint64_t MEMORY_SIZE = 256 * 1024 /* 256 KiB */;
 alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
-static size_t ptr = 0;
+static size_t global_ptr = 0;
 
 extern "C" {
 
 void *malloc(size_t size) {
-  LIBC_NAMESPACE::cpp::AtomicRef<size_t> ref(ptr);
+  LIBC_NAMESPACE::cpp::AtomicRef<size_t> ref(global_ptr);
   size = (size + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
   size_t old_ptr =
       ref.fetch_add(size, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
@@ -91,7 +92,8 @@ void *realloc(void *ptr, size_t s) {
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 // Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
 // defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
 unsigned long __getauxval(unsigned long id) {

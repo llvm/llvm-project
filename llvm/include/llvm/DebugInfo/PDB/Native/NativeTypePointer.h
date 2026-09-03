@@ -18,7 +18,7 @@
 namespace llvm {
 namespace pdb {
 
-class NativeTypePointer : public NativeRawSymbol {
+class LLVM_ABI NativeTypePointer : public NativeRawSymbol {
 public:
   // Create a pointer record for a simple type.
   NativeTypePointer(NativeSession &Session, SymIndexId Id,

@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <vector>
@@ -278,6 +279,10 @@ private:
 
   /// Set to true if this function has any function calls.
   bool HasCalls = false;
+
+  /// Frame-pointer policy for this function to avoid repeated attribute
+  /// lookups in hot paths.
+  FramePointerKind FramePointerPolicy = FramePointerKind::None;
 
   /// The frame index for the stack protector.
   int StackProtectorIdx = -1;
@@ -618,11 +623,13 @@ public:
   /// Set the correction for frame offsets.
   void setOffsetAdjustment(int64_t Adj) { OffsetAdjustment = Adj; }
 
-  /// Return the alignment in bytes that this function must be aligned to,
-  /// which is greater than the default stack alignment provided by the target.
+  /// Return alignment of this function's frame.
   Align getMaxAlign() const { return MaxAlignment; }
 
-  /// Make sure the function is at least Align bytes aligned.
+  /// Overwrite alignment of this function's frame.
+  void setMaxAlign(Align Alignment) { MaxAlignment = Alignment; }
+
+  /// Make sure the function's frame is at least Align bytes aligned.
   LLVM_ABI void ensureMaxAlignment(Align Alignment);
 
   /// Return true if stack realignment is forced by function attributes or if
@@ -640,6 +647,11 @@ public:
   /// Return true if the current function has any function calls.
   bool hasCalls() const { return HasCalls; }
   void setHasCalls(bool V) { HasCalls = V; }
+
+  FramePointerKind getFramePointerPolicy() const { return FramePointerPolicy; }
+  void setFramePointerPolicy(FramePointerKind Kind) {
+    FramePointerPolicy = Kind;
+  }
 
   /// Returns true if the function contains opaque dynamic stack adjustments.
   bool hasOpaqueSPAdjustment() const { return HasOpaqueSPAdjustment; }
@@ -823,7 +835,9 @@ public:
 
   /// Create a new statically sized stack object that represents a spill slot,
   /// returning a nonnegative identifier to represent it.
-  LLVM_ABI int CreateSpillStackObject(uint64_t Size, Align Alignment);
+  LLVM_ABI int
+  CreateSpillStackObject(uint64_t Size, Align Alignment,
+                         TargetStackID::Value StackID = TargetStackID::Default);
 
   /// Remove or mark dead a statically sized stack object.
   void RemoveStackObject(int ObjectIdx) {

@@ -683,6 +683,17 @@ public:
     Visit(D->getMessage());
   }
 
+  void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D) {
+    if (TypeSourceInfo *TSI = D->getTypeAsWritten())
+      Visit(TSI->getTypeLoc());
+    if (auto NumArgs = D->getNumTemplateArgs()) {
+      for (unsigned I = 0; I != *NumArgs; ++I) {
+        TemplateArgumentLoc Loc = D->getTemplateArg(I);
+        Visit(Loc.getArgument(), Loc.getSourceRange());
+      }
+    }
+  }
+
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
     dumpTemplateDecl(D);
   }
@@ -778,6 +789,14 @@ public:
     } else {
       Visit(D->getFriendDecl());
     }
+  }
+
+  void VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+    for (const TemplateParameterList *TPL : D->getTemplateParameterLists())
+      dumpTemplateParameters(TPL);
+    if (D->getFriendKind() !=
+        FriendTemplateDecl::FriendTemplateEntityKind::Template)
+      VisitFriendDecl(D);
   }
 
   void VisitObjCMethodDecl(const ObjCMethodDecl *D) {
@@ -970,6 +989,12 @@ public:
       Visit(Node->getRangeInit());
       Visit(Node->getBody());
     }
+  }
+
+  void VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *Node) {
+    Visit(Node->getExpansionPattern());
+    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+      Visit(Node->getInstantiations());
   }
 
   void VisitCallExpr(const CallExpr *Node) {

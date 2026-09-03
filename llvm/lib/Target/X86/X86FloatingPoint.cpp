@@ -1135,6 +1135,15 @@ void FPS::handleReturn(MachineBasicBlock::iterator &I) {
     --e;
   }
 
+  // Record the values returned in ST0/ST1 as implicit uses so that later
+  // passes can tell they are live at the return.
+  if (FirstFPRegOp != ~0U)
+    MI.addOperand(MachineOperand::CreateReg(X86::ST0, /*isDef=*/false,
+                                            /*isImp=*/true));
+  if (SecondFPRegOp != ~0U)
+    MI.addOperand(MachineOperand::CreateReg(X86::ST1, /*isDef=*/false,
+                                            /*isImp=*/true));
+
   // We may have been carrying spurious live-ins, so make sure only the
   // returned registers are left live.
   adjustLiveRegs(LiveMask, MI);

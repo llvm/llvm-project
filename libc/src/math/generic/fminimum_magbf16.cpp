@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fminimum_magbf16.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/fminimum_magbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(bfloat16, fminimum_magbf16, (bfloat16 x, bfloat16 y)) {
-  return fputil::fminimum_mag(x, y);
+  return math::fminimum_magbf16(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
