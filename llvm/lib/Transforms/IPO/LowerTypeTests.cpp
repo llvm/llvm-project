@@ -234,7 +234,8 @@ const std::vector<uint64_t> &GlobalLayoutBuilder::build() {
   Layout.reserve(FragmentMap.size());
   for (auto &&F : Fragments)
     llvm::append_range(Layout, std::move(F));
-  Fragments = {std::move(Layout)};
+  Fragments.clear();
+  Fragments.push_back(std::move(Layout));
   return Fragments.front();
 }
 

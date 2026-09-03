@@ -264,19 +264,19 @@ define void @minmax_pos_inf_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr 
 ; CHECK-NEXT:    store float +inf, ptr [[MAXIMUMNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %minnum = call float @llvm.minnum.f32(float %x, float 0x7FF0000000000000)
+  %minnum = call float @llvm.minnum.f32(float %x, float +inf)
   store float %minnum, ptr %minnum_res
-  %maxnum = call float @llvm.maxnum.f32(float %x, float 0x7FF0000000000000)
+  %maxnum = call float @llvm.maxnum.f32(float %x, float +inf)
   store float %maxnum, ptr %maxnum_res
 
-  %minimum = call float @llvm.minimum.f32(float %x, float 0x7FF0000000000000)
+  %minimum = call float @llvm.minimum.f32(float %x, float +inf)
   store float %minimum, ptr %minimum_res
-  %maximum = call float @llvm.maximum.f32(float %x, float 0x7FF0000000000000)
+  %maximum = call float @llvm.maximum.f32(float %x, float +inf)
   store float %maximum, ptr %maximum_res
 
-  %minimumnum = call float @llvm.minimumnum.f32(float %x, float 0x7FF0000000000000)
+  %minimumnum = call float @llvm.minimumnum.f32(float %x, float +inf)
   store float %minimumnum, ptr %minimumnum_res
-  %maximumnum = call float @llvm.maximumnum.f32(float %x, float 0x7FF0000000000000)
+  %maximumnum = call float @llvm.maximumnum.f32(float %x, float +inf)
   store float %maximumnum, ptr %maximumnum_res
   ret void
 }
@@ -292,19 +292,19 @@ define void @minmax_pos_inf_nnan_v2f32(<2 x float> %x, ptr %minnum_res, ptr %max
 ; CHECK-NEXT:    store <2 x float> splat (float +inf), ptr [[MAXIMUMNUM_RES:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %minnum = call nnan <2 x float> @llvm.minnum.v2f32(<2 x float> splat (float 0x7FF0000000000000), <2 x float> %x)
+  %minnum = call nnan <2 x float> @llvm.minnum.v2f32(<2 x float> splat (float +inf), <2 x float> %x)
   store <2 x float> %minnum, ptr %minnum_res
-  %maxnum = call nnan <2 x float> @llvm.maxnum.v2f32(<2 x float> splat (float 0x7FF0000000000000), <2 x float> %x)
+  %maxnum = call nnan <2 x float> @llvm.maxnum.v2f32(<2 x float> splat (float +inf), <2 x float> %x)
   store <2 x float> %maxnum, ptr %maxnum_res
 
-  %minimum = call nnan <2 x float> @llvm.minimum.v2f32(<2 x float> splat (float 0x7FF0000000000000), <2 x float> %x)
+  %minimum = call nnan <2 x float> @llvm.minimum.v2f32(<2 x float> splat (float +inf), <2 x float> %x)
   store <2 x float> %minimum, ptr %minimum_res
-  %maximum = call nnan <2 x float> @llvm.maximum.v2f32(<2 x float> splat (float 0x7FF0000000000000), <2 x float> %x)
+  %maximum = call nnan <2 x float> @llvm.maximum.v2f32(<2 x float> splat (float +inf), <2 x float> %x)
   store <2 x float> %maximum, ptr %maximum_res
 
-  %minimumnum = call nnan <2 x float> @llvm.minimumnum.v2f32(<2 x float> splat (float 0x7FF0000000000000), <2 x float> %x)
+  %minimumnum = call nnan <2 x float> @llvm.minimumnum.v2f32(<2 x float> splat (float +inf), <2 x float> %x)
   store <2 x float> %minimumnum, ptr %minimumnum_res
-  %maximumnum = call nnan <2 x float> @llvm.maximumnum.v2f32(<2 x float> splat (float 0x7FF0000000000000), <2 x float> %x)
+  %maximumnum = call nnan <2 x float> @llvm.maximumnum.v2f32(<2 x float> splat (float +inf), <2 x float> %x)
   store <2 x float> %maximumnum, ptr %maximumnum_res
   ret void
 }
@@ -333,19 +333,19 @@ define void @minmax_neg_inf_f32(float %x, ptr %minnum_res, ptr %maxnum_res, ptr 
 ; CHECK-NEXT:    store float [[MAXIMUMNUM]], ptr [[MAXIMUMNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %minnum = call float @llvm.minnum.f32(float %x, float 0xFFF0000000000000)
+  %minnum = call float @llvm.minnum.f32(float %x, float -inf)
   store float %minnum, ptr %minnum_res
-  %maxnum = call float @llvm.maxnum.f32(float %x, float 0xFFF0000000000000)
+  %maxnum = call float @llvm.maxnum.f32(float %x, float -inf)
   store float %maxnum, ptr %maxnum_res
 
-  %minimum = call float @llvm.minimum.f32(float %x, float 0xFFF0000000000000)
+  %minimum = call float @llvm.minimum.f32(float %x, float -inf)
   store float %minimum, ptr %minimum_res
-  %maximum = call float @llvm.maximum.f32(float %x, float 0xFFF0000000000000)
+  %maximum = call float @llvm.maximum.f32(float %x, float -inf)
   store float %maximum, ptr %maximum_res
 
-  %minimumnum = call float @llvm.minimumnum.f32(float %x, float 0xFFF0000000000000)
+  %minimumnum = call float @llvm.minimumnum.f32(float %x, float -inf)
   store float %minimumnum, ptr %minimumnum_res
-  %maximumnum = call float @llvm.maximumnum.f32(float %x, float 0xFFF0000000000000)
+  %maximumnum = call float @llvm.maximumnum.f32(float %x, float -inf)
   store float %maximumnum, ptr %maximumnum_res
   ret void
 }
@@ -641,19 +641,19 @@ define void @minmax_mixed_pos_inf_poison_snan_v3f32(<3 x float> %x, ptr %minnum_
 ; CHECK-NEXT:    store <3 x float> [[MAXIMUMNUM]], ptr [[MAXIMUMNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
-  %minnum = call nnan <3 x float> @llvm.minnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  %minnum = call nnan <3 x float> @llvm.minnum.v3f32(<3 x float> <float poison, float +inf, float 0x7FF4000000000000>, <3 x float> %x)
   store <3 x float> %minnum, ptr %minnum_res
-  %maxnum = call nnan <3 x float> @llvm.maxnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  %maxnum = call nnan <3 x float> @llvm.maxnum.v3f32(<3 x float> <float poison, float +inf, float 0x7FF4000000000000>, <3 x float> %x)
   store <3 x float> %maxnum, ptr %maxnum_res
 
-  %minimum = call nnan <3 x float> @llvm.minimum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  %minimum = call nnan <3 x float> @llvm.minimum.v3f32(<3 x float> <float poison, float +inf, float 0x7FF4000000000000>, <3 x float> %x)
   store <3 x float> %minimum, ptr %minimum_res
-  %maximum = call nnan <3 x float> @llvm.maximum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  %maximum = call nnan <3 x float> @llvm.maximum.v3f32(<3 x float> <float poison, float +inf, float 0x7FF4000000000000>, <3 x float> %x)
   store <3 x float> %maximum, ptr %maximum_res
 
-  %minimumnum = call nnan <3 x float> @llvm.minimumnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  %minimumnum = call nnan <3 x float> @llvm.minimumnum.v3f32(<3 x float> <float poison, float +inf, float 0x7FF4000000000000>, <3 x float> %x)
   store <3 x float> %minimumnum, ptr %minimumnum_res
-  %maximumnum = call nnan <3 x float> @llvm.maximumnum.v3f32(<3 x float> <float poison, float 0x7FF0000000000000, float 0x7FF4000000000000>, <3 x float> %x)
+  %maximumnum = call nnan <3 x float> @llvm.maximumnum.v3f32(<3 x float> <float poison, float +inf, float 0x7FF4000000000000>, <3 x float> %x)
   store <3 x float> %maximumnum, ptr %maximumnum_res
   ret void
 }
