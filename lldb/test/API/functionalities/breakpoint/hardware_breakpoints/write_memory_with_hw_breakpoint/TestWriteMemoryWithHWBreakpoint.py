@@ -14,6 +14,7 @@ from functionalities.breakpoint.hardware_breakpoints.base import *
 class WriteMemoryWithHWBreakpoint(HardwareBreakpointTestBase):
 
     @skipTestIfFn(HardwareBreakpointTestBase.hw_breakpoints_unsupported)
+    @skipIfOutOfTreeDebugserver
     def test_write_memory_with_hw_break(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

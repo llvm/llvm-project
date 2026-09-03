@@ -2,11 +2,16 @@
 
 // CHECK-LABEL: test_vector_insert_2d_idx
 // CHECK-SAME: (%[[DEST:.*]]: vector<2x8x4xf32>, %[[SRC:.*]]: vector<4xf32>) -> vector<2x8x4xf32>
+// CHECK: %[[POISON:.*]] = ub.poison : vector<4xf32>
 // CHECK: %[[ARG_DEST:.*]] = vector.shape_cast %[[DEST]] : vector<2x8x4xf32> to vector<64xf32>
-// CHECK: %[[SHUFFLE:.*]] = vector.shuffle %[[ARG_DEST]], %[[SRC]]
+// The source is first promoted to the width of the destination, so that both
+// shuffle operands have the same type.
+// CHECK: %[[PROMOTED:.*]] = vector.shuffle %[[SRC]], %[[POISON]]
+// CHECK-SAME: : vector<4xf32>, vector<4xf32>
+// CHECK: %[[SHUFFLE:.*]] = vector.shuffle %[[ARG_DEST]], %[[PROMOTED]]
 // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 64, 65, 66, 67, 16, 17, 18, 19, 20, 21,
 // CHECK-SAME: 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
-// CHECK-SAME: 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63] : vector<64xf32>, vector<4xf32>
+// CHECK-SAME: 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63] : vector<64xf32>, vector<64xf32>
 // CHECK: %[[RES:.*]] = vector.shape_cast %[[SHUFFLE]] : vector<64xf32> to vector<2x8x4xf32>
 // CHECK: return %[[RES]] : vector<2x8x4xf32>
 func.func @test_vector_insert_2d_idx(%arg0: vector<2x8x4xf32>, %arg1: vector<4xf32>) -> vector<2x8x4xf32> {
@@ -108,11 +113,17 @@ func.func @test_linearize_index(%arg0: vector<2x2xindex>, %arg1: vector<2x2xi32>
 // -----
 // CHECK-LABEL: func.func @broadcast_stretch_at_start
 // CHECK-SAME: (%[[ARG0:.*]]: vector<1x4xf32>) -> vector<3x4xf32>
-// CHECK: %[[POISON:.*]] = ub.poison : vector<12xf32>
+// CHECK-DAG: %[[POISON4:.*]] = ub.poison : vector<4xf32>
+// CHECK-DAG: %[[POISON:.*]] = ub.poison : vector<12xf32>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[ARG0]] : vector<1x4xf32> to vector<4xf32>
-// CHECK: %[[SHUFFLE1:.*]] = vector.shuffle %[[POISON]], %[[CAST]] [12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1] : vector<12xf32>, vector<4xf32>
-// CHECK: %[[SHUFFLE2:.*]] = vector.shuffle %[[SHUFFLE1]], %[[CAST]] [0, 1, 2, 3, 12, 13, 14, 15, 8, 9, 10, 11] : vector<12xf32>, vector<4xf32>
-// CHECK: %[[SHUFFLE3:.*]] = vector.shuffle %[[SHUFFLE2]], %[[CAST]] [0, 1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15] : vector<12xf32>, vector<4xf32>
+// Each narrow operand is promoted to the wide operand's type first, so every
+// shuffle below takes two `vector<12xf32>`.
+// CHECK: %[[P1:.*]] = vector.shuffle %[[CAST]], %[[POISON4]] [0, 1, 2, 3, -1, -1, -1, -1, -1, -1, -1, -1] : vector<4xf32>, vector<4xf32>
+// CHECK: %[[SHUFFLE1:.*]] = vector.shuffle %[[POISON]], %[[P1]] [12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1] : vector<12xf32>, vector<12xf32>
+// CHECK: %[[P2:.*]] = vector.shuffle %[[CAST]], %[[POISON4]] [0, 1, 2, 3, -1, -1, -1, -1, -1, -1, -1, -1] : vector<4xf32>, vector<4xf32>
+// CHECK: %[[SHUFFLE2:.*]] = vector.shuffle %[[SHUFFLE1]], %[[P2]] [0, 1, 2, 3, 12, 13, 14, 15, 8, 9, 10, 11] : vector<12xf32>, vector<12xf32>
+// CHECK: %[[P3:.*]] = vector.shuffle %[[CAST]], %[[POISON4]] [0, 1, 2, 3, -1, -1, -1, -1, -1, -1, -1, -1] : vector<4xf32>, vector<4xf32>
+// CHECK: %[[SHUFFLE3:.*]] = vector.shuffle %[[SHUFFLE2]], %[[P3]] [0, 1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15] : vector<12xf32>, vector<12xf32>
 // CHECK: %[[RESULT:.*]] = vector.shape_cast %[[SHUFFLE3]] : vector<12xf32> to vector<3x4xf32>
 func.func @broadcast_stretch_at_start(%arg0: vector<1x4xf32>) -> vector<3x4xf32> {
   %0 = vector.broadcast %arg0 : vector<1x4xf32> to vector<3x4xf32>
@@ -123,18 +134,21 @@ func.func @broadcast_stretch_at_start(%arg0: vector<1x4xf32>) -> vector<3x4xf32>
 // CHECK-LABEL: func.func @broadcast_stretch_at_end
 // CHECK-SAME: (%[[ARG0:.*]]: vector<4x1xf32>) -> vector<4x3xf32>
 // CHECK: %[[POISON:.*]] = ub.poison : vector<12xf32>
+// Promoting the narrow shuffle operand folds into the broadcast that produces
+// it, so each broadcast yields the wide type directly and every shuffle below
+// takes two `vector<12xf32>`.
 // CHECK: %[[EXTRACT1:.*]] = vector.extract %[[ARG0]][0, 0] : f32 from vector<4x1xf32>
-// CHECK: %[[BROADCAST1:.*]] = vector.broadcast %[[EXTRACT1]] : f32 to vector<3xf32>
-// CHECK: vector.shuffle
+// CHECK: %[[BROADCAST1:.*]] = vector.broadcast %[[EXTRACT1]] : f32 to vector<12xf32>
+// CHECK: vector.shuffle %[[POISON]], %[[BROADCAST1]] {{.*}} : vector<12xf32>, vector<12xf32>
 // CHECK: %[[EXTRACT2:.*]] = vector.extract %[[ARG0]][1, 0] : f32 from vector<4x1xf32>
-// CHECK: %[[BROADCAST2:.*]] = vector.broadcast %[[EXTRACT2]] : f32 to vector<3xf32>
-// CHECK: vector.shuffle
+// CHECK: %[[BROADCAST2:.*]] = vector.broadcast %[[EXTRACT2]] : f32 to vector<12xf32>
+// CHECK: vector.shuffle {{.*}} : vector<12xf32>, vector<12xf32>
 // CHECK: %[[EXTRACT3:.*]] = vector.extract %[[ARG0]][2, 0] : f32 from vector<4x1xf32>
-// CHECK: %[[BROADCAST3:.*]] = vector.broadcast %[[EXTRACT3]] : f32 to vector<3xf32>
-// CHECK: vector.shuffle
+// CHECK: %[[BROADCAST3:.*]] = vector.broadcast %[[EXTRACT3]] : f32 to vector<12xf32>
+// CHECK: vector.shuffle {{.*}} : vector<12xf32>, vector<12xf32>
 // CHECK: %[[EXTRACT4:.*]] = vector.extract %[[ARG0]][3, 0] : f32 from vector<4x1xf32>
-// CHECK: %[[BROADCAST4:.*]] = vector.broadcast %[[EXTRACT4]] : f32 to vector<3xf32>
-// CHECK: vector.shuffle
+// CHECK: %[[BROADCAST4:.*]] = vector.broadcast %[[EXTRACT4]] : f32 to vector<12xf32>
+// CHECK: vector.shuffle {{.*}} : vector<12xf32>, vector<12xf32>
 // CHECK: vector.shape_cast {{.*}} : vector<12xf32> to vector<4x3xf32>
 func.func @broadcast_stretch_at_end(%arg0: vector<4x1xf32>) -> vector<4x3xf32> {
   %0 = vector.broadcast %arg0 : vector<4x1xf32> to vector<4x3xf32>
@@ -216,27 +230,33 @@ func.func @gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x3xindex>, %mask
 // The `xegpu-vector-linearize` pass does not itself affect the XeGPU ops.
 
 // CHECK: gpu.func @test_kernel(%[[A:.*]]: memref<8x16xf16>, %[[B:.*]]: memref<16x16xf16>, %[[C:.*]]: memref<8x16xf32>) kernel {
-// CHECK: %[[POISON_F32:.*]] = ub.poison : vector<128xf32>
-// CHECK: %[[CST_A:.*]] = arith.constant dense<0.000000e+00> : vector<64xf16>
-// CHECK: %[[CST_C:.*]] = arith.constant dense<5.000000e+00> : vector<64xf32>
+// Promoting a narrow shuffle operand that is a splat constant folds into the
+// constant itself, so the zero splats are materialized directly at the widths
+// the shuffles need rather than at `vector<64xf16>` plus a promoting shuffle.
+// CHECK-DAG: %[[POISON_F32:.*]] = ub.poison : vector<128xf32>
+// CHECK-DAG: %[[CST_B:.*]] = arith.constant dense<0.000000e+00> : vector<256xf16>
+// CHECK-DAG: %[[CST_A:.*]] = arith.constant dense<0.000000e+00> : vector<128xf16>
+// CHECK-DAG: %[[CST_C:.*]] = arith.constant dense<5.000000e+00> : vector<64xf32>
 
 // CHECK: %[[A_TDESC:.*]] = xegpu.create_nd_tdesc %[[A]]
 // CHECK: %[[A_VAL:.*]] = xegpu.load_nd %[[A_TDESC]][0, 0]
 // CHECK: %[[A_CAST:.*]] = vector.shape_cast %[[A_VAL]] : vector<8x16xf16> to vector<128xf16>
-// CHECK: %[[A_SHUFFLE:.*]] = vector.shuffle %[[A_CAST]], %[[CST_A]] {{.*}} : vector<128xf16>, vector<64xf16>
+// CHECK: %[[A_SHUFFLE:.*]] = vector.shuffle %[[A_CAST]], %[[CST_A]] {{.*}} : vector<128xf16>, vector<128xf16>
 // CHECK: %[[A_RESULT:.*]] = vector.shape_cast %[[A_SHUFFLE]] : vector<128xf16> to vector<8x16xf16>
 
 // CHECK: %[[B_TDESC:.*]] = xegpu.create_nd_tdesc %[[B]]
 // CHECK: %[[B_VAL:.*]] = xegpu.load_nd %[[B_TDESC]][0, 0]
 // CHECK: %[[B_CAST:.*]] = vector.shape_cast %[[B_VAL]] : vector<16x16xf16> to vector<256xf16>
-// CHECK: %[[B_SHUFFLE:.*]] = vector.shuffle %[[B_CAST]], %[[CST_A]] {{.*}} : vector<256xf16>, vector<64xf16>
+// CHECK: %[[B_SHUFFLE:.*]] = vector.shuffle %[[B_CAST]], %[[CST_B]] {{.*}} : vector<256xf16>, vector<256xf16>
 // CHECK: %[[B_RESULT:.*]] = vector.shape_cast %[[B_SHUFFLE]] : vector<256xf16> to vector<16x16xf16>
 
 // CHECK: %[[DPAS:.*]] = xegpu.dpas %[[A_RESULT]], %[[B_RESULT]] : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
 // CHECK: %[[DPAS_CAST:.*]] = vector.shape_cast %[[DPAS]] : vector<8x16xf32> to vector<128xf32>
 // CHECK: %[[EXTRACT_SHUFFLE:.*]] = vector.shuffle %[[DPAS_CAST]], %[[POISON_F32]] {{.*}} : vector<128xf32>, vector<128xf32>
 // CHECK: %[[ADDF:.*]] = arith.addf %[[EXTRACT_SHUFFLE]], %[[CST_C]] : vector<64xf32>
-// CHECK: %[[INSERT_SHUFFLE:.*]] = vector.shuffle %[[DPAS_CAST]], %[[ADDF]] {{.*}} : vector<128xf32>, vector<64xf32>
+// The addf result is 64 wide and is promoted to 128 before the insert shuffle.
+// CHECK: %[[ADDF_PROMOTED:.*]] = vector.shuffle %[[ADDF]], %{{.*}} {{.*}} : vector<64xf32>, vector<64xf32>
+// CHECK: %[[INSERT_SHUFFLE:.*]] = vector.shuffle %[[DPAS_CAST]], %[[ADDF_PROMOTED]] {{.*}} : vector<128xf32>, vector<128xf32>
 // CHECK: %[[C_RESULT:.*]] = vector.shape_cast %[[INSERT_SHUFFLE]] : vector<128xf32> to vector<8x16xf32>
 
 // CHECK: %[[C_TDESC:.*]] = xegpu.create_nd_tdesc %[[C]]
@@ -267,3 +287,27 @@ gpu.module @test_kernel {
 }
 
 
+
+// -----
+// Linearizing an insert of a narrow chunk into a wider tile would produce a
+// `vector.shuffle` whose two operands have different lengths. MLIR permits
+// that, but LLVM's and SPIR-V's shuffles do not, and `convert-vector-to-llvm`
+// scalarizes such a shuffle into one extract plus one insert per result
+// element. Check that the pass promotes the narrow operand instead, so both
+// operands have the same type and no mixed-size shuffle escapes.
+
+// CHECK-LABEL: gpu.func @no_mixed_size_shuffle_escapes
+// CHECK-SAME:    %[[TILE:.*]]: vector<8x4xbf16>, %[[CHUNK:.*]]: vector<4xbf16>
+// CHECK:         %[[POISON:.*]] = ub.poison : vector<4xbf16>
+// CHECK:         %[[FLAT:.*]] = vector.shape_cast %[[TILE]] : vector<8x4xbf16> to vector<32xbf16>
+// CHECK:         %[[PROMOTED:.*]] = vector.shuffle %[[CHUNK]], %[[POISON]]
+// CHECK-SAME:      : vector<4xbf16>, vector<4xbf16>
+// CHECK:         vector.shuffle %[[FLAT]], %[[PROMOTED]]
+// CHECK-SAME:      : vector<32xbf16>, vector<32xbf16>
+// CHECK-NOT:     : vector<32xbf16>, vector<4xbf16>
+gpu.module @shuffle_kernel {
+  gpu.func @no_mixed_size_shuffle_escapes(%tile: vector<8x4xbf16>, %chunk: vector<4xbf16>) -> vector<8x4xbf16> {
+    %0 = vector.insert_strided_slice %chunk, %tile offsets = [1, 0], strides = [1] : vector<4xbf16> into vector<8x4xbf16>
+    gpu.return %0 : vector<8x4xbf16>
+  }
+}

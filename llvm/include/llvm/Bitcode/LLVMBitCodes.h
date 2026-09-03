@@ -573,6 +573,9 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
 
+/// Flags for serializing AddrSpaceCastInst's SubclassOptionalData contents.
+enum AddrSpaceCastInstOptionalFlags { ASCI_NON_NULL = 0 };
+
 /// Mark to distinguish metadata from value in an operator bundle.
 enum MetadataOperandBundleValueMarker { OB_METADATA = 0x80000000 };
 

@@ -87,6 +87,7 @@ protected:
 
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
+  std::unique_ptr<MachineModuleInfo> MMI;
   std::unique_ptr<Module> M;
   Function *F;
   GlobalVariable *G;
