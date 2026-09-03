@@ -869,6 +869,13 @@ TEST_F(FormatTestJava, BreakAfterRecord) {
                "public record Foo(int i) {}", Style);
 }
 
+TEST_F(FormatTestJava, EmptyRecordBodyOnASingleLine) {
+  auto Style = getGoogleStyle(FormatStyle::LK_Java);
+  verifyFormat("public interface Marker {}", Style);
+  verifyFormat("public record Marker() {}", Style);
+  verifyFormat("public class Marker {}", Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

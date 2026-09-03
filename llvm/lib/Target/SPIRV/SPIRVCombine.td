@@ -15,6 +15,13 @@ def vector_length_sub_to_distance_lowering : GICombineRule <
   (apply [{ Helper.applySPIRVDistance(*${root}); }])
 >;
 
+def vector_fdiv_length_to_normalize_lowering : GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_FDIV):$root,
+          [{ return Helper.matchFDivToNormalize(*${root}); }]),
+  (apply [{ Helper.applySPIRVNormalize(*${root}); }])
+>;
+
 def vector_select_to_faceforward_lowering : GICombineRule <
   (defs root:$root),
   (match (wip_match_opcode G_SELECT):$root,
@@ -41,6 +48,7 @@ def matrix_multiply_lowering
 def SPIRVPreLegalizerCombiner
     : GICombiner<"SPIRVPreLegalizerCombinerImpl",
                  [vector_length_sub_to_distance_lowering,
+                  vector_fdiv_length_to_normalize_lowering,
                   vector_select_to_faceforward_lowering,
                   matrix_transpose_lowering, matrix_multiply_lowering]> {
   let CombineAllMethodName = "tryCombineAllImpl";

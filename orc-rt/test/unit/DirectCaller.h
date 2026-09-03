@@ -9,7 +9,7 @@
 #ifndef ORC_RT_UNITTEST_DIRECTCALLER_H
 #define ORC_RT_UNITTEST_DIRECTCALLER_H
 
-#include "orc-rt/bedrock/WrapperFunction.h"
+#include "orc-rt/support/WrapperFunction.h"
 
 #include <memory>
 #include <utility>

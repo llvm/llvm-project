@@ -294,6 +294,8 @@ public:
   /// position in the current buffer into a SourceLocation object for rendering.
   DiagnosticBuilder Diag(const char *Loc, unsigned DiagID) const;
 
+  DiagnosticBuilder DiagCompat(const char *Loc, unsigned CompatDiagId) const;
+
   /// getSourceLocation - Return a source location identifier for the specified
   /// offset in the current file.
   SourceLocation getSourceLocation(const char *Loc, unsigned TokLen = 1) const;

@@ -305,10 +305,10 @@ struct FatRawBufferCastLowering
                                    memrefType)
             : descriptor.alignedPtr(rewriter, loc);
 
-    Value offset = adaptor.getResetOffset()
-                       ? LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                                  rewriter.getIndexAttr(0))
-                       : descriptor.offset(rewriter, loc);
+    Value offset =
+        adaptor.getResetOffset()
+            ? createIndexAttrConstant(rewriter, loc, getIndexType(), 0)
+            : descriptor.offset(rewriter, loc);
 
     bool hasSizes = memrefType.getRank() > 0;
     // No need to unpack() and pack() all the individual sizes and strides,
@@ -3218,9 +3218,9 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
 
     // Check for row_mask, bank_mask, bound_ctrl if they exist and create
     // constants
-    auto rowMask = DppOp->getAttrOfType<IntegerAttr>("row_mask").getInt();
-    auto bankMask = DppOp->getAttrOfType<IntegerAttr>("bank_mask").getInt();
-    bool boundCtrl = DppOp->getAttrOfType<BoolAttr>("bound_ctrl").getValue();
+    auto rowMask = DppOp.getRowMask();
+    auto bankMask = DppOp.getBankMask();
+    bool boundCtrl = DppOp.getBoundCtrl();
 
     // create a ROCDL_DPPMovOp instruction with the appropriate attributes
     auto dppMovOp =

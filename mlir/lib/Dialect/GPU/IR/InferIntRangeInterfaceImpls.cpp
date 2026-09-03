@@ -68,7 +68,9 @@ getKnownLaunchAttr(GPUFuncOp func, DimensionKind dims, Dimension dim) {
 static std::optional<uint32_t> getKnownLaunchAttr(FunctionOpInterface func,
                                                   StringRef attrName,
                                                   Dimension dim) {
-  auto bounds = func.getOperation()->getAttrOfType<DenseI32ArrayAttr>(attrName);
+  auto bounds =
+      func.getOperation()->getDiscardableAttrOfType<DenseI32ArrayAttr>(
+          attrName);
   if (!bounds)
     return std::nullopt;
   if (bounds.size() <= static_cast<uint32_t>(dim))

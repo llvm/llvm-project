@@ -1,4 +1,4 @@
-// RUN: mlir-opt --allow-unregistered-dialect -split-input-file -verify-diagnostics %s
+// RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
 llvm.func @deref(%arg0: !llvm.ptr) {
     // expected-error @below {{op expected op to return a single LLVM pointer type}}

@@ -82,6 +82,13 @@
 #define PTRACE_SETREGSET 0x4205
 #endif
 
+// glibc declares ptrace taking enum __ptrace_request (which requires a cast in
+// C++), whereas bionic and musl declare it taking int and do not define
+// __ptrace_request.
+#ifndef __GLIBC__
+typedef int __ptrace_request;
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
