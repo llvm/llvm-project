@@ -35,7 +35,7 @@ void test_zero_init_padding(void) {
 }
 
 // Type definitions for anonymous structs with padding
-// CIR-DAG: !rec_bitfield_with_padding = !cir.struct<"bitfield_with_padding" {bitfield !u8i, data !s32i}>
+// CIR-DAG: !rec_bitfield_with_padding = !cir.struct<"bitfield_with_padding" {bitfield !u8i, bitfield !cir.array<!cir.array<!u8i x 4> x 0>, data !s32i}>
 // CIR-DAG: !rec_multiple_padding = !cir.struct<"multiple_padding" {data !s8i, data !s16i, data !s64i}>
 // CIR-DAG: !rec_padding_after_field = !cir.struct<"padding_after_field" {data !s8i, data !s32i}>
 // CIR-DAG: !rec_tail_padding = !cir.struct<"tail_padding" {data !s32i, data !s8i}>
@@ -44,7 +44,7 @@ void test_zero_init_padding(void) {
 // CIR-DAG: cir.global "private" constant internal dso_local @test_zero_init_padding.paf = #cir.const_record<{#cir.int<1> : !s8i, #cir.int<42> : !s32i}> : !rec_padding_after_field
 
 // bfp: unsigned bitfield byte + 3 bytes padding + int
-// CIR-DAG: cir.global "private" constant internal dso_local @test_zero_init_padding.bfp = #cir.const_record<{#cir.int<17> : !u8i, #cir.int<99> : !s32i}> : !rec_bitfield_with_padding
+// CIR-DAG: cir.global "private" constant internal dso_local @test_zero_init_padding.bfp = #cir.const_record<{#cir.int<17> : !u8i, #cir.zero : !cir.array<!cir.array<!u8i x 4> x 0>, #cir.int<99> : !s32i}> : !rec_bitfield_with_padding
 
 // tp: int + char + 3 bytes tail padding
 // CIR-DAG: cir.global "private" constant internal dso_local @test_zero_init_padding.tp = #cir.const_record<{#cir.int<10> : !s32i, #cir.int<20> : !s8i}> : !rec_tail_padding
@@ -56,7 +56,7 @@ void test_zero_init_padding(void) {
 // CIR:   cir.return
 
 // LLVM-DAG: @test_zero_init_padding.paf = internal constant %struct.padding_after_field { i8 1, i32 42 }
-// LLVM-DAG: @test_zero_init_padding.bfp = internal constant %struct.bitfield_with_padding { i8 17, i32 99 }
+// LLVM-DAG: @test_zero_init_padding.bfp = internal constant %struct.bitfield_with_padding { i8 17, [0 x i8] zeroinitializer, i32 99 }
 // LLVM-DAG: @test_zero_init_padding.tp = internal constant %struct.tail_padding { i32 10, i8 20 }
 // LLVM-DAG: @test_zero_init_padding.mp = internal constant %struct.multiple_padding { i8 5, i16 10, i64 100 }
 

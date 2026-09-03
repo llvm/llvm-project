@@ -118,7 +118,7 @@ int check_load_exception(st3 *s3) {
 
 // CIR:  cir.func {{.*}} @check_load_exception
 // CIR:    [[LOAD:%.*]] = cir.load align(8) {{.*}} : !cir.ptr<!cir.ptr<!rec_st3>>, !cir.ptr<!rec_st3>
-// CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][3] {name = "b"} : !cir.ptr<!rec_st3> -> !cir.ptr<!u8i>
+// CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][4] {name = "b"} : !cir.ptr<!rec_st3> -> !cir.ptr<!u8i>
 // CIR:    [[BITFI:%.*]] = cir.get_bitfield align(4) (#bfi_b1, [[MEMBER]] {is_volatile} : !cir.ptr<!u8i>) -> !u32i
 // CIR:    [[CAST:%.*]] = cir.cast integral [[BITFI]] : !u32i -> !s32i
 // CIR:    cir.store [[CAST]], [[RETVAL:%.*]] : !s32i, !cir.ptr<!s32i>
@@ -127,7 +127,7 @@ int check_load_exception(st3 *s3) {
 
 // LLVM:define dso_local i32 @check_load_exception
 // LLVM:  [[LOAD:%.*]] = load ptr, ptr {{.*}}, align 8
-// LLVM:  [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.st3, ptr [[LOAD]], i32 0, i32 3
+// LLVM:  [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.st3, ptr [[LOAD]], i32 0, i32 4
 // LLVM:  [[LOADVOL:%.*]] = load volatile i8, ptr [[MEMBER]], align 4
 // LLVM:  [[CLEAR:%.*]] = and i8 [[LOADVOL]], 31
 // LLVM:  [[CAST:%.*]] = zext i8 [[CLEAR]] to i32
@@ -213,13 +213,13 @@ void check_store_exception(st3 *s3) {
 // CIR:  cir.func {{.*}} @check_store_exception
 // CIR:    [[CONST:%.*]] = cir.const #cir.int<2> : !u32i
 // CIR:    [[LOAD:%.*]] = cir.load align(8) {{.*}} : !cir.ptr<!cir.ptr<!rec_st3>>, !cir.ptr<!rec_st3>
-// CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][3] {name = "b"} : !cir.ptr<!rec_st3> -> !cir.ptr<!u8i>
+// CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][4] {name = "b"} : !cir.ptr<!rec_st3> -> !cir.ptr<!u8i>
 // CIR:    [[SETBF:%.*]] = cir.set_bitfield align(4) (#bfi_b1, [[MEMBER]] : !cir.ptr<!u8i>, [[CONST]] : !u32i) {is_volatile} -> !u32i
 // CIR:    cir.return
 
 // LLVM:define dso_local void @check_store_exception
 // LLVM:  [[LOAD:%.*]] = load ptr, ptr {{.*}}, align 8
-// LLVM:  [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.st3, ptr [[LOAD]], i32 0, i32 3
+// LLVM:  [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.st3, ptr [[LOAD]], i32 0, i32 4
 // LLVM:  [[LOADVOL:%.*]] = load volatile i8, ptr [[MEMBER]], align 4
 // LLVM:  [[CLEAR:%.*]] = and i8 [[LOADVOL]], -32
 // LLVM:  [[SET:%.*]] = or i8 [[CLEAR]], 2
@@ -264,12 +264,12 @@ void check_store_second_member (st4 *s4) {
 // CIR:  cir.func {{.*}} @check_store_second_member
 // CIR:    [[ONE:%.*]] = cir.const #cir.int<1> : !u64i
 // CIR:    [[LOAD:%.*]] = cir.load align(8) {{.*}} : !cir.ptr<!cir.ptr<!rec_st4>>, !cir.ptr<!rec_st4>
-// CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][2] {name = "b"} : !cir.ptr<!rec_st4> -> !cir.ptr<!u16i>
+// CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][3] {name = "b"} : !cir.ptr<!rec_st4> -> !cir.ptr<!u16i>
 // CIR:    cir.set_bitfield align(8) (#bfi_b2, [[MEMBER]] : !cir.ptr<!u16i>, [[ONE]] : !u64i) {is_volatile} -> !u64i
 
 // LLVM: define dso_local void @check_store_second_member
 // LLVM:   [[LOAD:%.*]] = load ptr, ptr {{.*}}, align 8
-// LLVM:   [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.st4, ptr [[LOAD]], i32 0, i32 2
+// LLVM:   [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.st4, ptr [[LOAD]], i32 0, i32 3
 // LLVM:   [[VAL:%.*]] = load volatile i64, ptr [[MEMBER]], align 8
 // LLVM:   [[CLEAR:%.*]] = and i64 [[VAL]], -65536
 // LLVM:   [[SET:%.*]] = or i64 [[CLEAR]], 1

@@ -79,6 +79,35 @@ struct CIRRecordLowering final {
         cir::ArrayType::get(cirGenTypes.convertTypeForMem(field->getType()), 0),
         cir::RecordMemberKind::BitField);
   }
+
+  /// An access unit can be narrower than the types its bit-fields were
+  /// declared with.  In `struct { int a : 4; int b : 11; int c : 17; }` all
+  /// three share one 4-byte unit, but `c` is declared `int`, so the declared
+  /// data runs 15 bits past the unit:
+  ///
+  ///   |-a-|----b-----|-------c--------|
+  ///   |--------- 4-byte unit ---------|--- extent ---|
+  ///                  |------ c declared as int ------|
+  ///   0   4          15               32             47  bits
+  ///
+  /// This member records that excess, rounded up to 2 bytes:
+  ///
+  ///   {bitfield !u32i, bitfield !cir.array<!cir.array<!u8i x 2> x 0>}
+  ///
+  /// It takes the same shape as a zero-width bit-field, so the layout walks
+  /// skip it.
+  ///
+  /// \p excessInBits is measured from \p offset, not from the start of the
+  /// access unit.  A zero-sized member takes the offset where the preceding
+  /// storage ends, so measuring from the unit's start would count the unit's
+  /// own bytes twice.
+  MemberInfo makeDeclaredExtentInfo(CharUnits offset, uint64_t excessInBits) {
+    unsigned charBits = astContext.getCharWidth();
+    CharUnits excess = bitsToCharUnits(excessInBits + charBits - 1);
+    return makeStorageInfo(offset,
+                           cir::ArrayType::get(getByteArrayType(excess), 0),
+                           cir::RecordMemberKind::BitField);
+  }
   // The constructor.
   CIRRecordLowering(CIRGenTypes &cirGenTypes, const RecordDecl *recordDecl,
                     bool packed);
@@ -644,14 +673,30 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
         const size_t storageIdx = members.size();
         members.push_back(
             makeStorageInfo(beginOffset, type, cir::RecordMemberKind::Empty));
+        uint64_t declaredEndBits = 0;
         for (; begin != bestEnd; ++begin) {
           if (!begin->isUnnamedBitField())
             members[storageIdx].memberKind = cir::RecordMemberKind::BitField;
+          // An unnamed bit-field supplies no eightbyte class, but the bytes
+          // its declared type covers still hold user data, so every bit-field
+          // in the unit counts toward the declared extent.
+          declaredEndBits = std::max(
+              declaredEndBits, getFieldBitOffset(*begin) +
+                                   astContext.getTypeSize(begin->getType()));
           if (!begin->isZeroLengthBitField())
             members.push_back(MemberInfo(beginOffset,
                                          MemberInfo::InfoKind::Field, nullptr,
                                          cir::RecordMemberKind::Data, *begin));
         }
+        // Only the furthest declaration matters, so one member covers the
+        // unit.  Emit it only when that declaration outruns the unit's own
+        // width, since otherwise the unit already claims those bytes.  The
+        // member sits at the unit's end, so it records the excess from there.
+        uint64_t unitEndBits =
+            astContext.toBits(beginOffset) + astContext.toBits(accessSize);
+        if (declaredEndBits > unitEndBits)
+          members.push_back(makeDeclaredExtentInfo(
+              beginOffset + accessSize, declaredEndBits - unitEndBits));
       }
       // Reset to start a new span.
       field = bestEnd;
@@ -988,6 +1033,8 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
   // storage type and padding is.
 
   // First, accumulate all the types.
+  uint64_t declaredExtentBits = 0;
+  uint64_t widestMemberBits = 0;
   for (const FieldDecl *field : recordDecl->fields()) {
     mlir::Type fieldType;
     if (field->isBitField()) {
@@ -995,13 +1042,23 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
         continue;
       fieldType = getBitfieldStorageType(field->getBitWidthValue());
       setBitFieldInfo(field, CharUnits::Zero(), fieldType);
+      declaredExtentBits = std::max(declaredExtentBits,
+                                    astContext.getTypeSize(field->getType()));
     } else {
       fieldType = getStorageType(field);
     }
 
+    widestMemberBits = std::max<uint64_t>(
+        widestMemberBits, dataLayout.layout.getTypeSizeInBits(fieldType));
     fieldIdxMap[field->getCanonicalDecl()] = 0;
     addField(fieldType, getFieldMemberKind(field));
   }
+
+  // A union's members all start at offset zero, so one member holding the
+  // furthest declared extent speaks for the whole union.  Record it only when
+  // it says something no member already does, which is when a bit-field's
+  // declared type outruns every member's storage.
+  bool extentOutrunsMembers = declaredExtentBits > widestMemberBits;
 
   // Compute zero-initializable status.
   // This union might not be zero initialized: it may contain a pointer to
@@ -1032,13 +1089,24 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     return;
   }
 
-  mlir::Type storageType =
-      cir::UnionType::getUnionStorageType(dataLayout.layout, getFieldTypes());
+  mlir::Type storageType = cir::UnionType::getUnionStorageType(
+      dataLayout.layout, getFieldTypes(), getFieldKinds());
 
   // If our storage size was bigger than our required size (can happen in the
   // case of packed bitfields on Itanium) then just use an I8 array.
   if (layoutSize < getSize(storageType))
     storageType = getByteArrayType(layoutSize);
+
+  // The member records only the bits past where it sits, and what precedes it
+  // differs by layout: the base subobject below is built as a struct, so the
+  // storage type comes first, while in a union proper every member is at zero.
+  auto addDeclaredExtent = [&](uint64_t claimedBits) {
+    if (!extentOutrunsMembers || declaredExtentBits <= claimedBits)
+      return;
+    MemberInfo extent = makeDeclaredExtentInfo(
+        bitsToCharUnits(claimedBits), declaredExtentBits - claimedBits);
+    addField(extent.data, extent.memberKind);
+  };
 
   // The base-subobject record is built as a struct from fieldTypes, so add
   // the storage type and any trailing padding as ordinary fields rather than
@@ -1056,10 +1124,12 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
                                               cir::isBitFieldAccessUnit));
     clearFields();
     addField(storageType, storageKind);
+    addDeclaredExtent(astContext.toBits(getSize(storageType)));
     CharUnits padding = layoutSize - getSize(storageType);
     if (!padding.isZero())
       addField(getByteArrayType(padding), cir::RecordMemberKind::Pad);
   } else {
+    addDeclaredExtent(/*claimedBits=*/0);
     // Else we just add padding normally.
     appendPaddingBytes(layoutSize - getSize(storageType));
   }

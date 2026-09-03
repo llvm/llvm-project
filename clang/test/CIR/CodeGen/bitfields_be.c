@@ -11,8 +11,8 @@ typedef struct {
     int c : 17;
 } S;
 
-// CIR:  !rec_S = !cir.struct<"S" {bitfield !u32i}>
-// LLVM: %struct.S = type { i32 }
+// CIR:  !rec_S = !cir.struct<"S" {bitfield !u32i, bitfield !cir.array<!cir.array<!u8i x 2> x 0>}>
+// LLVM: %struct.S = type { i32, [0 x i8] }
 // OGCG: %struct.S = type { i32 }
 void def() {
   S s;

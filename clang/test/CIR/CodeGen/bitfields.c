@@ -12,9 +12,9 @@ typedef struct {
   unsigned still_more_bits : 7;
 } A;
 
-// CIR-DAG:  !rec_A = !cir.struct<"A" packed {data !s8i, data !s8i, data !s8i, bitfield !u16i, pad !cir.array<!u8i x 3>}>
+// CIR-DAG:  !rec_A = !cir.struct<"A" packed {data !s8i, data !s8i, data !s8i, bitfield !u16i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>, pad !cir.array<!u8i x 3>}>
 // CIR-DAG:  #bfi_more_bits = #cir.bitfield_info<name = "more_bits", storage_type = !u16i, size = 4, offset = 3, is_signed = false>
-// LLVM-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
+// LLVM-DAG: %struct.A = type <{ i8, i8, i8, i16, [0 x i8], [3 x i8] }>
 // OGCG-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
 
 typedef struct {
@@ -23,8 +23,8 @@ typedef struct {
   int c;
 } D;
 
-// CIR-DAG:  !rec_D = !cir.struct<"D" {bitfield !u16i, data !s32i}>
-// LLVM-DAG: %struct.D = type { i16, i32 }
+// CIR-DAG:  !rec_D = !cir.struct<"D" {bitfield !u16i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>, data !s32i}>
+// LLVM-DAG: %struct.D = type { i16, [0 x i8], i32 }
 // OGCG-DAG: %struct.D = type { i16, i32 }
 
 typedef struct {
@@ -36,8 +36,8 @@ typedef struct {
   unsigned f; // type other than int above, not a bitfield
 } S;
 // CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u64i, size = 17, offset = 32, is_signed = true>
-// CIR-DAG:  !rec_S = !cir.struct<"S" {bitfield !u64i, bitfield !u16i, data !u32i}>
-// LLVM-DAG: %struct.S = type { i64, i16, i32 }
+// CIR-DAG:  !rec_S = !cir.struct<"S" {bitfield !u64i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>, bitfield !u16i, bitfield !cir.array<!cir.array<!u8i x 2> x 0>, data !u32i}>
+// LLVM-DAG: %struct.S = type { i64, [0 x i8], i16, [0 x i8], i32 }
 // OGCG-DAG: %struct.S = type { i64, i16, i32 }
 
 typedef struct {
@@ -45,8 +45,8 @@ typedef struct {
   unsigned b;
 } T;
 
-// CIR-DAG:  !rec_T = !cir.struct<"T" {bitfield !u8i, data !u32i}>
-// LLVM-DAG: %struct.T = type { i8, i32 }
+// CIR-DAG:  !rec_T = !cir.struct<"T" {bitfield !u8i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>, data !u32i}>
+// LLVM-DAG: %struct.T = type { i8, [0 x i8], i32 }
 // OGCG-DAG: %struct.T = type { i8, i32 }
 
 typedef struct {
@@ -67,8 +67,8 @@ typedef struct {
     int l: 14;
 } U;
 
-// CIR-DAG:  !rec_U = !cir.struct<"U" packed {data !s8i, data !s8i, data !s8i, bitfield !u8i, bitfield !u64i}>
-// LLVM-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
+// CIR-DAG:  !rec_U = !cir.struct<"U" packed {data !s8i, data !s8i, data !s8i, bitfield !u8i, bitfield !cir.array<!cir.array<!u8i x 4> x 0>, bitfield !u64i, bitfield !cir.array<!cir.array<!u8i x 2> x 0>}>
+// LLVM-DAG: %struct.U = type <{ i8, i8, i8, i8, [0 x i8], i64, [0 x i8] }>
 // OGCG-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 
 typedef struct{
@@ -77,8 +77,8 @@ typedef struct{
     int c: 30;
 } Clip;
 
-// CIR-DAG: !rec_Clip = !cir.struct<"Clip" {bitfield !cir.array<!u8i x 3>, data !s8i, bitfield !u32i}>
-// LLVM-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
+// CIR-DAG: !rec_Clip = !cir.struct<"Clip" {bitfield !cir.array<!u8i x 3>, bitfield !cir.array<!u8i x 0>, data !s8i, bitfield !u32i}>
+// LLVM-DAG: %struct.Clip = type { [3 x i8], [0 x i8], i8, i32 }
 // OGCG-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
 
 void def() {
@@ -153,12 +153,12 @@ void store_field() {
 // CIR: cir.func {{.*@store_field}}
 // CIR:   [[TMP0:%.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_S>
 // CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
-// CIR:   [[TMP2:%.*]] = cir.get_member [[TMP0]][1] {name = "e"} : !cir.ptr<!rec_S> -> !cir.ptr<!u16i>
+// CIR:   [[TMP2:%.*]] = cir.get_member [[TMP0]][2] {name = "e"} : !cir.ptr<!rec_S> -> !cir.ptr<!u16i>
 // CIR:   cir.set_bitfield align(4) (#bfi_e, [[TMP2]] : !cir.ptr<!u16i>, [[TMP1]] : !s32i)
 
 // LLVM: define dso_local void @store_field()
 // LLVM:   [[TMP0:%.*]] = alloca %struct.S, align 4
-// LLVM:   [[TMP1:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP0]], i32 0, i32 1
+// LLVM:   [[TMP1:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP0]], i32 0, i32 2
 // LLVM:   [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 4
 // LLVM:   [[TMP3:%.*]] = and i16 [[TMP2]], -32768
 // LLVM:   [[TMP4:%.*]] = or i16 [[TMP3]], 3

@@ -115,32 +115,32 @@ void function() {
 
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE9paa_array = #cir.const_array<[#cir.const_record<{#cir.int<1> : !s16i, #cir.int<2> : !s8i, #cir.fp<3.000000e+00> : !cir.float, #cir.int<0> : !u8i}> : !rec_packed_and_aligned], trailing_zeros> : !cir.array<!rec_packed_and_aligned x 2>
 
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE6ba_bf1 = #cir.const_record<{#cir.int<305441535> : !u32i}> : !rec_byte_aligned_bitfields
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE6ba_bf2 = #cir.const_record<{#cir.int<32767> : !u16i, #cir.zero : !cir.array<!u8i x 2>}> : !rec_signed_byte_aligned_bitfields
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE6ba_bf1 = #cir.const_record<{#cir.int<305441535> : !u32i, #cir.zero : !cir.array<!cir.array<!u8i x 2> x 0>}> : !rec_byte_aligned_bitfields
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE6ba_bf2 = #cir.const_record<{#cir.int<32767> : !u16i, #cir.zero : !cir.array<!cir.array<!u8i x 3> x 0>, #cir.zero : !cir.array<!u8i x 2>}> : !rec_signed_byte_aligned_bitfields
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE6ba_bf3 = #cir.const_record<{#cir.int<42> : !u8i}> : !rec_single_byte_bitfield
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE5p_bf1 = #cir.const_record<{#cir.int<785> : !u16i, #cir.zero : !cir.array<!u8i x 2>}> : !rec_partial_bitfields
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE5p_bf2 = #cir.const_record<{#cir.int<127> : !u8i, #cir.zero : !cir.array<!u8i x 3>}> : !rec_signed_partial_bitfields
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE5p_bf3 = #cir.const_record<{#cir.int<125> : !u8i}> : !rec_mixed_partial_bitfields
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE5p_bf1 = #cir.const_record<{#cir.int<785> : !u16i, #cir.zero : !cir.array<!cir.array<!u8i x 3> x 0>, #cir.zero : !cir.array<!u8i x 2>}> : !rec_partial_bitfields
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE5p_bf2 = #cir.const_record<{#cir.int<127> : !u8i, #cir.zero : !cir.array<!cir.array<!u8i x 4> x 0>, #cir.zero : !cir.array<!u8i x 3>}> : !rec_signed_partial_bitfields
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZZ8functionvE5p_bf3 = #cir.const_record<{#cir.int<125> : !u8i, #cir.zero : !cir.array<!u8i x 0>}> : !rec_mixed_partial_bitfields
 
 // CIR-LABEL: cir.func {{.*}} @_Z8functionv()
 // CIR:   cir.return
 
 
-// LLVM-DAG: @_ZZ8functionvE12packed_array = internal constant [2 x %struct.packed] [%struct.packed <{ i8 123, i32 456 }>, %struct.packed <{ i8 123, i32 456 }>]
-// LLVM-DAG: @_ZZ8functionvE12simple_array = internal constant [3 x %struct.simple] [%struct.simple { i32 0, i32 -1 }, %struct.simple { i32 1111, i32 2222 }, %struct.simple { i32 0, i32 -1 }]
-// LLVM-DAG: @_ZZ8functionvE1e = internal constant %struct.empty zeroinitializer
-// LLVM-DAG: @_ZZ8functionvE1s = internal constant %struct.simple { i32 0, i32 -1 }
-// LLVM-DAG: @_ZZ8functionvE2p1 = internal constant %struct.Point { i32 10, i32 20, [3 x i8] c"cXM", i32 40 }
-// LLVM-DAG: @_ZZ8functionvE2p2 = internal constant %struct.packed <{ i8 123, i32 456 }>
-// LLVM-DAG: @_ZZ8functionvE3paa = internal constant %struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 0 }>
-// LLVM-DAG: @_ZZ8functionvE5array = internal constant [2 x %struct.Point] [%struct.Point { i32 123, i32 456, [3 x i8] c"\0B\16!", i32 789 }, %struct.Point { i32 10, i32 20, [3 x i8] zeroinitializer, i32 40 }]
-// LLVM-DAG: @_ZZ8functionvE9paa_array = internal constant [2 x %struct.packed_and_aligned] [%struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 0 }>, %struct.packed_and_aligned zeroinitializer]
-// LLVM-DAG: @_ZZ8functionvE6ba_bf1 = internal constant %struct.byte_aligned_bitfields { i32 305441535 }
-// LLVM-dAG: @_ZZ8functionvE6ba_bf2 = internal constant %struct.signed_byte_aligned_bitfields { i16 32767, [2 x i8] zeroinitializer }
-// LLVM-DAG: @_ZZ8functionvE6ba_bf3 = internal constant %struct.single_byte_bitfield { i8 42 }
-// LLVM-DAG: @_ZZ8functionvE5p_bf1 = internal constant %struct.partial_bitfields { i16 785, [2 x i8] zeroinitializer }
-// LLVM-DAG: @_ZZ8functionvE5p_bf2 = internal constant %struct.signed_partial_bitfields { i8 127, [3 x i8] zeroinitializer }
-// LLVM-DAG: @_ZZ8functionvE5p_bf3 = internal constant %struct.mixed_partial_bitfields { i8 125 }
+// LLVM-DAG: @_ZZ8functionvE12packed_array = internal constant [2 x %struct.packed] [%struct.packed <{ i8 123, i32 456 }>, %struct.packed <{ i8 123, i32 456 }>], align 1
+// LLVM-DAG: @_ZZ8functionvE12simple_array = internal constant [3 x %struct.simple] [%struct.simple { i32 0, i32 -1 }, %struct.simple { i32 1111, i32 2222 }, %struct.simple { i32 0, i32 -1 }], align 16
+// LLVM-DAG: @_ZZ8functionvE1e = internal constant %struct.empty zeroinitializer, align 1
+// LLVM-DAG: @_ZZ8functionvE1s = internal constant %struct.simple { i32 0, i32 -1 }, align 4
+// LLVM-DAG: @_ZZ8functionvE2p1 = internal constant %struct.Point { i32 10, i32 20, [3 x i8] c"cXM", i32 40 }, align 4
+// LLVM-DAG: @_ZZ8functionvE2p2 = internal constant %struct.packed <{ i8 123, i32 456 }>, align 1
+// LLVM-DAG: @_ZZ8functionvE3paa = internal constant %struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 0 }>, align 8
+// LLVM-DAG: @_ZZ8functionvE5array = internal constant [2 x %struct.Point] [%struct.Point { i32 123, i32 456, [3 x i8] c"\0B\16!", i32 789 }, %struct.Point { i32 10, i32 20, [3 x i8] zeroinitializer, i32 40 }], align 16
+// LLVM-DAG: @_ZZ8functionvE9paa_array = internal constant [2 x %struct.packed_and_aligned] [%struct.packed_and_aligned <{ i16 1, i8 2, float 3.000000e+00, i8 0 }>, %struct.packed_and_aligned zeroinitializer], align 16
+// LLVM-DAG: @_ZZ8functionvE6ba_bf1 = internal constant %struct.byte_aligned_bitfields { i32 305441535, [0 x i8] zeroinitializer }, align 4
+// LLVM-DAG: @_ZZ8functionvE6ba_bf2 = internal constant %struct.signed_byte_aligned_bitfields { i16 32767, [0 x i8] zeroinitializer, [2 x i8] zeroinitializer }, align 4
+// LLVM-DAG: @_ZZ8functionvE6ba_bf3 = internal constant %struct.single_byte_bitfield { i8 42 }, align 1
+// LLVM-DAG: @_ZZ8functionvE5p_bf1 = internal constant %struct.partial_bitfields { i16 785, [0 x i8] zeroinitializer, [2 x i8] zeroinitializer }, align 4
+// LLVM-DAG: @_ZZ8functionvE5p_bf2 = internal constant %struct.signed_partial_bitfields { i8 127, [0 x i8] zeroinitializer, [3 x i8] zeroinitializer }, align 4
+// LLVM-DAG: @_ZZ8functionvE5p_bf3 = internal constant %struct.mixed_partial_bitfields { i8 125, [0 x i8] zeroinitializer }, align 1
 
 // LLVM-LABEL: define{{.*}} void @_Z8functionv
 // LLVM:   ret void

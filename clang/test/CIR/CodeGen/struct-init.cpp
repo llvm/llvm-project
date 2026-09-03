@@ -19,8 +19,8 @@ BitfieldStruct overlapping_init = { 3, 2, 1 };
 // This is unintuitive. The bitfields are initialized using a struct of constants
 // that maps to the bitfields but splits the value into bytes.
 
-// CIR: cir.global external @overlapping_init = #cir.const_record<{#cir.int<262179> : !u32i}> : !rec_BitfieldStruct
-// LLVM: @overlapping_init = global %struct.BitfieldStruct { i32 262179 }
+// CIR: cir.global external @overlapping_init = #cir.const_record<{#cir.int<262179> : !u32i, #cir.zero : !cir.array<!cir.array<!u8i x 3> x 0>}> : !rec_BitfieldStruct
+// LLVM: @overlapping_init = global %struct.BitfieldStruct { i32 262179, [0 x i8] zeroinitializer }
 // OGCG: @overlapping_init = global { i8, i8, i8, i8 } { i8 35, i8 0, i8 4, i8 0 }
 
 struct S {
@@ -56,8 +56,8 @@ StructWithFieldInitFromConst swfifc = {};
 
 StructWithFieldInitFromConst swfifc2 = { 2 };
 
-// CIR: cir.global external @swfifc2 = #cir.const_record<{#cir.int<2> : !u16i, #cir.int<2> : !s32i}> : !rec_StructWithFieldInitFromConst
-// LLVM: @swfifc2 = global %struct.StructWithFieldInitFromConst { i16 2, i32 2 }, align 4
+// CIR: cir.global external @swfifc2 = #cir.const_record<{#cir.int<2> : !u16i, #cir.zero : !cir.array<!cir.array<!u8i x 2> x 0>, #cir.int<2> : !s32i}> : !rec_StructWithFieldInitFromConst
+// LLVM: @swfifc2 = global %struct.StructWithFieldInitFromConst { i16 2, [0 x i8] zeroinitializer, i32 2 }, align 4
 // OGCG: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
 
 

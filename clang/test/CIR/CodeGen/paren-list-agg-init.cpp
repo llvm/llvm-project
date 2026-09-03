@@ -41,8 +41,9 @@ struct C : public B, public A {
   int c;
 };
 
-// LLVM-DAG: [[STRUCT_D:%.*]] = type { [[STRUCT_A]], [[STRUCT_A]], i8, [[STRUCT_A]] }
-// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {data ![[STRUCT_A]], data ![[STRUCT_A]], empty !u8i, data ![[STRUCT_A]]}>
+// LLVMCIR-DAG: [[STRUCT_D:%.*]] = type { [[STRUCT_A]], [[STRUCT_A]], i8, [0 x i8], [[STRUCT_A]] }
+// OGCG-DAG: [[STRUCT_D:%.*]] = type { [[STRUCT_A]], [[STRUCT_A]], i8, [[STRUCT_A]] }
+// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {data ![[STRUCT_A]], data ![[STRUCT_A]], empty !u8i, bitfield !cir.array<!cir.array<!u8i x 3> x 0>, data ![[STRUCT_A]]}>
 struct D {
   A a;
   A b = A{2, 2.0};
@@ -143,9 +144,9 @@ constexpr C c1(b1, a1);
 // LLVM-DAG: [[U1:@.*]] = internal constant {{.*}} { [[STRUCT_A]] { i8 1, double 1.000000e+00 } }, align 8
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL2u1 = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s8i, #cir.fp<1.000000e+00> : !cir.double}> : ![[STRUCT_A]]}> : !{{.*}}{alignment = 8 : i64}
 constexpr U u1(A(1, 1));
-// LLVMCIR-DAG: [[D1:@.*d1.*]] = internal constant [[STRUCT_D]] { [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [[STRUCT_A]] { i8 2, double 2.000000e+00 }, i8 0, [[STRUCT_A]] zeroinitializer }, align 8
+// LLVMCIR-DAG: [[D1:@.*d1.*]] = internal constant [[STRUCT_D]] { [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [[STRUCT_A]] { i8 2, double 2.000000e+00 }, i8 0, [0 x i8] zeroinitializer, [[STRUCT_A]] zeroinitializer }, align 8
 // OGCG-DAG:    [[D1:@.*d1.*]] = internal constant { [[STRUCT_A]], [[STRUCT_A]], [8 x i8], [[STRUCT_A]] } { [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [8 x i8] {{.*}}, [[STRUCT_A]] zeroinitializer }, align 8
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2d1 = #cir.const_record<{#cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !u8i, #cir.zero : ![[STRUCT_A]]}> : !rec_D {alignment = 8 : i64} loc(#loc284)
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2d1 = #cir.const_record<{#cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !u8i, #cir.zero : !cir.array<!cir.array<!u8i x 3> x 0>, #cir.zero : ![[STRUCT_A]]}> : !rec_D {alignment = 8 : i64} loc(#loc284)
 constexpr D d1(A(2, 2));
 // LLVM-DAG: [[ARR1:@.*arr1.*]] = internal constant [3 x i32] [i32 1, i32 2, i32 0], align 4
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr1 = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 3> {alignment = 4 : i64}
@@ -278,7 +279,8 @@ U foo6(A a) {
 // LLVM-NEXT: store i8 11, ptr [[I1]], align 8
 // LLVM-NEXT: [[J2:%.*]] = getelementptr {{.*}}[[STRUCT_A]], ptr [[B]], i32 0, i32 1
 // LLVM-NEXT: store double 1.100000e+01, ptr [[J2]], align 8
-// LLVM-NEXT: [[C:%.*]] = getelementptr {{.*}}[[STRUCT_D]], ptr [[D]], i32 0, i32 3
+// LLVMCIR-NEXT: [[C:%.*]] = getelementptr {{.*}}[[STRUCT_D]], ptr [[D]], i32 0, i32 4
+// OGCG-NEXT: [[C:%.*]] = getelementptr {{.*}}[[STRUCT_D]], ptr [[D]], i32 0, i32 3
 // LLVM-NEXT: [[I3:%.*]] = getelementptr {{.*}}[[STRUCT_A]], ptr [[C]], i32 0, i32 0
 // LLVM-NEXT: store i8 111, ptr [[I3]], align 8
 // LLVM-NEXT: [[J4:%.*]] = getelementptr {{.*}}[[STRUCT_A]], ptr [[C]], i32 0, i32 1
@@ -302,7 +304,7 @@ U foo6(A a) {
 // CIR: %[[ELEVEN:.*]] = cir.const #cir.int<11> : !s32i
 // CIR: %[[ELEVEN_F:.*]] = cir.cast int_to_float %[[ELEVEN]] : !s32i -> !cir.double
 // CIR: cir.store align(8) %[[ELEVEN_F]], %[[GET_J]] : !cir.double, !cir.ptr<!cir.double>
-// CIR: %[[GET_C:.*]] = cir.get_member %[[D_ALLOCA]][3] {name = "c"} : !cir.ptr<![[STRUCT_D]]> -> !cir.ptr<![[STRUCT_A]]>
+// CIR: %[[GET_C:.*]] = cir.get_member %[[D_ALLOCA]][4] {name = "c"} : !cir.ptr<![[STRUCT_D]]> -> !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_I:.*]] = cir.get_member %[[GET_C]][0] {name = "i"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!s8i>
 // CIR: %[[ONE_ELEVEN:.*]] = cir.const #cir.int<111> : !s8i
 // CIR: cir.store align(8) %[[ONE_ELEVEN]], %[[GET_I]] : !s8i, !cir.ptr<!s8i>
@@ -336,7 +338,8 @@ D foo8() {
 // LLVM-NEXT: store i8 2, ptr [[I1]], align 8
 // LLVM-NEXT: [[J2:%.*]] = getelementptr {{.*}}[[STRUCT_A]], ptr [[B]], i32 0, i32 1
 // LLVM-NEXT: store double 2.000000e+00, ptr [[J2]], align 8
-// LLVM-NEXT: [[C:%.*]] = getelementptr {{.*}}[[STRUCT_D]], ptr [[D]], i32 0, i32 3
+// LLVMCIR-NEXT: [[C:%.*]] = getelementptr {{.*}}[[STRUCT_D]], ptr [[D]], i32 0, i32 4
+// OGCG-NEXT: [[C:%.*]] = getelementptr {{.*}}[[STRUCT_D]], ptr [[D]], i32 0, i32 3
 // CIR-LABEL: cir.func no_inline dso_local @_Z4foo9v()
 // CIR: %[[D_ALLOCA:.*]] = cir.alloca "d" align(8) init : !cir.ptr<![[STRUCT_D]]>
 // CIR: %[[GET_A:.*]] = cir.get_member %[[D_ALLOCA]][0] {name = "a"} : !cir.ptr<![[STRUCT_D]]> -> !cir.ptr<![[STRUCT_A]]>
@@ -354,7 +357,7 @@ D foo8() {
 // CIR: %[[GET_J:.*]] = cir.get_member %[[GET_B]][1] {name = "j"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!cir.double>
 // CIR: %[[FP_2:.*]] = cir.const #cir.fp<2
 // CIR: cir.store align(8) %[[FP_2]], %[[GET_J]] : !cir.double, !cir.ptr<!cir.double>
-// CIR: %[[GET_C:.*]] = cir.get_member %[[D_ALLOCA]][3] {name = "c"} : !cir.ptr<![[STRUCT_D]]> -> !cir.ptr<![[STRUCT_A]]>
+// CIR: %[[GET_C:.*]] = cir.get_member %[[D_ALLOCA]][4] {name = "c"} : !cir.ptr<![[STRUCT_D]]> -> !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[ZERO:.*]] = cir.const #cir.zero : ![[STRUCT_A]]
 // CIR: cir.store align(8) %[[ZERO]], %[[GET_C]] : ![[STRUCT_A]], !cir.ptr<![[STRUCT_A]]>
 void foo9() {
