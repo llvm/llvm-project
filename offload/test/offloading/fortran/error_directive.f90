@@ -6,7 +6,9 @@
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 
 ! RUN: %libomptarget-compile-fortran-generic -fopenmp-version=51 && \
-! RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic
+! RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=NOLOC
+! RUN: %libomptarget-compile-fortran-generic -fopenmp-version=51 -g && \
+! RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=LOC
 
 program error_directive
   implicit none
@@ -22,6 +24,11 @@ program error_directive
 end program error_directive
 
 ! Device output is flushed after host output, so host prints are not checked.
+! Without -g the ident holds no location and is reported as "unknown:0:0", the
+! same as the host runtime.
 
-! CHECK: user-directed warning: warning message.
-! CHECK: user-directed warning.
+! NOLOC: OMP: unknown:0:0: Encountered user-directed warning: warning message.
+! NOLOC: OMP: unknown:0:0: Encountered user-directed warning.
+
+! LOC: {{.*}}error_directive.f90:{{[0-9]+}}:{{[0-9]+}}: Encountered user-directed warning: warning message.
+! LOC: {{.*}}error_directive.f90:{{[0-9]+}}:{{[0-9]+}}: Encountered user-directed warning.
