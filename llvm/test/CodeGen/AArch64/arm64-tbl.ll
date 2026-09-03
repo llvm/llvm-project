@@ -442,9 +442,9 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_first_mask(<16 x i8> %a, <16 x 
 define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_first_mask2(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d, i8 %v) {
 ; CHECK-SD-LABEL: shuffled_tbl2_to_tbl4_nonconst_first_mask2:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi.16b v4, #1
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
 ; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    fmov s4, w8
 ; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
