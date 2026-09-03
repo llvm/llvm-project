@@ -1820,19 +1820,21 @@ public:
     SmallVector<UnresolvedOperand, 2> dimOperands;
     SmallVector<UnresolvedOperand, 1> symOperands;
 
-    auto parseElement = [&](bool isSymbol) -> ParseResult {
+    auto parseElement = [&]() -> FailureOr<UnresolvedOperand> {
       UnresolvedOperand operand;
       if (parseOperand(operand))
-        return failure();
+        return {};
+      return operand;
+    };
+    auto addOperand = [&](bool isSymbol, UnresolvedOperand operand) {
       if (isSymbol)
         symOperands.push_back(operand);
       else
         dimOperands.push_back(operand);
-      return success();
     };
 
     AffineMap map;
-    if (parser.parseAffineMapOfSSAIds(map, parseElement, delimiter))
+    if (parser.parseAffineMapOfSSAIds(map, parseElement, addOperand, delimiter))
       return failure();
     // Add AffineMap attribute.
     if (map) {
@@ -1849,20 +1851,22 @@ public:
   /// Parse an AffineExpr of SSA ids.
   ParseResult
   parseAffineExprOfSSAIds(SmallVectorImpl<UnresolvedOperand> &dimOperands,
-                          SmallVectorImpl<UnresolvedOperand> &symbOperands,
+                          SmallVectorImpl<UnresolvedOperand> &symOperands,
                           AffineExpr &expr) override {
-    auto parseElement = [&](bool isSymbol) -> ParseResult {
+    auto parseElement = [&]() -> FailureOr<UnresolvedOperand> {
       UnresolvedOperand operand;
       if (parseOperand(operand))
-        return failure();
+        return {};
+      return operand;
+    };
+    auto addOperand = [&](bool isSymbol, UnresolvedOperand operand) {
       if (isSymbol)
-        symbOperands.push_back(operand);
+        symOperands.push_back(operand);
       else
         dimOperands.push_back(operand);
-      return success();
     };
 
-    return parser.parseAffineExprOfSSAIds(expr, parseElement);
+    return parser.parseAffineExprOfSSAIds(expr, parseElement, addOperand);
   }
 
   //===--------------------------------------------------------------------===//

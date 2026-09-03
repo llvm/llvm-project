@@ -147,12 +147,10 @@ public:
         continue;
       }
 
-      ReachableMap.try_emplace(MBB, false);
-
       // If this block has a divergent terminator and the def block is its
       // post-dominator, the wave may first visit the other successors.
       if (TII->hasDivergentBranch(MBB) && PDT.dominates(&DefBlock, MBB))
-        append_range(Stack, MBB->successors());
+        Stack.push_back(MBB);
     }
 
     while (!Stack.empty()) {
@@ -161,7 +159,13 @@ public:
         append_range(Stack, MBB->successors());
     }
 
-    for (auto &[MBB, Reachable] : ReachableMap) {
+    // Insert remaining incoming blocks.
+    for (auto Incoming : Incomings) {
+      MachineBasicBlock *MBB = Incoming.Block;
+      ReachableMap.try_emplace(MBB, false);
+    }
+
+    for (auto &[MBB, IsSource] : ReachableMap) {
       bool HaveReachablePred = false;
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
         if (ReachableMap.count(Pred)) {
@@ -171,7 +175,7 @@ public:
         }
       }
       if (!HaveReachablePred)
-        Reachable = true;
+        IsSource = true;
       if (HaveReachablePred) {
         for (MachineBasicBlock *UnreachablePred : Stack) {
           if (!llvm::is_contained(Predecessors, UnreachablePred))

@@ -95,7 +95,7 @@ public:
   /// bytes belonging to the same storage (stack, heap allocation,
   /// global variable) are considered.
   std::optional<uint64_t> tryEvaluateObjectSize(State &Parent, const Expr *E,
-                                                unsigned Kind);
+                                                unsigned Kind, bool IsDynamic);
 
   std::optional<bool> evaluateWithSubstitution(State &Parent,
                                                const FunctionDecl *Callee,
@@ -131,7 +131,8 @@ public:
     if (const auto *BT = dyn_cast<BuiltinType>(T)) {
       if (BT->isInteger() || BT->isFloatingPoint())
         return true;
-      if (BT->getKind() == BuiltinType::Bool)
+      if (BT->getKind() == BuiltinType::NullPtr ||
+          BT->getKind() == BuiltinType::BoundMember)
         return true;
     }
     if (T->isPointerOrReferenceType())
