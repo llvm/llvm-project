@@ -16,10 +16,11 @@
 
 using namespace llvm;
 
-static cl::opt<cl::boolOrDefault> ForceNewPM(
-    "force-new-pm-codegen",
-    cl::desc("Whether to force the NewPM on/off. Not setting the option "),
-    cl::init(cl::boolOrDefault::BOU_UNSET));
+static cl::opt<cl::boolOrDefault>
+    ForceNewPM("force-new-pm-codegen",
+               cl::desc("Whether to force the NewPM on/off. Not setting the "
+                        "option will default to what the target prefers."),
+               cl::init(cl::boolOrDefault::BOU_UNSET));
 
 static Error
 runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
