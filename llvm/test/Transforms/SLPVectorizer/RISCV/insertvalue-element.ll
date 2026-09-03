@@ -9,14 +9,13 @@ define %pair @insertvalue_elt_size_i64x2(ptr %a, ptr %b) {
 ; CHECK-LABEL: define %pair @insertvalue_elt_size_i64x2(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[VEC2STRUCT_SLOT:%.*]] = alloca [[PAIR:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[B]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i64> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP2]], i64 0
-; CHECK-NEXT:    [[IV0:%.*]] = insertvalue [[PAIR:%.*]] poison, i64 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
-; CHECK-NEXT:    [[IV1:%.*]] = insertvalue [[PAIR]] [[IV0]], i64 [[TMP4]], 1
-; CHECK-NEXT:    ret [[PAIR]] [[IV1]]
+; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[VEC2STRUCT_SLOT]], align 16
+; CHECK-NEXT:    [[VEC2STRUCT:%.*]] = load [[PAIR]], ptr [[VEC2STRUCT_SLOT]], align 16
+; CHECK-NEXT:    ret [[PAIR]] [[VEC2STRUCT]]
 ;
 entry:
   %a0 = load i64, ptr %a, align 8
@@ -36,18 +35,13 @@ define %quad @insertvalue_elt_size_i32x4(ptr %a, ptr %b) {
 ; CHECK-LABEL: define %quad @insertvalue_elt_size_i32x4(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[VEC2STRUCT_SLOT:%.*]] = alloca [[QUAD:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
-; CHECK-NEXT:    [[IV0:%.*]] = insertvalue [[QUAD:%.*]] poison, i32 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2]], i64 1
-; CHECK-NEXT:    [[IV1:%.*]] = insertvalue [[QUAD]] [[IV0]], i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP2]], i64 2
-; CHECK-NEXT:    [[IV2:%.*]] = insertvalue [[QUAD]] [[IV1]], i32 [[TMP5]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP2]], i64 3
-; CHECK-NEXT:    [[IV3:%.*]] = insertvalue [[QUAD]] [[IV2]], i32 [[TMP6]], 3
-; CHECK-NEXT:    ret [[QUAD]] [[IV3]]
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[VEC2STRUCT_SLOT]], align 16
+; CHECK-NEXT:    [[VEC2STRUCT:%.*]] = load [[QUAD]], ptr [[VEC2STRUCT_SLOT]], align 16
+; CHECK-NEXT:    ret [[QUAD]] [[VEC2STRUCT]]
 ;
 entry:
   %a0 = load i32, ptr %a, align 4
@@ -74,5 +68,3 @@ entry:
   %iv3 = insertvalue %quad %iv2, i32 %s3, 3
   ret %quad %iv3
 }
-
-
