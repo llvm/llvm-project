@@ -910,7 +910,7 @@ define amdgpu_kernel void @or_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0, p
 ; GFX8-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GFX8-NEXT:    v_max_f32_e32 v0, v1, v0
 ; GFX8-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
-; GFX8-NEXT:    s_and_b64 s[0:1], vcc, exec
+; GFX8-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX8-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    buffer_store_dword v0, off, s[4:7], 0

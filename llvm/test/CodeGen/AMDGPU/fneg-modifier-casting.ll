@@ -1686,32 +1686,49 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 }
 
 define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) {
-; GCN-LABEL: fnge_select_f32_multi_use_regression:
-; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_load_dword s0, s[8:9], 0x0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_cmp_nlt_f32_e64 s[0:1], s0, 0
-; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    v_cmp_gt_f32_e64 s[0:1], s2, 0
-; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; GCN-NEXT:    s_cselect_b32 s0, s2, 0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mul_f32_e64 v0, -s2, v0
-; GCN-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
-; GCN-NEXT:    s_and_b64 vcc, exec, vcc
-; GCN-NEXT:    s_endpgm
+;
+; GFX7-LABEL: fnge_select_f32_multi_use_regression:
+; GFX7:       ; %bb.0: ; %.entry
+; GFX7-NEXT:    s_load_dword s0, s[8:9], 0x0
+; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    v_cmp_nlt_f32_e64 s[0:1], s0, 0
+; GFX7-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX7-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX7-NEXT:    v_cmp_gt_f32_e64 s[0:1], s2, 0
+; GFX7-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GFX7-NEXT:    s_cselect_b32 s0, s2, 0
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
+; GFX7-NEXT:    v_mul_f32_e64 v0, -s2, v0
+; GFX7-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
+; GFX7-NEXT:    s_and_b64 vcc, exec, vcc
+; GFX7-NEXT:    s_endpgm
+;
+; GFX9-LABEL: fnge_select_f32_multi_use_regression:
+; GFX9:       ; %bb.0: ; %.entry
+; GFX9-NEXT:    s_load_dword s0, s[8:9], 0x0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_nlt_f32_e64 s[0:1], s0, 0
+; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX9-NEXT:    v_cmp_gt_f32_e64 s[0:1], s2, 0
+; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_cselect_b32 s0, s2, 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mul_f32_e64 v0, -s2, v0
+; GFX9-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
+; GFX9-NEXT:    s_and_b64 vcc, exec, vcc
+; GFX9-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: fnge_select_f32_multi_use_regression:
 ; GFX11:       ; %bb.0: ; %.entry
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_nlt_f32_e64 s0, s0, 0
-; GFX11-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_gt_f32_e64 s1, s0, 0
-; GFX11-NEXT:    s_and_b32 s1, s1, exec_lo
+; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    s_cselect_b32 s1, s0, 0
 ; GFX11-NEXT:    v_mul_f32_e64 v0, -s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)

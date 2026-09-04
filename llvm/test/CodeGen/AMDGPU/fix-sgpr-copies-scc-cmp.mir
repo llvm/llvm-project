@@ -1,0 +1,59 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-fix-sgpr-copies -o - %s | FileCheck -check-prefixes=CHECK,GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=bonaire -run-pass=si-fix-sgpr-copies -o - %s | FileCheck -check-prefixes=CHECK,GFX7 %s
+
+# A copy of a lane mask to SCC is lowered to an AND with EXEC, whose only
+# purpose is to define SCC. When the lane mask already has 0 in the bits of
+# all inactive lanes, S_CMP computes the same SCC without needing a
+# destination register.
+
+---
+name: vcmp_to_scc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: vcmp_to_scc
+    ; CHECK: [[CMP:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    ; GFX9-NEXT: S_CMP_LG_U64 [[CMP]], 0, implicit-def $scc
+    ; GFX7-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[CMP]], $exec, implicit-def $scc
+    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    $scc = COPY %0
+    %1:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %1
+...
+
+# Negative test: nothing is known about the lane mask, so it must be masked
+# with EXEC.
+---
+name: unknown_mask_to_scc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: unknown_mask_to_scc
+    ; CHECK: [[MASK:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[MASK]], $exec, implicit-def $scc
+    %0:sreg_64_xexec = COPY $sgpr0_sgpr1
+    $scc = COPY %0
+    %1:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %1
+...
+
+# Negative test: EXEC is written between the V_CMP and the copy to SCC, so the
+# V_CMP result may have bits set for lanes that are now inactive.
+---
+name: exec_written_in_between
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
+    ; CHECK-LABEL: name: exec_written_in_between
+    ; CHECK: [[CMP:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    ; CHECK-NEXT: $exec = S_OR_B64 $exec, $sgpr0_sgpr1, implicit-def dead $scc
+    ; CHECK-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[CMP]], $exec, implicit-def $scc
+    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    $exec = S_OR_B64 $exec, $sgpr0_sgpr1, implicit-def dead $scc
+    $scc = COPY %0
+    %1:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %1
+...
