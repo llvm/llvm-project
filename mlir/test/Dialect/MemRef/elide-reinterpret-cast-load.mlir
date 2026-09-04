@@ -252,6 +252,21 @@ func.func private @collapse_3d_moved_unit_dims(%i : index, %j : index,
   return
 }
 
+// CHECK-LABEL: func.func private @expand_keeps_load_attrs(
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x8xf32>, %[[I:.*]]: index) {
+func.func private @expand_keeps_load_attrs(%src : memref<1x8xf32>, %i : index) {
+  // CHECK:       %[[C0:.*]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [1, 1, 8], strides: [8, 8, 1]
+    : memref<1x8xf32> to memref<1x1x8xf32>
+  // CHECK:       memref.load %[[SRC]][%[[C0]], %[[I]]] alignment(16) nontemporal(true) invariant(true) : memref<1x8xf32>
+  %0 = memref.load %reinterpret_cast[%c0, %c0, %i]
+    alignment(16) nontemporal(true) invariant(true) : memref<1x1x8xf32>
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Negative tests (must NOT rewrite)
 //===----------------------------------------------------------------------===//
