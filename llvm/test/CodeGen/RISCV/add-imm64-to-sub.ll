@@ -153,11 +153,7 @@ define i64 @add_pos_and_neg_const(i64 %x, i64 %a, i64 %b) {
 ; CHECK-NEXT:    slli a4, a3, 32
 ; CHECK-NEXT:    add a3, a3, a4
 ; CHECK-NEXT:    mul a0, a0, a3
-; CHECK-NEXT:    lui a4, 1044464
-; CHECK-NEXT:    addi a4, a4, -257
-; CHECK-NEXT:    slli a5, a4, 32
-; CHECK-NEXT:    sub a1, a1, a4
-; CHECK-NEXT:    sub a1, a1, a5
+; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    xor a1, a1, a2
 ; CHECK-NEXT:    xor a0, a0, a1

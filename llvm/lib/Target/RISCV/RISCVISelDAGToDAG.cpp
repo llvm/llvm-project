@@ -156,10 +156,17 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
                                                /*CompressionCost=*/true);
       if (NegCost > OrigCost)
         break;
-      // Only rewrite when -C already exists, else this just moves the cost.
+      // Only rewrite when -C is anchored by a use that is not itself an ADD, so
+      // -C is materialized regardless of this transform. If -C were only used
+      // by other ADDs, each of those could be rewritten to use C instead, and
+      // forcing -C here would leave both C and -C materialized.
       bool HasNegConst = any_of(CurDAG->allnodes(), [&](const SDNode &Node) {
         auto *C = dyn_cast<ConstantSDNode>(&Node);
-        return C && C->getSimpleValueType(0) == VT && C->getSExtValue() == -Imm;
+        if (!C || C->getSimpleValueType(0) != VT || C->getSExtValue() != -Imm)
+          return false;
+        return any_of(Node.users(), [](const SDNode *U) {
+          return U->getOpcode() != ISD::ADD;
+        });
       });
       if (!HasNegConst)
         break;
