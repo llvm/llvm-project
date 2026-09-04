@@ -879,9 +879,12 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
       // Some transforms may leave unit dimension in the 2D vector, adaptors do
       // not catch it for results.
       if (auto vecType = dyn_cast<VectorType>(resType)) {
-        assert(llvm::count_if(vecType.getShape(),
-                              [](int64_t d) { return d != 1; }) <= 1 &&
-               "Expected either 1D vector or nD with unit dimensions");
+        // Only a result flattenable to 1D can be a single contiguous access.
+        if (llvm::count_if(vecType.getShape(),
+                           [](int64_t d) { return d != 1; }) > 1)
+          return rewriter.notifyMatchFailure(
+              op, "Expected either a 1D result or an nD result with unit "
+                  "dimensions.");
         resType = VectorType::get({vecType.getNumElements()},
                                   vecType.getElementType());
       }
