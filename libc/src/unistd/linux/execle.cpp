@@ -45,11 +45,10 @@ LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
 #pragma GCC diagnostic pop
   argv[0] = const_cast<char *>(arg0);
 
-  for (size_t i = 1; i < argc; ++i)
+  for (size_t i = 1; i <= argc; ++i)
     argv[i] = va_arg(varargs_copy, char *);
-  va_end(varargs_copy);
-  argv[argc] = nullptr;
   char **envp = va_arg(varargs_copy, char **);
+  va_end(varargs_copy);
 
   auto ret = linux_syscalls::execve(path, argv, envp);
   if (!ret) {
