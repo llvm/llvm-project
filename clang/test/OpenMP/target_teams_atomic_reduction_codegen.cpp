@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux-gnu \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple amdgcn-amd-amdhsa \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-is-target-device \
+// RUN:   -fopenmp-targets=amdgpu9.00-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple amdgpu9.00-amd-amdhsa \
+// RUN:   -fopenmp-targets=amdgpu9.00-amd-amdhsa -fopenmp-is-target-device \
 // RUN:   -fopenmp-target-atomic-reduction -fopenmp-host-ir-file-path %t-host.bc \
 // RUN:   -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=ATOMIC %s < %t.ll
