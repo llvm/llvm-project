@@ -4716,20 +4716,35 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
   if (!args)
     return SendErrorResponse(args.takeError());
 
-  for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
-       m_accelerator_plugins) {
-    if (plugin_up->GetPluginName() == args->plugin_name) {
-      std::optional<AcceleratorDynamicLoaderResponse> response =
-          plugin_up->GetDynamicLoaderLibraryInfos(*args);
-      if (!response)
-        return SendErrorResponse(
-            Status::FromErrorString("no dynamic loader info available"));
+  // On the native connection, forward to the named accelerator plugin.
+  if (!m_accelerator_plugins.empty()) {
+    for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
+         m_accelerator_plugins) {
+      if (plugin_up->GetPluginName() == args->plugin_name) {
+        std::optional<AcceleratorDynamicLoaderResponse> response =
+            plugin_up->GetDynamicLoaderLibraryInfos(*args);
+        if (!response)
+          return SendErrorResponse(
+              Status::FromErrorString("no dynamic loader info available"));
 
-      StreamGDBRemote stream;
-      stream.PutAsJSON(*response, /*hex_ascii=*/false);
-      return SendPacketNoLock(stream.GetString());
+        StreamGDBRemote stream;
+        stream.PutAsJSON(*response, /*hex_ascii=*/false);
+        return SendPacketNoLock(stream.GetString());
+      }
     }
+    return SendErrorResponse(
+        Status::FromErrorString("unknown accelerator plugin name"));
   }
-  return SendErrorResponse(
-      Status::FromErrorString("unknown accelerator plugin name"));
+
+  // On the accelerator connection, ask the process directly.
+  if (!m_current_process)
+    return SendErrorResponse(Status::FromErrorString("no current process"));
+  std::optional<AcceleratorDynamicLoaderResponse> response =
+      m_current_process->GetAcceleratorDynamicLoaderLibraryInfos(*args);
+  if (!response)
+    return SendErrorResponse(
+        Status::FromErrorString("dynamic loader library info not supported"));
+  StreamGDBRemote stream;
+  stream.PutAsJSON(*response, /*hex_ascii=*/false);
+  return SendPacketNoLock(stream.GetString());
 }
