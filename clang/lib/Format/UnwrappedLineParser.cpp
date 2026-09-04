@@ -5130,7 +5130,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         Args.reset();
         UnexpandedLine->Tokens.resize(1);
         Tokens->setPosition(Position);
-        nextToken();
+        // Not nextToken(), which would push the stale FormatTok onto the line.
+        FormatTok = Tokens->getNextToken();
         assert(!Args && Macros.objectLike(ID->TokenText));
       }
       if ((!Args && Macros.objectLike(ID->TokenText)) ||
