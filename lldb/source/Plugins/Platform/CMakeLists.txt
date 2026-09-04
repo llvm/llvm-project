@@ -8,6 +8,7 @@ set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES
 add_subdirectory(AIX)
 add_subdirectory(Android)
 add_subdirectory(FreeBSD)
+add_subdirectory(FreeBSD-Kernel)
 add_subdirectory(gdb-server)
 add_subdirectory(Linux)
 add_subdirectory(MacOSX)
