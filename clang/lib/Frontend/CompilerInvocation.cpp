@@ -2198,6 +2198,12 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         << A->getSpelling() << T.str();
   }
 
+  if (Arg *A = Args.getLastArg(OPT_mloadtime_comment_vars_EQ)) {
+    if (!T.isOSAIX())
+      Diags.Report(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << T.str();
+  }
+
   bool NeedLocTracking = false;
 
   if (!Opts.OptRecordFile.empty())

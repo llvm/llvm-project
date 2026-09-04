@@ -57,6 +57,10 @@ bool LangOptions::isNoBuiltinFunc(StringRef FuncName) const {
   return false;
 }
 
+bool LangOptions::isLoadTimeCommentVar(StringRef MangledName) const {
+  return llvm::is_contained(LoadTimeCommentVars, MangledName);
+}
+
 VersionTuple LangOptions::getOpenCLVersionTuple() const {
   const int Ver = OpenCLCPlusPlus ? OpenCLCPlusPlusVersion : OpenCLVersion;
   if (OpenCLCPlusPlus && Ver != 100)
