@@ -11,6 +11,10 @@ enum [[clang::flag_enum]] EnumFlag {
   D0 = 1, D1 = 8
 };
 
+enum [[gnu::flag_enum]] EnumFlag2 {
+  E0 = 1, E1 = 8
+};
+
 [[clang::overloadable]] void foo(void *c);
 [[clang::overloadable]] void foo(char *c);
 
