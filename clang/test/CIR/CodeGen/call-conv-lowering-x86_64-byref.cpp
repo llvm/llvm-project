@@ -107,11 +107,11 @@ void callByval() {
 // CIR:         %[[V:.*]] = cir.load align(8) %[[TMP]] : !cir.ptr<!rec_Big>, !rec_Big
 // CIR:         %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
 // CIR:         cir.store %[[V]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
-// CIR:         cir.call @_Z9takeByval3Big(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> ()
+// CIR:         cir.call @_Z9takeByval3Big(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define dso_local void @_Z9callByvalv()
 // LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP:[^,]+]], ptr align 8 %{{[^,]+}}, i64 32, i1 false)
 // LLVM-CIR:     %[[V:.*]] = load %struct.Big, ptr %[[TMP]], align 8
 // LLVM-CIR:     store %struct.Big %[[V]], ptr %[[SLOT:.*]], align 8
-// LLVM-CIR:     call void @_Z9takeByval3Big(ptr noalias noundef byval(%struct.Big) align 8 %[[SLOT]])
+// LLVM-CIR:     call void @_Z9takeByval3Big(ptr noundef byval(%struct.Big) align 8 %[[SLOT]])
 // OGCG:         call void @_Z9takeByval3Big(ptr noundef byval(%struct.Big) align 8 %[[TMP]])

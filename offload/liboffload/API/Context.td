@@ -13,7 +13,8 @@
 def olCreateContext : Function {
   let desc = "Create a context grouping the given devices.";
   let details = [
-    "All devices must belong to the same platform.",
+    "All devices must belong to the same platform and share the same driver ID "
+    "(as reported by `OL_DEVICE_INFO_DRIVER_ID`).",
     "A context enables resource sharing between the devices it groups and "
     "isolates those resources from other contexts: resources (such as memory "
     "allocations) created within a context cannot be used outside of it.",
@@ -31,7 +32,7 @@ def olCreateContext : Function {
       "`DevicesCount == 0`"
     ]>,
     Return<"OL_ERRC_INVALID_DEVICE", [
-      "the devices in `Devices` do not all belong to the same platform"
+      "the devices in `Devices` do not all belong to the same platform or do not all have the same driver ID"
     ]>
   ];
 }

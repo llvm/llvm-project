@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fclangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fclangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-CIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 typedef struct { long a, b, c, d; } Big;
 typedef struct { int a, b; } Pair;
@@ -32,11 +32,9 @@ long call_byval(long (*fp)(Big), Big b) { return fp(b); }
 
 // CIR: cir.func {{.*}}@call_byval(%arg0: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>> {{.*}}, %arg1: !cir.ptr<!rec_Big> {{.*}}llvm.byval = !rec_Big{{.*}}) -> !s64i
 // CIR:   %[[CAST:.*]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.func<(!rec_Big) -> !s64i>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>
-// CIR:   %{{.+}} = cir.call %[[CAST]](%{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> !s64i
-// LLVM-CIR: define dso_local i64 @call_byval(ptr noundef %{{.+}}, ptr noalias noundef byval(%struct.Big) align 8 %{{.+}})
-// LLVM-OGCG: define dso_local i64 @call_byval(ptr noundef %{{.+}}, ptr noundef byval(%struct.Big) align 8 %{{.+}})
-// LLVM-CIR:   call i64 %{{.+}}(ptr noalias noundef byval(%struct.Big) align 8 %{{.+}})
-// LLVM-OGCG:  call i64 %{{.+}}(ptr noundef byval(%struct.Big) align 8 %{{.+}})
+// CIR:   %{{.+}} = cir.call %[[CAST]](%{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s64i
+// LLVM: define dso_local i64 @call_byval(ptr noundef %{{.+}}, ptr noundef byval(%struct.Big) align 8 %{{.+}})
+// LLVM: call i64 %{{.+}}(ptr noundef byval(%struct.Big) align 8 %{{.+}})
 
 // Indirect call returning a large struct: an sret pointer slot is prepended
 // and the callee is bitcast to the void-returning sret signature.

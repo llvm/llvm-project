@@ -201,18 +201,14 @@ define void @test_non_unit_step_resume_values(ptr %p) #1 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP3]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x double>, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x double>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x double>, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x double> [[WIDE_LOAD]], [[WIDE_LOAD4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x double> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x double> [[WIDE_LOAD4]], [[WIDE_LOAD4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[WIDE_LOAD5]], [[WIDE_LOAD5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> [[WIDE_LOAD6]], [[WIDE_LOAD6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x double> [[WIDE_LOAD7]], [[WIDE_LOAD7]]
 ; CHECK-NEXT:    store <4 x double> [[TMP8]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    store <4 x double> [[TMP9]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    store <4 x double> [[TMP10]], ptr [[TMP6]], align 8
@@ -231,9 +227,8 @@ define void @test_non_unit_step_resume_values(ptr %p) #1 {
 ; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX9]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[P]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x double>, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x double>, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = fadd <4 x double> [[WIDE_LOAD10]], [[WIDE_LOAD11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd <4 x double> [[WIDE_LOAD11]], [[WIDE_LOAD11]]
 ; CHECK-NEXT:    store <4 x double> [[TMP14]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT12]] = add nuw i64 [[INDEX9]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT12]], 99
@@ -241,12 +236,12 @@ define void @test_non_unit_step_resume_values(ptr %p) #1 {
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i64 [ 396, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 384, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL14:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 3, %[[VEC_EPILOG_ITER_CHECK]] ], [ 99, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i64 [ 396, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 384, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 3, %[[VEC_EPILOG_ITER_CHECK]] ], [ 99, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL13]], %[[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ [[CNT_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL14]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL8]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ [[CNT_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL9]], %[[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[GEP0]], align 8
 ; CHECK-NEXT:    [[R0:%.*]] = fadd double [[V0]], [[V0]]

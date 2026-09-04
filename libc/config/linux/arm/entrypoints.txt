@@ -36,6 +36,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # pwd.h entrypoints
     libc.src.pwd.endpwent
     libc.src.pwd.getpwent
+    libc.src.pwd.getpwnam
+    libc.src.pwd.getpwnam_r
+    libc.src.pwd.getpwuid
+    libc.src.pwd.getpwuid_r
     libc.src.pwd.setpwent
 
     # string.h entrypoints
@@ -228,6 +232,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
+    libc.src.unistd.chroot
     libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
@@ -410,6 +415,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
+    libc.src.math.fdimf128
     libc.src.math.fdiml
     libc.src.math.fdiv
     libc.src.math.fdivl
@@ -429,11 +435,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_mag
     libc.src.math.fmaximum_mag_num
     libc.src.math.fmaximum_mag_numf
+    libc.src.math.fmaximum_mag_numf128
     libc.src.math.fmaximum_mag_numl
     libc.src.math.fmaximum_magf
+    libc.src.math.fmaximum_magf128
     libc.src.math.fmaximum_magl
     libc.src.math.fmaximum_num
     libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numf128
     libc.src.math.fmaximum_numl
     libc.src.math.fmaximumf
     libc.src.math.fmaximumf128
@@ -446,11 +455,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_mag
     libc.src.math.fminimum_mag_num
     libc.src.math.fminimum_mag_numf
+    libc.src.math.fminimum_mag_numf128
     libc.src.math.fminimum_mag_numl
     libc.src.math.fminimum_magf
+    libc.src.math.fminimum_magf128
     libc.src.math.fminimum_magl
     libc.src.math.fminimum_num
     libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numf128
     libc.src.math.fminimum_numl
     libc.src.math.fminimumf
     libc.src.math.fminimumf128

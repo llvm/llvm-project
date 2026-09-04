@@ -499,8 +499,12 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
+- Fixed an assertion failure when diagnosing a constant evaluation failure
+  inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
+- Fixed a wrong code generation in `__builtin_clear_padding` wherein the
+  wrong bits of the `_BitInt` type were cleared in big-endian mode.
 
 #### Bug Fixes to Attribute Support
 
@@ -576,6 +580,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when instantiating the body of a C++26 expansion
   statement after a fatal error had occurred. (#GH214917)
 
+- Fixed an assertion when an invalid statement appeared in a ``switch``
+  statement nested inside a C++26 expansion statement. (#GH210575)
+
 - Fixed friend declarations sometimes making non-visible default arguments
   incorrectly visible to default argument redefinition checks across modules.
 
@@ -604,6 +611,7 @@ features cannot lower the translation-unit ABI level;
   definition of a member of a class template added a default argument to a
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
+- Fixed an assertion failure when instantiating a late-parsed function template defined in an earlier translation unit with -fdelayed-template-parsing. (#GH217073)
 
 - Allow redeclaration lookup to consider conversion function templates, allowing
   Clang to match an in-class specialization such as `template<> operator int()`
@@ -618,6 +626,8 @@ features cannot lower the translation-unit ABI level;
   available as an identifier (e.g. `struct __make_unsigned`) was seen again
   in a token that was lexed and cached before the first occurrence was parsed.
   (#GH214128)
+- Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
+  function that is not a constructor. (#GH194298)
 
 #### Bug Fixes to AST Handling
 
@@ -819,6 +829,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.
   `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
   matching the behavior of such maps outside a mapper.
+- The `holds` clause on the `assume` directive now lowers side-effect-free
+  conditions to `llvm.assume`, enabling downstream optimizations. Previously
+  the clause was parsed but its condition was discarded without effect.
 
 ### SYCL Support
 

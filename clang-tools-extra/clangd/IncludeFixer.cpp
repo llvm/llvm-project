@@ -397,6 +397,13 @@ std::optional<std::string> getSpelledSpecifier(const CXXScopeSpec &SS,
 std::optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
     const SourceManager &SM, const DeclarationNameInfo &Unresolved,
     CXXScopeSpec *SS, const LangOptions &LangOpts, bool UnresolvedIsSpecifier) {
+  // Sema reports an unresolved conversion target type separately. Don't
+  // overwrite that record with the enclosing conversion function name, whose
+  // type cannot be represented by Name + Scopes.
+  if (Unresolved.getName().getNameKind() ==
+      DeclarationName::CXXConversionFunctionName)
+    return std::nullopt;
+
   CheapUnresolvedName Result;
   Result.Name = Unresolved.getAsString();
   if (SS && SS->isNotEmpty()) { // "::" or "ns::"
