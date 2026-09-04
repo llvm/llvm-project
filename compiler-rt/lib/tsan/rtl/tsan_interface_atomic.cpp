@@ -890,6 +890,38 @@ void __tsan_atomic_thread_fence(int mo) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_atomic_signal_fence(int mo) {}
+
+// __atomic_is_lock_free is a compiler builtin so defining it with that name is
+// an error. That's the reason for all the hackery redefining it.
+#  if defined(__PRAGMA_REDEFINE_EXTNAME)
+#    pragma redefine_extname __atomic_is_lock_free_c __atomic_is_lock_free
+#  elif defined(__GNUC__)
+SANITIZER_INTERFACE_ATTRIBUTE
+bool __atomic_is_lock_free_c(uptr size, const volatile void* ptr) __asm__(
+    "__atomic_is_lock_free");
+#  endif
+
+SANITIZER_INTERFACE_ATTRIBUTE
+bool __atomic_is_lock_free_c(uptr size, const volatile void* ptr) {
+  switch (size) {
+    case 1:
+      return true;
+    case 2:
+      return IsAligned((uptr)ptr, 2);
+    case 4:
+      return IsAligned((uptr)ptr, 4);
+    case 8:
+      return IsAligned((uptr)ptr, 8);
+#  if __TSAN_HAS_INT128
+    case 16:
+      // 128-bit atomics require hardware support and are otherwise emulated via
+      // spinlocks.
+      return __atomic_always_lock_free(16, 0) && IsAligned((uptr)ptr, 16);
+#  endif
+    default:
+      return false;
+  }
+}
 }  // extern "C"
 
 #else  // #if !SANITIZER_GO
