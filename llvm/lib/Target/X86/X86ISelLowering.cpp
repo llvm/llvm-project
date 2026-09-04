@@ -2573,18 +2573,25 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (!Subtarget.useSoftFloat() &&
-      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16())) {
+  // Keep v8bf16 legal with AVX even without native bf16 instructions so that
+  // f32-to-bf16 conversions can be expanded in the vector domain.
+  if (!Subtarget.useSoftFloat() && Subtarget.hasAVX()) {
     addRegisterClass(MVT::v8bf16, Subtarget.hasAVX512() ? &X86::VR128XRegClass
                                                         : &X86::VR128RegClass);
-    addRegisterClass(MVT::v16bf16, Subtarget.hasAVX512() ? &X86::VR256XRegClass
-                                                         : &X86::VR256RegClass);
+    if (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16()) {
+      addRegisterClass(MVT::v16bf16, Subtarget.hasAVX512()
+                                         ? &X86::VR256XRegClass
+                                         : &X86::VR256RegClass);
+      addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
+    }
     // We set the type action of bf16 to TypeSoftPromoteHalf, but we don't
     // provide the method to promote BUILD_VECTOR and INSERT_VECTOR_ELT.
     // Set the operation action Custom to do the customization later.
     setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::bf16, Custom);
-    for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
+    for (MVT VT : {MVT::v8bf16, MVT::v16bf16}) {
+      if (!isTypeLegal(VT))
+        continue;
       setF16Action(VT, Expand);
       if (!Subtarget.hasBF16())
         setOperationAction(ISD::VSELECT, VT, Custom);
@@ -2592,15 +2599,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+      for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+        setOperationPromotedToType(Opc, VT,
+                                   VT.changeVectorElementType(MVT::f32));
+      setOperationAction(ISD::SETCC, VT, Custom);
     }
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
-      setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
-      setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
-    }
-    setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
-    setOperationAction(ISD::SETCC, MVT::v16bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
-    addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasBF16() &&
@@ -9460,8 +9464,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (VT.getVectorElementType() == MVT::i1 && Subtarget.hasAVX512())
     return LowerBUILD_VECTORvXi1(Op, dl, DAG, Subtarget);
 
-  if (VT.getVectorElementType() == MVT::bf16 &&
-      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16()))
+  if (VT.getVectorElementType() == MVT::bf16)
     return LowerBUILD_VECTORvXbf16(Op, DAG, Subtarget);
 
   if (SDValue VectorCst = materializeVectorConstant(Op, dl, DAG, Subtarget))
@@ -22889,6 +22892,8 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
         ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
          Subtarget.hasAVXNECONVERT()))
       return Op;
+    if (!IsStrict && SVT.getScalarType() == MVT::f32)
+      return expandFP_ROUND(Op.getNode(), DAG);
     return SDValue();
   }
 
@@ -23036,6 +23041,13 @@ SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
     Res = DAG.getBitcast(MVT::v8i16, Res);
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, Res,
                        DAG.getVectorIdxConstant(0, DL));
+  }
+
+  if (SVT == MVT::f32 && !Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
+    // FP_TO_BF16 has an integer result after bf16 is softened. Form the
+    // equivalent FP_ROUND node to reuse the generic bf16 rounding expansion.
+    SDValue Round = DAG.getFPExtendOrRound(Op.getOperand(0), DL, MVT::bf16);
+    return DAG.getBitcast(MVT::i16, expandFP_ROUND(Round.getNode(), DAG));
   }
 
   MakeLibCallOptions CallOptions;
