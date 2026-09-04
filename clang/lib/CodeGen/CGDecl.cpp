@@ -363,6 +363,12 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   ConstantEmitter emitter(*this);
   llvm::Constant *Init = emitter.tryEmitForInitializer(D);
 
+  // CUDA device compilation only.  Sema has verified that a function-scope
+  // static in device code has an empty/constant initializer and an empty
+  // destructor, so neither needs to be emitted here.
+  const bool SkipCUDADeviceInit =
+      getLangOpts().CUDAIsDevice && !getLangOpts().GPUAllowDeviceInit;
+
   // If constant emission failed, then this should be a C++ static
   // initializer.
   if (!Init) {
@@ -375,7 +381,20 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
       // be constant.
       GV->setConstant(false);
 
-      EmitCXXGuardedInit(D, GV, /*PerformInit*/true);
+#ifndef NDEBUG
+      // Constant emission failed, so in device code Sema can only have accepted
+      // this via its "empty constructor" rule.
+      if (SkipCUDADeviceInit) {
+        const auto *CE = dyn_cast<CXXConstructExpr>(D.getInit());
+        const CXXConstructorDecl *Ctor = CE ? CE->getConstructor() : nullptr;
+        assert(Ctor && Ctor->hasTrivialBody() && Ctor->getNumParams() == 0 &&
+               "non-empty initializer for a device-side static should have "
+               "been diagnosed by Sema");
+      }
+#endif
+
+      if (!SkipCUDADeviceInit)
+        EmitCXXGuardedInit(D, GV, /*PerformInit*/ true);
     }
     return GV;
   }
@@ -399,10 +418,24 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
 
   emitter.finalize(GV);
 
-  if (NeedsDtor && HaveInsertPoint()) {
-    // We have a constant initializer, but a nontrivial destructor. We still
-    // need to perform a guarded "initialization" in order to register the
-    // destructor.
+#ifndef NDEBUG
+  if (SkipCUDADeviceInit && NeedsDtor) {
+    const auto *RD =
+        D.getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
+    const CXXDestructorDecl *Dtor = RD ? RD->getDestructor() : nullptr;
+    assert(Dtor && Dtor->hasTrivialBody() &&
+           "non-empty destructor for a device-side static should have been "
+           "diagnosed by Sema");
+  }
+#endif
+
+  // We have a constant initializer, but a nontrivial destructor. We still need
+  // to perform a guarded "initialization" in order to register the destructor.
+  //
+  // CUDA allows a device-side static whose destructor is non-trivial, but
+  // empty. A user-provided destructor with an empty body is non-trivial but
+  // does nothing.
+  if (NeedsDtor && HaveInsertPoint() && !SkipCUDADeviceInit) {
     EmitCXXGuardedInit(D, GV, /*PerformInit*/false);
   }
 
