@@ -219,7 +219,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-class _LIBCPP_EXPORTED_FROM_ABI recursive_mutex {
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WARN_UNUSED recursive_mutex {
   __libcpp_recursive_mutex_t __m_;
 
 public:
@@ -238,7 +238,7 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return &__m_; }
 };
 
-class _LIBCPP_EXPORTED_FROM_ABI timed_mutex {
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WARN_UNUSED timed_mutex {
   mutex __m_;
   condition_variable __cv_;
   bool __locked_;
@@ -275,7 +275,7 @@ public:
   void unlock() _NOEXCEPT;
 };
 
-class _LIBCPP_EXPORTED_FROM_ABI recursive_timed_mutex {
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WARN_UNUSED recursive_timed_mutex {
   mutex __m_;
   condition_variable __cv_;
   size_t __count_;
