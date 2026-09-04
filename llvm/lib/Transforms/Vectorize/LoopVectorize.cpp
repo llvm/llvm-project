@@ -3133,7 +3133,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   for (const auto &Plan : VPlans) {
     // Skip cost remarks when Plan is not compatible with the CM.
     // Specifically for the case of epilogue tail-folded Plans.
-    if (Plan->hasTailFolded() ^ CM->preferTailFoldedLoop())
+    if (Plan->hasTailFolded() != CM->preferTailFoldedLoop())
       continue;
     for (ElementCount VF : Plan->vectorFactors()) {
       // The VPlan-based cost model is designed for computing vector cost.
@@ -5551,15 +5551,13 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
       // For scalar VF, skip VPlan cost check as VPlan cost is designed for
       // vector VFs only.
-      if (!VPlans.empty() &&
+      if (!VPlans.empty() && (VPlans.front()->getSingleVF() == UserVF) &&
           (UserVF.isScalar() ||
            cost(*VPlans.front(), UserVF, /*RU=*/nullptr, *CM).isValid())) {
         // Plan for epilogue only if we succeeded in building main loop vplan.
-
         // Try to plan for tail-folded epilogue if it's enabled/doable,
         // otherwise plan for unpredicated epilogue:
-        bool EpilogueTfPlanCreated = planForEpilogueTF();
-        if (!EpilogueTfPlanCreated) {
+        if (!planForEpilogueTF()) {
           ElementCount EpilogueUserVF = EpilogueVectorizationForceVF;
           if (EpilogueUserVF.isVector() &&
               ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
@@ -5628,6 +5626,7 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     reportVectorizationInfo(
         "Failed to build initial tail-folded epilogue VPlan",
         "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+    assert(false && "Failed to build initial tail-folded epilogue VPlan");
     return false;
   }
 
@@ -7674,7 +7673,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   auto *Increment = vputils::findCanonicalIVIncrement(Plan);
   assert(Increment && "Must have a canonical IV increment at this point");
   IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U, unsigned) {
-    return &U != Add && &U != Increment && !isa<VPWidenCanonicalIVRecipe>(&U);
+    return &U != Add && &U != Increment;
   });
   VPInstruction *OffsetIVInc =
       VPBuilder::getToInsertAfter(Increment).createAdd(Increment, VPV);
@@ -7797,11 +7796,16 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
           VPInstruction::CanonicalIVIncrementForPart, {VPV, &Plan.getVF()}, {},
           R.getDebugLoc(), "index.part.next");
       auto *EntryALM = EntryBuilder.createNaryOp(
-          VPInstruction::ActiveLaneMask,
+          VPInstruction::WideActiveLaneMask,
           {EntryIncrement, Plan.getTripCount(), ALMMultiplier}, R.getDebugLoc(),
           "active.lane.mask.entry");
       cast<VPHeaderPHIRecipe>(&R)->setStartValue(EntryALM);
       continue;
+    } else if (isa<VPFirstOrderRecurrencePHIRecipe>(&R)) {
+      auto *RecPhi = cast<VPFirstOrderRecurrencePHIRecipe>(&R);
+      VPInstruction *ResumeForEpi =
+          IRPhiToResumeForEpi.at(cast<PHINode>(RecPhi->getUnderlyingInstr()));
+      ResumeV = ResumeForEpi->getUnderlyingValue();
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
       PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
