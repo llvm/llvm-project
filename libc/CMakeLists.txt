@@ -91,18 +91,20 @@ endif()
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
 
+# Enable source-based code coverage using Clang's continuous profiling mode.
 option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
 if(LIBC_ENABLE_COVERAGE)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_definitions(LIBC_ENABLE_COVERAGE)
-    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate=libc_cov_%p.profraw"
-         "-fcoverage-mapping" "-fprofile-continuous")
-    list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate=libc_cov_%p.profraw"
-         "-fcoverage-mapping" "-fprofile-continuous")
-    list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fprofile-instr-generate=libc_cov_%p.profraw"
-         "-fcoverage-mapping" "-fprofile-continuous")
+    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT
+         "-fprofile-instr-generate=libc_cov_%p.profraw"
+         "-fcoverage-mapping"
+         "-fprofile-continuous")
+    list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT
+         "-fprofile-instr-generate=libc_cov_%p.profraw"
+         "-fprofile-continuous")
   else()
-    message(FATAL_ERROR "Coverage instrumentation is currently only supported with Clang")
+    message(FATAL_ERROR
+            "Coverage instrumentation is currently only supported with Clang")
   endif()
 endif()
 
