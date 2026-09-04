@@ -61606,6 +61606,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                              Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
       }
       break;
+    case ISD::SHL:
+    case ISD::SRL:
+    case ISD::SRA:
+      if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasInt256()) ||
+                       (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
+                        (EltSizeInBits >= 32 || Subtarget.useBWIRegs())))) {
+        // We need the value being shifted to be concatenated for free to
+        // typically make this worthwhile.
+        if (SDValue Concat0 = CombineSubOperand(VT, Ops, 0))
+          return DAG.getNode(Opcode, DL, VT, Concat0,
+                             ConcatSubOperand(VT, Ops, 1));
+      }
+      break;
     // Due to VADD, VSUB, VMUL can executed on more ports than VINSERT and
     // their latency are short, so here we don't replace them unless we won't
     // introduce extra VINSERT.
