@@ -778,3 +778,32 @@ int arr3[3];
 Arr3 a3(arr3, 0);
 static_assert(__is_same(decltype(a3), Arr<int, 3>));
 } // namespace nttp_deduced_from_alias_in_nondeduced_param_type
+
+namespace lambda_in_alias_rhs {
+// The lambda in the RHS of the alias is rewritten in terms of the template
+// parameters of the synthesized deduction guide, and must remain dependent
+// there, so that it is instantiated along with the guide. Otherwise, the call
+// operator of the closure type in the deduced type would keep the parameter
+// type T.
+template <class T, class F> struct A {
+  constexpr A(T t, F f = {}) : v(f(t)) {}
+  int v;
+};
+
+template <class T> using AA = A<T, decltype([](T x) { return x + 1; })>;
+constexpr AA a{41};
+static_assert(a.v == 42);
+
+// The lambda comes from the RHS of the alias that AAA is equivalent to.
+template <class T> using AAA = AA<T>;
+constexpr AAA aa{1};
+static_assert(aa.v == 2);
+
+template <class T, class F> struct B {
+  B(T, F f = {}) { f({}); }
+};
+
+template <class T> using BB = B<T, decltype([](T) {})>;
+BB b{0};
+
+} // namespace lambda_in_alias_rhs

@@ -492,6 +492,13 @@ features cannot lower the translation-unit ABI level;
   invalid with the constant substituted, the deduction guide is now silently
   not synthesized for the alias instead of crashing, matching GCC.
 
+- Fixed a crash in class template argument deduction when the deduced type
+  contains the closure type of a lambda from the right-hand side of an alias
+  template (`template <class T> using A = S<T, decltype([](T) {})>;`) or from
+  the return type of a user-written deduction guide. The lambda is now
+  instantiated along with the deduction guide, and its closure type is created
+  in the scope enclosing the guide so that it can be mangled, matching GCC.
+
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
