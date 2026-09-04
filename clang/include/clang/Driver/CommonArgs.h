@@ -73,19 +73,6 @@ void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);
 
-void AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
-                                const JobAction &JA,
-                                const InputInfoList &Inputs,
-                                const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CmdArgs,
-                                StringRef Arch, StringRef Target,
-                                bool isBitCodeSDL);
-void AddStaticDeviceLibs(Compilation *C, const Tool *T, const JobAction *JA,
-                         const InputInfoList *Inputs, const Driver &D,
-                         const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &CmdArgs, StringRef Arch,
-                         StringRef Target, bool isBitCodeSDL);
-
 const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
 
