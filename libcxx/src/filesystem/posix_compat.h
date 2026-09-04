@@ -75,6 +75,12 @@ struct LIBCPP_REPARSE_DATA_BUFFER {
     } GenericReparseBuffer;
   };
 };
+
+// The reparse tag used for AF_UNIX (Unix domain) socket files isn't always
+// present in the Windows SDK headers, so define it ourselves if needed.
+#  ifndef IO_REPARSE_TAG_AF_UNIX
+#    define IO_REPARSE_TAG_AF_UNIX 0x80000023L
+#  endif
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
@@ -165,8 +171,16 @@ inline int stat_handle(HANDLE h, StatT* buf) {
     FILE_ATTRIBUTE_TAG_INFO tag;
     if (!GetFileInformationByHandleEx(h, FileAttributeTagInfo, &tag, sizeof(tag)))
       return -1;
-    if (tag.ReparseTag == IO_REPARSE_TAG_SYMLINK)
+    if (tag.ReparseTag == IO_REPARSE_TAG_SYMLINK) {
       buf->st_mode = (buf->st_mode & ~_S_IFMT) | _S_IFLNK;
+    } else if (tag.ReparseTag == IO_REPARSE_TAG_AF_UNIX) {
+      buf->st_mode = (buf->st_mode & ~_S_IFMT) | _S_IFSOCK;
+      // AF_UNIX (Unix domain) socket files don't support the information
+      // queries below; report what we already have (mode/timestamps) instead
+      // of failing outright, matching the behavior of the system
+      // stat()/os.stat().
+      return 0;
+    }
   }
   FILE_STANDARD_INFO standard;
   if (!GetFileInformationByHandleEx(h, FileStandardInfo, &standard, sizeof(standard)))
@@ -182,17 +196,38 @@ inline int stat_handle(HANDLE h, StatT* buf) {
   return 0;
 }
 
-inline int stat_file(const wchar_t* path, StatT* buf, DWORD flags) {
-  WinHandle h(path, FILE_READ_ATTRIBUTES, flags);
-  if (!h)
+inline int stat_file(const wchar_t* path, StatT* buf, bool follow_symlinks) {
+  // Win32 has no open mode that means "follow symlinks, but open any other
+  // reparse point (e.g. an AF_UNIX socket) as itself": omitting
+  // FILE_FLAG_OPEN_REPARSE_POINT follows *every* reparse point, which fails for
+  // ones that have no target to follow, while passing it opens *every* reparse
+  // point as itself, including symlinks we do want to follow.
+  //
+  // So we always open the reparse point itself first. This succeeds for any
+  // existing object regardless of its reparse tag, and lets stat_handle
+  // determine the type from that tag. We then emulate symlink following
+  // ourselves below, only for the objects that actually are symlinks.
+  WinHandle h(path, FILE_READ_ATTRIBUTES, FILE_FLAG_OPEN_REPARSE_POINT);
+  if (!h || stat_handle(h, buf) != 0)
     return -1;
-  int ret = stat_handle(h, buf);
-  return ret;
+  // For lstat, or for anything that isn't a symlink, we're already done. Only a
+  // genuine symlink needs to be resolved to its target for stat; do so by
+  // reopening the path without FILE_FLAG_OPEN_REPARSE_POINT so the OS follows
+  // it, and stat'ing the target handle. A failure here (dangling/cyclic/
+  // inaccessible target) is a real error, matching the behavior of the system
+  // stat()/os.stat().
+  if (follow_symlinks && S_ISLNK(buf->st_mode)) {
+    WinHandle ht(path, FILE_READ_ATTRIBUTES, 0);
+    if (!ht)
+      return -1;
+    return stat_handle(ht, buf);
+  }
+  return 0;
 }
 
-inline int stat(const wchar_t* path, StatT* buf) { return stat_file(path, buf, 0); }
+inline int stat(const wchar_t* path, StatT* buf) { return stat_file(path, buf, /*follow_symlinks=*/true); }
 
-inline int lstat(const wchar_t* path, StatT* buf) { return stat_file(path, buf, FILE_FLAG_OPEN_REPARSE_POINT); }
+inline int lstat(const wchar_t* path, StatT* buf) { return stat_file(path, buf, /*follow_symlinks=*/false); }
 
 inline int fstat(int fd, StatT* buf) {
   HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
