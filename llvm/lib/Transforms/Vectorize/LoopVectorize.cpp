@@ -1228,7 +1228,8 @@ public:
 
   /// Returns true if the predicated reduction select should be used to set the
   /// incoming value for the reduction phi.
-  bool usePredicatedReductionSelect(RecurKind RecurrenceKind) const {
+  bool usePredicatedReductionSelect(RecurKind RecurrenceKind,
+                                    bool HasUsesOutsideReductionChain) const {
     // Force to use predicated reduction select since the EVL of the
     // second-to-last iteration might not be VF*UF.
     if (foldTailWithEVL())
@@ -1239,10 +1240,12 @@ public:
     if (maskPartialAliasing())
       return true;
 
-    // Note: For FindLast recurrences we prefer a predicated select to simplify
-    // matching in handleFindLastReductions(), rather than handle multiple
+    // Note: For FindLast recurrences and multi-use reductions we prefer a
+    // predicated select to simplify matching in handleFindLastReductions() and
+    // handleMultiUseReductions() respectively, rather than handle multiple
     // cases.
-    if (RecurrenceDescriptor::isFindLastRecurrenceKind(RecurrenceKind))
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(RecurrenceKind) ||
+        HasUsesOutsideReductionChain)
       return true;
 
     return PreferPredicatedReductionSelect ||
@@ -6882,7 +6885,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
 
     // Remove the predicated select if the target doesn't want it.
     VPValue *V;
-    if (!CM->usePredicatedReductionSelect(RecurrenceKind) &&
+    if (!CM->usePredicatedReductionSelect(
+            RecurrenceKind, RdxDesc.hasUsesOutsideReductionChain()) &&
         match(PhiR->getBackedgeValue(),
               m_Select(m_Specific(HeaderMask), m_VPValue(V), m_Specific(PhiR))))
       PhiR->setBackedgeValue(V);
