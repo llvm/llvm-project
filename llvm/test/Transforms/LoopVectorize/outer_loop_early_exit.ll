@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -enable-vplan-native-path -disable-output -debug 2>&1 < %s | FileCheck %s
 
 ; CHECK-LABEL: LV: Found a loop: for.body
-; CHECK: LV: Not vectorizing: Unsupported conditional branch.
+; CHECK: LV: Not vectorizing: Outer loop contains divergent conditional branch.
 ; CHECK: loop not vectorized: loop control flow is not understood by vectorizer
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
