@@ -63,7 +63,7 @@ struct __fn {
   template <__unqualified_reserve_hint _Tp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr __integer_like auto
   operator()(_Tp&& __t) noexcept(noexcept(auto(reserve_hint(__t)))) {
-    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment) -- ADL is intentional here
+    // NOLINTNEXTLINE(libcpp-robust-against-adl) -- ADL is intentional here
     return auto(reserve_hint(__t));
   }
 };
