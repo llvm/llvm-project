@@ -15,6 +15,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/types/struct_passwd.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h"
 #include "src/pwd/flat_file_db.h"
 #include "src/string/string_utils.h"
@@ -38,18 +39,26 @@ ErrorOr<struct passwd> parse_passwd_line(char *line) {
   return pwd;
 }
 
-} // namespace pwd
+// Exposed via TESTONLY_set_passwd_path for unit testing to direct operations
+// to hermetic temporary files.
+static const char *passwd_file_path = LIBC_COPT_PWD_FILE_PATH;
 
-namespace passwd {
-
-static LIBC_CONSTINIT pwd::FlatFileDatabase<struct passwd>
+static LIBC_CONSTINIT FlatFileDatabase<struct passwd>
     db(LIBC_COPT_PWD_FILE_PATH);
 // Note: These static buffers are process-global and NOT protected by a mutex
 // at this stage. POSIX getpwent is non-reentrant.
 static char line_buffer[1024];
 static struct passwd pwd_entry;
 
-void TESTONLY_set_passwd_path(const char *path) { db.set_path(path); }
+void TESTONLY_set_passwd_path(const char *path) {
+  passwd_file_path = path;
+  db.set_path(path);
+}
+
+void TESTONLY_reset_passwd_path() {
+  passwd_file_path = LIBC_COPT_PWD_FILE_PATH;
+  db.set_path(LIBC_COPT_PWD_FILE_PATH);
+}
 
 ErrorOr<void> open() { return db.setdb(); }
 
@@ -64,5 +73,25 @@ ErrorOr<struct passwd *> read_next() {
   return &pwd_entry;
 }
 
-} // namespace passwd
+ErrorOr<bool> find_by_name(cpp::string_view name, struct passwd *pwd,
+                           cpp::span<char> buffer, const char *path) {
+  ScopedFlatFileDatabase<struct passwd> local_db(path ? path
+                                                      : passwd_file_path);
+  auto matcher = [name](const struct passwd &entry) {
+    return cpp::string_view(entry.pw_name) == name;
+  };
+  return local_db.lookup(matcher, pwd, buffer);
+}
+
+ErrorOr<bool> find_by_uid(uid_t uid, struct passwd *pwd, cpp::span<char> buffer,
+                          const char *path) {
+  ScopedFlatFileDatabase<struct passwd> local_db(path ? path
+                                                      : passwd_file_path);
+  auto matcher = [uid](const struct passwd &entry) {
+    return entry.pw_uid == uid;
+  };
+  return local_db.lookup(matcher, pwd, buffer);
+}
+
+} // namespace pwd
 } // namespace LIBC_NAMESPACE_DECL
