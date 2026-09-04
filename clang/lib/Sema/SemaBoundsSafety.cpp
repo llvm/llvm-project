@@ -17,6 +17,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include <optional>
 
 namespace clang {
 
@@ -27,6 +28,55 @@ getCountAttrKind(bool CountInBytes, bool OrNull) {
                   : CountAttributedType::SizedBy;
   return OrNull ? CountAttributedType::CountedByOrNull
                 : CountAttributedType::CountedBy;
+}
+
+namespace {
+struct BoundsAttrFlags {
+  bool CountInBytes = false;
+  bool OrNull = false;
+};
+} // namespace
+
+static std::optional<BoundsAttrFlags> getBoundsAttrFlags(ParsedAttr::Kind K) {
+  BoundsAttrFlags Flags;
+  switch (K) {
+  case ParsedAttr::AT_CountedBy:
+    break;
+  case ParsedAttr::AT_CountedByOrNull:
+    Flags.OrNull = true;
+    break;
+  case ParsedAttr::AT_SizedBy:
+    Flags.CountInBytes = true;
+    break;
+  case ParsedAttr::AT_SizedByOrNull:
+    Flags.CountInBytes = true;
+    Flags.OrNull = true;
+    break;
+  default:
+    return std::nullopt;
+  }
+  return Flags;
+}
+
+bool Sema::ActOnLateParsedTypeAttr(ParsedAttr::Kind AttrKind,
+                                   SourceLocation AttrNameLoc, QualType &type,
+                                   LateParsedTypeAttribute *LTA) {
+  std::optional<BoundsAttrFlags> Flags = getBoundsAttrFlags(AttrKind);
+  if (!Flags)
+    return false;
+
+  // The argument-independent validation, run before the attribute's argument
+  // has been parsed. An array parameter has already decayed to a pointer, so
+  // unlike a flexible array member there is no array spelling to accept here.
+  if (!type->isPointerType()) {
+    unsigned Kind = getCountAttrKind(Flags->CountInBytes, Flags->OrNull);
+    Diag(AttrNameLoc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
+        << Kind << AttrNameLoc << /*do not suggest counted_by*/ 0;
+    return false;
+  }
+
+  type = Context.getLateParsedAttrType(type, LTA);
+  return true;
 }
 
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
@@ -51,6 +101,86 @@ enum class CountedByInvalidPointeeTypeKind {
   FLEXIBLE_ARRAY_MEMBER,
   VALID,
 };
+
+/// Diagnose a counted_by-family attribute whose pointee (or array element)
+/// type \p PointeeTy cannot support bounds computation. Shared between the
+/// struct-field and function-parameter paths so both accept and reject the
+/// same shapes. \p DowngradeFAMPointeeErrToWarn is the Linux-kernel
+/// workaround; see the caller in CheckCountedByAttrOnField. Returns true if
+/// the attribute cannot be applied.
+static bool CheckCountAttrPointeeType(Sema &S, QualType PointeeTy,
+                                      bool CountInBytes, unsigned Kind,
+                                      int SelectPtrOrArr,
+                                      bool DowngradeFAMPointeeErrToWarn,
+                                      SourceLocation Loc, SourceRange Range) {
+  CountedByInvalidPointeeTypeKind InvalidTypeKind =
+      CountedByInvalidPointeeTypeKind::VALID;
+  bool ShouldWarn = false;
+  if (!CountInBytes && PointeeTy->isAlwaysIncompleteType()) {
+    // In general using `counted_by` or `counted_by_or_null` on
+    // pointers where the pointee is an incomplete type are problematic. This is
+    // because it isn't possible to compute the pointer's bounds without knowing
+    // the pointee type size. At the same time it is common to forward declare
+    // types in header files.
+    //
+    // E.g.:
+    //
+    // struct Handle;
+    // struct Wrapper {
+    //   size_t count;
+    //   struct Handle* __counted_by(count) handles;
+    // }
+    //
+    // To allow the above code pattern but still prevent the pointee type from
+    // being incomplete in places where bounds checks are needed the following
+    // scheme is used:
+    //
+    // * When the pointee type might not always be an incomplete type (i.e.
+    // a type that is currently incomplete but might be completed later
+    // on in the translation unit) the attribute is allowed by this method
+    // but later uses of the annotated declaration are checked that the pointee
+    // type is complete see `BoundsSafetyCheckAssignmentToCountAttrPtr`,
+    // `BoundsSafetyCheckInitialization`, and
+    // `BoundsSafetyCheckUseOfCountAttrPtr`
+    //
+    // * When the pointee type is always an incomplete type (e.g.
+    // `void` in strict C mode) the attribute is disallowed by this method
+    // because we know the type can never be completed so there's no reason
+    // to allow it.
+    //
+    // Exception: void has an implicit size of 1 byte for pointer arithmetic
+    // (following GNU convention). Therefore, counted_by on void* is allowed
+    // and behaves equivalently to sized_by (treating the count as bytes).
+    bool IsVoidPtr = PointeeTy->isVoidType();
+    if (IsVoidPtr) {
+      // Emit a warning that this is a GNU extension.
+      S.Diag(Loc, diag::ext_gnu_counted_by_void_ptr) << Kind;
+      S.Diag(Loc, diag::note_gnu_counted_by_void_ptr_use_sized_by) << Kind;
+      assert(InvalidTypeKind == CountedByInvalidPointeeTypeKind::VALID);
+    } else {
+      InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
+    }
+  } else if (PointeeTy->isSizelessType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
+  } else if (PointeeTy->isFunctionType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
+  } else if (!CountInBytes &&
+             PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
+    if (DowngradeFAMPointeeErrToWarn)
+      ShouldWarn = true;
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
+  }
+
+  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
+    unsigned DiagID = ShouldWarn
+                          ? diag::warn_counted_by_attr_elt_type_unknown_size
+                          : diag::err_counted_by_attr_pointee_unknown_size;
+    S.Diag(Loc, DiagID) << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
+                        << (ShouldWarn ? 1 : 0) << Kind << Range;
+    return true;
+  }
+  return false;
+}
 
 bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                      bool OrNull) {
@@ -89,8 +219,6 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
-  CountedByInvalidPointeeTypeKind InvalidTypeKind =
-      CountedByInvalidPointeeTypeKind::VALID;
   QualType PointeeTy;
   int SelectPtrOrArr = 0;
   if (FieldTy->isPointerType()) {
@@ -105,79 +233,19 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
   // Note: The `Decl::isFlexibleArrayMemberLike` check earlier on means
   // only `PointeeTy->isStructureTypeWithFlexibleArrayMember()` is reachable
   // when `FieldTy->isArrayType()`.
-  bool ShouldWarn = false;
-  if (!CountInBytes && PointeeTy->isAlwaysIncompleteType()) {
-    // In general using `counted_by` or `counted_by_or_null` on
-    // pointers where the pointee is an incomplete type are problematic. This is
-    // because it isn't possible to compute the pointer's bounds without knowing
-    // the pointee type size. At the same time it is common to forward declare
-    // types in header files.
-    //
-    // E.g.:
-    //
-    // struct Handle;
-    // struct Wrapper {
-    //   size_t count;
-    //   struct Handle* __counted_by(count) handles;
-    // }
-    //
-    // To allow the above code pattern but still prevent the pointee type from
-    // being incomplete in places where bounds checks are needed the following
-    // scheme is used:
-    //
-    // * When the pointee type might not always be an incomplete type (i.e.
-    // a type that is currently incomplete but might be completed later
-    // on in the translation unit) the attribute is allowed by this method
-    // but later uses of the FieldDecl are checked that the pointee type
-    // is complete see `BoundsSafetyCheckAssignmentToCountAttrPtr`,
-    // `BoundsSafetyCheckInitialization`, and
-    // `BoundsSafetyCheckUseOfCountAttrPtr`
-    //
-    // * When the pointee type is always an incomplete type (e.g.
-    // `void` in strict C mode) the attribute is disallowed by this method
-    // because we know the type can never be completed so there's no reason
-    // to allow it.
-    //
-    // Exception: void has an implicit size of 1 byte for pointer arithmetic
-    // (following GNU convention). Therefore, counted_by on void* is allowed
-    // and behaves equivalently to sized_by (treating the count as bytes).
-    bool IsVoidPtr = PointeeTy->isVoidType();
-    if (IsVoidPtr) {
-      // Emit a warning that this is a GNU extension.
-      Diag(FD->getBeginLoc(), diag::ext_gnu_counted_by_void_ptr) << Kind;
-      Diag(FD->getBeginLoc(), diag::note_gnu_counted_by_void_ptr_use_sized_by)
-          << Kind;
-      assert(InvalidTypeKind == CountedByInvalidPointeeTypeKind::VALID);
-    } else {
-      InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
-    }
-  } else if (PointeeTy->isSizelessType()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
-  } else if (PointeeTy->isFunctionType()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
-  } else if (!CountInBytes &&
-             PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
-    if (FieldTy->isArrayType() && !getLangOpts().BoundsSafety) {
-      // This is a workaround for the Linux kernel that has already adopted
-      // `counted_by` on a FAM where the pointee is a struct with a FAM. This
-      // should be an error because computing the bounds of the array cannot be
-      // done correctly without manually traversing every struct object in the
-      // array at runtime. To allow the code to be built this error is
-      // downgraded to a warning.
-      ShouldWarn = true;
-    }
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
-  }
-
-  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
-    unsigned DiagID = ShouldWarn
-                          ? diag::warn_counted_by_attr_elt_type_unknown_size
-                          : diag::err_counted_by_attr_pointee_unknown_size;
-    Diag(FD->getBeginLoc(), DiagID)
-        << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
-        << (ShouldWarn ? 1 : 0) << Kind << FD->getSourceRange();
+  //
+  // Downgrading the FAM-pointee error to a warning on such arrays is a
+  // workaround for the Linux kernel that has already adopted `counted_by` on
+  // a FAM where the pointee is a struct with a FAM. This should be an error
+  // because computing the bounds of the array cannot be done correctly
+  // without manually traversing every struct object in the array at runtime.
+  // To allow the code to be built the error is downgraded to a warning.
+  bool DowngradeFAMPointeeErrToWarn =
+      FieldTy->isArrayType() && !getLangOpts().BoundsSafety;
+  if (CheckCountAttrPointeeType(*this, PointeeTy, CountInBytes, Kind,
+                                SelectPtrOrArr, DowngradeFAMPointeeErrToWarn,
+                                FD->getBeginLoc(), FD->getSourceRange()))
     return true;
-  }
 
   // Check the expression
 
@@ -593,6 +661,396 @@ void Sema::ProcessLateParsedTypeAttributes(
       CheckCountedByAttrOnField(FD, CAT->getCountExpr(), CAT->isCountInBytes(),
                                 CAT->isOrNull());
     }
+  }
+}
+
+/// What a placeholder's count may name, decided by where the placeholder sits.
+enum class CountScope {
+  /// A parameter type: any parameter, this prototype's or an enclosing one's.
+  AnyParam,
+  /// A return type: this prototype's own parameters.
+  OwnParam,
+};
+
+/// Whether \p Count is already declared where the annotated parameter is.
+///
+/// \p Enclosing is the chain of parameters whose types the placeholder sits
+/// inside, outermost first; the count must precede whichever member of the
+/// chain shares its prototype. A count from a prototype *enclosing* the chain
+/// always precedes it -- that clause is still mid-parse, so its scope holds
+/// only the parameters written before this one, and lookup finding the count
+/// there is itself the proof. One from a prototype *nested* below the chain
+/// never does; that is the return-type case.
+///
+/// Ordering rather than source location, so that a parameter list produced by
+/// a single macro expansion is not read as declaring everything at once.
+static bool isCountDeclaredBefore(ArrayRef<ParmVarDecl *> Enclosing,
+                                  const ParmVarDecl *Count) {
+  for (const ParmVarDecl *Param : Enclosing)
+    if (Param->getFunctionScopeDepth() == Count->getFunctionScopeDepth())
+      return Count->getFunctionScopeIndex() < Param->getFunctionScopeIndex();
+  assert(!Enclosing.empty() && "chain is seeded with the annotated parameter");
+  return Count->getFunctionScopeDepth() <
+         Enclosing.front()->getFunctionScopeDepth();
+}
+
+/// Build the type an attribute on a prototype-scoped placeholder denotes.
+///
+/// \p Params is the parameter list of the prototype that owns the annotated
+/// type, and \p Scope what its count is allowed to name -- see the comment on
+/// the check below.
+static QualType buildCountAttributedTypeForParam(Sema &S, QualType InnerTy,
+                                                 ArrayRef<Decl *> Params,
+                                                 ArrayRef<ParmVarDecl *> Enclosing,
+                                                 CountScope Scope,
+                                                 ParsedAttr &AL) {
+  std::optional<BoundsAttrFlags> Flags = getBoundsAttrFlags(AL.getKind());
+  assert(Flags && "placeholder for a non-counted_by-family attribute");
+  auto [CountInBytes, OrNull] = *Flags;
+  unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
+
+  // The same pointee rules as the struct-field path, checked in the same
+  // order: the pointee's size before the count expression. A placeholder is
+  // only created for a pointer, so the pointee is always there to take.
+  if (CheckCountAttrPointeeType(S, InnerTy->getPointeeType(), CountInBytes,
+                                Kind, /*SelectPtrOrArr=*/0,
+                                /*DowngradeFAMPointeeErrToWarn=*/false,
+                                AL.getLoc(), AL.getRange()))
+    return QualType();
+
+  Expr *CountExpr = AL.getArgAsExpr(0);
+
+  // The argument must name a single declaration, so that assignments to the
+  // count can be related back to the pointer. No paren-stripping: the
+  // expression handed to BuildCountAttributedArrayOrPointerType must itself be
+  // the DeclRefExpr (BuildTypeCoupledDecls casts it), and the field path in
+  // CheckCountedByAttrOnField rejects parens the same way.
+  auto *DRE = dyn_cast<DeclRefExpr>(CountExpr);
+  if (!DRE) {
+    S.Diag(CountExpr->getBeginLoc(),
+           diag::err_count_attr_only_support_simple_decl_reference)
+        << Kind << CountExpr->getSourceRange();
+    return QualType();
+  }
+
+  // The count must name a parameter, and which prototype's depends on where
+  // the attribute sits.
+  //
+  // On a parameter type an enclosing prototype's parameter is allowed, as in
+  //   void f(int n, void (*cb)(int *__counted_by(n) p));
+  // and being a ParmVarDecl is the whole test. Nothing stronger is available:
+  // each prototype's parameters are resolved as its own clause closes, so the
+  // enclosing lists are not in hand here.
+  //
+  // A return type is checked against its own prototype's list, which is. Test
+  // the list rather than the DeclContext: mid-parse every ParmVarDecl shares
+  // the enclosing context, so a DeclContext test could not tell which
+  // prototype one belongs to.
+  auto *CountDecl = dyn_cast<ParmVarDecl>(DRE->getDecl());
+  if (!CountDecl || (Scope == CountScope::OwnParam &&
+                     !llvm::is_contained(Params, CountDecl))) {
+    S.Diag(DRE->getBeginLoc(), diag::err_count_attr_not_param_of_same_function)
+        << DRE->getDecl() << Kind << DRE->getSourceRange();
+    return QualType();
+  }
+
+  if (!CountDecl->getType()->isIntegerType() ||
+      CountDecl->getType()->isBooleanType()) {
+    S.Diag(DRE->getBeginLoc(), diag::err_count_attr_argument_not_integer)
+        << Kind << DRE->getSourceRange();
+    return QualType();
+  }
+
+  // Every counted_by-family attribute in a prototype is late parsed, whether
+  // or not -fexperimental-late-parse-attributes is on, so that a forward
+  // reference reaches this point as a resolvable name rather than as "use of
+  // undeclared identifier". Without the flag that is only a better
+  // diagnostic, not a feature: reject the forward reference here, or the flag
+  // would make no difference to what compiles.
+  if (!S.getLangOpts().ExperimentalLateParseAttributes &&
+      !isCountDeclaredBefore(Enclosing, CountDecl)) {
+    S.Diag(DRE->getBeginLoc(), diag::err_count_attr_param_declared_later)
+        << DRE->getDecl() << Kind << DRE->getSourceRange();
+    return QualType();
+  }
+
+  return S.BuildCountAttributedArrayOrPointerType(InnerTy, CountExpr,
+                                                  CountInBytes, OrNull);
+}
+
+namespace {
+
+/// Where a LateParsedAttrType placeholder sits inside the type being rebuilt.
+///
+/// Parameter and ReturnType are both "the annotated declaration's own type",
+/// and differ only in which prototypes their count may name; the other two are
+/// positions no bounds attribute may occupy.
+enum class LateAttrPosition {
+  Parameter,
+  ReturnType,
+  NestedPointer,
+  ArrayElement,
+};
+
+/// Rebuilds a type, replacing each LateParsedAttrType placeholder with the
+/// concrete type its attribute denotes, parsing the cached tokens on the way.
+///
+/// Every placeholder is replaced, including the ones whose attribute turns out
+/// to be unusable: a placeholder may not reach the finalized AST, and once its
+/// tokens are parsed it no longer refers to a live attribute either.
+struct RebuildParamTypeWithLateParsedAttr
+    : TreeTransform<RebuildParamTypeWithLateParsedAttr> {
+  ParmVarDecl *PVD;
+  ArrayRef<Decl *> Params;
+  Sema::ParseLateParsedTypeAttributeCB *ParseCallback;
+
+  /// Where the node currently being transformed sits relative to the annotated
+  /// declaration's own type. Only ever demoted on the way down: once a
+  /// placeholder is out of the running for describing that type it cannot
+  /// come back into it, except by crossing a function type, which starts a new
+  /// declaration and so resets it.
+  LateAttrPosition CurPos = LateAttrPosition::Parameter;
+
+  /// The parameters whose types enclose the node being transformed, outermost
+  /// first. The last is the one a placeholder reached here annotates, and the
+  /// chain is what decides whether its count is already declared -- see
+  /// isCountDeclaredBefore. Seeded with the parameter being rebuilt, which
+  /// TransformType is entered on directly rather than through
+  /// TransformFunctionTypeParam.
+  SmallVector<ParmVarDecl *, 4> Enclosing;
+
+  RebuildParamTypeWithLateParsedAttr(Sema &SemaRef, ParmVarDecl *PVD,
+                                ArrayRef<Decl *> Params,
+                                Sema::ParseLateParsedTypeAttributeCB *ParseCB)
+      : TreeTransform(SemaRef), PVD(PVD), Params(Params),
+        ParseCallback(ParseCB), Enclosing({PVD}) {}
+
+  /// Run \p Transform with the position demoted to \p To, if not already.
+  template <typename Fn>
+  QualType transformDemotedTo(LateAttrPosition To, Fn Transform) {
+    const bool IsOwnType = CurPos == LateAttrPosition::Parameter ||
+                           CurPos == LateAttrPosition::ReturnType;
+    SaveAndRestore<LateAttrPosition> SavedPos(CurPos, IsOwnType ? To : CurPos);
+    return Transform();
+  }
+
+  // The four overrides below only demote the position, so that
+  // TransformLateParsedAttrType can reject nested counted_by.
+  //
+  // BlockPointerType needs no override: its pointee is always a function type
+  // (ASTContext::getBlockPointerType asserts it), so a demotion there would be
+  // overwritten by the prototype below it before any placeholder saw it.
+
+  QualType TransformPointerType(TypeLocBuilder &TLB, PointerTypeLoc TL) {
+    return transformDemotedTo(LateAttrPosition::NestedPointer, [&] {
+      return TreeTransform::TransformPointerType(TLB, TL);
+    });
+  }
+
+  QualType TransformConstantArrayType(TypeLocBuilder &TLB,
+                                      ConstantArrayTypeLoc TL) {
+    return transformDemotedTo(LateAttrPosition::ArrayElement, [&] {
+      return TreeTransform::TransformConstantArrayType(TLB, TL);
+    });
+  }
+
+  QualType TransformIncompleteArrayType(TypeLocBuilder &TLB,
+                                        IncompleteArrayTypeLoc TL) {
+    return transformDemotedTo(LateAttrPosition::ArrayElement, [&] {
+      return TreeTransform::TransformIncompleteArrayType(TLB, TL);
+    });
+  }
+
+  QualType TransformVariableArrayType(TypeLocBuilder &TLB,
+                                      VariableArrayTypeLoc TL) {
+    return transformDemotedTo(LateAttrPosition::ArrayElement, [&] {
+      return TreeTransform::TransformVariableArrayType(TLB, TL);
+    });
+  }
+
+  // TransformFunctionProtoType is overloaded; overriding one would hide the
+  // rest. The base two-argument version dispatches to the five-argument one
+  // through getDerived().
+  using TreeTransform::TransformFunctionProtoType;
+
+  /// A count inside a nested prototype names *that* prototype's parameters, as
+  /// in `void f(int *__counted_by(len) (*cb)(int len), int len2);`. Two things
+  /// are needed and they are not alternatives: the re-entered scope makes `len`
+  /// findable at all (the inner prototype's scope was popped when its
+  /// declarator finished), and the parameter list decides whether what lookup
+  /// found is allowed (lookup falls through to the enclosing scopes).
+  ///
+  /// The position resets for the same reason the list is swapped: below a
+  /// prototype, the return type and each parameter type are an "own type"
+  /// again, just of a different declaration.
+  QualType TransformFunctionProtoType(TypeLocBuilder &TLB,
+                                      FunctionProtoTypeLoc TL) {
+    SmallVector<Decl *, 4> InnerParams;
+    for (unsigned I = 0, E = TL.getNumParams(); I != E; ++I)
+      if (ParmVarDecl *PD = TL.getParam(I))
+        InnerParams.push_back(PD);
+
+    Sema::FunctionPrototypeScopeRAII ProtoScope(SemaRef, InnerParams);
+    SaveAndRestore<ArrayRef<Decl *>> SavedParams(Params, InnerParams);
+    SaveAndRestore<LateAttrPosition> SavedPos(CurPos,
+                                              LateAttrPosition::ReturnType);
+    return TreeTransform::TransformFunctionProtoType(TLB, TL);
+  }
+
+  /// Where the enclosing chain grows. Called via getDerived().
+  ParmVarDecl *TransformFunctionTypeParam(ParmVarDecl *OldParm,
+                                          int indexAdjustment,
+                                          UnsignedOrNone NumExpansions,
+                                          bool ExpectParameterPack) {
+    Enclosing.push_back(OldParm);
+    ParmVarDecl *Result = TreeTransform::TransformFunctionTypeParam(
+        OldParm, indexAdjustment, NumExpansions, ExpectParameterPack);
+    Enclosing.pop_back();
+    return Result;
+  }
+
+  // As with TransformFunctionProtoType: overriding one overload would hide the
+  // other, which the base class calls through getDerived().
+  using TreeTransform::TransformFunctionTypeParams;
+
+  /// The return type is transformed at the position set by
+  /// TransformFunctionProtoType; the parameter types are transformed here, and
+  /// only they may name an enclosing prototype's parameters.
+  bool TransformFunctionTypeParams(
+      SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
+      const QualType *ParamTypes,
+      const FunctionProtoType::ExtParameterInfo *ParamInfos,
+      SmallVectorImpl<QualType> &PTypes, SmallVectorImpl<ParmVarDecl *> *PVars,
+      Sema::ExtParameterInfoBuilder &PInfos, unsigned *LastParamTransformed) {
+    SaveAndRestore<LateAttrPosition> SavedPos(CurPos,
+                                              LateAttrPosition::Parameter);
+    return TreeTransform::TransformFunctionTypeParams(
+        Loc, Params, ParamTypes, ParamInfos, PTypes, PVars, PInfos,
+        LastParamTransformed);
+  }
+
+  /// A no-prototype function declares no parameters, so nothing in its return
+  /// type can name one: `void f(int *__counted_by(len) (*cb)(), int len);`.
+  /// Clearing the list is what rejects that; otherwise the list is still the
+  /// enclosing prototype's and `len` is accepted. There is no scope worth
+  /// re-entering: an empty one would not change what lookup finds.
+  QualType TransformFunctionNoProtoType(TypeLocBuilder &TLB,
+                                        FunctionNoProtoTypeLoc TL) {
+    SaveAndRestore<ArrayRef<Decl *>> SavedParams(Params, ArrayRef<Decl *>());
+    SaveAndRestore<LateAttrPosition> SavedPos(CurPos,
+                                              LateAttrPosition::ReturnType);
+    return TreeTransform::TransformFunctionNoProtoType(TLB, TL);
+  }
+
+  QualType TransformLateParsedAttrType(TypeLocBuilder &TLB,
+                                       LateParsedAttrTypeLoc TL) {
+    LateParsedTypeAttribute *LTA = TL.getTypePtr()->getLateParsedAttribute();
+    assert(LTA && "LateParsedAttrType without a LateParsedTypeAttribute");
+
+    const LateAttrPosition Pos = CurPos;
+
+    AttributeFactory AF;
+    ParsedAttributes Attrs(AF);
+
+    // Parse the cached tokens. The callback also destroys LTA, so from here on
+    // the placeholder refers to an attribute that no longer exists.
+    assert(ParseCallback);
+    ParseCallback(LTA, &Attrs);
+
+    QualType InnerTy = TransformType(TLB, TL.getInnerLoc());
+    if (InnerTy.isNull()) {
+      PVD->setInvalidDecl();
+      return QualType();
+    }
+
+    // An empty list means the argument failed to parse, which is already
+    // diagnosed.
+    QualType T;
+    if (!Attrs.empty()) {
+      assert(Attrs.size() == 1);
+      if (Pos == LateAttrPosition::Parameter ||
+          Pos == LateAttrPosition::ReturnType) {
+        T = buildCountAttributedTypeForParam(
+            SemaRef, InnerTy, Params, Enclosing,
+            Pos == LateAttrPosition::Parameter ? CountScope::AnyParam
+                                               : CountScope::OwnParam,
+            Attrs[0]);
+      } else {
+        std::optional<BoundsAttrFlags> Flags =
+            getBoundsAttrFlags(Attrs[0].getKind());
+        assert(Flags && "placeholder for a non-counted_by-family attribute");
+        SemaRef.Diag(TL.getAttrNameLoc(), diag::err_count_attr_on_nested_type)
+            << getCountAttrKind(Flags->CountInBytes, Flags->OrNull)
+            << (Pos == LateAttrPosition::NestedPointer ? /*nested pointer*/ 0
+                                                       : /*array element*/ 1);
+      }
+    }
+
+    if (T.isNull()) {
+      // Drop the attribute and keep the type it wrapped. Returning nothing
+      // would leave the caller holding the original type, placeholder and all.
+      PVD->setInvalidDecl();
+      return InnerTy;
+    }
+
+    TLB.push<CountAttributedTypeLoc>(T);
+    return T;
+  }
+};
+
+} // namespace
+
+Sema::FunctionPrototypeScopeRAII::FunctionPrototypeScopeRAII(
+    Sema &S, ArrayRef<Decl *> Params)
+    : S(S), ProtoScope(S.getCurScope(),
+                       Scope::FunctionPrototypeScope | Scope::DeclScope,
+                       S.getDiagnostics()) {
+  S.CurScope = &ProtoScope;
+  for (Decl *D : Params)
+    S.ActOnReenterCXXMethodParameter(&ProtoScope,
+                                     dyn_cast_if_present<ParmVarDecl>(D));
+}
+
+Sema::FunctionPrototypeScopeRAII::~FunctionPrototypeScopeRAII() {
+  // ActOnPopScope is what takes the parameters back out of the IdResolver. It
+  // is a no-op otherwise here: a scope holding only ParmVarDecls produces no
+  // end-of-scope diagnostics.
+  S.ActOnPopScope(SourceLocation(), &ProtoScope);
+  S.CurScope = ProtoScope.getParent();
+}
+
+void Sema::ProcessLateParsedTypeAttributesForParams(
+    ArrayRef<Decl *> Params, ParseLateParsedTypeAttributeCB *ParseCB) {
+  // The parameters of a nested prototype are put back in scope by
+  // RebuildParamTypeWithLateParsedAttr::TransformFunctionProtoType. Do the same for
+  // the outermost prototype's own parameters rather than relying on the
+  // caller's scope, so that resolution works wherever this is called from.
+  //
+  // Created on the first parameter that needs it: the parser calls this for
+  // every prototype in C, and almost none carry a late-parsed attribute.
+  std::optional<FunctionPrototypeScopeRAII> ProtoScope;
+
+  for (Decl *D : Params) {
+    auto *PVD = dyn_cast_if_present<ParmVarDecl>(D);
+    if (!PVD || !PVD->getTypeSourceInfo())
+      continue;
+
+    TypeSourceInfo *OldTSI = PVD->getTypeSourceInfo();
+    if (!OldTSI->getType()->hasLateParsedAttr())
+      continue;
+
+    if (!ProtoScope)
+      ProtoScope.emplace(*this, Params);
+
+    RebuildParamTypeWithLateParsedAttr Rebuild(*this, PVD, Params, ParseCB);
+    TypeSourceInfo *TSI = Rebuild.TransformType(OldTSI);
+    if (!TSI) {
+      PVD->setInvalidDecl();
+      continue;
+    }
+    PVD->setTypeSourceInfo(TSI);
+    // A parameter's declared type is the adjusted form of its written type.
+    PVD->setType(Context.getAdjustedParameterType(TSI->getType()));
   }
 }
 
