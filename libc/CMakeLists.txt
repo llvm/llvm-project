@@ -88,6 +88,14 @@ if(NOT "${LIBC_TEST_FLOAT_RANGE_COUNT}" MATCHES "^[1-9][0-9]*$")
     "Expected a positive integer.")
 endif()
 
+set(LIBC_TEST_MAX_CONCURRENCY "" CACHE STRING
+  "Maximum number of threads/concurrency for libc tests (empty for hardware concurrency).")
+if(LIBC_TEST_MAX_CONCURRENCY AND NOT "${LIBC_TEST_MAX_CONCURRENCY}" MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR
+    "Invalid LIBC_TEST_MAX_CONCURRENCY: ${LIBC_TEST_MAX_CONCURRENCY}. "
+    "Expected a positive integer.")
+endif()
+
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
 

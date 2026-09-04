@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-#===-- Tool to convert CORE-MATH .wc files to raw binary data -------------===#
+# ===-- Tool to convert CORE-MATH .wc files to raw binary data -------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===#
+# ===----------------------------------------------------------------------===#
 
 """Convert CORE-MATH .wc (worst case) test files to raw IEEE 754 binary format.
 

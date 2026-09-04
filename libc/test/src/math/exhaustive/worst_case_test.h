@@ -236,6 +236,10 @@ struct LlvmLibcWorstCaseMathTest : public virtual LIBC_NAMESPACE::testing::Test,
     }
 
     int n_threads = std::thread::hardware_concurrency();
+#ifdef LIBC_TEST_MAX_CONCURRENCY
+    if (n_threads <= 0 || n_threads > LIBC_TEST_MAX_CONCURRENCY)
+      n_threads = LIBC_TEST_MAX_CONCURRENCY;
+#endif
     if (n_threads < 1)
       n_threads = 1;
 

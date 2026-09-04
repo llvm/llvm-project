@@ -148,6 +148,7 @@ jobs:
             cxx_compiler: clang++-23
             mpfr_path: /usr/riscv64-linux-gnu
             mpc_path: riscv64-linux-gnu
+            max_concurrency: 1
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -181,6 +182,7 @@ jobs:
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple}} \
             -DLLVM_LIBC_MPFR_INSTALL_PATH="${{ matrix.mpfr_path }}" \
             -DLIBC_MPC_INSTALL_PATH="${{ matrix.mpc_path }}" \
+            -DLIBC_TEST_MAX_CONCURRENCY="${{ matrix.max_concurrency }}" \
             -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh
 
       - name: Build
