@@ -13,6 +13,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -1750,6 +1751,9 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_LLVM_tag_offset:
   case dwarf::DW_OP_LLVM_entry_value:
   case dwarf::DW_OP_LLVM_arg:
+  case dwarf::DW_OP_LLVM_label:
+  case dwarf::DW_OP_LLVM_bra:
+  case dwarf::DW_OP_LLVM_skip:
   case dwarf::DW_OP_regx:
     return 2;
   default:
@@ -1758,7 +1762,12 @@ unsigned DIExpression::ExprOperand::getSize() const {
 }
 
 bool DIExpression::ExprOperand::isNonEmitting() const {
-  return getOp() == dwarf::DW_OP_LLVM_tag_offset;
+  return is(dwarf::DW_OP_LLVM_tag_offset) || is(dwarf::DW_OP_LLVM_label);
+}
+
+bool DIExpression::ExprOperand::isSymbolicControlFlow() const {
+  return is(dwarf::DW_OP_LLVM_label) || is(dwarf::DW_OP_LLVM_bra) ||
+         is(dwarf::DW_OP_LLVM_skip);
 }
 
 bool DIExpression::ArgOp::classof(const ExprOperand *Op) {
@@ -1799,11 +1808,81 @@ bool DIExpression::PlusUconstOp::classof(const ExprOperand *Op) {
 }
 
 bool DIExpression::isValid() const {
+  auto IsEntryValueValid = [this](const ExprOperand &EntryValue) {
+    auto FirstOp = expr_op_begin();
+    if (auto Arg = dyn_cast<ArgOp>(*FirstOp); Arg && Arg.getIndex() == 0)
+      ++FirstOp;
+    return EntryValue.get() == FirstOp->get() &&
+           cast<EntryValueOp>(EntryValue).getNumOperations() == 1;
+  };
+
+  SmallDenseSet<uint64_t, 4> Labels;
+  SmallVector<uint64_t, 4> LabelReferences;
+  bool HasControlFlow = false;
+  bool HasControlFlowConflict = false;
+  bool HasStackValue = false;
+  bool HasFragment = false;
+  bool HasInvalidControlFlowSuffix = false;
+
+  // Collect labels and branch targets before running the checks below, which
+  // may return early.
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
     if (I->get() + I->getSize() > E->get())
       return false;
 
+    uint64_t Op = I->getOp();
+
+    // Only DW_OP_LLVM_fragment may follow DW_OP_stack_value, and nothing may
+    // follow the fragment.
+    HasInvalidControlFlowSuffix |=
+        HasFragment || (HasStackValue && Op != dwarf::DW_OP_LLVM_fragment);
+
+    switch (Op) {
+    case dwarf::DW_OP_LLVM_label:
+      if (!Labels.insert(I->getArg(0)).second)
+        return false;
+      HasControlFlow = true;
+      break;
+    case dwarf::DW_OP_LLVM_bra:
+    case dwarf::DW_OP_LLVM_skip:
+      LabelReferences.push_back(I->getArg(0));
+      HasControlFlow = true;
+      break;
+    // We don't know the DW_OP_bra and DW_OP_skip offsets until CodeGen, so
+    // DIExpression uses the symbolic ops.
+    case dwarf::DW_OP_bra:
+    case dwarf::DW_OP_skip:
+      return false;
+    case dwarf::DW_OP_LLVM_tag_offset:
+      if (HasControlFlow)
+        return false;
+      break;
+    // These ops use lowering paths that don't support symbolic branches.
+    case dwarf::DW_OP_LLVM_arg:
+    case dwarf::DW_OP_LLVM_implicit_pointer:
+      HasControlFlowConflict = true;
+      break;
+    case dwarf::DW_OP_LLVM_entry_value:
+      HasControlFlowConflict |= !IsEntryValueValid(*I);
+      break;
+    default:
+      break;
+    }
+
+    if (Op == dwarf::DW_OP_stack_value)
+      HasStackValue = true;
+    else if (Op == dwarf::DW_OP_LLVM_fragment)
+      HasFragment = true;
+  }
+
+  if (HasControlFlow && (HasControlFlowConflict || HasInvalidControlFlowSuffix))
+    return false;
+  for (uint64_t Label : LabelReferences)
+    if (!Labels.contains(Label))
+      return false;
+
+  for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     uint64_t Op = I->getOp();
     if ((Op >= dwarf::DW_OP_reg0 && Op <= dwarf::DW_OP_reg31) ||
         (Op >= dwarf::DW_OP_breg0 && Op <= dwarf::DW_OP_breg31))
@@ -1825,7 +1904,7 @@ bool DIExpression::isValid() const {
         return false;
       break;
     }
-    case dwarf::DW_OP_swap: {
+    case dwarf::DW_OP_swap:
       // Must be more than one implicit element on the stack.
 
       // FIXME: A better way to implement this would be to add a local variable
@@ -1836,25 +1915,22 @@ bool DIExpression::isValid() const {
       if (getNumElements() == 1)
         return false;
       break;
-    }
-    case dwarf::DW_OP_LLVM_entry_value: {
+    case dwarf::DW_OP_LLVM_entry_value:
       // An entry value operator must appear at the beginning or immediately
       // following `DW_OP_LLVM_arg 0`, and the number of operations it cover can
       // currently only be 1, because we support only entry values of a simple
       // register location. One reason for this is that we currently can't
       // calculate the size of the resulting DWARF block for other expressions.
-      auto FirstOp = expr_op_begin();
-      if (auto Arg = dyn_cast<ArgOp>(*FirstOp); Arg && Arg.getIndex() == 0)
-        ++FirstOp;
-      if (I->get() != FirstOp->get() ||
-          cast<EntryValueOp>(*I).getNumOperations() != 1)
+      if (!IsEntryValueValid(*I))
         return false;
       break;
-    }
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
     case dwarf::DW_OP_LLVM_arg:
     case dwarf::DW_OP_LLVM_tag_offset:
+    case dwarf::DW_OP_LLVM_label:
+    case dwarf::DW_OP_LLVM_bra:
+    case dwarf::DW_OP_LLVM_skip:
     case dwarf::DW_OP_LLVM_extract_bits_sext:
     case dwarf::DW_OP_LLVM_extract_bits_zext:
     case dwarf::DW_OP_constu:

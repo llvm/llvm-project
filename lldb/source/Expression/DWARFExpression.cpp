@@ -206,6 +206,9 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
   case DW_OP_LLVM_arg:
   case DW_OP_LLVM_extract_bits_sext:
   case DW_OP_LLVM_extract_bits_zext:
+  case DW_OP_LLVM_label:
+  case DW_OP_LLVM_bra:
+  case DW_OP_LLVM_skip:
     break;
   // Vendor extensions:
   case DW_OP_HP_is_value:

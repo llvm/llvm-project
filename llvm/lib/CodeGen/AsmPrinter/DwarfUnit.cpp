@@ -27,6 +27,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <cassert>
 #include <cstdint>
@@ -36,6 +37,25 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "dwarfdebug"
+
+static dwarf::Form getDataForm(unsigned Size) {
+  switch (Size) {
+  case 1:
+    return dwarf::DW_FORM_data1;
+  case 2:
+    return dwarf::DW_FORM_data2;
+  case 4:
+    return dwarf::DW_FORM_data4;
+  case 8:
+    return dwarf::DW_FORM_data8;
+  default:
+    llvm_unreachable("fixed-width data size must be 1, 2, 4, or 8 bytes");
+  }
+}
+
+static uint64_t getDataValue(uint64_t Value, unsigned Size) {
+  return Value & maskTrailingOnes<uint64_t>(Size * 8);
+}
 
 DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP,
                                        DwarfCompileUnit &CU, DIELoc &DIE)
@@ -53,8 +73,8 @@ void DIEDwarfExpression::emitUnsigned(uint64_t Value) {
   CU.addUInt(getActiveDIE(), dwarf::DW_FORM_udata, Value);
 }
 
-void DIEDwarfExpression::emitData1(uint8_t Value) {
-  CU.addUInt(getActiveDIE(), dwarf::DW_FORM_data1, Value);
+void DIEDwarfExpression::emitData(uint64_t Value, unsigned Size) {
+  CU.addUInt(getActiveDIE(), getDataForm(Size), getDataValue(Value, Size));
 }
 
 void DIEDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
@@ -69,10 +89,40 @@ void DIEDwarfExpression::enableTemporaryBuffer() {
 void DIEDwarfExpression::disableTemporaryBuffer() { IsBuffering = false; }
 
 unsigned DIEDwarfExpression::getTemporaryBufferSize() {
-  return TmpDIE.computeSize(AP.getDwarfFormParams());
+  unsigned Size = 0;
+  for (const DIEValue &V : TmpDIE.values())
+    Size += V.sizeOf(AP.getDwarfFormParams());
+  return Size;
 }
 
 void DIEDwarfExpression::commitTemporaryBuffer() { OutDIE.takeValues(TmpDIE); }
+
+void DIEDwarfExpression::replaceTemporaryBufferData(unsigned PlaceholderOffset,
+                                                    uint64_t Replacement,
+                                                    unsigned PlaceholderSize) {
+  // Walk the encoded values until the cursor reaches the placeholder.
+  unsigned ByteCursor = 0;
+  for (DIEValue &V : TmpDIE.values()) {
+    unsigned ValueSize = V.sizeOf(AP.getDwarfFormParams());
+    unsigned ValueEnd = ByteCursor + ValueSize;
+    if (ValueEnd <= PlaceholderOffset) {
+      ByteCursor = ValueEnd;
+      continue;
+    }
+
+    // Replace the whole zero placeholder and keep its form, since changing its
+    // encoded size would move every later fixup.
+    assert(PlaceholderOffset == ByteCursor && ValueSize == PlaceholderSize &&
+           V.getType() == DIEValue::isInteger &&
+           V.getForm() == getDataForm(PlaceholderSize) &&
+           V.getDIEInteger().getValue() == 0 &&
+           "symbolic branch fixup does not match its placeholder");
+    V = DIEValue(V.getAttribute(), V.getForm(),
+                 DIEInteger(getDataValue(Replacement, PlaceholderSize)));
+    return;
+  }
+  llvm_unreachable("temporary DIE placeholder not found");
+}
 
 bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
                                          llvm::Register MachineReg) {

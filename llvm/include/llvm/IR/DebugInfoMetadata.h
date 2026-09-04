@@ -3571,6 +3571,9 @@ public:
     /// DWARF expression.
     LLVM_ABI bool isNonEmitting() const;
 
+    /// Return true if this is a symbolic control-flow operation.
+    LLVM_ABI bool isSymbolicControlFlow() const;
+
     /// Append the elements of this operand to \p V.
     void appendToVector(SmallVectorImpl<uint64_t> &V) const {
       V.append(get(), get() + getSize());

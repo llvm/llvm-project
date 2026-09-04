@@ -7376,6 +7376,19 @@ void Verifier::visit(DbgVariableRecord &DVR) {
           F);
   visitMDNode(*DVR.getExpression(), AreDebugLocsAllowed::No);
 
+  // A DIArgList can have a valid branch expression which doesn't use
+  // DW_OP_LLVM_arg, so check the record as well.
+  const DIExpression *Expr = DVR.getExpression();
+  if (DVR.hasArgList() && Expr->isValid()) {
+    bool HasSymbolicControlFlow =
+        llvm::any_of(Expr->expr_ops(), [](DIExpression::ExprOperand Op) {
+          return Op.isSymbolicControlFlow();
+        });
+    CheckDI(!HasSymbolicControlFlow,
+            "DIArgList doesn't support symbolic branches", &DVR, MD, Expr, BB,
+            F);
+  }
+
   if (DVR.isDbgAssign()) {
     CheckDI(isa_and_nonnull<DIAssignID>(DVR.getRawAssignID()),
             "invalid #dbg_assign DIAssignID", &DVR, DVR.getRawAssignID(), BB,

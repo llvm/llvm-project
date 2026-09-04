@@ -383,10 +383,9 @@ call void @llvm.dbg.assign(
 
 Debug expressions are represented as {ref}`specialized-metadata`.
 
-Debug expressions are interpreted left-to-right: start by pushing the
-value/address operand of the record onto a stack, then repeatedly push and
-evaluate opcodes from the `DIExpression` until the final variable description
-is produced.
+A debug expression starts with the record's value or address operand on the
+stack, then evaluates operations from left to right unless a symbolic branch
+jumps to a label in the same `DIExpression`.
 
 The opcodes available in these expressions are described in
 {ref}`dwarf-opcodes` and {ref}`internal-opcodes`.
@@ -467,6 +466,61 @@ Some opcodes do not influence the final DWARF expression directly, instead
 encoding information logically belonging to the debug records which use
 them.
 :::
+
+(symbolic-control-flow)=
+
+##### Symbolic Control Flow
+
+DWARF `DW_OP_bra` and `DW_OP_skip` have a two-byte offset in
+`[-32768, 32767]`, but we don't know that offset until we emit the expression,
+so we use three pseudo-ops with label IDs that CodeGen resolves during
+emission:
+
+- `DW_OP_LLVM_label, ID` marks a destination and emits no bytes.
+- `DW_OP_LLVM_bra, ID` branches to label `ID` when the value on top of the
+  expression stack is non-zero.
+- `DW_OP_LLVM_skip, ID` always branches to label `ID`.
+
+Label IDs are local to an expression:
+
+- Each ID can have at most one label, and every branch needs a matching label
+  in the same expression.
+- Labels don't need branches, and consecutive labels have the same byte
+  offset.
+- Branches can go forward, backward, to themselves, or form cycles.
+
+`DIExpression` validation also checks the following:
+
+- Put labels, branches, and skips before `DW_OP_stack_value` and
+  `DW_OP_LLVM_fragment`. Only a fragment can follow `DW_OP_stack_value`.
+- Put `DW_OP_LLVM_tag_offset` before the first label, branch, or skip so it
+  applies to every path.
+
+There are also a couple of cases we don't handle yet:
+
+- `DIArgList` and `DW_OP_LLVM_arg` are currently rejected. CodeGen expands each
+  argument before it resolves the label offsets, so there isn't a representation
+  problem here; it mostly needs work handling it in expressions and expression
+  writers.
+- `DW_OP_LLVM_implicit_pointer` bypasses normal expression emission and only
+  handles a single location today. Supporting branches there is a bit more
+  work, since we'll need to work it back into our normal emission order.
+
+We don't check reachability, termination, or stack state where paths meet.
+
+`DW_OP_LLVM_convert` can appear before or after labels, branches, and skips,
+and we don't match conversions on different paths. When CodeGen can't emit
+`DW_OP_convert`, it may defer one conversion until it sees the next; if a label,
+branch, or skip would split the pair, CodeGen reports an error.
+
+CodeGen also reports an error if the final branch offset is outside
+`[-32768, 32767]`.
+
+Local expression rewrites stop at labels, branches, and skips; they can still
+add operations to either end, but they don't move, remove, or copy labels.
+
+##### Other Internal Opcodes
+
 - `DW_OP_LLVM_fragment, <offset>, <size>` may appear at most once in an
   expression, and must be the last opcode. It specifies the bit offset and bit
   size of the variable fragment being described by the record or intrinsic
@@ -479,11 +533,15 @@ them.
 - `DW_OP_LLVM_convert, 16, DW_ATE_signed` specifies a bit size and encoding
   (`16` and `DW_ATE_signed` here, respectively) to which the top of the
   expression stack is to be converted. Maps into a `DW_OP_convert` operation
-  that references a base type constructed from the supplied values.
+  that references a base type constructed from the supplied values. See
+  {ref}`symbolic control flow <symbolic-control-flow>` for how conversions work
+  with labels, branches, and skips.
 - `DW_OP_LLVM_tag_offset, tag_offset` specifies that a memory tag should be
   optionally applied to the pointer. The memory tag is derived from the given
-  tag offset in an implementation-defined manner. (This does not affect the
-  semantics of the expression containing it.)
+  tag offset in an implementation-defined manner. See
+  {ref}`symbolic control flow <symbolic-control-flow>` for its placement with
+  labels, branches, and skips.
+  (This does not affect the semantics of the expression containing it.)
 - `DW_OP_LLVM_entry_value, N` evaluates a sub-expression as-if it were
   evaluated upon entry to the current call frame.
 

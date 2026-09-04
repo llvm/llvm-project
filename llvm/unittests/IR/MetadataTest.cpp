@@ -4413,6 +4413,93 @@ TEST_F(DIExpressionTest, Append) {
   EXPECT_EQ(ResExpr, AppendExpr);
 }
 
+TEST_F(DIExpressionTest, SymbolicBranchRewrites) {
+  // A symbolic op has an ID operand, so fold the math on both sides without
+  // consuming it.
+  for (uint64_t Barrier : {dwarf::DW_OP_LLVM_label, dwarf::DW_OP_LLVM_bra,
+                           dwarf::DW_OP_LLVM_skip}) {
+    SmallVector<uint64_t> Ops = {dwarf::DW_OP_constu,
+                                 1,
+                                 dwarf::DW_OP_constu,
+                                 2,
+                                 dwarf::DW_OP_plus,
+                                 dwarf::DW_OP_constu,
+                                 4,
+                                 Barrier,
+                                 7,
+                                 dwarf::DW_OP_constu,
+                                 5,
+                                 dwarf::DW_OP_plus,
+                                 dwarf::DW_OP_constu,
+                                 6,
+                                 dwarf::DW_OP_constu,
+                                 7,
+                                 dwarf::DW_OP_plus};
+    SmallVector<uint64_t> Expected = {
+        dwarf::DW_OP_constu,      3, dwarf::DW_OP_constu, 4, Barrier, 7,
+        dwarf::DW_OP_plus_uconst, 5, dwarf::DW_OP_constu, 13};
+    if (Barrier != dwarf::DW_OP_LLVM_label) {
+      Ops.append({dwarf::DW_OP_LLVM_label, 7});
+      Expected.append({dwarf::DW_OP_LLVM_label, 7});
+    }
+    EXPECT_EQ(DIExpression::get(Context, Expected),
+              DIExpression::get(Context, Ops)->foldConstantMath());
+  }
+
+  // Adding ops before or after an expression leaves its labels in place.
+  SmallVector<uint64_t> Ops = {dwarf::DW_OP_LLVM_label, 7,
+                               dwarf::DW_OP_plus_uconst, 1};
+  auto *Expr = DIExpression::get(Context, Ops);
+  auto *Prepended = DIExpression::prepend(Expr, DIExpression::DerefBefore, 0);
+  SmallVector<uint64_t> Expected = {dwarf::DW_OP_deref, dwarf::DW_OP_LLVM_label,
+                                    7, dwarf::DW_OP_plus_uconst, 1};
+  EXPECT_EQ(DIExpression::get(Context, Expected), Prepended);
+
+  SmallVector<uint64_t> Prefix = {dwarf::DW_OP_LLVM_tag_offset, 3};
+  Prepended = DIExpression::prependOpcodes(Expr, Prefix);
+  Expected = {dwarf::DW_OP_LLVM_tag_offset, 3, dwarf::DW_OP_LLVM_label, 7,
+              dwarf::DW_OP_plus_uconst,     1};
+  EXPECT_EQ(DIExpression::get(Context, Expected), Prepended);
+  EXPECT_TRUE(Prepended->isValid());
+
+  SmallVector<uint64_t> AppendOps = {
+      dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed,
+      dwarf::DW_OP_LLVM_convert, 64, dwarf::DW_ATE_signed};
+  auto *Appended = DIExpression::append(Expr, AppendOps);
+  Expected = {dwarf::DW_OP_LLVM_label,
+              7,
+              dwarf::DW_OP_plus_uconst,
+              1,
+              dwarf::DW_OP_LLVM_convert,
+              32,
+              dwarf::DW_ATE_signed,
+              dwarf::DW_OP_LLVM_convert,
+              64,
+              dwarf::DW_ATE_signed};
+  EXPECT_EQ(DIExpression::get(Context, Expected), Appended);
+  EXPECT_TRUE(Appended->isValid());
+
+  // A label emits no bytes, so a label-only expression doesn't need a deref
+  // before the appended ops. The ID collides with DW_OP_stack_value on purpose:
+  // label IDs are arbitrary, so appendExt has to read it as an argument rather
+  // than as an opcode.
+  uint64_t LabelID = dwarf::DW_OP_stack_value;
+  Ops = {dwarf::DW_OP_LLVM_label, LabelID};
+  Appended =
+      DIExpression::appendExt(DIExpression::get(Context, Ops), 32, 64, true);
+  Expected = {dwarf::DW_OP_LLVM_label,
+              LabelID,
+              dwarf::DW_OP_LLVM_convert,
+              32,
+              dwarf::DW_ATE_signed,
+              dwarf::DW_OP_LLVM_convert,
+              64,
+              dwarf::DW_ATE_signed,
+              dwarf::DW_OP_stack_value};
+  EXPECT_EQ(DIExpression::get(Context, Expected), Appended);
+  EXPECT_TRUE(Appended->isValid());
+}
+
 TEST_F(DIExpressionTest, isValid) {
 #define EXPECT_VALID(...)                                                      \
   do {                                                                         \
@@ -4433,6 +4520,7 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_VALID(dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
   EXPECT_VALID(dwarf::DW_OP_constu, 5, dwarf::DW_OP_swap);
   EXPECT_VALID(dwarf::DW_OP_deref);
+  EXPECT_VALID(dwarf::DW_OP_stack_value);
   EXPECT_VALID(dwarf::DW_OP_LLVM_fragment, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref);
   EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus_uconst, 6);
@@ -4444,12 +4532,31 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_VALID(dwarf::DW_OP_LLVM_entry_value, 1);
   EXPECT_VALID(dwarf::DW_OP_LLVM_entry_value, 1, dwarf::DW_OP_plus_uconst, 6);
   EXPECT_VALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_entry_value, 1);
+  // A label may be unused, and branches may refer forward or backward.
+  EXPECT_VALID(dwarf::DW_OP_LLVM_label, 1, dwarf::DW_OP_LLVM_bra, 1);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_skip, 2, dwarf::DW_OP_LLVM_label, 2);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_label, 3, dwarf::DW_OP_LLVM_label, 4);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_label, 4, dwarf::DW_OP_LLVM_skip, 5,
+               dwarf::DW_OP_LLVM_label, 5, dwarf::DW_OP_LLVM_skip, 4);
+  // Label IDs can use the full uint64_t range.
+  EXPECT_VALID(
+      dwarf::DW_OP_LLVM_label, std::numeric_limits<uint64_t>::max() - 1,
+      dwarf::DW_OP_LLVM_label, std::numeric_limits<uint64_t>::max(),
+      dwarf::DW_OP_LLVM_skip, std::numeric_limits<uint64_t>::max() - 1);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_label, 5, dwarf::DW_OP_stack_value);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_label, 6, dwarf::DW_OP_stack_value,
+               dwarf::DW_OP_LLVM_fragment, 0, 32);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_tag_offset, 1, dwarf::DW_OP_LLVM_label, 6,
+               dwarf::DW_OP_LLVM_skip, 6, dwarf::DW_OP_LLVM_convert, 32,
+               dwarf::DW_ATE_signed, dwarf::DW_OP_stack_value,
+               dwarf::DW_OP_LLVM_fragment, 0, 32);
 
   // Invalid constructions.
   EXPECT_INVALID(~0u);
   EXPECT_INVALID(dwarf::DW_OP_plus, 0);
   EXPECT_INVALID(dwarf::DW_OP_plus_uconst);
   EXPECT_INVALID(dwarf::DW_OP_swap);
+  EXPECT_INVALID(dwarf::DW_OP_stack_value, dwarf::DW_OP_deref);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_plus_uconst, 3);
@@ -4459,6 +4566,48 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 5,
                  dwarf::DW_OP_LLVM_entry_value, 1);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_LLVM_entry_value, 1);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_label);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_bra);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_skip);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_label, 1, dwarf::DW_OP_LLVM_label, 1);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_bra, 1);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_skip, 1);
+  EXPECT_INVALID(dwarf::DW_OP_bra, 0);
+  EXPECT_INVALID(dwarf::DW_OP_skip, 0);
+  EXPECT_INVALID(dwarf::DW_OP_reg0, dwarf::DW_OP_bra, 0);
+  EXPECT_INVALID(dwarf::DW_OP_reg0, dwarf::DW_OP_skip, 0);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_label, 1);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_implicit_pointer, dwarf::DW_OP_LLVM_label,
+                 1);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_label, 1, dwarf::DW_OP_LLVM_tag_offset, 0);
+  // Converts and other stack ops can appear around labels and branches.
+  EXPECT_VALID(dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed,
+               dwarf::DW_OP_LLVM_label, 1);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed,
+               dwarf::DW_OP_LLVM_skip, 7, dwarf::DW_OP_LLVM_label, 7);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_skip, 1, dwarf::DW_OP_LLVM_convert, 32,
+               dwarf::DW_ATE_signed, dwarf::DW_OP_LLVM_convert, 64,
+               dwarf::DW_ATE_signed, dwarf::DW_OP_LLVM_label, 1);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed,
+               dwarf::DW_OP_dup, dwarf::DW_OP_LLVM_bra, 1,
+               dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed,
+               dwarf::DW_OP_LLVM_label, 1);
+  EXPECT_INVALID(dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_label, 1);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 0, 32, dwarf::DW_OP_LLVM_label, 1);
+  // reg0 and entry_value normally end validation early, but they must not hide
+  // invalid control flow later in the expression.
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_entry_value, 1, dwarf::DW_OP_stack_value,
+                 dwarf::DW_OP_LLVM_bra, 1, dwarf::DW_OP_LLVM_label, 1);
+  EXPECT_INVALID(dwarf::DW_OP_reg0, dwarf::DW_OP_LLVM_fragment, 0, 32,
+                 dwarf::DW_OP_LLVM_label, 1);
+  EXPECT_INVALID(dwarf::DW_OP_reg0, dwarf::DW_OP_LLVM_bra, 1,
+                 dwarf::DW_OP_LLVM_label, 1, dwarf::DW_OP_LLVM_fragment, 0, 32,
+                 dwarf::DW_OP_plus);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_entry_value, 1, dwarf::DW_OP_LLVM_bra, 1,
+                 dwarf::DW_OP_LLVM_label, 1, dwarf::DW_OP_stack_value,
+                 dwarf::DW_OP_plus);
+  EXPECT_INVALID(dwarf::DW_OP_reg0, dwarf::DW_OP_LLVM_label, 1,
+                 dwarf::DW_OP_LLVM_entry_value, 1);
 
   // A valid operation doesn't make a malformed suffix valid.
   EXPECT_INVALID(dwarf::DW_OP_reg0, dwarf::DW_OP_stack_value,
@@ -4542,6 +4691,19 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
   // deref in the expression).
   EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_deref, dwarf::DW_OP_plus_uconst,
                           2, dwarf::DW_OP_stack_value);
+
+  // Creating a fragment leaves the branches alone and adds the fragment at the
+  // end.
+  SmallVector<uint64_t> ControlFlowOps = {dwarf::DW_OP_LLVM_label, 1,
+                                          dwarf::DW_OP_LLVM_bra,   1,
+                                          dwarf::DW_OP_LLVM_skip,  1};
+  DIExpression *ControlFlowExpr = DIExpression::get(Context, ControlFlowOps);
+  auto Fragment =
+      DIExpression::createFragmentExpression(ControlFlowExpr, 0, 32);
+  ASSERT_TRUE(Fragment.has_value());
+  ControlFlowOps.append({dwarf::DW_OP_LLVM_fragment, 0, 32});
+  EXPECT_EQ(DIExpression::get(Context, ControlFlowOps), *Fragment);
+  EXPECT_TRUE((*Fragment)->isValid());
 
 #undef EXPECT_VALID_FRAGMENT
 #undef EXPECT_INVALID_FRAGMENT

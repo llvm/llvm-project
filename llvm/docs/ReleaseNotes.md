@@ -248,6 +248,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the Debug Info
 
+* Added `DW_OP_LLVM_label`, `DW_OP_LLVM_bra`, and `DW_OP_LLVM_skip` for symbolic
+  branches in `DIExpression`. These operations use label IDs that CodeGen
+  resolves when it emits the expression. `DW_OP_LLVM_convert` can appear before
+  or after them, but when CodeGen can't emit `DW_OP_convert`, it reports an
+  error if a deferred conversion reaches a label, branch, or skip.
+
 ### Changes to the LLVM tools
 
 * llvm-mca no longer defaults -mcpu to "native"

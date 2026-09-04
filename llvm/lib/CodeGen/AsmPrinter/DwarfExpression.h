@@ -132,7 +132,11 @@ protected:
   /// Emit a raw unsigned value.
   virtual void emitUnsigned(uint64_t Value) = 0;
 
-  virtual void emitData1(uint8_t Value) = 0;
+  /// Emit the low 1, 2, 4, or 8 bytes of a value in the target byte order.
+  virtual void emitData(uint64_t Value, unsigned Size) = 0;
+
+  void emitData1(uint8_t Value) { emitData(Value, 1); }
+  void emitData2(uint16_t Value) { emitData(Value, 2); }
 
   virtual void emitBaseTypeRef(uint64_t Idx) = 0;
 
@@ -151,6 +155,15 @@ protected:
 
   /// Commit the data stored in the temporary buffer to the main output.
   virtual void commitTemporaryBuffer() = 0;
+
+  /// Replace a 1-, 2-, 4-, or 8-byte zero placeholder at Offset with the low
+  /// bytes of Value in the target byte order.
+  virtual void replaceTemporaryBufferData(unsigned Offset, uint64_t Value,
+                                          unsigned Size) = 0;
+
+  void replaceTemporaryBufferData2(unsigned Offset, uint16_t Value) {
+    replaceTemporaryBufferData(Offset, Value, 2);
+  }
 
   /// Emit a normalized unsigned constant.
   void emitConstu(uint64_t Value);
@@ -287,10 +300,14 @@ public:
 
   /// Emit all remaining operations in the DIExpressionCursor. The
   /// cursor must not contain any DW_OP_LLVM_arg operations.
+  /// CodeGen reports an error if a branch offset is outside [-32768, 32767] or
+  /// a deferred DW_OP_LLVM_convert reaches a label, branch, or skip.
   void addExpression(DIExpressionCursor &&Expr);
 
   /// Emit all remaining operations in the DIExpressionCursor.
   /// DW_OP_LLVM_arg operations are resolved by calling (\p InsertArg).
+  /// CodeGen reports an error if a branch offset is outside [-32768, 32767] or
+  /// a deferred DW_OP_LLVM_convert reaches a label, branch, or skip.
   //
   /// \return false if any call to (\p InsertArg) returns false.
   bool addExpression(
@@ -330,13 +347,15 @@ class DebugLocDwarfExpression final : public DwarfExpression {
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
-  void emitData1(uint8_t Value) override;
+  void emitData(uint64_t Value, unsigned Size) override;
   void emitBaseTypeRef(uint64_t Idx) override;
 
   void enableTemporaryBuffer() override;
   void disableTemporaryBuffer() override;
   unsigned getTemporaryBufferSize() override;
   void commitTemporaryBuffer() override;
+  void replaceTemporaryBufferData(unsigned Offset, uint64_t Value,
+                                  unsigned Size) override;
 
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        llvm::Register MachineReg) override;
@@ -360,13 +379,15 @@ class DIEDwarfExpression final : public DwarfExpression {
   void emitOp(uint8_t Op, const char *Comment = nullptr) override;
   void emitSigned(int64_t Value) override;
   void emitUnsigned(uint64_t Value) override;
-  void emitData1(uint8_t Value) override;
+  void emitData(uint64_t Value, unsigned Size) override;
   void emitBaseTypeRef(uint64_t Idx) override;
 
   void enableTemporaryBuffer() override;
   void disableTemporaryBuffer() override;
   unsigned getTemporaryBufferSize() override;
   void commitTemporaryBuffer() override;
+  void replaceTemporaryBufferData(unsigned Offset, uint64_t Value,
+                                  unsigned Size) override;
 
   bool isFrameRegister(const TargetRegisterInfo &TRI,
                        llvm::Register MachineReg) override;
