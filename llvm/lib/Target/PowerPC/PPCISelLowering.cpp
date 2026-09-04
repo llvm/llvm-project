@@ -603,9 +603,12 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // We cannot sextinreg(i1).  Expand to shifts.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
-  // Custom handling for PowerPC ucmp instruction
+  // Custom handling for PowerPC scmp/ucmp instruction
+  setOperationAction(ISD::SCMP, MVT::i32, Custom);
+  setOperationAction(ISD::SCMP, MVT::i64, isPPC64 ? Custom : Expand);
   setOperationAction(ISD::UCMP, MVT::i32, Custom);
   setOperationAction(ISD::UCMP, MVT::i64, isPPC64 ? Custom : Expand);
+
   setOperationAction(ISD::ABDU, MVT::i32, Custom);
   setOperationAction(ISD::ABDU, MVT::i64, isPPC64 ? Custom : Expand);
 
@@ -12852,13 +12855,42 @@ SDValue PPCTargetLowering::LowerABDU(SDValue Op, SelectionDAG &DAG) const {
   return Res;
 }
 
-// Lower unsigned 3-way compare producing -1/0/1.
-SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
+// Lower unsigned/signed 3-way compare producing -1/0/1.
+SDValue PPCTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  SDValue A = DAG.getFreeze(Op.getOperand(0));
-  SDValue B = DAG.getFreeze(Op.getOperand(1));
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
   EVT OpVT = A.getValueType();
   EVT ResVT = Op.getValueType();
+
+  if (Op.getOpcode() == ISD::SCMP) {
+    if (!isNullConstant(B))
+      return SDValue(); // Fallback to expansion if RHS is not 0
+
+    if (Subtarget.isPPC64() && OpVT != MVT::i64) {
+      A = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, A);
+      OpVT = MVT::i64;
+    }
+
+    // srawi/sradi r4, r3, 31/63
+    SDValue Sra =
+        DAG.getNode(ISD::SRA, DL, OpVT, A,
+                    DAG.getConstant(OpVT.getSizeInBits() - 1, DL, MVT::i32));
+
+    SDVTList VTs = DAG.getVTList(OpVT, MVT::i32);
+    // addic r5, r3, -1
+    SDValue Addc =
+        DAG.getNode(PPCISD::ADDC, DL, VTs, A, DAG.getAllOnesConstant(DL, OpVT));
+    SDValue CA = Addc.getValue(1);
+
+    // adde r6, r4, r4
+    SDValue Adde = DAG.getNode(PPCISD::ADDE, DL, VTs, Sra, Sra, CA);
+
+    return DAG.getSExtOrTrunc(Adde.getValue(0), DL, ResVT);
+  }
+
+  A = DAG.getFreeze(A);
+  B = DAG.getFreeze(B);
 
   // On PPC64, i32 carries are affected by the upper 32 bits of the registers.
   // We must zero-extend to i64 to ensure the carry reflects the 32-bit unsigned
@@ -12996,8 +13028,9 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UADDO_CARRY:
   case ISD::USUBO_CARRY:
     return LowerADDSUBO_CARRY(Op, DAG);
+  case ISD::SCMP:
   case ISD::UCMP:
-    return LowerUCMP(Op, DAG);
+    return LowerCMP(Op, DAG);
   case ISD::ABDU:
     return LowerABDU(Op, DAG);
   case ISD::STRICT_LRINT:
