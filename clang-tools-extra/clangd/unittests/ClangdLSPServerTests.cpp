@@ -65,11 +65,11 @@ protected:
     Base.FeatureModules = &FeatureModules;
   }
 
-  LSPClient &start() {
+  LSPClient &start(llvm::json::Object InitializeParams = {}) {
     EXPECT_FALSE(Server) << "Already initialized";
     Server.emplace(Client.transport(), FS, Opts);
     ServerThread.emplace([&] { EXPECT_TRUE(Server->run()); });
-    Client.call("initialize", llvm::json::Object{});
+    Client.call("initialize", std::move(InitializeParams));
     return Client;
   }
 
@@ -305,6 +305,201 @@ TEST_F(LSPTest, IncomingCalls) {
   EXPECT_EQ(FirstCall["fromRanges"], llvm::json::Value{Code.range()});
   auto From = *FirstCall["from"].getAsObject();
   EXPECT_EQ(From["name"], "caller1");
+}
+
+TEST_F(LSPTest, IncomingCallsWithReferenceTagsSupport) {
+  Annotations Code(R"cpp(
+    int va^r = 1;
+    void caller() {
+      var = 2;
+    }
+  )cpp");
+  auto &Client = start(llvm::json::Object{{
+      "capabilities",
+      llvm::json::Object{{
+          "textDocument",
+          llvm::json::Object{{
+              "callHierarchy",
+              llvm::json::Object{{"referenceTagsSupport", true}},
+          }},
+      }},
+  }});
+  Client.didOpen("foo.cpp", Code.code());
+  auto Items = Client
+                   .call("textDocument/prepareCallHierarchy",
+                         llvm::json::Object{
+                             {"textDocument", Client.documentID("foo.cpp")},
+                             {"position", Code.point()}})
+                   .takeValue();
+  auto FirstItem = (*Items.getAsArray())[0];
+  auto Calls = Client
+                   .call("callHierarchy/incomingCalls",
+                         llvm::json::Object{{"item", FirstItem}})
+                   .takeValue();
+  auto FirstCall = *(*Calls.getAsArray())[0].getAsObject();
+  auto From = *FirstCall["from"].getAsObject();
+
+  EXPECT_EQ(From["name"], "caller");
+  EXPECT_EQ(From["referenceTags"], llvm::json::Value(llvm::json::Array{
+                                       static_cast<int>(ReferenceTag::Write)}));
+}
+
+TEST_F(LSPTest, IncomingCallsWithoutReferenceTagsSupport) {
+  Annotations Code(R"cpp(
+    int va^r = 1;
+    void caller() {
+      var = 2;
+    }
+  )cpp");
+  auto &Client = start();
+  Client.didOpen("foo.cpp", Code.code());
+  auto Items = Client
+                   .call("textDocument/prepareCallHierarchy",
+                         llvm::json::Object{
+                             {"textDocument", Client.documentID("foo.cpp")},
+                             {"position", Code.point()}})
+                   .takeValue();
+  auto FirstItem = (*Items.getAsArray())[0];
+  auto Calls = Client
+                   .call("callHierarchy/incomingCalls",
+                         llvm::json::Object{{"item", FirstItem}})
+                   .takeValue();
+  auto FirstCall = *(*Calls.getAsArray())[0].getAsObject();
+  auto From = *FirstCall["from"].getAsObject();
+
+  EXPECT_EQ(From["name"], "caller");
+  EXPECT_FALSE(From.get("referenceTags"));
+}
+
+TEST_F(LSPTest, OutgoingVarCallsWithReferenceTagsSupport) {
+  Annotations Code(R"cpp(
+    int var = 1;
+    void callee();
+    void ca^ller() {
+      var = 2;
+      callee();
+    }
+  )cpp");
+  auto &Client = start(llvm::json::Object{{
+      "capabilities",
+      llvm::json::Object{{
+          "textDocument",
+          llvm::json::Object{{
+              "callHierarchy",
+              llvm::json::Object{{"referenceTagsSupport", true}},
+          }},
+      }},
+  }});
+  Client.didOpen("foo.cpp", Code.code());
+  auto Items = Client
+                   .call("textDocument/prepareCallHierarchy",
+                         llvm::json::Object{
+                             {"textDocument", Client.documentID("foo.cpp")},
+                             {"position", Code.point()}})
+                   .takeValue();
+  auto FirstItem = (*Items.getAsArray())[0];
+  auto Calls = Client
+                   .call("callHierarchy/outgoingCalls",
+                         llvm::json::Object{{"item", FirstItem}})
+                   .takeValue();
+  auto CallArray = Calls.getAsArray();
+  ASSERT_EQ(CallArray->size(), 2u);
+
+  {
+    auto FirstCall = *(*CallArray)[0].getAsObject();
+    auto To = *FirstCall["to"].getAsObject();
+
+    EXPECT_EQ(To["name"], "var");
+    EXPECT_EQ(To["referenceTags"], llvm::json::Value(llvm::json::Array{
+                                       static_cast<int>(ReferenceTag::Write)}));
+  }
+  {
+    auto SecondCall = *(*CallArray)[1].getAsObject();
+    auto To = *SecondCall["to"].getAsObject();
+
+    EXPECT_EQ(To["name"], "callee");
+    // Function calls are neither Read nor Write accesses, so no referenceTags.
+    EXPECT_FALSE(To.get("referenceTags"));
+  }
+}
+
+TEST_F(LSPTest, ReferencesReturnReferenceItemsWithTags) {
+  Annotations Code(R"cpp(
+    int var = 1;
+    void caller() {
+      $Write[[v^ar]] = 2;
+      int x = $Read[[var]];
+    }
+  )cpp");
+  auto &Client = start(llvm::json::Object{{
+      "capabilities",
+      llvm::json::Object{{
+          "textDocument",
+          llvm::json::Object{{
+              "references",
+              llvm::json::Object{{"referenceItemsSupport", true}},
+          }},
+      }},
+  }});
+  Client.didOpen("foo.cpp", Code.code());
+  auto Refs = Client
+                  .call("textDocument/references",
+                        llvm::json::Object{
+                            {"textDocument", Client.documentID("foo.cpp")},
+                            {"position", Code.point()},
+                            {"context",
+                             llvm::json::Object{{"includeDeclaration", false}}},
+                        })
+                  .takeValue();
+
+  auto *RefArray = Refs.getAsArray();
+  ASSERT_TRUE(RefArray);
+  ASSERT_EQ(RefArray->size(), 2u);
+
+  auto First = *(*RefArray)[0].getAsObject();
+  auto FirstLoc = *First["location"].getAsObject();
+  EXPECT_EQ(FirstLoc["uri"], Client.uri("foo.cpp"));
+  EXPECT_EQ(FirstLoc["range"], llvm::json::Value(Code.range("Write")));
+  EXPECT_EQ(First["referenceTags"],
+            llvm::json::Value(
+                llvm::json::Array{static_cast<int>(ReferenceTag::Write)}));
+
+  auto Second = *(*RefArray)[1].getAsObject();
+  auto SecondLoc = *Second["location"].getAsObject();
+  EXPECT_EQ(SecondLoc["uri"], Client.uri("foo.cpp"));
+  EXPECT_EQ(SecondLoc["range"], llvm::json::Value(Code.range("Read")));
+  EXPECT_EQ(Second["referenceTags"],
+            llvm::json::Value(
+                llvm::json::Array{static_cast<int>(ReferenceTag::Read)}));
+}
+
+TEST_F(LSPTest, ReferencesReturnLegacyLocationWithoutReferenceItemsSupport) {
+  Annotations Code(R"cpp(
+    int var = 1;
+    void caller() {
+      $Write[[v^ar]] = 2;
+    }
+  )cpp");
+  auto &Client = start();
+  Client.didOpen("foo.cpp", Code.code());
+  auto Refs = Client
+                  .call("textDocument/references",
+                        llvm::json::Object{
+                            {"textDocument", Client.documentID("foo.cpp")},
+                            {"position", Code.point()},
+                            {"context",
+                             llvm::json::Object{{"includeDeclaration", false}}},
+                        })
+                  .takeValue();
+
+  auto *RefArray = Refs.getAsArray();
+  ASSERT_TRUE(RefArray);
+  ASSERT_EQ(RefArray->size(), 1u);
+  auto First = *(*RefArray)[0].getAsObject();
+  EXPECT_EQ(First["uri"], Client.uri("foo.cpp"));
+  EXPECT_EQ(First["range"], llvm::json::Value(Code.range("Write")));
+  EXPECT_FALSE(First.get("location"));
+  EXPECT_FALSE(First.get("referenceTags"));
 }
 
 TEST_F(LSPTest, CDBConfigIntegration) {
