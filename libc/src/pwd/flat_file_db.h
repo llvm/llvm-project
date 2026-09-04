@@ -30,6 +30,7 @@ namespace pwd {
 struct ReadLineResult {
   size_t bytes_read;
   bool truncated;
+  // True only when no data was read because the file stream reached EOF.
   bool eof;
 };
 

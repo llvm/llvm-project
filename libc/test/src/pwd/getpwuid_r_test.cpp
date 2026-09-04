@@ -35,9 +35,8 @@ TEST_F(LlvmLibcGetpwuidRTest, Success) {
   char buffer[256];
   struct passwd *result = nullptr;
 
-  int ret =
-      LIBC_NAMESPACE::getpwuid_r(1, &pwd, buffer, sizeof(buffer), &result);
-  ASSERT_EQ(ret, 0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::getpwuid_r(1, &pwd, buffer, sizeof(buffer), &result), 0);
   ASSERT_EQ(result, &pwd);
   ASSERT_STREQ(pwd.pw_name, "bin");
   ASSERT_EQ(pwd.pw_uid, static_cast<uid_t>(1));
@@ -47,9 +46,9 @@ TEST_F(LlvmLibcGetpwuidRTest, Success) {
 
   // Lookup high UID (nobody)
   result = nullptr;
-  ret =
-      LIBC_NAMESPACE::getpwuid_r(65534, &pwd, buffer, sizeof(buffer), &result);
-  ASSERT_EQ(ret, 0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::getpwuid_r(65534, &pwd, buffer, sizeof(buffer), &result),
+      0);
   ASSERT_EQ(result, &pwd);
   ASSERT_STREQ(pwd.pw_name, "nobody");
   ASSERT_EQ(pwd.pw_uid, static_cast<uid_t>(65534));
@@ -65,9 +64,8 @@ TEST_F(LlvmLibcGetpwuidRTest, RootUidZero) {
   char buffer[256];
   struct passwd *result = nullptr;
 
-  int ret =
-      LIBC_NAMESPACE::getpwuid_r(0, &pwd, buffer, sizeof(buffer), &result);
-  ASSERT_EQ(ret, 0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::getpwuid_r(0, &pwd, buffer, sizeof(buffer), &result), 0);
   ASSERT_EQ(result, &pwd);
   ASSERT_STREQ(pwd.pw_name, "root");
   ASSERT_EQ(pwd.pw_uid, static_cast<uid_t>(0));
@@ -82,9 +80,9 @@ TEST_F(LlvmLibcGetpwuidRTest, NotFound) {
   char buffer[256];
   struct passwd *result = reinterpret_cast<struct passwd *>(0xdeadbeef);
 
-  int ret =
-      LIBC_NAMESPACE::getpwuid_r(999, &pwd, buffer, sizeof(buffer), &result);
-  ASSERT_EQ(ret, 0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::getpwuid_r(999, &pwd, buffer, sizeof(buffer), &result),
+      0);
   ASSERT_EQ(result, static_cast<struct passwd *>(nullptr));
 }
 
@@ -97,23 +95,22 @@ TEST_F(LlvmLibcGetpwuidRTest, BufferTooSmall) {
   char small_buf[8];
   struct passwd *result = reinterpret_cast<struct passwd *>(0xdeadbeef);
 
-  int ret = LIBC_NAMESPACE::getpwuid_r(0, &pwd, small_buf, sizeof(small_buf),
-                                       &result);
-  ASSERT_EQ(ret, ERANGE);
+  ASSERT_EQ(LIBC_NAMESPACE::getpwuid_r(0, &pwd, small_buf, sizeof(small_buf),
+                                       &result),
+            ERANGE);
   ASSERT_EQ(result, static_cast<struct passwd *>(nullptr));
 
   // Single-byte buffer is insufficient and must return ERANGE.
   char tiny_buf[1];
   result = reinterpret_cast<struct passwd *>(0xdeadbeef);
-  ret =
-      LIBC_NAMESPACE::getpwuid_r(0, &pwd, tiny_buf, sizeof(tiny_buf), &result);
-  ASSERT_EQ(ret, ERANGE);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::getpwuid_r(0, &pwd, tiny_buf, sizeof(tiny_buf), &result),
+      ERANGE);
   ASSERT_EQ(result, static_cast<struct passwd *>(nullptr));
 
   // Zero-byte buffer is insufficient and must return ERANGE.
   result = reinterpret_cast<struct passwd *>(0xdeadbeef);
-  ret = LIBC_NAMESPACE::getpwuid_r(0, &pwd, small_buf, 0, &result);
-  ASSERT_EQ(ret, ERANGE);
+  ASSERT_EQ(LIBC_NAMESPACE::getpwuid_r(0, &pwd, small_buf, 0, &result), ERANGE);
   ASSERT_EQ(result, static_cast<struct passwd *>(nullptr));
 
   // Note: passing nullptr for pwd, buffer, or result is undefined behavior per
@@ -131,9 +128,8 @@ TEST_F(LlvmLibcGetpwuidRTest, BlankLines) {
   char buffer[256];
   struct passwd *result = nullptr;
 
-  int ret =
-      LIBC_NAMESPACE::getpwuid_r(1, &pwd, buffer, sizeof(buffer), &result);
-  ASSERT_EQ(ret, 0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::getpwuid_r(1, &pwd, buffer, sizeof(buffer), &result), 0);
   ASSERT_EQ(result, &pwd);
   ASSERT_STREQ(pwd.pw_name, "bin");
   ASSERT_EQ(pwd.pw_uid, static_cast<uid_t>(1));

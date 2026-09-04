@@ -31,7 +31,7 @@ LLVM_LIBC_FUNCTION(int, getpwuid_r,
 
   *result = nullptr;
 
-  auto res = passwd::find_by_uid(uid, pwd, cpp::span<char>(buffer, bufsize));
+  auto res = pwd::find_by_uid(uid, pwd, cpp::span<char>(buffer, bufsize));
   if (!res.has_value())
     return res.error();
 

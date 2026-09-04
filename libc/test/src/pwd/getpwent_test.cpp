@@ -105,7 +105,7 @@ TEST_F(LlvmLibcPwdTest, ReopenAfterEndpwent) {
 }
 
 TEST_F(LlvmLibcPwdTest, FileOpenFailure) {
-  LIBC_NAMESPACE::passwd::TESTONLY_set_passwd_path(
+  LIBC_NAMESPACE::pwd::TESTONLY_set_passwd_path(
       "/nonexistent_directory/nonexistent_file");
   LIBC_NAMESPACE::endpwent(); // Force close any existing file
 

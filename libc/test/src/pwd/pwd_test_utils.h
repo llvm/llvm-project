@@ -38,11 +38,11 @@ public:
       f->write(content, len);
       f->close();
     }
-    LIBC_NAMESPACE::passwd::TESTONLY_set_passwd_path(path);
+    LIBC_NAMESPACE::pwd::TESTONLY_set_passwd_path(path);
   }
 
   ~ScopedPasswdFile() {
-    LIBC_NAMESPACE::passwd::TESTONLY_reset_passwd_path();
+    LIBC_NAMESPACE::pwd::TESTONLY_reset_passwd_path();
     LIBC_NAMESPACE::remove(path);
   }
 
@@ -53,7 +53,7 @@ public:
 class LlvmLibcPwdTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 protected:
   void TearDown() override {
-    LIBC_NAMESPACE::passwd::TESTONLY_reset_passwd_path();
+    LIBC_NAMESPACE::pwd::TESTONLY_reset_passwd_path();
     ErrnoCheckingTest::TearDown();
   }
 };

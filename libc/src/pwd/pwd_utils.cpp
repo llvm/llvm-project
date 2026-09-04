@@ -39,15 +39,11 @@ ErrorOr<struct passwd> parse_passwd_line(char *line) {
   return pwd;
 }
 
-} // namespace pwd
-
-namespace passwd {
-
 // Exposed via TESTONLY_set_passwd_path for unit testing to direct operations
 // to hermetic temporary files.
 static const char *passwd_file_path = LIBC_COPT_PWD_FILE_PATH;
 
-static LIBC_CONSTINIT pwd::FlatFileDatabase<struct passwd>
+static LIBC_CONSTINIT FlatFileDatabase<struct passwd>
     db(LIBC_COPT_PWD_FILE_PATH);
 // Note: These static buffers are process-global and NOT protected by a mutex
 // at this stage. POSIX getpwent is non-reentrant.
@@ -79,8 +75,8 @@ ErrorOr<struct passwd *> read_next() {
 
 ErrorOr<bool> find_by_name(cpp::string_view name, struct passwd *pwd,
                            cpp::span<char> buffer, const char *path) {
-  pwd::ScopedFlatFileDatabase<struct passwd> local_db(path ? path
-                                                           : passwd_file_path);
+  ScopedFlatFileDatabase<struct passwd> local_db(path ? path
+                                                      : passwd_file_path);
   auto matcher = [name](const struct passwd &entry) {
     return cpp::string_view(entry.pw_name) == name;
   };
@@ -89,13 +85,13 @@ ErrorOr<bool> find_by_name(cpp::string_view name, struct passwd *pwd,
 
 ErrorOr<bool> find_by_uid(uid_t uid, struct passwd *pwd, cpp::span<char> buffer,
                           const char *path) {
-  pwd::ScopedFlatFileDatabase<struct passwd> local_db(path ? path
-                                                           : passwd_file_path);
+  ScopedFlatFileDatabase<struct passwd> local_db(path ? path
+                                                      : passwd_file_path);
   auto matcher = [uid](const struct passwd &entry) {
     return entry.pw_uid == uid;
   };
   return local_db.lookup(matcher, pwd, buffer);
 }
 
-} // namespace passwd
+} // namespace pwd
 } // namespace LIBC_NAMESPACE_DECL

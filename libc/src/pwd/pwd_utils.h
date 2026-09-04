@@ -92,10 +92,6 @@ LIBC_INLINE bool parse_line<struct passwd>(cpp::span<char> line,
 // Parses a colon-separated password database line into a struct passwd.
 ErrorOr<struct passwd> parse_passwd_line(char *line);
 
-} // namespace pwd
-
-namespace passwd {
-
 // Overrides the default password file path for testing purposes.
 void TESTONLY_set_passwd_path(const char *path);
 
@@ -123,7 +119,7 @@ ErrorOr<bool> find_by_name(cpp::string_view name, struct passwd *pwd,
 ErrorOr<bool> find_by_uid(uid_t uid, struct passwd *pwd, cpp::span<char> buffer,
                           const char *path = nullptr);
 
-} // namespace passwd
+} // namespace pwd
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PWD_PWD_UTILS_H
