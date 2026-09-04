@@ -183,6 +183,12 @@ public:
   bool hasTrivialDtor(const VarDecl *VD) const {
     return hasTrivialDtorImpl(VD, TheCache);
   }
+  const FieldDecl *fieldWithNonTrivialCtor(const CXXRecordDecl *RD) const {
+    return fieldWithNonTrivialCtorImpl(RD, TheCache);
+  }
+  const FieldDecl *fieldWithNonTrivialDtor(const CXXRecordDecl *RD) const {
+    return fieldWithNonTrivialDtorImpl(RD, TheCache);
+  }
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
@@ -194,6 +200,10 @@ private:
   static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt **);
   static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt **);
   static bool hasTrivialDtorImpl(const VarDecl *VD, CacheTy &Cache);
+  static const FieldDecl *fieldWithNonTrivialCtorImpl(const CXXRecordDecl *RD,
+                                                      CacheTy &Cache);
+  static const FieldDecl *fieldWithNonTrivialDtorImpl(const CXXRecordDecl *RD,
+                                                      CacheTy &Cache);
 };
 
 } // namespace clang
