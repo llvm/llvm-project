@@ -326,6 +326,13 @@ void multidimensionalMember(){
   clang_analyzer_eval(EvalOrderArr[3] == 0); // expected-warning {{TRUE}}
 }
 
+void typedefMultidimensionalNoCrash(){
+  // The inner dimension is hidden behind a typedef, so the element type of the
+  // outer array is a TypedefType rather than a ConstantArrayType.
+  typedef EvalOrder EvalOrderRow[2];
+  EvalOrderRow arr[2]; // no-crash
+}
+
 void *memset(void *, int, size_t);
 void clang_analyzer_dumpElementCount(InlineDtor *);
 
