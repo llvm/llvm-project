@@ -8,7 +8,7 @@ struct S0 {
 
 // CHECK-SPIRV-DAG:    @A0 = external hidden thread_local addrspace(7) externally_initialized constant <4 x float>, !spirv.Decorations ![[#METADATA_0:]]
 
-[shader("pixel")]
+[shader("vertex")]
 S0 main1(float4 input : A) : B {
 // CHECK:         %[[ARG:.*]] = alloca %struct.S0
 // CHECK-SPIRV: %[[INPUT:.*]] = load <4 x float>, ptr addrspace(7) @A0, align 4

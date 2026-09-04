@@ -21,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 
 namespace llvm {
@@ -31,6 +32,35 @@ class MDNode;
 namespace hlsl {
 
 // Definitions of the in-memory data layout structures
+
+// Bitmask denoting whether a semantic is an input, output, or a value that is
+// constant across a patch (hull/domain shaders) or primitive (mesh shaders).
+enum IOType {
+  In = 0b001,
+  Out = 0b010,
+  InOut = 0b011,
+  PatchConstantOrPrimitive = 0b100,
+  All = 0b111,
+
+  LLVM_MARK_AS_BITMASK_ENUM(PatchConstantOrPrimitive),
+};
+
+enum class SemanticInterpretation {
+  Invalid,
+  NotAllocated,
+  Arbitrary,
+  SV,
+  SGV,
+  ClipCull,
+  TessFactor,
+  Target,
+};
+
+struct SemanticStageInfo {
+  Triple::EnvironmentType Stage;
+  IOType AllowedIOTypesMask;
+  SemanticInterpretation Interpretation;
+};
 
 // Sentinel values denoting that an element is unallocated
 static constexpr uint32_t UnallocatedRow = ~0U;
@@ -103,6 +133,13 @@ struct SemanticSignatureElement {
 };
 
 LLVM_ABI dxbc::PSV::SemanticKind getSemanticKind(StringRef SemanticName);
+
+LLVM_ABI ArrayRef<SemanticStageInfo>
+getAvailableStages(dxbc::PSV::SemanticKind SemanticKind);
+
+LLVM_ABI SemanticInterpretation
+getInterpretationKind(dxbc::PSV::SemanticKind SemanticKind,
+                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
 } // namespace hlsl
 } // namespace llvm

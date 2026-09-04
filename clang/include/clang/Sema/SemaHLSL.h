@@ -20,9 +20,11 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Frontend/HLSL/SemanticSignatures.h"
 #include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
@@ -206,6 +208,7 @@ public:
   }
 
   void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
+                                  llvm::dxbc::PSV::SemanticKind SemanticKind,
                                   std::optional<unsigned> Index);
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
@@ -290,14 +293,6 @@ private:
     std::optional<uint32_t> Index = std::nullopt;
   };
 
-  // Bitmask used to recall if the current semantic subtree is
-  // input, output or inout.
-  enum IOType {
-    In = 0b01,
-    Out = 0b10,
-    InOut = 0b11,
-  };
-
   // The context shared by all semantics with the same IOType during
   // flattening.
   struct SemanticContext {
@@ -308,12 +303,7 @@ private:
     // index collisions.
     llvm::StringSet<> ActiveSemantics = {};
     // The IOType of this semantic set.
-    IOType CurrentIOType;
-  };
-
-  struct SemanticStageInfo {
-    llvm::Triple::EnvironmentType Stage;
-    IOType AllowedIOTypesMask;
+    llvm::hlsl::IOType CurrentIOType;
   };
 
 private:
@@ -344,8 +334,9 @@ private:
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
 
   void diagnoseSemanticStageMismatch(
-      const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
-      std::initializer_list<SemanticStageInfo> AllowedStages);
+      const Attr *A, llvm::Triple::EnvironmentType Stage,
+      llvm::hlsl::IOType CurrentIOType,
+      llvm::ArrayRef<llvm::hlsl::SemanticStageInfo> AllowedStages);
 
   void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 

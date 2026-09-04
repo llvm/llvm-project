@@ -1435,18 +1435,17 @@ void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
 }
 
 llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
-    IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
-    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
-    std::optional<unsigned> Index, SemanticSignatures &Signature) {
-
-  std::string SemanticName = Semantic->getAttrName()->getName().upper();
-  if (SemanticName == "SV_GROUPINDEX") {
+    IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic,
+    llvm::dxbc::PSV::SemanticKind SemanticKind, std::optional<unsigned> Index,
+    SemanticSignatures &Signature) {
+  switch (SemanticKind) {
+  case llvm::dxbc::PSV::SemanticKind::GroupIndex: {
     llvm::Function *GroupIndex =
         CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
-
-  if (SemanticName == "SV_DISPATCHTHREADID") {
+  case llvm::dxbc::PSV::SemanticKind::DispatchThreadID: {
     llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -1454,8 +1453,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
             : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, ThreadIDIntrinsic, Type);
   }
-
-  if (SemanticName == "SV_GROUPTHREADID") {
+  case llvm::dxbc::PSV::SemanticKind::GroupThreadID: {
     llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -1463,8 +1461,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
             : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupThreadIDIntrinsic, Type);
   }
-
-  if (SemanticName == "SV_GROUPID") {
+  case llvm::dxbc::PSV::SemanticKind::GroupID: {
     llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
     llvm::Function *GroupIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
@@ -1472,38 +1469,26 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
             : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupIDIntrinsic, Type);
   }
-
-  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
-  assert(ShaderAttr && "Entry point has no shader attribute");
-  llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
-
-  if (SemanticName == "SV_POSITION") {
-    if (ST == Triple::EnvironmentType::Pixel) {
-      if (CGM.getTarget().getTriple().isSPIRV())
-        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                      Semantic->getAttrName()->getName(),
-                                      /* BuiltIn::FragCoord */ 15);
-      if (CGM.getTarget().getTriple().isDXIL())
-        return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
-                                        Signature);
-    }
-
-    if (ST == Triple::EnvironmentType::Vertex) {
-      return emitUserSemanticLoad(B, FD, Type, Decl, Semantic, Index,
-                                  Signature);
-    }
-  }
-
-  if (SemanticName == "SV_VERTEXID") {
-    if (ST == Triple::EnvironmentType::Vertex) {
-      if (CGM.getTarget().getTriple().isSPIRV())
-        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
-                                      Semantic->getAttrName()->getName(),
-                                      /* BuiltIn::VertexIndex */ 42);
-      else
-        return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
-                                        Signature);
-    }
+  case llvm::dxbc::PSV::SemanticKind::Position:
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                    Semantic->getAttrName()->getName(),
+                                    /* BuiltIn::FragCoord */ 15);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
+  case llvm::dxbc::PSV::SemanticKind::VertexID:
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                    Semantic->getAttrName()->getName(),
+                                    /* BuiltIn::VertexIndex */ 42);
+    if (CGM.getTarget().getTriple().isDXIL())
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
+    break;
+  default:
+    break;
   }
 
   llvm_unreachable(
@@ -1524,30 +1509,29 @@ static void createSPIRVBuiltinStore(IRBuilder<> &B, llvm::Module &M,
   B.CreateStore(Source, GV);
 }
 
-void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
-                                            const clang::DeclaratorDecl *Decl,
-                                            HLSLAppliedSemanticAttr *Semantic,
-                                            std::optional<unsigned> Index,
-                                            SemanticSignatures &Signature) {
-
-  std::string SemanticName = Semantic->getAttrName()->getName().upper();
-  if (SemanticName == "SV_POSITION") {
+void CGHLSLRuntime::emitSystemSemanticStore(
+    IRBuilder<> &B, llvm::Value *Source, const clang::DeclaratorDecl *Decl,
+    HLSLAppliedSemanticAttr *Semantic,
+    llvm::dxbc::PSV::SemanticKind SemanticKind, std::optional<unsigned> Index,
+    SemanticSignatures &Signature) {
+  switch (SemanticKind) {
+  case llvm::dxbc::PSV::SemanticKind::Position:
     if (CGM.getTarget().getTriple().isDXIL()) {
       emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
       return;
     }
-
     if (CGM.getTarget().getTriple().isSPIRV()) {
       createSPIRVBuiltinStore(B, CGM.getModule(), Source,
                               Semantic->getAttrName()->getName(),
                               /* BuiltIn::Position */ 0);
       return;
     }
-  }
-
-  if (SemanticName == "SV_TARGET") {
+    break;
+  case llvm::dxbc::PSV::SemanticKind::Target:
     emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
     return;
+  default:
+    break;
   }
 
   llvm_unreachable(
@@ -1560,10 +1544,19 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
     SemanticSignatures &Signature) {
 
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
-  if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
-    return emitSystemSemanticLoad(B, FD, Type, Decl, Semantic, Index,
-                                  Signature);
-  return emitUserSemanticLoad(B, FD, Type, Decl, Semantic, Index, Signature);
+  llvm::dxbc::PSV::SemanticKind SemanticKind =
+      llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::hlsl::SemanticInterpretation Interpretation =
+      llvm::hlsl::getInterpretationKind(SemanticKind, ShaderAttr->getType(),
+                                        llvm::hlsl::IOType::In);
+  if (Interpretation == llvm::hlsl::SemanticInterpretation::Invalid)
+    llvm_unreachable("invalid semantic should have been diagnosed by Sema");
+  if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
+    return emitUserSemanticLoad(B, FD, Type, Decl, Semantic, Index, Signature);
+  return emitSystemSemanticLoad(B, Type, Decl, Semantic, SemanticKind, Index,
+                                Signature);
 }
 
 void CGHLSLRuntime::handleScalarSemanticStore(IRBuilder<> &B,
@@ -1573,10 +1566,21 @@ void CGHLSLRuntime::handleScalarSemanticStore(IRBuilder<> &B,
                                               HLSLAppliedSemanticAttr *Semantic,
                                               SemanticSignatures &Signature) {
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
-  if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
-    emitSystemSemanticStore(B, Source, Decl, Semantic, Index, Signature);
-  else
-    emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+  llvm::dxbc::PSV::SemanticKind SemanticKind =
+      llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+
+  llvm::hlsl::SemanticInterpretation Interpretation =
+      llvm::hlsl::getInterpretationKind(SemanticKind, ShaderAttr->getType(),
+                                        llvm::hlsl::IOType::Out);
+  assert(Interpretation != llvm::hlsl::SemanticInterpretation::Invalid &&
+         "invalid semantic should have been diagnosed by Sema");
+
+  if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
+    return emitUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+  emitSystemSemanticStore(B, Source, Decl, Semantic, SemanticKind, Index,
+                          Signature);
 }
 
 std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>

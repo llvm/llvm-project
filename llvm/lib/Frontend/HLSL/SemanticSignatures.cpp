@@ -17,6 +17,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace llvm::hlsl;
@@ -52,6 +53,95 @@ dxbc::PSV::SemanticKind hlsl::getSemanticKind(StringRef SemanticName) {
       return Kind.value();
 
   return dxbc::PSV::SemanticKind::Invalid;
+}
+
+ArrayRef<SemanticStageInfo>
+hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
+  switch (SemanticKind) {
+  case dxbc::PSV::SemanticKind::Arbitrary: {
+    static constexpr IOType OutOrPatchConstant =
+        static_cast<IOType>(IOType::Out | IOType::PatchConstantOrPrimitive);
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::InOut, SemanticInterpretation::Arbitrary},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::Arbitrary},
+        {Triple::Hull, IOType::All, SemanticInterpretation::Arbitrary},
+        {Triple::Domain, IOType::All, SemanticInterpretation::Arbitrary},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::Arbitrary},
+        {Triple::Mesh, OutOrPatchConstant, SemanticInterpretation::Arbitrary},
+    };
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::DispatchThreadID:
+  case dxbc::PSV::SemanticKind::GroupID:
+  case dxbc::PSV::SemanticKind::GroupIndex:
+  case dxbc::PSV::SemanticKind::GroupThreadID: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Compute, IOType::In, SemanticInterpretation::NotAllocated}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::Target: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Pixel, IOType::Out, SemanticInterpretation::Target}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::VertexID: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::SV}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::IsFrontFace: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Geometry, IOType::Out, SemanticInterpretation::SGV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SGV}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::Position: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::SV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SV}};
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::ClipDistance:
+  case dxbc::PSV::SemanticKind::CullDistance: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::ClipCull},
+        {Triple::Hull, IOType::InOut, SemanticInterpretation::ClipCull},
+        {Triple::Hull, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::Arbitrary},
+        {Triple::Domain, IOType::InOut, SemanticInterpretation::ClipCull},
+        {Triple::Domain, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::Arbitrary},
+        {Triple::Geometry, IOType::InOut, SemanticInterpretation::ClipCull},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::ClipCull},
+        {Triple::Mesh, IOType::Out, SemanticInterpretation::ClipCull},
+    };
+    return Stages;
+  }
+  case dxbc::PSV::SemanticKind::TessFactor:
+  case dxbc::PSV::SemanticKind::InsideTessFactor: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Hull, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::TessFactor},
+        {Triple::Domain, IOType::PatchConstantOrPrimitive,
+         SemanticInterpretation::TessFactor},
+    };
+    return Stages;
+  }
+  default:
+    llvm_unreachable(
+        "available stages for given semantic kind are not handled");
+  }
+}
+
+SemanticInterpretation
+hlsl::getInterpretationKind(dxbc::PSV::SemanticKind SemanticKind,
+                            Triple::EnvironmentType ShaderStage, IOType IOTy) {
+  for (const SemanticStageInfo &Info : getAvailableStages(SemanticKind))
+    if (Info.Stage == ShaderStage && (Info.AllowedIOTypesMask & IOTy))
+      return Info.Interpretation;
+  return SemanticInterpretation::Invalid;
 }
 
 Expected<SemanticSignatureElement>
