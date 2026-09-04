@@ -1675,21 +1675,36 @@ entry:
 define <2 x bfloat> @stofp_v2i32_v2bf16(<2 x i32> %a) {
 ; CHECK-NOFP16-LABEL: stofp_v2i32_v2bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NOFP16-NEXT:    movi v1.4s, #1
-; CHECK-NOFP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    ushr v2.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-NOFP16-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NOFP16-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; CHECK-NOFP16-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v0.4s, v1.2d
+; CHECK-NOFP16-NEXT:    movi v1.4s, #1
+; CHECK-NOFP16-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-NOFP16-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-NOFP16-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-NOFP16-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
+; CHECK-NOFP16-NEXT:    orr v0.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-NOFP16-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-NOFP16-NEXT:    shrn v0.4h, v0.4s, #16
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stofp_v2i32_v2bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-FP16-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    movi d1, #0000000000000000
+; CHECK-FP16-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-FP16-NEXT:    fcvtxn s2, d0
+; CHECK-FP16-NEXT:    mov d0, v0.d[1]
+; CHECK-FP16-NEXT:    bfcvt h2, s2
+; CHECK-FP16-NEXT:    fcvtxn s0, d0
+; CHECK-FP16-NEXT:    mov v1.h[0], v2.h[0]
+; CHECK-FP16-NEXT:    bfcvt h0, s0
+; CHECK-FP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-FP16-NEXT:    fmov d0, d1
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = sitofp <2 x i32> %a to <2 x bfloat>
@@ -1699,21 +1714,36 @@ entry:
 define <2 x bfloat> @utofp_v2i32_v2bf16(<2 x i32> %a) {
 ; CHECK-NOFP16-LABEL: utofp_v2i32_v2bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NOFP16-NEXT:    movi v1.4s, #1
-; CHECK-NOFP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    ushr v2.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-NOFP16-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NOFP16-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; CHECK-NOFP16-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v0.4s, v1.2d
+; CHECK-NOFP16-NEXT:    movi v1.4s, #1
+; CHECK-NOFP16-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-NOFP16-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-NOFP16-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-NOFP16-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
+; CHECK-NOFP16-NEXT:    orr v0.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-NOFP16-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-NOFP16-NEXT:    shrn v0.4h, v0.4s, #16
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: utofp_v2i32_v2bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-FP16-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    movi d1, #0000000000000000
+; CHECK-FP16-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-FP16-NEXT:    fcvtxn s2, d0
+; CHECK-FP16-NEXT:    mov d0, v0.d[1]
+; CHECK-FP16-NEXT:    bfcvt h2, s2
+; CHECK-FP16-NEXT:    fcvtxn s0, d0
+; CHECK-FP16-NEXT:    mov v1.h[0], v2.h[0]
+; CHECK-FP16-NEXT:    bfcvt h0, s0
+; CHECK-FP16-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-FP16-NEXT:    fmov d0, d1
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = uitofp <2 x i32> %a to <2 x bfloat>
@@ -1723,19 +1753,33 @@ entry:
 define <3 x bfloat> @stofp_v3i32_v3bf16(<3 x i32> %a) {
 ; CHECK-NOFP16-LABEL: stofp_v3i32_v3bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    movi v1.4s, #1
-; CHECK-NOFP16-NEXT:    ushr v2.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-NOFP16-NEXT:    sshll v1.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v0.2d, v0.4s, #0
 ; CHECK-NOFP16-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; CHECK-NOFP16-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-NOFP16-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-NOFP16-NEXT:    movi v0.4s, #1
+; CHECK-NOFP16-NEXT:    ushr v3.4s, v1.4s, #16
+; CHECK-NOFP16-NEXT:    add v2.4s, v1.4s, v2.4s
+; CHECK-NOFP16-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-NOFP16-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
+; CHECK-NOFP16-NEXT:    orr v1.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-NOFP16-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-NOFP16-NEXT:    shrn v0.4h, v0.4s, #16
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stofp_v3i32_v3bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-FP16-NEXT:    sshll v1.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-FP16-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-FP16-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-FP16-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-FP16-NEXT:    bfcvtn v0.4h, v1.4s
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = sitofp <3 x i32> %a to <3 x bfloat>
@@ -1745,19 +1789,33 @@ entry:
 define <3 x bfloat> @utofp_v3i32_v3bf16(<3 x i32> %a) {
 ; CHECK-NOFP16-LABEL: utofp_v3i32_v3bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    movi v1.4s, #1
-; CHECK-NOFP16-NEXT:    ushr v2.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-NOFP16-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v0.2d, v0.4s, #0
 ; CHECK-NOFP16-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; CHECK-NOFP16-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-NOFP16-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-NOFP16-NEXT:    movi v0.4s, #1
+; CHECK-NOFP16-NEXT:    ushr v3.4s, v1.4s, #16
+; CHECK-NOFP16-NEXT:    add v2.4s, v1.4s, v2.4s
+; CHECK-NOFP16-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-NOFP16-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
+; CHECK-NOFP16-NEXT:    orr v1.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-NOFP16-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-NOFP16-NEXT:    shrn v0.4h, v0.4s, #16
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: utofp_v3i32_v3bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-FP16-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-FP16-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-FP16-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-FP16-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-FP16-NEXT:    bfcvtn v0.4h, v1.4s
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = uitofp <3 x i32> %a to <3 x bfloat>
@@ -1767,19 +1825,33 @@ entry:
 define <4 x bfloat> @stofp_v4i32_v4bf16(<4 x i32> %a) {
 ; CHECK-NOFP16-LABEL: stofp_v4i32_v4bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    movi v1.4s, #1
-; CHECK-NOFP16-NEXT:    ushr v2.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-NOFP16-NEXT:    sshll v1.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v0.2d, v0.4s, #0
 ; CHECK-NOFP16-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; CHECK-NOFP16-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-NOFP16-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-NOFP16-NEXT:    movi v0.4s, #1
+; CHECK-NOFP16-NEXT:    ushr v3.4s, v1.4s, #16
+; CHECK-NOFP16-NEXT:    add v2.4s, v1.4s, v2.4s
+; CHECK-NOFP16-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-NOFP16-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
+; CHECK-NOFP16-NEXT:    orr v1.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-NOFP16-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-NOFP16-NEXT:    shrn v0.4h, v0.4s, #16
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stofp_v4i32_v4bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-FP16-NEXT:    sshll v1.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-FP16-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-FP16-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-FP16-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-FP16-NEXT:    bfcvtn v0.4h, v1.4s
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = sitofp <4 x i32> %a to <4 x bfloat>
@@ -1789,19 +1861,33 @@ entry:
 define <4 x bfloat> @utofp_v4i32_v4bf16(<4 x i32> %a) {
 ; CHECK-NOFP16-LABEL: utofp_v4i32_v4bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    movi v1.4s, #1
-; CHECK-NOFP16-NEXT:    ushr v2.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-NOFP16-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v0.2d, v0.4s, #0
 ; CHECK-NOFP16-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; CHECK-NOFP16-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-NOFP16-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-NOFP16-NEXT:    movi v0.4s, #1
+; CHECK-NOFP16-NEXT:    ushr v3.4s, v1.4s, #16
+; CHECK-NOFP16-NEXT:    add v2.4s, v1.4s, v2.4s
+; CHECK-NOFP16-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-NOFP16-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
+; CHECK-NOFP16-NEXT:    orr v1.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-NOFP16-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-NOFP16-NEXT:    shrn v0.4h, v0.4s, #16
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: utofp_v4i32_v4bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-FP16-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-FP16-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-FP16-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-FP16-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-FP16-NEXT:    bfcvtn v0.4h, v1.4s
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = uitofp <4 x i32> %a to <4 x bfloat>
@@ -1811,26 +1897,54 @@ entry:
 define <8 x bfloat> @stofp_v8i32_v8bf16(<8 x i32> %a) {
 ; CHECK-NOFP16-LABEL: stofp_v8i32_v8bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    movi v2.4s, #1
-; CHECK-NOFP16-NEXT:    scvtf v1.4s, v1.4s
-; CHECK-NOFP16-NEXT:    movi v5.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    ushr v3.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v4.4s, v1.4s, #16
-; CHECK-NOFP16-NEXT:    and v3.16b, v3.16b, v2.16b
-; CHECK-NOFP16-NEXT:    and v2.16b, v4.16b, v2.16b
-; CHECK-NOFP16-NEXT:    add v0.4s, v3.4s, v0.4s
-; CHECK-NOFP16-NEXT:    add v1.4s, v2.4s, v1.4s
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-NOFP16-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-NOFP16-NEXT:    sshll v2.2d, v1.2s, #0
+; CHECK-NOFP16-NEXT:    sshll v3.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v1.2d, v1.4s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-NOFP16-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-NOFP16-NEXT:    scvtf v3.2d, v3.2d
+; CHECK-NOFP16-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-NOFP16-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v2.2s, v2.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v3.2s, v3.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v2.4s, v1.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v3.4s, v0.2d
+; CHECK-NOFP16-NEXT:    movi v0.4s, #1
+; CHECK-NOFP16-NEXT:    movi v1.4s, #127, msl #8
+; CHECK-NOFP16-NEXT:    ushr v4.4s, v2.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v5.4s, v3.4s, #16
+; CHECK-NOFP16-NEXT:    add v6.4s, v2.4s, v1.4s
+; CHECK-NOFP16-NEXT:    add v1.4s, v3.4s, v1.4s
+; CHECK-NOFP16-NEXT:    and v4.16b, v4.16b, v0.16b
+; CHECK-NOFP16-NEXT:    and v0.16b, v5.16b, v0.16b
+; CHECK-NOFP16-NEXT:    fcmeq v5.4s, v2.4s, v2.4s
+; CHECK-NOFP16-NEXT:    orr v2.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v4.4s, v6.4s, v4.4s
+; CHECK-NOFP16-NEXT:    fcmeq v6.4s, v3.4s, v3.4s
+; CHECK-NOFP16-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NOFP16-NEXT:    orr v3.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    mov v1.16b, v5.16b
+; CHECK-NOFP16-NEXT:    bsl v1.16b, v4.16b, v2.16b
+; CHECK-NOFP16-NEXT:    bif v0.16b, v3.16b, v6.16b
+; CHECK-NOFP16-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stofp_v8i32_v8bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    scvtf v1.4s, v1.4s
-; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v1.4s
+; CHECK-FP16-NEXT:    sshll v2.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    sshll v3.2d, v1.2s, #0
+; CHECK-FP16-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-FP16-NEXT:    sshll2 v1.2d, v1.4s, #0
+; CHECK-FP16-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-FP16-NEXT:    scvtf v3.2d, v3.2d
+; CHECK-FP16-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-FP16-NEXT:    fcvtxn v2.2s, v2.2d
+; CHECK-FP16-NEXT:    fcvtxn v3.2s, v3.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v2.4s, v0.2d
+; CHECK-FP16-NEXT:    scvtf v0.2d, v1.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v3.4s, v0.2d
+; CHECK-FP16-NEXT:    bfcvtn v0.4h, v2.4s
+; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v3.4s
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = sitofp <8 x i32> %a to <8 x bfloat>
@@ -1840,26 +1954,54 @@ entry:
 define <8 x bfloat> @utofp_v8i32_v8bf16(<8 x i32> %a) {
 ; CHECK-NOFP16-LABEL: utofp_v8i32_v8bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    movi v2.4s, #1
-; CHECK-NOFP16-NEXT:    ucvtf v1.4s, v1.4s
-; CHECK-NOFP16-NEXT:    movi v5.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    ushr v3.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v4.4s, v1.4s, #16
-; CHECK-NOFP16-NEXT:    and v3.16b, v3.16b, v2.16b
-; CHECK-NOFP16-NEXT:    and v2.16b, v4.16b, v2.16b
-; CHECK-NOFP16-NEXT:    add v0.4s, v3.4s, v0.4s
-; CHECK-NOFP16-NEXT:    add v1.4s, v2.4s, v1.4s
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-NOFP16-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-NOFP16-NEXT:    ushll v2.2d, v1.2s, #0
+; CHECK-NOFP16-NEXT:    ushll v3.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-NOFP16-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-NOFP16-NEXT:    ucvtf v3.2d, v3.2d
+; CHECK-NOFP16-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-NOFP16-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v2.2s, v2.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v3.2s, v3.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v2.4s, v1.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v3.4s, v0.2d
+; CHECK-NOFP16-NEXT:    movi v0.4s, #1
+; CHECK-NOFP16-NEXT:    movi v1.4s, #127, msl #8
+; CHECK-NOFP16-NEXT:    ushr v4.4s, v2.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v5.4s, v3.4s, #16
+; CHECK-NOFP16-NEXT:    add v6.4s, v2.4s, v1.4s
+; CHECK-NOFP16-NEXT:    add v1.4s, v3.4s, v1.4s
+; CHECK-NOFP16-NEXT:    and v4.16b, v4.16b, v0.16b
+; CHECK-NOFP16-NEXT:    and v0.16b, v5.16b, v0.16b
+; CHECK-NOFP16-NEXT:    fcmeq v5.4s, v2.4s, v2.4s
+; CHECK-NOFP16-NEXT:    orr v2.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v4.4s, v6.4s, v4.4s
+; CHECK-NOFP16-NEXT:    fcmeq v6.4s, v3.4s, v3.4s
+; CHECK-NOFP16-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NOFP16-NEXT:    orr v3.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    mov v1.16b, v5.16b
+; CHECK-NOFP16-NEXT:    bsl v1.16b, v4.16b, v2.16b
+; CHECK-NOFP16-NEXT:    bif v0.16b, v3.16b, v6.16b
+; CHECK-NOFP16-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: utofp_v8i32_v8bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    ucvtf v1.4s, v1.4s
-; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v1.4s
+; CHECK-FP16-NEXT:    ushll v2.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    ushll v3.2d, v1.2s, #0
+; CHECK-FP16-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-FP16-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-FP16-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-FP16-NEXT:    ucvtf v3.2d, v3.2d
+; CHECK-FP16-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-FP16-NEXT:    fcvtxn v2.2s, v2.2d
+; CHECK-FP16-NEXT:    fcvtxn v3.2s, v3.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v2.4s, v0.2d
+; CHECK-FP16-NEXT:    ucvtf v0.2d, v1.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v3.4s, v0.2d
+; CHECK-FP16-NEXT:    bfcvtn v0.4h, v2.4s
+; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v3.4s
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = uitofp <8 x i32> %a to <8 x bfloat>
@@ -1869,39 +2011,94 @@ entry:
 define <16 x bfloat> @stofp_v16i32_v16bf16(<16 x i32> %a) {
 ; CHECK-NOFP16-LABEL: stofp_v16i32_v16bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    scvtf v2.4s, v2.4s
-; CHECK-NOFP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    scvtf v4.4s, v1.4s
-; CHECK-NOFP16-NEXT:    movi v1.4s, #1
-; CHECK-NOFP16-NEXT:    scvtf v3.4s, v3.4s
-; CHECK-NOFP16-NEXT:    movi v17.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    ushr v5.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v6.4s, v2.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v7.4s, v4.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v16.4s, v3.4s, #16
-; CHECK-NOFP16-NEXT:    and v5.16b, v5.16b, v1.16b
-; CHECK-NOFP16-NEXT:    and v6.16b, v6.16b, v1.16b
-; CHECK-NOFP16-NEXT:    add v0.4s, v5.4s, v0.4s
-; CHECK-NOFP16-NEXT:    add v2.4s, v6.4s, v2.4s
-; CHECK-NOFP16-NEXT:    and v5.16b, v7.16b, v1.16b
-; CHECK-NOFP16-NEXT:    and v6.16b, v16.16b, v1.16b
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v17.4s
-; CHECK-NOFP16-NEXT:    addhn v1.4h, v2.4s, v17.4s
-; CHECK-NOFP16-NEXT:    add v2.4s, v5.4s, v4.4s
-; CHECK-NOFP16-NEXT:    add v3.4s, v6.4s, v3.4s
-; CHECK-NOFP16-NEXT:    addhn2 v0.8h, v2.4s, v17.4s
-; CHECK-NOFP16-NEXT:    addhn2 v1.8h, v3.4s, v17.4s
+; CHECK-NOFP16-NEXT:    sshll v5.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    sshll v4.2d, v1.2s, #0
+; CHECK-NOFP16-NEXT:    sshll v6.2d, v3.2s, #0
+; CHECK-NOFP16-NEXT:    sshll v7.2d, v2.2s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v1.2d, v1.4s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v3.2d, v3.4s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v2.2d, v2.4s, #0
+; CHECK-NOFP16-NEXT:    scvtf v5.2d, v5.2d
+; CHECK-NOFP16-NEXT:    scvtf v4.2d, v4.2d
+; CHECK-NOFP16-NEXT:    scvtf v6.2d, v6.2d
+; CHECK-NOFP16-NEXT:    scvtf v7.2d, v7.2d
+; CHECK-NOFP16-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NOFP16-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-NOFP16-NEXT:    scvtf v3.2d, v3.2d
+; CHECK-NOFP16-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v5.2s, v5.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v4.2s, v4.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v6.2s, v6.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v7.2s, v7.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v5.4s, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v4.4s, v1.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v6.4s, v3.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v7.4s, v2.2d
+; CHECK-NOFP16-NEXT:    movi v0.4s, #1
+; CHECK-NOFP16-NEXT:    movi v1.4s, #127, msl #8
+; CHECK-NOFP16-NEXT:    ushr v3.4s, v5.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v2.4s, v4.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v16.4s, v6.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v17.4s, v7.4s, #16
+; CHECK-NOFP16-NEXT:    add v19.4s, v5.4s, v1.4s
+; CHECK-NOFP16-NEXT:    add v18.4s, v4.4s, v1.4s
+; CHECK-NOFP16-NEXT:    add v20.4s, v6.4s, v1.4s
+; CHECK-NOFP16-NEXT:    add v1.4s, v7.4s, v1.4s
+; CHECK-NOFP16-NEXT:    and v3.16b, v3.16b, v0.16b
+; CHECK-NOFP16-NEXT:    and v2.16b, v2.16b, v0.16b
+; CHECK-NOFP16-NEXT:    and v16.16b, v16.16b, v0.16b
+; CHECK-NOFP16-NEXT:    and v0.16b, v17.16b, v0.16b
+; CHECK-NOFP16-NEXT:    fcmeq v17.4s, v4.4s, v4.4s
+; CHECK-NOFP16-NEXT:    orr v4.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v3.4s, v19.4s, v3.4s
+; CHECK-NOFP16-NEXT:    fcmeq v19.4s, v6.4s, v6.4s
+; CHECK-NOFP16-NEXT:    add v2.4s, v18.4s, v2.4s
+; CHECK-NOFP16-NEXT:    fcmeq v18.4s, v5.4s, v5.4s
+; CHECK-NOFP16-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NOFP16-NEXT:    fcmeq v1.4s, v7.4s, v7.4s
+; CHECK-NOFP16-NEXT:    add v16.4s, v20.4s, v16.4s
+; CHECK-NOFP16-NEXT:    orr v5.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    orr v6.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    orr v7.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    bif v2.16b, v4.16b, v17.16b
+; CHECK-NOFP16-NEXT:    mov v4.16b, v19.16b
+; CHECK-NOFP16-NEXT:    bif v3.16b, v5.16b, v18.16b
+; CHECK-NOFP16-NEXT:    bsl v1.16b, v0.16b, v7.16b
+; CHECK-NOFP16-NEXT:    bsl v4.16b, v16.16b, v6.16b
+; CHECK-NOFP16-NEXT:    uzp2 v0.8h, v3.8h, v2.8h
+; CHECK-NOFP16-NEXT:    uzp2 v1.8h, v1.8h, v4.8h
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stofp_v16i32_v16bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    scvtf v2.4s, v2.4s
-; CHECK-FP16-NEXT:    scvtf v4.4s, v1.4s
-; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn v1.4h, v2.4s
-; CHECK-FP16-NEXT:    scvtf v2.4s, v3.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v4.4s
+; CHECK-FP16-NEXT:    sshll v4.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    sshll v5.2d, v2.2s, #0
+; CHECK-FP16-NEXT:    sshll v6.2d, v1.2s, #0
+; CHECK-FP16-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-FP16-NEXT:    sshll v7.2d, v3.2s, #0
+; CHECK-FP16-NEXT:    sshll2 v2.2d, v2.4s, #0
+; CHECK-FP16-NEXT:    sshll2 v1.2d, v1.4s, #0
+; CHECK-FP16-NEXT:    sshll2 v3.2d, v3.4s, #0
+; CHECK-FP16-NEXT:    scvtf v4.2d, v4.2d
+; CHECK-FP16-NEXT:    scvtf v5.2d, v5.2d
+; CHECK-FP16-NEXT:    scvtf v6.2d, v6.2d
+; CHECK-FP16-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-FP16-NEXT:    scvtf v7.2d, v7.2d
+; CHECK-FP16-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-FP16-NEXT:    fcvtxn v4.2s, v4.2d
+; CHECK-FP16-NEXT:    fcvtxn v5.2s, v5.2d
+; CHECK-FP16-NEXT:    fcvtxn v6.2s, v6.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v4.4s, v0.2d
+; CHECK-FP16-NEXT:    scvtf v0.2d, v1.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v5.4s, v2.2d
+; CHECK-FP16-NEXT:    fcvtxn v2.2s, v7.2d
+; CHECK-FP16-NEXT:    scvtf v1.2d, v3.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v6.4s, v0.2d
+; CHECK-FP16-NEXT:    bfcvtn v0.4h, v4.4s
+; CHECK-FP16-NEXT:    fcvtxn2 v2.4s, v1.2d
+; CHECK-FP16-NEXT:    bfcvtn v1.4h, v5.4s
+; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v6.4s
 ; CHECK-FP16-NEXT:    bfcvtn2 v1.8h, v2.4s
 ; CHECK-FP16-NEXT:    ret
 entry:
@@ -1912,39 +2109,94 @@ entry:
 define <16 x bfloat> @utofp_v16i32_v16bf16(<16 x i32> %a) {
 ; CHECK-NOFP16-LABEL: utofp_v16i32_v16bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    ucvtf v2.4s, v2.4s
-; CHECK-NOFP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    ucvtf v4.4s, v1.4s
-; CHECK-NOFP16-NEXT:    movi v1.4s, #1
-; CHECK-NOFP16-NEXT:    ucvtf v3.4s, v3.4s
-; CHECK-NOFP16-NEXT:    movi v17.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    ushr v5.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v6.4s, v2.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v7.4s, v4.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v16.4s, v3.4s, #16
-; CHECK-NOFP16-NEXT:    and v5.16b, v5.16b, v1.16b
-; CHECK-NOFP16-NEXT:    and v6.16b, v6.16b, v1.16b
-; CHECK-NOFP16-NEXT:    add v0.4s, v5.4s, v0.4s
-; CHECK-NOFP16-NEXT:    add v2.4s, v6.4s, v2.4s
-; CHECK-NOFP16-NEXT:    and v5.16b, v7.16b, v1.16b
-; CHECK-NOFP16-NEXT:    and v6.16b, v16.16b, v1.16b
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v17.4s
-; CHECK-NOFP16-NEXT:    addhn v1.4h, v2.4s, v17.4s
-; CHECK-NOFP16-NEXT:    add v2.4s, v5.4s, v4.4s
-; CHECK-NOFP16-NEXT:    add v3.4s, v6.4s, v3.4s
-; CHECK-NOFP16-NEXT:    addhn2 v0.8h, v2.4s, v17.4s
-; CHECK-NOFP16-NEXT:    addhn2 v1.8h, v3.4s, v17.4s
+; CHECK-NOFP16-NEXT:    ushll v5.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    ushll v4.2d, v1.2s, #0
+; CHECK-NOFP16-NEXT:    ushll v6.2d, v3.2s, #0
+; CHECK-NOFP16-NEXT:    ushll v7.2d, v2.2s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v3.2d, v3.4s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v2.2d, v2.4s, #0
+; CHECK-NOFP16-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-NOFP16-NEXT:    ucvtf v4.2d, v4.2d
+; CHECK-NOFP16-NEXT:    ucvtf v6.2d, v6.2d
+; CHECK-NOFP16-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-NOFP16-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NOFP16-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-NOFP16-NEXT:    ucvtf v3.2d, v3.2d
+; CHECK-NOFP16-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v5.2s, v5.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v4.2s, v4.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v6.2s, v6.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v7.2s, v7.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v5.4s, v0.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v4.4s, v1.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v6.4s, v3.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v7.4s, v2.2d
+; CHECK-NOFP16-NEXT:    movi v0.4s, #1
+; CHECK-NOFP16-NEXT:    movi v1.4s, #127, msl #8
+; CHECK-NOFP16-NEXT:    ushr v3.4s, v5.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v2.4s, v4.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v16.4s, v6.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v17.4s, v7.4s, #16
+; CHECK-NOFP16-NEXT:    add v19.4s, v5.4s, v1.4s
+; CHECK-NOFP16-NEXT:    add v18.4s, v4.4s, v1.4s
+; CHECK-NOFP16-NEXT:    add v20.4s, v6.4s, v1.4s
+; CHECK-NOFP16-NEXT:    add v1.4s, v7.4s, v1.4s
+; CHECK-NOFP16-NEXT:    and v3.16b, v3.16b, v0.16b
+; CHECK-NOFP16-NEXT:    and v2.16b, v2.16b, v0.16b
+; CHECK-NOFP16-NEXT:    and v16.16b, v16.16b, v0.16b
+; CHECK-NOFP16-NEXT:    and v0.16b, v17.16b, v0.16b
+; CHECK-NOFP16-NEXT:    fcmeq v17.4s, v4.4s, v4.4s
+; CHECK-NOFP16-NEXT:    orr v4.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v3.4s, v19.4s, v3.4s
+; CHECK-NOFP16-NEXT:    fcmeq v19.4s, v6.4s, v6.4s
+; CHECK-NOFP16-NEXT:    add v2.4s, v18.4s, v2.4s
+; CHECK-NOFP16-NEXT:    fcmeq v18.4s, v5.4s, v5.4s
+; CHECK-NOFP16-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NOFP16-NEXT:    fcmeq v1.4s, v7.4s, v7.4s
+; CHECK-NOFP16-NEXT:    add v16.4s, v20.4s, v16.4s
+; CHECK-NOFP16-NEXT:    orr v5.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    orr v6.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    orr v7.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    bif v2.16b, v4.16b, v17.16b
+; CHECK-NOFP16-NEXT:    mov v4.16b, v19.16b
+; CHECK-NOFP16-NEXT:    bif v3.16b, v5.16b, v18.16b
+; CHECK-NOFP16-NEXT:    bsl v1.16b, v0.16b, v7.16b
+; CHECK-NOFP16-NEXT:    bsl v4.16b, v16.16b, v6.16b
+; CHECK-NOFP16-NEXT:    uzp2 v0.8h, v3.8h, v2.8h
+; CHECK-NOFP16-NEXT:    uzp2 v1.8h, v1.8h, v4.8h
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: utofp_v16i32_v16bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    ucvtf v2.4s, v2.4s
-; CHECK-FP16-NEXT:    ucvtf v4.4s, v1.4s
-; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn v1.4h, v2.4s
-; CHECK-FP16-NEXT:    ucvtf v2.4s, v3.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v4.4s
+; CHECK-FP16-NEXT:    ushll v4.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    ushll v5.2d, v2.2s, #0
+; CHECK-FP16-NEXT:    ushll v6.2d, v1.2s, #0
+; CHECK-FP16-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-FP16-NEXT:    ushll v7.2d, v3.2s, #0
+; CHECK-FP16-NEXT:    ushll2 v2.2d, v2.4s, #0
+; CHECK-FP16-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-FP16-NEXT:    ushll2 v3.2d, v3.4s, #0
+; CHECK-FP16-NEXT:    ucvtf v4.2d, v4.2d
+; CHECK-FP16-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-FP16-NEXT:    ucvtf v6.2d, v6.2d
+; CHECK-FP16-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-FP16-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-FP16-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-FP16-NEXT:    fcvtxn v4.2s, v4.2d
+; CHECK-FP16-NEXT:    fcvtxn v5.2s, v5.2d
+; CHECK-FP16-NEXT:    fcvtxn v6.2s, v6.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v4.4s, v0.2d
+; CHECK-FP16-NEXT:    ucvtf v0.2d, v1.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v5.4s, v2.2d
+; CHECK-FP16-NEXT:    fcvtxn v2.2s, v7.2d
+; CHECK-FP16-NEXT:    ucvtf v1.2d, v3.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v6.4s, v0.2d
+; CHECK-FP16-NEXT:    bfcvtn v0.4h, v4.4s
+; CHECK-FP16-NEXT:    fcvtxn2 v2.4s, v1.2d
+; CHECK-FP16-NEXT:    bfcvtn v1.4h, v5.4s
+; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v6.4s
 ; CHECK-FP16-NEXT:    bfcvtn2 v1.8h, v2.4s
 ; CHECK-FP16-NEXT:    ret
 entry:
@@ -1955,68 +2207,179 @@ entry:
 define <32 x bfloat> @stofp_v32i32_v32bf16(<32 x i32> %a) {
 ; CHECK-NOFP16-LABEL: stofp_v32i32_v32bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    scvtf v2.4s, v2.4s
-; CHECK-NOFP16-NEXT:    scvtf v4.4s, v4.4s
-; CHECK-NOFP16-NEXT:    scvtf v6.4s, v6.4s
-; CHECK-NOFP16-NEXT:    movi v16.4s, #1
-; CHECK-NOFP16-NEXT:    scvtf v1.4s, v1.4s
-; CHECK-NOFP16-NEXT:    scvtf v17.4s, v3.4s
-; CHECK-NOFP16-NEXT:    scvtf v5.4s, v5.4s
-; CHECK-NOFP16-NEXT:    scvtf v7.4s, v7.4s
-; CHECK-NOFP16-NEXT:    movi v21.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    ushr v3.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v18.4s, v2.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v19.4s, v4.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v20.4s, v6.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v22.4s, v1.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v23.4s, v17.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v24.4s, v5.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v25.4s, v7.4s, #16
-; CHECK-NOFP16-NEXT:    and v3.16b, v3.16b, v16.16b
-; CHECK-NOFP16-NEXT:    and v18.16b, v18.16b, v16.16b
-; CHECK-NOFP16-NEXT:    and v19.16b, v19.16b, v16.16b
-; CHECK-NOFP16-NEXT:    and v20.16b, v20.16b, v16.16b
-; CHECK-NOFP16-NEXT:    add v0.4s, v3.4s, v0.4s
-; CHECK-NOFP16-NEXT:    and v3.16b, v22.16b, v16.16b
-; CHECK-NOFP16-NEXT:    add v2.4s, v18.4s, v2.4s
-; CHECK-NOFP16-NEXT:    add v4.4s, v19.4s, v4.4s
-; CHECK-NOFP16-NEXT:    add v6.4s, v20.4s, v6.4s
-; CHECK-NOFP16-NEXT:    and v18.16b, v23.16b, v16.16b
-; CHECK-NOFP16-NEXT:    and v19.16b, v24.16b, v16.16b
-; CHECK-NOFP16-NEXT:    and v16.16b, v25.16b, v16.16b
-; CHECK-NOFP16-NEXT:    add v20.4s, v3.4s, v1.4s
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn v1.4h, v2.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn v2.4h, v4.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn v3.4h, v6.4s, v21.4s
-; CHECK-NOFP16-NEXT:    add v4.4s, v18.4s, v17.4s
-; CHECK-NOFP16-NEXT:    add v5.4s, v19.4s, v5.4s
-; CHECK-NOFP16-NEXT:    add v6.4s, v16.4s, v7.4s
-; CHECK-NOFP16-NEXT:    addhn2 v0.8h, v20.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn2 v1.8h, v4.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn2 v2.8h, v5.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn2 v3.8h, v6.4s, v21.4s
+; CHECK-NOFP16-NEXT:    sshll v17.2d, v1.2s, #0
+; CHECK-NOFP16-NEXT:    sshll v18.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v1.2d, v1.4s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v19.2d, v0.4s, #0
+; CHECK-NOFP16-NEXT:    sshll v16.2d, v3.2s, #0
+; CHECK-NOFP16-NEXT:    sshll v21.2d, v2.2s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v3.2d, v3.4s, #0
+; CHECK-NOFP16-NEXT:    sshll v23.2d, v7.2s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v7.2d, v7.4s, #0
+; CHECK-NOFP16-NEXT:    scvtf v17.2d, v17.2d
+; CHECK-NOFP16-NEXT:    scvtf v18.2d, v18.2d
+; CHECK-NOFP16-NEXT:    scvtf v20.2d, v1.2d
+; CHECK-NOFP16-NEXT:    scvtf v19.2d, v19.2d
+; CHECK-NOFP16-NEXT:    scvtf v16.2d, v16.2d
+; CHECK-NOFP16-NEXT:    scvtf v22.2d, v3.2d
+; CHECK-NOFP16-NEXT:    scvtf v23.2d, v23.2d
+; CHECK-NOFP16-NEXT:    scvtf v7.2d, v7.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v0.2s, v17.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v1.2s, v18.2d
+; CHECK-NOFP16-NEXT:    sshll2 v18.2d, v2.4s, #0
+; CHECK-NOFP16-NEXT:    scvtf v2.2d, v21.2d
+; CHECK-NOFP16-NEXT:    sshll v21.2d, v4.2s, #0
+; CHECK-NOFP16-NEXT:    fcvtxn v3.2s, v16.2d
+; CHECK-NOFP16-NEXT:    sshll2 v4.2d, v4.4s, #0
+; CHECK-NOFP16-NEXT:    movi v17.4s, #1
+; CHECK-NOFP16-NEXT:    movi v16.4s, #127, msl #8
+; CHECK-NOFP16-NEXT:    scvtf v18.2d, v18.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v0.4s, v20.2d
+; CHECK-NOFP16-NEXT:    sshll v20.2d, v5.2s, #0
+; CHECK-NOFP16-NEXT:    fcvtxn2 v1.4s, v19.2d
+; CHECK-NOFP16-NEXT:    sshll v19.2d, v6.2s, #0
+; CHECK-NOFP16-NEXT:    fcvtxn v2.2s, v2.2d
+; CHECK-NOFP16-NEXT:    scvtf v21.2d, v21.2d
+; CHECK-NOFP16-NEXT:    sshll2 v5.2d, v5.4s, #0
+; CHECK-NOFP16-NEXT:    sshll2 v6.2d, v6.4s, #0
+; CHECK-NOFP16-NEXT:    fcvtxn2 v3.4s, v22.2d
+; CHECK-NOFP16-NEXT:    scvtf v20.2d, v20.2d
+; CHECK-NOFP16-NEXT:    scvtf v4.2d, v4.2d
+; CHECK-NOFP16-NEXT:    scvtf v19.2d, v19.2d
+; CHECK-NOFP16-NEXT:    ushr v22.4s, v0.4s, #16
+; CHECK-NOFP16-NEXT:    add v24.4s, v0.4s, v16.4s
+; CHECK-NOFP16-NEXT:    fcvtxn2 v2.4s, v18.2d
+; CHECK-NOFP16-NEXT:    scvtf v5.2d, v5.2d
+; CHECK-NOFP16-NEXT:    scvtf v6.2d, v6.2d
+; CHECK-NOFP16-NEXT:    ushr v25.4s, v1.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v26.4s, v3.4s, #16
+; CHECK-NOFP16-NEXT:    fcmeq v27.4s, v3.4s, v3.4s
+; CHECK-NOFP16-NEXT:    fcvtxn v18.2s, v20.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v20.2s, v21.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v21.2s, v23.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v19.2s, v19.2d
+; CHECK-NOFP16-NEXT:    and v22.16b, v22.16b, v17.16b
+; CHECK-NOFP16-NEXT:    fcmeq v23.4s, v0.4s, v0.4s
+; CHECK-NOFP16-NEXT:    orr v0.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    fcvtxn2 v18.4s, v5.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v20.4s, v4.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v21.4s, v7.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v19.4s, v6.2d
+; CHECK-NOFP16-NEXT:    add v22.4s, v24.4s, v22.4s
+; CHECK-NOFP16-NEXT:    and v24.16b, v25.16b, v17.16b
+; CHECK-NOFP16-NEXT:    add v25.4s, v1.4s, v16.4s
+; CHECK-NOFP16-NEXT:    and v5.16b, v26.16b, v17.16b
+; CHECK-NOFP16-NEXT:    ushr v26.4s, v2.4s, #16
+; CHECK-NOFP16-NEXT:    add v4.4s, v3.4s, v16.4s
+; CHECK-NOFP16-NEXT:    fcmeq v7.4s, v1.4s, v1.4s
+; CHECK-NOFP16-NEXT:    orr v1.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    ushr v28.4s, v21.4s, #16
+; CHECK-NOFP16-NEXT:    add v30.4s, v20.4s, v16.4s
+; CHECK-NOFP16-NEXT:    add v31.4s, v21.4s, v16.4s
+; CHECK-NOFP16-NEXT:    add v6.4s, v25.4s, v24.4s
+; CHECK-NOFP16-NEXT:    and v24.16b, v26.16b, v17.16b
+; CHECK-NOFP16-NEXT:    add v25.4s, v2.4s, v16.4s
+; CHECK-NOFP16-NEXT:    ushr v26.4s, v18.4s, #16
+; CHECK-NOFP16-NEXT:    add v4.4s, v4.4s, v5.4s
+; CHECK-NOFP16-NEXT:    ushr v5.4s, v20.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v29.4s, v19.4s, #16
+; CHECK-NOFP16-NEXT:    and v28.16b, v28.16b, v17.16b
+; CHECK-NOFP16-NEXT:    orr v3.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v24.4s, v25.4s, v24.4s
+; CHECK-NOFP16-NEXT:    bit v1.16b, v6.16b, v7.16b
+; CHECK-NOFP16-NEXT:    bit v0.16b, v22.16b, v23.16b
+; CHECK-NOFP16-NEXT:    and v25.16b, v26.16b, v17.16b
+; CHECK-NOFP16-NEXT:    add v26.4s, v18.4s, v16.4s
+; CHECK-NOFP16-NEXT:    and v5.16b, v5.16b, v17.16b
+; CHECK-NOFP16-NEXT:    and v17.16b, v29.16b, v17.16b
+; CHECK-NOFP16-NEXT:    add v16.4s, v19.4s, v16.4s
+; CHECK-NOFP16-NEXT:    add v28.4s, v31.4s, v28.4s
+; CHECK-NOFP16-NEXT:    fcmeq v31.4s, v21.4s, v21.4s
+; CHECK-NOFP16-NEXT:    fcmeq v29.4s, v2.4s, v2.4s
+; CHECK-NOFP16-NEXT:    orr v2.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v25.4s, v26.4s, v25.4s
+; CHECK-NOFP16-NEXT:    fcmeq v26.4s, v18.4s, v18.4s
+; CHECK-NOFP16-NEXT:    add v5.4s, v30.4s, v5.4s
+; CHECK-NOFP16-NEXT:    add v16.4s, v16.4s, v17.4s
+; CHECK-NOFP16-NEXT:    fcmeq v17.4s, v19.4s, v19.4s
+; CHECK-NOFP16-NEXT:    fcmeq v30.4s, v20.4s, v20.4s
+; CHECK-NOFP16-NEXT:    orr v18.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    orr v20.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    orr v21.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    orr v19.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    bit v3.16b, v4.16b, v27.16b
+; CHECK-NOFP16-NEXT:    mov v6.16b, v31.16b
+; CHECK-NOFP16-NEXT:    mov v4.16b, v26.16b
+; CHECK-NOFP16-NEXT:    bit v2.16b, v24.16b, v29.16b
+; CHECK-NOFP16-NEXT:    uzp2 v0.8h, v1.8h, v0.8h
+; CHECK-NOFP16-NEXT:    mov v7.16b, v17.16b
+; CHECK-NOFP16-NEXT:    bif v5.16b, v20.16b, v30.16b
+; CHECK-NOFP16-NEXT:    bsl v6.16b, v28.16b, v21.16b
+; CHECK-NOFP16-NEXT:    bsl v4.16b, v25.16b, v18.16b
+; CHECK-NOFP16-NEXT:    bsl v7.16b, v16.16b, v19.16b
+; CHECK-NOFP16-NEXT:    uzp2 v1.8h, v2.8h, v3.8h
+; CHECK-NOFP16-NEXT:    uzp2 v2.8h, v5.8h, v4.8h
+; CHECK-NOFP16-NEXT:    uzp2 v3.8h, v7.8h, v6.8h
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: stofp_v32i32_v32bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    scvtf v2.4s, v2.4s
-; CHECK-FP16-NEXT:    scvtf v4.4s, v4.4s
-; CHECK-FP16-NEXT:    scvtf v6.4s, v6.4s
-; CHECK-FP16-NEXT:    scvtf v16.4s, v1.4s
-; CHECK-FP16-NEXT:    scvtf v17.4s, v3.4s
-; CHECK-FP16-NEXT:    scvtf v5.4s, v5.4s
-; CHECK-FP16-NEXT:    scvtf v7.4s, v7.4s
+; CHECK-FP16-NEXT:    sshll v17.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    sshll v16.2d, v2.2s, #0
+; CHECK-FP16-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-FP16-NEXT:    sshll v19.2d, v4.2s, #0
+; CHECK-FP16-NEXT:    sshll v20.2d, v6.2s, #0
+; CHECK-FP16-NEXT:    sshll2 v2.2d, v2.4s, #0
+; CHECK-FP16-NEXT:    sshll v21.2d, v3.2s, #0
+; CHECK-FP16-NEXT:    sshll v22.2d, v5.2s, #0
+; CHECK-FP16-NEXT:    sshll2 v4.2d, v4.4s, #0
+; CHECK-FP16-NEXT:    scvtf v18.2d, v17.2d
+; CHECK-FP16-NEXT:    scvtf v17.2d, v0.2d
+; CHECK-FP16-NEXT:    scvtf v16.2d, v16.2d
+; CHECK-FP16-NEXT:    scvtf v19.2d, v19.2d
+; CHECK-FP16-NEXT:    scvtf v20.2d, v20.2d
+; CHECK-FP16-NEXT:    sshll2 v6.2d, v6.4s, #0
+; CHECK-FP16-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-FP16-NEXT:    scvtf v21.2d, v21.2d
+; CHECK-FP16-NEXT:    scvtf v22.2d, v22.2d
+; CHECK-FP16-NEXT:    scvtf v4.2d, v4.2d
+; CHECK-FP16-NEXT:    sshll2 v3.2d, v3.4s, #0
+; CHECK-FP16-NEXT:    sshll2 v5.2d, v5.4s, #0
+; CHECK-FP16-NEXT:    fcvtxn v0.2s, v18.2d
+; CHECK-FP16-NEXT:    sshll v18.2d, v1.2s, #0
+; CHECK-FP16-NEXT:    fcvtxn v16.2s, v16.2d
+; CHECK-FP16-NEXT:    fcvtxn v19.2s, v19.2d
+; CHECK-FP16-NEXT:    fcvtxn v20.2s, v20.2d
+; CHECK-FP16-NEXT:    scvtf v6.2d, v6.2d
+; CHECK-FP16-NEXT:    sshll2 v1.2d, v1.4s, #0
+; CHECK-FP16-NEXT:    scvtf v3.2d, v3.2d
+; CHECK-FP16-NEXT:    scvtf v5.2d, v5.2d
+; CHECK-FP16-NEXT:    scvtf v18.2d, v18.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v0.4s, v17.2d
+; CHECK-FP16-NEXT:    sshll v17.2d, v7.2s, #0
+; CHECK-FP16-NEXT:    fcvtxn2 v16.4s, v2.2d
+; CHECK-FP16-NEXT:    sshll2 v2.2d, v7.4s, #0
+; CHECK-FP16-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-FP16-NEXT:    fcvtxn v7.2s, v21.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v19.4s, v4.2d
+; CHECK-FP16-NEXT:    fcvtxn v4.2s, v22.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v20.4s, v6.2d
+; CHECK-FP16-NEXT:    scvtf v17.2d, v17.2d
+; CHECK-FP16-NEXT:    fcvtxn v18.2s, v18.2d
 ; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn v1.4h, v2.4s
-; CHECK-FP16-NEXT:    bfcvtn v2.4h, v4.4s
-; CHECK-FP16-NEXT:    bfcvtn v3.4h, v6.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v16.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v1.8h, v17.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v2.8h, v5.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v3.8h, v7.4s
+; CHECK-FP16-NEXT:    fcvtxn2 v7.4s, v3.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v4.4s, v5.2d
+; CHECK-FP16-NEXT:    bfcvtn v3.4h, v20.4s
+; CHECK-FP16-NEXT:    fcvtxn v6.2s, v17.2d
+; CHECK-FP16-NEXT:    scvtf v17.2d, v2.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v18.4s, v1.2d
+; CHECK-FP16-NEXT:    bfcvtn v1.4h, v16.4s
+; CHECK-FP16-NEXT:    bfcvtn v2.4h, v19.4s
+; CHECK-FP16-NEXT:    fcvtxn2 v6.4s, v17.2d
+; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v18.4s
+; CHECK-FP16-NEXT:    bfcvtn2 v1.8h, v7.4s
+; CHECK-FP16-NEXT:    bfcvtn2 v2.8h, v4.4s
+; CHECK-FP16-NEXT:    bfcvtn2 v3.8h, v6.4s
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = sitofp <32 x i32> %a to <32 x bfloat>
@@ -2026,68 +2389,179 @@ entry:
 define <32 x bfloat> @utofp_v32i32_v32bf16(<32 x i32> %a) {
 ; CHECK-NOFP16-LABEL: utofp_v32i32_v32bf16:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NOFP16-NEXT:    ucvtf v2.4s, v2.4s
-; CHECK-NOFP16-NEXT:    ucvtf v4.4s, v4.4s
-; CHECK-NOFP16-NEXT:    ucvtf v6.4s, v6.4s
-; CHECK-NOFP16-NEXT:    movi v16.4s, #1
-; CHECK-NOFP16-NEXT:    ucvtf v1.4s, v1.4s
-; CHECK-NOFP16-NEXT:    ucvtf v17.4s, v3.4s
-; CHECK-NOFP16-NEXT:    ucvtf v5.4s, v5.4s
-; CHECK-NOFP16-NEXT:    ucvtf v7.4s, v7.4s
-; CHECK-NOFP16-NEXT:    movi v21.4s, #127, msl #8
-; CHECK-NOFP16-NEXT:    ushr v3.4s, v0.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v18.4s, v2.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v19.4s, v4.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v20.4s, v6.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v22.4s, v1.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v23.4s, v17.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v24.4s, v5.4s, #16
-; CHECK-NOFP16-NEXT:    ushr v25.4s, v7.4s, #16
-; CHECK-NOFP16-NEXT:    and v3.16b, v3.16b, v16.16b
-; CHECK-NOFP16-NEXT:    and v18.16b, v18.16b, v16.16b
-; CHECK-NOFP16-NEXT:    and v19.16b, v19.16b, v16.16b
-; CHECK-NOFP16-NEXT:    and v20.16b, v20.16b, v16.16b
-; CHECK-NOFP16-NEXT:    add v0.4s, v3.4s, v0.4s
-; CHECK-NOFP16-NEXT:    and v3.16b, v22.16b, v16.16b
-; CHECK-NOFP16-NEXT:    add v2.4s, v18.4s, v2.4s
-; CHECK-NOFP16-NEXT:    add v4.4s, v19.4s, v4.4s
-; CHECK-NOFP16-NEXT:    add v6.4s, v20.4s, v6.4s
-; CHECK-NOFP16-NEXT:    and v18.16b, v23.16b, v16.16b
-; CHECK-NOFP16-NEXT:    and v19.16b, v24.16b, v16.16b
-; CHECK-NOFP16-NEXT:    and v16.16b, v25.16b, v16.16b
-; CHECK-NOFP16-NEXT:    add v20.4s, v3.4s, v1.4s
-; CHECK-NOFP16-NEXT:    addhn v0.4h, v0.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn v1.4h, v2.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn v2.4h, v4.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn v3.4h, v6.4s, v21.4s
-; CHECK-NOFP16-NEXT:    add v4.4s, v18.4s, v17.4s
-; CHECK-NOFP16-NEXT:    add v5.4s, v19.4s, v5.4s
-; CHECK-NOFP16-NEXT:    add v6.4s, v16.4s, v7.4s
-; CHECK-NOFP16-NEXT:    addhn2 v0.8h, v20.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn2 v1.8h, v4.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn2 v2.8h, v5.4s, v21.4s
-; CHECK-NOFP16-NEXT:    addhn2 v3.8h, v6.4s, v21.4s
+; CHECK-NOFP16-NEXT:    ushll v17.2d, v1.2s, #0
+; CHECK-NOFP16-NEXT:    ushll v18.2d, v0.2s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v19.2d, v0.4s, #0
+; CHECK-NOFP16-NEXT:    ushll v16.2d, v3.2s, #0
+; CHECK-NOFP16-NEXT:    ushll v21.2d, v2.2s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v3.2d, v3.4s, #0
+; CHECK-NOFP16-NEXT:    ushll v23.2d, v7.2s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v7.2d, v7.4s, #0
+; CHECK-NOFP16-NEXT:    ucvtf v17.2d, v17.2d
+; CHECK-NOFP16-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-NOFP16-NEXT:    ucvtf v20.2d, v1.2d
+; CHECK-NOFP16-NEXT:    ucvtf v19.2d, v19.2d
+; CHECK-NOFP16-NEXT:    ucvtf v16.2d, v16.2d
+; CHECK-NOFP16-NEXT:    ucvtf v22.2d, v3.2d
+; CHECK-NOFP16-NEXT:    ucvtf v23.2d, v23.2d
+; CHECK-NOFP16-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v0.2s, v17.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v1.2s, v18.2d
+; CHECK-NOFP16-NEXT:    ushll2 v18.2d, v2.4s, #0
+; CHECK-NOFP16-NEXT:    ucvtf v2.2d, v21.2d
+; CHECK-NOFP16-NEXT:    ushll v21.2d, v4.2s, #0
+; CHECK-NOFP16-NEXT:    fcvtxn v3.2s, v16.2d
+; CHECK-NOFP16-NEXT:    ushll2 v4.2d, v4.4s, #0
+; CHECK-NOFP16-NEXT:    movi v17.4s, #1
+; CHECK-NOFP16-NEXT:    movi v16.4s, #127, msl #8
+; CHECK-NOFP16-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v0.4s, v20.2d
+; CHECK-NOFP16-NEXT:    ushll v20.2d, v5.2s, #0
+; CHECK-NOFP16-NEXT:    fcvtxn2 v1.4s, v19.2d
+; CHECK-NOFP16-NEXT:    ushll v19.2d, v6.2s, #0
+; CHECK-NOFP16-NEXT:    fcvtxn v2.2s, v2.2d
+; CHECK-NOFP16-NEXT:    ucvtf v21.2d, v21.2d
+; CHECK-NOFP16-NEXT:    ushll2 v5.2d, v5.4s, #0
+; CHECK-NOFP16-NEXT:    ushll2 v6.2d, v6.4s, #0
+; CHECK-NOFP16-NEXT:    fcvtxn2 v3.4s, v22.2d
+; CHECK-NOFP16-NEXT:    ucvtf v20.2d, v20.2d
+; CHECK-NOFP16-NEXT:    ucvtf v4.2d, v4.2d
+; CHECK-NOFP16-NEXT:    ucvtf v19.2d, v19.2d
+; CHECK-NOFP16-NEXT:    ushr v22.4s, v0.4s, #16
+; CHECK-NOFP16-NEXT:    add v24.4s, v0.4s, v16.4s
+; CHECK-NOFP16-NEXT:    fcvtxn2 v2.4s, v18.2d
+; CHECK-NOFP16-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-NOFP16-NEXT:    ucvtf v6.2d, v6.2d
+; CHECK-NOFP16-NEXT:    ushr v25.4s, v1.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v26.4s, v3.4s, #16
+; CHECK-NOFP16-NEXT:    fcmeq v27.4s, v3.4s, v3.4s
+; CHECK-NOFP16-NEXT:    fcvtxn v18.2s, v20.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v20.2s, v21.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v21.2s, v23.2d
+; CHECK-NOFP16-NEXT:    fcvtxn v19.2s, v19.2d
+; CHECK-NOFP16-NEXT:    and v22.16b, v22.16b, v17.16b
+; CHECK-NOFP16-NEXT:    fcmeq v23.4s, v0.4s, v0.4s
+; CHECK-NOFP16-NEXT:    orr v0.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    fcvtxn2 v18.4s, v5.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v20.4s, v4.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v21.4s, v7.2d
+; CHECK-NOFP16-NEXT:    fcvtxn2 v19.4s, v6.2d
+; CHECK-NOFP16-NEXT:    add v22.4s, v24.4s, v22.4s
+; CHECK-NOFP16-NEXT:    and v24.16b, v25.16b, v17.16b
+; CHECK-NOFP16-NEXT:    add v25.4s, v1.4s, v16.4s
+; CHECK-NOFP16-NEXT:    and v5.16b, v26.16b, v17.16b
+; CHECK-NOFP16-NEXT:    ushr v26.4s, v2.4s, #16
+; CHECK-NOFP16-NEXT:    add v4.4s, v3.4s, v16.4s
+; CHECK-NOFP16-NEXT:    fcmeq v7.4s, v1.4s, v1.4s
+; CHECK-NOFP16-NEXT:    orr v1.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    ushr v28.4s, v21.4s, #16
+; CHECK-NOFP16-NEXT:    add v30.4s, v20.4s, v16.4s
+; CHECK-NOFP16-NEXT:    add v31.4s, v21.4s, v16.4s
+; CHECK-NOFP16-NEXT:    add v6.4s, v25.4s, v24.4s
+; CHECK-NOFP16-NEXT:    and v24.16b, v26.16b, v17.16b
+; CHECK-NOFP16-NEXT:    add v25.4s, v2.4s, v16.4s
+; CHECK-NOFP16-NEXT:    ushr v26.4s, v18.4s, #16
+; CHECK-NOFP16-NEXT:    add v4.4s, v4.4s, v5.4s
+; CHECK-NOFP16-NEXT:    ushr v5.4s, v20.4s, #16
+; CHECK-NOFP16-NEXT:    ushr v29.4s, v19.4s, #16
+; CHECK-NOFP16-NEXT:    and v28.16b, v28.16b, v17.16b
+; CHECK-NOFP16-NEXT:    orr v3.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v24.4s, v25.4s, v24.4s
+; CHECK-NOFP16-NEXT:    bit v1.16b, v6.16b, v7.16b
+; CHECK-NOFP16-NEXT:    bit v0.16b, v22.16b, v23.16b
+; CHECK-NOFP16-NEXT:    and v25.16b, v26.16b, v17.16b
+; CHECK-NOFP16-NEXT:    add v26.4s, v18.4s, v16.4s
+; CHECK-NOFP16-NEXT:    and v5.16b, v5.16b, v17.16b
+; CHECK-NOFP16-NEXT:    and v17.16b, v29.16b, v17.16b
+; CHECK-NOFP16-NEXT:    add v16.4s, v19.4s, v16.4s
+; CHECK-NOFP16-NEXT:    add v28.4s, v31.4s, v28.4s
+; CHECK-NOFP16-NEXT:    fcmeq v31.4s, v21.4s, v21.4s
+; CHECK-NOFP16-NEXT:    fcmeq v29.4s, v2.4s, v2.4s
+; CHECK-NOFP16-NEXT:    orr v2.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    add v25.4s, v26.4s, v25.4s
+; CHECK-NOFP16-NEXT:    fcmeq v26.4s, v18.4s, v18.4s
+; CHECK-NOFP16-NEXT:    add v5.4s, v30.4s, v5.4s
+; CHECK-NOFP16-NEXT:    add v16.4s, v16.4s, v17.4s
+; CHECK-NOFP16-NEXT:    fcmeq v17.4s, v19.4s, v19.4s
+; CHECK-NOFP16-NEXT:    fcmeq v30.4s, v20.4s, v20.4s
+; CHECK-NOFP16-NEXT:    orr v18.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    orr v20.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    orr v21.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    orr v19.4s, #64, lsl #16
+; CHECK-NOFP16-NEXT:    bit v3.16b, v4.16b, v27.16b
+; CHECK-NOFP16-NEXT:    mov v6.16b, v31.16b
+; CHECK-NOFP16-NEXT:    mov v4.16b, v26.16b
+; CHECK-NOFP16-NEXT:    bit v2.16b, v24.16b, v29.16b
+; CHECK-NOFP16-NEXT:    uzp2 v0.8h, v1.8h, v0.8h
+; CHECK-NOFP16-NEXT:    mov v7.16b, v17.16b
+; CHECK-NOFP16-NEXT:    bif v5.16b, v20.16b, v30.16b
+; CHECK-NOFP16-NEXT:    bsl v6.16b, v28.16b, v21.16b
+; CHECK-NOFP16-NEXT:    bsl v4.16b, v25.16b, v18.16b
+; CHECK-NOFP16-NEXT:    bsl v7.16b, v16.16b, v19.16b
+; CHECK-NOFP16-NEXT:    uzp2 v1.8h, v2.8h, v3.8h
+; CHECK-NOFP16-NEXT:    uzp2 v2.8h, v5.8h, v4.8h
+; CHECK-NOFP16-NEXT:    uzp2 v3.8h, v7.8h, v6.8h
 ; CHECK-NOFP16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: utofp_v32i32_v32bf16:
 ; CHECK-FP16:       // %bb.0: // %entry
-; CHECK-FP16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-FP16-NEXT:    ucvtf v2.4s, v2.4s
-; CHECK-FP16-NEXT:    ucvtf v4.4s, v4.4s
-; CHECK-FP16-NEXT:    ucvtf v6.4s, v6.4s
-; CHECK-FP16-NEXT:    ucvtf v16.4s, v1.4s
-; CHECK-FP16-NEXT:    ucvtf v17.4s, v3.4s
-; CHECK-FP16-NEXT:    ucvtf v5.4s, v5.4s
-; CHECK-FP16-NEXT:    ucvtf v7.4s, v7.4s
+; CHECK-FP16-NEXT:    ushll v17.2d, v0.2s, #0
+; CHECK-FP16-NEXT:    ushll v16.2d, v2.2s, #0
+; CHECK-FP16-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-FP16-NEXT:    ushll v19.2d, v4.2s, #0
+; CHECK-FP16-NEXT:    ushll v20.2d, v6.2s, #0
+; CHECK-FP16-NEXT:    ushll2 v2.2d, v2.4s, #0
+; CHECK-FP16-NEXT:    ushll v21.2d, v3.2s, #0
+; CHECK-FP16-NEXT:    ushll v22.2d, v5.2s, #0
+; CHECK-FP16-NEXT:    ushll2 v4.2d, v4.4s, #0
+; CHECK-FP16-NEXT:    ucvtf v18.2d, v17.2d
+; CHECK-FP16-NEXT:    ucvtf v17.2d, v0.2d
+; CHECK-FP16-NEXT:    ucvtf v16.2d, v16.2d
+; CHECK-FP16-NEXT:    ucvtf v19.2d, v19.2d
+; CHECK-FP16-NEXT:    ucvtf v20.2d, v20.2d
+; CHECK-FP16-NEXT:    ushll2 v6.2d, v6.4s, #0
+; CHECK-FP16-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-FP16-NEXT:    ucvtf v21.2d, v21.2d
+; CHECK-FP16-NEXT:    ucvtf v22.2d, v22.2d
+; CHECK-FP16-NEXT:    ucvtf v4.2d, v4.2d
+; CHECK-FP16-NEXT:    ushll2 v3.2d, v3.4s, #0
+; CHECK-FP16-NEXT:    ushll2 v5.2d, v5.4s, #0
+; CHECK-FP16-NEXT:    fcvtxn v0.2s, v18.2d
+; CHECK-FP16-NEXT:    ushll v18.2d, v1.2s, #0
+; CHECK-FP16-NEXT:    fcvtxn v16.2s, v16.2d
+; CHECK-FP16-NEXT:    fcvtxn v19.2s, v19.2d
+; CHECK-FP16-NEXT:    fcvtxn v20.2s, v20.2d
+; CHECK-FP16-NEXT:    ucvtf v6.2d, v6.2d
+; CHECK-FP16-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-FP16-NEXT:    ucvtf v3.2d, v3.2d
+; CHECK-FP16-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-FP16-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v0.4s, v17.2d
+; CHECK-FP16-NEXT:    ushll v17.2d, v7.2s, #0
+; CHECK-FP16-NEXT:    fcvtxn2 v16.4s, v2.2d
+; CHECK-FP16-NEXT:    ushll2 v2.2d, v7.4s, #0
+; CHECK-FP16-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-FP16-NEXT:    fcvtxn v7.2s, v21.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v19.4s, v4.2d
+; CHECK-FP16-NEXT:    fcvtxn v4.2s, v22.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v20.4s, v6.2d
+; CHECK-FP16-NEXT:    ucvtf v17.2d, v17.2d
+; CHECK-FP16-NEXT:    fcvtxn v18.2s, v18.2d
 ; CHECK-FP16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-FP16-NEXT:    bfcvtn v1.4h, v2.4s
-; CHECK-FP16-NEXT:    bfcvtn v2.4h, v4.4s
-; CHECK-FP16-NEXT:    bfcvtn v3.4h, v6.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v16.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v1.8h, v17.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v2.8h, v5.4s
-; CHECK-FP16-NEXT:    bfcvtn2 v3.8h, v7.4s
+; CHECK-FP16-NEXT:    fcvtxn2 v7.4s, v3.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v4.4s, v5.2d
+; CHECK-FP16-NEXT:    bfcvtn v3.4h, v20.4s
+; CHECK-FP16-NEXT:    fcvtxn v6.2s, v17.2d
+; CHECK-FP16-NEXT:    ucvtf v17.2d, v2.2d
+; CHECK-FP16-NEXT:    fcvtxn2 v18.4s, v1.2d
+; CHECK-FP16-NEXT:    bfcvtn v1.4h, v16.4s
+; CHECK-FP16-NEXT:    bfcvtn v2.4h, v19.4s
+; CHECK-FP16-NEXT:    fcvtxn2 v6.4s, v17.2d
+; CHECK-FP16-NEXT:    bfcvtn2 v0.8h, v18.4s
+; CHECK-FP16-NEXT:    bfcvtn2 v1.8h, v7.4s
+; CHECK-FP16-NEXT:    bfcvtn2 v2.8h, v4.4s
+; CHECK-FP16-NEXT:    bfcvtn2 v3.8h, v6.4s
 ; CHECK-FP16-NEXT:    ret
 entry:
   %c = uitofp <32 x i32> %a to <32 x bfloat>
