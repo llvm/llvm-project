@@ -24,11 +24,8 @@ define void @stack_bigger_than_32bit() {
 ; RV64-NEXT:    addiw a0, a0, -2000
 ; RV64-NEXT:    sub sp, sp, a0
 ; RV64-NEXT:    .cfi_def_cfa_offset 2147483680
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    slli a0, a0, 31
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    add a0, sp, a0
-; RV64-NEXT:    addi a1, sp, 8
+; RV64-NEXT:    addi a0, sp, 8
+; RV64-NEXT:    addi a1, sp, 24
 ; RV64-NEXT:    call inspect
 ; RV64-NEXT:    lui a0, 524288
 ; RV64-NEXT:    addiw a0, a0, -2000
@@ -57,15 +54,12 @@ define void @stack_bigger_than_32bit_unsigned() {
 ; RV64-NEXT:    addi a0, a0, -2000
 ; RV64-NEXT:    sub sp, sp, a0
 ; RV64-NEXT:    .cfi_def_cfa_offset 4294967328
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    add a0, sp, a0
+; RV64-NEXT:    addi a0, sp, 8
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    slli a1, a1, 31
-; RV64-NEXT:    addi a1, a1, 8
+; RV64-NEXT:    addi a1, a1, 24
 ; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a2, sp, 8
+; RV64-NEXT:    addi a2, sp, 24
 ; RV64-NEXT:    call inspect
 ; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    slli a0, a0, 32
@@ -142,11 +136,8 @@ define void @rvv_frame_obj() {
 ; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    sub sp, sp, a0
 ; RV64-NEXT:    .cfi_escape 0x0f, 0x11, 0x72, 0x00, 0x11, 0xb0, 0x80, 0x80, 0x80, 0x08, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 2147483696 + 2 * vlenb
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    slli a0, a0, 31
-; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    add a0, sp, a0
-; RV64-NEXT:    addi a1, sp, 8
+; RV64-NEXT:    addi a0, sp, 8
+; RV64-NEXT:    addi a1, sp, 24
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    add a2, sp, a2
 ; RV64-NEXT:    li a3, 1
@@ -200,11 +191,8 @@ define <vscale x 1 x i64> @rvv_spill(<vscale x 1 x i64> %vector) {
 ; RV64-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; RV64-NEXT:    #APP
 ; RV64-NEXT:    #NO_APP
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    slli a0, a0, 31
-; RV64-NEXT:    addi a0, a0, 24
-; RV64-NEXT:    add a0, sp, a0
-; RV64-NEXT:    addi a1, sp, 24
+; RV64-NEXT:    addi a0, sp, 24
+; RV64-NEXT:    addi a1, sp, 40
 ; RV64-NEXT:    call inspect
 ; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    slli a0, a0, 31

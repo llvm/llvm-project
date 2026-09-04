@@ -13,26 +13,26 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV32IFD:       # %bb.0: # %entry
 ; RV32IFD-NEXT:    addi sp, sp, -32
 ; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw a0, 16(sp)
-; RV32IFD-NEXT:    sw a1, 20(sp)
-; RV32IFD-NEXT:    fld fa5, 16(sp)
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld fa5, 8(sp)
 ; RV32IFD-NEXT:    beqz a2, .LBB0_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.else
 ; RV32IFD-NEXT:    addi a2, a2, -1
-; RV32IFD-NEXT:    fsd fa5, 16(sp)
-; RV32IFD-NEXT:    lw a0, 16(sp)
-; RV32IFD-NEXT:    lw a1, 20(sp)
-; RV32IFD-NEXT:    fsd fa5, 8(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    fsd fa5, 8(sp)
+; RV32IFD-NEXT:    lw a0, 8(sp)
+; RV32IFD-NEXT:    lw a1, 12(sp)
+; RV32IFD-NEXT:    fsd fa5, 16(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    call func
-; RV32IFD-NEXT:    sw a0, 16(sp)
-; RV32IFD-NEXT:    sw a1, 20(sp)
-; RV32IFD-NEXT:    fld fa5, 16(sp)
-; RV32IFD-NEXT:    fld fa4, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    fld fa4, 16(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    fadd.d fa5, fa5, fa4
 ; RV32IFD-NEXT:  .LBB0_2: # %return
-; RV32IFD-NEXT:    fsd fa5, 16(sp)
-; RV32IFD-NEXT:    lw a0, 16(sp)
-; RV32IFD-NEXT:    lw a1, 20(sp)
+; RV32IFD-NEXT:    fsd fa5, 8(sp)
+; RV32IFD-NEXT:    lw a0, 8(sp)
+; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret

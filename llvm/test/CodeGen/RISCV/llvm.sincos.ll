@@ -102,23 +102,23 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) nounwind {
 ; RV32-NEXT:    lw a6, 8(a1)
 ; RV32-NEXT:    lw a7, 12(a1)
 ; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    addi a0, sp, 24
+; RV32-NEXT:    addi a0, sp, 56
 ; RV32-NEXT:    addi a1, sp, 8
-; RV32-NEXT:    addi a2, sp, 56
-; RV32-NEXT:    addi a3, sp, 40
+; RV32-NEXT:    addi a2, sp, 40
+; RV32-NEXT:    addi a3, sp, 24
 ; RV32-NEXT:    sw a4, 8(sp)
 ; RV32-NEXT:    sw a5, 12(sp)
 ; RV32-NEXT:    sw a6, 16(sp)
 ; RV32-NEXT:    sw a7, 20(sp)
 ; RV32-NEXT:    call sincosl
-; RV32-NEXT:    lw a0, 40(sp)
-; RV32-NEXT:    lw a1, 44(sp)
-; RV32-NEXT:    lw a2, 48(sp)
-; RV32-NEXT:    lw a3, 52(sp)
-; RV32-NEXT:    lw a4, 56(sp)
-; RV32-NEXT:    lw a5, 60(sp)
-; RV32-NEXT:    lw a6, 64(sp)
-; RV32-NEXT:    lw a7, 68(sp)
+; RV32-NEXT:    lw a0, 24(sp)
+; RV32-NEXT:    lw a1, 28(sp)
+; RV32-NEXT:    lw a2, 32(sp)
+; RV32-NEXT:    lw a3, 36(sp)
+; RV32-NEXT:    lw a4, 40(sp)
+; RV32-NEXT:    lw a5, 44(sp)
+; RV32-NEXT:    lw a6, 48(sp)
+; RV32-NEXT:    lw a7, 52(sp)
 ; RV32-NEXT:    sw a0, 16(s0)
 ; RV32-NEXT:    sw a1, 20(s0)
 ; RV32-NEXT:    sw a2, 24(s0)
