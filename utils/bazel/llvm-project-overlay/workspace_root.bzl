@@ -5,6 +5,8 @@ def _workspace_root_impl(ctx):
     may for instance be consumed in the `toolchains` attributes for `cc_library`
     and `genrule` targets.
     """
+
+    # Harmless comment to trigger build retry
     return [
         platform_common.TemplateVariableInfo({
             "WORKSPACE_ROOT": ctx.label.workspace_root,
