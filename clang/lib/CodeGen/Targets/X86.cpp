@@ -2200,8 +2200,9 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     bool UseClang11Compat = getContext().getLangOpts().isCompatibleWith(
                                 LangOptions::ClangABI::Ver11) ||
                             getContext().getTargetInfo().getTriple().isPS();
-    bool ClassifyUnnamedBitFields = getContext().getLangOpts().getClangABICompat() >
-                                    LangOptions::ClangABI::Ver23;
+    bool ClassifyUnnamedBitFields =
+        getContext().getLangOpts().getClangABICompat() >
+        LangOptions::ClangABI::Ver23;
     bool IsUnion = RT->isUnionType() && !UseClang11Compat;
 
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
