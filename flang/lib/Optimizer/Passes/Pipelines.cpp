@@ -317,19 +317,25 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
       addNestedPassToAllTopLevelOperations<PassConstructor>(
           pm, hlfir::createInlineHLFIRCopy);
     }
-  } else if ((config.EnableOpenMPIsTargetDevice &&
-              enableOpenMP == EnableOpenMP::Full) ||
-             config.EnableCUDA) {
+  } else if (config.EnableOpenMPIsTargetDevice &&
+             enableOpenMP == EnableOpenMP::Full) {
     // At O0, only inline scalar-to-array broadcasts when compiling for an
-    // OpenMP target device or with CUDA Fortran. This avoids emitting Fortran
-    // runtime calls (e.g. _FortranAAssign) that use malloc/free in device
-    // code, and whose call graph also inflates the worst-case stack frame the
-    // device linker must reserve for the calling kernel. Restricting this to
-    // those compilations preserves the runtime call at -O0 elsewhere so that
-    // a line breakpoint on a scalar-to-array assignment hits once instead of
+    // OpenMP target device. This avoids emitting Fortran runtime calls
+    // (e.g. _FortranAAssign) that use malloc/free in device code generated
+    // by OpenMP target offloading. Restricting this to target-device
+    // compilation preserves the runtime call on the host at -O0 so that a
+    // line breakpoint on a scalar-to-array assignment hits once instead of
     // once per element.
     addNestedPassToAllTopLevelOperations(pm, [&]() {
       return hlfir::createInlineHLFIRAssign({/*onlyScalarRHS=*/true});
+    });
+  } else if (config.EnableCUDA) {
+    // Same at O0 for CUDA Fortran device code, where the runtime call also
+    // inflates the stack frame the device linker reserves for the kernel.
+    // The module holds host code too, hence onlyCUDADeviceContext.
+    addNestedPassToAllTopLevelOperations(pm, [&]() {
+      return hlfir::createInlineHLFIRAssign(
+          {/*onlyScalarRHS=*/true, /*onlyCUDADeviceContext=*/true});
     });
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments(

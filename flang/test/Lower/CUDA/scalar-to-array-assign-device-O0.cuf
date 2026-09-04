@@ -14,6 +14,14 @@ contains
     out(1) = arr(1)
   end subroutine
 
+  ! Inlined too, since this one func.func becomes both copies.
+  attributes(host,device) subroutine hostdev_broadcast(out)
+    integer(4) :: out(*)
+    integer(4) :: arr(4)
+    arr = 11
+    out(1) = arr(1)
+  end subroutine
+
   subroutine host_broadcast(out)
     integer(4) :: out(*)
     integer(4) :: arr(4)
@@ -23,6 +31,11 @@ contains
 end module
 
 ! CHECK-LABEL: func.func @_QMmPdevice_broadcast
+! CHECK-NOT:     fir.call @_FortranAAssign
+! CHECK:         fir.do_loop
+! CHECK-NOT:     fir.call @_FortranAAssign
+
+! CHECK-LABEL: func.func @_QMmPhostdev_broadcast
 ! CHECK-NOT:     fir.call @_FortranAAssign
 ! CHECK:         fir.do_loop
 ! CHECK-NOT:     fir.call @_FortranAAssign

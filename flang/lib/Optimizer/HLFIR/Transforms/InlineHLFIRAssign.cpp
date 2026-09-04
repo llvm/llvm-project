@@ -17,10 +17,10 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -41,16 +41,16 @@ static llvm::cl::opt<bool> inlineAllocatableExprAssignFlag(
                    "hlfir.expr (e.g., from hlfir.elemental)"),
     llvm::cl::init(false));
 
-/// Returns true if \p op runs on the device. CUDA Fortran mixes host and
-/// device code, so that check is per-operation; an OpenMP target device
-/// module is all device.
-static bool isDeviceCode(mlir::Operation *op) {
+/// Returns true if \p op is CUDA Fortran device code. attributes(host,device)
+/// counts: this pass runs before the device copy is outlined, so the one
+/// func.func here becomes both copies.
+static bool isCUDADeviceCode(mlir::Operation *op) {
   if (cuf::isCUDADeviceContext(op))
     return true;
-  if (auto mod = op->getParentOfType<mlir::ModuleOp>())
-    if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
-            mod.getOperation()))
-      return offloadMod.getIsTargetDevice();
+  if (auto func = op->getParentOfType<mlir::func::FuncOp>())
+    if (auto procAttr =
+            func->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName()))
+      return procAttr.getValue() == cuf::ProcAttribute::HostDevice;
   return false;
 }
 
@@ -80,10 +80,13 @@ namespace {
 class InlineHLFIRAssignConversion
     : public mlir::OpRewritePattern<hlfir::AssignOp> {
   bool onlyScalarRHS;
+  bool onlyCUDADeviceContext;
 
 public:
-  InlineHLFIRAssignConversion(mlir::MLIRContext *context, bool onlyScalarRHS)
-      : OpRewritePattern(context), onlyScalarRHS(onlyScalarRHS) {}
+  InlineHLFIRAssignConversion(mlir::MLIRContext *context, bool onlyScalarRHS,
+                              bool onlyCUDADeviceContext)
+      : OpRewritePattern(context), onlyScalarRHS(onlyScalarRHS),
+        onlyCUDADeviceContext(onlyCUDADeviceContext) {}
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
@@ -103,12 +106,10 @@ public:
       return rewriter.notifyMatchFailure(
           assign, "onlyScalarRHS: skipping array-to-array assignment");
 
-    // onlyScalarRHS is the O0 mode, which exists only to keep runtime calls
-    // out of device code. Host code keeps the call so that a breakpoint on
-    // the assignment fires once, not once per element.
-    if (onlyScalarRHS && !isDeviceCode(assign))
-      return rewriter.notifyMatchFailure(assign,
-                                         "onlyScalarRHS: skipping host code");
+    // Host code keeps the runtime call so that a breakpoint on the assignment
+    // fires once, not once per element.
+    if (onlyCUDADeviceContext && !isCUDADeviceCode(assign))
+      return rewriter.notifyMatchFailure(assign, "skipping host code");
 
     mlir::Type rhsEleTy = rhs.getFortranElementType();
     if (!fir::isa_trivial(rhsEleTy))
@@ -381,10 +382,10 @@ public:
     // Bail out before the greedy driver runs: it folds and removes dead ops
     // as it walks, which would perturb host code at O0 even though the
     // pattern rewrites nothing there.
-    if (onlyScalarRHS) {
+    if (onlyCUDADeviceContext) {
       bool anyDeviceAssign = false;
       getOperation()->walk([&](hlfir::AssignOp assign) {
-        if (!isDeviceCode(assign))
+        if (!isCUDADeviceCode(assign))
           return mlir::WalkResult::advance();
         anyDeviceAssign = true;
         return mlir::WalkResult::interrupt();
@@ -399,7 +400,8 @@ public:
         mlir::GreedySimplifyRegionLevel::Disabled);
 
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<InlineHLFIRAssignConversion>(context, onlyScalarRHS);
+    patterns.insert<InlineHLFIRAssignConversion>(context, onlyScalarRHS,
+                                                 onlyCUDADeviceContext);
 
     // Optionally add the allocatable expr assignment pattern
     if (inlineAllocatableExprAssignFlag) {
