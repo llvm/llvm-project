@@ -2,9 +2,10 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 struct A {
-  int x;
+  int* val;
 };
 
 A* getAPtr();
@@ -21,6 +22,47 @@ void test_new_expression_cast_ok() {
   A* second = static_cast<A*>(new A());
   std::shared_ptr<A> a(first);
   std::unique_ptr<A> b(second);
+}
+
+void test_basic_double_two_conditions_ok(bool cond) {
+  int* a = new int(42);
+  if (cond) {
+    std::shared_ptr<int> p1(a);
+  } else {
+    std::shared_ptr<int> p2(a);
+  }
+}
+
+void test_basic_no_double_ownership() {
+  int* a = new int(42);
+  std::shared_ptr<int> p1(a);
+  a = nullptr;
+  std::shared_ptr<int> p2(a);
+}
+
+void test_reassignment_valid() {
+  int* a = new int(42);
+  std::shared_ptr<int> p1(a);
+
+  a = new int(43);  // Reassign
+  std::shared_ptr<int> p2(a);  // OK - new memory
+
+  int* b = new int(44);
+  std::shared_ptr<int> p3(b);  // OK
+}
+
+void test_make_shared() {
+  auto p1 = std::make_shared<int>(42);
+  auto p2 = p1;
+}
+
+void test_move_smart_ptr() {
+  int* a = new int(42);
+  std::shared_ptr<int> s1(a);
+  std::shared_ptr<int> s2(std::move(s1));
+  int* b = new int(42);
+  std::shared_ptr<int> u1(b);
+  std::shared_ptr<int> u2(std::move(u1));
 }
 
 void test_new_expression_fail() {
@@ -62,6 +104,22 @@ void test_new_expression_fail_in_different_scopes() {
   {
   std::unique_ptr<A> b(second);
   }
+  {
+  std::unique_ptr<A> b2(second);
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
+  }
+}
+
+void test_new_expression_fail_in_different_scopes2() {
+  A* first = new A();
+  A* second = new A();
+  std::shared_ptr<A> a(first);
+  {
+  std::shared_ptr<A> a2(first);
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' constructor may cause double deletion
+  }
+  
+  std::unique_ptr<A> b(second);
   {
   std::unique_ptr<A> b2(second);
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
@@ -112,6 +170,140 @@ void test_new_expression_fail_as_method() {
 
 };
 
+void test_reassignment_double_ownership() {
+  int* a = new int(42);
+  std::shared_ptr<int> p1(a);
+
+  a = new int(43);  // Reassign
+  std::shared_ptr<int> p2(a);
+  std::shared_ptr<int> p3(a);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+}
+
+void test_reset_to_nullptr() {
+  int* a = new int(42);
+  std::shared_ptr<int> p1(a);
+  a = nullptr;  //releasing the owning
+
+  int* b = new int(43);
+  std::shared_ptr<int> p2(b);  // OK - new memory
+  // no warnings
+}
+
+void test_branch(bool cond) {
+  int* a = new int(42);
+  std::shared_ptr<int> p1(a);
+
+  if (cond) {
+    std::shared_ptr<int> p2(a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+  }
+}
+
+void test_loop() {
+  int* a = new int(42);
+  std::shared_ptr<int> p1(a);
+
+  for (int i = 0; i < 10; ++i) {
+    std::shared_ptr<int> p2(a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+  }
+}
+
+void test_multiple_variables() {
+  int* a = new int(42);
+  int* b = new int(43);
+
+  std::shared_ptr<int> p1(a);
+  std::shared_ptr<int> p2(b);
+  std::shared_ptr<int> p3(a);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+}
+
+void test_function_parameter(int* a) {
+  std::shared_ptr<int> p1(a);
+  std::shared_ptr<int> p2(a);  // We don't know where this memory came from, but it doesn't matter anymore, since it will be freed at least twice
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+}
+
+void test_argument(int* a) {
+  a = new int(42);
+  std::shared_ptr<int> p1(a);
+  // Это должно вызвать предупреждение
+  std::shared_ptr<int> p2(a);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+}
+
+void test_complex_case() {
+  int* a = new int(1);
+  std::shared_ptr<int> p1(a);
+
+  a = new int(2);  // Reassign
+  std::shared_ptr<int> p2(a);  // OK
+
+  a = new int(3);  // Reassign again
+  std::shared_ptr<int> p3(a);  // OK
+  std::shared_ptr<int> p4(a);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+}
+
+void test_nested_function() {
+  auto lambda = []() {
+    int* a = new int(42);
+    std::shared_ptr<int> p1(a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+    std::shared_ptr<int> p2(a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+  };
+  lambda();
+}
+
+void test_nested_function2() {
+  int* a = new int(42);
+  auto lambda = [&]() {
+    std::shared_ptr<int> p1(a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+    std::shared_ptr<int> p2(a);
+  };
+  lambda();
+}
+
+void test_inside_structure() {
+  A a;
+  a.val = new int(42);
+  std::shared_ptr<int> p1(a.val);
+  std::shared_ptr<int> p2(a.val);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+}
+
+void test_inside_structure_and_argument(A& a) {
+  a.val = new int(42);
+  std::shared_ptr<int> p1(a.val);
+  std::shared_ptr<int> p2(a.val);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+}
+
+class test_inside_a_class {
+  int* a = nullptr;
+public:
+  void operator() () {
+    a = new int(42);
+    std::shared_ptr<int> p1(a);
+    std::shared_ptr<int> p2(a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+  }
+};
+
+class test_inside_a_class_with_this {
+  int* a = nullptr;
+public:
+  void operator() () {
+    this->a = new int(42);
+    std::shared_ptr<int> p1(this->a);
+    std::shared_ptr<int> p2(this->a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+  }
+};
 
 // test_new_expression_ok_in_global
 // FIXME: support it
@@ -138,6 +330,22 @@ void test_new_expression_reset_ok() {
   a.reset(first);
   std::unique_ptr<A> b;
   b.reset(second);
+}
+
+void test_basic_double_two_conditions_ok(bool cond, std::shared_ptr<int> p1, std::shared_ptr<int> p2) {
+  int* a = new int(42);
+  if (cond) {
+     p1.reset(a);
+  } else {
+     p2.reset(a);
+  }
+}
+
+void test_basic_no_double_ownership(std::shared_ptr<int> p1, std::shared_ptr<int> p2) {
+  int* a = new int(42);
+  p1.reset(a);
+  a = nullptr;
+  p2.reset(a);
 }
 
 void test_new_expression_reset_fail() {

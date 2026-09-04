@@ -54,16 +54,96 @@ void f() {
   cannot reliably distinguish between owning and non-owning raw pointers in
   complex code. It is **not recommended** for legacy codebases. Consider
   enabling this option only for new projects written with strict ownership
-  policies from the start.
+  policies from the start.  
   **Note**: Smart pointers with custom deleters (i.e., deleters not listed in
   the `DefaultDeleters` option) are always ignored in this mode and will never
   produce any diagnostics, regardless of the initialization pattern.
 
 ## Limitations
 
-This check only supports smart pointers with shared and unique ownership
-semantics. Smart pointers with different semantics, such as
-`boost::scoped_ptr`, cannot be used with the current version of this check.
+This check has several limitations that may result in false negatives (missed
+warnings) in real-world code:
+
+- **Limited Smart Pointer Support**
+
+  This check only supports smart pointers with shared and unique ownership
+  semantics. Smart pointers with different semantics, such as
+  `boost::scoped_ptr`, cannot be used with the current version of this check.
+
+- **Global Pointers**
+
+  This version of check does not track the origin of memory for global pointers
+  , which can lead to missed warnings:
+```cpp
+int* global_ptr = new int(42);
+
+void test_global_pointer() {
+  std::shared_ptr<int> p1(global_ptr);  // OK - global pointer
+  std::shared_ptr<int> p2(global_ptr);  // OK - origin unknown
+  // No warning, even though double deletion is guaranteed
+}
+```
+
+- **Pointer Aliasing**
+
+  This version of check does not track copies of pointers (aliases), leading to
+  missed warnings:
+```cpp
+void test_copy_pointer() {
+  int* a = new int(42);
+  int* b = a;  // b points to the same memory
+
+  std::shared_ptr<int> p1(a);
+  std::shared_ptr<int> p2(b);  // ERROR - p2 also owns a
+  // No warning
+}
+
+void test_pointer_reference() {
+  int* a = new int(42);
+  int*& ref = a;  // Reference to pointer
+
+  std::shared_ptr<int> p1(a);
+  std::shared_ptr<int> p2(ref);  // ERROR - ref points to same memory
+  // No warning
+}
+```
+
+- **Complex Control Flow**
+
+  This version of check fails to track pointer ownership through complex
+  control flow structures such as loops and conditionals:
+```cpp
+void test_complicated_loop() {
+  int* a = nullptr;
+  std::shared_ptr<int> p1;
+  std::shared_ptr<int> p2;
+
+  for (int i = 0; i < 10; ++i) {
+    if (i == 0)
+      a = new int(42);
+    else if (i == 1)
+      p1.reset(a);   // p1 takes ownership
+    else if (i == 2)
+      p2.reset(a);   // ERROR - p2 also attempts to own a
+    // No warning
+  }
+}
+```
+
+- **Pointers to Pointers**
+
+  This version of check does not handle indirect memory access through pointers
+  to pointers:
+```cpp
+void test_pointer_to_pointer() {
+  int** pp = new int*(new int(42));  // Double indirection
+
+  std::shared_ptr<int> p1(*pp);
+  std::shared_ptr<int> p2(*pp);
+  // Warning may or may not be generated
+  // In most cases, diagnostics are missing
+}
+```
 
 ## References
 
